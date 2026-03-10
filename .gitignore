@@ -35,3 +35,21 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Personal folders - never commit
+MDFiles_Archive/
+progress/
+# Root-level test/debug scripts
+add_test_code.js
+check_*.mjs
+run-migration.js
+run_migration.js
+test_*.mjs
+verify_*.js
+*.backup
+supabase/.temp/
+supabase/migrations/RUN_THIS_*.sql
+supabase/migrations/check_listing_status.sql
+supabase/migrations/fix-admin-roles-rls.sql
+README.md
+CODING-STANDARDS.md
