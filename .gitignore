@@ -51,7 +51,6 @@ supabase/.temp/
 supabase/migrations/RUN_THIS_*.sql
 supabase/migrations/check_listing_status.sql
 supabase/migrations/fix-admin-roles-rls.sql
-README.md
 CODING-STANDARDS.md
 
 MDFiles_Archive/

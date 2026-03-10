@@ -1,130 +1,101 @@
-# GameVault - P2P Gaming Marketplace
+# GameVault — P2P Gaming Marketplace
 
-A modern, secure P2P marketplace for trading gaming items, currency, accounts, and more. Built with Next.js 14, Supabase, and Stripe.
+A full-stack peer-to-peer marketplace for trading in-game items, currency, accounts, and services. Designed to compete with platforms like G2G, Eldorado.gg, and Gameflip — with lower fees, stronger buyer protection, and a modern developer experience.
 
-## Features
+## What It Does
 
-- 🎮 Multi-game support (Roblox, Fortnite, Valorant, etc.)
-- 💰 Lowest fees in the industry (6.9-10.4% vs competitors' 17-26%)
-- 🛡️ 30-day buyer protection
-- 💬 Built-in messaging system (email notifications + polling)
-- ⭐ Review and rating system
-- 🔒 Secure escrow payments with Stripe
-- 📱 Mobile-first responsive design
-- 🌙 Dark/Light theme support
+- **18 supported games** — Roblox, Fortnite, Valorant, CS2, Genshin Impact, and more
+- **Escrow payments** — Stripe Connect holds funds until delivery is confirmed
+- **VaultShield buyer protection** — up to 30-day warranty on purchases
+- **Seller verification & KYC** — 6-step onboarding with document upload
+- **5-tier seller system** — Bronze → Platinum with commission rates from 3.9% to 6.9%
+- **Real-time chat** — buyer-seller messaging with order context and delivery evidence
+- **Review system** — ratings, seller responses, edit windows, and admin moderation
+- **Admin dashboard** — order management, dispute resolution, seller approvals, analytics, fraud detection
+- **Programmatic SEO** — dynamic landing pages for organic traffic acquisition
+- **Dark-first responsive UI** — glass morphism, Framer Motion animations, mobile-optimized
 
 ## Tech Stack
 
-- **Frontend**: Next.js 14 (App Router), React 18, TypeScript
-- **Styling**: Tailwind CSS, Shadcn/ui
-- **Backend**: Supabase (PostgreSQL, Auth, Storage, Functions)
-- **Payments**: Stripe Connect
-- **State Management**: Zustand, TanStack Query
-- **Animations**: Framer Motion
-
-## Getting Started
-
-### 1. Install Dependencies
-
-\`\`\`bash
-npm install
-\`\`\`
-
-### 2. Set Up Environment Variables
-
-Copy `.env.local.example` to `.env.local` and fill in your credentials:
-
-\`\`\`bash
-cp .env.local.example .env.local
-\`\`\`
-
-You'll need:
-- Supabase project URL and keys
-- Stripe publishable and secret keys
-- App URL (http://localhost:3000 for development)
-
-### 3. Set Up Supabase Database
-
-1. Create a new project at [supabase.com](https://supabase.com)
-2. Run the SQL scripts from `docs/database-schema.sql` in your Supabase SQL Editor
-3. Create storage buckets: `avatars`, `listings`, `kyc-documents`
-
-### 4. Run Development Server
-
-\`\`\`bash
-npm run dev
-\`\`\`
-
-Open [http://localhost:3000](http://localhost:3000) to see your app!
+| Layer | Technology |
+|-------|-----------|
+| Framework | Next.js 14 (App Router), TypeScript |
+| UI | Tailwind CSS, Shadcn/ui, Framer Motion |
+| Database | Supabase PostgreSQL with Row-Level Security |
+| Auth | Supabase Auth (SSR + MFA/TOTP for admins) |
+| Payments | Stripe Connect (escrow, PaymentIntents, webhooks) |
+| Storage | Supabase Storage (listing images, KYC docs, delivery evidence) |
+| Real-time | Supabase Realtime (chat, presence, order updates) |
+| State | Zustand (client), TanStack Query (server) |
+| Forms | React Hook Form + Zod validation |
+| Email | Resend (transactional notifications) |
+| Deployment | Vercel |
 
 ## Project Structure
 
-\`\`\`
+```
 src/
-├── app/                    # Next.js app router pages
-├── components/             # Reusable UI components
-│   ├── ui/                # Shadcn/ui components
-│   └── providers.tsx      # React Query, Theme providers
-├── features/              # Feature-based modules
-│   ├── auth/             # Authentication
-│   ├── listings/         # Marketplace listings
-│   ├── cart/             # Shopping cart
-│   ├── checkout/         # Payment flow
-│   ├── messaging/        # User messaging
-│   ├── seller/           # Seller dashboard & KYC
-│   └── buyer/            # Buyer dashboard
-├── lib/                   # Utilities and configurations
-│   ├── supabase/         # Supabase clients
-│   └── utils.ts          # Helper functions
-└── types/                # TypeScript type definitions
-\`\`\`
+├── app/
+│   ├── (admin)/admin/        # Admin dashboard, disputes, sellers, analytics
+│   ├── (marketplace)/        # Game pages, category listings, listing detail
+│   ├── (marketing)/          # VaultShield landing page
+│   ├── account/              # Buyer/seller dashboard, orders, settings, wallet
+│   ├── api/                  # Stripe webhooks, cron jobs, presence
+│   ├── checkout/             # Payment flow with VaultShield tier selection
+│   └── shop/                 # Public seller storefronts
+├── components/
+│   ├── chat/                 # Real-time messaging interface
+│   ├── marketplace/          # Filters, search, category pills, listing cards
+│   ├── motion/               # Reusable animation components
+│   ├── orders/               # Order timeline, delivery evidence, dispute UI
+│   ├── reviews/              # Review cards, forms, stats, seller responses
+│   ├── seller/               # Tier badges, restriction banners
+│   ├── ui/                   # Shadcn + glass morphism components
+│   └── vaultshield/          # Protection badges and level cards
+├── hooks/                    # Custom hooks (auth, orders, sellers, wishlist)
+├── lib/
+│   ├── actions/              # Server actions (40+ files)
+│   ├── stripe/               # Stripe Connect integration
+│   ├── supabase/             # Client, server, service-role clients
+│   ├── templates/            # Game-specific listing templates
+│   └── utils/                # Helpers (tiers, notifications, rate limiting)
+└── supabase/
+    └── migrations/           # 80+ SQL migrations (schema, RLS, triggers)
+```
 
-## Key Features Implementation
+## Database
 
-### Messaging System
-- Email notifications for new messages
-- 10-second polling when on messages page
-- No WebSocket overhead (saves costs)
-- Easy upgrade path to real-time later
+- **80+ migrations** covering schema evolution from January to March 2026
+- **Row-Level Security** on all tables — users can only access their own data
+- **DB-enforced escrow state machine** — triggers prevent invalid payment transitions
+- **Materialized views** for admin analytics
+- **Full-text search** with trigram similarity for listing discovery
+- **Audit logging** via triggers on all sensitive operations
 
-### Payment Flow
-- Stripe Connect for marketplace payments
-- Escrow system for buyer protection
-- Automatic fee calculation
-- Secure webhook handling
+## Local Development
 
-### Seller Tiers
-- Bronze → Platinum progression
-- Fee reductions based on sales
-- Gamification for seller retention
+```bash
+# Install dependencies
+npm install
 
-## Development Roadmap
+# Copy environment variables
+cp .env.local.example .env.local
+# Fill in Supabase and Stripe keys
 
-### Phase 1 (Months 1-3) - MVP
-- ✅ Project setup
-- ⏳ Core marketplace features
-- ⏳ Authentication & profiles
-- ⏳ Listing creation & browsing
-- ⏳ Basic checkout flow
-- ⏳ Messaging system
+# Run dev server
+npm run dev
+```
 
-### Phase 2 (Months 4-6) - Growth
-- ⏳ KYC verification
-- ⏳ Advanced search & filters
-- ⏳ Seller dashboard & analytics
-- ⏳ Review system
-- ⏳ Referral program
+Open http://localhost:3000
 
-### Phase 3 (Months 7-12) - Scale
-- ⏳ Mobile app (React Native)
-- ⏳ Auto-delivery API
-- ⏳ Multi-seller orders
-- ⏳ Advanced fraud detection
+## Environment Variables
 
-## Contributing
-
-This is a private project. For questions or issues, contact the development team.
+See `.env.local.example` for the full list. You'll need:
+- Supabase project URL, anon key, and service role key
+- Stripe publishable key, secret key, and webhook secret
+- Resend API key (for email notifications)
+- Cloudflare Turnstile site key (for bot protection)
 
 ## License
 
-Proprietary - All rights reserved
+Proprietary — All rights reserved.
