@@ -1,0 +1,29 @@
+<svg width="200" height="140" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="200" height="140" fill="#0a0a0a"/>
+
+  <!-- Document -->
+  <rect x="25" y="15" width="150" height="110" rx="4" fill="#1a1a1a" stroke="#6366f1" stroke-width="1.5"/>
+
+  <!-- Header section -->
+  <rect x="35" y="25" width="130" height="18" rx="2" fill="#2a2a2a"/>
+  <text x="100" y="37" font-family="Arial, sans-serif" font-size="10" fill="#6366f1" text-anchor="middle" font-weight="bold">UTILITY BILL</text>
+
+  <!-- Address lines -->
+  <rect x="35" y="53" width="110" height="3" rx="1.5" fill="#4a4a4a"/>
+  <rect x="35" y="61" width="120" height="3" rx="1.5" fill="#4a4a4a"/>
+  <rect x="35" y="69" width="95" height="3" rx="1.5" fill="#4a4a4a"/>
+  <rect x="35" y="77" width="105" height="3" rx="1.5" fill="#4a4a4a"/>
+
+  <!-- Bill details -->
+  <rect x="35" y="90" width="55" height="3" rx="1.5" fill="#6366f1" opacity="0.5"/>
+  <rect x="35" y="98" width="65" height="3" rx="1.5" fill="#6366f1" opacity="0.5"/>
+  <rect x="35" y="106" width="50" height="3" rx="1.5" fill="#6366f1" opacity="0.5"/>
+
+  <!-- Amount box -->
+  <rect x="125" y="90" width="38" height="22" rx="2" fill="#2a2a2a" stroke="#6366f1" stroke-width="1"/>
+  <text x="144" y="104" font-family="Arial, sans-serif" font-size="9" fill="#6366f1" text-anchor="middle">$XXX</text>
+
+  <!-- Date -->
+  <text x="100" y="120" font-family="Arial, sans-serif" font-size="8" fill="#6366f1" text-anchor="middle">MM/DD/YYYY</text>
+</svg>

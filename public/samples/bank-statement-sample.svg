@@ -1,0 +1,32 @@
+<svg width="200" height="140" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="200" height="140" fill="#0a0a0a"/>
+
+  <!-- Document -->
+  <rect x="25" y="15" width="150" height="110" rx="4" fill="#1a1a1a" stroke="#6366f1" stroke-width="1.5"/>
+
+  <!-- Bank logo area -->
+  <rect x="35" y="25" width="45" height="14" rx="2" fill="#2a2a2a" stroke="#6366f1" stroke-width="1"/>
+  <text x="57" y="35" font-family="Arial, sans-serif" font-size="8" fill="#6366f1" text-anchor="middle" font-weight="bold">BANK</text>
+
+  <!-- Statement header -->
+  <text x="165" y="30" font-family="Arial, sans-serif" font-size="9" fill="#6366f1" text-anchor="end" font-weight="bold">STATEMENT</text>
+  <text x="165" y="39" font-family="Arial, sans-serif" font-size="7" fill="#6366f1" text-anchor="end">Jan 2024</text>
+
+  <!-- Account info -->
+  <text x="35" y="55" font-family="Arial, sans-serif" font-size="7" fill="#6366f1">Account Holder:</text>
+  <rect x="35" y="58" width="90" height="2" rx="1" fill="#4a4a4a"/>
+
+  <text x="35" y="69" font-family="Arial, sans-serif" font-size="7" fill="#6366f1">Account No:</text>
+  <rect x="35" y="72" width="65" height="2" rx="1" fill="#6366f1" opacity="0.5"/>
+
+  <!-- Transactions -->
+  <rect x="35" y="84" width="130" height="9" rx="1" fill="#2a2a2a"/>
+  <rect x="35" y="95" width="130" height="6" rx="1" fill="#1a1a1a"/>
+  <rect x="35" y="103" width="130" height="6" rx="1" fill="#1a1a1a"/>
+  <rect x="35" y="111" width="130" height="6" rx="1" fill="#1a1a1a"/>
+
+  <!-- Balance -->
+  <text x="35" y="125" font-family="Arial, sans-serif" font-size="8" fill="#6366f1" font-weight="bold">Balance:</text>
+  <text x="165" y="125" font-family="Arial, sans-serif" font-size="8" fill="#6366f1" text-anchor="end" font-weight="bold">$XXX.XX</text>
+</svg>

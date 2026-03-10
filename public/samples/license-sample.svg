@@ -1,0 +1,30 @@
+<svg width="200" height="140" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="200" height="140" fill="#0a0a0a"/>
+
+  <!-- Document -->
+  <rect x="25" y="15" width="150" height="110" rx="4" fill="#1a1a1a" stroke="#6366f1" stroke-width="1.5"/>
+
+  <!-- Header -->
+  <rect x="35" y="25" width="130" height="22" rx="2" fill="#2a2a2a"/>
+  <text x="100" y="35" font-family="Arial, sans-serif" font-size="10" fill="#6366f1" text-anchor="middle" font-weight="bold">BUSINESS LICENSE</text>
+  <text x="100" y="43" font-family="Arial, sans-serif" font-size="7" fill="#6366f1" text-anchor="middle">License No: XXXXXXXX</text>
+
+  <!-- License details -->
+  <text x="35" y="62" font-family="Arial, sans-serif" font-size="7" fill="#6366f1">Business Name:</text>
+  <rect x="35" y="65" width="120" height="2" rx="1" fill="#4a4a4a"/>
+
+  <text x="35" y="77" font-family="Arial, sans-serif" font-size="7" fill="#6366f1">Address:</text>
+  <rect x="35" y="80" width="110" height="2" rx="1" fill="#4a4a4a"/>
+  <rect x="35" y="85" width="105" height="2" rx="1" fill="#4a4a4a"/>
+
+  <text x="35" y="97" font-family="Arial, sans-serif" font-size="7" fill="#6366f1">Issue Date:</text>
+  <rect x="73" y="94" width="40" height="2" rx="1" fill="#6366f1" opacity="0.5"/>
+
+  <text x="35" y="109" font-family="Arial, sans-serif" font-size="7" fill="#6366f1">Expiry Date:</text>
+  <rect x="73" y="106" width="40" height="2" rx="1" fill="#6366f1" opacity="0.5"/>
+
+  <!-- Stamp -->
+  <circle cx="150" cy="95" r="17" fill="none" stroke="#6366f1" stroke-width="1.5" opacity="0.3" stroke-dasharray="2,2"/>
+  <text x="150" y="98" font-family="Arial, sans-serif" font-size="6" fill="#6366f1" text-anchor="middle" opacity="0.3">VALID</text>
+</svg>

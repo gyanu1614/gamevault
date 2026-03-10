@@ -1,0 +1,21 @@
+<svg width="200" height="140" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="200" height="140" fill="#0a0a0a"/>
+
+  <!-- ID Card -->
+  <rect x="20" y="30" width="160" height="90" rx="6" fill="#1a1a1a" stroke="#6366f1" stroke-width="1.5"/>
+
+  <!-- Photo placeholder -->
+  <rect x="30" y="40" width="45" height="55" rx="3" fill="#2a2a2a" stroke="#4a4a4a" stroke-width="1"/>
+  <circle cx="52.5" cy="60" r="8" fill="#4a4a4a"/>
+  <path d="M 45 72 Q 52.5 68 60 72" stroke="#4a4a4a" stroke-width="1.5" fill="none"/>
+
+  <!-- Text lines -->
+  <rect x="85" y="45" width="80" height="4" rx="2" fill="#4a4a4a"/>
+  <rect x="85" y="55" width="65" height="4" rx="2" fill="#4a4a4a"/>
+  <rect x="85" y="65" width="75" height="4" rx="2" fill="#4a4a4a"/>
+  <rect x="85" y="75" width="55" height="4" rx="2" fill="#4a4a4a"/>
+  <rect x="85" y="85" width="70" height="4" rx="2" fill="#4a4a4a"/>
+  <rect x="85" y="95" width="60" height="4" rx="2" fill="#4a4a4a"/>
+  <rect x="85" y="105" width="50" height="4" rx="2" fill="#4a4a4a"/>
+</svg>

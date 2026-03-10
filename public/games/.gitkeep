@@ -1,0 +1,18 @@
+# Game Logos
+
+Place your game logo images here with the following naming convention:
+- game-slug.png (e.g., roblox.png, fortnite.png, valorant.png)
+
+Recommended specifications:
+- Format: PNG with transparency
+- Size: 256x256px or 512x512px
+- Aspect ratio: 1:1 (square)
+
+Example structure:
+/public/games/
+  ├── roblox.png
+  ├── fortnite.png
+  ├── valorant.png
+  ├── gta-v.png
+  ├── minecraft.png
+  └── lol.png
