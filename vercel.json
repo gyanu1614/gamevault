@@ -1,20 +1,8 @@
 {
   "crons": [
-    {
-      "path": "/api/cron/auto-release-escrow",
-      "schedule": "0 * * * *"
-    },
-    {
-      "path": "/api/cron/mark-inactive-sellers",
-      "schedule": "*/5 * * * *"
-    },
-    {
-      "path": "/api/cron/send-trustpilot-invitations",
-      "schedule": "0 9 * * *"
-    },
-    {
-      "path": "/api/cron/upgrade-seller-tiers",
-      "schedule": "0 3 * * *"
-    }
+    { "path": "/api/cron/auto-release-escrow", "schedule": "0 */12 * * *" },
+    { "path": "/api/cron/mark-inactive-sellers", "schedule": "0 2 * * *" },
+    { "path": "/api/cron/send-trustpilot-invitations", "schedule": "0 9 * * *" },
+    { "path": "/api/cron/upgrade-seller-tiers", "schedule": "0 3 * * *" }
   ]
 }
