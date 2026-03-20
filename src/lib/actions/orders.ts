@@ -767,7 +767,26 @@ export async function confirmOrderReceipt(orderId: string): Promise<{
       }
     }
 
-    // TODO: Trigger payout to seller
+    // Trigger payout to seller via Stripe Connect
+    try {
+      const { transferEscrowToSeller } = await import('@/lib/stripe/connect')
+      const payoutResult = await transferEscrowToSeller(orderId)
+
+      if (payoutResult.success) {
+        if (payoutResult.transferId) {
+          console.log(`[Orders] Payout transfer initiated: ${payoutResult.transferId}`)
+        } else {
+          console.log(`[Orders] Payout held or seller not connected yet`)
+        }
+      } else {
+        console.error(`[Orders] Payout transfer failed: ${payoutResult.error}`)
+        // Don't fail the order completion - payout can be retried
+      }
+    } catch (payoutError) {
+      console.error('[Orders] Error initiating payout:', payoutError)
+      // Non-fatal - order is still completed, payout can be retried manually
+    }
+
     // TODO: Send completion emails
     // TODO: Invite buyer to leave Trustpilot review (after 7 days)
 

@@ -5,6 +5,11 @@
  * Handles webhook events from Stripe:
  * - payment_intent.succeeded: Create order after successful payment
  * - payment_intent.payment_failed: Log payment failure
+ * - account.updated: Sync Connect account status changes
+ * - transfer.created: Log seller payout transfers
+ * - transfer.failed: Handle payout failures
+ * - payout.paid: Mark seller payout as completed
+ * - payout.failed: Handle payout failures and notify seller
  *
  * Setup Instructions:
  * 1. Install Stripe CLI: https://stripe.com/docs/stripe-cli
@@ -73,6 +78,27 @@ export async function POST(req: NextRequest) {
 
       case 'payment_intent.payment_failed':
         await handlePaymentFailure(event.data.object as Stripe.PaymentIntent)
+        break
+
+      // Stripe Connect events
+      case 'account.updated':
+        await handleConnectAccountUpdated(event.data.object as Stripe.Account)
+        break
+
+      case 'transfer.created':
+        await handleTransferCreated(event.data.object as Stripe.Transfer)
+        break
+
+      case 'transfer.failed':
+        await handleTransferFailed(event.data.object as Stripe.Transfer)
+        break
+
+      case 'payout.paid':
+        await handlePayoutPaid(event.data.object as Stripe.Payout)
+        break
+
+      case 'payout.failed':
+        await handlePayoutFailed(event.data.object as Stripe.Payout)
         break
 
       default:
@@ -379,4 +405,260 @@ async function handlePaymentFailure(paymentIntent: Stripe.PaymentIntent) {
 
   // TODO: Notify buyer of payment failure
   // TODO: Log to monitoring system (Sentry, etc.)
+}
+
+// ─── Stripe Connect Event Handlers ───────────────────────────────
+
+/**
+ * Handle Connect account updates
+ * Syncs account status when seller completes/updates onboarding
+ */
+async function handleConnectAccountUpdated(account: Stripe.Account) {
+  console.log(`[Webhook] Connect account updated: ${account.id}`)
+
+  const supabase = createServiceRoleClient()
+
+  // Find seller by Connect account ID
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('id')
+    .eq('stripe_connect_account_id', account.id)
+    .single()
+
+  if (!profile) {
+    console.error('[Webhook] No profile found for Connect account:', account.id)
+    return
+  }
+
+  // Determine status
+  let status: string = 'pending'
+  if (account.charges_enabled && account.payouts_enabled) {
+    status = 'active'
+  } else if (account.requirements?.currently_due?.length) {
+    status = 'restricted'
+  } else if ((account as any).disabled_reason) {
+    status = 'disabled'
+  }
+
+  // Update profile
+  await supabase
+    .from('profiles')
+    .update({
+      stripe_connect_status: status,
+      stripe_connect_charges_enabled: account.charges_enabled,
+      stripe_connect_payouts_enabled: account.payouts_enabled,
+      stripe_connect_connected_at: status === 'active' ? new Date().toISOString() : undefined,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', profile.id)
+
+  console.log(`[Webhook] Profile updated for seller ${profile.id}: status=${status}`)
+
+  // If account just became active, notify seller
+  if (status === 'active') {
+    try {
+      await supabase.from('notifications').insert({
+        user_id: profile.id,
+        type: 'payout_enabled',
+        title: 'Payout Account Active!',
+        message: 'Your bank account has been verified. You can now receive automatic payouts.',
+        link: '/account/wallet',
+        is_read: false,
+      })
+      console.log(`[Webhook] Activation notification sent to seller ${profile.id}`)
+    } catch (error) {
+      console.error('[Webhook] Failed to create notification:', error)
+    }
+  }
+}
+
+/**
+ * Handle transfer creation
+ * Logs when a payout transfer is initiated to a seller
+ */
+async function handleTransferCreated(transfer: Stripe.Transfer) {
+  console.log(`[Webhook] Transfer created: ${transfer.id} → ${transfer.destination}`)
+
+  const supabase = createServiceRoleClient()
+
+  // Extract order ID from metadata
+  const orderId = transfer.metadata?.order_id
+  if (!orderId) {
+    console.log('[Webhook] Transfer has no order_id in metadata, skipping')
+    return
+  }
+
+  // Update payout record
+  const { error } = await supabase
+    .from('payouts')
+    .update({
+      status: 'processing',
+      updated_at: new Date().toISOString(),
+    })
+    .eq('stripe_transfer_id', transfer.id)
+
+  if (error) {
+    console.error('[Webhook] Failed to update payout:', error)
+  } else {
+    console.log(`[Webhook] Payout marked as processing for transfer ${transfer.id}`)
+  }
+}
+
+/**
+ * Handle transfer failure
+ * Marks payout as failed and notifies seller/admin
+ */
+async function handleTransferFailed(transfer: Stripe.Transfer) {
+  console.error(`[Webhook] Transfer failed: ${transfer.id}`, {
+    destination: transfer.destination,
+    amount: transfer.amount,
+    failure_code: (transfer as any).failure_code,
+    failure_message: (transfer as any).failure_message,
+  })
+
+  const supabase = createServiceRoleClient()
+
+  // Update payout record
+  const { data: payout, error: updateError } = await supabase
+    .from('payouts')
+    .update({
+      status: 'failed',
+      updated_at: new Date().toISOString(),
+    })
+    .eq('stripe_transfer_id', transfer.id)
+    .select('seller_id, amount, order_id')
+    .single()
+
+  if (updateError || !payout) {
+    console.error('[Webhook] Failed to update payout record:', updateError)
+    return
+  }
+
+  console.log(`[Webhook] Payout marked as failed for transfer ${transfer.id}`)
+
+  // Notify seller
+  try {
+    await supabase.from('notifications').insert({
+      user_id: payout.seller_id,
+      type: 'payout_failed',
+      title: 'Payout Failed',
+      message: `A payout of $${(payout.amount || 0).toFixed(2)} could not be transferred. Please check your bank account details in Stripe.`,
+      link: '/account/wallet/connect',
+      is_read: false,
+    })
+    console.log(`[Webhook] Failure notification sent to seller ${payout.seller_id}`)
+  } catch (error) {
+    console.error('[Webhook] Failed to create notification:', error)
+  }
+
+  // TODO: Alert admin about failed transfer for investigation
+}
+
+/**
+ * Handle payout completion
+ * Updates payout status when funds arrive in seller's bank
+ */
+async function handlePayoutPaid(payout: Stripe.Payout) {
+  console.log(`[Webhook] Payout paid: ${payout.id} to account ${payout.destination}`)
+
+  const supabase = createServiceRoleClient()
+
+  // Find all payouts for this Stripe payout ID
+  const { data: payouts, error: findError } = await supabase
+    .from('payouts')
+    .select('id, seller_id, amount')
+    .eq('stripe_payout_id', payout.id)
+
+  if (findError || !payouts?.length) {
+    console.log('[Webhook] No matching payouts found for Stripe payout:', payout.id)
+    return
+  }
+
+  // Update all matching payouts
+  const { error: updateError } = await supabase
+    .from('payouts')
+    .update({
+      status: 'paid',
+      paid_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq('stripe_payout_id', payout.id)
+
+  if (updateError) {
+    console.error('[Webhook] Failed to update payouts:', updateError)
+    return
+  }
+
+  console.log(`[Webhook] ${payouts.length} payout(s) marked as paid`)
+
+  // Notify seller (only once per payout batch)
+  const sellerId = payouts[0].seller_id
+  const totalAmount = payouts.reduce((sum, p) => sum + (p.amount || 0), 0)
+
+  try {
+    await supabase.from('notifications').insert({
+      user_id: sellerId,
+      type: 'payout_completed',
+      title: 'Payout Completed!',
+      message: `$${totalAmount.toFixed(2)} has been sent to your bank account. It should arrive within 2-7 business days.`,
+      link: '/account/wallet',
+      is_read: false,
+    })
+    console.log(`[Webhook] Completion notification sent to seller ${sellerId}`)
+  } catch (error) {
+    console.error('[Webhook] Failed to create notification:', error)
+  }
+}
+
+/**
+ * Handle payout failure
+ * Notifies seller when bank transfer fails
+ */
+async function handlePayoutFailed(payout: Stripe.Payout) {
+  console.error(`[Webhook] Payout failed: ${payout.id}`, {
+    destination: payout.destination,
+    amount: payout.amount,
+    failure_code: (payout as any).failure_code,
+    failure_message: (payout as any).failure_message,
+  })
+
+  const supabase = createServiceRoleClient()
+
+  // Find all payouts for this Stripe payout ID
+  const { data: payouts } = await supabase
+    .from('payouts')
+    .select('id, seller_id, amount')
+    .eq('stripe_payout_id', payout.id)
+
+  if (!payouts?.length) {
+    console.log('[Webhook] No matching payouts found for failed payout:', payout.id)
+    return
+  }
+
+  // Update payouts as failed
+  await supabase
+    .from('payouts')
+    .update({
+      status: 'failed',
+      updated_at: new Date().toISOString(),
+    })
+    .eq('stripe_payout_id', payout.id)
+
+  const sellerId = payouts[0].seller_id
+  const totalAmount = payouts.reduce((sum, p) => sum + (p.amount || 0), 0)
+
+  // Notify seller
+  try {
+    await supabase.from('notifications').insert({
+      user_id: sellerId,
+      type: 'payout_failed',
+      title: 'Payout Failed',
+      message: `A payout of $${totalAmount.toFixed(2)} could not be sent to your bank. Please update your bank details in Stripe.`,
+      link: '/account/wallet/connect',
+      is_read: false,
+    })
+    console.log(`[Webhook] Failure notification sent to seller ${sellerId}`)
+  } catch (error) {
+    console.error('[Webhook] Failed to create notification:', error)
+  }
 }
