@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
 import { Search, Filter, SlidersHorizontal } from 'lucide-react'
@@ -10,7 +10,9 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 
-export default function BrowsePage() {
+export const dynamic = 'force-dynamic'
+
+function BrowseContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
 
@@ -248,5 +250,35 @@ export default function BrowsePage() {
         </div>
       )}
     </div>
+  )
+}
+
+function BrowseLoadingFallback() {
+  return (
+    <div className="mx-auto w-full max-w-[95vw] px-4 py-8 sm:max-w-[90vw] md:max-w-5xl lg:max-w-6xl xl:max-w-7xl">
+      <div className="mb-8">
+        <div className="h-9 w-64 bg-muted/50 rounded animate-pulse mb-2"></div>
+        <div className="h-5 w-96 bg-muted/30 rounded animate-pulse"></div>
+      </div>
+      <div className="mb-6 space-y-4">
+        <div className="flex gap-2">
+          <div className="h-10 flex-1 bg-muted/50 rounded animate-pulse"></div>
+          <div className="h-10 w-24 bg-muted/50 rounded animate-pulse"></div>
+        </div>
+      </div>
+      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        {Array.from({ length: 8 }).map((_, i) => (
+          <ListingCardSkeleton key={i} />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+export default function BrowsePage() {
+  return (
+    <Suspense fallback={<BrowseLoadingFallback />}>
+      <BrowseContent />
+    </Suspense>
   )
 }

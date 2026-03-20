@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, Suspense } from 'react'
 import * as React from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -25,7 +25,7 @@ const loginSchema = z.object({
 
 type LoginFormData = z.infer<typeof loginSchema>
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [error,           setError]           = useState<string | null>(null)
@@ -33,7 +33,6 @@ export default function LoginPage() {
   const [turnstileToken,  setTurnstileToken]  = useState<string>('')
   const formRef = React.useRef<HTMLDivElement>(null)
 
-  // Check if Turnstile is configured
   const turnstileEnabled = !!process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY
 
   const {
@@ -230,5 +229,34 @@ export default function LoginPage() {
         </div>
       </div>
     </>
+  )
+}
+
+function LoginLoadingFallback() {
+  return (
+    <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center px-4 py-12">
+      <div className="w-full max-w-md space-y-8">
+        <div className="text-center">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-lg bg-primary animate-pulse">
+            <span className="text-2xl font-bold text-primary-foreground">G</span>
+          </div>
+          <div className="mt-6 h-9 w-48 mx-auto bg-muted/50 rounded animate-pulse"></div>
+          <div className="mt-2 h-5 w-64 mx-auto bg-muted/30 rounded animate-pulse"></div>
+        </div>
+        <div className="space-y-6">
+          <div className="h-10 bg-muted/50 rounded animate-pulse"></div>
+          <div className="h-10 bg-muted/50 rounded animate-pulse"></div>
+          <div className="h-12 bg-muted/50 rounded animate-pulse"></div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<LoginLoadingFallback />}>
+      <LoginForm />
+    </Suspense>
   )
 }

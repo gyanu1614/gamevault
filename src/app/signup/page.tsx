@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import * as React from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -47,7 +47,7 @@ const loadingStates = [
   { text: "✨ We are ready!" },
 ]
 
-export default function SignupPage() {
+function SignupForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [referralCode,   setReferralCode]   = useState('')
@@ -59,7 +59,6 @@ export default function SignupPage() {
 
   const turnstileEnabled = !!process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY
 
-  // Pre-fill referral code from ?ref= URL param
   useEffect(() => {
     const ref = searchParams?.get('ref')
     if (ref) setReferralCode(ref.toUpperCase())
@@ -419,5 +418,39 @@ export default function SignupPage() {
         </div>
       </div>
     </>
+  )
+}
+
+function SignupLoadingFallback() {
+  return (
+    <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center px-4 py-12">
+      <div className="w-full max-w-2xl space-y-8">
+        <div className="text-center">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-lg bg-primary animate-pulse">
+            <span className="text-2xl font-bold text-primary-foreground">G</span>
+          </div>
+          <div className="mt-6 h-9 w-64 mx-auto bg-muted/50 rounded animate-pulse"></div>
+          <div className="mt-2 h-5 w-96 mx-auto bg-muted/30 rounded animate-pulse"></div>
+        </div>
+        <div className="space-y-6">
+          <div className="h-10 bg-muted/50 rounded animate-pulse"></div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="h-10 bg-muted/50 rounded animate-pulse"></div>
+            <div className="h-10 bg-muted/50 rounded animate-pulse"></div>
+            <div className="md:col-span-2 h-10 bg-muted/50 rounded animate-pulse"></div>
+            <div className="h-10 bg-muted/50 rounded animate-pulse"></div>
+            <div className="h-10 bg-muted/50 rounded animate-pulse"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export default function SignupPage() {
+  return (
+    <Suspense fallback={<SignupLoadingFallback />}>
+      <SignupForm />
+    </Suspense>
   )
 }
