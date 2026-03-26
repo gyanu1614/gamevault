@@ -191,7 +191,7 @@ export function useAuth() {
                 ...session.user,
                 profile: profile || cachedProfile || null,
                 isApprovedSeller,
-                sellerApplicationStatus
+                sellerApplicationStatus: sellerApplicationStatus as "under_review" | "pending" | "approved" | "rejected" | null | undefined
               })
             }
           } catch (profileErr) {
@@ -319,7 +319,7 @@ export function useAuth() {
               ...session.user,
               profile: profile || cachedProfile || null,
               isApprovedSeller,
-              sellerApplicationStatus
+              sellerApplicationStatus: sellerApplicationStatus as "under_review" | "pending" | "approved" | "rejected" | null | undefined
             })
           }
         } catch (error) {

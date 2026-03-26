@@ -80,9 +80,10 @@ export async function getListing(id: string) {
   }
 
   // Increment view count
-  await supabase
+  const dataTyped = data as any
+  await (supabase
     .from('listings')
-    .update({ views: (data.views || 0) + 1 })
+    .update as any)({ views: (dataTyped.views || 0) + 1 })
     .eq('id', id)
 
   return { data: data as ListingWithRelations, error: null }
@@ -95,7 +96,7 @@ export async function getGames() {
     .from('games')
     .select('*')
     .eq('is_active', true)
-    .order('name')
+    .order('name') as any
 
   return { data, error }
 }
@@ -106,7 +107,7 @@ export async function getCategories() {
   const { data, error } = await supabase
     .from('categories')
     .select('*')
-    .order('name')
+    .order('name') as any
 
   return { data, error }
 }

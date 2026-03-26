@@ -37,9 +37,9 @@ export async function getPendingListings(): Promise<{
       .select('role, is_active')
       .eq('user_id', user.id)
       .eq('is_active', true)
-      .single()
+      .single() as any
 
-    if (!adminRole || (adminRole.role !== 'admin' && adminRole.role !== 'super_admin' && adminRole.role !== 'moderator')) {
+    if (!adminRole || ((adminRole as any).role !== 'admin' && (adminRole as any).role !== 'super_admin' && (adminRole as any).role !== 'moderator')) {
       return {
         success: false,
         error: 'Forbidden - Admin access required',
@@ -63,7 +63,7 @@ export async function getPendingListings(): Promise<{
     console.log('📊 Query result:', {
       count: listings?.length || 0,
       error: error?.message,
-      listings: listings?.map(l => ({ id: l.id, title: l.title, status: l.status }))
+      listings: listings?.map((l: any) => ({ id: l.id, title: l.title, status: l.status }))
     })
 
     if (error) {
@@ -117,9 +117,9 @@ export async function approveListing(
       .select('role, is_active')
       .eq('user_id', user.id)
       .eq('is_active', true)
-      .single()
+      .single() as any
 
-    if (!adminRole || (adminRole.role !== 'admin' && adminRole.role !== 'super_admin' && adminRole.role !== 'moderator')) {
+    if (!adminRole || ((adminRole as any).role !== 'admin' && (adminRole as any).role !== 'super_admin' && (adminRole as any).role !== 'moderator')) {
       return {
         success: false,
         error: 'Forbidden - Admin access required',
@@ -129,7 +129,7 @@ export async function approveListing(
     // Use the database function to approve listing (bypasses the moderation trigger)
     console.log('🎯 Approving listing:', listingId, 'by admin:', user.id)
 
-    const { error: approveError } = await supabase.rpc('approve_listing', {
+    const { error: approveError } = await (supabase.rpc as any)('approve_listing', {
       listing_id: listingId,
       admin_id: user.id,
     })
@@ -146,9 +146,9 @@ export async function approveListing(
 
     // Update moderation notes if provided
     if (notes) {
-      await supabase
+      await (supabase
         .from('listings')
-        .update({ moderation_notes: notes })
+        .update as any)({ moderation_notes: notes })
         .eq('id', listingId)
     }
 
@@ -200,9 +200,9 @@ export async function rejectListing(
       .select('role, is_active')
       .eq('user_id', user.id)
       .eq('is_active', true)
-      .single()
+      .single() as any
 
-    if (!adminRole || (adminRole.role !== 'admin' && adminRole.role !== 'super_admin' && adminRole.role !== 'moderator')) {
+    if (!adminRole || ((adminRole as any).role !== 'admin' && (adminRole as any).role !== 'super_admin' && (adminRole as any).role !== 'moderator')) {
       return {
         success: false,
         error: 'Forbidden - Admin access required',
@@ -210,7 +210,7 @@ export async function rejectListing(
     }
 
     // Use the database function to reject listing
-    const { error: rejectError } = await supabase.rpc('reject_listing', {
+    const { error: rejectError } = await (supabase.rpc as any)('reject_listing', {
       listing_id: listingId,
       admin_id: user.id,
       reason: reason,
@@ -270,9 +270,9 @@ export async function requestListingChanges(
       .select('role, is_active')
       .eq('user_id', user.id)
       .eq('is_active', true)
-      .single()
+      .single() as any
 
-    if (!adminRole || (adminRole.role !== 'admin' && adminRole.role !== 'super_admin' && adminRole.role !== 'moderator')) {
+    if (!adminRole || ((adminRole as any).role !== 'admin' && (adminRole as any).role !== 'super_admin' && (adminRole as any).role !== 'moderator')) {
       return {
         success: false,
         error: 'Forbidden - Admin access required',
@@ -280,9 +280,9 @@ export async function requestListingChanges(
     }
 
     // Update listing with change request
-    const { error: updateError } = await supabase
+    const { error: updateError } = await (supabase
       .from('listings')
-      .update({
+      .update as any)({
         moderation_notes: changes,
       })
       .eq('id', listingId)

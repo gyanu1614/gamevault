@@ -100,7 +100,7 @@ export async function getListingPriceChanges(
     }
   }
 
-  const priceChanges: PriceChange[] = result.data.map(entry => {
+  const priceChanges: PriceChange[] = result.data.map((entry: any) => {
     const changeAmount = entry.new_price - entry.old_price
     const changePercentage = (changeAmount / entry.old_price) * 100
 
@@ -136,7 +136,7 @@ export async function getListingPriceStats(listingId: string): Promise<{
       .from('listings')
       .select('price')
       .eq('id', listingId)
-      .single()
+      .single() as any
 
     if (listingError) {
       return {
@@ -175,17 +175,17 @@ export async function getListingPriceStats(listingId: string): Promise<{
     }
 
     const allPrices = [
-      ...history.map(h => h.old_price),
-      ...history.map(h => h.new_price),
+      ...history.map((h: any) => h.old_price),
+      ...history.map((h: any) => h.new_price),
       listing.price
     ]
 
     const lowestPrice = Math.min(...allPrices)
     const highestPrice = Math.max(...allPrices)
-    const averagePrice = allPrices.reduce((sum, price) => sum + price, 0) / allPrices.length
+    const averagePrice = allPrices.reduce((sum: number, price: any) => sum + price, 0) / allPrices.length
 
-    const priceIncreases = history.filter(h => h.new_price > h.old_price).length
-    const priceDecreases = history.filter(h => h.new_price < h.old_price).length
+    const priceIncreases = history.filter((h: any) => h.new_price > h.old_price).length
+    const priceDecreases = history.filter((h: any) => h.new_price < h.old_price).length
 
     return {
       success: true,
@@ -236,7 +236,7 @@ export async function getSellerPriceHistory(
       }
     }
 
-    const listingIds = listings.map(l => l.id)
+    const listingIds = listings.map((l: any) => l.id)
 
     if (listingIds.length === 0) {
       return {
@@ -261,11 +261,11 @@ export async function getSellerPriceHistory(
     }
 
     // Add listing titles
-    const historyWithTitles = history.map(entry => {
-      const listing = listings.find(l => l.id === entry.listing_id)
+    const historyWithTitles = history.map((entry: any) => {
+      const listing = listings.find((l: any) => l.id === entry.listing_id)
       return {
         ...entry,
-        listing_title: listing?.title
+        listing_title: (listing as any)?.title
       }
     })
 
@@ -301,7 +301,7 @@ export async function getListingPriceTrend(
       .from('listings')
       .select('price, created_at')
       .eq('id', listingId)
-      .single()
+      .single() as any
 
     if (listingError) {
       return {
@@ -351,10 +351,10 @@ export async function getListingPriceTrend(
 
       // Get the initial price (old_price of first entry)
       const firstEntry = history[0]
-      const firstDate = new Date(firstEntry.changed_at)
+      const firstDate = new Date((firstEntry as any).changed_at)
 
       // Set initial price point
-      let currentPrice = firstEntry.old_price
+      let currentPrice = (firstEntry as any).old_price
 
       // Add data point for the start of the period (or listing creation, whichever is later)
       const createdDate = new Date(listing.created_at)
@@ -367,17 +367,17 @@ export async function getListingPriceTrend(
       }
 
       // Process all price changes
-      for (const entry of history) {
-        const changeDate = new Date(entry.changed_at)
+      for (const entry of (history as any)) {
+        const changeDate = new Date((entry as any).changed_at)
         const changeDateStr = changeDate.toISOString().split('T')[0]
 
         // Only include changes within our date range
         if (changeDate >= displayStartDate && changeDate <= endDate) {
-          priceMap.set(changeDateStr, entry.new_price)
+          priceMap.set(changeDateStr, (entry as any).new_price)
         }
 
         // Update current price
-        currentPrice = entry.new_price
+        currentPrice = (entry as any).new_price
       }
 
       // Add today's price

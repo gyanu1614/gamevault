@@ -29,7 +29,7 @@ export async function requireAdmin(): Promise<AdminUser> {
     .select('*')
     .eq('user_id', user.id)
     .eq('is_active', true)
-    .single()
+    .single() as any
 
   if (error || !adminRole) {
     redirect('/')
@@ -39,19 +39,19 @@ export async function requireAdmin(): Promise<AdminUser> {
   const { data: permissions } = await supabase
     .from('role_permissions')
     .select('permission')
-    .eq('role', adminRole.role)
+    .eq('role', adminRole.role) as any
 
   // Fetch profile data for additional user info
   const { data: profile } = await supabase
     .from('profiles')
     .select('username, full_name, avatar_url')
     .eq('id', user.id)
-    .single()
+    .single() as any
 
   // Update last active timestamp
-  await supabase
+  await (supabase
     .from('admin_roles')
-    .update({ last_active_at: new Date().toISOString() })
+    .update as any)({ last_active_at: new Date().toISOString() })
     .eq('user_id', user.id)
 
   return {
@@ -59,7 +59,7 @@ export async function requireAdmin(): Promise<AdminUser> {
     email: user.email || '',
     role: adminRole.role as AdminRole,
     isActive: adminRole.is_active,
-    permissions: permissions?.map(p => p.permission) || [],
+    permissions: permissions?.map((p: any) => p.permission) || [],
     lastActiveAt: adminRole.last_active_at,
     // Add profile fields for UI components
     username: profile?.username || null,
@@ -109,28 +109,28 @@ export async function getAdminUser(): Promise<AdminUser | null> {
     .select('*')
     .eq('user_id', user.id)
     .eq('is_active', true)
-    .single()
+    .single() as any
 
   if (!adminRole) return null
 
   const { data: permissions } = await supabase
     .from('role_permissions')
     .select('permission')
-    .eq('role', adminRole.role)
+    .eq('role', adminRole.role) as any
 
   // Fetch profile data for additional user info
   const { data: profile } = await supabase
     .from('profiles')
     .select('username, full_name, avatar_url')
     .eq('id', user.id)
-    .single()
+    .single() as any
 
   return {
     userId: user.id,
     email: user.email || '',
     role: adminRole.role as AdminRole,
     isActive: adminRole.is_active,
-    permissions: permissions?.map(p => p.permission) || [],
+    permissions: permissions?.map((p: any) => p.permission) || [],
     lastActiveAt: adminRole.last_active_at,
     // Add profile fields for UI components
     username: profile?.username || null,

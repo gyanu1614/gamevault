@@ -36,7 +36,7 @@ export default async function AccountPage() {
     .from('seller_applications')
     .select('status')
     .eq('user_id', user.id)
-    .single()
+    .single() as any
 
   const isApprovedSeller = sellerApp?.status === 'approved'
 
@@ -114,7 +114,7 @@ export default async function AccountPage() {
             <h3 className="text-lg font-semibold text-white mb-1">Messages</h3>
             <p className="text-sm text-gray-400 mb-3">
               {(unreadCount || 0) > 0
-                ? `${unreadCount} unread message${unreadCount > 1 ? 's' : ''}`
+                ? `${unreadCount} unread message${(unreadCount || 0) > 1 ? 's' : ''}`
                 : 'No unread messages'}
             </p>
             <div className="text-xs text-blue-400 font-medium">

@@ -100,7 +100,7 @@ export default function SellerOrderDetailClient({
         try {
           const { data: review } = await getOrderReview(order.id)
           if (review) {
-            setBuyerReview(review)
+            setBuyerReview(review as any)
           }
           // Automatically show completed view after a short delay
           setTimeout(() => setShowCompletedView(true), 500)
@@ -154,7 +154,7 @@ export default function SellerOrderDetailClient({
         // Fetch full review with relations when new review is added
         const { data: review } = await getOrderReview(order.id)
         if (review) {
-          setBuyerReview(review)
+          setBuyerReview(review as any)
           // Auto-show the completed view with smooth transition
           if (!showCompletedView) {
             setIsTransitioning(true)
@@ -174,7 +174,7 @@ export default function SellerOrderDetailClient({
         // Refetch if review is updated
         const { data: review } = await getOrderReview(order.id)
         if (review) {
-          setBuyerReview(review)
+          setBuyerReview(review as any)
         }
       })
       .subscribe()
@@ -191,7 +191,7 @@ export default function SellerOrderDetailClient({
     avatar_url: getAvatarUrl(order.buyer.avatar_url, order.buyer.username),
   }
 
-  const orderForChat = {
+  const orderForChat: any = {
     id: order.id,
     order_number: order.order_number,
     listing: order.listing ? { title: order.listing.title, images: order.listing.images, game_id: order.listing.game_id } : null,
@@ -300,7 +300,7 @@ export default function SellerOrderDetailClient({
           }
 
           if (uploadedUrls.length > 0) {
-            await supabase.from('messages').insert({
+            await (supabase.from('messages').insert as any)({
               conversation_id: conversationId,
               sender_id: user.id,
               content: `I've marked your order as delivered! Here's the delivery proof. Please confirm receipt within 48 hours.`,
@@ -308,9 +308,9 @@ export default function SellerOrderDetailClient({
               is_read: false,
             })
 
-            await supabase
+            await (supabase
               .from('conversations')
-              .update({ last_message_at: new Date().toISOString() })
+              .update as any)({ last_message_at: new Date().toISOString() })
               .eq('id', conversationId)
           }
         } catch (uploadErr) {
@@ -324,16 +324,16 @@ export default function SellerOrderDetailClient({
           const supabase = createClient()
           const { data: { user } } = await supabase.auth.getUser()
           if (user) {
-            await supabase.from('messages').insert({
+            await (supabase.from('messages').insert as any)({
               conversation_id: conversationId,
               sender_id: user.id,
               content: `I've marked your order as delivered! The 48-hour auto-release timer has started. Please confirm receipt when you receive the item.`,
               attachments: [],
               is_read: false,
             })
-            await supabase
+            await (supabase
               .from('conversations')
-              .update({ last_message_at: new Date().toISOString() })
+              .update as any)({ last_message_at: new Date().toISOString() })
               .eq('id', conversationId)
           }
         } catch (msgErr) {
@@ -443,7 +443,7 @@ export default function SellerOrderDetailClient({
                   favored_party: disputeResolution.favored_party,
                   resolution_type: disputeResolution.resolution_type,
                   refund_amount: disputeResolution.refund_amount,
-                  resolved_at: disputeResolution.created_at,
+                  resolved_at: disputeResolution.resolved_at,
                   resolution_notes: disputeResolution.resolution_notes,
                 } : null}
               />

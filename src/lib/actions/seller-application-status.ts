@@ -59,7 +59,7 @@ export async function getApplicationStatus(): Promise<{
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
       .limit(1)
-      .single()
+      .single() as any
 
     if (appError && appError.code !== 'PGRST116') {
       throw appError
@@ -76,7 +76,7 @@ export async function getApplicationStatus(): Promise<{
     }
 
     // Check if can reapply using database function
-    const { data: reapplyCheck, error: reapplyError } = await supabase.rpc(
+    const { data: reapplyCheck, error: reapplyError } = await (supabase.rpc as any)(
       'can_seller_reapply',
       { user_id_param: user.id }
     )
@@ -154,14 +154,14 @@ export async function withdrawApplication(): Promise<{
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
       .limit(1)
-      .single()
+      .single() as any
 
     if (!application) {
       return { success: false, error: 'No application found' }
     }
 
     // Call database function to withdraw
-    const { data, error } = await supabase.rpc('withdraw_seller_application', {
+    const { data, error } = await (supabase.rpc as any)('withdraw_seller_application', {
       application_id_param: application.id,
       user_id_param: user.id,
     })
@@ -218,14 +218,14 @@ export async function rejectApplication(
       .from('profiles')
       .select('role')
       .eq('id', user.id)
-      .single()
+      .single() as any
 
-    if (!profile || !['admin', 'super_admin'].includes(profile.role)) {
+    if (!profile || !['admin', 'super_admin'].includes((profile as any).role)) {
       return { success: false, error: 'Unauthorized - admin access required' }
     }
 
     // Call database function to reject
-    const { data, error } = await supabase.rpc('reject_seller_application', {
+    const { data, error } = await (supabase.rpc as any)('reject_seller_application', {
       application_id_param: applicationId,
       admin_id_param: user.id,
       rejection_reason_param: reason,

@@ -134,7 +134,7 @@ function BrowseContent() {
                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   <option value="">All Games</option>
-                  {games.map((game) => (
+                  {games.map((game: any) => (
                     <option key={game.id} value={game.id}>
                       {game.emoji} {game.name}
                     </option>
@@ -152,7 +152,7 @@ function BrowseContent() {
                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   <option value="">All Categories</option>
-                  {categories.map((category) => (
+                  {categories.map((category: any) => (
                     <option key={category.id} value={category.id}>
                       {category.icon} {category.name}
                     </option>

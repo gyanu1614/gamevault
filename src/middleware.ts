@@ -47,7 +47,7 @@ export async function middleware(request: NextRequest) {
           .from('profiles')
           .select('seller_status')
           .eq('id', user.id)
-          .single()
+          .single() as any
 
         if (profile?.seller_status && profile.seller_status !== 'active') {
           // Redirect restricted/banned sellers to restrictions page

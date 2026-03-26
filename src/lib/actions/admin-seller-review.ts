@@ -62,7 +62,7 @@ export async function getApplicationStats(): Promise<ApplicationStats> {
     // Get application counts by status
     const { data: applications, error } = await supabase
       .from('seller_applications')
-      .select('status, created_at, reviewed_at')
+      .select('status, created_at, reviewed_at') as any
 
     if (error) throw error
 
@@ -78,7 +78,7 @@ export async function getApplicationStats(): Promise<ApplicationStats> {
     const today = new Date()
     today.setHours(0, 0, 0, 0)
 
-    applications?.forEach(app => {
+    applications?.forEach((app: any) => {
       if (app.status in stats) {
         stats[app.status as keyof ApplicationStats]++
       }
@@ -141,7 +141,7 @@ export async function getRecentApplications(limit: number = 5) {
       .from('seller_applications_with_users')
       .select('*')
       .order('created_at', { ascending: false })
-      .limit(limit)
+      .limit(limit) as any
 
     if (error) throw error
 
@@ -208,7 +208,7 @@ export async function getSellerApplications(filters: ApplicationFilters = {}) {
 
     query = query.range(from, to)
 
-    const { data, error, count } = await query
+    const { data, error, count } = await query as any
 
     if (error) {
       return { success: false, error: error.message }
@@ -274,7 +274,7 @@ export async function getApplicationById(applicationId: string) {
       .from('seller_applications')
       .select('*')
       .eq('id', applicationId)
-      .single()
+      .single() as any
 
     if (appError) throw appError
 
@@ -283,21 +283,21 @@ export async function getApplicationById(applicationId: string) {
       .from('seller_kyc_documents')
       .select('*')
       .eq('application_id', applicationId)
-      .order('created_at', { ascending: true })
+      .order('created_at', { ascending: true }) as any
 
     // Get logs
     const { data: logs, error: logsError } = await supabase
       .from('seller_verification_logs')
       .select('*')
       .eq('application_id', applicationId)
-      .order('created_at', { ascending: false })
+      .order('created_at', { ascending: false }) as any
 
     // Get user profile
     const { data: profile } = await supabase
       .from('profiles')
       .select('username, full_name, avatar_url, email')
       .eq('id', application.user_id)
-      .single()
+      .single() as any
 
     // Get game names for primary_games IDs
     let gameNames: string[] = []
@@ -341,9 +341,9 @@ export async function startReview(applicationId: string) {
     const supabase = await createClient()
 
     // Update status to under_review
-    const { error } = await supabase
+    const { error } = await (supabase
       .from('seller_applications')
-      .update({
+      .update as any)({
         status: 'under_review',
         reviewed_by: admin.userId,
       })
@@ -361,7 +361,7 @@ export async function startReview(applicationId: string) {
     })
 
     // Add to verification logs
-    await supabase.from('seller_verification_logs').insert({
+    await (supabase.from('seller_verification_logs').insert as any)({
       application_id: applicationId,
       action: 'review_started',
       performed_by: admin.userId,
@@ -403,16 +403,16 @@ export async function approveApplication(applicationId: string, notes?: string) 
         )
       `)
       .eq('id', applicationId)
-      .single()
+      .single() as any
 
     if (!application) {
       return { success: false, error: 'Application not found' }
     }
 
     // Update application status
-    const { error } = await supabase
+    const { error } = await (supabase
       .from('seller_applications')
-      .update({
+      .update as any)({
         status: 'approved',
         reviewed_by: admin.userId,
         reviewed_at: new Date().toISOString(),
@@ -430,7 +430,7 @@ export async function approveApplication(applicationId: string, notes?: string) 
       .from('profiles')
       .select('badges')
       .eq('id', application.user_id)
-      .single()
+      .single() as any
 
     const currentBadges = currentProfile?.badges || []
     const newBadges = currentBadges.includes('verified')
@@ -451,7 +451,7 @@ export async function approveApplication(applicationId: string, notes?: string) 
         .from('profiles')
         .select('id')
         .eq('shop_slug', shopSlug)
-        .single()
+        .single() as any
 
       if (!existingProfile) {
         slugExists = false
@@ -461,9 +461,9 @@ export async function approveApplication(applicationId: string, notes?: string) 
       }
     }
 
-    const { error: roleError } = await serviceClient
+    const { error: roleError } = await (serviceClient
       .from('profiles')
-      .update({
+      .update as any)({
         role: 'seller',
         badges: newBadges,
         shop_name: shopName,
@@ -499,7 +499,7 @@ export async function approveApplication(applicationId: string, notes?: string) 
     })
 
     // Add to verification logs
-    await supabase.from('seller_verification_logs').insert({
+    await (supabase.from('seller_verification_logs').insert as any)({
       application_id: applicationId,
       action: 'approved',
       performed_by: admin.userId,
@@ -546,11 +546,11 @@ export async function rejectApplication(applicationId: string, reason: string, n
         )
       `)
       .eq('id', applicationId)
-      .single()
+      .single() as any
 
-    const { error } = await supabase
+    const { error } = await (supabase
       .from('seller_applications')
-      .update({
+      .update as any)({
         status: 'rejected',
         reviewed_by: admin.userId,
         reviewed_at: new Date().toISOString(),
@@ -587,7 +587,7 @@ export async function rejectApplication(applicationId: string, reason: string, n
     })
 
     // Add to verification logs
-    await supabase.from('seller_verification_logs').insert({
+    await (supabase.from('seller_verification_logs').insert as any)({
       application_id: applicationId,
       action: 'rejected',
       performed_by: admin.userId,
@@ -631,11 +631,11 @@ export async function requestMoreInfo(applicationId: string, message: string) {
         )
       `)
       .eq('id', applicationId)
-      .single()
+      .single() as any
 
-    const { error } = await supabase
+    const { error } = await (supabase
       .from('seller_applications')
-      .update({
+      .update as any)({
         status: 'info_requested',
         admin_notes: message,
       })
@@ -668,7 +668,7 @@ export async function requestMoreInfo(applicationId: string, message: string) {
     })
 
     // Add to verification logs
-    await supabase.from('seller_verification_logs').insert({
+    await (supabase.from('seller_verification_logs').insert as any)({
       application_id: applicationId,
       action: 'info_requested',
       performed_by: admin.userId,
@@ -697,9 +697,9 @@ export async function verifyDocument(documentId: string, verified: boolean = tru
     const admin = await requireAdmin()
     const supabase = await createClient()
 
-    const { error } = await supabase
+    const { error } = await (supabase
       .from('seller_kyc_documents')
-      .update({
+      .update as any)({
         verified,
         verified_by: admin.userId,
         verified_at: verified ? new Date().toISOString() : null,
@@ -753,9 +753,9 @@ export async function updateFraudScore(applicationId: string, score: number) {
     const admin = await requireRole(['admin', 'super_admin'])
     const supabase = await createClient()
 
-    const { error } = await supabase
+    const { error } = await (supabase
       .from('seller_applications')
-      .update({ fraud_score: score })
+      .update as any)({ fraud_score: score })
       .eq('id', applicationId)
 
     if (error) throw error
@@ -791,7 +791,7 @@ export async function checkDuplicates(applicationId: string) {
       .from('seller_applications')
       .select('phone_number, full_legal_name, user_id, alternate_email')
       .eq('id', applicationId)
-      .single()
+      .single() as any
 
     if (!currentApp) return { success: false, error: 'Application not found' }
 
@@ -800,14 +800,14 @@ export async function checkDuplicates(applicationId: string) {
       .from('seller_applications')
       .select('id, display_name, status, created_at')
       .eq('phone_number', currentApp.phone_number)
-      .neq('id', applicationId)
+      .neq('id', applicationId) as any
 
     // Check for duplicates by name
     const { data: byName } = await supabase
       .from('seller_applications')
       .select('id, display_name, status, created_at')
       .eq('full_legal_name', currentApp.full_legal_name)
-      .neq('id', applicationId)
+      .neq('id', applicationId) as any
 
     return {
       success: true,

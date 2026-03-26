@@ -47,7 +47,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     .from('games')
     .select('name, id')
     .eq('slug', gameSlug)
-    .single()
+    .single() as any
 
   if (!game) return { title: 'Not Found | GameVault' }
 
@@ -56,7 +56,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     .select('name')
     .eq('slug', categorySlug)
     .eq('game_id', game.id)
-    .single()
+    .single() as any
 
   if (!category) return { title: 'Not Found | GameVault' }
 
@@ -87,7 +87,7 @@ async function getGameAndCategory(gameSlug: string, categorySlug: string) {
     .select('*')
     .eq('slug', gameSlug)
     .eq('is_active', true)
-    .single()
+    .single() as any
 
   if (gameResult.error || !gameResult.data) return null
 
@@ -97,7 +97,7 @@ async function getGameAndCategory(gameSlug: string, categorySlug: string) {
     .eq('slug', categorySlug)
     .eq('game_id', gameResult.data.id)
     .eq('is_active', true)
-    .single()
+    .single() as any
 
   if (categoryResult.error || !categoryResult.data) return null
 
@@ -112,7 +112,7 @@ async function getAllGameCategories(gameId: string): Promise<GameCategory[]> {
     .eq('game_id', gameId)
     .eq('is_active', true)
     .order('display_order', { ascending: true })
-    .order('name', { ascending: true })
+    .order('name', { ascending: true }) as any
   return (data || []) as GameCategory[]
 }
 
@@ -125,7 +125,7 @@ async function getListings(
   const LISTINGS_PER_PAGE = 12
   const currentPage = parseInt(searchParams.page || '1', 10)
 
-  let query = supabase
+  let query: any = supabase
     .from('listings')
     .select(`
       *,

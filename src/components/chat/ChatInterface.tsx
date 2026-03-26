@@ -176,9 +176,9 @@ export default function ChatInterface({
             })
 
             // Mark as read
-            await supabase
+            await (supabase
               .from('messages')
-              .update({
+              .update as any)({
                 is_read: true,
                 read_at: new Date().toISOString(),
               })
@@ -233,9 +233,9 @@ export default function ChatInterface({
 
       if (unreadMessages.length === 0) return
 
-      await supabase
+      await (supabase
         .from('messages')
-        .update({
+        .update as any)({
           is_read: true,
           read_at: new Date().toISOString(),
         })
@@ -277,7 +277,7 @@ export default function ChatInterface({
     setMessages((prev) => [...prev, optimisticMessage])
 
     try {
-      const { error: sendError } = await supabase.from('messages').insert({
+      const { error: sendError } = await (supabase.from('messages').insert as any)({
         conversation_id: conversationId,
         sender_id: currentUserId,
         content,
@@ -287,9 +287,9 @@ export default function ChatInterface({
       if (sendError) throw sendError
 
       // Update conversation last_message_at
-      await supabase
+      await (supabase
         .from('conversations')
-        .update({ last_message_at: new Date().toISOString() })
+        .update as any)({ last_message_at: new Date().toISOString() })
         .eq('id', conversationId)
 
       // Refetch to replace optimistic message with real one

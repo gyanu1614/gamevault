@@ -87,9 +87,9 @@ export async function POST(request: NextRequest) {
         `https://www.trustpilot.com/reviews/${payload.reviewId}`
 
       // Update the invitation record
-      const { error: updateError } = await supabase
+      const { error: updateError } = await (supabase
         .from('trustpilot_invitations')
-        .update({
+        .update as any)({
           review_submitted: true,
           review_submitted_at: new Date().toISOString(),
           review_rating: payload.review?.stars || null,

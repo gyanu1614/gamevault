@@ -166,7 +166,7 @@ export async function getReviewStats(): Promise<{
   try {
     const { data, error } = await supabase
       .from('reviews')
-      .select('id, rating, flagged_for_moderation, is_visible')
+      .select('id, rating, flagged_for_moderation, is_visible') as any
 
     if (error) {
       console.error('Error fetching review stats:', error)
@@ -177,13 +177,13 @@ export async function getReviewStats(): Promise<{
 
     const stats: AdminReviewStats = {
       total_reviews: reviews.length,
-      flagged_reviews: reviews.filter(r => r.flagged_for_moderation).length,
-      hidden_reviews: reviews.filter(r => !r.is_visible).length,
+      flagged_reviews: reviews.filter((r: any) => r.flagged_for_moderation).length,
+      hidden_reviews: reviews.filter((r: any) => !r.is_visible).length,
       avg_rating: reviews.length > 0
-        ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
+        ? reviews.reduce((sum: number, r: any) => sum + r.rating, 0) / reviews.length
         : 0,
-      positive_reviews: reviews.filter(r => r.rating >= 4).length,
-      negative_reviews: reviews.filter(r => r.rating <= 2).length,
+      positive_reviews: reviews.filter((r: any) => r.rating >= 4).length,
+      negative_reviews: reviews.filter((r: any) => r.rating <= 2).length,
     }
 
     return { success: true, stats }
@@ -204,9 +204,9 @@ export async function toggleReviewVisibility(
   const supabase = await createClient()
 
   try {
-    const { error } = await supabase
+    const { error } = await (supabase
       .from('reviews')
-      .update({
+      .update as any)({
         is_visible: isVisible,
         moderation_reason: reason || null,
         updated_at: new Date().toISOString()
@@ -237,9 +237,9 @@ export async function toggleReviewFlag(
   const supabase = await createClient()
 
   try {
-    const { error } = await supabase
+    const { error } = await (supabase
       .from('reviews')
-      .update({
+      .update as any)({
         flagged_for_moderation: flagged,
         moderation_reason: reason || null,
         updated_at: new Date().toISOString()

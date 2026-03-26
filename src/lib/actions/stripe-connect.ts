@@ -68,7 +68,7 @@ export async function initiateConnectOnboarding(): Promise<ConnectOnboardingResu
       .from('profiles')
       .select('is_seller_approved, stripe_connect_account_id')
       .eq('id', user.id)
-      .single()
+      .single() as any
 
     if (!profile?.is_seller_approved) {
       return {
@@ -123,7 +123,7 @@ export async function refreshAccountLink(): Promise<ConnectLinkResult> {
       .from('profiles')
       .select('stripe_connect_account_id')
       .eq('id', user.id)
-      .single()
+      .single() as any
 
     if (!profile?.stripe_connect_account_id) {
       return {
@@ -177,7 +177,7 @@ export async function getDashboardLink(): Promise<ConnectLinkResult> {
       .from('profiles')
       .select('stripe_connect_account_id, stripe_connect_status')
       .eq('id', user.id)
-      .single()
+      .single() as any
 
     if (!profile?.stripe_connect_account_id) {
       return {

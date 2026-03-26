@@ -58,7 +58,7 @@ export async function addInstantDeliveryInventory(
       .from('listings')
       .select('id, seller_id, delivery_method')
       .eq('id', listingId)
-      .single()
+      .single() as any
 
     if (listingError || !listing) {
       return { success: false, error: 'Listing not found' }
@@ -94,7 +94,7 @@ export async function addInstantDeliveryInventory(
     }
 
     // Encrypt and prepare inventory records
-    const inventoryRecords = validCodes.map(code => ({
+    const inventoryRecords = validCodes.map((code: any) => ({
       listing_id: listingId,
       delivery_type: deliveryType,
       delivery_data: encryptDeliveryData(code),
@@ -104,9 +104,9 @@ export async function addInstantDeliveryInventory(
     }))
 
     // Insert inventory records
-    const { data, error: insertError } = await supabase
+    const { data, error: insertError } = await (supabase
       .from('instant_delivery_inventory')
-      .insert(inventoryRecords)
+      .insert as any)(inventoryRecords)
       .select('id')
 
     if (insertError) {
@@ -205,7 +205,7 @@ export async function getListingInventory(
       .from('listings')
       .select('seller_id')
       .eq('id', listingId)
-      .single()
+      .single() as any
 
     if (!listing || listing.seller_id !== user.id) {
       return { success: false, error: 'Unauthorized' }
@@ -216,7 +216,7 @@ export async function getListingInventory(
       .from('instant_delivery_inventory')
       .select('id, status, delivery_type, created_at, sold_at')
       .eq('listing_id', listingId)
-      .order('created_at', { ascending: true })
+      .order('created_at', { ascending: true }) as any
 
     if (error) {
       console.error('Error getting inventory:', error)
@@ -225,7 +225,7 @@ export async function getListingInventory(
 
     return {
       success: true,
-      inventory: data?.map(item => ({
+      inventory: data?.map((item: any) => ({
         id: item.id,
         status: item.status,
         deliveryType: item.delivery_type as DeliveryType,
@@ -260,7 +260,7 @@ export async function deliverCodeToBuyer(
       .from('orders')
       .select('id, listing_id, buyer_id, status, instant_delivery_inventory_id')
       .eq('id', orderId)
-      .single()
+      .single() as any
 
     if (orderError || !order) {
       console.error('[InstantDelivery] Order not found:', orderError)
@@ -293,7 +293,7 @@ export async function deliverCodeToBuyer(
         .from('instant_delivery_inventory')
         .select('delivery_data, delivery_type')
         .eq('id', order.instant_delivery_inventory_id)
-        .single()
+        .single() as any
 
       if (existing) {
         const decrypted = decryptDeliveryData(existing.delivery_data)
@@ -314,7 +314,7 @@ export async function deliverCodeToBuyer(
       .eq('listing_id', order.listing_id)
       .eq('status', 'available')
       .limit(1)
-      .single()
+      .single() as any
 
     if (inventoryError || !availableInventory) {
       console.error('[InstantDelivery] No inventory available:', inventoryError)
@@ -325,9 +325,9 @@ export async function deliverCodeToBuyer(
 
     // Mark as sold
     console.log('[InstantDelivery] Marking inventory as sold...')
-    const { error: updateError } = await supabase
+    const { error: updateError } = await (supabase
       .from('instant_delivery_inventory')
-      .update({
+      .update as any)({
         status: 'sold',
         sold_to_order_id: orderId,
         sold_at: new Date().toISOString(),
@@ -347,9 +347,9 @@ export async function deliverCodeToBuyer(
 
     // Update order with decrypted code
     console.log('[InstantDelivery] Updating order with decrypted code...')
-    const { error: orderUpdateError } = await supabase
+    const { error: orderUpdateError } = await (supabase
       .from('orders')
-      .update({
+      .update as any)({
         instant_delivery_code: decryptedCode,
         instant_delivery_inventory_id: availableInventory.id,
         instant_delivery_delivered_at: new Date().toISOString()
@@ -433,7 +433,7 @@ export async function deleteAvailableInventory(
       .from('listings')
       .select('seller_id')
       .eq('id', listingId)
-      .single()
+      .single() as any
 
     if (!listing || listing.seller_id !== user.id) {
       return { success: false, error: 'Unauthorized' }
@@ -450,7 +450,7 @@ export async function deleteAvailableInventory(
       query = query.in('id', inventoryIds)
     }
 
-    const { error, count } = await query
+    const { error, count } = await query as any
 
     if (error) {
       console.error('Error deleting inventory:', error)

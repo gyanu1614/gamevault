@@ -397,7 +397,7 @@ export default function EditListingPage() {
         template_data: template ? templateData : undefined,
         region: selectedRegion || undefined,
         platform: selectedPlatform || undefined,
-        status: finalStatus,
+        status: finalStatus as 'active' | 'draft' | undefined,
       }
 
       const result = await updateListing(listingId, input)

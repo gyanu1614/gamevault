@@ -58,7 +58,7 @@ export function useWishlist() {
         .from('wishlists')
         .select('id, user_id, listing_id, created_at')
         .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
+        .order('created_at', { ascending: false }) as any
 
       if (wishlistError) {
         console.error('Error fetching wishlist entries:', wishlistError)
@@ -70,7 +70,7 @@ export function useWishlist() {
       }
 
       // Then fetch full listing details for each entry
-      const listingIds = wishlistEntries.map(entry => entry.listing_id)
+      const listingIds = wishlistEntries.map((entry: any) => entry.listing_id)
       const { data: listings, error: listingsError } = await supabase
         .from('listings')
         .select(`
@@ -88,7 +88,7 @@ export function useWishlist() {
           categories (id, name, slug),
           seller:profiles!listings_seller_id_fkey (id, username, seller_tier, is_verified)
         `)
-        .in('id', listingIds)
+        .in('id', listingIds) as any
 
       if (listingsError) {
         console.error('Error fetching listings:', listingsError)
@@ -96,8 +96,8 @@ export function useWishlist() {
       }
 
       // Combine wishlist entries with listing data
-      const combinedData = wishlistEntries.map(entry => {
-        const listing = listings?.find(l => l.id === entry.listing_id)
+      const combinedData = wishlistEntries.map((entry: any) => {
+        const listing = listings?.find((l: any) => l.id === entry.listing_id)
         return {
           id: entry.id,
           user_id: entry.user_id,
@@ -133,9 +133,9 @@ export function useWishlist() {
         throw new Error('You must be logged in to add items to your wishlist')
       }
 
-      const { data, error } = await supabase
+      const { data, error } = await (supabase
         .from('wishlists')
-        .insert({
+        .insert as any)({
           user_id: user.id,
           listing_id: listingId,
         })

@@ -17,7 +17,7 @@ export async function isApprovedSeller(): Promise<boolean> {
       .select('status')
       .eq('user_id', user.id)
       .eq('status', 'approved')
-      .single()
+      .single() as any
 
     return !!data
   } catch (error) {
@@ -48,7 +48,7 @@ export async function getSellerApplicationStatus(): Promise<{
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
       .limit(1)
-      .single()
+      .single() as any
 
     if (!data) {
       return { hasApplication: false, status: null, applicationId: null }

@@ -178,7 +178,7 @@ export default function MessagesPage() {
                               alt={otherUser?.username || 'User'}
                               className="h-10 w-10 rounded-full object-cover ring-2 ring-white/10"
                             />
-                            {conversation.unread_count > 0 && (
+                            {(conversation.unread_count || 0) > 0 && (
                               <div className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-primary flex items-center justify-center text-[10px] font-bold text-white">
                                 {conversation.unread_count}
                               </div>
@@ -208,10 +208,10 @@ export default function MessagesPage() {
                             </div>
 
                             {/* Show game → category for buyers, or last message for sellers */}
-                            {!isSeller && conversation.order?.listing?.game?.name ? (
+                            {!isSeller && (conversation.order?.listing as any)?.game?.name ? (
                               <p className="text-xs text-gray-500 truncate">
-                                {conversation.order.listing.game.name}
-                                {conversation.order.listing.category?.name && ` → ${conversation.order.listing.category.name}`}
+                                {(conversation.order?.listing as any).game.name}
+                                {(conversation.order?.listing as any).category?.name && ` → ${(conversation.order?.listing as any).category.name}`}
                               </p>
                             ) : conversation.last_message ? (
                               <p className={cn(
@@ -241,9 +241,9 @@ export default function MessagesPage() {
                       <img
                         src={getAvatarUrl(
                           selectedConversation.buyer_id === user?.id ? selectedConversation.seller?.avatar_url : selectedConversation.buyer?.avatar_url,
-                          selectedConversation.buyer_id === user?.id ? selectedConversation.seller?.username : selectedConversation.buyer?.username || 'user'
+                          (selectedConversation.buyer_id === user?.id ? selectedConversation.seller?.username : selectedConversation.buyer?.username) || 'user'
                         )}
-                        alt={selectedConversation.buyer_id === user?.id ? selectedConversation.seller?.username : selectedConversation.buyer?.username}
+                        alt={(selectedConversation.buyer_id === user?.id ? selectedConversation.seller?.username : selectedConversation.buyer?.username) || 'user'}
                         className="h-10 w-10 rounded-full object-cover ring-2 ring-white/10"
                       />
                       <div>
@@ -349,7 +349,7 @@ export default function MessagesPage() {
                       messages={messages}
                       currentUserId={user?.id || ''}
                       otherUser={selectedConversation.buyer_id === user?.id ? selectedConversation.seller : selectedConversation.buyer}
-                      order={selectedConversation.order}
+                      order={selectedConversation.order as any}
                       isLoading={isLoadingMessages}
                       autoScroll={false}
                     />

@@ -95,20 +95,20 @@ export default function ReviewsPage() {
   const currentReviews = activeTab === 'received' ? reviews.received : reviews.written
 
   const filteredReviews = useMemo(() => {
-    let filtered = currentReviews
+    let filtered: any = currentReviews
 
     if (filterRating) {
-      filtered = filtered.filter(r => r.rating === filterRating)
+      filtered = filtered.filter((r: any) => r.rating === filterRating)
     }
 
     if (searchQuery) {
-      filtered = filtered.filter(r =>
+      filtered = filtered.filter((r: any) =>
         r.comment.toLowerCase().includes(searchQuery.toLowerCase()) ||
         r.listing.title.toLowerCase().includes(searchQuery.toLowerCase())
       )
     }
 
-    return filtered.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    return filtered.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
   }, [currentReviews, filterRating, searchQuery])
 
   const stats = useMemo(() => {
@@ -343,7 +343,7 @@ export default function ReviewsPage() {
           </div>
         ) : (
           <div className="space-y-4">
-            {filteredReviews.map((review, index) => (
+            {filteredReviews.map((review: any, index: number) => (
               <motion.div
                 key={review.id}
                 initial={{ opacity: 0, y: 20 }}

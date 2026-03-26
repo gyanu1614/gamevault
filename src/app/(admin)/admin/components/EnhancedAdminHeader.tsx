@@ -137,9 +137,9 @@ export default function EnhancedAdminHeader({ role, user }: EnhancedAdminHeaderP
       .from('profiles')
       .select('id, username, email, full_name')
       .or(`username.ilike.%${query}%,email.ilike.%${query}%,full_name.ilike.%${query}%`)
-      .limit(3)
+      .limit(3) as any
 
-    users?.forEach(user => {
+    users?.forEach((user: any) => {
       results.push({
         type: 'user',
         id: user.id,
@@ -154,9 +154,9 @@ export default function EnhancedAdminHeader({ role, user }: EnhancedAdminHeaderP
       .from('seller_applications')
       .select('id, display_name, email, status')
       .or(`display_name.ilike.%${query}%,email.ilike.%${query}%`)
-      .limit(3)
+      .limit(3) as any
 
-    applications?.forEach(app => {
+    applications?.forEach((app: any) => {
       results.push({
         type: 'application',
         id: app.id,
@@ -171,9 +171,9 @@ export default function EnhancedAdminHeader({ role, user }: EnhancedAdminHeaderP
       .from('disputes')
       .select('id, title, reason, status')
       .or(`title.ilike.%${query}%,reason.ilike.%${query}%`)
-      .limit(3)
+      .limit(3) as any
 
-    disputes?.forEach(dispute => {
+    disputes?.forEach((dispute: any) => {
       results.push({
         type: 'dispute',
         id: dispute.id,
@@ -188,9 +188,9 @@ export default function EnhancedAdminHeader({ role, user }: EnhancedAdminHeaderP
       .from('orders')
       .select('id, order_number, status')
       .ilike('order_number', `%${query}%`)
-      .limit(3)
+      .limit(3) as any
 
-    orders?.forEach(order => {
+    orders?.forEach((order: any) => {
       results.push({
         type: 'order',
         id: order.id,
@@ -226,9 +226,12 @@ export default function EnhancedAdminHeader({ role, user }: EnhancedAdminHeaderP
 
   const markAsRead = async (notificationId: string) => {
     const supabase = createClient()
-    await supabase
+    const { error } = await (supabase
       .from('notifications')
-      .update({ is_read: true, read_at: new Date().toISOString() })
+      .update as any)({
+        is_read: true,
+        read_at: new Date().toISOString()
+      })
       .eq('id', notificationId)
 
     queryClient.invalidateQueries({ queryKey: ['admin-notifications-list', user.id] })

@@ -15,7 +15,7 @@ export async function POST() {
     .from('profiles')
     .select('role, seller_tier')
     .eq('id', user.id)
-    .single()
+    .single() as any
 
   if (!profile || profile.role !== 'seller') {
     return NextResponse.json(

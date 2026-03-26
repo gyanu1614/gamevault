@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
       .from('profiles')
       .select('role')
       .eq('id', user.id)
-      .single()
+      .single() as any
 
     if (!profile || (profile.role !== 'admin' && profile.role !== 'super_admin')) {
       return NextResponse.json({ error: 'Forbidden - Admin access required' }, { status: 403 })
@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
     // Get orders ready for auto-release
     const { data: orders, error: fetchError } = await supabase.rpc(
       'get_orders_ready_for_auto_release'
-    )
+    ) as any
 
     if (fetchError) {
       console.error('Error fetching orders ready for auto-release:', fetchError)
@@ -58,10 +58,10 @@ export async function POST(request: NextRequest) {
     const results = []
     for (const order of orders) {
       try {
-        const { error: releaseError } = await supabase.rpc('release_escrow', {
+        const { error: releaseError } = await ((supabase as any).rpc('release_escrow', {
           order_id: order.id,
           method: 'auto',
-        })
+        }))
 
         if (releaseError) {
           console.error(`❌ Failed to release escrow for order ${order.id}:`, releaseError)

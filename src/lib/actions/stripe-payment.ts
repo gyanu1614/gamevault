@@ -10,6 +10,7 @@ import {
 } from '@/lib/utils/vaultshield-tiers'
 
 // Re-export type only (value re-exports not allowed in 'use server' files)
+import type { VaultShieldTier } from '@/lib/utils/vaultshield-tiers'
 export type { VaultShieldTier } from '@/lib/utils/vaultshield-tiers'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {

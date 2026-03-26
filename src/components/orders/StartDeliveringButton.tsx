@@ -35,12 +35,11 @@ export default function StartDeliveringButton({
       const result = await startDelivering(orderId)
 
       if (result.success) {
-        // Send smart action message if enabled and conversationId is available
+        // Send notification message if enabled and conversationId is available
         if (sendNotification && conversationId) {
           try {
-            await messagesApi.sendSmartActionMessage(
+            await messagesApi.sendMessage(
               conversationId,
-              'processing',
               "I'm now processing your order! I'll mark it as delivered once it's ready for you."
             )
           } catch (messageError) {

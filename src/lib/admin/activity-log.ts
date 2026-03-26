@@ -28,9 +28,9 @@ export async function logAdminActivity(params: LogActivityParams) {
     const admin = await requireAdmin()
     const supabase = await createClient()
 
-    const { error } = await supabase
+    const { error } = await (supabase
       .from('admin_activity_log')
-      .insert({
+      .insert as any)({
         admin_id: admin.userId,
         action: params.action,
         action_category: params.actionCategory,

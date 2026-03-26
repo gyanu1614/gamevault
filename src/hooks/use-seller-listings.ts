@@ -74,9 +74,9 @@ export function useSellerListings(options?: UseListingsOptions) {
 
   // Delete listing mutation
   const deleteListing = useMutation({
-    mutationFn: ({ id, silent }: { id: string; silent?: boolean } | string) => {
+    mutationFn: (variables: { id: string; silent?: boolean } | string) => {
       // Support both old format (string) and new format (object with silent)
-      const listingId = typeof id === 'string' ? id : id.id
+      const listingId = typeof variables === 'string' ? variables : variables.id
       return listingsApi.delete(listingId)
     },
     onSuccess: (_, variables) => {

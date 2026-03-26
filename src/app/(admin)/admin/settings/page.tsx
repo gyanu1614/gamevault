@@ -27,13 +27,13 @@ export default function SettingsPage() {
         .from('profiles')
         .select('*')
         .eq('id', user.id)
-        .single()
+        .single() as any
 
       const { data: adminRole } = await supabase
         .from('admin_roles')
         .select('role')
         .eq('user_id', user.id)
-        .single()
+        .single() as any
 
       setAdmin({
         userId: user.id,

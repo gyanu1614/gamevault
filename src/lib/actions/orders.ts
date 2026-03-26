@@ -92,7 +92,7 @@ export async function createOrder(data: CreateOrderData): Promise<{
         )
       `)
       .eq('id', data.listingId)
-      .single()
+      .single() as any
     // Cast: Supabase narrow-select inference returns `never` against hand-written database.ts
     const listing = listingRaw as any
 
@@ -161,9 +161,9 @@ export async function createOrder(data: CreateOrderData): Promise<{
     const deliveryEvidenceRequired = vaultshieldTier !== 'standard' || subtotal >= 100
 
     // Insert order
-    const { data: orderRaw, error: orderError } = await supabase
+    const { data: orderRaw, error: orderError } = await (supabase
       .from('orders')
-      .insert({
+      .insert as any)({
         buyer_id: buyerId,
         seller_id: listing.seller_id,
         listing_id: data.listingId,
@@ -238,9 +238,9 @@ export async function createOrder(data: CreateOrderData): Promise<{
 
           // Mark order as completed immediately for instant delivery
           // This triggers the stock decrement and finalizes the order
-          await supabase
+          await (supabase
             .from('orders')
-            .update({
+            .update as any)({
               status: 'completed',
               completed_at: new Date().toISOString(),
             })
@@ -259,9 +259,9 @@ export async function createOrder(data: CreateOrderData): Promise<{
 
     // Create conversation between buyer and seller for this order
     try {
-      const { error: conversationError } = await supabase
+      const { error: conversationError } = await (supabase
         .from('conversations')
-        .insert({
+        .insert as any)({
           buyer_id: buyerId,
           seller_id: listing.seller_id,
           listing_id: data.listingId,
@@ -274,14 +274,14 @@ export async function createOrder(data: CreateOrderData): Promise<{
         // Don't fail the order if conversation creation fails
       } else {
         // Send automatic welcome message
-        await supabase
+        await (supabase
           .from('messages')
-          .insert({
+          .insert as any)({
             conversation_id: (await supabase
               .from('conversations')
               .select('id')
               .eq('order_id', order.id)
-              .single()
+              .single() as any
             ).data?.id,
             sender_id: listing.seller_id,
             content: `Hi! Thank you for your purchase of "${listing.title}". I'll deliver your order shortly. Feel free to message me if you have any questions!`,
@@ -309,9 +309,9 @@ export async function createOrder(data: CreateOrderData): Promise<{
 
     // Create notification for seller
     try {
-      await supabase
+      await (supabase
         .from('notifications')
-        .insert({
+        .insert as any)({
           user_id: listing.seller_id,
           type: 'new_order',
           title: 'New Order Received!',
@@ -397,7 +397,7 @@ export async function getOrder(orderId: string): Promise<{
         )
       `)
       .eq('id', orderId)
-      .single()
+      .single() as any
 
     if (error) {
       return {
@@ -411,7 +411,7 @@ export async function getOrder(orderId: string): Promise<{
       .from('profiles')
       .select('role')
       .eq('id', user.id)
-      .single()
+      .single() as any
 
     const isAdmin = profile?.role === 'admin' || profile?.role === 'super_admin'
 
@@ -480,7 +480,7 @@ export async function startDelivering(
       .select('*')
       .eq('id', orderId)
       .eq('seller_id', user.id) // Ensure seller owns this order
-      .single()
+      .single() as any
 
     if (orderError || !order) {
       return {
@@ -498,9 +498,9 @@ export async function startDelivering(
     }
 
     // Update order to delivering status
-    const { error: updateError } = await supabase
+    const { error: updateError } = await (supabase
       .from('orders')
-      .update({
+      .update as any)({
         status: 'delivering',
         delivering_at: new Date().toISOString(),
       })
@@ -559,7 +559,7 @@ export async function markOrderAsDelivered(
       .select('*')
       .eq('id', orderId)
       .eq('seller_id', user.id) // Ensure seller owns this order
-      .single()
+      .single() as any
 
     if (orderError || !order) {
       return {
@@ -569,9 +569,9 @@ export async function markOrderAsDelivered(
     }
 
     // Update order (auto_release_at is set automatically by database trigger)
-    const { error: updateError } = await supabase
+    const { error: updateError } = await (supabase
       .from('orders')
-      .update({
+      .update as any)({
         status: 'delivered',
         delivered_at: new Date().toISOString(),
       })
@@ -635,7 +635,7 @@ export async function cancelOrder(orderId: string): Promise<{
       .from('orders')
       .select('id, buyer_id, seller_id, status, stripe_payment_intent_id, total_amount, order_number')
       .eq('id', orderId)
-      .single()
+      .single() as any
     const order = orderRaw as any
 
     if (fetchError || !order) return { success: false, error: 'Order not found' }
@@ -661,9 +661,9 @@ export async function cancelOrder(orderId: string): Promise<{
     }
 
     // Update order status
-    const { error: updateError } = await supabase
+    const { error: updateError } = await (supabase
       .from('orders')
-      .update({
+      .update as any)({
         status: 'cancelled',
         escrow_status: 'refunded',
         cancelled_at: new Date().toISOString(),
@@ -717,7 +717,7 @@ export async function confirmOrderReceipt(orderId: string): Promise<{
       .select('*')
       .eq('id', orderId)
       .eq('buyer_id', user.id) // Ensure buyer owns this order
-      .single()
+      .single() as any
 
     if (orderError || !order) {
       return {
@@ -732,9 +732,9 @@ export async function confirmOrderReceipt(orderId: string): Promise<{
 
     if (order.status !== 'delivered') {
       // First transition to delivered
-      const { error: deliveredError } = await supabase
+      const { error: deliveredError } = await (supabase
         .from('orders')
-        .update({
+        .update as any)({
           status: 'delivered',
           delivered_at: now,
         })
@@ -750,9 +750,9 @@ export async function confirmOrderReceipt(orderId: string): Promise<{
     }
 
     // Now update to completed
-    const { error: updateError } = await supabase
+    const { error: updateError } = await (supabase
       .from('orders')
-      .update({
+      .update as any)({
         status: 'completed',
         completed_at: now,
         escrow_status: 'released',
@@ -857,7 +857,7 @@ export async function openDispute(
       .select('*')
       .eq('id', orderId)
       .eq('buyer_id', user.id) // Ensure buyer owns this order
-      .single()
+      .single() as any
 
     if (orderError || !order) {
       return {
@@ -875,9 +875,9 @@ export async function openDispute(
     }
 
     // Update order to disputed status
-    const { error: updateError } = await supabase
+    const { error: updateError } = await (supabase
       .from('orders')
-      .update({
+      .update as any)({
         status: 'disputed',
         escrow_status: 'frozen',
         disputed_at: new Date().toISOString(),
@@ -896,9 +896,9 @@ export async function openDispute(
     // Create dispute record in disputes table
     const disputeTitle = `Order #${order.order_number || orderId.slice(0, 8)} - ${category}`
 
-    const { error: disputeError } = await supabase
+    const { error: disputeError } = await (supabase
       .from('disputes')
-      .insert({
+      .insert as any)({
         transaction_id: orderId,
         order_reference: order.order_number || orderId.slice(0, 8),
         buyer_id: order.buyer_id,
@@ -924,12 +924,12 @@ export async function openDispute(
         .from('conversations')
         .select('id')
         .eq('order_id', orderId)
-        .single()
+        .single() as any
 
       if (conversation) {
         // Send system notification about dispute
         // Using special UUID for system messages: all zeros
-        await supabase.from('messages').insert({
+        await (supabase.from('messages').insert as any)({
           conversation_id: conversation.id,
           sender_id: '00000000-0000-0000-0000-000000000000', // System sender ID
           content: JSON.stringify({
@@ -1013,7 +1013,7 @@ export async function handleGuestCheckout(email: string): Promise<{
       .from('profiles')
       .select('id')
       .eq('email', email)
-      .maybeSingle()
+      .maybeSingle() as any
 
     if (existingProfile) {
       return {
@@ -1049,9 +1049,9 @@ export async function handleGuestCheckout(email: string): Promise<{
     const userId = authData.user.id
 
     // Create profile (should be auto-created by trigger, but ensure it exists)
-    const { error: profileError } = await supabase
+    const { error: profileError } = await (supabase
       .from('profiles')
-      .upsert({
+      .upsert as any)({
         id: userId,
         email,
         username: `guest_${userId.substring(0, 8)}`,

@@ -89,7 +89,7 @@ export async function POST(req: NextRequest) {
         await handleTransferCreated(event.data.object as Stripe.Transfer)
         break
 
-      case 'transfer.failed':
+      case 'transfer.failed' as any:
         await handleTransferFailed(event.data.object as Stripe.Transfer)
         break
 
@@ -593,7 +593,7 @@ async function handlePayoutPaid(payout: Stripe.Payout) {
 
   // Notify seller (only once per payout batch)
   const sellerId = payouts[0].seller_id
-  const totalAmount = payouts.reduce((sum, p) => sum + (p.amount || 0), 0)
+  const totalAmount = payouts.reduce((sum: any, p: any) => sum + (p.amount || 0), 0)
 
   try {
     await supabase.from('notifications').insert({
@@ -645,7 +645,7 @@ async function handlePayoutFailed(payout: Stripe.Payout) {
     .eq('stripe_payout_id', payout.id)
 
   const sellerId = payouts[0].seller_id
-  const totalAmount = payouts.reduce((sum, p) => sum + (p.amount || 0), 0)
+  const totalAmount = payouts.reduce((sum: any, p: any) => sum + (p.amount || 0), 0)
 
   // Notify seller
   try {

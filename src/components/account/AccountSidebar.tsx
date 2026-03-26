@@ -54,6 +54,7 @@ interface NavItem {
 
 interface AccountSidebarProps {
   user?: {
+    id: string
     username: string
     email: string
     avatar_url?: string
@@ -81,11 +82,11 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
       const { data: conversations } = await supabase
         .from('conversations')
         .select('id')
-        .or(`buyer_id.eq.${user.id},seller_id.eq.${user.id}`)
+        .or(`buyer_id.eq.${user.id},seller_id.eq.${user.id}`) as any
 
       if (!conversations || conversations.length === 0) return 0
 
-      const conversationIds = conversations.map(c => c.id)
+      const conversationIds = conversations.map((c: any) => c.id)
 
       // Count unread messages in those conversations where I'm not the sender
       const { count } = await supabase

@@ -126,23 +126,23 @@ export default function OrdersPage() {
         .from('disputes')
         .select('id, transaction_id, status')
         .in('transaction_id', orderIds)
-        .in('status', ['resolved_buyer_favor', 'resolved_seller_favor', 'resolved_partial'])
+        .in('status', ['resolved_buyer_favor', 'resolved_seller_favor', 'resolved_partial']) as any
 
       if (!disputes || disputes.length === 0) return
 
       // Fetch resolutions for these disputes
-      const disputeIds = disputes.map(d => d.id)
+      const disputeIds = disputes.map((d: any) => d.id)
       const { data: resolutions } = await supabase
         .from('dispute_resolutions')
         .select('*')
-        .in('dispute_id', disputeIds)
+        .in('dispute_id', disputeIds) as any
 
       if (!resolutions) return
 
       // Map resolutions by order ID
       const resolutionMap: Record<string, any> = {}
-      disputes.forEach(dispute => {
-        const resolution = resolutions.find(r => r.dispute_id === dispute.id)
+      disputes.forEach((dispute: any) => {
+        const resolution = resolutions.find((r: any) => r.dispute_id === dispute.id)
         if (resolution) {
           resolutionMap[dispute.transaction_id] = resolution
         }
@@ -173,7 +173,7 @@ export default function OrdersPage() {
     // Game filter
     if (filters.games.length > 0) {
       filtered = filtered.filter(o => {
-        const gameId = o.listing?.game_id || o.game?.id
+        const gameId = o.listing?.game_id || (o as any).game?.id
         return gameId && filters.games.includes(gameId)
       })
     }
@@ -213,8 +213,8 @@ export default function OrdersPage() {
       filtered = filtered.filter(o =>
         o.order_number?.toLowerCase().includes(filters.searchQuery.toLowerCase()) ||
         o.listing?.title?.toLowerCase().includes(filters.searchQuery.toLowerCase()) ||
-        o.seller?.username?.toLowerCase().includes(filters.searchQuery.toLowerCase()) ||
-        o.buyer?.username?.toLowerCase().includes(filters.searchQuery.toLowerCase())
+        (o as any).seller?.username?.toLowerCase().includes(filters.searchQuery.toLowerCase()) ||
+        (o as any).buyer?.username?.toLowerCase().includes(filters.searchQuery.toLowerCase())
       )
     }
 
@@ -239,7 +239,7 @@ export default function OrdersPage() {
     if (!dbOrders) return []
     const gameMap = new Map()
     dbOrders.forEach(order => {
-      const game = order.listing?.game || order.game
+      const game = order.listing?.game || (order as any).game
       if (game && game.id) {
         gameMap.set(game.id, { id: game.id, name: game.name, image_url: game.image_url })
       }
@@ -705,13 +705,13 @@ export default function OrdersPage() {
         ) : (
         <div className="space-y-3">
           {filteredOrders.map((order, index) => {
-            const otherParty = activeTab === 'purchases' ? order.seller : order.buyer
-            const gameData = order.listing?.game || order.game
+            const otherParty = activeTab === 'purchases' ? (order as any).seller : (order as any).buyer
+            const gameData = order.listing?.game || (order as any).game
             const listingImage = order.listing?.images?.[0]
             const gameImage = gameData?.image_url
             const displayImage = listingImage || gameImage
             const gameName = gameData?.name
-            const hasReview = order.has_review || false
+            const hasReview = (order as any).has_review || false
             const disputeResolution = disputeResolutions[order.id]
             const hasDisputeResolution = order.status === 'completed' && disputeResolution
 

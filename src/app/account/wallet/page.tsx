@@ -99,12 +99,12 @@ async function fetchPurchases(userId: string) {
       amount: order.total_amount || 0,
       platformFee: order.platform_fee || 0,
       netAmount: order.seller_payout || 0,
-      status: order.status === 'completed' ? 'completed'
+      status: (order.status === 'completed' ? 'completed'
             : order.status === 'cancelled' ? 'cancelled'
             : order.status === 'refunded' ? 'refunded'
             : order.status === 'pending' ? 'pending'
             : order.status === 'paid' ? 'processing'
-            : 'processing',
+            : 'processing') as any,
       title: listing?.title || 'Game Item',
       orderId: order.id,
       orderNumber: order.order_number,
@@ -115,7 +115,7 @@ async function fetchPurchases(userId: string) {
       listingImageUrl: Array.isArray(listing?.images) ? listing.images[0] : null,
       categoryName: listing?.category?.name,
     }
-  })
+  }) as any
 
   const lifetimeSpent = orders
     .filter((o: any) => o.status !== 'cancelled' && o.status !== 'refunded')

@@ -39,7 +39,7 @@ export async function uploadDeliveryEvidence(
       .from('orders')
       .select('seller_id, delivery_evidence_urls')
       .eq('id', orderId)
-      .single()
+      .single() as any
 
     if (!order || order.seller_id !== user.id) {
       return {
@@ -86,9 +86,9 @@ export async function uploadDeliveryEvidence(
     const existingUrls = order.delivery_evidence_urls || []
     const updatedUrls = [...existingUrls, ...uploadedUrls]
 
-    const { error: updateError } = await supabase
+    const { error: updateError } = await (supabase
       .from('orders')
-      .update({ delivery_evidence_urls: updatedUrls })
+      .update as any)({ delivery_evidence_urls: updatedUrls })
       .eq('id', orderId)
 
     if (updateError) {
@@ -142,7 +142,7 @@ export async function deleteDeliveryEvidence(
       .from('orders')
       .select('seller_id, delivery_evidence_urls')
       .eq('id', orderId)
-      .single()
+      .single() as any
 
     if (!order || order.seller_id !== user.id) {
       return {
@@ -174,12 +174,12 @@ export async function deleteDeliveryEvidence(
 
     // Update order - remove URL from array
     const updatedUrls = (order.delivery_evidence_urls || []).filter(
-      (url: string) => url !== fileUrl
+      (url: any) => url !== fileUrl
     )
 
-    const { error: updateError } = await supabase
+    const { error: updateError } = await (supabase
       .from('orders')
-      .update({ delivery_evidence_urls: updatedUrls })
+      .update as any)({ delivery_evidence_urls: updatedUrls })
       .eq('id', orderId)
 
     if (updateError) {

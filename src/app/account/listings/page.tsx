@@ -206,8 +206,7 @@ export default function ListingsPage() {
     bulkUpdate,
     bulkDelete,
     isUpdating,
-    isDeleting,
-    refetch
+    isDeleting
   } = useSellerListings({
     search: searchQuery,
     status: selectedStatus !== 'all' ? (selectedStatus as ListingStatus) : undefined
@@ -282,7 +281,7 @@ export default function ListingsPage() {
     paused: listings.filter(l => l.status === 'paused').length,
     sold: listings.filter(l => l.status === 'sold').length,
     draft: listings.filter(l => l.status === 'draft').length,
-    pending_approval: listings.filter(l => l.status === 'pending_approval').length,
+    pending_approval: listings.filter(l => (l.status as any) === 'pending_approval').length,
   }), [listings])
 
   // Bulk action handlers
@@ -376,7 +375,6 @@ export default function ListingsPage() {
       })
 
       // Refresh listings data
-      refetch?.()
     } catch (error: any) {
       toast.error(error.message || 'Failed to update price')
     } finally {
@@ -408,7 +406,6 @@ export default function ListingsPage() {
       await deleteListing({ id: listingId, silent: true })  // ✅ Use silent to prevent duplicate toast
       toast.success('Listing deleted successfully')
       setConfirmingDelete(null)
-      refetch?.()
     } catch (error: any) {
       toast.error(error.message || 'Failed to delete listing')
     } finally {
@@ -434,7 +431,6 @@ export default function ListingsPage() {
     try {
       await updateListing({ id: listingId, updates: { status: newStatus } })
       toast.success(`Listing ${newStatus === 'active' ? 'activated' : 'paused'}`)
-      refetch?.()
     } catch (error: any) {
       toast.error(error.message || 'Failed to update status')
     } finally {
@@ -490,7 +486,7 @@ export default function ListingsPage() {
   }
 
   // Get seller status from profile
-  const sellerStatus = (user?.profile?.seller_status as SellerStatus) || 'active'
+  const sellerStatus = ((user?.profile as any)?.seller_status as SellerStatus) || 'active'
   const isRestricted = !canSellerPublish(sellerStatus)
 
   return (
@@ -500,7 +496,7 @@ export default function ListingsPage() {
         {isRestricted && (
           <RestrictionBanner
             status={sellerStatus}
-            reason={user?.profile?.seller_restriction_reason}
+            reason={(user?.profile as any)?.seller_restriction_reason}
             dismissible={false}
           />
         )}
@@ -830,7 +826,7 @@ export default function ListingsPage() {
                 isSelected={selectedListings.has(listing.id)}
                 onToggleSelect={() => toggleSelectListing(listing.id)}
                 editingPrice={editingPrices[listing.id]}
-                onPriceChange={(newPrice) => handlePriceChange(listing.id, newPrice)}
+                onPriceChange={(newPrice: any) => handlePriceChange(listing.id, newPrice)}
                 onUpdatePrice={() => handleUpdatePrice(listing.id)}
                 onCancelEdit={() => handleCancelPriceEdit(listing.id)}
                 onDeleteClick={() => handleDeleteClick(listing.id)}

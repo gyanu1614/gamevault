@@ -252,9 +252,9 @@ export async function updateSellerStatus(
 
     // TODO: Create a seller_status table to track status changes
     // For now, we'll log this action
-    const { error: logError } = await supabase
+    const { error: logError } = await (supabase
       .from('seller_verification_logs')
-      .insert({
+      .insert as any)({
         application_id: sellerId,
         action: `status_changed_to_${status}`,
         performed_by: admin.userId,

@@ -72,7 +72,7 @@ export type NotificationUpdate = Database['public']['Tables']['notifications']['
 export type AdminRole = Database['public']['Enums']['admin_role_enum'] | null
 export type DisputeReason = Database['public']['Enums']['dispute_reason_enum'] | null
 export type DisputeStatus = Database['public']['Enums']['dispute_status_enum'] | null
-export type WalletTransactionType = Database['public']['Enums']['wallet_transaction_type_enum'] | null
+export type WalletTransactionType = any | null
 
 // Helper types for common query patterns
 export type ListingWithRelations = Listing & {

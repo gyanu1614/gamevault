@@ -32,7 +32,7 @@ export async function getMyReferralCode(): Promise<{
     .from('profiles')
     .select('referral_code, username')
     .eq('id', user.id)
-    .single()
+    .single() as any
 
   if (error || !profile) return { success: false, error: 'Profile not found' }
 
@@ -47,9 +47,9 @@ export async function getMyReferralCode(): Promise<{
   const suffix   = Math.random().toString(36).substring(2, 8).toUpperCase()
   const newCode  = `${prefix}${suffix}`
 
-  const { error: updateError } = await supabase
+  const { error: updateError } = await (supabase
     .from('profiles')
-    .update({ referral_code: newCode })
+    .update as any)({ referral_code: newCode })
     .eq('id', user.id)
 
   if (updateError) return { success: false, error: 'Failed to generate referral code' }
@@ -69,7 +69,7 @@ export async function validateReferralCode(code: string): Promise<{
     .from('profiles')
     .select('id, username')
     .eq('referral_code', code.trim().toUpperCase())
-    .single()
+    .single() as any
 
   if (!data) return { valid: false }
   return { valid: true, referrerId: data.id, referrerUsername: (data as any).username }
@@ -89,19 +89,19 @@ export async function applyReferralAtSignup(
     .from('profiles')
     .select('id')
     .eq('referral_code', referralCode.trim().toUpperCase())
-    .single()
+    .single() as any
 
   if (!referrer || referrer.id === newUserId) return  // invalid or self-referral
 
   // Set referred_by on the new user's profile
-  await supabase
+  await (supabase
     .from('profiles')
-    .update({ referred_by: referrer.id })
+    .update as any)({ referred_by: referrer.id })
     .eq('id', newUserId)
 
   // If signup bonus is configured, credit referrer immediately
   if (REFERRAL_SIGNUP_BONUS > 0) {
-    await supabase.from('referral_earnings').insert({
+    await (supabase.from('referral_earnings').insert as any)({
       referrer_id:      referrer.id,
       referred_user_id: newUserId,
       type:             'signup_bonus',
@@ -129,7 +129,7 @@ export async function recordReferralCommission(params: {
     .from('profiles')
     .select('referred_by')
     .eq('id', referredUserId)
-    .single()
+    .single() as any
 
   const referrerId = (profile as any)?.referred_by
   if (!referrerId) return
@@ -147,7 +147,7 @@ export async function recordReferralCommission(params: {
   const commission = parseFloat((platformFee * REFERRAL_COMMISSION_RATE).toFixed(2))
   if (commission <= 0) return
 
-  await supabase.from('referral_earnings').insert({
+  await (supabase.from('referral_earnings').insert as any)({
     referrer_id:      referrerId,
     referred_user_id: referredUserId,
     order_id:         orderId,
@@ -189,20 +189,20 @@ export async function getReferralStats(): Promise<{
   const earningsData = (earnings ?? []) as ReferralEarning[]
 
   const pendingEarnings = earningsData
-    .filter(e => e.status === 'pending')
-    .reduce((sum, e) => sum + e.amount, 0)
+    .filter((e: any) => e.status === 'pending')
+    .reduce((sum: number, e: any) => sum + e.amount, 0)
 
   const totalEarned = earningsData
-    .filter(e => e.status === 'paid')
-    .reduce((sum, e) => sum + e.amount, 0)
+    .filter((e: any) => e.status === 'paid')
+    .reduce((sum: number, e: any) => sum + e.amount, 0)
 
   const startOfMonth = new Date()
   startOfMonth.setDate(1)
   startOfMonth.setHours(0, 0, 0, 0)
 
   const thisMonthEarned = earningsData
-    .filter(e => e.status === 'paid' && new Date(e.created_at) >= startOfMonth)
-    .reduce((sum, e) => sum + e.amount, 0)
+    .filter((e: any) => e.status === 'paid' && new Date(e.created_at) >= startOfMonth)
+    .reduce((sum: number, e: any) => sum + e.amount, 0)
 
   return {
     success: true,

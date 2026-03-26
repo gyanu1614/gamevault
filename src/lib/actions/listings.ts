@@ -296,7 +296,7 @@ export async function checkListingSpam(
       .from('profiles')
       .select('seller_tier, total_sales')
       .eq('id', userId)
-      .single()
+      .single() as any
 
     const sellerTier = profile?.seller_tier || 'unverified'
     const totalSales = profile?.total_sales || 0
@@ -329,8 +329,8 @@ export async function checkListingSpam(
     if (similarListings && similarListings.length > 0) {
       // Use simple similarity check (can be enhanced with trigram later)
       const normalizedTitle = title.toLowerCase().trim()
-      for (const listing of similarListings) {
-        const existingTitle = listing.title.toLowerCase().trim()
+      for (const listing of (similarListings as any)) {
+        const existingTitle = (listing as any).title.toLowerCase().trim()
         if (normalizedTitle === existingTitle) {
           return {
             success: true,
@@ -393,7 +393,7 @@ export async function createListing(
       .from('profiles')
       .select('seller_tier, seller_status')
       .eq('id', user.id)
-      .single()
+      .single() as any
 
     // Check if seller is restricted or banned
     if (profile?.seller_status && profile.seller_status !== 'active') {
@@ -422,7 +422,7 @@ export async function createListing(
       .from('categories')
       .select('metadata')
       .eq('id', input.category_id)
-      .single()
+      .single() as any
 
     if (category) {
       const metadata = category.metadata as Category['metadata']
@@ -477,9 +477,9 @@ export async function createListing(
     }
 
     // Insert listing
-    const { data, error } = await supabase
+    const { data, error } = await (supabase
       .from('listings')
-      .insert([listingData])
+      .insert as any)([listingData])
       .select(`
         *,
         game:game_id (id, name, slug, image_url),
@@ -535,7 +535,7 @@ export async function checkSellerNeedsModeration(): Promise<{
       .from('profiles')
       .select('seller_tier')
       .eq('id', user.id)
-      .single()
+      .single() as any
 
     const sellerTier = profile?.seller_tier || 'unverified'
 
@@ -648,7 +648,7 @@ export async function updateListingPrice(
       .from('listings')
       .select('seller_id')
       .eq('id', listingId)
-      .single()
+      .single() as any
 
     if (!listing) {
       return { success: false, error: 'Listing not found' }
@@ -659,9 +659,9 @@ export async function updateListingPrice(
     }
 
     // Update the price
-    const { error: updateError } = await supabase
+    const { error: updateError } = await (supabase
       .from('listings')
-      .update({ price: newPrice, updated_at: new Date().toISOString() })
+      .update as any)({ price: newPrice, updated_at: new Date().toISOString() })
       .eq('id', listingId)
 
     if (updateError) throw updateError
@@ -697,7 +697,7 @@ export async function updateListing(
       .from('listings')
       .select('seller_id')
       .eq('id', listingId)
-      .single()
+      .single() as any
 
     if (!listing) {
       return { success: false, error: 'Listing not found' }
@@ -738,7 +738,7 @@ export async function updateListing(
           .from('listings')
           .select('status')
           .eq('id', listingId)
-          .single()
+          .single() as any
         if (currentListing?.status === 'sold') {
           updateData.status = 'active'
         }
@@ -760,9 +760,9 @@ export async function updateListing(
     if (input.status !== undefined) updateData.status = input.status
 
     // Update the listing
-    const { data, error: updateError } = await supabase
+    const { data, error: updateError } = await (supabase
       .from('listings')
-      .update(updateData)
+      .update as any)(updateData)
       .eq('id', listingId)
       .select(`
         *,
@@ -844,7 +844,7 @@ export async function deleteListing(
       .from('listings')
       .select('seller_id, images')
       .eq('id', listingId)
-      .single()
+      .single() as any
 
     if (!listing) {
       return { success: false, error: 'Listing not found' }
@@ -856,7 +856,7 @@ export async function deleteListing(
 
     // Delete listing images from storage
     if (listing.images && Array.isArray(listing.images)) {
-      for (const imageUrl of listing.images) {
+      for (const imageUrl of (listing.images as any)) {
         try {
           await deleteListingImage(imageUrl)
         } catch (err) {

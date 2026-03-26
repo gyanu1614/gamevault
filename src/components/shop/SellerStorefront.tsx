@@ -81,7 +81,7 @@ export default function SellerStorefront({ seller }: SellerStorefrontProps) {
     '@context': 'https://schema.org',
     '@type': 'Store',
     name: businessName,
-    image: getAvatarUrl(seller.profile),
+    image: getAvatarUrl(seller.profile.avatar_url, seller.profile.username),
     description: `Gaming marketplace seller on GameVault`,
     url: `${typeof window !== 'undefined' ? window.location.origin : ''}/shop/${seller.profile.shop_slug || seller.profile.username}`,
     aggregateRating: seller.stats.totalReviews > 0 ? {
@@ -122,7 +122,7 @@ export default function SellerStorefront({ seller }: SellerStorefrontProps) {
             sellerId={seller.profile.id}
             username={seller.profile.username}
             shopName={seller.profile.shop_name || seller.profile.business_name}
-            avatarUrl={getAvatarUrl(seller.profile)}
+            avatarUrl={getAvatarUrl(seller.profile.avatar_url, seller.profile.username)}
             isOnline={isOnline}
             isVerified={true}
             rating={seller.stats.avgRating}

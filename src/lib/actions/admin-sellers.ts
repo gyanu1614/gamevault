@@ -154,7 +154,7 @@ export async function getSellerApplications(
     query = query.eq('status', status)
   }
 
-  const { data, error } = await query
+  const { data, error } = await query as any
 
   if (error) {
     console.error('Error fetching applications:', error)
@@ -163,7 +163,7 @@ export async function getSellerApplications(
 
   // Get emails from auth.users for each application using admin API
   const applicationsWithUserInfo = await Promise.all(
-    (data || []).map(async (app) => {
+    (data || []).map(async (app: any) => {
       // Try to get email from profiles first (if migration is applied)
       let email = app.profiles?.email
 
@@ -231,7 +231,7 @@ export async function getSellerApplication(applicationId: string): Promise<Selle
       )
     `)
     .eq('id', applicationId)
-    .single()
+    .single() as any
 
   if (error || !data) {
     console.error('Error fetching application:', error)
@@ -309,19 +309,19 @@ export async function approveApplication(
   const { data: documents } = await supabase
     .from('seller_kyc_documents')
     .select('document_type')
-    .eq('application_id', applicationId)
+    .eq('application_id', applicationId) as any
 
   // Determine which verifications are complete based on uploaded documents
-  const docTypes = documents?.map(d => d.document_type) || []
-  const identity_verified = docTypes.some(t => ['id_front', 'id_back', 'selfie_with_id'].includes(t))
+  const docTypes = documents?.map((d: any) => d.document_type) || []
+  const identity_verified = docTypes.some((t: any) => ['id_front', 'id_back', 'selfie_with_id'].includes(t))
   const address_verified = docTypes.includes('proof_of_address')
-  const business_verified = docTypes.some(t => ['certificate_of_incorporation', 'business_license', 'director_id'].includes(t))
-  const tax_verified = docTypes.some(t => ['w9_form', 'w8ben_form', 'bank_statement'].includes(t))
+  const business_verified = docTypes.some((t: any) => ['certificate_of_incorporation', 'business_license', 'director_id'].includes(t))
+  const tax_verified = docTypes.some((t: any) => ['w9_form', 'w8ben_form', 'bank_statement'].includes(t))
 
   // Update application status with verification flags
-  const { error } = await supabase
+  const { error } = await (supabase
     .from('seller_applications')
-    .update({
+    .update as any)({
       status: 'approved',
       reviewed_at: new Date().toISOString(),
       reviewed_by: admin.userId,
@@ -344,7 +344,7 @@ export async function approveApplication(
     .from('seller_applications')
     .select('user_id, display_name')
     .eq('id', applicationId)
-    .single()
+    .single() as any
 
   if (app) {
     // Update user's avatar_url with their uploaded profile picture
@@ -353,7 +353,7 @@ export async function approveApplication(
       .list(app.user_id, {
         limit: 1,
         sortBy: { column: 'created_at', order: 'desc' }
-      })
+      }) as any
 
     if (profilePics && profilePics.length > 0) {
       // Get public URL for the profile picture
@@ -363,9 +363,9 @@ export async function approveApplication(
 
       if (publicUrlData?.publicUrl) {
         // Update profiles table with the avatar URL
-        await supabase
+        await (supabase
           .from('profiles')
-          .update({ avatar_url: publicUrlData.publicUrl })
+          .update as any)({ avatar_url: publicUrlData.publicUrl })
           .eq('id', app.user_id)
       }
     }
@@ -436,7 +436,7 @@ export async function rejectApplication(
   const supabase = await createClient()
 
   // Call database function to handle rejection with tiered cooldown
-  const { data, error } = await supabase.rpc('reject_seller_application', {
+  const { data, error } = await (supabase.rpc as any)('reject_seller_application', {
     application_id_param: applicationId,
     admin_id_param: admin.userId,
     rejection_reason_param: rejectionReason,
@@ -450,9 +450,9 @@ export async function rejectApplication(
 
   // Update admin notes separately if provided
   if (adminNotes) {
-    await supabase
+    await (supabase
       .from('seller_applications')
-      .update({
+      .update as any)({
         admin_notes: adminNotes,
         updated_at: new Date().toISOString()
       })
@@ -464,7 +464,7 @@ export async function rejectApplication(
     .from('seller_applications')
     .select('user_id, display_name')
     .eq('id', applicationId)
-    .single()
+    .single() as any
 
   if (app) {
     // TODO: Re-implement activity logging when logAdminActivity is integrated

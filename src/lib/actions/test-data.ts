@@ -86,7 +86,7 @@ export async function createTestListings() {
       .from('profiles')
       .select('id, username, role')
       .eq('id', user.id)
-      .single()
+      .single() as any
 
     if (!currentProfile) {
       return {
@@ -121,7 +121,7 @@ export async function createTestListings() {
         .from('profiles')
         .select('id, username, role, seller_tier')
         .eq('role', 'seller')
-        .limit(1)
+        .limit(1) as any
 
       if (sellers && sellers.length > 0) {
         sellerId = sellers[0].id
@@ -136,16 +136,16 @@ export async function createTestListings() {
         .from('profiles')
         .select('seller_tier')
         .eq('id', sellerId)
-        .single()
+        .single() as any
 
       originalTier = profile?.seller_tier
     }
 
     // Temporarily upgrade seller to 'bronze' tier to bypass pre-moderation
     console.log('⬆️ Temporarily upgrading seller tier to bronze to bypass pre-moderation...')
-    const { error: tierError } = await supabase
+    const { error: tierError } = await (supabase
       .from('profiles')
-      .update({ seller_tier: 'bronze' })
+      .update as any)({ seller_tier: 'bronze' })
       .eq('id', sellerId)
 
     if (tierError) {
@@ -159,12 +159,12 @@ export async function createTestListings() {
     const { data: games, error: gamesError } = await supabase
       .from('games')
       .select('id, slug, name')
-      .order('name')
+      .order('name') as any
 
     const { data: categories, error: categoriesError } = await supabase
       .from('categories')
       .select('id, slug, name')
-      .order('name')
+      .order('name') as any
 
     if (gamesError || !games || games.length === 0) {
       return {
@@ -180,11 +180,11 @@ export async function createTestListings() {
       }
     }
 
-    const robloxGame = games.find(g => g.slug === 'roblox')
-    const fortniteGame = games.find(g => g.slug === 'fortnite')
-    const valorantGame = games.find(g => g.slug === 'valorant')
-    const accountsCategory = categories.find(c => c.slug === 'accounts')
-    const currencyCategory = categories.find(c => c.slug === 'currency')
+    const robloxGame = games.find((g: any) => g.slug === 'roblox')
+    const fortniteGame = games.find((g: any) => g.slug === 'fortnite')
+    const valorantGame = games.find((g: any) => g.slug === 'valorant')
+    const accountsCategory = categories.find((c: any) => c.slug === 'accounts')
+    const currencyCategory = categories.find((c: any) => c.slug === 'currency')
 
     if (!robloxGame || !fortniteGame || !valorantGame) {
       return {
@@ -280,9 +280,9 @@ export async function createTestListings() {
 
     console.log('📝 Step 3: Inserting listings with ACTIVE status (bronze tier bypasses pre-moderation)...')
 
-    const { data: createdListings, error } = await supabase
+    const { data: createdListings, error } = await (supabase
       .from('listings')
-      .insert(testListings)
+      .insert as any)(testListings)
       .select()
 
     if (error) {
@@ -303,7 +303,7 @@ export async function createTestListings() {
 
     console.log('🔍 Verification - Final status:', verifyListings)
 
-    const allActive = verifyListings?.every(l => l.status === 'active')
+    const allActive = verifyListings?.every((l: any) => l.status === 'active')
     if (!allActive) {
       console.warn('⚠️ Not all listings are active:', verifyListings)
       return {

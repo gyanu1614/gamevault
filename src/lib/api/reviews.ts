@@ -112,7 +112,7 @@ export async function checkReviewEligibility(orderId: string): Promise<{
       .from('orders')
       .select('id, order_number, buyer_id, seller_id, listing_id, status')
       .eq('id', orderId)
-      .single()
+      .single() as any
 
     if (orderError || !order) {
       return {
@@ -196,7 +196,7 @@ export async function createReview(reviewData: CreateReviewData): Promise<{
     }
 
     // Create the review (without complex joins to avoid RLS recursion)
-    const reviewInsert = {
+    const reviewInsert: any = {
       order_id: reviewData.orderId,
       reviewer_id: user.id,
       seller_id: eligibility.order!.seller_id,
@@ -208,9 +208,9 @@ export async function createReview(reviewData: CreateReviewData): Promise<{
       is_visible: true
     }
 
-    const { data, error } = await supabase
+    const { data, error } = await (supabase
       .from('reviews')
-      .insert(reviewInsert)
+      .insert as any)(reviewInsert)
       .select('*')
       .single()
 
@@ -334,7 +334,7 @@ export async function getSellerReviews(sellerId: string, filters: ReviewFilters 
       .from('profiles')
       .select('seller_rating, total_reviews, positive_reviews')
       .eq('id', sellerId)
-      .single()
+      .single() as any
 
     if (profileError) {
       console.error('Error fetching seller profile:', profileError)
@@ -342,7 +342,7 @@ export async function getSellerReviews(sellerId: string, filters: ReviewFilters 
 
     // Calculate rating distribution
     const ratingDistribution: { [key: number]: number } = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 }
-    reviews?.forEach(review => {
+    reviews?.forEach((review: any) => {
       ratingDistribution[review.rating] = (ratingDistribution[review.rating] || 0) + 1
     })
 
@@ -438,7 +438,7 @@ export async function updateReview(
       .select('id, reviewer_id, created_at, last_edited_at, edit_count')
       .eq('id', reviewId)
       .eq('reviewer_id', user.id)
-      .single()
+      .single() as any
 
     if (fetchError || !currentReview) {
       return { data: null, error: new Error('Review not found or you don\'t have permission to edit it') }
@@ -468,9 +468,9 @@ export async function updateReview(
     }
 
     // Update the review (triggers will handle edit_count, last_edited_at, and history)
-    const { data, error } = await supabase
+    const { data, error } = await (supabase
       .from('reviews')
-      .update(updates)
+      .update as any)(updates)
       .eq('id', reviewId)
       .eq('reviewer_id', user.id)
       .select()
@@ -514,9 +514,9 @@ export async function addSellerResponse(
     }
 
     // Update the review with seller response
-    const { data, error } = await supabase
+    const { data, error } = await (supabase
       .from('reviews')
-      .update({
+      .update as any)({
         seller_response: response,
         seller_responded_at: new Date().toISOString()
       })
@@ -574,9 +574,9 @@ export async function flagReview(reviewId: string, reason: string): Promise<{
   const supabase = createClient()
 
   try {
-    const { error } = await supabase
+    const { error } = await (supabase
       .from('reviews')
-      .update({
+      .update as any)({
         flagged_for_moderation: true,
         moderation_reason: reason
       })
@@ -623,7 +623,7 @@ export async function getOrderReview(orderId: string): Promise<{
       return { data: null, error }
     }
 
-    return { data: data as ReviewWithRelations || null, error: null }
+    return { data: (data || null) as ReviewWithRelations | null, error: null }
   } catch (err) {
     console.error('Error in getOrderReview:', err)
     return { data: null, error: err }
@@ -691,7 +691,7 @@ export async function canEditReview(reviewId: string): Promise<{
       .from("reviews")
       .select("reviewer_id, created_at, last_edited_at")
       .eq("id", reviewId)
-      .single()
+      .single() as any
 
     if (error || !review) {
       return { canEdit: false, reason: "Review not found" }
