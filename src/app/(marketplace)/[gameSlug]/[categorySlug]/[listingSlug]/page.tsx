@@ -52,7 +52,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       category:categories!listings_category_id_fkey(name)
     `)
     .eq('slug', listingSlug)
-    .single()
+    .single() as any
 
   if (!listing) {
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -65,7 +65,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
           category:categories!listings_category_id_fkey(name)
         `)
         .eq('id', listingSlug)
-        .single()
+        .single() as any
       listing = result.data
     }
   }
@@ -105,7 +105,7 @@ async function getListing(listingSlug: string) {
     `)
     .eq('slug', listingSlug)
     .eq('status', 'active')
-    .single()
+    .single() as any
 
   if (error || !listing) {
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -120,19 +120,21 @@ async function getListing(listingSlug: string) {
         `)
         .eq('id', listingSlug)
         .eq('status', 'active')
-        .single()
+        .single() as any
 
       listing = result.data
       error = result.error
     }
   }
 
-  if (error || !listing) return null
+  if (error || !listing) {
+    return null
+  }
 
   // Increment view count (fire and forget)
-  supabase
-    .from('listings')
-    .update({ views: (listing.views || 0) + 1 })
+  ((supabase
+    .from('listings') as any)
+    .update({ views: (listing.views || 0) + 1 }))
     .eq('id', listing.id)
     .then()
 
@@ -147,7 +149,7 @@ async function getAllGameCategories(gameId: string): Promise<GameCategory[]> {
     .eq('game_id', gameId)
     .eq('is_active', true)
     .order('display_order', { ascending: true })
-    .order('name', { ascending: true })
+    .order('name', { ascending: true }) as any
   return (data || []) as GameCategory[]
 }
 

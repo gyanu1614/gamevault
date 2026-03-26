@@ -22,8 +22,8 @@ export async function PUT(request: Request) {
     }
 
     // Update profile
-    const { error: updateError } = await supabase
-      .from('profiles')
+    const { error: updateError } = await (supabase
+      .from('profiles') as any)
       .update({
         full_name: full_name?.trim() || null,
         username: username?.trim() || null,

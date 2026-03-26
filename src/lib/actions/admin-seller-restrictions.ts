@@ -25,16 +25,16 @@ export async function restrictSeller(params: RestrictSellerParams): Promise<{ su
       .from('profiles')
       .select('username, email, seller_status')
       .eq('id', userId)
-      .single()
+      .single() as any
 
     if (!seller) {
       return { success: false, error: 'Seller not found' }
     }
 
     // Update seller status
-    const { error: updateError } = await supabase
+    const { error: updateError } = await (supabase
       .from('profiles')
-      .update({
+      .update as any)({
         seller_status: status,
         seller_restriction_reason: reason || null,
         seller_restricted_at: status !== 'active' ? new Date().toISOString() : null,
@@ -49,9 +49,9 @@ export async function restrictSeller(params: RestrictSellerParams): Promise<{ su
 
     // If restricting or banning, pause all active listings
     if (status !== 'active') {
-      const { error: pauseError } = await supabase
+      const { error: pauseError } = await (supabase
         .from('listings')
-        .update({ status: 'paused' })
+        .update as any)({ status: 'paused' })
         .eq('seller_id', userId)
         .in('status', ['active', 'pending_approval'])
 
@@ -62,9 +62,9 @@ export async function restrictSeller(params: RestrictSellerParams): Promise<{ su
     }
 
     // Track restriction history
-    const { error: historyError } = await supabase
+    const { error: historyError } = await (supabase
       .from('seller_restrictions')
-      .insert({
+      .insert as any)({
         seller_id: userId,
         restricted_by: admin.userId,
         restriction_type: status === 'active' ? 'unrestricted' : status,
@@ -99,9 +99,9 @@ export async function restrictSeller(params: RestrictSellerParams): Promise<{ su
       ? 'seller_banned'
       : 'seller_unrestricted'
 
-    const { error: notifError } = await supabase
+    const { error: notifError } = await (supabase
       .from('notifications')
-      .insert({
+      .insert as any)({
         user_id: userId,
         type: notificationType,
         title: notificationTitle,

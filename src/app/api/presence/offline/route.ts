@@ -21,8 +21,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Mark user as offline
-    const { error } = await supabase
-      .from('seller_presence')
+    const { error } = await (supabase
+      .from('seller_presence') as any)
       .update({ is_online: false })
       .eq('seller_id', user.id)
 

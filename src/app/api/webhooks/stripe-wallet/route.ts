@@ -4,7 +4,7 @@ import Stripe from 'stripe'
 import { createClient } from '@/lib/supabase/server'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2024-11-20.acacia',
+  apiVersion: '2025-02-24.acacia',
 })
 
 const webhookSecret = process.env.STRIPE_WALLET_WEBHOOK_SECRET!
@@ -49,7 +49,7 @@ export async function POST(req: Request) {
           .from('wallet_balances')
           .select('available_balance, lifetime_earned')
           .eq('user_id', userId)
-          .single()
+          .single() as any
 
         if (walletError) {
           console.error(`[Stripe Wallet Webhook] Error fetching wallet:`, walletError)
@@ -60,8 +60,8 @@ export async function POST(req: Request) {
         const newLifetimeEarned = (wallet.lifetime_earned || 0) + amount
 
         // Create transaction record
-        const { error: txError } = await supabase
-          .from('wallet_transactions')
+        const { error: txError } = await (supabase
+          .from('wallet_transactions') as any)
           .insert({
             user_id: userId,
             type: 'top_up',
@@ -80,8 +80,8 @@ export async function POST(req: Request) {
         }
 
         // Update wallet balance
-        const { error: updateError } = await supabase
-          .from('wallet_balances')
+        const { error: updateError } = await (supabase
+          .from('wallet_balances') as any)
           .update({
             available_balance: newBalance,
             lifetime_earned: newLifetimeEarned,
@@ -98,9 +98,9 @@ export async function POST(req: Request) {
 
         // Send notification to user
         try {
-          await supabase
+          await (supabase
             .from('notifications')
-            .insert({
+            .insert as any)({
               user_id: userId,
               type: 'system',
               title: 'Wallet Topped Up',

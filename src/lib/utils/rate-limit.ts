@@ -118,7 +118,7 @@ function cleanup(): void {
   const now = Date.now()
   const keysToDelete: string[] = []
 
-  for (const [key, entry] of rateLimitMap.entries()) {
+  for (const [key, entry] of Array.from(rateLimitMap.entries())) {
     if (now > entry.resetAt) {
       keysToDelete.push(key)
     }

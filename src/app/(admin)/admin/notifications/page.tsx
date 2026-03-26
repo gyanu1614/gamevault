@@ -85,9 +85,12 @@ export default function AdminNotificationsPage() {
   const markAsRead = async (id: string) => {
     const { createClient } = await import('@/lib/supabase/client')
     const supabase = createClient()
-    await supabase
+    const { error } = await (supabase
       .from('notifications')
-      .update({ is_read: true, read_at: new Date().toISOString() })
+      .update as any)({
+        is_read: true,
+        read_at: new Date().toISOString()
+      })
       .eq('id', id)
     queryClient.invalidateQueries({ queryKey: ['admin-notifications-page', userId] })
     queryClient.invalidateQueries({ queryKey: ['admin-unread-notifications', userId] })
@@ -99,9 +102,12 @@ export default function AdminNotificationsPage() {
     setMarking(true)
     const { createClient } = await import('@/lib/supabase/client')
     const supabase = createClient()
-    await supabase
+    const { error } = await (supabase
       .from('notifications')
-      .update({ is_read: true, read_at: new Date().toISOString() })
+      .update as any)({
+        is_read: true,
+        read_at: new Date().toISOString()
+      })
       .eq('user_id', userId)
       .eq('is_read', false)
     queryClient.invalidateQueries({ queryKey: ['admin-notifications-page', userId] })

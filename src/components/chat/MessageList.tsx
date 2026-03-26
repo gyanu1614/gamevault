@@ -78,28 +78,28 @@ export default function MessageList({
   useEffect(() => {
     const fetchAdminUsers = async () => {
       // Get unique sender IDs from messages
-      const senderIds = [...new Set(messages.map(m => m.sender_id))]
+      const senderIds = Array.from(new Set(messages.map(m => m.sender_id)))
 
       // Check which senders are admins
       const { data: admins } = await supabase
         .from('admin_roles')
         .select('user_id')
         .in('user_id', senderIds)
-        .eq('is_active', true)
+        .eq('is_active', true) as any
 
       if (!admins || admins.length === 0) return
 
-      const adminUserIds = admins.map(a => a.user_id)
+      const adminUserIds = admins.map((a: any) => a.user_id)
 
       // Fetch profile info for admins
       const { data: profiles } = await supabase
         .from('profiles')
         .select('id, username, avatar_url')
-        .in('id', adminUserIds)
+        .in('id', adminUserIds) as any
 
       if (profiles) {
         const adminMap: Record<string, { username: string; avatar_url?: string }> = {}
-        profiles.forEach(p => {
+        profiles.forEach((p: any) => {
           adminMap[p.id] = {
             username: p.username,
             avatar_url: p.avatar_url || undefined

@@ -87,14 +87,14 @@ export async function getDisputes(filters?: {
 
   const { data, error, count } = await query
     .order('created_at', { ascending: false })
-    .range(from, to)
+    .range(from, to) as any
 
   if (error) {
     return { success: false, error: error.message }
   }
 
   // Get order IDs to fetch order/listing/game info
-  const orderIds = (data || []).map(d => d.transaction_id).filter(Boolean)
+  const orderIds = (data || []).map((d: any) => d.transaction_id).filter(Boolean)
 
   let ordersMap: Record<string, any> = {}
   if (orderIds.length > 0) {
@@ -166,7 +166,7 @@ export async function getDisputeById(disputeId: string) {
       .from('disputes_with_users')
       .select('*')
       .eq('id', disputeId)
-      .single(),
+      .single() as any,
     supabase
       .from('dispute_messages')
       .select(`
@@ -178,7 +178,7 @@ export async function getDisputeById(disputeId: string) {
         )
       `)
       .eq('dispute_id', disputeId)
-      .order('created_at', { ascending: true }),
+      .order('created_at', { ascending: true }) as any,
   ])
 
   if (disputeResult.error) {
@@ -190,7 +190,7 @@ export async function getDisputeById(disputeId: string) {
     actionCategory: 'dispute',
     resourceType: 'dispute',
     resourceId: disputeId,
-    resourceName: disputeResult.data.title,
+    resourceName: (disputeResult.data as any).title,
   })
 
   return {
@@ -212,19 +212,19 @@ export async function assignDispute(disputeId: string, adminId: string) {
     .from('disputes')
     .select('status, assigned_to, title')
     .eq('id', disputeId)
-    .single()
+    .single() as any
 
   if (fetchError) {
     return { success: false, error: fetchError.message }
   }
 
-  const { error } = await supabase
+  const { error } = await (supabase
     .from('disputes')
-    .update({
+    .update as any)({
       assigned_to: adminId,
       assigned_at: new Date().toISOString(),
-      status: dispute.status === 'open' ? 'under_review' : dispute.status,
-      first_response_at: dispute.status === 'open' ? new Date().toISOString() : undefined,
+      status: (dispute as any).status === 'open' ? 'under_review' : (dispute as any).status,
+      first_response_at: (dispute as any).status === 'open' ? new Date().toISOString() : undefined,
     })
     .eq('id', disputeId)
 
@@ -232,7 +232,7 @@ export async function assignDispute(disputeId: string, adminId: string) {
     return { success: false, error: error.message }
   }
 
-  await supabase.from('dispute_messages').insert({
+  await (supabase.from('dispute_messages').insert as any)({
     dispute_id: disputeId,
     sender_id: admin.userId,
     message: `Dispute assigned to admin for review.`,
@@ -267,7 +267,7 @@ export async function sendDisputeMessage(
   const admin = await requirePermission('disputes.view')
   const supabase = await createClient()
 
-  const { error } = await supabase.from('dispute_messages').insert({
+  const { error } = await (supabase.from('dispute_messages').insert as any)({
     dispute_id: disputeId,
     sender_id: admin.userId,
     message,
@@ -311,7 +311,7 @@ export async function resolveDispute(
     .from('disputes_with_users')
     .select('*')
     .eq('id', disputeId)
-    .single()
+    .single() as any
 
   if (fetchError) {
     return { success: false, error: fetchError.message }
@@ -321,8 +321,8 @@ export async function resolveDispute(
   const { data: order, error: orderError } = await supabase
     .from('orders')
     .select('id, stripe_payment_intent_id, total_amount, escrow_status, status')
-    .eq('id', dispute.transaction_id)
-    .single()
+    .eq('id', (dispute as any).transaction_id)
+    .single() as any
 
   if (orderError || !order) {
     return { success: false, error: 'Order not found' }
@@ -356,9 +356,9 @@ export async function resolveDispute(
   }
 
   // Update dispute status
-  const { error: disputeError } = await supabase
+  const { error: disputeError } = await (supabase
     .from('disputes')
-    .update({
+    .update as any)({
       status: resolution.status,
       resolution_type: resolution.resolutionType,
       resolved_amount: resolution.resolvedAmount,
@@ -385,20 +385,20 @@ export async function resolveDispute(
     'other': 'other'
   }
 
-  const { error: resolutionInsertError } = await supabase
+  const { error: resolutionInsertError } = await (supabase
     .from('dispute_resolutions')
-    .insert({
+    .insert as any)({
       dispute_id: disputeId,
       resolved_by: admin.userId,
       resolution_type: resolutionTypeMapping[resolution.resolutionType] || 'other',
       favored_party: favoredParty,
       refund_amount: resolution.resolutionType.includes('refund') ? resolution.resolvedAmount : null,
       refund_percentage: resolution.resolutionType === 'refund_partial' && resolution.resolvedAmount
-        ? (resolution.resolvedAmount / order.total_amount) * 100
+        ? (resolution.resolvedAmount / (order as any).total_amount) * 100
         : null,
-      seller_payout_amount: resolution.resolutionType === 'no_refund' ? order.total_amount :
+      seller_payout_amount: resolution.resolutionType === 'no_refund' ? (order as any).total_amount :
         (resolution.resolutionType === 'refund_partial' && resolution.resolvedAmount
-          ? order.total_amount - resolution.resolvedAmount
+          ? (order as any).total_amount - resolution.resolvedAmount
           : null),
       resolution_notes: resolution.notes,
       resolved_at: new Date().toISOString(),
@@ -426,15 +426,15 @@ export async function resolveDispute(
     newEscrowStatus = 'released'
   }
 
-  const { error: orderUpdateError } = await supabase
+  const { error: orderUpdateError } = await (supabase
     .from('orders')
-    .update({
+    .update as any)({
       status: newOrderStatus,
       escrow_status: newEscrowStatus,
       release_method: 'dispute_resolved',
       completed_at: new Date().toISOString(),
     })
-    .eq('id', dispute.transaction_id)
+    .eq('id', (dispute as any).transaction_id)
 
   if (orderUpdateError) {
     console.error('[Dispute] Failed to update order status:', orderUpdateError)
@@ -447,7 +447,7 @@ export async function resolveDispute(
       .from('conversations')
       .select('id')
       .eq('order_id', dispute.transaction_id)
-      .single()
+      .single() as any
 
     if (conversation) {
       // Map status to simple resolution type
@@ -465,7 +465,7 @@ export async function resolveDispute(
         refundAmount: resolution.resolvedAmount
       }
 
-      await supabase.from('messages').insert({
+      await (supabase.from('messages').insert as any)({
         conversation_id: conversation.id,
         sender_id: '00000000-0000-0000-0000-000000000000', // System user ID
         content: JSON.stringify(systemMessage),
@@ -488,7 +488,7 @@ export async function resolveDispute(
       .from('orders')
       .select('order_number, buyer_id, seller_id')
       .eq('id', dispute.transaction_id)
-      .single()
+      .single() as any
 
     if (orderData) {
       const orderRef = orderData.order_number || dispute.transaction_id.slice(0, 8).toUpperCase()
@@ -596,11 +596,11 @@ export async function escalateDispute(disputeId: string, reason: string) {
     .from('disputes')
     .select('title')
     .eq('id', disputeId)
-    .single()
+    .single() as any
 
-  const { error } = await supabase
+  const { error } = await (supabase
     .from('disputes')
-    .update({
+    .update as any)({
       status: 'escalated',
       priority: 'urgent',
       escalated_at: new Date().toISOString(),
@@ -613,7 +613,7 @@ export async function escalateDispute(disputeId: string, reason: string) {
     return { success: false, error: error.message }
   }
 
-  await supabase.from('dispute_messages').insert({
+  await (supabase.from('dispute_messages').insert as any)({
     dispute_id: disputeId,
     sender_id: admin.userId,
     message: `⚠️ Dispute escalated to senior review.\n\nReason: ${reason}`,
@@ -638,7 +638,7 @@ export async function escalateDispute(disputeId: string, reason: string) {
     .from('disputes')
     .select('transaction_id')
     .eq('id', disputeId)
-    .single()
+    .single() as any
 
   if (disputeData?.transaction_id) {
     revalidatePath(`/account/orders/${disputeData.transaction_id}`)
@@ -658,7 +658,7 @@ export async function getDisputeStats() {
 
   const { data, error } = await supabase
     .from('disputes')
-    .select('status, priority, created_at')
+    .select('status, priority, created_at') as any
 
   if (error) {
     return { success: false, error: error.message }
@@ -667,19 +667,19 @@ export async function getDisputeStats() {
   const now = new Date()
   const stats = {
     total: data.length,
-    open: data.filter(d => d.status === 'open').length,
-    underReview: data.filter(d => d.status === 'under_review').length,
-    escalated: data.filter(d => d.status === 'escalated').length,
-    awaitingResponse: data.filter(d =>
+    open: data.filter((d: any) => d.status === 'open').length,
+    underReview: data.filter((d: any) => d.status === 'under_review').length,
+    escalated: data.filter((d: any) => d.status === 'escalated').length,
+    awaitingResponse: data.filter((d: any) =>
       d.status === 'awaiting_seller_response' || d.status === 'awaiting_buyer_response'
     ).length,
-    resolvedThisWeek: data.filter(d => {
+    resolvedThisWeek: data.filter((d: any) => {
       const resolved = d.status.startsWith('resolved_')
       const createdAt = new Date(d.created_at)
       const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
       return resolved && createdAt > weekAgo
     }).length,
-    urgent: data.filter(d => d.priority === 'urgent' && !d.status.startsWith('resolved_')).length,
+    urgent: data.filter((d: any) => d.priority === 'urgent' && !d.status.startsWith('resolved_')).length,
   }
 
   return { success: true, stats }

@@ -43,7 +43,7 @@ async function checkOrderAccess(orderId: string, userId: string) {
     .from('orders')
     .select('buyer_id, seller_id')
     .eq('id', orderId)
-    .single()
+    .single() as any
   if (!order) return { hasAccess: false, userRole: null }
   const isBuyer  = order.buyer_id  === userId
   const isSeller = order.seller_id === userId
@@ -127,7 +127,7 @@ export default async function OrderDetailPage({ params }: PageProps) {
       .from('games')
       .select('id, name, slug, image_url')
       .eq('id', order.listing.game_id)
-      .single()
+      .single() as any
     game = gameData
   }
 
@@ -136,7 +136,7 @@ export default async function OrderDetailPage({ params }: PageProps) {
       .from('categories')
       .select('id, name, slug')
       .eq('id', order.listing.category_id)
-      .single()
+      .single() as any
     category = categoryData
   }
 
@@ -163,14 +163,14 @@ export default async function OrderDetailPage({ params }: PageProps) {
       .select('id, status')
       .eq('transaction_id', orderId)
       .in('status', ['resolved_buyer_favor', 'resolved_seller_favor', 'resolved_partial'])
-      .maybeSingle()
+      .maybeSingle() as any
 
     if (disputeData) {
       const { data: resolutionData } = await supabase
         .from('dispute_resolutions')
         .select('favored_party, resolution_type, refund_amount, refund_percentage, seller_payout_amount, resolution_notes, created_at')
         .eq('dispute_id', disputeData.id)
-        .maybeSingle()
+        .maybeSingle() as any
 
       if (resolutionData) {
         disputeResolution = {

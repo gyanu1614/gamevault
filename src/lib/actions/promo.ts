@@ -160,7 +160,7 @@ async function requireAdmin() {
     .select('role, is_active')
     .eq('user_id', user.id)
     .eq('is_active', true)
-    .single()
+    .single() as any
 
   if (!adminRole || !['admin', 'super_admin'].includes(adminRole.role)) {
     throw new Error('Admin access required')

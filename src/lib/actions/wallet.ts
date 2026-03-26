@@ -51,9 +51,9 @@ export async function getWalletBalance(): Promise<{
     if (error) {
       // If wallet doesn't exist, create it
       if (error.code === 'PGRST116') {
-        const { data: newWallet, error: createError } = await supabase
+        const { data: newWallet, error: createError } = await (supabase
           .from('wallet_balances')
-          .insert({ user_id: user.id, available_balance: 0 })
+          .insert as any)({ user_id: user.id, available_balance: 0 })
           .select()
           .single()
 
@@ -173,7 +173,7 @@ export async function addCashback(userId: string, amount: number, orderId: strin
       .from('wallet_balances')
       .select('available_balance, total_cashback')
       .eq('user_id', userId)
-      .single()
+      .single() as any
 
     if (!wallet) {
       return { success: false, error: 'Wallet not found' }
@@ -183,9 +183,9 @@ export async function addCashback(userId: string, amount: number, orderId: strin
     const newCashback = (wallet.total_cashback || 0) + amount
 
     // Create transaction record
-    const { error: txError } = await supabase
+    const { error: txError } = await (supabase
       .from('wallet_transactions')
-      .insert({
+      .insert as any)({
         user_id: userId,
         type: 'cashback',
         amount: amount,
@@ -202,9 +202,9 @@ export async function addCashback(userId: string, amount: number, orderId: strin
     }
 
     // Update wallet balance
-    const { error: updateError } = await supabase
+    const { error: updateError } = await (supabase
       .from('wallet_balances')
-      .update({
+      .update as any)({
         available_balance: newBalance,
         total_cashback: newCashback,
         updated_at: new Date().toISOString(),
@@ -236,7 +236,7 @@ export async function deductFromWallet(userId: string, amount: number, orderId: 
       .from('wallet_balances')
       .select('available_balance, lifetime_spent')
       .eq('user_id', userId)
-      .single()
+      .single() as any
 
     if (!wallet) {
       return { success: false, error: 'Wallet not found' }
@@ -250,9 +250,9 @@ export async function deductFromWallet(userId: string, amount: number, orderId: 
     const newLifetimeSpent = (wallet.lifetime_spent || 0) + amount
 
     // Create transaction record
-    const { error: txError } = await supabase
+    const { error: txError } = await (supabase
       .from('wallet_transactions')
-      .insert({
+      .insert as any)({
         user_id: userId,
         type: 'purchase',
         amount: -amount, // Negative for deductions
@@ -269,9 +269,9 @@ export async function deductFromWallet(userId: string, amount: number, orderId: 
     }
 
     // Update wallet balance
-    const { error: updateError } = await supabase
+    const { error: updateError } = await (supabase
       .from('wallet_balances')
-      .update({
+      .update as any)({
         available_balance: newBalance,
         lifetime_spent: newLifetimeSpent,
         updated_at: new Date().toISOString(),
@@ -303,7 +303,7 @@ export async function refundToWallet(userId: string, amount: number, orderId: st
       .from('wallet_balances')
       .select('available_balance, lifetime_earned')
       .eq('user_id', userId)
-      .single()
+      .single() as any
 
     if (!wallet) {
       return { success: false, error: 'Wallet not found' }
@@ -313,9 +313,9 @@ export async function refundToWallet(userId: string, amount: number, orderId: st
     const newLifetimeEarned = (wallet.lifetime_earned || 0) + amount
 
     // Create transaction record
-    const { error: txError } = await supabase
+    const { error: txError } = await (supabase
       .from('wallet_transactions')
-      .insert({
+      .insert as any)({
         user_id: userId,
         type: 'refund',
         amount: amount, // Positive for refunds
@@ -332,9 +332,9 @@ export async function refundToWallet(userId: string, amount: number, orderId: st
     }
 
     // Update wallet balance
-    const { error: updateError } = await supabase
+    const { error: updateError } = await (supabase
       .from('wallet_balances')
-      .update({
+      .update as any)({
         available_balance: newBalance,
         lifetime_earned: newLifetimeEarned,
         updated_at: new Date().toISOString(),

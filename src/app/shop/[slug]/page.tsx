@@ -81,7 +81,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   // Get seller stats
   const { count: totalSales } = await supabase
     .from('orders')
-    .select('*', { count: 'only', head: true })
+    .select('*', { count: 'exact', head: true })
     .eq('seller_id', profile.id)
     .eq('status', 'completed')
 
@@ -245,7 +245,7 @@ export default async function SellerShopPage({ params }: PageProps) {
   // Calculate seller stats
   const { count: totalSales } = await supabase
     .from('orders')
-    .select('*', { count: 'only', head: true })
+    .select('*', { count: 'exact', head: true })
     .eq('seller_id', profile.id)
     .eq('status', 'completed')
 

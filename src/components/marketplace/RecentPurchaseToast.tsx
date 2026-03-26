@@ -68,7 +68,7 @@ export default function RecentPurchaseToast() {
               )
             `)
             .eq('id', payload.new.id)
-            .single()
+            .single() as any
 
           if (!orderData || !orderData.listing) {
             return

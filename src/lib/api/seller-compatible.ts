@@ -238,9 +238,9 @@ export const listingsApi = {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) throw new Error('Not authenticated')
 
-    const { data, error } = await supabase
+    const { data, error } = await (supabase
       .from('listings')
-      .insert([{
+      .insert as any)([{
         seller_id: user.id,
         ...listing,
       }])
@@ -263,9 +263,9 @@ export const listingsApi = {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) throw new Error('Not authenticated')
 
-    const { data, error } = await supabase
+    const { data, error } = await (supabase
       .from('listings')
-      .update(updates)
+      .update as any)(updates)
       .eq('id', id)
       .eq('seller_id', user.id)  // CRITICAL: Only allow updating own listings
       .select(`
@@ -304,9 +304,9 @@ export const listingsApi = {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) throw new Error('Not authenticated')
 
-    const { error } = await supabase
+    const { error } = await (supabase
       .from('listings')
-      .update(updates)
+      .update as any)(updates)
       .in('id', ids)
       .eq('seller_id', user.id)  // CRITICAL: Only allow updating own listings
 
@@ -437,9 +437,9 @@ export const ordersApi = {
       updates.delivered_at = new Date().toISOString()
     }
 
-    const { data, error } = await supabase
+    const { data, error } = await (supabase
       .from('orders')
-      .update(updates)
+      .update as any)(updates)
       .eq('id', id)
       .select()
       .single()
@@ -452,9 +452,9 @@ export const ordersApi = {
    * Deliver order
    */
   async deliver(id: string, deliveryDetails: any): Promise<Order> {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase
       .from('orders')
-      .update({
+      .update as any)({
         status: 'completed',
         delivery_details: deliveryDetails,
         delivered_at: new Date().toISOString(),
@@ -620,9 +620,9 @@ export const reviewsApi = {
    * Respond to a review
    */
   async respond(id: string, response: string): Promise<Review> {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase
       .from('reviews')
-      .update({
+      .update as any)({
         seller_response: response,
         seller_responded_at: new Date().toISOString(),
       })
@@ -650,21 +650,21 @@ export const reviewsApi = {
       .from('reviews')
       .select('rating, seller_response')
       .eq('reviewed_user_id', user.id)
-      .eq('review_type', 'buyer_to_seller')
+      .eq('review_type', 'buyer_to_seller') as any
 
     if (error) throw error
 
     const totalReviews = reviews?.length || 0
     const avgRating = totalReviews > 0
-      ? reviews!.reduce((sum, r) => sum + r.rating, 0) / totalReviews
+      ? reviews!.reduce((sum: number, r: any) => sum + r.rating, 0) / totalReviews
       : 0
 
     const ratingCounts = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 }
-    reviews?.forEach(r => {
+    reviews?.forEach((r: any) => {
       ratingCounts[r.rating as keyof typeof ratingCounts]++
     })
 
-    const responsesCount = reviews?.filter(r => r.seller_response).length || 0
+    const responsesCount = reviews?.filter((r: any) => r.seller_response).length || 0
     const responseRate = totalReviews > 0 ? (responsesCount / totalReviews) * 100 : 0
 
     return {
@@ -693,7 +693,7 @@ export const analyticsApi = {
       .from('seller_dashboard_stats')
       .select('*')
       .eq('seller_id', user.id)
-      .single()
+      .single() as any
 
     if (error) {
       // If view doesn't exist or returns no data, return empty stats
@@ -706,33 +706,33 @@ export const analyticsApi = {
       }
     }
 
-    const totalViews = Number(data.total_views) || 0
-    const totalSales = Number(data.total_listing_sales) || 0
+    const totalViews = Number((data as any).total_views) || 0
+    const totalSales = Number((data as any).total_listing_sales) || 0
 
     return {
       earnings: {
-        today: Number(data.earnings_today) || 0,
-        week: Number(data.earnings_week) || 0,
-        month: Number(data.earnings_month) || 0,
-        allTime: Number(data.earnings_all_time) || 0,
+        today: Number((data as any).earnings_today) || 0,
+        week: Number((data as any).earnings_week) || 0,
+        month: Number((data as any).earnings_month) || 0,
+        allTime: Number((data as any).earnings_all_time) || 0,
       },
       listings: {
-        active: Number(data.active_listings) || 0,
-        paused: Number(data.paused_listings) || 0,
-        draft: Number(data.draft_listings) || 0,
-        sold: Number(data.sold_listings) || 0,
+        active: Number((data as any).active_listings) || 0,
+        paused: Number((data as any).paused_listings) || 0,
+        draft: Number((data as any).draft_listings) || 0,
+        sold: Number((data as any).sold_listings) || 0,
       },
       orders: {
-        pending: Number(data.pending_orders) || 0,
-        processing: Number(data.processing_orders) || 0,
-        completed: Number(data.completed_orders) || 0,
-        disputed: Number(data.disputed_orders) || 0,
+        pending: Number((data as any).pending_orders) || 0,
+        processing: Number((data as any).processing_orders) || 0,
+        completed: Number((data as any).completed_orders) || 0,
+        disputed: Number((data as any).disputed_orders) || 0,
       },
       performance: {
         totalViews,
         totalSales,
         conversionRate: totalViews > 0 ? (totalSales / totalViews) * 100 : 0,
-        avgRating: Number(data.seller_rating) || 0,
+        avgRating: Number((data as any).seller_rating) || 0,
       },
     }
   },
@@ -805,10 +805,10 @@ export const analyticsApi = {
         buckets[label] = 0
       }
       for (const order of orders) {
-        const d = new Date(order.created_at)
+        const d = new Date((order as any).created_at)
         const label = d.toLocaleDateString('en-US', { weekday: 'short' })
         if (label in buckets) {
-          buckets[label] += Number(order.total_amount) || 0
+          buckets[label] += Number((order as any).total_amount) || 0
         }
       }
     } else if (timeRange === '30d') {
@@ -818,22 +818,22 @@ export const analyticsApi = {
         buckets[label] = 0
       }
       for (const order of orders) {
-        const d = new Date(order.created_at)
+        const d = new Date((order as any).created_at)
         const diffDays = Math.floor((now.getTime() - d.getTime()) / (1000 * 60 * 60 * 24))
         const weekIndex = Math.floor(diffDays / 7)
         const label = weekIndex === 0 ? 'This Week' : weekIndex <= 3 ? `Week -${weekIndex}` : null
         if (label && label in buckets) {
-          buckets[label] += Number(order.total_amount) || 0
+          buckets[label] += Number((order as any).total_amount) || 0
         }
       }
     } else {
       // 90d or all: group by month "Jan", "Feb" etc.
       const monthsSeen = new Set<string>()
       for (const order of orders) {
-        const d = new Date(order.created_at)
+        const d = new Date((order as any).created_at)
         const label = d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' })
         monthsSeen.add(label)
-        buckets[label] = (buckets[label] || 0) + (Number(order.total_amount) || 0)
+        buckets[label] = (buckets[label] || 0) + (Number((order as any).total_amount) || 0)
       }
     }
 
@@ -875,7 +875,7 @@ export const settingsApi = {
         .from('profiles')
         .select('shop_name_updated_at')
         .eq('id', user.id)
-        .single()
+        .single() as any
 
       if (profileError) throw profileError
 
@@ -895,8 +895,8 @@ export const settingsApi = {
       const baseSlug = slugify(updates.shop_name)
 
       // Call database function to get unique slug
-      const { data: slugData, error: slugError } = await supabase
-        .rpc('generate_shop_slug', { name: updates.shop_name })
+      const { data: slugData, error: slugError } = await (supabase
+        .rpc as any)('generate_shop_slug', { name: updates.shop_name })
 
       if (slugError) throw slugError
 
@@ -905,9 +905,9 @@ export const settingsApi = {
       updateData.shop_name_updated_at = new Date().toISOString()
     }
 
-    const { error } = await supabase
+    const { error } = await (supabase
       .from('profiles')
-      .update(updateData)
+      .update as any)(updateData)
       .eq('id', user.id)
 
     if (error) throw error
@@ -924,7 +924,7 @@ export const settingsApi = {
       .from('profiles')
       .select('id, username, seller_tier, total_sales, seller_rating, total_reviews, shop_name, shop_slug, shop_name_updated_at')
       .eq('id', user.id)
-      .single()
+      .single() as any
 
     if (error) throw error
     return data
@@ -1019,7 +1019,7 @@ export const messagesApi = {
 
     // Get unread count and last message for each conversation
     const conversationsWithDetails = await Promise.all(
-      (data || []).map(async (conv) => {
+      (data || []).map(async (conv: any) => {
         // Get last message
         const { data: lastMsg } = await supabase
           .from('messages')
@@ -1027,7 +1027,7 @@ export const messagesApi = {
           .eq('conversation_id', conv.id)
           .order('created_at', { ascending: false })
           .limit(1)
-          .single()
+          .single() as any
 
         // Get unread count
         const { count } = await supabase
@@ -1072,9 +1072,9 @@ export const messagesApi = {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) throw new Error('Not authenticated')
 
-    const { data, error } = await supabase
+    const { data, error } = await (supabase
       .from('messages')
-      .insert({
+      .insert as any)({
         conversation_id: conversationId,
         sender_id: user.id,
         content,
@@ -1087,9 +1087,9 @@ export const messagesApi = {
     if (error) throw error
 
     // Update conversation last_message_at
-    await supabase
+    await (supabase
       .from('conversations')
-      .update({ last_message_at: new Date().toISOString() })
+      .update as any)({ last_message_at: new Date().toISOString() })
       .eq('id', conversationId)
 
     return data
@@ -1102,9 +1102,9 @@ export const messagesApi = {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) throw new Error('Not authenticated')
 
-    const { error } = await supabase
+    const { error } = await (supabase
       .from('messages')
-      .update({ is_read: true, read_at: new Date().toISOString() })
+      .update as any)({ is_read: true, read_at: new Date().toISOString() })
       .eq('conversation_id', conversationId)
       .neq('sender_id', user.id)
       .eq('is_read', false)
@@ -1125,15 +1125,15 @@ export const messagesApi = {
       .select('id')
       .eq('buyer_id', user.id)
       .eq('seller_id', sellerId)
-      .single()
+      .single() as any
 
     let conversationId = existingConv?.id
 
     // Create conversation if it doesn't exist
     if (!conversationId) {
-      const { data: newConv, error: convError } = await supabase
+      const { data: newConv, error: convError } = await (supabase
         .from('conversations')
-        .insert({
+        .insert as any)({
           buyer_id: user.id,
           seller_id: sellerId,
           last_message_at: new Date().toISOString()
@@ -1146,9 +1146,9 @@ export const messagesApi = {
     }
 
     // Send the initial message
-    const { error: msgError } = await supabase
+    const { error: msgError } = await (supabase
       .from('messages')
-      .insert({
+      .insert as any)({
         conversation_id: conversationId,
         sender_id: user.id,
         content: initialMessage,
@@ -1158,9 +1158,9 @@ export const messagesApi = {
     if (msgError) throw msgError
 
     // Update conversation last_message_at
-    await supabase
+    await (supabase
       .from('conversations')
-      .update({ last_message_at: new Date().toISOString() })
+      .update as any)({ last_message_at: new Date().toISOString() })
       .eq('id', conversationId)
 
     return { conversationId }
@@ -1232,15 +1232,15 @@ export const messagesApi = {
         )
       `)
       .eq('id', orderId)
-      .single()
+      .single() as any
 
     if (orderError) throw orderError
     if (!order) throw new Error('Order not found')
 
     // Create conversation
-    const { data: newConv, error: convError } = await supabase
+    const { data: newConv, error: convError } = await (supabase
       .from('conversations')
-      .insert({
+      .insert as any)({
         buyer_id: order.buyer_id,
         seller_id: order.seller_id,
         listing_id: order.listing_id,
@@ -1270,9 +1270,9 @@ export const messagesApi = {
     // Send welcome message from seller
     const welcomeMessage = `Hi! Thank you for your purchase. I'll deliver your order shortly. Feel free to message me if you have any questions!`
 
-    await supabase
+    await (supabase
       .from('messages')
-      .insert({
+      .insert as any)({
         conversation_id: newConv.id,
         sender_id: order.seller_id,
         content: welcomeMessage,
@@ -1303,9 +1303,9 @@ export const messagesApi = {
 
     const content = messageTemplates[action]
 
-    const { data, error } = await supabase
+    const { data, error } = await (supabase
       .from('messages')
-      .insert({
+      .insert as any)({
         conversation_id: conversationId,
         sender_id: user.id,
         content,
@@ -1317,9 +1317,9 @@ export const messagesApi = {
     if (error) throw error
 
     // Update conversation last_message_at
-    await supabase
+    await (supabase
       .from('conversations')
-      .update({ last_message_at: new Date().toISOString() })
+      .update as any)({ last_message_at: new Date().toISOString() })
       .eq('id', conversationId)
 
     return data
@@ -1373,7 +1373,7 @@ export const earningsApi = {
       .from('orders')
       .select('seller_payout, total_amount, platform_fee, created_at')
       .eq('seller_id', user.id)
-      .eq('status', 'completed')
+      .eq('status', 'completed') as any
 
     if (!orders) {
       return {
@@ -1385,7 +1385,7 @@ export const earningsApi = {
       }
     }
 
-    const total_earnings = orders.reduce((sum, order) => sum + (order.seller_payout || 0), 0)
+    const total_earnings = orders.reduce((sum: number, order: any) => sum + (order.seller_payout || 0), 0)
 
     // Calculate this month's earnings
     const startOfMonth = new Date()
@@ -1393,8 +1393,8 @@ export const earningsApi = {
     startOfMonth.setHours(0, 0, 0, 0)
 
     const this_month_earnings = orders
-      .filter(order => new Date(order.created_at) >= startOfMonth)
-      .reduce((sum, order) => sum + (order.seller_payout || 0), 0)
+      .filter((order: any) => new Date(order.created_at) >= startOfMonth)
+      .reduce((sum: number, order: any) => sum + (order.seller_payout || 0), 0)
 
     return {
       total_earnings,
@@ -1427,11 +1427,11 @@ export const earningsApi = {
       `)
       .eq('seller_id', user.id)
       .in('status', ['completed', 'processing', 'paid'])
-      .order('created_at', { ascending: false })
+      .order('created_at', { ascending: false }) as any
 
     if (error) throw error
 
-    return (data || []).map(order => ({
+    return (data || []).map((order: any) => ({
       id: order.id,
       order_id: order.id,
       order_number: order.order_number || `#${order.id.slice(0, 8)}`,

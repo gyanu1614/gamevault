@@ -84,9 +84,9 @@ export default function NotificationsPage() {
   const markAsRead = async (id: string) => {
     const { createClient } = await import('@/lib/supabase/client')
     const supabase = createClient()
-    await supabase
+    const { error } = await (supabase
       .from('notifications')
-      .update({ is_read: true, read_at: new Date().toISOString() })
+      .update as any)({ is_read: true, read_at: new Date().toISOString() })
       .eq('id', id)
     queryClient.invalidateQueries({ queryKey: ['notifications-page', user?.id] })
     queryClient.invalidateQueries({ queryKey: ['unread-notifications', user?.id] })
@@ -98,9 +98,9 @@ export default function NotificationsPage() {
     setMarking(true)
     const { createClient } = await import('@/lib/supabase/client')
     const supabase = createClient()
-    await supabase
+    const { error } = await (supabase
       .from('notifications')
-      .update({ is_read: true, read_at: new Date().toISOString() })
+      .update as any)({ is_read: true, read_at: new Date().toISOString() })
       .eq('user_id', user.id)
       .eq('is_read', false)
     queryClient.invalidateQueries({ queryKey: ['notifications-page', user?.id] })

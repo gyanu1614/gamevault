@@ -47,7 +47,7 @@ export default function LeaveReviewButton({
       // Check if review already exists
       const { data: review } = await getOrderReview(orderId)
       if (review) {
-        setExistingReview(review)
+        setExistingReview(review as any)
         setCanReview(false)
       } else {
         // Check if user can review this order

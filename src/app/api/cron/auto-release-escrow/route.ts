@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
     // Using the database function we created in the migration
     const { data: orders, error: fetchError } = await supabase.rpc(
       'get_orders_ready_for_auto_release'
-    )
+    ) as any
 
     if (fetchError) {
       console.error('Error fetching orders ready for auto-release:', fetchError)
@@ -50,10 +50,10 @@ export async function GET(request: NextRequest) {
     for (const order of orders) {
       try {
         // Call the release_escrow function
-        const { error: releaseError } = await supabase.rpc('release_escrow', {
+        const { error: releaseError } = await ((supabase as any).rpc('release_escrow', {
           order_id: order.id,
           method: 'auto',
-        })
+        }))
 
         if (releaseError) {
           console.error(`❌ Failed to release escrow for order ${order.id}:`, releaseError)

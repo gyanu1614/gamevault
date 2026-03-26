@@ -45,13 +45,13 @@ export default function SellerOrderDetailClient({
   })
 
   // Determine other user (buyer in this case)
-  const otherUser = conversation?.buyer || {
+  const otherUser = (conversation as any)?.buyer || {
     id: order.buyer.id,
     username: order.buyer.username,
     avatar_url: getAvatarUrl(order.buyer.avatar_url, order.buyer.username)
   }
 
-  const orderForChat = {
+  const orderForChat: any = {
     id: order.id,
     order_number: order.order_number,
     listing: order.listing ? {

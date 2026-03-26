@@ -43,7 +43,7 @@ export async function fixApprovedSellers() {
       }
     }
 
-    const userIds = approvedApps.map(app => app.user_id)
+    const userIds = approvedApps.map((app: any) => app.user_id)
 
     // Get profiles that need updating (approved sellers without seller role)
     const { data: profilesToUpdate, error: profilesError } = await supabase
@@ -74,16 +74,16 @@ export async function fixApprovedSellers() {
     const errors: string[] = []
     const serviceClient = getServiceClient()
 
-    for (const profile of profilesToUpdate) {
+    for (const profile of (profilesToUpdate as any)) {
       const currentBadges = profile.badges || []
       const newBadges = currentBadges.includes('verified')
         ? currentBadges
         : [...currentBadges, 'verified']
 
       // Use service client to bypass RLS
-      const { data: updateData, error: updateError } = await serviceClient
+      const { data: updateData, error: updateError } = await (serviceClient
         .from('profiles')
-        .update({
+        .update as any)({
           role: 'seller',
           badges: newBadges
         })
@@ -158,7 +158,7 @@ export async function getApprovedSellerStats() {
     }
 
     // Get unique user IDs
-    const userIds = [...new Set(approvedApps!.map(app => app.user_id))]
+    const userIds = Array.from(new Set(approvedApps!.map((app: any) => app.user_id)))
     const uniqueUsersCount = userIds.length
 
     // Check how many have seller role

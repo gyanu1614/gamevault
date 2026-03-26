@@ -25,7 +25,7 @@ export async function createNotification({
   const supabase = await createClient()
 
   try {
-    const { error } = await supabase.from('notifications').insert({
+    const { error } = await (supabase.from('notifications').insert as any)({
       user_id: userId,
       type,
       title,
@@ -106,7 +106,7 @@ export async function getAdminUserIdsWithPermission(permission: string): Promise
       return []
     }
 
-    const roles = rolesWithPermission.map((r) => r.role)
+    const roles = rolesWithPermission.map((r: any) => r.role)
 
     // Get all active admin users with these roles
     const { data: admins } = await supabase
@@ -115,7 +115,7 @@ export async function getAdminUserIdsWithPermission(permission: string): Promise
       .in('role', roles)
       .eq('is_active', true)
 
-    return admins?.map((a) => a.user_id) || []
+    return admins?.map((a: any) => a.user_id) || []
   } catch (error) {
     console.error('[Notifications] Failed to get admin users:', error)
     return []
@@ -153,7 +153,7 @@ export async function notifyAdmins({
 
   // Create notifications for all admins in parallel
   await Promise.all(
-    adminIds.map((adminId) =>
+    adminIds.map((adminId: any) =>
       createNotification({
         userId: adminId,
         type,

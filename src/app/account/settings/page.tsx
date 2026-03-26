@@ -137,7 +137,7 @@ export default function SettingsPage() {
           .from('profiles')
           .select('*')
           .eq('id', user.id)
-          .single()
+          .single() as any
 
         if (error) {
           console.error('Error fetching fresh profile:', error)

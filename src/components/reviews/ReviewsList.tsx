@@ -73,7 +73,7 @@ export default function ReviewsList({
       })
 
       if (data) {
-        setReviews(data)
+        setReviews(data as any)
       }
     } catch (error) {
       console.error('Error fetching reviews:', error)

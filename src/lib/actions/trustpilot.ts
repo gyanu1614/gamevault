@@ -35,7 +35,7 @@ export async function sendTrustpilotInvitation(orderId: string): Promise<{
         buyer:profiles!orders_buyer_id_fkey(email, username, full_name)
       `)
       .eq('id', orderId)
-      .single()
+      .single() as any
 
     if (orderError || !order) {
       return { success: false, error: 'Order not found' }
@@ -49,9 +49,9 @@ export async function sendTrustpilotInvitation(orderId: string): Promise<{
     }
 
     // Upsert invitation record (trigger may have already created it)
-    const { data: invitation, error: upsertError } = await supabase
+    const { data: invitation, error: upsertError } = await (supabase
       .from('trustpilot_invitations')
-      .upsert(
+      .upsert as any)(
         {
           order_id: orderId,
           buyer_id: order.buyer_id,
@@ -122,9 +122,9 @@ export async function sendTrustpilotInvitation(orderId: string): Promise<{
     }
 
     // Update sent_at timestamp on the invitation record
-    await supabase
+    await (supabase
       .from('trustpilot_invitations')
-      .update({ sent_at: new Date().toISOString() })
+      .update as any)({ sent_at: new Date().toISOString() })
       .eq('order_id', orderId)
 
     console.log(`✉️ Trustpilot invitation dispatched to ${buyerEmail} for order ${orderId}`)
@@ -180,9 +180,9 @@ export async function markTrustpilotReviewReceived(
   try {
     const supabase = await createClient()
 
-    const { error } = await supabase
+    const { error } = await (supabase
       .from('trustpilot_invitations')
-      .update({
+      .update as any)({
         review_submitted: true,
         review_submitted_at: new Date().toISOString(),
         ...(reviewData?.rating && { review_rating: reviewData.rating }),
@@ -218,7 +218,7 @@ export async function getTrustpilotStats(): Promise<{
   try {
     const supabase = await createClient()
 
-    const { data, error } = await supabase.from('trustpilot_stats').select('*').single()
+    const { data, error } = await supabase.from('trustpilot_stats').select('*').single() as any
 
     if (error) {
       return { success: false, error: error.message }

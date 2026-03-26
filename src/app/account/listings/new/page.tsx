@@ -248,7 +248,7 @@ export default function CreateListingPage() {
           setSellerProfile(profileRes.profile)
 
           // Check if seller is restricted - BLOCK immediately
-          const sellerStatus = (profileRes.profile?.seller_status as SellerStatus) || 'active'
+          const sellerStatus = ((profileRes.profile as any)?.seller_status as SellerStatus) || 'active'
           if (!canSellerPublish(sellerStatus)) {
             setIsRestricted(true)
             setLoading(false)

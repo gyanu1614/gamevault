@@ -14,7 +14,7 @@ export async function POST() {
     .from('profiles')
     .select('stripe_connect_account_id, stripe_connect_status')
     .eq('id', user.id)
-    .single()
+    .single() as any
 
   if (!profile?.stripe_connect_account_id) {
     return NextResponse.json({ error: 'No Connect account found' }, { status: 404 })

@@ -57,7 +57,7 @@ export async function createCancellationRequest(
         )
       `)
       .eq('id', orderId)
-      .single()
+      .single() as any
 
     if (orderError || !order) {
       return { error: { message: 'Order not found' } }
@@ -74,7 +74,7 @@ export async function createCancellationRequest(
     }
 
     // Parse delivery time to hours
-    function getDeliveryHours(deliveryTime?: string | null): number {
+    const getDeliveryHours = (deliveryTime?: string | null): number => {
       if (!deliveryTime) return 0
       const t = deliveryTime.toLowerCase().trim()
       if (t.includes('20min') || t.includes('20 min')) return 0.33
@@ -143,9 +143,9 @@ export async function createCancellationRequest(
     }
 
     // Create the cancellation request
-    const { data: request, error: createError } = await supabase
+    const { data: request, error: createError } = await (supabase
       .from('order_cancellation_requests')
-      .insert({
+      .insert as any)({
         order_id: orderId,
         buyer_id: user.id,
         reason: reason.trim(),
@@ -231,9 +231,9 @@ export async function getPendingCancellationRequests(): Promise<{
       .from('admin_roles')
       .select('role, is_active')
       .eq('user_id', user.id)
-      .maybeSingle()
+      .maybeSingle() as any
 
-    if (!adminRole || !adminRole.is_active) {
+    if (!adminRole || !(adminRole as any).is_active) {
       return { error: { message: 'Admin access required' } }
     }
 
@@ -306,7 +306,7 @@ export async function cancelCancellationRequest(
     }
 
     // Verify buyer owns these requests
-    const buyerRequests = requests.filter(r => r.buyer_id === user.id)
+    const buyerRequests = requests.filter((r: any) => r.buyer_id === user.id)
     if (buyerRequests.length === 0) {
       return { error: { message: 'You can only cancel your own requests' } }
     }
@@ -361,9 +361,9 @@ export async function processCancellationRequest(
       .from('admin_roles')
       .select('role, is_active')
       .eq('user_id', user.id)
-      .maybeSingle()
+      .maybeSingle() as any
 
-    if (!adminRole || !adminRole.is_active) {
+    if (!adminRole || !(adminRole as any).is_active) {
       return { error: { message: 'Admin access required' } }
     }
 
@@ -372,7 +372,7 @@ export async function processCancellationRequest(
       .from('order_cancellation_requests')
       .select('*, order:orders(*)')
       .eq('id', requestId)
-      .single()
+      .single() as any
 
     if (fetchError || !request) {
       return { error: { message: 'Cancellation request not found' } }
@@ -383,9 +383,9 @@ export async function processCancellationRequest(
     }
 
     // Update the request status
-    const { data: updatedRequest, error: updateError } = await supabase
+    const { data: updatedRequest, error: updateError } = await (supabase
       .from('order_cancellation_requests')
-      .update({
+      .update as any)({
         status: action === 'approve' ? 'approved' : 'rejected',
         admin_id: user.id,
         admin_notes: adminNotes || null,
@@ -419,9 +419,9 @@ export async function processCancellationRequest(
       }
 
       // Update order status
-      const { error: cancelError } = await supabase
+      const { error: cancelError } = await (supabase
         .from('orders')
-        .update({
+        .update as any)({
           status: 'cancelled',
           escrow_status: 'refunded',
           updated_at: new Date().toISOString(),

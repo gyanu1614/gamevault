@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
       .lte('scheduled_for', new Date().toISOString())
       .is('sent_at', null) // sent_at = NULL means not dispatched yet
       .order('scheduled_for', { ascending: true })
-      .limit(BATCH_SIZE)
+      .limit(BATCH_SIZE) as any
 
     if (fetchError) {
       console.error('Error fetching pending invitations:', fetchError)

@@ -94,13 +94,13 @@ export default async function AdminOrderDetailPage({ params }: PageProps) {
     .from('profiles')
     .select('id, username, email, avatar_url')
     .eq('id', order.buyer_id)
-    .single()
+    .single() as any
 
   const { data: seller } = await supabase
     .from('profiles')
     .select('id, username, email, avatar_url, shop_name')
     .eq('id', order.seller_id)
-    .single()
+    .single() as any
 
   // Fetch game and category
   let game: { id: string; name: string; slug: string; image_url: string | null; emoji: string } | null = null
@@ -111,7 +111,7 @@ export default async function AdminOrderDetailPage({ params }: PageProps) {
       .from('games')
       .select('id, name, slug, image_url, emoji')
       .eq('id', order.listing.game_id)
-      .single()
+      .single() as any
     game = gameData
   }
 
@@ -120,7 +120,7 @@ export default async function AdminOrderDetailPage({ params }: PageProps) {
       .from('categories')
       .select('id, name, slug')
       .eq('id', order.listing.category_id)
-      .single()
+      .single() as any
     category = categoryData
   }
 

@@ -27,7 +27,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     .from('games')
     .select('name, description')
     .eq('slug', gameSlug)
-    .single()
+    .single() as any
 
   if (!game) {
     return {
@@ -61,7 +61,7 @@ async function getGameData(gameSlug: string) {
     .select('*')
     .eq('slug', gameSlug)
     .eq('is_active', true)
-    .single()
+    .single() as any
 
   if (gameError || !game) {
     return null
@@ -73,7 +73,7 @@ async function getGameData(gameSlug: string) {
     .eq('game_id', game.id)
     .eq('is_active', true)
     .order('display_order', { ascending: true })
-    .order('name', { ascending: true })
+    .order('name', { ascending: true }) as any
 
   if (categoriesError) {
     console.error('Error fetching categories:', categoriesError)
@@ -92,7 +92,7 @@ async function getCategoryListingCounts(gameId: string) {
     .from('listings')
     .select('category_id')
     .eq('game_id', gameId)
-    .eq('status', 'active')
+    .eq('status', 'active') as any
 
   if (error) {
     console.error('Error fetching listing counts:', error)
@@ -100,7 +100,7 @@ async function getCategoryListingCounts(gameId: string) {
   }
 
   const countMap: Record<string, number> = {}
-  counts?.forEach(item => {
+  counts?.forEach((item: any) => {
     countMap[item.category_id] = (countMap[item.category_id] || 0) + 1
   })
 
@@ -120,7 +120,7 @@ async function getFeaturedListings(gameId: string, limit: number = 6) {
     .eq('game_id', gameId)
     .eq('status', 'active')
     .order('created_at', { ascending: false })
-    .limit(limit)
+    .limit(limit) as any
 
   return listings || []
 }

@@ -214,8 +214,8 @@ export default function SellerRegistration() {
         country: previousApplication.country || '',
         stateProvince: previousApplication.state_province || '',
         city: previousApplication.city || '',
-      },
-      step2: previousApplication.seller_type === 'business'
+      } as any,
+      step2: (previousApplication.seller_type === 'business'
         ? {
             companyLegalName: previousApplication.company_legal_name || '',
             businessRegistrationNumber: previousApplication.business_registration_number || '',
@@ -226,7 +226,7 @@ export default function SellerRegistration() {
             businessEmail: previousApplication.business_email || '',
             businessPhone: previousApplication.business_phone || '',
           }
-        : undefined,
+        : undefined) as any,
       step3: undefined, // Don't pre-fill documents for security
       step4: {
         profileBio: previousApplication.profile_bio || '',
@@ -237,14 +237,14 @@ export default function SellerRegistration() {
         twitterHandle: previousApplication.twitter_handle || '',
         twitchChannel: previousApplication.twitch_channel || '',
         youtubeChannel: previousApplication.youtube_channel || '',
-      },
+      } as any,
       step5: {
         primaryGames: previousApplication.primary_games || [],
         expectedMonthlyVolume: previousApplication.expected_monthly_volume || '',
         refundPolicy: previousApplication.refund_policy || '',
         deliveryTimeframe: previousApplication.delivery_timeframe || '',
         termsOfService: previousApplication.terms_of_service || '',
-      },
+      } as any,
       step6: {
         payoutMethod: previousApplication.payout_method || 'bank_transfer',
         bankAccountHolderName: previousApplication.bank_account_holder_name || '',
@@ -252,7 +252,7 @@ export default function SellerRegistration() {
         paypalEmail: previousApplication.paypal_email || '',
         cryptoWalletAddress: previousApplication.crypto_wallet_address || '',
         taxResidencyCountry: previousApplication.tax_residency_country || '',
-      },
+      } as any,
     }
 
     // Update languages for Step 4

@@ -260,7 +260,7 @@ export default function BuyerOrderDetailClient({
     avatar_url: getAvatarUrl(sellerSource.avatar_url, sellerSource.username),
   }
 
-  const orderForChat = {
+  const orderForChat: any = {
     id: order.id,
     order_number: order.order_number,
     listing: order.listing ? { title: order.listing.title, images: order.listing.images, game_id: order.listing.game_id } : null,
@@ -401,7 +401,6 @@ export default function BuyerOrderDetailClient({
                 <h4 className="text-xs font-semibold text-white mb-3">How was your experience?</h4>
                 <LeaveReviewButton
                   orderId={order.id}
-                  sellerId={order.seller_id}
                   sellerName={order.seller?.shop_name || order.seller?.username || 'Seller'}
                   onReviewSubmitted={() => {}}
                   className="w-full"
@@ -421,7 +420,7 @@ export default function BuyerOrderDetailClient({
                 favored_party: disputeResolution.favored_party,
                 resolution_type: disputeResolution.resolution_type,
                 refund_amount: disputeResolution.refund_amount,
-                resolved_at: disputeResolution.created_at,
+                resolved_at: disputeResolution.resolved_at,
                 resolution_notes: disputeResolution.resolution_notes,
               } : null}
             /></div>

@@ -77,12 +77,14 @@ export default function AdminHeader({ role, user }: AdminHeaderProps) {
   // Mark notification as read
   const markAsRead = async (notificationId: string) => {
     const supabase = createClient()
-    await supabase
+    const { error } = await (supabase
       .from('notifications')
-      .update({ is_read: true, read_at: new Date().toISOString() })
+      .update as any)({
+        is_read: true,
+        read_at: new Date().toISOString()
+      })
       .eq('id', notificationId)
 
-    // Refetch notifications
     queryClient.invalidateQueries({ queryKey: ['admin-notifications-list', user.id] })
     queryClient.invalidateQueries({ queryKey: ['admin-unread-notifications', user.id] })
   }

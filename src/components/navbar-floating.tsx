@@ -70,11 +70,11 @@ export function Navbar() {
       const { data: conversations } = await supabase
         .from('conversations')
         .select('id')
-        .or(`buyer_id.eq.${user.id},seller_id.eq.${user.id}`)
+        .or(`buyer_id.eq.${user.id},seller_id.eq.${user.id}`) as any
 
       if (!conversations || conversations.length === 0) return 0
 
-      const conversationIds = conversations.map(c => c.id)
+      const conversationIds = conversations.map((c: any) => c.id)
 
       // Count unread messages in those conversations where I'm not the sender
       const { count } = await supabase
@@ -177,9 +177,9 @@ export function Navbar() {
     const { createClient } = await import('@/lib/supabase/client')
     const supabase = createClient()
 
-    await supabase
+    await (supabase
       .from('notifications')
-      .update({ is_read: true, read_at: new Date().toISOString() })
+      .update as any)({ is_read: true, read_at: new Date().toISOString() })
       .eq('id', notificationId)
 
     // Refetch notifications

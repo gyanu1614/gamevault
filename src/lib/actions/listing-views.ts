@@ -18,7 +18,7 @@ export async function trackListingView(listingId: string): Promise<{
       .from('listings')
       .select('view_count')
       .eq('id', listingId)
-      .single()
+      .single() as any
 
     if (fetchError) {
       console.error('Error fetching listing:', fetchError)
@@ -27,9 +27,9 @@ export async function trackListingView(listingId: string): Promise<{
 
     // Increment view count
     const newCount = (listing.view_count || 0) + 1
-    const { error: updateError } = await supabase
+    const { error: updateError } = await (supabase
       .from('listings')
-      .update({ view_count: newCount })
+      .update as any)({ view_count: newCount })
       .eq('id', listingId)
 
     if (updateError) {
@@ -59,7 +59,7 @@ export async function getListingViewCount(listingId: string): Promise<{
       .from('listings')
       .select('view_count')
       .eq('id', listingId)
-      .single()
+      .single() as any
 
     if (error) {
       return { success: false, error: error.message }

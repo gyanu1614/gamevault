@@ -60,10 +60,10 @@ export function useOrderConversation({
 
       if (autoCreate) {
         // Get or create conversation
-        return await messagesApi.getOrCreateConversationByOrder(orderId)
+        return await messagesApi.getOrCreateConversationByOrder(orderId) as any
       } else {
         // Only get existing conversation
-        return await messagesApi.getConversationByOrder(orderId)
+        return await messagesApi.getConversationByOrder(orderId) as any
       }
     },
     enabled: enabled && !!orderId,

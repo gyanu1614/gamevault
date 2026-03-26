@@ -38,7 +38,7 @@ export default async function CheckoutPage({ params }: CheckoutPageProps) {
       )
     `)
     .eq('id', id)
-    .single()
+    .single() as any
 
   if (error || !listing) {
     redirect('/marketplace')

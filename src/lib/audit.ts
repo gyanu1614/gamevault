@@ -41,7 +41,7 @@ export async function logAudit(data: AuditLogData): Promise<void> {
         .from('profiles')
         .select('email, role')
         .eq('id', user.id)
-        .single()
+        .single() as any
 
       if (profile) {
         userEmail = profile.email
@@ -50,7 +50,7 @@ export async function logAudit(data: AuditLogData): Promise<void> {
     }
 
     // Insert audit log
-    await supabase.from('audit_logs').insert({
+    await (supabase.from('audit_logs').insert as any)({
       user_id: user?.id || null,
       user_email: userEmail,
       user_role: userRole,
@@ -205,7 +205,7 @@ export async function getRecentAuditLogs(
       .select('role')
       .eq('user_id', user.id)
       .eq('is_active', true)
-      .single()
+      .single() as any
 
     if (!adminRole) {
       return { success: false, error: 'Not authorized' }
@@ -270,7 +270,7 @@ export async function getRecentSecurityEvents(): Promise<{
       .select('role')
       .eq('user_id', user.id)
       .eq('is_active', true)
-      .single()
+      .single() as any
 
     if (!adminRole) {
       return { success: false, error: 'Not authorized' }
@@ -279,7 +279,7 @@ export async function getRecentSecurityEvents(): Promise<{
     const { data, error } = await supabase
       .from('recent_security_events')
       .select('*')
-      .limit(100)
+      .limit(100) as any
 
     if (error) throw error
 

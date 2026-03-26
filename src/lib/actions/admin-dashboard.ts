@@ -126,16 +126,16 @@ export async function getDashboardStats(): Promise<{
     const { data: ordersThisMonth } = await supabase
       .from('orders')
       .select('total_amount')
-      .gte('created_at', monthStart)
+      .gte('created_at', monthStart) as any
 
     const { data: ordersLastMonth } = await supabase
       .from('orders')
       .select('total_amount')
       .gte('created_at', lastMonthStart)
-      .lt('created_at', lastMonthEnd)
+      .lt('created_at', lastMonthEnd) as any
 
-    const revenueThisMonth = ordersThisMonth?.reduce((sum, order) => sum + (Number(order.total_amount) || 0), 0) || 0
-    const revenueLastMonth = ordersLastMonth?.reduce((sum, order) => sum + (Number(order.total_amount) || 0), 0) || 0
+    const revenueThisMonth = ordersThisMonth?.reduce((sum: number, order: any) => sum + (Number(order.total_amount) || 0), 0) || 0
+    const revenueLastMonth = ordersLastMonth?.reduce((sum: number, order: any) => sum + (Number(order.total_amount) || 0), 0) || 0
 
     // Determine system health
     let systemHealth: 'good' | 'warning' | 'critical' = 'good'
@@ -237,18 +237,18 @@ export async function getAllActivities(): Promise<{
         orders!inner(order_number)
       `)
       .order('updated_at', { ascending: false })
-      .limit(100)
+      .limit(100) as any
 
     // Group by order_id - only keep latest per order
     const disputesByOrder = new Map()
-    disputes?.forEach(dispute => {
+    disputes?.forEach((dispute: any) => {
       if (!disputesByOrder.has(dispute.order_id) ||
           new Date(dispute.updated_at) > new Date(disputesByOrder.get(dispute.order_id).updated_at)) {
         disputesByOrder.set(dispute.order_id, dispute)
       }
     })
 
-    disputesByOrder.forEach(dispute => {
+    disputesByOrder.forEach((dispute: any) => {
       const statusLabel = dispute.status === 'resolved_buyer_favor' ? 'Resolved - Buyer' :
                          dispute.status === 'resolved_seller_favor' ? 'Resolved - Seller' :
                          dispute.status === 'resolved_partial' ? 'Resolved - Partial' :
@@ -284,9 +284,9 @@ export async function getAllActivities(): Promise<{
       .from('seller_applications')
       .select('id, display_name, status, created_at, updated_at, country')
       .order('updated_at', { ascending: false })
-      .limit(50)
+      .limit(50) as any
 
-    applications?.forEach(app => {
+    applications?.forEach((app: any) => {
       const statusLabel = app.status === 'approved' ? 'Approved' :
                          app.status === 'rejected' ? 'Rejected' :
                          app.status === 'under_review' ? 'Under Review' :
@@ -312,9 +312,9 @@ export async function getAllActivities(): Promise<{
       .select('id, flag_type, description, severity, status, created_at, user_id')
       .eq('severity', 'high')
       .order('created_at', { ascending: false })
-      .limit(20)
+      .limit(20) as any
 
-    fraudFlags?.forEach(flag => {
+    fraudFlags?.forEach((flag: any) => {
       activities.push({
         id: flag.id,
         type: 'fraud',
@@ -385,18 +385,18 @@ export async function getRecentActivity(): Promise<{
         orders!inner(order_number)
       `)
       .order('updated_at', { ascending: false })
-      .limit(20)
+      .limit(20) as any
 
     // Group disputes by order_id and keep only the latest
     const disputesByOrder = new Map()
-    disputes?.forEach(dispute => {
+    disputes?.forEach((dispute: any) => {
       if (!disputesByOrder.has(dispute.order_id) ||
           new Date(dispute.updated_at) > new Date(disputesByOrder.get(dispute.order_id).updated_at)) {
         disputesByOrder.set(dispute.order_id, dispute)
       }
     })
 
-    disputesByOrder.forEach(dispute => {
+    disputesByOrder.forEach((dispute: any) => {
       const statusLabel = dispute.status === 'resolved_buyer_favor' ? 'Resolved - Buyer' :
                          dispute.status === 'resolved_seller_favor' ? 'Resolved - Seller' :
                          dispute.status === 'resolved_partial' ? 'Resolved - Partial' :
@@ -433,9 +433,9 @@ export async function getRecentActivity(): Promise<{
       .select('id, display_name, status, created_at, updated_at, country')
       .in('status', ['pending', 'under_review'])
       .order('updated_at', { ascending: false })
-      .limit(10)
+      .limit(10) as any
 
-    applications?.forEach(app => {
+    applications?.forEach((app: any) => {
       const statusLabel = app.status === 'under_review' ? 'Under Review' : 'Pending'
 
       activities.push({
@@ -458,9 +458,9 @@ export async function getRecentActivity(): Promise<{
       .select('id, flag_type, description, severity, status, created_at, user_id')
       .eq('severity', 'high')
       .order('created_at', { ascending: false })
-      .limit(3)
+      .limit(3) as any
 
-    fraudFlags?.forEach(flag => {
+    fraudFlags?.forEach((flag: any) => {
       activities.push({
         id: flag.id,
         type: 'fraud',

@@ -128,7 +128,7 @@ export default function MarkAsDeliveredButton({
 
           // Send as a chat message with attachments
           if (uploadedUrls.length > 0) {
-            await supabase.from('messages').insert({
+            await (supabase.from('messages').insert as any)({
               conversation_id: conversationId,
               sender_id: user.id,
               content: `I've marked your order as delivered! Here's the delivery proof. Please confirm receipt within 48 hours.`,
@@ -136,9 +136,9 @@ export default function MarkAsDeliveredButton({
               is_read: false,
             })
 
-            await supabase
+            await (supabase
               .from('conversations')
-              .update({ last_message_at: new Date().toISOString() })
+              .update as any)({ last_message_at: new Date().toISOString() })
               .eq('id', conversationId)
           }
         } catch (uploadErr) {
@@ -153,16 +153,16 @@ export default function MarkAsDeliveredButton({
           const supabase = createClient()
           const { data: { user } } = await supabase.auth.getUser()
           if (user) {
-            await supabase.from('messages').insert({
+            await (supabase.from('messages').insert as any)({
               conversation_id: conversationId,
               sender_id: user.id,
               content: `I've marked your order as delivered! The 48-hour auto-release timer has started. Please confirm receipt when you receive the item.`,
               attachments: [],
               is_read: false,
             })
-            await supabase
+            await (supabase
               .from('conversations')
-              .update({ last_message_at: new Date().toISOString() })
+              .update as any)({ last_message_at: new Date().toISOString() })
               .eq('id', conversationId)
           }
         } catch (msgErr) {

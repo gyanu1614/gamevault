@@ -37,14 +37,15 @@ export default function AccountLayout({ children }: { children: React.ReactNode 
 
   // Flatten profile data for AccountSidebar
   const sidebarUser = user ? {
+    id: user.id,
     username: user.profile?.username || user.email?.split('@')[0] || '',
     email: user.email || '',
-    avatar_url: user.profile?.avatar_url,
+    avatar_url: user.profile?.avatar_url || undefined,
     seller_tier: user.profile?.seller_tier,
     isApprovedSeller: user.isApprovedSeller,
     shop_name: user.profile?.shop_name,
     shop_slug: user.profile?.shop_slug,
-    seller_status: user.profile?.seller_status as 'active' | 'restricted' | 'banned',
+    seller_status: (user.profile as any)?.seller_status as 'active' | 'restricted' | 'banned',
   } : undefined
 
   // Hide sidebar on certain pages for a clean full-width view

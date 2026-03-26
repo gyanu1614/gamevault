@@ -37,7 +37,12 @@ export async function getAdminMFAStatus(): Promise<{
       status: {
         currentLevel: aal.currentLevel ?? 'aal1',
         nextLevel:    aal.nextLevel    ?? 'aal1',
-        factors:      factorsData?.totp ?? [],
+        factors:      (factorsData?.totp ?? []).map((f: any) => ({
+          id: f.id,
+          factorType: f.factor_type,
+          status: f.status,
+          friendlyName: f.friendly_name
+        })),
       },
     }
   } catch (error: any) {

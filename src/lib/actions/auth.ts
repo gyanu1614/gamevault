@@ -180,16 +180,16 @@ export async function updateProfile(formData: {
       .from('profiles')
       .select('username, id')
       .eq('username', formData.username)
-      .single()
+      .single() as any
 
     if (existingProfile && existingProfile.id !== user.id) {
       return { error: 'Username is already taken' }
     }
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await (supabase
     .from('profiles')
-    .update({
+    .update as any)({
       ...(formData.username && { username: formData.username }),
       ...(formData.fullName !== undefined && { full_name: formData.fullName }),
       ...(formData.bio !== undefined && { bio: formData.bio }),
@@ -312,9 +312,9 @@ export async function uploadProfileAvatar(avatarData: string) {
     const cacheBustedUrl = `${publicUrl}?t=${Date.now()}`
 
     // Update profile with new avatar URL
-    const { error: updateError } = await supabase
+    const { error: updateError } = await (supabase
       .from('profiles')
-      .update({ avatar_url: cacheBustedUrl, updated_at: new Date().toISOString() })
+      .update as any)({ avatar_url: cacheBustedUrl, updated_at: new Date().toISOString() })
       .eq('id', user.id)
 
     if (updateError) {
@@ -354,7 +354,7 @@ export async function registerAsSeller(formData: {
       .from('profiles')
       .select('seller_tier')
       .eq('id', user.id)
-      .maybeSingle()
+      .maybeSingle() as any
 
     if (profileError) {
       console.error('❌ Profile check error:', profileError)
@@ -370,9 +370,9 @@ export async function registerAsSeller(formData: {
     }
 
     // Update profile to make user a seller (bronze tier by default)
-    const { data, error } = await supabase
+    const { data, error } = await (supabase
       .from('profiles')
-      .update({
+      .update as any)({
         seller_tier: 'bronze',
         ...(formData.businessName && { business_name: formData.businessName }),
         ...(formData.paypalEmail && { paypal_email: formData.paypalEmail }),

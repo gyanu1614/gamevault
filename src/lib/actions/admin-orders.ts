@@ -187,17 +187,17 @@ export async function getOrderStats() {
     const { data: revenueData } = await supabase
       .from('orders')
       .select('total_amount')
-      .in('status', ['completed', 'paid'])
+      .in('status', ['completed', 'paid']) as any
 
-    const totalRevenue = revenueData?.reduce((sum, order) => sum + (order.total_amount || 0), 0) || 0
+    const totalRevenue = revenueData?.reduce((sum: number, order: any) => sum + (order.total_amount || 0), 0) || 0
 
     // Get total platform fees
     const { data: feesData } = await supabase
       .from('orders')
       .select('platform_fee')
-      .in('status', ['completed', 'paid'])
+      .in('status', ['completed', 'paid']) as any
 
-    const totalFees = feesData?.reduce((sum, order) => sum + (order.platform_fee || 0), 0) || 0
+    const totalFees = feesData?.reduce((sum: number, order: any) => sum + (order.platform_fee || 0), 0) || 0
 
     return {
       success: true,

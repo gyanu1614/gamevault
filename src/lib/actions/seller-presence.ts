@@ -30,9 +30,9 @@ export async function updatePresenceOnline(): Promise<{
     }
 
     // Upsert presence record
-    const { error } = await supabase
+    const { error } = await (supabase
       .from('seller_presence')
-      .upsert(
+      .upsert as any)(
         {
           seller_id: user.id,
           is_online: true,
@@ -85,9 +85,9 @@ export async function updatePresenceOffline(): Promise<{
       }
     }
 
-    const { error } = await supabase
+    const { error } = await (supabase
       .from('seller_presence')
-      .update({
+      .update as any)({
         is_online: false,
       })
       .eq('seller_id', user.id)
@@ -133,9 +133,9 @@ export async function updateStatusMessage(message: string): Promise<{
       }
     }
 
-    const { error } = await supabase
+    const { error } = await (supabase
       .from('seller_presence')
-      .update({
+      .update as any)({
         status_message: message,
       })
       .eq('seller_id', user.id)

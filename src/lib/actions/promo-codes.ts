@@ -27,16 +27,16 @@ export async function createPromoCode(data: {
       .from('profiles')
       .select('role')
       .eq('id', user.id)
-      .single()
+      .single() as any
 
     if (!profile || !['admin', 'super_admin'].includes(profile.role)) {
       return { success: false, error: 'Not authorized - admin only' }
     }
 
     // Create promo code
-    const { data: promoCode, error } = await supabase
+    const { data: promoCode, error } = await (supabase
       .from('promo_codes')
-      .insert({
+      .insert as any)({
         ...data,
         created_by: user.id
       })
