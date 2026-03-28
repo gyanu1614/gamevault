@@ -2,11 +2,12 @@
 
 import { useState, useEffect } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   CheckCircle2, AlertCircle, ExternalLink, Loader2,
   Shield, Zap, DollarSign, Clock, ArrowRight, RefreshCw,
-  Building2, Lock
+  Building2, Lock, ArrowLeft
 } from 'lucide-react'
 import { GlassCard } from '@/components/ui/glass-card'
 import { GlassBadge } from '@/components/ui/glass-badge'
@@ -96,8 +97,15 @@ export default function StripeConnectPage() {
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-8 space-y-6">
-      {/* Header */}
+      {/* Header with Back Button */}
       <div>
+        <Link
+          href="/account/wallet"
+          className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors mb-4"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back to Wallet
+        </Link>
         <div className="flex items-center gap-3 mb-2">
           <div className="p-2 rounded-xl bg-violet-500/10 border border-violet-500/20">
             <DollarSign className="w-6 h-6 text-violet-400" />

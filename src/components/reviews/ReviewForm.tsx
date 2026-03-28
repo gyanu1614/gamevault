@@ -77,6 +77,8 @@ export default function ReviewForm({
 
   const handleReviewTypeSelect = (type: ReviewType) => {
     setReviewType(type)
+    // Clear feedback text when switching between positive/negative
+    setFeedback('')
   }
 
   const handleSubmit = async (e: React.FormEvent) => {

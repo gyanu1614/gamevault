@@ -1,12 +1,13 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '@/hooks/use-auth'
 import { useSellerEarnings } from '@/hooks/use-seller-earnings'
 import { createClient } from '@/lib/supabase/client'
 import { getWalletBalance, getWalletTransactions, createTopUpCheckout } from '@/lib/actions/wallet'
 import { getLoyaltyStats } from '@/lib/actions/loyalty'
+import { getMyWithdrawalRequests } from '@/lib/actions/withdrawals'
 import Link from 'next/link'
 import {
   Wallet,
@@ -32,10 +33,12 @@ import {
   Plus,
   Gift,
   Sparkles,
+  ArrowDownToLine,
 } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
+import WithdrawalRequestCard from '@/components/wallet/WithdrawalRequestCard'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -147,6 +150,8 @@ interface SaleTransaction {
 async function fetchSales(userId: string): Promise<SaleTransaction[]> {
   const supabase = createClient()
 
+  console.log('[fetchSales] Fetching sales for user:', userId)
+
   const { data, error } = await supabase
     .from('orders')
     .select(`
@@ -160,16 +165,21 @@ async function fetchSales(userId: string): Promise<SaleTransaction[]> {
       buyer:profiles!buyer_id(username),
       listing:listing_id (
         title,
-        image_url,
+        images,
         game:game_id (name, emoji, image_url),
         category:category_id (name)
       )
     `)
     .eq('seller_id', userId)
-    .in('status', ['completed', 'processing', 'paid'])
+    .in('status', ['completed', 'processing', 'paid', 'delivered', 'confirmed'])
     .order('created_at', { ascending: false })
 
-  if (error) throw error
+  console.log('[fetchSales] Query result:', { data, error, count: data?.length })
+
+  if (error) {
+    console.error('[fetchSales] Error:', error)
+    throw error
+  }
 
   return ((data || []) as any[]).map(order => ({
     id: order.id,
@@ -299,24 +309,37 @@ function StatCard({ icon: Icon, label, value, sub, color = 'violet' }: {
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function WalletPage() {
-  const { user } = useAuth()
+  const { user, loading: authLoading } = useAuth()
+  const isSeller = user?.isApprovedSeller || false
   const [activeTab, setActiveTab] = useState<Tab>('purchases')
   const [searchQuery, setSearchQuery] = useState('')
   const [filterStatus, setFilterStatus] = useState('all')
   const [isTopUpLoading, setIsTopUpLoading] = useState(false)
 
+  // Update active tab when user role is determined
+  useEffect(() => {
+    if (user && !authLoading) {
+      setActiveTab(isSeller ? 'earnings' : 'purchases')
+    }
+  }, [user, isSeller, authLoading])
+
   const { data: purchaseData, isLoading: purchasesLoading, error: purchasesError } = useQuery({
     queryKey: ['wallet-purchases', user?.id],
     queryFn: () => fetchPurchases(user!.id),
-    enabled: !!user?.id,
+    enabled: !!user?.id && !authLoading,
     refetchOnWindowFocus: false,
     retry: 1,
   })
 
   const { data: salesData, isLoading: salesLoading, error: salesError } = useQuery({
     queryKey: ['wallet-sales', user?.id],
-    queryFn: () => fetchSales(user!.id),
-    enabled: !!user?.id && !!user?.isApprovedSeller,
+    queryFn: async () => {
+      console.log('[Wallet] Fetching sales for user:', user!.id)
+      const result = await fetchSales(user!.id)
+      console.log('[Wallet] Sales data:', result)
+      return result
+    },
+    enabled: !!user?.id && !!user?.isApprovedSeller && !authLoading,
     refetchOnWindowFocus: false,
     retry: 1,
   })
@@ -332,7 +355,7 @@ export default function WalletPage() {
       }
       return result.balance
     },
-    enabled: !!user?.id,
+    enabled: !!user?.id && !authLoading,
     refetchOnWindowFocus: false,
     retry: 1,
   })
@@ -348,7 +371,23 @@ export default function WalletPage() {
       }
       return result.data
     },
-    enabled: !!user?.id,
+    enabled: !!user?.id && !authLoading,
+    refetchOnWindowFocus: false,
+    retry: 1,
+  })
+
+  // Fetch withdrawal requests
+  const { data: withdrawalRequestsData, isLoading: withdrawalsLoading, refetch: refetchWithdrawals } = useQuery({
+    queryKey: ['withdrawal-requests', user?.id],
+    queryFn: async () => {
+      const result = await getMyWithdrawalRequests()
+      if (!result.success) {
+        console.error('[Wallet] Withdrawal requests fetch failed:', result.error)
+        return []
+      }
+      return result.requests || []
+    },
+    enabled: !!user?.id && !authLoading,
     refetchOnWindowFocus: false,
     retry: 1,
   })
@@ -368,7 +407,6 @@ export default function WalletPage() {
     }
   }
 
-  const isSeller = user?.isApprovedSeller
   const isLoading = purchasesLoading || walletLoading || (isSeller && (salesLoading || earningsLoading))
 
   const purchases = purchaseData?.transactions || []
@@ -416,9 +454,9 @@ export default function WalletPage() {
         { id: 'purchases', label: 'Purchases', icon: ShoppingCart },
       ]
 
-  // Show loader IMMEDIATELY if no wallet data exists yet - prevents flash of $0.00
-  // MUST be after all hooks to follow Rules of Hooks
-  if (!walletData && user?.id) {
+  // Show loader IMMEDIATELY to prevent flash of wrong content
+  // CRITICAL: Always show loader while auth is loading to prevent flash of buyer UI for sellers
+  if (authLoading) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-violet-500" />
@@ -426,158 +464,186 @@ export default function WalletPage() {
     )
   }
 
+  // After auth loads, check if data is ready
+  if (user?.id) {
+    if (isSeller) {
+      // Seller: Must have both wallet and earnings loaded
+      if (!walletData || earningsLoading) {
+        return (
+          <div className="min-h-screen bg-black flex items-center justify-center">
+            <Loader2 className="h-8 w-8 animate-spin text-violet-500" />
+          </div>
+        )
+      }
+    } else {
+      // Buyer: Only needs wallet data
+      if (!walletData) {
+        return (
+          <div className="min-h-screen bg-black flex items-center justify-center">
+            <Loader2 className="h-8 w-8 animate-spin text-violet-500" />
+          </div>
+        )
+      }
+    }
+  }
+
   return (
     <div className="min-h-screen bg-black pb-20">
       <div className="mx-auto w-full max-w-full px-4 sm:px-6 md:max-w-7xl lg:px-8">
         {/* ── Header ── */}
-        <div className="mb-6 flex items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-3 mb-1">
+        <div className="mb-6">
+          <div className="flex items-center gap-3 mb-4">
             <div className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-violet-500/30 bg-violet-500/10">
               <Wallet className="h-5 w-5 text-violet-400" />
             </div>
-            <h1 className="text-2xl font-bold text-white">Wallet</h1>
-          </div>
-          <p className="text-sm text-gray-400 ml-14">Purchases, sales &amp; payouts</p>
-        </div>
-
-        {/* Stripe Connect CTA — sellers only */}
-        {isSeller && (
-          <Link
-            href="/account/wallet/connect"
-            className="flex-shrink-0 flex items-center gap-2 rounded-lg border border-violet-500/30 bg-violet-500/10 hover:bg-violet-500/20 px-4 py-2.5 text-sm font-medium text-violet-300 hover:text-violet-200 transition-all"
-          >
-            <Zap className="h-4 w-4" />
-            <span className="hidden sm:inline">Payout Account</span>
-            <ExternalLink className="h-3.5 w-3.5 opacity-60" />
-          </Link>
-        )}
-      </div>
-
-      {/* ── Wallet Balance Card (Buyers Only) ── */}
-      {!isSeller && (
-        <div className="mb-6 rounded-2xl border border-white/[0.08] bg-gradient-to-br from-violet-500/10 via-purple-500/5 to-transparent p-1 shadow-xl">
-          <div className="rounded-xl bg-black/40 backdrop-blur-sm p-6">
-            <div className="flex items-start justify-between mb-6">
-              <div>
-                <div className="flex items-center gap-2 mb-1.5">
-                  <Wallet className="h-4 w-4 text-violet-400" />
-                  <p className="text-[10px] text-white/50 font-semibold uppercase tracking-wider">Balance</p>
-                </div>
-                <p className="text-4xl font-bold text-white tracking-tight">${walletBalance.available_balance.toFixed(2)}</p>
-                {walletBalance.pending_balance > 0 && (
-                  <p className="text-[11px] text-white/40 mt-1">
-                    +${walletBalance.pending_balance.toFixed(2)} pending
-                  </p>
-                )}
-              </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => handleTopUp(25)}
-                  disabled={isTopUpLoading}
-                  className="group relative flex items-center justify-center gap-1.5 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 disabled:from-violet-500/50 disabled:to-purple-600/50 px-4 py-2 text-sm font-semibold text-white transition-all shadow-lg hover:shadow-violet-500/25 disabled:cursor-not-allowed"
-                >
-                  {isTopUpLoading ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <>
-                      <Plus className="h-3.5 w-3.5" />
-                      <span>$25</span>
-                    </>
-                  )}
-                </button>
-                <button
-                  onClick={() => handleTopUp(50)}
-                  disabled={isTopUpLoading}
-                  className="group relative flex items-center justify-center gap-1.5 rounded-lg bg-gradient-to-br from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 disabled:from-purple-500/50 disabled:to-pink-600/50 px-4 py-2 text-sm font-semibold text-white transition-all shadow-lg hover:shadow-purple-500/25 disabled:cursor-not-allowed"
-                >
-                  {isTopUpLoading ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <>
-                      <Plus className="h-3.5 w-3.5" />
-                      <span>$50</span>
-                    </>
-                  )}
-                </button>
-              </div>
-            </div>
-
-            {/* Rewards Row */}
-            <div className="grid grid-cols-2 gap-2.5 pt-3 border-t border-white/[0.06]">
-              <div className="flex items-center gap-2.5 rounded-lg bg-green-500/10 border border-green-500/20 px-3 py-2.5">
-                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-green-500/20">
-                  <Gift className="h-3.5 w-3.5 text-green-400" />
-                </div>
-                <div>
-                  <p className="text-[9px] text-green-400/70 font-medium uppercase tracking-wide">Cashback</p>
-                  <p className="text-base font-bold text-green-400">${walletBalance.total_cashback.toFixed(2)}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2.5 rounded-lg bg-amber-500/10 border border-amber-500/20 px-3 py-2.5">
-                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-500/20">
-                  <Sparkles className="h-3.5 w-3.5 text-amber-400" />
-                </div>
-                <div>
-                  <p className="text-[9px] text-amber-400/70 font-medium uppercase tracking-wide">Referrals</p>
-                  <p className="text-base font-bold text-amber-400">${walletBalance.referral_earnings.toFixed(2)}</p>
-                </div>
-              </div>
+            <div>
+              <h1 className="text-2xl font-bold text-white">Wallet</h1>
+              <p className="text-sm text-gray-400">Purchases, sales &amp; payouts</p>
             </div>
           </div>
+
+          {/* Seller Balance Card with Withdraw Button */}
+          {isSeller && (
+            <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-8">
+              <div className="flex items-start justify-between mb-6">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-3">
+                    <DollarSign className="h-5 w-5 text-emerald-400" />
+                    <p className="text-xs text-gray-400 font-semibold uppercase tracking-wider">Available Balance</p>
+                  </div>
+                  <p className="text-5xl font-bold text-white mb-2">${earningsStats.available_balance.toFixed(2)}</p>
+                  <p className="text-sm text-gray-500 mb-4">Ready to withdraw</p>
+
+                  {/* Pending Balance Row */}
+                  {earningsStats.pending_balance > 0 && (
+                    <div className="flex items-center gap-3 pt-4 border-t border-white/[0.06]">
+                      <div className="flex items-center gap-2">
+                        <Clock className="h-4 w-4 text-amber-400" />
+                        <span className="text-xs text-gray-400 font-medium">Pending:</span>
+                      </div>
+                      <span className="text-base font-bold text-amber-400">${earningsStats.pending_balance.toFixed(2)}</span>
+                      <span className="text-xs text-gray-600">awaiting clearance</span>
+                    </div>
+                  )}
+                </div>
+                <Link
+                  href="/account/wallet/withdraw"
+                  className={cn(
+                    "inline-flex items-center gap-2 rounded-xl bg-gradient-to-br from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 px-8 py-4 text-base font-semibold text-white transition-all shadow-lg hover:shadow-emerald-500/25",
+                    earningsStats.available_balance <= 0 && "opacity-50 pointer-events-none cursor-not-allowed"
+                  )}
+                >
+                  <ArrowDownToLine className="h-5 w-5" />
+                  Withdraw
+                </Link>
+              </div>
+            </div>
+          )}
+
+          {/* ── Wallet Balance Card (Buyers Only - No Withdrawals) ── */}
+          {!isSeller && (
+            <div className="rounded-2xl border border-white/[0.08] bg-gradient-to-br from-violet-500/10 via-purple-500/5 to-transparent p-1 shadow-xl">
+              <div className="rounded-xl bg-black/40 backdrop-blur-sm p-6">
+                <div className="flex items-start justify-between mb-6">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <Wallet className="h-4 w-4 text-violet-400" />
+                      <p className="text-[10px] text-white/50 font-semibold uppercase tracking-wider">Balance</p>
+                    </div>
+                    <p className="text-4xl font-bold text-white tracking-tight">${walletBalance.available_balance.toFixed(2)}</p>
+                    {walletBalance.pending_balance > 0 && (
+                      <p className="text-[11px] text-white/40 mt-1">
+                        +${walletBalance.pending_balance.toFixed(2)} pending
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handleTopUp(25)}
+                      disabled={isTopUpLoading}
+                      className="group relative flex items-center justify-center gap-1.5 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 disabled:from-violet-500/50 disabled:to-purple-600/50 px-4 py-2 text-sm font-semibold text-white transition-all shadow-lg hover:shadow-violet-500/25 disabled:cursor-not-allowed"
+                    >
+                      {isTopUpLoading ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <>
+                          <Plus className="h-3.5 w-3.5" />
+                          <span>$25</span>
+                        </>
+                      )}
+                    </button>
+                    <button
+                      onClick={() => handleTopUp(50)}
+                      disabled={isTopUpLoading}
+                      className="group relative flex items-center justify-center gap-1.5 rounded-lg bg-gradient-to-br from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 disabled:from-purple-500/50 disabled:to-pink-600/50 px-4 py-2 text-sm font-semibold text-white transition-all shadow-lg hover:shadow-purple-500/25 disabled:cursor-not-allowed"
+                    >
+                      {isTopUpLoading ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <>
+                          <Plus className="h-3.5 w-3.5" />
+                          <span>$50</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Rewards Row */}
+                <div className="grid grid-cols-2 gap-2.5 pt-3 border-t border-white/[0.06]">
+                  <div className="flex items-center gap-2.5 rounded-lg bg-green-500/10 border border-green-500/20 px-3 py-2.5">
+                    <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-green-500/20">
+                      <Gift className="h-3.5 w-3.5 text-green-400" />
+                    </div>
+                    <div>
+                      <p className="text-[9px] text-green-400/70 font-medium uppercase tracking-wide">Cashback</p>
+                      <p className="text-base font-bold text-green-400">${walletBalance.total_cashback.toFixed(2)}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2.5 rounded-lg bg-amber-500/10 border border-amber-500/20 px-3 py-2.5">
+                    <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-500/20">
+                      <Sparkles className="h-3.5 w-3.5 text-amber-400" />
+                    </div>
+                    <div>
+                      <p className="text-[9px] text-amber-400/70 font-medium uppercase tracking-wide">Referrals</p>
+                      <p className="text-base font-bold text-amber-400">${walletBalance.referral_earnings.toFixed(2)}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
-      )}
 
-      {/* ── Compact Stats ── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 mb-4">
-        {/* Buyer stats - always shown */}
-        <StatCard
-          icon={Gift} label="Total Cashback"
-          value={`$${walletBalance.total_cashback.toFixed(2)}`}
-          sub="Earned rewards"
-          color="green"
-        />
-        <StatCard
-          icon={ShoppingCart} label="Total Spent"
-          value={`$${lifetimeSpent.toFixed(2)}`}
-          sub="All purchases"
-          color="violet"
-        />
-
-        {/* Seller stats - only shown if user is approved seller */}
-        {isSeller ? (
-          <>
-            <StatCard
-              icon={DollarSign} label="Total Earned"
-              value={`$${earningsStats.total_earnings.toFixed(2)}`}
-              sub="As seller"
-              color="amber"
-            />
-            <StatCard
-              icon={Clock} label="Pending Pay"
-              value={`$${earningsStats.pending_balance.toFixed(2)}`}
-              sub="Awaiting payout"
-              color="blue"
-            />
-          </>
-        ) : (
-          <>
-            {/* Buyer-only stats when not a seller */}
-            <StatCard
-              icon={CheckCircle2} label="Completed"
-              value={purchases.filter(t => t.status === 'completed').length.toString()}
-              sub="Delivered"
-              color="amber"
-            />
-            <StatCard
-              icon={Package} label="Total Orders"
-              value={purchases.length.toString()}
-              sub="All purchases"
-              color="blue"
-            />
-          </>
+        {/* ── Compact Stats (Buyers Only) ── */}
+        {!isSeller && (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 mb-4">
+          <StatCard
+            icon={Gift} label="Total Cashback"
+            value={`$${walletBalance.total_cashback.toFixed(2)}`}
+            sub="Earned rewards"
+            color="green"
+          />
+          <StatCard
+            icon={ShoppingCart} label="Total Spent"
+            value={`$${lifetimeSpent.toFixed(2)}`}
+            sub="All purchases"
+            color="violet"
+          />
+          <StatCard
+            icon={CheckCircle2} label="Completed"
+            value={purchases.filter(t => t.status === 'completed').length.toString()}
+            sub="Delivered"
+            color="amber"
+          />
+          <StatCard
+            icon={Package} label="Total Orders"
+            value={purchases.length.toString()}
+            sub="All purchases"
+            color="blue"
+          />
+          </div>
         )}
-      </div>
 
       {/* ── Tabs ── */}
       <div className="flex gap-3 mb-4">
@@ -712,14 +778,31 @@ export default function WalletPage() {
         </div>
       )}
 
+
       {/* ════════════════ TAB: SALES ════════════════ */}
       {activeTab === 'earnings' && (
         <div className="rounded-xl border border-white/[0.08] bg-white/[0.02] overflow-hidden">
-          {filteredSales.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 text-center">
+          {salesLoading ? (
+            <div className="flex flex-col items-center justify-center py-16">
+              <Loader2 className="h-8 w-8 animate-spin text-violet-500 mb-3" />
+              <p className="text-sm text-gray-500">Loading sales...</p>
+            </div>
+          ) : filteredSales.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 text-center px-4">
               <Package className="h-10 w-10 text-gray-700 mb-3" />
               <p className="text-sm font-medium text-gray-400">{searchQuery ? 'No matching sales' : 'No sales yet'}</p>
-              <p className="text-xs text-gray-600 mt-1">{searchQuery ? 'Try adjusting your search' : 'Start listing items to earn money'}</p>
+              <p className="text-xs text-gray-600 mt-1 mb-4">
+                {searchQuery ? 'Try adjusting your search' : 'Start listing items to earn money'}
+              </p>
+              {!searchQuery && (
+                <Link
+                  href="/account/listings/new"
+                  className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 px-4 py-2 text-sm font-semibold text-white transition-all shadow-lg hover:shadow-violet-500/25"
+                >
+                  <Plus className="h-4 w-4" />
+                  Create Listing
+                </Link>
+              )}
             </div>
           ) : (
             <div className="divide-y divide-white/[0.05]">
@@ -855,6 +938,26 @@ export default function WalletPage() {
           )}
         </div>
       )}
+
+      {/* ── Withdrawal Requests Section (Sellers Only) ── */}
+      {isSeller && withdrawalRequestsData && withdrawalRequestsData.length > 0 && (
+        <div className="mt-6">
+          <h2 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
+            <ArrowDownToLine className="h-5 w-5 text-emerald-400" />
+            Withdrawal Requests
+          </h2>
+          <div className="grid gap-3">
+            {withdrawalRequestsData.map((request) => (
+              <WithdrawalRequestCard
+                key={request.id}
+                request={request}
+                onUpdate={refetchWithdrawals}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
       </div>
     </div>
   )

@@ -62,9 +62,9 @@ export async function restrictSeller(params: RestrictSellerParams): Promise<{ su
     }
 
     // Track restriction history
-    const { error: historyError } = await (supabase
+    const { error: historyError } = await supabase
       .from('seller_restrictions')
-      .insert as any)({
+      .insert({
         seller_id: userId,
         restricted_by: admin.userId,
         restriction_type: status === 'active' ? 'unrestricted' : status,
@@ -73,7 +73,7 @@ export async function restrictSeller(params: RestrictSellerParams): Promise<{ su
           previous_status: seller.seller_status,
           admin_email: admin.email,
         }
-      })
+      } as any)
 
     if (historyError) {
       console.error('Error tracking restriction history:', historyError)

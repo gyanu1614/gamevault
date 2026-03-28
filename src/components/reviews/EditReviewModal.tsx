@@ -194,7 +194,10 @@ export default function EditReviewModal({
                   {/* Thumbs Up */}
                   <motion.button
                     type="button"
-                    onClick={() => setReviewType('positive')}
+                    onClick={() => {
+                      setReviewType('positive')
+                      setComment('') // Clear text when switching
+                    }}
                     whileTap={{ scale: 0.9 }}
                     className={cn(
                       "relative p-6 rounded-2xl border-2 transition-all duration-300",
@@ -231,7 +234,10 @@ export default function EditReviewModal({
                   {/* Thumbs Down */}
                   <motion.button
                     type="button"
-                    onClick={() => setReviewType('negative')}
+                    onClick={() => {
+                      setReviewType('negative')
+                      setComment('') // Clear text when switching
+                    }}
                     whileTap={{ scale: 0.9 }}
                     className={cn(
                       "relative p-6 rounded-2xl border-2 transition-all duration-300",
