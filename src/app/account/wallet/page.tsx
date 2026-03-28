@@ -504,36 +504,31 @@ export default function WalletPage() {
 
           {/* Seller Balance Card with Withdraw Button */}
           {isSeller && (
-            <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-8">
-              <div className="flex items-start justify-between mb-6">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-3">
-                    <DollarSign className="h-5 w-5 text-emerald-400" />
-                    <p className="text-xs text-gray-400 font-semibold uppercase tracking-wider">Available Balance</p>
+            <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <DollarSign className="h-4 w-4 text-emerald-400" />
+                    <p className="text-xs text-gray-400 font-semibold uppercase tracking-wider">Total Balance</p>
                   </div>
-                  <p className="text-5xl font-bold text-white mb-2">${earningsStats.available_balance.toFixed(2)}</p>
-                  <p className="text-sm text-gray-500 mb-4">Ready to withdraw</p>
+                  <p className="text-4xl font-bold text-white mb-1">${earningsStats.available_balance.toFixed(2)}</p>
+                  <p className="text-sm text-gray-500">Available to withdraw</p>
 
-                  {/* Pending Balance Row */}
+                  {/* Pending Balance */}
                   {earningsStats.pending_balance > 0 && (
-                    <div className="flex items-center gap-3 pt-4 border-t border-white/[0.06]">
-                      <div className="flex items-center gap-2">
-                        <Clock className="h-4 w-4 text-amber-400" />
-                        <span className="text-xs text-gray-400 font-medium">Pending:</span>
-                      </div>
-                      <span className="text-base font-bold text-amber-400">${earningsStats.pending_balance.toFixed(2)}</span>
-                      <span className="text-xs text-gray-600">awaiting clearance</span>
-                    </div>
+                    <p className="text-xs text-amber-400 mt-2">
+                      +${earningsStats.pending_balance.toFixed(2)} pending
+                    </p>
                   )}
                 </div>
                 <Link
                   href="/account/wallet/withdraw"
                   className={cn(
-                    "inline-flex items-center gap-2 rounded-xl bg-gradient-to-br from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 px-8 py-4 text-base font-semibold text-white transition-all shadow-lg hover:shadow-emerald-500/25",
+                    "inline-flex items-center gap-2 rounded-xl bg-gradient-to-br from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 px-6 py-3 text-sm font-semibold text-white transition-all shadow-lg hover:shadow-emerald-500/25",
                     earningsStats.available_balance <= 0 && "opacity-50 pointer-events-none cursor-not-allowed"
                   )}
                 >
-                  <ArrowDownToLine className="h-5 w-5" />
+                  <ArrowDownToLine className="h-4 w-4" />
                   Withdraw
                 </Link>
               </div>
