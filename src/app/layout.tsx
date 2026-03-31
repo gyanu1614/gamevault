@@ -5,6 +5,7 @@ import { Providers } from '@/components/providers'
 import { LayoutWrapper } from '@/components/layout-wrapper'
 import { Toaster } from 'sonner'
 import RecentPurchaseToast, { DailyStatsToast } from '@/components/marketplace/RecentPurchaseToast'
+import { Analytics } from "@vercel/analytics/next"
 
 // Inter — original body font, restored
 const inter = Inter({
