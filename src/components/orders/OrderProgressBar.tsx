@@ -3,6 +3,7 @@
 import { cn } from '@/lib/utils'
 import { Package, CheckCircle2, AlertTriangle, XCircle, RefreshCw, Check, Sparkles } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import DisputeResolutionCard from '@/components/admin/disputes/DisputeResolutionCard'
 
 interface OrderProgressBarProps {
   status: string
@@ -17,11 +18,14 @@ interface OrderProgressBarProps {
     escrow_status?: string
   }
   disputeResolution?: {
+    status?: string
     favored_party: 'buyer' | 'seller' | 'neutral'
     resolution_type: string
     refund_amount?: number
     resolved_at: string
     resolution_notes?: string
+    buyer_username?: string
+    seller_username?: string
   } | null
 }
 
@@ -54,52 +58,31 @@ function useCountdown(targetDate?: string | null) {
 export default function OrderProgressBar({ status, order, disputeResolution }: OrderProgressBarProps) {
   // ── Terminal states ──────────────────────────────────────────────────────────
 
-  // Dispute Resolved - compact version
+  // Dispute Resolved - show full resolution card
   if (disputeResolution) {
-    const buyerWon = disputeResolution.favored_party === 'buyer'
-    const formatDate = (date: string) => {
-      return new Date(date).toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-      })
+    // Determine status from favored_party if not explicitly provided
+    let disputeStatus = disputeResolution.status
+    if (!disputeStatus) {
+      if (disputeResolution.favored_party === 'buyer') {
+        disputeStatus = 'resolved_buyer_favor'
+      } else if (disputeResolution.favored_party === 'seller') {
+        disputeStatus = 'resolved_seller_favor'
+      } else {
+        disputeStatus = 'resolved_partial'
+      }
     }
 
     return (
-      <div className={cn(
-        "h-full rounded-2xl border px-4 py-3 flex items-center",
-        buyerWon ? "border-green-500/25 bg-green-500/[0.06]" : "border-red-500/25 bg-red-500/[0.06]"
-      )}>
-        <div className="flex items-center gap-3 w-full">
-          <div className={cn(
-            "flex h-10 w-10 items-center justify-center rounded-xl border flex-shrink-0",
-            buyerWon ? "border-green-500/30 bg-green-500/10" : "border-red-500/30 bg-red-500/10"
-          )}>
-            {buyerWon ? (
-              <CheckCircle2 className="h-4 w-4 text-green-400" />
-            ) : (
-              <XCircle className="h-4 w-4 text-red-400" />
-            )}
-          </div>
-          <div className="flex-1 space-y-0.5">
-            <div className={cn(
-              "text-xs font-bold uppercase tracking-[0.1em]",
-              buyerWon ? "text-green-400" : "text-red-400"
-            )}>
-              {buyerWon ? '✅ Dispute Resolved in Your Favor' : 'Dispute Resolved'}
-            </div>
-            <div className={cn("text-xs", buyerWon ? "text-green-400/70" : "text-red-400/70")}>
-              Decision: {buyerWon ? 'Buyer favored' : 'Seller favored'}
-              {disputeResolution.refund_amount !== undefined && ` • Refund: $${disputeResolution.refund_amount.toFixed(2)}`}
-            </div>
-            <div className="text-xs text-gray-600">
-              Resolved: {formatDate(disputeResolution.resolved_at)}
-            </div>
-          </div>
-        </div>
-      </div>
+      <DisputeResolutionCard
+        status={disputeStatus}
+        resolutionType={disputeResolution.resolution_type}
+        resolvedAmount={disputeResolution.refund_amount}
+        resolutionNotes={disputeResolution.resolution_notes}
+        resolvedAt={disputeResolution.resolved_at}
+        currency="USD"
+        buyerUsername={disputeResolution.buyer_username}
+        sellerUsername={disputeResolution.seller_username}
+      />
     )
   }
 

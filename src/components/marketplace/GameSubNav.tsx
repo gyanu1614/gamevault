@@ -18,6 +18,9 @@ export interface GameCategory {
   id: string
   name: string
   slug: string
+  icon_emoji?: string | null
+  icon_url?: string | null
+  icon_type?: 'emoji' | 'image' | 'svg' | null
 }
 
 interface GameSubNavProps {
@@ -85,12 +88,15 @@ export default function GameSubNav({
           >
             {categories.map((cat) => {
               const isActive = cat.slug === currentCategorySlug
+              const showIcon = cat.icon_type === 'image' || cat.icon_type === 'svg'
+              const icon = showIcon && cat.icon_url ? cat.icon_url : cat.icon_emoji
+
               return (
                 <button
                   key={cat.id}
                   onClick={() => router.push(`/${gameSlug}/${cat.slug}`)}
                   className={cn(
-                    'relative flex-shrink-0 px-2.5 py-1 sm:px-3.5 sm:py-1.5 text-xs sm:text-sm font-medium whitespace-nowrap rounded-full transition-colors',
+                    'relative flex-shrink-0 flex items-center gap-1.5 px-2.5 py-1 sm:px-3.5 sm:py-1.5 text-xs sm:text-sm font-medium whitespace-nowrap rounded-full transition-colors',
                     isActive
                       ? 'text-white'
                       : 'text-gray-400 hover:text-gray-100 hover:bg-white/[0.05]'
@@ -102,6 +108,19 @@ export default function GameSubNav({
                       className="absolute inset-0 rounded-full bg-white/[0.1]"
                       transition={{ type: 'spring', stiffness: 400, damping: 35 }}
                     />
+                  )}
+                  {icon && (
+                    <span className="relative z-10">
+                      {showIcon ? (
+                        <img
+                          src={icon}
+                          alt={cat.name}
+                          className="w-4 h-4 sm:w-4.5 sm:h-4.5 rounded object-cover"
+                        />
+                      ) : (
+                        <span className="text-sm">{icon}</span>
+                      )}
+                    </span>
                   )}
                   <span className="relative z-10">{cat.name}</span>
                 </button>

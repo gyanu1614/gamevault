@@ -30,15 +30,30 @@ export function DisputesTable({ disputes, pagination }: DisputesTableProps) {
   const router = useRouter()
   const [hoveredRow, setHoveredRow] = useState<string | null>(null)
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (status: string, dispute: any) => {
+    // If resolved, show "Completed - [Resolution Type]"
+    if (status.startsWith('resolved_')) {
+      let resolutionLabel = ''
+      if (status === 'resolved_buyer_favor') resolutionLabel = 'Buyer Favor'
+      else if (status === 'resolved_seller_favor') resolutionLabel = 'Seller Favor'
+      else if (status === 'resolved_partial') resolutionLabel = 'Partial'
+
+      return (
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[11px] font-medium border bg-green-500/10 text-green-400 border-green-500/20">
+          <Clock className="h-2.5 w-2.5" />
+          Completed - {resolutionLabel}
+        </span>
+      )
+    }
+
     const statusConfig = {
       open: {
-        label: 'Open',
+        label: 'Pending',
         icon: AlertTriangle,
         className: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20'
       },
       under_review: {
-        label: 'Under Review',
+        label: dispute.assigned_to ? 'Assigned' : 'Pending',
         icon: Clock,
         className: 'bg-blue-500/10 text-blue-400 border-blue-500/20'
       },
@@ -56,21 +71,6 @@ export function DisputesTable({ disputes, pagination }: DisputesTableProps) {
         label: 'Awaiting Buyer',
         icon: Clock,
         className: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20'
-      },
-      resolved_buyer_favor: {
-        label: 'Buyer Favor',
-        icon: Clock,
-        className: 'bg-blue-500/10 text-blue-400 border-blue-500/20'
-      },
-      resolved_seller_favor: {
-        label: 'Seller Favor',
-        icon: Clock,
-        className: 'bg-purple-500/10 text-purple-400 border-purple-500/20'
-      },
-      resolved_partial: {
-        label: 'Partial',
-        icon: Clock,
-        className: 'bg-green-500/10 text-green-400 border-green-500/20'
       },
       closed: {
         label: 'Closed',
@@ -245,7 +245,7 @@ export function DisputesTable({ disputes, pagination }: DisputesTableProps) {
 
                 {/* Status */}
                 <td className="px-4 py-3">
-                  {getStatusBadge(dispute.status)}
+                  {getStatusBadge(dispute.status, dispute)}
                 </td>
 
                 {/* Created Date */}

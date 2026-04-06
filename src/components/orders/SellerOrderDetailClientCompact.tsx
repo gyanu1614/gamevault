@@ -17,6 +17,7 @@ import OrderProgressBar from '@/components/orders/OrderProgressBar'
 import DeliveryTimer from '@/components/orders/DeliveryTimer'
 import OrderDetailsCard from '@/components/orders/OrderDetailsCard'
 import InstantDeliveryCodeDisplay from '@/components/orders/InstantDeliveryCodeDisplay'
+import DisputeResolutionCard from '@/components/admin/disputes/DisputeResolutionCard'
 import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
@@ -31,6 +32,7 @@ import type { ReviewWithRelations } from '@/types/database'
 interface SellerOrderDetailClientProps {
   order: any
   disputeResolution?: {
+    status: string
     favored_party: 'buyer' | 'seller' | 'neutral'
     resolution_type: string
     refund_amount?: number
@@ -38,6 +40,8 @@ interface SellerOrderDetailClientProps {
     seller_payout_amount?: number
     resolution_notes?: string
     resolved_at: string
+    buyer_username?: string
+    seller_username?: string
   } | null
   sellerPayout: number
   timeRemaining: number
@@ -440,11 +444,14 @@ export default function SellerOrderDetailClient({
                 status={order.status}
                 order={order}
                 disputeResolution={disputeResolution ? {
+                  status: disputeResolution.status,
                   favored_party: disputeResolution.favored_party,
                   resolution_type: disputeResolution.resolution_type,
                   refund_amount: disputeResolution.refund_amount,
                   resolved_at: disputeResolution.resolved_at,
                   resolution_notes: disputeResolution.resolution_notes,
+                  buyer_username: disputeResolution.buyer_username,
+                  seller_username: disputeResolution.seller_username,
                 } : null}
               />
             )}
@@ -534,6 +541,22 @@ export default function SellerOrderDetailClient({
 
         {/* ── SIDEBAR (1/3) ────────────────────────────────────────────── */}
         <div className="flex flex-col gap-3 h-full">
+
+          {/* Dispute Resolution Card - Shown for resolved disputes */}
+          {disputeResolution && (
+            <div className="mb-1">
+              <DisputeResolutionCard
+                status={disputeResolution.status}
+                resolutionType={disputeResolution.resolution_type}
+                resolvedAmount={disputeResolution.seller_payout_amount || disputeResolution.refund_amount}
+                resolutionNotes={disputeResolution.resolution_notes}
+                resolvedAt={disputeResolution.resolved_at}
+                currency="USD"
+                buyerUsername={disputeResolution.buyer_username}
+                sellerUsername={disputeResolution.seller_username}
+              />
+            </div>
+          )}
 
           {/* Instant Delivery Code Display (for seller) */}
           {isInstantDelivery && order.instant_delivery_code && (

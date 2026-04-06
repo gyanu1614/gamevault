@@ -29,6 +29,7 @@ import { cn } from '@/lib/utils'
 interface BuyerOrderDetailClientProps {
   order: any
   disputeResolution?: {
+    status: string
     favored_party: 'buyer' | 'seller' | 'neutral'
     resolution_type: string
     refund_amount?: number
@@ -36,6 +37,8 @@ interface BuyerOrderDetailClientProps {
     seller_payout_amount?: number
     resolution_notes?: string
     resolved_at: string
+    buyer_username?: string
+    seller_username?: string
   } | null
   timeRemaining: number
   hoursRemaining: number
@@ -417,11 +420,14 @@ export default function BuyerOrderDetailClient({
                 escrow_status: order.escrow_status,
               }}
               disputeResolution={disputeResolution ? {
+                status: disputeResolution.status,
                 favored_party: disputeResolution.favored_party,
                 resolution_type: disputeResolution.resolution_type,
                 refund_amount: disputeResolution.refund_amount,
                 resolved_at: disputeResolution.resolved_at,
                 resolution_notes: disputeResolution.resolution_notes,
+                buyer_username: disputeResolution.buyer_username,
+                seller_username: disputeResolution.seller_username,
               } : null}
             /></div>
           )}

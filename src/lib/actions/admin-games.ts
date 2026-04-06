@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient as createServiceClient } from '@supabase/supabase-js'
+import { createClient } from '@/lib/supabase/server'
 import { requireAdmin } from '@/lib/actions/admin-permissions'
 import { revalidatePath } from 'next/cache'
 
@@ -113,4 +114,127 @@ export async function toggleGameActive(id: string, isActive: boolean) {
   if (error) return { success: false, error: error.message }
   revalidatePath('/admin/games')
   return { success: true }
+}
+
+// ─── Game Icon Upload ─────────────────────────────────────────────────────────
+
+export async function uploadGameIcon(
+  gameId: string,
+  fileData: { name: string; type: string; size: number; base64: string }
+): Promise<{ success: boolean; url?: string; error?: string }> {
+  try {
+    await requireAdmin()
+    const supabase = await createClient()
+
+    // Validate file type
+    const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/svg+xml', 'image/webp']
+    if (!validTypes.includes(fileData.type)) {
+      return { success: false, error: 'Invalid file type. Allowed: PNG, JPEG, SVG, WebP' }
+    }
+
+    // Validate file size (2MB limit)
+    if (fileData.size > 2097152) {
+      return { success: false, error: 'File too large. Maximum size: 2MB' }
+    }
+
+    // Convert base64 to buffer
+    const base64Data = fileData.base64.split(',')[1]
+    const buffer = Buffer.from(base64Data, 'base64')
+
+    // Generate unique filename with 'games/' prefix to separate from categories
+    const fileExt = fileData.name.split('.').pop()
+    const fileName = `games/${gameId}-${Date.now()}.${fileExt}`
+    const filePath = `${fileName}`
+
+    // Delete old icon if exists
+    const { data: existingData } = await supabase
+      .from('games')
+      .select('image_url')
+      .eq('id', gameId)
+      .single() as { data: { image_url: string | null } | null }
+
+    if (existingData?.image_url) {
+      const oldFileName = existingData.image_url.split('/').pop()
+      if (oldFileName && oldFileName.startsWith('games/')) {
+        await supabase.storage.from('category-icons').remove([oldFileName])
+      }
+    }
+
+    // Upload new icon (using category-icons bucket)
+    const { error: uploadError } = await supabase.storage
+      .from('category-icons')
+      .upload(filePath, buffer, {
+        contentType: fileData.type,
+        cacheControl: '3600',
+        upsert: true,
+      })
+
+    if (uploadError) {
+      return { success: false, error: uploadError.message }
+    }
+
+    // Get public URL
+    const { data: urlData } = supabase.storage
+      .from('category-icons')
+      .getPublicUrl(filePath)
+
+    const iconUrl = urlData.publicUrl
+
+    // Update game with new icon URL
+    const adminSupabase = getAdminSupabase()
+    const { error: updateError } = await adminSupabase
+      .from('games')
+      .update({
+        image_url: iconUrl,
+      })
+      .eq('id', gameId)
+
+    if (updateError) {
+      return { success: false, error: updateError.message }
+    }
+
+    revalidatePath('/admin/games')
+    return { success: true, url: iconUrl }
+  } catch (error: any) {
+    return { success: false, error: error.message || 'Upload failed' }
+  }
+}
+
+export async function deleteGameIcon(gameId: string) {
+  try {
+    await requireAdmin()
+    const supabase = await createClient()
+
+    // Get current icon URL
+    const adminSupabase = getAdminSupabase()
+    const { data: gameData } = await adminSupabase
+      .from('games')
+      .select('image_url')
+      .eq('id', gameId)
+      .single() as { data: { image_url: string | null } | null }
+
+    if (gameData?.image_url) {
+      // Extract the full path including 'games/' prefix
+      const urlParts = gameData.image_url.split('/category-icons/')
+      if (urlParts.length > 1) {
+        const filePath = urlParts[1]
+        await supabase.storage.from('category-icons').remove([filePath])
+      }
+    }
+
+    // Reset game to emoji icon
+    const { error } = await adminSupabase
+      .from('games')
+      .update({
+        image_url: null,
+      })
+      .eq('id', gameId)
+
+    if (error) return { success: false, error: error.message }
+
+    revalidatePath('/admin/games')
+    return { success: true }
+  } catch (error: any) {
+    return { success: false, error: error.message || 'Delete failed' }
+  }
 }

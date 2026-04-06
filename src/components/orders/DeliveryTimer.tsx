@@ -93,14 +93,14 @@ export default function DeliveryTimer({
   // ── Instant delivery ───────────────────────────────────────────────────────
   if (deliveryMethod === 'instant') {
     return (
-      <div className="h-full rounded-2xl border border-green-500/20 bg-green-500/[0.06] px-4 py-3 flex items-center">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl border border-green-500/30 bg-green-500/10">
-            <Zap className="h-4 w-4 text-green-400" />
+      <div className="rounded-2xl border border-green-500/20 bg-green-500/[0.06] px-3.5 py-2.5 flex items-center w-fit">
+        <div className="flex items-center gap-2.5">
+          <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl border border-green-500/30 bg-green-500/10">
+            <Zap className="h-3.5 w-3.5 text-green-400" />
           </div>
           <div>
-            <div className="text-xs font-bold uppercase tracking-[0.1em] text-green-400">Instant Delivery</div>
-            <div className="text-sm text-gray-500 mt-0.5">Delivered automatically</div>
+            <div className="text-[11px] font-bold uppercase tracking-[0.1em] text-green-400">Instant Delivery</div>
+            <div className="text-xs text-gray-500 mt-0.5">Delivered automatically</div>
           </div>
         </div>
       </div>

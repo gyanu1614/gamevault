@@ -5,6 +5,7 @@
  * Handles webhook events from Stripe:
  * - payment_intent.succeeded: Create order after successful payment
  * - payment_intent.payment_failed: Log payment failure
+ * - charge.refunded: Process refunds and credit buyer wallet
  * - account.updated: Sync Connect account status changes
  * - transfer.created: Log seller payout transfers
  * - transfer.failed: Handle payout failures
@@ -78,6 +79,10 @@ export async function POST(req: NextRequest) {
 
       case 'payment_intent.payment_failed':
         await handlePaymentFailure(event.data.object as Stripe.PaymentIntent)
+        break
+
+      case 'charge.refunded':
+        await handleRefund(event.data.object as Stripe.Charge)
         break
 
       // Stripe Connect events
@@ -405,6 +410,107 @@ async function handlePaymentFailure(paymentIntent: Stripe.PaymentIntent) {
 
   // TODO: Notify buyer of payment failure
   // TODO: Log to monitoring system (Sentry, etc.)
+}
+
+/**
+ * Handle refund
+ * Credits wallet if buyer used wallet funds in original payment
+ */
+async function handleRefund(charge: Stripe.Charge) {
+  console.log(`[Webhook] Processing refund for charge: ${charge.id}`)
+
+  const supabase = createServiceRoleClient()
+
+  // Get payment intent to find the order
+  const paymentIntentId = typeof charge.payment_intent === 'string'
+    ? charge.payment_intent
+    : charge.payment_intent?.id
+
+  if (!paymentIntentId) {
+    console.error('[Webhook] No payment intent found for charge')
+    return
+  }
+
+  // Find the order
+  const { data: order, error: orderError } = await supabase
+    .from('orders')
+    .select('id, buyer_id, wallet_amount_used, total_amount, order_number')
+    .eq('stripe_payment_intent_id', paymentIntentId)
+    .single()
+
+  if (orderError || !order) {
+    console.error('[Webhook] Order not found for payment intent:', paymentIntentId)
+    return
+  }
+
+  // Get refund amount (in cents from Stripe)
+  const refundedAmount = charge.amount_refunded / 100
+
+  console.log(`[Webhook] Refund amount: $${refundedAmount} for order ${order.id}`)
+
+  // Credit ENTIRE refund amount to wallet (not proportional)
+  // User can withdraw from wallet if they prefer
+  if (refundedAmount > 0) {
+    console.log(`[Webhook] Crediting full refund $${refundedAmount.toFixed(2)} to buyer wallet`)
+
+    // Get current wallet balance
+    const { data: wallet } = await supabase
+      .from('wallet_balances')
+      .select('available_balance, lifetime_earned')
+      .eq('user_id', order.buyer_id)
+      .single()
+
+    if (wallet) {
+      const newBalance = wallet.available_balance + refundedAmount
+      const newLifetimeEarned = (wallet.lifetime_earned || 0) + refundedAmount
+
+      // Create wallet transaction for refund
+      await supabase
+        .from('wallet_transactions')
+        .insert({
+          user_id: order.buyer_id,
+          type: 'refund',
+          amount: refundedAmount,
+          balance_after: newBalance,
+          description: `Refund - Order #${order.order_number || order.id}`,
+          reference_id: order.id,
+          reference_type: 'order',
+          status: 'completed',
+          completed_at: new Date().toISOString(),
+        })
+
+      // Update wallet balance
+      await supabase
+        .from('wallet_balances')
+        .update({
+          available_balance: newBalance,
+          lifetime_earned: newLifetimeEarned,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('user_id', order.buyer_id)
+
+      console.log(`[Webhook] Wallet credited: $${refundedAmount.toFixed(2)} to buyer ${order.buyer_id}`)
+
+      // Create notification for buyer
+      try {
+        await supabase.from('notifications').insert({
+          user_id: order.buyer_id,
+          type: 'refund_processed',
+          title: 'Refund Processed',
+          message: `$${refundedAmount.toFixed(2)} has been credited to your wallet for order #${order.order_number || order.id}.`,
+          link: '/account/wallet',
+          is_read: false,
+        })
+        console.log(`[Webhook] Refund notification sent to buyer ${order.buyer_id}`)
+      } catch (error) {
+        console.error('[Webhook] Failed to create refund notification:', error)
+      }
+    } else {
+      console.error('[Webhook] Buyer wallet not found:', order.buyer_id)
+    }
+  }
+
+  console.log(`[Webhook] Refund processing complete for charge ${charge.id}`)
 }
 
 // ─── Stripe Connect Event Handlers ───────────────────────────────
