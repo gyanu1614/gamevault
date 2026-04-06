@@ -148,6 +148,7 @@ export default async function OrderDetailPage({ params }: PageProps) {
 
   // Fetch dispute resolution if order was disputed
   let disputeResolution: {
+    status: string
     favored_party: 'buyer' | 'seller' | 'neutral'
     resolution_type: string
     refund_amount?: number
@@ -155,6 +156,8 @@ export default async function OrderDetailPage({ params }: PageProps) {
     seller_payout_amount?: number
     resolution_notes?: string
     resolved_at: string
+    buyer_username?: string
+    seller_username?: string
   } | null = null
 
   if (order.disputed_at) {
@@ -174,6 +177,7 @@ export default async function OrderDetailPage({ params }: PageProps) {
 
       if (resolutionData) {
         disputeResolution = {
+          status: disputeData.status,
           favored_party: resolutionData.favored_party,
           resolution_type: resolutionData.resolution_type,
           refund_amount: resolutionData.refund_amount,
@@ -181,6 +185,8 @@ export default async function OrderDetailPage({ params }: PageProps) {
           seller_payout_amount: resolutionData.seller_payout_amount,
           resolution_notes: resolutionData.resolution_notes,
           resolved_at: resolutionData.created_at,
+          buyer_username: order.buyer?.username,
+          seller_username: order.seller?.username,
         }
       }
     }

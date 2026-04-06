@@ -81,6 +81,7 @@ export default function RootLayout({
           />
           {/* Social Proof Widgets */}
           <RecentPurchaseToast />
+          <Analytics />
           <DailyStatsToast />
         </Providers>
       </body>

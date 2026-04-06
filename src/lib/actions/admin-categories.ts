@@ -10,6 +10,7 @@ import { revalidatePath } from 'next/cache'
 export interface CategoryData {
   name: string
   slug: string
+  game_id?: string | null
   description?: string | null
   icon_emoji?: string | null
   icon_url?: string | null
@@ -28,15 +29,22 @@ function getAdminSupabase() {
 
 // ─── Actions ──────────────────────────────────────────────────────────────────
 
-export async function fetchAdminCategories() {
+export async function fetchAdminCategories(gameId?: string) {
   await requireAdmin()
   const supabase = getAdminSupabase()
 
-  const { data: categoriesData, error } = await supabase
+  let query = supabase
     .from('categories')
     .select('*')
     .order('sort_order', { ascending: true })
     .order('name', { ascending: true })
+
+  // Filter by game_id if provided
+  if (gameId) {
+    query = query.eq('game_id', gameId)
+  }
+
+  const { data: categoriesData, error } = await query
 
   if (error || !categoriesData) return []
 
@@ -84,6 +92,7 @@ export async function updateCategory(id: string, data: CategoryData) {
     .update({
       name: data.name,
       slug: data.slug,
+      game_id: data.game_id || null,
       description: data.description || null,
       icon_emoji: data.icon_emoji || null,
       icon_url: data.icon_url || null,
@@ -95,6 +104,7 @@ export async function updateCategory(id: string, data: CategoryData) {
 
   if (error) return { success: false, error: error.message }
   revalidatePath('/admin/categories')
+  revalidatePath('/admin/games')
   return { success: true }
 }
 
@@ -105,6 +115,7 @@ export async function insertCategory(data: CategoryData) {
   const { error } = await supabase.from('categories').insert({
     name: data.name,
     slug: data.slug,
+    game_id: data.game_id || null,
     description: data.description || null,
     icon_emoji: data.icon_emoji || '📦',
     icon_url: data.icon_url || null,
@@ -115,6 +126,7 @@ export async function insertCategory(data: CategoryData) {
 
   if (error) return { success: false, error: error.message }
   revalidatePath('/admin/categories')
+  revalidatePath('/admin/games')
   return { success: true }
 }
 

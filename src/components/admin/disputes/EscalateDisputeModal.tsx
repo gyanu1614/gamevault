@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import {
   Dialog,
@@ -34,6 +35,7 @@ export default function EscalateDisputeModal({
   dispute,
 }: EscalateDisputeModalProps) {
   const router = useRouter()
+  const queryClient = useQueryClient()
   const [reason, setReason] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -54,6 +56,10 @@ export default function EscalateDisputeModal({
       }
 
       toast.success('Dispute escalated to senior moderator')
+
+      // Invalidate dispute query to refresh UI and show escalation banner
+      await queryClient.invalidateQueries({ queryKey: ['dispute', dispute.id] })
+
       handleClose()
       router.refresh()
     } catch (error) {
