@@ -368,83 +368,161 @@ export default function BuyerOrderDetailClient({
   return (
     <div className="space-y-4 pb-32">
       {/* Progress bar / Leave Review section + Delivery Timer side by side */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-stretch">
-        <div className="lg:col-span-2 flex">
-          {order.status === 'completed' ? (
-            /* Order Completed + Leave Review Card */
-            <div className="flex-1 rounded-xl border border-white/[0.08] bg-white/[0.03] p-4">
-              {/* Order Completed Header */}
-              <div className="flex items-center gap-3 mb-4">
-                <div className="h-11 w-11 rounded-full bg-green-500/15 border border-green-500/25 flex items-center justify-center flex-shrink-0">
-                  <CheckCircle2 className="w-5 h-5 text-green-400" />
+      {order.listing?.delivery_method === 'instant' ? (
+        /* For instant delivery, show timer inline below progress bar */
+        <div className="space-y-4">
+          <div className="flex">
+            {order.status === 'completed' ? (
+              /* Order Completed + Leave Review Card */
+              <div className="flex-1 rounded-xl border border-white/[0.08] bg-white/[0.03] p-4">
+                {/* Order Completed Header */}
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="h-11 w-11 rounded-full bg-green-500/15 border border-green-500/25 flex items-center justify-center flex-shrink-0">
+                    <CheckCircle2 className="w-5 h-5 text-green-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-white mb-1">Order Completed</h3>
+                    <p className="text-xs text-gray-400">
+                      {order.completed_at ? new Date(order.completed_at).toLocaleString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                        hour: 'numeric',
+                        minute: '2-digit',
+                        hour12: true
+                      }) : 'Recently'}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1.5">
+                      Payment has been released to the seller.
+                    </p>
+                  </div>
                 </div>
+
+                {/* Divider */}
+                <div className="border-t border-white/[0.06] my-3.5" />
+
+                {/* Leave Review Section */}
                 <div>
-                  <h3 className="text-lg font-bold text-white mb-1">Order Completed</h3>
-                  <p className="text-xs text-gray-400">
-                    {order.completed_at ? new Date(order.completed_at).toLocaleString('en-US', {
-                      month: 'short',
-                      day: 'numeric',
-                      year: 'numeric',
-                      hour: 'numeric',
-                      minute: '2-digit',
-                      hour12: true
-                    }) : 'Recently'}
-                  </p>
-                  <p className="text-xs text-gray-500 mt-1.5">
-                    Payment has been released to the seller.
-                  </p>
+                  <h4 className="text-xs font-semibold text-white mb-3">How was your experience?</h4>
+                  <LeaveReviewButton
+                    orderId={order.id}
+                    sellerName={order.seller?.shop_name || order.seller?.username || 'Seller'}
+                    onReviewSubmitted={() => {}}
+                    className="w-full"
+                  />
                 </div>
               </div>
-
-              {/* Divider */}
-              <div className="border-t border-white/[0.06] my-3.5" />
-
-              {/* Leave Review Section */}
-              <div>
-                <h4 className="text-xs font-semibold text-white mb-3">How was your experience?</h4>
-                <LeaveReviewButton
-                  orderId={order.id}
-                  sellerName={order.seller?.shop_name || order.seller?.username || 'Seller'}
-                  onReviewSubmitted={() => {}}
-                  className="w-full"
-                />
-              </div>
-            </div>
-          ) : (
-            /* Progress bar for non-completed orders */
-            <div className="flex-1"><OrderProgressBar
-              status={order.status}
-              order={{
-                ...order,
-                auto_release_at: order.auto_release_at,
-                escrow_status: order.escrow_status,
-              }}
-              disputeResolution={disputeResolution ? {
-                status: disputeResolution.status,
-                favored_party: disputeResolution.favored_party,
-                resolution_type: disputeResolution.resolution_type,
-                refund_amount: disputeResolution.refund_amount,
-                resolved_at: disputeResolution.resolved_at,
-                resolution_notes: disputeResolution.resolution_notes,
-                buyer_username: disputeResolution.buyer_username,
-                seller_username: disputeResolution.seller_username,
-              } : null}
-            /></div>
-          )}
+            ) : (
+              /* Progress bar for non-completed orders */
+              <div className="flex-1"><OrderProgressBar
+                status={order.status}
+                order={{
+                  ...order,
+                  auto_release_at: order.auto_release_at,
+                  escrow_status: order.escrow_status,
+                }}
+                disputeResolution={disputeResolution ? {
+                  status: disputeResolution.status,
+                  favored_party: disputeResolution.favored_party,
+                  resolution_type: disputeResolution.resolution_type,
+                  refund_amount: disputeResolution.refund_amount,
+                  resolved_at: disputeResolution.resolved_at,
+                  resolution_notes: disputeResolution.resolution_notes,
+                  buyer_username: disputeResolution.buyer_username,
+                  seller_username: disputeResolution.seller_username,
+                } : null}
+              /></div>
+            )}
+          </div>
+          <DeliveryTimer
+            deliveringAt={order.delivering_at}
+            deliveredAt={order.delivered_at}
+            deliveryTime={order.listing?.delivery_time}
+            deliveryMethod={order.listing?.delivery_method}
+            role="buyer"
+            orderStatus={order.status}
+          />
         </div>
-        <div className="flex">
-          <div className="flex-1">
-            <DeliveryTimer
-              deliveringAt={order.delivering_at}
-              deliveredAt={order.delivered_at}
-              deliveryTime={order.listing?.delivery_time}
-              deliveryMethod={order.listing?.delivery_method}
-              role="buyer"
-              orderStatus={order.status}
-            />
+      ) : (
+        /* For other delivery methods, use grid layout */
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-stretch">
+          <div className="lg:col-span-2 flex">
+            {order.status === 'completed' ? (
+              /* Order Completed + Leave Review Card */
+              <div className="flex-1 rounded-xl border border-white/[0.08] bg-white/[0.03] p-4">
+                {/* Order Completed Header */}
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="h-11 w-11 rounded-full bg-green-500/15 border border-green-500/25 flex items-center justify-center flex-shrink-0">
+                    <CheckCircle2 className="w-5 h-5 text-green-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-white mb-1">Order Completed</h3>
+                    <p className="text-xs text-gray-400">
+                      {order.completed_at ? new Date(order.completed_at).toLocaleString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                        hour: 'numeric',
+                        minute: '2-digit',
+                        hour12: true
+                      }) : 'Recently'}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1.5">
+                      Payment has been released to the seller.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Divider */}
+                <div className="border-t border-white/[0.06] my-3.5" />
+
+                {/* Leave Review Section */}
+                <div>
+                  <h4 className="text-xs font-semibold text-white mb-3">How was your experience?</h4>
+                  <LeaveReviewButton
+                    orderId={order.id}
+                    sellerName={order.seller?.shop_name || order.seller?.username || 'Seller'}
+                    onReviewSubmitted={() => {}}
+                    className="w-full"
+                  />
+                </div>
+              </div>
+            ) : (
+              /* Progress bar for non-completed orders */
+              <div className="flex-1"><OrderProgressBar
+                status={order.status}
+                order={{
+                  ...order,
+                  auto_release_at: order.auto_release_at,
+                  escrow_status: order.escrow_status,
+                }}
+                disputeResolution={disputeResolution ? {
+                  status: disputeResolution.status,
+                  favored_party: disputeResolution.favored_party,
+                  resolution_type: disputeResolution.resolution_type,
+                  refund_amount: disputeResolution.refund_amount,
+                  resolved_at: disputeResolution.resolved_at,
+                  resolution_notes: disputeResolution.resolution_notes,
+                  buyer_username: disputeResolution.buyer_username,
+                  seller_username: disputeResolution.seller_username,
+                } : null}
+              /></div>
+            )}
+          </div>
+          <div className="flex">
+            <div className="flex-1">
+              <DeliveryTimer
+                deliveringAt={order.delivering_at}
+                deliveredAt={order.delivered_at}
+                deliveryTime={order.listing?.delivery_time}
+                deliveryMethod={order.listing?.delivery_method}
+                role="buyer"
+                orderStatus={order.status}
+              />
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Main grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-stretch">

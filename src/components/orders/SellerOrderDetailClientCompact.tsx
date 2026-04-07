@@ -362,115 +362,224 @@ export default function SellerOrderDetailClient({
   return (
     <div className="space-y-4 pb-32">
       {/* Progress bar + Delivery Timer side by side */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-stretch">
-        <div className="lg:col-span-2 flex">
-          <div className="flex-1">
-            {/* Show completed view for completed orders, otherwise show progress bar */}
-            {order.status === 'completed' ? (
-              <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-4">
-                {/* Order Completed Header */}
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="h-11 w-11 rounded-full bg-green-500/15 border border-green-500/25 flex items-center justify-center flex-shrink-0">
-                    <CheckCircle2 className="w-5 h-5 text-green-400" />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-bold text-white mb-1">Order Completed</h3>
-                    <p className="text-xs text-gray-400">
-                      {order.completed_at ? new Date(order.completed_at).toLocaleString('en-US', {
-                        month: 'short',
-                        day: 'numeric',
-                        year: 'numeric',
-                        hour: 'numeric',
-                        minute: '2-digit',
-                        hour12: true
-                      }) : 'Recently'}
-                    </p>
-                    <p className="text-xs text-gray-500 mt-1.5">
-                      Payment has been released to you. Great work!
-                    </p>
-                  </div>
-                </div>
-
-                {/* Divider */}
-                <div className="border-t border-white/[0.06] my-3.5" />
-
-                {/* Buyer Feedback Section */}
-                <div>
-                  <h4 className="text-xs font-semibold text-white mb-3">Buyer feedback</h4>
-                  {buyerReview ? (
-                    <div className="rounded-lg bg-white/[0.04] border border-white/[0.06] p-3 flex items-start gap-3">
-                      {buyerReview.rating >= 4 ? (
-                        <ThumbsUp className="w-4 h-4 text-green-400 fill-current flex-shrink-0 mt-0.5" />
-                      ) : (
-                        <ThumbsDown className="w-4 h-4 text-red-400 fill-current flex-shrink-0 mt-0.5" />
-                      )}
-                      <p className="text-sm text-gray-300 leading-relaxed flex-1">
-                        {buyerReview.comment || buyerReview.title || "No comment provided"}
+      {order.listing?.delivery_method === 'instant' ? (
+        /* For instant delivery, show timer inline below progress bar */
+        <div className="space-y-4">
+          <div className="flex">
+            <div className="flex-1">
+              {/* Show completed view for completed orders, otherwise show progress bar */}
+              {order.status === 'completed' ? (
+                <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-4">
+                  {/* Order Completed Header */}
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="h-11 w-11 rounded-full bg-green-500/15 border border-green-500/25 flex items-center justify-center flex-shrink-0">
+                      <CheckCircle2 className="w-5 h-5 text-green-400" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold text-white mb-1">Order Completed</h3>
+                      <p className="text-xs text-gray-400">
+                        {order.completed_at ? new Date(order.completed_at).toLocaleString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                          year: 'numeric',
+                          hour: 'numeric',
+                          minute: '2-digit',
+                          hour12: true
+                        }) : 'Recently'}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1.5">
+                        Payment has been released to you. Great work!
                       </p>
                     </div>
-                  ) : (
-                    <div className="flex items-center gap-3">
-                      <div className="flex-1">
-                        <p className="text-xs text-gray-500">
-                          No feedback yet. Send a friendly reminder to get valuable feedback.
+                  </div>
+
+                  {/* Divider */}
+                  <div className="border-t border-white/[0.06] my-3.5" />
+
+                  {/* Buyer Feedback Section */}
+                  <div>
+                    <h4 className="text-xs font-semibold text-white mb-3">Buyer feedback</h4>
+                    {buyerReview ? (
+                      <div className="rounded-lg bg-white/[0.04] border border-white/[0.06] p-3 flex items-start gap-3">
+                        {buyerReview.rating >= 4 ? (
+                          <ThumbsUp className="w-4 h-4 text-green-400 fill-current flex-shrink-0 mt-0.5" />
+                        ) : (
+                          <ThumbsDown className="w-4 h-4 text-red-400 fill-current flex-shrink-0 mt-0.5" />
+                        )}
+                        <p className="text-sm text-gray-300 leading-relaxed flex-1">
+                          {buyerReview.comment || buyerReview.title || "No comment provided"}
                         </p>
                       </div>
-                      <button
-                        onClick={async () => {
-                          if (!conversationId) return
-                          try {
-                            await messagesApi.sendMessage(
-                              conversationId,
-                              "Hey! Hope you enjoyed your purchase. Would love to hear your feedback! 😊"
-                            )
-                            toast.success('Review request sent!')
-                          } catch (error) {
-                            console.error('Error sending review request:', error)
-                            toast.error('Failed to send message')
-                          }
-                        }}
-                        disabled={!conversationId}
-                        className="flex-shrink-0 px-3 py-1.5 rounded-lg border border-white/10 bg-white/[0.05] hover:bg-white/[0.08] text-[11px] text-gray-300 font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5 whitespace-nowrap"
-                      >
-                        <MessageSquare className="w-3 h-3" />
-                        Request
-                      </button>
-                    </div>
-                  )}
+                    ) : (
+                      <div className="flex items-center gap-3">
+                        <div className="flex-1">
+                          <p className="text-xs text-gray-500">
+                            No feedback yet. Send a friendly reminder to get valuable feedback.
+                          </p>
+                        </div>
+                        <button
+                          onClick={async () => {
+                            if (!conversationId) return
+                            try {
+                              await messagesApi.sendMessage(
+                                conversationId,
+                                "Hey! Hope you enjoyed your purchase. Would love to hear your feedback! 😊"
+                              )
+                              toast.success('Review request sent!')
+                            } catch (error) {
+                              console.error('Error sending review request:', error)
+                              toast.error('Failed to send message')
+                            }
+                          }}
+                          disabled={!conversationId}
+                          className="flex-shrink-0 px-3 py-1.5 rounded-lg border border-white/10 bg-white/[0.05] hover:bg-white/[0.08] text-[11px] text-gray-300 font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5 whitespace-nowrap"
+                        >
+                          <MessageSquare className="w-3 h-3" />
+                          Request
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ) : (
-              <OrderProgressBar
-                status={order.status}
-                order={order}
-                disputeResolution={disputeResolution ? {
-                  status: disputeResolution.status,
-                  favored_party: disputeResolution.favored_party,
-                  resolution_type: disputeResolution.resolution_type,
-                  refund_amount: disputeResolution.refund_amount,
-                  resolved_at: disputeResolution.resolved_at,
-                  resolution_notes: disputeResolution.resolution_notes,
-                  buyer_username: disputeResolution.buyer_username,
-                  seller_username: disputeResolution.seller_username,
-                } : null}
+              ) : (
+                <OrderProgressBar
+                  status={order.status}
+                  order={order}
+                  disputeResolution={disputeResolution ? {
+                    status: disputeResolution.status,
+                    favored_party: disputeResolution.favored_party,
+                    resolution_type: disputeResolution.resolution_type,
+                    refund_amount: disputeResolution.refund_amount,
+                    resolved_at: disputeResolution.resolved_at,
+                    resolution_notes: disputeResolution.resolution_notes,
+                    buyer_username: disputeResolution.buyer_username,
+                    seller_username: disputeResolution.seller_username,
+                  } : null}
+                />
+              )}
+            </div>
+          </div>
+          <DeliveryTimer
+            deliveringAt={order.delivering_at}
+            deliveredAt={order.delivered_at}
+            deliveryTime={order.listing?.delivery_time}
+            deliveryMethod={order.listing?.delivery_method}
+            role="seller"
+            orderStatus={order.status}
+          />
+        </div>
+      ) : (
+        /* For other delivery methods, use grid layout */
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-stretch">
+          <div className="lg:col-span-2 flex">
+            <div className="flex-1">
+              {/* Show completed view for completed orders, otherwise show progress bar */}
+              {order.status === 'completed' ? (
+                <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-4">
+                  {/* Order Completed Header */}
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="h-11 w-11 rounded-full bg-green-500/15 border border-green-500/25 flex items-center justify-center flex-shrink-0">
+                      <CheckCircle2 className="w-5 h-5 text-green-400" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold text-white mb-1">Order Completed</h3>
+                      <p className="text-xs text-gray-400">
+                        {order.completed_at ? new Date(order.completed_at).toLocaleString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                          year: 'numeric',
+                          hour: 'numeric',
+                          minute: '2-digit',
+                          hour12: true
+                        }) : 'Recently'}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1.5">
+                        Payment has been released to you. Great work!
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Divider */}
+                  <div className="border-t border-white/[0.06] my-3.5" />
+
+                  {/* Buyer Feedback Section */}
+                  <div>
+                    <h4 className="text-xs font-semibold text-white mb-3">Buyer feedback</h4>
+                    {buyerReview ? (
+                      <div className="rounded-lg bg-white/[0.04] border border-white/[0.06] p-3 flex items-start gap-3">
+                        {buyerReview.rating >= 4 ? (
+                          <ThumbsUp className="w-4 h-4 text-green-400 fill-current flex-shrink-0 mt-0.5" />
+                        ) : (
+                          <ThumbsDown className="w-4 h-4 text-red-400 fill-current flex-shrink-0 mt-0.5" />
+                        )}
+                        <p className="text-sm text-gray-300 leading-relaxed flex-1">
+                          {buyerReview.comment || buyerReview.title || "No comment provided"}
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-3">
+                        <div className="flex-1">
+                          <p className="text-xs text-gray-500">
+                            No feedback yet. Send a friendly reminder to get valuable feedback.
+                          </p>
+                        </div>
+                        <button
+                          onClick={async () => {
+                            if (!conversationId) return
+                            try {
+                              await messagesApi.sendMessage(
+                                conversationId,
+                                "Hey! Hope you enjoyed your purchase. Would love to hear your feedback! 😊"
+                              )
+                              toast.success('Review request sent!')
+                            } catch (error) {
+                              console.error('Error sending review request:', error)
+                              toast.error('Failed to send message')
+                            }
+                          }}
+                          disabled={!conversationId}
+                          className="flex-shrink-0 px-3 py-1.5 rounded-lg border border-white/10 bg-white/[0.05] hover:bg-white/[0.08] text-[11px] text-gray-300 font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5 whitespace-nowrap"
+                        >
+                          <MessageSquare className="w-3 h-3" />
+                          Request
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <OrderProgressBar
+                  status={order.status}
+                  order={order}
+                  disputeResolution={disputeResolution ? {
+                    status: disputeResolution.status,
+                    favored_party: disputeResolution.favored_party,
+                    resolution_type: disputeResolution.resolution_type,
+                    refund_amount: disputeResolution.refund_amount,
+                    resolved_at: disputeResolution.resolved_at,
+                    resolution_notes: disputeResolution.resolution_notes,
+                    buyer_username: disputeResolution.buyer_username,
+                    seller_username: disputeResolution.seller_username,
+                  } : null}
+                />
+              )}
+            </div>
+          </div>
+          {/* Delivery timer - always visible */}
+          <div className="flex">
+            <div className="flex-1">
+              <DeliveryTimer
+                deliveringAt={order.delivering_at}
+                deliveredAt={order.delivered_at}
+                deliveryTime={order.listing?.delivery_time}
+                deliveryMethod={order.listing?.delivery_method}
+                role="seller"
+                orderStatus={order.status}
               />
-            )}
+            </div>
           </div>
         </div>
-        {/* Delivery timer - always visible */}
-        <div className="flex">
-          <div className="flex-1">
-            <DeliveryTimer
-              deliveringAt={order.delivering_at}
-              deliveredAt={order.delivered_at}
-              deliveryTime={order.listing?.delivery_time}
-              deliveryMethod={order.listing?.delivery_method}
-              role="seller"
-              orderStatus={order.status}
-            />
-          </div>
-        </div>
-      </div>
+      )}
 
       {/* Main grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-stretch">
