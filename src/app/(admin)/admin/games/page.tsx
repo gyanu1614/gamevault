@@ -514,7 +514,7 @@ function GameCategoriesSection({
       description: data.description,
       icon_emoji: data.icon_emoji,
       icon_url: data.icon_url,
-      icon_type: data.icon_type,
+      icon_type: data.icon_type ?? undefined,
       sort_order: data.sort_order,
       is_active: data.is_active,
     })
@@ -536,7 +536,7 @@ function GameCategoriesSection({
       description: data.description,
       icon_emoji: data.icon_emoji,
       icon_url: data.icon_url,
-      icon_type: data.icon_type,
+      icon_type: data.icon_type ?? undefined,
       sort_order: data.sort_order,
       is_active: data.is_active,
     })
