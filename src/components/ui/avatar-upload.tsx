@@ -88,10 +88,12 @@ export const AvatarUpload = ({ onChange, username, defaultAvatar }: AvatarUpload
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           className={cn(
-            'relative h-24 w-24 cursor-pointer rounded-full border-2 transition-all',
+            'relative h-32 w-32 cursor-pointer rounded-full border-4 transition-all',
             isDragActive
-              ? 'border-primary bg-primary/10'
-              : 'border-white/20 bg-white/5 hover:border-primary/50'
+              ? 'border-white bg-white/10'
+              : file
+                ? 'border-white/40 bg-white/5 hover:border-white/60'
+                : 'border-white/20 bg-white/5 hover:border-white/40'
           )}
         >
           <input
@@ -111,31 +113,40 @@ export const AvatarUpload = ({ onChange, username, defaultAvatar }: AvatarUpload
             />
           ) : (
             <div className="flex h-full w-full items-center justify-center">
-              <User className="h-10 w-10 text-gray-400" />
+              <User className="h-14 w-14 text-gray-400" />
             </div>
           )}
 
           {/* Upload Overlay */}
           <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/60 opacity-0 transition-opacity hover:opacity-100">
-            <Upload className="h-6 w-6 text-white" />
+            <Upload className="h-8 w-8 text-white" />
           </div>
 
           {/* Remove Button */}
           {file && (
             <button
               onClick={handleRemove}
-              className="absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-white hover:bg-red-600 transition-colors"
+              className="absolute -right-1 -top-1 flex h-8 w-8 items-center justify-center rounded-full bg-red-500 text-white hover:bg-red-600 transition-colors shadow-lg"
             >
-              <X className="h-4 w-4" />
+              <X className="h-5 w-5" />
             </button>
           )}
         </motion.div>
       </div>
 
+      {/* Prominent Upload Button */}
+      <button
+        type="button"
+        onClick={handleClick}
+        className="flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-medium text-black transition-all hover:bg-white/90 hover:shadow-lg"
+      >
+        <Upload className="h-4 w-4" />
+        {file ? 'Change Picture' : 'Upload Your Picture'}
+      </button>
+
       <div className="text-center">
-        <p className="text-sm font-medium text-white">Profile Picture</p>
         <p className="text-xs text-gray-400">
-          {file ? file.name : 'Click or drag to upload'}
+          {file ? `✓ ${file.name}` : 'PNG, JPG or GIF (max 5MB)'}
         </p>
       </div>
     </div>

@@ -43,11 +43,7 @@ export async function signup(formData: {
     }
 
     // Generate DiceBear avatar URL as placeholder
-    // Avatar upload will happen post-auth in settings page
     const avatarUrl = generateDiceBearAvatar(formData.username)
-
-    // Store avatar data in session if provided (to be uploaded after auth)
-    const hasCustomAvatar = !!formData.avatarData
 
     // Create user with metadata
     // NOTE: Do NOT store avatar_url in metadata - it bloats session cookies causing HTTP 431
@@ -60,7 +56,6 @@ export async function signup(formData: {
         data: {
           username: formData.username,
           full_name: formData.fullName || null,
-          has_pending_avatar: hasCustomAvatar, // Flag to trigger avatar upload after auth
         },
         emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback`,
       },
@@ -72,6 +67,51 @@ export async function signup(formData: {
     }
 
     console.log('✅ User created successfully:', data.user?.id)
+
+    // Upload avatar if provided
+    if (data.user?.id && formData.avatarData) {
+      try {
+        console.log('🔍 Uploading avatar...')
+
+        // Convert base64 to buffer
+        const base64Data = formData.avatarData.split(',')[1]
+        const buffer = Buffer.from(base64Data, 'base64')
+
+        // File path: {user_id}/avatar.png
+        const filePath = `${data.user.id}/avatar.png`
+
+        // Upload to Supabase Storage
+        const { error: uploadError } = await supabase.storage
+          .from('avatars')
+          .upload(filePath, buffer, {
+            contentType: 'image/png',
+            upsert: true,
+          })
+
+        if (uploadError) {
+          console.error('❌ Avatar upload error:', uploadError)
+          // Non-critical - don't block signup if avatar fails
+        } else {
+          // Get public URL
+          const { data: { publicUrl } } = supabase.storage
+            .from('avatars')
+            .getPublicUrl(filePath)
+
+          const cacheBustedUrl = `${publicUrl}?t=${Date.now()}`
+
+          // Update profile with avatar URL
+          await (supabase
+            .from('profiles')
+            .update as any)({ avatar_url: cacheBustedUrl })
+            .eq('id', data.user.id)
+
+          console.log('✅ Avatar uploaded successfully:', cacheBustedUrl)
+        }
+      } catch (avatarError: any) {
+        console.error('❌ Avatar upload failed:', avatarError)
+        // Non-critical - don't block signup
+      }
+    }
 
     // Apply referral code if provided (fire-and-forget — non-critical)
     if (data.user?.id && formData.referralCode) {
