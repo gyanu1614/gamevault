@@ -54,6 +54,14 @@ export async function submitSellerApplication(
   data: SubmitApplicationData
 ): Promise<SubmitApplicationResult> {
   try {
+    // Validate required data
+    if (!data || !data.step1 || !data.step2) {
+      return {
+        success: false,
+        error: 'Missing required form data. Please complete all required steps.',
+      }
+    }
+
     const supabase = await createClient()
 
     // 1. Get authenticated user
@@ -86,6 +94,15 @@ export async function submitSellerApplication(
     }
 
     // 3. Insert seller application into database
+    console.log('📝 Submitting seller application with data:', {
+      hasStep1: !!data.step1,
+      hasStep2: !!data.step2,
+      hasStep3: !!data.step3,
+      hasStep4: !!data.step4,
+      hasStep5: !!data.step5,
+      hasStep6: !!data.step6,
+    })
+
     const { data: application, error: insertError} = await (supabase
       .from('seller_applications')
       .insert as any)({
@@ -93,31 +110,31 @@ export async function submitSellerApplication(
         status: 'pending',
 
         // Step 1: Eligibility
-        is_18_or_older: data.step1.is18OrOlder,
-        seller_type: data.step1.sellerType,
-        primary_games: data.step1.primaryGames || [],
-        expected_monthly_volume: data.step1.expectedVolume,
-        referral_code: data.step1.referralCode || null,
+        is_18_or_older: data.step1?.is18OrOlder ?? false,
+        seller_type: data.step1?.sellerType ?? '',
+        primary_games: data.step1?.primaryGames || [],
+        expected_monthly_volume: data.step1?.expectedVolume ?? '',
+        referral_code: data.step1?.referralCode || null,
 
         // Step 2: Business Information
-        full_legal_name: data.step2.fullLegalName,
-        display_name: data.step2.displayName,
-        country: data.step2.country,
-        state_province: data.step2.stateProvince || null,
-        city: data.step2.city || null,
-        phone_number: data.step2.phoneNumber,
+        full_legal_name: data.step2?.fullLegalName ?? '',
+        display_name: data.step2?.displayName ?? '',
+        country: data.step2?.country ?? '',
+        state_province: data.step2?.stateProvince || null,
+        city: data.step2?.city || null,
+        phone_number: data.step2?.phoneNumber ?? '',
         phone_verified: false,
-        alternate_email: data.step2.alternateEmail || null,
+        alternate_email: data.step2?.alternateEmail || null,
 
         // Business-specific fields (conditional)
-        company_legal_name: data.step2.companyLegalName || null,
-        business_registration_number: data.step2.businessRegistrationNumber || null,
-        tax_id_vat: data.step2.taxIdVat || null,
-        company_address: data.step2.companyAddress || null,
-        business_type: data.step2.businessType || null,
-        year_established: data.step2.yearEstablished ? parseInt(data.step2.yearEstablished) : null,
-        business_email: data.step2.businessEmail || null,
-        business_phone: data.step2.businessPhone || null,
+        company_legal_name: data.step2?.companyLegalName || null,
+        business_registration_number: data.step2?.businessRegistrationNumber || null,
+        tax_id_vat: data.step2?.taxIdVat || null,
+        company_address: data.step2?.companyAddress || null,
+        business_type: data.step2?.businessType || null,
+        year_established: data.step2?.yearEstablished ? parseInt(data.step2.yearEstablished) : null,
+        business_email: data.step2?.businessEmail || null,
+        business_phone: data.step2?.businessPhone || null,
 
         // Step 4: Profile (if provided)
         profile_bio: data.step4?.bio || null,
