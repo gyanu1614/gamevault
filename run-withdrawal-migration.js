@@ -3,7 +3,7 @@ const fs = require('fs')
 const path = require('path')
 
 const supabaseUrl = 'https://cserfvellsliylifjkos.supabase.co'
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNzZXJmdmVsbHNsaXlsaWZqa29zIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2OTE1ODkyMCwiZXhwIjoyMDg0NzM0OTIwfQ.ERmViEhhSZ_ogW9ze7ENEDMQXqIM7ya4OF_EmhsYYXs'
+const supabaseKey = 'sb_publishable_5YCmkuiBxyFYu780-Jq_0A_5kprzT09'
 
 const supabase = createClient(supabaseUrl, supabaseKey, {
   auth: { autoRefreshToken: false, persistSession: false }
