@@ -7,17 +7,20 @@ import { Toaster } from 'sonner'
 import RecentPurchaseToast, { DailyStatsToast } from '@/components/marketplace/RecentPurchaseToast'
 import { Analytics } from "@vercel/analytics/next"
 
-// Inter — original body font, restored
+// Inter — single font for everything (display + body), same approach as Eldorado/G2G
+// Exposed as both --font-display (new) and --font-inter (legacy alias for existing components)
 const inter = Inter({
   subsets: ['latin'],
+  weight: ['400', '500', '600', '700', '800', '900'],
   variable: '--font-inter',
   display: 'swap',
 })
 
-// JetBrains Mono — prices, codes, data (numbers only, barely visible)
+// JetBrains Mono — order IDs, timestamps, mono data
+// (Geist Mono not available in next/font/google for Next.js 14; JetBrains Mono is equivalent quality)
 const jetbrainsMono = JetBrains_Mono({
   subsets: ['latin'],
-  weight: ['400', '500', '600', '700'],
+  weight: ['400', '500'],
   variable: '--font-mono',
   display: 'swap',
 })
@@ -63,7 +66,7 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <head />
-      <body className={`${inter.variable} ${jetbrainsMono.variable} font-sans antialiased`}>
+      <body className={`${inter.variable} ${jetbrainsMono.variable} font-sans antialiased`} style={{ '--font-display': 'var(--font-inter)', '--font-body': 'var(--font-inter)' } as React.CSSProperties}>
         <Providers>
           <LayoutWrapper>{children}</LayoutWrapper>
           <Toaster
