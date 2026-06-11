@@ -193,7 +193,7 @@ export async function getGamesForGlobalCategory(globalCategorySlug: string): Pro
         *,
         global_category:global_categories!game_categories_global_category_id_fkey(*)
       `)
-      .eq('global_category_id', gc.id)
+      .eq('global_category_id', (gc as { id: string }).id)
       .eq('is_enabled', true)
       .order('sort_order', { ascending: true })
     if (error) throw error
@@ -222,7 +222,7 @@ export async function getGameCategoryByPair(
         global_category:global_categories!game_categories_global_category_id_fkey(*)
       `)
       .eq('game_id', gameId)
-      .eq('global_category_id', gc.id)
+      .eq('global_category_id', (gc as { id: string }).id)
       .maybeSingle()
     if (error) throw error
     return ok((data ?? null) as unknown as GameCategory | null)

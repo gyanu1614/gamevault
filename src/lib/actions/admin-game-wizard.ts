@@ -220,6 +220,121 @@ export async function saveGameIdentity(
 
 // ─── WRITES — game_categories ────────────────────────────────────────────────
 
+// ─── WRITES — logo upload (service-role bucket write) ────────────────────────
+
+/**
+ * Upload a game logo using the SERVICE ROLE supabase client, so we don't
+ * depend on the category-icons bucket's profiles-based RLS policy (which
+ * doesn't see admins whose role is recorded in admin_roles, not profiles.role).
+ *
+ * Authorization is still gated by requireAdmin() at the top of this action.
+ */
+export async function uploadGameLogoV2(
+  gameId: string,
+  fileData: { name: string; type: string; size: number; base64: string }
+): Promise<Result<{ url: string }>> {
+  try {
+    await requireAdmin()
+    const supabase = getAdminSupabase()
+
+    const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/svg+xml', 'image/webp']
+    if (!validTypes.includes(fileData.type)) {
+      return { success: false, error: 'Invalid file type. Allowed: PNG, JPEG, SVG, WebP' }
+    }
+    if (fileData.size > 2_097_152) {
+      return { success: false, error: 'File too large. Maximum size: 2MB' }
+    }
+
+    // base64 may or may not include a "data:...;base64," prefix
+    const commaIdx = fileData.base64.indexOf(',')
+    const base64Data = commaIdx >= 0 ? fileData.base64.slice(commaIdx + 1) : fileData.base64
+    const buffer = Buffer.from(base64Data, 'base64')
+
+    const fileExt = (fileData.name.split('.').pop() || 'png').toLowerCase()
+    const filePath = `games/${gameId}-${Date.now()}.${fileExt}`
+
+    // Try to clean up the previous logo, but don't fail the upload if cleanup misses.
+    const { data: existing } = await supabase
+      .from('games')
+      .select('image_url')
+      .eq('id', gameId)
+      .maybeSingle()
+    const existingUrl = (existing as { image_url: string | null } | null)?.image_url
+    if (existingUrl) {
+      const marker = '/category-icons/'
+      const idx = existingUrl.indexOf(marker)
+      if (idx >= 0) {
+        const oldPath = existingUrl.slice(idx + marker.length)
+        if (oldPath.startsWith('games/')) {
+          await supabase.storage.from('category-icons').remove([oldPath])
+        }
+      }
+    }
+
+    const { error: upErr } = await supabase.storage
+      .from('category-icons')
+      .upload(filePath, buffer, {
+        contentType: fileData.type,
+        cacheControl: '3600',
+        upsert: true,
+      })
+    if (upErr) return { success: false, error: upErr.message }
+
+    const { data: urlData } = supabase.storage.from('category-icons').getPublicUrl(filePath)
+    const publicUrl = urlData.publicUrl
+
+    const { error: updErr } = await supabase
+      .from('games')
+      .update({ image_url: publicUrl })
+      .eq('id', gameId)
+    if (updErr) return { success: false, error: updErr.message }
+
+    revalidatePath('/admin/games')
+    revalidatePath('/admin/games-v2')
+    revalidatePath(`/admin/games-v2/${gameId}/edit`)
+    return { success: true, data: { url: publicUrl } }
+  } catch (e: any) {
+    return { success: false, error: e?.message ?? 'Upload failed' }
+  }
+}
+
+export async function deleteGameLogoV2(gameId: string): Promise<Result<{ id: string }>> {
+  try {
+    await requireAdmin()
+    const supabase = getAdminSupabase()
+
+    const { data: existing } = await supabase
+      .from('games')
+      .select('image_url')
+      .eq('id', gameId)
+      .maybeSingle()
+    const existingUrl = (existing as { image_url: string | null } | null)?.image_url
+    if (existingUrl) {
+      const marker = '/category-icons/'
+      const idx = existingUrl.indexOf(marker)
+      if (idx >= 0) {
+        const oldPath = existingUrl.slice(idx + marker.length)
+        if (oldPath.startsWith('games/')) {
+          await supabase.storage.from('category-icons').remove([oldPath])
+        }
+      }
+    }
+
+    const { error } = await supabase
+      .from('games')
+      .update({ image_url: null })
+      .eq('id', gameId)
+    if (error) return { success: false, error: error.message }
+
+    revalidatePath('/admin/games')
+    revalidatePath('/admin/games-v2')
+    revalidatePath(`/admin/games-v2/${gameId}/edit`)
+    return { success: true, data: { id: gameId } }
+  } catch (e: any) {
+    return { success: false, error: e?.message ?? 'Delete failed' }
+  }
+}
+
 /**
  * Upsert a single (game_id, global_category_id) pair. Used when the admin
  * toggles a category on or edits its per-pair settings.

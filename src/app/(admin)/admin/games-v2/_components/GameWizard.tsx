@@ -30,13 +30,11 @@ import { GlassCard } from '@/components/ui/glass-card'
 import {
   saveGameIdentity,
   upsertGameCategory,
+  uploadGameLogoV2,
+  deleteGameLogoV2,
   type GameDetail,
   type GameCategoryRow,
 } from '@/lib/actions/admin-game-wizard'
-import {
-  uploadGameIcon,
-  deleteGameIcon,
-} from '@/lib/actions/admin-games'
 
 // ─── Types passed in by the server-rendered route wrapper ────────────────────
 
@@ -286,7 +284,7 @@ export default function GameWizard({ mode, game, globalCategories, initialGameCa
       return false
     }
     setGameId(result.data.id)
-    setCompleted((prev) => new Set([...prev, 1]))
+    setCompleted((prev) => new Set(Array.from(prev).concat(1)))
     if (advance) setStep(2)
     return true
   }
@@ -303,14 +301,14 @@ export default function GameWizard({ mode, game, globalCategories, initialGameCa
         reader.onerror = () => reject(reader.error)
         reader.readAsDataURL(file)
       })
-      const res = await uploadGameIcon(gameId, {
+      const res = await uploadGameLogoV2(gameId, {
         name: file.name,
         type: file.type,
         size: file.size,
         base64,
       })
-      if (!res.success) { toast.error(res.error ?? 'Upload failed'); return }
-      setLogoUrl(res.url ?? null)
+      if (!res.success) { toast.error(res.error); return }
+      setLogoUrl(res.data.url)
       toast.success('Logo uploaded')
     } finally {
       setIsUploading(false)
@@ -321,8 +319,8 @@ export default function GameWizard({ mode, game, globalCategories, initialGameCa
     if (!gameId) return
     setIsUploading(true)
     try {
-      const res = await deleteGameIcon(gameId)
-      if (!res.success) { toast.error(res.error ?? 'Delete failed'); return }
+      const res = await deleteGameLogoV2(gameId)
+      if (!res.success) { toast.error(res.error); return }
       setLogoUrl(null)
       toast.success('Logo removed')
     } finally {
@@ -758,7 +756,7 @@ export default function GameWizard({ mode, game, globalCategories, initialGameCa
                     const ok = await handleSaveIdentity(true)
                     if (!ok) return
                   } else {
-                    setCompleted((p) => new Set([...p, step]))
+                    setCompleted((p) => new Set(Array.from(p).concat(step)))
                     setStep((s) => Math.min(4, s + 1))
                   }
                 }}
