@@ -107,19 +107,19 @@ export default function TemplateBuilder({ initial }: { initial: BuilderState }) 
     setSelectedId(res.data.id)
     setDraftName('')
     setAdding(false)
-    toast.success('Attribute added')
+    toast.success('Field added')
     refresh()
   }
 
   // ── Delete attribute ──────────────────────────────────────────────────────
   const handleDeleteAttribute = async (id: string) => {
-    if (!confirm('Delete this attribute? All its options and rules will be removed.')) return
+    if (!confirm('Delete this field? All its choices and sub-fields will be removed too.')) return
     setBusy(true)
     const res = await deleteAttribute(id)
     setBusy(false)
     if (!res.success) { toast.error(res.error); return }
     setSelectedId((cur) => (cur === id ? null : cur))
-    toast.success('Attribute deleted')
+    toast.success('Field deleted')
     refresh()
   }
 
@@ -148,7 +148,7 @@ export default function TemplateBuilder({ initial }: { initial: BuilderState }) 
             </div>
             <p className="mt-1 text-sm text-gray-400">
               Define the fields sellers fill in when listing in this category.
-              Conditional rules show fields only when other fields have specific values.
+              Sub-fields appear only when another field has a specific value.
             </p>
           </div>
           {state.template && (
@@ -193,7 +193,7 @@ export default function TemplateBuilder({ initial }: { initial: BuilderState }) 
           <GlassCard intensity="light" rounded="2xl" className="flex items-center justify-center py-20">
             <div className="text-center">
               <Pencil className="mx-auto mb-3 h-6 w-6 text-gray-600" />
-              <p className="text-sm text-gray-500">Select an attribute on the left, or add a new one.</p>
+              <p className="text-sm text-gray-500">Pick a field on the left to edit it, or add a new one.</p>
             </div>
           </GlassCard>
         )}
@@ -644,15 +644,35 @@ function AttributeDetail({
     })
     setSaving(false)
     if (!res.success) { toast.error(res.error); return }
-    toast.success('Attribute saved')
+    toast.success('Field saved')
     onChange()
   }
 
   return (
     <div className="space-y-4">
+      {/* ── Step-by-step explainer ── */}
+      <div className="rounded-2xl border border-violet-500/20 bg-violet-500/[0.05] p-4">
+        <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-violet-300">
+          Editing a field
+        </div>
+        <ol className="space-y-1 text-xs text-gray-300">
+          <li><span className="font-semibold text-white">1.</span> Set a <span className="text-white">Name</span> and pick a <span className="text-white">Type</span>.</li>
+          {supportsOptions && (
+            <li><span className="font-semibold text-white">2.</span> Add the <span className="text-white">Choices</span> below (e.g. Pet, Egg, Cash).</li>
+          )}
+          <li>
+            <span className="font-semibold text-white">{supportsOptions ? '3.' : '2.'}</span>{' '}
+            {supportsOptions
+              ? <>Optional — back in the tree, click "+ Add sub-field shown when <em>X</em> is chosen" to add a field that only appears for that choice.</>
+              : <>Use <span className="text-white">Advanced</span> below for placeholder, help text, and validation.</>}
+          </li>
+        </ol>
+      </div>
+
+      {/* ── Essentials ── */}
       <GlassCard intensity="light" rounded="2xl" className="p-0">
         <div className="flex items-center justify-between border-b border-white/[0.06] px-5 py-3">
-          <div className="text-xs font-semibold uppercase tracking-wider text-gray-400">Attribute</div>
+          <div className="text-xs font-semibold uppercase tracking-wider text-gray-400">Field</div>
           <button
             type="button"
             onClick={handleSave}
@@ -667,11 +687,8 @@ function AttributeDetail({
           </button>
         </div>
         <div className="grid gap-3 p-5 sm:grid-cols-2">
-          <Field label="Name" required>
+          <Field label="Name" required className="sm:col-span-2">
             <input value={name} onChange={(e) => setName(e.target.value)} className={inputCls} />
-          </Field>
-          <Field label="Slug" hint="lowercase, dashes only">
-            <input value={slug} onChange={(e) => setSlug(e.target.value)} className={cn(inputCls, 'font-mono text-xs')} />
           </Field>
           <Field label="Type">
             <select value={type} onChange={(e) => setType(e.target.value as AttrType)} className={cn(inputCls, 'bg-gray-950')}>
@@ -680,20 +697,7 @@ function AttributeDetail({
               ))}
             </select>
           </Field>
-          <div className="flex items-end justify-between gap-3">
-            <ToggleField label="Required" value={isRequired} onChange={setIsRequired} />
-            <ToggleField label="Facet indexed" hint="future search" value={facetIndexed} onChange={setFacetIndexed} />
-          </div>
-
-          <Field label="Placeholder" className="sm:col-span-2">
-            <input value={placeholder} onChange={(e) => setPlaceholder(e.target.value)} className={inputCls} />
-          </Field>
-          <Field label="Help text" className="sm:col-span-2">
-            <textarea value={helpText} onChange={(e) => setHelpText(e.target.value)} rows={2} className={cn(inputCls, 'h-auto py-2')} />
-          </Field>
-          <Field label="Description" className="sm:col-span-2">
-            <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} className={cn(inputCls, 'h-auto py-2')} />
-          </Field>
+          <ToggleField label="Required" hint="seller must fill in" value={isRequired} onChange={setIsRequired} />
 
           {isNumeric && (
             <>
@@ -706,19 +710,86 @@ function AttributeDetail({
             </>
           )}
           {isTextish && (
-            <Field label="Max length">
+            <Field label="Max length" className="sm:col-span-2">
               <input type="number" value={maxLength} onChange={(e) => setMaxLength(e.target.value)} className={inputCls} />
             </Field>
           )}
         </div>
       </GlassCard>
 
+      {/* ── Choices (visible right under Type, before Advanced) ── */}
       {supportsOptions && (
         <OptionsEditor attribute={attribute} onChange={onChange} />
       )}
 
+      {/* ── Advanced (collapsed by default) ── */}
+      <AdvancedFieldSettings
+        slug={slug} setSlug={setSlug}
+        placeholder={placeholder} setPlaceholder={setPlaceholder}
+        helpText={helpText} setHelpText={setHelpText}
+        description={description} setDescription={setDescription}
+        facetIndexed={facetIndexed} setFacetIndexed={setFacetIndexed}
+      />
+
       <RulesEditor attribute={attribute} siblings={siblings} onChange={onChange} />
     </div>
+  )
+}
+
+// ─── Advanced settings (collapsed by default) ────────────────────────────────
+
+function AdvancedFieldSettings({
+  slug, setSlug,
+  placeholder, setPlaceholder,
+  helpText, setHelpText,
+  description, setDescription,
+  facetIndexed, setFacetIndexed,
+}: {
+  slug: string;            setSlug: (s: string) => void
+  placeholder: string;     setPlaceholder: (s: string) => void
+  helpText: string;        setHelpText: (s: string) => void
+  description: string;     setDescription: (s: string) => void
+  facetIndexed: boolean;   setFacetIndexed: (v: boolean) => void
+}) {
+  const [open, setOpen] = useState(false)
+  return (
+    <GlassCard intensity="light" rounded="2xl" className="p-0">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center justify-between px-5 py-3 text-left"
+      >
+        <div className="text-xs font-semibold uppercase tracking-wider text-gray-400">
+          Advanced
+          <span className="ml-2 text-[10px] font-normal normal-case tracking-normal text-gray-600">
+            slug, placeholder, help text, description, search
+          </span>
+        </div>
+        <span className="text-xs text-gray-500">{open ? 'Hide' : 'Show'}</span>
+      </button>
+      {open && (
+        <div className="grid gap-3 border-t border-white/[0.06] p-5 sm:grid-cols-2">
+          <Field label="Slug" hint="used in URLs · lowercase, dashes only" className="sm:col-span-2">
+            <input value={slug} onChange={(e) => setSlug(e.target.value)} className={cn(inputCls, 'font-mono text-xs')} />
+          </Field>
+          <Field label="Placeholder" hint="grey hint inside the input" className="sm:col-span-2">
+            <input value={placeholder} onChange={(e) => setPlaceholder(e.target.value)} className={inputCls} />
+          </Field>
+          <Field label="Help text" hint="small explainer next to the field label" className="sm:col-span-2">
+            <textarea value={helpText} onChange={(e) => setHelpText(e.target.value)} rows={2} className={cn(inputCls, 'h-auto py-2')} />
+          </Field>
+          <Field label="Description" hint="admin-only note · sellers don't see this" className="sm:col-span-2">
+            <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} className={cn(inputCls, 'h-auto py-2')} />
+          </Field>
+          <ToggleField
+            label="Facet indexed"
+            hint="future · include this field in search filters"
+            value={facetIndexed}
+            onChange={setFacetIndexed}
+          />
+        </div>
+      )}
+    </GlassCard>
   )
 }
 
@@ -768,13 +839,13 @@ function OptionsEditor({ attribute, onChange }: { attribute: BuilderAttribute; o
     <GlassCard intensity="light" rounded="2xl" className="p-0">
       <div className="flex items-center justify-between border-b border-white/[0.06] px-5 py-3">
         <div className="text-xs font-semibold uppercase tracking-wider text-gray-400">
-          Options <span className="text-gray-600">({localOptions.length})</span>
+          Choices <span className="text-gray-600">({localOptions.length})</span>
         </div>
       </div>
       <div className="space-y-2 p-4">
         {localOptions.length === 0 ? (
           <p className="rounded-lg border border-dashed border-white/10 bg-white/[0.02] px-3 py-4 text-center text-xs text-gray-500">
-            No options yet — add one below.
+            No choices yet — add one below.
           </p>
         ) : (
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
@@ -795,7 +866,7 @@ function OptionsEditor({ attribute, onChange }: { attribute: BuilderAttribute; o
           <input
             value={newLabel}
             onChange={(e) => setNewLabel(e.target.value)}
-            placeholder="Add option label (e.g. Brainrot)…"
+            placeholder="Add a choice (e.g. Pet, Egg, Cash)…"
             onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAdd() } }}
             className="h-9 flex-1 rounded-lg border border-white/10 bg-white/[0.04] px-3 text-sm text-white placeholder:text-gray-600 focus:border-violet-500/50 focus:outline-none focus:ring-2 focus:ring-violet-500/15"
           />
@@ -806,7 +877,7 @@ function OptionsEditor({ attribute, onChange }: { attribute: BuilderAttribute; o
             className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-white px-3 text-xs font-semibold text-black hover:bg-white/90 disabled:opacity-40"
           >
             {busy ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
-            Add option
+            Add choice
           </button>
         </div>
       </div>
@@ -874,7 +945,7 @@ function OptionRow({
   }
 
   const handleDelete = async () => {
-    if (!confirm('Delete this option?')) return
+    if (!confirm('Delete this choice?')) return
     const res = await deleteOption(option.id)
     if (!res.success) { toast.error(res.error); return }
     onChange()
@@ -970,7 +1041,7 @@ function OptionRow({
           type="button"
           onClick={handleDelete}
           className="inline-flex h-7 items-center rounded-md px-1.5 text-gray-500 hover:bg-rose-500/15 hover:text-rose-300"
-          title="Delete option"
+          title="Delete choice"
         >
           <Trash2 className="h-3 w-3" />
         </button>
@@ -1018,7 +1089,7 @@ function RulesEditor({
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Delete this rule?')) return
+    if (!confirm('Delete this sub-field rule?')) return
     const res = await deleteRule(id)
     if (!res.success) { toast.error(res.error); return }
     onChange()
@@ -1029,14 +1100,17 @@ function RulesEditor({
       <div className="flex items-center justify-between border-b border-white/[0.06] px-5 py-3">
         <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-gray-400">
           <GitBranch className="h-3.5 w-3.5" />
-          Conditional rules
+          When this field is shown
+          <span className="ml-1 rounded-full bg-white/[0.06] px-1.5 py-0.5 text-[9px] font-normal normal-case tracking-normal text-gray-500">
+            advanced
+          </span>
         </div>
         <button
           type="button"
           onClick={() => setAdding((v) => !v)}
           disabled={triggerableSiblings.length === 0}
           className="inline-flex h-7 items-center gap-1 rounded-lg bg-white px-2 text-[11px] font-semibold text-black hover:bg-white/90 disabled:opacity-40"
-          title={triggerableSiblings.length === 0 ? 'Need at least one select/boolean attribute to trigger a rule' : ''}
+          title={triggerableSiblings.length === 0 ? 'Need at least one dropdown / yes-no field above to drive a rule' : ''}
         >
           <Plus className="h-3 w-3" />
           Add rule
@@ -1045,7 +1119,8 @@ function RulesEditor({
       <div className="space-y-2 p-4">
         {attribute.rules.length === 0 && !adding ? (
           <p className="rounded-lg border border-dashed border-white/10 bg-white/[0.02] px-3 py-4 text-center text-xs text-gray-500">
-            Always shown. Add a rule to make this attribute appear only when another attribute has a specific value.
+            This field is always shown. Tip: easier way to make a sub-field is via the
+            "+ Add sub-field shown when X is chosen" link in the tree on the left.
           </p>
         ) : (
           attribute.rules.map((r) => {
