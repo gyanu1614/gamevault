@@ -25,7 +25,7 @@ import { cn } from '@/lib/utils'
 import { GlassCard } from '@/components/ui/glass-card'
 import {
   createAttribute, updateAttribute, deleteAttribute, reorderAttributes,
-  createOption, updateOption, deleteOption,
+  createOption, updateOption, deleteOption, uploadOptionIcon,
   saveRule, deleteRule,
   type AttrType,
   type BuilderAttribute,
@@ -476,7 +476,12 @@ function OptionsEditor({ attribute, onChange }: { attribute: BuilderAttribute; o
           </p>
         ) : (
           attribute.options.map((opt) => (
-            <OptionRow key={opt.id} option={opt} onChange={onChange} />
+            <OptionRow
+              key={opt.id}
+              option={opt}
+              parentType={attribute.type}
+              onChange={onChange}
+            />
           ))
         )}
 
@@ -503,11 +508,21 @@ function OptionsEditor({ attribute, onChange }: { attribute: BuilderAttribute; o
   )
 }
 
-function OptionRow({ option, onChange }: { option: BuilderOption; onChange: () => void }) {
+function OptionRow({
+  option,
+  parentType,
+  onChange,
+}: {
+  option: BuilderOption
+  parentType: AttrType
+  onChange: () => void
+}) {
   const [label, setLabel] = useState(option.label)
   const [value, setValue] = useState(option.value)
   const [saving, setSaving] = useState(false)
+  const [uploading, setUploading] = useState(false)
   const dirty = label !== option.label || value !== option.value
+  const showIcon = parentType === 'image_select'
 
   const handleSave = async () => {
     setSaving(true)
@@ -524,8 +539,58 @@ function OptionRow({ option, onChange }: { option: BuilderOption; onChange: () =
     onChange()
   }
 
+  const handleIconUpload = async (file: File) => {
+    if (file.size > 1_048_576) { toast.error('Icon must be 1 MB or smaller'); return }
+    setUploading(true)
+    try {
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload  = () => resolve(reader.result as string)
+        reader.onerror = () => reject(reader.error)
+        reader.readAsDataURL(file)
+      })
+      const res = await uploadOptionIcon(option.id, {
+        name: file.name, type: file.type, size: file.size, base64,
+      })
+      if (!res.success) { toast.error(res.error); return }
+      onChange()
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  const handleIconClear = async () => {
+    setUploading(true)
+    const res = await updateOption({ id: option.id, icon_url: null as any })
+    setUploading(false)
+    if (!res.success) { toast.error(res.error); return }
+    onChange()
+  }
+
   return (
-    <div className="grid grid-cols-[1fr_140px_80px] items-center gap-2 rounded-lg border border-white/10 bg-white/[0.02] p-2">
+    <div className={cn(
+      'grid items-center gap-2 rounded-lg border border-white/10 bg-white/[0.02] p-2',
+      showIcon ? 'grid-cols-[36px_1fr_140px_120px]' : 'grid-cols-[1fr_140px_80px]'
+    )}>
+      {showIcon && (
+        <label className="relative flex h-9 w-9 cursor-pointer items-center justify-center overflow-hidden rounded-md border border-white/10 bg-white/[0.04] hover:bg-white/[0.06]">
+          {option.icon_url ? (
+            /* eslint-disable-next-line @next/next/no-img-element */
+            <img src={option.icon_url} alt="" className="h-full w-full object-cover" />
+          ) : uploading ? (
+            <Loader2 className="h-4 w-4 animate-spin text-violet-300" />
+          ) : (
+            <ImageIcon className="h-4 w-4 text-gray-500" />
+          )}
+          <input
+            type="file"
+            accept="image/png,image/jpeg,image/jpg,image/svg+xml,image/webp"
+            onChange={(e) => { const f = e.target.files?.[0]; if (f) handleIconUpload(f); e.currentTarget.value = '' }}
+            disabled={uploading}
+            className="hidden"
+          />
+        </label>
+      )}
       <input
         value={label}
         onChange={(e) => setLabel(e.target.value)}
@@ -544,14 +609,27 @@ function OptionRow({ option, onChange }: { option: BuilderOption; onChange: () =
             onClick={handleSave}
             disabled={saving}
             className="inline-flex h-7 items-center gap-1 rounded-md bg-white px-2 text-[11px] font-semibold text-black hover:bg-white/90 disabled:opacity-50"
+            title="Save"
           >
             {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
+          </button>
+        )}
+        {showIcon && option.icon_url && (
+          <button
+            type="button"
+            onClick={handleIconClear}
+            disabled={uploading}
+            className="inline-flex h-7 items-center rounded-md px-1.5 text-gray-500 hover:bg-white/[0.06] hover:text-white"
+            title="Clear icon"
+          >
+            <X className="h-3 w-3" />
           </button>
         )}
         <button
           type="button"
           onClick={handleDelete}
           className="inline-flex h-7 items-center rounded-md px-1.5 text-gray-500 hover:bg-rose-500/15 hover:text-rose-300"
+          title="Delete option"
         >
           <Trash2 className="h-3 w-3" />
         </button>
@@ -844,7 +922,7 @@ function LivePreview({ attributes }: { attributes: BuilderAttribute[] }) {
                     {values[a.id] === 'true' ? 'Yes' : 'No'}
                   </button>
                 )}
-                {(a.type === 'select' || a.type === 'image_select') && (
+                {a.type === 'select' && (
                   <select
                     value={(values[a.id] as string) ?? ''}
                     onChange={(e) => set(a.id, e.target.value)}
@@ -855,6 +933,38 @@ function LivePreview({ attributes }: { attributes: BuilderAttribute[] }) {
                       <option key={o.id} value={o.value}>{o.label}</option>
                     ))}
                   </select>
+                )}
+                {a.type === 'image_select' && (
+                  <div className="grid grid-cols-4 gap-2 sm:grid-cols-6">
+                    {a.options.length === 0 ? (
+                      <p className="col-span-full text-[11px] text-gray-500">No options yet.</p>
+                    ) : a.options.map((o) => {
+                      const on = values[a.id] === o.value
+                      return (
+                        <button
+                          key={o.id}
+                          type="button"
+                          onClick={() => set(a.id, on ? '' : o.value)}
+                          className={cn(
+                            'flex flex-col items-center gap-1 rounded-lg border p-2 text-[10px] transition-colors',
+                            on
+                              ? 'border-violet-500/50 bg-violet-500/10 text-violet-100'
+                              : 'border-white/10 bg-white/[0.02] text-gray-300 hover:bg-white/[0.04]'
+                          )}
+                        >
+                          <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-md bg-white/[0.04]">
+                            {o.icon_url ? (
+                              /* eslint-disable-next-line @next/next/no-img-element */
+                              <img src={o.icon_url} alt="" className="h-full w-full object-cover" />
+                            ) : (
+                              <ImageIcon className="h-4 w-4 text-gray-600" />
+                            )}
+                          </div>
+                          <span className="line-clamp-1">{o.label}</span>
+                        </button>
+                      )
+                    })}
+                  </div>
                 )}
                 {a.type === 'multiselect' && (
                   <div className="flex flex-wrap gap-1.5">

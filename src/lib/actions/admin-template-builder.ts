@@ -458,6 +458,69 @@ export async function updateOption(input: UpdateOptionInput): Promise<Result<{ i
   }
 }
 
+/**
+ * Upload an icon for an attribute_option. Service-role client; admin gate
+ * at top. Public bucket 'attribute-icons' (created via migration).
+ */
+export async function uploadOptionIcon(
+  optionId: string,
+  fileData: { name: string; type: string; size: number; base64: string }
+): Promise<Result<{ url: string }>> {
+  try {
+    await requireAdmin()
+    const supabase = getAdminSupabase()
+    const validTypes = ['image/png','image/jpeg','image/jpg','image/svg+xml','image/webp']
+    if (!validTypes.includes(fileData.type)) {
+      return { success: false, error: 'Invalid file type' }
+    }
+    if (fileData.size > 1_048_576) {
+      return { success: false, error: 'Icon must be 1 MB or smaller' }
+    }
+    const commaIdx = fileData.base64.indexOf(',')
+    const base64Data = commaIdx >= 0 ? fileData.base64.slice(commaIdx + 1) : fileData.base64
+    const buffer = Buffer.from(base64Data, 'base64')
+    const ext = (fileData.name.split('.').pop() || 'png').toLowerCase()
+    const path = `options/${optionId}-${Date.now()}.${ext}`
+
+    // Best-effort cleanup of the previous icon for this option
+    const { data: existing } = await supabase
+      .from('attribute_options')
+      .select('icon_url')
+      .eq('id', optionId)
+      .maybeSingle()
+    const oldUrl = (existing as { icon_url: string | null } | null)?.icon_url
+    if (oldUrl) {
+      const marker = '/attribute-icons/'
+      const idx = oldUrl.indexOf(marker)
+      if (idx >= 0) {
+        const oldPath = oldUrl.slice(idx + marker.length)
+        if (oldPath.startsWith('options/')) {
+          await supabase.storage.from('attribute-icons').remove([oldPath])
+        }
+      }
+    }
+
+    const { error: upErr } = await supabase.storage
+      .from('attribute-icons')
+      .upload(path, buffer, { contentType: fileData.type, cacheControl: '3600', upsert: true })
+    if (upErr) return { success: false, error: upErr.message }
+
+    const { data: urlData } = supabase.storage.from('attribute-icons').getPublicUrl(path)
+    const publicUrl = urlData.publicUrl
+
+    const { error: updErr } = await supabase
+      .from('attribute_options')
+      .update({ icon_url: publicUrl })
+      .eq('id', optionId)
+    if (updErr) return { success: false, error: updErr.message }
+
+    revalidatePath('/admin/games-v2', 'layout')
+    return { success: true, data: { url: publicUrl } }
+  } catch (e: any) {
+    return { success: false, error: e?.message ?? 'Upload failed' }
+  }
+}
+
 export async function deleteOption(id: string): Promise<Result<{ id: string }>> {
   try {
     await requireAdmin()
