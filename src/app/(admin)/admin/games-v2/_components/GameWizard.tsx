@@ -692,9 +692,20 @@ export default function GameWizard({ mode, game, globalCategories, initialGameCa
                             </button>
                           </div>
 
-                          <p className="text-[10px] text-gray-600">
-                            Region/platform option lists are edited in the attribute template builder (coming next).
-                          </p>
+                          {gameId && (
+                            <Link
+                              href={`/admin/games-v2/${gameId}/templates/${c.slug}`}
+                              className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-violet-500/30 bg-violet-500/10 px-3 text-[11px] font-semibold text-violet-300 transition-colors hover:bg-violet-500/15"
+                            >
+                              <Sparkles className="h-3 w-3" />
+                              Edit attribute template
+                            </Link>
+                          )}
+                          {!gameId && (
+                            <p className="text-[10px] text-gray-600">
+                              Save identity step first, then come back here to edit this category's attribute template.
+                            </p>
+                          )}
                         </div>
                       )}
                     </div>
