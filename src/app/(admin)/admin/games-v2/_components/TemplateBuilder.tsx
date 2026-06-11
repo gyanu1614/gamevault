@@ -19,13 +19,30 @@ import { toast } from 'sonner'
 import {
   ArrowLeft, ChevronUp, ChevronDown, Plus, Pencil, Trash2, Loader2,
   Sparkles, GitBranch, Hash, Type, ToggleLeft, List, AlignLeft, Image as ImageIcon,
-  CheckSquare, AlertCircle, Save, X,
+  CheckSquare, AlertCircle, Save, X, GripVertical,
 } from 'lucide-react'
+import {
+  DndContext,
+  type DragEndEvent,
+  PointerSensor,
+  KeyboardSensor,
+  useSensor,
+  useSensors,
+  closestCenter,
+} from '@dnd-kit/core'
+import {
+  SortableContext,
+  arrayMove,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 import { cn } from '@/lib/utils'
 import { GlassCard } from '@/components/ui/glass-card'
 import {
   createAttribute, updateAttribute, deleteAttribute, reorderAttributes,
-  createOption, updateOption, deleteOption, uploadOptionIcon,
+  createOption, updateOption, deleteOption, uploadOptionIcon, reorderOptions,
   saveRule, deleteRule,
   type AttrType,
   type BuilderAttribute,
@@ -95,6 +112,13 @@ export default function TemplateBuilder({ initial }: { initial: BuilderState }) 
   }
 
   // ── Reorder ───────────────────────────────────────────────────────────────
+  const persistOrder = async (next: typeof state.attributes) => {
+    setState((s) => ({ ...s, attributes: next }))
+    const res = await reorderAttributes(next.map((a) => a.id))
+    if (!res.success) toast.error(res.error)
+    refresh()
+  }
+
   const move = async (id: string, dir: -1 | 1) => {
     const idx = state.attributes.findIndex((a) => a.id === id)
     if (idx < 0) return
@@ -102,10 +126,21 @@ export default function TemplateBuilder({ initial }: { initial: BuilderState }) 
     if (swapIdx < 0 || swapIdx >= state.attributes.length) return
     const reordered = [...state.attributes]
     ;[reordered[idx], reordered[swapIdx]] = [reordered[swapIdx], reordered[idx]]
-    setState((s) => ({ ...s, attributes: reordered }))
-    const res = await reorderAttributes(reordered.map((a) => a.id))
-    if (!res.success) toast.error(res.error)
-    refresh()
+    await persistOrder(reordered)
+  }
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  )
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event
+    if (!over || active.id === over.id) return
+    const oldIdx = state.attributes.findIndex((a) => a.id === active.id)
+    const newIdx = state.attributes.findIndex((a) => a.id === over.id)
+    if (oldIdx < 0 || newIdx < 0) return
+    persistOrder(arrayMove(state.attributes, oldIdx, newIdx))
   }
 
   // ── Delete attribute ──────────────────────────────────────────────────────
@@ -219,64 +254,23 @@ export default function TemplateBuilder({ initial }: { initial: BuilderState }) 
                 No attributes yet. Click <span className="font-semibold text-gray-300">Add</span> to create the first one.
               </li>
             ) : (
-              state.attributes.map((a, idx) => {
-                const Icon = TYPE_META[a.type].icon
-                const selectedClass = selectedId === a.id
-                  ? 'bg-violet-500/10 text-white'
-                  : 'text-gray-300 hover:bg-white/[0.03]'
-                return (
-                  <li key={a.id} className={cn('group flex items-center border-b border-white/[0.04] last:border-b-0', selectedClass)}>
-                    <button
-                      type="button"
-                      onClick={() => setSelectedId(a.id)}
-                      className="flex flex-1 items-center gap-2 px-3 py-2.5 text-left"
-                    >
-                      <Icon className="h-3.5 w-3.5 shrink-0 text-gray-500" />
-                      <div className="min-w-0 flex-1">
-                        <div className="truncate text-sm font-medium">{a.name}</div>
-                        <div className="truncate font-mono text-[10px] text-gray-500">
-                          {a.slug} · {TYPE_META[a.type].label}
-                          {a.is_required && <span className="ml-1 text-rose-400">*</span>}
-                          {a.rules.length > 0 && (
-                            <span className="ml-1 inline-flex items-center gap-0.5 text-violet-400">
-                              <GitBranch className="h-2.5 w-2.5" />
-                              {a.rules.length}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </button>
-                    <div className="flex items-center pr-2 opacity-0 transition-opacity group-hover:opacity-100">
-                      <button
-                        type="button"
-                        title="Move up"
-                        onClick={() => move(a.id, -1)}
-                        disabled={idx === 0}
-                        className="rounded p-1 text-gray-500 hover:bg-white/[0.06] hover:text-white disabled:opacity-30"
-                      >
-                        <ChevronUp className="h-3 w-3" />
-                      </button>
-                      <button
-                        type="button"
-                        title="Move down"
-                        onClick={() => move(a.id, 1)}
-                        disabled={idx === state.attributes.length - 1}
-                        className="rounded p-1 text-gray-500 hover:bg-white/[0.06] hover:text-white disabled:opacity-30"
-                      >
-                        <ChevronDown className="h-3 w-3" />
-                      </button>
-                      <button
-                        type="button"
-                        title="Delete"
-                        onClick={() => handleDeleteAttribute(a.id)}
-                        className="rounded p-1 text-gray-500 hover:bg-rose-500/15 hover:text-rose-300"
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </button>
-                    </div>
-                  </li>
-                )
-              })
+              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                <SortableContext items={state.attributes.map((a) => a.id)} strategy={verticalListSortingStrategy}>
+                  {state.attributes.map((a, idx) => (
+                    <SortableAttributeRow
+                      key={a.id}
+                      attribute={a}
+                      selected={selectedId === a.id}
+                      isFirst={idx === 0}
+                      isLast={idx === state.attributes.length - 1}
+                      onSelect={() => setSelectedId(a.id)}
+                      onMoveUp={() => move(a.id, -1)}
+                      onMoveDown={() => move(a.id, 1)}
+                      onDelete={() => handleDeleteAttribute(a.id)}
+                    />
+                  ))}
+                </SortableContext>
+              </DndContext>
             )}
           </ul>
         </GlassCard>
@@ -302,6 +296,106 @@ export default function TemplateBuilder({ initial }: { initial: BuilderState }) 
       {/* ── Live preview ── */}
       <LivePreview attributes={state.attributes} />
     </div>
+  )
+}
+
+// ─── Sortable attribute row ──────────────────────────────────────────────────
+
+function SortableAttributeRow({
+  attribute,
+  selected,
+  isFirst,
+  isLast,
+  onSelect,
+  onMoveUp,
+  onMoveDown,
+  onDelete,
+}: {
+  attribute: BuilderAttribute
+  selected: boolean
+  isFirst: boolean
+  isLast: boolean
+  onSelect: () => void
+  onMoveUp: () => void
+  onMoveDown: () => void
+  onDelete: () => void
+}) {
+  const { attributes: dragAttrs, listeners, setNodeRef, transform, transition, isDragging } =
+    useSortable({ id: attribute.id })
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  }
+  const Icon = TYPE_META[attribute.type].icon
+
+  return (
+    <li
+      ref={setNodeRef}
+      style={style}
+      className={cn(
+        'group flex items-center border-b border-white/[0.04] last:border-b-0',
+        selected ? 'bg-violet-500/10 text-white' : 'text-gray-300 hover:bg-white/[0.03]',
+        isDragging && 'opacity-60 ring-1 ring-violet-500/40 bg-violet-500/[0.08]'
+      )}
+    >
+      <button
+        type="button"
+        {...dragAttrs}
+        {...listeners}
+        aria-label="Drag to reorder"
+        className="flex h-full cursor-grab touch-none items-center justify-center px-1.5 text-gray-600 hover:text-gray-300 active:cursor-grabbing"
+      >
+        <GripVertical className="h-3.5 w-3.5" />
+      </button>
+      <button
+        type="button"
+        onClick={onSelect}
+        className="flex flex-1 items-center gap-2 py-2.5 pr-3 text-left"
+      >
+        <Icon className="h-3.5 w-3.5 shrink-0 text-gray-500" />
+        <div className="min-w-0 flex-1">
+          <div className="truncate text-sm font-medium">{attribute.name}</div>
+          <div className="truncate font-mono text-[10px] text-gray-500">
+            {attribute.slug} · {TYPE_META[attribute.type].label}
+            {attribute.is_required && <span className="ml-1 text-rose-400">*</span>}
+            {attribute.rules.length > 0 && (
+              <span className="ml-1 inline-flex items-center gap-0.5 text-violet-400">
+                <GitBranch className="h-2.5 w-2.5" />
+                {attribute.rules.length}
+              </span>
+            )}
+          </div>
+        </div>
+      </button>
+      <div className="flex items-center pr-2 opacity-0 transition-opacity group-hover:opacity-100">
+        <button
+          type="button"
+          title="Move up"
+          onClick={onMoveUp}
+          disabled={isFirst}
+          className="rounded p-1 text-gray-500 hover:bg-white/[0.06] hover:text-white disabled:opacity-30"
+        >
+          <ChevronUp className="h-3 w-3" />
+        </button>
+        <button
+          type="button"
+          title="Move down"
+          onClick={onMoveDown}
+          disabled={isLast}
+          className="rounded p-1 text-gray-500 hover:bg-white/[0.06] hover:text-white disabled:opacity-30"
+        >
+          <ChevronDown className="h-3 w-3" />
+        </button>
+        <button
+          type="button"
+          title="Delete"
+          onClick={onDelete}
+          className="rounded p-1 text-gray-500 hover:bg-rose-500/15 hover:text-rose-300"
+        >
+          <Trash2 className="h-3 w-3" />
+        </button>
+      </div>
+    </li>
   )
 }
 
@@ -447,6 +541,10 @@ function AttributeDetail({
 function OptionsEditor({ attribute, onChange }: { attribute: BuilderAttribute; onChange: () => void }) {
   const [newLabel, setNewLabel] = useState('')
   const [busy, setBusy] = useState(false)
+  const [localOptions, setLocalOptions] = useState<BuilderOption[]>(attribute.options)
+
+  // Sync local copy when the server data changes (refresh after mutation)
+  useEffect(() => { setLocalOptions(attribute.options) }, [attribute.options])
 
   const handleAdd = async () => {
     if (!newLabel.trim()) return
@@ -462,27 +560,49 @@ function OptionsEditor({ attribute, onChange }: { attribute: BuilderAttribute; o
     onChange()
   }
 
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  )
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event
+    if (!over || active.id === over.id) return
+    const oldIdx = localOptions.findIndex((o) => o.id === active.id)
+    const newIdx = localOptions.findIndex((o) => o.id === over.id)
+    if (oldIdx < 0 || newIdx < 0) return
+    const next = arrayMove(localOptions, oldIdx, newIdx)
+    setLocalOptions(next)
+    const res = await reorderOptions(next.map((o) => o.id))
+    if (!res.success) toast.error(res.error)
+    onChange()
+  }
+
   return (
     <GlassCard intensity="light" rounded="2xl" className="p-0">
       <div className="flex items-center justify-between border-b border-white/[0.06] px-5 py-3">
         <div className="text-xs font-semibold uppercase tracking-wider text-gray-400">
-          Options <span className="text-gray-600">({attribute.options.length})</span>
+          Options <span className="text-gray-600">({localOptions.length})</span>
         </div>
       </div>
       <div className="space-y-2 p-4">
-        {attribute.options.length === 0 ? (
+        {localOptions.length === 0 ? (
           <p className="rounded-lg border border-dashed border-white/10 bg-white/[0.02] px-3 py-4 text-center text-xs text-gray-500">
             No options yet — add one below.
           </p>
         ) : (
-          attribute.options.map((opt) => (
-            <OptionRow
-              key={opt.id}
-              option={opt}
-              parentType={attribute.type}
-              onChange={onChange}
-            />
-          ))
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+            <SortableContext items={localOptions.map((o) => o.id)} strategy={verticalListSortingStrategy}>
+              {localOptions.map((opt) => (
+                <SortableOptionRow
+                  key={opt.id}
+                  option={opt}
+                  parentType={attribute.type}
+                  onChange={onChange}
+                />
+              ))}
+            </SortableContext>
+          </DndContext>
         )}
 
         <div className="flex gap-2 pt-1">
@@ -505,6 +625,41 @@ function OptionsEditor({ attribute, onChange }: { attribute: BuilderAttribute; o
         </div>
       </div>
     </GlassCard>
+  )
+}
+
+function SortableOptionRow({
+  option, parentType, onChange,
+}: {
+  option: BuilderOption
+  parentType: AttrType
+  onChange: () => void
+}) {
+  const { attributes: dragAttrs, listeners, setNodeRef, transform, transition, isDragging } =
+    useSortable({ id: option.id })
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  }
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={cn('flex items-stretch gap-1', isDragging && 'opacity-60')}
+    >
+      <button
+        type="button"
+        {...dragAttrs}
+        {...listeners}
+        aria-label="Drag to reorder"
+        className="flex shrink-0 cursor-grab touch-none items-center justify-center rounded-md px-1 text-gray-600 hover:text-gray-300 active:cursor-grabbing"
+      >
+        <GripVertical className="h-3.5 w-3.5" />
+      </button>
+      <div className="flex-1">
+        <OptionRow option={option} parentType={parentType} onChange={onChange} />
+      </div>
+    </div>
   )
 }
 

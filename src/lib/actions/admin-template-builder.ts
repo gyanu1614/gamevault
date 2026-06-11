@@ -364,6 +364,22 @@ export async function deleteAttribute(id: string): Promise<Result<{ id: string }
   }
 }
 
+export async function reorderOptions(orderedIds: string[]): Promise<Result<{ count: number }>> {
+  try {
+    await requireAdmin()
+    const supabase = getAdminSupabase()
+    await Promise.all(
+      orderedIds.map((id, idx) =>
+        supabase.from('attribute_options').update({ sort_order: idx }).eq('id', id)
+      )
+    )
+    revalidatePath('/admin/games-v2', 'layout')
+    return { success: true, data: { count: orderedIds.length } }
+  } catch (e: any) {
+    return { success: false, error: e?.message ?? 'Unknown error' }
+  }
+}
+
 export async function reorderAttributes(orderedIds: string[]): Promise<Result<{ count: number }>> {
   try {
     await requireAdmin()
