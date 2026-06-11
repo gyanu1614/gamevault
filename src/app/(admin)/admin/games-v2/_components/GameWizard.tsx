@@ -32,6 +32,8 @@ import {
   upsertGameCategory,
   uploadGameLogoV2,
   deleteGameLogoV2,
+  uploadGameCoverV2,
+  deleteGameCoverV2,
   type GameDetail,
   type GameCategoryRow,
 } from '@/lib/actions/admin-game-wizard'
@@ -91,7 +93,7 @@ function slugify(s: string) {
 
 const STEPS = [
   { id: 1, label: 'Identity',    description: 'Name, slug, display' },
-  { id: 2, label: 'Branding',    description: 'Logo upload' },
+  { id: 2, label: 'Branding',    description: 'Logo + cover' },
   { id: 3, label: 'Categories',  description: 'Currency, Items, Accounts, Top Up, Boosting' },
   { id: 4, label: 'Review',      description: 'Confirm and save' },
 ] as const
@@ -206,6 +208,8 @@ export default function GameWizard({ mode, game, globalCategories, initialGameCa
 
   // Branding state
   const [logoUrl, setLogoUrl] = useState<string | null>(game?.image_url ?? null)
+  const [coverUrl, setCoverUrl] = useState<string | null>(game?.cover_url ?? null)
+  const [isUploadingCover, setIsUploadingCover] = useState(false)
   // gameId only exists after step 1 saves (for create mode). In edit mode, it's the route param.
   const [gameId, setGameId] = useState<string | null>(game?.id ?? null)
 
@@ -325,6 +329,42 @@ export default function GameWizard({ mode, game, globalCategories, initialGameCa
       toast.success('Logo removed')
     } finally {
       setIsUploading(false)
+    }
+  }
+
+  // ── Step 2: cover upload ───────────────────────────────────────────────────
+  const handleCoverFile = async (file: File) => {
+    if (!gameId) { toast.error('Save identity step first'); return }
+    if (file.size > 4_194_304) { toast.error('Cover must be 4 MB or smaller'); return }
+    setIsUploadingCover(true)
+    try {
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload  = () => resolve(reader.result as string)
+        reader.onerror = () => reject(reader.error)
+        reader.readAsDataURL(file)
+      })
+      const res = await uploadGameCoverV2(gameId, {
+        name: file.name, type: file.type, size: file.size, base64,
+      })
+      if (!res.success) { toast.error(res.error); return }
+      setCoverUrl(res.data.url)
+      toast.success('Cover uploaded')
+    } finally {
+      setIsUploadingCover(false)
+    }
+  }
+
+  const handleDeleteCover = async () => {
+    if (!gameId) return
+    setIsUploadingCover(true)
+    try {
+      const res = await deleteGameCoverV2(gameId)
+      if (!res.success) { toast.error(res.error); return }
+      setCoverUrl(null)
+      toast.success('Cover removed')
+    } finally {
+      setIsUploadingCover(false)
     }
   }
 
@@ -539,9 +579,50 @@ export default function GameWizard({ mode, game, globalCategories, initialGameCa
                 </div>
               </div>
 
-              <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3 text-[11px] text-gray-500">
-                <AlertCircle className="mr-1.5 inline-block h-3 w-3 text-amber-400/80" />
-                Cover art for the homepage Popular Games shelf is a separate field — added in a later iteration.
+              <div className="h-px bg-white/[0.06]" />
+
+              <div>
+                <div className="text-sm font-medium text-white">Cover art</div>
+                <p className="text-xs text-gray-500">Portrait JPG/PNG/WebP, 600×800 recommended. Used on the Popular Games shelf. Max 4 MB.</p>
+              </div>
+
+              <div className="flex items-center gap-5">
+                <div className="flex h-32 w-24 items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04]">
+                  {coverUrl ? (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img src={coverUrl} alt="Cover" className="h-full w-full object-cover" />
+                  ) : (
+                    <ImageIcon className="h-8 w-8 text-gray-600" />
+                  )}
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  <label className={cn(
+                    'inline-flex h-10 cursor-pointer items-center gap-2 rounded-xl bg-white px-4 text-sm font-semibold text-black transition-colors hover:bg-white/90',
+                    isUploadingCover && 'pointer-events-none opacity-60'
+                  )}>
+                    {isUploadingCover ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                    {coverUrl ? 'Replace cover' : 'Upload cover'}
+                    <input
+                      type="file"
+                      accept="image/png,image/jpeg,image/jpg,image/webp"
+                      className="hidden"
+                      onChange={(e) => { const f = e.target.files?.[0]; if (f) handleCoverFile(f); e.currentTarget.value = '' }}
+                      disabled={isUploadingCover}
+                    />
+                  </label>
+                  {coverUrl && (
+                    <button
+                      type="button"
+                      onClick={handleDeleteCover}
+                      disabled={isUploadingCover}
+                      className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-rose-500/20 bg-rose-500/[0.06] px-3 text-xs font-medium text-rose-300 transition-colors hover:bg-rose-500/[0.1] disabled:opacity-50"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                      Remove cover
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           )}
@@ -724,6 +805,7 @@ export default function GameWizard({ mode, game, globalCategories, initialGameCa
                 <ReviewRow label="Sort order" value={String(sortOrder)} />
                 <ReviewRow label="Status" value={isActive ? 'Active' : 'Paused'} />
                 <ReviewRow label="Logo" value={logoUrl ? 'Uploaded' : 'Emoji fallback'} />
+                <ReviewRow label="Cover art" value={coverUrl ? 'Uploaded' : 'None yet'} />
                 <ReviewRow label="Categories enabled" value={`${enabledCount} of ${categories.length}`} />
               </dl>
 
