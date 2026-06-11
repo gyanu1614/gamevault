@@ -302,6 +302,87 @@ export async function createAttribute(input: CreateAttributeInput): Promise<Resu
   }
 }
 
+/**
+ * Convenience: create a new attribute and immediately wire a conditional
+ * rule that says "show this only when trigger_attribute_id equals
+ * trigger_value". Used by the tree builder when you click "Add sub-field
+ * shown when X is chosen" — saves the admin two trips.
+ */
+export interface CreateSubAttributeInput {
+  template_id: string
+  name: string
+  type: AttrType
+  trigger_attribute_id: string
+  trigger_value: string
+  sort_order?: number
+}
+
+export async function createSubAttribute(
+  input: CreateSubAttributeInput
+): Promise<Result<{ id: string; slug: string; rule_id: string }>> {
+  try {
+    await requireAdmin()
+    const supabase = getAdminSupabase()
+
+    if (input.template_id === '' || !input.trigger_attribute_id) {
+      return { success: false, error: 'Trigger attribute is required' }
+    }
+
+    // 1. Create the attribute (same logic as createAttribute, inlined to avoid double admin checks)
+    const baseSlug = slugify(input.name) || `attr-${Date.now()}`
+    let slug = baseSlug
+    let n = 1
+    while (true) {
+      const { data: clash } = await supabase
+        .from('attributes')
+        .select('id')
+        .eq('template_id', input.template_id)
+        .eq('slug', slug)
+        .maybeSingle()
+      if (!clash) break
+      n += 1
+      slug = `${baseSlug}-${n}`
+    }
+
+    const { data: attr, error: attrErr } = await supabase
+      .from('attributes')
+      .insert({
+        template_id: input.template_id,
+        name: input.name.trim(),
+        slug,
+        type: input.type,
+        is_required: false,
+        sort_order: input.sort_order ?? 0,
+      })
+      .select('id, slug')
+      .single()
+    if (attrErr) return { success: false, error: attrErr.message }
+    const attrId = (attr as any).id as string
+
+    // 2. Wire the rule
+    const { data: rule, error: ruleErr } = await supabase
+      .from('attribute_conditional_rules')
+      .insert({
+        attribute_id: attrId,
+        trigger_attribute_id: input.trigger_attribute_id,
+        operator: 'equals',
+        trigger_values: [input.trigger_value],
+      })
+      .select('id')
+      .single()
+    if (ruleErr) {
+      // Roll back the attribute create so we don't leave an orphan
+      await supabase.from('attributes').delete().eq('id', attrId)
+      return { success: false, error: ruleErr.message }
+    }
+
+    revalidatePath('/admin/games-v2', 'layout')
+    return { success: true, data: { id: attrId, slug: (attr as any).slug, rule_id: (rule as any).id } }
+  } catch (e: any) {
+    return { success: false, error: e?.message ?? 'Unknown error' }
+  }
+}
+
 export interface UpdateAttributeInput {
   id: string
   name?: string

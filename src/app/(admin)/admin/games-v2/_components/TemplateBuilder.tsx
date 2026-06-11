@@ -17,7 +17,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import {
-  ArrowLeft, ChevronUp, ChevronDown, Plus, Pencil, Trash2, Loader2,
+  ArrowLeft, Plus, Pencil, Trash2, Loader2,
   Sparkles, GitBranch, Hash, Type, ToggleLeft, List, AlignLeft, Image as ImageIcon,
   CheckSquare, AlertCircle, Save, X, GripVertical,
 } from 'lucide-react'
@@ -41,9 +41,9 @@ import { CSS } from '@dnd-kit/utilities'
 import { cn } from '@/lib/utils'
 import { GlassCard } from '@/components/ui/glass-card'
 import {
-  createAttribute, updateAttribute, deleteAttribute, reorderAttributes,
+  createAttribute, updateAttribute, deleteAttribute,
   createOption, updateOption, deleteOption, uploadOptionIcon, reorderOptions,
-  saveRule, deleteRule,
+  saveRule, deleteRule, createSubAttribute,
   type AttrType,
   type BuilderAttribute,
   type BuilderOption,
@@ -111,38 +111,6 @@ export default function TemplateBuilder({ initial }: { initial: BuilderState }) 
     refresh()
   }
 
-  // ── Reorder ───────────────────────────────────────────────────────────────
-  const persistOrder = async (next: typeof state.attributes) => {
-    setState((s) => ({ ...s, attributes: next }))
-    const res = await reorderAttributes(next.map((a) => a.id))
-    if (!res.success) toast.error(res.error)
-    refresh()
-  }
-
-  const move = async (id: string, dir: -1 | 1) => {
-    const idx = state.attributes.findIndex((a) => a.id === id)
-    if (idx < 0) return
-    const swapIdx = idx + dir
-    if (swapIdx < 0 || swapIdx >= state.attributes.length) return
-    const reordered = [...state.attributes]
-    ;[reordered[idx], reordered[swapIdx]] = [reordered[swapIdx], reordered[idx]]
-    await persistOrder(reordered)
-  }
-
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
-  )
-
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event
-    if (!over || active.id === over.id) return
-    const oldIdx = state.attributes.findIndex((a) => a.id === active.id)
-    const newIdx = state.attributes.findIndex((a) => a.id === over.id)
-    if (oldIdx < 0 || newIdx < 0) return
-    persistOrder(arrayMove(state.attributes, oldIdx, newIdx))
-  }
-
   // ── Delete attribute ──────────────────────────────────────────────────────
   const handleDeleteAttribute = async (id: string) => {
     if (!confirm('Delete this attribute? All its options and rules will be removed.')) return
@@ -193,87 +161,25 @@ export default function TemplateBuilder({ initial }: { initial: BuilderState }) 
 
       {/* ── Main grid ── */}
       <div className="grid gap-4 lg:grid-cols-[320px_1fr]">
-        {/* ── Left: attribute list ── */}
-        <GlassCard intensity="light" rounded="2xl" className="p-0">
-          <div className="flex items-center justify-between border-b border-white/[0.06] px-4 py-3">
-            <div className="text-xs font-semibold uppercase tracking-wider text-gray-400">
-              Attributes
-            </div>
-            <button
-              type="button"
-              onClick={() => setAdding((v) => !v)}
-              className="inline-flex h-7 items-center gap-1 rounded-lg bg-white px-2 text-[11px] font-semibold text-black hover:bg-white/90"
-            >
-              <Plus className="h-3 w-3" />
-              Add
-            </button>
-          </div>
-
-          {adding && (
-            <div className="space-y-2 border-b border-white/[0.06] bg-white/[0.02] px-4 py-3">
-              <input
-                value={draftName}
-                onChange={(e) => setDraftName(e.target.value)}
-                placeholder="e.g. Item Type"
-                autoFocus
-                className="h-9 w-full rounded-lg border border-white/10 bg-white/[0.04] px-3 text-sm text-white placeholder:text-gray-600 focus:border-violet-500/50 focus:outline-none focus:ring-2 focus:ring-violet-500/15"
-              />
-              <select
-                value={draftType}
-                onChange={(e) => setDraftType(e.target.value as AttrType)}
-                className="h-9 w-full rounded-lg border border-white/10 bg-gray-950 px-2 text-xs text-white focus:border-violet-500/50 focus:outline-none focus:ring-2 focus:ring-violet-500/15"
-              >
-                {TYPE_ORDER.map((t) => (
-                  <option key={t} value={t}>{TYPE_META[t].label}</option>
-                ))}
-              </select>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={handleAddAttribute}
-                  disabled={busy || !draftName.trim()}
-                  className="inline-flex h-8 flex-1 items-center justify-center gap-1 rounded-lg bg-emerald-500 px-2 text-xs font-semibold text-black hover:bg-emerald-400 disabled:opacity-40"
-                >
-                  {busy ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
-                  Create
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setAdding(false); setDraftName('') }}
-                  className="inline-flex h-8 items-center justify-center rounded-lg border border-white/10 bg-white/[0.04] px-2 text-xs font-medium text-gray-300 hover:bg-white/[0.08]"
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              </div>
-            </div>
-          )}
-
-          <ul className="max-h-[60vh] overflow-y-auto">
-            {state.attributes.length === 0 && !adding ? (
-              <li className="px-4 py-10 text-center text-xs text-gray-500">
-                No attributes yet. Click <span className="font-semibold text-gray-300">Add</span> to create the first one.
-              </li>
-            ) : (
-              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-                <SortableContext items={state.attributes.map((a) => a.id)} strategy={verticalListSortingStrategy}>
-                  {state.attributes.map((a, idx) => (
-                    <SortableAttributeRow
-                      key={a.id}
-                      attribute={a}
-                      selected={selectedId === a.id}
-                      isFirst={idx === 0}
-                      isLast={idx === state.attributes.length - 1}
-                      onSelect={() => setSelectedId(a.id)}
-                      onMoveUp={() => move(a.id, -1)}
-                      onMoveDown={() => move(a.id, 1)}
-                      onDelete={() => handleDeleteAttribute(a.id)}
-                    />
-                  ))}
-                </SortableContext>
-              </DndContext>
-            )}
-          </ul>
-        </GlassCard>
+        {/* ── Left: field tree ── */}
+        <FieldTree
+          state={state}
+          selectedId={selectedId}
+          onSelect={setSelectedId}
+          onDelete={handleDeleteAttribute}
+          onAddTopLevel={() => setAdding((v) => !v)}
+          addingTopLevel={adding}
+          draftName={draftName}
+          setDraftName={setDraftName}
+          draftType={draftType}
+          setDraftType={setDraftType}
+          onCreateTopLevel={handleAddAttribute}
+          onCancelTopLevel={() => { setAdding(false); setDraftName('') }}
+          busy={busy}
+          onRefresh={refresh}
+        />
+        {/* Keep the dnd handlers alive even though FieldTree owns its own dnd for top-level.
+            Top-level reordering still routes through here via FieldTree's sensors. */}
 
         {/* ── Right: detail / options / rules ── */}
         {selected ? (
@@ -299,101 +205,381 @@ export default function TemplateBuilder({ initial }: { initial: BuilderState }) 
   )
 }
 
-// ─── Sortable attribute row ──────────────────────────────────────────────────
+// ─── Field tree — explanatory left pane with multi-level sub-fields ──────────
 
-function SortableAttributeRow({
-  attribute,
-  selected,
-  isFirst,
-  isLast,
-  onSelect,
-  onMoveUp,
-  onMoveDown,
-  onDelete,
-}: {
-  attribute: BuilderAttribute
-  selected: boolean
-  isFirst: boolean
-  isLast: boolean
-  onSelect: () => void
-  onMoveUp: () => void
-  onMoveDown: () => void
-  onDelete: () => void
-}) {
-  const { attributes: dragAttrs, listeners, setNodeRef, transform, transition, isDragging } =
-    useSortable({ id: attribute.id })
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
+/**
+ * Build the parent→children index. A "child" of an attribute is another
+ * attribute that has a conditional rule pointing at the parent. The trigger
+ * value tells us which option / boolean state the child is associated with.
+ *
+ * Result shape: Map<parentAttributeId, Map<triggerValue, childAttributeId[]>>
+ *
+ * "Top-level" attributes are those with no conditional rules at all (so they
+ * always show on the seller form and have no parent in this tree).
+ */
+function buildTreeIndex(attrs: BuilderAttribute[]): {
+  topLevel: BuilderAttribute[]
+  childrenOf: Map<string, Map<string, BuilderAttribute[]>>
+} {
+  const childrenOf = new Map<string, Map<string, BuilderAttribute[]>>()
+  const childIds = new Set<string>()
+
+  for (const a of attrs) {
+    if (a.rules.length === 0) continue
+    childIds.add(a.id)
+    // We treat the FIRST rule as the canonical parent for tree layout.
+    // (Multi-rule attributes still work at runtime — they just appear under
+    // their first trigger here. Rare in practice; admins can use the rules
+    // panel on the right to add extra triggers.)
+    const rule = a.rules[0]
+    const triggerVal = rule.trigger_values[0] ?? ''
+    const inner = childrenOf.get(rule.trigger_attribute_id) ?? new Map<string, BuilderAttribute[]>()
+    const list = inner.get(triggerVal) ?? []
+    list.push(a)
+    inner.set(triggerVal, list)
+    childrenOf.set(rule.trigger_attribute_id, inner)
   }
-  const Icon = TYPE_META[attribute.type].icon
+
+  // Sort siblings in each bucket by sort_order
+  childrenOf.forEach((inner) => {
+    inner.forEach((list) => list.sort((a, b) => a.sort_order - b.sort_order))
+  })
+
+  const topLevel = attrs
+    .filter((a) => !childIds.has(a.id))
+    .sort((a, b) => a.sort_order - b.sort_order)
+
+  return { topLevel, childrenOf }
+}
+
+interface FieldTreeProps {
+  state: BuilderState
+  selectedId: string | null
+  onSelect: (id: string) => void
+  onDelete: (id: string) => void
+  onAddTopLevel: () => void
+  addingTopLevel: boolean
+  draftName: string
+  setDraftName: (s: string) => void
+  draftType: AttrType
+  setDraftType: (t: AttrType) => void
+  onCreateTopLevel: () => void
+  onCancelTopLevel: () => void
+  busy: boolean
+  onRefresh: () => void
+}
+
+function FieldTree(props: FieldTreeProps) {
+  const { topLevel, childrenOf } = useMemo(
+    () => buildTreeIndex(props.state.attributes),
+    [props.state.attributes]
+  )
 
   return (
-    <li
-      ref={setNodeRef}
-      style={style}
-      className={cn(
-        'group flex items-center border-b border-white/[0.04] last:border-b-0',
-        selected ? 'bg-violet-500/10 text-white' : 'text-gray-300 hover:bg-white/[0.03]',
-        isDragging && 'opacity-60 ring-1 ring-violet-500/40 bg-violet-500/[0.08]'
-      )}
-    >
-      <button
-        type="button"
-        {...dragAttrs}
-        {...listeners}
-        aria-label="Drag to reorder"
-        className="flex h-full cursor-grab touch-none items-center justify-center px-1.5 text-gray-600 hover:text-gray-300 active:cursor-grabbing"
-      >
-        <GripVertical className="h-3.5 w-3.5" />
-      </button>
-      <button
-        type="button"
-        onClick={onSelect}
-        className="flex flex-1 items-center gap-2 py-2.5 pr-3 text-left"
-      >
-        <Icon className="h-3.5 w-3.5 shrink-0 text-gray-500" />
-        <div className="min-w-0 flex-1">
-          <div className="truncate text-sm font-medium">{attribute.name}</div>
-          <div className="truncate font-mono text-[10px] text-gray-500">
-            {attribute.slug} · {TYPE_META[attribute.type].label}
-            {attribute.is_required && <span className="ml-1 text-rose-400">*</span>}
-            {attribute.rules.length > 0 && (
-              <span className="ml-1 inline-flex items-center gap-0.5 text-violet-400">
-                <GitBranch className="h-2.5 w-2.5" />
-                {attribute.rules.length}
-              </span>
-            )}
+    <GlassCard intensity="light" rounded="2xl" className="p-0">
+      {/* Header + explainer */}
+      <div className="border-b border-white/[0.06] px-4 py-3">
+        <div className="flex items-center justify-between">
+          <div className="text-xs font-semibold uppercase tracking-wider text-gray-400">Fields</div>
+          <button
+            type="button"
+            onClick={props.onAddTopLevel}
+            className="inline-flex h-7 items-center gap-1 rounded-lg bg-white px-2 text-[11px] font-semibold text-black hover:bg-white/90"
+          >
+            <Plus className="h-3 w-3" />
+            Add field
+          </button>
+        </div>
+        <p className="mt-1 text-[11px] leading-snug text-gray-500">
+          Fields are what sellers fill in. Add a top-level field, then for choice-type fields
+          you can add <span className="text-gray-300">sub-fields</span> that only appear when a
+          specific choice is picked.
+        </p>
+      </div>
+
+      {/* Inline "add top-level" form */}
+      {props.addingTopLevel && (
+        <div className="space-y-2 border-b border-white/[0.06] bg-white/[0.02] px-4 py-3">
+          <input
+            value={props.draftName}
+            onChange={(e) => props.setDraftName(e.target.value)}
+            placeholder="e.g. Item Type"
+            autoFocus
+            className="h-9 w-full rounded-lg border border-white/10 bg-white/[0.04] px-3 text-sm text-white placeholder:text-gray-600 focus:border-violet-500/50 focus:outline-none focus:ring-2 focus:ring-violet-500/15"
+          />
+          <select
+            value={props.draftType}
+            onChange={(e) => props.setDraftType(e.target.value as AttrType)}
+            className="h-9 w-full rounded-lg border border-white/10 bg-gray-950 px-2 text-xs text-white focus:border-violet-500/50 focus:outline-none focus:ring-2 focus:ring-violet-500/15"
+          >
+            {TYPE_ORDER.map((t) => (
+              <option key={t} value={t}>{TYPE_META[t].label}</option>
+            ))}
+          </select>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={props.onCreateTopLevel}
+              disabled={props.busy || !props.draftName.trim()}
+              className="inline-flex h-8 flex-1 items-center justify-center gap-1 rounded-lg bg-emerald-500 px-2 text-xs font-semibold text-black hover:bg-emerald-400 disabled:opacity-40"
+            >
+              {props.busy ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
+              Create field
+            </button>
+            <button
+              type="button"
+              onClick={props.onCancelTopLevel}
+              className="inline-flex h-8 items-center justify-center rounded-lg border border-white/10 bg-white/[0.04] px-2 text-xs font-medium text-gray-300 hover:bg-white/[0.08]"
+            >
+              <X className="h-3 w-3" />
+            </button>
           </div>
         </div>
-      </button>
-      <div className="flex items-center pr-2 opacity-0 transition-opacity group-hover:opacity-100">
+      )}
+
+      <div className="max-h-[70vh] overflow-y-auto py-2">
+        {topLevel.length === 0 && !props.addingTopLevel ? (
+          <div className="px-4 py-10 text-center text-xs text-gray-500">
+            No fields yet. Click <span className="font-semibold text-gray-300">Add field</span> to start —
+            e.g. a <em>Dropdown</em> called "Item Type".
+          </div>
+        ) : (
+          <ul className="space-y-0.5">
+            {topLevel.map((attr) => (
+              <FieldNode
+                key={attr.id}
+                attribute={attr}
+                depth={0}
+                childrenOf={childrenOf}
+                selectedId={props.selectedId}
+                onSelect={props.onSelect}
+                onDelete={props.onDelete}
+                templateId={props.state.template?.id ?? ''}
+                onRefresh={props.onRefresh}
+              />
+            ))}
+          </ul>
+        )}
+      </div>
+    </GlassCard>
+  )
+}
+
+interface FieldNodeProps {
+  attribute: BuilderAttribute
+  depth: number
+  childrenOf: Map<string, Map<string, BuilderAttribute[]>>
+  selectedId: string | null
+  onSelect: (id: string) => void
+  onDelete: (id: string) => void
+  templateId: string
+  onRefresh: () => void
+}
+
+function FieldNode({ attribute, depth, childrenOf, selectedId, onSelect, onDelete, templateId, onRefresh }: FieldNodeProps) {
+  const Icon = TYPE_META[attribute.type].icon
+  const selected = selectedId === attribute.id
+  const inner = childrenOf.get(attribute.id) ?? new Map<string, BuilderAttribute[]>()
+  const hasChoices = TYPE_META[attribute.type].supportsOptions || attribute.type === 'boolean'
+
+  // Build the list of "buckets" (one per option / boolean state), so we can
+  // render a sub-tree under each and the "add sub-field" button per choice.
+  const buckets: Array<{ key: string; label: string; iconUrl?: string | null }> = []
+  if (attribute.type === 'boolean') {
+    buckets.push({ key: 'true',  label: 'when Yes' })
+    buckets.push({ key: 'false', label: 'when No' })
+  } else if (hasChoices) {
+    for (const opt of attribute.options) {
+      buckets.push({ key: opt.value, label: `when ${opt.label}`, iconUrl: opt.icon_url })
+    }
+  }
+
+  // padding-left per depth (12 px each)
+  const indentPx = depth * 14
+
+  return (
+    <li>
+      <div
+        className={cn(
+          'group flex items-center gap-2 rounded-md py-1.5 pr-2 transition-colors',
+          selected ? 'bg-violet-500/15 text-white' : 'hover:bg-white/[0.03] text-gray-300'
+        )}
+        style={{ paddingLeft: 12 + indentPx }}
+      >
+        <Icon className="h-3.5 w-3.5 shrink-0 text-gray-500" />
         <button
           type="button"
-          title="Move up"
-          onClick={onMoveUp}
-          disabled={isFirst}
-          className="rounded p-1 text-gray-500 hover:bg-white/[0.06] hover:text-white disabled:opacity-30"
+          onClick={() => onSelect(attribute.id)}
+          className="min-w-0 flex-1 truncate text-left text-sm"
         >
-          <ChevronUp className="h-3 w-3" />
+          <span className="font-medium">{attribute.name}</span>
+          <span className="ml-2 text-[10px] text-gray-500">
+            {TYPE_META[attribute.type].label}
+            {attribute.is_required && <span className="ml-1 text-rose-400">*</span>}
+          </span>
         </button>
         <button
           type="button"
-          title="Move down"
-          onClick={onMoveDown}
-          disabled={isLast}
-          className="rounded p-1 text-gray-500 hover:bg-white/[0.06] hover:text-white disabled:opacity-30"
-        >
-          <ChevronDown className="h-3 w-3" />
-        </button>
-        <button
-          type="button"
-          title="Delete"
-          onClick={onDelete}
-          className="rounded p-1 text-gray-500 hover:bg-rose-500/15 hover:text-rose-300"
+          onClick={() => onDelete(attribute.id)}
+          className="rounded p-1 text-gray-500 opacity-0 transition-opacity hover:bg-rose-500/15 hover:text-rose-300 group-hover:opacity-100"
+          title="Delete field"
         >
           <Trash2 className="h-3 w-3" />
         </button>
+      </div>
+
+      {/* Sub-tree per choice */}
+      {buckets.length > 0 && (
+        <ul className="space-y-0.5">
+          {buckets.map((b) => {
+            const children = inner.get(b.key) ?? []
+            return (
+              <li key={b.key}>
+                <div
+                  className="flex items-center gap-1.5 py-0.5 text-[10px] uppercase tracking-wider text-gray-600"
+                  style={{ paddingLeft: 12 + indentPx + 14 }}
+                >
+                  {b.iconUrl ? (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img src={b.iconUrl} alt="" className="h-3 w-3 rounded object-cover" />
+                  ) : (
+                    <span className="inline-block h-1.5 w-1.5 rounded-full bg-gray-700" />
+                  )}
+                  {b.label}
+                </div>
+                <ul className="space-y-0.5">
+                  {children.map((child) => (
+                    <FieldNode
+                      key={child.id}
+                      attribute={child}
+                      depth={depth + 1}
+                      childrenOf={childrenOf}
+                      selectedId={selectedId}
+                      onSelect={onSelect}
+                      onDelete={onDelete}
+                      templateId={templateId}
+                      onRefresh={onRefresh}
+                    />
+                  ))}
+                  <AddSubFieldRow
+                    parentAttributeId={attribute.id}
+                    triggerValue={b.key}
+                    triggerLabel={b.label.replace(/^when\s+/i, '')}
+                    templateId={templateId}
+                    indentPx={indentPx + 14}
+                    onCreated={(newId) => { onRefresh(); onSelect(newId) }}
+                  />
+                </ul>
+              </li>
+            )
+          })}
+        </ul>
+      )}
+    </li>
+  )
+}
+
+/** Inline "+ Add sub-field shown when X is chosen" row beneath each choice. */
+function AddSubFieldRow({
+  parentAttributeId,
+  triggerValue,
+  triggerLabel,
+  templateId,
+  indentPx,
+  onCreated,
+}: {
+  parentAttributeId: string
+  triggerValue: string
+  triggerLabel: string
+  templateId: string
+  indentPx: number
+  onCreated: (newId: string) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const [name, setName] = useState('')
+  const [type, setType] = useState<AttrType>('select')
+  const [busy, setBusy] = useState(false)
+
+  const handleCreate = async () => {
+    if (!name.trim()) { toast.error('Name is required'); return }
+    if (!templateId) { toast.error('No template loaded'); return }
+    setBusy(true)
+    const res = await createSubAttribute({
+      template_id: templateId,
+      name,
+      type,
+      trigger_attribute_id: parentAttributeId,
+      trigger_value: triggerValue,
+    })
+    setBusy(false)
+    if (!res.success) { toast.error(res.error); return }
+    toast.success('Sub-field added')
+    setName('')
+    setOpen(false)
+    onCreated(res.data.id)
+  }
+
+  if (!open) {
+    return (
+      <li>
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className="group inline-flex items-center gap-1 py-0.5 text-[11px] text-gray-500 hover:text-violet-300"
+          style={{ paddingLeft: 12 + indentPx + 14 }}
+        >
+          <Plus className="h-3 w-3" />
+          Add sub-field shown when {triggerLabel} is chosen
+        </button>
+      </li>
+    )
+  }
+
+  return (
+    <li>
+      <div
+        className="rounded-lg border border-violet-500/30 bg-violet-500/[0.06] p-2"
+        style={{ marginLeft: 12 + indentPx + 14, marginRight: 8 }}
+      >
+        <div className="mb-1.5 text-[10px] uppercase tracking-wider text-violet-300">
+          New sub-field — appears when “{triggerLabel}” is chosen
+        </div>
+        <div className="space-y-1.5">
+          <input
+            autoFocus
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="e.g. Rarity"
+            className="h-8 w-full rounded-md border border-white/10 bg-white/[0.04] px-2 text-sm text-white placeholder:text-gray-600 focus:border-violet-500/50 focus:outline-none focus:ring-2 focus:ring-violet-500/15"
+          />
+          <select
+            value={type}
+            onChange={(e) => setType(e.target.value as AttrType)}
+            className="h-8 w-full rounded-md border border-white/10 bg-gray-950 px-2 text-xs text-white focus:border-violet-500/50 focus:outline-none focus:ring-2 focus:ring-violet-500/15"
+          >
+            {TYPE_ORDER.map((t) => (
+              <option key={t} value={t}>{TYPE_META[t].label}</option>
+            ))}
+          </select>
+          <div className="flex gap-1">
+            <button
+              type="button"
+              onClick={handleCreate}
+              disabled={busy || !name.trim()}
+              className="inline-flex h-7 flex-1 items-center justify-center gap-1 rounded-md bg-emerald-500 px-2 text-[11px] font-semibold text-black hover:bg-emerald-400 disabled:opacity-40"
+            >
+              {busy ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
+              Create sub-field
+            </button>
+            <button
+              type="button"
+              onClick={() => { setOpen(false); setName('') }}
+              className="inline-flex h-7 items-center justify-center rounded-md border border-white/10 bg-white/[0.04] px-2 text-[11px] text-gray-300 hover:bg-white/[0.08]"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          </div>
+        </div>
       </div>
     </li>
   )
