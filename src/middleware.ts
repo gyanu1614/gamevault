@@ -40,6 +40,7 @@ export async function middleware(request: NextRequest) {
 
       // CRITICAL: Block restricted/banned sellers from creating/editing listings
       const isListingMutation = pathname.startsWith('/account/listings/new') ||
+                                pathname.startsWith('/sell/') ||
                                 pathname.includes('/edit')
 
       if (isListingMutation) {

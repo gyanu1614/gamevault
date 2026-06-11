@@ -520,7 +520,7 @@ export default function ListingsPage() {
               </Link>
             ) : (
               <Link
-                href="/account/listings/new"
+                href="/sell/new"
                 className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-5 py-2.5 text-sm font-medium text-black transition-all hover:bg-white/90 active:scale-95"
               >
                 <Plus className="h-4 w-4" />
@@ -795,7 +795,7 @@ export default function ListingsPage() {
                 </button>
               ) : (
                 <Link
-                  href="/account/listings/new"
+                  href="/sell/new"
                   className="inline-flex items-center gap-2 rounded-lg bg-primary px-6 py-3 font-semibold text-white transition-all hover:bg-primary/90"
                 >
                   <Plus className="h-5 w-5" />

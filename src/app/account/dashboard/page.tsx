@@ -59,7 +59,7 @@ const insights = [
 ]
 
 const quickActions = [
-  { icon: Package, label: 'Create Listing', href: '/account/listings/new', color: 'from-cyan-500 to-blue-500' },
+  { icon: Package, label: 'Create Listing', href: '/sell/new', color: 'from-cyan-500 to-blue-500' },
   { icon: Eye, label: 'View Orders', href: '/account/orders', color: 'from-purple-500 to-pink-500' },
   { icon: MessageSquare, label: 'Messages', href: '/messages', color: 'from-green-500 to-emerald-500' },
   { icon: Star, label: 'Reviews', href: '/account/reviews', color: 'from-yellow-500 to-orange-500' },
