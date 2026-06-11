@@ -9,8 +9,9 @@
  */
 
 import { useState, useRef } from 'react'
+import Link from 'next/link'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { PlusCircle, Pencil, Eye, EyeOff, Save, X, Loader2, Trash2, Upload, Image as ImageIcon } from 'lucide-react'
+import { PlusCircle, Pencil, Eye, EyeOff, Save, X, Loader2, Trash2, Upload, Image as ImageIcon, Sparkles } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -364,6 +365,14 @@ export default function AdminCategoriesPage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
+          <Link
+            href="/admin/categories-v2"
+            className="inline-flex h-9 items-center gap-1.5 rounded-md border border-violet-500/30 bg-violet-500/10 px-3 text-xs font-semibold text-violet-300 transition-colors hover:bg-violet-500/15"
+            title="Open the redesigned categories admin (5 global categories)"
+          >
+            <Sparkles className="h-3.5 w-3.5" />
+            Try new admin
+          </Link>
           <Input
             value={filterText}
             onChange={(e) => setFilterText(e.target.value)}
