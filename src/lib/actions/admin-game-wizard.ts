@@ -34,6 +34,7 @@ export interface GameDetail {
   slug: string
   emoji: string | null
   image_url: string | null   // logo URL (existing column)
+  cover_url: string | null   // portrait cover (added in 20260611_games_cover_url.sql)
   display_name: string | null
   sort_order: number
   is_active: boolean
@@ -95,7 +96,7 @@ export async function fetchGameById(id: string): Promise<GameDetail | null> {
   const supabase = getAdminSupabase()
   const { data, error } = await supabase
     .from('games')
-    .select('id, name, slug, emoji, image_url, display_name, sort_order, is_active')
+    .select('id, name, slug, emoji, image_url, cover_url, display_name, sort_order, is_active')
     .eq('id', id)
     .maybeSingle()
   if (error || !data) return null
@@ -295,6 +296,108 @@ export async function uploadGameLogoV2(
     return { success: true, data: { url: publicUrl } }
   } catch (e: any) {
     return { success: false, error: e?.message ?? 'Upload failed' }
+  }
+}
+
+/**
+ * Upload a portrait cover (Popular Games shelf). Writes to game-covers
+ * bucket (4 MB) and games.cover_url. Service-role client.
+ */
+export async function uploadGameCoverV2(
+  gameId: string,
+  fileData: { name: string; type: string; size: number; base64: string }
+): Promise<Result<{ url: string }>> {
+  try {
+    await requireAdmin()
+    const supabase = getAdminSupabase()
+
+    const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp']
+    if (!validTypes.includes(fileData.type)) {
+      return { success: false, error: 'Invalid file type. Allowed: PNG, JPEG, WebP' }
+    }
+    if (fileData.size > 4_194_304) {
+      return { success: false, error: 'Cover must be 4 MB or smaller' }
+    }
+
+    const commaIdx = fileData.base64.indexOf(',')
+    const base64Data = commaIdx >= 0 ? fileData.base64.slice(commaIdx + 1) : fileData.base64
+    const buffer = Buffer.from(base64Data, 'base64')
+
+    const ext = (fileData.name.split('.').pop() || 'jpg').toLowerCase()
+    const path = `covers/${gameId}-${Date.now()}.${ext}`
+
+    const { data: existing } = await supabase
+      .from('games')
+      .select('cover_url')
+      .eq('id', gameId)
+      .maybeSingle()
+    const oldUrl = (existing as { cover_url: string | null } | null)?.cover_url
+    if (oldUrl) {
+      const marker = '/game-covers/'
+      const idx = oldUrl.indexOf(marker)
+      if (idx >= 0) {
+        const oldPath = oldUrl.slice(idx + marker.length)
+        if (oldPath.startsWith('covers/')) {
+          await supabase.storage.from('game-covers').remove([oldPath])
+        }
+      }
+    }
+
+    const { error: upErr } = await supabase.storage
+      .from('game-covers')
+      .upload(path, buffer, { contentType: fileData.type, cacheControl: '3600', upsert: true })
+    if (upErr) return { success: false, error: upErr.message }
+
+    const { data: urlData } = supabase.storage.from('game-covers').getPublicUrl(path)
+    const publicUrl = urlData.publicUrl
+
+    const { error: updErr } = await supabase
+      .from('games')
+      .update({ cover_url: publicUrl })
+      .eq('id', gameId)
+    if (updErr) return { success: false, error: updErr.message }
+
+    revalidatePath('/admin/games-v2')
+    revalidatePath(`/admin/games-v2/${gameId}/edit`)
+    return { success: true, data: { url: publicUrl } }
+  } catch (e: any) {
+    return { success: false, error: e?.message ?? 'Upload failed' }
+  }
+}
+
+export async function deleteGameCoverV2(gameId: string): Promise<Result<{ id: string }>> {
+  try {
+    await requireAdmin()
+    const supabase = getAdminSupabase()
+
+    const { data: existing } = await supabase
+      .from('games')
+      .select('cover_url')
+      .eq('id', gameId)
+      .maybeSingle()
+    const oldUrl = (existing as { cover_url: string | null } | null)?.cover_url
+    if (oldUrl) {
+      const marker = '/game-covers/'
+      const idx = oldUrl.indexOf(marker)
+      if (idx >= 0) {
+        const oldPath = oldUrl.slice(idx + marker.length)
+        if (oldPath.startsWith('covers/')) {
+          await supabase.storage.from('game-covers').remove([oldPath])
+        }
+      }
+    }
+
+    const { error } = await supabase
+      .from('games')
+      .update({ cover_url: null })
+      .eq('id', gameId)
+    if (error) return { success: false, error: error.message }
+
+    revalidatePath('/admin/games-v2')
+    revalidatePath(`/admin/games-v2/${gameId}/edit`)
+    return { success: true, data: { id: gameId } }
+  } catch (e: any) {
+    return { success: false, error: e?.message ?? 'Delete failed' }
   }
 }
 
