@@ -105,18 +105,45 @@ function buildChildIndex(attrs: Attribute[]) {
 
 // ─── Slim step bar (sits below the homepage navbar) ─────────────────────────
 
+/**
+ * StepBar — inline progress indicator. NOT sticky.
+ *
+ * The homepage Navbar is a floating pill (fixed top-6 with its own h-16
+ * md:h-18 lg:h-20 spacer). Trying to chase its bottom edge with sticky
+ * positioning is fragile across breakpoints and caused overlap with the
+ * pill. Instead we render this inline at the top of the page content;
+ * it scrolls with everything else.
+ *
+ * On mobile (< 640px) we render a compact "Step N · Label" row so the
+ * pills don't squeeze. ≥640 we show the full chip row.
+ */
 function StepBar({ step }: { step: number }) {
+  const current = STEPS[step - 1]
   return (
-    <div className="sticky top-16 z-30 -mb-px border-b border-white/[0.04] bg-black/30 backdrop-blur-md md:top-[72px] lg:top-20">
-      <div className="mx-auto flex h-10 max-w-3xl items-center justify-center gap-1.5 px-4 sm:px-6">
+    <nav aria-label="Progress" className="mb-6">
+      {/* Mobile: compact summary */}
+      <div className="flex items-center justify-between gap-2 rounded-full border border-white/[0.06] bg-white/[0.02] px-3 py-2 sm:hidden">
+        <div className="flex items-center gap-2 text-xs">
+          <span className="flex h-5 w-5 items-center justify-center rounded-full border border-violet-500/60 bg-violet-500/20 text-[10px] font-semibold text-violet-100">
+            {step}
+          </span>
+          <span className="bg-gradient-to-r from-violet-300 via-purple-300 to-cyan-300 bg-clip-text font-semibold text-transparent">
+            {current.label}
+          </span>
+        </div>
+        <div className="text-[10px] uppercase tracking-wider text-gray-500">{step} / {STEPS.length}</div>
+      </div>
+
+      {/* ≥ sm: full chip row */}
+      <ol className="hidden items-center justify-center gap-1.5 sm:flex">
         {STEPS.map((s, i) => {
           const done = step > s.id
           const active = step === s.id
           return (
-            <div key={s.id} className="flex items-center gap-1.5">
+            <li key={s.id} className="flex items-center gap-1.5">
               <span
                 className={cn(
-                  'flex h-5 w-5 items-center justify-center rounded-full border text-[9px] font-semibold transition-colors',
+                  'flex h-5 w-5 items-center justify-center rounded-full border text-[10px] font-semibold transition-colors',
                   done
                     ? 'border-emerald-500/40 bg-emerald-500/15 text-emerald-300'
                     : active
@@ -137,13 +164,13 @@ function StepBar({ step }: { step: number }) {
                 {s.label}
               </span>
               {i < STEPS.length - 1 && (
-                <span className="mx-1 inline-block h-px w-4 bg-white/10 sm:w-6" />
+                <span className="mx-1 inline-block h-px w-5 bg-white/10 md:w-8" />
               )}
-            </div>
+            </li>
           )
         })}
-      </div>
-    </div>
+      </ol>
+    </nav>
   )
 }
 
@@ -350,15 +377,14 @@ export default function SellWizard({ initialCategories }: { initialCategories: G
   }
 
   return (
-    <>
+    <main className="mx-auto w-full max-w-4xl px-3 pb-24 pt-4 sm:px-6 sm:pt-6 lg:max-w-5xl">
       <StepBar step={step} />
 
-      <main className="mx-auto max-w-3xl px-4 pb-24 pt-6 sm:px-6">
-        <div className="mb-5">
-          <h1 className="bg-gradient-to-r from-white via-violet-100 to-cyan-100 bg-clip-text text-xl font-semibold tracking-tight text-transparent sm:text-2xl">
-            {STEPS[step - 1].hint}
-          </h1>
-        </div>
+      <div className="mb-5 sm:mb-6">
+        <h1 className="bg-gradient-to-r from-white via-violet-100 to-cyan-100 bg-clip-text text-xl font-semibold tracking-tight text-transparent sm:text-2xl lg:text-3xl">
+          {STEPS[step - 1].hint}
+        </h1>
+      </div>
 
         <AnimatePresence mode="wait">
           <motion.div
@@ -424,62 +450,61 @@ export default function SellWizard({ initialCategories }: { initialCategories: G
           </motion.div>
         </AnimatePresence>
 
-        <div className="mt-8 flex items-center justify-between">
+      <div className="mt-8 flex items-center justify-between gap-2">
+        <button
+          type="button"
+          onClick={() => setStep((s) => Math.max(1, s - 1))}
+          disabled={step === 1 || submitting}
+          className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.04] px-3 text-sm font-medium text-gray-200 transition-colors hover:bg-white/[0.08] disabled:opacity-40 sm:px-4"
+        >
+          <ChevronLeft className="h-4 w-4" />
+          Back
+        </button>
+
+        {step < 4 ? (
           <button
             type="button"
-            onClick={() => setStep((s) => Math.max(1, s - 1))}
-            disabled={step === 1 || submitting}
-            className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.04] px-4 text-sm font-medium text-gray-200 transition-colors hover:bg-white/[0.08] disabled:opacity-40"
+            onClick={() => setStep((s) => Math.min(4, s + 1))}
+            disabled={!canGoNext}
+            className={cn(
+              'inline-flex h-10 items-center gap-1.5 rounded-xl px-4 text-sm font-semibold transition-all sm:px-5',
+              canGoNext
+                ? 'bg-violet-500 text-white shadow-lg shadow-violet-500/30 hover:bg-violet-400 hover:shadow-violet-500/40'
+                : 'cursor-not-allowed bg-white/[0.04] text-gray-600'
+            )}
           >
-            <ChevronLeft className="h-4 w-4" />
-            Back
+            Continue
+            <ArrowRight className="h-4 w-4" />
           </button>
-
-          {step < 4 ? (
+        ) : (
+          <div className="flex flex-wrap justify-end gap-2">
             <button
               type="button"
-              onClick={() => setStep((s) => Math.min(4, s + 1))}
-              disabled={!canGoNext}
+              onClick={() => handlePublish(true)}
+              disabled={submitting}
+              className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.04] px-3 text-sm font-medium text-gray-200 transition-colors hover:bg-white/[0.08] disabled:opacity-40"
+            >
+              {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+              Save draft
+            </button>
+            <button
+              type="button"
+              onClick={() => handlePublish(false)}
+              disabled={!canPublish || submitting}
               className={cn(
-                'inline-flex h-10 items-center gap-1.5 rounded-xl px-5 text-sm font-semibold transition-all',
-                canGoNext
-                  ? 'bg-violet-500 text-white shadow-lg shadow-violet-500/30 hover:bg-violet-400 hover:shadow-violet-500/40'
+                'inline-flex h-10 items-center gap-1.5 rounded-xl px-4 text-sm font-semibold transition-all sm:px-5',
+                canPublish && !submitting
+                  ? 'bg-gradient-to-r from-violet-500 via-purple-500 to-cyan-500 text-white shadow-lg shadow-violet-500/30 hover:shadow-violet-500/40'
                   : 'cursor-not-allowed bg-white/[0.04] text-gray-600'
               )}
             >
-              Continue
-              <ArrowRight className="h-4 w-4" />
+              {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+              Publish
             </button>
-          ) : (
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => handlePublish(true)}
-                disabled={submitting}
-                className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.04] px-3 text-sm font-medium text-gray-200 transition-colors hover:bg-white/[0.08] disabled:opacity-40"
-              >
-                {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                Save draft
-              </button>
-              <button
-                type="button"
-                onClick={() => handlePublish(false)}
-                disabled={!canPublish || submitting}
-                className={cn(
-                  'inline-flex h-10 items-center gap-1.5 rounded-xl px-5 text-sm font-semibold transition-all',
-                  canPublish && !submitting
-                    ? 'bg-gradient-to-r from-violet-500 via-purple-500 to-cyan-500 text-white shadow-lg shadow-violet-500/30 hover:shadow-violet-500/40'
-                    : 'cursor-not-allowed bg-white/[0.04] text-gray-600'
-                )}
-              >
-                {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-                Publish
-              </button>
-            </div>
-          )}
-        </div>
-      </main>
-    </>
+          </div>
+        )}
+      </div>
+    </main>
   )
 }
 
@@ -493,7 +518,7 @@ function Step1Category({
   onSelect: (c: GlobalCategory) => void
 }) {
   return (
-    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
       {categories.map((c, i) => {
         const active = selected?.id === c.id
         const disabled = !c.is_active
