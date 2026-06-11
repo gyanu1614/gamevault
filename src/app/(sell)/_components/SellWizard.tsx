@@ -107,43 +107,41 @@ function buildChildIndex(attrs: Attribute[]) {
 
 function StepBar({ step }: { step: number }) {
   return (
-    <div className="sticky top-[64px] z-30 -mb-px border-b border-white/[0.06] bg-black/40 backdrop-blur-xl">
-      <div className="mx-auto flex h-12 max-w-5xl items-center justify-between px-4 sm:px-6">
-        <div className="hidden items-center gap-2 sm:flex">
-          {STEPS.map((s, i) => {
-            const done = step > s.id
-            const active = step === s.id
-            return (
-              <div key={s.id} className="flex items-center gap-2">
-                <span
-                  className={cn(
-                    'flex h-6 w-6 items-center justify-center rounded-full border text-[10px] font-semibold transition-colors',
-                    done
-                      ? 'border-emerald-500/40 bg-emerald-500/15 text-emerald-300'
-                      : active
-                        ? 'border-violet-500/60 bg-violet-500/20 text-violet-100 shadow-[0_0_18px_-3px_rgba(168,85,247,0.6)]'
-                        : 'border-white/10 text-gray-500'
-                  )}
-                >
-                  {done ? <Check className="h-3 w-3" /> : s.id}
-                </span>
-                <span
-                  className={cn(
-                    'text-xs',
-                    active
-                      ? 'bg-gradient-to-r from-violet-300 via-purple-300 to-cyan-300 bg-clip-text font-semibold text-transparent'
-                      : done ? 'text-emerald-300' : 'text-gray-600'
-                  )}
-                >
-                  {s.label}
-                </span>
-                {i < STEPS.length - 1 && <span className="mx-1 text-gray-700">·</span>}
-              </div>
-            )
-          })}
-        </div>
-        <div className="text-xs text-gray-500 sm:hidden">Step {step} of {STEPS.length}</div>
-        <div className="text-[10px] text-gray-600">create listing</div>
+    <div className="sticky top-16 z-30 -mb-px border-b border-white/[0.04] bg-black/30 backdrop-blur-md md:top-[72px] lg:top-20">
+      <div className="mx-auto flex h-10 max-w-3xl items-center justify-center gap-1.5 px-4 sm:px-6">
+        {STEPS.map((s, i) => {
+          const done = step > s.id
+          const active = step === s.id
+          return (
+            <div key={s.id} className="flex items-center gap-1.5">
+              <span
+                className={cn(
+                  'flex h-5 w-5 items-center justify-center rounded-full border text-[9px] font-semibold transition-colors',
+                  done
+                    ? 'border-emerald-500/40 bg-emerald-500/15 text-emerald-300'
+                    : active
+                      ? 'border-violet-500/60 bg-violet-500/20 text-violet-100'
+                      : 'border-white/10 text-gray-500'
+                )}
+              >
+                {done ? <Check className="h-2.5 w-2.5" /> : s.id}
+              </span>
+              <span
+                className={cn(
+                  'text-[11px]',
+                  active
+                    ? 'bg-gradient-to-r from-violet-300 via-purple-300 to-cyan-300 bg-clip-text font-semibold text-transparent'
+                    : done ? 'text-emerald-300' : 'text-gray-600'
+                )}
+              >
+                {s.label}
+              </span>
+              {i < STEPS.length - 1 && (
+                <span className="mx-1 inline-block h-px w-4 bg-white/10 sm:w-6" />
+              )}
+            </div>
+          )
+        })}
       </div>
     </div>
   )
@@ -356,11 +354,8 @@ export default function SellWizard({ initialCategories }: { initialCategories: G
       <StepBar step={step} />
 
       <main className="mx-auto max-w-3xl px-4 pb-24 pt-6 sm:px-6">
-        <div className="mb-6">
-          <div className="text-[11px] font-semibold uppercase tracking-wider text-violet-300">
-            Step {step} of {STEPS.length}
-          </div>
-          <h1 className="mt-1 bg-gradient-to-r from-white via-violet-100 to-cyan-100 bg-clip-text text-3xl font-bold tracking-tight text-transparent sm:text-4xl">
+        <div className="mb-5">
+          <h1 className="bg-gradient-to-r from-white via-violet-100 to-cyan-100 bg-clip-text text-xl font-semibold tracking-tight text-transparent sm:text-2xl">
             {STEPS[step - 1].hint}
           </h1>
         </div>
@@ -630,9 +625,10 @@ function Step2Game({
             : `No games match "${filter}".`}
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
           {ordered.map((g, i) => {
             const active = selected?.game_id === g.game_id
+            const hasCover = !!g.game_cover_url
             return (
               <motion.button
                 key={g.game_id}
@@ -646,27 +642,43 @@ function Step2Game({
                   'group relative overflow-hidden rounded-2xl border text-left transition-all',
                   active
                     ? 'border-violet-500/60 shadow-[0_0_0_3px_rgba(168,85,247,0.15)]'
-                    : 'border-white/10 hover:border-white/20'
+                    : 'border-white/10 hover:border-white/20 hover:bg-white/[0.02]'
                 )}
               >
-                <div className="relative aspect-[5/3] w-full overflow-hidden bg-gradient-to-br from-violet-500/[0.08] via-purple-500/[0.04] to-black/40">
-                  {g.game_cover_url ? (
-                    /* eslint-disable-next-line @next/next/no-img-element */
-                    <img src={g.game_cover_url} alt={g.game_name} className="h-full w-full object-cover" />
-                  ) : g.game_logo_url ? (
-                    /* eslint-disable-next-line @next/next/no-img-element */
-                    <img src={g.game_logo_url} alt={g.game_name} className="h-full w-full object-contain p-5" />
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center text-4xl">
-                      {g.game_emoji ?? '🎮'}
+                {hasCover ? (
+                  // Cover-art games: full-bleed image, name overlaid
+                  <>
+                    <div className="relative aspect-[4/3] w-full overflow-hidden">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={g.game_cover_url!} alt={g.game_name} className="h-full w-full object-cover" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent" />
+                      <div className="absolute bottom-2 left-2.5 right-2.5">
+                        <div className="truncate text-sm font-semibold text-white">{g.game_name}</div>
+                      </div>
                     </div>
-                  )}
-                  {/* Dark bottom gradient for legibility */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/0 to-transparent" />
-                  <div className="absolute bottom-1.5 left-2 right-2">
-                    <div className="truncate text-xs font-semibold text-white">{g.game_name}</div>
+                  </>
+                ) : (
+                  // Logo-only games: big logo on a soft gradient, name below
+                  <div className="flex flex-col">
+                    <div className="relative flex aspect-square w-full items-center justify-center overflow-hidden bg-gradient-to-br from-violet-500/[0.12] via-purple-500/[0.06] to-cyan-500/[0.05]">
+                      {/* subtle glow behind the logo */}
+                      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(168,85,247,0.18),transparent_60%)]" />
+                      {g.game_logo_url ? (
+                        /* eslint-disable-next-line @next/next/no-img-element */
+                        <img
+                          src={g.game_logo_url}
+                          alt={g.game_name}
+                          className="relative h-3/4 w-3/4 object-contain drop-shadow-[0_4px_24px_rgba(0,0,0,0.5)]"
+                        />
+                      ) : (
+                        <div className="relative text-5xl">{g.game_emoji ?? '🎮'}</div>
+                      )}
+                    </div>
+                    <div className="border-t border-white/[0.06] bg-black/30 px-3 py-2">
+                      <div className="truncate text-sm font-semibold text-white">{g.game_name}</div>
+                    </div>
                   </div>
-                </div>
+                )}
                 {active && (
                   <span className="absolute right-2 top-2 inline-flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-cyan-500 text-white shadow-lg shadow-violet-500/40">
                     <Check className="h-3.5 w-3.5" />
