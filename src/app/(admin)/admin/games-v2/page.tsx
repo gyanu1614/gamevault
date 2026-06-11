@@ -51,9 +51,11 @@ function groupBadges(badges: AdminGameCategoryBadge[]) {
     m.set(b.game_id, arr)
   }
   // Stable order: by category_slug
-  for (const arr of m.values()) {
-    arr.sort((a, b) => a.category_slug.localeCompare(b.category_slug))
-  }
+  m.forEach((arr) => {
+    arr.sort((a: AdminGameCategoryBadge, b: AdminGameCategoryBadge) =>
+      a.category_slug.localeCompare(b.category_slug)
+    )
+  })
   return m
 }
 
@@ -93,13 +95,22 @@ export default function AdminGamesV2Page() {
       {/* ── Header ── */}
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <Link
-            href="/admin/games"
-            className="mb-3 inline-flex items-center gap-1.5 text-xs text-gray-500 transition-colors hover:text-white"
-          >
-            <ArrowLeft className="h-3 w-3" />
-            Back to classic admin
-          </Link>
+          <div className="mb-3 flex items-center gap-3">
+            <Link
+              href="/admin/redesign"
+              className="inline-flex items-center gap-1.5 text-xs text-gray-500 transition-colors hover:text-white"
+            >
+              <ArrowLeft className="h-3 w-3" />
+              Redesign hub
+            </Link>
+            <span className="text-xs text-gray-700">·</span>
+            <Link
+              href="/admin/games"
+              className="inline-flex items-center gap-1.5 text-xs text-gray-500 transition-colors hover:text-white"
+            >
+              Classic admin
+            </Link>
+          </div>
           <div className="flex items-center gap-2">
             <h1 className="text-2xl font-semibold tracking-tight text-white">Games</h1>
             <span className="inline-flex items-center gap-1 rounded-full border border-violet-500/30 bg-violet-500/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-violet-300">

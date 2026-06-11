@@ -213,13 +213,22 @@ export default function AdminCategoriesV2Page() {
   return (
     <div className="mx-auto max-w-3xl space-y-5">
       <header className="space-y-2">
-        <Link
-          href="/admin/categories"
-          className="inline-flex items-center gap-1.5 text-xs text-gray-500 transition-colors hover:text-white"
-        >
-          <ArrowLeft className="h-3 w-3" />
-          Back to classic categories admin
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link
+            href="/admin/redesign"
+            className="inline-flex items-center gap-1.5 text-xs text-gray-500 transition-colors hover:text-white"
+          >
+            <ArrowLeft className="h-3 w-3" />
+            Redesign hub
+          </Link>
+          <span className="text-xs text-gray-700">·</span>
+          <Link
+            href="/admin/categories"
+            className="inline-flex items-center gap-1.5 text-xs text-gray-500 transition-colors hover:text-white"
+          >
+            Classic admin
+          </Link>
+        </div>
         <div className="flex items-end justify-between gap-3">
           <div>
             <div className="flex items-center gap-2">
