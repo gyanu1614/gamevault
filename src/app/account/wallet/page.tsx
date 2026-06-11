@@ -791,7 +791,7 @@ export default function WalletPage() {
               </p>
               {!searchQuery && (
                 <Link
-                  href="/account/listings/new"
+                  href="/sell/new"
                   className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 px-4 py-2 text-sm font-semibold text-white transition-all shadow-lg hover:shadow-violet-500/25"
                 >
                   <Plus className="h-4 w-4" />

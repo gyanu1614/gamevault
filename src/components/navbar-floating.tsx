@@ -632,7 +632,7 @@ export function Navbar() {
                                 <div className="w-px h-8 bg-white/10 flex-shrink-0" />
                                 {/* Right — Sell button */}
                                 <Link
-                                  href="/account/listings/new"
+                                  href="/sell/new"
                                   onClick={() => setUserMenuOpen(false)}
                                   className="flex-shrink-0 flex items-center gap-1.5 pr-3 pl-2.5 py-2.5 text-sm font-semibold text-white hover:text-primary transition-colors whitespace-nowrap"
                                 >
