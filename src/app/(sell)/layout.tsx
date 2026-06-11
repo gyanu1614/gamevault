@@ -17,12 +17,12 @@ export default async function SellLayout({ children }: { children: React.ReactNo
   }
 
   return (
-    <div className="relative min-h-screen bg-[#0a0a0f] text-white">
-      {/* Soft gradient backdrop, matches Apple-feel */}
+    <div className="relative min-h-screen bg-black text-white">
+      {/* Homepage-matching backdrop: violet -> purple -> cyan glow on black */}
       <div className="pointer-events-none fixed inset-0 -z-10">
         <div className="absolute inset-0 bg-gradient-to-b from-black via-[#0a0a0f] to-black" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-violet-500/10 via-transparent to-transparent" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_right,_var(--tw-gradient-stops))] from-lime-500/[0.06] via-transparent to-transparent" />
+        <div className="absolute top-0 left-1/2 h-[520px] w-[520px] -translate-x-1/2 rounded-full bg-violet-500/[0.10] blur-[110px]" />
+        <div className="absolute bottom-0 right-0 h-[420px] w-[420px] rounded-full bg-cyan-500/[0.06] blur-[110px]" />
       </div>
       {children}
     </div>

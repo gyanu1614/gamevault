@@ -10,8 +10,9 @@ export function LayoutWrapper({ children }: { children: React.ReactNode }) {
   // Don't show navbar and footer on admin pages
   const isAdminPage = pathname?.startsWith('/admin')
 
-  // /sell/* is the redesigned listing wizard — fully stripped layout
-  // (no navbar, no footer, no sidebar). Owns its own shell.
+  // /sell/* shows the homepage navbar (consistent shell) but skips the
+  // footer to keep the wizard focused. The wizard's own step indicator
+  // sits below the navbar.
   const isSellWizard = pathname?.startsWith('/sell')
 
   // Check if we're on a seller page with sidebar (not /new or /edit)
@@ -25,13 +26,11 @@ export function LayoutWrapper({ children }: { children: React.ReactNode }) {
 
   const hasSidebar = isSellerPageWithSidebar || isAccountPage
 
-  const hideChrome = isAdminPage || isSellWizard
-
   return (
     <div className="flex min-h-screen flex-col">
-      {!hideChrome && <Navbar />}
+      {!isAdminPage && <Navbar />}
       <main className="flex-1">{children}</main>
-      {!hideChrome && <Footer hasSellerSidebar={hasSidebar} />}
+      {!isAdminPage && !isSellWizard && <Footer hasSellerSidebar={hasSidebar} />}
     </div>
   )
 }
