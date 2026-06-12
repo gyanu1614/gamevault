@@ -139,10 +139,10 @@ function StepBar({ step, onJumpToStep }: { step: number; onJumpToStep: (target: 
                 disabled={!clickable && !active}
                 onClick={() => clickable && onJumpToStep(s.id)}
                 className={cn(
-                  // Box
-                  'group flex w-full items-center justify-center gap-2 rounded-xl border px-3 py-2 text-xs font-semibold uppercase tracking-wider transition-colors sm:text-sm',
+                  // Box — R9: slightly smaller; softer lime treatment
+                  'group flex w-full items-center justify-center gap-1.5 rounded-xl border px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-wider transition-colors sm:text-xs',
                   // State
-                  active && 'border-lime bg-lime-tint-bg text-lime-text shadow-[0_0_24px_-10px_rgba(198,255,61,0.7)]',
+                  active && 'border-lime-tint-border bg-lime-tint-bg text-lime-text',
                   done && 'border-success/40 bg-success-bg text-success cursor-pointer hover:border-success hover:bg-bg-raised-hover',
                   !active && !done && 'border-border-subtle text-text-disabled cursor-default',
                 )}
@@ -150,13 +150,13 @@ function StepBar({ step, onJumpToStep }: { step: number; onJumpToStep: (target: 
               >
                 <span
                   className={cn(
-                    'flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-[10px] font-bold',
+                    'flex h-4 w-4 shrink-0 items-center justify-center rounded-full border text-[9px] font-bold',
                     active && 'border-lime bg-lime text-text-inverse',
                     done && 'border-success bg-success text-text-inverse',
                     !active && !done && 'border-border-default text-text-tertiary',
                   )}
                 >
-                  {done ? <Check className="h-3 w-3" strokeWidth={3} /> : s.id}
+                  {done ? <Check className="h-2.5 w-2.5" strokeWidth={3} /> : s.id}
                 </span>
                 <span className="truncate">{s.label}</span>
               </button>
@@ -168,7 +168,7 @@ function StepBar({ step, onJumpToStep }: { step: number; onJumpToStep: (target: 
       {/* Rail */}
       <div className="relative h-1.5 w-full overflow-hidden rounded-full bg-bg-raised-hover">
         <motion.div
-          className="absolute inset-y-0 left-0 rounded-full bg-lime shadow-[0_0_18px_-3px_rgba(198,255,61,0.55)]"
+          className="absolute inset-y-0 left-0 rounded-full bg-lime"
           initial={false}
           animate={{ width: `${pct}%` }}
           transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
@@ -406,7 +406,7 @@ export default function SellWizard({ initialCategories }: { initialCategories: G
   }
 
   return (
-    <main className="mx-auto w-full max-w-4xl px-3 pb-24 pt-4 sm:px-6 sm:pt-6 lg:max-w-5xl">
+    <main className="mx-auto w-full max-w-4xl px-3 pb-24 pt-8 sm:px-6 sm:pt-10 lg:max-w-5xl lg:pt-12">
       {/* Wizard card — elevated grey surface on bg-bg-base. Per spec §2,
           no lime tint on the wrapper; sub-cards inside go one shade deeper
           (bg-bg-overlay) for visual hierarchy.
@@ -1645,8 +1645,11 @@ function SubCard({
 }) {
   return (
     <div className="rounded-2xl border border-border-subtle bg-bg-overlay p-4 sm:p-5">
-      <div className="mb-3 flex h-7 items-center justify-between sm:mb-4 sm:h-9">
-        <h2 className="text-sm font-semibold text-text-primary">{title}</h2>
+      {/* Head row — bigger title (h5-ish: text-base font-bold) with a faint
+          horizontal divider beneath that separates the title from the body.
+          R9 polish. */}
+      <div className="mb-4 flex items-center justify-between border-b border-border-subtle pb-3 sm:mb-5 sm:pb-4">
+        <h2 className="text-base font-bold text-text-primary">{title}</h2>
         {right}
       </div>
       {children}
@@ -1659,4 +1662,6 @@ function SubCard({
 // Inputs sit on bg-bg-inset (one shade darker than the sub-card bg-bg-overlay)
 // so they pop visually inside the panel.
 const inputCls =
-  'h-10 w-full rounded-xl border border-border-default bg-bg-inset px-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-lime focus:outline-none focus:ring-2 focus:ring-lime-tint-bg transition-colors'
+  // R9 — rounded-md (6px) so inputs read as professional rectangular fields
+  // against the rounder outer cards and pill buttons.
+  'h-10 w-full rounded-md border border-border-default bg-bg-inset px-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-lime focus:outline-none focus:ring-2 focus:ring-lime-tint-bg transition-colors'

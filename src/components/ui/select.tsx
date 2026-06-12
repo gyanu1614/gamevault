@@ -41,7 +41,8 @@ const SelectTrigger = React.forwardRef<
     ref={ref}
     className={cn(
       // Box
-      'flex h-10 w-full items-center justify-between rounded-xl px-3 text-sm',
+      // R9 — rounded-md to match the rest of the input chrome.
+      'flex h-10 w-full items-center justify-between rounded-md px-3 text-sm',
       'border border-border-default bg-bg-inset',
       // Text
       'text-text-primary placeholder:text-text-tertiary',
