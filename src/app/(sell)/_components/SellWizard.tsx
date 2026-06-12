@@ -48,7 +48,6 @@ const STEPS = [
   { id: 1, label: 'Category', hint: 'What are you selling?' },
   { id: 2, label: 'Game',     hint: 'Which game is it for?' },
   { id: 3, label: 'Details',  hint: 'Tell us about the offer' },
-  { id: 4, label: 'Publish',  hint: 'Title, photos, price' },
 ] as const
 
 const DELIVERY_TIMES = [
@@ -117,7 +116,7 @@ function StepBar({ step }: { step: number }) {
   return (
     <nav aria-label="Progress" className="mb-6">
       {/* Labels */}
-      <ol className="mb-2.5 grid grid-cols-4 gap-1 text-[10px] sm:text-[11px]">
+      <ol className="mb-2.5 grid grid-cols-3 gap-1 text-[10px] sm:text-[11px]">
         {STEPS.map((s) => {
           const done = step > s.id
           const active = step === s.id
@@ -128,8 +127,8 @@ function StepBar({ step }: { step: number }) {
                 'flex items-center gap-1.5 truncate',
                 // distribute labels under their progress segment
                 'first:justify-start last:justify-end',
-                s.id === 2 && 'justify-center sm:justify-center',
-                s.id === 3 && 'justify-center sm:justify-center',
+                // middle step (Game) sits centered in its column
+                s.id === 2 && 'justify-center',
               )}
             >
               <span
@@ -295,6 +294,8 @@ export default function SellWizard({ initialCategories }: { initialCategories: G
     return check(topLevel)
   }, [template, fieldValues, topLevel, childrenOf])
 
+  // canGoNext: only meaningful for step 1 → 2 and step 2 → 3.
+  // Step 3 is the final step — its "next" is Publish, gated by canPublish below.
   const canGoNext = useMemo(() => {
     if (step === 1) return !!selectedCategory
     if (step === 2) {
@@ -303,11 +304,14 @@ export default function SellWizard({ initialCategories }: { initialCategories: G
       if (selectedGame.requires_platform && !platform) return false
       return true
     }
-    if (step === 3) return allRequiredFilled
-    return true
-  }, [step, selectedCategory, selectedGame, region, platform, allRequiredFilled])
+    return false
+  }, [step, selectedCategory, selectedGame, region, platform])
 
+  // canPublish: gates the Publish button on step 3. Combines dynamic
+  // attribute validity (allRequiredFilled) with the static fields that
+  // used to live on the old Step 4.
   const canPublish = useMemo(() => {
+    if (!allRequiredFilled) return false
     if (!title.trim() || title.length < 5) return false
     if (images.length === 0) return false
     const p = parseFloat(price)
@@ -315,7 +319,7 @@ export default function SellWizard({ initialCategories }: { initialCategories: G
     const q = parseInt(quantity, 10)
     if (!Number.isFinite(q) || q < 1) return false
     return true
-  }, [title, images, price, quantity])
+  }, [allRequiredFilled, title, images, price, quantity])
 
   const handleImages = async (files: FileList | null) => {
     if (!files || files.length === 0) return
@@ -434,33 +438,38 @@ export default function SellWizard({ initialCategories }: { initialCategories: G
               />
             )}
 
+            {/* Step 3 — the combined Details + Publish content.
+                Rendered in two stacked blocks: dynamic attribute fields
+                (Offer Details) and the static fields (Offer Description).
+                R4 wraps these into proper sub-cards; for R2 they're
+                stacked with a divider so the page works while the
+                visual restructure lands. */}
             {step === 3 && selectedCategory && selectedGame && (
-              <Step3Details
-                templateLoading={templateLoading}
-                template={template}
-                topLevel={topLevel}
-                childrenOf={childrenOf}
-                values={fieldValues}
-                onChange={(id, v) => setFieldValues((prev) => ({ ...prev, [id]: v }))}
-              />
-            )}
-
-            {step === 4 && selectedGame && (
-              <Step4Publish
-                title={title} setTitle={setTitle}
-                description={description} setDescription={setDescription}
-                price={price} setPrice={setPrice}
-                originalPrice={originalPrice} setOriginalPrice={setOriginalPrice}
-                quantity={quantity} setQuantity={setQuantity}
-                minQuantity={minQuantity} setMinQuantity={setMinQuantity}
-                deliveryMethod={deliveryMethod} setDeliveryMethod={setDeliveryMethod}
-                deliveryTime={deliveryTime} setDeliveryTime={setDeliveryTime}
-                allowedDeliveryModes={selectedGame.delivery_modes}
-                images={images}
-                onUpload={handleImages}
-                onRemoveImage={(i) => setImages((prev) => prev.filter((_, idx) => idx !== i))}
-                imageUploading={imageUploading}
-              />
+              <div className="space-y-5">
+                <Step3Details
+                  templateLoading={templateLoading}
+                  template={template}
+                  topLevel={topLevel}
+                  childrenOf={childrenOf}
+                  values={fieldValues}
+                  onChange={(id, v) => setFieldValues((prev) => ({ ...prev, [id]: v }))}
+                />
+                <Step4Publish
+                  title={title} setTitle={setTitle}
+                  description={description} setDescription={setDescription}
+                  price={price} setPrice={setPrice}
+                  originalPrice={originalPrice} setOriginalPrice={setOriginalPrice}
+                  quantity={quantity} setQuantity={setQuantity}
+                  minQuantity={minQuantity} setMinQuantity={setMinQuantity}
+                  deliveryMethod={deliveryMethod} setDeliveryMethod={setDeliveryMethod}
+                  deliveryTime={deliveryTime} setDeliveryTime={setDeliveryTime}
+                  allowedDeliveryModes={selectedGame.delivery_modes}
+                  images={images}
+                  onUpload={handleImages}
+                  onRemoveImage={(i) => setImages((prev) => prev.filter((_, idx) => idx !== i))}
+                  imageUploading={imageUploading}
+                />
+              </div>
             )}
           </motion.div>
         </AnimatePresence>
@@ -481,10 +490,10 @@ export default function SellWizard({ initialCategories }: { initialCategories: G
           <span aria-hidden />
         )}
 
-        {step < 4 ? (
+        {step < 3 ? (
           <button
             type="button"
-            onClick={() => setStep((s) => Math.min(4, s + 1))}
+            onClick={() => setStep((s) => Math.min(3, s + 1))}
             disabled={!canGoNext}
             className={cn(
               'inline-flex h-10 items-center gap-1.5 rounded-xl px-4 text-sm font-semibold transition-all sm:px-5',
