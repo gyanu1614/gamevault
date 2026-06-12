@@ -18,15 +18,14 @@
  * legacy category_id via metadata->>'type' mapping).
  */
 
-import { useEffect, useMemo, useState, useTransition } from 'react'
-import Link from 'next/link'
+import { useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   ArrowRight, Check, Loader2, Upload, X as IconX, Image as ImageIcon,
   ChevronLeft, Sparkles, Search, DollarSign, Package, Clock, Zap,
-  AlertCircle, History, Flame,
+  History, Flame,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import {
@@ -36,6 +35,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Checkbox } from '@/components/ui/checkbox'
+import { NumberField } from '@/components/ui/number-field'
 import {
   fetchSellGamesForCategory,
   fetchSellTemplate,
@@ -109,57 +110,56 @@ function buildChildIndex(attrs: Attribute[]) {
   return { topLevel, childrenOf }
 }
 
-// ─── Slim step bar (sits below the homepage navbar) ─────────────────────────
+// ─── Step bar (clickable step labels + lime progress rail) ───────────────────
 
 /**
- * StepBar — horizontal progress bar with 25% / 50% / 75% / 100% fill
- * across the 4 wizard steps. Step labels sit above the rail with the
- * active label gradient-highlighted; the rail fills with solid lime
- * and animates between steps.
+ * StepBar — three clickable step chips above a progress rail.
+ *
+ * Each chip is a real <button>; the user can click a completed step to jump
+ * back to it. The current step's chip is highlighted lime; completed ones
+ * use the success tone; future ones look muted.
+ *
+ * Breadcrumbs are GONE — these chips replace them.
  */
-function StepBar({ step }: { step: number }) {
+function StepBar({ step, onJumpToStep }: { step: number; onJumpToStep: (target: number) => void }) {
   const pct = (step / STEPS.length) * 100
 
   return (
     <nav aria-label="Progress" className="mb-6">
-      {/* Labels */}
-      <ol className="mb-2.5 grid grid-cols-3 gap-1 text-[10px] sm:text-[11px]">
+      {/* Chip row — bigger than before, each chip clickable when reachable */}
+      <ol className="mb-3 flex items-center justify-between gap-2">
         {STEPS.map((s) => {
           const done = step > s.id
           const active = step === s.id
+          const clickable = done // can only jump backwards to a completed step
           return (
-            <li
-              key={s.id}
-              className={cn(
-                'flex items-center gap-1.5 truncate',
-                // distribute labels under their progress segment
-                'first:justify-start last:justify-end',
-                // middle step (Game) sits centered in its column
-                s.id === 2 && 'justify-center',
-              )}
-            >
-              <span
+            <li key={s.id} className="flex-1">
+              <button
+                type="button"
+                disabled={!clickable && !active}
+                onClick={() => clickable && onJumpToStep(s.id)}
                 className={cn(
-                  'flex h-4 w-4 shrink-0 items-center justify-center rounded-full border text-[8px] font-semibold transition-colors',
-                  done
-                    ? 'border-success bg-success-bg text-success'
-                    : active
-                      ? 'border-lime bg-lime-tint-bg text-lime-text'
-                      : 'border-border-default text-text-tertiary'
+                  // Box
+                  'group flex w-full items-center justify-center gap-2 rounded-xl border px-3 py-2 text-xs font-semibold uppercase tracking-wider transition-colors sm:text-sm',
+                  // State
+                  active && 'border-lime bg-lime-tint-bg text-lime-text shadow-[0_0_24px_-10px_rgba(198,255,61,0.7)]',
+                  done && 'border-success/40 bg-success-bg text-success cursor-pointer hover:border-success hover:bg-bg-raised-hover',
+                  !active && !done && 'border-border-subtle text-text-disabled cursor-default',
                 )}
+                aria-current={active ? 'step' : undefined}
               >
-                {done ? <Check className="h-2 w-2" /> : s.id}
-              </span>
-              <span
-                className={cn(
-                  'truncate font-medium uppercase tracking-wider',
-                  active
-                    ? 'text-lime-text'
-                    : done ? 'text-success' : 'text-text-disabled'
-                )}
-              >
-                {s.label}
-              </span>
+                <span
+                  className={cn(
+                    'flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-[10px] font-bold',
+                    active && 'border-lime bg-lime text-text-inverse',
+                    done && 'border-success bg-success text-text-inverse',
+                    !active && !done && 'border-border-default text-text-tertiary',
+                  )}
+                >
+                  {done ? <Check className="h-3 w-3" strokeWidth={3} /> : s.id}
+                </span>
+                <span className="truncate">{s.label}</span>
+              </button>
             </li>
           )
         })}
@@ -178,66 +178,15 @@ function StepBar({ step }: { step: number }) {
   )
 }
 
-// ─── Breadcrumbs ─────────────────────────────────────────────────────────────
-
-/**
- * Breadcrumbs — Home › Select category › Select game › Details
- *
- * Each completed crumb is a clickable Link that jumps the wizard back to
- * that step. The current step is plain text. Separator is a › glyph in
- * text-text-disabled. Per HANDOFF_SELL_WIZARD_RESTRUCTURE.md §5.
- */
-function Breadcrumbs({
-  step,
-  onJumpToStep,
-}: {
-  step: number
-  onJumpToStep: (target: number) => void
-}) {
-  const crumbs: Array<{ label: string; targetStep?: number }> = [
-    { label: 'Home' },
-    { label: 'Select category', targetStep: 1 },
-  ]
-  if (step >= 2) crumbs.push({ label: 'Select game', targetStep: 2 })
-  if (step >= 3) crumbs.push({ label: 'Details' })
-
-  return (
-    <nav aria-label="Breadcrumb" className="flex h-6 items-center gap-2 text-xs text-text-tertiary">
-      {crumbs.map((c, i) => {
-        const isLast = i === crumbs.length - 1
-        const isLink = !isLast && c.targetStep !== undefined && c.targetStep < step
-        return (
-          <span key={c.label} className="inline-flex items-center gap-2">
-            {i === 0 ? (
-              <Link
-                href="/"
-                className="transition-colors hover:text-text-secondary"
-              >
-                {c.label}
-              </Link>
-            ) : isLink ? (
-              <button
-                type="button"
-                onClick={() => onJumpToStep(c.targetStep!)}
-                className="transition-colors hover:text-text-secondary"
-              >
-                {c.label}
-              </button>
-            ) : (
-              <span className={isLast ? 'text-text-primary' : ''}>{c.label}</span>
-            )}
-            {!isLast && <span className="text-text-disabled">›</span>}
-          </span>
-        )
-      })}
-    </nav>
-  )
-}
 
 // ─── Main component ──────────────────────────────────────────────────────────
 
 export default function SellWizard({ initialCategories }: { initialCategories: GlobalCategory[] }) {
   const router = useRouter()
+  // Ref to the wizard card so we can scroll to the top of it whenever the
+  // step changes (per R8 user feedback — landing on the prior scroll
+  // position of the next page is disorienting).
+  const cardRef = useRef<HTMLElement | null>(null)
   const [, startTransition] = useTransition()
 
   const [step, setStep] = useState(1)
@@ -268,6 +217,20 @@ export default function SellWizard({ initialCategories }: { initialCategories: G
   const [images, setImages] = useState<string[]>([])
   const [imageUploading, setImageUploading] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+
+  // Terms gate (R8 — both must be checked to enable Create Offer)
+  const [agreeSellerRules, setAgreeSellerRules] = useState(false)
+  const [agreeTos, setAgreeTos] = useState(false)
+
+  // R8 — whenever the step changes, scroll the wizard card to the top of the
+  // viewport so the seller doesn't land on the new page mid-scroll.
+  useEffect(() => {
+    if (!cardRef.current) return
+    // Use the top of the breadcrumb-less card; small offset for the floating
+    // navbar above. Smooth scrolling so it doesn't feel jarring.
+    const top = cardRef.current.getBoundingClientRect().top + window.scrollY - 96
+    window.scrollTo({ top, behavior: 'smooth' })
+  }, [step])
 
   // Read recent games from localStorage on mount
   useEffect(() => {
@@ -370,9 +333,9 @@ export default function SellWizard({ initialCategories }: { initialCategories: G
     return false
   }, [step, selectedCategory, selectedGame, region, platform])
 
-  // canPublish: gates the Publish button on step 3. Combines dynamic
-  // attribute validity (allRequiredFilled) with the static fields that
-  // used to live on the old Step 4.
+  // canPublish: gates the Create Offer button on step 3. Combines dynamic
+  // attribute validity (allRequiredFilled) with the static fields and the
+  // two R8 terms checkboxes.
   const canPublish = useMemo(() => {
     if (!allRequiredFilled) return false
     if (!title.trim() || title.length < 5) return false
@@ -381,8 +344,9 @@ export default function SellWizard({ initialCategories }: { initialCategories: G
     if (!Number.isFinite(p) || p <= 0) return false
     const q = parseInt(quantity, 10)
     if (!Number.isFinite(q) || q < 1) return false
+    if (!agreeSellerRules || !agreeTos) return false
     return true
-  }, [allRequiredFilled, title, images, price, quantity])
+  }, [allRequiredFilled, title, images, price, quantity, agreeSellerRules, agreeTos])
 
   const handleImages = async (files: FileList | null) => {
     if (!files || files.length === 0) return
@@ -443,19 +407,19 @@ export default function SellWizard({ initialCategories }: { initialCategories: G
 
   return (
     <main className="mx-auto w-full max-w-4xl px-3 pb-24 pt-4 sm:px-6 sm:pt-6 lg:max-w-5xl">
-      {/* Breadcrumbs sit above the card. Each completed crumb is a Link
-          that resets the wizard to that step; the current crumb is plain.
-          Per HANDOFF_SELL_WIZARD_RESTRUCTURE.md §5. */}
-      <Breadcrumbs
-        step={step}
-        onJumpToStep={(target) => setStep((s) => (target < s ? target : s))}
-      />
-
       {/* Wizard card — elevated grey surface on bg-bg-base. Per spec §2,
           no lime tint on the wrapper; sub-cards inside go one shade deeper
-          (bg-bg-overlay) for visual hierarchy. */}
-      <section className="relative isolate mt-3 overflow-visible rounded-3xl border border-border-default bg-bg-raised p-5 shadow-elevated sm:p-7 lg:p-8">
-        <StepBar step={step} />
+          (bg-bg-overlay) for visual hierarchy.
+          Breadcrumbs removed in R8 — the clickable step chips inside StepBar
+          serve as the only step navigation. */}
+      <section
+        ref={cardRef}
+        className="relative isolate overflow-visible rounded-3xl border border-border-default bg-bg-raised p-5 shadow-elevated sm:p-7 lg:p-8"
+      >
+        <StepBar
+          step={step}
+          onJumpToStep={(target) => setStep((s) => (target < s ? target : s))}
+        />
 
         {/* Step header.
             Step 1 / 2 just show the hint text.
@@ -510,7 +474,16 @@ export default function SellWizard({ initialCategories }: { initialCategories: G
                 games={games}
                 loading={gamesLoading}
                 selected={selectedGame}
-                onSelect={(g) => { setSelectedGame(g); rememberGame(g.game_id) }}
+                onSelect={(g) => {
+                  setSelectedGame(g)
+                  rememberGame(g.game_id)
+                  // R8: auto-advance to Step 3 unless this (game, category)
+                  // needs region or platform input first — in that case the
+                  // pickers render inline and the user uses Continue.
+                  if (!g.requires_region && !g.requires_platform) {
+                    setStep(3)
+                  }
+                }}
                 filter={gameFilter}
                 onFilter={setGameFilter}
                 recentGameIds={recentGameIds}
@@ -551,6 +524,12 @@ export default function SellWizard({ initialCategories }: { initialCategories: G
                   onUpload={handleImages}
                   onRemoveImage={(i) => setImages((prev) => prev.filter((_, idx) => idx !== i))}
                   imageUploading={imageUploading}
+                />
+                <TermsCard
+                  agreeSellerRules={agreeSellerRules}
+                  setAgreeSellerRules={setAgreeSellerRules}
+                  agreeTos={agreeTos}
+                  setAgreeTos={setAgreeTos}
                 />
               </div>
             )}
@@ -623,7 +602,7 @@ export default function SellWizard({ initialCategories }: { initialCategories: G
               )}
             >
               {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-              Publish
+              Create Offer
             </button>
           </div>
         )}
@@ -643,7 +622,7 @@ function Step1Category({
   onSelect: (c: GlobalCategory) => void
 }) {
   return (
-    <div className="mx-auto max-w-2xl space-y-2.5">
+    <div className="mx-auto max-w-2xl space-y-2">
       {categories.map((c, i) => {
         const active = selected?.id === c.id
         const disabled = !c.is_active
@@ -658,14 +637,15 @@ function Step1Category({
             transition={{ duration: 0.22, delay: i * 0.04 }}
             whileHover={!disabled ? { x: 2 } : undefined}
             className={cn(
-              'group relative flex w-full items-center gap-4 rounded-2xl border p-4 text-left transition-all sm:p-5',
+              // R8: compressed padding so 5 rows + Continue fit in viewport
+              'group relative flex w-full items-center gap-3 rounded-2xl border p-3 text-left transition-all sm:gap-4 sm:p-4',
               disabled && 'cursor-not-allowed opacity-50',
               active
                 ? 'border-lime bg-lime-tint-bg shadow-[0_0_0_3px_rgba(198,255,61,0.18)]'
                 : 'border-border-subtle bg-bg-inset hover:border-border-strong hover:bg-bg-inset'
             )}
           >
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-border-default bg-bg-raised-hover text-2xl">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border-default bg-bg-raised-hover text-xl sm:h-11 sm:w-11">
               {c.icon_url ? (
                 /* eslint-disable-next-line @next/next/no-img-element */
                 <img src={c.icon_url} alt={c.name} className="h-full w-full rounded-xl object-cover" />
@@ -955,38 +935,35 @@ function Step3Details({
   values: Record<string, unknown>
   onChange: (id: string, value: unknown) => void
 }) {
-  return (
-    <SubCard title="Offer Details">
-      {templateLoading ? (
+  // R8 — when there are no admin-defined extra fields for this (game, category),
+  // skip the Offer Details sub-card entirely. The seller starts straight at the
+  // Title card. Loading state still renders so the UI doesn't flash.
+  if (templateLoading) {
+    return (
+      <SubCard title="Offer Details">
         <div className="flex items-center justify-center gap-2 py-6 text-sm text-text-tertiary">
           <Loader2 className="h-4 w-4 animate-spin text-lime-text" />
           Loading details…
         </div>
-      ) : !template || topLevel.length === 0 ? (
-        <div className="flex items-start gap-3 rounded-lg bg-bg-inset p-3">
-          <AlertCircle className="mt-0.5 h-5 w-5 text-warning" />
-          <div>
-            <div className="text-sm font-semibold text-text-primary">No extra details needed</div>
-            <p className="mt-1 text-xs text-text-secondary">
-              An admin hasn’t set up extra fields for this game and category yet.
-              You can still publish — fill in the offer description below.
-            </p>
-          </div>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {topLevel.map((a) => (
-            <FieldCard
-              key={a.id}
-              attribute={a}
-              values={values}
-              onChange={onChange}
-              childrenOf={childrenOf}
-              depth={0}
-            />
-          ))}
-        </div>
-      )}
+      </SubCard>
+    )
+  }
+  if (!template || topLevel.length === 0) return null
+
+  return (
+    <SubCard title="Offer Details">
+      <div className="space-y-4">
+        {topLevel.map((a) => (
+          <FieldCard
+            key={a.id}
+            attribute={a}
+            values={values}
+            onChange={onChange}
+            childrenOf={childrenOf}
+            depth={0}
+          />
+        ))}
+      </div>
     </SubCard>
   )
 }
@@ -1448,36 +1425,42 @@ function Step4Publish(p: Step4Props) {
         )}
       </SubCard>
 
-      {/* Stock & Delivery */}
-      <SubCard title="Stock & Delivery">
-        <div className="grid gap-3 sm:grid-cols-2">
+      {/* Stock */}
+      <SubCard title="Stock">
+        <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-1.5">
             <label className="block text-xs font-semibold uppercase tracking-wider text-text-secondary">
-              <Package className="mr-1 inline h-3.5 w-3.5" /> Stock
+              <Package className="mr-1 inline h-3.5 w-3.5" /> Available quantity
             </label>
-            <input
-              type="number"
-              value={p.quantity}
-              onChange={(e) => p.setQuantity(e.target.value)}
-              min={1}
-              className={inputCls}
+            <NumberField
+              value={Number.isFinite(parseInt(p.quantity, 10)) ? parseInt(p.quantity, 10) : 1}
+              onChange={(v) => p.setQuantity(String(v))}
+              minValue={1}
+              maxValue={99_999}
+              ariaLabel="Stock"
             />
           </div>
           <div className="space-y-1.5">
             <label className="block text-xs font-semibold uppercase tracking-wider text-text-secondary">
               Min order qty
             </label>
-            <input
-              type="number"
-              value={p.minQuantity}
-              onChange={(e) => p.setMinQuantity(e.target.value)}
-              min={1}
-              className={inputCls}
+            <NumberField
+              value={Number.isFinite(parseInt(p.minQuantity, 10)) ? parseInt(p.minQuantity, 10) : 1}
+              onChange={(v) => p.setMinQuantity(String(v))}
+              minValue={1}
+              maxValue={Math.max(1, parseInt(p.quantity || '1', 10))}
+              ariaLabel="Minimum order quantity"
             />
           </div>
         </div>
+        <FieldHint className="mt-3">
+          Set stock to what you can actually fulfill. Min order qty is the smallest amount a buyer can purchase.
+        </FieldHint>
+      </SubCard>
 
-        <div className="mt-4 space-y-1.5">
+      {/* Delivery */}
+      <SubCard title="Delivery">
+        <div className="space-y-1.5">
           <label className="block text-xs font-semibold uppercase tracking-wider text-text-secondary">Delivery method</label>
           <div className="grid gap-2 sm:grid-cols-2">
             {(['manual', 'instant'] as const).map((m) => {
@@ -1491,19 +1474,19 @@ function Step4Publish(p: Step4Props) {
                   disabled={!allowed}
                   onClick={() => p.setDeliveryMethod(m)}
                   className={cn(
-                    'flex items-start gap-2 rounded-xl border p-3 text-left transition-colors',
+                    'flex items-start gap-3 rounded-xl border p-3 text-left transition-colors sm:p-4',
                     !allowed && 'cursor-not-allowed opacity-40',
                     on && allowed
                       ? 'border-lime bg-lime-tint-bg'
                       : 'border-border-default bg-bg-inset hover:bg-bg-raised-hover'
                   )}
                 >
-                  <Icon className={cn('h-4 w-4 shrink-0', on ? 'text-lime-text' : 'text-text-tertiary')} />
+                  <Icon className={cn('h-5 w-5 shrink-0', on ? 'text-lime-text' : 'text-text-tertiary')} />
                   <div>
                     <div className="text-sm font-semibold text-text-primary">
                       {m === 'manual' ? 'Manual delivery' : 'Instant delivery'}
                     </div>
-                    <div className="text-[11px] text-text-tertiary">
+                    <div className="text-[11px] leading-snug text-text-secondary">
                       {m === 'manual' ? 'You deliver within your chosen time window.' : 'Codes/credentials sent automatically.'}
                     </div>
                   </div>
@@ -1514,19 +1497,35 @@ function Step4Publish(p: Step4Props) {
         </div>
 
         {p.deliveryMethod === 'manual' && (
-          <div className="mt-4 space-y-1.5">
+          <div className="mt-5 space-y-2">
             <label className="block text-xs font-semibold uppercase tracking-wider text-text-secondary">Delivery window</label>
-            <PillRow
-              options={DELIVERY_TIMES.map((t) => ({ value: t.value, label: t.label }))}
-              value={p.deliveryTime}
-              onChange={p.setDeliveryTime}
-            />
+            {/* Bigger pills, spaced out, with higher contrast.
+                One per row on mobile (no wrap weirdness) -> grid layout. */}
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
+              {DELIVERY_TIMES.map((t) => {
+                const on = p.deliveryTime === t.value
+                return (
+                  <button
+                    key={t.value}
+                    type="button"
+                    onClick={() => p.setDeliveryTime(t.value)}
+                    className={cn(
+                      'h-10 rounded-xl border text-sm font-medium transition-colors',
+                      on
+                        ? 'border-lime bg-lime-tint-bg text-lime-text'
+                        : 'border-border-default bg-bg-inset text-text-secondary hover:border-border-strong hover:text-text-primary'
+                    )}
+                  >
+                    {t.label}
+                  </button>
+                )
+              })}
+            </div>
+            <FieldHint>
+              Faster windows rank higher in search and convert better.
+            </FieldHint>
           </div>
         )}
-
-        <FieldHint className="mt-4">
-          Faster delivery times rank better. Set stock to what you can actually fulfill.
-        </FieldHint>
       </SubCard>
     </div>
   )
@@ -1554,6 +1553,77 @@ function FieldRow({ children, className }: { children: React.ReactNode; classNam
  */
 function FieldHint({ children, className }: { children: React.ReactNode; className?: string }) {
   return <p className={cn('text-[11px] leading-snug text-text-tertiary', className)}>{children}</p>
+}
+
+// ─── TermsCard — final sub-card on Step 3; gates the Create Offer button ────
+
+/**
+ * Two checkboxes the seller must tick to enable Create Offer:
+ *   - Seller Rules (community standards / what can be listed)
+ *   - Terms of Service (platform-wide ToS)
+ *
+ * Uses the existing shadcn Checkbox (themed to lime in R8). The Create Offer
+ * button is gated on (canPublish && agreeSellerRules && agreeTos) — the
+ * parent SellWizard reads these two booleans into its canPublish check.
+ */
+function TermsCard({
+  agreeSellerRules, setAgreeSellerRules, agreeTos, setAgreeTos,
+}: {
+  agreeSellerRules: boolean; setAgreeSellerRules: (v: boolean) => void
+  agreeTos: boolean; setAgreeTos: (v: boolean) => void
+}) {
+  return (
+    <SubCard title="Confirm">
+      <ul className="space-y-3">
+        <li>
+          <label className="flex cursor-pointer items-start gap-3">
+            <Checkbox
+              checked={agreeSellerRules}
+              onCheckedChange={(v) => setAgreeSellerRules(v === true)}
+              className="mt-0.5"
+              aria-label="I agree to the Seller Rules"
+            />
+            <span className="text-sm text-text-primary">
+              I agree to the{' '}
+              <a
+                href="/seller-rules"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-lime-text underline-offset-2 hover:underline"
+                onClick={(e) => e.stopPropagation()}
+              >
+                Seller Rules
+              </a>
+              .
+            </span>
+          </label>
+        </li>
+        <li>
+          <label className="flex cursor-pointer items-start gap-3">
+            <Checkbox
+              checked={agreeTos}
+              onCheckedChange={(v) => setAgreeTos(v === true)}
+              className="mt-0.5"
+              aria-label="I agree to the Terms of Service"
+            />
+            <span className="text-sm text-text-primary">
+              I agree to the{' '}
+              <a
+                href="/terms"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-lime-text underline-offset-2 hover:underline"
+                onClick={(e) => e.stopPropagation()}
+              >
+                Terms of Service
+              </a>
+              .
+            </span>
+          </label>
+        </li>
+      </ul>
+    </SubCard>
+  )
 }
 
 // ─── SubCard — the grey panel each Step 3 section lives in ──────────────────
