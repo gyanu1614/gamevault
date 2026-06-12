@@ -232,6 +232,44 @@ export default function SellWizard({ initialCategories }: { initialCategories: G
     window.scrollTo({ top, behavior: 'smooth' })
   }, [step])
 
+  // R11.c — sync the wizard step with browser history so the back gesture
+  // walks step 3 -> step 2 -> step 1 -> previous page instead of leaving
+  // the wizard outright on the first back tap.
+  //
+  // Mechanics:
+  //  - On mount, replace the current history entry with { step: 1 } so we
+  //    always have a known starting state for popstate.
+  //  - When the seller advances (or jumps back via a chip), pushState so
+  //    the browser stack grows in lockstep with `step`.
+  //  - On popstate, read state.step and call setStep — guarded by a ref so
+  //    the resulting step change effect below does NOT push another entry.
+  const popstateGuardRef = useRef(false)
+  // Mount: lay down the initial history entry
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    window.history.replaceState({ wizardStep: 1 }, '')
+    const onPop = (e: PopStateEvent) => {
+      const target = (e.state as { wizardStep?: number } | null)?.wizardStep
+      if (typeof target === 'number' && target >= 1 && target <= 3) {
+        popstateGuardRef.current = true
+        setStep(target)
+      }
+    }
+    window.addEventListener('popstate', onPop)
+    return () => window.removeEventListener('popstate', onPop)
+  }, [])
+  // Step change → push history (unless we got here via popstate)
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    if (popstateGuardRef.current) {
+      popstateGuardRef.current = false
+      return
+    }
+    const cur = (window.history.state as { wizardStep?: number } | null)?.wizardStep
+    if (cur === step) return // initial replaceState already covers step 1
+    window.history.pushState({ wizardStep: step }, '')
+  }, [step])
+
   // Read recent games from localStorage on mount
   useEffect(() => {
     try {
