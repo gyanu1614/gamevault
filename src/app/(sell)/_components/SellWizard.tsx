@@ -18,7 +18,7 @@
  * legacy category_id via metadata->>'type' mapping).
  */
 
-import { useEffect, useMemo, useRef, useState, useTransition } from 'react'
+import { useEffect, useMemo, useState, useTransition } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
@@ -26,9 +26,16 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   ArrowRight, Check, Loader2, Upload, X as IconX, Image as ImageIcon,
   ChevronLeft, Sparkles, Search, DollarSign, Package, Clock, Zap,
-  AlertCircle, ChevronDown, History, Flame,
+  AlertCircle, History, Flame,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import {
   fetchSellGamesForCategory,
   fetchSellTemplate,
@@ -40,7 +47,6 @@ import type {
   GlobalCategory,
   AttributeTemplateFull,
   Attribute,
-  AttributeOption,
 } from '@/lib/actions/new-schema'
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -1169,12 +1175,29 @@ function FieldInput({
       )}
 
       {attribute.type === 'select' && (
-        <Dropdown
-          options={attribute.options ?? []}
-          value={typeof v === 'string' ? v : ''}
-          onChange={(val) => onChange(val)}
-          placeholder={attribute.placeholder || 'Choose…'}
-        />
+        <Select
+          value={typeof v === 'string' && v ? v : undefined}
+          onValueChange={(val) => onChange(val)}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder={attribute.placeholder || 'Choose…'} />
+          </SelectTrigger>
+          <SelectContent>
+            {(attribute.options ?? []).map((o) => (
+              <SelectItem key={o.id} value={o.value}>
+                {o.icon_url ? (
+                  <span className="inline-flex items-center gap-2">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={o.icon_url} alt="" className="h-5 w-5 rounded object-cover" />
+                    {o.label}
+                  </span>
+                ) : (
+                  o.label
+                )}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       )}
 
       {attribute.type === 'multiselect' && (
@@ -1221,114 +1244,6 @@ function FieldInput({
           })}
         </div>
       )}
-    </div>
-  )
-}
-
-// ─── Dropdown (the proper one) ──────────────────────────────────────────────
-
-function Dropdown({
-  options, value, onChange, placeholder,
-}: {
-  options: AttributeOption[]
-  value: string
-  onChange: (v: string) => void
-  placeholder: string
-}) {
-  const [open, setOpen] = useState(false)
-  const [filter, setFilter] = useState('')
-  const ref = useRef<HTMLDivElement | null>(null)
-
-  // Close on outside click
-  useEffect(() => {
-    if (!open) return
-    function onDoc(e: MouseEvent) {
-      if (!ref.current) return
-      if (!ref.current.contains(e.target as Node)) setOpen(false)
-    }
-    document.addEventListener('mousedown', onDoc)
-    return () => document.removeEventListener('mousedown', onDoc)
-  }, [open])
-
-  const filtered = useMemo(() => {
-    if (!filter) return options
-    const f = filter.toLowerCase()
-    return options.filter((o) => o.label.toLowerCase().includes(f))
-  }, [options, filter])
-
-  const selected = options.find((o) => o.value === value) ?? null
-  const searchable = options.length > 6
-
-  return (
-    <div ref={ref} className="relative">
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className={cn(
-          'flex h-10 w-full items-center justify-between rounded-xl border bg-bg-raised px-3 text-left text-sm transition-colors',
-          open
-            ? 'border-lime ring-2 ring-lime-tint-bg'
-            : 'border-border-default hover:border-border-strong'
-        )}
-      >
-        <span className={cn('truncate', selected ? 'text-text-primary' : 'text-text-tertiary')}>
-          {selected?.label ?? placeholder}
-        </span>
-        <ChevronDown className={cn('h-4 w-4 text-text-tertiary transition-transform', open && 'rotate-180')} />
-      </button>
-
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            initial={{ opacity: 0, y: -4 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -4 }}
-            transition={{ duration: 0.14 }}
-            className="absolute z-50 mt-1.5 w-full overflow-hidden rounded-xl border border-border-default bg-[#0c0c12]/95 shadow-2xl backdrop-blur-xl"
-          >
-            {searchable && (
-              <div className="flex items-center gap-2 border-b border-border-subtle px-3 py-2">
-                <Search className="h-3.5 w-3.5 text-text-tertiary" />
-                <input
-                  value={filter}
-                  onChange={(e) => setFilter(e.target.value)}
-                  placeholder="Search…"
-                  autoFocus
-                  className="h-7 flex-1 bg-transparent text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none"
-                />
-              </div>
-            )}
-            <ul className="max-h-72 overflow-y-auto py-1">
-              {filtered.length === 0 ? (
-                <li className="px-3 py-2 text-xs text-text-tertiary">No matches.</li>
-              ) : filtered.map((o) => {
-                const on = o.value === value
-                return (
-                  <li key={o.id}>
-                    <button
-                      type="button"
-                      onClick={() => { onChange(o.value); setOpen(false); setFilter('') }}
-                      className={cn(
-                        'flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors',
-                        on
-                          ? 'bg-lime-tint-bg text-text-primary'
-                          : 'text-text-primary hover:bg-bg-raised-hover'
-                      )}
-                    >
-                      {o.icon_url && (
-                        /* eslint-disable-next-line @next/next/no-img-element */
-                        <img src={o.icon_url} alt="" className="h-5 w-5 rounded object-cover" />
-                      )}
-                      <span className="flex-1 truncate">{o.label}</span>
-                      {on && <Check className="h-3.5 w-3.5 text-lime-text" />}
-                    </button>
-                  </li>
-                )
-              })}
-            </ul>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   )
 }
