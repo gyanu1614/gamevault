@@ -28,13 +28,7 @@ import {
   History, Flame,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import { Combobox } from '@/components/ui/combobox'
 import { Checkbox } from '@/components/ui/checkbox'
 import { NumberField } from '@/components/ui/number-field'
 import {
@@ -125,7 +119,7 @@ function StepBar({ step, onJumpToStep }: { step: number; onJumpToStep: (target: 
   const pct = (step / STEPS.length) * 100
 
   return (
-    <nav aria-label="Progress" className="mb-6">
+    <nav aria-label="Progress" className="mb-4">
       {/* Chip row — bigger than before, each chip clickable when reachable */}
       <ol className="mb-3 flex items-center justify-between gap-2">
         {STEPS.map((s) => {
@@ -224,10 +218,16 @@ export default function SellWizard({ initialCategories }: { initialCategories: G
 
   // R8 — whenever the step changes, scroll the wizard card to the top of the
   // viewport so the seller doesn't land on the new page mid-scroll.
+  // R10 — skip the very first render so initial mount doesn't trigger a
+  // tiny smooth-scroll that visually jerks the page (the wizard is already
+  // at the top on mount).
+  const didMountRef = useRef(false)
   useEffect(() => {
+    if (!didMountRef.current) {
+      didMountRef.current = true
+      return
+    }
     if (!cardRef.current) return
-    // Use the top of the breadcrumb-less card; small offset for the floating
-    // navbar above. Smooth scrolling so it doesn't feel jarring.
     const top = cardRef.current.getBoundingClientRect().top + window.scrollY - 96
     window.scrollTo({ top, behavior: 'smooth' })
   }, [step])
@@ -414,7 +414,7 @@ export default function SellWizard({ initialCategories }: { initialCategories: G
           serve as the only step navigation. */}
       <section
         ref={cardRef}
-        className="relative isolate overflow-visible rounded-3xl border border-border-default bg-bg-raised p-5 shadow-elevated sm:p-7 lg:p-8"
+        className="relative isolate overflow-visible rounded-3xl border border-border-default bg-bg-raised p-4 shadow-elevated sm:p-5 lg:p-6"
       >
         <StepBar
           step={step}
@@ -425,10 +425,10 @@ export default function SellWizard({ initialCategories }: { initialCategories: G
             Step 1 / 2 just show the hint text.
             Step 3 swaps in the "Sell Game Items" title with a game-logo
             sub-header — the chosen game is now context, not a question. */}
-        <div className="mb-5 sm:mb-6">
+        <div className="mb-3 sm:mb-4">
           {step === 3 && selectedGame ? (
             <div className="text-center">
-              <h1 className="text-xl font-semibold tracking-tight text-text-primary sm:text-2xl lg:text-3xl">
+              <h1 className="text-lg font-semibold tracking-tight text-text-primary sm:text-xl lg:text-2xl">
                 Sell {selectedCategory?.name ?? 'Listing'}
               </h1>
               <div className="mt-2 inline-flex items-center gap-2 text-sm text-text-secondary">
@@ -622,7 +622,7 @@ function Step1Category({
   onSelect: (c: GlobalCategory) => void
 }) {
   return (
-    <div className="mx-auto max-w-2xl space-y-2">
+    <div className="mx-auto max-w-2xl space-y-1.5">
       {categories.map((c, i) => {
         const active = selected?.id === c.id
         const disabled = !c.is_active
@@ -637,15 +637,15 @@ function Step1Category({
             transition={{ duration: 0.22, delay: i * 0.04 }}
             whileHover={!disabled ? { x: 2 } : undefined}
             className={cn(
-              // R8: compressed padding so 5 rows + Continue fit in viewport
-              'group relative flex w-full items-center gap-3 rounded-2xl border p-3 text-left transition-all sm:gap-4 sm:p-4',
+              // R10: further compressed so 5 rows + Continue fit in one viewport
+              'group relative flex w-full items-center gap-3 rounded-2xl border p-2.5 text-left transition-all sm:gap-4 sm:p-3',
               disabled && 'cursor-not-allowed opacity-50',
               active
                 ? 'border-lime bg-lime-tint-bg shadow-[0_0_0_3px_rgba(198,255,61,0.18)]'
                 : 'border-border-subtle bg-bg-inset hover:border-border-strong hover:bg-bg-inset'
             )}
           >
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border-default bg-bg-raised-hover text-xl sm:h-11 sm:w-11">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border-default bg-bg-raised-hover text-lg sm:h-10 sm:w-10">
               {c.icon_url ? (
                 /* eslint-disable-next-line @next/next/no-img-element */
                 <img src={c.icon_url} alt={c.name} className="h-full w-full rounded-xl object-cover" />
@@ -656,14 +656,14 @@ function Step1Category({
 
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
-                <div className="text-base font-semibold text-text-primary">{c.name}</div>
+                <div className="text-sm font-semibold text-text-primary sm:text-base">{c.name}</div>
                 {disabled && (
                   <span className="inline-flex items-center gap-1 rounded-full border border-warning bg-warning-bg px-2 py-0.5 text-[10px] font-medium text-warning">
                     Coming soon
                   </span>
                 )}
               </div>
-              <div className="mt-0.5 text-xs text-text-tertiary">{c.description ?? ''}</div>
+              <div className="mt-0.5 truncate text-[11px] text-text-tertiary sm:text-xs">{c.description ?? ''}</div>
             </div>
 
             {/* Indicator on the right */}
@@ -1040,21 +1040,27 @@ function FieldCard({
             transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
             className="overflow-hidden"
           >
-            <div className="mt-4 space-y-2 border-l border-lime-tint-border pl-4">
-              <div className="-mt-1 mb-1 inline-flex items-center gap-1 rounded-full bg-lime-tint-bg px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-lime-text">
-                <Sparkles className="h-2.5 w-2.5" />
-                because you chose {labelFor(attribute, currentValue as string)}
+            {/* Sub-field group — a thin lime left rail signals "this group
+                depends on the parent". A tiny uppercase eyebrow above shows
+                which parent value triggered it. R10 — replaces the
+                'because you chose X' chip. */}
+            <div className="mt-4 border-l-2 border-lime-tint-border pl-4">
+              <div className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-text-tertiary">
+                <span className="text-text-secondary">{attribute.name}:</span>{' '}
+                <span className="text-lime-text">{labelFor(attribute, currentValue as string)}</span>
               </div>
-              {revealedKids.map((kid) => (
-                <FieldCard
-                  key={kid.id}
-                  attribute={kid}
-                  values={values}
-                  onChange={onChange}
-                  childrenOf={childrenOf}
-                  depth={depth + 1}
-                />
-              ))}
+              <div className="space-y-3">
+                {revealedKids.map((kid) => (
+                  <FieldCard
+                    key={kid.id}
+                    attribute={kid}
+                    values={values}
+                    onChange={onChange}
+                    childrenOf={childrenOf}
+                    depth={depth + 1}
+                  />
+                ))}
+              </div>
             </div>
           </motion.div>
         )}
@@ -1161,29 +1167,17 @@ function FieldInput({
       )}
 
       {attribute.type === 'select' && (
-        <Select
-          value={typeof v === 'string' && v ? v : undefined}
-          onValueChange={(val) => onChange(val)}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder={attribute.placeholder || 'Choose…'} />
-          </SelectTrigger>
-          <SelectContent>
-            {(attribute.options ?? []).map((o) => (
-              <SelectItem key={o.id} value={o.value}>
-                {o.icon_url ? (
-                  <span className="inline-flex items-center gap-2">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={o.icon_url} alt="" className="h-5 w-5 rounded object-cover" />
-                    {o.label}
-                  </span>
-                ) : (
-                  o.label
-                )}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <Combobox
+          value={typeof v === 'string' ? v : ''}
+          onChange={onChange}
+          placeholder={attribute.placeholder || 'Choose…'}
+          ariaLabel={attribute.name}
+          options={(attribute.options ?? []).map((o) => ({
+            value: o.value,
+            label: o.label,
+            icon_url: o.icon_url,
+          }))}
+        />
       )}
 
       {attribute.type === 'multiselect' && (
@@ -1231,8 +1225,14 @@ function FieldInput({
         </div>
       )}
 
-      {/* Helper text — minimal-hint pattern (no surface, just dim text). */}
-      {attribute.help_text && <FieldHint className="mt-1.5">{attribute.help_text}</FieldHint>}
+      {/* Helper text — minimal-hint pattern. Skipped for choice-typed fields
+          (select / multiselect / image_select / boolean) since their
+          placeholder already conveys the intent; admin-authored help_text on
+          those is usually redundant ('What Category', etc.). R10. */}
+      {attribute.help_text &&
+        !(['select', 'multiselect', 'image_select', 'boolean'] as const).includes(attribute.type as any) && (
+          <FieldHint className="mt-1.5">{attribute.help_text}</FieldHint>
+        )}
     </div>
   )
 }
