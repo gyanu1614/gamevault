@@ -1,0 +1,74 @@
+/* ============================================================
+   SHADCN COMPATIBILITY SHIM
+   Maps GameVault design tokens → shadcn/ui CSS variable names.
+   Every shadcn component (Button, Dialog, Input, etc.) inherits
+   the GameVault brand automatically via these mappings.
+   ============================================================ */
+
+:root {
+  /* Core surfaces */
+  --background:            var(--color-bg-base);
+  --foreground:            var(--color-text-primary);
+
+  /* Cards / Popovers */
+  --card:                  var(--color-bg-raised);
+  --card-foreground:       var(--color-text-primary);
+  --popover:               var(--color-bg-overlay);
+  --popover-foreground:    var(--color-text-primary);
+
+  /* Primary — lime accent */
+  --primary:               var(--color-accent-default);
+  --primary-foreground:    var(--color-text-inverse);
+
+  /* Secondary — elevated surface */
+  --secondary:             var(--color-bg-overlay-2);
+  --secondary-foreground:  var(--color-text-secondary);
+
+  /* Muted — inset/disabled surfaces */
+  --muted:                 var(--color-bg-inset);
+  --muted-foreground:      var(--color-text-tertiary);
+
+  /* Accent — same lime, different context */
+  --accent:                var(--color-accent-tint-bg);
+  --accent-foreground:     var(--color-accent-text);
+
+  /* Destructive */
+  --destructive:           var(--color-error);
+  --destructive-foreground: var(--color-text-primary);
+
+  /* Borders & Inputs */
+  --border:                var(--color-border-default);
+  --input:                 var(--color-border-default);
+
+  /* Focus ring */
+  --ring:                  var(--color-focus-ring);
+
+  /* Radius — shadcn uses a single --radius variable */
+  --radius:                var(--radius-md);
+}
+
+/* shadcn reads --background / --foreground as raw values for hsl() in some
+   components. Since we switched from hsl(vars) to direct hex vars in the
+   compat layer, override the Tailwind color aliases too so nothing breaks. */
+.dark {
+  --background:            var(--color-bg-base);
+  --foreground:            var(--color-text-primary);
+  --card:                  var(--color-bg-raised);
+  --card-foreground:       var(--color-text-primary);
+  --popover:               var(--color-bg-overlay);
+  --popover-foreground:    var(--color-text-primary);
+  --primary:               var(--color-accent-default);
+  --primary-foreground:    var(--color-text-inverse);
+  --secondary:             var(--color-bg-overlay-2);
+  --secondary-foreground:  var(--color-text-secondary);
+  --muted:                 var(--color-bg-inset);
+  --muted-foreground:      var(--color-text-tertiary);
+  --accent:                var(--color-accent-tint-bg);
+  --accent-foreground:     var(--color-accent-text);
+  --destructive:           var(--color-error);
+  --destructive-foreground: var(--color-text-primary);
+  --border:                var(--color-border-default);
+  --input:                 var(--color-border-default);
+  --ring:                  var(--color-focus-ring);
+  --radius:                var(--radius-md);
+}
