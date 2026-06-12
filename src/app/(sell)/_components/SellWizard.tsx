@@ -3,8 +3,8 @@
 /**
  * SellWizard — seller listing creator at /sell/new.
  *
- * Visual: matches the homepage (violet → purple → cyan gradient accents,
- * glass cards, same Navbar component on top via layout-wrapper).
+ * Visual: matches the homepage (GV design tokens — lime accent on dark
+ * elevation surfaces, same Navbar component on top via layout-wrapper).
  * The wizard adds a slim sticky step bar beneath the navbar.
  *
  * 4 steps:
@@ -108,8 +108,8 @@ function buildChildIndex(attrs: Attribute[]) {
 /**
  * StepBar — horizontal progress bar with 25% / 50% / 75% / 100% fill
  * across the 4 wizard steps. Step labels sit above the rail with the
- * active label gradient-highlighted; the rail fills with a violet→cyan
- * gradient and animates between steps.
+ * active label gradient-highlighted; the rail fills with solid lime
+ * and animates between steps.
  */
 function StepBar({ step }: { step: number }) {
   const pct = (step / STEPS.length) * 100
@@ -136,10 +136,10 @@ function StepBar({ step }: { step: number }) {
                 className={cn(
                   'flex h-4 w-4 shrink-0 items-center justify-center rounded-full border text-[8px] font-semibold transition-colors',
                   done
-                    ? 'border-emerald-500/40 bg-emerald-500/15 text-emerald-300'
+                    ? 'border-success/40 bg-success-bg text-success'
                     : active
-                      ? 'border-violet-500/60 bg-violet-500/20 text-violet-100'
-                      : 'border-white/10 text-gray-500'
+                      ? 'border-lime bg-lime-tint-bg text-lime-text'
+                      : 'border-border-default text-text-tertiary'
                 )}
               >
                 {done ? <Check className="h-2 w-2" /> : s.id}
@@ -148,8 +148,8 @@ function StepBar({ step }: { step: number }) {
                 className={cn(
                   'truncate font-medium uppercase tracking-wider',
                   active
-                    ? 'bg-gradient-to-r from-violet-300 via-purple-300 to-cyan-300 bg-clip-text text-transparent'
-                    : done ? 'text-emerald-300/80' : 'text-gray-600'
+                    ? 'text-lime-text'
+                    : done ? 'text-success/80' : 'text-text-disabled'
                 )}
               >
                 {s.label}
@@ -160,9 +160,9 @@ function StepBar({ step }: { step: number }) {
       </ol>
 
       {/* Rail */}
-      <div className="relative h-1.5 w-full overflow-hidden rounded-full bg-white/[0.05]">
+      <div className="relative h-1.5 w-full overflow-hidden rounded-full bg-bg-raised-hover">
         <motion.div
-          className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-violet-500 via-purple-500 to-cyan-400 shadow-[0_0_18px_-3px_rgba(168,85,247,0.6)]"
+          className="absolute inset-y-0 left-0 rounded-full bg-lime shadow-[0_0_18px_-3px_rgba(198,255,61,0.55)]"
           initial={false}
           animate={{ width: `${pct}%` }}
           transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
@@ -381,8 +381,8 @@ export default function SellWizard({ initialCategories }: { initialCategories: G
           reads as an elevated section, not a hard modal. */}
       <section
         className={cn(
-          'relative isolate overflow-visible rounded-3xl border border-white/[0.08]',
-          'bg-gradient-to-b from-white/[0.04] to-white/[0.015]',
+          'relative isolate overflow-visible rounded-3xl border border-border-default',
+          'bg-bg-raised',
           'p-4 shadow-[0_30px_80px_-30px_rgba(0,0,0,0.8)] backdrop-blur-xl',
           'sm:p-6 lg:p-8',
         )}
@@ -390,13 +390,13 @@ export default function SellWizard({ initialCategories }: { initialCategories: G
         {/* Outer glow ring */}
         <div
           aria-hidden
-          className="pointer-events-none absolute -inset-px -z-10 rounded-3xl bg-gradient-to-br from-violet-500/[0.08] via-transparent to-cyan-500/[0.05]"
+          className="pointer-events-none absolute -inset-px -z-10 rounded-3xl bg-lime-tint-bg"
         />
 
         <StepBar step={step} />
 
         <div className="mb-5 sm:mb-6">
-          <h1 className="bg-gradient-to-r from-white via-violet-100 to-cyan-100 bg-clip-text text-xl font-semibold tracking-tight text-transparent sm:text-2xl lg:text-3xl">
+          <h1 className="text-xl font-semibold tracking-tight text-text-primary sm:text-2xl lg:text-3xl">
             {STEPS[step - 1].hint}
           </h1>
         </div>
@@ -471,7 +471,7 @@ export default function SellWizard({ initialCategories }: { initialCategories: G
             type="button"
             onClick={() => setStep((s) => Math.max(1, s - 1))}
             disabled={submitting}
-            className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.04] px-3 text-sm font-medium text-gray-200 transition-colors hover:bg-white/[0.08] disabled:opacity-40 sm:px-4"
+            className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-border-default bg-bg-raised px-3 text-sm font-medium text-text-primary transition-colors hover:bg-bg-raised-hover disabled:opacity-40 sm:px-4"
           >
             <ChevronLeft className="h-4 w-4" />
             Back
@@ -489,8 +489,8 @@ export default function SellWizard({ initialCategories }: { initialCategories: G
             className={cn(
               'inline-flex h-10 items-center gap-1.5 rounded-xl px-4 text-sm font-semibold transition-all sm:px-5',
               canGoNext
-                ? 'bg-violet-500 text-white shadow-lg shadow-violet-500/30 hover:bg-violet-400 hover:shadow-violet-500/40'
-                : 'cursor-not-allowed bg-white/[0.04] text-gray-600'
+                ? 'bg-lime text-text-inverse shadow-lg shadow-lime/30 hover:bg-lime-hover hover:shadow-lime/40'
+                : 'cursor-not-allowed bg-bg-raised text-text-disabled'
             )}
           >
             Continue
@@ -502,7 +502,7 @@ export default function SellWizard({ initialCategories }: { initialCategories: G
               type="button"
               onClick={() => handlePublish(true)}
               disabled={submitting}
-              className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.04] px-3 text-sm font-medium text-gray-200 transition-colors hover:bg-white/[0.08] disabled:opacity-40"
+              className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-border-default bg-bg-raised px-3 text-sm font-medium text-text-primary transition-colors hover:bg-bg-raised-hover disabled:opacity-40"
             >
               {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
               Save draft
@@ -514,8 +514,8 @@ export default function SellWizard({ initialCategories }: { initialCategories: G
               className={cn(
                 'inline-flex h-10 items-center gap-1.5 rounded-xl px-4 text-sm font-semibold transition-all sm:px-5',
                 canPublish && !submitting
-                  ? 'bg-gradient-to-r from-violet-500 via-purple-500 to-cyan-500 text-white shadow-lg shadow-violet-500/30 hover:shadow-violet-500/40'
-                  : 'cursor-not-allowed bg-white/[0.04] text-gray-600'
+                  ? 'bg-lime text-text-inverse shadow-lg shadow-lime/30 hover:bg-lime-hover hover:shadow-lime/40'
+                  : 'cursor-not-allowed bg-bg-raised text-text-disabled'
               )}
             >
               {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
@@ -557,11 +557,11 @@ function Step1Category({
               'group relative flex w-full items-center gap-4 rounded-2xl border p-4 text-left transition-all sm:p-5',
               disabled && 'cursor-not-allowed opacity-50',
               active
-                ? 'border-violet-500/60 bg-gradient-to-r from-violet-500/15 via-purple-500/8 to-cyan-500/5 shadow-[0_0_0_3px_rgba(168,85,247,0.15)]'
-                : 'border-white/[0.06] bg-black/30 hover:border-white/15 hover:bg-black/40'
+                ? 'border-lime bg-lime-tint-bg shadow-[0_0_0_3px_rgba(198,255,61,0.18)]'
+                : 'border-border-subtle bg-bg-inset hover:border-border-strong hover:bg-bg-inset'
             )}
           >
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.06] text-2xl">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-border-default bg-bg-raised-hover text-2xl">
               {c.icon_url ? (
                 /* eslint-disable-next-line @next/next/no-img-element */
                 <img src={c.icon_url} alt={c.name} className="h-full w-full rounded-xl object-cover" />
@@ -572,28 +572,28 @@ function Step1Category({
 
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
-                <div className="text-base font-semibold text-white">{c.name}</div>
+                <div className="text-base font-semibold text-text-primary">{c.name}</div>
                 {disabled && (
-                  <span className="inline-flex items-center gap-1 rounded-full border border-amber-500/30 bg-amber-500/[0.08] px-2 py-0.5 text-[10px] font-medium text-amber-300">
+                  <span className="inline-flex items-center gap-1 rounded-full border border-warning/40 bg-warning-bg px-2 py-0.5 text-[10px] font-medium text-warning">
                     Coming soon
                   </span>
                 )}
               </div>
-              <div className="mt-0.5 text-xs text-gray-500">{c.description ?? ''}</div>
+              <div className="mt-0.5 text-xs text-text-tertiary">{c.description ?? ''}</div>
             </div>
 
             {/* Indicator on the right */}
             <div className="shrink-0">
               {active ? (
-                <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-cyan-500 text-white shadow-lg shadow-violet-500/40">
+                <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-lime text-text-inverse shadow-lg shadow-lime/40">
                   <Check className="h-3.5 w-3.5" />
                 </span>
               ) : (
                 <span
                   aria-hidden
                   className={cn(
-                    'inline-flex h-7 w-7 items-center justify-center rounded-full border text-gray-500 transition-colors',
-                    disabled ? 'border-white/[0.04]' : 'border-white/10 group-hover:border-white/20 group-hover:text-white'
+                    'inline-flex h-7 w-7 items-center justify-center rounded-full border text-text-tertiary transition-colors',
+                    disabled ? 'border-border-subtle' : 'border-border-default group-hover:border-border-strong group-hover:text-text-primary'
                   )}
                 >
                   <ArrowRight className="h-3.5 w-3.5" />
@@ -653,18 +653,18 @@ function Step2Game({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] px-3 backdrop-blur-sm">
-        <Search className="h-4 w-4 text-gray-500" />
+      <div className="flex items-center gap-2 rounded-2xl border border-border-default bg-bg-raised px-3 backdrop-blur-sm">
+        <Search className="h-4 w-4 text-text-tertiary" />
         <input
           value={filter}
           onChange={(e) => onFilter(e.target.value)}
           placeholder={`Search games that sell ${category.name.toLowerCase()}…`}
-          className="h-11 flex-1 bg-transparent text-sm text-white placeholder:text-gray-500 focus:outline-none"
+          className="h-11 flex-1 bg-transparent text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none"
         />
       </div>
 
       {/* Popular / Recent tabs */}
-      <div className="flex items-center gap-1 rounded-xl border border-white/10 bg-white/[0.02] p-1">
+      <div className="flex items-center gap-1 rounded-xl border border-border-default bg-bg-base p-1">
         <SortTab active={sortMode === 'popular'} onClick={() => onSortMode('popular')} icon={Flame} label="Popular" />
         <SortTab
           active={sortMode === 'recent'}
@@ -677,12 +677,12 @@ function Step2Game({
       </div>
 
       {loading ? (
-        <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-10 text-center text-sm text-gray-500">
-          <Loader2 className="mx-auto mb-2 h-5 w-5 animate-spin text-violet-300" />
+        <div className="rounded-2xl border border-border-subtle bg-bg-base p-10 text-center text-sm text-text-tertiary">
+          <Loader2 className="mx-auto mb-2 h-5 w-5 animate-spin text-lime-text" />
           Loading games…
         </div>
       ) : ordered.length === 0 ? (
-        <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-10 text-center text-sm text-gray-500">
+        <div className="rounded-2xl border border-border-subtle bg-bg-base p-10 text-center text-sm text-text-tertiary">
           {games.length === 0
             ? `No games have ${category.name} enabled yet. An admin needs to enable it.`
             : `No games match "${filter}".`}
@@ -704,8 +704,8 @@ function Step2Game({
                 className={cn(
                   'group relative overflow-hidden rounded-2xl border text-left transition-all',
                   active
-                    ? 'border-violet-500/60 shadow-[0_0_0_3px_rgba(168,85,247,0.15)]'
-                    : 'border-white/10 hover:border-white/20 hover:bg-white/[0.02]'
+                    ? 'border-lime shadow-[0_0_0_3px_rgba(168,85,247,0.15)]'
+                    : 'border-border-default hover:border-border-strong hover:bg-bg-base'
                 )}
               >
                 {hasCover ? (
@@ -716,14 +716,14 @@ function Step2Game({
                       <img src={g.game_cover_url!} alt={g.game_name} className="h-full w-full object-cover" />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent" />
                       <div className="absolute bottom-2 left-2.5 right-2.5">
-                        <div className="truncate text-sm font-semibold text-white">{g.game_name}</div>
+                        <div className="truncate text-sm font-semibold text-text-primary">{g.game_name}</div>
                       </div>
                     </div>
                   </>
                 ) : (
                   // Logo-only games: big logo on a soft gradient, name below
                   <div className="flex flex-col">
-                    <div className="relative flex aspect-square w-full items-center justify-center overflow-hidden bg-gradient-to-br from-violet-500/[0.12] via-purple-500/[0.06] to-cyan-500/[0.05]">
+                    <div className="relative flex aspect-square w-full items-center justify-center overflow-hidden bg-lime-tint-bg">
                       {/* subtle glow behind the logo */}
                       <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(168,85,247,0.18),transparent_60%)]" />
                       {g.game_logo_url ? (
@@ -737,13 +737,13 @@ function Step2Game({
                         <div className="relative text-5xl">{g.game_emoji ?? '🎮'}</div>
                       )}
                     </div>
-                    <div className="border-t border-white/[0.06] bg-black/30 px-3 py-2">
-                      <div className="truncate text-sm font-semibold text-white">{g.game_name}</div>
+                    <div className="border-t border-border-subtle bg-bg-inset px-3 py-2">
+                      <div className="truncate text-sm font-semibold text-text-primary">{g.game_name}</div>
                     </div>
                   </div>
                 )}
                 {active && (
-                  <span className="absolute right-2 top-2 inline-flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-cyan-500 text-white shadow-lg shadow-violet-500/40">
+                  <span className="absolute right-2 top-2 inline-flex h-6 w-6 items-center justify-center rounded-full bg-lime text-text-inverse shadow-lg shadow-lime/40">
                     <Check className="h-3.5 w-3.5" />
                   </span>
                 )}
@@ -754,8 +754,8 @@ function Step2Game({
       )}
 
       {selected?.requires_region && selected.available_regions.length > 0 && (
-        <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
-          <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-400">Region</div>
+        <div className="rounded-2xl border border-border-default bg-bg-raised p-4">
+          <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-text-secondary">Region</div>
           <PillRow
             options={selected.available_regions.map((r) => ({ value: r.code, label: r.name }))}
             value={region}
@@ -765,8 +765,8 @@ function Step2Game({
       )}
 
       {selected?.requires_platform && selected.available_platforms.length > 0 && (
-        <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
-          <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-400">Platform</div>
+        <div className="rounded-2xl border border-border-default bg-bg-raised p-4">
+          <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-text-secondary">Platform</div>
           <PillRow
             options={selected.available_platforms.map((p) => ({ value: p, label: p }))}
             value={platform}
@@ -797,9 +797,9 @@ function SortTab({
       className={cn(
         'inline-flex h-8 items-center gap-1.5 rounded-lg px-3 text-xs font-semibold transition-colors',
         active
-          ? 'bg-violet-500/15 text-violet-100'
-          : 'text-gray-400 hover:text-white',
-        disabled && 'cursor-not-allowed opacity-40 hover:text-gray-400'
+          ? 'bg-lime-tint-bg text-lime-text'
+          : 'text-text-secondary hover:text-text-primary',
+        disabled && 'cursor-not-allowed opacity-40 hover:text-text-secondary'
       )}
     >
       <Icon className="h-3.5 w-3.5" />
@@ -827,8 +827,8 @@ function PillRow<T extends { value: string; label: string }>({
             className={cn(
               'h-8 rounded-full border px-3 text-xs font-medium transition-colors',
               on
-                ? 'border-violet-500/40 bg-violet-500/15 text-violet-100'
-                : 'border-white/10 bg-white/[0.04] text-gray-300 hover:text-white'
+                ? 'border-lime-tint-border bg-lime-tint-bg text-lime-text'
+                : 'border-border-default bg-bg-raised text-text-secondary hover:text-text-primary'
             )}
           >
             {o.label}
@@ -853,8 +853,8 @@ function Step3Details({
 }) {
   if (templateLoading) {
     return (
-      <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-10 text-center text-sm text-gray-500">
-        <Loader2 className="mx-auto mb-2 h-5 w-5 animate-spin text-violet-300" />
+      <div className="rounded-2xl border border-border-subtle bg-bg-base p-10 text-center text-sm text-text-tertiary">
+        <Loader2 className="mx-auto mb-2 h-5 w-5 animate-spin text-lime-text" />
         Loading details…
       </div>
     )
@@ -862,12 +862,12 @@ function Step3Details({
 
   if (!template || topLevel.length === 0) {
     return (
-      <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+      <div className="rounded-2xl border border-border-default bg-bg-raised p-5">
         <div className="flex items-start gap-3">
-          <AlertCircle className="mt-0.5 h-5 w-5 text-amber-400" />
+          <AlertCircle className="mt-0.5 h-5 w-5 text-warning" />
           <div>
-            <div className="text-sm font-semibold text-white">No extra details needed</div>
-            <p className="mt-1 text-xs text-gray-400">
+            <div className="text-sm font-semibold text-text-primary">No extra details needed</div>
+            <p className="mt-1 text-xs text-text-secondary">
               An admin hasn’t set up extra fields for this game and category yet.
               You can still publish — continue to the next step.
             </p>
@@ -917,8 +917,8 @@ function FieldCard({
 
   // Top-level fields get a glass card; nested ones get just a separator
   const shell = depth === 0
-    ? 'rounded-2xl border border-white/10 bg-white/[0.03] p-5 backdrop-blur-sm'
-    : 'rounded-xl border border-white/[0.06] bg-white/[0.02] p-4'
+    ? 'rounded-2xl border border-border-default bg-bg-raised p-5 backdrop-blur-sm'
+    : 'rounded-xl border border-border-subtle bg-bg-base p-4'
 
   return (
     <motion.div
@@ -964,8 +964,8 @@ function FieldCard({
             transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
             className="overflow-hidden"
           >
-            <div className="mt-4 space-y-2 border-l border-violet-500/30 pl-4">
-              <div className="-mt-1 mb-1 inline-flex items-center gap-1 rounded-full bg-violet-500/[0.08] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-violet-300">
+            <div className="mt-4 space-y-2 border-l border-lime-tint-border pl-4">
+              <div className="-mt-1 mb-1 inline-flex items-center gap-1 rounded-full bg-lime-tint-bg px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-lime-text">
                 <Sparkles className="h-2.5 w-2.5" />
                 because you chose {labelFor(attribute, currentValue as string)}
               </div>
@@ -1022,12 +1022,12 @@ function FieldInput({
   return (
     <div>
       <label className="mb-2 block">
-        <span className="text-sm font-semibold text-white">
+        <span className="text-sm font-semibold text-text-primary">
           {attribute.name}
-          {attribute.is_required && <span className="ml-1 text-rose-400">*</span>}
+          {attribute.is_required && <span className="ml-1 text-error">*</span>}
         </span>
         {attribute.help_text && (
-          <span className="ml-2 text-xs text-gray-500">{attribute.help_text}</span>
+          <span className="ml-2 text-xs text-text-tertiary">{attribute.help_text}</span>
         )}
       </label>
 
@@ -1076,8 +1076,8 @@ function FieldInput({
                 className={cn(
                   'h-10 flex-1 rounded-xl border text-sm font-medium transition-colors',
                   on
-                    ? 'border-violet-500/40 bg-violet-500/15 text-violet-100'
-                    : 'border-white/10 bg-white/[0.04] text-gray-300 hover:text-white'
+                    ? 'border-lime-tint-border bg-lime-tint-bg text-lime-text'
+                    : 'border-border-default bg-bg-raised text-text-secondary hover:text-text-primary'
                 )}
               >
                 {opt === 'true' ? 'Yes' : 'No'}
@@ -1111,7 +1111,7 @@ function FieldInput({
       {attribute.type === 'image_select' && (
         <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
           {(attribute.options ?? []).length === 0 ? (
-            <p className="col-span-full text-xs text-gray-500">No choices yet.</p>
+            <p className="col-span-full text-xs text-text-tertiary">No choices yet.</p>
           ) : attribute.options!.map((o) => {
             const on = v === o.value
             return (
@@ -1122,19 +1122,19 @@ function FieldInput({
                 className={cn(
                   'flex flex-col items-center gap-1 rounded-xl border p-2 transition-colors',
                   on
-                    ? 'border-violet-500/60 bg-violet-500/[0.08]'
-                    : 'border-white/10 bg-white/[0.03] hover:bg-white/[0.06]'
+                    ? 'border-lime bg-lime-tint-bg'
+                    : 'border-border-default bg-bg-raised hover:bg-bg-raised-hover'
                 )}
               >
-                <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-lg bg-white/[0.05]">
+                <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-lg bg-bg-raised-hover">
                   {o.icon_url ? (
                     /* eslint-disable-next-line @next/next/no-img-element */
                     <img src={o.icon_url} alt="" className="h-full w-full object-cover" />
                   ) : (
-                    <ImageIcon className="h-5 w-5 text-gray-600" />
+                    <ImageIcon className="h-5 w-5 text-text-disabled" />
                   )}
                 </div>
-                <span className="line-clamp-1 text-[11px] text-gray-200">{o.label}</span>
+                <span className="line-clamp-1 text-[11px] text-text-primary">{o.label}</span>
               </button>
             )
           })}
@@ -1184,16 +1184,16 @@ function Dropdown({
         type="button"
         onClick={() => setOpen((v) => !v)}
         className={cn(
-          'flex h-10 w-full items-center justify-between rounded-xl border bg-white/[0.04] px-3 text-left text-sm transition-colors',
+          'flex h-10 w-full items-center justify-between rounded-xl border bg-bg-raised px-3 text-left text-sm transition-colors',
           open
-            ? 'border-violet-500/50 ring-2 ring-violet-500/15'
-            : 'border-white/10 hover:border-white/20'
+            ? 'border-lime ring-2 ring-lime-tint-bg'
+            : 'border-border-default hover:border-border-strong'
         )}
       >
-        <span className={cn('truncate', selected ? 'text-white' : 'text-gray-500')}>
+        <span className={cn('truncate', selected ? 'text-text-primary' : 'text-text-tertiary')}>
           {selected?.label ?? placeholder}
         </span>
-        <ChevronDown className={cn('h-4 w-4 text-gray-500 transition-transform', open && 'rotate-180')} />
+        <ChevronDown className={cn('h-4 w-4 text-text-tertiary transition-transform', open && 'rotate-180')} />
       </button>
 
       <AnimatePresence>
@@ -1203,23 +1203,23 @@ function Dropdown({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -4 }}
             transition={{ duration: 0.14 }}
-            className="absolute z-50 mt-1.5 w-full overflow-hidden rounded-xl border border-white/10 bg-[#0c0c12]/95 shadow-2xl backdrop-blur-xl"
+            className="absolute z-50 mt-1.5 w-full overflow-hidden rounded-xl border border-border-default bg-[#0c0c12]/95 shadow-2xl backdrop-blur-xl"
           >
             {searchable && (
-              <div className="flex items-center gap-2 border-b border-white/[0.06] px-3 py-2">
-                <Search className="h-3.5 w-3.5 text-gray-500" />
+              <div className="flex items-center gap-2 border-b border-border-subtle px-3 py-2">
+                <Search className="h-3.5 w-3.5 text-text-tertiary" />
                 <input
                   value={filter}
                   onChange={(e) => setFilter(e.target.value)}
                   placeholder="Search…"
                   autoFocus
-                  className="h-7 flex-1 bg-transparent text-sm text-white placeholder:text-gray-500 focus:outline-none"
+                  className="h-7 flex-1 bg-transparent text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none"
                 />
               </div>
             )}
             <ul className="max-h-72 overflow-y-auto py-1">
               {filtered.length === 0 ? (
-                <li className="px-3 py-2 text-xs text-gray-500">No matches.</li>
+                <li className="px-3 py-2 text-xs text-text-tertiary">No matches.</li>
               ) : filtered.map((o) => {
                 const on = o.value === value
                 return (
@@ -1230,8 +1230,8 @@ function Dropdown({
                       className={cn(
                         'flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors',
                         on
-                          ? 'bg-violet-500/15 text-white'
-                          : 'text-gray-200 hover:bg-white/[0.05]'
+                          ? 'bg-lime-tint-bg text-text-primary'
+                          : 'text-text-primary hover:bg-bg-raised-hover'
                       )}
                     >
                       {o.icon_url && (
@@ -1239,7 +1239,7 @@ function Dropdown({
                         <img src={o.icon_url} alt="" className="h-5 w-5 rounded object-cover" />
                       )}
                       <span className="flex-1 truncate">{o.label}</span>
-                      {on && <Check className="h-3.5 w-3.5 text-violet-300" />}
+                      {on && <Check className="h-3.5 w-3.5 text-lime-text" />}
                     </button>
                   </li>
                 )
@@ -1280,8 +1280,8 @@ function Step4Publish(p: Step4Props) {
   return (
     <div className="space-y-4">
       {/* Title + description */}
-      <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
-        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-gray-400">Title</label>
+      <div className="rounded-2xl border border-border-default bg-bg-raised p-5">
+        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-text-secondary">Title</label>
         <input
           value={p.title}
           onChange={(e) => p.setTitle(e.target.value)}
@@ -1289,14 +1289,14 @@ function Step4Publish(p: Step4Props) {
           maxLength={100}
           className={inputCls}
         />
-        <div className="mt-1 flex justify-between text-[10px] text-gray-500">
-          <span className={p.title.length >= 5 ? 'text-emerald-400' : ''}>
+        <div className="mt-1 flex justify-between text-[10px] text-text-tertiary">
+          <span className={p.title.length >= 5 ? 'text-success' : ''}>
             {p.title.length >= 5 ? '✓ Good length' : `${5 - p.title.length} more chars needed`}
           </span>
           <span>{p.title.length}/100</span>
         </div>
 
-        <label className="mb-1.5 mt-4 block text-xs font-semibold uppercase tracking-wider text-gray-400">Description</label>
+        <label className="mb-1.5 mt-4 block text-xs font-semibold uppercase tracking-wider text-text-secondary">Description</label>
         <textarea
           value={p.description}
           onChange={(e) => p.setDescription(e.target.value)}
@@ -1308,40 +1308,40 @@ function Step4Publish(p: Step4Props) {
       </div>
 
       {/* Images */}
-      <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+      <div className="rounded-2xl border border-border-default bg-bg-raised p-5">
         <div className="mb-2 flex items-center justify-between">
-          <div className="text-xs font-semibold uppercase tracking-wider text-gray-400">
-            Photos <span className="text-rose-400">*</span>
+          <div className="text-xs font-semibold uppercase tracking-wider text-text-secondary">
+            Photos <span className="text-error">*</span>
           </div>
-          <span className="text-[10px] text-gray-500">{p.images.length}/5</span>
+          <span className="text-[10px] text-text-tertiary">{p.images.length}/5</span>
         </div>
         <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
           {p.images.map((src, i) => (
-            <div key={i} className="group relative aspect-square overflow-hidden rounded-xl border border-white/10">
+            <div key={i} className="group relative aspect-square overflow-hidden rounded-xl border border-border-default">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={src} alt="" className="h-full w-full object-cover" />
               <button
                 type="button"
                 onClick={() => p.onRemoveImage(i)}
-                className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-rose-500 text-white opacity-0 transition-opacity group-hover:opacity-100"
+                className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-error text-text-primary opacity-0 transition-opacity group-hover:opacity-100"
               >
                 <IconX className="h-3 w-3" />
               </button>
               {i === 0 && (
-                <span className="absolute bottom-1.5 left-1.5 rounded-full bg-violet-500 px-1.5 py-0.5 text-[9px] font-bold text-white">
+                <span className="absolute bottom-1.5 left-1.5 rounded-full bg-lime px-1.5 py-0.5 text-[9px] font-bold text-text-primary">
                   Main
                 </span>
               )}
             </div>
           ))}
           {p.images.length < 5 && (
-            <label className="flex aspect-square cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-white/15 bg-white/[0.02] hover:border-violet-500/40 hover:bg-violet-500/[0.05]">
+            <label className="flex aspect-square cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-white/15 bg-bg-base hover:border-lime-tint-border hover:bg-lime-tint-bg">
               {p.imageUploading ? (
-                <Loader2 className="h-5 w-5 animate-spin text-violet-300" />
+                <Loader2 className="h-5 w-5 animate-spin text-lime-text" />
               ) : (
                 <>
-                  <Upload className="h-5 w-5 text-gray-500" />
-                  <span className="text-[10px] text-gray-500">Upload</span>
+                  <Upload className="h-5 w-5 text-text-tertiary" />
+                  <span className="text-[10px] text-text-tertiary">Upload</span>
                 </>
               )}
               <input
@@ -1358,14 +1358,14 @@ function Step4Publish(p: Step4Props) {
       </div>
 
       {/* Pricing */}
-      <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+      <div className="rounded-2xl border border-border-default bg-bg-raised p-5">
         <div className="grid gap-3 sm:grid-cols-2">
           <div>
-            <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-gray-400">
-              Your price <span className="text-rose-400">*</span>
+            <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-text-secondary">
+              Your price <span className="text-error">*</span>
             </label>
             <div className="relative">
-              <DollarSign className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
+              <DollarSign className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary" />
               <input
                 type="number"
                 value={p.price}
@@ -1378,11 +1378,11 @@ function Step4Publish(p: Step4Props) {
             </div>
           </div>
           <div>
-            <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-gray-400">
-              Original price <span className="text-gray-600">(optional)</span>
+            <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-text-secondary">
+              Original price <span className="text-text-disabled">(optional)</span>
             </label>
             <div className="relative">
-              <DollarSign className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
+              <DollarSign className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary" />
               <input
                 type="number"
                 value={p.originalPrice}
@@ -1394,21 +1394,21 @@ function Step4Publish(p: Step4Props) {
               />
             </div>
             {discount > 0 && (
-              <div className="mt-1 text-[10px] text-emerald-400">{discount}% discount badge will show</div>
+              <div className="mt-1 text-[10px] text-success">{discount}% discount badge will show</div>
             )}
           </div>
         </div>
 
         {youReceive && (
-          <div className="mt-4 rounded-xl border border-white/[0.06] bg-gradient-to-br from-violet-500/[0.05] via-purple-500/[0.03] to-transparent p-3 text-xs">
-            <div className="mb-1.5 font-semibold uppercase tracking-wider text-gray-500">Fee breakdown</div>
-            <div className="space-y-1 text-gray-400">
-              <div className="flex justify-between"><span>Listing price</span><span className="text-white">${priceNum.toFixed(2)}</span></div>
-              <div className="flex justify-between"><span>Platform fee (6.9%)</span><span className="text-rose-300">−${(priceNum * 0.069).toFixed(2)}</span></div>
-              <div className="flex justify-between"><span>Payment processing (3.5%)</span><span className="text-rose-300">−${(priceNum * 0.035).toFixed(2)}</span></div>
-              <div className="mt-1.5 flex justify-between border-t border-white/[0.06] pt-1.5 font-semibold">
-                <span className="text-white">You receive</span>
-                <span className="bg-gradient-to-r from-violet-300 to-cyan-300 bg-clip-text text-transparent">
+          <div className="mt-4 rounded-xl border border-border-subtle bg-lime-tint-bg p-3 text-xs">
+            <div className="mb-1.5 font-semibold uppercase tracking-wider text-text-tertiary">Fee breakdown</div>
+            <div className="space-y-1 text-text-secondary">
+              <div className="flex justify-between"><span>Listing price</span><span className="text-text-primary">${priceNum.toFixed(2)}</span></div>
+              <div className="flex justify-between"><span>Platform fee (6.9%)</span><span className="text-error">−${(priceNum * 0.069).toFixed(2)}</span></div>
+              <div className="flex justify-between"><span>Payment processing (3.5%)</span><span className="text-error">−${(priceNum * 0.035).toFixed(2)}</span></div>
+              <div className="mt-1.5 flex justify-between border-t border-border-subtle pt-1.5 font-semibold">
+                <span className="text-text-primary">You receive</span>
+                <span className="text-lime-text">
                   ${youReceive}
                 </span>
               </div>
@@ -1418,10 +1418,10 @@ function Step4Publish(p: Step4Props) {
       </div>
 
       {/* Stock + delivery */}
-      <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+      <div className="rounded-2xl border border-border-default bg-bg-raised p-5">
         <div className="grid gap-3 sm:grid-cols-2">
           <div>
-            <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-gray-400">
+            <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-text-secondary">
               <Package className="mr-1 inline h-3.5 w-3.5" /> Stock
             </label>
             <input
@@ -1433,7 +1433,7 @@ function Step4Publish(p: Step4Props) {
             />
           </div>
           <div>
-            <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-gray-400">
+            <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-text-secondary">
               Min order qty
             </label>
             <input
@@ -1447,7 +1447,7 @@ function Step4Publish(p: Step4Props) {
         </div>
 
         <div className="mt-4">
-          <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-gray-400">Delivery method</label>
+          <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-text-secondary">Delivery method</label>
           <div className="grid gap-2 sm:grid-cols-2">
             {(['manual', 'instant'] as const).map((m) => {
               const allowed = p.allowedDeliveryModes.includes(m)
@@ -1463,16 +1463,16 @@ function Step4Publish(p: Step4Props) {
                     'flex items-start gap-2 rounded-xl border p-3 text-left transition-colors',
                     !allowed && 'cursor-not-allowed opacity-40',
                     on && allowed
-                      ? 'border-violet-500/60 bg-violet-500/[0.08]'
-                      : 'border-white/10 bg-white/[0.03] hover:bg-white/[0.06]'
+                      ? 'border-lime bg-lime-tint-bg'
+                      : 'border-border-default bg-bg-raised hover:bg-bg-raised-hover'
                   )}
                 >
-                  <Icon className={cn('h-4 w-4 shrink-0', on ? 'text-violet-300' : 'text-gray-500')} />
+                  <Icon className={cn('h-4 w-4 shrink-0', on ? 'text-lime-text' : 'text-text-tertiary')} />
                   <div>
-                    <div className="text-sm font-semibold text-white">
+                    <div className="text-sm font-semibold text-text-primary">
                       {m === 'manual' ? 'Manual delivery' : 'Instant delivery'}
                     </div>
-                    <div className="text-[11px] text-gray-500">
+                    <div className="text-[11px] text-text-tertiary">
                       {m === 'manual' ? 'You deliver within your chosen time window.' : 'Codes/credentials sent automatically.'}
                     </div>
                   </div>
@@ -1484,7 +1484,7 @@ function Step4Publish(p: Step4Props) {
 
         {p.deliveryMethod === 'manual' && (
           <div className="mt-4">
-            <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-gray-400">Delivery window</label>
+            <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-text-secondary">Delivery window</label>
             <PillRow
               options={DELIVERY_TIMES.map((t) => ({ value: t.value, label: t.label }))}
               value={p.deliveryTime}
@@ -1500,4 +1500,4 @@ function Step4Publish(p: Step4Props) {
 // ─── Shared input styles ─────────────────────────────────────────────────────
 
 const inputCls =
-  'h-10 w-full rounded-xl border border-white/10 bg-white/[0.04] px-3 text-sm text-white placeholder:text-gray-500 focus:border-violet-500/50 focus:outline-none focus:ring-2 focus:ring-violet-500/15 transition-colors'
+  'h-10 w-full rounded-xl border border-border-default bg-bg-raised px-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-lime focus:outline-none focus:ring-2 focus:ring-lime-tint-bg transition-colors'
