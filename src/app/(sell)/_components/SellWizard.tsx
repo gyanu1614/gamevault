@@ -772,7 +772,8 @@ function Step2Game({
             : `No games match "${filter}".`}
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+        // R11.b — denser game grid: up to 8 tiles per row on xl screens.
+        <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8">
           {ordered.map((g, i) => {
             const active = selected?.game_id === g.game_id
             const hasCover = !!g.game_cover_url
@@ -786,49 +787,46 @@ function Step2Game({
                 transition={{ duration: 0.18, delay: Math.min(i * 0.02, 0.3) }}
                 whileHover={{ y: -2 }}
                 className={cn(
-                  'group relative overflow-hidden rounded-2xl border text-left transition-all',
+                  'group relative overflow-hidden rounded-xl border text-left transition-all',
                   active
-                    ? 'border-lime shadow-[0_0_0_3px_rgba(168,85,247,0.15)]'
+                    ? 'border-lime shadow-[0_0_0_2px_rgba(198,255,61,0.18)]'
                     : 'border-border-default hover:border-border-strong hover:bg-bg-base'
                 )}
               >
                 {hasCover ? (
                   // Cover-art games: full-bleed image, name overlaid
-                  <>
-                    <div className="relative aspect-[4/3] w-full overflow-hidden">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={g.game_cover_url!} alt={g.game_name} className="h-full w-full object-cover" />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent" />
-                      <div className="absolute bottom-2 left-2.5 right-2.5">
-                        <div className="truncate text-sm font-semibold text-text-primary">{g.game_name}</div>
-                      </div>
+                  <div className="relative aspect-square w-full overflow-hidden">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={g.game_cover_url!} alt={g.game_name} className="h-full w-full object-cover" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent" />
+                    <div className="absolute bottom-1.5 left-2 right-2">
+                      <div className="truncate text-xs font-semibold text-text-primary">{g.game_name}</div>
                     </div>
-                  </>
+                  </div>
                 ) : (
-                  // Logo-only games: big logo on a soft gradient, name below
+                  // Logo-only games: logo on a soft tint, name strip below
                   <div className="flex flex-col">
                     <div className="relative flex aspect-square w-full items-center justify-center overflow-hidden bg-lime-tint-bg">
-                      {/* subtle glow behind the logo */}
-                      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(168,85,247,0.18),transparent_60%)]" />
+                      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(198,255,61,0.12),transparent_60%)]" />
                       {g.game_logo_url ? (
                         /* eslint-disable-next-line @next/next/no-img-element */
                         <img
                           src={g.game_logo_url}
                           alt={g.game_name}
-                          className="relative h-3/4 w-3/4 object-contain drop-shadow-[0_4px_24px_rgba(0,0,0,0.5)]"
+                          className="relative h-3/4 w-3/4 object-contain drop-shadow-[0_2px_12px_rgba(0,0,0,0.5)]"
                         />
                       ) : (
-                        <div className="relative text-5xl">{g.game_emoji ?? '🎮'}</div>
+                        <div className="relative text-3xl">{g.game_emoji ?? '🎮'}</div>
                       )}
                     </div>
-                    <div className="border-t border-border-subtle bg-bg-inset px-3 py-2">
-                      <div className="truncate text-sm font-semibold text-text-primary">{g.game_name}</div>
+                    <div className="border-t border-border-subtle bg-bg-inset px-2 py-1.5">
+                      <div className="truncate text-xs font-semibold text-text-primary">{g.game_name}</div>
                     </div>
                   </div>
                 )}
                 {active && (
-                  <span className="absolute right-2 top-2 inline-flex h-6 w-6 items-center justify-center rounded-full bg-lime text-text-inverse shadow-lg shadow-glow">
-                    <Check className="h-3.5 w-3.5" />
+                  <span className="absolute right-1.5 top-1.5 inline-flex h-5 w-5 items-center justify-center rounded-full bg-lime text-text-inverse shadow-lg shadow-glow">
+                    <Check className="h-3 w-3" strokeWidth={3} />
                   </span>
                 )}
               </motion.button>
