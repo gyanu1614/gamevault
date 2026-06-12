@@ -557,7 +557,19 @@ export default function SellWizard({ initialCategories }: { initialCategories: G
           </motion.div>
         </AnimatePresence>
 
-      <div className="mt-8 flex items-center justify-between gap-2 border-t border-border-subtle pt-6">
+      {/* Footer / publish row.
+          Desktop (sm+): inline at the bottom of the wizard card with the
+            standard mt-8 border-t pt-6 treatment.
+          Mobile (< sm): fixed at the bottom of the viewport with a
+            backdrop so the seller can hit Publish without scrolling
+            all the way to the end. main.pb-24 already leaves space. */}
+      <div className={cn(
+        // Mobile sticky bar
+        'fixed inset-x-0 bottom-0 z-40 flex items-center justify-between gap-2',
+        'border-t border-border-subtle bg-bg-raised/95 px-3 py-3 backdrop-blur',
+        // Desktop inline
+        'sm:relative sm:mt-8 sm:bg-transparent sm:px-0 sm:pt-6 sm:pb-0 sm:backdrop-blur-none',
+      )}>
         {step > 1 ? (
           <button
             type="button"
@@ -1108,14 +1120,11 @@ function FieldInput({
 
   return (
     <div>
-      <label className="mb-2 block">
-        <span className="text-sm font-semibold text-text-primary">
+      <label className="mb-1.5 block">
+        <span className="text-xs font-semibold uppercase tracking-wider text-text-secondary">
           {attribute.name}
           {attribute.is_required && <span className="ml-1 text-error">*</span>}
         </span>
-        {attribute.help_text && (
-          <span className="ml-2 text-xs text-text-tertiary">{attribute.help_text}</span>
-        )}
       </label>
 
       {attribute.type === 'text' && (
@@ -1244,6 +1253,15 @@ function FieldInput({
           })}
         </div>
       )}
+
+      {/* Helper-text strip — per spec §7. Tinted box below the input,
+          not beside the label. Renders only when the admin set help_text
+          on the attribute. */}
+      {attribute.help_text && (
+        <p className="mt-2 rounded-lg bg-bg-inset px-3 py-2 text-xs leading-5 text-text-secondary">
+          {attribute.help_text}
+        </p>
+      )}
     </div>
   )
 }
@@ -1291,6 +1309,10 @@ function Step4Publish(p: Step4Props) {
           </span>
           <span>{p.title.length}/100</span>
         </div>
+        <p className="mt-2 rounded-lg bg-bg-inset px-3 py-2 text-xs leading-5 text-text-secondary">
+          Give your item a descriptive title. What would buyers search for to find your item?
+          Add the most searchable words at the front of your title. Titles have a 100 character limit.
+        </p>
 
         <label className="mb-1.5 mt-4 block text-xs font-semibold uppercase tracking-wider text-text-secondary">Description</label>
         <textarea
@@ -1301,6 +1323,10 @@ function Step4Publish(p: Step4Props) {
           maxLength={2000}
           className={cn(inputCls, 'h-auto py-2')}
         />
+        <p className="mt-2 rounded-lg bg-bg-inset px-3 py-2 text-xs leading-5 text-text-secondary">
+          Be specific about what the buyer receives. Include condition, delivery method, and any terms.
+          Detailed descriptions improve buyer confidence and ranking.
+        </p>
       </div>
 
       {/* Images */}
@@ -1331,7 +1357,7 @@ function Step4Publish(p: Step4Props) {
             </div>
           ))}
           {p.images.length < 5 && (
-            <label className="flex aspect-square cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-white/15 bg-bg-base hover:border-lime-tint-border hover:bg-lime-tint-bg">
+            <label className="flex aspect-square cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-border-default bg-bg-inset transition-colors hover:border-lime hover:bg-bg-raised-hover">
               {p.imageUploading ? (
                 <Loader2 className="h-5 w-5 animate-spin text-lime-text" />
               ) : (
@@ -1351,6 +1377,10 @@ function Step4Publish(p: Step4Props) {
             </label>
           )}
         </div>
+        <p className="mt-2 rounded-lg bg-bg-inset px-3 py-2 text-xs leading-5 text-text-secondary">
+          We recommend images at least 800 pixels square. The first photo is your main thumbnail —
+          choose a clear shot that shows the item front-and-center.
+        </p>
       </div>
 
       {/* Pricing */}
@@ -1394,6 +1424,11 @@ function Step4Publish(p: Step4Props) {
             )}
           </div>
         </div>
+
+        <p className="mt-3 rounded-lg bg-bg-inset px-3 py-2 text-xs leading-5 text-text-secondary">
+          Competitive prices improve your offer's ranking. Use the optional original price
+          to show a discount badge on your listing.
+        </p>
 
         {youReceive && (
           <div className="mt-4 rounded-xl border border-border-subtle bg-bg-inset p-3 text-xs">
@@ -1488,6 +1523,10 @@ function Step4Publish(p: Step4Props) {
             />
           </div>
         )}
+        <p className="mt-4 rounded-lg bg-bg-inset px-3 py-2 text-xs leading-5 text-text-secondary">
+          Faster delivery times rank better. Set your stock to match what you can actually fulfill,
+          and use the minimum order quantity if you only want bulk buys.
+        </p>
       </div>
     </SubCard>
   )
