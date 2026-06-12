@@ -1254,14 +1254,8 @@ function FieldInput({
         </div>
       )}
 
-      {/* Helper-text strip — per spec §7. Tinted box below the input,
-          not beside the label. Renders only when the admin set help_text
-          on the attribute. */}
-      {attribute.help_text && (
-        <p className="mt-2 rounded-lg bg-bg-inset px-3 py-2 text-xs leading-5 text-text-secondary">
-          {attribute.help_text}
-        </p>
-      )}
+      {/* Helper text — minimal-hint pattern (no surface, just dim text). */}
+      {attribute.help_text && <FieldHint className="mt-1.5">{attribute.help_text}</FieldHint>}
     </div>
   )
 }
@@ -1284,6 +1278,16 @@ interface Step4Props {
   imageUploading: boolean
 }
 
+/**
+ * Step4Publish — the static publish fields, rendered as 5 separate SubCards
+ * stacked vertically. Each card has its own labelled title (Title, Description,
+ * Photos, Pricing, Stock & Delivery). Sibling spacing between cards comes from
+ * the parent's `space-y-5`, so each card breathes equally with the Offer
+ * Details card above.
+ *
+ * Helper text under each input uses the FormDescription pattern:
+ *   text-[11px] text-text-tertiary leading-snug, no surface.
+ */
 function Step4Publish(p: Step4Props) {
   const priceNum = parseFloat(p.price || '0')
   const youReceive = priceNum > 0 ? (priceNum * 0.896).toFixed(2) : null
@@ -1292,51 +1296,51 @@ function Step4Publish(p: Step4Props) {
     : 0
 
   return (
-    <SubCard title="Offer Description">
-      {/* Title + description */}
-      <div className="space-y-1.5">
-        <label className="block text-xs font-semibold uppercase tracking-wider text-text-secondary">Title</label>
-        <input
-          value={p.title}
-          onChange={(e) => p.setTitle(e.target.value)}
-          placeholder="e.g., Mythical Brainrot — Tralalero Tralala — Mutation: Golden"
-          maxLength={100}
-          className={inputCls}
-        />
-        <div className="mt-1 flex justify-between text-[10px] text-text-tertiary">
-          <span className={p.title.length >= 5 ? 'text-success' : ''}>
-            {p.title.length >= 5 ? '✓ Good length' : `${5 - p.title.length} more chars needed`}
-          </span>
-          <span>{p.title.length}/100</span>
-        </div>
-        <p className="mt-2 rounded-lg bg-bg-inset px-3 py-2 text-xs leading-5 text-text-secondary">
-          Give your item a descriptive title. What would buyers search for to find your item?
-          Add the most searchable words at the front of your title. Titles have a 100 character limit.
-        </p>
-
-        <label className="mb-1.5 mt-4 block text-xs font-semibold uppercase tracking-wider text-text-secondary">Description</label>
-        <textarea
-          value={p.description}
-          onChange={(e) => p.setDescription(e.target.value)}
-          placeholder="What’s included, condition, delivery notes, terms…"
-          rows={4}
-          maxLength={2000}
-          className={cn(inputCls, 'h-auto py-2')}
-        />
-        <p className="mt-2 rounded-lg bg-bg-inset px-3 py-2 text-xs leading-5 text-text-secondary">
-          Be specific about what the buyer receives. Include condition, delivery method, and any terms.
-          Detailed descriptions improve buyer confidence and ranking.
-        </p>
-      </div>
-
-      {/* Images */}
-      <div className="mt-6 border-t border-border-subtle pt-6">
-        <div className="mb-2 flex items-center justify-between">
-          <div className="text-xs font-semibold uppercase tracking-wider text-text-secondary">
-            Photos <span className="text-error">*</span>
+    <div className="space-y-5">
+      {/* Title */}
+      <SubCard title="Title">
+        <FieldRow>
+          <input
+            value={p.title}
+            onChange={(e) => p.setTitle(e.target.value)}
+            placeholder="e.g., Mythical Brainrot — Tralalero Tralala — Mutation: Golden"
+            maxLength={100}
+            className={inputCls}
+          />
+          <div className="flex justify-between text-[10px] text-text-tertiary">
+            <span className={p.title.length >= 5 ? 'text-success' : ''}>
+              {p.title.length >= 5 ? '✓ Good length' : `${5 - p.title.length} more chars needed`}
+            </span>
+            <span>{p.title.length}/100</span>
           </div>
-          <span className="text-[10px] text-text-tertiary">{p.images.length}/5</span>
-        </div>
+          <FieldHint>
+            Add the most searchable words at the front. Titles have a 100 character limit.
+          </FieldHint>
+        </FieldRow>
+      </SubCard>
+
+      {/* Description */}
+      <SubCard title="Description">
+        <FieldRow>
+          <textarea
+            value={p.description}
+            onChange={(e) => p.setDescription(e.target.value)}
+            placeholder="What’s included, condition, delivery notes, terms…"
+            rows={4}
+            maxLength={2000}
+            className={cn(inputCls, 'h-auto py-2')}
+          />
+          <FieldHint>
+            Be specific. Include condition, delivery method, and any terms.
+          </FieldHint>
+        </FieldRow>
+      </SubCard>
+
+      {/* Photos */}
+      <SubCard
+        title="Photos"
+        right={<span className="text-[10px] text-text-tertiary">{p.images.length}/5</span>}
+      >
         <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
           {p.images.map((src, i) => (
             <div key={i} className="group relative aspect-square overflow-hidden rounded-xl border border-border-default">
@@ -1350,7 +1354,7 @@ function Step4Publish(p: Step4Props) {
                 <IconX className="h-3 w-3" />
               </button>
               {i === 0 && (
-                <span className="absolute bottom-1.5 left-1.5 rounded-full bg-lime px-1.5 py-0.5 text-[9px] font-bold text-text-primary">
+                <span className="absolute bottom-1.5 left-1.5 rounded-full bg-lime px-1.5 py-0.5 text-[9px] font-bold text-text-inverse">
                   Main
                 </span>
               )}
@@ -1377,21 +1381,20 @@ function Step4Publish(p: Step4Props) {
             </label>
           )}
         </div>
-        <p className="mt-2 rounded-lg bg-bg-inset px-3 py-2 text-xs leading-5 text-text-secondary">
-          We recommend images at least 800 pixels square. The first photo is your main thumbnail —
-          choose a clear shot that shows the item front-and-center.
-        </p>
-      </div>
+        <FieldHint className="mt-3">
+          Images at least 800px square. First photo is your main thumbnail.
+        </FieldHint>
+      </SubCard>
 
       {/* Pricing */}
-      <div className="mt-6 border-t border-border-subtle pt-6">
+      <SubCard title="Pricing">
         <div className="grid gap-3 sm:grid-cols-2">
-          <div>
-            <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-text-secondary">
+          <div className="space-y-1.5">
+            <label className="block text-xs font-semibold uppercase tracking-wider text-text-secondary">
               Your price <span className="text-error">*</span>
             </label>
             <div className="relative">
-              <DollarSign className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary" />
+              <DollarSign className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary" />
               <input
                 type="number"
                 value={p.price}
@@ -1403,12 +1406,12 @@ function Step4Publish(p: Step4Props) {
               />
             </div>
           </div>
-          <div>
-            <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-text-secondary">
-              Original price <span className="text-text-disabled">(optional)</span>
+          <div className="space-y-1.5">
+            <label className="block text-xs font-semibold uppercase tracking-wider text-text-secondary">
+              Original price <span className="font-normal normal-case tracking-normal text-text-disabled">(optional)</span>
             </label>
             <div className="relative">
-              <DollarSign className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary" />
+              <DollarSign className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary" />
               <input
                 type="number"
                 value={p.originalPrice}
@@ -1420,15 +1423,14 @@ function Step4Publish(p: Step4Props) {
               />
             </div>
             {discount > 0 && (
-              <div className="mt-1 text-[10px] text-success">{discount}% discount badge will show</div>
+              <FieldHint className="text-success">{discount}% discount badge will show</FieldHint>
             )}
           </div>
         </div>
 
-        <p className="mt-3 rounded-lg bg-bg-inset px-3 py-2 text-xs leading-5 text-text-secondary">
-          Competitive prices improve your offer's ranking. Use the optional original price
-          to show a discount badge on your listing.
-        </p>
+        <FieldHint className="mt-3">
+          Competitive prices rank better. Original price triggers a discount badge.
+        </FieldHint>
 
         {youReceive && (
           <div className="mt-4 rounded-xl border border-border-subtle bg-bg-inset p-3 text-xs">
@@ -1439,20 +1441,18 @@ function Step4Publish(p: Step4Props) {
               <div className="flex justify-between"><span>Payment processing (3.5%)</span><span className="text-error">−${(priceNum * 0.035).toFixed(2)}</span></div>
               <div className="mt-1.5 flex justify-between border-t border-border-subtle pt-1.5 font-semibold">
                 <span className="text-text-primary">You receive</span>
-                <span className="text-lime-text">
-                  ${youReceive}
-                </span>
+                <span className="text-lime-text">${youReceive}</span>
               </div>
             </div>
           </div>
         )}
-      </div>
+      </SubCard>
 
-      {/* Stock + delivery */}
-      <div className="mt-6 border-t border-border-subtle pt-6">
+      {/* Stock & Delivery */}
+      <SubCard title="Stock & Delivery">
         <div className="grid gap-3 sm:grid-cols-2">
-          <div>
-            <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-text-secondary">
+          <div className="space-y-1.5">
+            <label className="block text-xs font-semibold uppercase tracking-wider text-text-secondary">
               <Package className="mr-1 inline h-3.5 w-3.5" /> Stock
             </label>
             <input
@@ -1463,8 +1463,8 @@ function Step4Publish(p: Step4Props) {
               className={inputCls}
             />
           </div>
-          <div>
-            <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-text-secondary">
+          <div className="space-y-1.5">
+            <label className="block text-xs font-semibold uppercase tracking-wider text-text-secondary">
               Min order qty
             </label>
             <input
@@ -1477,8 +1477,8 @@ function Step4Publish(p: Step4Props) {
           </div>
         </div>
 
-        <div className="mt-4">
-          <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-text-secondary">Delivery method</label>
+        <div className="mt-4 space-y-1.5">
+          <label className="block text-xs font-semibold uppercase tracking-wider text-text-secondary">Delivery method</label>
           <div className="grid gap-2 sm:grid-cols-2">
             {(['manual', 'instant'] as const).map((m) => {
               const allowed = p.allowedDeliveryModes.includes(m)
@@ -1514,8 +1514,8 @@ function Step4Publish(p: Step4Props) {
         </div>
 
         {p.deliveryMethod === 'manual' && (
-          <div className="mt-4">
-            <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-text-secondary">Delivery window</label>
+          <div className="mt-4 space-y-1.5">
+            <label className="block text-xs font-semibold uppercase tracking-wider text-text-secondary">Delivery window</label>
             <PillRow
               options={DELIVERY_TIMES.map((t) => ({ value: t.value, label: t.label }))}
               value={p.deliveryTime}
@@ -1523,13 +1523,37 @@ function Step4Publish(p: Step4Props) {
             />
           </div>
         )}
-        <p className="mt-4 rounded-lg bg-bg-inset px-3 py-2 text-xs leading-5 text-text-secondary">
-          Faster delivery times rank better. Set your stock to match what you can actually fulfill,
-          and use the minimum order quantity if you only want bulk buys.
-        </p>
-      </div>
-    </SubCard>
+
+        <FieldHint className="mt-4">
+          Faster delivery times rank better. Set stock to what you can actually fulfill.
+        </FieldHint>
+      </SubCard>
+    </div>
   )
+}
+
+// ─── FieldRow — input + caption + hint vertical stack ───────────────────────
+
+/**
+ * FieldRow is the canonical wrapper for "one input with bits below it".
+ * Matches the spacing the shadcn FormItem provides (space-y-2) so that when
+ * we later swap in react-hook-form via shadcn Form, the visual rhythm
+ * doesn't change. Used inside Step3 sub-cards.
+ */
+function FieldRow({ children, className }: { children: React.ReactNode; className?: string }) {
+  return <div className={cn('space-y-2', className)}>{children}</div>
+}
+
+// ─── FieldHint — small dim text under a control. No surface. ────────────────
+
+/**
+ * FieldHint is the standalone version of shadcn's <FormDescription/>.
+ * Same styling — text-[11px] leading-snug text-text-tertiary — so we can
+ * use it without wiring up react-hook-form yet. Once Step 3 moves to RHF
+ * (Phase D-era), every FieldHint maps 1:1 to <FormDescription/>.
+ */
+function FieldHint({ children, className }: { children: React.ReactNode; className?: string }) {
+  return <p className={cn('text-[11px] leading-snug text-text-tertiary', className)}>{children}</p>
 }
 
 // ─── SubCard — the grey panel each Step 3 section lives in ──────────────────
@@ -1550,8 +1574,8 @@ function SubCard({
   children: React.ReactNode
 }) {
   return (
-    <div className="rounded-2xl border border-border-subtle bg-bg-overlay p-5">
-      <div className="mb-4 flex h-9 items-center justify-between">
+    <div className="rounded-2xl border border-border-subtle bg-bg-overlay p-4 sm:p-5">
+      <div className="mb-3 flex h-7 items-center justify-between sm:mb-4 sm:h-9">
         <h2 className="text-sm font-semibold text-text-primary">{title}</h2>
         {right}
       </div>
