@@ -305,7 +305,7 @@ function FieldTree(props: FieldTreeProps) {
             onChange={(e) => props.setDraftName(e.target.value)}
             placeholder="e.g. Item Type"
             autoFocus
-            className="h-9 w-full rounded-lg border border-border-default bg-bg-raised px-3 text-sm text-text-primary placeholder:text-text-disabled focus:border-lime focus:outline-none focus:ring-2 focus:ring-lime-tint-bg"
+            className="h-9 w-full rounded-lg border border-border-default bg-bg-raised px-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-lime focus:outline-none focus:ring-2 focus:ring-lime-tint-bg"
           />
           <select
             value={props.draftType}
@@ -550,7 +550,7 @@ function AddSubFieldRow({
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="e.g. Rarity"
-            className="h-8 w-full rounded-md border border-border-default bg-bg-raised px-2 text-sm text-text-primary placeholder:text-text-disabled focus:border-lime focus:outline-none focus:ring-2 focus:ring-lime-tint-bg"
+            className="h-8 w-full rounded-md border border-border-default bg-bg-raised px-2 text-sm text-text-primary placeholder:text-text-tertiary focus:border-lime focus:outline-none focus:ring-2 focus:ring-lime-tint-bg"
           />
           <select
             value={type}
@@ -868,7 +868,7 @@ function OptionsEditor({ attribute, onChange }: { attribute: BuilderAttribute; o
             onChange={(e) => setNewLabel(e.target.value)}
             placeholder="Add a choice (e.g. Pet, Egg, Cash)…"
             onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAdd() } }}
-            className="h-9 flex-1 rounded-lg border border-border-default bg-bg-raised px-3 text-sm text-text-primary placeholder:text-text-disabled focus:border-lime focus:outline-none focus:ring-2 focus:ring-lime-tint-bg"
+            className="h-9 flex-1 rounded-lg border border-border-default bg-bg-raised px-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-lime focus:outline-none focus:ring-2 focus:ring-lime-tint-bg"
           />
           <button
             type="button"
@@ -1415,7 +1415,7 @@ function LivePreview({ attributes }: { attributes: BuilderAttribute[] }) {
 // ─── Small field primitives ──────────────────────────────────────────────────
 
 const inputCls =
-  'h-9 w-full rounded-lg border border-border-default bg-bg-raised px-3 text-sm text-text-primary placeholder:text-text-disabled focus:border-lime focus:outline-none focus:ring-2 focus:ring-lime-tint-bg'
+  'h-9 w-full rounded-lg border border-border-default bg-bg-raised px-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-lime focus:outline-none focus:ring-2 focus:ring-lime-tint-bg'
 
 function Field({
   label, required, hint, children, className,

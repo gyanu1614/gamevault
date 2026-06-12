@@ -159,7 +159,7 @@ function TextInput(props: React.InputHTMLAttributes<HTMLInputElement>) {
     <input
       {...props}
       className={cn(
-        'h-10 w-full rounded-xl border border-border-default bg-bg-raised px-3 text-sm text-text-primary placeholder:text-text-disabled',
+        'h-10 w-full rounded-xl border border-border-default bg-bg-raised px-3 text-sm text-text-primary placeholder:text-text-tertiary',
         'focus:border-lime focus:outline-none focus:ring-2 focus:ring-lime-tint-bg transition-colors',
         props.className
       )}
