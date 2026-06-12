@@ -228,7 +228,8 @@ export async function publishListing(input: PublishListingInput): Promise<Result
       game_id: input.game_id,
       category_id: legacyCatId,
       title: input.title.trim(),
-      description: input.description?.trim() || null,
+      // listings.description is NOT NULL in the legacy schema; default to ''
+      description: input.description?.trim() || '',
       price: input.price,
       original_price: input.original_price ?? null,
       quantity: input.quantity,

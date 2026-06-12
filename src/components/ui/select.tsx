@@ -41,9 +41,10 @@ const SelectTrigger = React.forwardRef<
     ref={ref}
     className={cn(
       // Box
-      // R9 — rounded-md to match the rest of the input chrome.
-      'flex h-10 w-full items-center justify-between rounded-md px-3 text-sm',
-      'border border-border-default bg-bg-inset',
+      // R12 — fully square (rounded-none) + transparent fill to match
+      // the rest of the input chrome. Border defines the box.
+      'flex h-10 w-full items-center justify-between rounded-none px-3 text-sm',
+      'border border-border-default bg-transparent',
       // Text
       'text-text-primary placeholder:text-text-tertiary',
       // States

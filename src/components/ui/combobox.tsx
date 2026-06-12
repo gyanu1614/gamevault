@@ -95,7 +95,9 @@ export function Combobox({
             }
           }}
           className={cn(
-            'flex h-10 w-full cursor-pointer items-center justify-between rounded-md border bg-bg-inset px-3 text-sm transition-colors',
+            // R12 — rounded-none + transparent so the trigger matches the rest of the
+            // input chrome; border defines the box.
+            'flex h-10 w-full cursor-pointer items-center justify-between rounded-none border bg-transparent px-3 text-sm transition-colors',
             'border-border-default text-text-primary',
             'hover:border-border-strong',
             open && 'border-lime ring-2 ring-lime-tint-bg',
