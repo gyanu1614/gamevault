@@ -1,0 +1,103 @@
+/* ============================================================
+   GAMEVAULT — DESIGN TOKENS
+   Source of truth for the entire product.
+   Direction 01: Premium dark + signature lime
+   Fonts loaded via next/font/local in layout.tsx —
+   --font-display, --font-body, --font-mono are injected there.
+   ============================================================ */
+
+/* ── CSS Custom Properties ──────────────────────────────────── */
+:root {
+  /* ── Background / Elevation ── */
+  --color-bg-base:         #0A0A0F;
+  --color-bg-raised:       #121218;
+  --color-bg-raised-hover: #17171F;
+  --color-bg-overlay:      #1C1C25;
+  --color-bg-overlay-2:    #23232E;
+  --color-bg-inset:        #0C0C12;
+
+  /* ── Borders ── */
+  --color-border-subtle:   rgba(255,255,255,0.06);
+  --color-border-default:  rgba(255,255,255,0.10);
+  --color-border-strong:   rgba(255,255,255,0.17);
+
+  /* ── Text ── */
+  --color-text-primary:    #F3F3F6;
+  --color-text-secondary:  #9EA0AB;
+  --color-text-tertiary:   #65666F;
+  --color-text-disabled:   #43444C;
+  --color-text-inverse:    #0A0A0F;
+  --color-text-footer:     #E2E3E8;
+
+  /* ── Accent — Lime ── */
+  --color-accent-default:  #C6FF3D;
+  --color-accent-hover:    #D6FF6E;
+  --color-accent-pressed:  #ABE52B;
+  --color-accent-tint-bg:  rgba(198,255,61,0.11);
+  --color-accent-tint-border: rgba(198,255,61,0.26);
+  --color-accent-text:     #D2FF63;
+
+  /* ── System / Semantic ── */
+  --color-success:         #3FD986;
+  --color-success-bg:      rgba(63,217,134,0.12);
+  --color-warning:         #FFB23E;
+  --color-warning-bg:      rgba(255,178,62,0.12);
+  --color-error:           #FF5C5C;
+  --color-error-bg:        rgba(255,92,92,0.12);
+  --color-info:            #589BFF;
+  --color-info-bg:         rgba(88,155,255,0.12);
+
+  /* ── Interaction States ── */
+  --color-state-hover:     rgba(255,255,255,0.045);
+  --color-state-pressed:   rgba(255,255,255,0.085);
+  --color-state-selected:  rgba(198,255,61,0.10);
+  --color-focus-ring:      rgba(198,255,61,0.55);
+
+  /* ── Typography — Families (vars injected by next/font/local in layout.tsx) ── */
+  /* --font-display = Inter 800/900 (headings), --font-body = Inter 400/500/600 (body/UI), --font-mono = JetBrains Mono */
+  /* Both display and body use Inter — single font system, same as Eldorado/G2G */
+
+  /* ── Typography — Scale ──
+     name             size    weight  lh     ls          family    */
+  --text-hero-size:    72px;  --text-hero-weight:    900;  --text-hero-lh:    1.02;  --text-hero-ls:    -0.03em;
+  --text-display-lg-size: 52px; --text-display-lg-weight: 900; --text-display-lg-lh: 1.05; --text-display-lg-ls: -0.025em;
+  --text-display-size: 38px; --text-display-weight: 700; --text-display-lh: 1.10; --text-display-ls: -0.02em;
+  --text-heading-size: 28px; --text-heading-weight: 700; --text-heading-lh: 1.15; --text-heading-ls: -0.015em;
+  --text-subheading-size: 21px; --text-subheading-weight: 700; --text-subheading-lh: 1.25; --text-subheading-ls: -0.01em;
+  --text-body-lg-size: 18px; --text-body-lg-weight: 400; --text-body-lg-lh: 1.6;  --text-body-lg-ls: 0;
+  --text-body-size:   16px;  --text-body-weight:    400;  --text-body-lh:    1.6;  --text-body-ls:    0;
+  --text-body-sm-size: 14px; --text-body-sm-weight: 400; --text-body-sm-lh: 1.5;  --text-body-sm-ls: 0;
+  --text-caption-size: 12px; --text-caption-weight: 500; --text-caption-lh: 1.35; --text-caption-ls: 0.02em;
+  --text-mono-size:   13px;  --text-mono-weight:    400;  --text-mono-lh:    1.45; --text-mono-ls:    0;
+  --text-overline-size: 12px; --text-overline-weight: 600; --text-overline-lh: 1.35; --text-overline-ls: 0.14em;
+
+  /* ── Spacing — 4px base grid ── */
+  --space-1:  4px;   --space-2:  8px;   --space-3:  12px;  --space-4:  16px;
+  --space-5:  20px;  --space-6:  24px;  --space-8:  32px;  --space-10: 40px;
+  --space-12: 48px;  --space-16: 64px;  --space-20: 80px;  --space-24: 96px;
+  --space-32: 128px;
+
+  /* ── Border Radius ── */
+  --radius-sm:   6px;
+  --radius-md:   10px;
+  --radius-lg:   14px;
+  --radius-xl:   20px;
+  --radius-full: 999px;
+
+  /* ── Shadows ── */
+  --shadow-subtle:   0 1px 2px rgba(0,0,0,0.40);
+  --shadow-raised:   0 4px 14px rgba(0,0,0,0.45);
+  --shadow-elevated: 0 18px 44px rgba(0,0,0,0.60);
+  --shadow-glow:     0 0 0 1px rgba(198,255,61,0.45), 0 10px 30px rgba(198,255,61,0.16);
+
+  /* ── Layout ── */
+  --container-default: 1280px;
+  --container-wide:    1440px;
+  --nav-height:        68px;
+
+  /* ── Motion ── */
+  --ease-default: cubic-bezier(0.22, 1, 0.36, 1);
+  --duration-fast: 120ms;
+  --duration-default: 200ms;
+  --duration-slow: 360ms;
+}
