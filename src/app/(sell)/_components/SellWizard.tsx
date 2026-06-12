@@ -106,44 +106,35 @@ function buildChildIndex(attrs: Attribute[]) {
 // ─── Slim step bar (sits below the homepage navbar) ─────────────────────────
 
 /**
- * StepBar — inline progress indicator. NOT sticky.
- *
- * The homepage Navbar is a floating pill (fixed top-6 with its own h-16
- * md:h-18 lg:h-20 spacer). Trying to chase its bottom edge with sticky
- * positioning is fragile across breakpoints and caused overlap with the
- * pill. Instead we render this inline at the top of the page content;
- * it scrolls with everything else.
- *
- * On mobile (< 640px) we render a compact "Step N · Label" row so the
- * pills don't squeeze. ≥640 we show the full chip row.
+ * StepBar — horizontal progress bar with 25% / 50% / 75% / 100% fill
+ * across the 4 wizard steps. Step labels sit above the rail with the
+ * active label gradient-highlighted; the rail fills with a violet→cyan
+ * gradient and animates between steps.
  */
 function StepBar({ step }: { step: number }) {
-  const current = STEPS[step - 1]
+  const pct = (step / STEPS.length) * 100
+
   return (
     <nav aria-label="Progress" className="mb-6">
-      {/* Mobile: compact summary */}
-      <div className="flex items-center justify-between gap-2 rounded-full border border-white/[0.06] bg-white/[0.02] px-3 py-2 sm:hidden">
-        <div className="flex items-center gap-2 text-xs">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full border border-violet-500/60 bg-violet-500/20 text-[10px] font-semibold text-violet-100">
-            {step}
-          </span>
-          <span className="bg-gradient-to-r from-violet-300 via-purple-300 to-cyan-300 bg-clip-text font-semibold text-transparent">
-            {current.label}
-          </span>
-        </div>
-        <div className="text-[10px] uppercase tracking-wider text-gray-500">{step} / {STEPS.length}</div>
-      </div>
-
-      {/* ≥ sm: full chip row */}
-      <ol className="hidden items-center justify-center gap-1.5 sm:flex">
-        {STEPS.map((s, i) => {
+      {/* Labels */}
+      <ol className="mb-2.5 grid grid-cols-4 gap-1 text-[10px] sm:text-[11px]">
+        {STEPS.map((s) => {
           const done = step > s.id
           const active = step === s.id
           return (
-            <li key={s.id} className="flex items-center gap-1.5">
+            <li
+              key={s.id}
+              className={cn(
+                'flex items-center gap-1.5 truncate',
+                // distribute labels under their progress segment
+                'first:justify-start last:justify-end',
+                s.id === 2 && 'justify-center sm:justify-center',
+                s.id === 3 && 'justify-center sm:justify-center',
+              )}
+            >
               <span
                 className={cn(
-                  'flex h-5 w-5 items-center justify-center rounded-full border text-[10px] font-semibold transition-colors',
+                  'flex h-4 w-4 shrink-0 items-center justify-center rounded-full border text-[8px] font-semibold transition-colors',
                   done
                     ? 'border-emerald-500/40 bg-emerald-500/15 text-emerald-300'
                     : active
@@ -151,25 +142,32 @@ function StepBar({ step }: { step: number }) {
                       : 'border-white/10 text-gray-500'
                 )}
               >
-                {done ? <Check className="h-2.5 w-2.5" /> : s.id}
+                {done ? <Check className="h-2 w-2" /> : s.id}
               </span>
               <span
                 className={cn(
-                  'text-[11px]',
+                  'truncate font-medium uppercase tracking-wider',
                   active
-                    ? 'bg-gradient-to-r from-violet-300 via-purple-300 to-cyan-300 bg-clip-text font-semibold text-transparent'
-                    : done ? 'text-emerald-300' : 'text-gray-600'
+                    ? 'bg-gradient-to-r from-violet-300 via-purple-300 to-cyan-300 bg-clip-text text-transparent'
+                    : done ? 'text-emerald-300/80' : 'text-gray-600'
                 )}
               >
                 {s.label}
               </span>
-              {i < STEPS.length - 1 && (
-                <span className="mx-1 inline-block h-px w-5 bg-white/10 md:w-8" />
-              )}
             </li>
           )
         })}
       </ol>
+
+      {/* Rail */}
+      <div className="relative h-1.5 w-full overflow-hidden rounded-full bg-white/[0.05]">
+        <motion.div
+          className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-violet-500 via-purple-500 to-cyan-400 shadow-[0_0_18px_-3px_rgba(168,85,247,0.6)]"
+          initial={false}
+          animate={{ width: `${pct}%` }}
+          transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+        />
+      </div>
     </nav>
   )
 }
@@ -378,13 +376,30 @@ export default function SellWizard({ initialCategories }: { initialCategories: G
 
   return (
     <main className="mx-auto w-full max-w-4xl px-3 pb-24 pt-4 sm:px-6 sm:pt-6 lg:max-w-5xl">
-      <StepBar step={step} />
+      {/* Card-style container — gives the wizard its own surface, distinct
+          from the page background. Subtle border + gradient glow so it
+          reads as an elevated section, not a hard modal. */}
+      <section
+        className={cn(
+          'relative isolate overflow-visible rounded-3xl border border-white/[0.08]',
+          'bg-gradient-to-b from-white/[0.04] to-white/[0.015]',
+          'p-4 shadow-[0_30px_80px_-30px_rgba(0,0,0,0.8)] backdrop-blur-xl',
+          'sm:p-6 lg:p-8',
+        )}
+      >
+        {/* Outer glow ring */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -inset-px -z-10 rounded-3xl bg-gradient-to-br from-violet-500/[0.08] via-transparent to-cyan-500/[0.05]"
+        />
 
-      <div className="mb-5 sm:mb-6">
-        <h1 className="bg-gradient-to-r from-white via-violet-100 to-cyan-100 bg-clip-text text-xl font-semibold tracking-tight text-transparent sm:text-2xl lg:text-3xl">
-          {STEPS[step - 1].hint}
-        </h1>
-      </div>
+        <StepBar step={step} />
+
+        <div className="mb-5 sm:mb-6">
+          <h1 className="bg-gradient-to-r from-white via-violet-100 to-cyan-100 bg-clip-text text-xl font-semibold tracking-tight text-transparent sm:text-2xl lg:text-3xl">
+            {STEPS[step - 1].hint}
+          </h1>
+        </div>
 
         <AnimatePresence mode="wait">
           <motion.div
@@ -451,15 +466,20 @@ export default function SellWizard({ initialCategories }: { initialCategories: G
         </AnimatePresence>
 
       <div className="mt-8 flex items-center justify-between gap-2">
-        <button
-          type="button"
-          onClick={() => setStep((s) => Math.max(1, s - 1))}
-          disabled={step === 1 || submitting}
-          className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.04] px-3 text-sm font-medium text-gray-200 transition-colors hover:bg-white/[0.08] disabled:opacity-40 sm:px-4"
-        >
-          <ChevronLeft className="h-4 w-4" />
-          Back
-        </button>
+        {step > 1 ? (
+          <button
+            type="button"
+            onClick={() => setStep((s) => Math.max(1, s - 1))}
+            disabled={submitting}
+            className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.04] px-3 text-sm font-medium text-gray-200 transition-colors hover:bg-white/[0.08] disabled:opacity-40 sm:px-4"
+          >
+            <ChevronLeft className="h-4 w-4" />
+            Back
+          </button>
+        ) : (
+          // Spacer keeps the Continue button right-aligned on step 1
+          <span aria-hidden />
+        )}
 
         {step < 4 ? (
           <button
@@ -504,6 +524,7 @@ export default function SellWizard({ initialCategories }: { initialCategories: G
           </div>
         )}
       </div>
+      </section>
     </main>
   )
 }
@@ -518,7 +539,7 @@ function Step1Category({
   onSelect: (c: GlobalCategory) => void
 }) {
   return (
-    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+    <div className="mx-auto max-w-2xl space-y-2.5">
       {categories.map((c, i) => {
         const active = selected?.id === c.id
         const disabled = !c.is_active
@@ -528,19 +549,19 @@ function Step1Category({
             type="button"
             disabled={disabled}
             onClick={() => onSelect(c)}
-            initial={{ opacity: 0, y: 10 }}
+            initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.25, delay: i * 0.04 }}
-            whileHover={!disabled ? { y: -2 } : undefined}
+            transition={{ duration: 0.22, delay: i * 0.04 }}
+            whileHover={!disabled ? { x: 2 } : undefined}
             className={cn(
-              'group relative flex h-32 flex-col items-start justify-between overflow-hidden rounded-2xl border p-4 text-left transition-all',
+              'group relative flex w-full items-center gap-4 rounded-2xl border p-4 text-left transition-all sm:p-5',
               disabled && 'cursor-not-allowed opacity-50',
               active
-                ? 'border-violet-500/60 bg-gradient-to-br from-violet-500/15 via-purple-500/8 to-cyan-500/5 shadow-[0_0_0_3px_rgba(168,85,247,0.15)]'
-                : 'border-white/10 bg-white/[0.03] hover:border-white/20 hover:bg-white/[0.05]'
+                ? 'border-violet-500/60 bg-gradient-to-r from-violet-500/15 via-purple-500/8 to-cyan-500/5 shadow-[0_0_0_3px_rgba(168,85,247,0.15)]'
+                : 'border-white/[0.06] bg-black/30 hover:border-white/15 hover:bg-black/40'
             )}
           >
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.06] text-3xl">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.06] text-2xl">
               {c.icon_url ? (
                 /* eslint-disable-next-line @next/next/no-img-element */
                 <img src={c.icon_url} alt={c.name} className="h-full w-full rounded-xl object-cover" />
@@ -548,20 +569,37 @@ function Step1Category({
                 <span>{c.icon_emoji ?? '📦'}</span>
               )}
             </div>
-            <div>
-              <div className="text-base font-semibold text-white">{c.name}</div>
-              <div className="line-clamp-2 text-xs text-gray-500">{c.description ?? ''}</div>
+
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2">
+                <div className="text-base font-semibold text-white">{c.name}</div>
+                {disabled && (
+                  <span className="inline-flex items-center gap-1 rounded-full border border-amber-500/30 bg-amber-500/[0.08] px-2 py-0.5 text-[10px] font-medium text-amber-300">
+                    Coming soon
+                  </span>
+                )}
+              </div>
+              <div className="mt-0.5 text-xs text-gray-500">{c.description ?? ''}</div>
             </div>
-            {disabled && (
-              <span className="absolute right-3 top-3 inline-flex items-center gap-1 rounded-full border border-amber-500/30 bg-amber-500/[0.08] px-2 py-0.5 text-[10px] font-medium text-amber-300">
-                Coming soon
-              </span>
-            )}
-            {active && (
-              <span className="absolute right-3 top-3 inline-flex h-5 w-5 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-cyan-500 text-white shadow-lg shadow-violet-500/40">
-                <Check className="h-3 w-3" />
-              </span>
-            )}
+
+            {/* Indicator on the right */}
+            <div className="shrink-0">
+              {active ? (
+                <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-cyan-500 text-white shadow-lg shadow-violet-500/40">
+                  <Check className="h-3.5 w-3.5" />
+                </span>
+              ) : (
+                <span
+                  aria-hidden
+                  className={cn(
+                    'inline-flex h-7 w-7 items-center justify-center rounded-full border text-gray-500 transition-colors',
+                    disabled ? 'border-white/[0.04]' : 'border-white/10 group-hover:border-white/20 group-hover:text-white'
+                  )}
+                >
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </span>
+              )}
+            </div>
           </motion.button>
         )
       })}
