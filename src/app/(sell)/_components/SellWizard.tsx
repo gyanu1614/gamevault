@@ -136,7 +136,7 @@ function StepBar({ step }: { step: number }) {
                 className={cn(
                   'flex h-4 w-4 shrink-0 items-center justify-center rounded-full border text-[8px] font-semibold transition-colors',
                   done
-                    ? 'border-success/40 bg-success-bg text-success'
+                    ? 'border-success bg-success-bg text-success'
                     : active
                       ? 'border-lime bg-lime-tint-bg text-lime-text'
                       : 'border-border-default text-text-tertiary'
@@ -149,7 +149,7 @@ function StepBar({ step }: { step: number }) {
                   'truncate font-medium uppercase tracking-wider',
                   active
                     ? 'text-lime-text'
-                    : done ? 'text-success/80' : 'text-text-disabled'
+                    : done ? 'text-success' : 'text-text-disabled'
                 )}
               >
                 {s.label}
@@ -489,7 +489,7 @@ export default function SellWizard({ initialCategories }: { initialCategories: G
             className={cn(
               'inline-flex h-10 items-center gap-1.5 rounded-xl px-4 text-sm font-semibold transition-all sm:px-5',
               canGoNext
-                ? 'bg-lime text-text-inverse shadow-lg shadow-lime/30 hover:bg-lime-hover hover:shadow-lime/40'
+                ? 'bg-lime text-text-inverse shadow-lg shadow-elevated hover:bg-lime-hover hover:shadow-glow'
                 : 'cursor-not-allowed bg-bg-raised text-text-disabled'
             )}
           >
@@ -514,7 +514,7 @@ export default function SellWizard({ initialCategories }: { initialCategories: G
               className={cn(
                 'inline-flex h-10 items-center gap-1.5 rounded-xl px-4 text-sm font-semibold transition-all sm:px-5',
                 canPublish && !submitting
-                  ? 'bg-lime text-text-inverse shadow-lg shadow-lime/30 hover:bg-lime-hover hover:shadow-lime/40'
+                  ? 'bg-lime text-text-inverse shadow-lg shadow-elevated hover:bg-lime-hover hover:shadow-glow'
                   : 'cursor-not-allowed bg-bg-raised text-text-disabled'
               )}
             >
@@ -574,7 +574,7 @@ function Step1Category({
               <div className="flex items-center gap-2">
                 <div className="text-base font-semibold text-text-primary">{c.name}</div>
                 {disabled && (
-                  <span className="inline-flex items-center gap-1 rounded-full border border-warning/40 bg-warning-bg px-2 py-0.5 text-[10px] font-medium text-warning">
+                  <span className="inline-flex items-center gap-1 rounded-full border border-warning bg-warning-bg px-2 py-0.5 text-[10px] font-medium text-warning">
                     Coming soon
                   </span>
                 )}
@@ -585,7 +585,7 @@ function Step1Category({
             {/* Indicator on the right */}
             <div className="shrink-0">
               {active ? (
-                <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-lime text-text-inverse shadow-lg shadow-lime/40">
+                <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-lime text-text-inverse shadow-lg shadow-glow">
                   <Check className="h-3.5 w-3.5" />
                 </span>
               ) : (
@@ -743,7 +743,7 @@ function Step2Game({
                   </div>
                 )}
                 {active && (
-                  <span className="absolute right-2 top-2 inline-flex h-6 w-6 items-center justify-center rounded-full bg-lime text-text-inverse shadow-lg shadow-lime/40">
+                  <span className="absolute right-2 top-2 inline-flex h-6 w-6 items-center justify-center rounded-full bg-lime text-text-inverse shadow-lg shadow-glow">
                     <Check className="h-3.5 w-3.5" />
                   </span>
                 )}

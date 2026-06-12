@@ -367,7 +367,7 @@ export default function AdminCategoriesPage() {
         <div className="flex items-center gap-3">
           <Link
             href="/admin/redesign"
-            className="inline-flex h-9 items-center gap-1.5 rounded-md border border-violet-500/30 bg-violet-500/10 px-3 text-xs font-semibold text-violet-300 transition-colors hover:bg-violet-500/15"
+            className="inline-flex h-9 items-center gap-1.5 rounded-md border border-lime-tint-border bg-lime-tint-bg px-3 text-xs font-semibold text-lime-text transition-colors hover:bg-lime/20"
             title="Open the redesigned admin hub"
           >
             <Sparkles className="h-3.5 w-3.5" />
