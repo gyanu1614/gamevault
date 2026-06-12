@@ -19,6 +19,7 @@
  */
 
 import { useEffect, useMemo, useRef, useState, useTransition } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -167,6 +168,62 @@ function StepBar({ step }: { step: number }) {
           transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
         />
       </div>
+    </nav>
+  )
+}
+
+// ─── Breadcrumbs ─────────────────────────────────────────────────────────────
+
+/**
+ * Breadcrumbs — Home › Select category › Select game › Details
+ *
+ * Each completed crumb is a clickable Link that jumps the wizard back to
+ * that step. The current step is plain text. Separator is a › glyph in
+ * text-text-disabled. Per HANDOFF_SELL_WIZARD_RESTRUCTURE.md §5.
+ */
+function Breadcrumbs({
+  step,
+  onJumpToStep,
+}: {
+  step: number
+  onJumpToStep: (target: number) => void
+}) {
+  const crumbs: Array<{ label: string; targetStep?: number }> = [
+    { label: 'Home' },
+    { label: 'Select category', targetStep: 1 },
+  ]
+  if (step >= 2) crumbs.push({ label: 'Select game', targetStep: 2 })
+  if (step >= 3) crumbs.push({ label: 'Details' })
+
+  return (
+    <nav aria-label="Breadcrumb" className="flex h-6 items-center gap-2 text-xs text-text-tertiary">
+      {crumbs.map((c, i) => {
+        const isLast = i === crumbs.length - 1
+        const isLink = !isLast && c.targetStep !== undefined && c.targetStep < step
+        return (
+          <span key={c.label} className="inline-flex items-center gap-2">
+            {i === 0 ? (
+              <Link
+                href="/"
+                className="transition-colors hover:text-text-secondary"
+              >
+                {c.label}
+              </Link>
+            ) : isLink ? (
+              <button
+                type="button"
+                onClick={() => onJumpToStep(c.targetStep!)}
+                className="transition-colors hover:text-text-secondary"
+              >
+                {c.label}
+              </button>
+            ) : (
+              <span className={isLast ? 'text-text-primary' : ''}>{c.label}</span>
+            )}
+            {!isLast && <span className="text-text-disabled">›</span>}
+          </span>
+        )
+      })}
     </nav>
   )
 }
@@ -380,29 +437,49 @@ export default function SellWizard({ initialCategories }: { initialCategories: G
 
   return (
     <main className="mx-auto w-full max-w-4xl px-3 pb-24 pt-4 sm:px-6 sm:pt-6 lg:max-w-5xl">
-      {/* Card-style container — gives the wizard its own surface, distinct
-          from the page background. Subtle border + gradient glow so it
-          reads as an elevated section, not a hard modal. */}
-      <section
-        className={cn(
-          'relative isolate overflow-visible rounded-3xl border border-border-default',
-          'bg-bg-raised',
-          'p-4 shadow-[0_30px_80px_-30px_rgba(0,0,0,0.8)] backdrop-blur-xl',
-          'sm:p-6 lg:p-8',
-        )}
-      >
-        {/* Outer glow ring */}
-        <div
-          aria-hidden
-          className="pointer-events-none absolute -inset-px -z-10 rounded-3xl bg-lime-tint-bg"
-        />
+      {/* Breadcrumbs sit above the card. Each completed crumb is a Link
+          that resets the wizard to that step; the current crumb is plain.
+          Per HANDOFF_SELL_WIZARD_RESTRUCTURE.md §5. */}
+      <Breadcrumbs
+        step={step}
+        onJumpToStep={(target) => setStep((s) => (target < s ? target : s))}
+      />
 
+      {/* Wizard card — elevated grey surface on bg-bg-base. Per spec §2,
+          no lime tint on the wrapper; sub-cards inside go one shade deeper
+          (bg-bg-overlay) for visual hierarchy. */}
+      <section className="relative isolate mt-3 overflow-visible rounded-3xl border border-border-default bg-bg-raised p-5 shadow-elevated sm:p-7 lg:p-8">
         <StepBar step={step} />
 
+        {/* Step header.
+            Step 1 / 2 just show the hint text.
+            Step 3 swaps in the "Sell Game Items" title with a game-logo
+            sub-header — the chosen game is now context, not a question. */}
         <div className="mb-5 sm:mb-6">
-          <h1 className="text-xl font-semibold tracking-tight text-text-primary sm:text-2xl lg:text-3xl">
-            {STEPS[step - 1].hint}
-          </h1>
+          {step === 3 && selectedGame ? (
+            <div className="text-center">
+              <h1 className="text-xl font-semibold tracking-tight text-text-primary sm:text-2xl lg:text-3xl">
+                Sell {selectedCategory?.name ?? 'Listing'}
+              </h1>
+              <div className="mt-2 inline-flex items-center gap-2 text-sm text-text-secondary">
+                {selectedGame.game_logo_url ? (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img
+                    src={selectedGame.game_logo_url}
+                    alt={selectedGame.game_name}
+                    className="h-7 w-7 rounded-md object-cover"
+                  />
+                ) : (
+                  <span className="text-base">{selectedGame.game_emoji ?? '🎮'}</span>
+                )}
+                <span className="font-medium text-text-primary">{selectedGame.game_name}</span>
+              </div>
+            </div>
+          ) : (
+            <h1 className="text-xl font-semibold tracking-tight text-text-primary sm:text-2xl lg:text-3xl">
+              {STEPS[step - 1].hint}
+            </h1>
+          )}
         </div>
 
         <AnimatePresence mode="wait">
@@ -474,7 +551,7 @@ export default function SellWizard({ initialCategories }: { initialCategories: G
           </motion.div>
         </AnimatePresence>
 
-      <div className="mt-8 flex items-center justify-between gap-2">
+      <div className="mt-8 flex items-center justify-between gap-2 border-t border-border-subtle pt-6">
         {step > 1 ? (
           <button
             type="button"
