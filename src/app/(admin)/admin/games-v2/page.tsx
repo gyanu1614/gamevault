@@ -98,27 +98,27 @@ export default function AdminGamesV2Page() {
           <div className="mb-3 flex items-center gap-3">
             <Link
               href="/admin/redesign"
-              className="inline-flex items-center gap-1.5 text-xs text-gray-500 transition-colors hover:text-white"
+              className="inline-flex items-center gap-1.5 text-xs text-text-tertiary transition-colors hover:text-text-primary"
             >
               <ArrowLeft className="h-3 w-3" />
               Redesign hub
             </Link>
-            <span className="text-xs text-gray-700">·</span>
+            <span className="text-xs text-text-disabled">·</span>
             <Link
               href="/admin/games"
-              className="inline-flex items-center gap-1.5 text-xs text-gray-500 transition-colors hover:text-white"
+              className="inline-flex items-center gap-1.5 text-xs text-text-tertiary transition-colors hover:text-text-primary"
             >
               Classic admin
             </Link>
           </div>
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-semibold tracking-tight text-white">Games</h1>
-            <span className="inline-flex items-center gap-1 rounded-full border border-violet-500/30 bg-violet-500/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-violet-300">
+            <h1 className="text-2xl font-semibold tracking-tight text-text-primary">Games</h1>
+            <span className="inline-flex items-center gap-1 rounded-full border border-lime-tint-border bg-lime-tint-bg px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-lime-text">
               <Sparkles className="h-3 w-3" />
               new
             </span>
           </div>
-          <p className="mt-1 text-sm text-gray-400">
+          <p className="mt-1 text-sm text-text-secondary">
             {gamesQuery.data
               ? <>{activeCount} active · {gamesQuery.data.length} total</>
               : 'Loading…'}
@@ -127,17 +127,17 @@ export default function AdminGamesV2Page() {
 
         <div className="flex items-center gap-2">
           <div className="relative">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary" />
             <input
               value={filter}
               onChange={(e) => setFilter(e.target.value)}
               placeholder="Filter games…"
-              className="h-10 w-64 rounded-xl border border-white/10 bg-white/[0.04] pl-10 pr-3 text-sm text-white placeholder:text-gray-500 focus:border-violet-500/50 focus:outline-none focus:ring-2 focus:ring-violet-500/15"
+              className="h-10 w-64 rounded-xl border border-border-default bg-bg-raised pl-10 pr-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-lime focus:outline-none focus:ring-2 focus:ring-lime-tint-bg"
             />
           </div>
           <Link
             href="/admin/games-v2/new"
-            className="inline-flex h-10 items-center gap-1.5 rounded-xl bg-white px-4 text-sm font-semibold text-black shadow-sm transition-colors hover:bg-white/90"
+            className="inline-flex h-10 items-center gap-1.5 rounded-xl bg-lime px-4 text-sm font-semibold text-text-inverse shadow-sm transition-colors hover:bg-lime-hover"
           >
             <Plus className="h-4 w-4" />
             Add game
@@ -148,7 +148,7 @@ export default function AdminGamesV2Page() {
       {/* ── List ── */}
       <GlassCard intensity="light" noPadding rounded="2xl">
         {/* Column headings */}
-        <div className="grid grid-cols-[60px_1.4fr_1.4fr_120px_120px_56px] items-center gap-3 border-b border-white/[0.06] px-5 py-3 text-[10px] font-semibold uppercase tracking-wider text-gray-500">
+        <div className="grid grid-cols-[60px_1.4fr_1.4fr_120px_120px_56px] items-center gap-3 border-b border-border-subtle px-5 py-3 text-[10px] font-semibold uppercase tracking-wider text-text-tertiary">
           <span>Logo</span>
           <span>Name</span>
           <span>Categories enabled</span>
@@ -160,9 +160,9 @@ export default function AdminGamesV2Page() {
         {/* Rows */}
         <div>
           {isLoading ? (
-            <div className="px-5 py-16 text-center text-sm text-gray-500">Loading games…</div>
+            <div className="px-5 py-16 text-center text-sm text-text-tertiary">Loading games…</div>
           ) : filtered.length === 0 ? (
-            <div className="px-5 py-16 text-center text-sm text-gray-500">
+            <div className="px-5 py-16 text-center text-sm text-text-tertiary">
               No games match "{filter}"
             </div>
           ) : (
@@ -172,7 +172,7 @@ export default function AdminGamesV2Page() {
                 <div
                   key={game.id}
                   className={cn(
-                    'grid grid-cols-[60px_1.4fr_1.4fr_120px_120px_56px] items-center gap-3 border-b border-white/[0.04] px-5 py-4 text-sm transition-colors hover:bg-white/[0.02]',
+                    'grid grid-cols-[60px_1.4fr_1.4fr_120px_120px_56px] items-center gap-3 border-b border-border-subtle px-5 py-4 text-sm transition-colors hover:bg-bg-base',
                     !game.is_active && 'bg-red-500/[0.025]'
                   )}
                 >
@@ -187,7 +187,7 @@ export default function AdminGamesV2Page() {
                         className="h-9 w-9 rounded-lg object-cover ring-1 ring-white/10"
                       />
                     ) : (
-                      <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/[0.04] text-xl ring-1 ring-white/10">
+                      <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-bg-raised text-xl ring-1 ring-white/10">
                         {game.emoji ?? '🎮'}
                       </div>
                     )}
@@ -195,14 +195,14 @@ export default function AdminGamesV2Page() {
 
                   {/* Name + slug */}
                   <div className={cn(!game.is_active && 'opacity-60')}>
-                    <div className="font-medium text-white">{game.name}</div>
-                    <div className="font-mono text-[11px] text-gray-500">{game.slug}</div>
+                    <div className="font-medium text-text-primary">{game.name}</div>
+                    <div className="font-mono text-[11px] text-text-tertiary">{game.slug}</div>
                   </div>
 
                   {/* Category badges */}
                   <div className="flex flex-wrap gap-1.5">
                     {badges.length === 0 ? (
-                      <span className="text-[11px] text-gray-600">— none enabled</span>
+                      <span className="text-[11px] text-text-disabled">— none enabled</span>
                     ) : (
                       badges.map((b) => (
                         <span
@@ -211,8 +211,8 @@ export default function AdminGamesV2Page() {
                           className={cn(
                             'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px]',
                             b.is_active_global
-                              ? 'border-white/10 bg-white/[0.04] text-gray-300'
-                              : 'border-amber-500/20 bg-amber-500/[0.06] text-amber-300/70'
+                              ? 'border-border-default bg-bg-raised text-text-secondary'
+                              : 'border-warning bg-warning-bg text-warning'
                           )}
                         >
                           <span aria-hidden>{b.icon_emoji ?? '•'}</span>
@@ -224,7 +224,7 @@ export default function AdminGamesV2Page() {
 
                   {/* Listings */}
                   <div className={cn(!game.is_active && 'opacity-60')}>
-                    <span className="inline-flex h-6 items-center rounded-full bg-white/[0.04] px-2 text-[11px] text-gray-300 ring-1 ring-inset ring-white/[0.06]">
+                    <span className="inline-flex h-6 items-center rounded-full bg-bg-raised px-2 text-[11px] text-text-secondary ring-1 ring-inset ring-white/[0.06]">
                       {game.listing_count ?? 0}
                     </span>
                   </div>
@@ -235,7 +235,7 @@ export default function AdminGamesV2Page() {
                       className={cn(
                         'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium',
                         game.is_active
-                          ? 'bg-emerald-500/15 text-emerald-400'
+                          ? 'bg-success-bg text-success'
                           : 'bg-red-500/15 text-red-400'
                       )}
                     >
@@ -249,7 +249,7 @@ export default function AdminGamesV2Page() {
                     <Link
                       href={`/admin/games-v2/${game.id}/edit`}
                       title="Edit"
-                      className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-white/[0.06] hover:text-white"
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-text-secondary transition-colors hover:bg-bg-raised-hover hover:text-text-primary"
                     >
                       <Pencil className="h-3.5 w-3.5" />
                     </Link>
@@ -262,18 +262,18 @@ export default function AdminGamesV2Page() {
       </GlassCard>
 
       {/* ── Legend ── */}
-      <div className="flex flex-wrap items-center gap-x-5 gap-y-1 px-1 text-[11px] text-gray-500">
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-1 px-1 text-[11px] text-text-tertiary">
         <span className="inline-flex items-center gap-1">
-          <span className="inline-block h-2 w-2 rounded-full bg-emerald-400/70" />
+          <span className="inline-block h-2 w-2 rounded-full bg-success" />
           Active games are visible in the marketplace
         </span>
         <span className="inline-flex items-center gap-1">
-          <span className="inline-block h-2 w-2 rounded-full bg-amber-400/70" />
+          <span className="inline-block h-2 w-2 rounded-full bg-warning" />
           Amber category badges = the global category is disabled at launch (Boosting)
         </span>
         <span className="inline-flex items-center gap-1">
-          <ChevronRight className="h-3 w-3 text-violet-400/60" />
-          Click <span className="font-semibold text-gray-400">Edit</span> to open the new wizard
+          <ChevronRight className="h-3 w-3 text-lime-text" />
+          Click <span className="font-semibold text-text-secondary">Edit</span> to open the new wizard
         </span>
       </div>
     </div>

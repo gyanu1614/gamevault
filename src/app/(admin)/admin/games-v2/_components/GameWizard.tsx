@@ -113,24 +113,24 @@ function Stepper({ current, completed }: { current: number; completed: Set<numbe
                 className={cn(
                   'flex h-8 w-8 items-center justify-center rounded-full border text-xs font-semibold transition-colors',
                   done
-                    ? 'border-emerald-500/40 bg-emerald-500/15 text-emerald-300'
+                    ? 'border-success bg-success-bg text-success'
                     : active
-                      ? 'border-violet-500/50 bg-violet-500/15 text-violet-200'
-                      : 'border-white/10 bg-white/[0.03] text-gray-500'
+                      ? 'border-lime bg-lime-tint-bg text-lime-text'
+                      : 'border-border-default bg-bg-raised text-text-tertiary'
                 )}
               >
                 {done ? <Check className="h-3.5 w-3.5" /> : s.id}
               </span>
               <div className="hidden sm:block">
-                <div className={cn('text-xs font-semibold', active ? 'text-white' : done ? 'text-emerald-300' : 'text-gray-500')}>
+                <div className={cn('text-xs font-semibold', active ? 'text-text-primary' : done ? 'text-success' : 'text-text-tertiary')}>
                   {s.label}
                 </div>
-                <div className="text-[10px] text-gray-600">{s.description}</div>
+                <div className="text-[10px] text-text-disabled">{s.description}</div>
               </div>
             </div>
             {i < STEPS.length - 1 && (
-              <div className="mx-4 h-px w-10 bg-white/10 sm:w-16">
-                <div className={cn('h-px transition-all', done ? 'w-full bg-emerald-500/50' : 'w-0')} />
+              <div className="mx-4 h-px w-10 bg-bg-raised sm:w-16">
+                <div className={cn('h-px transition-all', done ? 'w-full bg-success' : 'w-0')} />
               </div>
             )}
           </li>
@@ -145,11 +145,11 @@ function Stepper({ current, completed }: { current: number; completed: Set<numbe
 function Label({ children, hint, required }: { children: React.ReactNode; hint?: string; required?: boolean }) {
   return (
     <div className="mb-1.5 flex items-baseline justify-between">
-      <label className="text-xs font-medium text-gray-300">
+      <label className="text-xs font-medium text-text-secondary">
         {children}
-        {required && <span className="ml-1 text-rose-400">*</span>}
+        {required && <span className="ml-1 text-error">*</span>}
       </label>
-      {hint && <span className="text-[10px] text-gray-600">{hint}</span>}
+      {hint && <span className="text-[10px] text-text-disabled">{hint}</span>}
     </div>
   )
 }
@@ -159,8 +159,8 @@ function TextInput(props: React.InputHTMLAttributes<HTMLInputElement>) {
     <input
       {...props}
       className={cn(
-        'h-10 w-full rounded-xl border border-white/10 bg-white/[0.04] px-3 text-sm text-white placeholder:text-gray-600',
-        'focus:border-violet-500/50 focus:outline-none focus:ring-2 focus:ring-violet-500/15 transition-colors',
+        'h-10 w-full rounded-xl border border-border-default bg-bg-raised px-3 text-sm text-text-primary placeholder:text-text-disabled',
+        'focus:border-lime focus:outline-none focus:ring-2 focus:ring-lime-tint-bg transition-colors',
         props.className
       )}
     />
@@ -428,7 +428,7 @@ export default function GameWizard({ mode, game, globalCategories, initialGameCa
       <header className="space-y-3">
         <Link
           href="/admin/games-v2"
-          className="inline-flex items-center gap-1.5 text-xs text-gray-500 transition-colors hover:text-white"
+          className="inline-flex items-center gap-1.5 text-xs text-text-tertiary transition-colors hover:text-text-primary"
         >
           <ArrowLeft className="h-3 w-3" />
           Back to games
@@ -436,15 +436,15 @@ export default function GameWizard({ mode, game, globalCategories, initialGameCa
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-semibold tracking-tight text-white">
+              <h1 className="text-2xl font-semibold tracking-tight text-text-primary">
                 {mode === 'create' ? 'New game' : `Edit ${game?.name ?? 'game'}`}
               </h1>
-              <span className="inline-flex items-center gap-1 rounded-full border border-violet-500/30 bg-violet-500/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-violet-300">
+              <span className="inline-flex items-center gap-1 rounded-full border border-lime-tint-border bg-lime-tint-bg px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-lime-text">
                 <Sparkles className="h-3 w-3" />
                 wizard
               </span>
             </div>
-            <p className="mt-1 text-sm text-gray-400">
+            <p className="mt-1 text-sm text-text-secondary">
               {mode === 'create'
                 ? 'Fill in identity, upload branding, choose which categories the game supports.'
                 : 'Update game details and per-category settings.'}
@@ -508,23 +508,23 @@ export default function GameWizard({ mode, game, globalCategories, initialGameCa
                 />
               </div>
 
-              <div className="sm:col-span-2 flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.02] px-4 py-3">
+              <div className="sm:col-span-2 flex items-center justify-between rounded-xl border border-border-default bg-bg-base px-4 py-3">
                 <div>
-                  <div className="text-sm font-medium text-white">Active</div>
-                  <div className="text-xs text-gray-500">Inactive games are hidden from the marketplace.</div>
+                  <div className="text-sm font-medium text-text-primary">Active</div>
+                  <div className="text-xs text-text-tertiary">Inactive games are hidden from the marketplace.</div>
                 </div>
                 <button
                   type="button"
                   onClick={() => setIsActive((v) => !v)}
                   className={cn(
                     'relative inline-flex h-6 w-11 items-center rounded-full transition-colors',
-                    isActive ? 'bg-emerald-500/70' : 'bg-white/10'
+                    isActive ? 'bg-success' : 'bg-bg-raised'
                   )}
                   aria-pressed={isActive}
                 >
                   <span
                     className={cn(
-                      'inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform',
+                      'inline-block h-4 w-4 transform rounded-full bg-text-primary shadow transition-transform',
                       isActive ? 'translate-x-6' : 'translate-x-1'
                     )}
                   />
@@ -536,23 +536,23 @@ export default function GameWizard({ mode, game, globalCategories, initialGameCa
           {step === 2 && (
             <div className="space-y-5">
               <div>
-                <div className="text-sm font-medium text-white">Logo</div>
-                <p className="text-xs text-gray-500">Square PNG/WebP, 256×256 recommended. Max 2 MB.</p>
+                <div className="text-sm font-medium text-text-primary">Logo</div>
+                <p className="text-xs text-text-tertiary">Square PNG/WebP, 256×256 recommended. Max 2 MB.</p>
               </div>
 
               <div className="flex items-center gap-5">
-                <div className="flex h-24 w-24 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04]">
+                <div className="flex h-24 w-24 items-center justify-center rounded-2xl border border-border-default bg-bg-raised">
                   {logoUrl ? (
                     /* eslint-disable-next-line @next/next/no-img-element */
                     <img src={logoUrl} alt="Logo" className="h-full w-full rounded-2xl object-cover" />
                   ) : (
-                    <ImageIcon className="h-8 w-8 text-gray-600" />
+                    <ImageIcon className="h-8 w-8 text-text-disabled" />
                   )}
                 </div>
 
                 <div className="flex flex-col gap-2">
                   <label className={cn(
-                    'inline-flex h-10 cursor-pointer items-center gap-2 rounded-xl bg-white px-4 text-sm font-semibold text-black transition-colors hover:bg-white/90',
+                    'inline-flex h-10 cursor-pointer items-center gap-2 rounded-xl bg-lime px-4 text-sm font-semibold text-text-inverse transition-colors hover:bg-lime-hover',
                     isUploading && 'pointer-events-none opacity-60'
                   )}>
                     {isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
@@ -570,7 +570,7 @@ export default function GameWizard({ mode, game, globalCategories, initialGameCa
                       type="button"
                       onClick={handleDeleteLogo}
                       disabled={isUploading}
-                      className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-rose-500/20 bg-rose-500/[0.06] px-3 text-xs font-medium text-rose-300 transition-colors hover:bg-rose-500/[0.1] disabled:opacity-50"
+                      className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-error bg-error-bg px-3 text-xs font-medium text-error transition-colors hover:bg-error-bg disabled:opacity-50"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                       Remove logo
@@ -579,26 +579,26 @@ export default function GameWizard({ mode, game, globalCategories, initialGameCa
                 </div>
               </div>
 
-              <div className="h-px bg-white/[0.06]" />
+              <div className="h-px bg-bg-raised-hover" />
 
               <div>
-                <div className="text-sm font-medium text-white">Cover art</div>
-                <p className="text-xs text-gray-500">Portrait JPG/PNG/WebP, 600×800 recommended. Used on the Popular Games shelf. Max 4 MB.</p>
+                <div className="text-sm font-medium text-text-primary">Cover art</div>
+                <p className="text-xs text-text-tertiary">Portrait JPG/PNG/WebP, 600×800 recommended. Used on the Popular Games shelf. Max 4 MB.</p>
               </div>
 
               <div className="flex items-center gap-5">
-                <div className="flex h-32 w-24 items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04]">
+                <div className="flex h-32 w-24 items-center justify-center overflow-hidden rounded-2xl border border-border-default bg-bg-raised">
                   {coverUrl ? (
                     /* eslint-disable-next-line @next/next/no-img-element */
                     <img src={coverUrl} alt="Cover" className="h-full w-full object-cover" />
                   ) : (
-                    <ImageIcon className="h-8 w-8 text-gray-600" />
+                    <ImageIcon className="h-8 w-8 text-text-disabled" />
                   )}
                 </div>
 
                 <div className="flex flex-col gap-2">
                   <label className={cn(
-                    'inline-flex h-10 cursor-pointer items-center gap-2 rounded-xl bg-white px-4 text-sm font-semibold text-black transition-colors hover:bg-white/90',
+                    'inline-flex h-10 cursor-pointer items-center gap-2 rounded-xl bg-lime px-4 text-sm font-semibold text-text-inverse transition-colors hover:bg-lime-hover',
                     isUploadingCover && 'pointer-events-none opacity-60'
                   )}>
                     {isUploadingCover ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
@@ -616,7 +616,7 @@ export default function GameWizard({ mode, game, globalCategories, initialGameCa
                       type="button"
                       onClick={handleDeleteCover}
                       disabled={isUploadingCover}
-                      className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-rose-500/20 bg-rose-500/[0.06] px-3 text-xs font-medium text-rose-300 transition-colors hover:bg-rose-500/[0.1] disabled:opacity-50"
+                      className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-error bg-error-bg px-3 text-xs font-medium text-error transition-colors hover:bg-error-bg disabled:opacity-50"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                       Remove cover
@@ -631,10 +631,10 @@ export default function GameWizard({ mode, game, globalCategories, initialGameCa
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <div className="text-sm font-medium text-white">Categories</div>
-                  <p className="text-xs text-gray-500">Toggle which categories this game supports. Boosting is disabled at launch.</p>
+                  <div className="text-sm font-medium text-text-primary">Categories</div>
+                  <p className="text-xs text-text-tertiary">Toggle which categories this game supports. Boosting is disabled at launch.</p>
                 </div>
-                <div className="text-xs text-gray-500">{enabledCount} of {categories.length} enabled</div>
+                <div className="text-xs text-text-tertiary">{enabledCount} of {categories.length} enabled</div>
               </div>
 
               <div className="space-y-2">
@@ -644,10 +644,10 @@ export default function GameWizard({ mode, game, globalCategories, initialGameCa
                     <div
                       key={c.global_category_id}
                       className={cn(
-                        'rounded-xl border bg-white/[0.02] transition-colors',
+                        'rounded-xl border bg-bg-base transition-colors',
                         c.is_enabled
-                          ? 'border-emerald-500/30 bg-emerald-500/[0.04]'
-                          : 'border-white/10',
+                          ? 'border-success bg-success/[0.04]'
+                          : 'border-border-default',
                         disabledGlobally && 'opacity-70'
                       )}
                     >
@@ -655,8 +655,8 @@ export default function GameWizard({ mode, game, globalCategories, initialGameCa
                         <div className="flex items-center gap-3">
                           <span className="text-xl" aria-hidden>{c.icon_emoji ?? '•'}</span>
                           <div>
-                            <div className="text-sm font-medium text-white">{c.name}</div>
-                            <div className="text-[11px] text-gray-500">
+                            <div className="text-sm font-medium text-text-primary">{c.name}</div>
+                            <div className="text-[11px] text-text-tertiary">
                               {disabledGlobally ? 'Disabled at launch' : `Slug: ${c.slug}`}
                             </div>
                           </div>
@@ -667,7 +667,7 @@ export default function GameWizard({ mode, game, globalCategories, initialGameCa
                           disabled={disabledGlobally}
                           className={cn(
                             'relative inline-flex h-6 w-11 items-center rounded-full transition-colors',
-                            c.is_enabled ? 'bg-emerald-500/70' : 'bg-white/10',
+                            c.is_enabled ? 'bg-success' : 'bg-bg-raised',
                             disabledGlobally && 'cursor-not-allowed opacity-50'
                           )}
                           aria-pressed={c.is_enabled}
@@ -675,7 +675,7 @@ export default function GameWizard({ mode, game, globalCategories, initialGameCa
                         >
                           <span
                             className={cn(
-                              'inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform',
+                              'inline-block h-4 w-4 transform rounded-full bg-text-primary shadow transition-transform',
                               c.is_enabled ? 'translate-x-6' : 'translate-x-1'
                             )}
                           />
@@ -684,10 +684,10 @@ export default function GameWizard({ mode, game, globalCategories, initialGameCa
 
                       {/* Per-category settings — only show when enabled */}
                       {c.is_enabled && (
-                        <div className="space-y-3 border-t border-white/[0.06] px-4 py-3">
+                        <div className="space-y-3 border-t border-border-subtle px-4 py-3">
                           {/* Delivery modes */}
                           <div>
-                            <div className="mb-1.5 text-[11px] font-medium uppercase tracking-wider text-gray-500">Delivery modes</div>
+                            <div className="mb-1.5 text-[11px] font-medium uppercase tracking-wider text-text-tertiary">Delivery modes</div>
                             <div className="flex gap-2">
                               {(['manual', 'instant'] as const).map((mode) => {
                                 const on = c.delivery_modes.includes(mode)
@@ -709,8 +709,8 @@ export default function GameWizard({ mode, game, globalCategories, initialGameCa
                                     className={cn(
                                       'inline-flex h-8 items-center gap-1.5 rounded-lg border px-3 text-xs font-medium transition-colors',
                                       on
-                                        ? 'border-violet-500/40 bg-violet-500/15 text-violet-200'
-                                        : 'border-white/10 bg-white/[0.02] text-gray-400 hover:text-white'
+                                        ? 'border-lime-tint-border bg-lime-tint-bg text-lime-text'
+                                        : 'border-border-default bg-bg-base text-text-secondary hover:text-text-primary'
                                     )}
                                   >
                                     {mode === 'manual' ? <Clock className="h-3.5 w-3.5" /> : <Zap className="h-3.5 w-3.5" />}
@@ -722,24 +722,24 @@ export default function GameWizard({ mode, game, globalCategories, initialGameCa
                           </div>
 
                           {/* Region toggle */}
-                          <div className="flex items-center justify-between rounded-lg border border-white/10 bg-white/[0.02] px-3 py-2">
+                          <div className="flex items-center justify-between rounded-lg border border-border-default bg-bg-base px-3 py-2">
                             <div className="flex items-center gap-2 text-xs">
-                              <Globe2 className="h-3.5 w-3.5 text-gray-400" />
-                              <span className="text-gray-300">Requires region</span>
-                              <span className="text-gray-600">— buyer must pick a region</span>
+                              <Globe2 className="h-3.5 w-3.5 text-text-secondary" />
+                              <span className="text-text-secondary">Requires region</span>
+                              <span className="text-text-disabled">— buyer must pick a region</span>
                             </div>
                             <button
                               type="button"
                               onClick={() => updateCategory(c.global_category_id, { requires_region: !c.requires_region })}
                               className={cn(
                                 'relative inline-flex h-5 w-9 items-center rounded-full transition-colors',
-                                c.requires_region ? 'bg-violet-500/70' : 'bg-white/10'
+                                c.requires_region ? 'bg-lime' : 'bg-bg-raised'
                               )}
                               aria-pressed={c.requires_region}
                             >
                               <span
                                 className={cn(
-                                  'inline-block h-3 w-3 transform rounded-full bg-white transition-transform',
+                                  'inline-block h-3 w-3 transform rounded-full bg-text-primary transition-transform',
                                   c.requires_region ? 'translate-x-5' : 'translate-x-1'
                                 )}
                               />
@@ -747,24 +747,24 @@ export default function GameWizard({ mode, game, globalCategories, initialGameCa
                           </div>
 
                           {/* Platform toggle */}
-                          <div className="flex items-center justify-between rounded-lg border border-white/10 bg-white/[0.02] px-3 py-2">
+                          <div className="flex items-center justify-between rounded-lg border border-border-default bg-bg-base px-3 py-2">
                             <div className="flex items-center gap-2 text-xs">
-                              <Monitor className="h-3.5 w-3.5 text-gray-400" />
-                              <span className="text-gray-300">Requires platform</span>
-                              <span className="text-gray-600">— e.g. PC / PlayStation / Xbox</span>
+                              <Monitor className="h-3.5 w-3.5 text-text-secondary" />
+                              <span className="text-text-secondary">Requires platform</span>
+                              <span className="text-text-disabled">— e.g. PC / PlayStation / Xbox</span>
                             </div>
                             <button
                               type="button"
                               onClick={() => updateCategory(c.global_category_id, { requires_platform: !c.requires_platform })}
                               className={cn(
                                 'relative inline-flex h-5 w-9 items-center rounded-full transition-colors',
-                                c.requires_platform ? 'bg-violet-500/70' : 'bg-white/10'
+                                c.requires_platform ? 'bg-lime' : 'bg-bg-raised'
                               )}
                               aria-pressed={c.requires_platform}
                             >
                               <span
                                 className={cn(
-                                  'inline-block h-3 w-3 transform rounded-full bg-white transition-transform',
+                                  'inline-block h-3 w-3 transform rounded-full bg-text-primary transition-transform',
                                   c.requires_platform ? 'translate-x-5' : 'translate-x-1'
                                 )}
                               />
@@ -774,14 +774,14 @@ export default function GameWizard({ mode, game, globalCategories, initialGameCa
                           {gameId && (
                             <Link
                               href={`/admin/games-v2/${gameId}/templates/${c.slug}`}
-                              className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-violet-500/30 bg-violet-500/10 px-3 text-[11px] font-semibold text-violet-300 transition-colors hover:bg-violet-500/15"
+                              className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-lime-tint-border bg-lime-tint-bg px-3 text-[11px] font-semibold text-lime-text transition-colors hover:bg-lime-tint-bg"
                             >
                               <Sparkles className="h-3 w-3" />
                               Edit attribute template
                             </Link>
                           )}
                           {!gameId && (
-                            <p className="text-[10px] text-gray-600">
+                            <p className="text-[10px] text-text-disabled">
                               Save identity step first, then come back here to edit this category's attribute template.
                             </p>
                           )}
@@ -796,7 +796,7 @@ export default function GameWizard({ mode, game, globalCategories, initialGameCa
 
           {step === 4 && (
             <div className="space-y-4">
-              <div className="text-sm font-medium text-white">Review</div>
+              <div className="text-sm font-medium text-text-primary">Review</div>
               <dl className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                 <ReviewRow label="Name" value={name} />
                 <ReviewRow label="Slug" value={slug} mono />
@@ -809,8 +809,8 @@ export default function GameWizard({ mode, game, globalCategories, initialGameCa
                 <ReviewRow label="Categories enabled" value={`${enabledCount} of ${categories.length}`} />
               </dl>
 
-              <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3 text-[11px] text-gray-500">
-                Identity and logo are saved as you go. Hitting <span className="font-semibold text-gray-300">Save game</span> persists the
+              <div className="rounded-xl border border-border-default bg-bg-base p-3 text-[11px] text-text-tertiary">
+                Identity and logo are saved as you go. Hitting <span className="font-semibold text-text-secondary">Save game</span> persists the
                 per-category toggles and returns to the games list.
               </div>
             </div>
@@ -818,12 +818,12 @@ export default function GameWizard({ mode, game, globalCategories, initialGameCa
         </div>
 
         {/* ── Footer ── */}
-        <div className="flex items-center justify-between border-t border-white/[0.06] px-6 py-4">
+        <div className="flex items-center justify-between border-t border-border-subtle px-6 py-4">
           <button
             type="button"
             onClick={() => setStep((s) => Math.max(1, s - 1))}
             disabled={step === 1 || isSaving}
-            className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.04] px-3 text-sm font-medium text-gray-200 transition-colors hover:bg-white/[0.08] disabled:opacity-40"
+            className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-border-default bg-bg-raised px-3 text-sm font-medium text-text-primary transition-colors hover:bg-bg-raised-hover disabled:opacity-40"
           >
             <ArrowLeft className="h-3.5 w-3.5" />
             Back
@@ -843,7 +843,7 @@ export default function GameWizard({ mode, game, globalCategories, initialGameCa
                   }
                 }}
                 disabled={!canGoNext || isSaving}
-                className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-white px-4 text-sm font-semibold text-black transition-colors hover:bg-white/90 disabled:opacity-50"
+                className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-lime px-4 text-sm font-semibold text-text-inverse transition-colors hover:bg-lime-hover disabled:opacity-50"
               >
                 {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
                 {step === 1 ? 'Save and continue' : 'Continue'}
@@ -854,7 +854,7 @@ export default function GameWizard({ mode, game, globalCategories, initialGameCa
                 type="button"
                 onClick={handleFinalSave}
                 disabled={isSaving || pending}
-                className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-emerald-500 px-4 text-sm font-semibold text-black transition-colors hover:bg-emerald-400 disabled:opacity-50"
+                className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-success px-4 text-sm font-semibold text-text-inverse transition-colors hover:bg-success disabled:opacity-50"
               >
                 {isSaving || pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                 Save game
@@ -869,9 +869,9 @@ export default function GameWizard({ mode, game, globalCategories, initialGameCa
 
 function ReviewRow({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
   return (
-    <div className="flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.02] px-3 py-2">
-      <dt className="text-[11px] uppercase tracking-wider text-gray-500">{label}</dt>
-      <dd className={cn('text-sm text-white', mono && 'font-mono text-xs')}>{value}</dd>
+    <div className="flex items-center justify-between rounded-xl border border-border-default bg-bg-base px-3 py-2">
+      <dt className="text-[11px] uppercase tracking-wider text-text-tertiary">{label}</dt>
+      <dd className={cn('text-sm text-text-primary', mono && 'font-mono text-xs')}>{value}</dd>
     </div>
   )
 }

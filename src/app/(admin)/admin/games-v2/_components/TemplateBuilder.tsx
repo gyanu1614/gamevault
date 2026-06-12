@@ -129,7 +129,7 @@ export default function TemplateBuilder({ initial }: { initial: BuilderState }) 
       <header className="space-y-2">
         <Link
           href={`/admin/games-v2/${state.header.game_id}/edit`}
-          className="inline-flex items-center gap-1.5 text-xs text-gray-500 transition-colors hover:text-white"
+          className="inline-flex items-center gap-1.5 text-xs text-text-tertiary transition-colors hover:text-text-primary"
         >
           <ArrowLeft className="h-3 w-3" />
           Back to {state.header.game_name}
@@ -137,22 +137,22 @@ export default function TemplateBuilder({ initial }: { initial: BuilderState }) 
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-semibold tracking-tight text-white">
-                {state.header.game_name} <span className="text-gray-500">·</span>{' '}
-                <span className="text-violet-300">{state.header.global_category_name}</span>
+              <h1 className="text-2xl font-semibold tracking-tight text-text-primary">
+                {state.header.game_name} <span className="text-text-tertiary">·</span>{' '}
+                <span className="text-lime-text">{state.header.global_category_name}</span>
               </h1>
-              <span className="inline-flex items-center gap-1 rounded-full border border-violet-500/30 bg-violet-500/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-violet-300">
+              <span className="inline-flex items-center gap-1 rounded-full border border-lime-tint-border bg-lime-tint-bg px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-lime-text">
                 <Sparkles className="h-3 w-3" />
                 attribute template
               </span>
             </div>
-            <p className="mt-1 text-sm text-gray-400">
+            <p className="mt-1 text-sm text-text-secondary">
               Define the fields sellers fill in when listing in this category.
               Sub-fields appear only when another field has a specific value.
             </p>
           </div>
           {state.template && (
-            <div className="text-[11px] text-gray-500">
+            <div className="text-[11px] text-text-tertiary">
               version {state.template.version} · {state.attributes.length} attributes
             </div>
           )}
@@ -192,8 +192,8 @@ export default function TemplateBuilder({ initial }: { initial: BuilderState }) 
         ) : (
           <GlassCard intensity="light" rounded="2xl" className="flex items-center justify-center py-20">
             <div className="text-center">
-              <Pencil className="mx-auto mb-3 h-6 w-6 text-gray-600" />
-              <p className="text-sm text-gray-500">Pick a field on the left to edit it, or add a new one.</p>
+              <Pencil className="mx-auto mb-3 h-6 w-6 text-text-disabled" />
+              <p className="text-sm text-text-tertiary">Pick a field on the left to edit it, or add a new one.</p>
             </div>
           </GlassCard>
         )}
@@ -278,39 +278,39 @@ function FieldTree(props: FieldTreeProps) {
   return (
     <GlassCard intensity="light" rounded="2xl" className="p-0">
       {/* Header + explainer */}
-      <div className="border-b border-white/[0.06] px-4 py-3">
+      <div className="border-b border-border-subtle px-4 py-3">
         <div className="flex items-center justify-between">
-          <div className="text-xs font-semibold uppercase tracking-wider text-gray-400">Fields</div>
+          <div className="text-xs font-semibold uppercase tracking-wider text-text-secondary">Fields</div>
           <button
             type="button"
             onClick={props.onAddTopLevel}
-            className="inline-flex h-7 items-center gap-1 rounded-lg bg-white px-2 text-[11px] font-semibold text-black hover:bg-white/90"
+            className="inline-flex h-7 items-center gap-1 rounded-lg bg-text-primary px-2 text-[11px] font-semibold text-text-inverse hover:bg-lime-hover"
           >
             <Plus className="h-3 w-3" />
             Add field
           </button>
         </div>
-        <p className="mt-1 text-[11px] leading-snug text-gray-500">
+        <p className="mt-1 text-[11px] leading-snug text-text-tertiary">
           Fields are what sellers fill in. Add a top-level field, then for choice-type fields
-          you can add <span className="text-gray-300">sub-fields</span> that only appear when a
+          you can add <span className="text-text-secondary">sub-fields</span> that only appear when a
           specific choice is picked.
         </p>
       </div>
 
       {/* Inline "add top-level" form */}
       {props.addingTopLevel && (
-        <div className="space-y-2 border-b border-white/[0.06] bg-white/[0.02] px-4 py-3">
+        <div className="space-y-2 border-b border-border-subtle bg-bg-base px-4 py-3">
           <input
             value={props.draftName}
             onChange={(e) => props.setDraftName(e.target.value)}
             placeholder="e.g. Item Type"
             autoFocus
-            className="h-9 w-full rounded-lg border border-white/10 bg-white/[0.04] px-3 text-sm text-white placeholder:text-gray-600 focus:border-violet-500/50 focus:outline-none focus:ring-2 focus:ring-violet-500/15"
+            className="h-9 w-full rounded-lg border border-border-default bg-bg-raised px-3 text-sm text-text-primary placeholder:text-text-disabled focus:border-lime focus:outline-none focus:ring-2 focus:ring-lime-tint-bg"
           />
           <select
             value={props.draftType}
             onChange={(e) => props.setDraftType(e.target.value as AttrType)}
-            className="h-9 w-full rounded-lg border border-white/10 bg-gray-950 px-2 text-xs text-white focus:border-violet-500/50 focus:outline-none focus:ring-2 focus:ring-violet-500/15"
+            className="h-9 w-full rounded-lg border border-border-default bg-bg-overlay px-2 text-xs text-text-primary focus:border-lime focus:outline-none focus:ring-2 focus:ring-lime-tint-bg"
           >
             {TYPE_ORDER.map((t) => (
               <option key={t} value={t}>{TYPE_META[t].label}</option>
@@ -321,7 +321,7 @@ function FieldTree(props: FieldTreeProps) {
               type="button"
               onClick={props.onCreateTopLevel}
               disabled={props.busy || !props.draftName.trim()}
-              className="inline-flex h-8 flex-1 items-center justify-center gap-1 rounded-lg bg-emerald-500 px-2 text-xs font-semibold text-black hover:bg-emerald-400 disabled:opacity-40"
+              className="inline-flex h-8 flex-1 items-center justify-center gap-1 rounded-lg bg-lime px-2 text-xs font-semibold text-text-inverse hover:bg-lime-hover disabled:opacity-40"
             >
               {props.busy ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
               Create field
@@ -329,7 +329,7 @@ function FieldTree(props: FieldTreeProps) {
             <button
               type="button"
               onClick={props.onCancelTopLevel}
-              className="inline-flex h-8 items-center justify-center rounded-lg border border-white/10 bg-white/[0.04] px-2 text-xs font-medium text-gray-300 hover:bg-white/[0.08]"
+              className="inline-flex h-8 items-center justify-center rounded-lg border border-border-default bg-bg-raised px-2 text-xs font-medium text-text-secondary hover:bg-bg-raised-hover"
             >
               <X className="h-3 w-3" />
             </button>
@@ -339,8 +339,8 @@ function FieldTree(props: FieldTreeProps) {
 
       <div className="max-h-[70vh] overflow-y-auto py-2">
         {topLevel.length === 0 && !props.addingTopLevel ? (
-          <div className="px-4 py-10 text-center text-xs text-gray-500">
-            No fields yet. Click <span className="font-semibold text-gray-300">Add field</span> to start —
+          <div className="px-4 py-10 text-center text-xs text-text-tertiary">
+            No fields yet. Click <span className="font-semibold text-text-secondary">Add field</span> to start —
             e.g. a <em>Dropdown</em> called "Item Type".
           </div>
         ) : (
@@ -402,26 +402,26 @@ function FieldNode({ attribute, depth, childrenOf, selectedId, onSelect, onDelet
       <div
         className={cn(
           'group flex items-center gap-2 rounded-md py-1.5 pr-2 transition-colors',
-          selected ? 'bg-violet-500/15 text-white' : 'hover:bg-white/[0.03] text-gray-300'
+          selected ? 'bg-lime-tint-bg text-text-primary' : 'hover:bg-bg-raised text-text-secondary'
         )}
         style={{ paddingLeft: 12 + indentPx }}
       >
-        <Icon className="h-3.5 w-3.5 shrink-0 text-gray-500" />
+        <Icon className="h-3.5 w-3.5 shrink-0 text-text-tertiary" />
         <button
           type="button"
           onClick={() => onSelect(attribute.id)}
           className="min-w-0 flex-1 truncate text-left text-sm"
         >
           <span className="font-medium">{attribute.name}</span>
-          <span className="ml-2 text-[10px] text-gray-500">
+          <span className="ml-2 text-[10px] text-text-tertiary">
             {TYPE_META[attribute.type].label}
-            {attribute.is_required && <span className="ml-1 text-rose-400">*</span>}
+            {attribute.is_required && <span className="ml-1 text-error">*</span>}
           </span>
         </button>
         <button
           type="button"
           onClick={() => onDelete(attribute.id)}
-          className="rounded p-1 text-gray-500 opacity-0 transition-opacity hover:bg-rose-500/15 hover:text-rose-300 group-hover:opacity-100"
+          className="rounded p-1 text-text-tertiary opacity-0 transition-opacity hover:bg-error-bg hover:text-error group-hover:opacity-100"
           title="Delete field"
         >
           <Trash2 className="h-3 w-3" />
@@ -436,14 +436,14 @@ function FieldNode({ attribute, depth, childrenOf, selectedId, onSelect, onDelet
             return (
               <li key={b.key}>
                 <div
-                  className="flex items-center gap-1.5 py-0.5 text-[10px] uppercase tracking-wider text-gray-600"
+                  className="flex items-center gap-1.5 py-0.5 text-[10px] uppercase tracking-wider text-text-disabled"
                   style={{ paddingLeft: 12 + indentPx + 14 }}
                 >
                   {b.iconUrl ? (
                     /* eslint-disable-next-line @next/next/no-img-element */
                     <img src={b.iconUrl} alt="" className="h-3 w-3 rounded object-cover" />
                   ) : (
-                    <span className="inline-block h-1.5 w-1.5 rounded-full bg-gray-700" />
+                    <span className="inline-block h-1.5 w-1.5 rounded-full bg-bg-overlay-2" />
                   )}
                   {b.label}
                 </div>
@@ -525,7 +525,7 @@ function AddSubFieldRow({
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="group inline-flex items-center gap-1 py-0.5 text-[11px] text-gray-500 hover:text-violet-300"
+          className="group inline-flex items-center gap-1 py-0.5 text-[11px] text-text-tertiary hover:text-lime-text"
           style={{ paddingLeft: 12 + indentPx + 14 }}
         >
           <Plus className="h-3 w-3" />
@@ -538,10 +538,10 @@ function AddSubFieldRow({
   return (
     <li>
       <div
-        className="rounded-lg border border-violet-500/30 bg-violet-500/[0.06] p-2"
+        className="rounded-lg border border-lime-tint-border bg-lime/[0.06] p-2"
         style={{ marginLeft: 12 + indentPx + 14, marginRight: 8 }}
       >
-        <div className="mb-1.5 text-[10px] uppercase tracking-wider text-violet-300">
+        <div className="mb-1.5 text-[10px] uppercase tracking-wider text-lime-text">
           New sub-field — appears when “{triggerLabel}” is chosen
         </div>
         <div className="space-y-1.5">
@@ -550,12 +550,12 @@ function AddSubFieldRow({
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="e.g. Rarity"
-            className="h-8 w-full rounded-md border border-white/10 bg-white/[0.04] px-2 text-sm text-white placeholder:text-gray-600 focus:border-violet-500/50 focus:outline-none focus:ring-2 focus:ring-violet-500/15"
+            className="h-8 w-full rounded-md border border-border-default bg-bg-raised px-2 text-sm text-text-primary placeholder:text-text-disabled focus:border-lime focus:outline-none focus:ring-2 focus:ring-lime-tint-bg"
           />
           <select
             value={type}
             onChange={(e) => setType(e.target.value as AttrType)}
-            className="h-8 w-full rounded-md border border-white/10 bg-gray-950 px-2 text-xs text-white focus:border-violet-500/50 focus:outline-none focus:ring-2 focus:ring-violet-500/15"
+            className="h-8 w-full rounded-md border border-border-default bg-bg-overlay px-2 text-xs text-text-primary focus:border-lime focus:outline-none focus:ring-2 focus:ring-lime-tint-bg"
           >
             {TYPE_ORDER.map((t) => (
               <option key={t} value={t}>{TYPE_META[t].label}</option>
@@ -566,7 +566,7 @@ function AddSubFieldRow({
               type="button"
               onClick={handleCreate}
               disabled={busy || !name.trim()}
-              className="inline-flex h-7 flex-1 items-center justify-center gap-1 rounded-md bg-emerald-500 px-2 text-[11px] font-semibold text-black hover:bg-emerald-400 disabled:opacity-40"
+              className="inline-flex h-7 flex-1 items-center justify-center gap-1 rounded-md bg-success px-2 text-[11px] font-semibold text-text-inverse hover:bg-success disabled:opacity-40"
             >
               {busy ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
               Create sub-field
@@ -574,7 +574,7 @@ function AddSubFieldRow({
             <button
               type="button"
               onClick={() => { setOpen(false); setName('') }}
-              className="inline-flex h-7 items-center justify-center rounded-md border border-white/10 bg-white/[0.04] px-2 text-[11px] text-gray-300 hover:bg-white/[0.08]"
+              className="inline-flex h-7 items-center justify-center rounded-md border border-border-default bg-bg-raised px-2 text-[11px] text-text-secondary hover:bg-bg-raised-hover"
             >
               <X className="h-3 w-3" />
             </button>
@@ -651,35 +651,35 @@ function AttributeDetail({
   return (
     <div className="space-y-4">
       {/* ── Step-by-step explainer ── */}
-      <div className="rounded-2xl border border-violet-500/20 bg-violet-500/[0.05] p-4">
-        <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-violet-300">
+      <div className="rounded-2xl border border-lime-tint-border bg-lime-tint-bg p-4">
+        <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-lime-text">
           Editing a field
         </div>
-        <ol className="space-y-1 text-xs text-gray-300">
-          <li><span className="font-semibold text-white">1.</span> Set a <span className="text-white">Name</span> and pick a <span className="text-white">Type</span>.</li>
+        <ol className="space-y-1 text-xs text-text-secondary">
+          <li><span className="font-semibold text-text-primary">1.</span> Set a <span className="text-text-primary">Name</span> and pick a <span className="text-text-primary">Type</span>.</li>
           {supportsOptions && (
-            <li><span className="font-semibold text-white">2.</span> Add the <span className="text-white">Choices</span> below (e.g. Pet, Egg, Cash).</li>
+            <li><span className="font-semibold text-text-primary">2.</span> Add the <span className="text-text-primary">Choices</span> below (e.g. Pet, Egg, Cash).</li>
           )}
           <li>
-            <span className="font-semibold text-white">{supportsOptions ? '3.' : '2.'}</span>{' '}
+            <span className="font-semibold text-text-primary">{supportsOptions ? '3.' : '2.'}</span>{' '}
             {supportsOptions
               ? <>Optional — back in the tree, click "+ Add sub-field shown when <em>X</em> is chosen" to add a field that only appears for that choice.</>
-              : <>Use <span className="text-white">Advanced</span> below for placeholder, help text, and validation.</>}
+              : <>Use <span className="text-text-primary">Advanced</span> below for placeholder, help text, and validation.</>}
           </li>
         </ol>
       </div>
 
       {/* ── Essentials ── */}
       <GlassCard intensity="light" rounded="2xl" className="p-0">
-        <div className="flex items-center justify-between border-b border-white/[0.06] px-5 py-3">
-          <div className="text-xs font-semibold uppercase tracking-wider text-gray-400">Field</div>
+        <div className="flex items-center justify-between border-b border-border-subtle px-5 py-3">
+          <div className="text-xs font-semibold uppercase tracking-wider text-text-secondary">Field</div>
           <button
             type="button"
             onClick={handleSave}
             disabled={!dirty || saving}
             className={cn(
               'inline-flex h-8 items-center gap-1.5 rounded-lg px-3 text-xs font-semibold transition-colors',
-              dirty ? 'bg-white text-black hover:bg-white/90' : 'bg-white/[0.04] text-gray-600'
+              dirty ? 'bg-lime text-text-inverse hover:bg-lime-hover' : 'bg-bg-raised text-text-disabled'
             )}
           >
             {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
@@ -691,7 +691,7 @@ function AttributeDetail({
             <input value={name} onChange={(e) => setName(e.target.value)} className={inputCls} />
           </Field>
           <Field label="Type">
-            <select value={type} onChange={(e) => setType(e.target.value as AttrType)} className={cn(inputCls, 'bg-gray-950')}>
+            <select value={type} onChange={(e) => setType(e.target.value as AttrType)} className={cn(inputCls, 'bg-bg-overlay')}>
               {TYPE_ORDER.map((t) => (
                 <option key={t} value={t}>{TYPE_META[t].label}</option>
               ))}
@@ -759,16 +759,16 @@ function AdvancedFieldSettings({
         onClick={() => setOpen((v) => !v)}
         className="flex w-full items-center justify-between px-5 py-3 text-left"
       >
-        <div className="text-xs font-semibold uppercase tracking-wider text-gray-400">
+        <div className="text-xs font-semibold uppercase tracking-wider text-text-secondary">
           Advanced
-          <span className="ml-2 text-[10px] font-normal normal-case tracking-normal text-gray-600">
+          <span className="ml-2 text-[10px] font-normal normal-case tracking-normal text-text-disabled">
             slug, placeholder, help text, description, search
           </span>
         </div>
-        <span className="text-xs text-gray-500">{open ? 'Hide' : 'Show'}</span>
+        <span className="text-xs text-text-tertiary">{open ? 'Hide' : 'Show'}</span>
       </button>
       {open && (
-        <div className="grid gap-3 border-t border-white/[0.06] p-5 sm:grid-cols-2">
+        <div className="grid gap-3 border-t border-border-subtle p-5 sm:grid-cols-2">
           <Field label="Slug" hint="used in URLs · lowercase, dashes only" className="sm:col-span-2">
             <input value={slug} onChange={(e) => setSlug(e.target.value)} className={cn(inputCls, 'font-mono text-xs')} />
           </Field>
@@ -837,14 +837,14 @@ function OptionsEditor({ attribute, onChange }: { attribute: BuilderAttribute; o
 
   return (
     <GlassCard intensity="light" rounded="2xl" className="p-0">
-      <div className="flex items-center justify-between border-b border-white/[0.06] px-5 py-3">
-        <div className="text-xs font-semibold uppercase tracking-wider text-gray-400">
-          Choices <span className="text-gray-600">({localOptions.length})</span>
+      <div className="flex items-center justify-between border-b border-border-subtle px-5 py-3">
+        <div className="text-xs font-semibold uppercase tracking-wider text-text-secondary">
+          Choices <span className="text-text-disabled">({localOptions.length})</span>
         </div>
       </div>
       <div className="space-y-2 p-4">
         {localOptions.length === 0 ? (
-          <p className="rounded-lg border border-dashed border-white/10 bg-white/[0.02] px-3 py-4 text-center text-xs text-gray-500">
+          <p className="rounded-lg border border-dashed border-border-default bg-bg-base px-3 py-4 text-center text-xs text-text-tertiary">
             No choices yet — add one below.
           </p>
         ) : (
@@ -868,13 +868,13 @@ function OptionsEditor({ attribute, onChange }: { attribute: BuilderAttribute; o
             onChange={(e) => setNewLabel(e.target.value)}
             placeholder="Add a choice (e.g. Pet, Egg, Cash)…"
             onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAdd() } }}
-            className="h-9 flex-1 rounded-lg border border-white/10 bg-white/[0.04] px-3 text-sm text-white placeholder:text-gray-600 focus:border-violet-500/50 focus:outline-none focus:ring-2 focus:ring-violet-500/15"
+            className="h-9 flex-1 rounded-lg border border-border-default bg-bg-raised px-3 text-sm text-text-primary placeholder:text-text-disabled focus:border-lime focus:outline-none focus:ring-2 focus:ring-lime-tint-bg"
           />
           <button
             type="button"
             onClick={handleAdd}
             disabled={busy || !newLabel.trim()}
-            className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-white px-3 text-xs font-semibold text-black hover:bg-white/90 disabled:opacity-40"
+            className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-lime px-3 text-xs font-semibold text-text-inverse hover:bg-lime-hover disabled:opacity-40"
           >
             {busy ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
             Add choice
@@ -909,7 +909,7 @@ function SortableOptionRow({
         {...dragAttrs}
         {...listeners}
         aria-label="Drag to reorder"
-        className="flex shrink-0 cursor-grab touch-none items-center justify-center rounded-md px-1 text-gray-600 hover:text-gray-300 active:cursor-grabbing"
+        className="flex shrink-0 cursor-grab touch-none items-center justify-center rounded-md px-1 text-text-disabled hover:text-text-secondary active:cursor-grabbing"
       >
         <GripVertical className="h-3.5 w-3.5" />
       </button>
@@ -981,18 +981,18 @@ function OptionRow({
 
   return (
     <div className={cn(
-      'grid items-center gap-2 rounded-lg border border-white/10 bg-white/[0.02] p-2',
+      'grid items-center gap-2 rounded-lg border border-border-default bg-bg-base p-2',
       showIcon ? 'grid-cols-[36px_1fr_140px_120px]' : 'grid-cols-[1fr_140px_80px]'
     )}>
       {showIcon && (
-        <label className="relative flex h-9 w-9 cursor-pointer items-center justify-center overflow-hidden rounded-md border border-white/10 bg-white/[0.04] hover:bg-white/[0.06]">
+        <label className="relative flex h-9 w-9 cursor-pointer items-center justify-center overflow-hidden rounded-md border border-border-default bg-bg-raised hover:bg-bg-raised-hover">
           {option.icon_url ? (
             /* eslint-disable-next-line @next/next/no-img-element */
             <img src={option.icon_url} alt="" className="h-full w-full object-cover" />
           ) : uploading ? (
-            <Loader2 className="h-4 w-4 animate-spin text-violet-300" />
+            <Loader2 className="h-4 w-4 animate-spin text-lime-text" />
           ) : (
-            <ImageIcon className="h-4 w-4 text-gray-500" />
+            <ImageIcon className="h-4 w-4 text-text-tertiary" />
           )}
           <input
             type="file"
@@ -1006,13 +1006,13 @@ function OptionRow({
       <input
         value={label}
         onChange={(e) => setLabel(e.target.value)}
-        className="h-8 rounded-md border border-white/10 bg-white/[0.04] px-2 text-sm text-white focus:border-violet-500/50 focus:outline-none focus:ring-2 focus:ring-violet-500/15"
+        className="h-8 rounded-md border border-border-default bg-bg-raised px-2 text-sm text-text-primary focus:border-lime focus:outline-none focus:ring-2 focus:ring-lime-tint-bg"
       />
       <input
         value={value}
         onChange={(e) => setValue(e.target.value)}
         placeholder="stored value"
-        className="h-8 rounded-md border border-white/10 bg-white/[0.04] px-2 font-mono text-xs text-gray-300 focus:border-violet-500/50 focus:outline-none focus:ring-2 focus:ring-violet-500/15"
+        className="h-8 rounded-md border border-border-default bg-bg-raised px-2 font-mono text-xs text-text-secondary focus:border-lime focus:outline-none focus:ring-2 focus:ring-lime-tint-bg"
       />
       <div className="flex justify-end gap-1">
         {dirty && (
@@ -1020,7 +1020,7 @@ function OptionRow({
             type="button"
             onClick={handleSave}
             disabled={saving}
-            className="inline-flex h-7 items-center gap-1 rounded-md bg-white px-2 text-[11px] font-semibold text-black hover:bg-white/90 disabled:opacity-50"
+            className="inline-flex h-7 items-center gap-1 rounded-md bg-text-primary px-2 text-[11px] font-semibold text-text-inverse hover:bg-lime-hover disabled:opacity-50"
             title="Save"
           >
             {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
@@ -1031,7 +1031,7 @@ function OptionRow({
             type="button"
             onClick={handleIconClear}
             disabled={uploading}
-            className="inline-flex h-7 items-center rounded-md px-1.5 text-gray-500 hover:bg-white/[0.06] hover:text-white"
+            className="inline-flex h-7 items-center rounded-md px-1.5 text-text-tertiary hover:bg-bg-raised-hover hover:text-text-primary"
             title="Clear icon"
           >
             <X className="h-3 w-3" />
@@ -1040,7 +1040,7 @@ function OptionRow({
         <button
           type="button"
           onClick={handleDelete}
-          className="inline-flex h-7 items-center rounded-md px-1.5 text-gray-500 hover:bg-rose-500/15 hover:text-rose-300"
+          className="inline-flex h-7 items-center rounded-md px-1.5 text-text-tertiary hover:bg-error-bg hover:text-error"
           title="Delete choice"
         >
           <Trash2 className="h-3 w-3" />
@@ -1097,11 +1097,11 @@ function RulesEditor({
 
   return (
     <GlassCard intensity="light" rounded="2xl" className="p-0">
-      <div className="flex items-center justify-between border-b border-white/[0.06] px-5 py-3">
-        <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-gray-400">
+      <div className="flex items-center justify-between border-b border-border-subtle px-5 py-3">
+        <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-text-secondary">
           <GitBranch className="h-3.5 w-3.5" />
           When this field is shown
-          <span className="ml-1 rounded-full bg-white/[0.06] px-1.5 py-0.5 text-[9px] font-normal normal-case tracking-normal text-gray-500">
+          <span className="ml-1 rounded-full bg-bg-raised-hover px-1.5 py-0.5 text-[9px] font-normal normal-case tracking-normal text-text-tertiary">
             advanced
           </span>
         </div>
@@ -1109,7 +1109,7 @@ function RulesEditor({
           type="button"
           onClick={() => setAdding((v) => !v)}
           disabled={triggerableSiblings.length === 0}
-          className="inline-flex h-7 items-center gap-1 rounded-lg bg-white px-2 text-[11px] font-semibold text-black hover:bg-white/90 disabled:opacity-40"
+          className="inline-flex h-7 items-center gap-1 rounded-lg bg-text-primary px-2 text-[11px] font-semibold text-text-inverse hover:bg-lime-hover disabled:opacity-40"
           title={triggerableSiblings.length === 0 ? 'Need at least one dropdown / yes-no field above to drive a rule' : ''}
         >
           <Plus className="h-3 w-3" />
@@ -1118,7 +1118,7 @@ function RulesEditor({
       </div>
       <div className="space-y-2 p-4">
         {attribute.rules.length === 0 && !adding ? (
-          <p className="rounded-lg border border-dashed border-white/10 bg-white/[0.02] px-3 py-4 text-center text-xs text-gray-500">
+          <p className="rounded-lg border border-dashed border-border-default bg-bg-base px-3 py-4 text-center text-xs text-text-tertiary">
             This field is always shown. Tip: easier way to make a sub-field is via the
             "+ Add sub-field shown when X is chosen" link in the tree on the left.
           </p>
@@ -1126,15 +1126,15 @@ function RulesEditor({
           attribute.rules.map((r) => {
             const trig = siblings.find((s) => s.id === r.trigger_attribute_id)
             return (
-              <div key={r.id} className="flex items-center justify-between rounded-lg border border-violet-500/20 bg-violet-500/[0.05] px-3 py-2 text-xs">
-                <div className="text-gray-300">
+              <div key={r.id} className="flex items-center justify-between rounded-lg border border-lime-tint-border bg-lime-tint-bg px-3 py-2 text-xs">
+                <div className="text-text-secondary">
                   Show when{' '}
-                  <span className="font-semibold text-white">{trig?.name ?? '?'}</span>{' '}
-                  <span className="font-mono text-violet-300">{r.operator}</span>{' '}
+                  <span className="font-semibold text-text-primary">{trig?.name ?? '?'}</span>{' '}
+                  <span className="font-mono text-lime-text">{r.operator}</span>{' '}
                   {r.trigger_values.map((v, i) => {
                     const label = trig?.options.find((o) => o.value === v)?.label ?? v
                     return (
-                      <span key={i} className="ml-1 inline-flex rounded-md bg-white/[0.06] px-1.5 py-0.5 text-[10px] text-gray-200">
+                      <span key={i} className="ml-1 inline-flex rounded-md bg-bg-raised-hover px-1.5 py-0.5 text-[10px] text-text-primary">
                         {label}
                       </span>
                     )
@@ -1143,7 +1143,7 @@ function RulesEditor({
                 <button
                   type="button"
                   onClick={() => handleDelete(r.id)}
-                  className="rounded p-1 text-gray-500 hover:bg-rose-500/15 hover:text-rose-300"
+                  className="rounded p-1 text-text-tertiary hover:bg-error-bg hover:text-error"
                 >
                   <Trash2 className="h-3 w-3" />
                 </button>
@@ -1153,18 +1153,18 @@ function RulesEditor({
         )}
 
         {adding && (
-          <div className="space-y-2 rounded-lg border border-white/10 bg-white/[0.02] p-3">
+          <div className="space-y-2 rounded-lg border border-border-default bg-bg-base p-3">
             <div className="grid grid-cols-[1fr_120px] gap-2">
               <select
                 value={triggerId}
                 onChange={(e) => { setTriggerId(e.target.value); setVals([]) }}
-                className={cn(inputCls, 'bg-gray-950 h-9')}
+                className={cn(inputCls, 'bg-bg-overlay h-9')}
               >
                 {triggerableSiblings.map((s) => (
                   <option key={s.id} value={s.id}>{s.name} ({TYPE_META[s.type].label})</option>
                 ))}
               </select>
-              <select value={op} onChange={(e) => setOp(e.target.value as any)} className={cn(inputCls, 'bg-gray-950 h-9')}>
+              <select value={op} onChange={(e) => setOp(e.target.value as any)} className={cn(inputCls, 'bg-bg-overlay h-9')}>
                 <option value="equals">equals</option>
                 <option value="not_equals">not equals</option>
                 <option value="in">in</option>
@@ -1174,7 +1174,7 @@ function RulesEditor({
 
             {/* Value picker */}
             <div className="space-y-1">
-              <div className="text-[10px] font-medium uppercase tracking-wider text-gray-500">Values</div>
+              <div className="text-[10px] font-medium uppercase tracking-wider text-text-tertiary">Values</div>
               {triggerAttr?.type === 'boolean' ? (
                 <div className="flex gap-2">
                   {['true', 'false'].map((v) => {
@@ -1186,7 +1186,7 @@ function RulesEditor({
                         onClick={() => setVals((cur) => on ? cur.filter((x) => x !== v) : [...cur, v])}
                         className={cn(
                           'h-7 rounded-md border px-2 text-xs',
-                          on ? 'border-violet-500/40 bg-violet-500/15 text-violet-200' : 'border-white/10 bg-white/[0.04] text-gray-300'
+                          on ? 'border-lime-tint-border bg-lime-tint-bg text-lime-text' : 'border-border-default bg-bg-raised text-text-secondary'
                         )}
                       >
                         {v}
@@ -1195,7 +1195,7 @@ function RulesEditor({
                   })}
                 </div>
               ) : (triggerAttr?.options ?? []).length === 0 ? (
-                <p className="text-[11px] text-amber-300/80">
+                <p className="text-[11px] text-warning">
                   <AlertCircle className="mr-1 inline h-3 w-3" />
                   This attribute has no options yet — add some first.
                 </p>
@@ -1210,7 +1210,7 @@ function RulesEditor({
                         onClick={() => setVals((cur) => on ? cur.filter((x) => x !== opt.value) : [...cur, opt.value])}
                         className={cn(
                           'h-7 rounded-full border px-2.5 text-xs',
-                          on ? 'border-violet-500/40 bg-violet-500/15 text-violet-200' : 'border-white/10 bg-white/[0.04] text-gray-300 hover:text-white'
+                          on ? 'border-lime-tint-border bg-lime-tint-bg text-lime-text' : 'border-border-default bg-bg-raised text-text-secondary hover:text-text-primary'
                         )}
                       >
                         {opt.label}
@@ -1225,7 +1225,7 @@ function RulesEditor({
               <button
                 type="button"
                 onClick={() => { setAdding(false); setVals([]) }}
-                className="inline-flex h-7 items-center rounded-md border border-white/10 bg-white/[0.04] px-2 text-[11px] text-gray-300 hover:bg-white/[0.08]"
+                className="inline-flex h-7 items-center rounded-md border border-border-default bg-bg-raised px-2 text-[11px] text-text-secondary hover:bg-bg-raised-hover"
               >
                 Cancel
               </button>
@@ -1233,7 +1233,7 @@ function RulesEditor({
                 type="button"
                 onClick={handleAdd}
                 disabled={busy || vals.length === 0}
-                className="inline-flex h-7 items-center gap-1 rounded-md bg-emerald-500 px-2 text-[11px] font-semibold text-black hover:bg-emerald-400 disabled:opacity-40"
+                className="inline-flex h-7 items-center gap-1 rounded-md bg-success px-2 text-[11px] font-semibold text-text-inverse hover:bg-success disabled:opacity-40"
               >
                 {busy ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
                 Save rule
@@ -1274,28 +1274,28 @@ function LivePreview({ attributes }: { attributes: BuilderAttribute[] }) {
 
   return (
     <GlassCard intensity="light" rounded="2xl" className="p-0">
-      <div className="flex items-center justify-between border-b border-white/[0.06] px-5 py-3">
-        <div className="text-xs font-semibold uppercase tracking-wider text-gray-400">
+      <div className="flex items-center justify-between border-b border-border-subtle px-5 py-3">
+        <div className="text-xs font-semibold uppercase tracking-wider text-text-secondary">
           Live preview
         </div>
-        <div className="text-[10px] text-gray-500">
+        <div className="text-[10px] text-text-tertiary">
           Try selecting values to see conditional fields appear
         </div>
       </div>
 
       <div className="space-y-4 p-5">
         {attributes.length === 0 ? (
-          <p className="text-center text-xs text-gray-500">No attributes yet.</p>
+          <p className="text-center text-xs text-text-tertiary">No attributes yet.</p>
         ) : (
           attributes.map((a) => {
             if (!isVisible(a)) return null
             return (
               <div key={a.id}>
-                <label className="mb-1.5 block text-xs font-medium text-gray-300">
+                <label className="mb-1.5 block text-xs font-medium text-text-secondary">
                   {a.name}
-                  {a.is_required && <span className="ml-1 text-rose-400">*</span>}
+                  {a.is_required && <span className="ml-1 text-error">*</span>}
                   {a.help_text && (
-                    <span className="ml-2 text-[10px] font-normal text-gray-500">{a.help_text}</span>
+                    <span className="ml-2 text-[10px] font-normal text-text-tertiary">{a.help_text}</span>
                   )}
                 </label>
                 {a.type === 'text' && (
@@ -1332,7 +1332,7 @@ function LivePreview({ attributes }: { attributes: BuilderAttribute[] }) {
                     onClick={() => set(a.id, values[a.id] === 'true' ? 'false' : 'true')}
                     className={cn(
                       'inline-flex h-9 items-center gap-2 rounded-lg border px-3 text-sm',
-                      values[a.id] === 'true' ? 'border-emerald-500/40 bg-emerald-500/15 text-emerald-300' : 'border-white/10 bg-white/[0.04] text-gray-300'
+                      values[a.id] === 'true' ? 'border-success bg-success-bg text-success' : 'border-border-default bg-bg-raised text-text-secondary'
                     )}
                   >
                     {values[a.id] === 'true' ? 'Yes' : 'No'}
@@ -1342,7 +1342,7 @@ function LivePreview({ attributes }: { attributes: BuilderAttribute[] }) {
                   <select
                     value={(values[a.id] as string) ?? ''}
                     onChange={(e) => set(a.id, e.target.value)}
-                    className={cn(inputCls, 'bg-gray-950')}
+                    className={cn(inputCls, 'bg-bg-overlay')}
                   >
                     <option value="">Select…</option>
                     {a.options.map((o) => (
@@ -1353,7 +1353,7 @@ function LivePreview({ attributes }: { attributes: BuilderAttribute[] }) {
                 {a.type === 'image_select' && (
                   <div className="grid grid-cols-4 gap-2 sm:grid-cols-6">
                     {a.options.length === 0 ? (
-                      <p className="col-span-full text-[11px] text-gray-500">No options yet.</p>
+                      <p className="col-span-full text-[11px] text-text-tertiary">No options yet.</p>
                     ) : a.options.map((o) => {
                       const on = values[a.id] === o.value
                       return (
@@ -1364,16 +1364,16 @@ function LivePreview({ attributes }: { attributes: BuilderAttribute[] }) {
                           className={cn(
                             'flex flex-col items-center gap-1 rounded-lg border p-2 text-[10px] transition-colors',
                             on
-                              ? 'border-violet-500/50 bg-violet-500/10 text-violet-100'
-                              : 'border-white/10 bg-white/[0.02] text-gray-300 hover:bg-white/[0.04]'
+                              ? 'border-lime bg-lime-tint-bg text-lime-text'
+                              : 'border-border-default bg-bg-base text-text-secondary hover:bg-bg-raised'
                           )}
                         >
-                          <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-md bg-white/[0.04]">
+                          <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-md bg-bg-raised">
                             {o.icon_url ? (
                               /* eslint-disable-next-line @next/next/no-img-element */
                               <img src={o.icon_url} alt="" className="h-full w-full object-cover" />
                             ) : (
-                              <ImageIcon className="h-4 w-4 text-gray-600" />
+                              <ImageIcon className="h-4 w-4 text-text-disabled" />
                             )}
                           </div>
                           <span className="line-clamp-1">{o.label}</span>
@@ -1394,7 +1394,7 @@ function LivePreview({ attributes }: { attributes: BuilderAttribute[] }) {
                           onClick={() => set(a.id, on ? arr.filter((x) => x !== o.value) : [...arr, o.value])}
                           className={cn(
                             'h-7 rounded-full border px-2.5 text-xs',
-                            on ? 'border-violet-500/40 bg-violet-500/15 text-violet-200' : 'border-white/10 bg-white/[0.04] text-gray-300'
+                            on ? 'border-lime-tint-border bg-lime-tint-bg text-lime-text' : 'border-border-default bg-bg-raised text-text-secondary'
                           )}
                         >
                           {o.label}
@@ -1415,7 +1415,7 @@ function LivePreview({ attributes }: { attributes: BuilderAttribute[] }) {
 // ─── Small field primitives ──────────────────────────────────────────────────
 
 const inputCls =
-  'h-9 w-full rounded-lg border border-white/10 bg-white/[0.04] px-3 text-sm text-white placeholder:text-gray-600 focus:border-violet-500/50 focus:outline-none focus:ring-2 focus:ring-violet-500/15'
+  'h-9 w-full rounded-lg border border-border-default bg-bg-raised px-3 text-sm text-text-primary placeholder:text-text-disabled focus:border-lime focus:outline-none focus:ring-2 focus:ring-lime-tint-bg'
 
 function Field({
   label, required, hint, children, className,
@@ -1429,11 +1429,11 @@ function Field({
   return (
     <div className={className}>
       <div className="mb-1 flex items-baseline justify-between">
-        <label className="text-[10px] font-medium uppercase tracking-wider text-gray-500">
+        <label className="text-[10px] font-medium uppercase tracking-wider text-text-tertiary">
           {label}
-          {required && <span className="ml-1 text-rose-400">*</span>}
+          {required && <span className="ml-1 text-error">*</span>}
         </label>
-        {hint && <span className="text-[10px] text-gray-600">{hint}</span>}
+        {hint && <span className="text-[10px] text-text-disabled">{hint}</span>}
       </div>
       {children}
     </div>
@@ -1449,23 +1449,23 @@ function ToggleField({
   onChange: (v: boolean) => void
 }) {
   return (
-    <label className="flex flex-1 items-center justify-between rounded-lg border border-white/10 bg-white/[0.02] px-3 py-2">
+    <label className="flex flex-1 items-center justify-between rounded-lg border border-border-default bg-bg-base px-3 py-2">
       <div>
-        <div className="text-xs font-medium text-white">{label}</div>
-        {hint && <div className="text-[10px] text-gray-500">{hint}</div>}
+        <div className="text-xs font-medium text-text-primary">{label}</div>
+        {hint && <div className="text-[10px] text-text-tertiary">{hint}</div>}
       </div>
       <button
         type="button"
         onClick={() => onChange(!value)}
         className={cn(
           'relative inline-flex h-5 w-9 items-center rounded-full transition-colors',
-          value ? 'bg-violet-500/70' : 'bg-white/10'
+          value ? 'bg-lime' : 'bg-bg-raised'
         )}
         aria-pressed={value}
       >
         <span
           className={cn(
-            'inline-block h-3 w-3 transform rounded-full bg-white transition-transform',
+            'inline-block h-3 w-3 transform rounded-full bg-text-primary transition-transform',
             value ? 'translate-x-5' : 'translate-x-1'
           )}
         />
