@@ -26,6 +26,8 @@ import {
   ArrowRight, Check, Loader2, Upload, X as IconX, Image as ImageIcon,
   ChevronLeft, Sparkles, Search, DollarSign, Package, Clock, Zap,
   History, Flame,
+  Coins, Backpack, UserSquare2, Trophy,
+  type LucideIcon,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Combobox } from '@/components/ui/combobox'
@@ -216,19 +218,30 @@ export default function SellWizard({ initialCategories }: { initialCategories: G
   const [agreeSellerRules, setAgreeSellerRules] = useState(false)
   const [agreeTos, setAgreeTos] = useState(false)
 
-  // R8 — whenever the step changes, scroll the wizard card to the top of the
-  // viewport so the seller doesn't land on the new page mid-scroll.
-  // R10 — skip the very first render so initial mount doesn't trigger a
-  // tiny smooth-scroll that visually jerks the page (the wizard is already
-  // at the top on mount).
+  // R12 — uniform top spacing on mount + every step transition.
+  //
+  // The previous version skipped the very first render to avoid a smooth-scroll
+  // jerk, but that left the initial paint at a different scroll position than
+  // every subsequent step landed at — the navbar-to-modal gap looked
+  // inconsistent. Now we scroll on both:
+  //   - first paint: instant (no smooth) — lands the card at the same target
+  //     offset before the user sees anything else, so the gap is right from
+  //     the start.
+  //   - step changes:  smooth scroll to the same target.
+  // The offset (-128) leaves a generous gap below the floating homepage navbar.
+  const WIZARD_TOP_OFFSET = 128
   const didMountRef = useRef(false)
   useEffect(() => {
+    if (!cardRef.current) return
+    const top =
+      cardRef.current.getBoundingClientRect().top + window.scrollY - WIZARD_TOP_OFFSET
     if (!didMountRef.current) {
       didMountRef.current = true
+      // Instant on initial paint so the user doesn't see a scroll animation
+      // from a wrong starting position.
+      window.scrollTo({ top, behavior: 'auto' })
       return
     }
-    if (!cardRef.current) return
-    const top = cardRef.current.getBoundingClientRect().top + window.scrollY - 96
     window.scrollTo({ top, behavior: 'smooth' })
   }, [step])
 
@@ -443,8 +456,11 @@ export default function SellWizard({ initialCategories }: { initialCategories: G
     }
   }
 
+  // R12 — main top padding matches WIZARD_TOP_OFFSET so first paint already
+  // shows the right gap before the JS scroll runs; the JS scroll then keeps
+  // that gap consistent on every step transition.
   return (
-    <main className="mx-auto w-full max-w-4xl px-3 pb-24 pt-8 sm:px-6 sm:pt-10 lg:max-w-5xl lg:pt-12">
+    <main className="mx-auto w-full max-w-4xl px-3 pb-24 pt-24 sm:px-6 sm:pt-28 lg:max-w-5xl lg:pt-32">
       {/* Wizard card — elevated grey surface on bg-bg-base. Per spec §2,
           no lime tint on the wrapper; sub-cards inside go one shade deeper
           (bg-bg-overlay) for visual hierarchy.
@@ -652,6 +668,44 @@ export default function SellWizard({ initialCategories }: { initialCategories: G
 
 // ─── Step 1: category picker ────────────────────────────────────────────────
 
+// R12 — Category tile theme per slug: icon + gradient bg + accent ring.
+// Each category gets a distinct gradient tint so the grid reads as a
+// well-branded chooser rather than 'five generic dark cards'.
+const CATEGORY_THEME: Record<
+  string,
+  {
+    Icon: LucideIcon
+    iconBg: string   // gradient classes for the icon plate
+    ring: string     // hover/active ring accent
+  }
+> = {
+  currency: {
+    Icon: Coins,
+    iconBg: 'bg-gradient-to-br from-amber-400/30 via-yellow-500/20 to-orange-500/20',
+    ring: 'group-hover:border-amber-400/40',
+  },
+  items: {
+    Icon: Backpack,
+    iconBg: 'bg-gradient-to-br from-rose-500/30 via-pink-500/20 to-red-500/20',
+    ring: 'group-hover:border-rose-400/40',
+  },
+  accounts: {
+    Icon: UserSquare2,
+    iconBg: 'bg-gradient-to-br from-sky-400/30 via-blue-500/20 to-indigo-500/20',
+    ring: 'group-hover:border-sky-400/40',
+  },
+  'top-up': {
+    Icon: Zap,
+    iconBg: 'bg-gradient-to-br from-yellow-300/30 via-amber-400/25 to-yellow-500/20',
+    ring: 'group-hover:border-yellow-400/40',
+  },
+  boosting: {
+    Icon: Trophy,
+    iconBg: 'bg-gradient-to-br from-violet-400/30 via-purple-500/20 to-fuchsia-500/20',
+    ring: 'group-hover:border-violet-400/40',
+  },
+}
+
 function Step1Category({
   categories, selected, onSelect,
 }: {
@@ -660,10 +714,12 @@ function Step1Category({
   onSelect: (c: GlobalCategory) => void
 }) {
   return (
-    <div className="mx-auto max-w-2xl space-y-1.5">
+    <div className="mx-auto grid w-full max-w-4xl grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
       {categories.map((c, i) => {
         const active = selected?.id === c.id
         const disabled = !c.is_active
+        const theme = CATEGORY_THEME[c.slug] ?? CATEGORY_THEME.items
+        const Icon = theme.Icon
         return (
           <motion.button
             key={c.id}
@@ -673,54 +729,55 @@ function Step1Category({
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.22, delay: i * 0.04 }}
-            whileHover={!disabled ? { x: 2 } : undefined}
+            whileHover={!disabled ? { y: -2 } : undefined}
             className={cn(
-              // R10: further compressed so 5 rows + Continue fit in one viewport
-              'group relative flex w-full items-center gap-3 rounded-2xl border p-2.5 text-left transition-all sm:gap-4 sm:p-3',
+              'group relative flex h-full w-full flex-col items-start gap-4 overflow-hidden rounded-2xl border p-5 text-left transition-all sm:p-6',
               disabled && 'cursor-not-allowed opacity-50',
               active
                 ? 'border-lime bg-lime-tint-bg shadow-[0_0_0_3px_rgba(198,255,61,0.18)]'
-                : 'border-border-subtle bg-bg-inset hover:border-border-strong hover:bg-bg-inset'
+                : cn('border-border-subtle bg-bg-overlay', theme.ring),
             )}
           >
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border-default bg-bg-raised-hover text-lg sm:h-10 sm:w-10">
-              {c.icon_url ? (
-                /* eslint-disable-next-line @next/next/no-img-element */
-                <img src={c.icon_url} alt={c.name} className="h-full w-full rounded-xl object-cover" />
-              ) : (
-                <span>{c.icon_emoji ?? '📦'}</span>
+            {/* Decorative gradient blob in the top-right of the tile */}
+            <div
+              aria-hidden
+              className={cn(
+                'pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full blur-3xl opacity-60 transition-opacity',
+                theme.iconBg,
               )}
-            </div>
+            />
 
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2">
-                <div className="text-sm font-semibold text-text-primary sm:text-base">{c.name}</div>
-                {disabled && (
-                  <span className="inline-flex items-center gap-1 rounded-full border border-warning bg-warning-bg px-2 py-0.5 text-[10px] font-medium text-warning">
-                    Coming soon
-                  </span>
+            <div className="relative flex w-full items-center justify-between">
+              <div
+                className={cn(
+                  'flex h-14 w-14 items-center justify-center rounded-2xl border border-border-default',
+                  theme.iconBg,
                 )}
+              >
+                <Icon className="h-7 w-7 text-text-primary" strokeWidth={1.75} />
               </div>
-              <div className="mt-0.5 truncate text-[11px] text-text-tertiary sm:text-xs">{c.description ?? ''}</div>
-            </div>
-
-            {/* Indicator on the right */}
-            <div className="shrink-0">
-              {active ? (
-                <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-lime text-text-inverse shadow-lg shadow-glow">
-                  <Check className="h-3.5 w-3.5" />
+              {disabled ? (
+                <span className="inline-flex items-center gap-1 rounded-full border border-warning bg-warning-bg px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-warning">
+                  Coming soon
                 </span>
               ) : (
                 <span
                   aria-hidden
                   className={cn(
-                    'inline-flex h-7 w-7 items-center justify-center rounded-full border text-text-tertiary transition-colors',
-                    disabled ? 'border-border-subtle' : 'border-border-default group-hover:border-border-strong group-hover:text-text-primary'
+                    'inline-flex h-8 w-8 items-center justify-center rounded-full border transition-colors',
+                    active
+                      ? 'border-lime bg-lime text-text-inverse'
+                      : 'border-border-default text-text-tertiary group-hover:border-border-strong group-hover:text-text-primary',
                   )}
                 >
-                  <ArrowRight className="h-3.5 w-3.5" />
+                  {active ? <Check className="h-4 w-4" strokeWidth={3} /> : <ArrowRight className="h-4 w-4" />}
                 </span>
               )}
+            </div>
+
+            <div className="relative min-w-0 flex-1">
+              <div className="text-lg font-bold text-text-primary sm:text-xl">{c.name}</div>
+              <div className="mt-1 text-sm text-text-secondary">{c.description ?? ''}</div>
             </div>
           </motion.button>
         )
@@ -1695,9 +1752,9 @@ function SubCard({
 
 // ─── Shared input styles ─────────────────────────────────────────────────────
 
-// Inputs sit on bg-bg-inset (one shade darker than the sub-card bg-bg-overlay)
-// so they pop visually inside the panel.
+// R12 — fully rectangular (rounded-none) + transparent fill so inputs share
+// the sub-card surface and a border defines the field. Removes the
+// black-on-grey contrast that read as 'two surfaces fighting'. Focused border
+// turns lime; the lime tint ring stays as a soft focus halo.
 const inputCls =
-  // R9 — rounded-md (6px) so inputs read as professional rectangular fields
-  // against the rounder outer cards and pill buttons.
-  'h-10 w-full rounded-md border border-border-default bg-bg-inset px-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-lime focus:outline-none focus:ring-2 focus:ring-lime-tint-bg transition-colors'
+  'h-10 w-full rounded-none border border-border-default bg-transparent px-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-lime focus:outline-none focus:ring-2 focus:ring-lime-tint-bg transition-colors'
