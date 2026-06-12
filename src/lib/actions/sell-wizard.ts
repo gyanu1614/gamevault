@@ -13,9 +13,21 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { revalidatePath } from 'next/cache'
 import { getGlobalCategories, getGamesForGlobalCategory, getAttributeTemplateFull } from '@/lib/actions/new-schema'
 import type { GlobalCategory, GameCategory, AttributeTemplateFull, Attribute } from '@/lib/actions/new-schema'
+import { ensureLegacyCategoryRow, GLOBAL_SLUG_TO_LEGACY_TYPE } from '@/lib/actions/_category-bridge'
+
+/** Service-role supabase client — bypasses RLS so we can self-heal a missing
+ *  legacy categories row on the publish path. The user-bound client can't
+ *  insert into the categories table because of admin-only RLS policies. */
+function getAdminSupabase() {
+  return createServiceClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+}
 
 // ─── Result helper ───────────────────────────────────────────────────────────
 
@@ -191,34 +203,30 @@ export async function publishListing(input: PublishListingInput): Promise<Result
     const { data: { user }, error: authErr } = await supabase.auth.getUser()
     if (authErr || !user) return { success: false, error: 'Not signed in' }
 
-    // Map global category slug -> 'type' metadata value on the legacy
-    // game-scoped categories table, so we can find the matching old row.
-    const slugToType: Record<string, string> = {
-      'currency': 'currency',
-      'items':    'items',
-      'accounts': 'account',
-      'top-up':   'top_up',
-      'boosting': 'service',
+    // Validate the slug is one we know about. (Boosting may legitimately
+    // map to 'service' here but should be gated upstream — we still want a
+    // legacy row if it gets through.)
+    if (!GLOBAL_SLUG_TO_LEGACY_TYPE[input.category_slug]) {
+      return { success: false, error: 'Unknown category' }
     }
-    const legacyType = slugToType[input.category_slug]
-    if (!legacyType) return { success: false, error: 'Unknown category' }
 
-    const { data: legacyCat } = await supabase
-      .from('categories')
-      .select('id')
-      .eq('game_id', input.game_id)
-      .eq('is_active', true)
-      .filter('metadata->>type', 'eq', legacyType)
-      .maybeSingle()
-
-    if (!legacyCat) {
-      return { success: false, error: 'This category isn’t enabled for this game yet.' }
+    // Self-healing: look up the legacy categories row for this (game, slug)
+    // pair, creating it via the service-role client if missing. This handles
+    // games enabled via the new admin (which only writes game_categories)
+    // and any pair that slipped through the Phase A backfill.
+    const legacyCatId = await ensureLegacyCategoryRow(
+      getAdminSupabase(),
+      input.game_id,
+      input.category_slug,
+    )
+    if (!legacyCatId) {
+      return { success: false, error: 'Couldn’t resolve a category for this game. Please contact support.' }
     }
 
     const insertPayload: Record<string, unknown> = {
       seller_id: user.id,
       game_id: input.game_id,
-      category_id: (legacyCat as { id: string }).id,
+      category_id: legacyCatId,
       title: input.title.trim(),
       description: input.description?.trim() || null,
       price: input.price,

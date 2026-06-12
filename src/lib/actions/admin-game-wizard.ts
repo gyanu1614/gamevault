@@ -7,8 +7,11 @@
  *   - public.games          (existing — shared with classic admin)
  *   - public.game_categories (new — Phase A table)
  *
- * Hard rule: never modify `categories` (the old game-scoped table) here.
- * The classic admin still owns that. We only touch the new join.
+ * R11.a — also keeps public.categories in sync so listing detail pages and
+ * the publish path stay functional during the legacy schema transition.
+ * Toggle ON  -> ensureLegacyCategoryRow (creates if missing, reactivates)
+ * Toggle OFF -> deactivateLegacyCategoryRow (soft delete; never hard delete
+ *               since listings.category_id may still reference it).
  */
 
 'use server'
@@ -16,6 +19,10 @@
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { requireAdmin } from '@/lib/actions/admin-permissions'
 import { revalidatePath } from 'next/cache'
+import {
+  ensureLegacyCategoryRow,
+  deactivateLegacyCategoryRow,
+} from '@/lib/actions/_category-bridge'
 
 // ─── Service-role client (matches admin-games.ts) ─────────────────────────────
 
@@ -471,14 +478,14 @@ export async function upsertGameCategory(
     if (input.seo_title           !== undefined) payload.seo_title           = input.seo_title
     if (input.seo_description     !== undefined) payload.seo_description     = input.seo_description
 
+    let gameCategoryRowId: string
     if (existing) {
       const { error } = await supabase
         .from('game_categories')
         .update(payload)
         .eq('id', (existing as any).id)
       if (error) return { success: false, error: error.message }
-      revalidatePath('/admin/games-v2')
-      return { success: true, data: { id: (existing as any).id } }
+      gameCategoryRowId = (existing as any).id
     } else {
       const { data, error } = await supabase
         .from('game_categories')
@@ -486,9 +493,33 @@ export async function upsertGameCategory(
         .select('id')
         .single()
       if (error) return { success: false, error: error.message }
-      revalidatePath('/admin/games-v2')
-      return { success: true, data: { id: (data as any).id } }
+      gameCategoryRowId = (data as any).id
     }
+
+    // R11.a — keep the legacy public.categories table in sync.
+    // Resolve the global slug from its id, then ensure / deactivate the
+    // corresponding legacy row. Failures here are logged but not fatal —
+    // the publish path's self-heal covers any miss.
+    try {
+      const { data: gc } = await supabase
+        .from('global_categories')
+        .select('slug')
+        .eq('id', input.global_category_id)
+        .maybeSingle()
+      const slug = (gc as { slug: string } | null)?.slug
+      if (slug) {
+        if (input.is_enabled) {
+          await ensureLegacyCategoryRow(supabase, input.game_id, slug)
+        } else {
+          await deactivateLegacyCategoryRow(supabase, input.game_id, slug)
+        }
+      }
+    } catch (e) {
+      console.warn('legacy categories sync failed (non-fatal):', e)
+    }
+
+    revalidatePath('/admin/games-v2')
+    return { success: true, data: { id: gameCategoryRowId } }
   } catch (e: any) {
     return { success: false, error: e?.message ?? 'Unknown error' }
   }
