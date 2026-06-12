@@ -937,45 +937,39 @@ function Step3Details({
   values: Record<string, unknown>
   onChange: (id: string, value: unknown) => void
 }) {
-  if (templateLoading) {
-    return (
-      <div className="rounded-2xl border border-border-subtle bg-bg-base p-10 text-center text-sm text-text-tertiary">
-        <Loader2 className="mx-auto mb-2 h-5 w-5 animate-spin text-lime-text" />
-        Loading details…
-      </div>
-    )
-  }
-
-  if (!template || topLevel.length === 0) {
-    return (
-      <div className="rounded-2xl border border-border-default bg-bg-raised p-5">
-        <div className="flex items-start gap-3">
+  return (
+    <SubCard title="Offer Details">
+      {templateLoading ? (
+        <div className="flex items-center justify-center gap-2 py-6 text-sm text-text-tertiary">
+          <Loader2 className="h-4 w-4 animate-spin text-lime-text" />
+          Loading details…
+        </div>
+      ) : !template || topLevel.length === 0 ? (
+        <div className="flex items-start gap-3 rounded-lg bg-bg-inset p-3">
           <AlertCircle className="mt-0.5 h-5 w-5 text-warning" />
           <div>
             <div className="text-sm font-semibold text-text-primary">No extra details needed</div>
             <p className="mt-1 text-xs text-text-secondary">
               An admin hasn’t set up extra fields for this game and category yet.
-              You can still publish — continue to the next step.
+              You can still publish — fill in the offer description below.
             </p>
           </div>
         </div>
-      </div>
-    )
-  }
-
-  return (
-    <div className="space-y-3">
-      {topLevel.map((a) => (
-        <FieldCard
-          key={a.id}
-          attribute={a}
-          values={values}
-          onChange={onChange}
-          childrenOf={childrenOf}
-          depth={0}
-        />
-      ))}
-    </div>
+      ) : (
+        <div className="space-y-4">
+          {topLevel.map((a) => (
+            <FieldCard
+              key={a.id}
+              attribute={a}
+              values={values}
+              onChange={onChange}
+              childrenOf={childrenOf}
+              depth={0}
+            />
+          ))}
+        </div>
+      )}
+    </SubCard>
   )
 }
 
@@ -1001,10 +995,11 @@ function FieldCard({
     ? inner.get(currentValue) ?? []
     : []
 
-  // Top-level fields get a glass card; nested ones get just a separator
+  // Inside the SubCard wrapper now, top-level fields are flat rows;
+  // nested fields get a subtle inset to indicate the parent-child chain.
   const shell = depth === 0
-    ? 'rounded-2xl border border-border-default bg-bg-raised p-5 backdrop-blur-sm'
-    : 'rounded-xl border border-border-subtle bg-bg-base p-4'
+    ? ''
+    : 'rounded-xl border border-border-subtle bg-bg-inset p-4'
 
   return (
     <motion.div
@@ -1209,7 +1204,7 @@ function FieldInput({
                   'flex flex-col items-center gap-1 rounded-xl border p-2 transition-colors',
                   on
                     ? 'border-lime bg-lime-tint-bg'
-                    : 'border-border-default bg-bg-raised hover:bg-bg-raised-hover'
+                    : 'border-border-default bg-bg-inset hover:bg-bg-raised-hover'
                 )}
               >
                 <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-lg bg-bg-raised-hover">
@@ -1364,10 +1359,10 @@ function Step4Publish(p: Step4Props) {
     : 0
 
   return (
-    <div className="space-y-4">
+    <SubCard title="Offer Description">
       {/* Title + description */}
-      <div className="rounded-2xl border border-border-default bg-bg-raised p-5">
-        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-text-secondary">Title</label>
+      <div className="space-y-1.5">
+        <label className="block text-xs font-semibold uppercase tracking-wider text-text-secondary">Title</label>
         <input
           value={p.title}
           onChange={(e) => p.setTitle(e.target.value)}
@@ -1394,7 +1389,7 @@ function Step4Publish(p: Step4Props) {
       </div>
 
       {/* Images */}
-      <div className="rounded-2xl border border-border-default bg-bg-raised p-5">
+      <div className="mt-6 border-t border-border-subtle pt-6">
         <div className="mb-2 flex items-center justify-between">
           <div className="text-xs font-semibold uppercase tracking-wider text-text-secondary">
             Photos <span className="text-error">*</span>
@@ -1444,7 +1439,7 @@ function Step4Publish(p: Step4Props) {
       </div>
 
       {/* Pricing */}
-      <div className="rounded-2xl border border-border-default bg-bg-raised p-5">
+      <div className="mt-6 border-t border-border-subtle pt-6">
         <div className="grid gap-3 sm:grid-cols-2">
           <div>
             <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-text-secondary">
@@ -1486,7 +1481,7 @@ function Step4Publish(p: Step4Props) {
         </div>
 
         {youReceive && (
-          <div className="mt-4 rounded-xl border border-border-subtle bg-lime-tint-bg p-3 text-xs">
+          <div className="mt-4 rounded-xl border border-border-subtle bg-bg-inset p-3 text-xs">
             <div className="mb-1.5 font-semibold uppercase tracking-wider text-text-tertiary">Fee breakdown</div>
             <div className="space-y-1 text-text-secondary">
               <div className="flex justify-between"><span>Listing price</span><span className="text-text-primary">${priceNum.toFixed(2)}</span></div>
@@ -1504,7 +1499,7 @@ function Step4Publish(p: Step4Props) {
       </div>
 
       {/* Stock + delivery */}
-      <div className="rounded-2xl border border-border-default bg-bg-raised p-5">
+      <div className="mt-6 border-t border-border-subtle pt-6">
         <div className="grid gap-3 sm:grid-cols-2">
           <div>
             <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-text-secondary">
@@ -1550,7 +1545,7 @@ function Step4Publish(p: Step4Props) {
                     !allowed && 'cursor-not-allowed opacity-40',
                     on && allowed
                       ? 'border-lime bg-lime-tint-bg'
-                      : 'border-border-default bg-bg-raised hover:bg-bg-raised-hover'
+                      : 'border-border-default bg-bg-inset hover:bg-bg-raised-hover'
                   )}
                 >
                   <Icon className={cn('h-4 w-4 shrink-0', on ? 'text-lime-text' : 'text-text-tertiary')} />
@@ -1579,11 +1574,41 @@ function Step4Publish(p: Step4Props) {
           </div>
         )}
       </div>
+    </SubCard>
+  )
+}
+
+// ─── SubCard — the grey panel each Step 3 section lives in ──────────────────
+
+/**
+ * SubCard wraps a labelled section of the Details step.
+ * Spec: bg-bg-overlay rounded-2xl border-border-subtle p-5,
+ * with a head row (h-9 mb-4) holding the title.
+ * Per HANDOFF_SELL_WIZARD_RESTRUCTURE.md §3.
+ */
+function SubCard({
+  title,
+  right,
+  children,
+}: {
+  title: string
+  right?: React.ReactNode
+  children: React.ReactNode
+}) {
+  return (
+    <div className="rounded-2xl border border-border-subtle bg-bg-overlay p-5">
+      <div className="mb-4 flex h-9 items-center justify-between">
+        <h2 className="text-sm font-semibold text-text-primary">{title}</h2>
+        {right}
+      </div>
+      {children}
     </div>
   )
 }
 
 // ─── Shared input styles ─────────────────────────────────────────────────────
 
+// Inputs sit on bg-bg-inset (one shade darker than the sub-card bg-bg-overlay)
+// so they pop visually inside the panel.
 const inputCls =
-  'h-10 w-full rounded-xl border border-border-default bg-bg-raised px-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-lime focus:outline-none focus:ring-2 focus:ring-lime-tint-bg transition-colors'
+  'h-10 w-full rounded-xl border border-border-default bg-bg-inset px-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-lime focus:outline-none focus:ring-2 focus:ring-lime-tint-bg transition-colors'
