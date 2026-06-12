@@ -17,12 +17,11 @@ export default async function SellLayout({ children }: { children: React.ReactNo
   }
 
   return (
-    <div className="relative min-h-screen bg-black text-white">
-      {/* Homepage-matching backdrop: violet -> purple -> cyan glow on black */}
+    <div className="relative min-h-screen bg-bg-base text-text-primary">
+      {/* Subtle lime glow on the page surface — matches the homepage idiom */}
       <div className="pointer-events-none fixed inset-0 -z-10">
-        <div className="absolute inset-0 bg-gradient-to-b from-black via-[#0a0a0f] to-black" />
-        <div className="absolute top-0 left-1/2 h-[520px] w-[520px] -translate-x-1/2 rounded-full bg-violet-500/[0.10] blur-[110px]" />
-        <div className="absolute bottom-0 right-0 h-[420px] w-[420px] rounded-full bg-cyan-500/[0.06] blur-[110px]" />
+        <div className="absolute inset-0 bg-bg-base" />
+        <div className="absolute top-0 left-1/2 h-[520px] w-[520px] -translate-x-1/2 rounded-full bg-lime-tint-bg blur-[110px] opacity-60" />
       </div>
       {children}
     </div>
