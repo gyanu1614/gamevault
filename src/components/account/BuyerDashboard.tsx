@@ -79,7 +79,7 @@ export default function BuyerDashboard({ user }: BuyerDashboardProps) {
           <h1 className="text-3xl font-bold text-white">
             Welcome back, {user?.username || 'Buyer'}!
           </h1>
-          <p className="mt-2 text-gray-400">
+          <p className="mt-2 text-text-secondary">
             Here's an overview of your gaming marketplace activity
           </p>
         </div>
@@ -90,7 +90,7 @@ export default function BuyerDashboard({ user }: BuyerDashboardProps) {
           <div className="rounded-xl bg-gradient-to-br from-blue-500/10 to-cyan-500/10 border border-blue-500/20 p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-400">Total Spent</p>
+                <p className="text-sm text-text-secondary">Total Spent</p>
                 <p className="mt-2 text-3xl font-bold text-white">
                   ${buyerStats.totalSpent.toFixed(2)}
                 </p>
@@ -105,17 +105,17 @@ export default function BuyerDashboard({ user }: BuyerDashboardProps) {
           <div className="rounded-xl bg-gradient-to-br from-green-500/10 to-emerald-500/10 border border-green-500/20 p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-400">Total Savings</p>
+                <p className="text-sm text-text-secondary">Total Savings</p>
                 <p className="mt-2 text-3xl font-bold text-white">
                   ${buyerStats.totalSavings.toFixed(2)}
                 </p>
-                <div className="mt-1 flex items-center gap-1 text-xs text-green-400">
+                <div className="mt-1 flex items-center gap-1 text-xs text-success">
                   <TrendingDown className="h-3 w-3" />
                   <span>From deals & discounts</span>
                 </div>
               </div>
-              <div className="rounded-full bg-green-500/20 p-3">
-                <Tag className="h-6 w-6 text-green-400" />
+              <div className="rounded-full bg-success-bg p-3">
+                <Tag className="h-6 w-6 text-success" />
               </div>
             </div>
           </div>
@@ -124,22 +124,22 @@ export default function BuyerDashboard({ user }: BuyerDashboardProps) {
           <div className="rounded-xl bg-gradient-to-br from-yellow-500/10 to-orange-500/10 border border-yellow-500/20 p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-400">Active Orders</p>
+                <p className="text-sm text-text-secondary">Active Orders</p>
                 <p className="mt-2 text-3xl font-bold text-white">
                   {buyerStats.activeOrders}
                 </p>
               </div>
-              <div className="rounded-full bg-yellow-500/20 p-3">
-                <Package className="h-6 w-6 text-yellow-400" />
+              <div className="rounded-full bg-warning-bg p-3">
+                <Package className="h-6 w-6 text-warning" />
               </div>
             </div>
           </div>
 
           {/* Wishlist Items */}
-          <div className="rounded-xl bg-gradient-to-br from-pink-500/10 to-purple-500/10 border border-pink-500/20 p-6">
+          <div className="rounded-xl bg-gradient-to-br from-pink-500/10 to-lime/5 border border-pink-500/20 p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-400">Wishlist</p>
+                <p className="text-sm text-text-secondary">Wishlist</p>
                 <p className="mt-2 text-3xl font-bold text-white">
                   {buyerStats.wishlistItems}
                 </p>
@@ -177,7 +177,7 @@ export default function BuyerDashboard({ user }: BuyerDashboardProps) {
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <h3 className="font-semibold text-white">{order.item}</h3>
-                        <p className="mt-1 text-sm text-gray-400">
+                        <p className="mt-1 text-sm text-text-secondary">
                           Seller: {order.seller} • {order.date}
                         </p>
                         <div className="mt-2 flex items-center gap-2">
@@ -187,7 +187,7 @@ export default function BuyerDashboard({ user }: BuyerDashboardProps) {
                               Delivered
                             </span>
                           ) : (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-yellow-500/10 px-2 py-1 text-xs font-medium text-yellow-400 border border-yellow-500/20">
+                            <span className="inline-flex items-center gap-1 rounded-full bg-warning-bg px-2 py-1 text-xs font-medium text-warning border border-yellow-500/20">
                               <Clock className="h-3 w-3" />
                               Processing
                             </span>
@@ -216,22 +216,22 @@ export default function BuyerDashboard({ user }: BuyerDashboardProps) {
               <h2 className="mb-4 text-xl font-bold text-white">Purchase Insights</h2>
               <div className="space-y-4">
                 <div>
-                  <p className="text-sm text-gray-400 mb-2">Your favorite games</p>
+                  <p className="text-sm text-text-secondary mb-2">Your favorite games</p>
                   <div className="space-y-2">
                     {recentPurchases.map((game, index) => (
                       <div key={game.game} className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
                           <div className={cn(
                             "flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold",
-                            index === 0 ? "bg-yellow-500/20 text-yellow-400" :
-                            index === 1 ? "bg-gray-500/20 text-gray-400" :
+                            index === 0 ? "bg-warning-bg text-warning" :
+                            index === 1 ? "bg-gray-500/20 text-text-secondary" :
                             "bg-orange-500/20 text-orange-400"
                           )}>
                             #{index + 1}
                           </div>
                           <span className="text-white">{game.game}</span>
                         </div>
-                        <span className="text-sm text-gray-400">{game.count} items</span>
+                        <span className="text-sm text-text-secondary">{game.count} items</span>
                       </div>
                     ))}
                   </div>
@@ -248,7 +248,7 @@ export default function BuyerDashboard({ user }: BuyerDashboardProps) {
               <div className="space-y-2">
                 <Link
                   href="/browse"
-                  className="flex items-center gap-3 rounded-lg bg-gradient-to-r from-violet-600 to-purple-600 px-4 py-3 text-sm font-medium text-white transition-all hover:from-violet-700 hover:to-purple-700"
+                  className="flex items-center gap-3 rounded-lg bg-gradient-to-r from-lime to-purple-600 px-4 py-3 text-sm font-medium text-white transition-all hover:from-violet-700 hover:to-purple-700"
                 >
                   <ShoppingBag className="h-4 w-4" />
                   Browse Marketplace
@@ -271,17 +271,17 @@ export default function BuyerDashboard({ user }: BuyerDashboardProps) {
             </div>
 
             {/* Seller CTA */}
-            <div className="rounded-xl bg-gradient-to-br from-violet-500/10 via-purple-500/10 to-pink-500/10 border border-violet-500/20 p-6">
+            <div className="rounded-xl bg-gradient-to-br from-lime/10 via-purple-500/10 to-pink-500/10 border border-lime-tint-border p-6">
               <div className="mb-3 flex items-center gap-2">
-                <Sparkles className="h-5 w-5 text-violet-400" />
+                <Sparkles className="h-5 w-5 text-lime-text" />
                 <h3 className="font-bold text-white">Become a Seller</h3>
               </div>
-              <p className="mb-4 text-sm text-gray-400">
+              <p className="mb-4 text-sm text-text-secondary">
                 Start selling your gaming accounts and earn money with the lowest fees in the industry.
               </p>
               <Link
                 href="/account/become-seller"
-                className="flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-violet-600 to-purple-600 px-4 py-2 text-sm font-medium text-white transition-all hover:from-violet-700 hover:to-purple-700"
+                className="flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-lime to-purple-600 px-4 py-2 text-sm font-medium text-white transition-all hover:from-violet-700 hover:to-purple-700"
               >
                 Get Started
                 <ArrowRight className="h-4 w-4" />
@@ -293,15 +293,15 @@ export default function BuyerDashboard({ user }: BuyerDashboardProps) {
               <h2 className="mb-4 text-lg font-bold text-white">Your Stats</h2>
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-400">Items Purchased</span>
+                  <span className="text-sm text-text-secondary">Items Purchased</span>
                   <span className="text-sm font-medium text-white">{buyerStats.itemsPurchased}</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-400">Completed Orders</span>
+                  <span className="text-sm text-text-secondary">Completed Orders</span>
                   <span className="text-sm font-medium text-white">{buyerStats.completedOrders}</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-400">Reviews Given</span>
+                  <span className="text-sm text-text-secondary">Reviews Given</span>
                   <span className="text-sm font-medium text-white">{buyerStats.reviewsGiven}</span>
                 </div>
               </div>

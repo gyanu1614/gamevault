@@ -40,8 +40,8 @@ export default function FiltersSidebar({ minPrice = 0, maxPrice = 1000, classNam
   // Available options
   const tierOptions = [
     { value: 'bronze', label: 'Bronze', color: 'text-orange-400' },
-    { value: 'silver', label: 'Silver', color: 'text-gray-400' },
-    { value: 'gold', label: 'Gold', color: 'text-yellow-400' },
+    { value: 'silver', label: 'Silver', color: 'text-text-secondary' },
+    { value: 'gold', label: 'Gold', color: 'text-warning' },
     { value: 'platinum', label: 'Platinum', color: 'text-cyan-400' }
   ]
 
@@ -144,14 +144,14 @@ export default function FiltersSidebar({ minPrice = 0, maxPrice = 1000, classNam
     <div className="space-y-8">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+        <h3 className="text-lg font-semibold text-text-primary flex items-center gap-2">
           <SlidersHorizontal className="w-5 h-5" />
           Filters
         </h3>
         {hasActiveFilters && (
           <button
             onClick={clearFilters}
-            className="text-sm text-violet-400 hover:text-violet-300 transition-colors"
+            className="text-sm text-lime-text hover:text-lime-text transition-colors"
           >
             Clear all
           </button>
@@ -160,7 +160,7 @@ export default function FiltersSidebar({ minPrice = 0, maxPrice = 1000, classNam
 
       {/* Price Range */}
       <div>
-        <Label className="text-sm font-semibold text-white mb-3 block">
+        <Label className="text-sm font-semibold text-text-primary mb-3 block">
           Price Range
         </Label>
         <div className="space-y-4">
@@ -172,7 +172,7 @@ export default function FiltersSidebar({ minPrice = 0, maxPrice = 1000, classNam
             onValueChange={setPriceRange}
             className="w-full"
           />
-          <div className="flex items-center justify-between text-sm text-gray-400">
+          <div className="flex items-center justify-between text-sm text-text-secondary">
             <span>${priceRange[0]}</span>
             <span>${priceRange[1]}</span>
           </div>
@@ -181,7 +181,7 @@ export default function FiltersSidebar({ minPrice = 0, maxPrice = 1000, classNam
 
       {/* Seller Tier */}
       <div>
-        <Label className="text-sm font-semibold text-white mb-3 block">
+        <Label className="text-sm font-semibold text-text-primary mb-3 block">
           Seller Tier
         </Label>
         <div className="space-y-3">
@@ -191,7 +191,7 @@ export default function FiltersSidebar({ minPrice = 0, maxPrice = 1000, classNam
                 id={`tier-${tier.value}`}
                 checked={sellerTiers.includes(tier.value)}
                 onCheckedChange={() => toggleTier(tier.value)}
-                className="border-white/20"
+                className="border-border-default"
               />
               <Label
                 htmlFor={`tier-${tier.value}`}
@@ -209,7 +209,7 @@ export default function FiltersSidebar({ minPrice = 0, maxPrice = 1000, classNam
 
       {/* Delivery Time */}
       <div>
-        <Label className="text-sm font-semibold text-white mb-3 block">
+        <Label className="text-sm font-semibold text-text-primary mb-3 block">
           Delivery Time
         </Label>
         <div className="space-y-3">
@@ -219,11 +219,11 @@ export default function FiltersSidebar({ minPrice = 0, maxPrice = 1000, classNam
                 id={`delivery-${option.value}`}
                 checked={deliveryTimes.includes(option.value)}
                 onCheckedChange={() => toggleDeliveryTime(option.value)}
-                className="border-white/20"
+                className="border-border-default"
               />
               <Label
                 htmlFor={`delivery-${option.value}`}
-                className="text-sm text-gray-300 cursor-pointer select-none"
+                className="text-sm text-text-secondary cursor-pointer select-none"
               >
                 {option.label}
               </Label>
@@ -239,13 +239,13 @@ export default function FiltersSidebar({ minPrice = 0, maxPrice = 1000, classNam
             id="online-only"
             checked={onlineOnly}
             onCheckedChange={(checked) => setOnlineOnly(checked as boolean)}
-            className="border-white/20"
+            className="border-border-default"
           />
-          <Label htmlFor="online-only" className="text-sm font-medium text-green-400 cursor-pointer select-none">
+          <Label htmlFor="online-only" className="text-sm font-medium text-success cursor-pointer select-none">
             🟢 Online Now
           </Label>
         </div>
-        <p className="text-xs text-gray-500 mt-1 ml-6">
+        <p className="text-xs text-text-tertiary mt-1 ml-6">
           Show only sellers currently online
         </p>
       </div>
@@ -253,7 +253,7 @@ export default function FiltersSidebar({ minPrice = 0, maxPrice = 1000, classNam
       {/* Apply Button */}
       <button
         onClick={applyFilters}
-        className="w-full px-4 py-3 bg-violet-600 hover:bg-violet-700 text-white font-semibold rounded-lg transition-colors"
+        className="w-full px-4 py-3 bg-lime hover:bg-lime-hover-hover text-text-primary font-semibold rounded-lg transition-colors"
       >
         Apply Filters
       </button>
@@ -263,7 +263,7 @@ export default function FiltersSidebar({ minPrice = 0, maxPrice = 1000, classNam
   // ── Inline / controlled mode (used by CategoryPageLayout) ───────────────
   if (inline) {
     return (
-      <div className={cn('bg-white/[0.03] border border-white/[0.07] rounded-xl p-5 backdrop-blur-xl overflow-y-auto', className)}>
+      <div className={cn('bg-bg-overlay border border-border-subtle rounded-xl p-5 backdrop-blur-xl overflow-y-auto', className)}>
         {filtersContent}
       </div>
     )
@@ -273,7 +273,7 @@ export default function FiltersSidebar({ minPrice = 0, maxPrice = 1000, classNam
     <>
       {/* Desktop Sidebar */}
       <div className={cn('hidden lg:block', className)}>
-        <div className="sticky top-24 bg-white/[0.03] border border-white/[0.1] rounded-xl p-6 backdrop-blur-xl">
+        <div className="sticky top-24 bg-bg-overlay border border-white/[0.1] rounded-xl p-6 backdrop-blur-xl">
           {filtersContent}
         </div>
       </div>
@@ -281,7 +281,7 @@ export default function FiltersSidebar({ minPrice = 0, maxPrice = 1000, classNam
       {/* Mobile Toggle Button */}
       <button
         onClick={() => setShowMobile(true)}
-        className="lg:hidden fixed bottom-6 right-6 z-40 px-6 py-3 bg-violet-600 hover:bg-violet-700 text-white font-semibold rounded-full shadow-lg flex items-center gap-2 transition-all"
+        className="lg:hidden fixed bottom-6 right-6 z-40 px-6 py-3 bg-lime hover:bg-lime-hover-hover text-text-primary font-semibold rounded-full shadow-lg flex items-center gap-2 transition-all"
       >
         <SlidersHorizontal className="w-5 h-5" />
         Filters
@@ -305,7 +305,7 @@ export default function FiltersSidebar({ minPrice = 0, maxPrice = 1000, classNam
               {/* Close Button */}
               <button
                 onClick={() => setShowMobile(false)}
-                className="absolute top-4 right-4 p-2 text-gray-400 hover:text-white transition-colors"
+                className="absolute top-4 right-4 p-2 text-text-secondary hover:text-text-primary transition-colors"
               >
                 <X className="w-6 h-6" />
               </button>

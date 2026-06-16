@@ -73,7 +73,7 @@ export default function EditReviewButton({
           'flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-all',
           canEdit
             ? 'text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 active:scale-95'
-            : 'text-gray-600 cursor-not-allowed',
+            : 'text-text-disabled cursor-not-allowed',
           className
         )}
         title={canEdit ? 'Edit review' : disabledReason}

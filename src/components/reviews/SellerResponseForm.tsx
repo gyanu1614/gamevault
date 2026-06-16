@@ -73,7 +73,7 @@ export default function SellerResponseForm({
     <form onSubmit={handleSubmit} className="space-y-3">
       {/* Response Textarea */}
       <div className="space-y-2">
-        <label htmlFor="seller-response" className="block text-sm font-medium text-violet-400">
+        <label htmlFor="seller-response" className="block text-sm font-medium text-lime-text">
           Your Response
         </label>
         <textarea
@@ -84,18 +84,18 @@ export default function SellerResponseForm({
           minLength={10}
           maxLength={500}
           placeholder="Thank the customer or address their concerns professionally..."
-          className="w-full px-4 py-3 bg-white/[0.05] border border-white/[0.08] rounded-lg text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-violet-500/50 transition-all resize-none"
+          className="w-full px-4 py-3 bg-bg-overlay border border-border-subtle rounded-lg text-white placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-violet-500/50 transition-all resize-none"
           disabled={isSubmitting}
           required
         />
         <div className="flex items-center justify-between text-xs">
           <span className={cn(
-            response.length < 10 ? 'text-red-400' : 'text-gray-500'
+            response.length < 10 ? 'text-error' : 'text-text-tertiary'
           )}>
             {response.length < 10 ? `${10 - response.length} more characters required` : 'Minimum met'}
           </span>
           <span className={cn(
-            response.length > 450 ? 'text-yellow-400' : 'text-gray-500'
+            response.length > 450 ? 'text-warning' : 'text-text-tertiary'
           )}>
             {response.length}/500 characters
           </span>
@@ -103,9 +103,9 @@ export default function SellerResponseForm({
       </div>
 
       {/* Response Guidelines */}
-      <div className="p-3 bg-violet-500/10 border border-violet-500/20 rounded-lg">
-        <p className="text-xs text-gray-400">
-          <strong className="text-violet-400">Tip:</strong> Thank the customer, address concerns professionally, and offer solutions when appropriate.
+      <div className="p-3 bg-lime/10 border border-lime-tint-border rounded-lg">
+        <p className="text-xs text-text-secondary">
+          <strong className="text-lime-text">Tip:</strong> Thank the customer, address concerns professionally, and offer solutions when appropriate.
         </p>
       </div>
 
@@ -116,7 +116,7 @@ export default function SellerResponseForm({
             type="button"
             onClick={onCancel}
             disabled={isSubmitting}
-            className="px-4 py-2 text-sm rounded-lg border border-white/[0.08] text-gray-400 hover:text-white hover:bg-white/[0.05] transition-all disabled:opacity-50"
+            className="px-4 py-2 text-sm rounded-lg border border-border-subtle text-text-secondary hover:text-white hover:bg-bg-overlay transition-all disabled:opacity-50"
           >
             Cancel
           </button>
@@ -124,7 +124,7 @@ export default function SellerResponseForm({
         <button
           type="submit"
           disabled={isSubmitting || response.trim().length < 10}
-          className="px-4 py-2 text-sm rounded-lg bg-violet-600 hover:bg-violet-700 text-white font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+          className="px-4 py-2 text-sm rounded-lg bg-lime hover:bg-lime-hover-hover text-white font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
         >
           {isSubmitting ? (
             <>

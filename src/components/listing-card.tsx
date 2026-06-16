@@ -35,16 +35,16 @@ export function ListingCard({ listing, index = 0 }: ListingCardProps) {
         href={`/listings/${listing.id}`}
         className={cn(
           'group relative flex flex-col overflow-hidden rounded-2xl',
-          'bg-white/[0.04] border border-white/[0.08]',
+          'bg-bg-raised border border-border-subtle',
           'backdrop-blur-sm',
           'transition-all duration-300 ease-out',
-          'hover:border-violet-500/40 hover:bg-white/[0.06]',
-          'hover:shadow-[0_0_30px_-5px_rgba(139,92,246,0.3)]',
+          'hover:border-lime-tint-border hover:bg-bg-raised-hover',
+          'hover:shadow-glow',
           isSoldOut && 'opacity-60'
         )}
       >
         {/* Image */}
-        <div className="relative aspect-[4/3] overflow-hidden bg-white/[0.03]">
+        <div className="relative aspect-[4/3] overflow-hidden bg-bg-overlay">
           {primaryImage ? (
             <Image
               src={primaryImage}
@@ -122,7 +122,7 @@ export function ListingCard({ listing, index = 0 }: ListingCardProps) {
           {/* Delivery time — bottom right of image */}
           <div className="absolute bottom-2.5 right-2.5 flex items-center gap-1 rounded-full bg-black/50 px-2 py-1 backdrop-blur-md">
             {listing.delivery_time?.toLowerCase().includes('instant') ? (
-              <Zap className="w-3 h-3 text-violet-400" />
+              <Zap className="w-3 h-3 text-lime-text" />
             ) : (
               <Clock className="w-3 h-3 text-white/60" />
             )}
@@ -137,18 +137,18 @@ export function ListingCard({ listing, index = 0 }: ListingCardProps) {
             {listing.category?.icon && (
               <span className="text-xs">{listing.category.icon}</span>
             )}
-            <span className="text-[11px] font-medium text-violet-400/80 uppercase tracking-wide">
+            <span className="text-[11px] font-medium text-lime-text/80 uppercase tracking-wide">
               {listing.category?.name}
             </span>
           </div>
 
           {/* Title */}
-          <h3 className="line-clamp-2 text-sm font-semibold text-foreground leading-snug group-hover:text-violet-300 transition-colors duration-200">
+          <h3 className="line-clamp-2 text-sm font-semibold text-foreground leading-snug group-hover:text-lime-text transition-colors duration-200">
             {listing.title}
           </h3>
 
           {/* Seller row */}
-          <div className="mt-auto flex items-center justify-between pt-2 border-t border-white/[0.06]">
+          <div className="mt-auto flex items-center justify-between pt-2 border-t border-border-subtle">
             <div className="flex items-center gap-2 min-w-0">
               {/* Avatar */}
               <div className="relative shrink-0">
@@ -159,7 +159,7 @@ export function ListingCard({ listing, index = 0 }: ListingCardProps) {
                     className="h-6 w-6 rounded-full object-cover ring-1 ring-white/10"
                   />
                 ) : (
-                  <div className="h-6 w-6 rounded-full bg-violet-500/20 ring-1 ring-violet-500/30 flex items-center justify-center text-[10px] font-bold text-violet-400">
+                  <div className="h-6 w-6 rounded-full bg-lime-tint-bg ring-1 ring-lime-tint-border flex items-center justify-center text-[10px] font-bold text-lime-text">
                     {(listing.seller?.username ?? '?')[0].toUpperCase()}
                   </div>
                 )}
@@ -194,7 +194,7 @@ export function ListingCard({ listing, index = 0 }: ListingCardProps) {
         </div>
 
         {/* Glow border on hover — purely decorative */}
-        <div className="pointer-events-none absolute inset-0 rounded-2xl opacity-0 transition-opacity duration-300 group-hover:opacity-100 ring-1 ring-violet-500/30" />
+        <div className="pointer-events-none absolute inset-0 rounded-2xl opacity-0 transition-opacity duration-300 group-hover:opacity-100 ring-1 ring-lime-tint-border" />
       </Link>
     </motion.div>
   )
@@ -206,7 +206,7 @@ export function ListingCard({ listing, index = 0 }: ListingCardProps) {
 
 export function ListingCardSkeleton() {
   return (
-    <div className="relative flex flex-col overflow-hidden rounded-2xl bg-white/[0.04] border border-white/[0.08]">
+    <div className="relative flex flex-col overflow-hidden rounded-2xl bg-bg-raised border border-border-subtle">
       {/* Image area */}
       <div className="relative aspect-[4/3] overflow-hidden">
         <div className="skeleton absolute inset-0" />
@@ -228,7 +228,7 @@ export function ListingCardSkeleton() {
           <div className="h-4 w-3/4 rounded skeleton" />
         </div>
         {/* Seller row */}
-        <div className="mt-auto flex items-center justify-between pt-2 border-t border-white/[0.06]">
+        <div className="mt-auto flex items-center justify-between pt-2 border-t border-border-subtle">
           <div className="flex items-center gap-2">
             <div className="h-6 w-6 rounded-full skeleton" />
             <div className="h-3 w-20 rounded skeleton" />

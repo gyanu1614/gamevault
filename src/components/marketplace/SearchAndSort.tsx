@@ -52,19 +52,19 @@ export default function SearchAndSort() {
     <div className="flex items-center gap-2 w-full">
       {/* Search */}
       <form onSubmit={handleSearch} className="flex-1 min-w-0 relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-tertiary pointer-events-none" />
         <input
           type="text"
           placeholder="Search listings..."
           value={searchValue}
           onChange={(e) => setSearchValue(e.target.value)}
-          className="w-full pl-9 pr-8 py-2 bg-white/[0.04] border border-white/[0.08] rounded-lg text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-1 focus:ring-violet-500/60 focus:border-violet-500/40 transition-all"
+          className="w-full pl-9 pr-8 py-2 bg-bg-raised border border-border-subtle rounded-lg text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-1 focus:ring-violet-500/60 focus:border-lime-tint-border transition-all"
         />
         {searchValue && (
           <button
             type="button"
             onClick={clearSearch}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-text-tertiary hover:text-text-primary transition-colors"
           >
             <X className="w-3.5 h-3.5" />
           </button>
@@ -75,7 +75,7 @@ export default function SearchAndSort() {
       <select
         value={sortValue}
         onChange={(e) => handleSortChange(e.target.value)}
-        className="flex-shrink-0 px-3 py-2 bg-white/[0.04] border border-white/[0.08] rounded-lg text-sm text-white focus:outline-none focus:ring-1 focus:ring-violet-500/60 cursor-pointer transition-all appearance-none pr-8"
+        className="flex-shrink-0 px-3 py-2 bg-bg-raised border border-border-subtle rounded-lg text-sm text-text-primary focus:outline-none focus:ring-1 focus:ring-violet-500/60 cursor-pointer transition-all appearance-none pr-8"
         style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 10px center' }}
       >
         <option value="newest" className="bg-zinc-900">Newest First</option>

@@ -96,21 +96,21 @@ export function ContactSellerModal({
               transition={{ duration: 0.2, ease: "easeOut" }}
               className="w-full max-w-lg pointer-events-auto"
             >
-              <div className="rounded-2xl border border-white/20 bg-[#1a1a1a]/95 backdrop-blur-2xl shadow-[0_8px_32px_0_rgba(0,0,0,0.8)] overflow-hidden">
+              <div className="rounded-2xl border border-border-default bg-[#1a1a1a]/95 backdrop-blur-2xl shadow-[0_8px_32px_0_rgba(0,0,0,0.8)] overflow-hidden">
                 {/* Header */}
-                <div className="flex items-center justify-between p-6 border-b border-white/10 bg-black/20">
+                <div className="flex items-center justify-between p-6 border-b border-border-subtle bg-black/20">
                   <div className="flex items-center gap-3">
-                    <div className="flex items-center justify-center h-12 w-12 rounded-full bg-gradient-to-br from-violet-500 via-purple-600 to-purple-700 shadow-lg shadow-purple-500/30">
-                      <MessageCircle className="h-6 w-6 text-white" />
+                    <div className="flex items-center justify-center h-12 w-12 rounded-full bg-gradient-to-br from-lime via-purple-600 to-lime-700 shadow-lg shadow-purple-500/30">
+                      <MessageCircle className="h-6 w-6 text-text-primary" />
                     </div>
                     <div>
-                      <h2 className="text-xl font-semibold text-white">Contact Seller</h2>
-                      <p className="text-sm text-gray-400">{sellerUsername}</p>
+                      <h2 className="text-xl font-semibold text-text-primary">Contact Seller</h2>
+                      <p className="text-sm text-text-secondary">{sellerUsername}</p>
                     </div>
                   </div>
                   <button
                     onClick={onClose}
-                    className="flex items-center justify-center h-9 w-9 rounded-lg hover:bg-white/10 transition-all text-gray-400 hover:text-white"
+                    className="flex items-center justify-center h-9 w-9 rounded-lg hover:bg-bg-raised-hover transition-all text-text-secondary hover:text-text-primary"
                   >
                     <X className="h-5 w-5" />
                   </button>
@@ -119,14 +119,14 @@ export function ContactSellerModal({
                 {/* Content */}
                 <div className="p-6 space-y-5 bg-black/10">
                   {/* Listing Info */}
-                  <div className="rounded-xl border border-white/10 bg-black/40 p-4 backdrop-blur-sm">
-                    <p className="text-xs font-medium text-gray-400 mb-1.5">About</p>
-                    <p className="text-sm font-medium text-white">{listingTitle}</p>
+                  <div className="rounded-xl border border-border-subtle bg-black/40 p-4 backdrop-blur-sm">
+                    <p className="text-xs font-medium text-text-secondary mb-1.5">About</p>
+                    <p className="text-sm font-medium text-text-primary">{listingTitle}</p>
                   </div>
 
                   {/* Message Input */}
                   <div>
-                    <label htmlFor="message" className="block text-sm font-semibold text-white mb-2.5">
+                    <label htmlFor="message" className="block text-sm font-semibold text-text-primary mb-2.5">
                       Your Message
                     </label>
                     <textarea
@@ -136,27 +136,27 @@ export function ContactSellerModal({
                       onKeyPress={handleKeyPress}
                       placeholder="Hi! I'm interested in this listing. Can you provide more details?"
                       rows={5}
-                      className="w-full rounded-xl border border-white/20 bg-black/40 p-4 text-sm text-white placeholder:text-gray-500 focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-500/30 resize-none transition-all"
+                      className="w-full rounded-xl border border-border-default bg-black/40 p-4 text-sm text-text-primary placeholder:text-text-tertiary focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-500/30 resize-none transition-all"
                     />
-                    <p className="mt-2 text-xs text-gray-500">
+                    <p className="mt-2 text-xs text-text-tertiary">
                       Press Enter to send • Shift+Enter for new line
                     </p>
                   </div>
                 </div>
 
                 {/* Footer */}
-                <div className="flex items-center justify-end gap-3 p-6 border-t border-white/10 bg-black/20">
+                <div className="flex items-center justify-end gap-3 p-6 border-t border-border-subtle bg-black/20">
                   <button
                     onClick={onClose}
                     disabled={isSending}
-                    className="px-5 py-2.5 rounded-xl border border-white/20 bg-black/40 text-sm font-medium text-white hover:bg-white/10 transition-all disabled:opacity-50"
+                    className="px-5 py-2.5 rounded-xl border border-border-default bg-black/40 text-sm font-medium text-text-primary hover:bg-bg-raised-hover transition-all disabled:opacity-50"
                   >
                     Cancel
                   </button>
                   <button
                     onClick={handleSend}
                     disabled={isSending || !message.trim()}
-                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-violet-500 to-purple-600 text-white text-sm font-semibold hover:from-violet-600 hover:to-purple-700 transition-all shadow-lg shadow-violet-500/30 disabled:opacity-50 disabled:shadow-none"
+                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-lime to-lime-600 text-text-primary text-sm font-semibold hover:from-lime hover:to-lime-700 transition-all shadow-lg shadow-violet-500/30 disabled:opacity-50 disabled:shadow-none"
                   >
                     {isSending ? (
                       <>

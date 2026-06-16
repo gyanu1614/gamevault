@@ -168,15 +168,15 @@ export default function ReviewForm({
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.9, opacity: 0, y: 20 }}
             transition={{ type: "spring", stiffness: 300, damping: 25 }}
-            className="bg-white/[0.02] backdrop-blur-2xl border border-white/[0.1] rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden"
+            className="bg-bg-overlay backdrop-blur-2xl border border-white/[0.1] rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="relative p-4 pb-3 border-b border-white/[0.05]">
+            <div className="relative p-4 pb-3 border-b border-border-subtle">
               <button
                 onClick={handleClose}
                 disabled={isSubmitting}
-                className="absolute top-3 right-3 p-1.5 rounded-full hover:bg-white/[0.05] text-gray-400 hover:text-white transition-all disabled:opacity-50"
+                className="absolute top-3 right-3 p-1.5 rounded-full hover:bg-bg-overlay text-text-secondary hover:text-white transition-all disabled:opacity-50"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -185,7 +185,7 @@ export default function ReviewForm({
                   {isEditMode ? 'Edit Your Review' : 'How was your experience?'}
                 </h2>
                 {sellerName && (
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-text-tertiary">
                     {sellerName}
                     {orderNumber && ` • #${orderNumber}`}
                   </p>
@@ -197,7 +197,7 @@ export default function ReviewForm({
             <form onSubmit={handleSubmit} className="p-4 space-y-4">
               {/* Thumbs Up/Down Selector */}
               <div className="space-y-2">
-                <label className="block text-xs font-medium text-gray-400 text-center">
+                <label className="block text-xs font-medium text-text-secondary text-center">
                   Rate your experience
                 </label>
                 <div className="flex items-center justify-center gap-4">
@@ -210,13 +210,13 @@ export default function ReviewForm({
                       "relative p-4 rounded-xl border-2 transition-all duration-200",
                       reviewType === 'positive'
                         ? "bg-green-500/15 border-green-500/40"
-                        : "bg-white/[0.03] border-white/[0.08] hover:border-white/[0.12]"
+                        : "bg-bg-overlay border-border-subtle hover:border-white/[0.12]"
                     )}
                   >
                     <ThumbsUp
                       className={cn(
                         "w-8 h-8 transition-colors duration-200",
-                        reviewType === 'positive' ? "text-green-400 fill-green-400" : "text-gray-500"
+                        reviewType === 'positive' ? "text-success fill-green-400" : "text-text-tertiary"
                       )}
                     />
                     {reviewType === 'positive' && (
@@ -239,13 +239,13 @@ export default function ReviewForm({
                       "relative p-4 rounded-xl border-2 transition-all duration-200",
                       reviewType === 'negative'
                         ? "bg-red-500/15 border-red-500/40"
-                        : "bg-white/[0.03] border-white/[0.08] hover:border-white/[0.12]"
+                        : "bg-bg-overlay border-border-subtle hover:border-white/[0.12]"
                     )}
                   >
                     <ThumbsDown
                       className={cn(
                         "w-8 h-8 transition-colors duration-200",
-                        reviewType === 'negative' ? "text-red-400 fill-red-400" : "text-gray-500"
+                        reviewType === 'negative' ? "text-error fill-red-400" : "text-text-tertiary"
                       )}
                     />
                     {reviewType === 'negative' && (
@@ -269,7 +269,7 @@ export default function ReviewForm({
                       exit={{ opacity: 0, y: -5 }}
                       className={cn(
                         "text-center text-xs font-medium",
-                        reviewType === 'positive' ? "text-green-400" : "text-red-400"
+                        reviewType === 'positive' ? "text-success" : "text-error"
                       )}
                     >
                       {reviewType === 'positive' ? '👍 Positive' : '👎 Negative'}
@@ -287,7 +287,7 @@ export default function ReviewForm({
                     exit={{ opacity: 0, height: 0 }}
                     className="space-y-2"
                   >
-                    <label className="block text-xs font-medium text-gray-400">
+                    <label className="block text-xs font-medium text-text-secondary">
                       Quick options
                     </label>
                     <div className="flex flex-wrap gap-1.5">
@@ -301,9 +301,9 @@ export default function ReviewForm({
                             "px-2.5 py-1 rounded-lg text-xs font-medium transition-all",
                             feedback === preset
                               ? reviewType === 'positive'
-                                ? "bg-green-500/20 border-green-500/40 text-green-400 border"
-                                : "bg-red-500/20 border-red-500/40 text-red-400 border"
-                              : "bg-white/[0.03] border border-white/[0.08] text-gray-400 hover:bg-white/[0.05] hover:text-white"
+                                ? "bg-success-bg border-green-500/40 text-success border"
+                                : "bg-error-bg border-red-500/40 text-error border"
+                              : "bg-bg-overlay border border-border-subtle text-text-secondary hover:bg-bg-overlay hover:text-white"
                           )}
                         >
                           {preset}
@@ -323,8 +323,8 @@ export default function ReviewForm({
                     exit={{ opacity: 0, height: 0 }}
                     className="space-y-2"
                   >
-                    <label htmlFor="review-feedback" className="block text-xs font-medium text-gray-400">
-                      Or write your own <span className="text-gray-500">(optional)</span>
+                    <label htmlFor="review-feedback" className="block text-xs font-medium text-text-secondary">
+                      Or write your own <span className="text-text-tertiary">(optional)</span>
                     </label>
                     <textarea
                       id="review-feedback"
@@ -337,10 +337,10 @@ export default function ReviewForm({
                           ? "What made it great..."
                           : "What went wrong..."
                       }
-                      className="w-full px-3 py-2 bg-white/[0.03] border border-white/[0.08] rounded-lg text-sm text-white placeholder:text-gray-600 focus:outline-none focus:ring-1 focus:ring-violet-500/40 focus:border-transparent transition-all resize-none"
+                      className="w-full px-3 py-2 bg-bg-overlay border border-border-subtle rounded-lg text-sm text-white placeholder:text-text-disabled focus:outline-none focus:ring-1 focus:ring-violet-500/40 focus:border-transparent transition-all resize-none"
                       disabled={isSubmitting}
                     />
-                    <div className="flex items-center justify-end text-[10px] text-gray-600">
+                    <div className="flex items-center justify-end text-[10px] text-text-disabled">
                       {feedback.length}/2000
                     </div>
                   </motion.div>
@@ -356,7 +356,7 @@ export default function ReviewForm({
                   "w-full py-2.5 rounded-lg font-semibold text-sm transition-all",
                   reviewType === 'positive' && !isSubmitting && "bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white",
                   reviewType === 'negative' && !isSubmitting && "bg-gradient-to-r from-red-500 to-rose-500 hover:from-red-600 hover:to-rose-600 text-white",
-                  (!reviewType || isSubmitting) && "bg-white/[0.05] text-gray-500 cursor-not-allowed"
+                  (!reviewType || isSubmitting) && "bg-bg-overlay text-text-tertiary cursor-not-allowed"
                 )}
               >
                 {isSubmitting ? (
@@ -374,7 +374,7 @@ export default function ReviewForm({
                 type="button"
                 onClick={handleClose}
                 disabled={isSubmitting}
-                className="w-full py-2 text-gray-400 hover:text-white transition-colors text-xs font-medium disabled:opacity-50"
+                className="w-full py-2 text-text-secondary hover:text-white transition-colors text-xs font-medium disabled:opacity-50"
               >
                 Cancel
               </button>

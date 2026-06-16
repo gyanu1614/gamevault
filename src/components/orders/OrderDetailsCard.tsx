@@ -13,8 +13,8 @@ interface OrderDetailsCardProps {
 function Row({ label, value, valueClass }: { label: string; value: React.ReactNode; valueClass?: string }) {
   if (!value) return null
   return (
-    <div className="flex items-center justify-between py-3 border-b border-white/[0.04] last:border-0">
-      <span className="text-xs text-gray-500">{label}</span>
+    <div className="flex items-center justify-between py-3 border-b border-border-subtle last:border-0">
+      <span className="text-xs text-text-tertiary">{label}</span>
       <span className={cn('text-xs text-gray-200 font-medium text-right max-w-[60%] truncate', valueClass)}>
         {value}
       </span>
@@ -37,9 +37,9 @@ export default function OrderDetailsCard({ order, role, onClick }: OrderDetailsC
     : []
 
   return (
-    <div className="rounded-2xl border border-white/[0.06] bg-white/[0.025] overflow-hidden">
+    <div className="rounded-2xl border border-border-subtle bg-white/[0.025] overflow-hidden">
       {/* Header */}
-      <div className="px-5 py-3.5 border-b border-white/[0.05] flex items-center justify-between gap-2.5">
+      <div className="px-5 py-3.5 border-b border-border-subtle flex items-center justify-between gap-2.5">
         <div className="flex items-center gap-2.5">
           {game?.image_url && (
             <Image
@@ -50,12 +50,12 @@ export default function OrderDetailsCard({ order, role, onClick }: OrderDetailsC
               className="rounded-md object-cover flex-shrink-0"
             />
           )}
-          <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-gray-500">Order Details</span>
+          <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-text-tertiary">Order Details</span>
         </div>
         {onClick && (
           <button
             onClick={onClick}
-            className="flex items-center gap-1.5 text-[10px] text-violet-400 font-medium rounded-lg px-2 py-1.5 transition-colors hover:bg-violet-500/10"
+            className="flex items-center gap-1.5 text-[10px] text-lime-text font-medium rounded-lg px-2 py-1.5 transition-colors hover:bg-lime/10"
           >
             <Eye className="h-3 w-3" />
             <span>View Full Details</span>
@@ -93,13 +93,13 @@ export default function OrderDetailsCard({ order, role, onClick }: OrderDetailsC
           <Row
             label="Buyer"
             value={`@${order.buyer?.username}`}
-            valueClass="text-violet-400"
+            valueClass="text-lime-text"
           />
         ) : (
           <Row
             label="Seller"
             value={order.seller?.shop_name || `@${order.seller?.username}`}
-            valueClass="text-violet-400"
+            valueClass="text-lime-text"
           />
         )}
 

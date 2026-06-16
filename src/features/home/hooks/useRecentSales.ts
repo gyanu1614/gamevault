@@ -25,6 +25,7 @@ export function useRecentSales() {
   return useQuery({
     queryKey: ['recent-sales'],
     queryFn: async (): Promise<SoldItem[]> => MOCK_RECENT_SALES,
+    initialData: MOCK_RECENT_SALES,
     staleTime: 30 * 1000,
     refetchInterval: 30 * 1000,
   })

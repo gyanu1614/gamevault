@@ -42,11 +42,11 @@ export default function WishlistButton({
   // Variant styles
   const variantStyles = {
     default: {
-      container: 'p-2.5 hover:bg-white/[0.08] rounded-xl',
+      container: 'p-2.5 hover:bg-bg-raised-hover rounded-xl',
       icon: 'h-5 w-5',
     },
     compact: {
-      container: 'p-2 hover:bg-white/[0.08] rounded-lg',
+      container: 'p-2 hover:bg-bg-raised-hover rounded-lg',
       icon: 'h-4 w-4',
     },
     card: {
@@ -79,7 +79,7 @@ export default function WishlistButton({
             exit={{ opacity: 0, scale: 0.8 }}
             transition={{ duration: 0.15 }}
           >
-            <Loader2 className={cn(styles.icon, 'animate-spin text-violet-400')} />
+            <Loader2 className={cn(styles.icon, 'animate-spin text-lime-text')} />
           </motion.div>
         ) : (
           <motion.div
@@ -103,8 +103,8 @@ export default function WishlistButton({
                   styles.icon,
                   'transition-colors duration-200',
                   isWishlisted
-                    ? 'fill-violet-500 text-violet-500'
-                    : 'text-white hover:text-violet-400'
+                    ? 'fill-violet-500 text-lime-text'
+                    : 'text-white hover:text-lime-text'
                 )}
               />
             </motion.div>
@@ -117,7 +117,7 @@ export default function WishlistButton({
                 animate={{ scale: 2, opacity: 0 }}
                 transition={{ duration: 0.5, ease: "easeOut" }}
               >
-                <Heart className={cn(styles.icon, 'fill-violet-500 text-violet-500')} />
+                <Heart className={cn(styles.icon, 'fill-violet-500 text-lime-text')} />
               </motion.div>
             )}
           </motion.div>

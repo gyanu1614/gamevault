@@ -127,7 +127,7 @@ export default function SellerSteps34({
                 <h2 className="text-lg font-semibold text-white sm:text-xl md:text-2xl">
                   Identity Verification
                 </h2>
-                <p className="mt-1.5 text-xs text-gray-400 sm:text-sm">
+                <p className="mt-1.5 text-xs text-text-secondary sm:text-sm">
                   Upload your documents for KYC verification. All files are encrypted and stored securely.
                 </p>
               </div>
@@ -247,7 +247,7 @@ export default function SellerSteps34({
               <button
                 type="button"
                 onClick={onStepBack}
-                className="flex items-center gap-1 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-xs font-medium text-white transition-all hover:bg-white/[0.05] sm:gap-1.5 sm:px-4 sm:text-sm"
+                className="flex items-center gap-1 rounded-lg border border-white/10 bg-bg-overlay px-3 py-2 text-xs font-medium text-white transition-all hover:bg-bg-overlay sm:gap-1.5 sm:px-4 sm:text-sm"
               >
                 <ChevronLeft className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                 <span className="hidden sm:inline">Previous</span>
@@ -282,7 +282,7 @@ export default function SellerSteps34({
                 <h2 className="text-lg font-semibold text-white sm:text-xl md:text-2xl">
                   Seller Profile Setup
                 </h2>
-                <p className="mt-1.5 text-xs text-gray-400 sm:text-sm">
+                <p className="mt-1.5 text-xs text-text-secondary sm:text-sm">
                   Create your public-facing seller profile and store policies
                 </p>
               </div>
@@ -300,7 +300,7 @@ export default function SellerSteps34({
                     <label className="mb-1.5 block text-xs font-medium text-white sm:text-sm">
                       Profile Picture / Logo
                     </label>
-                    <p className="mb-3 text-[10px] text-gray-400 sm:text-xs">
+                    <p className="mb-3 text-[10px] text-text-secondary sm:text-xs">
                       Upload a profile picture or your business logo
                     </p>
 
@@ -317,13 +317,13 @@ export default function SellerSteps34({
                         />
                         <div className="flex flex-col items-center gap-3 p-6 sm:flex-row sm:gap-4 sm:p-8">
                           <div className="flex h-20 w-20 flex-shrink-0 items-center justify-center rounded-full bg-white/5 group-hover:bg-primary/10 sm:h-24 sm:w-24">
-                            <User className="h-10 w-10 text-gray-400 group-hover:text-primary sm:h-12 sm:w-12" />
+                            <User className="h-10 w-10 text-text-secondary group-hover:text-primary sm:h-12 sm:w-12" />
                           </div>
                           <div className="text-center sm:text-left">
                             <p className="text-sm font-medium text-white sm:text-base">
                               Click to upload or <span className="text-primary">browse</span>
                             </p>
-                            <p className="mt-1 text-xs text-gray-500 sm:text-sm">JPG or PNG (max 5MB)</p>
+                            <p className="mt-1 text-xs text-text-tertiary sm:text-sm">JPG or PNG (max 5MB)</p>
                           </div>
                         </div>
                       </div>
@@ -341,16 +341,16 @@ export default function SellerSteps34({
                           <p className="truncate text-sm font-medium text-white sm:text-base">
                             {profilePicture.name}
                           </p>
-                          <p className="mt-0.5 text-xs text-gray-400 sm:text-sm">
+                          <p className="mt-0.5 text-xs text-text-secondary sm:text-sm">
                             {(profilePicture.size / 1024 / 1024).toFixed(2)} MB
                           </p>
                         </div>
                         <button
                           type="button"
                           onClick={() => onProfilePictureChange(null)}
-                          className="flex-shrink-0 rounded-lg p-2 transition-all hover:bg-red-500/10"
+                          className="flex-shrink-0 rounded-lg p-2 transition-all hover:bg-error-bg"
                         >
-                          <X className="h-5 w-5 text-red-400 sm:h-6 sm:w-6" />
+                          <X className="h-5 w-5 text-error sm:h-6 sm:w-6" />
                         </button>
                       </div>
                     )}
@@ -360,9 +360,9 @@ export default function SellerSteps34({
                   <div>
                     <label className="mb-1.5 block text-xs font-medium text-white sm:text-sm">
                       Bio / About{' '}
-                      <span className="font-normal text-gray-400">(Optional)</span>
+                      <span className="font-normal text-text-secondary">(Optional)</span>
                     </label>
-                    <p className="mb-2 text-[10px] text-gray-400 sm:text-xs">
+                    <p className="mb-2 text-[10px] text-text-secondary sm:text-xs">
                       Tell buyers about yourself and what you offer
                     </p>
                     <textarea
@@ -370,9 +370,9 @@ export default function SellerSteps34({
                       rows={4}
                       maxLength={500}
                       placeholder="I'm a professional seller specializing in..."
-                      className="w-full rounded-lg border border-white/10 bg-white/[0.05] px-3 py-2.5 text-xs text-white placeholder:text-gray-500 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-3 sm:text-sm"
+                      className="w-full rounded-lg border border-white/10 bg-bg-overlay px-3 py-2.5 text-xs text-white placeholder:text-text-tertiary focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-3 sm:text-sm"
                     />
-                    <div className="mt-1.5 text-right text-xs text-gray-500">
+                    <div className="mt-1.5 text-right text-xs text-text-tertiary">
                       {bio.length}/500 characters
                     </div>
                   </div>
@@ -388,7 +388,7 @@ export default function SellerSteps34({
                   {/* Availability Options */}
                   <div>
                     <label className="mb-3 block text-xs font-medium text-white sm:text-sm">
-                      When are you available? <span className="font-normal text-gray-400">(Optional)</span>
+                      When are you available? <span className="font-normal text-text-secondary">(Optional)</span>
                     </label>
 
                     <div className="space-y-3">
@@ -400,7 +400,7 @@ export default function SellerSteps34({
                             setValue4('businessHours', '24/7 - Always Available')
                             setValue4('timezone', 'UTC+00:00 (GMT)')
                           }}
-                          className="px-4 py-2.5 bg-white/[0.05] hover:bg-white/[0.08] border border-white/10 hover:border-violet-500/50 rounded-lg text-xs sm:text-sm text-white transition-all"
+                          className="px-4 py-2.5 bg-bg-overlay hover:bg-bg-raised-hover border border-white/10 hover:border-lime rounded-lg text-xs sm:text-sm text-white transition-all"
                         >
                           ⏰ 24/7
                         </button>
@@ -410,7 +410,7 @@ export default function SellerSteps34({
                             setValue4('businessHours', '9AM-5PM, Mon-Fri')
                             setValue4('timezone', 'Auto')
                           }}
-                          className="px-4 py-2.5 bg-white/[0.05] hover:bg-white/[0.08] border border-white/10 hover:border-violet-500/50 rounded-lg text-xs sm:text-sm text-white transition-all"
+                          className="px-4 py-2.5 bg-bg-overlay hover:bg-bg-raised-hover border border-white/10 hover:border-lime rounded-lg text-xs sm:text-sm text-white transition-all"
                         >
                           🏢 Business Hours
                         </button>
@@ -420,23 +420,23 @@ export default function SellerSteps34({
                             setValue4('businessHours', '6PM-12AM, Daily')
                             setValue4('timezone', 'Auto')
                           }}
-                          className="px-4 py-2.5 bg-white/[0.05] hover:bg-white/[0.08] border border-white/10 hover:border-violet-500/50 rounded-lg text-xs sm:text-sm text-white transition-all"
+                          className="px-4 py-2.5 bg-bg-overlay hover:bg-bg-raised-hover border border-white/10 hover:border-lime rounded-lg text-xs sm:text-sm text-white transition-all"
                         >
                           🌙 Evenings
                         </button>
                       </div>
 
                       {/* Current Selection Display */}
-                      <div className="bg-white/[0.03] border border-white/10 rounded-lg p-4">
+                      <div className="bg-bg-overlay border border-white/10 rounded-lg p-4">
                         <div className="flex items-start gap-3">
                           <div className="text-2xl">📅</div>
                           <div className="flex-1">
-                            <p className="text-xs text-gray-400 mb-1">Selected:</p>
+                            <p className="text-xs text-text-secondary mb-1">Selected:</p>
                             <p className="text-sm text-white font-medium">
                               {watch4('businessHours') || 'Not set'}
                             </p>
                             {watch4('timezone') && watch4('timezone') !== '' && (
-                              <p className="text-xs text-gray-500 mt-1">
+                              <p className="text-xs text-text-tertiary mt-1">
                                 {watch4('timezone')}
                               </p>
                             )}
@@ -447,7 +447,7 @@ export default function SellerSteps34({
                       {/* Custom Input (Advanced) */}
                       <details className="group">
                         <summary className="cursor-pointer list-none">
-                          <div className="flex items-center gap-2 text-xs text-gray-400 hover:text-violet-400 transition-colors">
+                          <div className="flex items-center gap-2 text-xs text-text-secondary hover:text-lime-text transition-colors">
                             <span>✏️ Enter custom hours & timezone</span>
                             <svg className="w-4 h-4 group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -457,23 +457,23 @@ export default function SellerSteps34({
 
                         <div className="mt-3 grid gap-3 sm:grid-cols-2 pl-6">
                           <div>
-                            <label className="mb-1.5 block text-xs font-medium text-gray-400">
+                            <label className="mb-1.5 block text-xs font-medium text-text-secondary">
                               Custom Hours
                             </label>
                             <input
                               type="text"
                               {...register4('businessHours')}
                               placeholder="e.g., 10AM-8PM, Tue-Sat"
-                              className="w-full rounded-lg border border-white/10 bg-white/[0.05] px-3 py-2.5 text-xs text-white placeholder:text-gray-600 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:text-sm"
+                              className="w-full rounded-lg border border-white/10 bg-bg-overlay px-3 py-2.5 text-xs text-white placeholder:text-text-disabled focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:text-sm"
                             />
                           </div>
                           <div>
-                            <label className="mb-1.5 block text-xs font-medium text-gray-400">
+                            <label className="mb-1.5 block text-xs font-medium text-text-secondary">
                               Timezone
                             </label>
                             <select
                               {...register4('timezone')}
-                              className="w-full rounded-lg border border-white/10 bg-white/[0.05] px-3 py-2.5 text-xs text-white focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:text-sm"
+                              className="w-full rounded-lg border border-white/10 bg-bg-overlay px-3 py-2.5 text-xs text-white focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:text-sm"
                             >
                               <option value="" className="bg-black">Auto-detect</option>
                               <option value="UTC-08:00 (PST)" className="bg-black">PST - Los Angeles</option>
@@ -491,7 +491,7 @@ export default function SellerSteps34({
                   {/* Languages Spoken */}
                   <div>
                     <label className="mb-2 block text-xs font-medium text-white sm:text-sm">
-                      Languages Spoken <span className="font-normal text-gray-400">(Optional)</span>
+                      Languages Spoken <span className="font-normal text-text-secondary">(Optional)</span>
                     </label>
                     <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
                       {LANGUAGES.map((lang) => {
@@ -503,8 +503,8 @@ export default function SellerSteps34({
                             onClick={() => toggleLanguage(lang)}
                             className={`rounded-lg border p-2 text-xs transition-all sm:p-2.5 sm:text-sm ${
                               isSelected
-                                ? 'border-primary border-2 bg-white/[0.03] text-white'
-                                : 'border-white/10 bg-white/[0.03] text-gray-300 hover:border-white/20 hover:bg-white/[0.05]'
+                                ? 'border-primary border-2 bg-bg-overlay text-white'
+                                : 'border-white/10 bg-bg-overlay text-text-secondary hover:border-white/20 hover:bg-bg-overlay'
                             }`}
                           >
                             {lang}
@@ -534,7 +534,7 @@ export default function SellerSteps34({
                         type="text"
                         {...register4('discordUsername')}
                         placeholder="username#1234"
-                        className="w-full rounded-lg border border-white/10 bg-white/[0.05] px-3 py-2.5 text-xs text-white placeholder:text-gray-500 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-3 sm:text-sm"
+                        className="w-full rounded-lg border border-white/10 bg-bg-overlay px-3 py-2.5 text-xs text-white placeholder:text-text-tertiary focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-3 sm:text-sm"
                       />
                     </div>
 
@@ -547,7 +547,7 @@ export default function SellerSteps34({
                         type="text"
                         {...register4('twitterHandle')}
                         placeholder="@username"
-                        className="w-full rounded-lg border border-white/10 bg-white/[0.05] px-3 py-2.5 text-xs text-white placeholder:text-gray-500 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-3 sm:text-sm"
+                        className="w-full rounded-lg border border-white/10 bg-bg-overlay px-3 py-2.5 text-xs text-white placeholder:text-text-tertiary focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-3 sm:text-sm"
                       />
                     </div>
 
@@ -560,7 +560,7 @@ export default function SellerSteps34({
                         type="text"
                         {...register4('twitchChannel')}
                         placeholder="twitch.tv/username"
-                        className="w-full rounded-lg border border-white/10 bg-white/[0.05] px-3 py-2.5 text-xs text-white placeholder:text-gray-500 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-3 sm:text-sm"
+                        className="w-full rounded-lg border border-white/10 bg-bg-overlay px-3 py-2.5 text-xs text-white placeholder:text-text-tertiary focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-3 sm:text-sm"
                       />
                     </div>
 
@@ -573,7 +573,7 @@ export default function SellerSteps34({
                         type="text"
                         {...register4('youtubeChannel')}
                         placeholder="youtube.com/@username"
-                        className="w-full rounded-lg border border-white/10 bg-white/[0.05] px-3 py-2.5 text-xs text-white placeholder:text-gray-500 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-3 sm:text-sm"
+                        className="w-full rounded-lg border border-white/10 bg-bg-overlay px-3 py-2.5 text-xs text-white placeholder:text-text-tertiary focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-3 sm:text-sm"
                       />
                     </div>
                   </div>
@@ -586,7 +586,7 @@ export default function SellerSteps34({
                       <div className="h-1 w-1 rounded-full bg-primary" />
                       <h3 className="text-xs font-semibold text-white sm:text-sm">Your Store Policies</h3>
                     </div>
-                    <p className="text-xs text-gray-400">
+                    <p className="text-xs text-text-secondary">
                       📋 Define your own policies that will be displayed to buyers on your storefront
                     </p>
                   </div>
@@ -594,9 +594,9 @@ export default function SellerSteps34({
                   {/* Refund Policy */}
                   <div>
                     <label className="mb-1.5 block text-xs font-medium text-white sm:text-sm">
-                      Your Refund Policy <span className="font-normal text-gray-400">(Optional)</span>
+                      Your Refund Policy <span className="font-normal text-text-secondary">(Optional)</span>
                     </label>
-                    <p className="mb-2 text-[10px] text-gray-500 sm:text-xs">
+                    <p className="mb-2 text-[10px] text-text-tertiary sm:text-xs">
                       Tell buyers about YOUR refund conditions (e.g., "No refunds after delivery", "24h refund window", etc.)
                     </p>
 
@@ -605,14 +605,14 @@ export default function SellerSteps34({
                       <button
                         type="button"
                         onClick={() => setValue4('refundPolicy', 'No refunds once order is delivered and verified.')}
-                        className="px-3 py-1.5 bg-white/[0.05] hover:bg-white/[0.08] border border-white/10 hover:border-violet-500/50 rounded-md text-[10px] sm:text-xs text-gray-300 hover:text-white transition-all"
+                        className="px-3 py-1.5 bg-bg-overlay hover:bg-bg-raised-hover border border-white/10 hover:border-lime rounded-md text-[10px] sm:text-xs text-text-secondary hover:text-white transition-all"
                       >
                         📦 No Refunds
                       </button>
                       <button
                         type="button"
                         onClick={() => setValue4('refundPolicy', 'Full refund within 24 hours if item not as described.')}
-                        className="px-3 py-1.5 bg-white/[0.05] hover:bg-white/[0.08] border border-white/10 hover:border-violet-500/50 rounded-md text-[10px] sm:text-xs text-gray-300 hover:text-white transition-all"
+                        className="px-3 py-1.5 bg-bg-overlay hover:bg-bg-raised-hover border border-white/10 hover:border-lime rounded-md text-[10px] sm:text-xs text-text-secondary hover:text-white transition-all"
                       >
                         🔄 24h Refund Window
                       </button>
@@ -622,16 +622,16 @@ export default function SellerSteps34({
                       {...register4('refundPolicy')}
                       rows={3}
                       placeholder="e.g., Full refund within 24 hours if item not as described. No refunds after successful delivery."
-                      className="w-full rounded-lg border border-white/10 bg-white/[0.05] px-3 py-2.5 text-xs text-white placeholder:text-gray-500 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-3 sm:text-sm"
+                      className="w-full rounded-lg border border-white/10 bg-bg-overlay px-3 py-2.5 text-xs text-white placeholder:text-text-tertiary focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-3 sm:text-sm"
                     />
                   </div>
 
                   {/* Delivery Timeframe */}
                   <div>
                     <label className="mb-1.5 block text-xs font-medium text-white sm:text-sm">
-                      Your Delivery Timeframe <span className="font-normal text-gray-400">(Optional)</span>
+                      Your Delivery Timeframe <span className="font-normal text-text-secondary">(Optional)</span>
                     </label>
-                    <p className="mb-2 text-[10px] text-gray-500 sm:text-xs">
+                    <p className="mb-2 text-[10px] text-text-tertiary sm:text-xs">
                       Set expectations for buyers about when they'll receive their items
                     </p>
 
@@ -640,21 +640,21 @@ export default function SellerSteps34({
                       <button
                         type="button"
                         onClick={() => setValue4('deliveryTimeframe', 'Instant delivery (usually within minutes)')}
-                        className="px-3 py-1.5 bg-white/[0.05] hover:bg-white/[0.08] border border-white/10 hover:border-violet-500/50 rounded-md text-[10px] sm:text-xs text-gray-300 hover:text-white transition-all"
+                        className="px-3 py-1.5 bg-bg-overlay hover:bg-bg-raised-hover border border-white/10 hover:border-lime rounded-md text-[10px] sm:text-xs text-text-secondary hover:text-white transition-all"
                       >
                         ⚡ Instant
                       </button>
                       <button
                         type="button"
                         onClick={() => setValue4('deliveryTimeframe', 'Within 24 hours')}
-                        className="px-3 py-1.5 bg-white/[0.05] hover:bg-white/[0.08] border border-white/10 hover:border-violet-500/50 rounded-md text-[10px] sm:text-xs text-gray-300 hover:text-white transition-all"
+                        className="px-3 py-1.5 bg-bg-overlay hover:bg-bg-raised-hover border border-white/10 hover:border-lime rounded-md text-[10px] sm:text-xs text-text-secondary hover:text-white transition-all"
                       >
                         📅 Within 24h
                       </button>
                       <button
                         type="button"
                         onClick={() => setValue4('deliveryTimeframe', '1-3 business days')}
-                        className="px-3 py-1.5 bg-white/[0.05] hover:bg-white/[0.08] border border-white/10 hover:border-violet-500/50 rounded-md text-[10px] sm:text-xs text-gray-300 hover:text-white transition-all"
+                        className="px-3 py-1.5 bg-bg-overlay hover:bg-bg-raised-hover border border-white/10 hover:border-lime rounded-md text-[10px] sm:text-xs text-text-secondary hover:text-white transition-all"
                       >
                         🕐 1-3 Days
                       </button>
@@ -664,23 +664,23 @@ export default function SellerSteps34({
                       type="text"
                       {...register4('deliveryTimeframe')}
                       placeholder="e.g., Within 24 hours, Instant delivery, 1-3 business days"
-                      className="w-full rounded-lg border border-white/10 bg-white/[0.05] px-3 py-2.5 text-xs text-white placeholder:text-gray-500 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-3 sm:text-sm"
+                      className="w-full rounded-lg border border-white/10 bg-bg-overlay px-3 py-2.5 text-xs text-white placeholder:text-text-tertiary focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-3 sm:text-sm"
                     />
                   </div>
 
                   {/* Terms of Service */}
                   <div>
                     <label className="mb-1.5 block text-xs font-medium text-white sm:text-sm">
-                      Your Terms of Service <span className="font-normal text-gray-400">(Optional)</span>
+                      Your Terms of Service <span className="font-normal text-text-secondary">(Optional)</span>
                     </label>
-                    <p className="mb-2 text-[10px] text-gray-500 sm:text-xs">
+                    <p className="mb-2 text-[10px] text-text-tertiary sm:text-xs">
                       Any additional rules or requirements buyers should know before purchasing from you
                     </p>
                     <textarea
                       {...register4('termsOfService')}
                       rows={3}
                       placeholder="e.g., By purchasing, you agree to provide accurate account details. I am not responsible for bans due to incorrect information."
-                      className="w-full rounded-lg border border-white/10 bg-white/[0.05] px-3 py-2.5 text-xs text-white placeholder:text-gray-500 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-3 sm:text-sm"
+                      className="w-full rounded-lg border border-white/10 bg-bg-overlay px-3 py-2.5 text-xs text-white placeholder:text-text-tertiary focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-3 sm:text-sm"
                     />
                   </div>
 
@@ -700,7 +700,7 @@ export default function SellerSteps34({
               <button
                 type="button"
                 onClick={onStepBack}
-                className="flex items-center gap-1 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-xs font-medium text-white transition-all hover:bg-white/[0.05] sm:gap-1.5 sm:px-4 sm:text-sm"
+                className="flex items-center gap-1 rounded-lg border border-white/10 bg-bg-overlay px-3 py-2 text-xs font-medium text-white transition-all hover:bg-bg-overlay sm:gap-1.5 sm:px-4 sm:text-sm"
               >
                 <ChevronLeft className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                 <span className="hidden sm:inline">Previous</span>

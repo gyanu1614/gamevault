@@ -1,34 +1,27 @@
-/**
- * Seller Profile Banner Component
- *
- * Prominent banner for seller shop pages featuring:
- * - Custom uploaded banner or preset gradient (based on tier)
- * - Large seller avatar with online status
- * - Shop name and username
- * - Key stats: Reviews, Listings, Sales
- * - Seller tier badge
- * - Action buttons: Message, Follow
- *
- * Design: Apple-style minimalism with Framer Motion animations
- */
-
 'use client'
 
+/**
+ * SellerProfileBanner — V10b refinement.
+ *
+ * Refined seller storefront hero with:
+ *   - Layered backdrop: lime radial glow + subtle dotted pattern + dark
+ *     base (custom banner image takes precedence)
+ *   - Larger avatar with a clean tier ring (NOT a hanging ribbon)
+ *   - Tier badge sits inline next to the name like a verified check
+ *   - Stats rendered as separate chips with icons (rating, listings, sales)
+ *   - Right-aligned Message + Follow CTAs
+ *   - Bottom lime hairline for finish
+ */
+
 import React from 'react'
+import Link from 'next/link'
 import { motion } from 'framer-motion'
 import {
-  ThumbsUp,
-  Package,
-  TrendingUp,
-  MessageCircle,
-  UserPlus,
-  Check,
-  Shield,
-  Star,
-  Crown
+  ThumbsUp, Package, TrendingUp, MessageCircle, UserPlus, Check,
+  Shield, Crown, Gem, Sparkles, Award, ShieldCheck, type LucideIcon,
 } from 'lucide-react'
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
-import Link from 'next/link'
 
 interface BannerConfig {
   type: 'custom' | 'preset'
@@ -39,359 +32,277 @@ interface BannerConfig {
 }
 
 interface SellerProfileBannerProps {
-  // Seller info
   sellerId: string
   username: string
   shopName?: string
   avatarUrl?: string
   isOnline?: boolean
   isVerified?: boolean
-
-  // Stats
   rating: number
   reviewsCount: number
   listingsCount: number
   totalSales: number
-
-  // Tier
   sellerTier: 'bronze' | 'silver' | 'gold' | 'platinum' | 'diamond'
-
-  // Banner
   bannerConfig?: BannerConfig
-
-  // Actions
   currentUserId?: string
   onMessageClick?: () => void
   onFollowClick?: () => void
   isFollowing?: boolean
-
-  // Optional
   className?: string
 }
 
-// Tier configurations
-const tierConfig = {
+const TIER_CONFIG: Record<
+  string,
+  { label: string; Icon: LucideIcon; pill: string; ring: string }
+> = {
+  unverified: {
+    label: 'Unverified',
+    Icon: Shield,
+    pill: 'text-zinc-300 bg-zinc-500/15 border-zinc-500/30',
+    ring: 'ring-zinc-500/40',
+  },
   bronze: {
-    label: 'Bronze Seller',
-    icon: Shield,
-    color: 'text-orange-700',
-    bgColor: 'bg-orange-500/10',
-    borderColor: 'border-orange-500/20'
+    label: 'Bronze',
+    Icon: Award,
+    pill: 'text-orange-300 bg-orange-500/15 border-orange-500/30',
+    ring: 'ring-orange-500/40',
   },
   silver: {
-    label: 'Silver Seller',
-    icon: Shield,
-    color: 'text-gray-400',
-    bgColor: 'bg-gray-500/10',
-    borderColor: 'border-gray-500/20'
+    label: 'Silver',
+    Icon: ShieldCheck,
+    pill: 'text-slate-200 bg-slate-500/15 border-slate-500/30',
+    ring: 'ring-slate-400/40',
   },
   gold: {
-    label: 'Gold Seller',
-    icon: Star,
-    color: 'text-yellow-400',
-    bgColor: 'bg-yellow-500/10',
-    borderColor: 'border-yellow-500/20'
+    label: 'Gold',
+    Icon: Crown,
+    pill: 'text-yellow-300 bg-yellow-500/15 border-yellow-500/30',
+    ring: 'ring-yellow-500/40',
   },
   platinum: {
-    label: 'Platinum Seller',
-    icon: Crown,
-    color: 'text-cyan-400',
-    bgColor: 'bg-cyan-500/10',
-    borderColor: 'border-cyan-500/20'
+    label: 'Platinum',
+    Icon: Gem,
+    pill: 'text-cyan-300 bg-cyan-500/15 border-cyan-500/30',
+    ring: 'ring-cyan-500/40',
   },
   diamond: {
-    label: 'Diamond Elite',
-    icon: Crown,
-    color: 'text-purple-400',
-    bgColor: 'bg-purple-500/10',
-    borderColor: 'border-purple-500/20'
-  }
+    label: 'Diamond',
+    Icon: Sparkles,
+    pill: 'text-lime-text bg-lime-tint-bg border-lime-tint-border',
+    ring: 'ring-lime/40',
+  },
 }
 
 export default function SellerProfileBanner({
-  sellerId,
-  username,
-  shopName,
-  avatarUrl,
-  isOnline = false,
-  isVerified = false,
-  rating,
-  reviewsCount,
-  listingsCount,
-  totalSales,
-  sellerTier = 'bronze',
-  bannerConfig,
-  currentUserId,
-  onMessageClick,
-  onFollowClick,
-  isFollowing = false,
-  className
+  sellerId, username, shopName, avatarUrl, isOnline = false,
+  isVerified = false, rating, reviewsCount, listingsCount, totalSales,
+  sellerTier = 'bronze', bannerConfig, currentUserId,
+  onMessageClick, onFollowClick, isFollowing = false, className,
 }: SellerProfileBannerProps) {
-  const tier = tierConfig[sellerTier]
-  const TierIcon = tier.icon
+  const tier = TIER_CONFIG[sellerTier] ?? TIER_CONFIG.bronze
+  const TierIcon = tier.Icon
   const isOwnShop = currentUserId === sellerId
-
-  // Generate banner background style
-  const getBannerStyle = (): React.CSSProperties => {
-    if (!bannerConfig) {
-      return {
-        background: 'linear-gradient(to right, #6b46c1, #9333ea)'
-      }
-    }
-
-    if (bannerConfig.type === 'custom' && bannerConfig.url) {
-      return {
-        backgroundImage: `url(${bannerConfig.url})`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center'
-      }
-    }
-
-    if (bannerConfig.type === 'preset') {
-      const direction = bannerConfig.gradientDirection || 'to right'
-      const from = bannerConfig.gradientFrom || '#6b46c1'
-      const to = bannerConfig.gradientTo || '#9333ea'
-      return {
-        background: `linear-gradient(${direction}, ${from}, ${to})`
-      }
-    }
-
-    return {
-      background: 'linear-gradient(to right, #6b46c1, #9333ea)'
-    }
-  }
-
-  // Calculate positive review percentage
   const positivePercentage = rating > 0 ? Math.round((rating / 5) * 100) : 0
+
+  // Banner background — custom uploads always win
+  const customBg: React.CSSProperties | null =
+    bannerConfig?.type === 'custom' && bannerConfig.url
+      ? {
+          backgroundImage: `url(${bannerConfig.url})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+        }
+      : bannerConfig?.type === 'preset' &&
+        bannerConfig.gradientFrom &&
+        bannerConfig.gradientTo
+      ? {
+          background: `linear-gradient(${bannerConfig.gradientDirection || 'to right'}, ${bannerConfig.gradientFrom}, ${bannerConfig.gradientTo})`,
+        }
+      : null
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: -20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
+      initial={false}
       className={cn(
-        'relative w-full overflow-hidden rounded-2xl border border-white/[0.08]',
-        className
+        'relative w-full overflow-hidden rounded-2xl border border-border-default shadow-elevated',
+        className,
       )}
     >
-      {/* Banner Background */}
-      <div
-        className="absolute inset-0 opacity-90"
-        style={getBannerStyle()}
-      >
-        {/* Overlay gradient for better text visibility */}
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-black/20 to-black/60" />
-      </div>
+      {/* Backdrop — layered */}
+      {customBg ? (
+        <div className="absolute inset-0" style={customBg}>
+          <div className="absolute inset-0 bg-gradient-to-b from-bg-base/30 via-bg-base/50 to-bg-base/85" />
+        </div>
+      ) : (
+        <>
+          {/* Base */}
+          <div className="absolute inset-0 bg-bg-raised" />
+          {/* Lime radial glow top-left */}
+          <div
+            aria-hidden
+            className="absolute inset-0"
+            style={{
+              background:
+                'radial-gradient(ellipse 80% 60% at 15% 0%, rgba(198,255,61,0.18), transparent 70%)',
+            }}
+          />
+          {/* Soft dotted pattern */}
+          <div
+            aria-hidden
+            className="absolute inset-0 opacity-[0.05]"
+            style={{
+              backgroundImage:
+                'radial-gradient(circle at 1px 1px, rgba(255,255,255,0.5) 1px, transparent 0)',
+              backgroundSize: '20px 20px',
+            }}
+          />
+          {/* Bottom fade */}
+          <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-bg-base/60 to-transparent" />
+        </>
+      )}
 
-      {/* Content Container */}
-      <div className="relative z-10 px-6 pt-12 pb-6 sm:px-8 sm:pt-16 sm:pb-8">
-        {/* Top Row: Avatar + Info */}
-        <div className="flex flex-col items-center gap-6 sm:flex-row sm:items-end">
-          {/* Avatar */}
-          <motion.div
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ delay: 0.2, type: 'spring', stiffness: 200 }}
-            className="relative flex-shrink-0"
+      {/* Content */}
+      <div className="relative z-10 flex flex-col gap-5 px-5 py-6 sm:flex-row sm:items-center sm:px-8 sm:py-7">
+        {/* Avatar */}
+        <div className="relative shrink-0 self-center sm:self-auto">
+          <div
+            className={cn(
+              'relative h-20 w-20 overflow-hidden rounded-2xl border-2 border-bg-base ring-2 shadow-elevated sm:h-24 sm:w-24',
+              tier.ring,
+            )}
           >
-            {/* Avatar Container */}
-            <div className={cn(
-              'relative w-24 h-24 sm:w-32 sm:h-32 rounded-full border-4 border-white/20 overflow-hidden',
-              'shadow-2xl shadow-black/50'
-            )}>
-              {avatarUrl ? (
-                <img
-                  src={avatarUrl}
-                  alt={shopName || username}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="w-full h-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-bold text-4xl">
-                  {(shopName || username)[0]?.toUpperCase()}
-                </div>
-              )}
-
-              {/* Online Status Indicator */}
-              {isOnline && (
-                <motion.div
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ delay: 0.4 }}
-                  className="absolute bottom-1 right-1 w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-green-500 border-4 border-white/90 shadow-lg"
-                />
-              )}
-            </div>
-
-            {/* Seller Tier Badge (overlaps avatar) */}
-            <motion.div
-              initial={{ y: 10, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.5 }}
-              className={cn(
-                'absolute -bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap',
-                'border shadow-lg backdrop-blur-sm',
-                tier.color,
-                tier.bgColor,
-                tier.borderColor
-              )}
-            >
-              <TierIcon className="w-3.5 h-3.5" />
-              <span>{tier.label}</span>
-            </motion.div>
-          </motion.div>
-
-          {/* Shop Info */}
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.3 }}
-            className="flex-1 text-center sm:text-left"
-          >
-            {/* Shop Name */}
-            <div className="flex items-center justify-center sm:justify-start gap-2 mb-1">
-              <h1 className="text-2xl sm:text-3xl font-bold text-white drop-shadow-lg">
-                {shopName || username}
-              </h1>
-              {isVerified && (
-                <motion.div
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1, rotate: [0, 10, -10, 0] }}
-                  transition={{ delay: 0.6, type: 'spring' }}
-                  className="flex-shrink-0 w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center"
-                  title="Verified Seller"
-                >
-                  <Check className="w-4 h-4 text-white" />
-                </motion.div>
-              )}
-            </div>
-
-            {/* Username */}
-            <p className="text-white/80 text-sm sm:text-base mb-3 drop-shadow">
-              @{username}
-            </p>
-
-            {/* Stats Row */}
-            <div className="flex items-center justify-center sm:justify-start gap-4 sm:gap-6 flex-wrap">
-              {/* Reviews */}
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.4 }}
-                className="flex items-center gap-2"
-              >
-                <ThumbsUp className="w-4 h-4 sm:w-5 sm:h-5 text-green-400 fill-green-400" />
-                <span className="text-white font-semibold text-sm sm:text-base">
-                  {positivePercentage}%
-                </span>
-                <span className="text-white/60 text-xs sm:text-sm">
-                  ({reviewsCount} {reviewsCount === 1 ? 'review' : 'reviews'})
-                </span>
-              </motion.div>
-
-              {/* Listings */}
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.5 }}
-                className="flex items-center gap-2"
-              >
-                <Package className="w-4 h-4 sm:w-5 sm:h-5 text-blue-400" />
-                <span className="text-white font-semibold text-sm sm:text-base">
-                  {listingsCount}
-                </span>
-                <span className="text-white/60 text-xs sm:text-sm">
-                  {listingsCount === 1 ? 'listing' : 'listings'}
-                </span>
-              </motion.div>
-
-              {/* Sales */}
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.6 }}
-                className="flex items-center gap-2"
-              >
-                <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-purple-400" />
-                <span className="text-white font-semibold text-sm sm:text-base">
-                  {totalSales}
-                </span>
-                <span className="text-white/60 text-xs sm:text-sm">
-                  {totalSales === 1 ? 'sale' : 'sales'}
-                </span>
-              </motion.div>
-            </div>
-          </motion.div>
-
-          {/* Action Buttons */}
-          {!isOwnShop && (
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.4 }}
-              className="flex items-center gap-3"
-            >
-              {/* Message Button */}
-              <button
-                onClick={onMessageClick}
-                className={cn(
-                  'flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium transition-all',
-                  'bg-white text-black hover:bg-white/90 active:scale-95 shadow-lg'
-                )}
-              >
-                <MessageCircle className="w-4 h-4" />
-                <span className="hidden sm:inline">Message</span>
-              </button>
-
-              {/* Follow Button */}
-              <button
-                onClick={onFollowClick}
-                className={cn(
-                  'flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium transition-all',
-                  'border-2 backdrop-blur-sm shadow-lg active:scale-95',
-                  isFollowing
-                    ? 'bg-white/10 border-white/30 text-white hover:bg-white/20'
-                    : 'bg-purple-500/20 border-purple-400/40 text-purple-200 hover:bg-purple-500/30'
-                )}
-              >
-                {isFollowing ? (
-                  <>
-                    <Check className="w-4 h-4" />
-                    <span className="hidden sm:inline">Following</span>
-                  </>
-                ) : (
-                  <>
-                    <UserPlus className="w-4 h-4" />
-                    <span className="hidden sm:inline">Follow</span>
-                  </>
-                )}
-              </button>
-            </motion.div>
-          )}
-
-          {/* Dashboard Link for Own Shop */}
-          {isOwnShop && (
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.4 }}
-            >
-              <Link
-                href="/account/dashboard"
-                className={cn(
-                  'flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium transition-all',
-                  'bg-white text-black hover:bg-white/90 active:scale-95 shadow-lg'
-                )}
-              >
-                <Package className="w-4 h-4" />
-                <span>Dashboard</span>
-              </Link>
-            </motion.div>
+            {avatarUrl ? (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img
+                src={avatarUrl}
+                alt={shopName || username}
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center bg-lime-tint-bg text-3xl font-bold text-lime-text">
+                {(shopName || username)[0]?.toUpperCase()}
+              </div>
+            )}
+          </div>
+          {isOnline && (
+            <span
+              aria-label="Online"
+              className="absolute bottom-0.5 right-0.5 h-4 w-4 rounded-full border-2 border-bg-base bg-success shadow-elevated sm:h-5 sm:w-5"
+            />
           )}
         </div>
+
+        {/* Info column */}
+        <div className="min-w-0 flex-1 text-center sm:text-left">
+          {/* Name + tier + verified */}
+          <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-start">
+            <h1 className="truncate text-2xl font-bold text-text-primary drop-shadow-md sm:text-3xl">
+              {shopName || username}
+            </h1>
+            {isVerified && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span
+                    aria-label="Verified seller"
+                    className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-lime text-text-inverse shadow-elevated"
+                  >
+                    <Check className="h-3 w-3" strokeWidth={3} />
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>Verified by GameVault</TooltipContent>
+              </Tooltip>
+            )}
+            <span
+              className={cn(
+                'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider backdrop-blur-sm',
+                tier.pill,
+              )}
+            >
+              <TierIcon className="h-3 w-3" />
+              {tier.label}
+            </span>
+          </div>
+          <p className="mt-1 text-sm text-text-secondary">@{username}</p>
+
+          {/* Stat chips */}
+          <div className="mt-3 flex flex-wrap items-center justify-center gap-1.5 sm:justify-start">
+            <StatChip
+              icon={<ThumbsUp className="h-3.5 w-3.5 fill-success/70 text-success" />}
+              value={`${positivePercentage}%`}
+              label={`${reviewsCount} ${reviewsCount === 1 ? 'review' : 'reviews'}`}
+            />
+            <StatChip
+              icon={<Package className="h-3.5 w-3.5 text-text-secondary" />}
+              value={String(listingsCount)}
+              label={listingsCount === 1 ? 'listing' : 'listings'}
+            />
+            <StatChip
+              icon={<TrendingUp className="h-3.5 w-3.5 text-lime-text" />}
+              value={String(totalSales)}
+              label={totalSales === 1 ? 'sale' : 'sales'}
+            />
+          </div>
+        </div>
+
+        {/* Actions */}
+        {!isOwnShop ? (
+          <div className="flex shrink-0 items-center gap-2 self-center sm:self-auto">
+            <button
+              type="button"
+              onClick={onMessageClick}
+              className="inline-flex h-10 items-center gap-1.5 rounded-xl bg-lime px-4 text-sm font-bold uppercase tracking-wider text-text-inverse shadow-elevated transition-all hover:bg-lime-hover hover:shadow-glow"
+            >
+              <MessageCircle className="h-4 w-4" />
+              <span className="hidden sm:inline">Message</span>
+            </button>
+            <button
+              type="button"
+              onClick={onFollowClick}
+              className={cn(
+                'inline-flex h-10 items-center gap-1.5 rounded-xl border px-4 text-sm font-medium transition-colors',
+                isFollowing
+                  ? 'border-border-default bg-bg-raised text-text-primary hover:bg-bg-raised-hover'
+                  : 'border-border-default bg-bg-raised text-text-primary hover:border-lime-tint-border hover:bg-bg-raised-hover',
+              )}
+            >
+              {isFollowing ? (
+                <>
+                  <Check className="h-4 w-4" />
+                  <span className="hidden sm:inline">Following</span>
+                </>
+              ) : (
+                <>
+                  <UserPlus className="h-4 w-4" />
+                  <span className="hidden sm:inline">Follow</span>
+                </>
+              )}
+            </button>
+          </div>
+        ) : (
+          <Link
+            href="/account/dashboard"
+            className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-xl bg-lime px-4 text-sm font-bold uppercase tracking-wider text-text-inverse shadow-elevated transition-all hover:bg-lime-hover hover:shadow-glow"
+          >
+            <Package className="h-4 w-4" />
+            Dashboard
+          </Link>
+        )}
       </div>
 
-      {/* Bottom Border Accent */}
-      <div className={cn('absolute bottom-0 left-0 right-0 h-1', tier.bgColor)} />
+      {/* Bottom lime hairline */}
+      <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-lime to-transparent opacity-50" />
     </motion.div>
+  )
+}
+
+function StatChip({
+  icon, value, label,
+}: { icon: React.ReactNode; value: string; label: string }) {
+  return (
+    <span className="inline-flex items-center gap-1.5 rounded-full border border-border-subtle bg-bg-overlay/60 px-2.5 py-1 backdrop-blur-sm">
+      {icon}
+      <span className="font-mono text-sm font-semibold tabular-nums text-text-primary">{value}</span>
+      <span className="text-[11px] text-text-tertiary">{label}</span>
+    </span>
   )
 }

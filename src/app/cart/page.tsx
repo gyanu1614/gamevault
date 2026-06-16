@@ -22,8 +22,8 @@ export default function CartPage() {
   return (
     <div className="min-h-screen bg-black flex items-center justify-center">
       <div className="text-center">
-        <Loader2 className="h-8 w-8 animate-spin text-violet-500 mx-auto mb-4" />
-        <p className="text-gray-400">Redirecting to marketplace...</p>
+        <Loader2 className="h-8 w-8 animate-spin text-lime-text mx-auto mb-4" />
+        <p className="text-text-secondary">Redirecting to marketplace...</p>
       </div>
     </div>
   )

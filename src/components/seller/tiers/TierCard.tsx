@@ -78,13 +78,13 @@ export default function TierCard({
         'relative flex flex-col gap-4 rounded-2xl border bg-[#0e0e0e] p-5 transition-all',
         isCurrent
           ? `ring-1 border-white/[0.12] ${TIER_RING[config.tier]} shadow-xl ${TIER_GLOW[config.tier]}`
-          : 'border-white/[0.06]',
+          : 'border-border-subtle',
         className
       )}
     >
       {/* ── Current badge ──────────────────────────────────────────────── */}
       {isCurrent && (
-        <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 text-[10px] font-bold uppercase tracking-widest text-white bg-white/[0.08] border border-white/[0.1] rounded-full px-2.5 py-0.5">
+        <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 text-[10px] font-bold uppercase tracking-widest text-white bg-bg-raised-hover border border-white/[0.1] rounded-full px-2.5 py-0.5">
           Current tier
         </span>
       )}
@@ -104,7 +104,7 @@ export default function TierCard({
       </p>
 
       {/* ── Commission callout ─────────────────────────────────────────── */}
-      <div className="rounded-lg bg-white/[0.03] border border-white/[0.06] px-3 py-2 flex items-center justify-between">
+      <div className="rounded-lg bg-bg-overlay border border-border-subtle px-3 py-2 flex items-center justify-between">
         <span className="text-xs text-zinc-500">Platform fee</span>
         <span className="text-sm font-semibold text-white">{commissionPct}%</span>
       </div>

@@ -20,6 +20,7 @@ import {
   ArrowLeft, Plus, Pencil, Trash2, Loader2,
   Sparkles, GitBranch, Hash, Type, ToggleLeft, List, AlignLeft, Image as ImageIcon,
   CheckSquare, AlertCircle, Save, X, GripVertical,
+  ClipboardPaste,
 } from 'lucide-react'
 import {
   DndContext,
@@ -43,6 +44,7 @@ import { GlassCard } from '@/components/ui/glass-card'
 import {
   createAttribute, updateAttribute, deleteAttribute,
   createOption, updateOption, deleteOption, uploadOptionIcon, reorderOptions,
+  bulkCreateOptions, bulkDeleteOptions,
   saveRule, deleteRule, createSubAttribute,
   type AttrType,
   type BuilderAttribute,
@@ -799,6 +801,12 @@ function OptionsEditor({ attribute, onChange }: { attribute: BuilderAttribute; o
   const [newLabel, setNewLabel] = useState('')
   const [busy, setBusy] = useState(false)
   const [localOptions, setLocalOptions] = useState<BuilderOption[]>(attribute.options)
+  // V15 — Bulk-add state.
+  const [bulkOpen, setBulkOpen] = useState(false)
+  const [bulkText, setBulkText] = useState('')
+  const [bulkBusy, setBulkBusy] = useState(false)
+  // V15b — Bulk-delete state.
+  const [purging, setPurging] = useState(false)
 
   // Sync local copy when the server data changes (refresh after mutation)
   useEffect(() => { setLocalOptions(attribute.options) }, [attribute.options])
@@ -814,6 +822,47 @@ function OptionsEditor({ attribute, onChange }: { attribute: BuilderAttribute; o
     setBusy(false)
     if (!res.success) { toast.error(res.error); return }
     setNewLabel('')
+    onChange()
+  }
+
+  // V15 — Submit the pasted list to the bulk action. Closes the dialog
+  // on success, surfaces created/skipped counts via toast.
+  const handleBulk = async () => {
+    if (!bulkText.trim()) return
+    setBulkBusy(true)
+    const res = await bulkCreateOptions({
+      attribute_id: attribute.id,
+      labels: bulkText,
+      skipDuplicates: true,
+    })
+    setBulkBusy(false)
+    if (!res.success) { toast.error(res.error); return }
+    const { created, skipped } = res.data
+    if (created === 0 && skipped === 0) {
+      toast.message('No valid choices found in the pasted text')
+    } else {
+      toast.success(
+        `Added ${created} choice${created === 1 ? '' : 's'}${skipped > 0 ? ` · ${skipped} duplicate${skipped === 1 ? '' : 's'} skipped` : ''}`,
+      )
+    }
+    setBulkText('')
+    setBulkOpen(false)
+    onChange()
+  }
+
+  // V15b — Wipe every choice on this attribute. Confirms first to avoid
+  // catastrophic clicks; used to recover from a wrong-attribute paste.
+  const handleDeleteAll = async () => {
+    if (localOptions.length === 0) return
+    const ok = window.confirm(
+      `Delete all ${localOptions.length} choices on "${attribute.name || attribute.slug}"?\n\nThis can't be undone.`,
+    )
+    if (!ok) return
+    setPurging(true)
+    const res = await bulkDeleteOptions({ attribute_id: attribute.id })
+    setPurging(false)
+    if (!res.success) { toast.error(res.error); return }
+    toast.success(`Removed ${res.data.deleted} choice${res.data.deleted === 1 ? '' : 's'}`)
     onChange()
   }
 
@@ -841,7 +890,83 @@ function OptionsEditor({ attribute, onChange }: { attribute: BuilderAttribute; o
         <div className="text-xs font-semibold uppercase tracking-wider text-text-secondary">
           Choices <span className="text-text-disabled">({localOptions.length})</span>
         </div>
+        {/* V15 — Bulk add. Opens an inline panel below where the admin
+            pastes a newline- or comma-separated list. Idempotent — pasting
+            again only adds new rows. Designed for onboarding large
+            taxonomies (Steal-a-Brainrot secrets, etc). */}
+        <div className="flex items-center gap-1.5">
+          {localOptions.length > 0 && (
+            <button
+              type="button"
+              onClick={handleDeleteAll}
+              disabled={purging}
+              title="Remove every choice on this attribute"
+              className="inline-flex h-7 items-center gap-1.5 rounded-md border border-border-default bg-bg-base px-2.5 text-[11px] font-semibold text-text-secondary transition-colors hover:border-error/40 hover:bg-error-bg hover:text-error disabled:opacity-50"
+            >
+              {purging ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
+              Delete all
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => setBulkOpen((v) => !v)}
+            className={cn(
+              'inline-flex h-7 items-center gap-1.5 rounded-md border px-2.5 text-[11px] font-semibold transition-colors',
+              bulkOpen
+                ? 'border-lime-tint-border bg-lime-tint-bg text-lime-text'
+                : 'border-border-default bg-bg-base text-text-secondary hover:border-border-strong hover:text-text-primary',
+            )}
+          >
+            <ClipboardPaste className="h-3 w-3" />
+            {bulkOpen ? 'Close bulk add' : 'Bulk add'}
+          </button>
+        </div>
       </div>
+
+      {/* Bulk-add panel */}
+      {bulkOpen && (
+        <div className="space-y-2 border-b border-border-subtle bg-bg-base/50 p-4">
+          <div className="flex items-baseline justify-between">
+            <label className="text-[11px] font-semibold uppercase tracking-wider text-text-secondary">
+              Paste choices — one per line or comma-separated
+            </label>
+            <span className="text-[10.5px] text-text-tertiary">
+              {bulkText.split(/[\n,]+/g).filter((s) => s.trim()).length} detected
+            </span>
+          </div>
+          <textarea
+            value={bulkText}
+            onChange={(e) => setBulkText(e.target.value)}
+            placeholder={'Garama and Madundung\nLa Vacca Saturno Saturnita\nTralalero Tralala\n…'}
+            rows={8}
+            className="w-full resize-y rounded-lg border border-border-default bg-bg-raised px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:border-lime focus:outline-none focus:ring-2 focus:ring-lime-tint-bg"
+          />
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[10.5px] text-text-tertiary">
+              Duplicates and wiki noise (File:/User:/Category:/(Disambiguation)) are skipped automatically.
+            </span>
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => setBulkText('')}
+                disabled={bulkBusy}
+                className="inline-flex h-8 items-center gap-1 rounded-md px-2.5 text-[11.5px] font-semibold text-text-secondary hover:text-text-primary disabled:opacity-50"
+              >
+                Clear
+              </button>
+              <button
+                type="button"
+                onClick={handleBulk}
+                disabled={bulkBusy || !bulkText.trim()}
+                className="inline-flex h-8 items-center gap-1.5 rounded-md bg-lime px-3 text-[11.5px] font-semibold text-text-inverse hover:bg-lime-hover disabled:opacity-40"
+              >
+                {bulkBusy ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
+                Add all
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="space-y-2 p-4">
         {localOptions.length === 0 ? (
           <p className="rounded-lg border border-dashed border-border-default bg-bg-base px-3 py-4 text-center text-xs text-text-tertiary">
@@ -1251,11 +1376,27 @@ function RulesEditor({
 function LivePreview({ attributes }: { attributes: BuilderAttribute[] }) {
   const [values, setValues] = useState<Record<string, unknown>>({})
 
+  // V15c — Build a child→parent index once per render so visibility
+  // checks (and cascade resets) walk the rule tree without quadratic
+  // searches. `byId` resolves trigger ids to attribute objects.
+  const byId = useMemo(() => {
+    const m = new Map<string, BuilderAttribute>()
+    for (const a of attributes) m.set(a.id, a)
+    return m
+  }, [attributes])
+
   // Pure visibility check — mirrors isAttributeVisible in new-schema.ts.
-  // Done client-side here for snappy preview without round-trips.
-  const isVisible = (attr: BuilderAttribute): boolean => {
+  // V15c — Walks the full chain: an attribute is only visible if EVERY
+  // ancestor is visible AND the local rule passes. Stops a stale value
+  // on a now-hidden ancestor from keeping a descendant on screen.
+  const isVisible = (attr: BuilderAttribute, seen = new Set<string>()): boolean => {
+    if (seen.has(attr.id)) return true // cycle guard — treat as visible
+    seen.add(attr.id)
     if (attr.rules.length === 0) return true
     for (const r of attr.rules) {
+      const parent = byId.get(r.trigger_attribute_id)
+      // If a parent doesn't exist or isn't itself visible, this attr can't be.
+      if (parent && !isVisible(parent, seen)) return false
       const cur = values[r.trigger_attribute_id]
       const trig = r.trigger_values
       let pass = false
@@ -1270,7 +1411,40 @@ function LivePreview({ attributes }: { attributes: BuilderAttribute[] }) {
     return true
   }
 
-  const set = (id: string, v: unknown) => setValues((p) => ({ ...p, [id]: v }))
+  // V15c — When a parent value changes, wipe every descendant's stored
+  // value so the next time the user flips back they start from a clean
+  // slate (no stale "Antonio" lurking under a hidden Rarity).
+  const collectDescendants = (parentId: string): Set<string> => {
+    const out = new Set<string>()
+    let frontier = new Set<string>([parentId])
+    let safety = 0
+    while (frontier.size > 0 && safety++ < 32) {
+      const next = new Set<string>()
+      for (const a of attributes) {
+        if (out.has(a.id)) continue
+        for (const r of a.rules) {
+          if (frontier.has(r.trigger_attribute_id)) {
+            out.add(a.id)
+            next.add(a.id)
+            break
+          }
+        }
+      }
+      frontier = next
+    }
+    return out
+  }
+
+  const set = (id: string, v: unknown) =>
+    setValues((p) => {
+      const next: Record<string, unknown> = { ...p, [id]: v }
+      // Cascade-reset descendants. Safe to clear even if they happen to
+      // pass the new rule — the user re-picks intentionally.
+      collectDescendants(id).forEach((childId) => {
+        delete next[childId]
+      })
+      return next
+    })
 
   return (
     <GlassCard intensity="light" rounded="2xl" className="p-0">

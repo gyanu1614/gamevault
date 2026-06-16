@@ -60,7 +60,7 @@ export function withSellerAccess<P extends object>(
     if (loading || !user || !sellerStatusChecked) {
       return (
         <div className="flex min-h-screen items-center justify-center bg-black">
-          <Loader2 className="h-8 w-8 animate-spin text-violet-500" />
+          <Loader2 className="h-8 w-8 animate-spin text-lime-text" />
         </div>
       )
     }

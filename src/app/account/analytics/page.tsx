@@ -96,7 +96,7 @@ export default function AnalyticsPage() {
       <div className="flex min-h-screen items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="text-gray-400">Loading analytics...</p>
+          <p className="text-text-secondary">Loading analytics...</p>
         </div>
       </div>
     )
@@ -107,7 +107,7 @@ export default function AnalyticsPage() {
       {/* Header */}
       <div className="mb-5">
         <h1 className="text-2xl sm:text-3xl font-semibold text-white">Analytics</h1>
-        <p className="mt-0.5 text-sm text-gray-500">
+        <p className="mt-0.5 text-sm text-text-tertiary">
           Track your performance and insights
         </p>
       </div>
@@ -122,7 +122,7 @@ export default function AnalyticsPage() {
               'flex-shrink-0 rounded-lg px-4 py-2 text-sm font-medium transition-all',
               timeRange === range.value
                 ? 'bg-white text-black'
-                : 'bg-white/[0.05] text-gray-400 hover:bg-white/[0.08] hover:text-gray-300'
+                : 'bg-bg-overlay text-text-secondary hover:bg-bg-raised-hover hover:text-text-secondary'
             )}
           >
             {range.label}
@@ -145,12 +145,12 @@ export default function AnalyticsPage() {
                 <card.icon className="h-5 w-5 text-white" />
               </div>
               <div className="flex items-center gap-1 text-xs">
-                <span className={cn('font-medium', card.trendUp ? 'text-green-400' : 'text-red-400')}>
+                <span className={cn('font-medium', card.trendUp ? 'text-success' : 'text-error')}>
                   {card.trend}
                 </span>
               </div>
             </div>
-            <p className="text-xs text-gray-400 mb-1">{card.label}</p>
+            <p className="text-xs text-text-secondary mb-1">{card.label}</p>
             <p className="text-2xl font-bold text-white">{card.value}</p>
           </motion.div>
         ))}
@@ -166,15 +166,15 @@ export default function AnalyticsPage() {
         <div className="mb-4 flex items-center justify-between">
           <div>
             <h2 className="text-base font-semibold text-white">Revenue Trend</h2>
-            <p className="text-xs text-gray-500">Last {timeRange === '7d' ? '7 days' : timeRange === '30d' ? '30 days' : timeRange === '90d' ? '90 days' : 'all time'}</p>
+            <p className="text-xs text-text-tertiary">Last {timeRange === '7d' ? '7 days' : timeRange === '30d' ? '30 days' : timeRange === '90d' ? '90 days' : 'all time'}</p>
           </div>
-          <Calendar className="h-5 w-5 text-gray-400" />
+          <Calendar className="h-5 w-5 text-text-secondary" />
         </div>
 
         {/* Bar chart visualization */}
         {revenueTrend.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-8 text-center">
-            <p className="text-sm text-gray-400">No revenue data for this period</p>
+            <p className="text-sm text-text-secondary">No revenue data for this period</p>
           </div>
         ) : (() => {
           const maxAmount = Math.max(...revenueTrend.map(i => i.amount), 1)
@@ -184,7 +184,7 @@ export default function AnalyticsPage() {
                 const pct = Math.max((item.amount / maxAmount) * 100, item.amount > 0 ? 4 : 0)
                 return (
                   <div key={item.label} className="flex items-center gap-3">
-                    <span className="w-20 shrink-0 text-xs text-gray-400">{item.label}</span>
+                    <span className="w-20 shrink-0 text-xs text-text-secondary">{item.label}</span>
                     <div className="flex-1">
                       <motion.div
                         initial={{ width: 0 }}
@@ -214,14 +214,14 @@ export default function AnalyticsPage() {
         >
           <div className="p-4 border-b border-white/10">
             <h2 className="text-base font-semibold text-white">Top Performing Listings</h2>
-            <p className="text-xs text-gray-500">Your best sellers</p>
+            <p className="text-xs text-text-tertiary">Your best sellers</p>
           </div>
 
           <div className="p-4">
             {topListings.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-8 text-center">
-                <Package className="h-12 w-12 text-gray-600 mb-3" />
-                <p className="text-gray-400 text-sm">No listings yet</p>
+                <Package className="h-12 w-12 text-text-disabled mb-3" />
+                <p className="text-text-secondary text-sm">No listings yet</p>
               </div>
             ) : (
               <div className="space-y-3">
@@ -238,12 +238,12 @@ export default function AnalyticsPage() {
                         <p className="text-sm font-medium text-white line-clamp-1">
                           {listing.title}
                         </p>
-                        <p className="text-xs text-gray-500">{listing.game?.name}</p>
+                        <p className="text-xs text-text-tertiary">{listing.game?.name}</p>
                       </div>
                     </div>
                     <div className="text-right">
                       <p className="text-sm font-semibold text-white">${(listing.price * (listing.sales || 0)).toFixed(0)}</p>
-                      <p className="text-xs text-gray-500">{listing.sales || 0} sales</p>
+                      <p className="text-xs text-text-tertiary">{listing.sales || 0} sales</p>
                     </div>
                   </div>
                 ))}
@@ -261,7 +261,7 @@ export default function AnalyticsPage() {
         >
           <div className="p-4 border-b border-white/10">
             <h2 className="text-base font-semibold text-white">Performance Metrics</h2>
-            <p className="text-xs text-gray-500">Key performance indicators</p>
+            <p className="text-xs text-text-tertiary">Key performance indicators</p>
           </div>
 
           <div className="p-4 space-y-4">
@@ -272,35 +272,35 @@ export default function AnalyticsPage() {
                   <Eye className="h-4 w-4 text-blue-400" />
                 </div>
                 <div>
-                  <p className="text-sm text-gray-400">Total Views</p>
+                  <p className="text-sm text-text-secondary">Total Views</p>
                   <p className="text-lg font-semibold text-white">{stats.performance.totalViews.toLocaleString()}</p>
                 </div>
               </div>
-              <ArrowUpRight className="h-4 w-4 text-green-400" />
+              <ArrowUpRight className="h-4 w-4 text-success" />
             </div>
 
             {/* Total Sales */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="rounded-lg bg-green-500/10 p-2">
-                  <ShoppingCart className="h-4 w-4 text-green-400" />
+                <div className="rounded-lg bg-success-bg p-2">
+                  <ShoppingCart className="h-4 w-4 text-success" />
                 </div>
                 <div>
-                  <p className="text-sm text-gray-400">Total Sales</p>
+                  <p className="text-sm text-text-secondary">Total Sales</p>
                   <p className="text-lg font-semibold text-white">{stats.performance.totalSales}</p>
                 </div>
               </div>
-              <ArrowUpRight className="h-4 w-4 text-green-400" />
+              <ArrowUpRight className="h-4 w-4 text-success" />
             </div>
 
             {/* Average Rating */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="rounded-lg bg-yellow-500/10 p-2">
-                  <Star className="h-4 w-4 text-yellow-400" />
+                <div className="rounded-lg bg-warning-bg p-2">
+                  <Star className="h-4 w-4 text-warning" />
                 </div>
                 <div>
-                  <p className="text-sm text-gray-400">Average Rating</p>
+                  <p className="text-sm text-text-secondary">Average Rating</p>
                   <p className="text-lg font-semibold text-white">{stats.performance.avgRating.toFixed(1)} / 5.0</p>
                 </div>
               </div>
@@ -311,8 +311,8 @@ export default function AnalyticsPage() {
                     className={cn(
                       'h-3 w-3',
                       star <= Math.round(stats.performance.avgRating)
-                        ? 'fill-yellow-400 text-yellow-400'
-                        : 'text-gray-600'
+                        ? 'fill-yellow-400 text-warning'
+                        : 'text-text-disabled'
                     )}
                   />
                 ))}
@@ -326,11 +326,11 @@ export default function AnalyticsPage() {
                   <Package className="h-4 w-4 text-purple-400" />
                 </div>
                 <div>
-                  <p className="text-sm text-gray-400">Active Listings</p>
+                  <p className="text-sm text-text-secondary">Active Listings</p>
                   <p className="text-lg font-semibold text-white">{stats.listings.active}</p>
                 </div>
               </div>
-              <Activity className="h-4 w-4 text-gray-400" />
+              <Activity className="h-4 w-4 text-text-secondary" />
             </div>
           </div>
         </motion.div>
@@ -349,7 +349,7 @@ export default function AnalyticsPage() {
           </div>
           <div>
             <h2 className="text-base font-semibold text-white">Quick Insights</h2>
-            <p className="text-xs text-gray-500">AI-powered recommendations</p>
+            <p className="text-xs text-text-tertiary">AI-powered recommendations</p>
           </div>
         </div>
 
@@ -359,13 +359,13 @@ export default function AnalyticsPage() {
               💡 Your conversion rate is <span className="font-semibold">{stats.performance.conversionRate.toFixed(1)}%</span> higher than average sellers. Keep up the great work!
             </p>
           </div>
-          <div className="rounded-lg border border-green-500/30 bg-green-500/10 p-3">
+          <div className="rounded-lg border border-success/30 bg-success-bg p-3">
             <p className="text-sm text-green-100">
               📈 Revenue increased by <span className="font-semibold">12.5%</span> compared to last period. Your listings are performing well!
             </p>
           </div>
           {stats.listings.active < 3 && (
-            <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/10 p-3">
+            <div className="rounded-lg border border-warning/40 bg-warning-bg p-3">
               <p className="text-sm text-yellow-100">
                 ⚠️ Consider adding more listings to increase your reach and potential earnings.
               </p>

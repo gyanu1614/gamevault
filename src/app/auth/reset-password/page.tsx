@@ -68,18 +68,18 @@ export default function ResetPasswordPage() {
 
   if (success) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-black py-12 px-4 sm:px-6 lg:px-8">
+      <div className="min-h-screen flex items-center justify-center bg-bg-base py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-md w-full space-y-8">
           <div className="text-center">
             <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-950 border border-green-800">
-              <svg className="h-6 w-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="h-6 w-6 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
               </svg>
             </div>
             <h2 className="mt-6 text-3xl font-extrabold text-white">
               Password Reset Successful!
             </h2>
-            <p className="mt-2 text-sm text-gray-400">
+            <p className="mt-2 text-sm text-text-secondary">
               Redirecting you to login page...
             </p>
           </div>
@@ -89,13 +89,13 @@ export default function ResetPasswordPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-black py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen flex items-center justify-center bg-bg-base py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
         <div className="bg-gray-900 py-8 px-4 shadow-xl rounded-lg sm:px-10 border border-gray-800">
           <div>
             <Link
               href="/login"
-              className="flex items-center text-sm text-gray-400 hover:text-white mb-6 transition-colors"
+              className="flex items-center text-sm text-text-secondary hover:text-white mb-6 transition-colors"
             >
               <ArrowLeft className="w-4 h-4 mr-1" />
               Back to login
@@ -104,7 +104,7 @@ export default function ResetPasswordPage() {
             <h2 className="text-3xl font-extrabold text-white text-center">
               Reset your password
             </h2>
-            <p className="mt-2 text-center text-sm text-gray-400">
+            <p className="mt-2 text-center text-sm text-text-secondary">
               Enter your new password below
             </p>
           </div>
@@ -114,7 +114,7 @@ export default function ResetPasswordPage() {
               <div className="rounded-md bg-red-950 border border-red-900 p-4">
                 <div className="flex">
                   <div className="ml-3">
-                    <h3 className="text-sm font-medium text-red-400">
+                    <h3 className="text-sm font-medium text-error">
                       {error}
                     </h3>
                   </div>
@@ -125,12 +125,12 @@ export default function ResetPasswordPage() {
             <div className="space-y-4">
               {/* New Password */}
               <div>
-                <label htmlFor="password" className="block text-sm font-medium text-gray-300">
+                <label htmlFor="password" className="block text-sm font-medium text-text-secondary">
                   New Password
                 </label>
                 <div className="mt-1 relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Lock className="h-5 w-5 text-gray-500" />
+                    <Lock className="h-5 w-5 text-text-tertiary" />
                   </div>
                   <input
                     id="password"
@@ -149,9 +149,9 @@ export default function ResetPasswordPage() {
                     onClick={() => setShowPassword(!showPassword)}
                   >
                     {showPassword ? (
-                      <EyeOff className="h-5 w-5 text-gray-500 hover:text-gray-300" />
+                      <EyeOff className="h-5 w-5 text-text-tertiary hover:text-text-secondary" />
                     ) : (
-                      <Eye className="h-5 w-5 text-gray-500 hover:text-gray-300" />
+                      <Eye className="h-5 w-5 text-text-tertiary hover:text-text-secondary" />
                     )}
                   </button>
                 </div>
@@ -159,12 +159,12 @@ export default function ResetPasswordPage() {
 
               {/* Confirm Password */}
               <div>
-                <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-300">
+                <label htmlFor="confirmPassword" className="block text-sm font-medium text-text-secondary">
                   Confirm New Password
                 </label>
                 <div className="mt-1 relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Lock className="h-5 w-5 text-gray-500" />
+                    <Lock className="h-5 w-5 text-text-tertiary" />
                   </div>
                   <input
                     id="confirmPassword"
@@ -183,9 +183,9 @@ export default function ResetPasswordPage() {
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                   >
                     {showConfirmPassword ? (
-                      <EyeOff className="h-5 w-5 text-gray-500 hover:text-gray-300" />
+                      <EyeOff className="h-5 w-5 text-text-tertiary hover:text-text-secondary" />
                     ) : (
-                      <Eye className="h-5 w-5 text-gray-500 hover:text-gray-300" />
+                      <Eye className="h-5 w-5 text-text-tertiary hover:text-text-secondary" />
                     )}
                   </button>
                 </div>
@@ -194,9 +194,9 @@ export default function ResetPasswordPage() {
 
             {/* Password Requirements */}
             <div className="rounded-md bg-gray-800 border border-gray-700 p-4">
-              <div className="text-sm text-gray-300">
+              <div className="text-sm text-text-secondary">
                 <p className="font-medium mb-1">Password requirements:</p>
-                <ul className="list-disc list-inside space-y-1 text-xs text-gray-400">
+                <ul className="list-disc list-inside space-y-1 text-xs text-text-secondary">
                   <li>At least 6 characters long</li>
                   <li>Both passwords must match</li>
                 </ul>

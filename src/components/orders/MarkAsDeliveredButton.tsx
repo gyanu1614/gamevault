@@ -221,7 +221,7 @@ export default function MarkAsDeliveredButton({
         onClick={() => setShowModal(true)}
         className="w-full py-2.5 border border-white/[0.15] bg-white/[0.07] hover:bg-white/[0.11] hover:border-white/[0.22] text-white font-medium rounded-lg transition-all flex items-center justify-center gap-2 text-sm"
       >
-        <Package className="w-4 h-4 text-violet-400" />
+        <Package className="w-4 h-4 text-lime-text" />
         Mark as Delivered
       </button>
 
@@ -235,13 +235,13 @@ export default function MarkAsDeliveredButton({
             onClick={(e) => e.stopPropagation()}
           >
             <h3 className="text-lg font-bold text-white mb-1">Mark Order as Delivered</h3>
-            <p className="text-xs text-gray-500 mb-5 leading-relaxed">
+            <p className="text-xs text-text-tertiary mb-5 leading-relaxed">
               This starts the 48-hour auto-release timer. The buyer has 48h to confirm receipt or open a dispute.
             </p>
 
             {/* Evidence required warning */}
             {requiresEvidence && !hasEvidence && selectedFiles.length === 0 && (
-              <div className="mb-4 p-3 rounded-xl bg-red-500/10 border border-red-500/25 text-xs text-red-400">
+              <div className="mb-4 p-3 rounded-xl bg-error-bg border border-red-500/25 text-xs text-error">
                 ⚠ You must upload at least one delivery proof image before marking as delivered.
               </div>
             )}
@@ -249,10 +249,10 @@ export default function MarkAsDeliveredButton({
             {/* Proof upload section */}
             <div className="mb-5">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-semibold text-gray-400 uppercase tracking-[0.08em]">
+                <span className="text-xs font-semibold text-text-secondary uppercase tracking-[0.08em]">
                   Delivery Proof
                 </span>
-                <span className="text-[10px] text-gray-600">
+                <span className="text-[10px] text-text-disabled">
                   {selectedFiles.length}/4 images · optional
                 </span>
               </div>
@@ -261,7 +261,7 @@ export default function MarkAsDeliveredButton({
               {previews.length > 0 && (
                 <div className="grid grid-cols-4 gap-2 mb-3">
                   {previews.map((src, i) => (
-                    <div key={i} className="relative aspect-square rounded-lg overflow-hidden border border-white/[0.08] bg-white/[0.03] group">
+                    <div key={i} className="relative aspect-square rounded-lg overflow-hidden border border-border-subtle bg-bg-overlay group">
                       <Image src={src} alt={`proof ${i + 1}`} fill className="object-cover" />
                       <button
                         onClick={() => removeFile(i)}
@@ -279,7 +279,7 @@ export default function MarkAsDeliveredButton({
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="w-full py-3 rounded-xl border border-dashed border-white/[0.12] bg-white/[0.02] hover:bg-white/[0.05] hover:border-violet-500/40 transition-all flex flex-col items-center gap-1.5 text-gray-600 hover:text-gray-400"
+                  className="w-full py-3 rounded-xl border border-dashed border-white/[0.12] bg-bg-overlay hover:bg-bg-overlay hover:border-lime-tint-border transition-all flex flex-col items-center gap-1.5 text-text-disabled hover:text-text-secondary"
                 >
                   <ImagePlus className="h-5 w-5" />
                   <span className="text-xs">Click to add proof images</span>
@@ -296,9 +296,9 @@ export default function MarkAsDeliveredButton({
             </div>
 
             {/* Info row */}
-            <div className="mb-5 flex items-start gap-2.5 rounded-xl bg-violet-500/[0.06] border border-violet-500/15 px-3.5 py-2.5">
-              <CheckCircle2 className="h-3.5 w-3.5 text-violet-400 flex-shrink-0 mt-0.5" />
-              <p className="text-[11px] text-gray-500 leading-relaxed">
+            <div className="mb-5 flex items-start gap-2.5 rounded-xl bg-lime/[0.06] border border-lime-tint-border px-3.5 py-2.5">
+              <CheckCircle2 className="h-3.5 w-3.5 text-lime-text flex-shrink-0 mt-0.5" />
+              <p className="text-[11px] text-text-tertiary leading-relaxed">
                 Proof images will be sent directly to the buyer in chat as your delivery confirmation.
               </p>
             </div>
@@ -307,7 +307,7 @@ export default function MarkAsDeliveredButton({
               <button
                 onClick={handleClose}
                 disabled={isLoading}
-                className="flex-1 py-2.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.07] text-sm text-gray-400 font-medium transition-colors disabled:opacity-40"
+                className="flex-1 py-2.5 rounded-xl bg-bg-raised hover:bg-white/[0.07] text-sm text-text-secondary font-medium transition-colors disabled:opacity-40"
               >
                 Cancel
               </button>

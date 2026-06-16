@@ -51,13 +51,13 @@ export default function InstantDeliveryCodeDisplay({
       return (
         <div className="space-y-3">
           <div>
-            <div className="text-xs text-gray-500 mb-1.5 font-medium">Username / Email:</div>
+            <div className="text-xs text-text-tertiary mb-1.5 font-medium">Username / Email:</div>
             <div className="font-mono text-base sm:text-lg font-bold text-white break-all">
               {username}
             </div>
           </div>
           <div>
-            <div className="text-xs text-gray-500 mb-1.5 font-medium">Password:</div>
+            <div className="text-xs text-text-tertiary mb-1.5 font-medium">Password:</div>
             <div className="font-mono text-base sm:text-lg font-bold text-white break-all">
               {isVisible ? password : '•'.repeat(password.length)}
             </div>
@@ -82,15 +82,15 @@ export default function InstantDeliveryCodeDisplay({
     >
       {/* Header */}
       <div className="flex items-center gap-3 mb-4">
-        <div className="flex items-center justify-center w-12 h-12 rounded-2xl bg-gradient-to-br from-green-500/20 to-emerald-500/20 border border-green-500/30">
-          <Sparkles className="w-6 h-6 text-green-400" />
+        <div className="flex items-center justify-center w-12 h-12 rounded-2xl bg-gradient-to-br from-green-500/20 to-emerald-500/20 border border-success/30">
+          <Sparkles className="w-6 h-6 text-success" />
         </div>
         <div className="flex-1">
           <h3 className="text-lg font-bold text-white flex items-center gap-2">
             Instant Delivery
-            <ShieldCheck className="w-5 h-5 text-green-400" />
+            <ShieldCheck className="w-5 h-5 text-success" />
           </h3>
-          <p className="text-sm text-gray-400">
+          <p className="text-sm text-text-secondary">
             Your {getDeliveryTypeLabel().toLowerCase()} is ready!
           </p>
         </div>
@@ -100,7 +100,7 @@ export default function InstantDeliveryCodeDisplay({
       <div className="rounded-2xl border border-green-500/20 bg-gradient-to-br from-green-500/10 to-emerald-500/5 p-6 backdrop-blur-xl">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
-            <Lock className="w-4 h-4 text-green-400" />
+            <Lock className="w-4 h-4 text-success" />
             <span className="text-sm font-semibold text-green-300">
               {getDeliveryTypeLabel()}
             </span>
@@ -109,7 +109,7 @@ export default function InstantDeliveryCodeDisplay({
           <div className="flex items-center gap-2">
             <button
               onClick={() => setIsVisible(!isVisible)}
-              className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-all"
+              className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-text-secondary hover:text-white transition-all"
               title={isVisible ? 'Hide' : 'Show'}
             >
               {isVisible ? (
@@ -174,8 +174,8 @@ export default function InstantDeliveryCodeDisplay({
       <div className="mt-4 flex items-start gap-2 p-3 rounded-lg bg-white/5 border border-white/10">
         <div className="w-1.5 h-1.5 rounded-full bg-green-400 mt-1.5 flex-shrink-0" />
         <div className="flex-1">
-          <p className="text-xs text-gray-400 leading-relaxed">
-            <span className="text-green-400 font-medium">Security:</span> This code was delivered instantly and securely encrypted.
+          <p className="text-xs text-text-secondary leading-relaxed">
+            <span className="text-success font-medium">Security:</span> This code was delivered instantly and securely encrypted.
             Save it somewhere safe - you can always find it here in your order details{orderNumber ? ` (#${orderNumber})` : ''}.
           </p>
         </div>

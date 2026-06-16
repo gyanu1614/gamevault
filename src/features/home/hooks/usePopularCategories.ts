@@ -82,6 +82,7 @@ export function usePopularItems() {
   return useQuery({
     queryKey: ['popular-items'],
     queryFn: async (): Promise<CategoryCard[]> => MOCK_ITEMS,
+    initialData: MOCK_ITEMS,
     staleTime: 5 * 60 * 1000,
   })
 }
@@ -91,6 +92,7 @@ export function usePopularAccounts() {
   return useQuery({
     queryKey: ['popular-accounts'],
     queryFn: async (): Promise<CategoryCard[]> => MOCK_ACCOUNTS,
+    initialData: MOCK_ACCOUNTS,
     staleTime: 5 * 60 * 1000,
   })
 }
@@ -100,6 +102,7 @@ export function usePopularTopups() {
   return useQuery({
     queryKey: ['popular-topups'],
     queryFn: async (): Promise<PopularCurrency[]> => MOCK_TOPUPS,
+    initialData: MOCK_TOPUPS,
     staleTime: 5 * 60 * 1000,
   })
 }

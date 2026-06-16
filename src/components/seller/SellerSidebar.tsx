@@ -108,18 +108,18 @@ export default function SellerSidebar({ user }: SellerSidebarProps) {
 
   const tierColors: Record<string, string> = {
     bronze: 'text-orange-400',
-    silver: 'text-gray-300',
-    gold: 'text-yellow-400',
+    silver: 'text-text-secondary',
+    gold: 'text-warning',
     platinum: 'text-cyan-400',
   }
 
   const NavItems = () => (
     <>
       {/* User Profile */}
-      <div className="px-3 pt-4 pb-3 border-b border-white/[0.08]">
-        <div className="flex items-center gap-3 px-3 py-2 rounded-lg bg-white/[0.03]">
+      <div className="px-3 pt-4 pb-3 border-b border-border-subtle">
+        <div className="flex items-center gap-3 px-3 py-2 rounded-lg bg-bg-overlay">
           <div className="relative flex-shrink-0">
-            <div className="h-9 w-9 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-white text-sm font-semibold">
+            <div className="h-9 w-9 rounded-full bg-gradient-to-br from-lime to-purple-600 flex items-center justify-center text-white text-sm font-semibold">
               {user?.username?.[0]?.toUpperCase() || 'S'}
             </div>
             <div className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-green-500 border-2 border-gray-900" />
@@ -155,7 +155,7 @@ export default function SellerSidebar({ user }: SellerSidebarProps) {
                     'w-full flex items-center justify-between gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all',
                     active
                       ? 'bg-white text-black'
-                      : 'text-gray-400 hover:text-white hover:bg-white/[0.05]'
+                      : 'text-text-secondary hover:text-white hover:bg-bg-overlay'
                   )}
                 >
                   <div className="flex items-center gap-3">
@@ -177,7 +177,7 @@ export default function SellerSidebar({ user }: SellerSidebarProps) {
                     'flex items-center justify-between gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all',
                     active
                       ? 'bg-white text-black'
-                      : 'text-gray-400 hover:text-white hover:bg-white/[0.05]'
+                      : 'text-text-secondary hover:text-white hover:bg-bg-overlay'
                   )}
                 >
                   <div className="flex items-center gap-3">
@@ -189,7 +189,7 @@ export default function SellerSidebar({ user }: SellerSidebarProps) {
                       'px-2 py-0.5 text-xs font-semibold rounded-full',
                       active
                         ? 'bg-black/10 text-black'
-                        : 'bg-violet-500/20 text-violet-400'
+                        : 'bg-lime/20 text-lime-text'
                     )}>
                       {item.badge}
                     </span>
@@ -207,7 +207,7 @@ export default function SellerSidebar({ user }: SellerSidebarProps) {
                     transition={{ duration: 0.2 }}
                     className="overflow-hidden"
                   >
-                    <div className="ml-7 mt-1 space-y-1 border-l border-white/[0.08] pl-3">
+                    <div className="ml-7 mt-1 space-y-1 border-l border-border-subtle pl-3">
                       {item.children?.map((child) => {
                         const ChildIcon = child.icon
                         const childActive = isActive(child.href)
@@ -219,8 +219,8 @@ export default function SellerSidebar({ user }: SellerSidebarProps) {
                             className={cn(
                               'flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all',
                               childActive
-                                ? 'bg-white/[0.08] text-white'
-                                : 'text-gray-500 hover:text-white hover:bg-white/[0.05]'
+                                ? 'bg-bg-raised-hover text-white'
+                                : 'text-text-tertiary hover:text-white hover:bg-bg-overlay'
                             )}
                           >
                             <ChildIcon className="h-3.5 w-3.5" />
@@ -241,7 +241,7 @@ export default function SellerSidebar({ user }: SellerSidebarProps) {
       <div className="flex-1" />
 
       {/* Bottom Navigation */}
-      <div className="px-3 py-3 border-t border-white/[0.08] space-y-0.5">
+      <div className="px-3 py-3 border-t border-border-subtle space-y-0.5">
         {bottomNavigation.map((item) => {
           const Icon = item.icon
           const active = isActive(item.href)
@@ -255,7 +255,7 @@ export default function SellerSidebar({ user }: SellerSidebarProps) {
                 'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all',
                 active
                   ? 'bg-white text-black'
-                  : 'text-gray-400 hover:text-white hover:bg-white/[0.05]'
+                  : 'text-text-secondary hover:text-white hover:bg-bg-overlay'
               )}
             >
               <Icon className="h-4 w-4 flex-shrink-0" />
@@ -266,7 +266,7 @@ export default function SellerSidebar({ user }: SellerSidebarProps) {
 
         {/* Logout */}
         <button
-          className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-gray-400 hover:text-red-400 hover:bg-red-500/[0.05] transition-all"
+          className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-text-secondary hover:text-error hover:bg-red-500/[0.05] transition-all"
         >
           <LogOut className="h-4 w-4 flex-shrink-0" />
           <span>Logout</span>
@@ -280,7 +280,7 @@ export default function SellerSidebar({ user }: SellerSidebarProps) {
       {/* Mobile Menu Button */}
       <button
         onClick={() => setIsMobileOpen(!isMobileOpen)}
-        className="fixed top-20 left-4 z-50 lg:hidden p-2.5 rounded-xl bg-gray-900/90 backdrop-blur-xl border border-white/[0.08] text-white shadow-lg hover:bg-gray-900 transition-all"
+        className="fixed top-20 left-4 z-50 lg:hidden p-2.5 rounded-xl bg-gray-900/90 backdrop-blur-xl border border-border-subtle text-white shadow-lg hover:bg-gray-900 transition-all"
       >
         {isMobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
       </button>
@@ -299,7 +299,7 @@ export default function SellerSidebar({ user }: SellerSidebarProps) {
       </AnimatePresence>
 
       {/* Desktop Sidebar - Static Floating Card */}
-      <aside className="hidden lg:flex lg:flex-col lg:fixed lg:left-4 lg:top-28 lg:bottom-4 lg:w-56 bg-gray-900/80 backdrop-blur-xl border border-white/[0.08] rounded-2xl shadow-2xl">
+      <aside className="hidden lg:flex lg:flex-col lg:fixed lg:left-4 lg:top-28 lg:bottom-4 lg:w-56 bg-gray-900/80 backdrop-blur-xl border border-border-subtle rounded-2xl shadow-2xl">
         <NavItems />
       </aside>
 
@@ -311,7 +311,7 @@ export default function SellerSidebar({ user }: SellerSidebarProps) {
             animate={{ x: 0 }}
             exit={{ x: '-100%' }}
             transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-            className="fixed top-4 bottom-4 left-4 w-56 bg-gray-900/95 backdrop-blur-xl border border-white/[0.08] rounded-2xl z-40 lg:hidden flex flex-col shadow-2xl"
+            className="fixed top-4 bottom-4 left-4 w-56 bg-gray-900/95 backdrop-blur-xl border border-border-subtle rounded-2xl z-40 lg:hidden flex flex-col shadow-2xl"
           >
             <NavItems />
           </motion.aside>

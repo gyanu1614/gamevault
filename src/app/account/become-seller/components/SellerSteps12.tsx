@@ -121,7 +121,7 @@ export default function SellerSteps12({
                 <h2 className="text-lg font-semibold text-white sm:text-xl md:text-2xl">
                   Eligibility & Intent
                 </h2>
-                <p className="mt-1.5 text-xs text-gray-400 sm:text-sm">
+                <p className="mt-1.5 text-xs text-text-secondary sm:text-sm">
                   Let's start with some basic information about you and your selling plans
                 </p>
               </div>
@@ -139,16 +139,16 @@ export default function SellerSteps12({
                       className={`group relative overflow-hidden rounded-xl border p-3 text-left transition-all sm:p-4 ${
                         sellerType === 'individual'
                           ? 'border-primary bg-primary/10'
-                          : 'border-white/10 bg-white/[0.03] hover:border-white/20 hover:bg-white/[0.05]'
+                          : 'border-white/10 bg-bg-overlay hover:border-white/20 hover:bg-bg-overlay'
                       }`}
                     >
                       <User
                         className={`mb-1.5 h-5 w-5 sm:mb-2 sm:h-6 sm:w-6 ${
-                          sellerType === 'individual' ? 'text-primary' : 'text-gray-400'
+                          sellerType === 'individual' ? 'text-primary' : 'text-text-secondary'
                         }`}
                       />
                       <h3 className="text-xs font-semibold text-white sm:text-sm">Individual</h3>
-                      <p className="mt-0.5 text-[9px] text-gray-400 sm:text-[10px]">
+                      <p className="mt-0.5 text-[9px] text-text-secondary sm:text-[10px]">
                         Selling as an individual person
                       </p>
                     </button>
@@ -159,22 +159,22 @@ export default function SellerSteps12({
                       className={`group relative overflow-hidden rounded-xl border p-3 text-left transition-all sm:p-4 ${
                         sellerType === 'business'
                           ? 'border-primary bg-primary/10'
-                          : 'border-white/10 bg-white/[0.03] hover:border-white/20 hover:bg-white/[0.05]'
+                          : 'border-white/10 bg-bg-overlay hover:border-white/20 hover:bg-bg-overlay'
                       }`}
                     >
                       <Building2
                         className={`mb-1.5 h-5 w-5 sm:mb-2 sm:h-6 sm:w-6 ${
-                          sellerType === 'business' ? 'text-primary' : 'text-gray-400'
+                          sellerType === 'business' ? 'text-primary' : 'text-text-secondary'
                         }`}
                       />
                       <h3 className="text-xs font-semibold text-white sm:text-sm">Business</h3>
-                      <p className="mt-0.5 text-[9px] text-gray-400 sm:text-[10px]">
+                      <p className="mt-0.5 text-[9px] text-text-secondary sm:text-[10px]">
                         Registered company or business
                       </p>
                     </button>
                   </div>
                   {errors1.sellerType && (
-                    <p className="mt-1.5 text-xs text-red-400">{errors1.sellerType.message}</p>
+                    <p className="mt-1.5 text-xs text-error">{errors1.sellerType.message}</p>
                   )}
                 </div>
 
@@ -204,14 +204,14 @@ export default function SellerSteps12({
                         <span className="text-sm font-medium text-white sm:text-base">
                           I am 18 years or older
                         </span>
-                        <p className="mt-1 text-xs text-gray-400 sm:text-sm">
+                        <p className="mt-1 text-xs text-text-secondary sm:text-sm">
                           You must be at least 18 years old to sell on GameVault
                         </p>
                       </button>
                     </div>
                   </div>
                   {errors1.is18OrOlder && (
-                    <p className="mt-2 text-xs text-red-400 sm:text-sm">
+                    <p className="mt-2 text-xs text-error sm:text-sm">
                       {errors1.is18OrOlder.message}
                     </p>
                   )}
@@ -221,7 +221,7 @@ export default function SellerSteps12({
                 <div>
                   <label className="mb-2 block text-xs font-medium text-white sm:text-sm">
                     Which games will you sell?
-                    <span className="ml-1.5 text-[10px] font-normal text-gray-400 sm:text-xs">
+                    <span className="ml-1.5 text-[10px] font-normal text-text-secondary sm:text-xs">
                       (Select at least one)
                     </span>
                   </label>
@@ -235,8 +235,8 @@ export default function SellerSteps12({
                           onClick={() => toggleGame(game.id)}
                           className={`flex items-center gap-1.5 rounded-lg border p-2 text-left transition-all sm:gap-2 sm:p-2.5 ${
                             isSelected
-                              ? 'border-primary border-2 bg-white/[0.03]'
-                              : 'border-white/10 bg-white/[0.03] hover:border-white/20 hover:bg-white/[0.05]'
+                              ? 'border-primary border-2 bg-bg-overlay'
+                              : 'border-white/10 bg-bg-overlay hover:border-white/20 hover:bg-bg-overlay'
                           }`}
                         >
                           <div className="relative h-5 w-5 flex-shrink-0 sm:h-6 sm:w-6">
@@ -249,7 +249,7 @@ export default function SellerSteps12({
                           </div>
                           <span
                             className={`text-[10px] font-medium sm:text-xs ${
-                              isSelected ? 'text-white' : 'text-gray-400'
+                              isSelected ? 'text-white' : 'text-text-secondary'
                             }`}
                           >
                             {game.name}
@@ -259,7 +259,7 @@ export default function SellerSteps12({
                     })}
                   </div>
                   {errors1.primaryGames && (
-                    <p className="mt-1.5 text-xs text-red-400">{errors1.primaryGames.message}</p>
+                    <p className="mt-1.5 text-xs text-error">{errors1.primaryGames.message}</p>
                   )}
                 </div>
 
@@ -282,20 +282,20 @@ export default function SellerSteps12({
                         className={`rounded-lg border p-2.5 text-left transition-all sm:p-3 ${
                           watch1('expectedVolume') === option.value
                             ? 'border-primary bg-primary/10'
-                            : 'border-white/10 bg-white/[0.03] hover:border-white/20 hover:bg-white/[0.05]'
+                            : 'border-white/10 bg-bg-overlay hover:border-white/20 hover:bg-bg-overlay'
                         }`}
                       >
                         <h4 className="text-xs font-semibold text-white sm:text-sm">
                           {option.label}
                         </h4>
-                        <p className="mt-0.5 text-[9px] text-gray-400 sm:text-[10px]">
+                        <p className="mt-0.5 text-[9px] text-text-secondary sm:text-[10px]">
                           {option.desc}
                         </p>
                       </button>
                     ))}
                   </div>
                   {errors1.expectedVolume && (
-                    <p className="mt-1.5 text-xs text-red-400">{errors1.expectedVolume.message}</p>
+                    <p className="mt-1.5 text-xs text-error">{errors1.expectedVolume.message}</p>
                   )}
                 </div>
 
@@ -306,7 +306,7 @@ export default function SellerSteps12({
                     className="mb-1.5 block text-xs font-medium text-white sm:text-sm"
                   >
                     Referral Code{' '}
-                    <span className="text-[10px] font-normal text-gray-400 sm:text-xs">
+                    <span className="text-[10px] font-normal text-text-secondary sm:text-xs">
                       (Optional)
                     </span>
                   </label>
@@ -315,7 +315,7 @@ export default function SellerSteps12({
                     id="referralCode"
                     type="text"
                     placeholder="Enter referral code if you have one"
-                    className="w-full rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-sm text-white placeholder-gray-500 transition-all focus:border-primary focus:bg-white/[0.05] focus:outline-none sm:px-4 sm:py-2.5"
+                    className="w-full rounded-lg border border-white/10 bg-bg-overlay px-3 py-2 text-sm text-white placeholder-gray-500 transition-all focus:border-primary focus:bg-bg-overlay focus:outline-none sm:px-4 sm:py-2.5"
                   />
                 </div>
               </div>
@@ -338,7 +338,7 @@ export default function SellerSteps12({
                         {tier.tier}
                       </div>
                       <div className="text-base font-bold text-white sm:text-lg">{tier.rate}</div>
-                      <div className="mt-0.5 text-[8px] text-gray-500 sm:text-[9px]">
+                      <div className="mt-0.5 text-[8px] text-text-tertiary sm:text-[9px]">
                         {tier.description}
                       </div>
                     </div>
@@ -377,7 +377,7 @@ export default function SellerSteps12({
                 <h2 className="text-lg font-semibold text-white sm:text-xl md:text-2xl">
                   Business Information
                 </h2>
-                <p className="mt-1.5 text-xs text-gray-400 sm:text-sm">
+                <p className="mt-1.5 text-xs text-text-secondary sm:text-sm">
                   {step2SellerType === 'business'
                     ? 'Tell us about your company and how we can reach you'
                     : 'Tell us about yourself and how we can reach you'}
@@ -388,16 +388,16 @@ export default function SellerSteps12({
                 {/* Full Legal Name */}
                 <div>
                   <label className="mb-1.5 block text-xs font-medium text-white sm:text-sm">
-                    Full Legal Name <span className="text-red-400">*</span>
+                    Full Legal Name <span className="text-error">*</span>
                   </label>
                   <input
                     type="text"
                     {...register2('fullLegalName')}
                     placeholder="Enter your full legal name"
-                    className="w-full rounded-lg border border-white/10 bg-white/[0.05] px-3 py-2.5 text-xs text-white placeholder:text-gray-500 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-3 sm:text-sm"
+                    className="w-full rounded-lg border border-white/10 bg-bg-overlay px-3 py-2.5 text-xs text-white placeholder:text-text-tertiary focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-3 sm:text-sm"
                   />
                   {errors2.fullLegalName && (
-                    <p className="mt-1.5 text-xs text-red-400 sm:text-sm">
+                    <p className="mt-1.5 text-xs text-error sm:text-sm">
                       {errors2.fullLegalName.message}
                     </p>
                   )}
@@ -406,19 +406,19 @@ export default function SellerSteps12({
                 {/* Display Name */}
                 <div>
                   <label className="mb-1.5 block text-xs font-medium text-white sm:text-sm">
-                    Display Name <span className="text-red-400">*</span>
+                    Display Name <span className="text-error">*</span>
                   </label>
-                  <p className="mb-2 text-[10px] text-gray-400 sm:text-xs">
+                  <p className="mb-2 text-[10px] text-text-secondary sm:text-xs">
                     This is how your seller profile will appear to buyers
                   </p>
                   <input
                     type="text"
                     {...register2('displayName')}
                     placeholder="Choose a display name"
-                    className="w-full rounded-lg border border-white/10 bg-white/[0.05] px-3 py-2.5 text-xs text-white placeholder:text-gray-500 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-3 sm:text-sm"
+                    className="w-full rounded-lg border border-white/10 bg-bg-overlay px-3 py-2.5 text-xs text-white placeholder:text-text-tertiary focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-3 sm:text-sm"
                   />
                   {errors2.displayName && (
-                    <p className="mt-1.5 text-xs text-red-400 sm:text-sm">
+                    <p className="mt-1.5 text-xs text-error sm:text-sm">
                       {errors2.displayName.message}
                     </p>
                   )}
@@ -427,19 +427,19 @@ export default function SellerSteps12({
                 {/* Shop Name */}
                 <div>
                   <label className="mb-1.5 block text-xs font-medium text-white sm:text-sm">
-                    Shop Name <span className="text-red-400">*</span>
+                    Shop Name <span className="text-error">*</span>
                   </label>
-                  <p className="mb-2 text-[10px] text-gray-400 sm:text-xs">
+                  <p className="mb-2 text-[10px] text-text-secondary sm:text-xs">
                     This will be used for your shop URL (e.g., /shop/your-shop-name)
                   </p>
                   <input
                     type="text"
                     {...register2('shopName')}
                     placeholder="Choose your shop name"
-                    className="w-full rounded-lg border border-white/10 bg-white/[0.05] px-3 py-2.5 text-xs text-white placeholder:text-gray-500 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-3 sm:text-sm"
+                    className="w-full rounded-lg border border-white/10 bg-bg-overlay px-3 py-2.5 text-xs text-white placeholder:text-text-tertiary focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-3 sm:text-sm"
                   />
                   {errors2.shopName && (
-                    <p className="mt-1.5 text-xs text-red-400 sm:text-sm">
+                    <p className="mt-1.5 text-xs text-error sm:text-sm">
                       {errors2.shopName.message}
                     </p>
                   )}
@@ -456,16 +456,16 @@ export default function SellerSteps12({
                     {/* Country */}
                     <div>
                       <label className="mb-1.5 block text-xs font-medium text-white sm:text-sm">
-                        Country <span className="text-red-400">*</span>
+                        Country <span className="text-error">*</span>
                       </label>
                       <input
                         type="text"
                         {...register2('country')}
                         placeholder="e.g. United States"
-                        className="w-full rounded-lg border border-white/10 bg-white/[0.05] px-3 py-2.5 text-xs text-white placeholder:text-gray-500 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-3 sm:text-sm"
+                        className="w-full rounded-lg border border-white/10 bg-bg-overlay px-3 py-2.5 text-xs text-white placeholder:text-text-tertiary focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-3 sm:text-sm"
                       />
                       {errors2.country && (
-                        <p className="mt-1.5 text-xs text-red-400 sm:text-sm">
+                        <p className="mt-1.5 text-xs text-error sm:text-sm">
                           {errors2.country.message}
                         </p>
                       )}
@@ -474,29 +474,29 @@ export default function SellerSteps12({
                     {/* State/Province */}
                     <div>
                       <label className="mb-1.5 block text-xs font-medium text-white sm:text-sm">
-                        State/Province <span className="text-gray-400">(Optional)</span>
+                        State/Province <span className="text-text-secondary">(Optional)</span>
                       </label>
                       <input
                         type="text"
                         {...register2('stateProvince')}
                         placeholder="e.g. California"
-                        className="w-full rounded-lg border border-white/10 bg-white/[0.05] px-3 py-2.5 text-xs text-white placeholder:text-gray-500 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-3 sm:text-sm"
+                        className="w-full rounded-lg border border-white/10 bg-bg-overlay px-3 py-2.5 text-xs text-white placeholder:text-text-tertiary focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-3 sm:text-sm"
                       />
                     </div>
 
                     {/* City */}
                     <div>
                       <label className="mb-1.5 block text-xs font-medium text-white sm:text-sm">
-                        City <span className="text-red-400">*</span>
+                        City <span className="text-error">*</span>
                       </label>
                       <input
                         type="text"
                         {...register2('city')}
                         placeholder="e.g. Los Angeles"
-                        className="w-full rounded-lg border border-white/10 bg-white/[0.05] px-3 py-2.5 text-xs text-white placeholder:text-gray-500 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-3 sm:text-sm"
+                        className="w-full rounded-lg border border-white/10 bg-bg-overlay px-3 py-2.5 text-xs text-white placeholder:text-text-tertiary focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-3 sm:text-sm"
                       />
                       {errors2.city && (
-                        <p className="mt-1.5 text-xs text-red-400 sm:text-sm">
+                        <p className="mt-1.5 text-xs text-error sm:text-sm">
                           {errors2.city.message}
                         </p>
                       )}
@@ -515,16 +515,16 @@ export default function SellerSteps12({
                     {/* Phone Number */}
                     <div>
                       <label className="mb-1.5 block text-xs font-medium text-white sm:text-sm">
-                        Phone Number <span className="text-red-400">*</span>
+                        Phone Number <span className="text-error">*</span>
                       </label>
                       <input
                         type="tel"
                         {...register2('phoneNumber')}
                         placeholder="+1 (555) 000-0000"
-                        className="w-full rounded-lg border border-white/10 bg-white/[0.05] px-3 py-2.5 text-xs text-white placeholder:text-gray-500 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-3 sm:text-sm"
+                        className="w-full rounded-lg border border-white/10 bg-bg-overlay px-3 py-2.5 text-xs text-white placeholder:text-text-tertiary focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-3 sm:text-sm"
                       />
                       {errors2.phoneNumber && (
-                        <p className="mt-1.5 text-xs text-red-400 sm:text-sm">
+                        <p className="mt-1.5 text-xs text-error sm:text-sm">
                           {errors2.phoneNumber.message}
                         </p>
                       )}
@@ -533,16 +533,16 @@ export default function SellerSteps12({
                     {/* Alternate Email */}
                     <div>
                       <label className="mb-1.5 block text-xs font-medium text-white sm:text-sm">
-                        Alternate Email <span className="text-gray-400">(Optional)</span>
+                        Alternate Email <span className="text-text-secondary">(Optional)</span>
                       </label>
                       <input
                         type="email"
                         {...register2('alternateEmail')}
                         placeholder="backup@example.com"
-                        className="w-full rounded-lg border border-white/10 bg-white/[0.05] px-3 py-2.5 text-xs text-white placeholder:text-gray-500 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-3 sm:text-sm"
+                        className="w-full rounded-lg border border-white/10 bg-bg-overlay px-3 py-2.5 text-xs text-white placeholder:text-text-tertiary focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-3 sm:text-sm"
                       />
                       {errors2.alternateEmail && (
-                        <p className="mt-1.5 text-xs text-red-400 sm:text-sm">
+                        <p className="mt-1.5 text-xs text-error sm:text-sm">
                           {errors2.alternateEmail.message}
                         </p>
                       )}
@@ -561,16 +561,16 @@ export default function SellerSteps12({
                     {/* Company Legal Name */}
                     <div>
                       <label className="mb-1.5 block text-xs font-medium text-white sm:text-sm">
-                        Company Legal Name <span className="text-red-400">*</span>
+                        Company Legal Name <span className="text-error">*</span>
                       </label>
                       <input
                         type="text"
                         {...register2('companyLegalName')}
                         placeholder="Enter registered company name"
-                        className="w-full rounded-lg border border-white/10 bg-white/[0.05] px-3 py-2.5 text-xs text-white placeholder:text-gray-500 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-3 sm:text-sm"
+                        className="w-full rounded-lg border border-white/10 bg-bg-overlay px-3 py-2.5 text-xs text-white placeholder:text-text-tertiary focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-3 sm:text-sm"
                       />
                       {errors2.companyLegalName && (
-                        <p className="mt-1.5 text-xs text-red-400 sm:text-sm">
+                        <p className="mt-1.5 text-xs text-error sm:text-sm">
                           {errors2.companyLegalName.message}
                         </p>
                       )}
@@ -586,7 +586,7 @@ export default function SellerSteps12({
                           type="text"
                           {...register2('businessRegistrationNumber')}
                           placeholder="123456789"
-                          className="w-full rounded-lg border border-white/10 bg-white/[0.05] px-3 py-2.5 text-xs text-white placeholder:text-gray-500 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-3 sm:text-sm"
+                          className="w-full rounded-lg border border-white/10 bg-bg-overlay px-3 py-2.5 text-xs text-white placeholder:text-text-tertiary focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-3 sm:text-sm"
                         />
                       </div>
 
@@ -599,7 +599,7 @@ export default function SellerSteps12({
                           type="text"
                           {...register2('taxIdVat')}
                           placeholder="XX-XXXXXXX"
-                          className="w-full rounded-lg border border-white/10 bg-white/[0.05] px-3 py-2.5 text-xs text-white placeholder:text-gray-500 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-3 sm:text-sm"
+                          className="w-full rounded-lg border border-white/10 bg-bg-overlay px-3 py-2.5 text-xs text-white placeholder:text-text-tertiary focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-3 sm:text-sm"
                         />
                       </div>
                     </div>
@@ -613,7 +613,7 @@ export default function SellerSteps12({
                         type="text"
                         {...register2('companyAddress')}
                         placeholder="123 Business St, Suite 100"
-                        className="w-full rounded-lg border border-white/10 bg-white/[0.05] px-3 py-2.5 text-xs text-white placeholder:text-gray-500 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-3 sm:text-sm"
+                        className="w-full rounded-lg border border-white/10 bg-bg-overlay px-3 py-2.5 text-xs text-white placeholder:text-text-tertiary focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-3 sm:text-sm"
                       />
                     </div>
 
@@ -625,7 +625,7 @@ export default function SellerSteps12({
                         </label>
                         <select
                           {...register2('businessType')}
-                          className="w-full rounded-lg border border-white/10 bg-white/[0.05] px-3 py-2.5 text-xs text-white focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-3 sm:text-sm"
+                          className="w-full rounded-lg border border-white/10 bg-bg-overlay px-3 py-2.5 text-xs text-white focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-3 sm:text-sm"
                         >
                           <option value="" className="bg-black">Select type</option>
                           <option value="llc" className="bg-black">LLC</option>
@@ -646,7 +646,7 @@ export default function SellerSteps12({
                           {...register2('yearEstablished')}
                           placeholder="2020"
                           maxLength={4}
-                          className="w-full rounded-lg border border-white/10 bg-white/[0.05] px-3 py-2.5 text-xs text-white placeholder:text-gray-500 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-3 sm:text-sm"
+                          className="w-full rounded-lg border border-white/10 bg-bg-overlay px-3 py-2.5 text-xs text-white placeholder:text-text-tertiary focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-3 sm:text-sm"
                         />
                       </div>
                     </div>
@@ -661,10 +661,10 @@ export default function SellerSteps12({
                           type="email"
                           {...register2('businessEmail')}
                           placeholder="contact@company.com"
-                          className="w-full rounded-lg border border-white/10 bg-white/[0.05] px-3 py-2.5 text-xs text-white placeholder:text-gray-500 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-3 sm:text-sm"
+                          className="w-full rounded-lg border border-white/10 bg-bg-overlay px-3 py-2.5 text-xs text-white placeholder:text-text-tertiary focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-3 sm:text-sm"
                         />
                         {errors2.businessEmail && (
-                          <p className="mt-1.5 text-xs text-red-400 sm:text-sm">
+                          <p className="mt-1.5 text-xs text-error sm:text-sm">
                             {errors2.businessEmail.message}
                           </p>
                         )}
@@ -679,7 +679,7 @@ export default function SellerSteps12({
                           type="tel"
                           {...register2('businessPhone')}
                           placeholder="+1 (555) 000-0000"
-                          className="w-full rounded-lg border border-white/10 bg-white/[0.05] px-3 py-2.5 text-xs text-white placeholder:text-gray-500 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-3 sm:text-sm"
+                          className="w-full rounded-lg border border-white/10 bg-bg-overlay px-3 py-2.5 text-xs text-white placeholder:text-text-tertiary focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-3 sm:text-sm"
                         />
                       </div>
                     </div>
@@ -693,7 +693,7 @@ export default function SellerSteps12({
               <button
                 type="button"
                 onClick={onStepBack}
-                className="flex items-center gap-1 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-xs font-medium text-white transition-all hover:bg-white/[0.05] sm:gap-1.5 sm:px-4 sm:text-sm"
+                className="flex items-center gap-1 rounded-lg border border-white/10 bg-bg-overlay px-3 py-2 text-xs font-medium text-white transition-all hover:bg-bg-overlay sm:gap-1.5 sm:px-4 sm:text-sm"
               >
                 <ChevronLeft className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                 <span className="hidden sm:inline">Previous</span>

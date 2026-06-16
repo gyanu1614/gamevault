@@ -45,7 +45,7 @@ export default function RestrictionsPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="h-8 w-8 animate-spin text-violet-400" />
+        <Loader2 className="h-8 w-8 animate-spin text-lime-text" />
       </div>
     )
   }
@@ -53,7 +53,7 @@ export default function RestrictionsPage() {
   if (!profile) {
     return (
       <div className="p-6">
-        <p className="text-gray-400">Unable to load restriction information.</p>
+        <p className="text-text-secondary">Unable to load restriction information.</p>
       </div>
     )
   }

@@ -52,7 +52,7 @@ export const GlassCard = forwardRef<HTMLDivElement, GlassCardProps>(
     ref
   ) => {
     const intensityClasses: Record<GlassIntensity, string> = {
-      light:  'bg-white/[0.04] backdrop-blur-md  border border-white/[0.08]',
+      light:  'bg-bg-raised backdrop-blur-md  border border-border-subtle',
       medium: 'bg-white/[0.07] backdrop-blur-lg  border border-white/[0.10]',
       heavy:  'bg-white/[0.10] backdrop-blur-xl  border border-white/[0.14]',
     }
@@ -80,12 +80,12 @@ export const GlassCard = forwardRef<HTMLDivElement, GlassCardProps>(
           // Hover glow
           glow && [
             'transition-shadow duration-200',
-            'hover:shadow-glow hover:border-violet-500/20',
+            'hover:shadow-glow hover:border-lime-tint-border',
           ],
           // Animated glow border
           glowBorder && [
             'relative before:absolute before:inset-0 before:rounded-[inherit]',
-            'before:p-px before:bg-gradient-to-br before:from-violet-500/30 before:via-transparent before:to-cyan-500/20',
+            'before:p-px before:bg-gradient-to-br before:from-lime/30 before:via-transparent before:to-cyan-500/20',
             'before:-z-10',
           ],
           // Gradient overlay
@@ -97,7 +97,7 @@ export const GlassCard = forwardRef<HTMLDivElement, GlassCardProps>(
         {gradient && (
           <div
             aria-hidden
-            className="absolute inset-0 bg-gradient-to-b from-violet-500/5 via-transparent to-transparent pointer-events-none rounded-[inherit]"
+            className="absolute inset-0 bg-gradient-to-b from-lime/5 via-transparent to-transparent pointer-events-none rounded-[inherit]"
           />
         )}
         {children}
@@ -113,7 +113,7 @@ GlassCard.displayName = 'GlassCard'
 export function GlassCardHeader({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
   return (
     <div
-      className={cn('flex flex-col space-y-1.5 pb-4 border-b border-white/[0.06]', className)}
+      className={cn('flex flex-col space-y-1.5 pb-4 border-b border-border-subtle', className)}
       {...props}
     />
   )
@@ -144,7 +144,7 @@ export function GlassCardContent({ className, ...props }: React.HTMLAttributes<H
 export function GlassCardFooter({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
   return (
     <div
-      className={cn('flex items-center pt-4 border-t border-white/[0.06]', className)}
+      className={cn('flex items-center pt-4 border-t border-border-subtle', className)}
       {...props}
     />
   )

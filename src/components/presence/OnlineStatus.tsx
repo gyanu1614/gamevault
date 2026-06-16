@@ -29,7 +29,7 @@ export default function OnlineStatus({
     return (
       <div className={`inline-flex items-center gap-2 ${className}`}>
         <div className="w-2 h-2 rounded-full bg-gray-500 animate-pulse" />
-        {showLabel && <span className="text-sm text-gray-500">Loading...</span>}
+        {showLabel && <span className="text-sm text-text-tertiary">Loading...</span>}
       </div>
     )
   }
@@ -46,30 +46,30 @@ export default function OnlineStatus({
       {/* Status indicator */}
       <div className="relative">
         <Circle
-          className={`w-2 h-2 ${isOnline ? 'text-green-400 fill-green-400' : 'text-gray-500 fill-gray-500'}`}
+          className={`w-2 h-2 ${isOnline ? 'text-success fill-green-400' : 'text-text-tertiary fill-gray-500'}`}
         />
         {isOnline && (
-          <Circle className="absolute inset-0 w-2 h-2 text-green-400 fill-green-400 animate-ping opacity-75" />
+          <Circle className="absolute inset-0 w-2 h-2 text-success fill-green-400 animate-ping opacity-75" />
         )}
       </div>
 
       {/* Label */}
       {showLabel && (
-        <span className={`text-sm font-medium ${isOnline ? 'text-green-400' : 'text-gray-500'}`}>
+        <span className={`text-sm font-medium ${isOnline ? 'text-success' : 'text-text-tertiary'}`}>
           {isOnline ? 'Online' : 'Offline'}
         </span>
       )}
 
       {/* Last seen */}
       {showLastSeen && !isOnline && lastSeen && (
-        <span className="text-xs text-gray-400">
+        <span className="text-xs text-text-secondary">
           {formatLastSeen(lastSeen)}
         </span>
       )}
 
       {/* Status message */}
       {presence.status_message && (
-        <span className="text-xs text-gray-400 italic">
+        <span className="text-xs text-text-secondary italic">
           {presence.status_message}
         </span>
       )}
@@ -88,9 +88,9 @@ export function OnlineStatusBadge({ sellerId }: { sellerId: string }) {
   }
 
   return (
-    <div className="inline-flex items-center gap-1.5 px-2 py-1 bg-green-500/10 border border-green-500/30 rounded-full">
-      <Circle className="w-1.5 h-1.5 text-green-400 fill-green-400 animate-pulse" />
-      <span className="text-xs font-medium text-green-400">Online</span>
+    <div className="inline-flex items-center gap-1.5 px-2 py-1 bg-success-bg border border-success/30 rounded-full">
+      <Circle className="w-1.5 h-1.5 text-success fill-green-400 animate-pulse" />
+      <span className="text-xs font-medium text-success">Online</span>
     </div>
   )
 }
@@ -110,11 +110,11 @@ export function OnlineStatusDot({ sellerId, size = 'sm' }: { sellerId: string; s
   return (
     <div className="relative inline-block">
       <Circle
-        className={`${sizeClasses[size]} ${presence?.is_online ? 'text-green-400 fill-green-400' : 'text-gray-500 fill-gray-500'}`}
+        className={`${sizeClasses[size]} ${presence?.is_online ? 'text-success fill-green-400' : 'text-text-tertiary fill-gray-500'}`}
       />
       {presence?.is_online && (
         <Circle
-          className={`absolute inset-0 ${sizeClasses[size]} text-green-400 fill-green-400 animate-ping opacity-75`}
+          className={`absolute inset-0 ${sizeClasses[size]} text-success fill-green-400 animate-ping opacity-75`}
         />
       )}
     </div>

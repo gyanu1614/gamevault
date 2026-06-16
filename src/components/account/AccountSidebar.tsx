@@ -37,9 +37,9 @@ const TIER_CONFIG: Record<string, { icon: React.ElementType; color: string; bg: 
   unverified: { icon: Shield,      color: 'text-zinc-400',   bg: 'bg-zinc-500/10',   border: 'border-zinc-500/20' },
   bronze:     { icon: Award,       color: 'text-orange-400', bg: 'bg-orange-500/10', border: 'border-orange-500/20' },
   silver:     { icon: ShieldCheck, color: 'text-slate-300',  bg: 'bg-slate-500/10',  border: 'border-slate-500/20' },
-  gold:       { icon: Crown,       color: 'text-yellow-400', bg: 'bg-yellow-500/10', border: 'border-yellow-500/20' },
+  gold:       { icon: Crown,       color: 'text-warning', bg: 'bg-warning-bg', border: 'border-yellow-500/20' },
   platinum:   { icon: Gem,         color: 'text-cyan-400',   bg: 'bg-cyan-500/10',   border: 'border-cyan-500/20' },
-  diamond:    { icon: Sparkles,    color: 'text-violet-400', bg: 'bg-violet-500/10', border: 'border-violet-500/20' },
+  diamond:    { icon: Sparkles,    color: 'text-lime-text', bg: 'bg-lime/10', border: 'border-lime-tint-border' },
 }
 
 interface NavItem {
@@ -161,12 +161,12 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
   const NavItems = () => (
     <>
       {/* User Profile */}
-      <div className="p-4 border-b border-white/[0.08]">
+      <div className="p-4 border-b border-border-subtle">
         {user?.isApprovedSeller ? (
           <Link
             href={`/shop/${user?.shop_slug || user?.username || ''}`}
             onClick={() => setIsMobileOpen(false)}
-            className="flex items-center gap-3 w-full rounded-2xl px-3 py-3.5 bg-gradient-to-br from-violet-500/10 via-purple-500/5 to-transparent hover:from-violet-500/15 border border-violet-500/20 hover:border-violet-500/30 transition-all duration-200 group"
+            className="flex items-center gap-3 w-full rounded-2xl px-3 py-3.5 bg-gradient-to-br from-lime/10 via-purple-500/5 to-transparent hover:from-lime/15 border border-lime-tint-border hover:border-lime-tint-border transition-all duration-200 group"
           >
             {/* Avatar */}
             <div className="relative flex-shrink-0">
@@ -177,7 +177,7 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
                   className="h-12 w-12 rounded-full object-cover ring-2 ring-violet-500/30 group-hover:ring-violet-500/50 transition-all"
                 />
               ) : (
-                <div className="h-12 w-12 rounded-full flex items-center justify-center text-white font-bold text-base bg-gradient-to-br from-violet-500 to-purple-600 ring-2 ring-violet-500/30 group-hover:ring-violet-500/50 transition-all">
+                <div className="h-12 w-12 rounded-full flex items-center justify-center text-white font-bold text-base bg-gradient-to-br from-lime to-purple-600 ring-2 ring-violet-500/30 group-hover:ring-violet-500/50 transition-all">
                   {user?.username?.[0]?.toUpperCase() || 'S'}
                 </div>
               )}
@@ -200,10 +200,10 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
                 )
               })()}
             </div>
-            <Store className="h-4 w-4 text-violet-400 flex-shrink-0" />
+            <Store className="h-4 w-4 text-lime-text flex-shrink-0" />
           </Link>
         ) : (
-          <div className="flex items-center gap-3 w-full rounded-2xl px-3 py-3.5 bg-white/[0.02] border border-white/[0.08]">
+          <div className="flex items-center gap-3 w-full rounded-2xl px-3 py-3.5 bg-bg-overlay border border-border-subtle">
             <div className="relative flex-shrink-0">
               {user?.avatar_url ? (
                 <img
@@ -222,7 +222,7 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
               <p className="text-sm font-semibold text-white truncate leading-tight">
                 {user?.username || 'User'}
               </p>
-              <p className="mt-1 text-[11px] text-gray-500">Buyer Account</p>
+              <p className="mt-1 text-[11px] text-text-tertiary">Buyer Account</p>
             </div>
           </div>
         )}
@@ -234,8 +234,8 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
             onClick={() => setIsMobileOpen(false)}
             className={cn(
               "mt-3 flex items-center gap-2 w-full rounded-lg px-3 py-2 text-xs font-medium transition-all duration-200 border",
-              user.seller_status === 'restricted' && "bg-yellow-500/10 border-yellow-500/20 text-yellow-400 hover:bg-yellow-500/15 hover:border-yellow-500/30",
-              user.seller_status === 'banned' && "bg-red-500/10 border-red-500/20 text-red-400 hover:bg-red-500/15 hover:border-red-500/30"
+              user.seller_status === 'restricted' && "bg-warning-bg border-yellow-500/20 text-warning hover:bg-yellow-500/15 hover:border-warning/40",
+              user.seller_status === 'banned' && "bg-error-bg border-error/40 text-error hover:bg-red-500/15 hover:border-error/40"
             )}
           >
             {user.seller_status === 'restricted' && <ShieldAlert className="h-3.5 w-3.5 flex-shrink-0" />}
@@ -262,8 +262,8 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
               className={cn(
                 'flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200',
                 active
-                  ? 'bg-violet-500 text-white shadow-lg shadow-violet-500/25'
-                  : 'text-gray-400 hover:text-white hover:bg-white/[0.06]'
+                  ? 'bg-lime text-text-inverse shadow-lg shadow-violet-500/25'
+                  : 'text-text-secondary hover:text-white hover:bg-bg-raised-hover'
               )}
             >
               <div className="flex items-center gap-3">
@@ -273,7 +273,7 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
               {item.badge && (
                 <span className={cn(
                   'px-2 py-0.5 text-[11px] font-bold rounded-full',
-                  active ? 'bg-white/20 text-white' : 'bg-violet-500/20 text-violet-400'
+                  active ? 'bg-white/20 text-text-inverse' : 'bg-lime/20 text-lime-text'
                 )}>
                   {item.badge}
                 </span>
@@ -285,7 +285,7 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
         {/* Divider between seller tools and account tools (sellers only) */}
         {user?.isApprovedSeller && (
           <div className="py-3 px-3">
-            <div className="h-px bg-white/[0.08]" />
+            <div className="h-px bg-bg-raised-hover" />
           </div>
         )}
 
@@ -301,8 +301,8 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
               className={cn(
                 'flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200',
                 active
-                  ? 'bg-violet-500 text-white shadow-lg shadow-violet-500/25'
-                  : 'text-gray-400 hover:text-white hover:bg-white/[0.06]'
+                  ? 'bg-lime text-text-inverse shadow-lg shadow-violet-500/25'
+                  : 'text-text-secondary hover:text-white hover:bg-bg-raised-hover'
               )}
             >
               <div className="flex items-center gap-3">
@@ -312,7 +312,7 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
               {item.badge && (
                 <span className={cn(
                   'px-2 py-0.5 text-[11px] font-bold rounded-full',
-                  active ? 'bg-white/20 text-white' : 'bg-violet-500/20 text-violet-400'
+                  active ? 'bg-white/20 text-text-inverse' : 'bg-lime/20 text-lime-text'
                 )}>
                   {item.badge}
                 </span>
@@ -324,7 +324,7 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
 
 
       {/* Bottom Navigation */}
-      <div className="p-2 border-t border-white/[0.08] space-y-1">
+      <div className="p-2 border-t border-border-subtle space-y-1">
         {bottomNavigation.map((item) => {
           const Icon = item.icon
           const active = isActive(item.href)
@@ -337,8 +337,8 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
               className={cn(
                 'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200',
                 active
-                  ? 'bg-violet-500 text-white shadow-lg shadow-violet-500/25'
-                  : 'text-gray-400 hover:text-white hover:bg-white/[0.06]'
+                  ? 'bg-lime text-text-inverse shadow-lg shadow-violet-500/25'
+                  : 'text-text-secondary hover:text-white hover:bg-bg-raised-hover'
               )}
             >
               <Icon className="h-[18px] w-[18px] flex-shrink-0" />
@@ -349,7 +349,7 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
 
         {/* Logout */}
         <button
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-400 hover:text-red-400 hover:bg-red-500/[0.08] transition-all duration-200"
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-text-secondary hover:text-error hover:bg-red-500/[0.08] transition-all duration-200"
         >
           <LogOut className="h-[18px] w-[18px] flex-shrink-0" />
           <span>Logout</span>
@@ -363,7 +363,7 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
       {/* Mobile Menu Button */}
       <button
         onClick={() => setIsMobileOpen(!isMobileOpen)}
-        className="fixed top-[4.5rem] left-3 z-50 lg:hidden p-2.5 rounded-xl bg-black/50 backdrop-blur-xl border border-white/[0.08] text-white shadow-lg hover:bg-black/70 transition-all"
+        className="fixed top-[4.5rem] left-3 z-50 lg:hidden p-2.5 rounded-xl bg-black/50 backdrop-blur-xl border border-border-subtle text-white shadow-lg hover:bg-black/70 transition-all"
       >
         {isMobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
       </button>
@@ -382,7 +382,7 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
       </AnimatePresence>
 
       {/* Desktop Sidebar - Modern Floating Card */}
-      <aside className="hidden lg:flex lg:flex-col lg:fixed lg:left-4 lg:top-24 lg:bottom-4 lg:w-64 bg-black/40 backdrop-blur-2xl border border-white/[0.08] rounded-3xl shadow-2xl overflow-hidden">
+      <aside className="hidden lg:flex lg:flex-col lg:fixed lg:left-4 lg:top-24 lg:bottom-4 lg:w-64 bg-black/40 backdrop-blur-2xl border border-border-subtle rounded-3xl shadow-2xl overflow-hidden">
         <NavItems />
       </aside>
 
@@ -394,7 +394,7 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
             animate={{ x: 0 }}
             exit={{ x: '-100%' }}
             transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-            className="fixed top-4 bottom-4 left-4 w-56 bg-black/50 backdrop-blur-2xl border border-white/[0.08] rounded-3xl z-40 lg:hidden flex flex-col shadow-2xl"
+            className="fixed top-4 bottom-4 left-4 w-56 bg-black/50 backdrop-blur-2xl border border-border-subtle rounded-3xl z-40 lg:hidden flex flex-col shadow-2xl"
           >
             <NavItems />
           </motion.aside>

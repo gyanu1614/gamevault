@@ -109,7 +109,7 @@ export default function ReviewsPage() {
             key={star}
             className={cn(
               'h-4 w-4',
-              star <= rating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-600'
+              star <= rating ? 'fill-yellow-400 text-warning' : 'text-text-disabled'
             )}
           />
         ))}
@@ -122,7 +122,7 @@ export default function ReviewsPage() {
       <div className="flex min-h-screen items-center justify-center bg-black">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="text-gray-400">Loading reviews...</p>
+          <p className="text-text-secondary">Loading reviews...</p>
         </div>
       </div>
     )
@@ -138,7 +138,7 @@ export default function ReviewsPage() {
           className="mb-6"
         >
           <h1 className="text-2xl font-bold text-white">Feedback</h1>
-          <p className="text-sm text-gray-400 mt-1">Manage your reviews and feedback</p>
+          <p className="text-sm text-text-secondary mt-1">Manage your reviews and feedback</p>
         </motion.div>
 
         {/* Stats Overview (only for received reviews) */}
@@ -149,10 +149,10 @@ export default function ReviewsPage() {
               animate={{ opacity: 1, y: 0 }}
               className="rounded-xl border border-white/10 bg-gradient-to-br from-primary/20 to-primary/10 p-4"
             >
-              <div className="text-sm text-gray-400">Average Rating</div>
+              <div className="text-sm text-text-secondary">Average Rating</div>
               <div className="mt-1 flex items-baseline gap-2">
                 <div className="text-2xl font-bold text-white">{stats.avgRating.toFixed(1)}</div>
-                <Star className="h-5 w-5 fill-yellow-400 text-yellow-400" />
+                <Star className="h-5 w-5 fill-yellow-400 text-warning" />
               </div>
             </motion.div>
 
@@ -162,7 +162,7 @@ export default function ReviewsPage() {
               transition={{ delay: 0.05 }}
               className="rounded-xl border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] p-4"
             >
-              <div className="text-sm text-gray-400">Total Reviews</div>
+              <div className="text-sm text-text-secondary">Total Reviews</div>
               <div className="mt-1 text-2xl font-bold text-white">{stats.totalReviews}</div>
             </motion.div>
 
@@ -172,7 +172,7 @@ export default function ReviewsPage() {
               transition={{ delay: 0.1 }}
               className="rounded-xl border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] p-4"
             >
-              <div className="text-sm text-gray-400">Response Rate</div>
+              <div className="text-sm text-text-secondary">Response Rate</div>
               <div className="mt-1 text-2xl font-bold text-white">{stats.responseRate}%</div>
             </motion.div>
 
@@ -182,7 +182,7 @@ export default function ReviewsPage() {
               transition={{ delay: 0.15 }}
               className="rounded-xl border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] p-4"
             >
-              <div className="text-sm text-gray-400">5-Star Reviews</div>
+              <div className="text-sm text-text-secondary">5-Star Reviews</div>
               <div className="mt-1 text-2xl font-bold text-white">
                 {stats.ratingCounts[5] || 0}
               </div>
@@ -196,8 +196,8 @@ export default function ReviewsPage() {
             onClick={() => setActiveTab('received')}
             className={cn(
               activeTab === 'received'
-                ? "flex items-center gap-2 px-4 py-3 text-sm font-semibold rounded-xl border-2 border-violet-500/50 bg-gradient-to-br from-violet-500/20 to-purple-500/10 text-white shadow-lg shadow-violet-500/20 transition-all"
-                : "flex items-center gap-2 px-4 py-3 text-sm font-medium rounded-xl border border-white/[0.08] bg-white/[0.02] text-gray-400 hover:border-violet-500/30 hover:bg-white/[0.05] hover:text-gray-300 transition-all"
+                ? "flex items-center gap-2 px-4 py-3 text-sm font-semibold rounded-xl border-2 border-lime bg-gradient-to-br from-lime/20 to-lime/5 text-white shadow-lg shadow-violet-500/20 transition-all"
+                : "flex items-center gap-2 px-4 py-3 text-sm font-medium rounded-xl border border-border-subtle bg-bg-overlay text-text-secondary hover:border-lime-tint-border hover:bg-bg-overlay hover:text-text-secondary transition-all"
             )}
           >
             <TrendingDown className="w-4 h-4" />
@@ -207,8 +207,8 @@ export default function ReviewsPage() {
             onClick={() => setActiveTab('given')}
             className={cn(
               activeTab === 'given'
-                ? "flex items-center gap-2 px-4 py-3 text-sm font-semibold rounded-xl border-2 border-violet-500/50 bg-gradient-to-br from-violet-500/20 to-purple-500/10 text-white shadow-lg shadow-violet-500/20 transition-all"
-                : "flex items-center gap-2 px-4 py-3 text-sm font-medium rounded-xl border border-white/[0.08] bg-white/[0.02] text-gray-400 hover:border-violet-500/30 hover:bg-white/[0.05] hover:text-gray-300 transition-all"
+                ? "flex items-center gap-2 px-4 py-3 text-sm font-semibold rounded-xl border-2 border-lime bg-gradient-to-br from-lime/20 to-lime/5 text-white shadow-lg shadow-violet-500/20 transition-all"
+                : "flex items-center gap-2 px-4 py-3 text-sm font-medium rounded-xl border border-border-subtle bg-bg-overlay text-text-secondary hover:border-lime-tint-border hover:bg-bg-overlay hover:text-text-secondary transition-all"
             )}
           >
             <TrendingUp className="w-4 h-4" />
@@ -231,7 +231,7 @@ export default function ReviewsPage() {
                   : 'border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] hover:border-white/20'
               )}
             >
-              <div className="text-sm text-gray-400">
+              <div className="text-sm text-text-secondary">
                 {rating === 'all' ? 'All' : `${rating} Star`}
               </div>
               <div className="mt-1 text-xl font-bold text-white">
@@ -243,18 +243,18 @@ export default function ReviewsPage() {
 
         {/* Search */}
         <div className="mb-6 relative">
-          <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-text-secondary" />
           <input
             type="text"
             placeholder="Search reviews..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full rounded-lg border border-white/10 bg-white/5 py-3 pl-10 pr-10 text-white placeholder:text-gray-500 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+            className="w-full rounded-lg border border-white/10 bg-white/5 py-3 pl-10 pr-10 text-white placeholder:text-text-tertiary focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
           />
           {searchQuery && (
             <button
               onClick={() => setSearchQuery('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-text-secondary hover:text-white"
             >
               <X className="h-4 w-4" />
             </button>
@@ -264,9 +264,9 @@ export default function ReviewsPage() {
         {/* Reviews List */}
         {filteredReviews.length === 0 ? (
           <div className="flex flex-col items-center justify-center rounded-xl border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] p-12 backdrop-blur-md">
-            <Award className="mb-4 h-16 w-16 text-violet-400" />
+            <Award className="mb-4 h-16 w-16 text-lime-text" />
             <h3 className="mb-2 text-xl font-bold text-white">No reviews found</h3>
-            <p className="text-gray-400">
+            <p className="text-text-secondary">
               {searchQuery ? 'Try adjusting your search' : `You haven't ${activeTab === 'received' ? 'received' : 'given'} any reviews yet`}
             </p>
           </div>
@@ -290,7 +290,7 @@ export default function ReviewsPage() {
                     />
                     <div>
                       <div className="font-medium text-white">{review.reviewer?.username || 'Unknown User'}</div>
-                      <div className="text-sm text-gray-400">{getTimeAgo(review.created_at)}</div>
+                      <div className="text-sm text-text-secondary">{getTimeAgo(review.created_at)}</div>
                     </div>
                   </div>
                   {renderStars(review.rating)}
@@ -298,20 +298,20 @@ export default function ReviewsPage() {
 
                 {/* Order Info */}
                 {review.order?.listing?.title && (
-                  <div className="mb-3 rounded-lg border border-white/5 bg-white/[0.02] p-3">
-                    <div className="text-xs text-gray-400">Order</div>
+                  <div className="mb-3 rounded-lg border border-white/5 bg-bg-overlay p-3">
+                    <div className="text-xs text-text-secondary">Order</div>
                     <div className="text-sm text-white">{review.order.listing.title}</div>
                   </div>
                 )}
 
                 {/* Review Comment */}
                 {review.comment && (
-                  <p className="mb-4 text-gray-300">{review.comment}</p>
+                  <p className="mb-4 text-text-secondary">{review.comment}</p>
                 )}
 
                 {/* Helpful Count */}
                 {review.helpful_count && review.helpful_count > 0 && (
-                  <div className="mb-4 flex items-center gap-2 text-sm text-gray-400">
+                  <div className="mb-4 flex items-center gap-2 text-sm text-text-secondary">
                     <ThumbsUp className="h-4 w-4" />
                     {review.helpful_count} {review.helpful_count === 1 ? 'person' : 'people'} found this helpful
                   </div>
@@ -324,9 +324,9 @@ export default function ReviewsPage() {
                       <MessageSquare className="h-4 w-4" />
                       Seller Response
                     </div>
-                    <p className="text-gray-300">{review.seller_response}</p>
+                    <p className="text-text-secondary">{review.seller_response}</p>
                     {review.seller_responded_at && (
-                      <div className="mt-2 text-xs text-gray-400">
+                      <div className="mt-2 text-xs text-text-secondary">
                         Responded {getTimeAgo(review.seller_responded_at)}
                       </div>
                     )}
@@ -343,7 +343,7 @@ export default function ReviewsPage() {
                           onChange={(e) => setResponseText(e.target.value)}
                           placeholder="Write your response..."
                           rows={3}
-                          className="w-full rounded-lg border border-white/10 bg-white/5 p-3 text-white placeholder:text-gray-500 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                          className="w-full rounded-lg border border-white/10 bg-white/5 p-3 text-white placeholder:text-text-tertiary focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                         />
                         <div className="flex gap-2">
                           <button

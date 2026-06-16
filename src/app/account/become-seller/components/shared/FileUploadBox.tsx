@@ -84,9 +84,9 @@ export default function FileUploadBox({
   return (
     <div>
       <label className="mb-1.5 block text-xs font-medium text-white sm:text-sm">
-        {label} {required && <span className="text-red-400">*</span>}
+        {label} {required && <span className="text-error">*</span>}
       </label>
-      <p className="mb-3 text-[10px] text-gray-400 sm:mb-4 sm:text-xs">{description}</p>
+      <p className="mb-3 text-[10px] text-text-secondary sm:mb-4 sm:text-xs">{description}</p>
 
       {!uploadedFile ? (
         <div className="grid gap-3 sm:gap-4 md:grid-cols-[1fr,200px] lg:grid-cols-[1fr,240px]">
@@ -115,7 +115,7 @@ export default function FileUploadBox({
                   <div
                     key={i}
                     className={`border border-white/5 ${
-                      i % 3 === 0 ? 'bg-white/[0.02] shadow-[inset_0_2px_4px_rgba(0,0,0,0.3)]' : ''
+                      i % 3 === 0 ? 'bg-bg-overlay shadow-[inset_0_2px_4px_rgba(0,0,0,0.3)]' : ''
                     }`}
                   />
                 ))}
@@ -133,7 +133,7 @@ export default function FileUploadBox({
               >
                 <Upload
                   className={`h-6 w-6 transition-all sm:h-7 sm:w-7 ${
-                    isDragging ? 'text-primary' : 'text-gray-400 group-hover:text-primary'
+                    isDragging ? 'text-primary' : 'text-text-secondary group-hover:text-primary'
                   }`}
                 />
               </motion.div>
@@ -147,7 +147,7 @@ export default function FileUploadBox({
                     </>
                   )}
                 </p>
-                <p className="mt-0.5 text-[11px] text-gray-500 sm:mt-1 sm:text-xs">JPG, PNG or PDF (max 10MB)</p>
+                <p className="mt-0.5 text-[11px] text-text-tertiary sm:mt-1 sm:text-xs">JPG, PNG or PDF (max 10MB)</p>
               </div>
             </div>
           </div>
@@ -188,7 +188,7 @@ export default function FileUploadBox({
                   <p className="text-xs font-medium text-white sm:text-sm">
                     {sampleText || 'Reference example'}
                   </p>
-                  <p className="mt-1 text-[10px] leading-relaxed text-gray-400 sm:text-xs">
+                  <p className="mt-1 text-[10px] leading-relaxed text-text-secondary sm:text-xs">
                     Your document should look similar
                   </p>
                 </div>
@@ -203,14 +203,14 @@ export default function FileUploadBox({
           </div>
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-medium text-white sm:text-base">{uploadedFile.name}</p>
-            <p className="mt-0.5 text-xs text-gray-400 sm:text-sm">{formatFileSize(uploadedFile.size)}</p>
+            <p className="mt-0.5 text-xs text-text-secondary sm:text-sm">{formatFileSize(uploadedFile.size)}</p>
           </div>
           <button
             type="button"
             onClick={() => onFileUpload(fileType, null)}
-            className="flex-shrink-0 rounded-lg p-2 transition-all hover:bg-red-500/10 sm:p-2.5"
+            className="flex-shrink-0 rounded-lg p-2 transition-all hover:bg-error-bg sm:p-2.5"
           >
-            <X className="h-5 w-5 text-red-400 sm:h-6 sm:w-6" />
+            <X className="h-5 w-5 text-error sm:h-6 sm:w-6" />
           </button>
         </div>
       )}

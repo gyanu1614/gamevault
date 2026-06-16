@@ -27,7 +27,7 @@ export function StaticFieldDisplay({ fields, values }: StaticFieldDisplayProps) 
 
         return (
           <div key={field.name} className="space-y-1">
-            <div className="text-sm font-medium text-gray-400">
+            <div className="text-sm font-medium text-text-secondary">
               {field.label}
             </div>
             <div className="text-base text-white">

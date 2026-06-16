@@ -113,7 +113,7 @@ export const AvatarUpload = ({ onChange, username, defaultAvatar }: AvatarUpload
             />
           ) : (
             <div className="flex h-full w-full items-center justify-center">
-              <User className="h-14 w-14 text-gray-400" />
+              <User className="h-14 w-14 text-text-secondary" />
             </div>
           )}
 
@@ -145,7 +145,7 @@ export const AvatarUpload = ({ onChange, username, defaultAvatar }: AvatarUpload
       </button>
 
       <div className="text-center">
-        <p className="text-xs text-gray-400">
+        <p className="text-xs text-text-secondary">
           {file ? `✓ ${file.name}` : 'PNG, JPG or GIF (max 5MB)'}
         </p>
       </div>

@@ -47,8 +47,8 @@ export default async function RelatedListings({
 
   return (
     <section className="mt-8">
-      <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-        <span className="w-1 h-5 rounded-full bg-violet-500 inline-block" />
+      <h2 className="text-lg font-semibold text-text-primary mb-4 flex items-center gap-2">
+        <span className="w-1 h-5 rounded-full bg-lime inline-block" />
         More like this
       </h2>
 
@@ -69,10 +69,10 @@ export default async function RelatedListings({
             <Link
               key={listing.id}
               href={`/${gameSlug}/${categorySlug}/${listing.slug}`}
-              className="group relative flex flex-col overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.03] transition-all duration-300 hover:border-violet-500/40 hover:bg-white/[0.06] hover:shadow-[0_0_24px_-4px_rgba(139,92,246,0.3)]"
+              className="group relative flex flex-col overflow-hidden rounded-xl border border-border-subtle bg-bg-overlay transition-all duration-300 hover:border-lime-tint-border hover:bg-bg-raised-hover hover:shadow-[0_0_24px_-4px_rgba(139,92,246,0.3)]"
             >
               {/* Image */}
-              <div className="relative aspect-[4/3] overflow-hidden bg-white/[0.03]">
+              <div className="relative aspect-[4/3] overflow-hidden bg-bg-overlay">
                 {image ? (
                   <Image
                     src={image}
@@ -89,9 +89,9 @@ export default async function RelatedListings({
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
 
                 {/* Delivery badge — top right */}
-                <div className="absolute right-2 top-2 flex items-center gap-1 rounded-full bg-black/60 px-2 py-0.5 backdrop-blur-md border border-white/10">
+                <div className="absolute right-2 top-2 flex items-center gap-1 rounded-full bg-black/60 px-2 py-0.5 backdrop-blur-md border border-border-subtle">
                   {isInstant ? (
-                    <Zap className="w-2.5 h-2.5 text-violet-400" />
+                    <Zap className="w-2.5 h-2.5 text-lime-text" />
                   ) : (
                     <Clock className="w-2.5 h-2.5 text-white/50" />
                   )}
@@ -107,13 +107,13 @@ export default async function RelatedListings({
                       <span className="text-[10px] text-white/50 line-through leading-none">
                         ${listing.original_price!.toFixed(2)}
                       </span>
-                      <span className="flex items-center gap-0.5 rounded bg-green-500/90 px-1 py-0.5 text-[9px] font-bold text-white leading-none">
+                      <span className="flex items-center gap-0.5 rounded bg-green-500/90 px-1 py-0.5 text-[9px] font-bold text-text-primary leading-none">
                         <TrendingDown className="h-2 w-2" />
                         -{discountPct}%
                       </span>
                     </div>
                   )}
-                  <span className="font-mono text-base font-bold text-white drop-shadow-md">
+                  <span className="font-mono text-base font-bold text-text-primary drop-shadow-md">
                     ${listing.price.toFixed(2)}
                   </span>
                 </div>
@@ -121,7 +121,7 @@ export default async function RelatedListings({
 
               {/* Body */}
               <div className="flex flex-col gap-2 p-3">
-                <h3 className="line-clamp-2 text-xs font-semibold text-white/90 leading-snug group-hover:text-violet-300 transition-colors">
+                <h3 className="line-clamp-2 text-xs font-semibold text-white/90 leading-snug group-hover:text-lime-text transition-colors">
                   {listing.title}
                 </h3>
 
@@ -134,7 +134,7 @@ export default async function RelatedListings({
                         className="h-4 w-4 rounded-full object-cover ring-1 ring-white/10 flex-shrink-0"
                       />
                     ) : (
-                      <div className="h-4 w-4 rounded-full bg-violet-500/20 flex items-center justify-center text-[8px] font-bold text-violet-400 flex-shrink-0">
+                      <div className="h-4 w-4 rounded-full bg-lime/20 flex items-center justify-center text-[8px] font-bold text-lime-text flex-shrink-0">
                         {(seller?.username ?? '?')[0].toUpperCase()}
                       </div>
                     )}

@@ -526,6 +526,148 @@ export async function createOption(input: CreateOptionInput): Promise<Result<{ i
   }
 }
 
+/**
+ * V15 — Bulk-create options.
+ *
+ * Accepts a newline- (or comma-) separated list of labels and inserts
+ * them in one round-trip. Each label is slugified and de-duplicated
+ * against the parent attribute's existing slugs so re-paste-and-merge is
+ * idempotent. Returns the number of rows actually created.
+ *
+ * Used by the Choices card's "Bulk add" UI in TemplateBuilder when
+ * onboarding large taxonomies (e.g. Steal-a-Brainrot secrets — 270+).
+ */
+export interface BulkCreateOptionsInput {
+  attribute_id: string
+  /** Either a single multi-line/CSV string or a pre-parsed list of labels. */
+  labels: string | string[]
+  /** When true, lines that already exist (by slug) are silently skipped.
+   *  Defaults to true so paste-and-merge is safe to repeat. */
+  skipDuplicates?: boolean
+}
+
+export async function bulkCreateOptions(
+  input: BulkCreateOptionsInput,
+): Promise<Result<{ created: number; skipped: number }>> {
+  try {
+    await requireAdmin()
+    const supabase = getAdminSupabase()
+
+    const raw = Array.isArray(input.labels)
+      ? input.labels
+      : input.labels.split(/[\n,]+/g)
+    const labels = raw
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0)
+      // Drop common wiki noise: leading "File:", "User:", trailing "(Disambiguation)" etc.
+      .filter((s) => !/^(File|User|Category):/i.test(s))
+      .filter((s) => !/\(Disambiguation\)/i.test(s))
+    if (labels.length === 0) {
+      return { success: true, data: { created: 0, skipped: 0 } }
+    }
+
+    // Read existing slugs once so we can dedupe in-memory.
+    const { data: existing, error: existingErr } = await supabase
+      .from('attribute_options')
+      .select('slug, sort_order')
+      .eq('attribute_id', input.attribute_id)
+    if (existingErr) return { success: false, error: existingErr.message }
+
+    const taken = new Set<string>((existing ?? []).map((r: any) => r.slug as string))
+    const nextSort = (existing ?? []).reduce(
+      (max: number, r: any) => Math.max(max, Number(r.sort_order ?? 0)),
+      -1,
+    ) + 1
+
+    const rows: Array<{
+      attribute_id: string
+      slug: string
+      value: string
+      label: string
+      sort_order: number
+    }> = []
+    let skipped = 0
+
+    // Track slugs we're about to insert so the batch dedupes against
+    // itself in addition to the existing rows.
+    const pending = new Set<string>()
+
+    labels.forEach((label, i) => {
+      const baseSlug = slugify(label) || `opt-${Date.now()}-${i}`
+      let slug = baseSlug
+      let n = 1
+      while (taken.has(slug) || pending.has(slug)) {
+        if (input.skipDuplicates !== false) {
+          skipped += 1
+          return
+        }
+        n += 1
+        slug = `${baseSlug}-${n}`
+      }
+      pending.add(slug)
+      rows.push({
+        attribute_id: input.attribute_id,
+        slug,
+        value: slug,
+        label,
+        sort_order: nextSort + rows.length,
+      })
+    })
+
+    if (rows.length === 0) {
+      revalidatePath('/admin/games-v2', 'layout')
+      return { success: true, data: { created: 0, skipped } }
+    }
+
+    const { error: insertErr } = await supabase
+      .from('attribute_options')
+      .insert(rows)
+    if (insertErr) return { success: false, error: insertErr.message }
+
+    revalidatePath('/admin/games-v2', 'layout')
+    return { success: true, data: { created: rows.length, skipped } }
+  } catch (e: any) {
+    return { success: false, error: e?.message ?? 'Unknown error' }
+  }
+}
+
+/**
+ * V15b — Bulk-delete options.
+ *
+ * Strips every option under one attribute. Used to recover from a bad
+ * paste (e.g. dumping a 272-row list into the wrong attribute). Caller
+ * passes the attribute id; pass `ids` to delete only a subset instead
+ * of the whole list.
+ *
+ * Returns the count of rows actually removed.
+ */
+export async function bulkDeleteOptions(input: {
+  attribute_id: string
+  ids?: string[]
+}): Promise<Result<{ deleted: number }>> {
+  try {
+    await requireAdmin()
+    const supabase = getAdminSupabase()
+
+    let q: any = supabase
+      .from('attribute_options')
+      .delete()
+      .eq('attribute_id', input.attribute_id)
+    if (input.ids && input.ids.length > 0) {
+      q = q.in('id', input.ids)
+    }
+    // `.select()` causes the delete to return the deleted rows so we can
+    // give the admin an accurate count without a separate query.
+    const { data, error } = await q.select('id')
+    if (error) return { success: false, error: error.message }
+
+    revalidatePath('/admin/games-v2', 'layout')
+    return { success: true, data: { deleted: Array.isArray(data) ? data.length : 0 } }
+  } catch (e: any) {
+    return { success: false, error: e?.message ?? 'Unknown error' }
+  }
+}
+
 export interface UpdateOptionInput {
   id: string
   label?: string

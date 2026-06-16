@@ -19,7 +19,7 @@ export default function DeliveryEvidenceViewer({ evidenceUrls }: DeliveryEvidenc
 
   if (!evidenceUrls || evidenceUrls.length === 0) {
     return (
-      <div className="text-center py-8 text-gray-400">
+      <div className="text-center py-8 text-text-secondary">
         <FileImage className="w-12 h-12 mx-auto mb-3 opacity-50" />
         <p>No delivery evidence uploaded yet</p>
       </div>
@@ -36,12 +36,12 @@ export default function DeliveryEvidenceViewer({ evidenceUrls }: DeliveryEvidenc
         {evidenceUrls.map((url, index) => (
           <div
             key={index}
-            className="group relative aspect-square rounded-lg overflow-hidden border border-white/[0.1] bg-white/[0.02] cursor-pointer"
+            className="group relative aspect-square rounded-lg overflow-hidden border border-white/[0.1] bg-bg-overlay cursor-pointer"
             onClick={() => setSelectedEvidence(url)}
           >
             {isVideo(url) ? (
               <div className="w-full h-full flex items-center justify-center bg-black">
-                <FileVideo className="w-12 h-12 text-violet-400" />
+                <FileVideo className="w-12 h-12 text-lime-text" />
               </div>
             ) : (
               <div className="relative w-full h-full">
@@ -77,7 +77,7 @@ export default function DeliveryEvidenceViewer({ evidenceUrls }: DeliveryEvidenc
             {/* Close Button */}
             <button
               onClick={() => setSelectedEvidence(null)}
-              className="absolute -top-12 right-0 p-2 text-white hover:text-gray-300 transition-colors"
+              className="absolute -top-12 right-0 p-2 text-white hover:text-text-secondary transition-colors"
             >
               <X className="w-6 h-6" />
             </button>
@@ -88,7 +88,7 @@ export default function DeliveryEvidenceViewer({ evidenceUrls }: DeliveryEvidenc
               download
               target="_blank"
               rel="noopener noreferrer"
-              className="absolute -top-12 right-12 p-2 text-white hover:text-gray-300 transition-colors"
+              className="absolute -top-12 right-12 p-2 text-white hover:text-text-secondary transition-colors"
               onClick={(e) => e.stopPropagation()}
             >
               <Download className="w-6 h-6" />

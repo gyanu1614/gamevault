@@ -35,9 +35,9 @@ const levelConfig = {
   enhanced: {
     icon: ShieldCheck,
     label: 'Enhanced Protection',
-    color: 'text-violet-400',
-    bgColor: 'bg-violet-500/10',
-    borderColor: 'border-violet-500/20',
+    color: 'text-lime-text',
+    bgColor: 'bg-lime/10',
+    borderColor: 'border-lime-tint-border',
     description: 'Advanced protection for orders $100-$499',
     features: [
       '48-hour escrow',

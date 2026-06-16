@@ -57,12 +57,12 @@ async function checkOrderAccess(orderId: string, userId: string) {
 
 const STATUS_CONFIG: Record<string, { label: string; pill: string; dot: string; pulse: boolean; icon: React.ElementType }> = {
   paid:       { label: 'Processing',  pill: 'bg-amber-500/10 text-amber-400 border-amber-500/20',   dot: 'bg-amber-400',  pulse: true,  icon: Clock },
-  delivering: { label: 'Delivering',  pill: 'bg-violet-500/10 text-violet-400 border-violet-500/20', dot: 'bg-violet-400', pulse: true,  icon: Truck },
+  delivering: { label: 'Delivering',  pill: 'bg-lime/10 text-lime-text border-lime-tint-border', dot: 'bg-violet-400', pulse: true,  icon: Truck },
   delivered:  { label: 'Delivered',   pill: 'bg-blue-500/10 text-blue-400 border-blue-500/20',       dot: 'bg-blue-400',   pulse: false, icon: Package },
-  completed:  { label: 'Completed',   pill: 'bg-green-500/10 text-green-400 border-green-500/20',    dot: 'bg-green-400',  pulse: false, icon: CheckCircle2 },
-  disputed:   { label: 'Disputed',    pill: 'bg-red-500/10 text-red-400 border-red-500/20',          dot: 'bg-red-400',    pulse: true,  icon: AlertTriangle },
-  resolved:   { label: 'Resolved',    pill: 'bg-green-500/10 text-green-400 border-green-500/20',    dot: 'bg-green-400',  pulse: false, icon: CheckCircle2 },
-  refunded:   { label: 'Refunded',    pill: 'bg-gray-500/10 text-gray-400 border-gray-500/20',       dot: 'bg-gray-400',   pulse: false, icon: RefreshCw },
+  completed:  { label: 'Completed',   pill: 'bg-success-bg text-success border-green-500/20',    dot: 'bg-green-400',  pulse: false, icon: CheckCircle2 },
+  disputed:   { label: 'Disputed',    pill: 'bg-error-bg text-error border-error/40',          dot: 'bg-red-400',    pulse: true,  icon: AlertTriangle },
+  resolved:   { label: 'Resolved',    pill: 'bg-success-bg text-success border-green-500/20',    dot: 'bg-green-400',  pulse: false, icon: CheckCircle2 },
+  refunded:   { label: 'Refunded',    pill: 'bg-gray-500/10 text-text-secondary border-gray-500/20',       dot: 'bg-gray-400',   pulse: false, icon: RefreshCw },
   cancelled:  { label: 'Cancelled',   pill: 'bg-orange-500/10 text-orange-400 border-orange-500/20', dot: 'bg-orange-400', pulse: false, icon: XCircle },
 }
 
@@ -85,11 +85,11 @@ function StatusPill({ status, disputeResolved }: { status: string; disputeResolv
 
 function EscrowPill({ escrowStatus, disputeResolved }: { escrowStatus: string; disputeResolved?: boolean }) {
   const cfg: Record<string, { label: string; pill: string }> = {
-    held:     { label: 'Funds in Escrow',             pill: 'bg-violet-500/10 text-violet-400/80 border-violet-500/15' },
+    held:     { label: 'Funds in Escrow',             pill: 'bg-lime/10 text-lime-text/80 border-lime-tint-border' },
     released: { label: 'Payment Released to Seller', pill: 'bg-blue-500/10 text-blue-400/80 border-blue-500/15' },
     refunded: { label: 'Refunded to Wallet',         pill: 'bg-cyan-500/10 text-cyan-400/80 border-cyan-500/15' },
-    frozen:   { label: 'Under Review',               pill: 'bg-red-500/10 text-red-400/80 border-red-500/15' },
-    resolved: { label: 'Resolved',                   pill: 'bg-green-500/10 text-green-400/80 border-green-500/15' },
+    frozen:   { label: 'Under Review',               pill: 'bg-error-bg text-error/80 border-red-500/15' },
+    resolved: { label: 'Resolved',                   pill: 'bg-success-bg text-success/80 border-green-500/15' },
   }
   // Show "Resolved" instead of "Under Review" if dispute is resolved
   const effectiveStatus = (escrowStatus === 'frozen' && disputeResolved) ? 'resolved' : escrowStatus
@@ -220,7 +220,7 @@ export default async function OrderDetailPage({ params }: PageProps) {
         {/* Back link */}
         <Link
           href="/account/orders"
-          className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-white/[0.08] bg-white/[0.03] hover:bg-white/[0.06] hover:border-white/[0.12] text-sm text-gray-300 hover:text-white transition-all mb-7"
+          className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-border-subtle bg-bg-overlay hover:bg-bg-raised-hover hover:border-white/[0.12] text-sm text-text-secondary hover:text-white transition-all mb-7"
         >
           <ArrowLeft className="h-4 w-4" />
           Back to Orders
@@ -238,7 +238,7 @@ export default async function OrderDetailPage({ params }: PageProps) {
               className="rounded-xl object-cover flex-shrink-0 ring-1 ring-white/10 shadow-lg"
             />
           ) : (
-            <div className="h-18 w-18 rounded-xl bg-white/[0.05] border border-white/[0.08] flex-shrink-0" />
+            <div className="h-18 w-18 rounded-xl bg-bg-overlay border border-border-subtle flex-shrink-0" />
           )}
 
           {/* Left: title + game + category + order ID */}
@@ -248,13 +248,13 @@ export default async function OrderDetailPage({ params }: PageProps) {
             </h1>
             <div className="flex items-center gap-2 mt-1.5 truncate">
               {gameName && (
-                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-white/[0.04] border border-white/[0.08] text-xs font-medium text-gray-400">
-                  <Package className="h-3 w-3 text-gray-500" />
+                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-bg-raised border border-border-subtle text-xs font-medium text-text-secondary">
+                  <Package className="h-3 w-3 text-text-tertiary" />
                   {gameName}
                 </span>
               )}
               {categoryName && (
-                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-white/[0.04] border border-white/[0.08] text-xs font-medium text-gray-400">
+                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-bg-raised border border-border-subtle text-xs font-medium text-text-secondary">
                   {categoryName}
                 </span>
               )}

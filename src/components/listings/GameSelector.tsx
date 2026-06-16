@@ -76,8 +76,8 @@ export default function GameSelector({
   if (displayMode === 'grid') {
     return (
       <div className={className}>
-        <label className="mb-3 block text-sm font-medium text-gray-300">
-          Select Game <span className="text-red-400">*</span>
+        <label className="mb-3 block text-sm font-medium text-text-secondary">
+          Select Game <span className="text-error">*</span>
         </label>
         <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-6">
           {games.map((game) => {
@@ -119,8 +119,8 @@ export default function GameSelector({
   // Dropdown View (for 50+ games)
   return (
     <div className={className}>
-      <label className="mb-2 block text-sm font-medium text-gray-300">
-        Select Game <span className="text-red-400">*</span>
+      <label className="mb-2 block text-sm font-medium text-text-secondary">
+        Select Game <span className="text-error">*</span>
       </label>
 
       {/* Selected Game Display / Dropdown Trigger */}
@@ -145,7 +145,7 @@ export default function GameSelector({
             <span className="font-medium text-white">{selectedGame.name}</span>
           </div>
         ) : (
-          <span className="text-gray-400">Select a game...</span>
+          <span className="text-text-secondary">Select a game...</span>
         )}
       </button>
 
@@ -173,19 +173,19 @@ export default function GameSelector({
               {/* Search Bar */}
               <div className="border-b border-white/10 p-3">
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-secondary" />
                   <input
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Search games..."
-                    className="w-full rounded-lg border border-white/10 bg-white/5 py-2 pl-10 pr-4 text-sm text-white placeholder:text-gray-500 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    className="w-full rounded-lg border border-white/10 bg-white/5 py-2 pl-10 pr-4 text-sm text-white placeholder:text-text-tertiary focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                     autoFocus
                   />
                   {searchQuery && (
                     <button
                       onClick={() => setSearchQuery('')}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-text-secondary hover:text-white"
                     >
                       <X className="h-4 w-4" />
                     </button>
@@ -198,7 +198,7 @@ export default function GameSelector({
                 {/* Featured Games Section */}
                 {featuredGames.length > 0 && !searchQuery && (
                   <>
-                    <div className="px-2 py-2 text-xs font-semibold uppercase tracking-wide text-gray-400">
+                    <div className="px-2 py-2 text-xs font-semibold uppercase tracking-wide text-text-secondary">
                       Popular Games
                     </div>
                     {featuredGames.map((game) => (
@@ -223,7 +223,7 @@ export default function GameSelector({
                       <div className="my-2 border-t border-white/10" />
                     )}
                     {!searchQuery && regularGames.length > 0 && (
-                      <div className="px-2 py-2 text-xs font-semibold uppercase tracking-wide text-gray-400">
+                      <div className="px-2 py-2 text-xs font-semibold uppercase tracking-wide text-text-secondary">
                         All Games
                       </div>
                     )}
@@ -244,7 +244,7 @@ export default function GameSelector({
 
                 {/* No Results */}
                 {filteredGames.length === 0 && (
-                  <div className="py-8 text-center text-sm text-gray-400">
+                  <div className="py-8 text-center text-sm text-text-secondary">
                     No games found for "{searchQuery}"
                   </div>
                 )}
@@ -276,7 +276,7 @@ function GameOption({
         'flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition-all',
         isSelected
           ? 'bg-primary/20 text-white'
-          : 'text-gray-300 hover:bg-white/5 hover:text-white'
+          : 'text-text-secondary hover:bg-white/5 hover:text-white'
       )}
     >
       {imageUrl ? (

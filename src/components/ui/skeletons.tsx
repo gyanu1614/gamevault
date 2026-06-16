@@ -19,7 +19,7 @@ function Sk({ className }: { className: string }) {
 
 export function OrderCardSkeleton() {
   return (
-    <div className="rounded-2xl bg-white/[0.04] border border-white/[0.08] p-5 space-y-4">
+    <div className="rounded-2xl bg-bg-raised border border-border-subtle p-5 space-y-4">
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-2 flex-1">
           <Sk className="h-4 w-32" />
@@ -32,7 +32,7 @@ export function OrderCardSkeleton() {
         <Sk className="h-3 w-16" />
         <Sk className="h-3 w-20" />
       </div>
-      <div className="flex items-center justify-between pt-2 border-t border-white/[0.06]">
+      <div className="flex items-center justify-between pt-2 border-t border-border-subtle">
         <Sk className="h-6 w-16" />
         <Sk className="h-8 w-24 rounded-lg" />
       </div>
@@ -46,7 +46,7 @@ export function OrderCardSkeleton() {
 
 export function ReviewCardSkeleton() {
   return (
-    <div className="rounded-2xl bg-white/[0.04] border border-white/[0.08] p-5 space-y-3">
+    <div className="rounded-2xl bg-bg-raised border border-border-subtle p-5 space-y-3">
       <div className="flex items-center gap-3">
         <Sk className="h-9 w-9 rounded-full" />
         <div className="space-y-1.5 flex-1">
@@ -67,7 +67,7 @@ export function ReviewCardSkeleton() {
 
 export function MetricCardSkeleton() {
   return (
-    <div className="rounded-2xl bg-white/[0.04] border border-white/[0.08] p-5 space-y-3">
+    <div className="rounded-2xl bg-bg-raised border border-border-subtle p-5 space-y-3">
       <div className="flex items-center justify-between">
         <Sk className="h-3 w-24" />
         <Sk className="h-7 w-7 rounded-lg" />
@@ -101,7 +101,7 @@ export function ChatMessageSkeleton({ right = false }: { right?: boolean }) {
 
 export function TableRowSkeleton({ cols = 4 }: { cols?: number }) {
   return (
-    <div className="flex items-center gap-4 px-4 py-3 border-b border-white/[0.05]">
+    <div className="flex items-center gap-4 px-4 py-3 border-b border-border-subtle">
       {Array.from({ length: cols }).map((_, i) => (
         <Sk key={i} className={cn('h-4 flex-1', i === 0 && 'w-8 flex-none')} />
       ))}

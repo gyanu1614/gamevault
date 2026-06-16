@@ -37,9 +37,9 @@ export default function RegionSelector({
 
   return (
     <div className={className}>
-      <label className="mb-3 flex items-center gap-2 text-sm font-medium text-gray-300">
+      <label className="mb-3 flex items-center gap-2 text-sm font-medium text-text-secondary">
         <Globe className="h-4 w-4" />
-        {label} <span className="text-red-400">*</span>
+        {label} <span className="text-error">*</span>
       </label>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
@@ -58,9 +58,9 @@ export default function RegionSelector({
               )}
             >
               <div className="font-semibold text-white">{region.code}</div>
-              <div className="mt-0.5 text-xs text-gray-400">{region.name}</div>
+              <div className="mt-0.5 text-xs text-text-secondary">{region.name}</div>
               {region.currency && (
-                <div className="mt-1 text-[10px] text-gray-500">{region.currency}</div>
+                <div className="mt-1 text-[10px] text-text-tertiary">{region.currency}</div>
               )}
 
               {isSelected && (

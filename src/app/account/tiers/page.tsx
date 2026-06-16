@@ -60,7 +60,7 @@ export default async function SellerTiersPage() {
   return (
     <div className="min-h-screen bg-black">
       {/* ── Header ─────────────────────────────────────────────────────────── */}
-      <div className="border-b border-white/[0.06] bg-black/60 backdrop-blur-xl">
+      <div className="border-b border-border-subtle bg-black/60 backdrop-blur-xl">
         <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
           <Link
             href="/account/dashboard"
@@ -79,7 +79,7 @@ export default async function SellerTiersPage() {
       <div className="mx-auto max-w-5xl px-4 pb-10 sm:px-6 space-y-10">
 
         {/* ── Hero: current tier ──────────────────────────────────────────── */}
-        <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-6 sm:p-8">
+        <div className="rounded-2xl border border-border-subtle bg-bg-overlay p-6 sm:p-8">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
               <p className="text-xs font-medium uppercase tracking-wider text-zinc-500 mb-2">
@@ -110,7 +110,7 @@ export default async function SellerTiersPage() {
 
         {/* ── Progress toward next tier ───────────────────────────────────── */}
         {myData && (
-          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-6">
+          <div className="rounded-2xl border border-border-subtle bg-bg-overlay p-6">
             <TierProgressBar
               stats={myData.stats}
               nextTier={nextTierForProgress}
@@ -136,23 +136,23 @@ export default async function SellerTiersPage() {
         </div>
 
         {/* ── How upgrades work ───────────────────────────────────────────── */}
-        <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-5">
+        <div className="rounded-xl border border-border-subtle bg-bg-overlay p-5">
           <h3 className="text-sm font-semibold text-white mb-3">How tier upgrades work</h3>
           <ul className="space-y-2 text-sm text-zinc-400">
             <li className="flex gap-2">
-              <span className="text-violet-400 flex-shrink-0">•</span>
+              <span className="text-lime-text flex-shrink-0">•</span>
               Tiers are checked automatically every day at 3 AM UTC.
             </li>
             <li className="flex gap-2">
-              <span className="text-violet-400 flex-shrink-0">•</span>
+              <span className="text-lime-text flex-shrink-0">•</span>
               Upgrades are permanent — tiers never decrease once earned.
             </li>
             <li className="flex gap-2">
-              <span className="text-violet-400 flex-shrink-0">•</span>
+              <span className="text-lime-text flex-shrink-0">•</span>
               Your new commission rate applies to all orders placed after the upgrade.
             </li>
             <li className="flex gap-2">
-              <span className="text-violet-400 flex-shrink-0">•</span>
+              <span className="text-lime-text flex-shrink-0">•</span>
               Completion rate is calculated from non-cancelled/refunded orders only.
             </li>
           </ul>

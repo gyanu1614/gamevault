@@ -48,6 +48,10 @@ export interface ComboboxProps {
   ariaLabel?: string
   /** Skip the auto alphabetical sort (default sorted A→Z) */
   unsorted?: boolean
+  /** Invalid state — paints the trigger border + ring red */
+  invalid?: boolean
+  /** Called when the trigger loses focus — let parents track touched state */
+  onBlur?: () => void
 }
 
 export function Combobox({
@@ -60,6 +64,8 @@ export function Combobox({
   className,
   ariaLabel,
   unsorted,
+  invalid,
+  onBlur,
 }: ComboboxProps) {
   const [open, setOpen] = React.useState(false)
   const [query, setQuery] = React.useState('')
@@ -86,7 +92,13 @@ export function Combobox({
           role="combobox"
           aria-label={ariaLabel}
           aria-expanded={open}
+          aria-invalid={invalid || undefined}
           tabIndex={disabled ? -1 : 0}
+          onBlur={(e) => {
+            // Don't fire onBlur when focus moves into the popover panel
+            if (e.relatedTarget && e.currentTarget.contains(e.relatedTarget as Node)) return
+            onBlur?.()
+          }}
           onKeyDown={(e) => {
             if (disabled) return
             if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowDown') {
@@ -95,12 +107,13 @@ export function Combobox({
             }
           }}
           className={cn(
-            // R12 — rounded-none + transparent so the trigger matches the rest of the
-            // input chrome; border defines the box.
-            'flex h-10 w-full cursor-pointer items-center justify-between rounded-none border bg-transparent px-3 text-sm transition-colors',
+            // R14 — reverted to rounded-md; transparent fill kept.
+            'flex h-10 w-full cursor-pointer items-center justify-between rounded-md border bg-transparent px-3 text-sm transition-colors',
             'border-border-default text-text-primary',
             'hover:border-border-strong',
             open && 'border-lime ring-2 ring-lime-tint-bg',
+            // Invalid (touched + empty) — overrides default border/ring.
+            invalid && !open && 'border-error ring-2 ring-error-bg',
             disabled && 'cursor-not-allowed opacity-50',
             className
           )}

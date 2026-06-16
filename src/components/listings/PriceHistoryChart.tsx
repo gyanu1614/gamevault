@@ -121,9 +121,9 @@ export function PriceHistoryChart({
 
   if (loading) {
     return (
-      <div className="w-full bg-white/[0.03] border border-white/[0.05] rounded-xl p-6">
+      <div className="w-full bg-bg-overlay border border-border-subtle rounded-xl p-6">
         <div className="flex items-center justify-center h-[300px]">
-          <div className="text-gray-400">Loading price history...</div>
+          <div className="text-text-secondary">Loading price history...</div>
         </div>
       </div>
     )
@@ -131,9 +131,9 @@ export function PriceHistoryChart({
 
   if (error) {
     return (
-      <div className="w-full bg-white/[0.03] border border-white/[0.05] rounded-xl p-6">
+      <div className="w-full bg-bg-overlay border border-border-subtle rounded-xl p-6">
         <div className="flex items-center justify-center h-[300px]">
-          <div className="text-red-400">{error}</div>
+          <div className="text-error">{error}</div>
         </div>
       </div>
     )
@@ -141,9 +141,9 @@ export function PriceHistoryChart({
 
   if (chartData.length === 0) {
     return (
-      <div className="w-full bg-white/[0.03] border border-white/[0.05] rounded-xl p-6">
+      <div className="w-full bg-bg-overlay border border-border-subtle rounded-xl p-6">
         <div className="flex items-center justify-center h-[300px]">
-          <div className="text-gray-400">No price history available</div>
+          <div className="text-text-secondary">No price history available</div>
         </div>
       </div>
     )
@@ -153,7 +153,7 @@ export function PriceHistoryChart({
     if (active && payload && payload.length) {
       return (
         <div className="bg-gray-900 border border-white/[0.1] rounded-lg p-3 shadow-xl">
-          <p className="text-sm text-gray-400 mb-1">{payload[0].payload.formattedDate}</p>
+          <p className="text-sm text-text-secondary mb-1">{payload[0].payload.formattedDate}</p>
           <p className="text-lg font-semibold text-white">
             {formatPrice(payload[0].value)}
           </p>
@@ -164,20 +164,20 @@ export function PriceHistoryChart({
   }
 
   return (
-    <div className="w-full bg-white/[0.03] border border-white/[0.05] rounded-xl p-6 space-y-6">
+    <div className="w-full bg-bg-overlay border border-border-subtle rounded-xl p-6 space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-lg font-semibold text-white">Price History</h3>
-          <p className="text-sm text-gray-400 mt-1">
+          <p className="text-sm text-text-secondary mt-1">
             Last {days} days
           </p>
         </div>
 
         {volatility && (
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-white/[0.05] rounded-lg">
-            <Activity className="w-4 h-4 text-violet-400" />
-            <span className="text-sm text-gray-300">{volatility.description}</span>
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-bg-overlay rounded-lg">
+            <Activity className="w-4 h-4 text-lime-text" />
+            <span className="text-sm text-text-secondary">{volatility.description}</span>
           </div>
         )}
       </div>
@@ -242,7 +242,7 @@ export function PriceHistoryChart({
 
       {/* Stats */}
       {showStats && stats && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t border-white/[0.05]">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t border-border-subtle">
           <StatCard
             label="Current Price"
             value={formatPrice(stats.currentPrice)}
@@ -251,14 +251,14 @@ export function PriceHistoryChart({
           <StatCard
             label="Lowest Price"
             value={formatPrice(stats.lowestPrice)}
-            icon={<TrendingDown className="w-4 h-4 text-red-400" />}
-            valueColor="text-red-400"
+            icon={<TrendingDown className="w-4 h-4 text-error" />}
+            valueColor="text-error"
           />
           <StatCard
             label="Highest Price"
             value={formatPrice(stats.highestPrice)}
-            icon={<TrendingUp className="w-4 h-4 text-green-400" />}
-            valueColor="text-green-400"
+            icon={<TrendingUp className="w-4 h-4 text-success" />}
+            valueColor="text-success"
           />
           <StatCard
             label="Average Price"
@@ -283,7 +283,7 @@ function StatCard({ label, value, icon, valueColor = 'text-white' }: StatCardPro
     <div className="space-y-1">
       <div className="flex items-center gap-1.5">
         {icon}
-        <p className="text-xs text-gray-400">{label}</p>
+        <p className="text-xs text-text-secondary">{label}</p>
       </div>
       <p className={`text-lg font-semibold ${valueColor}`}>{value}</p>
     </div>

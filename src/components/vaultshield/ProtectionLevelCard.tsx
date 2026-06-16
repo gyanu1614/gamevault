@@ -37,9 +37,9 @@ const levelConfig = {
   enhanced: {
     icon: ShieldCheck,
     label: 'Enhanced Protection',
-    color: 'text-violet-400',
+    color: 'text-lime-text',
     bgGradient: 'from-violet-500/10 to-violet-500/5',
-    borderColor: 'border-violet-500/20',
+    borderColor: 'border-lime-tint-border',
     description: 'Advanced security for valuable purchases',
     features: [
       { icon: Clock, text: '48-hour secure escrow hold' },
@@ -90,7 +90,7 @@ export function ProtectionLevelCard({
         <div className="flex items-center gap-3">
           <div
             className={cn(
-              'p-2.5 rounded-lg bg-white/[0.05] border',
+              'p-2.5 rounded-lg bg-bg-overlay border',
               config.borderColor
             )}
           >
@@ -127,7 +127,7 @@ export function ProtectionLevelCard({
           </div>
 
           {/* Notice */}
-          <div className="pt-4 border-t border-white/[0.05]">
+          <div className="pt-4 border-t border-border-subtle">
             <p className="text-xs text-gray-400">{config.notice}</p>
           </div>
         </>

@@ -39,7 +39,7 @@ function DigitBlock({ value, label, color }: { value: number; label: string; col
       )}>
         {str}
       </div>
-      <span className="text-[9px] font-medium uppercase tracking-[0.08em] text-gray-600">{label}</span>
+      <span className="text-[9px] font-medium uppercase tracking-[0.08em] text-text-disabled">{label}</span>
     </div>
   )
 }
@@ -95,12 +95,12 @@ export default function DeliveryTimer({
     return (
       <div className="rounded-2xl border border-green-500/20 bg-green-500/[0.06] px-3.5 py-2.5 flex items-center w-fit">
         <div className="flex items-center gap-2.5">
-          <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl border border-green-500/30 bg-green-500/10">
-            <Zap className="h-3.5 w-3.5 text-green-400" />
+          <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl border border-success/30 bg-success-bg">
+            <Zap className="h-3.5 w-3.5 text-success" />
           </div>
           <div>
-            <div className="text-[11px] font-bold uppercase tracking-[0.1em] text-green-400">Instant Delivery</div>
-            <div className="text-xs text-gray-500 mt-0.5">Delivered automatically</div>
+            <div className="text-[11px] font-bold uppercase tracking-[0.1em] text-success">Instant Delivery</div>
+            <div className="text-xs text-text-tertiary mt-0.5">Delivered automatically</div>
           </div>
         </div>
       </div>
@@ -138,15 +138,15 @@ export default function DeliveryTimer({
         wasOnTime ? 'border-green-500/20 bg-green-500/[0.06]' : 'border-amber-500/20 bg-amber-500/[0.06]'
       )}>
         <div className="flex flex-col items-center gap-2 w-full">
-          <div className={cn('flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-[0.1em]', wasOnTime ? 'text-green-400' : 'text-amber-400')}>
+          <div className={cn('flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-[0.1em]', wasOnTime ? 'text-success' : 'text-amber-400')}>
             <CheckCircle2 className="h-3 w-3" />
             {wasOnTime ? 'Delivered On Time' : 'Delivered Late'}
           </div>
           <div className="flex items-end gap-1.5">
             <DigitBlock value={h} label="Hours" color={wasOnTime ? 'border-green-500/20 bg-green-500/[0.08] text-green-300' : 'border-amber-500/20 bg-amber-500/[0.08] text-amber-300'} />
-            <Colon color={wasOnTime ? 'text-green-500/40' : 'text-amber-500/40'} />
+            <Colon color={wasOnTime ? 'text-success/40' : 'text-amber-500/40'} />
             <DigitBlock value={m} label="Minutes" color={wasOnTime ? 'border-green-500/20 bg-green-500/[0.08] text-green-300' : 'border-amber-500/20 bg-amber-500/[0.08] text-amber-300'} />
-            <Colon color={wasOnTime ? 'text-green-500/40' : 'text-amber-500/40'} />
+            <Colon color={wasOnTime ? 'text-success/40' : 'text-amber-500/40'} />
             <DigitBlock value={s} label="Seconds" color={wasOnTime ? 'border-green-500/20 bg-green-500/[0.08] text-green-300' : 'border-amber-500/20 bg-amber-500/[0.08] text-amber-300'} />
           </div>
         </div>
@@ -155,15 +155,15 @@ export default function DeliveryTimer({
         <div className="w-full space-y-2.5 pt-2 border-t border-white/5">
           {/* Delivery window */}
           <div className="flex items-center justify-between text-[11px]">
-            <span className="text-gray-500">Expected time</span>
-            <span className="text-gray-300 font-medium">{deliveryTime || 'N/A'}</span>
+            <span className="text-text-tertiary">Expected time</span>
+            <span className="text-text-secondary font-medium">{deliveryTime || 'N/A'}</span>
           </div>
 
           {/* Single status message */}
           <div className="text-center">
             <div className={cn(
               'text-xs font-semibold',
-              wasOnTime ? 'text-green-400' : 'text-red-400'
+              wasOnTime ? 'text-success' : 'text-error'
             )}>
               {wasOnTime ? (
                 'Delivered on time'
@@ -186,16 +186,16 @@ export default function DeliveryTimer({
     const wm = Math.floor((windowSec % 3600) / 60)
     const ws = windowSec % 60
     return (
-      <div className="h-full rounded-2xl border border-white/[0.06] bg-white/[0.025] px-4 py-3 flex flex-col items-center justify-center">
-        <div className="text-[10px] font-bold uppercase tracking-[0.1em] text-gray-500 mb-2">
+      <div className="h-full rounded-2xl border border-border-subtle bg-white/[0.025] px-4 py-3 flex flex-col items-center justify-center">
+        <div className="text-[10px] font-bold uppercase tracking-[0.1em] text-text-tertiary mb-2">
           {role === 'buyer' ? 'Delivery Timer' : 'Delivery Window'}
         </div>
         <div className="flex items-end gap-2">
-          <DigitBlock value={wh} label="Hours"   color="border-white/[0.08] bg-white/[0.04] text-gray-600" />
+          <DigitBlock value={wh} label="Hours"   color="border-border-subtle bg-bg-raised text-text-disabled" />
           <Colon color="text-white/10" />
-          <DigitBlock value={wm} label="Minutes" color="border-white/[0.08] bg-white/[0.04] text-gray-600" />
+          <DigitBlock value={wm} label="Minutes" color="border-border-subtle bg-bg-raised text-text-disabled" />
           <Colon color="text-white/10" />
-          <DigitBlock value={ws} label="Seconds" color="border-white/[0.08] bg-white/[0.04] text-gray-600" />
+          <DigitBlock value={ws} label="Seconds" color="border-border-subtle bg-bg-raised text-text-disabled" />
         </div>
         <div className="text-[10px] text-gray-700 mt-2">
           {deliveryTime ? 'Waiting for seller to start' : 'No time window set'}
@@ -219,12 +219,12 @@ export default function DeliveryTimer({
 
   const scheme = isOverdue
     ? {
-        border: 'border-red-500/20',
+        border: 'border-error/40',
         bg: 'bg-red-500/[0.06]',
-        label: 'text-red-400',
-        digit: 'border-red-500/20 bg-red-500/[0.08] text-red-300',
-        colon: 'text-red-500/40',
-        sub: 'text-red-400/50',
+        label: 'text-error',
+        digit: 'border-error/40 bg-red-500/[0.08] text-error',
+        colon: 'text-error/40',
+        sub: 'text-error/50',
       }
     : isWarning
     ? {
@@ -236,12 +236,12 @@ export default function DeliveryTimer({
         sub: 'text-amber-400/50',
       }
     : {
-        border: 'border-violet-500/20',
-        bg: 'bg-violet-500/[0.06]',
-        label: 'text-violet-400',
-        digit: 'border-violet-500/20 bg-violet-500/[0.08] text-white',
-        colon: 'text-violet-500/40',
-        sub: 'text-gray-600',
+        border: 'border-lime-tint-border',
+        bg: 'bg-lime/[0.06]',
+        label: 'text-lime-text',
+        digit: 'border-lime-tint-border bg-lime/[0.08] text-text-inverse',
+        colon: 'text-lime-text/40',
+        sub: 'text-text-disabled',
       }
 
   const headerLabel = isOverdue
@@ -258,7 +258,7 @@ export default function DeliveryTimer({
         <div className={cn('text-[10px] font-bold uppercase tracking-[0.1em]', scheme.label)}>
           {headerLabel}
         </div>
-        {isOverdue && <AlertTriangle className="h-3.5 w-3.5 text-red-400" />}
+        {isOverdue && <AlertTriangle className="h-3.5 w-3.5 text-error" />}
         {!isOverdue && (
           <span className="relative flex h-1.5 w-1.5">
             <span className={cn('animate-ping absolute inline-flex h-full w-full rounded-full opacity-60', isWarning ? 'bg-amber-400' : 'bg-violet-400')} />

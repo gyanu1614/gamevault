@@ -320,9 +320,9 @@ export default function ChatInterface({
     return (
       <div className={`flex h-full items-center justify-center ${className}`}>
         <div className="text-center">
-          <AlertCircle className="mx-auto mb-3 h-12 w-12 text-red-500" />
+          <AlertCircle className="mx-auto mb-3 h-12 w-12 text-error" />
           <h3 className="mb-2 text-lg font-semibold text-white">Failed to load chat</h3>
-          <p className="text-sm text-gray-400">{error}</p>
+          <p className="text-sm text-text-secondary">{error}</p>
           <button
             onClick={() => {
               setError(null)
@@ -330,7 +330,7 @@ export default function ChatInterface({
               // Retry loading instead of full page reload
               window.location.reload()
             }}
-            className="mt-4 rounded-lg bg-violet-500 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-600"
+            className="mt-4 rounded-lg bg-lime px-4 py-2 text-sm font-semibold text-text-inverse hover:bg-lime"
           >
             Reload
           </button>
@@ -343,24 +343,24 @@ export default function ChatInterface({
     <div className={`flex h-full flex-col bg-black ${className}`}>
       {/* Admin View: Party Indicators */}
       {isAdmin && order?.buyer && order?.seller && (
-        <div className="bg-gradient-to-r from-gray-500/10 via-black to-violet-500/10 border-b border-white/[0.05] px-4 py-2">
+        <div className="bg-gradient-to-r from-gray-500/10 via-black to-lime/10 border-b border-border-subtle px-4 py-2">
           <div className="flex items-center justify-between text-xs">
             <div className="flex items-center gap-2">
               <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-gray-500/15 border border-gray-500/20">
-                <svg className="w-3.5 h-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="w-3.5 h-3.5 text-text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
                 </svg>
-                <span className="font-semibold text-gray-300">LEFT: Seller</span>
-                <span className="text-gray-500">({order.seller.username})</span>
+                <span className="font-semibold text-text-secondary">LEFT: Seller</span>
+                <span className="text-text-tertiary">({order.seller.username})</span>
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-violet-500/15 border border-violet-500/20">
-                <svg className="w-3.5 h-3.5 text-violet-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-lime/15 border border-lime-tint-border">
+                <svg className="w-3.5 h-3.5 text-lime-text" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                 </svg>
-                <span className="font-semibold text-violet-300">RIGHT: Buyer</span>
-                <span className="text-violet-500">({order.buyer.username})</span>
+                <span className="font-semibold text-lime-text">RIGHT: Buyer</span>
+                <span className="text-lime-text">({order.buyer.username})</span>
               </div>
             </div>
           </div>
@@ -369,14 +369,14 @@ export default function ChatInterface({
 
       {/* Chat Expired Banner */}
       {isChatExpired && !isAdmin && (
-        <div className="bg-yellow-500/10 border-b border-yellow-500/30 px-4 py-3">
+        <div className="bg-warning-bg border-b border-warning/40 px-4 py-3">
           <div className="flex items-center gap-2">
-            <AlertCircle className="w-5 h-5 text-yellow-400 flex-shrink-0" />
+            <AlertCircle className="w-5 h-5 text-warning flex-shrink-0" />
             <div className="flex-1">
-              <div className="text-sm font-semibold text-yellow-400">
+              <div className="text-sm font-semibold text-warning">
                 Chat Inactive - Order Completed Over 7 Days Ago
               </div>
-              <div className="text-xs text-gray-400">
+              <div className="text-xs text-text-secondary">
                 This conversation is now read-only. Contact support if you need assistance.
               </div>
             </div>
@@ -399,16 +399,16 @@ export default function ChatInterface({
 
       {/* Delivery Evidence Upload Panel (seller only, orders ≥ $100) */}
       {evidenceProps && !isChatExpired && (
-        <div className="border-t border-white/[0.05]">
+        <div className="border-t border-border-subtle">
           <button
             onClick={() => setShowEvidencePanel(p => !p)}
-            className="w-full flex items-center justify-between px-4 py-2.5 text-xs text-gray-500 hover:text-gray-300 hover:bg-white/[0.03] transition-colors"
+            className="w-full flex items-center justify-between px-4 py-2.5 text-xs text-text-tertiary hover:text-text-secondary hover:bg-bg-overlay transition-colors"
           >
             <div className="flex items-center gap-2">
-              <Upload className="h-3.5 w-3.5 text-violet-400" />
-              <span className="font-medium text-violet-400/80">Upload Delivery Proof</span>
+              <Upload className="h-3.5 w-3.5 text-lime-text" />
+              <span className="font-medium text-lime-text/80">Upload Delivery Proof</span>
               {evidenceProps.existingEvidence.length > 0 && (
-                <span className="px-1.5 py-0.5 rounded-full bg-violet-500/20 text-violet-400 text-[10px] font-semibold">
+                <span className="px-1.5 py-0.5 rounded-full bg-lime/20 text-lime-text text-[10px] font-semibold">
                   {evidenceProps.existingEvidence.length}
                 </span>
               )}
@@ -420,7 +420,7 @@ export default function ChatInterface({
             )}
           </button>
           {showEvidencePanel && (
-            <div className="px-4 pb-4 border-t border-white/[0.04]">
+            <div className="px-4 pb-4 border-t border-border-subtle">
               <DeliveryEvidenceUpload
                 orderId={evidenceProps.orderId}
                 existingEvidence={evidenceProps.existingEvidence}

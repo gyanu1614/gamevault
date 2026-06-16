@@ -8,10 +8,11 @@
  * Active tab gets a subtle highlight; Framer Motion animates between them.
  */
 
+import { useEffect, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
-import { ChevronLeft } from 'lucide-react'
+import { ChevronLeft, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 export interface GameCategory {
@@ -39,23 +40,78 @@ export default function GameSubNav({
   categories,
 }: GameSubNavProps) {
   const router = useRouter()
+  // V14m — Track which tab is mid-navigation so we can show a small spinner
+  // on it (instead of the whole UI sitting silent until the new page paints).
+  const [isPendingNav, startNavTransition] = useTransition()
+  const [pendingSlug, setPendingSlug] = useState<string | null>(null)
+  // V14s — Spinner-visibility gate. Cached/instant navigations resolve in
+  // under a frame; flashing a spinner for ~100ms reads as glitchy. We only
+  // reveal the spinner after a short delay so quick transitions stay clean
+  // and only the genuinely slow ones get the loading state.
+  const [spinnerVisible, setSpinnerVisible] = useState(false)
+  const spinnerTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    if (isPendingNav && pendingSlug) {
+      // V14u — Arm the spinner only after 350ms. Cached / fast routes resolve
+      // in 50-300ms; flashing a spinner for sub-second navs reads as glitchy.
+      // We only reveal the spinner for genuinely slow transitions (>350ms).
+      spinnerTimerRef.current = setTimeout(() => setSpinnerVisible(true), 350)
+    } else {
+      // Nav finished (or never started): cancel pending reveal and hide.
+      if (spinnerTimerRef.current) clearTimeout(spinnerTimerRef.current)
+      setSpinnerVisible(false)
+      if (!isPendingNav) setPendingSlug(null)
+    }
+    return () => {
+      if (spinnerTimerRef.current) clearTimeout(spinnerTimerRef.current)
+    }
+  }, [isPendingNav, pendingSlug])
+
+  // V15j — Eliminate the /roblox/robux → /roblox/buy-robux flash by
+  // rewriting known currency aliases to their canonical slug BEFORE
+  // we fire router.push. The server still redirects non-canonical
+  // aliases (so external links keep working), but our own sub-nav
+  // never makes the user pay the round-trip.
+  const CURRENCY_CANONICAL_BY_GAME: Record<string, string> = {
+    roblox: 'buy-robux',
+    fortnite: 'buy-vbucks',
+    valorant: 'buy-valorant-points',
+    'genshin-impact': 'buy-genesis-crystals',
+    'apex-legends': 'buy-apex-coins',
+  }
+  const CURRENCY_ALIASES = new Set(['currency', 'robux', 'v-bucks', 'vbucks', 'valorant-points', 'genesis-crystals', 'apex-coins'])
+
+  const goToCategory = (slug: string) => {
+    if (slug === currentCategorySlug) return
+    // Rewrite if this slug is a known currency alias for this game and a
+    // canonical exists.
+    const canonical = CURRENCY_ALIASES.has(slug)
+      ? CURRENCY_CANONICAL_BY_GAME[gameSlug]
+      : undefined
+    const targetSlug = canonical ?? slug
+    setPendingSlug(targetSlug)
+    startNavTransition(() => {
+      router.push(`/${gameSlug}/${targetSlug}`)
+    })
+  }
 
   return (
-    /* Sticky container — sits right below the fixed main navbar (top-[72px])
-       py-10 on desktop / py-6 on mobile gives a balanced gap */
-    <div className="sticky top-[72px] z-40 flex justify-center py-6 sm:py-8 md:py-10 pointer-events-none bg-black px-3">
+    /* V14f — Non-sticky. Scrolls away with the rest of the page so the
+       viewport opens up as the user moves down. */
+    <div className="relative z-40 flex justify-center py-6 sm:py-8 md:py-10 pointer-events-none bg-bg-base px-3">
       <div
         className={cn(
           'pointer-events-auto w-full max-w-fit',
           'flex items-center gap-0.5',
-          'rounded-full border border-white/[0.1] bg-black shadow-2xl backdrop-blur-xl',
+          'rounded-full border border-white/[0.1] bg-bg-base shadow-2xl backdrop-blur-xl',
           'px-2 py-2 sm:px-3 sm:py-2.5',
         )}
       >
         {/* ── Game name / logo ───────────────────────────────────────── */}
         <Link
           href={`/${gameSlug}`}
-          className="group flex items-center gap-2 flex-shrink-0 rounded-full px-3 py-1.5 sm:px-4 sm:py-2 transition-colors hover:bg-white/[0.06]"
+          className="group flex items-center gap-2 flex-shrink-0 rounded-full px-3 py-1.5 sm:px-4 sm:py-2 transition-colors hover:bg-bg-raised-hover"
         >
           {gameImageUrl ? (
             <img
@@ -64,7 +120,7 @@ export default function GameSubNav({
               className="w-6 h-6 sm:w-7 sm:h-7 rounded-md object-contain opacity-95"
             />
           ) : null}
-          <span className="text-sm sm:text-[15px] font-bold text-gray-200 group-hover:text-white transition-colors whitespace-nowrap tracking-tight">
+          <span className="text-sm sm:text-[15px] font-bold text-gray-200 group-hover:text-text-primary transition-colors whitespace-nowrap tracking-tight">
             {gameName}
           </span>
         </Link>
@@ -76,7 +132,7 @@ export default function GameSubNav({
         {categories.length === 0 ? (
           <Link
             href="/"
-            className="flex items-center gap-1 rounded-full px-2.5 py-1 sm:px-3 sm:py-1.5 text-xs sm:text-sm text-gray-400 hover:text-white hover:bg-white/[0.06] transition-colors"
+            className="flex items-center gap-1 rounded-full px-2.5 py-1 sm:px-3 sm:py-1.5 text-xs sm:text-sm text-text-secondary hover:text-text-primary hover:bg-bg-raised-hover transition-colors"
           >
             <ChevronLeft className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
             Marketplace
@@ -88,28 +144,50 @@ export default function GameSubNav({
           >
             {categories.map((cat) => {
               const isActive = cat.slug === currentCategorySlug
+              // V15j — Spinner-pending compares against EITHER the DB slug
+              // OR its canonical alias, so the spinner still lights up
+              // when we rewrote the click to the canonical (currency tabs).
+              const canonicalForCat = CURRENCY_ALIASES.has(cat.slug)
+                ? CURRENCY_CANONICAL_BY_GAME[gameSlug]
+                : undefined
+              const isPending =
+                pendingSlug === cat.slug ||
+                (canonicalForCat !== undefined && pendingSlug === canonicalForCat)
+              // V14s — Only swap to the spinner / lime tint after the
+              // 150ms grace period. Sub-150ms navs stay clean — no flash.
+              const showLoading = isPending && spinnerVisible
               const showIcon = cat.icon_type === 'image' || cat.icon_type === 'svg'
               const icon = showIcon && cat.icon_url ? cat.icon_url : cat.icon_emoji
 
               return (
                 <button
                   key={cat.id}
-                  onClick={() => router.push(`/${gameSlug}/${cat.slug}`)}
+                  onClick={() => goToCategory(cat.slug)}
+                  disabled={isPending}
                   className={cn(
                     'relative flex-shrink-0 flex items-center gap-1.5 px-2.5 py-1 sm:px-3.5 sm:py-1.5 text-xs sm:text-sm font-medium whitespace-nowrap rounded-full transition-colors',
                     isActive
-                      ? 'text-white'
-                      : 'text-gray-400 hover:text-gray-100 hover:bg-white/[0.05]'
+                      ? 'text-text-primary'
+                      : 'text-text-secondary hover:text-gray-100 hover:bg-bg-overlay',
+                    isPending && 'cursor-wait'
                   )}
                 >
-                  {isActive && (
+                  {(isActive || showLoading) && (
                     <motion.span
                       layoutId="activeCategory"
-                      className="absolute inset-0 rounded-full bg-white/[0.1]"
+                      className={cn(
+                        'absolute inset-0 rounded-full',
+                        showLoading ? 'bg-lime-tint-bg/40' : 'bg-white/[0.1]'
+                      )}
                       transition={{ type: 'spring', stiffness: 400, damping: 35 }}
                     />
                   )}
-                  {icon && (
+                  {/* V14m — Swap the leading icon for a spinner while the
+                      target page is loading. V14s — only after 150ms so
+                      cached/instant navs don't flash. */}
+                  {showLoading ? (
+                    <Loader2 className="relative z-10 h-4 w-4 animate-spin text-lime-text" />
+                  ) : icon ? (
                     <span className="relative z-10">
                       {showIcon ? (
                         <img
@@ -121,8 +199,11 @@ export default function GameSubNav({
                         <span className="text-sm">{icon}</span>
                       )}
                     </span>
-                  )}
-                  <span className="relative z-10">{cat.name}</span>
+                  ) : null}
+                  <span className={cn(
+                    'relative z-10',
+                    showLoading && 'text-lime-text'
+                  )}>{cat.name}</span>
                 </button>
               )
             })}

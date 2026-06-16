@@ -84,7 +84,7 @@ export function GlassModal({
   }
 
   const intensityClasses: Record<NonNullable<GlassModalProps['intensity']>, string> = {
-    light:  'bg-[#111118]/80 backdrop-blur-xl  border border-white/[0.08]',
+    light:  'bg-[#111118]/80 backdrop-blur-xl  border border-border-subtle',
     medium: 'bg-[#111118]/90 backdrop-blur-2xl border border-white/[0.12]',
     heavy:  'bg-[#0a0a0f]/95 backdrop-blur-3xl border border-white/[0.14]',
   }
@@ -125,7 +125,7 @@ export function GlassModal({
           >
             {/* Header */}
             {(title || showClose) && (
-              <div className="flex items-start justify-between px-6 pt-6 pb-4 border-b border-white/[0.07]">
+              <div className="flex items-start justify-between px-6 pt-6 pb-4 border-b border-border-subtle">
                 <div className="flex-1 min-w-0 pr-4">
                   {title && (
                     <h2 className="text-lg font-display font-semibold text-foreground leading-tight">
@@ -161,7 +161,7 @@ export function GlassModal({
 
             {/* Footer */}
             {footer && (
-              <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-white/[0.07]">
+              <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-border-subtle">
                 {footer}
               </div>
             )}

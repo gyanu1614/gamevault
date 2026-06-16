@@ -73,8 +73,8 @@ export default function ReviewCard({
   // Determine if positive or negative based on rating
   const isPositive = review.rating >= 4
   const ThumbIcon = isPositive ? ThumbsUp : ThumbsDown
-  const thumbColor = isPositive ? 'text-green-400' : 'text-red-400'
-  const thumbBg = isPositive ? 'bg-green-500/10' : 'bg-red-500/10'
+  const thumbColor = isPositive ? 'text-success' : 'text-error'
+  const thumbBg = isPositive ? 'bg-success-bg' : 'bg-error-bg'
 
   // Format timestamp
   const timeAgo = formatDistanceToNow(new Date(review.created_at), { addSuffix: true })
@@ -85,7 +85,7 @@ export default function ReviewCard({
   const shortListingTitle = shortenTitle(listingTitle, 25)
 
   return (
-    <div className="max-w-2xl bg-white/[0.02] border border-white/[0.06] rounded-xl p-4 space-y-3 hover:border-white/[0.1] transition-all">
+    <div className="max-w-2xl bg-bg-overlay border border-border-subtle rounded-xl p-4 space-y-3 hover:border-white/[0.1] transition-all">
       {/* Header: Avatar + Name + Verified + Thumbs */}
       <div className="flex items-start gap-3">
         {/* Avatar - Smaller and Compact */}
@@ -108,16 +108,16 @@ export default function ReviewCard({
           <div className="flex items-center gap-2 flex-wrap">
             <h4 className="text-sm font-semibold text-white">{anonymizedName}</h4>
             {review.is_verified_purchase && (
-              <div className="flex items-center gap-1 px-1.5 py-0.5 bg-green-500/10 border border-green-500/20 rounded text-green-400">
+              <div className="flex items-center gap-1 px-1.5 py-0.5 bg-success-bg border border-green-500/20 rounded text-success">
                 <Shield className="w-3 h-3" />
                 <span className="text-[10px] font-medium">Verified</span>
               </div>
             )}
           </div>
           <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-            <p className="text-xs text-gray-500">{timeAgo}</p>
+            <p className="text-xs text-text-tertiary">{timeAgo}</p>
             {isEdited && (
-              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-gray-500/10 border border-gray-500/20 text-gray-400">
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-gray-500/10 border border-gray-500/20 text-text-secondary">
                 <Edit3 className="w-2.5 h-2.5" />
                 Edited
               </span>
@@ -133,9 +133,9 @@ export default function ReviewCard({
 
       {/* Game → Product Info */}
       {review.listing && (
-        <div className="text-xs text-gray-400 flex items-center gap-1.5">
+        <div className="text-xs text-text-secondary flex items-center gap-1.5">
           <span className="font-medium">{gameName}</span>
-          <span className="text-gray-600">→</span>
+          <span className="text-text-disabled">→</span>
           <span className="truncate">{shortListingTitle}</span>
         </div>
       )}
@@ -146,13 +146,13 @@ export default function ReviewCard({
       )}
 
       {/* Review Comment */}
-      <p className="text-sm text-gray-300 leading-relaxed whitespace-pre-wrap">
+      <p className="text-sm text-text-secondary leading-relaxed whitespace-pre-wrap">
         {review.comment}
       </p>
 
       {/* Action Buttons Row */}
       {(isReviewer || canViewOrder) && (
-        <div className="flex items-center justify-between pt-2 border-t border-white/[0.05]">
+        <div className="flex items-center justify-between pt-2 border-t border-border-subtle">
           {/* Left: Edit Button */}
           <div>
             {isReviewer && (
@@ -171,7 +171,7 @@ export default function ReviewCard({
           {canViewOrder && review.order_id && (
             <Link
               href={`/orders/${review.order_id}`}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-400 hover:text-gray-300 hover:bg-white/[0.05] rounded-lg transition-all"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-text-secondary hover:text-text-secondary hover:bg-bg-overlay rounded-lg transition-all"
             >
               <ExternalLink className="w-3.5 h-3.5" />
               View Order
@@ -205,12 +205,12 @@ export default function ReviewCard({
             <MessageCircle className="w-3 h-3 text-purple-400" />
             <span className="text-xs font-medium text-purple-400">{sellerName}</span>
             {review.seller_responded_at && (
-              <span className="text-[10px] text-gray-600">
+              <span className="text-[10px] text-text-disabled">
                 {formatDistanceToNow(new Date(review.seller_responded_at), { addSuffix: true })}
               </span>
             )}
           </div>
-          <p className="text-xs text-gray-400 leading-relaxed">
+          <p className="text-xs text-text-secondary leading-relaxed">
             {review.seller_response}
           </p>
         </div>

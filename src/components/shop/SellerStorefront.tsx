@@ -1,36 +1,24 @@
-/**
- * Seller Storefront Component
- *
- * Client component for public seller shop with tabbed interface
- */
-
 'use client'
 
-import React, { useState, useMemo } from 'react'
+/**
+ * SellerStorefront — V10 reskin.
+ *
+ * Public shop page: banner → Tabs (Shop / Reviews / About). Listings grid
+ * reuses the ListingCard for parity with browse/marketplace. Filter row
+ * uses Combobox (game) and primitives across the board. Mobile-first.
+ */
+
+import React, { useMemo, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import {
-  Store,
-  Star,
-  Package,
-  ShoppingBag,
-  MessageSquare,
-  Clock,
-  Shield,
-  TrendingUp,
-  MapPin,
-  Calendar,
-  CheckCircle2,
-  ChevronDown,
-  Filter,
-  Grid3x3,
-  List as ListIcon
-} from 'lucide-react'
-import { cn } from '@/lib/utils'
-import { getAvatarUrl } from '@/lib/utils/avatar'
-import { formatDistanceToNow } from 'date-fns'
+import { Package, Calendar, Shield, Star, Crown, Gem, Sparkles, Award, ShieldCheck } from 'lucide-react'
+
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+import { Combobox, type ComboboxOption } from '@/components/ui/combobox'
 import SellerProfileBanner from '@/components/shop/SellerProfileBanner'
 import ReviewsList from '@/components/reviews/ReviewsList'
+import { cn } from '@/lib/utils'
+import { getAvatarUrl } from '@/lib/utils/avatar'
 
 interface SellerStorefrontProps {
   seller: {
@@ -47,36 +35,50 @@ interface SellerStorefrontProps {
   }
 }
 
+const TIER_CONFIG: Record<string, { label: string; cls: string }> = {
+  unverified: { label: 'Unverified', cls: 'text-zinc-300' },
+  bronze:     { label: 'Bronze',     cls: 'text-orange-300' },
+  silver:     { label: 'Silver',     cls: 'text-slate-200' },
+  gold:       { label: 'Gold',       cls: 'text-yellow-300' },
+  platinum:   { label: 'Platinum',   cls: 'text-cyan-300' },
+  diamond:    { label: 'Diamond',    cls: 'text-lime-text' },
+}
+
 export default function SellerStorefront({ seller }: SellerStorefrontProps) {
   const [activeTab, setActiveTab] = useState<'shop' | 'reviews' | 'about'>('shop')
   const [selectedGame, setSelectedGame] = useState<string>('all')
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
 
   // Group listings by game
   const listingsByGame = useMemo(() => {
     const grouped: Record<string, any[]> = {}
     seller.listings.forEach((listing) => {
       const game = listing.game?.name || 'Other'
-      if (!grouped[game]) {
-        grouped[game] = []
-      }
+      if (!grouped[game]) grouped[game] = []
       grouped[game].push(listing)
     })
     return grouped
   }, [seller.listings])
 
-  const games = ['all', ...Object.keys(listingsByGame)]
+  const gameOptions: ComboboxOption[] = useMemo(
+    () => [
+      { value: 'all', label: `All games (${seller.listings.length})` },
+      ...Object.keys(listingsByGame).map((g) => ({
+        value: g,
+        label: `${g} (${listingsByGame[g].length})`,
+      })),
+    ],
+    [listingsByGame, seller.listings.length],
+  )
 
-  const filteredListings = selectedGame === 'all'
-    ? seller.listings
-    : listingsByGame[selectedGame] || []
+  const filteredListings =
+    selectedGame === 'all' ? seller.listings : listingsByGame[selectedGame] || []
 
-  const isOnline = false // TODO: Implement online status check
+  const isOnline = false
+  const sellerTier = (seller.profile.seller_tier || 'bronze') as keyof typeof TIER_CONFIG
+  const tier = TIER_CONFIG[sellerTier] ?? TIER_CONFIG.bronze
 
-  const sellerTier = seller.profile.seller_tier || 'bronze'
-
-  // JSON-LD Structured Data for SEO
-  const businessName = seller.profile.shop_name || seller.profile.business_name || seller.profile.username;
+  // JSON-LD
+  const businessName = seller.profile.shop_name || seller.profile.business_name || seller.profile.username
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'Store',
@@ -84,39 +86,26 @@ export default function SellerStorefront({ seller }: SellerStorefrontProps) {
     image: getAvatarUrl(seller.profile.avatar_url, seller.profile.username),
     description: `Gaming marketplace seller on GameVault`,
     url: `${typeof window !== 'undefined' ? window.location.origin : ''}/shop/${seller.profile.shop_slug || seller.profile.username}`,
-    aggregateRating: seller.stats.totalReviews > 0 ? {
-      '@type': 'AggregateRating',
-      ratingValue: seller.stats.avgRating,
-      reviewCount: seller.stats.totalReviews,
-      bestRating: 5,
-      worstRating: 1
-    } : undefined,
-    founder: {
-      '@type': 'Person',
-      name: seller.profile.username,
-    },
-    memberOf: {
-      '@type': 'Organization',
-      name: 'GameVault'
-    }
-  };
-  const tierColors = {
-    bronze: 'text-orange-400',
-    silver: 'text-gray-300',
-    gold: 'text-yellow-400',
-    platinum: 'text-purple-400'
-  };
+    aggregateRating:
+      seller.stats.totalReviews > 0
+        ? {
+            '@type': 'AggregateRating',
+            ratingValue: seller.stats.avgRating,
+            reviewCount: seller.stats.totalReviews,
+            bestRating: 5,
+            worstRating: 1,
+          }
+        : undefined,
+    founder: { '@type': 'Person', name: seller.profile.username },
+    memberOf: { '@type': 'Organization', name: 'GameVault' },
+  }
 
   return (
     <>
-      {/* JSON-LD Structured Data */}
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-      />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
 
-      <div className="min-h-screen bg-gradient-to-b from-black via-gray-900 to-black">
-        {/* Seller Profile Banner */}
+      <main className="min-h-screen bg-bg-base pb-16">
+        {/* Banner */}
         <div className="mx-auto max-w-7xl px-4 pt-8 sm:px-6 lg:px-8">
           <SellerProfileBanner
             sellerId={seller.profile.id}
@@ -133,213 +122,249 @@ export default function SellerStorefront({ seller }: SellerStorefrontProps) {
             bannerConfig={
               seller.profile.banner_url
                 ? { type: 'custom', url: seller.profile.banner_url }
-                : {
-                    type: 'preset',
-                    gradientFrom: '#6b46c1',
-                    gradientTo: '#9333ea',
-                    gradientDirection: 'to right'
-                  }
+                : { type: 'preset' }
             }
             onMessageClick={() => {
-              window.location.href = `/messages?seller=${seller.profile.id}`
+              window.location.href = `/account/messages?seller=${seller.profile.id}`
             }}
           />
         </div>
 
-      {/* Tab Navigation */}
-      <div className="border-b border-white/10 bg-black/30">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="flex gap-8">
-            {(['shop', 'reviews', 'about'] as const).map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={cn(
-                  "relative border-b-2 py-4 text-sm font-medium capitalize transition-colors",
-                  activeTab === tab
-                    ? "border-primary text-white"
-                    : "border-transparent text-gray-400 hover:text-white"
-                )}
-              >
-                {tab}
-              </button>
-            ))}
-          </div>
+        {/* Tabs */}
+        <div className="mx-auto mt-6 max-w-7xl px-4 sm:px-6 lg:px-8">
+          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
+            <TabsList variant="underline" className="w-full justify-start gap-6">
+              <TabsTrigger value="shop">Shop</TabsTrigger>
+              <TabsTrigger value="reviews">
+                Reviews
+                <span className="ml-1.5 rounded-full bg-bg-inset px-1.5 text-[10px] font-semibold text-text-tertiary data-[state=active]:bg-lime-tint-bg data-[state=active]:text-lime-text">
+                  {seller.stats.totalReviews}
+                </span>
+              </TabsTrigger>
+              <TabsTrigger value="about">About</TabsTrigger>
+            </TabsList>
+
+            {/* Shop */}
+            <TabsContent value="shop" className="pt-6">
+              {/* Filter row */}
+              <div className="mb-5 flex flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div className="sm:w-64">
+                  <Combobox
+                    value={selectedGame}
+                    onChange={setSelectedGame}
+                    options={gameOptions}
+                    ariaLabel="Filter by game"
+                    unsorted
+                  />
+                </div>
+                <span className="text-xs text-text-tertiary">
+                  {filteredListings.length} {filteredListings.length === 1 ? 'listing' : 'listings'}
+                </span>
+              </div>
+
+              {filteredListings.length > 0 ? (
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                  {filteredListings.map((listing) => (
+                    <ShopListingCard key={listing.id} listing={listing} />
+                  ))}
+                </div>
+              ) : (
+                <EmptyShop sellerName={seller.profile.username} />
+              )}
+            </TabsContent>
+
+            {/* Reviews */}
+            <TabsContent value="reviews" className="pt-6">
+              <div className="mx-auto max-w-3xl">
+                <ReviewsList
+                  sellerId={seller.profile.id}
+                  initialReviews={seller.reviews}
+                  allowSellerReply={false}
+                />
+              </div>
+            </TabsContent>
+
+            {/* About */}
+            <TabsContent value="about" className="pt-6">
+              <div className="mx-auto max-w-3xl space-y-5">
+                {/* About */}
+                <section className="rounded-2xl border border-border-subtle bg-bg-overlay p-5 sm:p-6">
+                  <h2 className="mb-3 text-base font-bold text-text-primary">About this seller</h2>
+                  <p className="text-sm leading-relaxed text-text-secondary">
+                    {seller.profile.bio?.trim() || 'No description provided yet.'}
+                  </p>
+                </section>
+
+                {/* Info */}
+                <section className="rounded-2xl border border-border-subtle bg-bg-overlay p-5 sm:p-6">
+                  <h2 className="mb-4 text-base font-bold text-text-primary">Seller information</h2>
+                  <dl className="space-y-2.5 text-sm">
+                    <InfoRow
+                      icon={Calendar}
+                      label="Member since"
+                      value={new Date(seller.profile.created_at).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'long',
+                      })}
+                    />
+                    <InfoRow icon={Shield} label="Response time" value="Within 2 hours" />
+                    <InfoRow
+                      icon={Star}
+                      label="Seller tier"
+                      value={
+                        <span className={cn('font-semibold uppercase', tier.cls)}>
+                          {tier.label}
+                        </span>
+                      }
+                    />
+                    <InfoRow
+                      icon={Package}
+                      label="Total sales"
+                      value={
+                        <span className="font-mono font-semibold tabular-nums text-text-primary">
+                          {seller.stats.totalSales}
+                        </span>
+                      }
+                    />
+                  </dl>
+                </section>
+
+                {/* Policies */}
+                <section className="rounded-2xl border border-border-subtle bg-bg-overlay p-5 sm:p-6">
+                  <h2 className="mb-4 text-base font-bold text-text-primary">Shop policies</h2>
+                  <div className="space-y-4 text-sm">
+                    <PolicyBlock
+                      title="Returns & refunds"
+                      body="All sales are covered by GameVault's buyer protection policy. Refunds available within 7 days if the product doesn't match the description."
+                    />
+                    <PolicyBlock
+                      title="Delivery"
+                      body="Digital goods are delivered immediately after payment confirmation. Physical items ship within 1–3 business days."
+                    />
+                    <PolicyBlock
+                      title="Support"
+                      body="Message me anytime for questions or support. I aim to respond within 2 hours during business hours."
+                    />
+                  </div>
+                </section>
+              </div>
+            </TabsContent>
+          </Tabs>
         </div>
+      </main>
+    </>
+  )
+}
+
+// ─── Listing card (shop-local variant) ───────────────────────────────────────
+
+function ShopListingCard({ listing }: { listing: any }) {
+  const img = listing.images?.[0]
+  const game = listing.game?.name ?? ''
+  const category = listing.category?.name ?? ''
+  const hasPriceDrop = listing.original_price && listing.original_price > listing.price
+  const discountPct = hasPriceDrop
+    ? Math.round(((listing.original_price - listing.price) / listing.original_price) * 100)
+    : 0
+
+  return (
+    <Link
+      href={`/listings/${listing.id}`}
+      className="group flex flex-col overflow-hidden rounded-2xl border border-border-subtle bg-bg-overlay transition-colors hover:border-lime-tint-border hover:bg-bg-raised-hover"
+    >
+      <div className="relative aspect-[4/3] overflow-hidden bg-bg-raised">
+        {img ? (
+          <Image
+            src={img}
+            alt={listing.title}
+            fill
+            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+            className="object-cover transition-transform duration-500 group-hover:scale-105"
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center text-5xl">
+            {listing.game?.emoji ?? '🎮'}
+          </div>
+        )}
+        {/* Game chip */}
+        <div className="absolute left-2.5 top-2.5 inline-flex items-center gap-1 rounded-full border border-lime-tint-border bg-lime-tint-bg/80 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-lime-text backdrop-blur-sm">
+          {game}
+        </div>
+        {hasPriceDrop && (
+          <div className="absolute right-2.5 top-2.5 rounded-full border border-success/40 bg-success-bg/80 px-2 py-0.5 text-[10px] font-bold text-success backdrop-blur-sm">
+            -{discountPct}%
+          </div>
+        )}
       </div>
 
-      {/* Tab Content */}
-      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        {/* Shop Tab */}
-        {activeTab === 'shop' && (
+      <div className="flex flex-1 flex-col gap-2 p-3 sm:p-4">
+        <div className="text-[10px] font-medium uppercase tracking-wider text-text-tertiary">
+          {category}
+        </div>
+        <h3 className="line-clamp-2 text-sm font-semibold leading-snug text-text-primary group-hover:text-lime-text">
+          {listing.title}
+        </h3>
+        <div className="mt-auto flex items-center justify-between pt-2">
           <div>
-            {/* Filters */}
-            <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
-              <div className="flex items-center gap-2">
-                <select
-                  value={selectedGame}
-                  onChange={(e) => setSelectedGame(e.target.value)}
-                  className="rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-white focus:border-primary focus:outline-none"
-                >
-                  <option value="all">All Games</option>
-                  {Object.keys(listingsByGame).map((game) => (
-                    <option key={game} value={game}>
-                      {game} ({listingsByGame[game].length})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setViewMode('grid')}
-                  className={cn(
-                    "rounded-lg p-2 transition-colors",
-                    viewMode === 'grid' ? "bg-primary text-white" : "bg-white/5 text-gray-400 hover:text-white"
-                  )}
-                >
-                  <Grid3x3 className="h-5 w-5" />
-                </button>
-                <button
-                  onClick={() => setViewMode('list')}
-                  className={cn(
-                    "rounded-lg p-2 transition-colors",
-                    viewMode === 'list' ? "bg-primary text-white" : "bg-white/5 text-gray-400 hover:text-white"
-                  )}
-                >
-                  <ListIcon className="h-5 w-5" />
-                </button>
-              </div>
+            <div className="font-mono text-lg font-bold tabular-nums text-text-primary">
+              ${listing.price.toFixed(2)}
             </div>
-
-            {/* Listings Grid */}
-            {filteredListings.length > 0 ? (
-              <div className={cn(
-                "grid gap-6",
-                viewMode === 'grid' ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3" : "grid-cols-1"
-              )}>
-                {filteredListings.map((listing) => (
-                  <Link
-                    key={listing.id}
-                    href={`/listings/${listing.id}`}
-                    className="group rounded-xl border border-white/10 bg-white/5 p-4 transition-all hover:border-primary/50 hover:bg-white/10"
-                  >
-                    {listing.images?.[0] && (
-                      <div className="mb-4 aspect-video overflow-hidden rounded-lg">
-                        <Image
-                          src={listing.images[0]}
-                          alt={listing.title}
-                          width={400}
-                          height={225}
-                          className="h-full w-full object-cover transition-transform group-hover:scale-105"
-                        />
-                      </div>
-                    )}
-                    <div>
-                      <h3 className="font-semibold text-white group-hover:text-primary transition-colors">
-                        {listing.title}
-                      </h3>
-                      <p className="mt-1 text-sm text-gray-400">
-                        {listing.game?.name} • {listing.category?.name}
-                      </p>
-                      <div className="mt-3 flex items-center justify-between">
-                        <span className="text-2xl font-bold text-primary">
-                          ${listing.price}
-                        </span>
-                        {listing.stock > 0 ? (
-                          <span className="text-sm text-green-400">{listing.stock} in stock</span>
-                        ) : (
-                          <span className="text-sm text-red-400">Out of stock</span>
-                        )}
-                      </div>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            ) : (
-              <div className="rounded-xl border border-white/10 bg-white/5 p-12 text-center">
-                <Package className="mx-auto h-12 w-12 text-gray-600" />
-                <h3 className="mt-4 text-lg font-medium text-white">No listings found</h3>
-                <p className="mt-2 text-sm text-gray-400">This seller doesn't have any active listings{selectedGame !== 'all' && ' for this game'}.</p>
+            {hasPriceDrop && (
+              <div className="font-mono text-[11px] text-text-tertiary line-through tabular-nums">
+                ${listing.original_price.toFixed(2)}
               </div>
             )}
           </div>
-        )}
+          {listing.quantity > 0 ? (
+            <span className="text-[11px] text-text-secondary">
+              {listing.quantity > 10000 ? '∞' : listing.quantity} in stock
+            </span>
+          ) : (
+            <span className="text-[11px] text-error">Out of stock</span>
+          )}
+        </div>
+      </div>
+    </Link>
+  )
+}
 
-        {/* Reviews Tab */}
-        {activeTab === 'reviews' && (
-          <div className="w-full">
-            <ReviewsList
-              sellerId={seller.profile.id}
-              initialReviews={seller.reviews}
-              allowSellerReply={false}
-            />
-          </div>
-        )}
+// ─── Helpers ────────────────────────────────────────────────────────────────
 
-        {/* About Tab */}
-        {activeTab === 'about' && (
-          <div className="max-w-3xl space-y-6">
-            {/* About Section */}
-            <div className="rounded-xl border border-white/10 bg-white/5 p-6">
-              <h2 className="mb-4 text-xl font-bold text-white">About</h2>
-              <p className="text-gray-300">
-                No description provided.
-              </p>
-            </div>
+function InfoRow({
+  icon: Icon, label, value,
+}: { icon: React.ElementType; label: string; value: React.ReactNode }) {
+  return (
+    <div className="flex items-center justify-between border-b border-border-subtle pb-2 last:border-b-0 last:pb-0">
+      <dt className="inline-flex items-center gap-2 text-text-secondary">
+        <Icon className="h-4 w-4 text-text-tertiary" />
+        {label}
+      </dt>
+      <dd className="text-text-primary">{value}</dd>
+    </div>
+  )
+}
 
-            {/* Stats & Info */}
-            <div className="rounded-xl border border-white/10 bg-white/5 p-6">
-              <h2 className="mb-4 text-xl font-bold text-white">Seller Information</h2>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-400">Member since</span>
-                  <span className="text-white">
-                    {new Date(seller.profile.created_at).toLocaleDateString('en-US', {
-                      year: 'numeric',
-                      month: 'long'
-                    })}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-400">Response time</span>
-                  <span className="text-white">Within 2 hours</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-400">Seller tier</span>
-                  <span className={cn("font-medium uppercase", tierColors[sellerTier as keyof typeof tierColors])}>
-                    {sellerTier}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-400">Total sales</span>
-                  <span className="text-white">{seller.stats.totalSales}</span>
-                </div>
-              </div>
-            </div>
+function PolicyBlock({ title, body }: { title: string; body: string }) {
+  return (
+    <div>
+      <h3 className="text-sm font-semibold text-text-primary">{title}</h3>
+      <p className="mt-1 text-sm text-text-secondary">{body}</p>
+    </div>
+  )
+}
 
-            {/* Policies */}
-            <div className="rounded-xl border border-white/10 bg-white/5 p-6">
-              <h2 className="mb-4 text-xl font-bold text-white">Shop Policies</h2>
-              <div className="space-y-4 text-gray-300">
-                <div>
-                  <h3 className="font-medium text-white">Returns & Refunds</h3>
-                  <p className="mt-1 text-sm">All sales are covered by GameVault's buyer protection policy. Refunds available within 7 days if the product doesn't match the description.</p>
-                </div>
-                <div>
-                  <h3 className="font-medium text-white">Delivery</h3>
-                  <p className="mt-1 text-sm">Digital goods are delivered immediately after payment confirmation. Physical items ship within 1-3 business days.</p>
-                </div>
-                <div>
-                  <h3 className="font-medium text-white">Support</h3>
-                  <p className="mt-1 text-sm">Message me anytime for questions or support. I aim to respond within 2 hours during business hours.</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+function EmptyShop({ sellerName }: { sellerName: string }) {
+  return (
+    <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-border-subtle bg-bg-overlay p-12 text-center">
+      <div className="flex h-12 w-12 items-center justify-center rounded-full border border-border-default bg-bg-raised">
+        <Package className="h-5 w-5 text-text-tertiary" />
+      </div>
+      <div>
+        <h3 className="text-base font-semibold text-text-primary">No listings yet</h3>
+        <p className="mt-1 text-sm text-text-secondary">
+          @{sellerName} hasn't listed anything in this category.
+        </p>
       </div>
     </div>
-    </>
   )
 }

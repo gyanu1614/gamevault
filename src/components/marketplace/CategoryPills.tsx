@@ -56,7 +56,7 @@ export default function CategoryPills({ subTypes, activeType }: CategoryPillsPro
               'flex-shrink-0 px-4 py-1.5 rounded-full text-sm font-medium transition-all duration-150',
               !activeType
                 ? 'bg-white text-black'
-                : 'bg-white/[0.06] text-gray-300 hover:bg-white/[0.12] hover:text-white'
+                : 'bg-bg-raised-hover text-text-secondary hover:bg-white/[0.12] hover:text-text-primary'
             )}
           >
             All
@@ -73,8 +73,8 @@ export default function CategoryPills({ subTypes, activeType }: CategoryPillsPro
                 className={cn(
                   'flex-shrink-0 px-4 py-1.5 rounded-full text-sm font-medium transition-all duration-150 whitespace-nowrap',
                   isActive
-                    ? 'bg-violet-600 text-white'
-                    : 'bg-white/[0.06] text-gray-300 hover:bg-white/[0.12] hover:text-white'
+                    ? 'bg-lime text-text-inverse'
+                    : 'bg-bg-raised-hover text-text-secondary hover:bg-white/[0.12] hover:text-text-primary'
                 )}
               >
                 {subType}

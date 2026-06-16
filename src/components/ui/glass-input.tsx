@@ -115,11 +115,11 @@ export const GlassInput = forwardRef<HTMLInputElement, GlassInputProps>(
             className={cn(
               // Glass base
               'w-full rounded-lg',
-              'bg-white/[0.06] backdrop-blur-sm',
+              'bg-bg-raised-hover backdrop-blur-sm',
               'border border-white/[0.10]',
               'text-foreground placeholder:text-muted-foreground',
               // Focus
-              'focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-violet-500/50',
+              'focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-lime',
               // Disabled
               'disabled:opacity-50 disabled:cursor-not-allowed',
               // Transition
@@ -150,7 +150,7 @@ export const GlassInput = forwardRef<HTMLInputElement, GlassInputProps>(
 
         {/* Hint / Error */}
         {(hint || error) && (
-          <p className={cn('text-xs', error ? 'text-red-400' : 'text-muted-foreground')}>
+          <p className={cn('text-xs', error ? 'text-error' : 'text-muted-foreground')}>
             {error ?? hint}
           </p>
         )}
@@ -186,10 +186,10 @@ export const GlassTextarea = forwardRef<HTMLTextAreaElement, GlassTextareaProps>
           id={inputId}
           className={cn(
             'w-full rounded-lg min-h-[80px] px-3 py-2.5 text-sm resize-y',
-            'bg-white/[0.06] backdrop-blur-sm',
+            'bg-bg-raised-hover backdrop-blur-sm',
             'border border-white/[0.10]',
             'text-foreground placeholder:text-muted-foreground',
-            'focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-violet-500/50',
+            'focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-lime',
             'disabled:opacity-50 disabled:cursor-not-allowed',
             'transition-all duration-150',
             error && 'border-red-500/50 focus:ring-red-500/40',
@@ -198,7 +198,7 @@ export const GlassTextarea = forwardRef<HTMLTextAreaElement, GlassTextareaProps>
           {...props}
         />
         {(hint || error) && (
-          <p className={cn('text-xs', error ? 'text-red-400' : 'text-muted-foreground')}>
+          <p className={cn('text-xs', error ? 'text-error' : 'text-muted-foreground')}>
             {error ?? hint}
           </p>
         )}

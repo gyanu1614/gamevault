@@ -188,27 +188,27 @@ export default function WithdrawalModal({
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.9, opacity: 0, y: 20 }}
             transition={{ type: "spring", stiffness: 300, damping: 25 }}
-            className="bg-white/[0.02] backdrop-blur-2xl border border-white/[0.1] rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden max-h-[90vh] flex flex-col"
+            className="bg-bg-overlay backdrop-blur-2xl border border-white/[0.1] rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden max-h-[90vh] flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="relative p-6 pb-4 border-b border-white/[0.05]">
+            <div className="relative p-6 pb-4 border-b border-border-subtle">
               <button
                 onClick={handleClose}
                 disabled={isSubmitting}
-                className="absolute top-4 right-4 p-2 rounded-full hover:bg-white/[0.05] text-gray-400 hover:text-white transition-all disabled:opacity-50"
+                className="absolute top-4 right-4 p-2 rounded-full hover:bg-bg-overlay text-text-secondary hover:text-white transition-all disabled:opacity-50"
               >
                 <X className="w-5 h-5" />
               </button>
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-xl bg-violet-500/10 border border-violet-500/20">
-                  <DollarSign className="w-5 h-5 text-violet-400" />
+                <div className="p-2 rounded-xl bg-lime/10 border border-lime-tint-border">
+                  <DollarSign className="w-5 h-5 text-lime-text" />
                 </div>
                 <div>
                   <h2 className="text-xl font-semibold text-white">
                     Withdraw Funds
                   </h2>
-                  <p className="text-sm text-gray-400">
+                  <p className="text-sm text-text-secondary">
                     Available balance: ${currentBalance.toFixed(2)}
                   </p>
                 </div>
@@ -222,7 +222,7 @@ export default function WithdrawalModal({
                   <div className={cn(
                     "w-full h-1 rounded-full transition-all",
                     ['method', 'amount', 'details', 'confirm'].indexOf(step) >= i
-                      ? "bg-violet-500"
+                      ? "bg-lime"
                       : "bg-white/10"
                   )} />
                 </div>
@@ -234,10 +234,10 @@ export default function WithdrawalModal({
               {/* Step 1: Method Selection */}
               {step === 'method' && (
                 <div className="space-y-3">
-                  <h3 className="text-sm font-medium text-gray-300">Select withdrawal method</h3>
+                  <h3 className="text-sm font-medium text-text-secondary">Select withdrawal method</h3>
                   {isLoadingMethods ? (
                     <div className="flex items-center justify-center py-8">
-                      <Loader2 className="w-6 h-6 animate-spin text-violet-400" />
+                      <Loader2 className="w-6 h-6 animate-spin text-lime-text" />
                     </div>
                   ) : (
                     <div className="space-y-2">
@@ -245,15 +245,15 @@ export default function WithdrawalModal({
                         <button
                           key={method.id}
                           onClick={() => handleMethodSelect(method)}
-                          className="w-full p-4 rounded-xl bg-white/[0.03] border border-white/[0.08] hover:border-violet-500/40 hover:bg-white/[0.05] transition-all text-left group"
+                          className="w-full p-4 rounded-xl bg-bg-overlay border border-border-subtle hover:border-lime-tint-border hover:bg-bg-overlay transition-all text-left group"
                         >
                           <div className="flex items-start justify-between">
                             <div className="flex-1">
-                              <p className="font-medium text-white group-hover:text-violet-300 transition-colors">
+                              <p className="font-medium text-white group-hover:text-lime-text transition-colors">
                                 {method.display_name}
                               </p>
-                              <p className="text-xs text-gray-500 mt-1">{method.description}</p>
-                              <div className="flex items-center gap-4 mt-2 text-xs text-gray-400">
+                              <p className="text-xs text-text-tertiary mt-1">{method.description}</p>
+                              <div className="flex items-center gap-4 mt-2 text-xs text-text-secondary">
                                 <span>Fee: {method.fee_percentage}% + ${method.fee_fixed}</span>
                                 <span>•</span>
                                 <span>{method.processing_time}</span>
@@ -272,24 +272,24 @@ export default function WithdrawalModal({
                 <div className="space-y-4">
                   <button
                     onClick={() => setStep('method')}
-                    className="text-sm text-gray-400 hover:text-white transition-colors"
+                    className="text-sm text-text-secondary hover:text-white transition-colors"
                   >
                     ← Change method
                   </button>
 
-                  <div className="p-4 rounded-xl bg-violet-500/10 border border-violet-500/20">
-                    <p className="text-sm text-violet-300 font-medium">{selectedMethod.display_name}</p>
-                    <p className="text-xs text-gray-400 mt-1">
+                  <div className="p-4 rounded-xl bg-lime/10 border border-lime-tint-border">
+                    <p className="text-sm text-lime-text font-medium">{selectedMethod.display_name}</p>
+                    <p className="text-xs text-text-secondary mt-1">
                       Min: ${selectedMethod.min_withdrawal} • Max: ${selectedMethod.max_withdrawal || 'No limit'}
                     </p>
                   </div>
 
                   <div className="space-y-2">
-                    <label className="block text-sm font-medium text-gray-300">
+                    <label className="block text-sm font-medium text-text-secondary">
                       Withdrawal amount
                     </label>
                     <div className="relative">
-                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-text-tertiary">$</span>
                       <input
                         type="number"
                         value={amount}
@@ -298,7 +298,7 @@ export default function WithdrawalModal({
                         step="0.01"
                         min="0"
                         max={currentBalance}
-                        className="w-full pl-8 pr-4 py-3 bg-white/[0.03] border border-white/[0.1] rounded-xl text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-transparent transition-all"
+                        className="w-full pl-8 pr-4 py-3 bg-bg-overlay border border-white/[0.1] rounded-xl text-white placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-transparent transition-all"
                       />
                     </div>
                   </div>
@@ -307,19 +307,19 @@ export default function WithdrawalModal({
                     <motion.div
                       initial={{ opacity: 0, height: 0 }}
                       animate={{ opacity: 1, height: 'auto' }}
-                      className="p-4 rounded-xl bg-white/[0.03] border border-white/[0.08] space-y-2 text-sm"
+                      className="p-4 rounded-xl bg-bg-overlay border border-border-subtle space-y-2 text-sm"
                     >
                       <div className="flex justify-between">
-                        <span className="text-gray-400">Amount</span>
+                        <span className="text-text-secondary">Amount</span>
                         <span className="text-white font-mono">${parseFloat(amount).toFixed(2)}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-gray-400">Fee</span>
+                        <span className="text-text-secondary">Fee</span>
                         <span className="text-amber-400 font-mono">-${fee.toFixed(2)}</span>
                       </div>
                       <div className="h-px bg-white/10 my-2" />
                       <div className="flex justify-between">
-                        <span className="text-gray-300 font-medium">You'll receive</span>
+                        <span className="text-text-secondary font-medium">You'll receive</span>
                         <span className="text-emerald-400 font-semibold font-mono">${netAmount.toFixed(2)}</span>
                       </div>
                     </motion.div>
@@ -331,8 +331,8 @@ export default function WithdrawalModal({
                     className={cn(
                       "w-full py-3 rounded-xl font-semibold transition-all",
                       amount && parseFloat(amount) > 0
-                        ? "bg-violet-500 hover:bg-violet-600 text-white"
-                        : "bg-white/[0.05] text-gray-500 cursor-not-allowed"
+                        ? "bg-lime hover:bg-lime-hover text-text-inverse"
+                        : "bg-bg-overlay text-text-tertiary cursor-not-allowed"
                     )}
                   >
                     Continue
@@ -345,12 +345,12 @@ export default function WithdrawalModal({
                 <div className="space-y-4">
                   <button
                     onClick={() => setStep('amount')}
-                    className="text-sm text-gray-400 hover:text-white transition-colors"
+                    className="text-sm text-text-secondary hover:text-white transition-colors"
                   >
                     ← Back
                   </button>
 
-                  <h3 className="text-sm font-medium text-gray-300">Payment details</h3>
+                  <h3 className="text-sm font-medium text-text-secondary">Payment details</h3>
 
                   {selectedMethod.method_name === 'bank_transfer' && (
                     <>
@@ -359,21 +359,21 @@ export default function WithdrawalModal({
                         value={paymentDetails.account_holder || ''}
                         onChange={(e) => setPaymentDetails({ ...paymentDetails, account_holder: e.target.value })}
                         placeholder="Account holder name"
-                        className="w-full px-4 py-3 bg-white/[0.03] border border-white/[0.1] rounded-xl text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-violet-500/50"
+                        className="w-full px-4 py-3 bg-bg-overlay border border-white/[0.1] rounded-xl text-white placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-violet-500/50"
                       />
                       <input
                         type="text"
                         value={paymentDetails.account_number || ''}
                         onChange={(e) => setPaymentDetails({ ...paymentDetails, account_number: e.target.value })}
                         placeholder="Account number"
-                        className="w-full px-4 py-3 bg-white/[0.03] border border-white/[0.1] rounded-xl text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-violet-500/50"
+                        className="w-full px-4 py-3 bg-bg-overlay border border-white/[0.1] rounded-xl text-white placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-violet-500/50"
                       />
                       <input
                         type="text"
                         value={paymentDetails.routing_number || ''}
                         onChange={(e) => setPaymentDetails({ ...paymentDetails, routing_number: e.target.value })}
                         placeholder="Routing number"
-                        className="w-full px-4 py-3 bg-white/[0.03] border border-white/[0.1] rounded-xl text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-violet-500/50"
+                        className="w-full px-4 py-3 bg-bg-overlay border border-white/[0.1] rounded-xl text-white placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-violet-500/50"
                       />
                     </>
                   )}
@@ -384,7 +384,7 @@ export default function WithdrawalModal({
                       value={paymentDetails.email || ''}
                       onChange={(e) => setPaymentDetails({ ...paymentDetails, email: e.target.value })}
                       placeholder="Email address"
-                      className="w-full px-4 py-3 bg-white/[0.03] border border-white/[0.1] rounded-xl text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-violet-500/50"
+                      className="w-full px-4 py-3 bg-bg-overlay border border-white/[0.1] rounded-xl text-white placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-violet-500/50"
                     />
                   )}
 
@@ -395,14 +395,14 @@ export default function WithdrawalModal({
                         value={paymentDetails.wallet_address || ''}
                         onChange={(e) => setPaymentDetails({ ...paymentDetails, wallet_address: e.target.value })}
                         placeholder="Wallet address"
-                        className="w-full px-4 py-3 bg-white/[0.03] border border-white/[0.1] rounded-xl text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-violet-500/50 font-mono text-sm"
+                        className="w-full px-4 py-3 bg-bg-overlay border border-white/[0.1] rounded-xl text-white placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-violet-500/50 font-mono text-sm"
                       />
                       <input
                         type="text"
                         value={paymentDetails.network || ''}
                         onChange={(e) => setPaymentDetails({ ...paymentDetails, network: e.target.value })}
                         placeholder="Network (e.g., ERC-20, TRC-20)"
-                        className="w-full px-4 py-3 bg-white/[0.03] border border-white/[0.1] rounded-xl text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-violet-500/50"
+                        className="w-full px-4 py-3 bg-bg-overlay border border-white/[0.1] rounded-xl text-white placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-violet-500/50"
                       />
                     </>
                   )}
@@ -416,7 +416,7 @@ export default function WithdrawalModal({
 
                   <button
                     onClick={handleDetailsNext}
-                    className="w-full py-3 rounded-xl font-semibold bg-violet-500 hover:bg-violet-600 text-white transition-all"
+                    className="w-full py-3 rounded-xl font-semibold bg-lime hover:bg-lime-hover text-text-inverse transition-all"
                   >
                     Continue
                   </button>
@@ -428,35 +428,35 @@ export default function WithdrawalModal({
                 <div className="space-y-4">
                   <button
                     onClick={() => setStep('details')}
-                    className="text-sm text-gray-400 hover:text-white transition-colors"
+                    className="text-sm text-text-secondary hover:text-white transition-colors"
                     disabled={isSubmitting}
                   >
                     ← Back
                   </button>
 
-                  <div className="p-4 rounded-xl bg-white/[0.03] border border-white/[0.08] space-y-3">
-                    <h3 className="text-sm font-medium text-gray-300">Review your withdrawal</h3>
+                  <div className="p-4 rounded-xl bg-bg-overlay border border-border-subtle space-y-3">
+                    <h3 className="text-sm font-medium text-text-secondary">Review your withdrawal</h3>
 
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between">
-                        <span className="text-gray-400">Method</span>
+                        <span className="text-text-secondary">Method</span>
                         <span className="text-white">{selectedMethod.display_name}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-gray-400">Amount</span>
+                        <span className="text-text-secondary">Amount</span>
                         <span className="text-white font-mono">${parseFloat(amount).toFixed(2)}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-gray-400">Fee</span>
+                        <span className="text-text-secondary">Fee</span>
                         <span className="text-amber-400 font-mono">-${fee.toFixed(2)}</span>
                       </div>
                       <div className="h-px bg-white/10" />
                       <div className="flex justify-between">
-                        <span className="text-gray-300 font-medium">You'll receive</span>
+                        <span className="text-text-secondary font-medium">You'll receive</span>
                         <span className="text-emerald-400 font-semibold font-mono">${netAmount.toFixed(2)}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-gray-400">Processing time</span>
+                        <span className="text-text-secondary">Processing time</span>
                         <span className="text-white text-xs">{selectedMethod.processing_time}</span>
                       </div>
                     </div>
@@ -475,8 +475,8 @@ export default function WithdrawalModal({
                     className={cn(
                       "w-full py-3 rounded-xl font-semibold transition-all flex items-center justify-center gap-2",
                       isSubmitting
-                        ? "bg-white/[0.05] text-gray-500 cursor-not-allowed"
-                        : "bg-violet-500 hover:bg-violet-600 text-white"
+                        ? "bg-bg-overlay text-text-tertiary cursor-not-allowed"
+                        : "bg-lime hover:bg-lime-hover text-text-inverse"
                     )}
                   >
                     {isSubmitting ? (

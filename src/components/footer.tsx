@@ -44,7 +44,7 @@ export function Footer({ hasSellerSidebar = false }: FooterProps) {
                 <li key={link.name}>
                   <Link
                     href={link.href}
-                    className="text-sm text-gray-400 hover:text-primary transition-colors"
+                    className="text-sm text-text-secondary hover:text-primary transition-colors"
                   >
                     {link.name}
                   </Link>
@@ -61,7 +61,7 @@ export function Footer({ hasSellerSidebar = false }: FooterProps) {
                 <li key={link.name}>
                   <Link
                     href={link.href}
-                    className="text-sm text-gray-400 hover:text-primary transition-colors"
+                    className="text-sm text-text-secondary hover:text-primary transition-colors"
                   >
                     {link.name}
                   </Link>
@@ -78,7 +78,7 @@ export function Footer({ hasSellerSidebar = false }: FooterProps) {
                 <li key={link.name}>
                   <Link
                     href={link.href}
-                    className="text-sm text-gray-400 hover:text-primary transition-colors"
+                    className="text-sm text-text-secondary hover:text-primary transition-colors"
                   >
                     {link.name}
                   </Link>
@@ -95,7 +95,7 @@ export function Footer({ hasSellerSidebar = false }: FooterProps) {
                 <li key={link.name}>
                   <Link
                     href={link.href}
-                    className="text-sm text-gray-400 hover:text-primary transition-colors"
+                    className="text-sm text-text-secondary hover:text-primary transition-colors"
                   >
                     {link.name}
                   </Link>
@@ -113,7 +113,7 @@ export function Footer({ hasSellerSidebar = false }: FooterProps) {
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-purple-600">
                 <span className="text-lg font-bold text-white">G</span>
               </div>
-              <span className="text-sm text-gray-400">
+              <span className="text-sm text-text-secondary">
                 © 2026 GameVault. All rights reserved.
               </span>
             </div>
@@ -122,7 +122,7 @@ export function Footer({ hasSellerSidebar = false }: FooterProps) {
             <div className="flex items-center space-x-4">
               <a
                 href="https://twitter.com/gamevault"
-                className="text-gray-400 hover:text-primary transition-colors"
+                className="text-text-secondary hover:text-primary transition-colors"
                 target="_blank"
                 rel="noopener noreferrer"
               >
@@ -133,7 +133,7 @@ export function Footer({ hasSellerSidebar = false }: FooterProps) {
               </a>
               <a
                 href="https://discord.gg/gamevault"
-                className="text-gray-400 hover:text-primary transition-colors"
+                className="text-text-secondary hover:text-primary transition-colors"
                 target="_blank"
                 rel="noopener noreferrer"
               >
@@ -144,7 +144,7 @@ export function Footer({ hasSellerSidebar = false }: FooterProps) {
               </a>
               <a
                 href="https://github.com/gamevault"
-                className="text-gray-400 hover:text-primary transition-colors"
+                className="text-text-secondary hover:text-primary transition-colors"
                 target="_blank"
                 rel="noopener noreferrer"
               >

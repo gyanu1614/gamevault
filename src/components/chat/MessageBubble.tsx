@@ -129,7 +129,7 @@ export default function MessageBubble({
 
           {/* Timestamp - Centered */}
           <div className="mt-1.5">
-            <span className="text-[10px] text-gray-500">
+            <span className="text-[10px] text-text-tertiary">
               {formatTime(message.created_at)}
             </span>
           </div>
@@ -175,7 +175,7 @@ export default function MessageBubble({
       <div className={cn('flex flex-col max-w-[70%]', alignRight ? 'items-end' : 'items-start')}>
         {/* Sender Name (for left-aligned messages or admin view) */}
         {(alignLeft || isAdminView) && senderName && (
-          <span className="mb-1 px-3 text-xs font-medium text-gray-400">
+          <span className="mb-1 px-3 text-xs font-medium text-text-secondary">
             {senderName}
           </span>
         )}
@@ -185,8 +185,8 @@ export default function MessageBubble({
           className={cn(
             'rounded-2xl px-4 py-2.5 break-words',
             alignRight
-              ? 'bg-gradient-to-br from-violet-500 to-purple-600 text-white'
-              : 'bg-white/[0.08] text-gray-100 border border-white/10'
+              ? 'bg-gradient-to-br from-lime to-purple-600 text-white'
+              : 'bg-bg-raised-hover text-gray-100 border border-white/10'
           )}
         >
           <p className="text-sm leading-relaxed whitespace-pre-wrap">{renderMarkdown(message.content)}</p>
@@ -212,13 +212,13 @@ export default function MessageBubble({
 
         {/* Timestamp & Read Receipt */}
         <div className="mt-1 flex items-center gap-1.5 px-3">
-          <span className="text-xs text-gray-500">
+          <span className="text-xs text-text-tertiary">
             {formatTime(message.created_at)}
           </span>
           {alignRight && (
-            <div className="text-gray-500">
+            <div className="text-text-tertiary">
               {message.is_read ? (
-                <CheckCheck className="h-3.5 w-3.5 text-violet-400" />
+                <CheckCheck className="h-3.5 w-3.5 text-lime-text" />
               ) : (
                 <Check className="h-3.5 w-3.5" />
               )}

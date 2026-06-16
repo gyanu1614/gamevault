@@ -20,8 +20,8 @@ export default async function ReferralPage() {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
         <div className="text-center">
-          <p className="text-gray-400 mb-2">Could not load referral data.</p>
-          <p className="text-sm text-gray-600">{result.error}</p>
+          <p className="text-text-secondary mb-2">Could not load referral data.</p>
+          <p className="text-sm text-text-disabled">{result.error}</p>
         </div>
       </div>
     )

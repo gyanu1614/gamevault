@@ -40,8 +40,8 @@ const TIER_STYLES: Record<string, { label: string; text: string; bg: string; bor
   },
   gold: {
     label: 'Gold',
-    text: 'text-yellow-400',
-    bg: 'bg-yellow-500/10',
+    text: 'text-warning',
+    bg: 'bg-warning-bg',
     border: 'border-yellow-500/20',
     icon: '◆',
   },
@@ -54,9 +54,9 @@ const TIER_STYLES: Record<string, { label: string; text: string; bg: string; bor
   },
   diamond: {
     label: 'Diamond',
-    text: 'text-violet-400',
-    bg: 'bg-violet-500/10',
-    border: 'border-violet-500/20',
+    text: 'text-lime-text',
+    bg: 'bg-lime/10',
+    border: 'border-lime-tint-border',
     icon: '◈',
   },
 }

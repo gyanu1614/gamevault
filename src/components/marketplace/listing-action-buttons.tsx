@@ -6,7 +6,6 @@ import { useRouter } from 'next/navigation'
 import { MessageCircle, AlertCircle } from 'lucide-react'
 import { ContactSellerModal } from './contact-seller-modal'
 import { useAuth } from '@/hooks/use-auth'
-import WishlistButton from '@/components/wishlist/WishlistButton'
 
 interface ListingActionButtonsProps {
   listingId: string
@@ -56,41 +55,36 @@ export function ListingActionButtons({
             <p>You cannot purchase your own listing</p>
           </div>
 
-          {/* Edit listing button - vibrant color */}
+          {/* Edit listing — owner's listing */}
           <Link href={`/seller/listings/${listingId}/edit`}>
-            <button className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-white px-5 py-3 text-sm font-medium text-black transition-all hover:bg-white/90 active:scale-95">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <button className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-border-default bg-bg-raised px-5 py-3 text-sm font-medium text-text-primary transition-colors hover:bg-bg-raised-hover hover:border-lime-tint-border">
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
               </svg>
-              Edit Listing
+              Edit listing
             </button>
           </Link>
         </>
       ) : (
         <>
-          {/* Button Group: Buy Now + Wishlist */}
-          <div className="flex gap-2 mb-2">
-            {/* Buy Now Button - Full width */}
-            <button
-              onClick={handleBuyNow}
-              className="flex-1 py-3 bg-violet-500 hover:bg-violet-600 text-white text-sm font-semibold rounded-lg transition-colors"
-            >
-              Buy Now - ${price.toFixed(2)}
-            </button>
+          {/* Buy Now — full-width primary. Wishlist is pulled OUT of the
+              row and rendered as a small ghost action below the CTA pair,
+              so Buy Now and Contact Seller match in width. */}
+          <button
+            onClick={handleBuyNow}
+            className="group relative mb-2 flex h-12 w-full items-center justify-center gap-2 overflow-hidden rounded-xl bg-lime text-sm font-bold uppercase tracking-wider text-text-inverse shadow-[0_1px_0_0_rgba(255,255,255,0.4)_inset,0_-1px_0_0_rgba(0,0,0,0.15)_inset,0_4px_12px_-2px_rgba(198,255,61,0.35)] transition-all hover:bg-lime-hover hover:shadow-[0_1px_0_0_rgba(255,255,255,0.4)_inset,0_-1px_0_0_rgba(0,0,0,0.15)_inset,0_6px_20px_-4px_rgba(198,255,61,0.5)] active:translate-y-px"
+          >
+            <span className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/60 to-transparent opacity-50" />
+            Buy Now — ${price.toFixed(2)}
+          </button>
 
-            {/* Wishlist Button */}
-            <div className="flex items-center">
-              <WishlistButton listingId={listingId} variant="default" />
-            </div>
-          </div>
-
-          {/* Contact Seller for other users */}
+          {/* Contact Seller — secondary */}
           <button
             onClick={() => setIsModalOpen(true)}
-            className="w-full py-3 bg-white/[0.05] hover:bg-white/[0.08] text-white text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
+            className="mb-2 flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-border-default bg-bg-raised text-sm font-medium text-text-primary transition-colors hover:border-lime-tint-border hover:bg-bg-raised-hover"
           >
-            <MessageCircle className="w-4 h-4" />
-            Contact Seller
+            <MessageCircle className="h-4 w-4" />
+            Contact seller
           </button>
 
           <ContactSellerModal

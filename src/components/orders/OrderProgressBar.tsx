@@ -90,13 +90,13 @@ export default function OrderProgressBar({ status, order, disputeResolution }: O
     return (
       <div className="h-full rounded-2xl border border-red-500/25 bg-red-500/[0.06] px-4 py-3 flex items-center">
         <div className="flex items-center gap-3 w-full">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-red-500/30 bg-red-500/10 flex-shrink-0">
-            <AlertTriangle className="h-4 w-4 text-red-400" />
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-error/40 bg-error-bg flex-shrink-0">
+            <AlertTriangle className="h-4 w-4 text-error" />
           </div>
           <div className="flex-1 space-y-0.5">
-            <div className="text-xs font-bold uppercase tracking-[0.1em] text-red-400">Dispute Active</div>
-            <div className="text-xs text-red-400/70">Support reviewing — response within 24-48h</div>
-            <div className="text-xs text-red-400/70">Continue chatting. All messages monitored.</div>
+            <div className="text-xs font-bold uppercase tracking-[0.1em] text-error">Dispute Active</div>
+            <div className="text-xs text-error/70">Support reviewing — response within 24-48h</div>
+            <div className="text-xs text-error/70">Continue chatting. All messages monitored.</div>
           </div>
         </div>
       </div>
@@ -104,14 +104,14 @@ export default function OrderProgressBar({ status, order, disputeResolution }: O
   }
   if (status === 'refunded') {
     return (
-      <div className="h-full rounded-2xl border border-white/[0.08] bg-white/[0.03] px-4 py-3 flex items-center">
+      <div className="h-full rounded-2xl border border-border-subtle bg-bg-overlay px-4 py-3 flex items-center">
         <div className="flex items-center gap-3 w-full">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/[0.05] flex-shrink-0">
-            <RefreshCw className="h-4 w-4 text-gray-400" />
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-bg-overlay flex-shrink-0">
+            <RefreshCw className="h-4 w-4 text-text-secondary" />
           </div>
           <div className="flex-1">
-            <div className="text-xs font-bold uppercase tracking-[0.1em] text-gray-400">Refunded</div>
-            <div className="text-sm text-gray-600 mt-0.5">Payment returned to your original method</div>
+            <div className="text-xs font-bold uppercase tracking-[0.1em] text-text-secondary">Refunded</div>
+            <div className="text-sm text-text-disabled mt-0.5">Payment returned to your original method</div>
           </div>
         </div>
       </div>
@@ -168,13 +168,13 @@ export default function OrderProgressBar({ status, order, disputeResolution }: O
   const showTimer = status === 'delivered' && order?.escrow_status === 'held' && !!order?.auto_release_at
 
   return (
-    <div className="h-full rounded-2xl border border-white/[0.06] bg-white/[0.025] px-5 py-3 flex items-center">
+    <div className="h-full rounded-2xl border border-border-subtle bg-white/[0.025] px-5 py-3 flex items-center">
       <div className="relative w-full">
         {/* Track bg */}
-        <div className="absolute top-[17px] left-[calc(16.67%)] right-[calc(16.67%)] h-px bg-white/[0.06]" />
+        <div className="absolute top-[17px] left-[calc(16.67%)] right-[calc(16.67%)] h-px bg-bg-raised-hover" />
         {/* Fill */}
         <div
-          className="absolute top-[17px] left-[calc(16.67%)] h-px bg-gradient-to-r from-violet-500 to-violet-400 transition-all duration-700"
+          className="absolute top-[17px] left-[calc(16.67%)] h-px bg-gradient-to-r from-lime to-violet-400 transition-all duration-700"
           style={{ width: `calc(${fillPct}% * 0.667)` }}
         />
 
@@ -188,29 +188,29 @@ export default function OrderProgressBar({ status, order, disputeResolution }: O
                 {/* Node */}
                 <div className={cn(
                   'relative flex h-8 w-8 items-center justify-center rounded-full border-2 transition-all duration-500',
-                  step.done  && 'bg-gradient-to-br from-violet-600 to-violet-500 border-violet-400 shadow-sm shadow-violet-500/30',
-                  step.active && !step.done && 'bg-violet-500/20 border-violet-400',
+                  step.done  && 'bg-gradient-to-br from-lime to-lime border-violet-400 shadow-sm shadow-violet-500/30',
+                  step.active && !step.done && 'bg-lime/20 border-violet-400',
                   !step.done && !step.active && 'bg-transparent border-white/[0.1]',
                 )}>
                   {step.active && !step.done && (
-                    <span className="absolute inset-0 rounded-full bg-violet-500/20 animate-ping opacity-40" />
+                    <span className="absolute inset-0 rounded-full bg-lime/20 animate-ping opacity-40" />
                   )}
                   {step.done ? (
                     <Check className="h-3.5 w-3.5 text-white" strokeWidth={3} />
                   ) : (
-                    <Icon className={cn('h-4 w-4', step.active ? 'text-violet-300' : 'text-gray-700')} />
+                    <Icon className={cn('h-4 w-4', step.active ? 'text-lime-text' : 'text-gray-700')} />
                   )}
                 </div>
 
                 {/* Label + timestamp */}
                 <div className="text-center">
                   <div className={cn('text-xs font-semibold leading-tight',
-                    (step.done || step.active) ? 'text-white' : 'text-gray-600'
+                    (step.done || step.active) ? 'text-white' : 'text-text-disabled'
                   )}>
                     {step.label}
                   </div>
                   {step.ts && (step.done || step.active) && (
-                    <div className="text-[10px] text-violet-400/60 mt-0.5 whitespace-nowrap">{step.ts}</div>
+                    <div className="text-[10px] text-lime-text/60 mt-0.5 whitespace-nowrap">{step.ts}</div>
                   )}
                   {/* Inline auto-release countdown under Delivered node */}
                   {isDelivered && showTimer && (
@@ -239,15 +239,15 @@ function InlineCountdown({ autoReleaseAt }: { autoReleaseAt: string }) {
   // Still loading calculation
   if (total === null) return null
 
-  if (total === 0) return <div className="text-[9px] text-gray-500 mt-1">Releasing…</div>
+  if (total === 0) return <div className="text-[9px] text-text-tertiary mt-1">Releasing…</div>
 
   return (
     <div className={cn(
       'mt-1.5 flex items-center gap-1 text-[9px] font-mono font-semibold tabular-nums',
-      isUrgent ? 'text-red-400' : 'text-gray-500'
+      isUrgent ? 'text-error' : 'text-text-tertiary'
     )}>
       <span>auto-release</span>
-      <span className={cn('px-1 py-0.5 rounded border', isUrgent ? 'border-red-500/30 bg-red-500/10 text-red-300' : 'border-white/10 bg-white/[0.04] text-gray-400')}>
+      <span className={cn('px-1 py-0.5 rounded border', isUrgent ? 'border-error/40 bg-error-bg text-error' : 'border-white/10 bg-bg-raised text-text-secondary')}>
         {String(h).padStart(2,'0')}:{String(m).padStart(2,'0')}:{String(s).padStart(2,'0')}
       </span>
     </div>
