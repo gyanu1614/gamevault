@@ -88,7 +88,7 @@ export default function StripeConnectPage() {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="flex flex-col items-center gap-4">
-          <div className="w-10 h-10 rounded-full border-2 border-violet-500/30 border-t-violet-500 animate-spin" />
+          <div className="w-10 h-10 rounded-full border-2 border-lime-tint-border border-t-violet-500 animate-spin" />
           <p className="text-sm text-muted-foreground">Loading your payout account…</p>
         </div>
       </div>
@@ -107,8 +107,8 @@ export default function StripeConnectPage() {
           Back to Wallet
         </Link>
         <div className="flex items-center gap-3 mb-2">
-          <div className="p-2 rounded-xl bg-violet-500/10 border border-violet-500/20">
-            <DollarSign className="w-6 h-6 text-violet-400" />
+          <div className="p-2 rounded-xl bg-lime/10 border border-lime-tint-border">
+            <DollarSign className="w-6 h-6 text-lime-text" />
           </div>
           <div>
             <h1 className="text-2xl font-display font-bold text-foreground">Payout Account</h1>
@@ -155,9 +155,9 @@ export default function StripeConnectPage() {
 
       {/* Error */}
       {error && (
-        <div className="flex items-center gap-3 p-4 rounded-xl bg-red-500/10 border border-red-500/25">
-          <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
-          <p className="text-sm text-red-300">{error}</p>
+        <div className="flex items-center gap-3 p-4 rounded-xl bg-error-bg border border-red-500/25">
+          <AlertCircle className="w-4 h-4 text-error shrink-0" />
+          <p className="text-sm text-error">{error}</p>
         </div>
       )}
 
@@ -174,8 +174,8 @@ export default function StripeConnectPage() {
               label: 'Available Balance',
               value: `$${status.sellerBalance.toFixed(2)}`,
               icon: <DollarSign className="w-4 h-4" />,
-              color: 'text-violet-400',
-              bg: 'bg-violet-500/10 border-violet-500/20',
+              color: 'text-lime-text',
+              bg: 'bg-lime/10 border-lime-tint-border',
             },
             {
               label: 'Pending (Escrow)',
@@ -262,8 +262,8 @@ export default function StripeConnectPage() {
         {/* Not connected state */}
         {status?.status === 'not_connected' && (
           <div className="text-center py-6">
-            <div className="w-16 h-16 rounded-2xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center mx-auto mb-4">
-              <DollarSign className="w-8 h-8 text-violet-400" />
+            <div className="w-16 h-16 rounded-2xl bg-lime/10 border border-lime-tint-border flex items-center justify-center mx-auto mb-4">
+              <DollarSign className="w-8 h-8 text-lime-text" />
             </div>
             <h2 className="text-lg font-display font-semibold text-foreground mb-2">
               Start receiving payments
@@ -278,7 +278,7 @@ export default function StripeConnectPage() {
               disabled={connecting}
               className={cn(
                 'inline-flex items-center gap-2 px-6 py-3 rounded-xl',
-                'bg-violet-500 hover:bg-violet-600 text-white font-semibold text-sm',
+                'bg-lime hover:bg-lime-hover text-text-inverse font-semibold text-sm',
                 'transition-all duration-200 hover:shadow-glow',
                 'disabled:opacity-50 disabled:cursor-not-allowed',
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:ring-offset-2 focus-visible:ring-offset-background'
@@ -355,8 +355,8 @@ export default function StripeConnectPage() {
           { icon: <Shield className="w-4 h-4" />, title: 'No card details stored', desc: 'GameVault never sees your bank info' },
           { icon: <Zap className="w-4 h-4" />, title: 'Instant after hold', desc: 'Funds arrive within 2-7 business days' },
         ].map((item) => (
-          <div key={item.title} className="flex items-start gap-3 p-3 rounded-xl bg-white/[0.03] border border-white/[0.06]">
-            <span className="text-violet-400 shrink-0 mt-0.5">{item.icon}</span>
+          <div key={item.title} className="flex items-start gap-3 p-3 rounded-xl bg-bg-overlay border border-border-subtle">
+            <span className="text-lime-text shrink-0 mt-0.5">{item.icon}</span>
             <div>
               <p className="text-xs font-semibold text-foreground">{item.title}</p>
               <p className="text-xs text-muted-foreground mt-0.5">{item.desc}</p>

@@ -73,8 +73,8 @@ export default function MessageInput({
           maxLength={maxLength}
           rows={1}
           className={cn(
-            'w-full resize-none rounded-xl border border-white/10 bg-white/5 px-4 py-3 pr-14 text-sm text-white placeholder:text-gray-500',
-            'focus:border-violet-500/50 focus:outline-none focus:ring-2 focus:ring-violet-500/20',
+            'w-full resize-none rounded-xl border border-white/10 bg-white/5 px-4 py-3 pr-14 text-sm text-white placeholder:text-text-tertiary',
+            'focus:border-lime focus:outline-none focus:ring-2 focus:ring-violet-500/20',
             'disabled:cursor-not-allowed disabled:opacity-50',
             'transition-all duration-200'
           )}
@@ -88,8 +88,8 @@ export default function MessageInput({
           className={cn(
             'absolute bottom-2 right-2 flex h-8 w-8 items-center justify-center rounded-lg transition-all',
             message.trim() && !isSending && !disabled
-              ? 'bg-gradient-to-br from-violet-500 to-purple-600 text-white hover:scale-105 hover:shadow-lg hover:shadow-violet-500/50'
-              : 'bg-white/5 text-gray-500 cursor-not-allowed'
+              ? 'bg-gradient-to-br from-lime to-purple-600 text-white hover:scale-105 hover:shadow-lg hover:shadow-violet-500/50'
+              : 'bg-white/5 text-text-tertiary cursor-not-allowed'
           )}
         >
           {isSending ? (
@@ -104,14 +104,14 @@ export default function MessageInput({
       {isNearLimit && (
         <div className={cn(
           'mt-1.5 text-right text-xs',
-          remainingChars < 50 ? 'text-red-400' : 'text-gray-500'
+          remainingChars < 50 ? 'text-error' : 'text-text-tertiary'
         )}>
           {remainingChars} characters remaining
         </div>
       )}
 
       {/* Hint */}
-      <div className="mt-2 text-xs text-gray-500">
+      <div className="mt-2 text-xs text-text-tertiary">
         Press <kbd className="rounded bg-white/10 px-1.5 py-0.5 font-mono">Enter</kbd> to send,
         <kbd className="ml-1 rounded bg-white/10 px-1.5 py-0.5 font-mono">Shift+Enter</kbd> for new line
       </div>

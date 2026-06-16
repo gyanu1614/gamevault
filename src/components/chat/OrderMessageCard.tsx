@@ -26,14 +26,14 @@ interface OrderMessageCardProps {
 
 const getStatusColor = (status: string) => {
   const colors = {
-    pending: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/30',
+    pending: 'bg-warning-bg text-warning border-warning/40',
     processing: 'bg-blue-500/10 text-blue-400 border-blue-500/30',
     delivered: 'bg-purple-500/10 text-purple-400 border-purple-500/30',
-    completed: 'bg-green-500/10 text-green-400 border-green-500/30',
-    disputed: 'bg-red-500/10 text-red-400 border-red-500/30',
-    resolved: 'bg-green-500/10 text-green-400 border-green-500/30',
-    refunded: 'bg-gray-500/10 text-gray-400 border-gray-500/30',
-    cancelled: 'bg-gray-500/10 text-gray-400 border-gray-500/30',
+    completed: 'bg-success-bg text-success border-success/30',
+    disputed: 'bg-error-bg text-error border-error/40',
+    resolved: 'bg-success-bg text-success border-success/30',
+    refunded: 'bg-gray-500/10 text-text-secondary border-gray-500/30',
+    cancelled: 'bg-gray-500/10 text-text-secondary border-gray-500/30',
   }
   return colors[status as keyof typeof colors] || colors.pending
 }
@@ -51,10 +51,10 @@ export default function OrderMessageCard({ order, onViewOrder, disputeResolution
       animate={{ opacity: 1, y: 0 }}
       className="mx-auto my-4 max-w-md"
     >
-      <div className="rounded-xl border border-white/10 bg-gradient-to-br from-violet-500/10 via-purple-500/5 to-transparent p-4 backdrop-blur-sm">
+      <div className="rounded-xl border border-white/10 bg-gradient-to-br from-lime/10 via-purple-500/5 to-transparent p-4 backdrop-blur-sm">
         {/* Header */}
         <div className="mb-3 flex items-center justify-between">
-          <div className="flex items-center gap-2 text-xs text-gray-400">
+          <div className="flex items-center gap-2 text-xs text-text-secondary">
             <Package className="h-3.5 w-3.5" />
             <span>Order {order.order_number || order.id.slice(0, 8)}</span>
           </div>
@@ -80,7 +80,7 @@ export default function OrderMessageCard({ order, onViewOrder, disputeResolution
             <h4 className="mb-1 text-sm font-semibold text-white line-clamp-2">
               {order.listing?.title || 'Unknown Listing'}
             </h4>
-            <div className="flex items-center gap-3 text-xs text-gray-400">
+            <div className="flex items-center gap-3 text-xs text-text-secondary">
               <div className="flex items-center gap-1">
                 <DollarSign className="h-3 w-3" />
                 <span className="font-semibold text-white">${order.total_amount}</span>
@@ -97,7 +97,7 @@ export default function OrderMessageCard({ order, onViewOrder, disputeResolution
         {onViewOrder && (
           <button
             onClick={onViewOrder}
-            className="mt-3 w-full rounded-lg border border-violet-500/30 bg-violet-500/10 py-2 text-xs font-semibold text-violet-400 transition-all hover:border-violet-500/50 hover:bg-violet-500/20"
+            className="mt-3 w-full rounded-lg border border-lime-tint-border bg-lime/10 py-2 text-xs font-semibold text-lime-text transition-all hover:border-lime hover:bg-lime/20"
           >
             View Full Order Details
           </button>

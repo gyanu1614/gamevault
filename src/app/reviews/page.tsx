@@ -140,7 +140,7 @@ export default function ReviewsPage() {
             key={star}
             className={cn(
               size,
-              star <= rating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-600'
+              star <= rating ? 'fill-yellow-400 text-warning' : 'text-text-disabled'
             )}
           />
         ))}
@@ -164,7 +164,7 @@ export default function ReviewsPage() {
       <div className="flex min-h-screen items-center justify-center bg-black">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="text-gray-400">Loading reviews...</p>
+          <p className="text-text-secondary">Loading reviews...</p>
         </div>
       </div>
     )
@@ -174,9 +174,9 @@ export default function ReviewsPage() {
     return (
       <div className="flex min-h-screen items-center justify-center bg-black">
         <div className="text-center">
-          <Star className="mx-auto mb-4 h-16 w-16 text-gray-600" />
+          <Star className="mx-auto mb-4 h-16 w-16 text-text-disabled" />
           <h2 className="mb-2 text-2xl font-bold text-white">Please log in</h2>
-          <p className="mb-6 text-gray-400">You need to be logged in to view your reviews</p>
+          <p className="mb-6 text-text-secondary">You need to be logged in to view your reviews</p>
           <Link
             href="/login"
             className="rounded-lg bg-primary px-6 py-3 font-semibold text-white hover:bg-primary/90"
@@ -197,7 +197,7 @@ export default function ReviewsPage() {
             <Award className="h-8 w-8 text-primary" />
             <h1 className="text-3xl font-bold text-white">My Reviews</h1>
           </div>
-          <p className="text-gray-400">Manage your feedback and reputation</p>
+          <p className="text-text-secondary">Manage your feedback and reputation</p>
         </div>
 
         {/* Stats - Only show for received reviews */}
@@ -208,12 +208,12 @@ export default function ReviewsPage() {
               animate={{ opacity: 1, y: 0 }}
               className="rounded-xl border border-white/10 bg-gradient-to-br from-yellow-500/10 to-orange-500/10 p-4"
             >
-              <div className="mb-2 flex items-center gap-2 text-yellow-400">
+              <div className="mb-2 flex items-center gap-2 text-warning">
                 <Star className="h-5 w-5 fill-current" />
                 <span className="text-sm font-medium">Average Rating</span>
               </div>
               <div className="text-3xl font-bold text-white">{stats.avgRating.toFixed(1)}</div>
-              <div className="mt-1 text-xs text-gray-400">From {stats.total} reviews</div>
+              <div className="mt-1 text-xs text-text-secondary">From {stats.total} reviews</div>
             </motion.div>
 
             <motion.div
@@ -222,12 +222,12 @@ export default function ReviewsPage() {
               transition={{ delay: 0.05 }}
               className="rounded-xl border border-white/10 bg-gradient-to-br from-green-500/10 to-emerald-500/10 p-4"
             >
-              <div className="mb-2 flex items-center gap-2 text-green-400">
+              <div className="mb-2 flex items-center gap-2 text-success">
                 <ThumbsUp className="h-5 w-5" />
                 <span className="text-sm font-medium">Helpful Votes</span>
               </div>
               <div className="text-3xl font-bold text-white">{stats.totalHelpful}</div>
-              <div className="mt-1 text-xs text-gray-400">Total received</div>
+              <div className="mt-1 text-xs text-text-secondary">Total received</div>
             </motion.div>
 
             <motion.div
@@ -241,7 +241,7 @@ export default function ReviewsPage() {
                 <span className="text-sm font-medium">Response Rate</span>
               </div>
               <div className="text-3xl font-bold text-white">{stats.responseRate.toFixed(0)}%</div>
-              <div className="mt-1 text-xs text-gray-400">Of reviews responded</div>
+              <div className="mt-1 text-xs text-text-secondary">Of reviews responded</div>
             </motion.div>
 
             <motion.div
@@ -255,7 +255,7 @@ export default function ReviewsPage() {
                 <span className="text-sm font-medium">5-Star Reviews</span>
               </div>
               <div className="text-3xl font-bold text-white">{stats.ratingDistribution[5]}</div>
-              <div className="mt-1 text-xs text-gray-400">
+              <div className="mt-1 text-xs text-text-secondary">
                 {stats.total > 0 ? ((stats.ratingDistribution[5] / stats.total) * 100).toFixed(0) : 0}% of total
               </div>
             </motion.div>
@@ -270,7 +270,7 @@ export default function ReviewsPage() {
               'flex-1 rounded-lg px-4 py-2 text-sm font-medium transition-all',
               activeTab === 'received'
                 ? 'bg-primary text-white shadow-lg'
-                : 'text-gray-400 hover:text-white hover:bg-white/5'
+                : 'text-text-secondary hover:text-white hover:bg-white/5'
             )}
           >
             Received ({reviews.received.length})
@@ -281,7 +281,7 @@ export default function ReviewsPage() {
               'flex-1 rounded-lg px-4 py-2 text-sm font-medium transition-all',
               activeTab === 'written'
                 ? 'bg-primary text-white shadow-lg'
-                : 'text-gray-400 hover:text-white hover:bg-white/5'
+                : 'text-text-secondary hover:text-white hover:bg-white/5'
             )}
           >
             Written ({reviews.written.length})
@@ -292,18 +292,18 @@ export default function ReviewsPage() {
         <div className="mb-6 flex flex-col gap-4 rounded-xl border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] p-4 backdrop-blur-md sm:flex-row sm:items-center sm:justify-between">
           {/* Search */}
           <div className="relative flex-1 sm:max-w-md">
-            <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-text-secondary" />
             <input
               type="text"
               placeholder="Search reviews..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full rounded-lg border border-white/10 bg-white/5 py-2 pl-10 pr-4 text-white placeholder:text-gray-500 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+              className="w-full rounded-lg border border-white/10 bg-white/5 py-2 pl-10 pr-4 text-white placeholder:text-text-tertiary focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
             />
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-text-secondary hover:text-white"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -312,7 +312,7 @@ export default function ReviewsPage() {
 
           {/* Rating Filter */}
           <div className="flex items-center gap-2">
-            <Filter className="h-4 w-4 text-gray-400" />
+            <Filter className="h-4 w-4 text-text-secondary" />
             <select
               value={filterRating || ''}
               onChange={(e) => setFilterRating(e.target.value ? parseInt(e.target.value) : null)}
@@ -331,9 +331,9 @@ export default function ReviewsPage() {
         {/* Reviews List */}
         {filteredReviews.length === 0 ? (
           <div className="flex flex-col items-center justify-center rounded-xl border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] p-12 backdrop-blur-md">
-            <Star className="mb-4 h-16 w-16 text-gray-600" />
+            <Star className="mb-4 h-16 w-16 text-text-disabled" />
             <h3 className="mb-2 text-xl font-bold text-white">No reviews found</h3>
-            <p className="text-gray-400">
+            <p className="text-text-secondary">
               {searchQuery
                 ? 'Try adjusting your search or filters'
                 : activeTab === 'received'
@@ -363,11 +363,11 @@ export default function ReviewsPage() {
                       <div className="font-semibold text-white">
                         {activeTab === 'received' ? review.reviewer.name : review.seller.name}
                       </div>
-                      <div className="flex items-center gap-2 text-xs text-gray-400">
+                      <div className="flex items-center gap-2 text-xs text-text-secondary">
                         <Calendar className="h-3 w-3" />
                         {getTimeAgo(review.createdAt)}
                       </div>
-                      <div className="mt-1 text-xs text-gray-500">
+                      <div className="mt-1 text-xs text-text-tertiary">
                         {review.listing.title} • {review.listing.game}
                       </div>
                     </div>
@@ -377,28 +377,28 @@ export default function ReviewsPage() {
 
                 {/* Review Content */}
                 <div className="mb-4">
-                  <p className="text-gray-300 leading-relaxed">{review.comment}</p>
+                  <p className="text-text-secondary leading-relaxed">{review.comment}</p>
                 </div>
 
                 {/* Seller Response */}
                 {activeTab === 'received' && review.response && (
                   <div className="ml-12 rounded-lg border border-primary/20 bg-primary/5 p-4 mb-4">
                     <div className="mb-1 text-xs font-semibold text-primary">Your Response:</div>
-                    <p className="text-sm text-gray-300">{review.response}</p>
+                    <p className="text-sm text-text-secondary">{review.response}</p>
                   </div>
                 )}
 
                 {activeTab === 'written' && review.sellerResponse && (
                   <div className="ml-12 rounded-lg border border-blue-500/20 bg-blue-500/5 p-4 mb-4">
                     <div className="mb-1 text-xs font-semibold text-blue-400">Seller Response:</div>
-                    <p className="text-sm text-gray-300">{review.sellerResponse}</p>
+                    <p className="text-sm text-text-secondary">{review.sellerResponse}</p>
                   </div>
                 )}
 
                 {/* Actions */}
                 <div className="flex items-center justify-between border-t border-white/10 pt-4">
                   <div className="flex items-center gap-4">
-                    <button className="flex items-center gap-1 text-sm text-gray-400 transition-colors hover:text-primary">
+                    <button className="flex items-center gap-1 text-sm text-text-secondary transition-colors hover:text-primary">
                       <ThumbsUp className="h-4 w-4" />
                       Helpful ({review.helpful})
                     </button>

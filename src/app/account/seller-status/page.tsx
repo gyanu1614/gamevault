@@ -120,7 +120,7 @@ export default function ApplicationStatusPage() {
       <div className="flex min-h-screen items-center justify-center bg-black">
         <div className="text-center">
           <Loader2 className="mx-auto h-12 w-12 animate-spin text-primary" />
-          <p className="mt-4 text-sm text-gray-400">Loading application status...</p>
+          <p className="mt-4 text-sm text-text-secondary">Loading application status...</p>
         </div>
       </div>
     )
@@ -131,9 +131,9 @@ export default function ApplicationStatusPage() {
     return (
       <div className="flex min-h-screen items-center justify-center bg-black">
         <div className="text-center">
-          <AlertCircle className="mx-auto h-12 w-12 text-red-500" />
+          <AlertCircle className="mx-auto h-12 w-12 text-error" />
           <p className="mt-4 text-lg text-white">Error</p>
-          <p className="mt-2 text-sm text-gray-400">{error}</p>
+          <p className="mt-2 text-sm text-text-secondary">{error}</p>
           <button
             onClick={() => router.push('/')}
             className="mt-6 rounded-lg bg-primary/10 px-6 py-2 text-sm font-medium text-primary hover:bg-primary/20"
@@ -150,9 +150,9 @@ export default function ApplicationStatusPage() {
     return (
       <div className="flex min-h-screen items-center justify-center bg-black">
         <div className="text-center">
-          <FileText className="mx-auto h-12 w-12 text-gray-500" />
+          <FileText className="mx-auto h-12 w-12 text-text-tertiary" />
           <p className="mt-4 text-lg text-white">No Application Found</p>
-          <p className="mt-2 text-sm text-gray-400">
+          <p className="mt-2 text-sm text-text-secondary">
             You haven't submitted a seller application yet.
           </p>
           <button
@@ -174,7 +174,7 @@ export default function ApplicationStatusPage() {
       pending: {
         icon: Clock,
         text: 'Pending Review',
-        color: 'text-yellow-400 bg-yellow-500/10 border-yellow-500/20',
+        color: 'text-warning bg-warning-bg border-yellow-500/20',
       },
       under_review: {
         icon: Clock,
@@ -184,17 +184,17 @@ export default function ApplicationStatusPage() {
       approved: {
         icon: CheckCircle2,
         text: 'Approved',
-        color: 'text-green-400 bg-green-500/10 border-green-500/20',
+        color: 'text-success bg-success-bg border-green-500/20',
       },
       rejected: {
         icon: XCircle,
         text: 'Rejected',
-        color: 'text-red-400 bg-red-500/10 border-red-500/20',
+        color: 'text-error bg-error-bg border-error/40',
       },
       withdrawn: {
         icon: Ban,
         text: 'Withdrawn',
-        color: 'text-gray-400 bg-gray-500/10 border-gray-500/20',
+        color: 'text-text-secondary bg-gray-500/10 border-gray-500/20',
       },
     }
 
@@ -216,17 +216,17 @@ export default function ApplicationStatusPage() {
       return (
         <div className="rounded-lg border border-white/5 bg-white/5 p-6">
           <h3 className="text-lg font-semibold text-white">Application Withdrawn</h3>
-          <p className="mt-2 text-sm text-gray-400">
+          <p className="mt-2 text-sm text-text-secondary">
             You have withdrawn your seller application. You can submit a new application anytime.
           </p>
 
           {withdrawal && withdrawal.withdrawalCount >= 3 && (
             <div className="mt-4 rounded-lg bg-yellow-500/5 p-4 border border-yellow-500/20">
               <div className="flex items-start gap-2">
-                <Info className="h-4 w-4 text-yellow-400 mt-0.5" />
+                <Info className="h-4 w-4 text-warning mt-0.5" />
                 <div className="flex-1">
-                  <p className="text-sm font-medium text-yellow-400">Multiple Withdrawals Detected</p>
-                  <p className="mt-1 text-sm text-gray-300">
+                  <p className="text-sm font-medium text-warning">Multiple Withdrawals Detected</p>
+                  <p className="mt-1 text-sm text-text-secondary">
                     You have withdrawn {withdrawal.withdrawalCount} applications. Please ensure your next application is complete to avoid delays.
                   </p>
                 </div>
@@ -249,13 +249,13 @@ export default function ApplicationStatusPage() {
       return (
         <div className="rounded-lg border border-white/5 bg-white/5 p-6">
           <h3 className="text-lg font-semibold text-white">🎉 Congratulations! You are now a seller</h3>
-          <p className="mt-2 text-sm text-gray-400">
+          <p className="mt-2 text-sm text-text-secondary">
             Your application has been approved. You can now start listing your products and services on GameVault.
           </p>
 
           <button
             onClick={() => router.push('/account/dashboard')}
-            className="mt-4 rounded-lg bg-green-500/10 px-6 py-2 text-sm font-medium text-green-400 hover:bg-green-500/20"
+            className="mt-4 rounded-lg bg-success-bg px-6 py-2 text-sm font-medium text-success hover:bg-success-bg"
           >
             Go to Dashboard
           </button>
@@ -268,19 +268,19 @@ export default function ApplicationStatusPage() {
       return (
         <div className="space-y-6">
           {/* Rejection Details */}
-          <div className="rounded-lg border border-red-500/20 bg-red-500/5 p-6">
+          <div className="rounded-lg border border-error/40 bg-red-500/5 p-6">
             <h3 className="text-lg font-semibold text-white">Application Not Approved</h3>
-            <p className="mt-2 text-sm text-gray-400">
+            <p className="mt-2 text-sm text-text-secondary">
               Unfortunately, we were unable to approve your application at this time.
             </p>
 
             {/* Rejection Reason */}
-            <div className="mt-4 rounded-lg bg-red-500/10 p-4 border border-red-500/20">
-              <p className="text-sm font-medium text-red-400">Rejection Reason:</p>
-              <p className="mt-1 text-sm text-gray-300">{rejection.reason}</p>
+            <div className="mt-4 rounded-lg bg-error-bg p-4 border border-error/40">
+              <p className="text-sm font-medium text-error">Rejection Reason:</p>
+              <p className="mt-1 text-sm text-text-secondary">{rejection.reason}</p>
 
               {rejection.category && (
-                <p className="mt-2 text-xs text-gray-400">
+                <p className="mt-2 text-xs text-text-secondary">
                   Category: {getRejectionCategoryLabel(rejection.category)}
                 </p>
               )}
@@ -288,12 +288,12 @@ export default function ApplicationStatusPage() {
 
             {/* Rejection Count & Tier Info */}
             <div className="mt-4 flex items-start gap-2 rounded-lg bg-yellow-500/5 p-4 border border-yellow-500/20">
-              <AlertCircle className="h-4 w-4 text-yellow-400 mt-0.5" />
+              <AlertCircle className="h-4 w-4 text-warning mt-0.5" />
               <div className="flex-1">
-                <p className="text-sm font-medium text-yellow-400">
+                <p className="text-sm font-medium text-warning">
                   {rejection.isPermanentBan ? 'Permanent Ban' : `Rejection ${rejection.rejectionCount} of 3`}
                 </p>
-                <p className="mt-1 text-sm text-gray-300">
+                <p className="mt-1 text-sm text-text-secondary">
                   {rejection.isPermanentBan
                     ? 'You have exceeded the maximum number of rejections. Please contact support to appeal.'
                     : `Cooldown period: ${getCooldownLabel(rejection.rejectionCount - 1)}`}
@@ -304,12 +304,12 @@ export default function ApplicationStatusPage() {
 
           {/* Countdown Timer or Permanent Ban Message */}
           {rejection.isPermanentBan ? (
-            <div className="rounded-lg border border-red-500/20 bg-red-500/5 p-6">
+            <div className="rounded-lg border border-error/40 bg-red-500/5 p-6">
               <div className="flex items-start gap-3">
-                <Ban className="h-6 w-6 text-red-400" />
+                <Ban className="h-6 w-6 text-error" />
                 <div className="flex-1">
                   <h4 className="text-base font-semibold text-white">Account Permanently Restricted</h4>
-                  <p className="mt-2 text-sm text-gray-400">
+                  <p className="mt-2 text-sm text-text-secondary">
                     You have been permanently restricted from becoming a seller due to multiple application rejections.
                     If you believe this is a mistake, please contact our support team with your application reference number.
                   </p>
@@ -336,7 +336,7 @@ export default function ApplicationStatusPage() {
                 className={`mt-6 w-full flex items-center justify-center gap-2 rounded-lg px-6 py-3 text-sm font-medium transition-colors ${
                   cooldownExpired || canReapply
                     ? 'bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20'
-                    : 'bg-gray-500/10 text-gray-500 cursor-not-allowed border border-gray-500/20'
+                    : 'bg-gray-500/10 text-text-tertiary cursor-not-allowed border border-gray-500/20'
                 }`}
               >
                 <RefreshCcw className="h-4 w-4" />
@@ -367,13 +367,13 @@ export default function ApplicationStatusPage() {
     return (
       <div className="rounded-lg border border-white/5 bg-white/5 p-6">
         <h3 className="text-lg font-semibold text-white">{message.title}</h3>
-        <p className="mt-2 text-sm text-gray-400">{message.description}</p>
+        <p className="mt-2 text-sm text-text-secondary">{message.description}</p>
 
         {/* Withdraw button for pending/under_review */}
         {(status === 'pending' || status === 'under_review') && (
           <button
             onClick={() => setShowWithdrawModal(true)}
-            className="mt-4 flex items-center gap-2 rounded-lg border border-red-500/20 bg-red-500/10 px-6 py-2 text-sm font-medium text-red-400 hover:bg-red-500/20 transition-colors"
+            className="mt-4 flex items-center gap-2 rounded-lg border border-error/40 bg-error-bg px-6 py-2 text-sm font-medium text-error hover:bg-error-bg transition-colors"
           >
             <Trash2 className="h-4 w-4" />
             Withdraw Application
@@ -397,13 +397,13 @@ export default function ApplicationStatusPage() {
           <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
             <button
               onClick={() => router.push('/')}
-              className="mb-4 flex items-center gap-2 text-sm text-gray-400 hover:text-white"
+              className="mb-4 flex items-center gap-2 text-sm text-text-secondary hover:text-white"
             >
               <ArrowLeft className="h-4 w-4" />
               Back to Home
             </button>
             <h1 className="text-2xl font-bold text-white sm:text-3xl">Application Status</h1>
-            <p className="mt-2 text-sm text-gray-400">
+            <p className="mt-2 text-sm text-text-secondary">
               Track the progress of your seller application
             </p>
           </div>
@@ -427,13 +427,13 @@ export default function ApplicationStatusPage() {
               <div className="relative flex items-start gap-4">
                 <div className="absolute left-4 top-8 h-full w-px bg-white/10" />
 
-                <div className="relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-green-500/10 text-green-400 ring-4 ring-black">
+                <div className="relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-success-bg text-success ring-4 ring-black">
                   <CheckCircle2 className="h-4 w-4" />
                 </div>
                 <div className="flex-1 pb-2">
                   <p className="text-sm font-medium text-white">Application Started</p>
                   {application?.created_at && (
-                    <p className="text-xs text-gray-400">
+                    <p className="text-xs text-text-secondary">
                       {new Date(application.created_at).toLocaleString()}
                     </p>
                   )}
@@ -445,12 +445,12 @@ export default function ApplicationStatusPage() {
                 <div className="relative flex items-start gap-4">
                   <div className="absolute left-4 top-8 h-full w-px bg-white/10" />
 
-                  <div className="relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-green-500/10 text-green-400 ring-4 ring-black">
+                  <div className="relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-success-bg text-success ring-4 ring-black">
                     <CheckCircle2 className="h-4 w-4" />
                   </div>
                   <div className="flex-1 pb-2">
                     <p className="text-sm font-medium text-white">Application Submitted</p>
-                    <p className="text-xs text-gray-400">
+                    <p className="text-xs text-text-secondary">
                       {new Date(application.submitted_at).toLocaleString()}
                     </p>
                   </div>
@@ -467,7 +467,7 @@ export default function ApplicationStatusPage() {
                   className={`relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full ring-4 ring-black ${
                     status === 'under_review' || application?.reviewed_at
                       ? 'bg-blue-500/10 text-blue-400'
-                      : 'bg-white/5 text-gray-500'
+                      : 'bg-white/5 text-text-tertiary'
                   }`}
                 >
                   {status === 'under_review' || application?.reviewed_at ? (
@@ -477,14 +477,14 @@ export default function ApplicationStatusPage() {
                   )}
                 </div>
                 <div className="flex-1 pb-2">
-                  <p className={`text-sm font-medium ${status === 'under_review' || application?.reviewed_at ? 'text-white' : 'text-gray-500'}`}>
+                  <p className={`text-sm font-medium ${status === 'under_review' || application?.reviewed_at ? 'text-white' : 'text-text-tertiary'}`}>
                     Review In Progress
                   </p>
                   {status === 'under_review' && (
-                    <p className="text-xs text-gray-400">Our team is reviewing your application</p>
+                    <p className="text-xs text-text-secondary">Our team is reviewing your application</p>
                   )}
                   {!application?.reviewed_at && status !== 'under_review' && (
-                    <p className="text-xs text-gray-500">Waiting for review</p>
+                    <p className="text-xs text-text-tertiary">Waiting for review</p>
                   )}
                 </div>
               </div>
@@ -492,16 +492,16 @@ export default function ApplicationStatusPage() {
               {/* Step 4: Withdrawal Event (if withdrawn) */}
               {status === 'withdrawn' && withdrawal && (
                 <div className="relative flex items-start gap-4">
-                  <div className="relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gray-500/10 text-gray-400 ring-4 ring-black">
+                  <div className="relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gray-500/10 text-text-secondary ring-4 ring-black">
                     <Ban className="h-4 w-4" />
                   </div>
                   <div className="flex-1 pb-2">
                     <p className="text-sm font-medium text-white">Application Withdrawn</p>
-                    <p className="text-xs text-gray-400">
+                    <p className="text-xs text-text-secondary">
                       {new Date(withdrawal.withdrawnAt).toLocaleString()}
                     </p>
                     {withdrawal.withdrawalCount > 1 && (
-                      <p className="text-xs text-yellow-400 mt-1">
+                      <p className="text-xs text-warning mt-1">
                         Withdrawal count: {withdrawal.withdrawalCount}
                       </p>
                     )}
@@ -512,16 +512,16 @@ export default function ApplicationStatusPage() {
               {/* Step 4: Rejection Event (if rejected) */}
               {status === 'rejected' && rejection && (
                 <div className="relative flex items-start gap-4">
-                  <div className="relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-red-500/10 text-red-400 ring-4 ring-black">
+                  <div className="relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-error-bg text-error ring-4 ring-black">
                     <XCircle className="h-4 w-4" />
                   </div>
                   <div className="flex-1 pb-2">
                     <p className="text-sm font-medium text-white">Application Rejected</p>
-                    <p className="text-xs text-gray-400">
+                    <p className="text-xs text-text-secondary">
                       {new Date(rejection.rejectedAt).toLocaleString()}
                     </p>
                     {rejection.rejectionCount > 1 && (
-                      <p className="text-xs text-red-400 mt-1">
+                      <p className="text-xs text-error mt-1">
                         Rejection #{rejection.rejectionCount}
                       </p>
                     )}
@@ -532,13 +532,13 @@ export default function ApplicationStatusPage() {
               {/* Step 4: Review Completed (approved) */}
               {status === 'approved' && (
                 <div className="relative flex items-start gap-4">
-                  <div className="relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-green-500/10 text-green-400 ring-4 ring-black">
+                  <div className="relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-success-bg text-success ring-4 ring-black">
                     <CheckCircle2 className="h-4 w-4" />
                   </div>
                   <div className="flex-1 pb-2">
                     <p className="text-sm font-medium text-white">Application Approved</p>
                     {application?.reviewed_at && (
-                      <p className="text-xs text-gray-400">
+                      <p className="text-xs text-text-secondary">
                         {new Date(application.reviewed_at).toLocaleString()}
                       </p>
                     )}
@@ -556,8 +556,8 @@ export default function ApplicationStatusPage() {
               </div>
               <div className="flex-1">
                 <h4 className="text-sm font-semibold text-white">Application Reference</h4>
-                <p className="mt-1 font-mono text-sm text-gray-300">{application?.id || 'N/A'}</p>
-                <p className="mt-3 text-xs leading-relaxed text-gray-400">
+                <p className="mt-1 font-mono text-sm text-text-secondary">{application?.id || 'N/A'}</p>
+                <p className="mt-3 text-xs leading-relaxed text-text-secondary">
                   Use this reference number when contacting our support team for inquiries regarding your application status or any assistance you may need.
                 </p>
               </div>
@@ -577,12 +577,12 @@ export default function ApplicationStatusPage() {
 
           {/* Modal */}
           <div className="relative z-10 w-full max-w-md rounded-2xl border border-white/10 bg-black/90 p-6 shadow-2xl">
-            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-500/10">
-              <AlertCircle className="h-6 w-6 text-red-400" />
+            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-error-bg">
+              <AlertCircle className="h-6 w-6 text-error" />
             </div>
 
             <h3 className="text-xl font-bold text-white mb-2">Withdraw Application?</h3>
-            <p className="text-sm text-gray-400 mb-6">
+            <p className="text-sm text-text-secondary mb-6">
               Are you sure you want to withdraw your seller application? This action cannot be undone, but you can submit a new application anytime.
             </p>
 
@@ -590,14 +590,14 @@ export default function ApplicationStatusPage() {
               <button
                 onClick={() => setShowWithdrawModal(false)}
                 disabled={isWithdrawing}
-                className="flex-1 rounded-lg border border-white/10 bg-white/[0.03] px-4 py-2.5 text-sm font-medium text-white hover:bg-white/[0.05] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="flex-1 rounded-lg border border-white/10 bg-bg-overlay px-4 py-2.5 text-sm font-medium text-white hover:bg-bg-overlay disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={handleWithdraw}
                 disabled={isWithdrawing}
-                className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-red-500/10 border border-red-500/20 px-4 py-2.5 text-sm font-medium text-red-400 hover:bg-red-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-error-bg border border-error/40 px-4 py-2.5 text-sm font-medium text-error hover:bg-error-bg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 {isWithdrawing ? (
                   <>

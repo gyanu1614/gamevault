@@ -52,7 +52,7 @@ const TIER_CONFIG: Record<
   },
   silver: {
     label: 'Silver',
-    color: 'text-gray-300',
+    color: 'text-text-secondary',
     bg: 'bg-gray-400/10',
     border: 'border-gray-400/30',
     glow: 'shadow-gray-400/20',
@@ -62,9 +62,9 @@ const TIER_CONFIG: Record<
   },
   gold: {
     label: 'Gold',
-    color: 'text-yellow-400',
-    bg: 'bg-yellow-500/10',
-    border: 'border-yellow-500/30',
+    color: 'text-warning',
+    bg: 'bg-warning-bg',
+    border: 'border-warning/40',
     glow: 'shadow-yellow-500/20',
     icon: Award,
     description: 'Top rated seller',
@@ -82,9 +82,9 @@ const TIER_CONFIG: Record<
   },
   diamond: {
     label: 'Diamond',
-    color: 'text-violet-400',
-    bg: 'bg-violet-500/10',
-    border: 'border-violet-500/30',
+    color: 'text-lime-text',
+    bg: 'bg-lime/10',
+    border: 'border-lime-tint-border',
     glow: 'shadow-violet-500/20',
     icon: Zap,
     description: 'Diamond elite',
@@ -158,7 +158,7 @@ function InlineBadge({
 
       {/* Rating */}
       {rating !== undefined && rating !== null && (
-        <span className="inline-flex items-center gap-1 text-yellow-400 text-xs font-medium">
+        <span className="inline-flex items-center gap-1 text-warning text-xs font-medium">
           <Star className="w-3 h-3 fill-yellow-400" />
           {rating.toFixed(1)}
         </span>
@@ -166,7 +166,7 @@ function InlineBadge({
 
       {/* Sales count */}
       {totalSales !== undefined && totalSales > 0 && (
-        <span className="text-xs text-gray-400">{totalSales.toLocaleString()} sales</span>
+        <span className="text-xs text-text-secondary">{totalSales.toLocaleString()} sales</span>
       )}
 
       {/* Verified badge */}
@@ -179,7 +179,7 @@ function InlineBadge({
 
       {/* Online indicator */}
       {isOnline !== undefined && (
-        <span className={`inline-flex items-center gap-1 text-xs ${isOnline ? 'text-green-400' : 'text-gray-500'}`}>
+        <span className={`inline-flex items-center gap-1 text-xs ${isOnline ? 'text-success' : 'text-text-tertiary'}`}>
           <span className={`w-1.5 h-1.5 rounded-full ${isOnline ? 'bg-green-400 animate-pulse' : 'bg-gray-500'}`} />
           {isOnline ? 'Online' : 'Offline'}
         </span>
@@ -208,14 +208,14 @@ function TrustCard({ tier, rating, totalSales, isVerified, isOnline, username, s
           <div>
             <span className={`text-sm font-bold ${config.color}`}>{config.label} Seller</span>
             {username && (
-              <p className="text-xs text-gray-400">@{username}</p>
+              <p className="text-xs text-text-secondary">@{username}</p>
             )}
           </div>
         </div>
 
         {/* Online status */}
         {isOnline !== undefined && (
-          <div className={`flex items-center gap-1 text-xs ${isOnline ? 'text-green-400' : 'text-gray-500'}`}>
+          <div className={`flex items-center gap-1 text-xs ${isOnline ? 'text-success' : 'text-text-tertiary'}`}>
             <span className={`w-2 h-2 rounded-full ${isOnline ? 'bg-green-400 animate-pulse' : 'bg-gray-500'}`} />
             {isOnline ? 'Online' : 'Offline'}
           </div>
@@ -226,18 +226,18 @@ function TrustCard({ tier, rating, totalSales, isVerified, isOnline, username, s
       <div className="flex items-center gap-4">
         {rating !== undefined && rating !== null && (
           <div className="text-center">
-            <div className="flex items-center gap-1 text-yellow-400">
+            <div className="flex items-center gap-1 text-warning">
               <Star className="w-4 h-4 fill-yellow-400" />
               <span className="font-bold text-white">{rating.toFixed(1)}</span>
             </div>
-            <p className="text-xs text-gray-500 mt-0.5">Rating</p>
+            <p className="text-xs text-text-tertiary mt-0.5">Rating</p>
           </div>
         )}
 
         {totalSales !== undefined && (
           <div className="text-center">
             <p className="font-bold text-white">{totalSales >= 1000 ? `${(totalSales / 1000).toFixed(1)}k` : totalSales}</p>
-            <p className="text-xs text-gray-500 mt-0.5">Sales</p>
+            <p className="text-xs text-text-tertiary mt-0.5">Sales</p>
           </div>
         )}
 
@@ -303,17 +303,17 @@ export function StarRating({
             key={star}
             className={`${iconSize} ${
               star <= filled
-                ? 'text-yellow-400 fill-yellow-400'
+                ? 'text-warning fill-yellow-400'
                 : star === filled + 1 && hasHalf
-                  ? 'text-yellow-400 fill-yellow-400/50'
-                  : 'text-gray-600'
+                  ? 'text-warning fill-yellow-400/50'
+                  : 'text-text-disabled'
             }`}
           />
         ))}
       </div>
       <span className="text-sm font-medium text-white">{rating.toFixed(1)}</span>
       {count !== undefined && (
-        <span className="text-xs text-gray-400">({count.toLocaleString()})</span>
+        <span className="text-xs text-text-secondary">({count.toLocaleString()})</span>
       )}
     </div>
   )

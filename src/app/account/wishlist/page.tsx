@@ -92,7 +92,7 @@ export default function WishlistPage() {
     return (
       <div className="w-full px-6 pb-8">
         <div className="flex items-center justify-center py-24">
-          <Loader2 className="h-8 w-8 animate-spin text-violet-500" />
+          <Loader2 className="h-8 w-8 animate-spin text-lime-text" />
         </div>
       </div>
     )
@@ -104,10 +104,10 @@ export default function WishlistPage() {
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-2">
-            <Heart className="h-7 w-7 text-violet-400 fill-violet-400" />
+            <Heart className="h-7 w-7 text-lime-text fill-violet-400" />
             <h1 className="text-3xl font-bold text-white">Wishlist</h1>
           </div>
-          <p className="text-sm text-gray-400">Save your favorite items and track them</p>
+          <p className="text-sm text-text-secondary">Save your favorite items and track them</p>
         </div>
 
         {/* Stats */}
@@ -115,35 +115,35 @@ export default function WishlistPage() {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-5 backdrop-blur-sm"
+            className="rounded-2xl border border-border-subtle bg-bg-overlay p-5 backdrop-blur-sm"
         >
-          <div className="mb-3 flex items-center gap-2.5 text-violet-400">
+          <div className="mb-3 flex items-center gap-2.5 text-lime-text">
             <Heart className="h-5 w-5 fill-violet-400" />
             <span className="text-sm font-medium">Total Items</span>
           </div>
           <div className="text-3xl font-bold text-white">{wishlist.length}</div>
-          <div className="mt-1.5 text-xs text-gray-500">In your wishlist</div>
+          <div className="mt-1.5 text-xs text-text-tertiary">In your wishlist</div>
         </motion.div>
 
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.05 }}
-          className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-5 backdrop-blur-sm"
+          className="rounded-2xl border border-border-subtle bg-bg-overlay p-5 backdrop-blur-sm"
         >
           <div className="mb-3 flex items-center gap-2.5 text-emerald-400">
             <TrendingUp className="h-5 w-5" />
             <span className="text-sm font-medium">Total Value</span>
           </div>
           <div className="text-3xl font-bold text-white">${totalValue.toFixed(2)}</div>
-          <div className="mt-1.5 text-xs text-gray-500">If bought today</div>
+          <div className="mt-1.5 text-xs text-text-tertiary">If bought today</div>
         </motion.div>
 
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-5 backdrop-blur-sm"
+          className="rounded-2xl border border-border-subtle bg-bg-overlay p-5 backdrop-blur-sm"
         >
           <div className="mb-3 flex items-center gap-2.5 text-cyan-400">
             <ShoppingBag className="h-5 w-5" />
@@ -154,26 +154,26 @@ export default function WishlistPage() {
               item.listing?.is_unlimited || (item.listing?.quantity ?? 0) > 0
             ).length}
           </div>
-          <div className="mt-1.5 text-xs text-gray-500">Available to buy</div>
+          <div className="mt-1.5 text-xs text-text-tertiary">Available to buy</div>
         </motion.div>
         </div>
 
         {/* Filters & View Toggle */}
-        <div className="mb-6 flex flex-col gap-4 rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4 backdrop-blur-sm sm:flex-row sm:items-center sm:justify-between">
+        <div className="mb-6 flex flex-col gap-4 rounded-2xl border border-border-subtle bg-bg-overlay p-4 backdrop-blur-sm sm:flex-row sm:items-center sm:justify-between">
         {/* Search */}
         <div className="relative flex-1 sm:max-w-md">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary" />
           <input
             type="text"
             placeholder="Search wishlist..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full rounded-xl border border-white/[0.08] bg-white/[0.04] py-2.5 pl-10 pr-4 text-sm text-white placeholder:text-gray-500 focus:border-violet-500/50 focus:outline-none focus:ring-2 focus:ring-violet-500/20 transition-all"
+            className="w-full rounded-xl border border-border-subtle bg-bg-raised py-2.5 pl-10 pr-4 text-sm text-white placeholder:text-text-tertiary focus:border-lime focus:outline-none focus:ring-2 focus:ring-violet-500/20 transition-all"
           />
           {searchQuery && (
             <button
               onClick={() => setSearchQuery('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-text-tertiary hover:text-white transition-colors"
             >
               <X className="h-4 w-4" />
             </button>
@@ -186,7 +186,7 @@ export default function WishlistPage() {
             <select
               value={filterGame}
               onChange={(e) => setFilterGame(e.target.value)}
-              className="rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 py-2.5 text-sm text-white focus:border-violet-500/50 focus:outline-none focus:ring-2 focus:ring-violet-500/20 transition-all"
+              className="rounded-xl border border-border-subtle bg-bg-raised px-3 py-2.5 text-sm text-white focus:border-lime focus:outline-none focus:ring-2 focus:ring-violet-500/20 transition-all"
             >
               <option value="">All Games</option>
               {games.map(game => (
@@ -196,14 +196,14 @@ export default function WishlistPage() {
           )}
 
           {/* View Toggle */}
-          <div className="flex gap-1 rounded-xl border border-white/[0.08] bg-white/[0.04] p-1">
+          <div className="flex gap-1 rounded-xl border border-border-subtle bg-bg-raised p-1">
             <button
               onClick={() => setViewMode('grid')}
               className={cn(
                 'rounded-lg p-2 transition-all',
                 viewMode === 'grid'
-                  ? 'bg-violet-500 text-white shadow-lg shadow-violet-500/25'
-                  : 'text-gray-400 hover:text-white hover:bg-white/[0.06]'
+                  ? 'bg-lime text-text-inverse shadow-lg shadow-violet-500/25'
+                  : 'text-text-secondary hover:text-white hover:bg-bg-raised-hover'
               )}
             >
               <Grid3x3 className="h-4 w-4" />
@@ -213,8 +213,8 @@ export default function WishlistPage() {
               className={cn(
                 'rounded-lg p-2 transition-all',
                 viewMode === 'list'
-                  ? 'bg-violet-500 text-white shadow-lg shadow-violet-500/25'
-                  : 'text-gray-400 hover:text-white hover:bg-white/[0.06]'
+                  ? 'bg-lime text-text-inverse shadow-lg shadow-violet-500/25'
+                  : 'text-text-secondary hover:text-white hover:bg-bg-raised-hover'
               )}
             >
               <List className="h-4 w-4" />
@@ -225,15 +225,15 @@ export default function WishlistPage() {
 
         {/* Wishlist Items */}
         {filteredWishlist.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-2xl border border-white/[0.08] bg-white/[0.02] p-16 backdrop-blur-sm">
+        <div className="flex flex-col items-center justify-center rounded-2xl border border-border-subtle bg-bg-overlay p-16 backdrop-blur-sm">
           <Heart className="mb-4 h-20 w-20 text-gray-700/50 fill-gray-700/50" />
           <h3 className="mb-2 text-xl font-semibold text-white">Your wishlist is empty</h3>
-          <p className="mb-8 text-sm text-gray-400 text-center max-w-sm">
+          <p className="mb-8 text-sm text-text-secondary text-center max-w-sm">
             {searchQuery ? 'Try adjusting your search or filters' : 'Browse listings and click the heart icon to save your favorite items here'}
           </p>
           <Link
             href="/"
-            className="rounded-xl bg-violet-500 hover:bg-violet-600 px-6 py-3 text-sm font-semibold text-white transition-all shadow-lg shadow-violet-500/25 hover:shadow-violet-500/40"
+            className="rounded-xl bg-lime hover:bg-lime-hover px-6 py-3 text-sm font-semibold text-text-inverse transition-all shadow-lg shadow-violet-500/25 hover:shadow-violet-500/40"
           >
             Browse Listings
           </Link>
@@ -251,7 +251,7 @@ export default function WishlistPage() {
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: index * 0.05 }}
-                className="group relative rounded-2xl border border-white/[0.08] bg-white/[0.02] overflow-hidden backdrop-blur-sm transition-all hover:border-violet-500/40 hover:bg-white/[0.04] cursor-pointer"
+                className="group relative rounded-2xl border border-border-subtle bg-bg-overlay overflow-hidden backdrop-blur-sm transition-all hover:border-lime-tint-border hover:bg-bg-raised cursor-pointer"
                 onClick={() => router.push(`/${listing.game?.slug}/${listing.category?.slug}/${listing.slug}`)}
               >
                 {/* Remove Button */}
@@ -266,7 +266,7 @@ export default function WishlistPage() {
                 </button>
 
                 {/* Image Placeholder */}
-                <div className="aspect-video bg-gradient-to-br from-violet-500/10 to-purple-500/10 flex items-center justify-center overflow-hidden">
+                <div className="aspect-video bg-gradient-to-br from-lime/10 to-lime/5 flex items-center justify-center overflow-hidden">
                   {listing.images && listing.images.length > 0 ? (
                     <img
                       src={listing.images[0]}
@@ -282,7 +282,7 @@ export default function WishlistPage() {
 
                 {/* Content */}
                 <div className="p-4">
-                  <div className="mb-2 flex items-center justify-between text-[11px] text-gray-500">
+                  <div className="mb-2 flex items-center justify-between text-[11px] text-text-tertiary">
                     <span className="font-medium">{listing.game?.name || 'Unknown Game'}</span>
                     <span>{listing.category?.name || ''}</span>
                   </div>
@@ -296,7 +296,7 @@ export default function WishlistPage() {
 
                   {/* Stock Status */}
                   {!inStock && (
-                    <div className="mb-3 flex items-center gap-1.5 text-xs text-red-400">
+                    <div className="mb-3 flex items-center gap-1.5 text-xs text-error">
                       <AlertCircle className="h-3.5 w-3.5" />
                       Out of stock
                     </div>
@@ -313,8 +313,8 @@ export default function WishlistPage() {
                       className={cn(
                         'flex-1 rounded-xl py-2.5 text-sm font-semibold transition-all',
                         inStock
-                          ? 'bg-violet-500 text-white hover:bg-violet-600 shadow-lg shadow-violet-500/25'
-                          : 'bg-gray-700/50 text-gray-500 cursor-not-allowed'
+                          ? 'bg-lime text-text-inverse hover:bg-lime shadow-lg shadow-violet-500/25'
+                          : 'bg-gray-700/50 text-text-tertiary cursor-not-allowed'
                       )}
                     >
                       <ShoppingBag className="inline h-4 w-4 mr-1.5" />
@@ -322,7 +322,7 @@ export default function WishlistPage() {
                     </button>
                   </div>
 
-                  <div className="mt-2.5 text-[11px] text-gray-600">
+                  <div className="mt-2.5 text-[11px] text-text-disabled">
                     Added {getTimeAgo(item.created_at)}
                   </div>
                 </div>
@@ -343,11 +343,11 @@ export default function WishlistPage() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.05 }}
-                className="flex gap-4 rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4 backdrop-blur-sm transition-all hover:border-violet-500/40 hover:bg-white/[0.04] cursor-pointer"
+                className="flex gap-4 rounded-2xl border border-border-subtle bg-bg-overlay p-4 backdrop-blur-sm transition-all hover:border-lime-tint-border hover:bg-bg-raised cursor-pointer"
                 onClick={() => router.push(`/${listing.game?.slug}/${listing.category?.slug}/${listing.slug}`)}
               >
                 {/* Image */}
-                <div className="h-24 w-32 flex-shrink-0 rounded-xl bg-gradient-to-br from-violet-500/10 to-purple-500/10 flex items-center justify-center overflow-hidden">
+                <div className="h-24 w-32 flex-shrink-0 rounded-xl bg-gradient-to-br from-lime/10 to-lime/5 flex items-center justify-center overflow-hidden">
                   {listing.images && listing.images.length > 0 ? (
                     <img
                       src={listing.images[0]}
@@ -366,7 +366,7 @@ export default function WishlistPage() {
                   <div className="mb-1.5 flex items-start justify-between gap-2">
                     <div className="min-w-0">
                       <h3 className="text-sm font-semibold text-white truncate">{listing.title}</h3>
-                      <div className="mt-1.5 flex items-center gap-2 text-[11px] text-gray-500">
+                      <div className="mt-1.5 flex items-center gap-2 text-[11px] text-text-tertiary">
                         <span className="font-medium">{listing.game?.name || 'Unknown'}</span>
                         {listing.category?.name && (
                           <>
@@ -375,7 +375,7 @@ export default function WishlistPage() {
                           </>
                         )}
                         <span>•</span>
-                        <span className="text-gray-600">{getTimeAgo(item.created_at)}</span>
+                        <span className="text-text-disabled">{getTimeAgo(item.created_at)}</span>
                       </div>
                     </div>
                     <button
@@ -383,7 +383,7 @@ export default function WishlistPage() {
                         e.stopPropagation()
                         handleRemoveFromWishlist(item.listing_id)
                       }}
-                      className="rounded-full p-1.5 text-gray-500 transition-colors hover:text-red-500 hover:bg-red-500/10 flex-shrink-0"
+                      className="rounded-full p-1.5 text-text-tertiary transition-colors hover:text-error hover:bg-error-bg flex-shrink-0"
                     >
                       <X className="h-4 w-4" />
                     </button>
@@ -401,8 +401,8 @@ export default function WishlistPage() {
                       className={cn(
                         'rounded-xl px-5 py-2.5 text-sm font-semibold transition-all',
                         inStock
-                          ? 'bg-violet-500 text-white hover:bg-violet-600 shadow-lg shadow-violet-500/25'
-                          : 'bg-gray-700/50 text-gray-500 cursor-not-allowed'
+                          ? 'bg-lime text-text-inverse hover:bg-lime shadow-lg shadow-violet-500/25'
+                          : 'bg-gray-700/50 text-text-tertiary cursor-not-allowed'
                       )}
                     >
                       <ShoppingBag className="inline h-4 w-4 mr-1.5" />

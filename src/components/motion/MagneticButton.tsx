@@ -22,7 +22,7 @@ interface MagneticButtonProps {
  * The effect is subtle by default — strength 0.3 = 30% of cursor offset.
  *
  * @example
- * <MagneticButton className="bg-violet-500 text-white px-6 py-3 rounded-xl">
+ * <MagneticButton className="bg-lime text-text-inverse px-6 py-3 rounded-xl">
  *   Buy Now
  * </MagneticButton>
  */

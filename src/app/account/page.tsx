@@ -1,6 +1,8 @@
 /**
- * Account Home/Overview Page
- * Unified dashboard for both buyers and sellers
+ * /account — Account overview.
+ *
+ * V6 reskin: GV tokens, lime accent for primary actions, mobile-first
+ * grid. Server component (no client interactivity required).
  */
 
 import { Metadata } from 'next'
@@ -8,165 +10,160 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import {
-  ShoppingCart,
-  MessageSquare,
-  Package,
-  TrendingUp,
-  ArrowRight
+  ShoppingCart, MessageSquare, Package, TrendingUp, ArrowRight,
+  Heart, Wallet, Star, Settings, type LucideIcon,
 } from 'lucide-react'
 
 export const metadata: Metadata = {
   title: 'My Account | GameVault',
-  description: 'Manage your orders, messages, and account settings'
+  description: 'Manage your orders, messages, and account settings',
+}
+
+interface CardSpec {
+  href: string
+  icon: LucideIcon
+  title: string
+  metric: string
+  cta: string
+  badge?: number
 }
 
 export default async function AccountPage() {
   const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
-    redirect('/login')
-  }
-
-  // Check if user is an approved seller
   const { data: sellerApp } = await supabase
     .from('seller_applications')
     .select('status')
     .eq('user_id', user.id)
     .single() as any
-
   const isApprovedSeller = sellerApp?.status === 'approved'
 
-  // Get recent orders count
-  const { count: buyerOrdersCount } = await supabase
-    .from('orders')
-    .select('*', { count: 'exact', head: true })
-    .eq('buyer_id', user.id)
+  const [{ count: buyerOrdersCount }, sellerOrdersRes, { count: unreadCount }] = await Promise.all([
+    supabase.from('orders').select('*', { count: 'exact', head: true }).eq('buyer_id', user.id),
+    isApprovedSeller
+      ? supabase.from('orders').select('*', { count: 'exact', head: true }).eq('seller_id', user.id)
+      : Promise.resolve({ count: 0 } as any),
+    supabase.from('messages').select('*', { count: 'exact', head: true })
+      .eq('receiver_id', user.id).eq('read', false),
+  ])
+  const sellerOrdersCount = (sellerOrdersRes as any)?.count ?? 0
 
-  const { count: sellerOrdersCount } = isApprovedSeller ? await supabase
-    .from('orders')
-    .select('*', { count: 'exact', head: true })
-    .eq('seller_id', user.id) : { count: 0 }
+  const cards: CardSpec[] = [
+    {
+      href: '/account/orders',
+      icon: ShoppingCart,
+      title: 'Orders',
+      metric: isApprovedSeller
+        ? `${buyerOrdersCount || 0} purchases · ${sellerOrdersCount || 0} sales`
+        : `${buyerOrdersCount || 0} order${(buyerOrdersCount || 0) === 1 ? '' : 's'}`,
+      cta: 'View all orders',
+    },
+    {
+      href: '/account/messages',
+      icon: MessageSquare,
+      title: 'Messages',
+      metric:
+        (unreadCount || 0) > 0
+          ? `${unreadCount} unread`
+          : 'No unread messages',
+      cta: 'Open inbox',
+      badge: unreadCount ?? 0,
+    },
+    {
+      href: '/account/wishlist',
+      icon: Heart,
+      title: 'Wishlist',
+      metric: 'Saved items',
+      cta: 'View wishlist',
+    },
+    {
+      href: '/account/wallet',
+      icon: Wallet,
+      title: 'Wallet',
+      metric: 'Balance & cashback',
+      cta: 'Open wallet',
+    },
+    {
+      href: '/account/reviews',
+      icon: Star,
+      title: 'Reviews',
+      metric: 'Your purchases',
+      cta: 'See reviews',
+    },
+    {
+      href: '/account/settings',
+      icon: Settings,
+      title: 'Settings',
+      metric: 'Profile, security, payouts',
+      cta: 'Open settings',
+    },
+  ]
 
-  // Get unread messages count
-  const { count: unreadCount } = await supabase
-    .from('messages')
-    .select('*', { count: 'exact', head: true })
-    .eq('receiver_id', user.id)
-    .eq('read', false)
+  if (isApprovedSeller) {
+    cards.splice(2, 0,
+      {
+        href: '/account/listings',
+        icon: Package,
+        title: 'My listings',
+        metric: 'Manage offers',
+        cta: 'View listings',
+      },
+      {
+        href: '/account/analytics',
+        icon: TrendingUp,
+        title: 'Analytics',
+        metric: 'Sales performance',
+        cta: 'View analytics',
+      },
+    )
+  }
+
+  const username = (user as any).user_metadata?.username ?? user.email?.split('@')[0] ?? 'there'
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-black via-gray-900 to-black">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-white mb-2">
-            Welcome back!
-          </h1>
-          <p className="text-gray-400">
-            {isApprovedSeller ? 'Manage your purchases and sales' : 'Manage your account'}
-          </p>
-        </div>
+    <main className="mx-auto w-full max-w-7xl px-4 pb-16 pt-8 sm:px-6 lg:px-8">
+      <header className="mb-6">
+        <h1 className="text-2xl font-bold text-text-primary sm:text-3xl">
+          Welcome back, {username}
+        </h1>
+        <p className="mt-1 text-sm text-text-secondary">
+          {isApprovedSeller
+            ? 'Manage your purchases, sales, and seller tools.'
+            : 'Manage your purchases, messages, and settings.'}
+        </p>
+      </header>
 
-        {/* Quick Actions Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {/* Orders Card */}
-          <Link
-            href="/account/orders"
-            className="group bg-white/[0.03] hover:bg-white/[0.05] border border-white/[0.05] rounded-xl p-6 transition-all hover:border-violet-500/30"
-          >
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-violet-500/10 rounded-lg">
-                <ShoppingCart className="w-6 h-6 text-violet-400" />
-              </div>
-              <ArrowRight className="w-5 h-5 text-gray-600 group-hover:text-violet-400 transition-colors" />
-            </div>
-            <h3 className="text-lg font-semibold text-white mb-1">Orders</h3>
-            <p className="text-sm text-gray-400 mb-3">
-              {isApprovedSeller
-                ? `${buyerOrdersCount || 0} purchases, ${sellerOrdersCount || 0} sales`
-                : `${buyerOrdersCount || 0} orders`}
-            </p>
-            <div className="text-xs text-violet-400 font-medium">
-              View all orders →
-            </div>
-          </Link>
-
-          {/* Messages Card */}
-          <Link
-            href="/account/messages"
-            className="group bg-white/[0.03] hover:bg-white/[0.05] border border-white/[0.05] rounded-xl p-6 transition-all hover:border-blue-500/30"
-          >
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-blue-500/10 rounded-lg relative">
-                <MessageSquare className="w-6 h-6 text-blue-400" />
-                {(unreadCount || 0) > 0 && (
-                  <div className="absolute -top-1 -right-1 h-5 w-5 bg-red-500 rounded-full flex items-center justify-center text-xs font-bold text-white">
-                    {unreadCount}
-                  </div>
-                )}
-              </div>
-              <ArrowRight className="w-5 h-5 text-gray-600 group-hover:text-blue-400 transition-colors" />
-            </div>
-            <h3 className="text-lg font-semibold text-white mb-1">Messages</h3>
-            <p className="text-sm text-gray-400 mb-3">
-              {(unreadCount || 0) > 0
-                ? `${unreadCount} unread message${(unreadCount || 0) > 1 ? 's' : ''}`
-                : 'No unread messages'}
-            </p>
-            <div className="text-xs text-blue-400 font-medium">
-              Open inbox →
-            </div>
-          </Link>
-
-          {/* Seller Listings Card - Only show if approved seller */}
-          {isApprovedSeller && (
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {cards.map((c) => {
+          const Icon = c.icon
+          return (
             <Link
-              href="/seller/listings"
-              className="group bg-white/[0.03] hover:bg-white/[0.05] border border-white/[0.05] rounded-xl p-6 transition-all hover:border-green-500/30"
+              key={c.href}
+              href={c.href}
+              className="group block rounded-2xl border border-border-subtle bg-bg-overlay p-5 transition-colors hover:border-lime-tint-border hover:bg-bg-raised-hover"
             >
-              <div className="flex items-center justify-between mb-4">
-                <div className="p-3 bg-green-500/10 rounded-lg">
-                  <Package className="w-6 h-6 text-green-400" />
+              <div className="mb-3 flex items-center justify-between">
+                <div className="relative inline-flex h-10 w-10 items-center justify-center rounded-xl border border-border-default bg-bg-raised">
+                  <Icon className="h-5 w-5 text-text-secondary group-hover:text-lime-text" />
+                  {c.badge && c.badge > 0 ? (
+                    <span className="absolute -right-1 -top-1 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-error px-1 text-[10px] font-bold text-text-primary">
+                      {c.badge > 9 ? '9+' : c.badge}
+                    </span>
+                  ) : null}
                 </div>
-                <ArrowRight className="w-5 h-5 text-gray-600 group-hover:text-green-400 transition-colors" />
+                <ArrowRight className="h-4 w-4 text-text-tertiary transition-colors group-hover:text-lime-text" />
               </div>
-              <h3 className="text-lg font-semibold text-white mb-1">My Listings</h3>
-              <p className="text-sm text-gray-400 mb-3">
-                Manage your products
-              </p>
-              <div className="text-xs text-green-400 font-medium">
-                View listings →
+              <h3 className="text-base font-semibold text-text-primary">{c.title}</h3>
+              <p className="mt-0.5 text-sm text-text-secondary">{c.metric}</p>
+              <div className="mt-3 text-[11px] font-semibold uppercase tracking-wider text-text-tertiary group-hover:text-lime-text">
+                {c.cta} →
               </div>
             </Link>
-          )}
-
-          {/* Seller Analytics Card - Only show if approved seller */}
-          {isApprovedSeller && (
-            <Link
-              href="/seller/analytics"
-              className="group bg-white/[0.03] hover:bg-white/[0.05] border border-white/[0.05] rounded-xl p-6 transition-all hover:border-orange-500/30"
-            >
-              <div className="flex items-center justify-between mb-4">
-                <div className="p-3 bg-orange-500/10 rounded-lg">
-                  <TrendingUp className="w-6 h-6 text-orange-400" />
-                </div>
-                <ArrowRight className="w-5 h-5 text-gray-600 group-hover:text-orange-400 transition-colors" />
-              </div>
-              <h3 className="text-lg font-semibold text-white mb-1">Analytics</h3>
-              <p className="text-sm text-gray-400 mb-3">
-                View sales performance
-              </p>
-              <div className="text-xs text-orange-400 font-medium">
-                View analytics →
-              </div>
-            </Link>
-          )}
-        </div>
+          )
+        })}
       </div>
-    </div>
+    </main>
   )
 }

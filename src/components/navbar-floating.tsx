@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import { useState, useRef, useEffect, useMemo } from 'react'
 import { Search, User, LogOut, Menu, X, ChevronDown, Settings, Store, Package, MessageSquare, PlusCircle, Heart, Wallet, Star, List, Bell, LayoutDashboard, Activity, Award, Crown, Gem, Sparkles, Shield, ShieldCheck } from 'lucide-react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -18,18 +19,31 @@ const TIER_CONFIG: Record<string, { icon: React.ElementType; color: string; bg: 
   silver:     { icon: ShieldCheck,  color: 'text-slate-300',  bg: 'bg-slate-500/10',  border: 'border-slate-500/20' },
   gold:       { icon: Crown,        color: 'text-yellow-400', bg: 'bg-yellow-500/10', border: 'border-yellow-500/20' },
   platinum:   { icon: Gem,          color: 'text-cyan-400',   bg: 'bg-cyan-500/10',   border: 'border-cyan-500/20' },
-  diamond:    { icon: Sparkles,     color: 'text-violet-400', bg: 'bg-violet-500/10', border: 'border-violet-500/20' },
+  diamond:    { icon: Sparkles,     color: 'text-lime-text', bg: 'bg-lime/10', border: 'border-lime-tint-border' },
 }
 
 export function Navbar() {
   const { user, loading } = useAuth()
   const queryClient = useQueryClient()
+  const pathname = usePathname()
   const [searchQuery, setSearchQuery] = useState('')
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const [notificationsOpen, setNotificationsOpen] = useState(false)
   const [activityOpen, setActivityOpen] = useState(false)
+
+  // V14u — Force-close every navbar dropdown on route change. Catches
+  // cases where the user navigates via the browser back button, a
+  // programmatic redirect, or a link inside a sub-component that didn't
+  // wire up its own onSelect handler.
+  useEffect(() => {
+    setActiveDropdown(null)
+    setUserMenuOpen(false)
+    setNotificationsOpen(false)
+    setActivityOpen(false)
+    setMobileMenuOpen(false)
+  }, [pathname])
   const [activityTab, setActivityTab] = useState<'buying' | 'selling'>('buying')
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const [isAdmin, setIsAdmin] = useState(false)
@@ -275,23 +289,28 @@ export function Navbar() {
       {/* Top black bar to hide content scrolling above navbar */}
       <div className="fixed left-0 right-0 top-0 z-50 h-6 bg-black" />
 
-      {/* Floating Navbar */}
+      {/*
+        Floating Navbar — R17: dropped the slide-in animation that ran on
+        every page load. It made the navbar feel like it "loaded later" than
+        the page body even though both painted at the same time. Now it's
+        in its final position from frame 1.
+      */}
       <motion.nav
-        initial={{ y: -100 }}
-        animate={{ y: 0 }}
+        initial={false}
         className="fixed left-0 right-0 top-6 z-50 flex justify-center"
       >
         <div className="w-full max-w-[95vw] px-2 sm:max-w-[90vw] md:max-w-5xl lg:max-w-6xl xl:max-w-7xl">
           <motion.div
-            className={cn(
-              'flex items-center justify-between gap-2 rounded-full border border-white/10 bg-black px-3 py-3 shadow-2xl backdrop-blur-xl sm:gap-3 sm:px-6',
-              'transition-all duration-300'
-            )}
+            // R17 — Dropped `transition-all duration-300`. The pill is
+            // content-width; when the auth-dependent icons swap in, even a
+            // 1px width delta gets animated as a visible 300ms stretch.
+            // Nothing on this element actually needs an animated transition.
+            className="flex items-center justify-between gap-2 rounded-full border border-white/10 bg-black px-3 py-3 shadow-2xl backdrop-blur-xl sm:gap-3 sm:px-6"
           >
             {/* Logo */}
             <Link href="/" className="flex shrink-0 items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-purple-600">
-                <span className="text-lg font-bold text-white">G</span>
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-lime">
+                <span className="text-lg font-bold text-text-inverse">G</span>
               </div>
               <span className="hidden font-bold text-white sm:inline-block">GameVault</span>
             </Link>
@@ -308,6 +327,9 @@ export function Navbar() {
                   isActive={activeDropdown === tab.id}
                   onHoverStart={() => setActiveDropdown(tab.id)}
                   onHoverEnd={() => setActiveDropdown(null)}
+                  // V14u — Force-close the dropdown when a game is picked
+                  // so it doesn't linger on the destination page.
+                  onSelect={() => setActiveDropdown(null)}
                 />
               ))}
             </div>
@@ -316,19 +338,39 @@ export function Navbar() {
 
             {/* Right Side */}
             <div className="flex shrink-0 items-center gap-1 sm:gap-2">
-              {/* Search - Desktop */}
+              {/* V15n — Global game autocomplete. Replaces the
+                  single-keyword form input that just submitted to /browse.
+                  Now: type a game name → live filtered dropdown of
+                  matching games across every category. Enter or "View all
+                  results" still goes to /browse for full marketplace
+                  search. */}
               <div className="hidden lg:block">
-                <form onSubmit={handleSearch} className="relative">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-                  <Input
-                    type="text"
-                    placeholder="Search..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="h-9 w-32 rounded-full border-white/10 bg-white/5 pl-10 text-sm text-white placeholder:text-gray-500 focus:border-primary focus:bg-white/10 xl:w-48"
-                  />
-                </form>
+                <GlobalSearch
+                  navCatsData={navCatsData ?? []}
+                  onSubmitFallback={(q) => {
+                    window.location.href = `/browse?search=${encodeURIComponent(q)}`
+                  }}
+                />
               </div>
+
+              {/* R17 — Skeleton placeholders for Notifications + Messages +
+                  Activity while auth is resolving, so the navbar's width is
+                  identical before and after the user data arrives. Guarded
+                  on `!user` because `useAuth()` can set `user` from
+                  localStorage cache before `loading` flips to false — without
+                  the `!user` guard we'd briefly render BOTH the skeletons
+                  AND the real icons side by side. */}
+              {loading && !user && (
+                <>
+                  {/* h-9 w-9 to match the real bell/messages/activity
+                      Buttons: `cn()` uses tailwind-merge, so the className
+                      `h-9 w-9` overrides the default `h-10 w-10` from
+                      `size="icon"`. Real buttons render 36×36. */}
+                  <div className="h-9 w-9 animate-pulse rounded-full bg-white/10" />
+                  <div className="h-9 w-9 animate-pulse rounded-full bg-white/10" />
+                  <div className="h-9 w-9 animate-pulse rounded-full bg-white/10" />
+                </>
+              )}
 
               {user && (
                 <>
@@ -386,12 +428,12 @@ export function Navbar() {
                                       markAsRead(notification.id)
                                       setNotificationsOpen(false)
                                     }}
-                                    className="block rounded-lg p-3 transition-colors hover:bg-white/5 bg-violet-500/10 border border-violet-500/20"
+                                    className="block rounded-lg p-3 transition-colors hover:bg-white/5 bg-lime/10 border border-lime-tint-border"
                                   >
                                     <div className="flex items-start gap-3">
                                       <div className="flex-shrink-0">
-                                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-violet-500/20">
-                                          <Bell className="h-4 w-4 text-violet-400" />
+                                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-lime/20">
+                                          <Bell className="h-4 w-4 text-lime-text" />
                                         </div>
                                       </div>
                                       <div className="flex-1 min-w-0">
@@ -411,7 +453,7 @@ export function Navbar() {
                                         </p>
                                       </div>
                                       <div className="flex-shrink-0">
-                                        <div className="h-2 w-2 rounded-full bg-violet-500" />
+                                        <div className="h-2 w-2 rounded-full bg-lime" />
                                       </div>
                                     </div>
                                   </Link>
@@ -463,7 +505,7 @@ export function Navbar() {
                     >
                       <Activity className="h-5 w-5" />
                       {totalActiveOrders > 0 && (
-                        <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-violet-500 text-[10px] font-bold text-white">
+                        <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-lime text-[10px] font-bold text-text-inverse">
                           {totalActiveOrders > 9 ? '9+' : totalActiveOrders}
                         </span>
                       )}
@@ -484,7 +526,7 @@ export function Navbar() {
                               <h3 className="text-sm font-semibold text-white">Live Orders</h3>
                               <Link
                                 href="/account/orders"
-                                className="text-xs text-violet-400 hover:text-violet-300 transition-colors"
+                                className="text-xs text-lime-text hover:text-lime-text transition-colors"
                                 onClick={() => setActivityOpen(false)}
                               >
                                 View all
@@ -525,7 +567,7 @@ export function Navbar() {
                                     pending: 'bg-yellow-500/20 text-yellow-400',
                                     paid: 'bg-blue-500/20 text-blue-400',
                                     processing: 'bg-blue-500/20 text-blue-400',
-                                    delivering: 'bg-violet-500/20 text-violet-400',
+                                    delivering: 'bg-lime/20 text-lime-text',
                                   }
                                   return (
                                     <Link
@@ -534,8 +576,8 @@ export function Navbar() {
                                       onClick={() => setActivityOpen(false)}
                                       className="flex items-start gap-3 rounded-lg p-2.5 transition-colors hover:bg-white/5"
                                     >
-                                      <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-violet-500/20">
-                                        <Package className="h-4 w-4 text-violet-400" />
+                                      <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-lime/20">
+                                        <Package className="h-4 w-4 text-lime-text" />
                                       </div>
                                       <div className="min-w-0 flex-1">
                                         <p className="truncate text-sm font-medium text-white">
@@ -564,8 +606,12 @@ export function Navbar() {
               )}
 
               {/* User/Auth */}
-              {loading || isLoggingOut ? (
-                <div className="h-8 w-8 animate-pulse rounded-full bg-white/10" />
+              {(loading && !user) || isLoggingOut ? (
+                // R17 — match the real avatar button (h-10 w-10) so the
+                // navbar doesn't grow when the user data resolves. `!user`
+                // guard so a cached-then-fresh hydration doesn't flash the
+                // skeleton over the real avatar.
+                <div className="h-10 w-10 animate-pulse rounded-full bg-white/10" />
               ) : user ? (
                 <div className="relative" data-dropdown>
                   <Button
@@ -665,7 +711,7 @@ export function Navbar() {
                               <>
                                 <Link
                                   href="/admin"
-                                  className="flex items-center gap-3 rounded-lg px-4 py-2 mb-2 text-sm transition-all font-semibold bg-gradient-to-r from-violet-500/20 to-purple-500/20 border border-violet-500/30 text-violet-400 hover:border-violet-500/50 hover:from-violet-500/25 hover:to-purple-500/25 shadow-lg shadow-violet-500/10"
+                                  className="mb-2 flex items-center gap-3 rounded-lg border border-lime-tint-border bg-lime-tint-bg px-4 py-2 text-sm font-semibold text-lime-text transition-colors hover:border-lime hover:bg-lime-tint-bg/80"
                                   onClick={() => setUserMenuOpen(false)}
                                 >
                                   <Shield className="h-4 w-4" />
@@ -972,13 +1018,41 @@ function CategoryDropdown({
   isActive,
   onHoverStart,
   onHoverEnd,
+  onSelect,
 }: {
   tab: { id: string; label: string; type: string }
   gameEntries: Array<{ game: any; categorySlug: string }>
   isActive: boolean
   onHoverStart: () => void
   onHoverEnd: () => void
+  /** V14u — Called when the user picks a game so the dropdown can close. */
+  onSelect: () => void
 }) {
+  // V15n — Split layout. Left = popular (top 5 by sort_order). Right =
+  // searchable list of every game in this category. The search input is
+  // autofocused when the menu opens; arrow keys scroll the list.
+  const [q, setQ] = useState('')
+  const searchRef = useRef<HTMLInputElement | null>(null)
+
+  // V15o — Don't auto-focus the search input on open. Hover-opens
+  // shouldn't steal focus from whatever the user was doing (typing in a
+  // text field elsewhere on the page, scrolling, etc.). Users can click
+  // the input or tab into it when they want to type.
+  useEffect(() => {
+    if (!isActive) setQ('')
+  }, [isActive])
+
+  const popular = useMemo(() => gameEntries.slice(0, 5), [gameEntries])
+  const filtered = useMemo(() => {
+    if (!q.trim()) return gameEntries
+    const needle = q.trim().toLowerCase()
+    return gameEntries.filter(
+      ({ game }) =>
+        game.name.toLowerCase().includes(needle) ||
+        game.slug?.toLowerCase().includes(needle),
+    )
+  }, [gameEntries, q])
+
   return (
     <div
       className="relative"
@@ -994,44 +1068,374 @@ function CategoryDropdown({
       <AnimatePresence>
         {isActive && gameEntries.length > 0 && (
           <motion.div
-            initial={{ opacity: 0, y: 10, scale: 0.95 }}
+            initial={{ opacity: 0, y: 10, scale: 0.97 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 10, scale: 0.95 }}
-            transition={{ duration: 0.2 }}
-            className="absolute left-0 top-full pt-2 z-50"
+            exit={{ opacity: 0, y: 10, scale: 0.97 }}
+            transition={{ duration: 0.18 }}
+            className="absolute left-1/2 top-full z-50 -translate-x-1/2 pt-2"
           >
-            <div className="min-w-[280px] w-[400px] max-w-[92vw] rounded-2xl border border-white/10 bg-black p-5 shadow-2xl backdrop-blur-xl">
-              <h3 className="mb-3 text-xs font-semibold uppercase text-gray-400">
-                {tab.label}
-              </h3>
-              <div className="grid grid-cols-2 gap-1.5">
-                {gameEntries.slice(0, 10).map(({ game, categorySlug }) => (
-                  <Link
-                    key={game.slug}
-                    href={`/${game.slug}/${categorySlug}`}
-                    className="group flex items-center gap-3 rounded-lg p-2.5 transition-all hover:bg-white/10"
-                  >
-                    {game.image_url && game.image_url !== '' ? (
-                      <img
-                        src={game.image_url}
-                        alt={game.name}
-                        className="h-8 w-8 rounded-md object-contain transition-transform group-hover:scale-110"
-                      />
-                    ) : (
-                      <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md bg-white/10 text-xs font-bold text-gray-300 group-hover:bg-white/20">
-                        {game.name.slice(0, 2).toUpperCase()}
+            <div className="w-[640px] max-w-[92vw] overflow-hidden rounded-2xl border border-white/10 bg-black shadow-2xl backdrop-blur-xl">
+              <div className="grid grid-cols-1 md:grid-cols-[200px_1fr]">
+                {/* LEFT — Popular */}
+                <div className="border-b border-white/10 bg-white/[0.02] p-3 md:border-b-0 md:border-r">
+                  <div className="mb-2 px-1.5 text-[10.5px] font-bold uppercase tracking-[0.12em] text-lime-text">
+                    Popular {tab.label}
+                  </div>
+                  <ul className="flex flex-col gap-0.5">
+                    {popular.map(({ game, categorySlug }) => (
+                      <li key={game.slug}>
+                        <Link
+                          href={`/${game.slug}/${categorySlug}`}
+                          onClick={onSelect}
+                          className="group flex items-center gap-2.5 rounded-lg p-1.5 transition-colors hover:bg-white/[0.06]"
+                        >
+                          {game.image_url ? (
+                            <img
+                              src={game.image_url}
+                              alt=""
+                              className="h-7 w-7 shrink-0 rounded-md object-contain"
+                            />
+                          ) : (
+                            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-white/10 text-[10px] font-bold text-gray-300">
+                              {game.name.slice(0, 2).toUpperCase()}
+                            </span>
+                          )}
+                          <span className="truncate text-[13px] font-semibold text-gray-200 group-hover:text-white">
+                            {game.name}
+                          </span>
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                {/* RIGHT — Searchable */}
+                <div className="flex max-h-[440px] flex-col p-3">
+                  <div className="relative mb-2">
+                    <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-500" />
+                    <input
+                      ref={searchRef}
+                      type="text"
+                      value={q}
+                      onChange={(e) => setQ(e.target.value)}
+                      placeholder={`Search ${tab.label.toLowerCase()}…`}
+                      className="h-9 w-full rounded-lg border border-white/10 bg-white/5 pl-9 pr-3 text-[13px] text-white placeholder:text-gray-500 outline-none transition-colors focus:border-lime-tint-border focus:bg-white/[0.08]"
+                    />
+                  </div>
+                  <div className="mb-1.5 flex items-center justify-between px-1">
+                    <div className="text-[10.5px] font-bold uppercase tracking-[0.12em] text-gray-400">
+                      All {tab.label}
+                    </div>
+                    <div className="text-[10.5px] tabular-nums text-gray-500">
+                      {filtered.length} game{filtered.length === 1 ? '' : 's'}
+                    </div>
+                  </div>
+                  <div className="-mr-1 flex-1 overflow-y-auto pr-1">
+                    {filtered.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center py-8 text-center">
+                        <Search className="mb-1.5 h-4 w-4 text-gray-600" />
+                        <p className="text-[12px] text-gray-500">
+                          No games match "{q}"
+                        </p>
                       </div>
+                    ) : (
+                      <ul className="grid grid-cols-2 gap-0.5">
+                        {filtered.map(({ game, categorySlug }) => (
+                          <li key={game.slug}>
+                            <Link
+                              href={`/${game.slug}/${categorySlug}`}
+                              onClick={onSelect}
+                              className="group flex items-center gap-2.5 rounded-lg p-2 transition-colors hover:bg-white/[0.06]"
+                            >
+                              {game.image_url ? (
+                                <img
+                                  src={game.image_url}
+                                  alt=""
+                                  className="h-7 w-7 shrink-0 rounded-md object-contain"
+                                />
+                              ) : (
+                                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-white/10 text-[10px] font-bold text-gray-300">
+                                  {game.name.slice(0, 2).toUpperCase()}
+                                </span>
+                              )}
+                              <span className="truncate text-[12.5px] font-semibold text-gray-200 group-hover:text-white">
+                                {game.name}
+                              </span>
+                            </Link>
+                          </li>
+                        ))}
+                      </ul>
                     )}
-                    <span className="text-sm font-medium text-gray-300 group-hover:text-white truncate">
-                      {game.name}
-                    </span>
-                  </Link>
-                ))}
+                  </div>
+                </div>
               </div>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
     </div>
+  )
+}
+
+/* ────────────────────────────────────────────────────────────────────
+   V15n — Global navbar search.
+
+   Live autocomplete that searches across every game in every category
+   from `navCatsData`. Click a game → goes to its first available
+   category page. Press Enter (or the "View all results" link) → falls
+   back to /browse?search=q.
+
+   Focus styling: subtle white-overlay ring, NOT lime — the navbar's lime
+   logo + active dropdown carry the brand accent, the search box should
+   stay neutral so it doesn't fight them.
+   ────────────────────────────────────────────────────────────────── */
+
+interface NavGame {
+  name: string
+  slug: string
+  emoji?: string | null
+  image_url?: string | null
+  sort_order?: number | null
+}
+interface NavCatRow {
+  slug: string
+  metadata: any
+  game: NavGame | null
+}
+
+function GlobalSearch({
+  navCatsData,
+  onSubmitFallback,
+}: {
+  navCatsData: any[]
+  onSubmitFallback: (q: string) => void
+}) {
+  const [q, setQ] = useState('')
+  const [focused, setFocused] = useState(false)
+  const [highlightIdx, setHighlightIdx] = useState(-1)
+  const containerRef = useRef<HTMLDivElement | null>(null)
+
+  // Click-outside closes the panel.
+  useEffect(() => {
+    const onClick = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setFocused(false)
+      }
+    }
+    document.addEventListener('mousedown', onClick)
+    return () => document.removeEventListener('mousedown', onClick)
+  }, [])
+
+  // Build a flat (game, primary categorySlug) index — first category
+  // listed wins as the link target when the user clicks the game.
+  const gameIndex = useMemo(() => {
+    const map = new Map<
+      string,
+      { game: NavGame; primaryCategorySlug: string; categories: string[] }
+    >()
+    for (const row of navCatsData as NavCatRow[]) {
+      const game = row.game
+      if (!game?.slug) continue
+      const existing = map.get(game.slug)
+      if (existing) {
+        existing.categories.push(row.slug)
+      } else {
+        map.set(game.slug, {
+          game,
+          primaryCategorySlug: row.slug,
+          categories: [row.slug],
+        })
+      }
+    }
+    return Array.from(map.values()).sort(
+      (a, b) => (a.game.sort_order ?? 99) - (b.game.sort_order ?? 99),
+    )
+  }, [navCatsData])
+
+  const trimmed = q.trim()
+  const matches = useMemo(() => {
+    if (!trimmed) return [] as typeof gameIndex
+    const needle = trimmed.toLowerCase()
+    return gameIndex
+      .filter((g) =>
+        g.game.name.toLowerCase().includes(needle) ||
+        g.game.slug.toLowerCase().includes(needle),
+      )
+      .slice(0, 8)
+  }, [gameIndex, trimmed])
+
+  // Reset highlight when query changes.
+  useEffect(() => {
+    setHighlightIdx(matches.length > 0 ? 0 : -1)
+  }, [trimmed, matches.length])
+
+  const goToGame = (g: (typeof matches)[number]) => {
+    setFocused(false)
+    setQ('')
+    window.location.href = `/${g.game.slug}/${g.primaryCategorySlug}`
+  }
+
+  const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!focused) return
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      setHighlightIdx((i) => Math.min(matches.length - 1, i + 1))
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      setHighlightIdx((i) => Math.max(0, i - 1))
+    } else if (e.key === 'Enter') {
+      e.preventDefault()
+      if (matches[highlightIdx]) goToGame(matches[highlightIdx])
+      else if (trimmed) onSubmitFallback(trimmed)
+    } else if (e.key === 'Escape') {
+      setFocused(false)
+    }
+  }
+
+  const open = focused && (matches.length > 0 || trimmed.length > 0)
+
+  return (
+    <div ref={containerRef} className="relative">
+      <div className="relative">
+        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+        <input
+          type="text"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          onFocus={() => setFocused(true)}
+          onKeyDown={onKeyDown}
+          placeholder="Search games…"
+          aria-label="Search games"
+          aria-autocomplete="list"
+          aria-expanded={open}
+          className={cn(
+            'h-9 w-44 rounded-full border bg-white/5 pl-10 pr-3 text-sm text-white placeholder:text-gray-500 outline-none transition-colors xl:w-56',
+            // V15n — Subtle border-default + white-overlay focus, no lime
+            // glow. The lime accent stays for active dropdowns / nav state.
+            focused
+              ? 'border-white/20 bg-white/[0.08]'
+              : 'border-white/10 hover:border-white/20',
+          )}
+        />
+        {q && (
+          <button
+            type="button"
+            onClick={() => { setQ(''); setFocused(true) }}
+            aria-label="Clear search"
+            className="absolute right-2 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-full text-gray-400 hover:bg-white/10 hover:text-white"
+          >
+            <X className="h-3 w-3" />
+          </button>
+        )}
+      </div>
+
+      {/* Result panel */}
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 6 }}
+            transition={{ duration: 0.15 }}
+            className="absolute right-0 top-full mt-2 w-[360px] overflow-hidden rounded-2xl border border-white/10 bg-black shadow-2xl backdrop-blur-xl"
+          >
+            <div className="max-h-[360px] overflow-y-auto">
+              {matches.length === 0 ? (
+                <div className="flex flex-col items-center justify-center px-6 py-8 text-center">
+                  <Search className="mb-2 h-5 w-5 text-gray-600" />
+                  <p className="text-[13px] font-semibold text-gray-300">
+                    No games match "{trimmed}"
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => onSubmitFallback(trimmed)}
+                    className="mt-3 inline-flex h-8 items-center gap-1.5 rounded-full border border-white/15 bg-white/5 px-3 text-[12px] font-semibold text-gray-200 transition-colors hover:bg-white/10"
+                  >
+                    Search marketplace listings instead
+                    <ArrowRightIcon />
+                  </button>
+                </div>
+              ) : (
+                <ul className="p-1.5">
+                  {matches.map((m, i) => {
+                    const highlighted = i === highlightIdx
+                    return (
+                      <li key={m.game.slug}>
+                        <button
+                          type="button"
+                          onClick={() => goToGame(m)}
+                          onMouseEnter={() => setHighlightIdx(i)}
+                          className={cn(
+                            'flex w-full items-center gap-3 rounded-lg p-2 text-left transition-colors',
+                            highlighted ? 'bg-white/[0.08]' : 'hover:bg-white/[0.06]',
+                          )}
+                        >
+                          {m.game.image_url ? (
+                            <img
+                              src={m.game.image_url}
+                              alt=""
+                              className="h-8 w-8 shrink-0 rounded-md object-contain"
+                            />
+                          ) : (
+                            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-white/10 text-[11px] font-bold text-gray-300">
+                              {m.game.name.slice(0, 2).toUpperCase()}
+                            </span>
+                          )}
+                          <div className="min-w-0 flex-1">
+                            <div className="truncate text-[13.5px] font-semibold text-white">
+                              {m.game.name}
+                            </div>
+                            <div className="truncate text-[11px] text-gray-500">
+                              {m.categories.length} categor
+                              {m.categories.length === 1 ? 'y' : 'ies'}
+                            </div>
+                          </div>
+                          <span className="text-gray-500">
+                            <ArrowRightIcon />
+                          </span>
+                        </button>
+                      </li>
+                    )
+                  })}
+                </ul>
+              )}
+            </div>
+            {/* Footer: explicit "search all listings" link */}
+            {trimmed && matches.length > 0 && (
+              <div className="border-t border-white/10 bg-white/[0.02] p-1.5">
+                <button
+                  type="button"
+                  onClick={() => onSubmitFallback(trimmed)}
+                  className="flex w-full items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-[12.5px] font-semibold text-gray-300 transition-colors hover:bg-white/[0.06] hover:text-white"
+                >
+                  <span className="inline-flex items-center gap-1.5">
+                    <Search className="h-3.5 w-3.5" />
+                    View all results for "{trimmed}"
+                  </span>
+                  <ArrowRightIcon />
+                </button>
+              </div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  )
+}
+
+function ArrowRightIcon() {
+  return (
+    <svg
+      viewBox="0 0 16 16"
+      className="h-3.5 w-3.5"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M5.5 3.5L10 8l-4.5 4.5" />
+    </svg>
   )
 }

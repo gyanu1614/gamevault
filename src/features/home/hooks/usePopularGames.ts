@@ -103,6 +103,8 @@ export function usePopularGames() {
   return useQuery({
     queryKey: ['popular-games'],
     queryFn: async (): Promise<PopularGame[]> => MOCK_POPULAR_GAMES,
+    // Seed initial data so first render is populated (no pop-in).
+    initialData: MOCK_POPULAR_GAMES,
     staleTime: 5 * 60 * 1000,
   })
 }

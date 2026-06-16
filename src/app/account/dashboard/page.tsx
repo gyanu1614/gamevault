@@ -35,8 +35,8 @@ const insights = [
     title: 'Price Optimization',
     description: 'Your Valorant account listings are 15% below market average. Consider increasing prices.',
     action: 'Adjust Prices',
-    color: 'text-yellow-400',
-    bgColor: 'bg-yellow-500/10'
+    color: 'text-warning',
+    bgColor: 'bg-warning-bg'
   },
   {
     type: 'warning',
@@ -53,8 +53,8 @@ const insights = [
     title: 'Peak Performance',
     description: 'Your sales increased by 23% this week! Keep up the great work.',
     action: 'View Report',
-    color: 'text-green-400',
-    bgColor: 'bg-green-500/10'
+    color: 'text-success',
+    bgColor: 'bg-success-bg'
   }
 ]
 
@@ -139,11 +139,11 @@ export default function SellerDashboard() {
   const getTierColor = (tier: string) => {
     const colors = {
       bronze: 'text-orange-400',
-      silver: 'text-gray-300',
-      gold: 'text-yellow-400',
+      silver: 'text-text-secondary',
+      gold: 'text-warning',
       platinum: 'text-purple-400'
     }
-    return colors[tier as keyof typeof colors] || 'text-gray-400'
+    return colors[tier as keyof typeof colors] || 'text-text-secondary'
   }
 
   return (
@@ -154,7 +154,7 @@ export default function SellerDashboard() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold text-white">Seller Dashboard</h1>
-              <p className="mt-1 text-gray-400">
+              <p className="mt-1 text-text-secondary">
                 Welcome back, {user.profile?.username || 'Seller'}!
               </p>
             </div>
@@ -169,7 +169,7 @@ export default function SellerDashboard() {
                       'rounded-md px-4 py-2 text-sm font-medium transition-all',
                       timeRange === range
                         ? 'bg-primary text-white'
-                        : 'text-gray-400 hover:text-white'
+                        : 'text-text-secondary hover:text-white'
                     )}
                   >
                     {range === 'day' ? 'Today' : range === 'week' ? 'Week' : 'Month'}
@@ -201,7 +201,7 @@ export default function SellerDashboard() {
                   </div>
                   <div className="flex-1">
                     <h3 className="mb-1 font-semibold text-white">{insight.title}</h3>
-                    <p className="mb-3 text-sm text-gray-400">{insight.description}</p>
+                    <p className="mb-3 text-sm text-text-secondary">{insight.description}</p>
                     <button className={cn('text-sm font-medium hover:underline', insight.color)}>
                       {insight.action} →
                     </button>
@@ -220,7 +220,7 @@ export default function SellerDashboard() {
               <div className="mb-6 flex items-center justify-between">
                 <h2 className="text-xl font-bold text-white">Earnings Overview</h2>
                 {stats.earnings.week > 0 && (
-                  <div className="flex items-center gap-2 rounded-full bg-green-500/10 px-3 py-1 text-sm font-medium text-green-400">
+                  <div className="flex items-center gap-2 rounded-full bg-success-bg px-3 py-1 text-sm font-medium text-success">
                     <TrendingUp className="h-4 w-4" />
                     Growing
                   </div>
@@ -240,7 +240,7 @@ export default function SellerDashboard() {
                       key={index}
                       className="rounded-lg border border-white/10 bg-white/5 p-4"
                     >
-                      <div className="mb-2 flex items-center gap-2 text-gray-400">
+                      <div className="mb-2 flex items-center gap-2 text-text-secondary">
                         <Icon className="h-4 w-4" />
                         <span className="text-sm">{stat.label}</span>
                       </div>
@@ -274,15 +274,15 @@ export default function SellerDashboard() {
                   label: 'Avg Rating',
                   value: stats.performance.avgRating.toFixed(1),
                   icon: Star,
-                  color: 'text-yellow-400',
-                  bgColor: 'bg-yellow-500/10'
+                  color: 'text-warning',
+                  bgColor: 'bg-warning-bg'
                 },
                 {
                   label: 'Total Sales',
                   value: stats.performance.totalSales,
                   icon: MessageSquare,
-                  color: 'text-green-400',
-                  bgColor: 'bg-green-500/10'
+                  color: 'text-success',
+                  bgColor: 'bg-success-bg'
                 },
               ].map((stat, index) => {
                 const Icon = stat.icon
@@ -300,7 +300,7 @@ export default function SellerDashboard() {
                       </div>
                     </div>
                     <div className="text-3xl font-bold text-white">{stat.value}</div>
-                    <div className="mt-1 text-sm text-gray-400">{stat.label}</div>
+                    <div className="mt-1 text-sm text-text-secondary">{stat.label}</div>
                   </div>
                 )
               })}
@@ -348,7 +348,7 @@ export default function SellerDashboard() {
 
               <div className="mb-4">
                 <div className="mb-2 flex items-center justify-between text-sm">
-                  <span className="text-gray-400">Progress to {currentTierData.next}</span>
+                  <span className="text-text-secondary">Progress to {currentTierData.next}</span>
                   <span className="font-medium text-white">
                     {profile.total_sales}/{currentTierData.sales}
                   </span>
@@ -361,15 +361,15 @@ export default function SellerDashboard() {
                     className="h-full bg-gradient-to-r from-cyan-500 to-purple-600"
                   />
                 </div>
-                <p className="mt-2 text-xs text-gray-400">
+                <p className="mt-2 text-xs text-text-secondary">
                   {salesNeeded > 0 ? `${salesNeeded} more sales to unlock ${currentTierData.next} tier` : 'Top tier achieved!'}
                 </p>
               </div>
 
               <div className="space-y-2 rounded-lg border border-white/10 bg-white/5 p-3">
-                <div className="text-xs font-medium text-gray-400">Tier Benefits</div>
+                <div className="text-xs font-medium text-text-secondary">Tier Benefits</div>
                 <div className="flex items-center gap-2 text-sm text-white">
-                  <Zap className="h-4 w-4 text-yellow-400" />
+                  <Zap className="h-4 w-4 text-warning" />
                   <span>Current Fee: 6.9%</span>
                 </div>
                 <div className="flex items-center gap-2 text-sm text-white">
@@ -386,14 +386,14 @@ export default function SellerDashboard() {
                 {[
                   { label: 'Total Views', value: stats.performance.totalViews, icon: Eye, color: 'text-cyan-400' },
                   { label: 'Conversion Rate', value: `${stats.performance.conversionRate.toFixed(1)}%`, icon: Target, color: 'text-purple-400' },
-                  { label: 'Completed Orders', value: stats.orders.completed, icon: CheckCircle2, color: 'text-green-400' },
+                  { label: 'Completed Orders', value: stats.orders.completed, icon: CheckCircle2, color: 'text-success' },
                 ].map((metric, index) => {
                   const Icon = metric.icon
                   return (
                     <div key={index} className="flex items-center justify-between rounded-lg border border-white/10 bg-white/5 p-3">
                       <div className="flex items-center gap-3">
                         <Icon className={cn('h-5 w-5', metric.color)} />
-                        <span className="text-sm text-gray-300">{metric.label}</span>
+                        <span className="text-sm text-text-secondary">{metric.label}</span>
                       </div>
                       <span className="font-bold text-white">{metric.value}</span>
                     </div>
@@ -407,15 +407,15 @@ export default function SellerDashboard() {
               <h2 className="mb-4 text-lg font-bold text-white">Recent Activity</h2>
               <div className="space-y-3">
                 {[
-                  { type: 'sale', text: 'New order #GV-20250124-A8F2', time: '5 min ago', color: 'text-green-400' },
+                  { type: 'sale', text: 'New order #GV-20250124-A8F2', time: '5 min ago', color: 'text-success' },
                   { type: 'message', text: 'New message from buyer', time: '12 min ago', color: 'text-blue-400' },
-                  { type: 'review', text: '5-star review received', time: '1 hour ago', color: 'text-yellow-400' },
+                  { type: 'review', text: '5-star review received', time: '1 hour ago', color: 'text-warning' },
                 ].map((activity, index) => (
                   <div key={index} className="flex items-start gap-3 text-sm">
                     <div className={cn('mt-1 h-2 w-2 rounded-full', `bg-${activity.color.split('-')[1]}-400`)} />
                     <div className="flex-1">
                       <p className="text-white">{activity.text}</p>
-                      <p className="text-xs text-gray-400">{activity.time}</p>
+                      <p className="text-xs text-text-secondary">{activity.time}</p>
                     </div>
                   </div>
                 ))}

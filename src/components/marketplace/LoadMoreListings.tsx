@@ -38,7 +38,7 @@ export default function LoadMoreListings({
       <button
         onClick={handleLoadMore}
         disabled={isPending}
-        className="px-8 py-3 bg-gradient-to-r from-violet-500 to-blue-500 hover:from-violet-600 hover:to-blue-600 text-white font-semibold rounded-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+        className="px-8 py-3 bg-gradient-to-r from-lime to-blue-500 hover:from-lime hover:to-blue-600 text-text-primary font-semibold rounded-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
       >
         {isPending ? (
           <>

@@ -12,7 +12,7 @@ export default function AnalyticsLoading() {
         {Array.from({ length: 4 }).map((_, i) => <MetricCardSkeleton key={i} />)}
       </div>
       {/* Chart placeholder */}
-      <div className="rounded-2xl bg-white/[0.04] border border-white/[0.08] p-5 space-y-4">
+      <div className="rounded-2xl bg-bg-raised border border-border-subtle p-5 space-y-4">
         <div className="skeleton h-4 w-32 rounded" />
         <div className="skeleton h-52 w-full rounded-xl" />
       </div>

@@ -67,7 +67,7 @@ export function PaginationControls({
   return (
     <div className="flex items-center justify-between px-4 py-3 border-t border-white/10">
       {/* Item count */}
-      <div className="text-sm text-gray-400">
+      <div className="text-sm text-text-secondary">
         {totalItems ? (
           <>
             Showing <span className="font-medium text-white">{startItem}</span> to{' '}
@@ -86,7 +86,7 @@ export function PaginationControls({
           size="icon"
           onClick={() => onPageChange(1)}
           disabled={!hasPrevPage}
-          className="h-8 w-8 text-gray-400 hover:text-white disabled:opacity-50"
+          className="h-8 w-8 text-text-secondary hover:text-white disabled:opacity-50"
         >
           <ChevronsLeft className="h-4 w-4" />
         </Button>
@@ -96,7 +96,7 @@ export function PaginationControls({
           size="icon"
           onClick={() => onPageChange(currentPage - 1)}
           disabled={!hasPrevPage}
-          className="h-8 w-8 text-gray-400 hover:text-white disabled:opacity-50"
+          className="h-8 w-8 text-text-secondary hover:text-white disabled:opacity-50"
         >
           <ChevronLeft className="h-4 w-4" />
         </Button>
@@ -104,7 +104,7 @@ export function PaginationControls({
         <div className="flex items-center gap-1 mx-2">
           {getPageNumbers().map((page, idx) =>
             page === 'ellipsis' ? (
-              <span key={`ellipsis-${idx}`} className="px-2 text-gray-500">
+              <span key={`ellipsis-${idx}`} className="px-2 text-text-tertiary">
                 ...
               </span>
             ) : (
@@ -116,7 +116,7 @@ export function PaginationControls({
                 className={`h-8 w-8 ${
                   currentPage === page
                     ? 'bg-indigo-600 text-white'
-                    : 'text-gray-400 hover:text-white hover:bg-white/10'
+                    : 'text-text-secondary hover:text-white hover:bg-white/10'
                 }`}
               >
                 {page}
@@ -130,7 +130,7 @@ export function PaginationControls({
           size="icon"
           onClick={() => onPageChange(currentPage + 1)}
           disabled={!hasNextPage}
-          className="h-8 w-8 text-gray-400 hover:text-white disabled:opacity-50"
+          className="h-8 w-8 text-text-secondary hover:text-white disabled:opacity-50"
         >
           <ChevronRight className="h-4 w-4" />
         </Button>
@@ -140,7 +140,7 @@ export function PaginationControls({
           size="icon"
           onClick={() => onPageChange(totalPages)}
           disabled={!hasNextPage}
-          className="h-8 w-8 text-gray-400 hover:text-white disabled:opacity-50"
+          className="h-8 w-8 text-text-secondary hover:text-white disabled:opacity-50"
         >
           <ChevronsRight className="h-4 w-4" />
         </Button>

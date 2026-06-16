@@ -61,9 +61,9 @@ export default function WithdrawalRequestCard({ request, onUpdate }: WithdrawalR
         return {
           icon: <Loader2 className="w-4 h-4 animate-spin" />,
           label: 'Processing',
-          color: 'text-violet-400',
-          bg: 'bg-violet-500/10',
-          border: 'border-violet-500/20'
+          color: 'text-lime-text',
+          bg: 'bg-lime/10',
+          border: 'border-lime-tint-border'
         }
       case 'completed':
         return {
@@ -77,15 +77,15 @@ export default function WithdrawalRequestCard({ request, onUpdate }: WithdrawalR
         return {
           icon: <XCircle className="w-4 h-4" />,
           label: 'Rejected',
-          color: 'text-red-400',
-          bg: 'bg-red-500/10',
-          border: 'border-red-500/20'
+          color: 'text-error',
+          bg: 'bg-error-bg',
+          border: 'border-error/40'
         }
       case 'cancelled':
         return {
           icon: <X className="w-4 h-4" />,
           label: 'Cancelled',
-          color: 'text-gray-400',
+          color: 'text-text-secondary',
           bg: 'bg-gray-500/10',
           border: 'border-gray-500/20'
         }
@@ -93,15 +93,15 @@ export default function WithdrawalRequestCard({ request, onUpdate }: WithdrawalR
         return {
           icon: <XCircle className="w-4 h-4" />,
           label: 'Failed',
-          color: 'text-red-400',
-          bg: 'bg-red-500/10',
-          border: 'border-red-500/20'
+          color: 'text-error',
+          bg: 'bg-error-bg',
+          border: 'border-error/40'
         }
       default:
         return {
           icon: <Clock className="w-4 h-4" />,
           label: status,
-          color: 'text-gray-400',
+          color: 'text-text-secondary',
           bg: 'bg-gray-500/10',
           border: 'border-gray-500/20'
         }
@@ -114,18 +114,18 @@ export default function WithdrawalRequestCard({ request, onUpdate }: WithdrawalR
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="p-4 rounded-xl bg-white/[0.03] border border-white/[0.08] hover:border-white/[0.12] transition-all group"
+      className="p-4 rounded-xl bg-bg-overlay border border-border-subtle hover:border-white/[0.12] transition-all group"
     >
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-violet-500/10 border border-violet-500/20">
-            <DollarSign className="w-4 h-4 text-violet-400" />
+          <div className="p-2 rounded-lg bg-lime/10 border border-lime-tint-border">
+            <DollarSign className="w-4 h-4 text-lime-text" />
           </div>
           <div>
             <p className="font-semibold text-white">{request.method_name}</p>
             <div className="flex items-center gap-2 mt-0.5">
-              <Calendar className="w-3 h-3 text-gray-500" />
-              <span className="text-xs text-gray-500">
+              <Calendar className="w-3 h-3 text-text-tertiary" />
+              <span className="text-xs text-text-tertiary">
                 {format(new Date(request.created_at), 'MMM d, yyyy • h:mm a')}
               </span>
             </div>
@@ -145,25 +145,25 @@ export default function WithdrawalRequestCard({ request, onUpdate }: WithdrawalR
 
       {/* Amount details */}
       <div className="grid grid-cols-3 gap-3 mb-3">
-        <div className="p-2 rounded-lg bg-white/[0.02]">
-          <p className="text-xs text-gray-500 mb-0.5">Amount</p>
+        <div className="p-2 rounded-lg bg-bg-overlay">
+          <p className="text-xs text-text-tertiary mb-0.5">Amount</p>
           <p className="text-sm font-semibold text-white font-mono">${request.amount.toFixed(2)}</p>
         </div>
-        <div className="p-2 rounded-lg bg-white/[0.02]">
-          <p className="text-xs text-gray-500 mb-0.5">Fee</p>
+        <div className="p-2 rounded-lg bg-bg-overlay">
+          <p className="text-xs text-text-tertiary mb-0.5">Fee</p>
           <p className="text-sm font-semibold text-amber-400 font-mono">-${request.fee_amount.toFixed(2)}</p>
         </div>
-        <div className="p-2 rounded-lg bg-white/[0.02]">
-          <p className="text-xs text-gray-500 mb-0.5">You receive</p>
+        <div className="p-2 rounded-lg bg-bg-overlay">
+          <p className="text-xs text-text-tertiary mb-0.5">You receive</p>
           <p className="text-sm font-semibold text-emerald-400 font-mono">${request.net_amount.toFixed(2)}</p>
         </div>
       </div>
 
       {/* Admin notes */}
       {request.admin_notes && (
-        <div className="p-3 rounded-lg bg-white/[0.02] border border-white/[0.05] mb-3">
-          <p className="text-xs text-gray-500 mb-1">Admin note:</p>
-          <p className="text-sm text-gray-300">{request.admin_notes}</p>
+        <div className="p-3 rounded-lg bg-bg-overlay border border-border-subtle mb-3">
+          <p className="text-xs text-text-tertiary mb-1">Admin note:</p>
+          <p className="text-sm text-text-secondary">{request.admin_notes}</p>
         </div>
       )}
 
@@ -174,7 +174,7 @@ export default function WithdrawalRequestCard({ request, onUpdate }: WithdrawalR
           disabled={isCancelling}
           className={cn(
             "w-full py-2 rounded-lg text-sm font-medium transition-all",
-            "bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20",
+            "bg-error-bg hover:bg-error-bg text-error border border-error/40",
             "disabled:opacity-50 disabled:cursor-not-allowed",
             "flex items-center justify-center gap-2"
           )}

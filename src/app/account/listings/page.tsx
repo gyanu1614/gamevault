@@ -1,51 +1,68 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+/**
+ * /account/listings — seller's listing inventory.
+ *
+ * V4 reskin: GV tokens, Radix primitives, NumberField for prices, Combobox
+ * for category/sort, DropdownMenu for row actions, Dialog for delete
+ * confirmation, Checkbox for selection, Tabs for status filter. Mobile-
+ * responsive layout: 2-card grid on mobile, 3-up on lg; full-width status
+ * tabs scroll horizontally on narrow screens.
+ *
+ * Behavior preserved end-to-end from the previous file:
+ *   - useSellerListings for data + mutations (update, delete, bulk*)
+ *   - inline price edit per row with optimistic state
+ *   - bulk activate / pause / delete / set-price
+ *   - restriction banner when the seller is restricted
+ *   - status counts per filter chip
+ */
+
+import { useMemo, useState } from 'react'
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
+import { motion, AnimatePresence } from 'framer-motion'
+import {
+  Search, Plus, Trash2, Pause, Play, Eye, MoreVertical, X, Loader2,
+  AlertCircle, Edit2, ShieldAlert, Check, Package,
+  Share2, FileSpreadsheet, ListFilter, TrendingUp,
+} from 'lucide-react'
+// V14r — Tabler icons for the metric rail. Lucide's basic icons (Boxes,
+// Truck) read as clip-art; Tabler's stroke-style set is more premium
+// and consistent with how dashboards like Linear / Vercel render metrics.
+import {
+  IconEye,
+  IconCoins,
+  IconPackages,
+  IconInfinity,
+  IconRocket,
+  IconBolt,
+} from '@tabler/icons-react'
+import { formatDeliveryLabel } from '@/lib/utils/delivery-time'
+
 import { useAuth } from '@/hooks/use-auth'
 import { useSellerListings } from '@/hooks/use-seller-listings'
 import { ListingStatus } from '@/lib/api/seller-compatible'
-import { useRouter } from 'next/navigation'
-import { updateListingPrice, deleteListing as deleteListingAction } from '@/lib/actions/listings'
-import { toast } from 'sonner'
-import Link from 'next/link'
+import { canSellerPublish, type SellerStatus } from '@/lib/utils/seller-status'
 import RestrictionBanner from '@/components/seller/RestrictionBanner'
-import {  canSellerPublish } from '@/lib/utils/seller-status'
-import type { SellerStatus } from '@/lib/utils/seller-status'
-import {
-  Search,
-  Grid3x3,
-  List,
-  Plus,
-  Filter,
-  Download,
-  Upload,
-  MoreVertical,
-  Edit,
-  Eye,
-  Trash2,
-  Copy,
-  Pause,
-  Play,
-  TrendingUp,
-  DollarSign,
-  Package,
-  BarChart3,
-  X,
-  Check,
-  AlertCircle,
-  Loader2,
-  Clock,
-  Share2,
-  Edit2,
-  ShieldAlert,
-  Zap,
-  Infinity
-} from 'lucide-react'
-import { motion, AnimatePresence } from 'framer-motion'
-import { cn } from '@/lib/utils'
-import { getDeliveryMethodLabel, getDeliveryMethodIcon } from '@/lib/config/delivery-methods'
 
-// Slug → filename map for games where slug differs from filename in /public/games/
+import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Combobox } from '@/components/ui/combobox'
+import { NumberField } from '@/components/ui/number-field'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import {
+  DropdownMenu, DropdownMenuTrigger, DropdownMenuContent,
+  DropdownMenuItem, DropdownMenuSeparator,
+} from '@/components/ui/dropdown-menu'
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle,
+  DialogDescription, DialogFooter,
+} from '@/components/ui/dialog'
+import { cn } from '@/lib/utils'
+
+// ─── Game icon helpers (carry-over) ──────────────────────────────────────────
+
 const GAME_ICON_MAP: Record<string, string> = {
   'steal-a-brainrot': 'sab',
   'grow-a-garden': 'gag',
@@ -55,149 +72,126 @@ const GAME_ICON_MAP: Record<string, string> = {
   'league-of-legends': 'lol',
   'gta-v': 'gta-v',
 }
-
-function getGameIconUrl(slug: string): string {
-  const filename = GAME_ICON_MAP[slug] ?? slug
-  return `/games/${filename}.png`
+function gameIconUrl(slug: string): string {
+  return `/games/${GAME_ICON_MAP[slug] ?? slug}.png`
+}
+function GameIcon({ slug, emoji, size = 'sm' }: { slug: string; emoji: string; size?: 'xs' | 'sm' }) {
+  const [failed, setFailed] = useState(false)
+  const cls = size === 'xs' ? 'h-4 w-4 text-xs' : 'h-5 w-5 text-sm'
+  if (!slug || failed) {
+    return <span className={cn('inline-flex shrink-0 items-center justify-center leading-none', cls)}>{emoji || '🎮'}</span>
+  }
+  /* eslint-disable-next-line @next/next/no-img-element */
+  return <img src={gameIconUrl(slug)} alt="" className={cn(cls, 'shrink-0 rounded object-cover')} onError={() => setFailed(true)} />
 }
 
-function GameIcon({ slug, emoji, size }: { slug: string; emoji: string; size: 'xs' | 'sm' }) {
-  const sizeClass = size === 'xs'
-    ? 'h-3 w-3 sm:h-4 sm:w-4 text-[10px] sm:text-xs'
-    : 'h-5 w-5 text-sm'
-  const [failed, setFailed] = useState(false)
-  if (failed) {
-    return <span className={`flex flex-shrink-0 items-center justify-center leading-none ${sizeClass}`}>{emoji || '🎮'}</span>
-  }
+// ─── Constants ───────────────────────────────────────────────────────────────
+
+type SortBy = 'newest' | 'oldest' | 'price-low' | 'price-high' | 'views' | 'sales'
+type FilterStatus = 'all' | 'active' | 'paused' | 'sold' | 'draft' | 'archived' | 'suspended' | 'pending_approval'
+
+const SORT_OPTIONS: { value: SortBy; label: string }[] = [
+  { value: 'newest', label: 'Newest first' },
+  { value: 'oldest', label: 'Oldest first' },
+  { value: 'price-low', label: 'Price: low to high' },
+  { value: 'price-high', label: 'Price: high to low' },
+  { value: 'views', label: 'Most viewed' },
+  { value: 'sales', label: 'Best selling' },
+]
+
+const CATEGORY_OPTIONS = [
+  { value: 'all', label: 'All categories' },
+  { value: 'currency', label: 'Currency' },
+  { value: 'items', label: 'Items' },
+  { value: 'accounts', label: 'Accounts' },
+  { value: 'top-up', label: 'Top Up' },
+  { value: 'boosting', label: 'Boosting' },
+]
+
+const STATUS_TABS: { value: FilterStatus; label: string }[] = [
+  { value: 'all', label: 'All' },
+  { value: 'active', label: 'Active' },
+  { value: 'pending_approval', label: 'Under review' },
+  { value: 'paused', label: 'Paused' },
+  { value: 'sold', label: 'Sold' },
+  { value: 'draft', label: 'Drafts' },
+]
+
+// ─── Status badge ────────────────────────────────────────────────────────────
+
+// V14q — Listing-row metric cell. Same shape as the currency-page seller
+// row's MetricCol: small icon + bold value on top, caption beneath.
+// Fixed width per column so every row's columns align vertically.
+// V14t — Caption bumped from 10px / tracking-wider to 11.5px / tracking-[0.06em]
+// per design call: was too thin to read. Still Inter (app default font).
+function MetricCell({
+  icon: Icon, label, value, valueClass, width = 84,
+}: {
+  icon: React.ComponentType<{ className?: string }>
+  label: string
+  value: string
+  valueClass?: string
+  width?: number
+}) {
   return (
-    <img
-      src={getGameIconUrl(slug)}
-      alt=""
-      className={`${sizeClass} flex-shrink-0 rounded object-cover`}
-      onError={() => setFailed(true)}
-    />
+    <div className="shrink-0" style={{ width }}>
+      <div className={cn(
+        'flex items-center gap-1.5 text-[15px] font-semibold tabular-nums leading-tight text-text-primary',
+        valueClass,
+      )}>
+        <Icon className="h-4 w-4 shrink-0 text-text-tertiary" />
+        <span className="truncate">{value}</span>
+      </div>
+      <div className="mt-1 text-[11.5px] font-medium uppercase tracking-[0.06em] text-text-tertiary">
+        {label}
+      </div>
+    </div>
   )
 }
 
-// Mock listings data - DEPRECATED: Now using real data from hook
-const mockListings_DEPRECATED = [
-  {
-    id: '1',
-    title: 'Valorant Radiant Account | 5000+ VP | All Agents',
-    game: { name: 'Valorant', slug: 'valorant', image: '/games/valorant.png' },
-    category: 'Accounts',
-    price: 149.99,
-    originalPrice: 199.99,
-    quantity: 1,
-    status: 'active',
-    views: 1234,
-    favorites: 45,
-    sales: 12,
-    image: 'https://placehold.co/400x300/6366f1/fff?text=Valorant',
-    createdAt: '2024-01-15',
-    updatedAt: '2024-01-20'
-  },
-  {
-    id: '2',
-    title: 'Fortnite Account | 200+ Skins | Rare Emotes',
-    game: { name: 'Fortnite', slug: 'fortnite', image: '/games/fortnite.png' },
-    category: 'Accounts',
-    price: 89.99,
-    quantity: 3,
-    status: 'active',
-    views: 856,
-    favorites: 32,
-    sales: 8,
-    image: 'https://placehold.co/400x300/8b5cf6/fff?text=Fortnite',
-    createdAt: '2024-01-18',
-    updatedAt: '2024-01-22'
-  },
-  {
-    id: '3',
-    title: 'Roblox Account | 50k Robux | Premium',
-    game: { name: 'Roblox', slug: 'roblox', image: '/games/roblox.png' },
-    category: 'Currency',
-    price: 45.00,
-    quantity: 10,
-    status: 'active',
-    views: 2341,
-    favorites: 89,
-    sales: 34,
-    image: 'https://placehold.co/400x300/ec4899/fff?text=Roblox',
-    createdAt: '2024-01-10',
-    updatedAt: '2024-01-23'
-  },
-  {
-    id: '4',
-    title: 'GTA V Modded Account | $500M | Rank 200',
-    game: { name: 'GTA V', slug: 'gta-v', image: '/games/gta-v.png' },
-    category: 'Accounts',
-    price: 29.99,
-    quantity: 0,
-    status: 'sold',
-    views: 456,
-    favorites: 12,
-    sales: 1,
-    image: 'https://placehold.co/400x300/10b981/fff?text=GTA+V',
-    createdAt: '2024-01-12',
-    updatedAt: '2024-01-19'
-  },
-  {
-    id: '5',
-    title: 'Minecraft Premium Account | Full Access',
-    game: { name: 'Minecraft', slug: 'minecraft', image: '/games/minecraft.png' },
-    category: 'Accounts',
-    price: 15.99,
-    quantity: 25,
-    status: 'paused',
-    views: 678,
-    favorites: 23,
-    sales: 15,
-    image: 'https://placehold.co/400x300/f59e0b/fff?text=Minecraft',
-    createdAt: '2024-01-14',
-    updatedAt: '2024-01-21'
-  },
-  {
-    id: '6',
-    title: 'League of Legends | Diamond Account | 150+ Champs',
-    game: { name: 'League of Legends', slug: 'lol', image: '/games/lol.png' },
-    category: 'Accounts',
-    price: 120.00,
-    quantity: 2,
-    status: 'draft',
-    views: 0,
-    favorites: 0,
-    sales: 0,
-    image: 'https://placehold.co/400x300/3b82f6/fff?text=LoL',
-    createdAt: '2024-01-24',
-    updatedAt: '2024-01-24'
-  },
-]
+function StatusBadge({ status }: { status: string }) {
+  const cfg: Record<string, { dot: string; text: string; bg: string; border: string; label: string }> = {
+    active:           { dot: 'bg-success', text: 'text-success', bg: 'bg-success-bg', border: 'border-success/30', label: 'Active' },
+    paused:           { dot: 'bg-warning', text: 'text-warning', bg: 'bg-warning-bg', border: 'border-warning/30', label: 'Paused' },
+    sold:             { dot: 'bg-text-tertiary', text: 'text-text-tertiary', bg: 'bg-bg-inset', border: 'border-border-subtle', label: 'Sold out' },
+    draft:            { dot: 'bg-info', text: 'text-info', bg: 'bg-info-bg', border: 'border-info/30', label: 'Draft' },
+    pending_approval: { dot: 'bg-warning', text: 'text-warning', bg: 'bg-warning-bg', border: 'border-warning/30', label: 'Under review' },
+    suspended:        { dot: 'bg-error', text: 'text-error', bg: 'bg-error-bg', border: 'border-error/30', label: 'Suspended' },
+    archived:         { dot: 'bg-text-disabled', text: 'text-text-tertiary', bg: 'bg-bg-inset', border: 'border-border-subtle', label: 'Archived' },
+  }
+  const c = cfg[status] ?? cfg.draft
+  return (
+    <span className={cn('inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider', c.bg, c.border, c.text)}>
+      <span className={cn('h-1.5 w-1.5 rounded-full', c.dot)} />
+      {c.label}
+    </span>
+  )
+}
 
-type ViewMode = 'grid' | 'list'
-type SortBy = 'newest' | 'oldest' | 'price-low' | 'price-high' | 'views' | 'sales'
-type FilterStatus = 'all' | 'active' | 'paused' | 'sold' | 'draft' | 'archived' | 'suspended' | 'pending_approval'
+// ─── Main page ───────────────────────────────────────────────────────────────
 
 export default function ListingsPage() {
   const { user, loading: authLoading } = useAuth()
   const router = useRouter()
 
-  const [viewMode, setViewMode] = useState<ViewMode>('list')
+  // Filters
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedStatus, setSelectedStatus] = useState<FilterStatus>('all')
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
   const [sortBy, setSortBy] = useState<SortBy>('newest')
+
+  // Selection + bulk
   const [selectedListings, setSelectedListings] = useState<Set<string>>(new Set())
-  const [showFilters, setShowFilters] = useState(false)
-  const [showBulkActions, setShowBulkActions] = useState(false)
+  const [bulkPriceOpen, setBulkPriceOpen] = useState(false)
+  const [bulkPrice, setBulkPrice] = useState<number>(0)
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
+
+  // Per-row inline edits
   const [editingPrices, setEditingPrices] = useState<Record<string, number>>({})
   const [updatingListings, setUpdatingListings] = useState<Set<string>>(new Set())
   const [deletingListings, setDeletingListings] = useState<Set<string>>(new Set())
-  const [confirmingDelete, setConfirmingDelete] = useState<string | null>(null)
-  const [bulkPriceInput, setBulkPriceInput] = useState('')
-  const [showBulkPriceInput, setShowBulkPriceInput] = useState(false)
+  const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null)
 
-  // Fetch listings from database
   const {
     listings: dbListings,
     isLoading: listingsLoading,
@@ -206,293 +200,184 @@ export default function ListingsPage() {
     bulkUpdate,
     bulkDelete,
     isUpdating,
-    isDeleting
+    isDeleting,
   } = useSellerListings({
     search: searchQuery,
-    status: selectedStatus !== 'all' ? (selectedStatus as ListingStatus) : undefined
+    status: selectedStatus !== 'all' ? (selectedStatus as ListingStatus) : undefined,
   })
 
-  // Convert database listings to match UI format
   const listings = useMemo(() => {
-    return dbListings.map(listing => ({
-      id: listing.id,
-      title: listing.title,
-      game: {
-        name: listing.game?.name || 'Unknown',
-        slug: listing.game?.slug || '',
-        emoji: listing.game?.emoji || '🎮'
-      },
-      category: listing.category?.name || 'Uncategorized',
-      categorySlug: listing.category?.slug || '',
-      slug: listing.id, // Use id as fallback for slug
-      price: listing.price,
-      originalPrice: undefined,
-      quantity: listing.quantity,
-      status: listing.status,
-      views: listing.views,
-      favorites: 0,
-      sales: listing.sales,
-      delivery_method: listing.delivery_method || 'manual',
-      delivery_time: listing.delivery_time || '1-24 hours',
-      image: listing.images && listing.images.length > 0 ? listing.images[0] : `https://placehold.co/400x300/6366f1/fff?text=${encodeURIComponent(listing.title.slice(0, 20))}`,
-      createdAt: listing.created_at,
-      updatedAt: listing.updated_at
+    return dbListings.map((l) => ({
+      id: l.id,
+      title: l.title,
+      game: { name: l.game?.name || 'Unknown', slug: l.game?.slug || '', emoji: l.game?.emoji || '🎮' },
+      category: l.category?.name || 'Uncategorized',
+      categorySlug: l.category?.slug || '',
+      slug: l.id,
+      price: l.price,
+      originalPrice: undefined as number | undefined,
+      quantity: l.quantity,
+      isUnlimited: !!l.is_unlimited,
+      status: l.status,
+      views: l.views,
+      sales: l.sales,
+      delivery_method: l.delivery_method || 'manual',
+      delivery_time: l.delivery_time || '1-24 hours',
+      image:
+        l.images?.length
+          ? l.images[0]
+          : `https://placehold.co/400x300/6366f1/fff?text=${encodeURIComponent(l.title.slice(0, 20))}`,
+      createdAt: l.created_at,
+      updatedAt: l.updated_at,
     }))
   }, [dbListings])
 
-  // Filter and sort listings (filtering and sorting on client side)
   const filteredListings = useMemo(() => {
     let result = [...listings]
-
-    // Filter by category
     if (selectedCategory !== 'all') {
-      result = result.filter(listing =>
-        listing.categorySlug?.toLowerCase() === selectedCategory.toLowerCase() ||
-        listing.category?.toLowerCase() === selectedCategory.toLowerCase()
+      result = result.filter(
+        (l) => l.categorySlug?.toLowerCase() === selectedCategory || l.category?.toLowerCase() === selectedCategory,
       )
     }
-
-    // Sort
     result.sort((a, b) => {
       switch (sortBy) {
-        case 'newest':
-          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-        case 'oldest':
-          return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-        case 'price-low':
-          return a.price - b.price
-        case 'price-high':
-          return b.price - a.price
-        case 'views':
-          return b.views - a.views
-        case 'sales':
-          return b.sales - a.sales
-        default:
-          return 0
+        case 'newest':     return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        case 'oldest':     return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+        case 'price-low':  return a.price - b.price
+        case 'price-high': return b.price - a.price
+        case 'views':      return b.views - a.views
+        case 'sales':      return b.sales - a.sales
       }
     })
-
     return result
   }, [listings, sortBy, selectedCategory])
 
   const statusCounts = useMemo(() => ({
-    all: listings.length,
-    active: listings.filter(l => l.status === 'active').length,
-    paused: listings.filter(l => l.status === 'paused').length,
-    sold: listings.filter(l => l.status === 'sold').length,
-    draft: listings.filter(l => l.status === 'draft').length,
-    pending_approval: listings.filter(l => (l.status as any) === 'pending_approval').length,
+    all:              listings.length,
+    active:           listings.filter((l) => l.status === 'active').length,
+    paused:           listings.filter((l) => l.status === 'paused').length,
+    sold:             listings.filter((l) => l.status === 'sold').length,
+    draft:            listings.filter((l) => l.status === 'draft').length,
+    pending_approval: listings.filter((l) => (l.status as any) === 'pending_approval').length,
   }), [listings])
 
-  // Bulk action handlers
-  const handleBulkActivate = async () => {
-    // Prevent restricted sellers from activating listings
-    if (isRestricted) {
-      toast.error('Your account is restricted. You cannot activate listings at this time.')
-      return
-    }
-    const ids = Array.from(selectedListings)
-    await bulkUpdate({ ids, updates: { status: 'active' } })
-    setSelectedListings(new Set())
-    setShowBulkActions(false)
-  }
+  // ── Handlers ──────────────────────────────────────────────────────────────
 
-  const handleBulkPause = async () => {
-    const ids = Array.from(selectedListings)
-    await bulkUpdate({ ids, updates: { status: 'paused' } })
-    setSelectedListings(new Set())
-    setShowBulkActions(false)
-  }
+  const sellerStatus = ((user?.profile as any)?.seller_status as SellerStatus) || 'active'
+  const isRestricted = !canSellerPublish(sellerStatus)
 
-  const handleBulkDelete = async () => {
-    if (!confirm(`Are you sure you want to delete ${selectedListings.size} listing(s)? This action cannot be undone.`)) {
-      return
-    }
-    const ids = Array.from(selectedListings)
-    await bulkDelete(ids)
-    setSelectedListings(new Set())
-    setShowBulkActions(false)
-  }
-
-  const handleBulkPriceUpdate = async () => {
-    const newPrice = parseFloat(bulkPriceInput)
-    if (!bulkPriceInput || isNaN(newPrice) || newPrice <= 0) {
-      toast.error('Enter a valid price greater than 0')
-      return
-    }
-    const ids = Array.from(selectedListings)
-    await bulkUpdate({ ids, updates: { price: newPrice } })
-    setBulkPriceInput('')
-    setShowBulkPriceInput(false)
-    setSelectedListings(new Set())
-    setShowBulkActions(false)
-  }
-
-  const toggleSelectListing = (id: string) => {
-    const newSet = new Set(selectedListings)
-    if (newSet.has(id)) {
-      newSet.delete(id)
-    } else {
-      newSet.add(id)
-    }
-    setSelectedListings(newSet)
-  }
-
-  const selectAll = () => {
-    if (selectedListings.size === filteredListings.length) {
-      setSelectedListings(new Set())
-    } else {
-      setSelectedListings(new Set(filteredListings.map(l => l.id)))
-    }
-  }
-
-  // Price editing handlers
-  const handlePriceChange = (listingId: string, newPrice: number) => {
-    setEditingPrices(prev => ({ ...prev, [listingId]: newPrice }))
-  }
-
-  const handleUpdatePrice = async (listingId: string) => {
-    const newPrice = editingPrices[listingId]
-    if (!newPrice || newPrice <= 0) {
-      toast.error('Price must be greater than 0')
-      return
-    }
-
-    setUpdatingListings(prev => new Set(prev).add(listingId))
-
-    try {
-      // Use updateListing with silent: true to suppress the hook's toast
-      await updateListing({ id: listingId, updates: { price: newPrice }, silent: true })
-
-      // Show only our custom toast
-      toast.success('Price updated successfully!')
-
-      // Remove from editing state
-      setEditingPrices(prev => {
-        const newState = { ...prev }
-        delete newState[listingId]
-        return newState
-      })
-
-      // Refresh listings data
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to update price')
-    } finally {
-      setUpdatingListings(prev => {
-        const newSet = new Set(prev)
-        newSet.delete(listingId)
-        return newSet
-      })
-    }
-  }
-
-  const handleCancelPriceEdit = (listingId: string) => {
-    setEditingPrices(prev => {
-      const newState = { ...prev }
-      delete newState[listingId]
-      return newState
+  const toggleSelectOne = (id: string) => {
+    setSelectedListings((prev) => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
     })
   }
+  const toggleSelectAll = () => {
+    setSelectedListings((prev) =>
+      prev.size === filteredListings.length ? new Set() : new Set(filteredListings.map((l) => l.id)),
+    )
+  }
+  const clearSelection = () => setSelectedListings(new Set())
 
-  // Delete handlers
-  const handleDeleteClick = (listingId: string) => {
-    setConfirmingDelete(listingId)
+  const onBulkActivate = async () => {
+    if (isRestricted) { toast.error('Your account is restricted.'); return }
+    await bulkUpdate({ ids: Array.from(selectedListings), updates: { status: 'active' } })
+    clearSelection()
+  }
+  const onBulkPause = async () => {
+    await bulkUpdate({ ids: Array.from(selectedListings), updates: { status: 'paused' } })
+    clearSelection()
+  }
+  const onBulkDelete = async () => {
+    await bulkDelete(Array.from(selectedListings))
+    setBulkDeleteOpen(false)
+    clearSelection()
+  }
+  const onBulkPriceApply = async () => {
+    if (!bulkPrice || bulkPrice <= 0) { toast.error('Enter a valid price'); return }
+    await bulkUpdate({ ids: Array.from(selectedListings), updates: { price: bulkPrice } })
+    setBulkPriceOpen(false)
+    setBulkPrice(0)
+    clearSelection()
   }
 
-  const handleConfirmDelete = async (listingId: string) => {
-    setDeletingListings(prev => new Set(prev).add(listingId))
-
+  const onUpdatePrice = async (id: string) => {
+    const v = editingPrices[id]
+    if (!v || v <= 0) { toast.error('Price must be greater than 0'); return }
+    setUpdatingListings((s) => new Set(s).add(id))
     try {
-      await deleteListing({ id: listingId, silent: true })  // ✅ Use silent to prevent duplicate toast
-      toast.success('Listing deleted successfully')
-      setConfirmingDelete(null)
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to delete listing')
+      await updateListing({ id, updates: { price: v }, silent: true })
+      toast.success('Price updated')
+      setEditingPrices((p) => { const n = { ...p }; delete n[id]; return n })
+    } catch (e: any) {
+      toast.error(e.message ?? 'Failed to update price')
     } finally {
-      setDeletingListings(prev => {
-        const newSet = new Set(prev)
-        newSet.delete(listingId)
-        return newSet
-      })
+      setUpdatingListings((s) => { const n = new Set(s); n.delete(id); return n })
     }
   }
 
-  const handleToggleStatus = async (listingId: string, currentStatus: string) => {
-    const newStatus = currentStatus === 'active' ? 'paused' : 'active'
-
-    // Prevent restricted sellers from resuming listings
-    if (newStatus === 'active' && isRestricted) {
-      toast.error('Your account is restricted. You cannot resume listings at this time.')
-      return
-    }
-
-    setUpdatingListings(prev => new Set(prev).add(listingId))
-
+  const onToggleStatus = async (id: string, current: string) => {
+    const next = current === 'active' ? 'paused' : 'active'
+    if (next === 'active' && isRestricted) { toast.error('Your account is restricted.'); return }
+    setUpdatingListings((s) => new Set(s).add(id))
     try {
-      await updateListing({ id: listingId, updates: { status: newStatus } })
-      toast.success(`Listing ${newStatus === 'active' ? 'activated' : 'paused'}`)
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to update status')
+      await updateListing({ id, updates: { status: next } })
+      toast.success(`Listing ${next === 'active' ? 'activated' : 'paused'}`)
+    } catch (e: any) {
+      toast.error(e.message ?? 'Failed to update status')
     } finally {
-      setUpdatingListings(prev => {
-        const newSet = new Set(prev)
-        newSet.delete(listingId)
-        return newSet
-      })
+      setUpdatingListings((s) => { const n = new Set(s); n.delete(id); return n })
     }
   }
 
-  const handleCopyLink = (listing: any) => {
-    const url = `${window.location.origin}/marketplace/${listing.game?.slug || 'game'}/${listing.categorySlug || 'category'}/${listing.slug || listing.id}`
+  const onConfirmDelete = async () => {
+    if (!confirmingDeleteId) return
+    setDeletingListings((s) => new Set(s).add(confirmingDeleteId))
+    try {
+      await deleteListing({ id: confirmingDeleteId, silent: true })
+      toast.success('Listing deleted')
+    } catch (e: any) {
+      toast.error(e.message ?? 'Failed to delete listing')
+    } finally {
+      setDeletingListings((s) => { const n = new Set(s); n.delete(confirmingDeleteId); return n })
+      setConfirmingDeleteId(null)
+    }
+  }
+
+  const onCopyLink = (l: { id: string; game: { slug: string }; categorySlug: string; slug: string }) => {
+    // V14r — Currency listings don't have a per-listing page; they live on
+    // /{gameSlug}/buy-robux (or the canonical alias). Copy that instead of
+    // a 404-prone /marketplace/<game>/currency/<id> URL.
+    const isCurrency = l.categorySlug === 'currency' || l.categorySlug === 'robux'
+    const url = isCurrency
+      ? `${window.location.origin}/${l.game.slug || 'game'}/buy-robux`
+      : `${window.location.origin}/${l.game.slug || 'game'}/${l.categorySlug || 'category'}/${l.slug || l.id}`
     navigator.clipboard.writeText(url)
-    toast.success('Link copied to clipboard!')
+    toast.success('Link copied')
   }
 
-  const handleCancelDelete = () => {
-    setConfirmingDelete(null)
-  }
-
-  const getStatusColor = (status: string) => {
-    const colors = {
-      active: 'bg-green-500/10 text-green-400 border-green-500/30',
-      paused: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/30',
-      sold: 'bg-gray-500/10 text-gray-400 border-gray-500/30',
-      draft: 'bg-blue-500/10 text-blue-400 border-blue-500/30',
-      pending_approval: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/30',
-    }
-    return colors[status as keyof typeof colors] || colors.draft
-  }
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'active': return <Play className="h-3 w-3" />
-      case 'paused': return <Pause className="h-3 w-3" />
-      case 'sold': return <Check className="h-3 w-3" />
-      case 'draft': return <Edit className="h-3 w-3" />
-      case 'pending_approval': return <Clock className="h-3 w-3" />
-      default: return null
-    }
-  }
+  // ── Loading / auth ────────────────────────────────────────────────────────
 
   if (authLoading || listingsLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="text-gray-400">Loading listings...</p>
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="h-7 w-7 animate-spin text-lime-text" />
+          <p className="text-sm text-text-tertiary">Loading listings…</p>
         </div>
       </div>
     )
   }
 
-  // Get seller status from profile
-  const sellerStatus = ((user?.profile as any)?.seller_status as SellerStatus) || 'active'
-  const isRestricted = !canSellerPublish(sellerStatus)
+  const allSelected = selectedListings.size > 0 && selectedListings.size === filteredListings.length
+  const someSelected = selectedListings.size > 0
+
+  // ── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <div className="min-h-screen bg-black pb-20">
-      <div className="mx-auto w-full max-w-full px-4 sm:px-6 md:max-w-7xl lg:px-8">
-        {/* Restriction Banner */}
+    <div className="min-h-screen bg-bg-base pb-24">
+      <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
         {isRestricted && (
           <RestrictionBanner
             status={sellerStatus}
@@ -501,843 +386,623 @@ export default function ListingsPage() {
           />
         )}
 
-        {/* Header - Compact & Modern */}
-        <div className="mb-5">
-          <div className="flex items-center justify-between mb-3">
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-semibold text-white">My Listings</h1>
-              <p className="mt-1 text-sm text-gray-500">
-                Manage your products and track performance
-              </p>
-            </div>
+        {/* Header */}
+        <header className="flex flex-col gap-3 pt-6 sm:flex-row sm:items-end sm:justify-between sm:pt-8">
+          <div>
+            <h1 className="text-2xl font-bold text-text-primary sm:text-3xl">My listings</h1>
+            <p className="mt-1 text-sm text-text-secondary">
+              Manage your offers, prices, and stock.
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Link href="/sell/bulk">
+              <Button variant="outline" className="h-10 gap-1.5 rounded-md border-border-default bg-bg-raised text-text-primary hover:bg-bg-raised-hover hover:border-lime-tint-border">
+                <FileSpreadsheet className="h-4 w-4" />
+                Bulk upload
+              </Button>
+            </Link>
             {isRestricted ? (
-              <Link
-                href="/account/restrictions"
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 text-sm font-medium hover:bg-yellow-500/20 transition-colors"
-              >
-                <ShieldAlert className="h-4 w-4" />
-                Selling Restricted
+              <Link href="/account/restrictions">
+                <Button variant="outline" className="h-10 gap-1.5 rounded-md border-warning/40 bg-warning-bg text-warning hover:bg-warning-bg">
+                  <ShieldAlert className="h-4 w-4" />
+                  Selling restricted
+                </Button>
               </Link>
             ) : (
-              <Link
-                href="/sell/new"
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-5 py-2.5 text-sm font-medium text-black transition-all hover:bg-white/90 active:scale-95"
-              >
-                <Plus className="h-4 w-4" />
-                Create Listing
+              <Link href="/sell/new">
+                <Button className="h-10 gap-1.5 rounded-md bg-lime text-text-inverse font-semibold shadow-elevated hover:bg-lime-hover hover:shadow-glow">
+                  <Plus className="h-4 w-4" />
+                  Create listing
+                </Button>
               </Link>
             )}
           </div>
+        </header>
 
-          {/* Tab-Style Stats Navigation */}
-          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-            {[
-              { label: 'All', value: statusCounts.all, status: 'all' as FilterStatus },
-              { label: 'Active', value: statusCounts.active, status: 'active' as FilterStatus },
-              { label: 'Under Review', value: statusCounts.pending_approval, status: 'pending_approval' as FilterStatus },
-              { label: 'Paused', value: statusCounts.paused, status: 'paused' as FilterStatus },
-              { label: 'Sold', value: statusCounts.sold, status: 'sold' as FilterStatus },
-              { label: 'Drafts', value: statusCounts.draft, status: 'draft' as FilterStatus },
-            ].map((stat) => (
+        {/* Status tabs */}
+        <Tabs
+          value={selectedStatus}
+          onValueChange={(v) => setSelectedStatus(v as FilterStatus)}
+          className="mt-5"
+        >
+          <div className="overflow-x-auto scrollbar-hide">
+            <TabsList variant="underline" className="min-w-max">
+              {STATUS_TABS.map((t) => (
+                <TabsTrigger key={t.value} value={t.value} className="gap-1.5">
+                  {t.label}
+                  <span className="rounded-full bg-bg-inset px-1.5 text-[10px] font-semibold text-text-tertiary data-[state=active]:bg-lime-tint-bg data-[state=active]:text-lime-text">
+                    {statusCounts[t.value as keyof typeof statusCounts] ?? 0}
+                  </span>
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </div>
+        </Tabs>
+
+        {/* Filter row */}
+        <div className="mt-4 flex flex-col gap-3 lg:flex-row lg:items-center">
+          {/* Search */}
+          <div className="relative flex-1 lg:max-w-md">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary" />
+            <input
+              type="text"
+              placeholder="Search your listings…"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="h-10 w-full rounded-md border border-border-default bg-bg-raised pl-9 pr-9 text-sm text-text-primary placeholder:text-text-tertiary transition-colors focus:border-lime focus:outline-none focus:ring-2 focus:ring-lime-tint-bg"
+            />
+            {searchQuery && (
               <button
-                key={stat.status}
-                onClick={() => setSelectedStatus(stat.status)}
-                className={cn(
-                  'flex-shrink-0 rounded-lg px-4 py-2 text-sm font-medium transition-all',
-                  selectedStatus === stat.status
-                    ? 'bg-white text-black'
-                    : 'bg-white/[0.05] text-gray-400 hover:bg-white/[0.08] hover:text-gray-300'
-                )}
+                onClick={() => setSearchQuery('')}
+                className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-text-tertiary hover:bg-bg-raised-hover hover:text-text-primary"
+                aria-label="Clear search"
               >
-                {stat.label} <span className="ml-1.5 opacity-60">{stat.value}</span>
+                <X className="h-3.5 w-3.5" />
               </button>
-            ))}
+            )}
+          </div>
+
+          {/* Category */}
+          <div className="lg:w-52">
+            <Combobox
+              value={selectedCategory}
+              onChange={setSelectedCategory}
+              options={CATEGORY_OPTIONS}
+              ariaLabel="Filter by category"
+              unsorted
+            />
+          </div>
+
+          {/* Sort */}
+          <div className="lg:w-52">
+            <Combobox
+              value={sortBy}
+              onChange={(v) => setSortBy(v as SortBy)}
+              options={SORT_OPTIONS}
+              ariaLabel="Sort"
+              unsorted
+            />
           </div>
         </div>
 
-        {/* Filters & Controls */}
-        <div className="mb-5 flex flex-col gap-4 rounded-xl border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] p-3 sm:p-4 backdrop-blur-md">
-          {/* Top Row */}
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            {/* Search */}
-            <div className="relative flex-1 lg:max-w-md">
-              <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search listings..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full rounded-lg border border-white/10 bg-white/5 py-2 pl-10 pr-4 text-white placeholder:text-gray-500 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-              />
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              )}
-            </div>
-
-            {/* Controls */}
-            <div className="flex items-center gap-2">
-              {/* Category Dropdown */}
-              <select
-                value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
-                className="rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-sm text-white focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+        {/* Bulk action bar — appears when items selected */}
+        <AnimatePresence>
+          {someSelected && (
+            <motion.div
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.18 }}
+              className="mt-3 flex flex-wrap items-center gap-2 rounded-xl border border-lime-tint-border bg-lime-tint-bg px-3 py-2"
+            >
+              <span className="text-xs font-semibold text-lime-text">
+                {selectedListings.size} selected
+              </span>
+              <span className="hidden h-3 w-px bg-border-default sm:block" />
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={onBulkActivate}
+                disabled={isUpdating}
+                className="h-8 gap-1.5 rounded-md border-border-default bg-bg-raised text-text-primary hover:bg-bg-raised-hover"
               >
-                <option value="all">All Categories</option>
-                <option value="currency">Currency</option>
-                <option value="items">Items</option>
-                <option value="top-up">Top-Up</option>
-                <option value="accounts">Accounts</option>
-                <option value="boosting">Boosting</option>
-              </select>
-
-              {/* View Mode */}
-              <div className="flex gap-1 rounded-lg border border-white/10 bg-white/5 p-1">
-                <button
-                  onClick={() => setViewMode('grid')}
-                  className={cn(
-                    'rounded-md p-2 transition-all',
-                    viewMode === 'grid'
-                      ? 'bg-primary text-white'
-                      : 'text-gray-400 hover:text-white'
-                  )}
-                >
-                  <Grid3x3 className="h-4 w-4" />
-                </button>
-                <button
-                  onClick={() => setViewMode('list')}
-                  className={cn(
-                    'rounded-md p-2 transition-all',
-                    viewMode === 'list'
-                      ? 'bg-primary text-white'
-                      : 'text-gray-400 hover:text-white'
-                  )}
-                >
-                  <List className="h-4 w-4" />
-                </button>
-              </div>
-
-              {/* Filters Toggle */}
-              <button
-                onClick={() => setShowFilters(!showFilters)}
-                className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-white transition-all hover:bg-white/10"
+                {isUpdating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
+                Activate
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={onBulkPause}
+                disabled={isUpdating}
+                className="h-8 gap-1.5 rounded-md border-border-default bg-bg-raised text-text-primary hover:bg-bg-raised-hover"
               >
-                <Filter className="h-4 w-4" />
-                Filters
-              </button>
+                {isUpdating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Pause className="h-3.5 w-3.5" />}
+                Pause
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setBulkPriceOpen(true)}
+                disabled={isUpdating}
+                className="h-8 gap-1.5 rounded-md border-border-default bg-bg-raised text-text-primary hover:bg-bg-raised-hover"
+              >
+                <TrendingUp className="h-3.5 w-3.5" />
+                Set price
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setBulkDeleteOpen(true)}
+                disabled={isDeleting}
+                className="h-8 gap-1.5 rounded-md border-error/40 bg-error-bg text-error hover:bg-error-bg hover:border-error"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                Delete
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={clearSelection}
+                className="ml-auto h-8 gap-1.5 text-text-tertiary hover:text-text-primary"
+              >
+                <X className="h-3.5 w-3.5" />
+                Clear
+              </Button>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-              {/* Bulk Actions */}
-              {selectedListings.size > 0 && (
-                <button
-                  onClick={() => setShowBulkActions(!showBulkActions)}
-                  className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-white transition-all hover:bg-white/10"
-                >
-                  <Check className="h-4 w-4" />
-                  {selectedListings.size} Selected
-                </button>
-              )}
-
-              {/* Import/Export */}
-              <button className="rounded-lg border border-white/10 bg-white/5 p-2 text-gray-400 transition-all hover:text-white">
-                <Upload className="h-4 w-4" />
-              </button>
-              <button className="rounded-lg border border-white/10 bg-white/5 p-2 text-gray-400 transition-all hover:text-white">
-                <Download className="h-4 w-4" />
-              </button>
-            </div>
+        {/* Select-all row */}
+        {filteredListings.length > 0 && (
+          <div className="mt-4 flex items-center gap-2 text-xs text-text-tertiary">
+            <Checkbox
+              checked={allSelected}
+              onCheckedChange={toggleSelectAll}
+              aria-label="Select all"
+            />
+            <span>
+              {allSelected
+                ? `All ${filteredListings.length} selected`
+                : `${filteredListings.length} listing${filteredListings.length === 1 ? '' : 's'}`}
+            </span>
           </div>
+        )}
 
-          {/* Filters Row */}
-          <AnimatePresence>
-            {showFilters && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                className="flex flex-wrap gap-3 border-t border-white/10 pt-4"
-              >
-                {/* Status Filter */}
-                <div className="flex flex-wrap gap-2">
-                  {(['all', 'active', 'pending_approval', 'paused', 'sold', 'draft'] as const).map((status) => (
-                    <button
-                      key={status}
-                      onClick={() => setSelectedStatus(status)}
-                      className={cn(
-                        'rounded-lg border px-4 py-2 text-sm font-medium transition-all',
-                        selectedStatus === status
-                          ? 'border-primary bg-primary text-white'
-                          : 'border-white/10 bg-white/5 text-gray-400 hover:text-white'
-                      )}
-                    >
-                      {status === 'pending_approval' ? 'Under Review' : status.charAt(0).toUpperCase() + status.slice(1)}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Sort */}
-                <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value as SortBy)}
-                  className="rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-sm text-white focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                >
-                  <option value="newest">Newest First</option>
-                  <option value="oldest">Oldest First</option>
-                  <option value="price-low">Price: Low to High</option>
-                  <option value="price-high">Price: High to Low</option>
-                  <option value="views">Most Viewed</option>
-                  <option value="sales">Best Selling</option>
-                </select>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* Bulk Actions Bar */}
-          <AnimatePresence>
-            {showBulkActions && selectedListings.size > 0 && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                className="flex flex-wrap gap-2 border-t border-white/10 pt-4"
-              >
-                <button
-                  onClick={handleBulkActivate}
-                  disabled={isUpdating}
-                  className="flex items-center gap-2 rounded-lg border border-green-500/30 bg-green-500/10 px-4 py-2 text-sm font-medium text-green-400 transition-all hover:bg-green-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isUpdating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
-                  Activate ({selectedListings.size})
-                </button>
-                <button
-                  onClick={handleBulkPause}
-                  disabled={isUpdating}
-                  className="flex items-center gap-2 rounded-lg border border-yellow-500/30 bg-yellow-500/10 px-4 py-2 text-sm font-medium text-yellow-400 transition-all hover:bg-yellow-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isUpdating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Pause className="h-4 w-4" />}
-                  Pause ({selectedListings.size})
-                </button>
-                <button
-                  onClick={handleBulkDelete}
-                  disabled={isDeleting}
-                  className="flex items-center gap-2 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-2 text-sm font-medium text-red-400 transition-all hover:bg-red-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-                  Delete ({selectedListings.size})
-                </button>
-
-                {/* Bulk Price Update */}
-                {!showBulkPriceInput ? (
-                  <button
-                    onClick={() => setShowBulkPriceInput(true)}
-                    disabled={isUpdating}
-                    className="flex items-center gap-2 rounded-lg border border-violet-500/30 bg-violet-500/10 px-4 py-2 text-sm font-medium text-violet-400 transition-all hover:bg-violet-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <DollarSign className="h-4 w-4" />
-                    Set Price
-                  </button>
-                ) : (
-                  <div className="flex items-center gap-2">
-                    <div className="flex items-center gap-1 rounded-lg border border-violet-500/30 bg-violet-500/10 px-3 py-1.5">
-                      <span className="text-sm text-violet-400 font-medium">$</span>
-                      <input
-                        type="number"
-                        step="0.01"
-                        min="0.01"
-                        value={bulkPriceInput}
-                        onChange={e => setBulkPriceInput(e.target.value)}
-                        onKeyDown={e => { if (e.key === 'Enter') handleBulkPriceUpdate(); if (e.key === 'Escape') { setShowBulkPriceInput(false); setBulkPriceInput('') } }}
-                        placeholder="0.00"
-                        autoFocus
-                        className="w-24 bg-transparent text-sm text-white placeholder:text-white/30 focus:outline-none"
-                      />
-                    </div>
-                    <button
-                      onClick={handleBulkPriceUpdate}
-                      disabled={isUpdating}
-                      className="flex items-center gap-1.5 rounded-lg bg-violet-500 px-3 py-1.5 text-sm font-medium text-white hover:bg-violet-600 disabled:opacity-50"
-                    >
-                      {isUpdating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
-                      Apply ({selectedListings.size})
-                    </button>
-                    <button
-                      onClick={() => { setShowBulkPriceInput(false); setBulkPriceInput('') }}
-                      className="flex items-center justify-center h-8 w-8 rounded-lg border border-white/10 hover:bg-white/10 text-gray-400"
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                )}
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-
-        {/* Listings Grid/List */}
+        {/* Listings */}
         {filteredListings.length === 0 ? (
-          <div className="flex flex-col items-center justify-center rounded-xl border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] p-12 backdrop-blur-md">
-            <Package className="mb-4 h-16 w-16 text-gray-600" />
-            <h3 className="mb-2 text-xl font-bold text-white">No listings found</h3>
-            <p className="mb-6 text-gray-400">
-              {searchQuery ? 'Try adjusting your search or filters' : 'Create your first listing to get started'}
-            </p>
-            {!searchQuery && (
-              isRestricted ? (
-                <button
-                  disabled
-                  className="inline-flex items-center gap-2 rounded-lg bg-gray-500 px-6 py-3 font-semibold text-gray-300 cursor-not-allowed opacity-50"
-                >
-                  <Plus className="h-5 w-5" />
-                  Create Listing
-                </button>
-              ) : (
-                <Link
-                  href="/sell/new"
-                  className="inline-flex items-center gap-2 rounded-lg bg-primary px-6 py-3 font-semibold text-white transition-all hover:bg-primary/90"
-                >
-                  <Plus className="h-5 w-5" />
-                  Create Listing
-                </Link>
-              )
-            )}
-          </div>
-        ) : viewMode === 'grid' ? (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {filteredListings.map((listing, index) => (
-              <ListingCardGrid
-                key={listing.id}
-                listing={listing}
-                index={index}
-                isSelected={selectedListings.has(listing.id)}
-                onToggleSelect={() => toggleSelectListing(listing.id)}
-              />
-            ))}
-          </div>
+          <EmptyState searchQuery={searchQuery} isRestricted={isRestricted} />
         ) : (
-          <div className="space-y-3">
-            {filteredListings.map((listing, index) => (
-              <ListingCardList
-                key={listing.id}
-                listing={listing}
-                index={index}
-                isSelected={selectedListings.has(listing.id)}
-                onToggleSelect={() => toggleSelectListing(listing.id)}
-                editingPrice={editingPrices[listing.id]}
-                onPriceChange={(newPrice: any) => handlePriceChange(listing.id, newPrice)}
-                onUpdatePrice={() => handleUpdatePrice(listing.id)}
-                onCancelEdit={() => handleCancelPriceEdit(listing.id)}
-                onDeleteClick={() => handleDeleteClick(listing.id)}
-                onConfirmDelete={() => handleConfirmDelete(listing.id)}
-                onCancelDelete={handleCancelDelete}
-                onToggleStatus={() => handleToggleStatus(listing.id, listing.status)}
-                onCopyLink={() => handleCopyLink(listing)}
-                isUpdating={updatingListings.has(listing.id)}
-                isDeleting={deletingListings.has(listing.id)}
-                confirmingDelete={confirmingDelete === listing.id}
+          <div className="mt-3 space-y-2">
+            {filteredListings.map((l, i) => (
+              <ListingRow
+                key={l.id}
+                listing={l}
+                index={i}
+                selected={selectedListings.has(l.id)}
+                onToggleSelect={() => toggleSelectOne(l.id)}
+                editingPrice={editingPrices[l.id]}
+                onPriceChange={(v) => setEditingPrices((p) => ({ ...p, [l.id]: v }))}
+                onSavePrice={() => onUpdatePrice(l.id)}
+                onCancelPrice={() =>
+                  setEditingPrices((p) => { const n = { ...p }; delete n[l.id]; return n })
+                }
+                onToggleStatus={() => onToggleStatus(l.id, l.status)}
+                onRequestDelete={() => setConfirmingDeleteId(l.id)}
+                onCopyLink={() => onCopyLink(l)}
+                onView={() => router.push(`/listings/${l.id}`)}
+                onEdit={() => router.push(`/account/listings/${l.id}/edit`)}
+                isUpdating={updatingListings.has(l.id)}
+                isDeleting={deletingListings.has(l.id)}
               />
             ))}
           </div>
         )}
       </div>
+
+      {/* ── Dialogs ─────────────────────────────────────────────────── */}
+
+      {/* Delete single listing */}
+      <Dialog open={!!confirmingDeleteId} onOpenChange={(o) => !o && setConfirmingDeleteId(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete this listing?</DialogTitle>
+            <DialogDescription>
+              This can't be undone. Buyers will no longer see the listing in the marketplace.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="ghost"
+              onClick={() => setConfirmingDeleteId(null)}
+              className="text-text-secondary hover:text-text-primary"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={onConfirmDelete}
+              disabled={deletingListings.has(confirmingDeleteId ?? '')}
+              className="bg-error text-text-primary hover:bg-error/90"
+            >
+              {deletingListings.has(confirmingDeleteId ?? '') ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                'Delete listing'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk delete */}
+      <Dialog open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete {selectedListings.size} listing{selectedListings.size === 1 ? '' : 's'}?</DialogTitle>
+            <DialogDescription>
+              This can't be undone. The listings will be removed from the marketplace immediately.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setBulkDeleteOpen(false)}>Cancel</Button>
+            <Button onClick={onBulkDelete} disabled={isDeleting} className="bg-error text-text-primary hover:bg-error/90">
+              {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : `Delete ${selectedListings.size}`}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk set price */}
+      <Dialog open={bulkPriceOpen} onOpenChange={(o) => { setBulkPriceOpen(o); if (!o) setBulkPrice(0) }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Set a new price for {selectedListings.size} listing{selectedListings.size === 1 ? '' : 's'}</DialogTitle>
+            <DialogDescription>
+              All selected listings will be updated to this price.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-1.5">
+            <label className="block text-xs font-semibold uppercase tracking-wider text-text-secondary">
+              New price (USD)
+            </label>
+            <NumberField
+              value={bulkPrice}
+              onChange={(v) => setBulkPrice(v ?? 0)}
+              minValue={0.01}
+              maxValue={99_999}
+              step={0.01}
+              ariaLabel="Bulk price"
+              formatOptions={{ style: 'currency', currency: 'USD' }}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setBulkPriceOpen(false)}>Cancel</Button>
+            <Button onClick={onBulkPriceApply} disabled={isUpdating || bulkPrice <= 0} className="bg-lime text-text-inverse hover:bg-lime-hover">
+              {isUpdating ? <Loader2 className="h-4 w-4 animate-spin" /> : `Apply to ${selectedListings.size}`}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
 
-// Grid Card Component
-function ListingCardGrid({ listing, index, isSelected, onToggleSelect }: any) {
-  const [showMenu, setShowMenu] = useState(false)
+// ─── Empty state ─────────────────────────────────────────────────────────────
 
+function EmptyState({ searchQuery, isRestricted }: { searchQuery: string; isRestricted: boolean }) {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.05 }}
-      className="group relative overflow-hidden rounded-xl border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] backdrop-blur-md transition-all hover:border-primary/50"
-    >
-      {/* Checkbox */}
-      <div className="absolute left-3 top-3 z-10">
-        <input
-          type="checkbox"
-          checked={isSelected}
-          onChange={onToggleSelect}
-          className="h-5 w-5 rounded border-white/20 bg-white/10 text-primary focus:ring-2 focus:ring-primary/20"
-        />
+    <div className="mt-6 flex flex-col items-center justify-center gap-3 rounded-2xl border border-border-subtle bg-bg-overlay p-10 text-center">
+      <div className="flex h-12 w-12 items-center justify-center rounded-full border border-border-default bg-bg-raised">
+        <Package className="h-5 w-5 text-text-tertiary" />
       </div>
-
-      {/* Status Badge */}
-      <div className="absolute right-3 top-3 z-10">
-        <div
-          className={cn('flex items-center gap-1 rounded-full border px-2 py-1 text-xs font-medium', listing.status && getStatusColor(listing.status))}
-          title={listing.status === 'pending_approval' ? 'Under Moderation - Your listing is being reviewed by our team' : undefined}
-        >
-          {getStatusIcon(listing.status)}
-          {listing.status === 'pending_approval' ? 'Moderation' : listing.status}
-        </div>
+      <div>
+        <h3 className="text-base font-semibold text-text-primary">No listings found</h3>
+        <p className="mt-1 text-sm text-text-secondary">
+          {searchQuery ? 'Try adjusting your search or filters.' : 'Create your first listing to get started.'}
+        </p>
       </div>
-
-      {/* Image */}
-      <div className="relative aspect-video overflow-hidden bg-white/5">
-        <img
-          src={listing.image}
-          alt={listing.title}
-          className="h-full w-full object-cover transition-transform group-hover:scale-110"
-        />
-        {listing.originalPrice && (
-          <div className="absolute bottom-2 left-2 rounded-full bg-red-500 px-2 py-1 text-xs font-bold text-white">
-            -{Math.round(((listing.originalPrice - listing.price) / listing.originalPrice) * 100)}%
-          </div>
-        )}
-      </div>
-
-      {/* Content */}
-      <div className="p-4">
-        {/* Game */}
-        <div className="mb-2 flex items-center gap-2">
-          <GameIcon slug={listing.game.slug} emoji={listing.game.emoji} size="sm" />
-          <span className="text-xs text-gray-400">{listing.game.name}</span>
-          <span className="text-xs text-gray-600">•</span>
-          <span className="text-xs text-gray-400">{listing.category}</span>
-        </div>
-
-        {/* Title */}
-        <h3 className="mb-3 line-clamp-2 font-semibold text-white">{listing.title}</h3>
-
-        {/* Stats */}
-        <div className="mb-3 flex items-center gap-4 text-xs text-gray-400">
-          <div className="flex items-center gap-1">
-            <Eye className="h-3 w-3" />
-            {listing.views}
-          </div>
-          <div className="flex items-center gap-1">
-            <TrendingUp className="h-3 w-3" />
-            {listing.sales} sales
-          </div>
-          <div className="flex items-center gap-1">
-            <Package className="h-3 w-3" />
-            {listing.quantity}
-          </div>
-        </div>
-
-        {/* Price & Actions */}
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="text-2xl font-bold text-white">${listing.price}</div>
-            {listing.originalPrice && (
-              <div className="text-xs text-gray-500 line-through">${listing.originalPrice}</div>
-            )}
-          </div>
-          <div className="relative">
-            <button
-              onClick={() => setShowMenu(!showMenu)}
-              className="rounded-lg border border-white/10 bg-white/5 p-2 text-gray-400 transition-all hover:text-white"
-            >
-              <MoreVertical className="h-4 w-4" />
-            </button>
-            {showMenu && (
-              <div className="absolute right-0 top-full z-20 mt-2 w-48 rounded-lg border border-white/10 bg-black/95 p-2 shadow-xl backdrop-blur-xl">
-                <button className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-white hover:bg-white/10">
-                  <Edit className="h-4 w-4" />
-                  Edit
-                </button>
-                <button className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-white hover:bg-white/10">
-                  <Eye className="h-4 w-4" />
-                  View
-                </button>
-                <button className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-white hover:bg-white/10">
-                  <BarChart3 className="h-4 w-4" />
-                  Analytics
-                </button>
-                <button className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-white hover:bg-white/10">
-                  <Copy className="h-4 w-4" />
-                  Duplicate
-                </button>
-                <button className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-red-400 hover:bg-white/10">
-                  <Trash2 className="h-4 w-4" />
-                  Delete
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    </motion.div>
+      {!searchQuery &&
+        (isRestricted ? (
+          <Button disabled variant="outline" className="gap-1.5 rounded-md">
+            <Plus className="h-4 w-4" />
+            Create listing
+          </Button>
+        ) : (
+          <Link href="/sell/new">
+            <Button className="gap-1.5 rounded-md bg-lime text-text-inverse hover:bg-lime-hover">
+              <Plus className="h-4 w-4" />
+              Create listing
+            </Button>
+          </Link>
+        ))}
+    </div>
   )
 }
 
-// List Card Component
-function ListingCardList({
-  listing,
-  index,
-  isSelected,
-  onToggleSelect,
-  editingPrice,
-  onPriceChange,
-  onUpdatePrice,
-  onCancelEdit,
-  onDeleteClick,
-  onConfirmDelete,
-  onCancelDelete,
-  onToggleStatus,
-  onCopyLink,
-  isUpdating,
-  isDeleting,
-  confirmingDelete
-}: any) {
-  const isEditing = editingPrice !== undefined
-  const hasChanged = isEditing && editingPrice !== listing.price
-  const canToggleStatus = listing.status === 'active' || listing.status === 'paused'
+// ─── Single listing row ──────────────────────────────────────────────────────
+
+interface ListingRowProps {
+  listing: {
+    id: string
+    title: string
+    game: { slug: string; emoji: string; name: string }
+    category: string
+    categorySlug: string
+    slug: string
+    price: number
+    originalPrice?: number
+    quantity: number
+    /** V14q — Real is_unlimited flag from the DB. Replaces the bogus
+     *  "quantity > 10k → unlimited" heuristic that was lying about the
+     *  stock state on currency listings. */
+    isUnlimited: boolean
+    status: string
+    views: number
+    sales: number
+    delivery_method: string
+    delivery_time: string
+    image: string
+  }
+  index: number
+  selected: boolean
+  onToggleSelect: () => void
+  editingPrice: number | undefined
+  onPriceChange: (v: number) => void
+  onSavePrice: () => void
+  onCancelPrice: () => void
+  onToggleStatus: () => void
+  onRequestDelete: () => void
+  onCopyLink: () => void
+  onView: () => void
+  onEdit: () => void
+  isUpdating: boolean
+  isDeleting: boolean
+}
+
+function ListingRow(p: ListingRowProps) {
+  const isEditing = p.editingPrice !== undefined
+  const canToggleStatus = p.listing.status === 'active' || p.listing.status === 'paused'
+  const isLowStock = p.listing.quantity > 0 && p.listing.quantity <= 5
+  // V14q — Honour the actual is_unlimited flag from the DB. The previous
+  // "quantity > 10k" heuristic mislabelled currency listings (e.g. 150k
+  // Robux stock) as Unlimited even though they have a finite supply.
+  const isUnlimited = p.listing.isUnlimited
 
   return (
     <motion.div
-      initial={{ opacity: 0, x: -20 }}
-      animate={{ opacity: 1, x: 0 }}
-      transition={{ delay: index * 0.03 }}
-      className="flex items-center gap-2 sm:gap-4 rounded-xl border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] p-3 sm:p-4 backdrop-blur-md transition-all hover:border-primary/50"
+      initial={{ opacity: 0, y: 4 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.18, delay: Math.min(p.index, 8) * 0.02 }}
+      className={cn(
+        'flex flex-col gap-3 rounded-xl border bg-bg-raised p-3 transition-colors sm:p-4',
+        'sm:flex-row sm:items-center',
+        p.selected
+          ? 'border-lime-tint-border bg-lime-tint-bg/40'
+          : 'border-border-subtle hover:border-border-default',
+      )}
     >
-      {/* Checkbox - Hidden on mobile */}
-      <input
-        type="checkbox"
-        checked={isSelected}
-        onChange={onToggleSelect}
-        className="hidden sm:block h-5 w-5 rounded border-white/20 bg-white/10 text-primary focus:ring-2 focus:ring-primary/20"
-      />
+      {/* Left — checkbox + image + content */}
+      <div className="flex flex-1 items-center gap-3 sm:gap-4">
+        <Checkbox
+          checked={p.selected}
+          onCheckedChange={p.onToggleSelect}
+          aria-label={`Select ${p.listing.title}`}
+        />
 
-      {/* Image */}
-      <img src={listing.image} alt={listing.title} className="h-12 w-16 sm:h-16 sm:w-24 rounded-lg object-cover flex-shrink-0" />
-
-      {/* Content */}
-      <div className="flex-1 min-w-0">
-        <div className="mb-1 flex items-center gap-1 sm:gap-2">
-          <GameIcon slug={listing.game.slug} emoji={listing.game.emoji} size="xs" />
-          <span className="text-[10px] sm:text-xs text-gray-400 truncate">{listing.game.name}</span>
-          <span className="text-[10px] sm:text-xs text-gray-600 hidden sm:inline">•</span>
-          <span className="text-[10px] sm:text-xs text-gray-400 truncate hidden sm:inline">{listing.category}</span>
+        {/* Listing image — bigger, with a subtle ring like StockX/Mercari */}
+        <div className="relative shrink-0">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={p.listing.image}
+            alt=""
+            className="h-16 w-16 rounded-xl border border-border-default object-cover shadow-sm sm:h-20 sm:w-20"
+          />
+          {/* Tiny game-icon overlay (Mercari / Goat pattern) */}
+          <div className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full border border-border-default bg-bg-raised shadow-elevated">
+            <GameIcon slug={p.listing.game.slug} emoji={p.listing.game.emoji} size="xs" />
+          </div>
         </div>
-        <h3 className="text-sm sm:text-base font-semibold text-white truncate">{listing.title}</h3>
 
-        {/* Mobile badges - Only visible on mobile/tablet */}
-        <div className="flex items-center gap-2 mt-2 lg:hidden">
-          {/* Delivery badge */}
-          {listing.delivery_method === 'instant' ? (
-            <span className="inline-flex items-center gap-1 rounded-full bg-violet-500/15 px-2 py-0.5 text-[10px] font-medium text-violet-400 border border-violet-500/20">
-              <Zap className="w-3 h-3" />
-              Instant
+        <div className="min-w-0 flex-1">
+          {/* Game + category chip row — proper sized, lime accent for the game */}
+          <div className="flex flex-wrap items-center gap-1.5">
+            {/* Game chip: actual logo + name for accessibility + scanability */}
+            <span
+              className="inline-flex items-center gap-1.5 rounded-md border border-border-subtle bg-bg-overlay py-0.5 pl-0.5 pr-2"
+              aria-label={`Game: ${p.listing.game.name}`}
+            >
+              <GameIcon slug={p.listing.game.slug} emoji={p.listing.game.emoji} size="xs" />
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-text-secondary">
+                {p.listing.game.name}
+              </span>
             </span>
-          ) : (
-            <span className="inline-flex items-center gap-1 rounded-full bg-white/5 px-2 py-0.5 text-[10px] font-medium text-gray-400 border border-white/10">
-              <Clock className="w-3 h-3" />
-              {listing.delivery_time || '1hr'}
+            <span className="text-[10px] font-medium uppercase tracking-wider text-text-tertiary">
+              {p.listing.category}
             </span>
-          )}
-
-          {/* Low stock warning badge */}
-          {listing.quantity > 0 && listing.quantity <= 5 && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-medium text-amber-400 border border-amber-500/20">
-              <AlertCircle className="w-3 h-3" />
-              Low Stock ({listing.quantity})
-            </span>
-          )}
-
-          {/* Sold out badge */}
-          {listing.status === 'sold' && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-red-500/15 px-2 py-0.5 text-[10px] font-medium text-red-400 border border-red-500/20">
-              Sold Out
-            </span>
-          )}
-
-          {/* Unlimited badge */}
-          {listing.quantity > 10000 && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-medium text-emerald-400 border border-emerald-500/20">
-              <Infinity className="w-3 h-3" />
-              Unlimited
-            </span>
-          )}
+          </div>
+          <h3 className="mt-1 truncate text-sm font-semibold text-text-primary sm:text-base">
+            {p.listing.title}
+          </h3>
+          {/* V14q — Left side keeps only the status pill. Stock and
+              delivery moved to the right metric rail so every listing's
+              columns align in a clean vertical stack. */}
+          <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+            <StatusBadge status={p.listing.status} />
+            {isLowStock && !isUnlimited && (
+              <span
+                className="inline-flex items-center gap-1 rounded-full border border-warning/30 bg-warning-bg px-2 py-0.5 text-[10px] font-medium text-warning"
+                title="Low stock — top up soon"
+              >
+                <AlertCircle className="h-2.5 w-2.5" />
+                Low stock
+              </span>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Stats - Hidden on mobile, visible on larger screens */}
-      <div className="hidden lg:flex items-center gap-4 text-sm text-gray-400 mr-8">
-        {/* Views */}
-        <div className="w-16 text-center">
-          <div className="font-semibold text-white tabular-nums">{listing.views}</div>
-          <div className="text-xs">Views</div>
+      {/* V14q — Fixed-width metric columns mirror the currency-page seller
+          row layout. Every column (Views · Sales · Stock · Delivery · Price ·
+          Actions) gets a locked width and a small icon + uppercase caption
+          so the row stays scannable at any density. */}
+      <div className="flex items-center justify-end gap-5 sm:gap-6">
+        {/* Views + Sales — lg+ only (saves space on smaller screens) */}
+        <div className="hidden items-start gap-5 lg:flex">
+          <MetricCell icon={IconEye} label="Views" value={p.listing.views.toLocaleString('en-US')} width={76} />
+          <MetricCell icon={IconCoins} label="Sales" value={p.listing.sales.toLocaleString('en-US')} width={76} />
         </div>
 
-        {/* Stock - Enhanced with color coding */}
-        <div className="w-20 text-center">
-          <div className={cn(
-            "font-semibold tabular-nums flex items-center justify-center gap-1",
-            listing.quantity > 10000 && "text-emerald-400", // High stock (likely "unlimited")
-            listing.status === 'sold' && "text-red-400",
-            listing.quantity > 0 && listing.quantity <= 5 && "text-amber-400",
-            listing.quantity > 5 && listing.quantity <= 10000 && "text-white"
-          )}>
-            {listing.quantity > 10000 ? (
-              <>
-                <Infinity className="w-3.5 h-3.5" />
-                <span>∞</span>
-              </>
-            ) : (
-              listing.quantity
-            )}
-          </div>
-          <div className="text-xs">
-            {listing.quantity > 10000 ? 'Unlimited' : 'Stock'}
-          </div>
+        {/* Stock + Delivery — md+, key inventory info */}
+        <div className="hidden items-start gap-5 md:flex">
+          <MetricCell
+            icon={isUnlimited ? IconInfinity : IconPackages}
+            label="Stock"
+            value={isUnlimited ? '∞' : p.listing.quantity.toLocaleString('en-US')}
+            valueClass={isUnlimited ? 'text-success' : isLowStock ? 'text-warning' : undefined}
+            width={108}
+          />
+          <MetricCell
+            icon={p.listing.delivery_method === 'instant' ? IconBolt : IconRocket}
+            label="Delivery"
+            value={
+              p.listing.delivery_method === 'instant'
+                ? 'Instant'
+                : formatDeliveryLabel(p.listing.delivery_time)
+            }
+            valueClass={p.listing.delivery_method === 'instant' ? 'text-info' : undefined}
+            width={108}
+          />
         </div>
 
-        {/* Delivery - NEW */}
-        <div className="w-24 text-center">
-          <div className="inline-flex items-center justify-center gap-1">
-            {listing.delivery_method === 'instant' ? (
-              <>
-                <Zap className="w-3.5 h-3.5 text-violet-400" />
-                <span className="text-xs font-semibold text-violet-400">Instant</span>
-              </>
-            ) : (
-              <>
-                <Clock className="w-3.5 h-3.5 text-gray-400" />
-                <span className="text-xs text-gray-400">{listing.delivery_time || '1hr'}</span>
-              </>
-            )}
-          </div>
-          <div className="text-xs">Delivery</div>
-        </div>
-      </div>
-
-      {/* Price - Inline editing - Compact on mobile */}
-      <div className="relative flex items-center justify-end flex-shrink-0 w-24 sm:w-32">
-        {!isEditing ? (
-          /* Display state - clickable badge */
-          <button
-            onClick={() => onPriceChange(listing.price)}
-            className="rounded-full border border-white/10 bg-white/5 px-2 sm:px-4 py-1.5 sm:py-2 backdrop-blur-xl transition-all hover:border-white/20 hover:bg-white/10 hover:scale-105 active:scale-95 min-w-[80px] sm:min-w-[120px]"
-            title="Click to edit price"
-          >
-            <div className="text-center">
-              <div className={cn(
-                "font-bold text-white tabular-nums",
-                "text-xs sm:text-base"
-              )}>
-                ${listing.price}
-              </div>
-              {listing.originalPrice && (
-                <div className="text-[10px] sm:text-xs text-gray-500 line-through tabular-nums hidden sm:block">${listing.originalPrice}</div>
+        {/* Price column — locked width so all prices form a vertical rail. */}
+        {(() => {
+          const needsFractional = p.listing.price > 0 && p.listing.price < 1
+          const decimals = needsFractional ? 4 : 2
+          const step = needsFractional ? 0.0001 : 0.01
+          const minValue = needsFractional ? 0.0001 : 0.01
+          return (
+            <div className="w-[140px] shrink-0 sm:w-[160px]">
+              {isEditing ? (
+                <div className="flex items-center gap-1.5">
+                  <NumberField
+                    value={p.editingPrice ?? 0}
+                    onChange={(v) => p.onPriceChange(v ?? 0)}
+                    minValue={minValue}
+                    maxValue={99_999}
+                    step={step}
+                    ariaLabel="Edit price"
+                    formatOptions={{
+                      style: 'currency',
+                      currency: 'USD',
+                      minimumFractionDigits: decimals,
+                      maximumFractionDigits: decimals,
+                    }}
+                    className="h-9"
+                  />
+                  <Button
+                    size="sm"
+                    onClick={p.onSavePrice}
+                    disabled={p.isUpdating}
+                    className="h-9 rounded-md bg-lime px-2.5 text-text-inverse hover:bg-lime-hover"
+                    aria-label="Save price"
+                  >
+                    {p.isUpdating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" strokeWidth={3} />}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={p.onCancelPrice}
+                    disabled={p.isUpdating}
+                    className="h-9 rounded-md px-2 text-text-tertiary hover:text-text-primary"
+                    aria-label="Cancel price edit"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => p.onPriceChange(p.listing.price)}
+                  // V14q — Full-width button so every price sits in the same
+                  // horizontal slot. justify-between pins price left and
+                  // pencil right; tabular-nums keeps digit columns aligned.
+                  className="flex h-9 w-full items-center justify-between gap-2 rounded-md border border-border-default bg-bg-overlay px-3 text-sm font-semibold tabular-nums text-text-primary transition-colors hover:border-lime-tint-border hover:text-lime-text"
+                  title="Click to edit price"
+                >
+                  <span>${p.listing.price.toFixed(decimals)}</span>
+                  <Edit2 className="h-3 w-3 shrink-0 text-text-tertiary" />
+                </button>
               )}
             </div>
-          </button>
-        ) : (
-          /* Editing state - just the input */
-          <motion.div
-            initial={{ scale: 0.95, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            className="relative"
-          >
-            <span className="absolute left-2 sm:left-3 top-1/2 -translate-y-1/2 text-xs sm:text-sm font-bold text-white/60">$</span>
-            <input
-              type="number"
-              value={editingPrice}
-              onChange={(e) => onPriceChange(parseFloat(e.target.value))}
-              onFocus={(e) => e.target.select()}
-              className="w-20 sm:w-28 rounded-lg border border-primary/30 bg-white/5 px-2 sm:px-3 py-1.5 sm:py-2 pl-5 sm:pl-7 text-center text-xs sm:text-sm font-bold text-white tabular-nums backdrop-blur-xl focus:outline-none focus:ring-2 focus:ring-primary/50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-              step="0.01"
-              min="0"
-              autoFocus
-            />
-          </motion.div>
-        )}
-      </div>
+          )
+        })()}
 
-      {/* Status column - Shows status OR edit buttons */}
-      <div className="hidden sm:flex w-24 sm:w-28 items-center relative min-h-[40px]">
-        {/* Status badge - fades out when editing */}
-        <motion.div
-          initial={false}
-          animate={{
-            opacity: isEditing ? 0 : 1,
-            scale: isEditing ? 0.95 : 1
-          }}
-          transition={{ duration: 0.2 }}
-          className="absolute inset-0 flex items-center"
-        >
-          {listing.status === 'sold' ? (
-            <div className="inline-flex items-center gap-1.5 rounded-full border border-orange-500/30 bg-orange-500/10 px-2.5 py-1">
-              <div className="h-1.5 w-1.5 rounded-full bg-orange-400" />
-              <span className="text-[10px] font-semibold uppercase tracking-wide text-orange-400">Sold Out</span>
-            </div>
+        {/* Actions cluster */}
+        {/* V14q — Locked-width actions rail so the trailing dropdown sits
+            in the same column whether or not the Pause/Play button renders.
+            Empty slot keeps the dropdown's horizontal position stable. */}
+        <div className="flex w-[84px] shrink-0 items-center justify-end gap-1">
+          {canToggleStatus ? (
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={p.onToggleStatus}
+              disabled={p.isUpdating}
+              className="h-9 w-9 rounded-md text-text-secondary hover:bg-bg-raised-hover hover:text-text-primary"
+              title={p.listing.status === 'active' ? 'Pause' : 'Resume'}
+            >
+              {p.isUpdating ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : p.listing.status === 'active' ? (
+                <Pause className="h-4 w-4" />
+              ) : (
+                <Play className="h-4 w-4" />
+              )}
+            </Button>
           ) : (
-            <div className="flex items-center gap-1.5">
-              <div className={cn(
-                'h-2 w-2 rounded-full',
-                listing.status === 'active' && 'bg-green-500',
-                listing.status === 'paused' && 'bg-yellow-500',
-                listing.status === 'draft' && 'bg-blue-500',
-                listing.status === 'pending_approval' && 'bg-orange-500',
-                listing.status === 'suspended' && 'bg-red-500',
-                listing.status === 'archived' && 'bg-gray-600'
-              )} />
-              <span className={cn(
-                'text-[10px] font-semibold uppercase tracking-wide',
-                listing.status === 'active' && 'text-green-400',
-                listing.status === 'paused' && 'text-yellow-400',
-                listing.status === 'draft' && 'text-blue-400',
-                listing.status === 'pending_approval' && 'text-orange-400',
-                listing.status === 'suspended' && 'text-red-400',
-                listing.status === 'archived' && 'text-gray-500'
-              )}>
-                {listing.status === 'pending_approval' ? 'Review' : listing.status}
-              </span>
-            </div>
+            // Empty placeholder so the dropdown stays in the same column.
+            <span aria-hidden className="h-9 w-9" />
           )}
-        </motion.div>
 
-        {/* Edit buttons - fade in when editing */}
-        {isEditing && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.2 }}
-            className="absolute inset-0 flex items-center gap-1.5"
-          >
-            <button
-              onClick={onUpdatePrice}
-              disabled={isUpdating || !hasChanged}
-              className="rounded-lg bg-green-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition-all hover:bg-green-700 hover:scale-105 active:scale-95 disabled:opacity-50 disabled:hover:scale-100 disabled:cursor-not-allowed"
-            >
-              {isUpdating ? <Loader2 className="h-3.5 w-3.5 animate-spin mx-auto" /> : 'Save'}
-            </button>
-            <button
-              onClick={onCancelEdit}
-              disabled={isUpdating}
-              className="rounded-lg p-1.5 text-gray-400 transition-all hover:bg-white/10 hover:text-white disabled:opacity-50"
-              title="Cancel"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </motion.div>
-        )}
-      </div>
-
-      {/* Actions - Compact on mobile */}
-      <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
-        {/* Restock Button - shown only for sold-out listings */}
-        {listing.status === 'sold' && (
-          <Link href={`/account/listings/new?id=${listing.id}`}>
-            <button
-              className="flex items-center gap-1 sm:gap-1.5 rounded-xl border border-orange-500/30 bg-orange-500/10 px-2 sm:px-3 py-1.5 sm:py-2 text-[10px] sm:text-xs font-semibold text-orange-400 shadow-sm transition-all hover:bg-orange-500/20 hover:border-orange-500/40 hover:scale-105 active:scale-95"
-              title="Restock this listing"
-            >
-              <Package className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-              <span className="hidden sm:inline">Restock</span>
-            </button>
-          </Link>
-        )}
-
-        {/* Pause/Resume Toggle */}
-        {canToggleStatus && (
-          <button
-            onClick={onToggleStatus}
-            disabled={isUpdating}
-            className={cn(
-              'rounded-xl border p-1.5 sm:p-2.5 shadow-sm transition-all hover:shadow-md hover:scale-105 active:scale-95',
-              listing.status === 'active'
-                ? 'border-yellow-500/20 bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20 hover:border-yellow-500/30'
-                : 'border-green-500/20 bg-green-500/10 text-green-400 hover:bg-green-500/20 hover:border-green-500/30',
-              isUpdating && 'opacity-50 hover:scale-100'
-            )}
-            title={listing.status === 'active' ? 'Pause listing' : 'Resume listing'}
-          >
-            {isUpdating ? (
-              <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 animate-spin" />
-            ) : listing.status === 'active' ? (
-              <Pause className="h-3 w-3 sm:h-4 sm:w-4" />
-            ) : (
-              <Play className="h-3 w-3 sm:h-4 sm:w-4" />
-            )}
-          </button>
-        )}
-
-        {/* Edit Button - Navigate to edit page */}
-        <Link href={`/account/listings/${listing.id}/edit`}>
-          <button
-            className="rounded-xl border border-white/10 bg-white/5 p-1.5 sm:p-2.5 text-gray-400 shadow-sm backdrop-blur-xl transition-all hover:text-white hover:bg-white/10 hover:border-white/20 hover:shadow-md hover:scale-105 active:scale-95"
-            title="Edit listing"
-          >
-            <Edit2 className="h-3 w-3 sm:h-4 sm:w-4" />
-          </button>
-        </Link>
-
-        {/* Share Button - Copy link - Hidden on small mobile */}
-        <button
-          onClick={onCopyLink}
-          className="hidden sm:block rounded-xl border border-white/10 bg-white/5 p-1.5 sm:p-2.5 text-gray-400 shadow-sm backdrop-blur-xl transition-all hover:text-white hover:bg-white/10 hover:border-white/20 hover:shadow-md hover:scale-105 active:scale-95"
-          title="Copy link"
-        >
-          <Share2 className="h-3 w-3 sm:h-4 sm:w-4" />
-        </button>
-
-        {/* Delete with inline confirmation */}
-        {confirmingDelete ? (
-          <motion.div
-            initial={{ scale: 0.9, opacity: 0, y: -10 }}
-            animate={{ scale: 1, opacity: 1, y: 0 }}
-            exit={{ scale: 0.9, opacity: 0, y: -10 }}
-            transition={{ type: "spring", stiffness: 400, damping: 25 }}
-            className="flex items-center gap-1 sm:gap-2 rounded-2xl border border-red-500/20 bg-gradient-to-br from-red-500/10 to-red-600/5 px-2 sm:px-4 py-1.5 sm:py-2.5 shadow-lg shadow-red-500/10 backdrop-blur-xl"
-          >
-            <span className="text-xs sm:text-sm font-medium text-red-300 whitespace-nowrap">Sure?</span>
-            <div className="flex items-center gap-1 sm:gap-1.5">
-              <button
-                onClick={onConfirmDelete}
-                disabled={isDeleting}
-                className="rounded-xl bg-red-600 px-2 sm:px-4 py-1 sm:py-1.5 text-xs sm:text-sm font-semibold text-white shadow-md transition-all hover:bg-red-700 hover:shadow-lg hover:scale-105 active:scale-95 disabled:opacity-50 disabled:hover:scale-100"
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-9 w-9 rounded-md text-text-secondary hover:bg-bg-raised-hover hover:text-text-primary"
+                aria-label="Open listing menu"
               >
-                {isDeleting ? <Loader2 className="h-3 w-3 sm:h-3.5 sm:w-3.5 animate-spin" /> : 'Yes'}
-              </button>
-              <button
-                onClick={onCancelDelete}
-                disabled={isDeleting}
-                className="rounded-xl bg-white/10 px-2 sm:px-4 py-1 sm:py-1.5 text-xs sm:text-sm font-semibold text-gray-300 backdrop-blur-xl transition-all hover:bg-white/20 hover:scale-105 active:scale-95 disabled:opacity-50 disabled:hover:scale-100"
-              >
-                No
-              </button>
-            </div>
-          </motion.div>
-        ) : (
-          <button
-            onClick={onDeleteClick}
-            className="rounded-xl border border-red-500/20 bg-red-500/10 p-1.5 sm:p-2.5 text-red-400 shadow-sm transition-all hover:bg-red-500/20 hover:border-red-500/30 hover:shadow-md hover:scale-105 active:scale-95"
-            title="Delete listing"
-          >
-            <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
-          </button>
-        )}
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            {/* V14r — Trimmed to actions the seller actually uses on a
+                listing row: View, Edit, Copy link, Delete. Duplicate and
+                Analytics were aspirational stubs — Duplicate went to
+                /sell/new?from=… which works but never gets used at this
+                density, and Analytics pointed at a route we don't have a
+                proper per-listing page for. Removed to keep the menu
+                focused on real actions. */}
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onSelect={p.onView}>
+                <Eye className="h-3.5 w-3.5" />
+                View listing
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={p.onEdit}>
+                <Edit2 className="h-3.5 w-3.5" />
+                Edit details
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={p.onCopyLink}>
+                <Share2 className="h-3.5 w-3.5" />
+                Copy link
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem variant="destructive" onSelect={p.onRequestDelete}>
+                <Trash2 className="h-3.5 w-3.5" />
+                Delete listing
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
     </motion.div>
   )
-}
-
-function getStatusColor(status: string) {
-  const colors = {
-    active: 'bg-green-500/10 text-green-400 border-green-500/30',
-    paused: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/30',
-    sold: 'bg-gray-500/10 text-gray-400 border-gray-500/30',
-    draft: 'bg-blue-500/10 text-blue-400 border-blue-500/30',
-    pending_approval: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/30',
-  }
-  return colors[status as keyof typeof colors] || colors.draft
-}
-
-function getStatusIcon(status: string) {
-  switch (status) {
-    case 'active': return <Play className="h-3 w-3" />
-    case 'paused': return <Pause className="h-3 w-3" />
-    case 'sold': return <Check className="h-3 w-3" />
-    case 'draft': return <Edit className="h-3 w-3" />
-    case 'pending_approval': return <Clock className="h-3 w-3" />
-    default: return null
-  }
 }

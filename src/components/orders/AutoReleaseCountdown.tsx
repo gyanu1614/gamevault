@@ -79,29 +79,29 @@ export default function AutoReleaseCountdown({
     <div
       className={`rounded-xl border p-4 ${
         isUrgent
-          ? 'bg-red-500/10 border-red-500/30'
+          ? 'bg-error-bg border-error/40'
           : isExpiringSoon
-          ? 'bg-yellow-500/10 border-yellow-500/30'
+          ? 'bg-warning-bg border-warning/40'
           : 'bg-blue-500/10 border-blue-500/30'
       }`}
     >
       <div className="flex items-start gap-3">
         {isUrgent || isExpiringSoon ? (
-          <AlertCircle className={`w-5 h-5 mt-0.5 ${isUrgent ? 'text-red-400' : 'text-yellow-400'}`} />
+          <AlertCircle className={`w-5 h-5 mt-0.5 ${isUrgent ? 'text-error' : 'text-warning'}`} />
         ) : (
           <Clock className="w-5 h-5 mt-0.5 text-blue-400" />
         )}
         <div className="flex-1">
           <h4
             className={`font-semibold mb-1 ${
-              isUrgent ? 'text-red-400' : isExpiringSoon ? 'text-yellow-400' : 'text-blue-400'
+              isUrgent ? 'text-error' : isExpiringSoon ? 'text-warning' : 'text-blue-400'
             }`}
           >
             {total === 0
               ? 'Auto-Release Processing'
               : 'Payment Auto-Release Timer'}
           </h4>
-          <p className="text-sm text-gray-400 mb-3">
+          <p className="text-sm text-text-secondary mb-3">
             {total === 0
               ? 'Payment is being released to the seller...'
               : 'Funds will be automatically released to the seller in:'}
@@ -111,36 +111,36 @@ export default function AutoReleaseCountdown({
           {total > 0 && (
             <div className="flex items-center gap-3 mb-3">
               {/* Hours */}
-              <div className="flex flex-col items-center bg-white/[0.05] border border-white/[0.1] rounded-lg p-2 min-w-[60px]">
+              <div className="flex flex-col items-center bg-bg-overlay border border-white/[0.1] rounded-lg p-2 min-w-[60px]">
                 <span className="text-2xl font-bold text-white tabular-nums">
                   {hours.toString().padStart(2, '0')}
                 </span>
-                <span className="text-xs text-gray-400 mt-1">Hours</span>
+                <span className="text-xs text-text-secondary mt-1">Hours</span>
               </div>
 
-              <span className="text-xl text-gray-500">:</span>
+              <span className="text-xl text-text-tertiary">:</span>
 
               {/* Minutes */}
-              <div className="flex flex-col items-center bg-white/[0.05] border border-white/[0.1] rounded-lg p-2 min-w-[60px]">
+              <div className="flex flex-col items-center bg-bg-overlay border border-white/[0.1] rounded-lg p-2 min-w-[60px]">
                 <span className="text-2xl font-bold text-white tabular-nums">
                   {minutes.toString().padStart(2, '0')}
                 </span>
-                <span className="text-xs text-gray-400 mt-1">Minutes</span>
+                <span className="text-xs text-text-secondary mt-1">Minutes</span>
               </div>
 
-              <span className="text-xl text-gray-500">:</span>
+              <span className="text-xl text-text-tertiary">:</span>
 
               {/* Seconds */}
-              <div className="flex flex-col items-center bg-white/[0.05] border border-white/[0.1] rounded-lg p-2 min-w-[60px]">
+              <div className="flex flex-col items-center bg-bg-overlay border border-white/[0.1] rounded-lg p-2 min-w-[60px]">
                 <span className="text-2xl font-bold text-white tabular-nums">
                   {seconds.toString().padStart(2, '0')}
                 </span>
-                <span className="text-xs text-gray-400 mt-1">Seconds</span>
+                <span className="text-xs text-text-secondary mt-1">Seconds</span>
               </div>
             </div>
           )}
 
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-text-tertiary">
             {total === 0
               ? 'The page will refresh automatically.'
               : isUrgent

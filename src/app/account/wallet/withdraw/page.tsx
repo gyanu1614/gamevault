@@ -178,7 +178,7 @@ export default function WithdrawPage() {
   if (isLoadingEarnings) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-violet-500" />
+        <Loader2 className="h-8 w-8 animate-spin text-lime-text" />
       </div>
     )
   }
@@ -190,14 +190,14 @@ export default function WithdrawPage() {
         <div className="mb-6">
           <Link
             href="/account/wallet"
-            className="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors mb-4"
+            className="inline-flex items-center gap-2 text-sm text-text-secondary hover:text-white transition-colors mb-4"
           >
             <ArrowLeft className="h-4 w-4" />
             Back to Wallet
           </Link>
 
           <h1 className="text-2xl font-bold text-white">Withdraw Funds</h1>
-          <p className="text-sm text-gray-400 mt-1">Choose your preferred withdrawal method to manage your assets.</p>
+          <p className="text-sm text-text-secondary mt-1">Choose your preferred withdrawal method to manage your assets.</p>
         </div>
 
         {/* Balance Cards */}
@@ -212,12 +212,12 @@ export default function WithdrawPage() {
           </div>
 
           {/* Pending Balance */}
-          <div className="rounded-xl border border-white/[0.08] bg-white/[0.02] p-4">
+          <div className="rounded-xl border border-border-subtle bg-bg-overlay p-4">
             <div className="flex items-center gap-2 mb-2">
-              <Clock className="h-3.5 w-3.5 text-gray-500" />
-              <p className="text-[10px] text-gray-500 font-semibold uppercase tracking-wider">Pending</p>
+              <Clock className="h-3.5 w-3.5 text-text-tertiary" />
+              <p className="text-[10px] text-text-tertiary font-semibold uppercase tracking-wider">Pending</p>
             </div>
-            <p className="text-2xl font-bold text-gray-400">${earningsStats.pending_balance.toFixed(2)}</p>
+            <p className="text-2xl font-bold text-text-secondary">${earningsStats.pending_balance.toFixed(2)}</p>
           </div>
         </div>
 
@@ -232,7 +232,7 @@ export default function WithdrawPage() {
             >
               {isLoadingMethods ? (
                 <div className="flex items-center justify-center py-12">
-                  <Loader2 className="h-8 w-8 animate-spin text-violet-500" />
+                  <Loader2 className="h-8 w-8 animate-spin text-lime-text" />
                 </div>
               ) : (
                 <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-3">
@@ -244,9 +244,9 @@ export default function WithdrawPage() {
                       <button
                         key={method.id}
                         onClick={() => handleMethodSelect(method)}
-                        className="group relative flex flex-col items-center justify-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.02] hover:bg-white/[0.05] hover:border-violet-500/40 p-4 transition-all aspect-square"
+                        className="group relative flex flex-col items-center justify-center gap-2 rounded-xl border border-border-subtle bg-bg-overlay hover:bg-bg-overlay hover:border-lime-tint-border p-4 transition-all aspect-square"
                       >
-                        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-violet-500/10 border border-violet-500/20 group-hover:bg-violet-500/20 transition-colors">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-lime/10 border border-lime-tint-border group-hover:bg-lime/20 transition-colors">
                           {isCustomIcon ? (
                             <Image
                               src={iconPath}
@@ -256,7 +256,7 @@ export default function WithdrawPage() {
                               className="object-contain"
                             />
                           ) : (
-                            <Building2 className="h-6 w-6 text-violet-400" />
+                            <Building2 className="h-6 w-6 text-lime-text" />
                           )}
                         </div>
                         <div className="text-center">
@@ -282,15 +282,15 @@ export default function WithdrawPage() {
               {/* Left Column: Form */}
               <div className="space-y-6">
                 {/* Amount Details */}
-                <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-6">
+                <div className="rounded-2xl border border-border-subtle bg-bg-overlay p-6">
                   <div className="flex items-center gap-2 mb-4">
-                    <div className="h-1 w-1 rounded-full bg-violet-500"></div>
+                    <div className="h-1 w-1 rounded-full bg-lime"></div>
                     <h2 className="text-lg font-bold text-white">Amount Details</h2>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">
+                      <label className="block text-xs font-medium text-text-secondary uppercase tracking-wider mb-2">
                         Withdrawal Amount
                       </label>
                       <div className="relative">
@@ -302,14 +302,14 @@ export default function WithdrawPage() {
                           min={selectedMethod.min_withdrawal}
                           max={Math.min(selectedMethod.max_withdrawal || Infinity, earningsStats.available_balance)}
                           step="0.01"
-                          className="w-full rounded-lg border border-white/10 bg-black/40 px-3 py-2.5 text-lg font-semibold text-white placeholder:text-white/20 focus:border-violet-500/50 focus:outline-none focus:ring-2 focus:ring-violet-500/20 transition-all"
+                          className="w-full rounded-lg border border-white/10 bg-black/40 px-3 py-2.5 text-lg font-semibold text-white placeholder:text-white/20 focus:border-lime focus:outline-none focus:ring-2 focus:ring-violet-500/20 transition-all"
                         />
-                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-500">USD</span>
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-text-tertiary">USD</span>
                       </div>
                     </div>
 
                     <div>
-                      <label className="block text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">
+                      <label className="block text-xs font-medium text-text-secondary uppercase tracking-wider mb-2">
                         Payment Fees
                       </label>
                       <div className="rounded-lg border border-white/10 bg-black/40 px-3 py-2.5">
@@ -319,19 +319,19 @@ export default function WithdrawPage() {
                   </div>
 
                   <div className="mt-4">
-                    <label className="block text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">
+                    <label className="block text-xs font-medium text-text-secondary uppercase tracking-wider mb-2">
                       You Receive
                     </label>
-                    <div className="rounded-lg border border-violet-500/20 bg-violet-500/5 px-4 py-3">
-                      <span className="text-2xl font-bold text-violet-400">${netAmount.toFixed(2)}</span>
+                    <div className="rounded-lg border border-lime-tint-border bg-lime/5 px-4 py-3">
+                      <span className="text-2xl font-bold text-lime-text">${netAmount.toFixed(2)}</span>
                     </div>
                   </div>
                 </div>
 
                 {/* Payment Details Form */}
-                <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-6">
+                <div className="rounded-2xl border border-border-subtle bg-bg-overlay p-6">
                   <div className="flex items-center gap-2 mb-4">
-                    <div className="h-1 w-1 rounded-full bg-violet-500"></div>
+                    <div className="h-1 w-1 rounded-full bg-lime"></div>
                     <h2 className="text-lg font-bold text-white">
                       {selectedMethod.method_type === 'crypto' ? 'Wallet Details' : 'Bank Details'}
                     </h2>
@@ -340,7 +340,7 @@ export default function WithdrawPage() {
                   <div className="space-y-4">
                     {getRequiredFields(selectedMethod.method_type).map((field) => (
                       <div key={field.key}>
-                        <label className="block text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">
+                        <label className="block text-xs font-medium text-text-secondary uppercase tracking-wider mb-2">
                           {field.label}
                         </label>
                         <input
@@ -350,7 +350,7 @@ export default function WithdrawPage() {
                             setPaymentDetails({ ...paymentDetails, [field.key]: e.target.value })
                           }
                           placeholder={field.placeholder}
-                          className="w-full rounded-lg border border-white/10 bg-black/40 px-4 py-2.5 text-sm text-white placeholder:text-white/30 focus:border-violet-500/50 focus:outline-none focus:ring-2 focus:ring-violet-500/20 transition-all"
+                          className="w-full rounded-lg border border-white/10 bg-black/40 px-4 py-2.5 text-sm text-white placeholder:text-white/30 focus:border-lime focus:outline-none focus:ring-2 focus:ring-violet-500/20 transition-all"
                         />
                       </div>
                     ))}
@@ -373,7 +373,7 @@ export default function WithdrawPage() {
                   <button
                     onClick={handleSubmit}
                     disabled={isSubmitting || !amount || parseFloat(amount) <= 0}
-                    className="flex-2 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 disabled:from-violet-500/50 disabled:to-purple-600/50 px-6 py-3 text-sm font-semibold text-white transition-all shadow-lg hover:shadow-violet-500/25 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    className="flex-2 rounded-lg bg-gradient-to-br from-lime to-purple-600 hover:from-lime hover:to-purple-700 disabled:from-lime/50 disabled:to-purple-600/50 px-6 py-3 text-sm font-semibold text-white transition-all shadow-lg hover:shadow-violet-500/25 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                   >
                     {isSubmitting ? (
                       <>
@@ -393,28 +393,28 @@ export default function WithdrawPage() {
               {/* Right Column: Summary */}
               <div className="space-y-6">
                 {/* Transaction Summary */}
-                <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-6">
+                <div className="rounded-2xl border border-border-subtle bg-bg-overlay p-6">
                   <h3 className="text-base font-bold text-white mb-4">Transaction Summary</h3>
 
                   <div className="space-y-3">
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-400">Minimum withdrawal</span>
+                      <span className="text-text-secondary">Minimum withdrawal</span>
                       <span className="font-semibold text-white">${selectedMethod.min_withdrawal.toFixed(2)}</span>
                     </div>
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-400">Processing fee</span>
+                      <span className="text-text-secondary">Processing fee</span>
                       <span className="font-semibold text-white">${fee.toFixed(2)}</span>
                     </div>
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-400">Exchange rate</span>
+                      <span className="text-text-secondary">Exchange rate</span>
                       <span className="font-semibold text-white">1 USD = 1.00 USD</span>
                     </div>
 
                     <div className="h-px bg-white/10 my-3" />
 
                     <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium text-gray-300 uppercase tracking-wide">Total to Receive</span>
-                      <span className="text-2xl font-bold text-violet-400">${netAmount.toFixed(2)}</span>
+                      <span className="text-sm font-medium text-text-secondary uppercase tracking-wide">Total to Receive</span>
+                      <span className="text-2xl font-bold text-lime-text">${netAmount.toFixed(2)}</span>
                     </div>
                   </div>
                 </div>
@@ -438,14 +438,14 @@ export default function WithdrawPage() {
                 </div>
 
                 {/* Security Notice */}
-                <div className="rounded-2xl border border-violet-500/20 bg-gradient-to-br from-violet-500/10 to-purple-500/5 p-5">
+                <div className="rounded-2xl border border-lime-tint-border bg-gradient-to-br from-lime/10 to-purple-500/5 p-5">
                   <div className="flex gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-violet-500/20 flex-shrink-0">
-                      <Shield className="h-5 w-5 text-violet-400" />
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-lime/20 flex-shrink-0">
+                      <Shield className="h-5 w-5 text-lime-text" />
                     </div>
                     <div>
-                      <p className="text-sm font-semibold text-violet-400 mb-1">Regal Security</p>
-                      <p className="text-xs text-violet-400/70 leading-relaxed">
+                      <p className="text-sm font-semibold text-lime-text mb-1">Regal Security</p>
+                      <p className="text-xs text-lime-text/70 leading-relaxed">
                         Your assets are protected by top-tier military-grade encryption.
                       </p>
                     </div>

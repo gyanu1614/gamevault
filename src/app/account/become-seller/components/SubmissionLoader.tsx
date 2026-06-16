@@ -43,7 +43,7 @@ export default function SubmissionLoader({
         {[...Array(20)].map((_, i) => (
           <motion.div
             key={i}
-            className="absolute h-1 w-1 rounded-full bg-violet-500/30"
+            className="absolute h-1 w-1 rounded-full bg-lime/30"
             initial={{
               x: Math.random() * window.innerWidth,
               y: Math.random() * window.innerHeight,
@@ -71,12 +71,12 @@ export default function SubmissionLoader({
         className="relative z-10 w-full max-w-lg mx-4"
       >
         {/* Glow Effect */}
-        <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-violet-500/20 via-indigo-500/20 to-purple-500/20 blur-2xl" />
+        <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-lime/20 via-indigo-500/20 to-purple-500/20 blur-2xl" />
 
         {/* Card */}
         <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-black/90 backdrop-blur-xl shadow-2xl">
           {/* Animated Border Gradient */}
-          <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-violet-500/0 via-violet-500/50 to-violet-500/0 opacity-50">
+          <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-lime/0 via-violet-500/50 to-lime/0 opacity-50">
             <motion.div
               className="h-full w-full bg-gradient-to-r from-transparent via-white/20 to-transparent"
               animate={{ x: ['-100%', '100%'] }}
@@ -91,13 +91,13 @@ export default function SubmissionLoader({
               <div className="relative">
                 {/* Pulsing Glow */}
                 <motion.div
-                  className="absolute inset-0 rounded-full bg-violet-500/30 blur-xl"
+                  className="absolute inset-0 rounded-full bg-lime/30 blur-xl"
                   animate={{ scale: [1, 1.2, 1], opacity: [0.5, 0.8, 0.5] }}
                   transition={{ duration: 2, repeat: Infinity }}
                 />
 
                 {/* Icon Container */}
-                <div className="relative flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-indigo-500">
+                <div className="relative flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-lime to-indigo-500">
                   {stage === 'uploading' && (
                     <motion.div
                       animate={{ rotate: 360 }}
@@ -139,7 +139,7 @@ export default function SubmissionLoader({
             </motion.h2>
 
             {/* Message */}
-            <p className="text-center text-gray-400 mb-6 text-sm">
+            <p className="text-center text-text-secondary mb-6 text-sm">
               {message}
             </p>
 
@@ -147,8 +147,8 @@ export default function SubmissionLoader({
             {stage === 'uploading' && totalFiles > 0 && (
               <div className="mb-6">
                 <div className="flex items-center justify-between mb-2 text-sm">
-                  <span className="text-gray-400">Files</span>
-                  <span className="font-medium text-violet-400">
+                  <span className="text-text-secondary">Files</span>
+                  <span className="font-medium text-lime-text">
                     {currentFile} / {totalFiles}
                   </span>
                 </div>
@@ -156,7 +156,7 @@ export default function SubmissionLoader({
                 {/* Progress Bar */}
                 <div className="relative h-3 bg-white/5 rounded-full overflow-hidden border border-white/10">
                   <motion.div
-                    className="absolute inset-y-0 left-0 bg-gradient-to-r from-violet-500 via-indigo-500 to-purple-500 rounded-full"
+                    className="absolute inset-y-0 left-0 bg-gradient-to-r from-lime via-indigo-500 to-purple-500 rounded-full"
                     initial={{ width: 0 }}
                     animate={{ width: `${progress}%` }}
                     transition={{ duration: 0.5, ease: 'easeOut' }}
@@ -198,7 +198,7 @@ export default function SubmissionLoader({
               animate={{ opacity: 1 }}
               transition={{ delay: 0.5 }}
             >
-              <p className="text-xs text-gray-500 flex items-center justify-center gap-2">
+              <p className="text-xs text-text-tertiary flex items-center justify-center gap-2">
                 <Rocket className="h-3 w-3" />
                 <span>Leveling up your seller profile...</span>
               </p>

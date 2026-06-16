@@ -190,9 +190,9 @@ export default async function SEOLandingPage({
       <main className="min-h-screen">
         {/* ---- Hero ---- */}
         <section className="relative pt-16 pb-12 px-4 overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-b from-violet-500/[0.07] via-transparent to-transparent pointer-events-none" />
+          <div className="absolute inset-0 bg-gradient-to-b from-lime/[0.07] via-transparent to-transparent pointer-events-none" />
           <div className="mx-auto max-w-5xl text-center relative">
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-violet-500/10 border border-violet-500/20 text-sm font-medium text-violet-400 mb-6">
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-lime/10 border border-lime-tint-border text-sm font-medium text-lime-text mb-6">
               <Shield className="w-3.5 h-3.5" />
               VaultShield Buyer Protection
             </div>
@@ -227,7 +227,7 @@ export default async function SEOLandingPage({
               {page.gameSlug && (
                 <Link
                   href={`/${page.gameSlug}${page.categorySlug ? `/${page.categorySlug}` : ''}`}
-                  className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-violet-500 hover:bg-violet-600 text-white font-semibold text-sm transition-all duration-200 hover:shadow-[0_0_20px_-4px_rgba(139,92,246,0.6)]"
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-lime hover:bg-lime-hover text-text-inverse font-semibold text-sm transition-all duration-200 hover:shadow-[0_0_20px_-4px_rgba(139,92,246,0.6)]"
                 >
                   Browse All Listings
                   <ArrowRight className="w-4 h-4" />
@@ -252,10 +252,10 @@ export default async function SEOLandingPage({
               </h2>
 
               {/* Desktop table */}
-              <div className="hidden md:block rounded-2xl overflow-hidden border border-white/[0.08] bg-white/[0.03]">
+              <div className="hidden md:block rounded-2xl overflow-hidden border border-border-subtle bg-bg-overlay">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-white/[0.08]">
+                    <tr className="border-b border-border-subtle">
                       <th className="text-left px-5 py-3 font-medium text-muted-foreground">Listing</th>
                       <th className="text-left px-5 py-3 font-medium text-muted-foreground">Seller</th>
                       <th className="text-left px-5 py-3 font-medium text-muted-foreground">Delivery</th>
@@ -267,7 +267,7 @@ export default async function SEOLandingPage({
                     {listings.map((listing) => (
                       <tr
                         key={listing.id}
-                        className="border-b border-white/[0.04] hover:bg-white/[0.03] transition-colors"
+                        className="border-b border-white/[0.04] hover:bg-bg-overlay transition-colors"
                       >
                         <td className="px-5 py-3.5">
                           <span className="font-medium text-foreground line-clamp-1">{listing.title}</span>
@@ -286,7 +286,7 @@ export default async function SEOLandingPage({
                         <td className="px-5 py-3.5">
                           <div className="flex items-center gap-1 text-muted-foreground">
                             {listing.delivery_time?.toLowerCase().includes('instant') && (
-                              <Zap className="w-3.5 h-3.5 text-violet-400" />
+                              <Zap className="w-3.5 h-3.5 text-lime-text" />
                             )}
                             {listing.delivery_time}
                           </div>
@@ -299,7 +299,7 @@ export default async function SEOLandingPage({
                         <td className="px-5 py-3.5 text-right">
                           <Link
                             href={`/listings/${listing.id}`}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-violet-500/10 hover:bg-violet-500/20 border border-violet-500/20 text-violet-400 text-xs font-semibold transition-colors"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-lime/10 hover:bg-lime/20 border border-lime-tint-border text-lime-text text-xs font-semibold transition-colors"
                           >
                             Buy
                             <ArrowRight className="w-3 h-3" />
@@ -317,7 +317,7 @@ export default async function SEOLandingPage({
                   <Link
                     key={listing.id}
                     href={`/listings/${listing.id}`}
-                    className="flex items-center justify-between gap-4 p-4 rounded-2xl bg-white/[0.04] border border-white/[0.08] hover:border-violet-500/30 transition-all"
+                    className="flex items-center justify-between gap-4 p-4 rounded-2xl bg-white/[0.04] border border-border-subtle hover:border-lime-tint-border transition-all"
                   >
                     <div className="min-w-0">
                       <p className="text-sm font-medium text-foreground line-clamp-1">{listing.title}</p>
@@ -335,7 +335,7 @@ export default async function SEOLandingPage({
                 <div className="mt-6 text-center">
                   <Link
                     href={`/${page.gameSlug}${page.categorySlug ? `/${page.categorySlug}` : ''}`}
-                    className="inline-flex items-center gap-2 text-sm text-violet-400 hover:text-violet-300 font-medium transition-colors"
+                    className="inline-flex items-center gap-2 text-sm text-lime-text hover:text-lime-text font-medium transition-colors"
                   >
                     View all listings
                     <ArrowRight className="w-4 h-4" />
@@ -347,7 +347,7 @@ export default async function SEOLandingPage({
         )}
 
         {/* ---- Trust signals ---- */}
-        <section className="py-10 px-4 border-y border-white/[0.06] bg-white/[0.02]">
+        <section className="py-10 px-4 border-y border-border-subtle bg-bg-overlay">
           <div className="mx-auto max-w-5xl">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
               {[
@@ -389,13 +389,13 @@ export default async function SEOLandingPage({
               {page.faqs.map((faq, i) => (
                 <details
                   key={i}
-                  className="group rounded-2xl bg-white/[0.04] border border-white/[0.08] overflow-hidden"
+                  className="group rounded-2xl bg-white/[0.04] border border-border-subtle overflow-hidden"
                 >
-                  <summary className="flex items-center justify-between gap-4 px-5 py-4 cursor-pointer list-none font-medium text-foreground text-sm select-none hover:text-violet-300 transition-colors">
+                  <summary className="flex items-center justify-between gap-4 px-5 py-4 cursor-pointer list-none font-medium text-foreground text-sm select-none hover:text-lime-text transition-colors">
                     {faq.q}
                     <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0 transition-transform group-open:rotate-180" />
                   </summary>
-                  <div className="px-5 pb-4 text-sm text-muted-foreground leading-relaxed border-t border-white/[0.06] pt-3">
+                  <div className="px-5 pb-4 text-sm text-muted-foreground leading-relaxed border-t border-border-subtle pt-3">
                     {faq.a}
                   </div>
                 </details>
@@ -407,7 +407,7 @@ export default async function SEOLandingPage({
         {/* ---- CTA ---- */}
         <section className="py-14 px-4">
           <div className="mx-auto max-w-3xl text-center">
-            <div className="rounded-2xl bg-gradient-to-br from-violet-500/[0.12] to-cyan-500/[0.06] border border-violet-500/20 p-10">
+            <div className="rounded-2xl bg-gradient-to-br from-lime/[0.12] to-cyan-500/[0.06] border border-lime-tint-border p-10">
               <h2 className="text-2xl font-display font-bold text-foreground mb-3">
                 Ready to buy?
               </h2>
@@ -418,7 +418,7 @@ export default async function SEOLandingPage({
                 {page.gameSlug ? (
                   <Link
                     href={`/${page.gameSlug}${page.categorySlug ? `/${page.categorySlug}` : ''}`}
-                    className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-violet-500 hover:bg-violet-600 text-white font-semibold text-sm transition-all duration-200"
+                    className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-lime hover:bg-lime-hover text-text-inverse font-semibold text-sm transition-all duration-200"
                   >
                     Browse Listings
                     <ArrowRight className="w-4 h-4" />
@@ -426,7 +426,7 @@ export default async function SEOLandingPage({
                 ) : (
                   <Link
                     href="/"
-                    className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-violet-500 hover:bg-violet-600 text-white font-semibold text-sm transition-all duration-200"
+                    className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-lime hover:bg-lime-hover text-text-inverse font-semibold text-sm transition-all duration-200"
                   >
                     Explore GameVault
                     <ArrowRight className="w-4 h-4" />

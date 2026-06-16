@@ -36,9 +36,9 @@ export default function OrderTimeline({ order }: OrderTimelineProps) {
       title: 'Order Delivered',
       description: order.delivery_notes || 'Seller marked order as delivered',
       timestamp: order.delivered_at,
-      color: 'text-violet-400',
-      bgColor: 'bg-violet-500/10',
-      borderColor: 'border-violet-500/30'
+      color: 'text-lime-text',
+      bgColor: 'bg-lime/10',
+      borderColor: 'border-lime-tint-border'
     })
   }
 
@@ -49,9 +49,9 @@ export default function OrderTimeline({ order }: OrderTimelineProps) {
       title: 'Receipt Confirmed',
       description: 'Buyer confirmed receipt of order',
       timestamp: order.buyer_confirmed_at,
-      color: 'text-green-400',
-      bgColor: 'bg-green-500/10',
-      borderColor: 'border-green-500/30'
+      color: 'text-success',
+      bgColor: 'bg-success-bg',
+      borderColor: 'border-success/30'
     })
   }
 
@@ -62,9 +62,9 @@ export default function OrderTimeline({ order }: OrderTimelineProps) {
       title: 'Order Completed',
       description: `Payment released to seller${order.release_method ? ` (${order.release_method})` : ''}`,
       timestamp: order.completed_at,
-      color: 'text-green-400',
-      bgColor: 'bg-green-500/10',
-      borderColor: 'border-green-500/30'
+      color: 'text-success',
+      bgColor: 'bg-success-bg',
+      borderColor: 'border-success/30'
     })
   }
 
@@ -75,9 +75,9 @@ export default function OrderTimeline({ order }: OrderTimelineProps) {
       title: 'Dispute Opened',
       description: order.dispute_reason || 'Order disputed',
       timestamp: order.disputed_at,
-      color: 'text-red-400',
-      bgColor: 'bg-red-500/10',
-      borderColor: 'border-red-500/30'
+      color: 'text-error',
+      bgColor: 'bg-error-bg',
+      borderColor: 'border-error/40'
     })
   }
 
@@ -104,11 +104,11 @@ export default function OrderTimeline({ order }: OrderTimelineProps) {
             <div className="flex-1 pb-8">
               <div className="flex items-start justify-between mb-1">
                 <h3 className="text-base font-semibold text-white">{event.title}</h3>
-                <span className="text-xs text-gray-400 whitespace-nowrap ml-4">
+                <span className="text-xs text-text-secondary whitespace-nowrap ml-4">
                   {formatTimestamp(event.timestamp)}
                 </span>
               </div>
-              <p className="text-sm text-gray-400">{event.description}</p>
+              <p className="text-sm text-text-secondary">{event.description}</p>
             </div>
           </div>
         </div>
@@ -116,7 +116,7 @@ export default function OrderTimeline({ order }: OrderTimelineProps) {
 
       {/* No events */}
       {events.length === 0 && (
-        <div className="text-center py-8 text-gray-400">
+        <div className="text-center py-8 text-text-secondary">
           <Clock className="w-12 h-12 mx-auto mb-3 opacity-50" />
           <p>No timeline events yet</p>
         </div>

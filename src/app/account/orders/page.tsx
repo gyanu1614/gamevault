@@ -261,14 +261,14 @@ export default function OrdersPage() {
 
   const getStatusColor = (status: string) => {
     const colors = {
-      paid: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/30',
+      paid: 'bg-warning-bg text-warning border-warning/40',
       delivering: 'bg-blue-500/10 text-blue-400 border-blue-500/30',
-      delivered: 'bg-green-500/10 text-green-400 border-green-500/30',
-      completed: 'bg-green-500/10 text-green-400 border-green-500/30',
-      disputed: 'bg-red-500/10 text-red-400 border-red-500/30',
-      resolved: 'bg-green-500/10 text-green-400 border-green-500/30',
-      refunded: 'bg-gray-500/10 text-gray-400 border-gray-500/30',
-      cancelled: 'bg-gray-500/10 text-gray-400 border-gray-500/30',
+      delivered: 'bg-success-bg text-success border-success/30',
+      completed: 'bg-success-bg text-success border-success/30',
+      disputed: 'bg-error-bg text-error border-error/40',
+      resolved: 'bg-success-bg text-success border-success/30',
+      refunded: 'bg-gray-500/10 text-text-secondary border-gray-500/30',
+      cancelled: 'bg-gray-500/10 text-text-secondary border-gray-500/30',
     }
     return colors[status as keyof typeof colors] || colors.paid
   }
@@ -298,10 +298,10 @@ export default function OrdersPage() {
 
   if (authLoading || ordersLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-black">
+      <div className="flex min-h-screen items-center justify-center bg-bg-base">
         <div className="flex flex-col items-center gap-4">
-          <Loader2 className="h-8 w-8 animate-spin text-violet-500" />
-          <p className="text-gray-400">Loading orders...</p>
+          <Loader2 className="h-8 w-8 animate-spin text-lime-text" />
+          <p className="text-text-secondary">Loading orders...</p>
         </div>
       </div>
     )
@@ -317,7 +317,7 @@ export default function OrdersPage() {
     : 'Purchases'
 
   return (
-    <div className="min-h-screen bg-black pb-20">
+    <div className="min-h-screen bg-bg-base pb-20">
       <div className="mx-auto w-full max-w-full px-4 sm:px-6 md:max-w-7xl lg:px-8">
         {/* Header */}
         <motion.div
@@ -325,8 +325,8 @@ export default function OrdersPage() {
           animate={{ opacity: 1, y: 0 }}
           className="mb-6"
       >
-        <h1 className="text-3xl font-bold text-white">{pageTitle}</h1>
-        <p className="text-sm text-gray-400 mt-1">
+        <h1 className="text-3xl font-bold text-text-primary">{pageTitle}</h1>
+        <p className="text-sm text-text-secondary mt-1">
           {activeTab === 'purchases'
             ? 'Track your orders and manage your gaming purchases'
             : 'Manage your sales and customer orders'
@@ -341,8 +341,8 @@ export default function OrdersPage() {
             onClick={() => setActiveTab('sales')}
             className={cn(
               activeTab === 'sales'
-                ? "flex items-center gap-2 px-4 py-3 text-sm font-semibold rounded-xl border-2 border-violet-500/50 bg-gradient-to-br from-violet-500/20 to-purple-500/10 text-white shadow-lg shadow-violet-500/20 transition-all"
-                : "flex items-center gap-2 px-4 py-3 text-sm font-medium rounded-xl border border-white/[0.08] bg-white/[0.02] text-gray-400 hover:border-violet-500/30 hover:bg-white/[0.05] hover:text-gray-300 transition-all"
+                ? "flex items-center gap-2 px-4 py-3 text-sm font-semibold rounded-xl border-2 border-lime bg-gradient-to-br from-lime/15 to-lime/5 text-text-primary shadow-lg shadow-elevated transition-all"
+                : "flex items-center gap-2 px-4 py-3 text-sm font-medium rounded-xl border border-border-subtle bg-bg-overlay text-text-secondary hover:border-lime-tint-border hover:bg-bg-overlay hover:text-text-secondary transition-all"
             )}
           >
             <Store className="w-4 h-4" />
@@ -352,8 +352,8 @@ export default function OrdersPage() {
             onClick={() => setActiveTab('purchases')}
             className={cn(
               activeTab === 'purchases'
-                ? "flex items-center gap-2 px-4 py-3 text-sm font-semibold rounded-xl border-2 border-violet-500/50 bg-gradient-to-br from-violet-500/20 to-purple-500/10 text-white shadow-lg shadow-violet-500/20 transition-all"
-                : "flex items-center gap-2 px-4 py-3 text-sm font-medium rounded-xl border border-white/[0.08] bg-white/[0.02] text-gray-400 hover:border-violet-500/30 hover:bg-white/[0.05] hover:text-gray-300 transition-all"
+                ? "flex items-center gap-2 px-4 py-3 text-sm font-semibold rounded-xl border-2 border-lime bg-gradient-to-br from-lime/15 to-lime/5 text-text-primary shadow-lg shadow-elevated transition-all"
+                : "flex items-center gap-2 px-4 py-3 text-sm font-medium rounded-xl border border-border-subtle bg-bg-overlay text-text-secondary hover:border-lime-tint-border hover:bg-bg-overlay hover:text-text-secondary transition-all"
             )}
           >
             <ShoppingCart className="w-4 h-4" />
@@ -377,16 +377,16 @@ export default function OrdersPage() {
               className={cn(
                 'flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-xl transition-all',
                 filters.status === tab.value
-                  ? 'border-2 border-violet-500/50 bg-gradient-to-br from-violet-500/20 to-purple-500/10 text-white shadow-lg shadow-violet-500/20'
-                  : 'border border-white/[0.08] bg-white/[0.02] text-gray-400 hover:border-violet-500/30 hover:bg-white/[0.05] hover:text-gray-300'
+                  ? 'border-2 border-lime bg-gradient-to-br from-lime/15 to-lime/5 text-text-primary shadow-lg shadow-elevated'
+                  : 'border border-border-subtle bg-bg-overlay text-text-secondary hover:border-lime-tint-border hover:bg-bg-overlay hover:text-text-secondary'
               )}
             >
               {tab.label}
               <span className={cn(
                 'px-1.5 py-0.5 rounded-md text-xs font-semibold',
                 filters.status === tab.value
-                  ? 'bg-violet-500/30 text-violet-200'
-                  : 'bg-white/[0.05] text-gray-500'
+                  ? 'bg-lime-tint-bg text-lime-text'
+                  : 'bg-bg-overlay text-text-tertiary'
               )}>
                 {tab.count}
               </span>
@@ -404,8 +404,8 @@ export default function OrdersPage() {
                 className={cn(
                   "w-full flex items-center justify-between gap-2 px-4 py-2.5 rounded-xl border text-sm transition-all",
                   openDropdown === 'game'
-                    ? "border-violet-500/50 bg-white/[0.05] text-white"
-                    : "border-white/[0.08] bg-white/[0.02] text-gray-400 hover:border-violet-500/30 hover:bg-white/[0.05]"
+                    ? "border-lime bg-bg-overlay text-text-primary"
+                    : "border-border-subtle bg-bg-overlay text-text-secondary hover:border-lime-tint-border hover:bg-bg-overlay"
                 )}
               >
                 <div className="flex items-center gap-2">
@@ -417,7 +417,7 @@ export default function OrdersPage() {
 
               {/* Game Dropdown Panel */}
               {openDropdown === 'game' && availableGames.length > 0 && (
-                <div className="absolute z-50 mt-2 w-full min-w-[280px] rounded-xl border border-white/[0.08] bg-[#0d0d14] shadow-2xl shadow-black/50 max-h-[320px] overflow-y-auto">
+                <div className="absolute z-50 mt-2 w-full min-w-[280px] rounded-xl border border-border-subtle bg-bg-overlay shadow-2xl shadow-black/50 max-h-[320px] overflow-y-auto">
                   <div className="p-2 space-y-1">
                     {availableGames.map((game) => {
                       const isSelected = filters.games.includes(game.id)
@@ -434,8 +434,8 @@ export default function OrdersPage() {
                           className={cn(
                             "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all text-left",
                             isSelected
-                              ? "bg-violet-500/20 text-white border border-violet-500/30"
-                              : "text-gray-300 hover:bg-white/[0.05] hover:text-white"
+                              ? "bg-lime-tint-bg text-text-primary border border-lime-tint-border"
+                              : "text-text-secondary hover:bg-bg-overlay hover:text-text-primary"
                           )}
                         >
                           {game.image_url && (
@@ -449,7 +449,7 @@ export default function OrdersPage() {
                             />
                           )}
                           <span className="flex-1">{game.name}</span>
-                          {isSelected && <CheckCircle2 className="h-4 w-4 text-violet-400 flex-shrink-0" />}
+                          {isSelected && <CheckCircle2 className="h-4 w-4 text-lime-text flex-shrink-0" />}
                         </button>
                       )
                     })}
@@ -465,8 +465,8 @@ export default function OrdersPage() {
                 className={cn(
                   "w-full flex items-center justify-between gap-2 px-4 py-2.5 rounded-xl border text-sm transition-all",
                   openDropdown === 'category'
-                    ? "border-violet-500/50 bg-white/[0.05] text-white"
-                    : "border-white/[0.08] bg-white/[0.02] text-gray-400 hover:border-violet-500/30 hover:bg-white/[0.05]"
+                    ? "border-lime bg-bg-overlay text-text-primary"
+                    : "border-border-subtle bg-bg-overlay text-text-secondary hover:border-lime-tint-border hover:bg-bg-overlay"
                 )}
               >
                 <div className="flex items-center gap-2">
@@ -478,7 +478,7 @@ export default function OrdersPage() {
 
               {/* Category Dropdown Panel */}
               {openDropdown === 'category' && availableCategories.length > 0 && (
-                <div className="absolute z-50 mt-2 w-full min-w-[240px] rounded-xl border border-white/[0.08] bg-[#0d0d14] shadow-2xl shadow-black/50 max-h-[280px] overflow-y-auto">
+                <div className="absolute z-50 mt-2 w-full min-w-[240px] rounded-xl border border-border-subtle bg-bg-overlay shadow-2xl shadow-black/50 max-h-[280px] overflow-y-auto">
                   <div className="p-2 space-y-1">
                     <button
                       onClick={() => {
@@ -488,12 +488,12 @@ export default function OrdersPage() {
                       className={cn(
                         "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all text-left",
                         !filters.category
-                          ? "bg-violet-500/20 text-white border border-violet-500/30"
-                          : "text-gray-300 hover:bg-white/[0.05] hover:text-white"
+                          ? "bg-lime-tint-bg text-text-primary border border-lime-tint-border"
+                          : "text-text-secondary hover:bg-bg-overlay hover:text-text-primary"
                       )}
                     >
                       <span className="flex-1">All Categories</span>
-                      {!filters.category && <CheckCircle2 className="h-4 w-4 text-violet-400 flex-shrink-0" />}
+                      {!filters.category && <CheckCircle2 className="h-4 w-4 text-lime-text flex-shrink-0" />}
                     </button>
                     {availableCategories.map((category) => {
                       const isSelected = filters.category === category.id
@@ -507,12 +507,12 @@ export default function OrdersPage() {
                           className={cn(
                             "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all text-left",
                             isSelected
-                              ? "bg-violet-500/20 text-white border border-violet-500/30"
-                              : "text-gray-300 hover:bg-white/[0.05] hover:text-white"
+                              ? "bg-lime-tint-bg text-text-primary border border-lime-tint-border"
+                              : "text-text-secondary hover:bg-bg-overlay hover:text-text-primary"
                           )}
                         >
                           <span className="flex-1">{category.name}</span>
-                          {isSelected && <CheckCircle2 className="h-4 w-4 text-violet-400 flex-shrink-0" />}
+                          {isSelected && <CheckCircle2 className="h-4 w-4 text-lime-text flex-shrink-0" />}
                         </button>
                       )
                     })}
@@ -528,8 +528,8 @@ export default function OrdersPage() {
                 className={cn(
                   "w-full flex items-center justify-between gap-2 px-4 py-2.5 rounded-xl border text-sm transition-all",
                   openDropdown === 'date'
-                    ? "border-violet-500/50 bg-white/[0.05] text-white"
-                    : "border-white/[0.08] bg-white/[0.02] text-gray-400 hover:border-violet-500/30 hover:bg-white/[0.05]"
+                    ? "border-lime bg-bg-overlay text-text-primary"
+                    : "border-border-subtle bg-bg-overlay text-text-secondary hover:border-lime-tint-border hover:bg-bg-overlay"
                 )}
               >
                 <div className="flex items-center gap-2">
@@ -548,7 +548,7 @@ export default function OrdersPage() {
 
               {/* Date Range Dropdown Panel */}
               {openDropdown === 'date' && (
-                <div className="absolute z-50 mt-2 w-full min-w-[200px] rounded-xl border border-white/[0.08] bg-[#0d0d14] shadow-2xl shadow-black/50">
+                <div className="absolute z-50 mt-2 w-full min-w-[200px] rounded-xl border border-border-subtle bg-bg-overlay shadow-2xl shadow-black/50">
                   <div className="p-2 space-y-1">
                     {[
                       { label: 'All Time', value: 'all' as const },
@@ -568,12 +568,12 @@ export default function OrdersPage() {
                           className={cn(
                             "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all text-left",
                             isSelected
-                              ? "bg-violet-500/20 text-white border border-violet-500/30"
-                              : "text-gray-300 hover:bg-white/[0.05] hover:text-white"
+                              ? "bg-lime-tint-bg text-text-primary border border-lime-tint-border"
+                              : "text-text-secondary hover:bg-bg-overlay hover:text-text-primary"
                           )}
                         >
                           <span className="flex-1">{option.label}</span>
-                          {isSelected && <CheckCircle2 className="h-4 w-4 text-violet-400 flex-shrink-0" />}
+                          {isSelected && <CheckCircle2 className="h-4 w-4 text-lime-text flex-shrink-0" />}
                         </button>
                       )
                     })}
@@ -584,18 +584,18 @@ export default function OrdersPage() {
 
             {/* Listing Search */}
             <div className="relative">
-              <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+              <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-text-secondary" />
               <input
                 type="text"
                 placeholder="Search listings..."
                 value={filters.searchQuery}
                 onChange={(e) => setFilters({ ...filters, searchQuery: e.target.value })}
-                className="w-full rounded-xl border border-white/[0.08] bg-white/[0.02] py-2.5 pl-10 pr-10 text-white text-sm placeholder:text-gray-500 focus:border-violet-500/30 focus:outline-none focus:ring-2 focus:ring-violet-500/20"
+                className="w-full rounded-xl border border-border-subtle bg-bg-overlay py-2.5 pl-10 pr-10 text-text-primary text-sm placeholder:text-text-tertiary focus:border-lime-tint-border focus:outline-none focus:ring-2 focus:ring-violet-500/20"
               />
               {filters.searchQuery && (
                 <button
                   onClick={() => setFilters({ ...filters, searchQuery: '' })}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-text-secondary hover:text-text-primary"
                 >
                   <X className="h-4 w-4" />
                 </button>
@@ -609,7 +609,7 @@ export default function OrdersPage() {
               {filters.games.map(gameId => {
                 const game = availableGames.find(g => g.id === gameId)
                 return game ? (
-                  <div key={gameId} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-violet-500/10 border border-violet-500/20 text-xs text-violet-300">
+                  <div key={gameId} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-lime-tint-bg border border-lime-tint-border text-xs text-lime-text">
                     <Gamepad2 className="h-3 w-3" />
                     <span>{game.name}</span>
                     <button
@@ -623,7 +623,7 @@ export default function OrdersPage() {
               })}
 
               {filters.category && (
-                <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-violet-500/10 border border-violet-500/20 text-xs text-violet-300">
+                <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-lime-tint-bg border border-lime-tint-border text-xs text-lime-text">
                   <Folder className="h-3 w-3" />
                   <span>{availableCategories.find(c => c.id === filters.category)?.name}</span>
                   <button
@@ -636,7 +636,7 @@ export default function OrdersPage() {
               )}
 
               {filters.dateRange !== 'all' && (
-                <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-violet-500/10 border border-violet-500/20 text-xs text-violet-300">
+                <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-lime-tint-bg border border-lime-tint-border text-xs text-lime-text">
                   <Calendar className="h-3 w-3" />
                   <span>
                     {filters.dateRange === 'today' ? 'Today' :
@@ -655,7 +655,7 @@ export default function OrdersPage() {
               )}
 
               {filters.searchQuery && (
-                <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-violet-500/10 border border-violet-500/20 text-xs text-violet-300">
+                <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-lime-tint-bg border border-lime-tint-border text-xs text-lime-text">
                   <Search className="h-3 w-3" />
                   <span className="max-w-[120px] truncate">{filters.searchQuery}</span>
                   <button
@@ -677,7 +677,7 @@ export default function OrdersPage() {
                   customDateEnd: null,
                   searchQuery: ''
                 })}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20 text-xs text-red-300 hover:bg-red-500/20 transition-colors"
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-error-bg border border-error/40 text-xs text-error hover:bg-error-bg transition-colors"
               >
                 <X className="h-3 w-3" />
                 Clear All ({filters.games.length + (filters.category ? 1 : 0) + (filters.dateRange !== 'all' ? 1 : 0) + (filters.searchQuery ? 1 : 0)})
@@ -688,12 +688,12 @@ export default function OrdersPage() {
 
         {/* Orders List */}
         {filteredOrders.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-2xl border border-white/[0.06] bg-white/[0.025] p-12">
-          <ShoppingCart className="mb-4 h-16 w-16 text-violet-400/40" />
-          <h3 className="mb-2 text-xl font-bold text-white">
+        <div className="flex flex-col items-center justify-center rounded-2xl border border-border-subtle bg-white/[0.025] p-12">
+          <ShoppingCart className="mb-4 h-16 w-16 text-lime-text/40" />
+          <h3 className="mb-2 text-xl font-bold text-text-primary">
             {activeTab === 'purchases' ? 'No purchases found' : 'No sales found'}
           </h3>
-          <p className="text-gray-400">
+          <p className="text-text-secondary">
             {filters.searchQuery
               ? 'Try adjusting your search'
               : activeTab === 'purchases'
@@ -727,13 +727,13 @@ export default function OrdersPage() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.03 }}
-                  className="group rounded-xl border border-white/[0.06] bg-white/[0.025] p-4 backdrop-blur-sm transition-all hover:border-white/[0.09] hover:bg-white/[0.03] cursor-pointer"
+                  className="group rounded-xl border border-border-subtle bg-white/[0.025] p-4 backdrop-blur-sm transition-all hover:border-white/[0.09] hover:bg-bg-overlay cursor-pointer"
                 >
                   <div className="flex items-center gap-4">
                     {/* Listing Image (fallback to Game Logo) */}
                     <div className="flex-shrink-0">
                       {displayImage ? (
-                        <div className="relative h-14 w-14 overflow-hidden rounded-lg border border-white/[0.08]">
+                        <div className="relative h-14 w-14 overflow-hidden rounded-lg border border-border-subtle">
                           <Image
                             src={displayImage}
                             alt={order.listing?.title || gameName || 'Order'}
@@ -743,8 +743,8 @@ export default function OrdersPage() {
                           />
                         </div>
                       ) : (
-                        <div className="flex h-14 w-14 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.03]">
-                          <ShoppingCart className="h-6 w-6 text-gray-600" />
+                        <div className="flex h-14 w-14 items-center justify-center rounded-lg border border-border-subtle bg-bg-overlay">
+                          <ShoppingCart className="h-6 w-6 text-text-disabled" />
                         </div>
                       )}
                     </div>
@@ -753,7 +753,7 @@ export default function OrdersPage() {
                     <div className="flex-1 min-w-0">
                       {/* Top Row: Order Number + Status */}
                       <div className="flex items-center gap-2 mb-2">
-                        <span className="font-mono text-[10px] font-semibold text-gray-500 uppercase tracking-wider">
+                        <span className="font-mono text-[10px] font-semibold text-text-tertiary uppercase tracking-wider">
                           {order.order_number || order.id.slice(0, 8).toUpperCase()}
                         </span>
                         {(() => {
@@ -772,7 +772,7 @@ export default function OrdersPage() {
 
                       {/* Item Name */}
                       <div className="flex items-center gap-2 mb-1">
-                        <h3 className="text-base font-bold text-white truncate">
+                        <h3 className="text-base font-bold text-text-primary truncate">
                           {order.listing?.title || 'Unknown Listing'}
                         </h3>
 
@@ -781,8 +781,8 @@ export default function OrdersPage() {
                           <div className={cn(
                             'flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider flex-shrink-0',
                             userWonDispute
-                              ? 'bg-green-500/15 text-green-400 border border-green-500/30'
-                              : 'bg-red-500/15 text-red-400 border border-red-500/30'
+                              ? 'bg-green-500/15 text-success border border-success/30'
+                              : 'bg-red-500/15 text-error border border-error/40'
                           )}>
                             {userWonDispute ? (
                               <>
@@ -800,7 +800,7 @@ export default function OrdersPage() {
                       </div>
 
                       {/* Game + Category */}
-                      <div className="flex items-center gap-2 text-xs text-gray-400 mb-2">
+                      <div className="flex items-center gap-2 text-xs text-text-secondary mb-2">
                         <span>{gameName || 'Unknown Game'}</span>
                         {order.listing?.category?.name && (
                           <>
@@ -812,7 +812,7 @@ export default function OrdersPage() {
 
                       {/* Seller/Buyer Info */}
                       <div className="flex items-center gap-2">
-                        <span className="text-[10px] text-gray-500 font-medium">
+                        <span className="text-[10px] text-text-tertiary font-medium">
                           {activeTab === 'purchases' ? 'Seller:' : 'Buyer:'}
                         </span>
                         {otherParty ? (
@@ -833,12 +833,12 @@ export default function OrdersPage() {
                                 unoptimized
                               />
                             </div>
-                            <span className="text-xs font-medium text-white group-hover/seller:text-violet-400 transition-colors">
+                            <span className="text-xs font-medium text-text-primary group-hover/seller:text-lime-text transition-colors">
                               {otherParty.shop_name || otherParty.username}
                             </span>
                           </div>
                         ) : (
-                          <span className="text-xs text-gray-500">Unknown</span>
+                          <span className="text-xs text-text-tertiary">Unknown</span>
                         )}
                       </div>
                     </div>
@@ -847,10 +847,10 @@ export default function OrdersPage() {
                     <div className="flex flex-col items-end justify-between gap-2">
                       {/* Price */}
                       <div className="text-right">
-                        <div className="text-xl font-bold text-white">
+                        <div className="text-xl font-bold text-text-primary">
                           ${order.total_amount?.toFixed(2) || '0.00'}
                         </div>
-                        <div className="text-[10px] text-gray-500">Total</div>
+                        <div className="text-[10px] text-text-tertiary">Total</div>
                       </div>
 
                       {/* Review Indicator / Button */}
@@ -859,12 +859,12 @@ export default function OrdersPage() {
                           {activeTab === 'sales' ? (
                             // Sold Orders - Show review indicator
                             hasReview ? (
-                              <div className="flex items-center gap-1 text-[10px] text-green-400">
+                              <div className="flex items-center gap-1 text-[10px] text-success">
                                 <Star className="h-3 w-3 fill-current" />
                                 <span>Reviewed</span>
                               </div>
                             ) : (
-                              <div className="flex items-center gap-1 text-[10px] text-gray-500">
+                              <div className="flex items-center gap-1 text-[10px] text-text-tertiary">
                                 <Star className="h-3 w-3" />
                                 <span>No review</span>
                               </div>
@@ -877,7 +877,7 @@ export default function OrdersPage() {
                                 orderNumber={order.order_number || order.id.slice(0, 8).toUpperCase()}
                                 sellerName={otherParty?.shop_name || otherParty?.username || 'Seller'}
                                 compact={true}
-                                className="flex items-center gap-1 rounded-lg bg-violet-500/10 hover:bg-violet-500/20 border border-violet-500/20 px-2 py-1 text-[10px] font-medium text-violet-400 transition-all"
+                                className="flex items-center gap-1 rounded-lg bg-lime-tint-bg hover:bg-lime-tint-bg border border-lime-tint-border px-2 py-1 text-[10px] font-medium text-lime-text transition-all"
                               />
                             )
                           )}

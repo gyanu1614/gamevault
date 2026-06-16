@@ -144,7 +144,7 @@ export default function InstantDeliveryFields({
         </div>
         <div className="flex-1">
           <h3 className="text-lg font-bold text-white">Instant Delivery Setup</h3>
-          <p className="text-sm text-gray-400">
+          <p className="text-sm text-text-secondary">
             Add your {getDeliveryTypeLabel().toLowerCase()} for automatic delivery
           </p>
         </div>
@@ -158,7 +158,7 @@ export default function InstantDeliveryFields({
             <p className="text-sm font-semibold text-blue-300">
               How Instant Delivery Works
             </p>
-            <p className="text-xs text-gray-300">
+            <p className="text-xs text-text-secondary">
               {getHelperText()} Your codes are encrypted and stored securely. When a buyer purchases,
               one code is automatically delivered to them. <span className="text-blue-400 font-medium">Stock automatically updates</span> based on the number of codes you enter.
             </p>
@@ -171,7 +171,7 @@ export default function InstantDeliveryFields({
         <div className="flex items-center justify-between">
           <label className="text-sm font-semibold text-white flex items-center gap-2">
             {getDeliveryTypeLabel()}
-            <span className="text-xs text-gray-500 font-normal">
+            <span className="text-xs text-text-tertiary font-normal">
               (one per line)
             </span>
           </label>
@@ -182,7 +182,7 @@ export default function InstantDeliveryFields({
               'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all',
               showPreview
                 ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
-                : 'bg-white/5 text-gray-400 border border-white/10 hover:bg-white/10'
+                : 'bg-white/5 text-text-secondary border border-white/10 hover:bg-white/10'
             )}
             disabled={disabled}
           >
@@ -209,7 +209,7 @@ export default function InstantDeliveryFields({
           style={{ whiteSpace: 'pre-wrap' }}
           className={cn(
             'w-full rounded-xl border bg-black/40 backdrop-blur-xl px-4 py-3',
-            'text-sm text-white placeholder:text-gray-600 font-mono',
+            'text-sm text-white placeholder:text-text-disabled font-mono',
             'focus:outline-none focus:ring-2 transition-all resize-none',
             disabled
               ? 'border-white/5 opacity-50 cursor-not-allowed'
@@ -229,8 +229,8 @@ export default function InstantDeliveryFields({
               {/* Stats */}
               <div className="flex items-center gap-3 flex-wrap">
                 {validationStatus.valid > 0 && (
-                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-500/10 border border-green-500/20">
-                    <CheckCircle2 className="w-4 h-4 text-green-400" />
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-success-bg border border-green-500/20">
+                    <CheckCircle2 className="w-4 h-4 text-success" />
                     <span className="text-xs font-semibold text-green-300">
                       {validationStatus.valid} Valid
                     </span>
@@ -238,9 +238,9 @@ export default function InstantDeliveryFields({
                 )}
 
                 {validationStatus.invalid > 0 && (
-                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20">
-                    <AlertCircle className="w-4 h-4 text-red-400" />
-                    <span className="text-xs font-semibold text-red-300">
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-error-bg border border-error/40">
+                    <AlertCircle className="w-4 h-4 text-error" />
+                    <span className="text-xs font-semibold text-error">
                       {validationStatus.invalid} Invalid
                     </span>
                   </div>
@@ -262,7 +262,7 @@ export default function InstantDeliveryFields({
                   <p className="text-sm text-purple-200">
                     <span className="font-bold text-purple-100">{validationStatus.valid}</span> code{validationStatus.valid > 1 ? 's' : ''} will be added to your inventory
                   </p>
-                  <p className="text-xs text-gray-400 mt-1">
+                  <p className="text-xs text-text-secondary mt-1">
                     Stock quantity will be automatically set to {validationStatus.valid}
                   </p>
                 </div>
@@ -277,8 +277,8 @@ export default function InstantDeliveryFields({
         <div className="flex items-start gap-2">
           <div className="w-1.5 h-1.5 rounded-full bg-green-400 mt-1.5 flex-shrink-0" />
           <div className="flex-1">
-            <p className="text-xs text-gray-400 leading-relaxed">
-              <span className="text-green-400 font-medium">Secure & Private:</span> Your codes are encrypted using military-grade AES-256 encryption before storage.
+            <p className="text-xs text-text-secondary leading-relaxed">
+              <span className="text-success font-medium">Secure & Private:</span> Your codes are encrypted using military-grade AES-256 encryption before storage.
               They're only decrypted when delivered to the buyer. Admins cannot see your codes.
             </p>
           </div>

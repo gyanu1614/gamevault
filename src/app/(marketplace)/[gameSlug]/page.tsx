@@ -141,12 +141,12 @@ export default async function GameBrowsePage({ params }: PageProps) {
     <div className="min-h-screen bg-gradient-to-b from-black via-gray-900 to-black">
       {/* Hero Section */}
       <section className="relative pt-24 pb-16 px-4 sm:px-6 lg:px-8">
-        <div className="absolute inset-0 bg-gradient-to-b from-violet-500/5 via-transparent to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-b from-lime/5 via-transparent to-transparent" />
 
         <div className="max-w-7xl mx-auto relative">
           {/* Breadcrumb */}
-          <nav className="flex items-center gap-2 text-sm text-gray-400 mb-8">
-            <Link href="/" className="hover:text-white transition-colors">
+          <nav className="flex items-center gap-2 text-sm text-text-secondary mb-8">
+            <Link href="/" className="hover:text-text-primary transition-colors">
               Marketplace
             </Link>
             <ArrowRight className="w-4 h-4" />
@@ -170,19 +170,19 @@ export default async function GameBrowsePage({ params }: PageProps) {
               <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
                 {game.name} Marketplace
               </h1>
-              <p className="text-xl text-gray-300 mb-6">
+              <p className="text-xl text-text-secondary mb-6">
                 {game.description}
               </p>
 
               <div className="flex flex-wrap gap-4">
-                <div className="flex items-center gap-2 px-4 py-2 bg-white/[0.05] rounded-lg border border-white/[0.1]">
-                  <Package className="w-5 h-5 text-violet-400" />
+                <div className="flex items-center gap-2 px-4 py-2 bg-bg-overlay rounded-lg border border-white/[0.1]">
+                  <Package className="w-5 h-5 text-lime-text" />
                   <span className="text-white font-medium">
                     {Object.values(listingCounts).reduce((a: number, b: number) => a + b, 0).toLocaleString()} Active Listings
                   </span>
                 </div>
-                <div className="flex items-center gap-2 px-4 py-2 bg-white/[0.05] rounded-lg border border-white/[0.1]">
-                  <TrendingUp className="w-5 h-5 text-green-400" />
+                <div className="flex items-center gap-2 px-4 py-2 bg-bg-overlay rounded-lg border border-white/[0.1]">
+                  <TrendingUp className="w-5 h-5 text-success" />
                   <span className="text-white font-medium">
                     {categories.length} Categories
                   </span>
@@ -199,8 +199,8 @@ export default async function GameBrowsePage({ params }: PageProps) {
           <h2 className="text-3xl font-bold text-white mb-8">Browse by Category</h2>
 
           {categories.length === 0 ? (
-            <div className="text-center py-12 bg-white/[0.03] border border-white/[0.05] rounded-xl">
-              <p className="text-gray-400">No categories available for this game yet</p>
+            <div className="text-center py-12 bg-bg-overlay border border-border-subtle rounded-xl">
+              <p className="text-text-secondary">No categories available for this game yet</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -222,13 +222,13 @@ export default async function GameBrowsePage({ params }: PageProps) {
 
       {/* Featured Listings */}
       {featuredListings.length > 0 && (
-        <section className="py-16 px-4 sm:px-6 lg:px-8 bg-white/[0.02]">
+        <section className="py-16 px-4 sm:px-6 lg:px-8 bg-bg-overlay">
           <div className="max-w-7xl mx-auto">
             <div className="flex items-center justify-between mb-8">
               <h2 className="text-3xl font-bold text-white">Recent Listings</h2>
               <Link
                 href={`/${gameSlug}`}
-                className="text-violet-400 hover:text-violet-300 font-medium flex items-center gap-2 transition-colors"
+                className="text-lime-text hover:text-lime-text font-medium flex items-center gap-2 transition-colors"
               >
                 View All
                 <ArrowRight className="w-4 h-4" />
@@ -277,24 +277,24 @@ function CategoryCard({
 }: CategoryCardProps) {
   return (
     <Link href={`/${gameSlug}/${categorySlug}`}>
-      <div className="group bg-white/[0.03] border border-white/[0.05] hover:border-violet-500/50 rounded-xl p-6 transition-all duration-300 hover:scale-105">
+      <div className="group bg-bg-overlay border border-border-subtle hover:border-lime rounded-xl p-6 transition-all duration-300 hover:scale-105">
         <div className="flex items-start justify-between mb-4">
-          <div className="p-3 bg-violet-500/10 border border-violet-500/20 rounded-lg">
+          <div className="p-3 bg-lime/10 border border-lime-tint-border rounded-lg">
             <span className="text-2xl">{icon || '📦'}</span>
           </div>
-          <span className="text-sm text-gray-400">
+          <span className="text-sm text-text-secondary">
             {listingCount.toLocaleString()} listings
           </span>
         </div>
 
-        <h3 className="text-xl font-semibold text-white mb-2 group-hover:text-violet-400 transition-colors">
+        <h3 className="text-xl font-semibold text-white mb-2 group-hover:text-lime-text transition-colors">
           {name}
         </h3>
-        <p className="text-sm text-gray-400 mb-4 line-clamp-2">
+        <p className="text-sm text-text-secondary mb-4 line-clamp-2">
           {description}
         </p>
 
-        <div className="flex items-center text-violet-400 text-sm font-medium">
+        <div className="flex items-center text-lime-text text-sm font-medium">
           Browse {name.toLowerCase()}
           <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
         </div>
@@ -327,16 +327,16 @@ function ListingPreviewCard({
 }: ListingPreviewCardProps) {
   const tierColors: Record<string, string> = {
     bronze: 'text-orange-400',
-    silver: 'text-gray-400',
-    gold: 'text-yellow-400',
+    silver: 'text-text-secondary',
+    gold: 'text-warning',
     platinum: 'text-cyan-400'
   }
 
   return (
     <Link href={`/${gameSlug}/${categorySlug}/${listingSlug}`}>
-      <div className="group bg-white/[0.03] border border-white/[0.05] hover:border-violet-500/50 rounded-xl overflow-hidden transition-all duration-300 hover:scale-105">
+      <div className="group bg-bg-overlay border border-border-subtle hover:border-lime rounded-xl overflow-hidden transition-all duration-300 hover:scale-105">
         {/* Image */}
-        <div className="relative h-48 bg-gradient-to-br from-violet-500/20 to-blue-500/20">
+        <div className="relative h-48 bg-gradient-to-br from-lime/20 to-blue-500/20">
           {imageUrl ? (
             <Image src={imageUrl} alt={title} fill className="object-cover" />
           ) : (
@@ -346,19 +346,19 @@ function ListingPreviewCard({
           )}
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
 
-          <div className="absolute bottom-3 right-3 px-3 py-1.5 bg-violet-500 rounded-lg">
+          <div className="absolute bottom-3 right-3 px-3 py-1.5 bg-lime rounded-lg">
             <span className="text-white font-bold">${price.toFixed(2)}</span>
           </div>
         </div>
 
         {/* Info */}
         <div className="p-4">
-          <h3 className="text-base font-semibold text-white mb-2 line-clamp-2 group-hover:text-violet-400 transition-colors">
+          <h3 className="text-base font-semibold text-white mb-2 line-clamp-2 group-hover:text-lime-text transition-colors">
             {title}
           </h3>
 
           <div className="flex items-center justify-between text-sm">
-            <span className={`font-medium ${tierColors[sellerTier] || 'text-gray-400'}`}>
+            <span className={`font-medium ${tierColors[sellerTier] || 'text-text-secondary'}`}>
               @{sellerUsername}
             </span>
           </div>

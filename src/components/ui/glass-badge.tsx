@@ -27,12 +27,12 @@ export const GlassBadge = forwardRef<HTMLSpanElement, GlassBadgeProps>(
 
     const variantStyles: Record<BadgeVariant, string> = {
       default: 'bg-white/[0.07] text-white/80  border-white/[0.12]',
-      primary: 'bg-violet-500/15 text-violet-300 border-violet-500/25',
+      primary: 'bg-lime/15 text-lime-text border-lime-tint-border',
       cyan:    'bg-cyan-500/15   text-cyan-300   border-cyan-500/25',
       success: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/25',
       warning: 'bg-amber-500/15  text-amber-300   border-amber-500/25',
-      error:   'bg-red-500/15    text-red-300     border-red-500/25',
-      muted:   'bg-white/[0.04] text-white/50     border-white/[0.07]',
+      error:   'bg-red-500/15    text-error     border-red-500/25',
+      muted:   'bg-bg-raised text-white/50     border-border-subtle',
     }
 
     const dotColors: Record<BadgeVariant, string> = {

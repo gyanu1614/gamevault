@@ -482,7 +482,7 @@ export default function SellerRegistration() {
         <div className="relative z-10 flex min-h-screen items-center justify-center">
           <div className="flex flex-col items-center gap-4">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <p className="text-sm text-gray-400">Checking your application status...</p>
+            <p className="text-sm text-text-secondary">Checking your application status...</p>
           </div>
         </div>
       </div>
@@ -512,15 +512,15 @@ export default function SellerRegistration() {
             {/* Modal Card */}
             <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-black/90 backdrop-blur-xl shadow-2xl">
               {/* Gradient Border Effect */}
-              <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-violet-500/20 via-transparent to-indigo-500/20 opacity-50" />
+              <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-lime/20 via-transparent to-indigo-500/20 opacity-50" />
 
               {/* Content */}
               <div className="relative p-8">
                 {/* Icon */}
                 <div className="flex justify-center mb-6">
                   <div className="relative">
-                    <div className="absolute inset-0 animate-pulse rounded-full bg-violet-500/30 blur-xl" />
-                    <div className="relative flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-indigo-500">
+                    <div className="absolute inset-0 animate-pulse rounded-full bg-lime/30 blur-xl" />
+                    <div className="relative flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-lime to-indigo-500">
                       <CheckCircle className="h-8 w-8 text-white" />
                     </div>
                   </div>
@@ -532,17 +532,17 @@ export default function SellerRegistration() {
                 </h2>
 
                 {/* Message */}
-                <p className="text-center text-gray-400 mb-6">
+                <p className="text-center text-text-secondary mb-6">
                   You already have an application in progress. Redirecting you to your application status page...
                 </p>
 
                 {/* Loading Animation */}
                 <div className="flex items-center justify-center gap-3">
-                  <Loader2 className="h-5 w-5 animate-spin text-violet-400" />
-                  <span className="text-sm font-medium text-violet-400">
+                  <Loader2 className="h-5 w-5 animate-spin text-lime-text" />
+                  <span className="text-sm font-medium text-lime-text">
                     Redirecting
                   </span>
-                  <ArrowRight className="h-4 w-4 text-violet-400 animate-pulse" />
+                  <ArrowRight className="h-4 w-4 text-lime-text animate-pulse" />
                 </div>
               </div>
             </div>
@@ -567,7 +567,7 @@ export default function SellerRegistration() {
                 transition={{ duration: 0.3 }}
                 className="mb-3 inline-flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-green-500/10 to-emerald-500/10 border border-green-500/20 rounded-full"
               >
-                <Sparkles className="h-3.5 w-3.5 text-green-400" />
+                <Sparkles className="h-3.5 w-3.5 text-success" />
                 <span className="text-xs font-semibold bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text text-transparent">
                   0% Fee + 0% Commission
                 </span>
@@ -588,7 +588,7 @@ export default function SellerRegistration() {
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.2, duration: 0.3 }}
-                className="text-sm text-gray-400 max-w-xl"
+                className="text-sm text-text-secondary max-w-xl"
               >
                 Join thousands of sellers. Keep 100% of your earnings.
               </motion.p>
@@ -602,17 +602,17 @@ export default function SellerRegistration() {
               className="flex flex-wrap gap-2 lg:gap-3"
             >
               {[
-                { label: 'Zero Fees', icon: DollarSign, color: 'text-green-400' },
-                { label: 'Instant', icon: Zap, color: 'text-yellow-400' },
+                { label: 'Zero Fees', icon: DollarSign, color: 'text-success' },
+                { label: 'Instant', icon: Zap, color: 'text-warning' },
                 { label: 'Fast Payouts', icon: Clock, color: 'text-blue-400' },
                 { label: '24/7 Support', icon: Headphones, color: 'text-purple-400' },
               ].map((benefit) => (
                 <div
                   key={benefit.label}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/[0.02] border border-white/[0.05]"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-bg-overlay border border-border-subtle"
                 >
                   <benefit.icon className={`h-3.5 w-3.5 ${benefit.color}`} />
-                  <span className="text-xs font-medium text-gray-300">
+                  <span className="text-xs font-medium text-text-secondary">
                     {benefit.label}
                   </span>
                 </div>
@@ -629,11 +629,11 @@ export default function SellerRegistration() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.4, duration: 0.3 }}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/[0.03] border border-white/[0.08] whitespace-nowrap"
+              className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-bg-overlay border border-border-subtle whitespace-nowrap"
             >
-              <Rocket className="h-3.5 w-3.5 text-violet-400" />
-              <span className="text-xs font-medium text-gray-300">
-                Step <span className="text-violet-400 font-semibold">{currentStep}</span>/{TOTAL_STEPS}
+              <Rocket className="h-3.5 w-3.5 text-lime-text" />
+              <span className="text-xs font-medium text-text-secondary">
+                Step <span className="text-lime-text font-semibold">{currentStep}</span>/{TOTAL_STEPS}
               </span>
             </motion.div>
           </div>

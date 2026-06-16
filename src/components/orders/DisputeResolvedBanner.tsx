@@ -33,10 +33,10 @@ export default function DisputeResolvedBanner({
   const buyerWon = favoredParty === 'buyer'
   const Icon = buyerWon ? CheckCircle : XCircle
   const colorClasses = buyerWon
-    ? 'border-green-500/30 bg-green-500/[0.08]'
-    : 'border-red-500/30 bg-red-500/[0.08]'
-  const iconColor = buyerWon ? 'text-green-400' : 'text-red-400'
-  const titleColor = buyerWon ? 'text-green-400' : 'text-red-400'
+    ? 'border-success/30 bg-green-500/[0.08]'
+    : 'border-error/40 bg-red-500/[0.08]'
+  const iconColor = buyerWon ? 'text-success' : 'text-error'
+  const titleColor = buyerWon ? 'text-success' : 'text-error'
 
   return (
     <div className={cn(
@@ -47,7 +47,7 @@ export default function DisputeResolvedBanner({
       <div className="flex items-start gap-4">
         <div className={cn(
           'flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl border',
-          buyerWon ? 'border-green-500/40 bg-green-500/20' : 'border-red-500/40 bg-red-500/20'
+          buyerWon ? 'border-green-500/40 bg-success-bg' : 'border-red-500/40 bg-error-bg'
         )}>
           <Icon className={cn('h-5 w-5', iconColor)} />
         </div>
@@ -61,28 +61,28 @@ export default function DisputeResolvedBanner({
             {/* Resolution Summary */}
             <div className={cn(
               'rounded-lg border p-3',
-              buyerWon ? 'border-green-500/20 bg-green-500/[0.05]' : 'border-red-500/20 bg-red-500/[0.05]'
+              buyerWon ? 'border-green-500/20 bg-green-500/[0.05]' : 'border-error/40 bg-red-500/[0.05]'
             )}>
-              <p className="text-xs text-gray-500 font-semibold mb-2">Resolution Summary</p>
+              <p className="text-xs text-text-tertiary font-semibold mb-2">Resolution Summary</p>
               <div className="space-y-2 text-sm">
                 <div className="flex items-center justify-between">
-                  <span className="text-gray-400">Decision:</span>
-                  <span className={cn('font-semibold', buyerWon ? 'text-green-400' : 'text-red-400')}>
+                  <span className="text-text-secondary">Decision:</span>
+                  <span className={cn('font-semibold', buyerWon ? 'text-success' : 'text-error')}>
                     {buyerWon ? 'Buyer favored' : 'Seller favored'}
                   </span>
                 </div>
 
                 {refundAmount !== undefined && (
                   <div className="flex items-center justify-between">
-                    <span className="text-gray-400">Refund Amount:</span>
-                    <span className={cn('font-bold', buyerWon ? 'text-green-400' : 'text-white')}>
+                    <span className="text-text-secondary">Refund Amount:</span>
+                    <span className={cn('font-bold', buyerWon ? 'text-success' : 'text-white')}>
                       ${refundAmount.toFixed(2)}
                     </span>
                   </div>
                 )}
 
                 <div className="flex items-center justify-between">
-                  <span className="text-gray-400">Resolved:</span>
+                  <span className="text-text-secondary">Resolved:</span>
                   <span className="text-white text-xs">{formatDate(resolvedAt)}</span>
                 </div>
               </div>
@@ -90,53 +90,53 @@ export default function DisputeResolvedBanner({
 
             {/* Resolution Notes */}
             {resolutionNotes && (
-              <div className="rounded-lg border border-white/[0.08] bg-white/[0.03] p-3">
+              <div className="rounded-lg border border-border-subtle bg-bg-overlay p-3">
                 <div className="flex items-center gap-2 mb-2">
-                  <FileText className="h-3.5 w-3.5 text-violet-400" />
-                  <p className="text-xs text-gray-500 font-semibold">Resolution Details:</p>
+                  <FileText className="h-3.5 w-3.5 text-lime-text" />
+                  <p className="text-xs text-text-tertiary font-semibold">Resolution Details:</p>
                 </div>
-                <p className="text-sm text-gray-300 leading-relaxed">{resolutionNotes}</p>
+                <p className="text-sm text-text-secondary leading-relaxed">{resolutionNotes}</p>
               </div>
             )}
 
             {/* What This Means */}
-            <div className="pt-3 border-t border-white/[0.08]">
-              <p className="text-xs text-gray-500 font-semibold mb-2">What This Means:</p>
+            <div className="pt-3 border-t border-border-subtle">
+              <p className="text-xs text-text-tertiary font-semibold mb-2">What This Means:</p>
               {buyerWon ? (
-                <ul className="space-y-1.5 text-xs text-gray-400">
+                <ul className="space-y-1.5 text-xs text-text-secondary">
                   <li className="flex items-start gap-2">
-                    <span className="text-green-400 mt-0.5">✓</span>
+                    <span className="text-success mt-0.5">✓</span>
                     <span>Your claim was approved by our support team</span>
                   </li>
                   <li className="flex items-start gap-2">
-                    <span className="text-green-400 mt-0.5">✓</span>
+                    <span className="text-success mt-0.5">✓</span>
                     <span>Refund has been processed to your original payment method</span>
                   </li>
                   <li className="flex items-start gap-2">
-                    <span className="text-green-400 mt-0.5">✓</span>
+                    <span className="text-success mt-0.5">✓</span>
                     <span>Funds will appear in your account within 3-5 business days</span>
                   </li>
                   <li className="flex items-start gap-2">
-                    <span className="text-green-400 mt-0.5">✓</span>
+                    <span className="text-success mt-0.5">✓</span>
                     <span>Order is now closed</span>
                   </li>
                 </ul>
               ) : (
-                <ul className="space-y-1.5 text-xs text-gray-400">
+                <ul className="space-y-1.5 text-xs text-text-secondary">
                   <li className="flex items-start gap-2">
-                    <span className="text-red-400 mt-0.5">✗</span>
+                    <span className="text-error mt-0.5">✗</span>
                     <span>Your dispute claim was not approved</span>
                   </li>
                   <li className="flex items-start gap-2">
-                    <span className="text-red-400 mt-0.5">✗</span>
+                    <span className="text-error mt-0.5">✗</span>
                     <span>Payment has been released to the seller</span>
                   </li>
                   <li className="flex items-start gap-2">
-                    <span className="text-red-400 mt-0.5">✗</span>
+                    <span className="text-error mt-0.5">✗</span>
                     <span>No refund will be issued</span>
                   </li>
                   <li className="flex items-start gap-2">
-                    <span className="text-gray-500 mt-0.5">•</span>
+                    <span className="text-text-tertiary mt-0.5">•</span>
                     <span>If you believe this decision was made in error, contact support within 7 days</span>
                   </li>
                 </ul>

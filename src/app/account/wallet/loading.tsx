@@ -16,7 +16,7 @@ export default function WalletLoading() {
         {Array.from({ length: 3 }).map((_, i) => <MetricCardSkeleton key={i} />)}
       </div>
       {/* Connect card */}
-      <div className="rounded-2xl bg-white/[0.04] border border-white/[0.08] p-6 space-y-4">
+      <div className="rounded-2xl bg-bg-raised border border-border-subtle p-6 space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="skeleton h-9 w-9 rounded-lg" />

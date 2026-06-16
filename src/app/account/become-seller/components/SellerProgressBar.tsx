@@ -49,7 +49,7 @@ export default function SellerProgressBar({ currentStep }: SellerProgressBarProp
                     ) : (
                       <Icon
                         className={`h-3.5 w-3.5 sm:h-4 sm:w-4 md:h-5 md:w-5 ${
-                          isActive ? 'text-primary' : 'text-gray-500'
+                          isActive ? 'text-primary' : 'text-text-tertiary'
                         }`}
                       />
                     )}
@@ -60,8 +60,8 @@ export default function SellerProgressBar({ currentStep }: SellerProgressBarProp
                       isActive
                         ? 'text-white'
                         : isCompleted
-                        ? 'text-gray-400'
-                        : 'text-gray-600'
+                        ? 'text-text-secondary'
+                        : 'text-text-disabled'
                     }`}
                   >
                     {step.name}

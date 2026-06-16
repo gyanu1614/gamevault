@@ -56,9 +56,9 @@ export default function CountdownTimer({
       <motion.div
         initial={{ scale: 0 }}
         animate={{ scale: 1 }}
-        className={`rounded-lg border border-green-500/30 bg-green-500/10 p-4 text-center ${className}`}
+        className={`rounded-lg border border-success/30 bg-success-bg p-4 text-center ${className}`}
       >
-        <div className="mb-2 flex items-center justify-center gap-2 text-green-400">
+        <div className="mb-2 flex items-center justify-center gap-2 text-success">
           <AlertCircle className="h-5 w-5" />
           <span className="font-semibold">Cooldown Period Expired</span>
         </div>
@@ -70,7 +70,7 @@ export default function CountdownTimer({
   return (
     <div className={`space-y-4 ${className}`}>
       {/* Header */}
-      <div className="flex items-center gap-2 text-yellow-400">
+      <div className="flex items-center gap-2 text-warning">
         <Clock className="h-5 w-5" />
         <span className="font-semibold">Eligible to reapply in:</span>
       </div>
@@ -84,7 +84,7 @@ export default function CountdownTimer({
       </div>
 
       {/* Target Date */}
-      <div className="flex items-center gap-2 text-sm text-gray-400">
+      <div className="flex items-center gap-2 text-sm text-text-secondary">
         <Calendar className="h-4 w-4" />
         <span>
           Available on:{' '}
@@ -126,7 +126,7 @@ function TimeUnit({ value, label }: { value: number; label: string }) {
       >
         {value.toString().padStart(2, '0')}
       </motion.div>
-      <div className="mt-1 text-xs text-gray-400">{label}</div>
+      <div className="mt-1 text-xs text-text-secondary">{label}</div>
     </div>
   )
 }

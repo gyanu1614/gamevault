@@ -34,13 +34,13 @@ function timeAgo(dateStr: string) {
 function NotificationIcon({ type }: { type: string }) {
   const map: Record<string, { icon: string; bg: string; text: string }> = {
     order_placed:    { icon: '🛍️', bg: 'bg-blue-500/20',   text: 'text-blue-400' },
-    order_delivered: { icon: '📦', bg: 'bg-green-500/20',  text: 'text-green-400' },
-    order_completed: { icon: '✅', bg: 'bg-green-500/20',  text: 'text-green-400' },
-    order_disputed:  { icon: '⚠️', bg: 'bg-red-500/20',    text: 'text-red-400' },
-    message:         { icon: '💬', bg: 'bg-violet-500/20', text: 'text-violet-400' },
-    review:          { icon: '⭐', bg: 'bg-yellow-500/20', text: 'text-yellow-400' },
+    order_delivered: { icon: '📦', bg: 'bg-success-bg',  text: 'text-success' },
+    order_completed: { icon: '✅', bg: 'bg-success-bg',  text: 'text-success' },
+    order_disputed:  { icon: '⚠️', bg: 'bg-error-bg',    text: 'text-error' },
+    message:         { icon: '💬', bg: 'bg-lime/20', text: 'text-lime-text' },
+    review:          { icon: '⭐', bg: 'bg-warning-bg', text: 'text-warning' },
     payout:          { icon: '💰', bg: 'bg-emerald-500/20','text': 'text-emerald-400' },
-    system:          { icon: '🔔', bg: 'bg-gray-500/20',   text: 'text-gray-400' },
+    system:          { icon: '🔔', bg: 'bg-gray-500/20',   text: 'text-text-secondary' },
   }
   const style = map[type] || map.system
   return (
@@ -111,8 +111,8 @@ export default function NotificationsPage() {
 
   if (authLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-black">
-        <Loader2 className="h-8 w-8 animate-spin text-violet-400" />
+      <div className="flex min-h-screen items-center justify-center bg-bg-base">
+        <Loader2 className="h-8 w-8 animate-spin text-lime-text" />
       </div>
     )
   }
@@ -130,20 +130,20 @@ export default function NotificationsPage() {
           <Button
             variant="ghost"
             size="icon"
-            className="h-9 w-9 rounded-full text-gray-400 hover:bg-white/10 hover:text-white"
+            className="h-9 w-9 rounded-full text-text-secondary hover:bg-white/10 hover:text-white"
             onClick={() => router.back()}
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div className="flex-1">
             <h1 className="text-2xl font-bold text-white">Notifications</h1>
-            <p className="text-sm text-gray-400">{unreadCount > 0 ? `${unreadCount} unread` : 'All caught up'}</p>
+            <p className="text-sm text-text-secondary">{unreadCount > 0 ? `${unreadCount} unread` : 'All caught up'}</p>
           </div>
           {unreadCount > 0 && (
             <Button
               variant="ghost"
               size="sm"
-              className="gap-1.5 rounded-full text-xs text-gray-400 hover:bg-white/10 hover:text-white"
+              className="gap-1.5 rounded-full text-xs text-text-secondary hover:bg-white/10 hover:text-white"
               onClick={markAllRead}
               disabled={marking}
             >
@@ -154,19 +154,19 @@ export default function NotificationsPage() {
         </div>
 
         {/* Tabs */}
-        <div className="mb-6 flex rounded-xl bg-white/[0.04] p-1">
+        <div className="mb-6 flex rounded-xl bg-bg-raised p-1">
           {(['all', 'unread'] as Tab[]).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
               className={cn(
                 'flex-1 rounded-lg py-2 text-sm font-medium capitalize transition-colors',
-                tab === t ? 'bg-white/10 text-white' : 'text-gray-400 hover:text-gray-300'
+                tab === t ? 'bg-white/10 text-white' : 'text-text-secondary hover:text-text-secondary'
               )}
             >
               {t}
               {t === 'unread' && unreadCount > 0 && (
-                <span className="ml-1.5 rounded-full bg-violet-500 px-1.5 py-0.5 text-[10px] font-bold text-white">
+                <span className="ml-1.5 rounded-full bg-lime px-1.5 py-0.5 text-[10px] font-bold text-text-inverse">
                   {unreadCount}
                 </span>
               )}
@@ -177,17 +177,17 @@ export default function NotificationsPage() {
         {/* List */}
         {isLoading ? (
           <div className="flex items-center justify-center py-20">
-            <Loader2 className="h-8 w-8 animate-spin text-violet-400" />
+            <Loader2 className="h-8 w-8 animate-spin text-lime-text" />
           </div>
         ) : !notifications || notifications.length === 0 ? (
           <div className="py-20 text-center">
-            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-white/[0.04]">
-              <Bell className="h-8 w-8 text-gray-500" />
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-bg-raised">
+              <Bell className="h-8 w-8 text-text-tertiary" />
             </div>
             <h3 className="mb-1 text-lg font-semibold text-white">
               {tab === 'unread' ? 'No unread notifications' : 'No notifications yet'}
             </h3>
-            <p className="text-sm text-gray-400">
+            <p className="text-sm text-text-secondary">
               {tab === 'unread' ? "You're all caught up!" : "We'll notify you about orders, messages, and more."}
             </p>
           </div>
@@ -208,25 +208,25 @@ export default function NotificationsPage() {
                       if (!notification.is_read) markAsRead(notification.id)
                     }}
                     className={cn(
-                      'group flex items-start gap-3 rounded-xl border p-4 transition-all hover:bg-white/[0.04]',
+                      'group flex items-start gap-3 rounded-xl border p-4 transition-all hover:bg-bg-raised',
                       notification.is_read
-                        ? 'border-white/[0.05] bg-transparent'
-                        : 'border-violet-500/20 bg-violet-500/[0.06]'
+                        ? 'border-border-subtle bg-transparent'
+                        : 'border-lime-tint-border bg-lime/[0.06]'
                     )}
                   >
                     <NotificationIcon type={notification.type || 'system'} />
 
                     <div className="min-w-0 flex-1">
                       <div className="flex items-start justify-between gap-2">
-                        <p className={cn('text-sm font-semibold leading-snug', notification.is_read ? 'text-gray-300' : 'text-white')}>
+                        <p className={cn('text-sm font-semibold leading-snug', notification.is_read ? 'text-text-secondary' : 'text-white')}>
                           {notification.title}
                         </p>
-                        <span className="flex-shrink-0 text-xs text-gray-500">
+                        <span className="flex-shrink-0 text-xs text-text-tertiary">
                           {timeAgo(notification.created_at)}
                         </span>
                       </div>
                       {notification.message && (
-                        <p className="mt-0.5 line-clamp-2 text-xs text-gray-400">{notification.message}</p>
+                        <p className="mt-0.5 line-clamp-2 text-xs text-text-secondary">{notification.message}</p>
                       )}
                     </div>
 
@@ -240,7 +240,7 @@ export default function NotificationsPage() {
                           markAsRead(notification.id)
                         }}
                       >
-                        <Check className="h-4 w-4 text-violet-400 hover:text-violet-300" />
+                        <Check className="h-4 w-4 text-lime-text hover:text-lime-text" />
                       </button>
                     )}
                   </Link>

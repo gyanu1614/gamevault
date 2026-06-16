@@ -2,9 +2,9 @@ import { ChatMessageSkeleton } from '@/components/ui/skeletons'
 
 export default function MessagesLoading() {
   return (
-    <div className="flex h-[calc(100vh-8rem)] rounded-2xl overflow-hidden border border-white/[0.08] bg-white/[0.02]">
+    <div className="flex h-[calc(100vh-8rem)] rounded-2xl overflow-hidden border border-border-subtle bg-bg-overlay">
       {/* Conversation list */}
-      <div className="w-72 shrink-0 border-r border-white/[0.06] p-3 space-y-2">
+      <div className="w-72 shrink-0 border-r border-border-subtle p-3 space-y-2">
         <div className="skeleton h-9 w-full rounded-xl mb-3" />
         {Array.from({ length: 7 }).map((_, i) => (
           <div key={i} className="flex items-center gap-3 p-2 rounded-xl">

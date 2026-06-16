@@ -153,15 +153,15 @@ export default function EditReviewModal({
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.9, opacity: 0, y: 20 }}
             transition={{ type: "spring", stiffness: 300, damping: 25 }}
-            className="bg-white/[0.02] backdrop-blur-2xl border border-white/[0.1] rounded-3xl shadow-2xl max-w-md w-full overflow-hidden"
+            className="bg-bg-overlay backdrop-blur-2xl border border-white/[0.1] rounded-3xl shadow-2xl max-w-md w-full overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="relative p-6 pb-4 border-b border-white/[0.05]">
+            <div className="relative p-6 pb-4 border-b border-border-subtle">
               <button
                 onClick={handleClose}
                 disabled={isSubmitting}
-                className="absolute top-4 right-4 p-2 rounded-full hover:bg-white/[0.05] text-gray-400 hover:text-white transition-all disabled:opacity-50"
+                className="absolute top-4 right-4 p-2 rounded-full hover:bg-bg-overlay text-text-secondary hover:text-white transition-all disabled:opacity-50"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -169,15 +169,15 @@ export default function EditReviewModal({
                 <h2 className="text-2xl font-semibold text-white mb-1">
                   Edit Your Review
                 </h2>
-                <p className="text-sm text-gray-400">
+                <p className="text-sm text-text-secondary">
                   Make changes to your review
                 </p>
               </div>
             </div>
 
             {/* Warning Banner */}
-            <div className="mx-6 mt-4 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg flex items-start gap-2">
-              <AlertCircle className="w-4 h-4 text-yellow-400 flex-shrink-0 mt-0.5" />
+            <div className="mx-6 mt-4 p-3 bg-warning-bg border border-yellow-500/20 rounded-lg flex items-start gap-2">
+              <AlertCircle className="w-4 h-4 text-warning flex-shrink-0 mt-0.5" />
               <p className="text-xs text-yellow-200">
                 Edited reviews will display an "Edited" badge. You can edit once per 24 hours.
               </p>
@@ -187,7 +187,7 @@ export default function EditReviewModal({
             <form onSubmit={handleSubmit} className="p-6 space-y-6">
               {/* Thumbs Up/Down Selector */}
               <div className="space-y-3">
-                <label className="block text-sm font-medium text-gray-300 text-center">
+                <label className="block text-sm font-medium text-text-secondary text-center">
                   Rate your experience
                 </label>
                 <div className="flex items-center justify-center gap-6">
@@ -202,8 +202,8 @@ export default function EditReviewModal({
                     className={cn(
                       "relative p-6 rounded-2xl border-2 transition-all duration-300",
                       reviewType === 'positive'
-                        ? "bg-green-500/20 border-green-500/50 shadow-lg shadow-green-500/20"
-                        : "bg-white/[0.03] border-white/[0.1] hover:bg-white/[0.05] hover:border-white/[0.15]"
+                        ? "bg-success-bg border-green-500/50 shadow-lg shadow-green-500/20"
+                        : "bg-bg-overlay border-white/[0.1] hover:bg-bg-overlay hover:border-white/[0.15]"
                     )}
                   >
                     <motion.div
@@ -216,7 +216,7 @@ export default function EditReviewModal({
                       <ThumbsUp
                         className={cn(
                           "w-12 h-12 transition-colors duration-300",
-                          reviewType === 'positive' ? "text-green-400 fill-green-400" : "text-gray-500"
+                          reviewType === 'positive' ? "text-success fill-green-400" : "text-text-tertiary"
                         )}
                       />
                     </motion.div>
@@ -242,8 +242,8 @@ export default function EditReviewModal({
                     className={cn(
                       "relative p-6 rounded-2xl border-2 transition-all duration-300",
                       reviewType === 'negative'
-                        ? "bg-red-500/20 border-red-500/50 shadow-lg shadow-red-500/20"
-                        : "bg-white/[0.03] border-white/[0.1] hover:bg-white/[0.05] hover:border-white/[0.15]"
+                        ? "bg-error-bg border-red-500/50 shadow-lg shadow-red-500/20"
+                        : "bg-bg-overlay border-white/[0.1] hover:bg-bg-overlay hover:border-white/[0.15]"
                     )}
                   >
                     <motion.div
@@ -256,7 +256,7 @@ export default function EditReviewModal({
                       <ThumbsDown
                         className={cn(
                           "w-12 h-12 transition-colors duration-300",
-                          reviewType === 'negative' ? "text-red-400 fill-red-400" : "text-gray-500"
+                          reviewType === 'negative' ? "text-error fill-red-400" : "text-text-tertiary"
                         )}
                       />
                     </motion.div>
@@ -275,8 +275,8 @@ export default function EditReviewModal({
 
               {/* Title (Optional) */}
               <div className="space-y-2">
-                <label htmlFor="review-title" className="block text-sm font-medium text-gray-300">
-                  Title <span className="text-gray-500">(optional)</span>
+                <label htmlFor="review-title" className="block text-sm font-medium text-text-secondary">
+                  Title <span className="text-text-tertiary">(optional)</span>
                 </label>
                 <input
                   id="review-title"
@@ -285,11 +285,11 @@ export default function EditReviewModal({
                   onChange={(e) => setTitle(e.target.value)}
                   maxLength={100}
                   placeholder="Brief summary of your experience"
-                  className="w-full px-4 py-3 bg-white/[0.03] border border-white/[0.1] rounded-xl text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-transparent transition-all"
+                  className="w-full px-4 py-3 bg-bg-overlay border border-white/[0.1] rounded-xl text-white placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-transparent transition-all"
                   disabled={isSubmitting}
                 />
                 <div className="flex justify-end">
-                  <span className="text-xs text-gray-500">
+                  <span className="text-xs text-text-tertiary">
                     {title.length}/100
                   </span>
                 </div>
@@ -297,7 +297,7 @@ export default function EditReviewModal({
 
               {/* Comment */}
               <div className="space-y-2">
-                <label htmlFor="review-comment" className="block text-sm font-medium text-gray-300">
+                <label htmlFor="review-comment" className="block text-sm font-medium text-text-secondary">
                   Your review
                 </label>
                 <textarea
@@ -311,17 +311,17 @@ export default function EditReviewModal({
                       ? "Share what made your experience great..."
                       : "Let us know what went wrong..."
                   }
-                  className="w-full px-4 py-3 bg-white/[0.03] border border-white/[0.1] rounded-xl text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-transparent transition-all resize-none"
+                  className="w-full px-4 py-3 bg-bg-overlay border border-white/[0.1] rounded-xl text-white placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-transparent transition-all resize-none"
                   disabled={isSubmitting}
                 />
                 <div className="flex items-center justify-between text-xs">
                   <span className={cn(
                     "transition-colors",
-                    comment.trim().length < 10 ? "text-red-400" : "text-gray-500"
+                    comment.trim().length < 10 ? "text-error" : "text-text-tertiary"
                   )}>
                     {comment.trim().length < 10 ? `${10 - comment.trim().length} more characters needed` : 'Good to go'}
                   </span>
-                  <span className="text-gray-500">
+                  <span className="text-text-tertiary">
                     {comment.length}/2000
                   </span>
                 </div>
@@ -334,7 +334,7 @@ export default function EditReviewModal({
                   type="button"
                   onClick={handleClose}
                   disabled={isSubmitting}
-                  className="flex-1 py-3 rounded-xl font-medium text-gray-400 hover:text-white hover:bg-white/[0.05] transition-all disabled:opacity-50"
+                  className="flex-1 py-3 rounded-xl font-medium text-text-secondary hover:text-white hover:bg-bg-overlay transition-all disabled:opacity-50"
                 >
                   Cancel
                 </button>
@@ -347,8 +347,8 @@ export default function EditReviewModal({
                   className={cn(
                     "flex-1 py-3 rounded-xl font-semibold transition-all shadow-lg flex items-center justify-center gap-2",
                     hasChanges && !isSubmitting && comment.trim().length >= 10
-                      ? "bg-gradient-to-r from-violet-500 to-purple-500 hover:from-violet-600 hover:to-purple-600 text-white shadow-violet-500/20"
-                      : "bg-white/[0.05] text-gray-500 cursor-not-allowed"
+                      ? "bg-gradient-to-r from-lime to-purple-500 hover:from-lime hover:to-purple-600 text-white shadow-violet-500/20"
+                      : "bg-bg-overlay text-text-tertiary cursor-not-allowed"
                   )}
                 >
                   {isSubmitting ? (

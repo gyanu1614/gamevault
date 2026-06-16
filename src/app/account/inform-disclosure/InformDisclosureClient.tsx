@@ -39,7 +39,7 @@ function Field({
   return (
     <div>
       <label className="block text-xs font-medium text-white/60 mb-1.5">
-        {label}{required && <span className="text-red-400 ml-0.5">*</span>}
+        {label}{required && <span className="text-error ml-0.5">*</span>}
       </label>
       <input
         type={type}
@@ -48,8 +48,8 @@ function Field({
         onChange={e => onChange(e.target.value)}
         placeholder={placeholder}
         required={required}
-        className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2.5 text-sm text-white
-                   placeholder:text-white/20 focus:outline-none focus:border-violet-500/50 transition-colors"
+        className="w-full bg-bg-raised border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-white
+                   placeholder:text-white/20 focus:outline-none focus:border-lime transition-colors"
       />
       {hint && <p className="text-xs text-white/30 mt-1">{hint}</p>}
     </div>
@@ -61,10 +61,10 @@ function Field({
 function StatusBanner({ status, rejectionReason }: { status: string; rejectionReason?: string | null }) {
   if (status === 'certified') {
     return (
-      <div className="flex items-start gap-3 bg-green-500/10 border border-green-500/20 rounded-xl p-4">
-        <CheckCircle2 className="w-5 h-5 text-green-400 flex-shrink-0 mt-0.5" />
+      <div className="flex items-start gap-3 bg-success-bg border border-green-500/20 rounded-xl p-4">
+        <CheckCircle2 className="w-5 h-5 text-success flex-shrink-0 mt-0.5" />
         <div>
-          <p className="text-sm font-semibold text-green-400">Disclosure Certified</p>
+          <p className="text-sm font-semibold text-success">Disclosure Certified</p>
           <p className="text-xs text-white/50 mt-0.5">
             Your identity has been verified. You are compliant with INFORM Act requirements.
           </p>
@@ -87,10 +87,10 @@ function StatusBanner({ status, rejectionReason }: { status: string; rejectionRe
   }
   if (status === 'rejected') {
     return (
-      <div className="flex items-start gap-3 bg-red-500/10 border border-red-500/20 rounded-xl p-4">
-        <AlertTriangle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+      <div className="flex items-start gap-3 bg-error-bg border border-error/40 rounded-xl p-4">
+        <AlertTriangle className="w-5 h-5 text-error flex-shrink-0 mt-0.5" />
         <div>
-          <p className="text-sm font-semibold text-red-400">Disclosure Rejected — Resubmission Required</p>
+          <p className="text-sm font-semibold text-error">Disclosure Rejected — Resubmission Required</p>
           {rejectionReason && (
             <p className="text-xs text-white/50 mt-0.5">Reason: {rejectionReason}</p>
           )}
@@ -167,13 +167,13 @@ export default function InformDisclosureClient({
       <motion.div variants={container} initial="hidden" animate="show" className="max-w-2xl mx-auto space-y-6 pb-10">
         <motion.div variants={item}>
           <h1 className="text-2xl font-bold text-white mb-1 flex items-center gap-2.5">
-            <ShieldCheck className="w-6 h-6 text-violet-400" />
+            <ShieldCheck className="w-6 h-6 text-lime-text" />
             INFORM Act Compliance
           </h1>
           <p className="text-white/40 text-sm">Identity verification for high-volume sellers.</p>
         </motion.div>
 
-        <motion.div variants={item} className="bg-[#0f0f0f] border border-white/[0.06] rounded-xl p-5">
+        <motion.div variants={item} className="bg-[#0f0f0f] border border-border-subtle rounded-xl p-5">
           <div className="flex items-start gap-3">
             <Info className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
             <div>
@@ -201,7 +201,7 @@ export default function InformDisclosureClient({
       <motion.div variants={container} initial="hidden" animate="show" className="max-w-2xl mx-auto space-y-6 pb-10">
         <motion.div variants={item}>
           <h1 className="text-2xl font-bold text-white mb-1 flex items-center gap-2.5">
-            <ShieldCheck className="w-6 h-6 text-violet-400" />
+            <ShieldCheck className="w-6 h-6 text-lime-text" />
             INFORM Act Disclosure
           </h1>
         </motion.div>
@@ -209,7 +209,7 @@ export default function InformDisclosureClient({
           <StatusBanner status={status} rejectionReason={disclosure?.rejection_reason} />
         </motion.div>
         {disclosure && (
-          <motion.div variants={item} className="bg-[#0f0f0f] border border-white/[0.06] rounded-xl p-5 space-y-2">
+          <motion.div variants={item} className="bg-[#0f0f0f] border border-border-subtle rounded-xl p-5 space-y-2">
             <p className="text-xs font-medium text-white/40 uppercase tracking-wider mb-3">Submitted Information</p>
             {[
               ['Legal Name',    disclosure.legal_name],
@@ -253,7 +253,7 @@ export default function InformDisclosureClient({
         <form onSubmit={handleSubmit} className="space-y-5">
 
           {/* Identity */}
-          <div className="bg-[#0f0f0f] border border-white/[0.06] rounded-xl p-5 space-y-4">
+          <div className="bg-[#0f0f0f] border border-border-subtle rounded-xl p-5 space-y-4">
             <p className="text-xs font-semibold text-white/50 uppercase tracking-wider">Legal Identity</p>
             <Field label="Legal Full Name or Business Name" name="legalName" value={form.legalName}
               onChange={set('legalName')} required placeholder="Jane Doe or Acme LLC" />
@@ -274,7 +274,7 @@ export default function InformDisclosureClient({
           </div>
 
           {/* Financial identifiers */}
-          <div className="bg-[#0f0f0f] border border-white/[0.06] rounded-xl p-5 space-y-4">
+          <div className="bg-[#0f0f0f] border border-border-subtle rounded-xl p-5 space-y-4">
             <p className="text-xs font-semibold text-white/50 uppercase tracking-wider">Financial Identifiers</p>
             <Field label="Tax ID — Last 4 digits only (SSN or EIN)" name="taxIdLast4" value={form.taxIdLast4}
               onChange={set('taxIdLast4')} required placeholder="4321"
@@ -285,7 +285,7 @@ export default function InformDisclosureClient({
           </div>
 
           {/* Public contact */}
-          <div className="bg-[#0f0f0f] border border-white/[0.06] rounded-xl p-5 space-y-4">
+          <div className="bg-[#0f0f0f] border border-border-subtle rounded-xl p-5 space-y-4">
             <p className="text-xs font-semibold text-white/50 uppercase tracking-wider">Public Contact Information</p>
             <p className="text-xs text-white/30">
               Under the INFORM Act, buyers may request this contact information. It will only be
@@ -302,12 +302,12 @@ export default function InformDisclosureClient({
             onClick={() => setConsented(v => !v)}
             className={`flex items-start gap-3 p-4 rounded-xl border cursor-pointer transition-colors ${
               consented
-                ? 'bg-violet-500/10 border-violet-500/30'
-                : 'bg-white/[0.02] border-white/[0.06] hover:border-white/[0.1]'
+                ? 'bg-lime/10 border-lime-tint-border'
+                : 'bg-bg-overlay border-border-subtle hover:border-white/[0.1]'
             }`}
           >
             <div className={`w-4 h-4 mt-0.5 rounded flex-shrink-0 border transition-colors ${
-              consented ? 'bg-violet-500 border-violet-400' : 'border-white/20'
+              consented ? 'bg-lime border-violet-400' : 'border-white/20'
             }`}>
               {consented && (
                 <svg viewBox="0 0 12 12" fill="none" className="w-full h-full p-0.5">
@@ -325,7 +325,7 @@ export default function InformDisclosureClient({
           <button
             type="submit"
             disabled={saving || !consented}
-            className="w-full py-3 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-semibold text-sm
+            className="w-full py-3 rounded-xl bg-lime hover:bg-lime-hover text-text-inverse font-semibold text-sm
                        transition-colors disabled:opacity-40 flex items-center justify-center gap-2"
           >
             {saving && <Loader2 className="w-4 h-4 animate-spin" />}

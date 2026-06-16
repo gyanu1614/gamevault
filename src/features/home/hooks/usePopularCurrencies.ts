@@ -39,6 +39,7 @@ export function usePopularCurrencies() {
   return useQuery({
     queryKey: ['popular-currencies'],
     queryFn: async (): Promise<PopularCurrency[]> => MOCK_POPULAR_CURRENCIES,
+    initialData: MOCK_POPULAR_CURRENCIES,
     staleTime: 5 * 60 * 1000,
   })
 }

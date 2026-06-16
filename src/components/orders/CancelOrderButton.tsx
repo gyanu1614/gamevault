@@ -39,10 +39,10 @@ export default function CancelOrderButton({ orderId, orderNumber, role = 'seller
     return (
       <div className="rounded-xl border border-red-500/25 bg-red-500/[0.06] p-3 space-y-2.5">
         <div className="flex items-start gap-2">
-          <AlertTriangle className="h-3.5 w-3.5 text-red-400 flex-shrink-0 mt-0.5" />
+          <AlertTriangle className="h-3.5 w-3.5 text-error flex-shrink-0 mt-0.5" />
           <div>
-            <div className="text-[11px] font-semibold text-red-300">Cancel order {orderNumber ? `#${orderNumber}` : ''}?</div>
-            <div className="text-[10px] text-red-400/70 mt-0.5 leading-relaxed">
+            <div className="text-[11px] font-semibold text-error">Cancel order {orderNumber ? `#${orderNumber}` : ''}?</div>
+            <div className="text-[10px] text-error/70 mt-0.5 leading-relaxed">
               {role === 'seller'
                 ? 'The buyer will receive a full refund within 5–10 business days.'
                 : 'A full refund will be returned to your original payment method within 5–10 business days.'}
@@ -53,7 +53,7 @@ export default function CancelOrderButton({ orderId, orderNumber, role = 'seller
           <button
             onClick={() => setShowConfirm(false)}
             disabled={isLoading}
-            className="flex-1 py-1.5 text-[11px] font-medium text-gray-400 bg-white/[0.05] hover:bg-white/[0.08] rounded-lg transition-colors disabled:opacity-50"
+            className="flex-1 py-1.5 text-[11px] font-medium text-text-secondary bg-bg-overlay hover:bg-bg-raised-hover rounded-lg transition-colors disabled:opacity-50"
           >
             Keep Order
           </button>
@@ -76,7 +76,7 @@ export default function CancelOrderButton({ orderId, orderNumber, role = 'seller
   return (
     <button
       onClick={() => setShowConfirm(true)}
-      className="w-full flex items-center justify-center gap-1.5 py-2 text-[11px] font-medium text-red-400/80 border border-red-500/15 bg-transparent hover:bg-red-500/[0.06] hover:border-red-500/25 hover:text-red-400 rounded-lg transition-all"
+      className="w-full flex items-center justify-center gap-1.5 py-2 text-[11px] font-medium text-error/80 border border-red-500/15 bg-transparent hover:bg-red-500/[0.06] hover:border-red-500/25 hover:text-error rounded-lg transition-all"
     >
       <X className="h-3.5 w-3.5" />
       Cancel Order

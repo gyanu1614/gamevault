@@ -72,9 +72,9 @@ export default function SellerOrderDetailClient({
         {/* Main Content */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Chat Container */}
-        <div className="bg-white/[0.03] border border-white/[0.05] rounded-xl overflow-hidden">
+        <div className="bg-bg-overlay border border-border-subtle rounded-xl overflow-hidden">
           {/* Chat Header */}
-          <div className="bg-white/[0.05] border-b border-white/[0.05] p-4">
+          <div className="bg-bg-overlay border-b border-border-subtle p-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="relative">
@@ -91,10 +91,10 @@ export default function SellerOrderDetailClient({
                   <h3 className="text-sm font-semibold text-white">
                     {otherUser.username}
                   </h3>
-                  <p className="text-xs text-gray-400">Buyer</p>
+                  <p className="text-xs text-text-secondary">Buyer</p>
                 </div>
               </div>
-              <div className="flex items-center gap-2 text-xs text-gray-400">
+              <div className="flex items-center gap-2 text-xs text-text-secondary">
                 <Package className="h-3.5 w-3.5" />
                 <span>Order #{order.order_number || order.id.slice(0, 8).toUpperCase()}</span>
               </div>
@@ -106,8 +106,8 @@ export default function SellerOrderDetailClient({
             {conversationLoading ? (
               <div className="flex h-full items-center justify-center">
                 <div className="flex flex-col items-center gap-3">
-                  <Loader2 className="h-8 w-8 animate-spin text-violet-500" />
-                  <p className="text-sm text-gray-400">Loading conversation...</p>
+                  <Loader2 className="h-8 w-8 animate-spin text-lime-text" />
+                  <p className="text-sm text-text-secondary">Loading conversation...</p>
                 </div>
               </div>
             ) : conversationId && user ? (
@@ -121,8 +121,8 @@ export default function SellerOrderDetailClient({
             ) : (
               <div className="flex h-full items-center justify-center">
                 <div className="text-center">
-                  <AlertCircle className="mx-auto mb-3 h-12 w-12 text-gray-600" />
-                  <p className="text-sm text-gray-400">Unable to load chat</p>
+                  <AlertCircle className="mx-auto mb-3 h-12 w-12 text-text-disabled" />
+                  <p className="text-sm text-text-secondary">Unable to load chat</p>
                 </div>
               </div>
             )}
@@ -141,7 +141,7 @@ export default function SellerOrderDetailClient({
                 <div className="text-sm font-medium text-blue-400">
                   Auto-release in {hoursRemaining}h {minutesRemaining}m
                 </div>
-                <div className="text-xs text-gray-400">
+                <div className="text-xs text-text-secondary">
                   Funds will be automatically released if buyer doesn't respond
                 </div>
               </div>
@@ -151,14 +151,14 @@ export default function SellerOrderDetailClient({
 
         {/* Escrow Released */}
         {order.escrow_status === 'released' && (
-          <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-4">
+          <div className="bg-success-bg border border-success/30 rounded-xl p-4">
             <div className="flex items-center gap-3">
-              <CheckCircle2 className="w-5 h-5 text-green-400 flex-shrink-0" />
+              <CheckCircle2 className="w-5 h-5 text-success flex-shrink-0" />
               <div>
-                <div className="text-sm font-medium text-green-400">
+                <div className="text-sm font-medium text-success">
                   Payment Released
                 </div>
-                <div className="text-xs text-gray-400">
+                <div className="text-xs text-text-secondary">
                   ${sellerPayout.toFixed(2)} has been transferred to your balance
                 </div>
               </div>
@@ -167,7 +167,7 @@ export default function SellerOrderDetailClient({
         )}
 
         {/* Listing Info */}
-        <div className="bg-white/[0.03] border border-white/[0.05] rounded-xl p-6">
+        <div className="bg-bg-overlay border border-border-subtle rounded-xl p-6">
           <h2 className="text-lg font-semibold text-white mb-4">Listing Details</h2>
           <div className="flex gap-3">
             {order.listing?.images && order.listing.images[0] ? (
@@ -180,7 +180,7 @@ export default function SellerOrderDetailClient({
                 />
               </div>
             ) : (
-              <div className="w-16 h-16 rounded-lg bg-violet-500/20 flex items-center justify-center text-2xl flex-shrink-0">
+              <div className="w-16 h-16 rounded-lg bg-lime/20 flex items-center justify-center text-2xl flex-shrink-0">
                 🎮
               </div>
             )}
@@ -188,11 +188,11 @@ export default function SellerOrderDetailClient({
               <h3 className="text-sm font-semibold text-white mb-1 line-clamp-2">
                 {order.listing?.title || 'Unknown Listing'}
               </h3>
-              <div className="text-xs text-gray-400">
+              <div className="text-xs text-text-secondary">
                 Qty: {order.quantity} × ${order.unit_price.toFixed(2)}
               </div>
               {order.listing && (
-                <div className="text-xs text-gray-400 mt-1">
+                <div className="text-xs text-text-secondary mt-1">
                   {order.listing.delivery_method} • {order.listing.delivery_time}
                 </div>
               )}
@@ -202,7 +202,7 @@ export default function SellerOrderDetailClient({
 
         {/* Delivery Evidence */}
         {order.delivery_evidence_required && (
-          <div className="bg-white/[0.03] border border-white/[0.05] rounded-xl p-6">
+          <div className="bg-bg-overlay border border-border-subtle rounded-xl p-6">
             <h2 className="text-lg font-semibold text-white mb-3">Delivery Evidence</h2>
             <div className="mb-3 p-2.5 bg-blue-500/10 border border-blue-500/30 rounded-lg text-xs text-blue-400">
               <Shield className="w-3.5 h-3.5 inline mr-1.5" />
@@ -218,9 +218,9 @@ export default function SellerOrderDetailClient({
 
         {/* Delivery Action */}
         {order.status === 'paid' && (
-          <div className="bg-white/[0.03] border border-white/[0.05] rounded-xl p-6">
+          <div className="bg-bg-overlay border border-border-subtle rounded-xl p-6">
             <h2 className="text-lg font-semibold text-white mb-3">Mark as Delivered</h2>
-            <p className="text-sm text-gray-400 mb-4">
+            <p className="text-sm text-text-secondary mb-4">
               Once you've delivered the order, mark it as delivered to start the 48-hour auto-release timer.
             </p>
             <MarkAsDeliveredButton
@@ -234,38 +234,38 @@ export default function SellerOrderDetailClient({
 
         {/* Delivery Notes */}
         {order.delivery_notes && (
-          <div className="bg-white/[0.03] border border-white/[0.05] rounded-xl p-6">
+          <div className="bg-bg-overlay border border-border-subtle rounded-xl p-6">
             <h2 className="text-lg font-semibold text-white mb-3">Delivery Notes</h2>
-            <p className="text-sm text-gray-300 whitespace-pre-wrap">{order.delivery_notes}</p>
+            <p className="text-sm text-text-secondary whitespace-pre-wrap">{order.delivery_notes}</p>
           </div>
         )}
 
         {/* Payment Summary */}
-        <div className="bg-white/[0.03] border border-white/[0.05] rounded-xl p-6">
+        <div className="bg-bg-overlay border border-border-subtle rounded-xl p-6">
           <h2 className="text-lg font-semibold text-white mb-4">Payment Summary</h2>
 
           <div className="space-y-2.5 mb-4">
             <div className="flex justify-between text-sm">
-              <span className="text-gray-400">Subtotal</span>
+              <span className="text-text-secondary">Subtotal</span>
               <span className="text-white">${order.subtotal.toFixed(2)}</span>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-gray-400">Platform Fee ({order.platform_fee_rate}%)</span>
-              <span className="text-red-400">-${order.platform_fee.toFixed(2)}</span>
+              <span className="text-text-secondary">Platform Fee ({order.platform_fee_rate}%)</span>
+              <span className="text-error">-${order.platform_fee.toFixed(2)}</span>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-gray-400">Payment Processing ({order.payment_processing_fee_rate}%)</span>
-              <span className="text-red-400">-${order.payment_processing_fee.toFixed(2)}</span>
+              <span className="text-text-secondary">Payment Processing ({order.payment_processing_fee_rate}%)</span>
+              <span className="text-error">-${order.payment_processing_fee.toFixed(2)}</span>
             </div>
-            <div className="pt-3 border-t border-white/[0.05] flex justify-between">
+            <div className="pt-3 border-t border-border-subtle flex justify-between">
               <span className="font-semibold text-white">Your Payout</span>
-              <span className="font-bold text-green-400 text-lg">
+              <span className="font-bold text-success text-lg">
                 ${sellerPayout.toFixed(2)}
               </span>
             </div>
           </div>
 
-          <div className="p-3 bg-green-500/10 border border-green-500/30 rounded-lg text-xs text-green-400">
+          <div className="p-3 bg-success-bg border border-success/30 rounded-lg text-xs text-success">
             <DollarSign className="w-4 h-4 inline mr-2" />
             {order.escrow_status === 'released'
               ? 'Funds released to your balance'
@@ -274,19 +274,19 @@ export default function SellerOrderDetailClient({
         </div>
 
         {/* Order Info */}
-        <div className="bg-white/[0.03] border border-white/[0.05] rounded-xl p-6">
+        <div className="bg-bg-overlay border border-border-subtle rounded-xl p-6">
           <h2 className="text-lg font-semibold text-white mb-4">Order Information</h2>
 
           <div className="space-y-3 text-sm">
             <div>
-              <div className="text-gray-400 mb-1 text-xs">Order ID</div>
+              <div className="text-text-secondary mb-1 text-xs">Order ID</div>
               <div className="text-white font-mono text-xs">
                 {order.order_number || order.id.slice(0, 8).toUpperCase()}
               </div>
             </div>
 
             <div>
-              <div className="text-gray-400 mb-1 text-xs">Created</div>
+              <div className="text-text-secondary mb-1 text-xs">Created</div>
               <div className="text-white text-xs">
                 {new Date(order.created_at).toLocaleString()}
               </div>
@@ -294,7 +294,7 @@ export default function SellerOrderDetailClient({
 
             {order.delivered_at && (
               <div>
-                <div className="text-gray-400 mb-1 text-xs">Delivered</div>
+                <div className="text-text-secondary mb-1 text-xs">Delivered</div>
                 <div className="text-white text-xs">
                   {new Date(order.delivered_at).toLocaleString()}
                 </div>
@@ -303,7 +303,7 @@ export default function SellerOrderDetailClient({
 
             {order.completed_at && (
               <div>
-                <div className="text-gray-400 mb-1 text-xs">Completed</div>
+                <div className="text-text-secondary mb-1 text-xs">Completed</div>
                 <div className="text-white text-xs">
                   {new Date(order.completed_at).toLocaleString()}
                 </div>
@@ -312,7 +312,7 @@ export default function SellerOrderDetailClient({
 
             {order.protection_until && (
               <div>
-                <div className="text-gray-400 mb-1 text-xs">Protection Until</div>
+                <div className="text-text-secondary mb-1 text-xs">Protection Until</div>
                 <div className="text-white text-xs">
                   {new Date(order.protection_until).toLocaleDateString()}
                 </div>
@@ -322,15 +322,15 @@ export default function SellerOrderDetailClient({
         </div>
 
         {/* Actions */}
-        <div className="bg-white/[0.03] border border-white/[0.05] rounded-xl p-6">
+        <div className="bg-bg-overlay border border-border-subtle rounded-xl p-6">
           <h2 className="text-lg font-semibold text-white mb-4">Actions</h2>
 
           <div className="space-y-2">
-            <button className="w-full py-2.5 bg-white/[0.05] hover:bg-white/[0.08] text-white text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-2">
+            <button className="w-full py-2.5 bg-bg-overlay hover:bg-bg-raised-hover text-white text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-2">
               <FileText className="w-4 h-4" />
               Download Invoice
             </button>
-            <button className="w-full py-2.5 bg-white/[0.05] hover:bg-white/[0.08] text-white text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-2">
+            <button className="w-full py-2.5 bg-bg-overlay hover:bg-bg-raised-hover text-white text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-2">
               <AlertCircle className="w-4 h-4" />
               Report Issue
             </button>

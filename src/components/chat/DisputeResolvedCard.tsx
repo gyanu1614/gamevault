@@ -15,31 +15,31 @@ export default function DisputeResolvedCard({ resolution, notes, refundAmount }:
 
   return (
     <div className="my-4">
-      <div className="bg-gradient-to-br from-green-500/10 to-emerald-500/10 border border-green-500/30 rounded-xl p-5">
+      <div className="bg-gradient-to-br from-green-500/10 to-emerald-500/10 border border-success/30 rounded-xl p-5">
         <div className="flex items-start gap-3">
           <div className="flex-shrink-0">
-            <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center">
-              <CheckCircle className="w-5 h-5 text-green-400" />
+            <div className="w-10 h-10 rounded-full bg-success-bg flex items-center justify-center">
+              <CheckCircle className="w-5 h-5 text-success" />
             </div>
           </div>
           <div className="flex-1">
-            <h3 className="text-base font-semibold text-green-400 mb-2">
+            <h3 className="text-base font-semibold text-success mb-2">
               ✅ Dispute Resolved - {resolutionLabels[resolution]}
             </h3>
             <div className="space-y-2 text-sm">
               <div>
-                <span className="font-medium text-gray-300">Resolution:</span>{' '}
-                <span className="text-gray-400">{notes}</span>
+                <span className="font-medium text-text-secondary">Resolution:</span>{' '}
+                <span className="text-text-secondary">{notes}</span>
               </div>
               {refundAmount !== undefined && refundAmount > 0 && (
                 <div>
-                  <span className="font-medium text-gray-300">Refund Amount:</span>{' '}
-                  <span className="text-green-400 font-semibold">${refundAmount.toFixed(2)}</span>
+                  <span className="font-medium text-text-secondary">Refund Amount:</span>{' '}
+                  <span className="text-success font-semibold">${refundAmount.toFixed(2)}</span>
                 </div>
               )}
             </div>
             <div className="mt-3 pt-3 border-t border-green-500/20">
-              <p className="text-xs text-gray-400">
+              <p className="text-xs text-text-secondary">
                 Thank you for your patience. This case is now closed.
               </p>
             </div>

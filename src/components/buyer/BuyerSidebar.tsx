@@ -90,8 +90,8 @@ export default function BuyerSidebar({ user }: BuyerSidebarProps) {
   const NavItems = () => (
     <>
       {/* User Profile */}
-      <div className="px-3 pt-4 pb-3 border-b border-white/[0.08]">
-        <div className="flex items-center gap-3 px-3 py-2 rounded-lg bg-white/[0.03]">
+      <div className="px-3 pt-4 pb-3 border-b border-border-subtle">
+        <div className="flex items-center gap-3 px-3 py-2 rounded-lg bg-bg-overlay">
           <div className="relative flex-shrink-0">
             <div className="h-9 w-9 rounded-full bg-gradient-to-br from-blue-500 to-cyan-600 flex items-center justify-center text-white text-sm font-semibold">
               {user?.username?.[0]?.toUpperCase() || 'B'}
@@ -102,7 +102,7 @@ export default function BuyerSidebar({ user }: BuyerSidebarProps) {
             <p className="text-sm font-medium text-white truncate">
               {user?.username || 'Buyer'}
             </p>
-            <p className="text-xs text-gray-400">
+            <p className="text-xs text-text-secondary">
               Buyer Account
             </p>
           </div>
@@ -126,7 +126,7 @@ export default function BuyerSidebar({ user }: BuyerSidebarProps) {
                     'w-full flex items-center justify-between gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all',
                     active
                       ? 'bg-white text-black'
-                      : 'text-gray-400 hover:text-white hover:bg-white/[0.05]'
+                      : 'text-text-secondary hover:text-white hover:bg-bg-overlay'
                   )}
                 >
                   <div className="flex items-center gap-3">
@@ -142,7 +142,7 @@ export default function BuyerSidebar({ user }: BuyerSidebarProps) {
                     'flex items-center justify-between gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all',
                     active
                       ? 'bg-white text-black'
-                      : 'text-gray-400 hover:text-white hover:bg-white/[0.05]'
+                      : 'text-text-secondary hover:text-white hover:bg-bg-overlay'
                   )}
                 >
                   <div className="flex items-center gap-3">
@@ -172,7 +172,7 @@ export default function BuyerSidebar({ user }: BuyerSidebarProps) {
                     transition={{ duration: 0.2 }}
                     className="overflow-hidden"
                   >
-                    <div className="ml-7 mt-1 space-y-1 border-l border-white/[0.08] pl-3">
+                    <div className="ml-7 mt-1 space-y-1 border-l border-border-subtle pl-3">
                       {item.children?.map((child) => {
                         const ChildIcon = child.icon
                         const childActive = isActive(child.href)
@@ -184,8 +184,8 @@ export default function BuyerSidebar({ user }: BuyerSidebarProps) {
                             className={cn(
                               'flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all',
                               childActive
-                                ? 'bg-white/[0.08] text-white'
-                                : 'text-gray-500 hover:text-white hover:bg-white/[0.05]'
+                                ? 'bg-bg-raised-hover text-white'
+                                : 'text-text-tertiary hover:text-white hover:bg-bg-overlay'
                             )}
                           >
                             <ChildIcon className="h-3.5 w-3.5" />
@@ -206,7 +206,7 @@ export default function BuyerSidebar({ user }: BuyerSidebarProps) {
       <div className="flex-1" />
 
       {/* Bottom Navigation */}
-      <div className="px-3 py-3 border-t border-white/[0.08] space-y-0.5">
+      <div className="px-3 py-3 border-t border-border-subtle space-y-0.5">
         {bottomNavigation.map((item) => {
           const Icon = item.icon
           const active = isActive(item.href)
@@ -220,7 +220,7 @@ export default function BuyerSidebar({ user }: BuyerSidebarProps) {
                 'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all',
                 active
                   ? 'bg-white text-black'
-                  : 'text-gray-400 hover:text-white hover:bg-white/[0.05]'
+                  : 'text-text-secondary hover:text-white hover:bg-bg-overlay'
               )}
             >
               <Icon className="h-4 w-4 flex-shrink-0" />
@@ -231,7 +231,7 @@ export default function BuyerSidebar({ user }: BuyerSidebarProps) {
 
         {/* Logout */}
         <button
-          className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-gray-400 hover:text-red-400 hover:bg-red-500/[0.05] transition-all"
+          className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-text-secondary hover:text-error hover:bg-red-500/[0.05] transition-all"
         >
           <LogOut className="h-4 w-4 flex-shrink-0" />
           <span>Logout</span>
@@ -245,7 +245,7 @@ export default function BuyerSidebar({ user }: BuyerSidebarProps) {
       {/* Mobile Menu Button */}
       <button
         onClick={() => setIsMobileOpen(!isMobileOpen)}
-        className="fixed top-20 left-4 z-50 lg:hidden p-2.5 rounded-xl bg-gray-900/90 backdrop-blur-xl border border-white/[0.08] text-white shadow-lg hover:bg-gray-900 transition-all"
+        className="fixed top-20 left-4 z-50 lg:hidden p-2.5 rounded-xl bg-gray-900/90 backdrop-blur-xl border border-border-subtle text-white shadow-lg hover:bg-gray-900 transition-all"
       >
         {isMobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
       </button>
@@ -264,7 +264,7 @@ export default function BuyerSidebar({ user }: BuyerSidebarProps) {
       </AnimatePresence>
 
       {/* Desktop Sidebar - Static Floating Card */}
-      <aside className="hidden lg:flex lg:flex-col lg:fixed lg:left-4 lg:top-28 lg:bottom-4 lg:w-56 bg-gray-900/80 backdrop-blur-xl border border-white/[0.08] rounded-2xl shadow-2xl">
+      <aside className="hidden lg:flex lg:flex-col lg:fixed lg:left-4 lg:top-28 lg:bottom-4 lg:w-56 bg-gray-900/80 backdrop-blur-xl border border-border-subtle rounded-2xl shadow-2xl">
         <NavItems />
       </aside>
 
@@ -276,7 +276,7 @@ export default function BuyerSidebar({ user }: BuyerSidebarProps) {
             animate={{ x: 0 }}
             exit={{ x: '-100%' }}
             transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-            className="fixed top-4 bottom-4 left-4 w-56 bg-gray-900/95 backdrop-blur-xl border border-white/[0.08] rounded-2xl z-40 lg:hidden flex flex-col shadow-2xl"
+            className="fixed top-4 bottom-4 left-4 w-56 bg-gray-900/95 backdrop-blur-xl border border-border-subtle rounded-2xl z-40 lg:hidden flex flex-col shadow-2xl"
           >
             <NavItems />
           </motion.aside>

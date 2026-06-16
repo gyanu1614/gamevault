@@ -120,11 +120,11 @@ export default function ReviewsList({
 
     return (
       <div className="text-center py-12">
-        <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-white/[0.05] flex items-center justify-center">
-          <ThumbsUp className="w-8 h-8 text-gray-600" />
+        <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-bg-overlay flex items-center justify-center">
+          <ThumbsUp className="w-8 h-8 text-text-disabled" />
         </div>
         <h3 className="text-lg font-semibold text-white mb-2">No reviews yet</h3>
-        <p className="text-sm text-gray-400">{emptyMessage}</p>
+        <p className="text-sm text-text-secondary">{emptyMessage}</p>
       </div>
     )
   }
@@ -132,12 +132,12 @@ export default function ReviewsList({
   return (
     <div className="space-y-6">
       {/* Filters & Sort Bar */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-white/[0.08]">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-border-subtle">
         {/* Filter by Type */}
         <div className="relative">
           <button
             onClick={() => setShowFilters(!showFilters)}
-            className="flex items-center gap-2 px-4 py-2 bg-white/[0.05] border border-white/[0.08] rounded-lg text-sm text-white hover:bg-white/[0.08] transition-all"
+            className="flex items-center gap-2 px-4 py-2 bg-bg-overlay border border-border-subtle rounded-lg text-sm text-white hover:bg-bg-raised-hover transition-all"
           >
             <Filter className="w-4 h-4" />
             {filterType === 'positive' ? 'Positive Reviews' : filterType === 'negative' ? 'Negative Reviews' : 'All Reviews'}
@@ -153,7 +153,7 @@ export default function ReviewsList({
                 className="fixed inset-0 z-10"
                 onClick={() => setShowFilters(false)}
               />
-              <div className="absolute top-full left-0 mt-2 w-52 bg-gray-900/95 backdrop-blur-xl border border-white/[0.08] rounded-lg shadow-xl z-20 overflow-hidden">
+              <div className="absolute top-full left-0 mt-2 w-52 bg-gray-900/95 backdrop-blur-xl border border-border-subtle rounded-lg shadow-xl z-20 overflow-hidden">
                 {filterOptions.map((option) => (
                   <button
                     key={option.value}
@@ -166,13 +166,13 @@ export default function ReviewsList({
                       'w-full px-4 py-2.5 text-left text-sm transition-colors',
                       filterType === option.value
                         ? 'bg-white/[0.1] text-white font-medium'
-                        : 'text-gray-400 hover:bg-white/[0.05] hover:text-white'
+                        : 'text-text-secondary hover:bg-bg-overlay hover:text-white'
                     )}
                   >
                     <div className="flex items-center justify-between">
                       <span>{option.label}</span>
                       {'description' in option && (
-                        <span className="text-xs text-gray-500">{option.description}</span>
+                        <span className="text-xs text-text-tertiary">{option.description}</span>
                       )}
                     </div>
                   </button>
@@ -184,7 +184,7 @@ export default function ReviewsList({
 
         {/* Sort Dropdown */}
         <div className="flex items-center gap-2 text-sm">
-          <span className="text-gray-400">Sort:</span>
+          <span className="text-text-secondary">Sort:</span>
           <select
             value={`${sortBy}-${sortOrder}`}
             onChange={(e) => {
@@ -193,7 +193,7 @@ export default function ReviewsList({
               setSortOrder(newSortOrder)
               setCurrentPage(1)
             }}
-            className="px-3 py-1.5 bg-white/[0.05] border border-white/[0.08] rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-white/20"
+            className="px-3 py-1.5 bg-bg-overlay border border-border-subtle rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-white/20"
           >
             {sortOptions.map((option) => (
               <option
@@ -212,7 +212,7 @@ export default function ReviewsList({
       {isLoading && (
         <div className="text-center py-12">
           <div className="w-8 h-8 mx-auto border-4 border-white/20 border-t-white rounded-full animate-spin" />
-          <p className="text-sm text-gray-400 mt-4">Loading reviews...</p>
+          <p className="text-sm text-text-secondary mt-4">Loading reviews...</p>
         </div>
       )}
 
@@ -234,21 +234,21 @@ export default function ReviewsList({
 
       {/* Pagination (if not using initialReviews) */}
       {!initialReviews.length && displayReviews.length === ITEMS_PER_PAGE && (
-        <div className="flex items-center justify-center gap-2 pt-6 border-t border-white/[0.08]">
+        <div className="flex items-center justify-center gap-2 pt-6 border-t border-border-subtle">
           <button
             onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
             disabled={currentPage === 1}
-            className="p-2 rounded-lg border border-white/[0.08] text-white hover:bg-white/[0.05] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            className="p-2 rounded-lg border border-border-subtle text-white hover:bg-bg-overlay disabled:opacity-50 disabled:cursor-not-allowed transition-all"
           >
             <ChevronLeft className="w-5 h-5" />
           </button>
-          <span className="px-4 py-2 text-sm text-gray-400">
+          <span className="px-4 py-2 text-sm text-text-secondary">
             Page {currentPage}
           </span>
           <button
             onClick={() => setCurrentPage(p => p + 1)}
             disabled={displayReviews.length < ITEMS_PER_PAGE}
-            className="p-2 rounded-lg border border-white/[0.08] text-white hover:bg-white/[0.05] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            className="p-2 rounded-lg border border-border-subtle text-white hover:bg-bg-overlay disabled:opacity-50 disabled:cursor-not-allowed transition-all"
           >
             <ChevronRight className="w-5 h-5" />
           </button>

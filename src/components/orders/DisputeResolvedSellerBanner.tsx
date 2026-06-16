@@ -33,10 +33,10 @@ export default function DisputeResolvedSellerBanner({
   const sellerWon = favoredParty === 'seller'
   const Icon = sellerWon ? CheckCircle : XCircle
   const colorClasses = sellerWon
-    ? 'border-green-500/30 bg-green-500/[0.08]'
+    ? 'border-success/30 bg-green-500/[0.08]'
     : 'border-orange-500/30 bg-orange-500/[0.08]'
-  const iconColor = sellerWon ? 'text-green-400' : 'text-orange-400'
-  const titleColor = sellerWon ? 'text-green-400' : 'text-orange-400'
+  const iconColor = sellerWon ? 'text-success' : 'text-orange-400'
+  const titleColor = sellerWon ? 'text-success' : 'text-orange-400'
 
   return (
     <div className={cn(
@@ -47,7 +47,7 @@ export default function DisputeResolvedSellerBanner({
       <div className="flex items-start gap-4">
         <div className={cn(
           'flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl border',
-          sellerWon ? 'border-green-500/40 bg-green-500/20' : 'border-orange-500/40 bg-orange-500/20'
+          sellerWon ? 'border-green-500/40 bg-success-bg' : 'border-orange-500/40 bg-orange-500/20'
         )}>
           <Icon className={cn('h-5 w-5', iconColor)} />
         </div>
@@ -63,26 +63,26 @@ export default function DisputeResolvedSellerBanner({
               'rounded-lg border p-3',
               sellerWon ? 'border-green-500/20 bg-green-500/[0.05]' : 'border-orange-500/20 bg-orange-500/[0.05]'
             )}>
-              <p className="text-xs text-gray-500 font-semibold mb-2">Resolution Summary</p>
+              <p className="text-xs text-text-tertiary font-semibold mb-2">Resolution Summary</p>
               <div className="space-y-2 text-sm">
                 <div className="flex items-center justify-between">
-                  <span className="text-gray-400">Decision:</span>
-                  <span className={cn('font-semibold', sellerWon ? 'text-green-400' : 'text-orange-400')}>
+                  <span className="text-text-secondary">Decision:</span>
+                  <span className={cn('font-semibold', sellerWon ? 'text-success' : 'text-orange-400')}>
                     {sellerWon ? 'Seller favored' : 'Buyer favored'}
                   </span>
                 </div>
 
                 {refundAmount !== undefined && (
                   <div className="flex items-center justify-between">
-                    <span className="text-gray-400">{sellerWon ? 'Payment Amount:' : 'Refund Amount:'}</span>
-                    <span className={cn('font-bold', sellerWon ? 'text-green-400' : 'text-orange-400')}>
+                    <span className="text-text-secondary">{sellerWon ? 'Payment Amount:' : 'Refund Amount:'}</span>
+                    <span className={cn('font-bold', sellerWon ? 'text-success' : 'text-orange-400')}>
                       ${refundAmount.toFixed(2)}
                     </span>
                   </div>
                 )}
 
                 <div className="flex items-center justify-between">
-                  <span className="text-gray-400">Resolved:</span>
+                  <span className="text-text-secondary">Resolved:</span>
                   <span className="text-white text-xs">{formatDate(resolvedAt)}</span>
                 </div>
               </div>
@@ -90,39 +90,39 @@ export default function DisputeResolvedSellerBanner({
 
             {/* Resolution Notes */}
             {resolutionNotes && (
-              <div className="rounded-lg border border-white/[0.08] bg-white/[0.03] p-3">
+              <div className="rounded-lg border border-border-subtle bg-bg-overlay p-3">
                 <div className="flex items-center gap-2 mb-2">
-                  <FileText className="h-3.5 w-3.5 text-violet-400" />
-                  <p className="text-xs text-gray-500 font-semibold">Resolution Details:</p>
+                  <FileText className="h-3.5 w-3.5 text-lime-text" />
+                  <p className="text-xs text-text-tertiary font-semibold">Resolution Details:</p>
                 </div>
-                <p className="text-sm text-gray-300 leading-relaxed">{resolutionNotes}</p>
+                <p className="text-sm text-text-secondary leading-relaxed">{resolutionNotes}</p>
               </div>
             )}
 
             {/* What This Means */}
-            <div className="pt-3 border-t border-white/[0.08]">
-              <p className="text-xs text-gray-500 font-semibold mb-2">What This Means:</p>
+            <div className="pt-3 border-t border-border-subtle">
+              <p className="text-xs text-text-tertiary font-semibold mb-2">What This Means:</p>
               {sellerWon ? (
-                <ul className="space-y-1.5 text-xs text-gray-400">
+                <ul className="space-y-1.5 text-xs text-text-secondary">
                   <li className="flex items-start gap-2">
-                    <span className="text-green-400 mt-0.5">✓</span>
+                    <span className="text-success mt-0.5">✓</span>
                     <span>Your claim was approved by our support team</span>
                   </li>
                   <li className="flex items-start gap-2">
-                    <span className="text-green-400 mt-0.5">✓</span>
+                    <span className="text-success mt-0.5">✓</span>
                     <span>Funds will be released to your account</span>
                   </li>
                   <li className="flex items-start gap-2">
-                    <span className="text-green-400 mt-0.5">✓</span>
+                    <span className="text-success mt-0.5">✓</span>
                     <span>Payment will be processed within 3-5 business days</span>
                   </li>
                   <li className="flex items-start gap-2">
-                    <span className="text-green-400 mt-0.5">✓</span>
+                    <span className="text-success mt-0.5">✓</span>
                     <span>Order is now closed</span>
                   </li>
                 </ul>
               ) : (
-                <ul className="space-y-1.5 text-xs text-gray-400">
+                <ul className="space-y-1.5 text-xs text-text-secondary">
                   <li className="flex items-start gap-2">
                     <span className="text-orange-400 mt-0.5">⚠</span>
                     <span>Buyer's dispute claim was approved</span>
@@ -136,7 +136,7 @@ export default function DisputeResolvedSellerBanner({
                     <span>Payment will not be released to you</span>
                   </li>
                   <li className="flex items-start gap-2">
-                    <span className="text-gray-500 mt-0.5">•</span>
+                    <span className="text-text-tertiary mt-0.5">•</span>
                     <span>If you believe this decision was made in error, contact support within 7 days</span>
                   </li>
                 </ul>

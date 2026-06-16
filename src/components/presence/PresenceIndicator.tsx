@@ -54,7 +54,7 @@ export default function PresenceIndicator({
     <div className="flex items-center gap-1.5">
       <div className={`${dotSize} rounded-full ${isOnline ? 'bg-green-500' : 'bg-gray-500'} ${isOnline ? 'animate-pulse' : ''}`} />
       {showLabel && (
-        <span className={`text-xs ${isOnline ? 'text-green-400' : 'text-gray-500'}`}>
+        <span className={`text-xs ${isOnline ? 'text-success' : 'text-text-tertiary'}`}>
           {isOnline ? 'Online' : lastSeenText}
         </span>
       )}

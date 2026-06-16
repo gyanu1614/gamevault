@@ -42,17 +42,14 @@ export default function CategoryPageLayout({
         <button
           onClick={() => setFilterOpen((v) => !v)}
           className={cn(
-            'flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all border',
+            'inline-flex h-10 shrink-0 items-center gap-1.5 rounded-md border px-3 text-sm font-medium transition-colors',
             filterOpen
-              ? 'bg-violet-600/20 border-violet-500/40 text-violet-300'
-              : 'bg-white/[0.04] border-white/[0.08] text-gray-400 hover:text-white hover:bg-white/[0.07]'
+              ? 'border-lime-tint-border bg-lime-tint-bg text-lime-text'
+              : 'border-border-default bg-bg-raised text-text-primary hover:border-lime-tint-border hover:bg-bg-raised-hover',
           )}
+          aria-pressed={filterOpen}
         >
-          {filterOpen ? (
-            <X className="w-4 h-4" />
-          ) : (
-            <SlidersHorizontal className="w-4 h-4" />
-          )}
+          {filterOpen ? <X className="h-4 w-4" /> : <SlidersHorizontal className="h-4 w-4" />}
           <span>Filters</span>
         </button>
 
@@ -62,7 +59,7 @@ export default function CategoryPageLayout({
       </div>
 
       {/* ── Listing count ─────────────────────────────────────────────── */}
-      <p className="mb-4 text-sm text-zinc-500">
+      <p className="mb-4 text-sm text-text-tertiary">
         {totalListings} {totalListings === 1 ? 'listing' : 'listings'} found
       </p>
 
@@ -109,14 +106,15 @@ export default function CategoryPageLayout({
                 transition={{ type: 'spring', stiffness: 320, damping: 36 }}
                 className="md:hidden fixed inset-y-0 left-0 z-50 w-80 overflow-y-auto"
               >
-                <div className="p-5 h-full">
-                  <div className="flex items-center justify-between mb-4">
-                    <span className="text-sm font-semibold text-white">Filters</span>
+                <div className="h-full border-r border-border-default bg-bg-raised p-5">
+                  <div className="mb-4 flex items-center justify-between">
+                    <span className="text-sm font-bold text-text-primary">Filters</span>
                     <button
                       onClick={() => setFilterOpen(false)}
-                      className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
+                      className="rounded-md p-1.5 text-text-tertiary transition-colors hover:bg-bg-raised-hover hover:text-text-primary"
+                      aria-label="Close filters"
                     >
-                      <X className="w-4 h-4" />
+                      <X className="h-4 w-4" />
                     </button>
                   </div>
                   <FiltersSidebar maxPrice={roundedMax} inline />

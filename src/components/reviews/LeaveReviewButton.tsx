@@ -78,7 +78,7 @@ export default function LeaveReviewButton({
   if (existingReview) {
     const isPositive = existingReview.rating >= 4
     const ThumbIcon = isPositive ? ThumbsUp : ThumbsDown
-    const iconColor = isPositive ? 'text-green-400' : 'text-red-400'
+    const iconColor = isPositive ? 'text-success' : 'text-error'
 
     // Compact mode - just show icon
     if (compact) {
@@ -116,7 +116,7 @@ export default function LeaveReviewButton({
             <div className={cn('text-[10px] font-bold uppercase tracking-[0.08em] mb-0.5', iconColor)}>
               {isPositive ? 'Positive Review' : 'Negative Review'}
             </div>
-            <p className="text-xs text-gray-500 truncate leading-tight">
+            <p className="text-xs text-text-tertiary truncate leading-tight">
               {existingReview.comment || existingReview.title || '—'}
             </p>
           </div>
@@ -124,10 +124,10 @@ export default function LeaveReviewButton({
           {/* Edit button */}
           <button
             onClick={() => setShowReviewForm(true)}
-            className="flex-shrink-0 h-6 w-6 rounded-lg border border-white/[0.08] bg-white/[0.04] hover:bg-white/[0.08] flex items-center justify-center transition-colors"
+            className="flex-shrink-0 h-6 w-6 rounded-lg border border-border-subtle bg-bg-raised hover:bg-bg-raised-hover flex items-center justify-center transition-colors"
             title="Edit review"
           >
-            <Pencil className="h-3 w-3 text-gray-500" />
+            <Pencil className="h-3 w-3 text-text-tertiary" />
           </button>
         </div>
 
@@ -151,7 +151,7 @@ export default function LeaveReviewButton({
         <button
           onClick={() => setShowReviewForm(true)}
           className={cn(
-            'w-full py-2 border border-yellow-500/20 bg-yellow-500/[0.06] hover:bg-yellow-500/[0.11] text-yellow-400/90 hover:text-yellow-400 text-sm font-medium rounded-xl transition-all flex items-center justify-center gap-2',
+            'w-full py-2 border border-yellow-500/20 bg-yellow-500/[0.06] hover:bg-yellow-500/[0.11] text-warning/90 hover:text-warning text-sm font-medium rounded-xl transition-all flex items-center justify-center gap-2',
             className
           )}
         >

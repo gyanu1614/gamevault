@@ -100,23 +100,23 @@ export default function DeliveryEvidenceUpload({
             relative flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer transition-colors
             ${disabled
               ? 'border-gray-700 bg-gray-900/50 cursor-not-allowed'
-              : 'border-white/[0.1] bg-white/[0.02] hover:border-violet-500/50 hover:bg-violet-500/5'
+              : 'border-white/[0.1] bg-bg-overlay hover:border-lime hover:bg-lime/5'
             }
           `}
         >
           <div className="flex flex-col items-center justify-center pt-5 pb-6">
             {uploading ? (
               <>
-                <Loader2 className="w-10 h-10 mb-3 text-violet-400 animate-spin" />
-                <p className="text-sm text-gray-400">Uploading...</p>
+                <Loader2 className="w-10 h-10 mb-3 text-lime-text animate-spin" />
+                <p className="text-sm text-text-secondary">Uploading...</p>
               </>
             ) : (
               <>
-                <Upload className="w-10 h-10 mb-3 text-gray-400" />
-                <p className="mb-2 text-sm text-gray-400">
+                <Upload className="w-10 h-10 mb-3 text-text-secondary" />
+                <p className="mb-2 text-sm text-text-secondary">
                   <span className="font-semibold">Click to upload</span> or drag and drop
                 </p>
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-text-tertiary">
                   PNG, JPG, MP4, WebM (max 10MB each)
                 </p>
               </>
@@ -141,11 +141,11 @@ export default function DeliveryEvidenceUpload({
             {evidence.map((url, index) => (
               <div
                 key={index}
-                className="flex items-center gap-3 p-3 bg-white/[0.03] border border-white/[0.05] rounded-lg"
+                className="flex items-center gap-3 p-3 bg-bg-overlay border border-border-subtle rounded-lg"
               >
                 <div className="flex-shrink-0">
                   {url.includes('.mp4') || url.includes('.webm') ? (
-                    <FileVideo className="w-5 h-5 text-violet-400" />
+                    <FileVideo className="w-5 h-5 text-lime-text" />
                   ) : (
                     <FileImage className="w-5 h-5 text-blue-400" />
                   )}
@@ -154,7 +154,7 @@ export default function DeliveryEvidenceUpload({
                   <p className="text-sm text-white truncate">
                     Evidence #{index + 1}
                   </p>
-                  <p className="text-xs text-gray-400 truncate">
+                  <p className="text-xs text-text-secondary truncate">
                     {url.split('/').pop()}
                   </p>
                 </div>
@@ -163,16 +163,16 @@ export default function DeliveryEvidenceUpload({
                     href={url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="p-2 hover:bg-white/[0.05] rounded-lg transition-colors"
+                    className="p-2 hover:bg-bg-overlay rounded-lg transition-colors"
                   >
-                    <CheckCircle2 className="w-4 h-4 text-green-400" />
+                    <CheckCircle2 className="w-4 h-4 text-success" />
                   </a>
                   {!disabled && (
                     <button
                       onClick={() => handleDeleteEvidence(url)}
-                      className="p-2 hover:bg-white/[0.05] rounded-lg transition-colors"
+                      className="p-2 hover:bg-bg-overlay rounded-lg transition-colors"
                     >
-                      <X className="w-4 h-4 text-red-400" />
+                      <X className="w-4 h-4 text-error" />
                     </button>
                   )}
                 </div>

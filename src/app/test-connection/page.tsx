@@ -94,11 +94,11 @@ export default function TestConnectionPage() {
               <div className="space-y-2 font-mono text-sm">
                 <div>
                   <strong>NEXT_PUBLIC_SUPABASE_URL:</strong> {result.envVars.url}
-                  <div className="ml-4 text-gray-400">{result.envVars.urlValue}</div>
+                  <div className="ml-4 text-text-secondary">{result.envVars.urlValue}</div>
                 </div>
                 <div>
                   <strong>NEXT_PUBLIC_SUPABASE_ANON_KEY:</strong> {result.envVars.key}
-                  <div className="ml-4 text-gray-400">{result.envVars.keyPreview}</div>
+                  <div className="ml-4 text-text-secondary">{result.envVars.keyPreview}</div>
                 </div>
               </div>
             </div>
@@ -118,16 +118,16 @@ export default function TestConnectionPage() {
 
             {/* Instructions */}
             <div className="rounded-lg border border-yellow-500/20 bg-yellow-500/5 p-6">
-              <h2 className="mb-4 text-2xl font-bold text-yellow-500">What to do next?</h2>
+              <h2 className="mb-4 text-2xl font-bold text-warning">What to do next?</h2>
               <div className="space-y-2 text-sm">
                 {result.envVars.url === '❌ Missing' && (
-                  <div className="text-red-400">
+                  <div className="text-error">
                     ❌ <strong>CRITICAL:</strong> Environment variables are missing!
                     Check QUICK-FIX.md for instructions.
                   </div>
                 )}
                 {result.tests.connection?.startsWith('❌') && (
-                  <div className="text-red-400">
+                  <div className="text-error">
                     ❌ <strong>Cannot connect to Supabase!</strong> Check:
                     <ul className="ml-6 mt-2 list-disc">
                       <li>Is your Supabase project active? (not paused)</li>
@@ -142,7 +142,7 @@ export default function TestConnectionPage() {
                   </div>
                 )}
                 {result.tests.connection?.startsWith('✅') && result.tests.profilesTable?.startsWith('✅') && (
-                  <div className="text-green-400">
+                  <div className="text-success">
                     ✅ <strong>Everything looks good!</strong> Try signing up again.
                     If it still fails, check browser console for detailed errors.
                   </div>

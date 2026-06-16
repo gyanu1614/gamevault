@@ -41,9 +41,8 @@ export const NumberField = React.forwardRef<HTMLDivElement, NumberFieldProps>(
         <RACGroup
           ref={ref}
           className={cn(
-            // R12 — fully square (rounded-none) and transparent fill to match
-            // the rest of the input chrome. Border defines the box.
-            'flex h-10 w-full items-stretch overflow-hidden rounded-none border border-border-default bg-transparent',
+            // R14 — reverted to rounded-md; transparent fill kept.
+            'flex h-10 w-full items-stretch overflow-hidden rounded-md border border-border-default bg-transparent',
             'transition-colors focus-within:border-lime focus-within:ring-2 focus-within:ring-lime-tint-bg',
             'data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50',
             className

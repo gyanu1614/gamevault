@@ -50,13 +50,13 @@ interface BuyerOrderDetailClientProps {
 
 function SidebarCard({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className={cn('rounded-2xl border border-white/[0.06] bg-white/[0.025] p-4 transition-colors hover:border-white/[0.09]', className)}>
+    <div className={cn('rounded-2xl border border-border-subtle bg-white/[0.025] p-4 transition-colors hover:border-white/[0.09]', className)}>
       {children}
     </div>
   )
 }
 
-function CardLabel({ icon: Icon, label, color = 'text-gray-500' }: { icon: React.ElementType; label: string; color?: string }) {
+function CardLabel({ icon: Icon, label, color = 'text-text-tertiary' }: { icon: React.ElementType; label: string; color?: string }) {
   return (
     <div className="flex items-center gap-2 mb-3">
       <Icon className={cn('h-3.5 w-3.5', color)} />
@@ -374,15 +374,15 @@ export default function BuyerOrderDetailClient({
           <div className="flex">
             {order.status === 'completed' ? (
               /* Order Completed + Leave Review Card */
-              <div className="flex-1 rounded-xl border border-white/[0.08] bg-white/[0.03] p-4">
+              <div className="flex-1 rounded-xl border border-border-subtle bg-bg-overlay p-4">
                 {/* Order Completed Header */}
                 <div className="flex items-center gap-3 mb-4">
                   <div className="h-11 w-11 rounded-full bg-green-500/15 border border-green-500/25 flex items-center justify-center flex-shrink-0">
-                    <CheckCircle2 className="w-5 h-5 text-green-400" />
+                    <CheckCircle2 className="w-5 h-5 text-success" />
                   </div>
                   <div>
                     <h3 className="text-lg font-bold text-white mb-1">Order Completed</h3>
-                    <p className="text-xs text-gray-400">
+                    <p className="text-xs text-text-secondary">
                       {order.completed_at ? new Date(order.completed_at).toLocaleString('en-US', {
                         month: 'short',
                         day: 'numeric',
@@ -392,14 +392,14 @@ export default function BuyerOrderDetailClient({
                         hour12: true
                       }) : 'Recently'}
                     </p>
-                    <p className="text-xs text-gray-500 mt-1.5">
+                    <p className="text-xs text-text-tertiary mt-1.5">
                       Payment has been released to the seller.
                     </p>
                   </div>
                 </div>
 
                 {/* Divider */}
-                <div className="border-t border-white/[0.06] my-3.5" />
+                <div className="border-t border-border-subtle my-3.5" />
 
                 {/* Leave Review Section */}
                 <div>
@@ -449,15 +449,15 @@ export default function BuyerOrderDetailClient({
           <div className="lg:col-span-2 flex">
             {order.status === 'completed' ? (
               /* Order Completed + Leave Review Card */
-              <div className="flex-1 rounded-xl border border-white/[0.08] bg-white/[0.03] p-4">
+              <div className="flex-1 rounded-xl border border-border-subtle bg-bg-overlay p-4">
                 {/* Order Completed Header */}
                 <div className="flex items-center gap-3 mb-4">
                   <div className="h-11 w-11 rounded-full bg-green-500/15 border border-green-500/25 flex items-center justify-center flex-shrink-0">
-                    <CheckCircle2 className="w-5 h-5 text-green-400" />
+                    <CheckCircle2 className="w-5 h-5 text-success" />
                   </div>
                   <div>
                     <h3 className="text-lg font-bold text-white mb-1">Order Completed</h3>
-                    <p className="text-xs text-gray-400">
+                    <p className="text-xs text-text-secondary">
                       {order.completed_at ? new Date(order.completed_at).toLocaleString('en-US', {
                         month: 'short',
                         day: 'numeric',
@@ -467,14 +467,14 @@ export default function BuyerOrderDetailClient({
                         hour12: true
                       }) : 'Recently'}
                     </p>
-                    <p className="text-xs text-gray-500 mt-1.5">
+                    <p className="text-xs text-text-tertiary mt-1.5">
                       Payment has been released to the seller.
                     </p>
                   </div>
                 </div>
 
                 {/* Divider */}
-                <div className="border-t border-white/[0.06] my-3.5" />
+                <div className="border-t border-border-subtle my-3.5" />
 
                 {/* Leave Review Section */}
                 <div>
@@ -529,10 +529,10 @@ export default function BuyerOrderDetailClient({
 
         {/* ── CHAT (2/3) ────────────────────────────────────────────────── */}
         <div className="lg:col-span-2 flex flex-col">
-          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] overflow-hidden flex flex-col flex-1">
+          <div className="rounded-2xl border border-border-subtle bg-bg-overlay overflow-hidden flex flex-col flex-1">
 
             {/* Chat header */}
-            <div className="border-b border-white/[0.05] px-5 py-4 flex items-center gap-3 flex-shrink-0">
+            <div className="border-b border-border-subtle px-5 py-4 flex items-center gap-3 flex-shrink-0">
               {/* Seller avatar */}
               <div className="relative flex-shrink-0">
                 <AvatarImage
@@ -550,12 +550,12 @@ export default function BuyerOrderDetailClient({
                 <div className="text-sm font-semibold text-white truncate leading-tight">
                   {order.seller.shop_name || otherUser.username}
                 </div>
-                <div className="text-[11px] text-gray-500 mt-0.5">Seller</div>
+                <div className="text-[11px] text-text-tertiary mt-0.5">Seller</div>
               </div>
 
-              <div className="flex items-center gap-2 flex-shrink-0 rounded-full border border-white/[0.06] bg-white/[0.03] px-3 py-1.5">
-                <MessageSquare className="h-3 w-3 text-gray-600" />
-                <span className="text-[11px] font-mono font-medium text-gray-500">#{orderNum}</span>
+              <div className="flex items-center gap-2 flex-shrink-0 rounded-full border border-border-subtle bg-bg-overlay px-3 py-1.5">
+                <MessageSquare className="h-3 w-3 text-text-disabled" />
+                <span className="text-[11px] font-mono font-medium text-text-tertiary">#{orderNum}</span>
               </div>
             </div>
 
@@ -563,7 +563,7 @@ export default function BuyerOrderDetailClient({
             <div className="h-[620px]">
               {conversationLoading ? (
                 <div className="flex h-full items-center justify-center">
-                  <Loader2 className="h-6 w-6 animate-spin text-violet-500/60" />
+                  <Loader2 className="h-6 w-6 animate-spin text-lime-text/60" />
                 </div>
               ) : conversationId && user ? (
                 <ChatInterface
@@ -579,7 +579,7 @@ export default function BuyerOrderDetailClient({
                 />
               ) : (
                 <div className="flex h-full items-center justify-center">
-                  <Loader2 className="h-6 w-6 animate-spin text-violet-500/60" />
+                  <Loader2 className="h-6 w-6 animate-spin text-lime-text/60" />
                 </div>
               )}
             </div>
@@ -593,13 +593,13 @@ export default function BuyerOrderDetailClient({
           {!['completed', 'cancelled', 'refunded'].includes(order.status) && order.status !== 'disputed' && (
             <SidebarCard className={cn(
               'relative overflow-hidden',
-              order.status === 'delivered' ? 'border-green-500/15 bg-green-500/[0.03]' : 'border-violet-500/15 bg-violet-500/[0.03]'
+              order.status === 'delivered' ? 'border-green-500/15 bg-green-500/[0.03]' : 'border-lime-tint-border bg-lime/[0.03]'
             )}>
 
               {/* Blur overlay during transition */}
               {isTransitioning && (
                 <div className="absolute inset-0 bg-black/40 backdrop-blur-lg z-10 flex items-center justify-center">
-                  <Loader2 className="w-5 h-5 text-violet-400 animate-spin" />
+                  <Loader2 className="w-5 h-5 text-lime-text animate-spin" />
                 </div>
               )}
 
@@ -614,30 +614,30 @@ export default function BuyerOrderDetailClient({
                 <CardLabel
                   icon={order.status === 'delivered' ? CheckCircle2 : Clock}
                   label="Action Required"
-                  color={order.status === 'delivered' ? 'text-green-400' : 'text-violet-400'}
+                  color={order.status === 'delivered' ? 'text-success' : 'text-lime-text'}
                 />
 
                 {/* Status-specific messaging */}
                 {order.status === 'processing' && (
-                  <p className="text-xs text-gray-500 mb-3 leading-relaxed">
+                  <p className="text-xs text-text-tertiary mb-3 leading-relaxed">
                     Your order is being processed. You'll be notified when the seller delivers the item.
                   </p>
                 )}
 
                 {order.status === 'paid' && (
-                  <p className="text-xs text-gray-500 mb-3 leading-relaxed">
+                  <p className="text-xs text-text-tertiary mb-3 leading-relaxed">
                     Waiting for the seller to deliver your item. Delivery timer has started.
                   </p>
                 )}
 
                 {order.status === 'delivering' && (
-                  <p className="text-xs text-gray-500 mb-3 leading-relaxed">
+                  <p className="text-xs text-text-tertiary mb-3 leading-relaxed">
                     Your item is being delivered. You'll be able to confirm receipt soon.
                   </p>
                 )}
 
                 {order.status === 'delivered' && (
-                  <p className="text-xs text-gray-500 mb-3 leading-relaxed">
+                  <p className="text-xs text-text-tertiary mb-3 leading-relaxed">
                     {order.delivered_at
                       ? 'Seller has marked this as delivered. Has your item arrived? Confirm to release payment.'
                       : 'Has your item arrived? Only confirm if you have received it.'}
@@ -656,7 +656,7 @@ export default function BuyerOrderDetailClient({
                         }, 150)
                       }}
                       disabled={isTransitioning}
-                      className="w-full py-2 border border-green-500/25 bg-green-500/[0.07] hover:bg-green-500/[0.13] hover:border-green-500/40 text-green-400 text-sm font-medium rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                      className="w-full py-2 border border-green-500/25 bg-green-500/[0.07] hover:bg-green-500/[0.13] hover:border-green-500/40 text-success text-sm font-medium rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50"
                     >
                       <CheckCircle2 className="w-4 h-4" />
                       Mark as Received
@@ -692,8 +692,8 @@ export default function BuyerOrderDetailClient({
                         className={cn(
                           "w-full py-2 border rounded-xl text-sm font-medium transition-all flex items-center justify-center gap-2",
                           canOpenDispute
-                            ? "border-red-500/20 bg-red-500/[0.05] hover:bg-red-500/[0.10] hover:border-red-500/35 text-red-400/80 hover:text-red-400"
-                            : "border-gray-500/20 bg-gray-500/[0.05] text-gray-500 cursor-not-allowed opacity-60"
+                            ? "border-error/40 bg-red-500/[0.05] hover:bg-red-500/[0.10] hover:border-red-500/35 text-error/80 hover:text-error"
+                            : "border-gray-500/20 bg-gray-500/[0.05] text-text-tertiary cursor-not-allowed opacity-60"
                         )}
                       >
                         {!canOpenDispute ? (
@@ -722,8 +722,8 @@ export default function BuyerOrderDetailClient({
                 isTransitioning && "blur-lg"
               )}>
                 <div className="flex items-center gap-2 mb-3">
-                  <CheckCircle2 className="h-4 w-4 text-green-400" />
-                  <span className="text-xs font-bold uppercase tracking-wider text-green-400">Confirm Receipt</span>
+                  <CheckCircle2 className="h-4 w-4 text-success" />
+                  <span className="text-xs font-bold uppercase tracking-wider text-success">Confirm Receipt</span>
                 </div>
 
                 {!order.delivered_at && (
@@ -740,19 +740,19 @@ export default function BuyerOrderDetailClient({
                   </div>
                 )}
 
-                <p className="text-xs text-gray-400 mb-3 leading-relaxed">
+                <p className="text-xs text-text-secondary mb-3 leading-relaxed">
                   {order.delivered_at
                     ? 'Confirm that you received your item as described.'
                     : 'Only confirm if you have actually received your item.'}
                 </p>
 
-                <ul className="text-xs text-gray-500 mb-3 space-y-1.5 list-disc list-inside">
+                <ul className="text-xs text-text-tertiary mb-3 space-y-1.5 list-disc list-inside">
                   <li>You have received the order</li>
                   <li>Everything is as described</li>
                   <li>Payment will be released to seller</li>
                 </ul>
 
-                <div className="p-2.5 bg-yellow-500/10 border border-yellow-500/30 rounded-lg text-[10px] text-yellow-400 mb-4">
+                <div className="p-2.5 bg-warning-bg border border-warning/40 rounded-lg text-[10px] text-warning mb-4">
                   ⚠️ This action cannot be undone.
                 </div>
 
@@ -767,7 +767,7 @@ export default function BuyerOrderDetailClient({
                       }, 150)
                     }}
                     disabled={isConfirming || isTransitioning}
-                    className="flex-1 py-2 rounded-xl bg-white/[0.04] hover:bg-white/[0.07] text-xs text-gray-400 font-medium transition-colors disabled:opacity-40"
+                    className="flex-1 py-2 rounded-xl bg-bg-raised hover:bg-white/[0.07] text-xs text-text-secondary font-medium transition-colors disabled:opacity-40"
                   >
                     Cancel
                   </button>
@@ -796,11 +796,11 @@ export default function BuyerOrderDetailClient({
                   : "opacity-0 translate-x-6 pointer-events-none absolute inset-0"
               )}>
                 <div className="flex items-center gap-2 mb-3">
-                  <Star className="h-4 w-4 text-yellow-400" />
-                  <span className="text-xs font-bold uppercase tracking-wider text-yellow-400">Leave a Review</span>
+                  <Star className="h-4 w-4 text-warning" />
+                  <span className="text-xs font-bold uppercase tracking-wider text-warning">Leave a Review</span>
                 </div>
 
-                <p className="text-xs text-gray-400 mb-4 leading-relaxed">
+                <p className="text-xs text-text-secondary mb-4 leading-relaxed">
                   Help other buyers by sharing your experience with this seller.
                 </p>
 
@@ -811,7 +811,7 @@ export default function BuyerOrderDetailClient({
                     const reviewButton = document.querySelector('[data-review-button]') as HTMLButtonElement
                     reviewButton?.click()
                   }}
-                  className="w-full py-2.5 rounded-xl border border-yellow-500/25 bg-yellow-500/[0.07] hover:bg-yellow-500/[0.13] text-sm text-yellow-400 font-medium transition-all flex items-center justify-center gap-2"
+                  className="w-full py-2.5 rounded-xl border border-yellow-500/25 bg-yellow-500/[0.07] hover:bg-yellow-500/[0.13] text-sm text-warning font-medium transition-all flex items-center justify-center gap-2"
                 >
                   <Star className="w-4 h-4" />
                   Write Review
@@ -819,7 +819,7 @@ export default function BuyerOrderDetailClient({
 
                 <button
                   onClick={() => setShowReviewForm(false)}
-                  className="w-full mt-2 py-2 rounded-xl bg-white/[0.04] hover:bg-white/[0.07] text-xs text-gray-500 font-medium transition-colors"
+                  className="w-full mt-2 py-2 rounded-xl bg-bg-raised hover:bg-white/[0.07] text-xs text-text-tertiary font-medium transition-colors"
                 >
                   Maybe Later
                 </button>
@@ -838,27 +838,27 @@ export default function BuyerOrderDetailClient({
                   <span className="text-xs font-bold uppercase tracking-wider text-amber-400">Request Cancellation</span>
                 </div>
 
-                <p className="text-[10px] text-gray-500 mb-3">Admin will review within 24h</p>
+                <p className="text-[10px] text-text-tertiary mb-3">Admin will review within 24h</p>
 
                 {/* Reason input */}
                 <div className="mb-3">
-                  <span className="text-[9px] font-semibold text-gray-600 uppercase tracking-[0.08em] mb-1.5 block">
+                  <span className="text-[9px] font-semibold text-text-disabled uppercase tracking-[0.08em] mb-1.5 block">
                     Reason for cancellation
                   </span>
                   <textarea
                     value={cancelReason}
                     onChange={(e) => setCancelReason(e.target.value)}
                     placeholder="Please explain why you want to cancel this order..."
-                    className="w-full px-3 py-2 bg-white/[0.03] border border-white/[0.07] rounded-lg text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-amber-500/30 resize-none transition-colors"
+                    className="w-full px-3 py-2 bg-bg-overlay border border-border-subtle rounded-lg text-xs text-white placeholder:text-text-disabled focus:outline-none focus:border-amber-500/30 resize-none transition-colors"
                     rows={3}
                     maxLength={2000}
                     disabled={isSubmittingCancel}
                   />
                   <div className="flex justify-between items-center mt-1">
-                    <span className="text-[9px] text-gray-600">Minimum 10 characters</span>
+                    <span className="text-[9px] text-text-disabled">Minimum 10 characters</span>
                     <span className={cn(
                       "text-[9px]",
-                      cancelReason.length < 10 ? "text-gray-600" : "text-amber-400/60"
+                      cancelReason.length < 10 ? "text-text-disabled" : "text-amber-400/60"
                     )}>
                       {cancelReason.length}/2000
                     </span>
@@ -877,7 +877,7 @@ export default function BuyerOrderDetailClient({
                       }, 150)
                     }}
                     disabled={isSubmittingCancel || isTransitioning}
-                    className="flex-1 py-2 rounded-xl bg-white/[0.04] hover:bg-white/[0.07] text-xs text-gray-400 font-medium transition-colors disabled:opacity-40"
+                    className="flex-1 py-2 rounded-xl bg-bg-raised hover:bg-white/[0.07] text-xs text-text-secondary font-medium transition-colors disabled:opacity-40"
                   >
                     Back
                   </button>
@@ -936,15 +936,15 @@ export default function BuyerOrderDetailClient({
                 isTransitioning && "blur-lg"
               )}>
                 <div className="flex items-center gap-2 mb-3">
-                  <ShieldAlert className="h-4 w-4 text-red-400" />
-                  <span className="text-xs font-bold uppercase tracking-wider text-red-400">Open Dispute</span>
+                  <ShieldAlert className="h-4 w-4 text-error" />
+                  <span className="text-xs font-bold uppercase tracking-wider text-error">Open Dispute</span>
                 </div>
 
-                <p className="text-[10px] text-gray-500 mb-3">Support responds within 24h</p>
+                <p className="text-[10px] text-text-tertiary mb-3">Support responds within 24h</p>
 
                 {/* Category pills */}
                 <div className="mb-3">
-                  <span className="text-[9px] font-semibold text-gray-600 uppercase tracking-[0.08em] mb-1.5 block">
+                  <span className="text-[9px] font-semibold text-text-disabled uppercase tracking-[0.08em] mb-1.5 block">
                     What went wrong?
                   </span>
                   <div className="flex flex-wrap gap-1.5">
@@ -956,8 +956,8 @@ export default function BuyerOrderDetailClient({
                         className={cn(
                           "px-2 py-1 rounded-lg border text-[10px] font-medium transition-all",
                           selectedCategory === cat.value
-                            ? 'border-red-500/40 bg-red-500/[0.12] text-red-400'
-                            : 'border-white/[0.07] bg-white/[0.03] text-gray-500 hover:border-white/[0.12] hover:text-gray-400'
+                            ? 'border-red-500/40 bg-red-500/[0.12] text-error'
+                            : 'border-border-subtle bg-bg-overlay text-text-tertiary hover:border-white/[0.12] hover:text-text-secondary'
                         )}
                       >
                         {cat.label}
@@ -969,14 +969,14 @@ export default function BuyerOrderDetailClient({
                 {/* Description - only show when "Other" is selected */}
                 {selectedCategory === 'Other' && (
                   <div className="mb-3">
-                    <span className="text-[9px] font-semibold text-gray-600 uppercase tracking-[0.08em] mb-1.5 block">
+                    <span className="text-[9px] font-semibold text-text-disabled uppercase tracking-[0.08em] mb-1.5 block">
                       Details
                     </span>
                     <textarea
                       value={disputeReason}
                       onChange={(e) => setDisputeReason(e.target.value)}
                       placeholder="Briefly describe what happened..."
-                      className="w-full px-3 py-2 bg-white/[0.03] border border-white/[0.07] rounded-lg text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-red-500/30 resize-none transition-colors"
+                      className="w-full px-3 py-2 bg-bg-overlay border border-border-subtle rounded-lg text-xs text-white placeholder:text-text-disabled focus:outline-none focus:border-error/40 resize-none transition-colors"
                       rows={3}
                       disabled={isOpeningDispute}
                     />
@@ -996,14 +996,14 @@ export default function BuyerOrderDetailClient({
                       }, 150)
                     }}
                     disabled={isOpeningDispute || isTransitioning}
-                    className="flex-1 py-2 rounded-xl bg-white/[0.04] hover:bg-white/[0.07] text-xs text-gray-400 font-medium transition-colors disabled:opacity-40"
+                    className="flex-1 py-2 rounded-xl bg-bg-raised hover:bg-white/[0.07] text-xs text-text-secondary font-medium transition-colors disabled:opacity-40"
                   >
                     Cancel
                   </button>
                   <button
                     onClick={handleOpenDispute}
                     disabled={isOpeningDispute || !canSubmitDispute}
-                    className="flex-1 py-2 rounded-xl border border-red-500/25 bg-red-500/[0.08] hover:bg-red-500/[0.15] text-xs text-red-400 font-medium transition-all flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="flex-1 py-2 rounded-xl border border-red-500/25 bg-red-500/[0.08] hover:bg-red-500/[0.15] text-xs text-error font-medium transition-all flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     {isOpeningDispute ? (
                       <>
@@ -1027,7 +1027,7 @@ export default function BuyerOrderDetailClient({
                   <span className="text-xs font-bold uppercase tracking-wider text-orange-400">Dispute Opened</span>
                 </div>
 
-                <p className="text-xs text-gray-400 mb-3 leading-relaxed">
+                <p className="text-xs text-text-secondary mb-3 leading-relaxed">
                   Your dispute has been submitted. Our support team will review it within 24 hours.
                 </p>
 
@@ -1037,7 +1037,7 @@ export default function BuyerOrderDetailClient({
 
                 <button
                   onClick={() => setShowDisputedState(false)}
-                  className="w-full py-2 rounded-xl bg-white/[0.04] hover:bg-white/[0.07] text-xs text-gray-400 font-medium transition-colors"
+                  className="w-full py-2 rounded-xl bg-bg-raised hover:bg-white/[0.07] text-xs text-text-secondary font-medium transition-colors"
                 >
                   Got it
                 </button>
@@ -1056,7 +1056,7 @@ export default function BuyerOrderDetailClient({
                   <span className="text-xs font-bold uppercase tracking-wider text-amber-400">Cancellation Pending</span>
                 </div>
 
-                <p className="text-xs text-gray-400 mb-3 leading-relaxed">
+                <p className="text-xs text-text-secondary mb-3 leading-relaxed">
                   Support is reviewing your cancellation request. Check back in a few hours for updates.
                 </p>
 
@@ -1066,10 +1066,10 @@ export default function BuyerOrderDetailClient({
 
                 {cancellationRequest?.reason && (
                   <div className="mb-3">
-                    <span className="text-[9px] font-semibold text-gray-600 uppercase tracking-[0.08em] mb-1.5 block">
+                    <span className="text-[9px] font-semibold text-text-disabled uppercase tracking-[0.08em] mb-1.5 block">
                       Your Reason
                     </span>
-                    <p className="text-xs text-gray-500 bg-white/[0.02] border border-white/[0.05] rounded-lg p-2.5 leading-relaxed">
+                    <p className="text-xs text-text-tertiary bg-bg-overlay border border-border-subtle rounded-lg p-2.5 leading-relaxed">
                       {cancellationRequest.reason}
                     </p>
                   </div>
@@ -1078,7 +1078,7 @@ export default function BuyerOrderDetailClient({
                 <div className="flex flex-col gap-2">
                   <button
                     onClick={() => window.open('/support', '_blank')}
-                    className="w-full py-2 rounded-xl border border-violet-500/25 bg-violet-500/[0.07] hover:bg-violet-500/[0.13] text-xs text-violet-400 font-medium transition-all flex items-center justify-center gap-2"
+                    className="w-full py-2 rounded-xl border border-lime-tint-border bg-lime/[0.07] hover:bg-lime/[0.13] text-xs text-lime-text font-medium transition-all flex items-center justify-center gap-2"
                   >
                     <MessageSquare className="w-3.5 h-3.5" />
                     Contact Live Support
@@ -1108,7 +1108,7 @@ export default function BuyerOrderDetailClient({
                       }
                     }}
                     disabled={isUndoingCancel || isTransitioning}
-                    className="w-full py-2 rounded-xl bg-white/[0.04] hover:bg-white/[0.07] text-xs text-gray-400 hover:text-gray-300 font-medium transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                    className="w-full py-2 rounded-xl bg-bg-raised hover:bg-white/[0.07] text-xs text-text-secondary hover:text-text-secondary font-medium transition-all flex items-center justify-center gap-2 disabled:opacity-50"
                   >
                     {isUndoingCancel ? (
                       <>
@@ -1130,7 +1130,7 @@ export default function BuyerOrderDetailClient({
           {/* ⑤ Delivery Proof */}
           {order.delivery_evidence_urls && order.delivery_evidence_urls.length > 0 && (
             <SidebarCard>
-              <CardLabel icon={Eye} label="Delivery Proof" color="text-violet-400" />
+              <CardLabel icon={Eye} label="Delivery Proof" color="text-lime-text" />
               <DeliveryEvidenceViewer evidenceUrls={order.delivery_evidence_urls} />
             </SidebarCard>
           )}
@@ -1167,12 +1167,12 @@ export default function BuyerOrderDetailClient({
             <>
               <SidebarCard className="border-green-500/20 bg-green-500/[0.04]">
                 <div className="flex items-center gap-3">
-                  <div className="h-9 w-9 rounded-xl flex items-center justify-center border border-green-500/25 bg-green-500/10 flex-shrink-0">
-                    <CheckCircle2 className="h-4 w-4 text-green-400" />
+                  <div className="h-9 w-9 rounded-xl flex items-center justify-center border border-green-500/25 bg-success-bg flex-shrink-0">
+                    <CheckCircle2 className="h-4 w-4 text-success" />
                   </div>
                   <div>
-                    <div className="text-sm font-bold text-green-400">Order Complete</div>
-                    <div className="text-xs text-gray-600 mt-0.5">Payment released to seller</div>
+                    <div className="text-sm font-bold text-success">Order Complete</div>
+                    <div className="text-xs text-text-disabled mt-0.5">Payment released to seller</div>
                   </div>
                 </div>
               </SidebarCard>
@@ -1181,16 +1181,16 @@ export default function BuyerOrderDetailClient({
 
           {/* ⑧ VaultShield Protection - Clean & Confident */}
           {order.vaultshield_tier && (
-            <SidebarCard className="border-violet-500/20 bg-gradient-to-br from-violet-500/5 to-transparent">
+            <SidebarCard className="border-lime-tint-border bg-gradient-to-br from-lime/5 to-transparent">
               {/* Header with tier badge */}
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-3">
-                  <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-violet-500 to-violet-600 flex items-center justify-center shadow-lg shadow-violet-500/25">
+                  <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-lime to-lime flex items-center justify-center shadow-lg shadow-violet-500/25">
                     <ShieldCheck className="h-6 w-6 text-white" />
                   </div>
                   <div>
                     <div className="text-base font-bold text-white">VaultShield™</div>
-                    <div className="text-xs text-violet-400 font-medium">
+                    <div className="text-xs text-lime-text font-medium">
                       {order.vaultshield_tier === 'standard' && '48-Hour Protection'}
                       {order.vaultshield_tier === 'enhanced' && '7-Day Protection'}
                       {order.vaultshield_tier === 'premium' && '30-Day Protection'}
@@ -1200,7 +1200,7 @@ export default function BuyerOrderDetailClient({
                 <div className={cn(
                   'text-[9px] font-bold uppercase tracking-wider px-2.5 py-1.5 rounded-lg border',
                   order.vaultshield_tier === 'standard' && 'bg-blue-500/10 text-blue-400 border-blue-500/30',
-                  order.vaultshield_tier === 'enhanced' && 'bg-violet-500/10 text-violet-400 border-violet-500/30',
+                  order.vaultshield_tier === 'enhanced' && 'bg-lime/10 text-lime-text border-lime-tint-border',
                   order.vaultshield_tier === 'premium' && 'bg-purple-500/10 text-purple-400 border-purple-500/30'
                 )}>
                   {order.vaultshield_tier}
@@ -1216,8 +1216,8 @@ export default function BuyerOrderDetailClient({
                       <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-400" />
                     </div>
                     <div className="flex-1">
-                      <div className="text-xs font-bold text-green-400">Active Protection</div>
-                      <div className="text-[10px] text-gray-500 mt-0.5">
+                      <div className="text-xs font-bold text-success">Active Protection</div>
+                      <div className="text-[10px] text-text-tertiary mt-0.5">
                         {protectionDays} day{protectionDays !== 1 ? 's' : ''} remaining
                       </div>
                     </div>
@@ -1228,31 +1228,31 @@ export default function BuyerOrderDetailClient({
               {/* Clean 3-point guarantee */}
               <div className="space-y-2 mb-4">
                 <div className="flex items-center gap-3">
-                  <div className="h-7 w-7 rounded-lg bg-violet-500/10 flex items-center justify-center flex-shrink-0">
-                    <CheckCircle2 className="h-4 w-4 text-violet-400" />
+                  <div className="h-7 w-7 rounded-lg bg-lime/10 flex items-center justify-center flex-shrink-0">
+                    <CheckCircle2 className="h-4 w-4 text-lime-text" />
                   </div>
-                  <span className="text-sm text-gray-300 font-medium">Full refund guarantee</span>
+                  <span className="text-sm text-text-secondary font-medium">Full refund guarantee</span>
                 </div>
                 <div className="flex items-center gap-3">
-                  <div className="h-7 w-7 rounded-lg bg-violet-500/10 flex items-center justify-center flex-shrink-0">
-                    <CheckCircle2 className="h-4 w-4 text-violet-400" />
+                  <div className="h-7 w-7 rounded-lg bg-lime/10 flex items-center justify-center flex-shrink-0">
+                    <CheckCircle2 className="h-4 w-4 text-lime-text" />
                   </div>
-                  <span className="text-sm text-gray-300 font-medium">Escrow-protected funds</span>
+                  <span className="text-sm text-text-secondary font-medium">Escrow-protected funds</span>
                 </div>
                 <div className="flex items-center gap-3">
-                  <div className="h-7 w-7 rounded-lg bg-violet-500/10 flex items-center justify-center flex-shrink-0">
-                    <CheckCircle2 className="h-4 w-4 text-violet-400" />
+                  <div className="h-7 w-7 rounded-lg bg-lime/10 flex items-center justify-center flex-shrink-0">
+                    <CheckCircle2 className="h-4 w-4 text-lime-text" />
                   </div>
-                  <span className="text-sm text-gray-300 font-medium">24/7 dispute support</span>
+                  <span className="text-sm text-text-secondary font-medium">24/7 dispute support</span>
                 </div>
               </div>
 
               {/* Protection expiry date */}
               {order.warranty_expires_at && (
-                <div className="mb-4 pt-4 border-t border-white/[0.06]">
+                <div className="mb-4 pt-4 border-t border-border-subtle">
                   <div className="flex items-center justify-between text-xs">
-                    <span className="text-gray-500">Protection expires</span>
-                    <span className="text-gray-300 font-medium">
+                    <span className="text-text-tertiary">Protection expires</span>
+                    <span className="text-text-secondary font-medium">
                       {new Date(order.warranty_expires_at).toLocaleDateString('en-US', {
                         month: 'short',
                         day: 'numeric',
@@ -1264,11 +1264,11 @@ export default function BuyerOrderDetailClient({
               )}
 
               {/* Action buttons */}
-              <div className="flex gap-2 pt-4 border-t border-white/[0.06]">
+              <div className="flex gap-2 pt-4 border-t border-border-subtle">
                 {order.status !== 'completed' && order.status !== 'cancelled' && order.status !== 'refunded' && (
                   <button
                     onClick={() => setShowDisputeForm(true)}
-                    className="flex-1 flex items-center justify-center gap-2 rounded-lg border border-violet-500/30 bg-violet-500/10 px-3 py-2 text-xs font-medium text-violet-400 transition-colors hover:border-violet-500/50 hover:bg-violet-500/20"
+                    className="flex-1 flex items-center justify-center gap-2 rounded-lg border border-lime-tint-border bg-lime/10 px-3 py-2 text-xs font-medium text-lime-text transition-colors hover:border-lime hover:bg-lime/20"
                   >
                     <ShieldAlert className="h-3.5 w-3.5" />
                     <span>File a Claim</span>
@@ -1278,7 +1278,7 @@ export default function BuyerOrderDetailClient({
                   href="/vaultshield"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex-1 flex items-center justify-center gap-2 rounded-lg border border-white/[0.08] bg-white/[0.02] px-3 py-2 text-xs font-medium text-gray-400 transition-colors hover:border-white/[0.12] hover:bg-white/[0.04] hover:text-gray-300"
+                  className="flex-1 flex items-center justify-center gap-2 rounded-lg border border-border-subtle bg-bg-overlay px-3 py-2 text-xs font-medium text-text-secondary transition-colors hover:border-white/[0.12] hover:bg-bg-raised hover:text-text-secondary"
                 >
                   <Zap className="h-3.5 w-3.5" />
                   <span>Learn More</span>
@@ -1297,27 +1297,27 @@ export default function BuyerOrderDetailClient({
             {/* Amount breakdown */}
             <div className="space-y-2 mb-3">
               <div className="flex justify-between items-center">
-                <span className="text-xs text-gray-500">Order Price</span>
+                <span className="text-xs text-text-tertiary">Order Price</span>
                 <span className="text-xs text-gray-200 font-mono">${(order.subtotal || order.unit_price || 0).toFixed(2)}</span>
               </div>
               {order.platform_fee > 0 && (
                 <div className="flex justify-between items-center">
-                  <span className="text-xs text-gray-500">Platform Fee</span>
-                  <span className="text-xs text-gray-500 font-mono">${order.platform_fee.toFixed(2)}</span>
+                  <span className="text-xs text-text-tertiary">Platform Fee</span>
+                  <span className="text-xs text-text-tertiary font-mono">${order.platform_fee.toFixed(2)}</span>
                 </div>
               )}
               {order.vaultshield_tier && order.vaultshield_tier !== 'standard' && order.vaultshield_tier_fee > 0 && (
                 <div className="flex justify-between items-center">
                   <div className="flex items-center gap-1.5">
-                    <ShieldCheck className="h-3 w-3 text-violet-400" />
-                    <span className="text-xs text-violet-400 font-medium">
+                    <ShieldCheck className="h-3 w-3 text-lime-text" />
+                    <span className="text-xs text-lime-text font-medium">
                       VaultShield {order.vaultshield_tier.charAt(0).toUpperCase() + order.vaultshield_tier.slice(1)}
                     </span>
                   </div>
-                  <span className="text-xs text-violet-400 font-mono">+${order.vaultshield_tier_fee.toFixed(2)}</span>
+                  <span className="text-xs text-lime-text font-mono">+${order.vaultshield_tier_fee.toFixed(2)}</span>
                 </div>
               )}
-              <div className="pt-2 border-t border-white/[0.05] flex justify-between items-center">
+              <div className="pt-2 border-t border-border-subtle flex justify-between items-center">
                 <span className="text-sm font-semibold text-white">Total Paid</span>
                 <span className="text-xl font-bold text-white font-mono">${order.total_amount.toFixed(2)}</span>
               </div>
@@ -1330,7 +1330,7 @@ export default function BuyerOrderDetailClient({
                 ? "bg-gradient-to-r from-blue-500/10 to-cyan-500/5 border border-blue-500/20"
                 : order.status === 'completed'
                 ? "bg-gradient-to-r from-emerald-500/10 to-green-500/5 border border-emerald-500/20"
-                : "bg-gradient-to-r from-violet-500/10 to-purple-500/5 border border-violet-500/20"
+                : "bg-gradient-to-r from-lime/10 to-purple-500/5 border border-lime-tint-border"
             )}>
               <div className="flex items-center gap-2.5">
                 <div className={cn(
@@ -1339,7 +1339,7 @@ export default function BuyerOrderDetailClient({
                     ? "bg-blue-500/20"
                     : order.status === 'completed'
                     ? "bg-emerald-500/20"
-                    : "bg-violet-500/20"
+                    : "bg-lime/20"
                 )}>
                   <ShieldCheck className={cn(
                     "h-4.5 w-4.5",
@@ -1347,7 +1347,7 @@ export default function BuyerOrderDetailClient({
                       ? "text-blue-400"
                       : order.status === 'completed'
                       ? "text-emerald-400"
-                      : "text-violet-400"
+                      : "text-lime-text"
                   )} />
                 </div>
                 <div className="flex-1">
@@ -1357,7 +1357,7 @@ export default function BuyerOrderDetailClient({
                       ? "text-blue-400"
                       : order.status === 'completed'
                       ? "text-emerald-400"
-                      : "text-violet-400"
+                      : "text-lime-text"
                   )}>
                     {order.status === 'cancelled'
                       ? 'Refunded to Wallet'
@@ -1365,7 +1365,7 @@ export default function BuyerOrderDetailClient({
                       ? 'Funds Released to Seller'
                       : 'Funds in Escrow'}
                   </div>
-                  <div className="text-[10px] text-gray-500 leading-relaxed">
+                  <div className="text-[10px] text-text-tertiary leading-relaxed">
                     {order.status === 'cancelled'
                       ? 'Full refund credited to your wallet'
                       : order.status === 'completed'
@@ -1377,14 +1377,14 @@ export default function BuyerOrderDetailClient({
             </div>
 
             {/* Simple trust points - only essential info */}
-            <div className="mt-4 pt-4 border-t border-white/[0.05] space-y-2.5">
+            <div className="mt-4 pt-4 border-t border-border-subtle space-y-2.5">
               <div className="flex items-center gap-2.5">
-                <CheckCircle2 className="h-3.5 w-3.5 text-violet-400 flex-shrink-0" />
-                <span className="text-[11px] text-gray-500">Seller paid only after you confirm</span>
+                <CheckCircle2 className="h-3.5 w-3.5 text-lime-text flex-shrink-0" />
+                <span className="text-[11px] text-text-tertiary">Seller paid only after you confirm</span>
               </div>
               <div className="flex items-center gap-2.5">
-                <CheckCircle2 className="h-3.5 w-3.5 text-violet-400 flex-shrink-0" />
-                <span className="text-[11px] text-gray-500">Dispute protection active</span>
+                <CheckCircle2 className="h-3.5 w-3.5 text-lime-text flex-shrink-0" />
+                <span className="text-[11px] text-text-tertiary">Dispute protection active</span>
               </div>
             </div>
           </SidebarCard>
@@ -1402,7 +1402,7 @@ export default function BuyerOrderDetailClient({
                 <HelpCircle className="w-4 h-4" />
                 Need Help? Contact Support
               </button>
-              <p className="text-[10px] text-gray-600 text-center mt-2">
+              <p className="text-[10px] text-text-disabled text-center mt-2">
                 Issues after receiving your item?
               </p>
             </SidebarCard>

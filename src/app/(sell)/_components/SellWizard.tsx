@@ -19,14 +19,16 @@
  */
 
 import { useEffect, useMemo, useRef, useState, useTransition } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   ArrowRight, Check, Loader2, Upload, X as IconX, Image as ImageIcon,
-  ChevronLeft, Sparkles, Search, DollarSign, Package, Clock, Zap,
+  ChevronLeft, Search, DollarSign, Package, Clock, Zap, FileSpreadsheet,
   History, Flame,
-  Coins, Backpack, UserSquare2, Trophy,
+  Coins, Backpack, UserSquare2, Trophy, ShoppingBag, Gamepad2,
   type LucideIcon,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -37,6 +39,12 @@ import {
   fetchSellGamesForCategory,
   fetchSellTemplate,
   publishListing,
+  updateListingFromWizard,
+  fetchPublishPolicy,
+  fetchPriceGuidance,
+  fetchListingForDuplicate,
+  type SellerPublishPolicy,
+  type PriceGuidance,
   uploadSellImage,
   type SellGameOption,
 } from '@/lib/actions/sell-wizard'
@@ -49,8 +57,8 @@ import type {
 // ─── Constants ───────────────────────────────────────────────────────────────
 
 const STEPS = [
-  { id: 1, label: 'Category', hint: 'What are you selling?' },
-  { id: 2, label: 'Game',     hint: 'Which game is it for?' },
+  { id: 1, label: 'Category', hint: 'Choose a category' },
+  { id: 2, label: 'Game',     hint: 'Choose a game' },
   { id: 3, label: 'Details',  hint: 'Tell us about the offer' },
 ] as const
 
@@ -63,13 +71,66 @@ const DELIVERY_TIMES = [
   { value: '24hr',  label: '1 day' },
 ]
 
-const RECENT_GAMES_KEY = 'gv_sell_recent_games'
+// V13 — Currency sellers think in minutes. Tighter preset grid.
+const DELIVERY_TIMES_CURRENCY = [
+  { value: 'instant', label: 'Instant' },
+  { value: '5min',    label: '5 min' },
+  { value: '15min',   label: '15 min' },
+  { value: '30min',   label: '30 min' },
+  { value: '1hr',     label: '1 hour' },
+  { value: 'custom',  label: 'Custom' },
+]
 
-/** Pure visibility check (mirrors LivePreview / new-schema.ts/isAttributeVisible). */
-function isVisible(attr: Attribute, values: Record<string, unknown>): boolean {
+const RECENT_GAMES_KEY = 'gv_sell_recent_games'
+// R16 — sessionStorage key for the wizard snapshot so refresh keeps the
+// seller on the same step with the same draft. Lives on sessionStorage so it
+// auto-clears when the tab closes (we don't want a stale half-filled draft
+// to come back days later).
+const WIZARD_SNAPSHOT_KEY = 'gv_sell_wizard_snapshot'
+
+interface WizardSnapshot {
+  step: number
+  categoryId: string | null
+  gameId: string | null
+  region: string
+  platform: string
+  title: string
+  description: string
+  price: string
+  originalPrice: string
+  quantity: string
+  minQuantity: string
+  deliveryMethod: 'manual' | 'instant'
+  deliveryTime: string
+  images: string[]
+  fieldValues: Record<string, unknown>
+  agreeSellerRules: boolean
+  agreeTos: boolean
+}
+
+/**
+ * Pure visibility check (mirrors LivePreview / new-schema.ts/isAttributeVisible).
+ *
+ * V15c — Walks the full ancestor chain so a stale value on a now-hidden
+ * parent can't keep a descendant on screen. If the third arg is provided,
+ * we look up parent attributes by id; otherwise we fall back to the
+ * shallow rule check (preserves call sites that don't have the full list).
+ */
+function isVisible(
+  attr: Attribute,
+  values: Record<string, unknown>,
+  byId?: Map<string, Attribute>,
+  seen: Set<string> = new Set(),
+): boolean {
+  if (seen.has(attr.id)) return true
+  seen.add(attr.id)
   const rules = attr.conditional_rules ?? []
   if (rules.length === 0) return true
   for (const r of rules) {
+    if (byId) {
+      const parent = byId.get(r.trigger_attribute_id)
+      if (parent && !isVisible(parent, values, byId, seen)) return false
+    }
     const cur = values[r.trigger_attribute_id]
     const trig = r.trigger_values ?? []
     let pass = false
@@ -82,6 +143,34 @@ function isVisible(attr: Attribute, values: Record<string, unknown>): boolean {
     if (!pass) return false
   }
   return true
+}
+
+/**
+ * V15c — Collect every descendant attribute id of a parent. Used when
+ * the user changes a parent value so we can wipe stale sub-selections
+ * (e.g. switching Item Type from Brainrot → Base Skin clears both Rarity
+ * and the leaf "Brainrot" selection).
+ */
+function collectDescendantIds(parentId: string, attrs: Attribute[]): Set<string> {
+  const out = new Set<string>()
+  let frontier = new Set<string>([parentId])
+  let safety = 0
+  while (frontier.size > 0 && safety++ < 32) {
+    const next = new Set<string>()
+    for (const a of attrs) {
+      if (out.has(a.id)) continue
+      const rules = a.conditional_rules ?? []
+      for (const r of rules) {
+        if (frontier.has(r.trigger_attribute_id)) {
+          out.add(a.id)
+          next.add(a.id)
+          break
+        }
+      }
+    }
+    frontier = next
+  }
+  return out
 }
 
 /** Build parent → (triggerValue → children[]) index, just like the admin tree. */
@@ -109,50 +198,48 @@ function buildChildIndex(attrs: Attribute[]) {
 // ─── Step bar (clickable step labels + lime progress rail) ───────────────────
 
 /**
- * StepBar — three clickable step chips above a progress rail.
+ * StepBar — three clickable step labels above a progress rail.
  *
- * Each chip is a real <button>; the user can click a completed step to jump
- * back to it. The current step's chip is highlighted lime; completed ones
- * use the success tone; future ones look muted.
- *
- * Breadcrumbs are GONE — these chips replace them.
+ * R13 — Pill chrome dropped. Each step is now a plain text label with a
+ * leading number/check badge. Active = lime text. Completed = clickable,
+ * subtle hover bg. Future = dimmed. No bordered box around the label.
  */
 function StepBar({ step, onJumpToStep }: { step: number; onJumpToStep: (target: number) => void }) {
   const pct = (step / STEPS.length) * 100
 
   return (
     <nav aria-label="Progress" className="mb-4">
-      {/* Chip row — bigger than before, each chip clickable when reachable */}
-      <ol className="mb-3 flex items-center justify-between gap-2">
+      {/* Step row — plain labels, no pill chrome */}
+      <ol className="mb-3 flex items-center justify-between gap-1 sm:gap-2">
         {STEPS.map((s) => {
           const done = step > s.id
           const active = step === s.id
           const clickable = done // can only jump backwards to a completed step
           return (
-            <li key={s.id} className="flex-1">
+            <li key={s.id} className="min-w-0 flex-1">
               <button
                 type="button"
                 disabled={!clickable && !active}
                 onClick={() => clickable && onJumpToStep(s.id)}
                 className={cn(
-                  // Box — R9: slightly smaller; softer lime treatment
-                  'group flex w-full items-center justify-center gap-1.5 rounded-xl border px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-wider transition-colors sm:text-xs',
-                  // State
-                  active && 'border-lime-tint-border bg-lime-tint-bg text-lime-text',
-                  done && 'border-success/40 bg-success-bg text-success cursor-pointer hover:border-success hover:bg-bg-raised-hover',
-                  !active && !done && 'border-border-subtle text-text-disabled cursor-default',
+                  // Layout — no border, no background fill by default
+                  'group flex w-full items-center justify-center gap-1.5 rounded-md px-1.5 py-1.5 text-[10px] font-semibold uppercase tracking-wider transition-colors sm:gap-2 sm:px-3 sm:text-xs',
+                  // State — color only, no enclosing pill
+                  active && 'text-lime-text',
+                  done && 'cursor-pointer text-text-secondary hover:bg-bg-raised-hover hover:text-text-primary',
+                  !active && !done && 'cursor-default text-text-disabled',
                 )}
                 aria-current={active ? 'step' : undefined}
               >
                 <span
                   className={cn(
-                    'flex h-4 w-4 shrink-0 items-center justify-center rounded-full border text-[9px] font-bold',
-                    active && 'border-lime bg-lime text-text-inverse',
-                    done && 'border-success bg-success text-text-inverse',
-                    !active && !done && 'border-border-default text-text-tertiary',
+                    'flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[9px] font-bold sm:h-5 sm:w-5 sm:text-[10px]',
+                    active && 'bg-lime text-text-inverse',
+                    done && 'bg-success text-text-inverse',
+                    !active && !done && 'border border-border-default text-text-tertiary',
                   )}
                 >
-                  {done ? <Check className="h-2.5 w-2.5" strokeWidth={3} /> : s.id}
+                  {done ? <Check className="h-2.5 w-2.5 sm:h-3 sm:w-3" strokeWidth={3} /> : s.id}
                 </span>
                 <span className="truncate">{s.label}</span>
               </button>
@@ -162,7 +249,7 @@ function StepBar({ step, onJumpToStep }: { step: number; onJumpToStep: (target: 
       </ol>
 
       {/* Rail */}
-      <div className="relative h-1.5 w-full overflow-hidden rounded-full bg-bg-raised-hover">
+      <div className="relative h-1 w-full overflow-hidden rounded-full bg-bg-raised-hover">
         <motion.div
           className="absolute inset-y-0 left-0 rounded-full bg-lime"
           initial={false}
@@ -177,17 +264,54 @@ function StepBar({ step, onJumpToStep }: { step: number; onJumpToStep: (target: 
 
 // ─── Main component ──────────────────────────────────────────────────────────
 
-export default function SellWizard({ initialCategories }: { initialCategories: GlobalCategory[] }) {
+export default function SellWizard({
+  initialCategories,
+  duplicateFromId,
+  editListingId,
+}: {
+  initialCategories: GlobalCategory[]
+  /** D4 — when set, fetch this listing on mount and pre-fill the wizard. */
+  duplicateFromId?: string | null
+  /** V14k — when set, the wizard runs in EDIT mode: pre-fills from the
+   *  listing (same loader as duplicate), lands on Step 3, and submits
+   *  via updateListingFromWizard instead of publishListing. Mutually
+   *  exclusive with duplicateFromId (editListingId wins). */
+  editListingId?: string | null
+}) {
   const router = useRouter()
+  // V14p — Query client used to bust the seller-listings cache after an
+  // edit-mode save. The /account/listings page reads via react-query with
+  // a 1-minute staleTime, so without an explicit invalidate the seller
+  // would see the old row until the cache expired.
+  const queryClient = useQueryClient()
   // Ref to the wizard card so we can scroll to the top of it whenever the
   // step changes (per R8 user feedback — landing on the prior scroll
   // position of the next page is disorienting).
   const cardRef = useRef<HTMLElement | null>(null)
   const [, startTransition] = useTransition()
 
+  // V14k — Hoisted up so other effects (snapshot persist, rehydrate gate)
+  // can reference it.
+  const isEditMode = !!editListingId
+  // V14o — Edit-mode shows a full-card loader until the prefill resolves
+  // AND we've landed on Step 3. Without this gate, the wizard renders
+  // Step 1 → Step 2 → Step 3 in rapid succession as data arrives, which
+  // looks glitchy. Hidden surface, animated lime spinner, faded copy.
+  const [editLoading, setEditLoading] = useState<boolean>(isEditMode)
+
   const [step, setStep] = useState(1)
   const [categories] = useState<GlobalCategory[]>(initialCategories)
   const [selectedCategory, setSelectedCategory] = useState<GlobalCategory | null>(null)
+
+  // D1 — Publish policy (tier, cap, moderation gate). Fetched on mount;
+  // surfaced in Step 3 so the seller sees pending-approval status and cap
+  // info before they click Create Offer.
+  const [policy, setPolicy] = useState<SellerPublishPolicy | null>(null)
+
+  // D2 — Price guidance for the chosen (game, category). Fetched whenever
+  // both are set; surfaced in the Pricing sub-card so the seller sees the
+  // going rate before they price too high/low.
+  const [priceGuidance, setPriceGuidance] = useState<PriceGuidance | null>(null)
 
   const [games, setGames] = useState<SellGameOption[]>([])
   const [gamesLoading, setGamesLoading] = useState(false)
@@ -245,6 +369,130 @@ export default function SellWizard({ initialCategories }: { initialCategories: G
     window.scrollTo({ top, behavior: 'smooth' })
   }, [step])
 
+  // R16 — Refresh persistence. Snapshot lives in sessionStorage so a hard
+  // refresh keeps the seller on the same step with the same fields filled.
+  // Cleared on successful publish (see handlePublish below).
+  //
+  // Two-phase rehydrate:
+  //   1. Synchronously restore everything EXCEPT step (deferred so step
+  //      never gets ahead of selectedCategory / selectedGame).
+  //   2. Once the data needed for the saved step has resolved (category for
+  //      step 2; game for step 3), bump step up to the target.
+  const pendingGameIdRef = useRef<string | null>(null)
+  const pendingStepRef = useRef<number | null>(null)
+  const hydratedRef = useRef(false)
+  // Rehydrate on mount
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    // V14k — In edit mode, skip the session snapshot. The prefill effect
+    // below loads the actual listing and should fully own the form state.
+    if (editListingId) { hydratedRef.current = true; return }
+    try {
+      const raw = sessionStorage.getItem(WIZARD_SNAPSHOT_KEY)
+      if (!raw) { hydratedRef.current = true; return }
+      const snap = JSON.parse(raw) as WizardSnapshot
+      if (snap.categoryId) {
+        const cat = categories.find((c) => c.id === snap.categoryId) ?? null
+        if (cat) setSelectedCategory(cat)
+      }
+      pendingGameIdRef.current = snap.gameId ?? null
+      pendingStepRef.current =
+        typeof snap.step === 'number' && snap.step >= 1 && snap.step <= 3 ? snap.step : null
+      setRegion(snap.region ?? '')
+      setPlatform(snap.platform ?? '')
+      setTitle(snap.title ?? '')
+      setDescription(snap.description ?? '')
+      setPrice(snap.price ?? '')
+      setOriginalPrice(snap.originalPrice ?? '')
+      setQuantity(snap.quantity ?? '1')
+      setMinQuantity(snap.minQuantity ?? '1')
+      setDeliveryMethod(snap.deliveryMethod ?? 'manual')
+      setDeliveryTime(snap.deliveryTime ?? '1hr')
+      setImages(Array.isArray(snap.images) ? snap.images : [])
+      setFieldValues(snap.fieldValues ?? {})
+      setAgreeSellerRules(!!snap.agreeSellerRules)
+      setAgreeTos(!!snap.agreeTos)
+    } catch {}
+    hydratedRef.current = true
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+  // Resolve the pending gameId once games arrive.
+  useEffect(() => {
+    if (!pendingGameIdRef.current) return
+    if (games.length === 0) return
+    const g = games.find((g) => g.game_id === pendingGameIdRef.current) ?? null
+    if (g) setSelectedGame(g)
+    pendingGameIdRef.current = null
+  }, [games])
+  // Bump step to the rehydrate target as soon as the data it needs is ready.
+  useEffect(() => {
+    const target = pendingStepRef.current
+    if (target === null) return
+    if (target === 1) {
+      pendingStepRef.current = null
+      return
+    }
+    if (target === 2 && selectedCategory) {
+      setStep(2)
+      pendingStepRef.current = null
+      return
+    }
+    if (target === 3 && selectedCategory && selectedGame) {
+      setStep(3)
+      pendingStepRef.current = null
+      // V14o — Reveal the wizard once we've actually arrived at Step 3.
+      // The category + game are now resolved, so the details form is
+      // ready to render with the prefilled data.
+      if (isEditMode) setEditLoading(false)
+    }
+  }, [selectedCategory, selectedGame, isEditMode])
+  // Persist on every relevant state change (after initial hydrate finishes).
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    if (!hydratedRef.current) return
+    // V14k — Don't persist in edit mode; we don't want editing an existing
+    // listing to clobber an in-progress /sell/new draft.
+    if (isEditMode) return
+    const snap: WizardSnapshot = {
+      step,
+      categoryId: selectedCategory?.id ?? null,
+      gameId: selectedGame?.game_id ?? null,
+      region,
+      platform,
+      title,
+      description,
+      price,
+      originalPrice,
+      quantity,
+      minQuantity,
+      deliveryMethod,
+      deliveryTime,
+      images,
+      fieldValues,
+      agreeSellerRules,
+      agreeTos,
+    }
+    try { sessionStorage.setItem(WIZARD_SNAPSHOT_KEY, JSON.stringify(snap)) } catch {}
+  }, [
+    step,
+    selectedCategory,
+    selectedGame,
+    region,
+    platform,
+    title,
+    description,
+    price,
+    originalPrice,
+    quantity,
+    minQuantity,
+    deliveryMethod,
+    deliveryTime,
+    images,
+    fieldValues,
+    agreeSellerRules,
+    agreeTos,
+  ])
+
   // R11.c — sync the wizard step with browser history so the back gesture
   // walks step 3 -> step 2 -> step 1 -> previous page instead of leaving
   // the wizard outright on the first back tap.
@@ -256,10 +504,67 @@ export default function SellWizard({ initialCategories }: { initialCategories: G
   //    the browser stack grows in lockstep with `step`.
   //  - On popstate, read state.step and call setStep — guarded by a ref so
   //    the resulting step change effect below does NOT push another entry.
+  // D1 — Fetch publish policy on mount. Cheap RPC, runs in parallel with
+  // the rest of the page; no need to block render on it. We only read it
+  // when the seller hits Step 3 / clicks Create Offer.
+  useEffect(() => {
+    let cancelled = false
+    fetchPublishPolicy().then((res) => {
+      if (cancelled) return
+      if (res.success) setPolicy(res.data)
+    })
+    return () => { cancelled = true }
+  }, [])
+
+  // D4 / V14k — Prefill for duplicate AND edit modes. Same loader, same
+  // landing step (3). Edit mode just changes the toast copy and what
+  // handlePublish calls on submit.
+  const prefillId = editListingId ?? duplicateFromId ?? null
+  useEffect(() => {
+    if (!prefillId) return
+    let cancelled = false
+    fetchListingForDuplicate(prefillId).then((res) => {
+      if (cancelled) return
+      if (!res.success) {
+        toast.error(res.error)
+        // V14o — Drop the loader on failure so the user isn't stuck on a
+        // blank loader screen; they'll see the empty wizard and can back out.
+        if (isEditMode) setEditLoading(false)
+        return
+      }
+      const d = res.data
+      const cat = categories.find((c) => c.slug === d.category_slug) ?? null
+      if (cat) setSelectedCategory(cat)
+      pendingGameIdRef.current = d.game_id
+      pendingStepRef.current = 3
+      setTitle(d.title)
+      setDescription(d.description)
+      setPrice(String(d.price))
+      setOriginalPrice(d.original_price != null ? String(d.original_price) : '')
+      setQuantity(String(d.quantity))
+      setMinQuantity(String(d.min_quantity))
+      setDeliveryMethod(d.delivery_method)
+      setDeliveryTime(d.delivery_time ?? '1hr')
+      setRegion(d.region ?? '')
+      setPlatform(d.platform ?? '')
+      setFieldValues(d.template_data ?? {})
+      setImages(d.images)
+      toast.success(isEditMode ? 'Loaded your listing for editing' : 'Pre-filled from your existing listing')
+    })
+    return () => { cancelled = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [prefillId])
+
   const popstateGuardRef = useRef(false)
-  // Mount: lay down the initial history entry
+  // Mount: lay down the initial history entry.
+  // V14o — Skip the step-history wiring in edit mode. The wizard only ever
+  // shows Step 3 in edit mode, so there's nothing to step back through —
+  // the browser back gesture should fall through to the previous page
+  // (i.e. /account/listings), not bounce the seller to Steps 2/1 which
+  // they can't legally edit anyway.
   useEffect(() => {
     if (typeof window === 'undefined') return
+    if (isEditMode) return
     window.history.replaceState({ wizardStep: 1 }, '')
     const onPop = (e: PopStateEvent) => {
       const target = (e.state as { wizardStep?: number } | null)?.wizardStep
@@ -270,10 +575,12 @@ export default function SellWizard({ initialCategories }: { initialCategories: G
     }
     window.addEventListener('popstate', onPop)
     return () => window.removeEventListener('popstate', onPop)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
-  // Step change → push history (unless we got here via popstate)
+  // Step change → push history (unless we got here via popstate). Same edit-mode skip.
   useEffect(() => {
     if (typeof window === 'undefined') return
+    if (isEditMode) return
     if (popstateGuardRef.current) {
       popstateGuardRef.current = false
       return
@@ -281,7 +588,7 @@ export default function SellWizard({ initialCategories }: { initialCategories: G
     const cur = (window.history.state as { wizardStep?: number } | null)?.wizardStep
     if (cur === step) return // initial replaceState already covers step 1
     window.history.pushState({ wizardStep: step }, '')
-  }, [step])
+  }, [step, isEditMode])
 
   // Read recent games from localStorage on mount
   useEffect(() => {
@@ -321,6 +628,37 @@ export default function SellWizard({ initialCategories }: { initialCategories: G
     return () => { cancelled = true }
   }, [selectedCategory, selectedGame])
 
+  // V13 — When the seller picks Currency, pre-seed sensible defaults so
+  // they don't have to fix them manually. Currency listings sell in bulk:
+  // 100 min order qty is a friendly floor (Robux, V-Bucks, etc.) and
+  // stock 1000 prevents the seller from accidentally publishing with
+  // qty=1.
+  useEffect(() => {
+    if (selectedCategory?.slug !== 'currency') return
+    // V14 — Enforce min-100 floor on currency. If the seller picked currency
+    // after typing a smaller min qty (e.g. switched category), bump it up.
+    setMinQuantity((cur) => {
+      const n = parseInt(cur, 10)
+      return !Number.isFinite(n) || n < 100 ? '100' : cur
+    })
+    setQuantity((cur) => (cur === '1' || cur === '' ? '1000' : cur))
+  }, [selectedCategory])
+
+  // D2 — Fetch price guidance whenever (game, category) is set. Cheap
+  // RPC; runs in parallel with template-load. The Pricing card consumes it.
+  useEffect(() => {
+    if (!selectedCategory || !selectedGame) {
+      setPriceGuidance(null)
+      return
+    }
+    let cancelled = false
+    fetchPriceGuidance(selectedGame.game_id, selectedCategory.slug).then((res) => {
+      if (cancelled) return
+      if (res.success) setPriceGuidance(res.data)
+    })
+    return () => { cancelled = true }
+  }, [selectedCategory, selectedGame])
+
   // Force allowed delivery mode
   useEffect(() => {
     if (!selectedGame) return
@@ -349,9 +687,12 @@ export default function SellWizard({ initialCategories }: { initialCategories: G
   // Step 3 validity: every visible required field has a value
   const allRequiredFilled = useMemo(() => {
     if (!template) return true
+    // V15c — Build the byId index once so isVisible can walk the full chain.
+    const byId = new Map<string, Attribute>()
+    for (const a of template.attributes) byId.set(a.id, a)
     function check(list: Attribute[]): boolean {
       for (const a of list) {
-        if (!isVisible(a, fieldValues)) continue
+        if (!isVisible(a, fieldValues, byId)) continue
         if (a.is_required) {
           const v = fieldValues[a.id]
           if (v === undefined || v === null || v === '' || (Array.isArray(v) && v.length === 0)) return false
@@ -389,15 +730,22 @@ export default function SellWizard({ initialCategories }: { initialCategories: G
   // two R8 terms checkboxes.
   const canPublish = useMemo(() => {
     if (!allRequiredFilled) return false
-    if (!title.trim() || title.length < 5) return false
-    if (images.length === 0) return false
+    // V13 — Currency listings skip Title + Photos requirements (server fills
+    // them automatically from the currency record).
+    const isCurrency = selectedCategory?.slug === 'currency'
+    if (!isCurrency && !title.trim()) return false
+    if (!isCurrency && images.length === 0) return false
     const p = parseFloat(price)
     if (!Number.isFinite(p) || p <= 0) return false
     const q = parseInt(quantity, 10)
     if (!Number.isFinite(q) || q < 1) return false
     if (!agreeSellerRules || !agreeTos) return false
+    // D1 — block clicking Create Offer when the seller is at their tier's
+    // active-listing cap. The server enforces this too, but blocking the
+    // button avoids the round-trip + error toast.
+    if (policy?.at_listing_limit) return false
     return true
-  }, [allRequiredFilled, title, images, price, quantity, agreeSellerRules, agreeTos])
+  }, [allRequiredFilled, title, images, price, quantity, agreeSellerRules, agreeTos, policy, selectedCategory])
 
   const handleImages = async (files: FileList | null) => {
     if (!files || files.length === 0) return
@@ -424,14 +772,18 @@ export default function SellWizard({ initialCategories }: { initialCategories: G
     try {
       const templateData: Record<string, unknown> = {}
       if (template) {
+        // V15c — Use the chain-aware visibility check so hidden-ancestor
+        // values don't sneak into the publish payload.
+        const byId = new Map<string, Attribute>()
+        for (const a of template.attributes) byId.set(a.id, a)
         for (const a of template.attributes) {
-          if (!isVisible(a, fieldValues)) continue
+          if (!isVisible(a, fieldValues, byId)) continue
           const v = fieldValues[a.id]
           if (v === undefined || v === '' || (Array.isArray(v) && v.length === 0)) continue
           templateData[a.slug] = v
         }
       }
-      const res = await publishListing({
+      const payload = {
         game_id: selectedGame.game_id,
         category_slug: selectedCategory.slug,
         title: title.trim(),
@@ -446,14 +798,79 @@ export default function SellWizard({ initialCategories }: { initialCategories: G
         template_data: templateData,
         region: region || null,
         platform: platform || null,
-        status: asDraft ? 'draft' : 'active',
-      })
+        status: (asDraft ? 'draft' : 'active') as 'draft' | 'active',
+      }
+      // V14k — Edit mode UPDATES the existing row; publish/duplicate INSERTs
+      // a new one.
+      const res = isEditMode && editListingId
+        ? await updateListingFromWizard(editListingId, payload)
+        : await publishListing(payload)
       if (!res.success) { toast.error(res.error); return }
-      toast.success(asDraft ? 'Saved as draft' : 'Listing published!')
+      const landed = res.data.status
+      if (isEditMode) {
+        toast.success('Listing updated')
+      } else if (asDraft) {
+        toast.success('Saved as draft')
+      } else if (landed === 'pending_approval') {
+        toast.success('Listing submitted — pending review by our team')
+      } else {
+        toast.success('Listing published!')
+      }
+      // R16 — clear the refresh-persistence snapshot so a future visit to
+      // /sell/new starts fresh instead of restoring this just-published draft.
+      try { sessionStorage.removeItem(WIZARD_SNAPSHOT_KEY) } catch {}
+      // V14p — Bust react-query caches so the listings page shows fresh data.
+      // updateListingFromWizard already revalidates the RSC path, but the
+      // /account/listings page is a client component using useQuery, so we
+      // also need to invalidate the in-memory cache here.
+      queryClient.invalidateQueries({ queryKey: ['seller', 'listings'] })
+      queryClient.invalidateQueries({ queryKey: ['seller', 'dashboard'] })
       startTransition(() => router.push('/account/listings'))
     } finally {
       setSubmitting(false)
     }
+  }
+
+  // V14o — Edit-mode loader screen. While the listing is being fetched and
+  // the wizard is being walked to Step 3, show a centered loader instead
+  // of the half-built wizard (the seller doesn't need to see Step 1 → 2 → 3
+  // flash by — they only care about editing the details).
+  if (isEditMode && editLoading) {
+    return (
+      <main className="mx-auto flex w-full max-w-4xl items-center justify-center px-3 pb-24 pt-24 sm:px-6 sm:pt-28 lg:max-w-5xl lg:pt-32">
+        <section
+          className="relative flex w-full flex-col items-center gap-4 rounded-3xl border border-border-default bg-bg-raised p-10 shadow-elevated sm:p-14"
+          aria-live="polite"
+          aria-busy="true"
+        >
+          {/* Soft lime glow behind the spinner */}
+          <div
+            aria-hidden
+            className="absolute inset-0 -m-8 rounded-3xl bg-lime/5 blur-3xl"
+          />
+          <div className="relative flex h-14 w-14 items-center justify-center">
+            <div
+              aria-hidden
+              className="absolute inset-0 rounded-full border-2 border-border-subtle"
+            />
+            <div
+              aria-hidden
+              className="absolute inset-0 animate-spin rounded-full border-2 border-transparent border-t-lime border-r-lime"
+              style={{ animationDuration: '0.9s' }}
+            />
+            <Loader2 className="h-0 w-0" />
+          </div>
+          <div className="relative text-center">
+            <h1 className="text-[18px] font-bold text-text-primary sm:text-[20px]">
+              Loading your listing
+            </h1>
+            <p className="mt-1 text-[13.5px] text-text-tertiary">
+              Pulling in your offer details — one moment.
+            </p>
+          </div>
+        </section>
+      </main>
+    )
   }
 
   // R12 — main top padding matches WIZARD_TOP_OFFSET so first paint already
@@ -472,7 +889,11 @@ export default function SellWizard({ initialCategories }: { initialCategories: G
       >
         <StepBar
           step={step}
-          onJumpToStep={(target) => setStep((s) => (target < s ? target : s))}
+          // V14o — In edit mode the seller can't change category/game on
+          // an existing row (would orphan template_data + category_id), so
+          // disable jumping back to Steps 1/2. Keeps them focused on the
+          // editable details on Step 3.
+          onJumpToStep={(target) => setStep((s) => (isEditMode ? s : (target < s ? target : s)))}
         />
 
         {/* Step header.
@@ -481,32 +902,65 @@ export default function SellWizard({ initialCategories }: { initialCategories: G
             sub-header — the chosen game is now context, not a question. */}
         <div className="mb-3 sm:mb-4">
           {step === 3 && selectedGame ? (
-            <div className="text-center">
-              <h1 className="text-lg font-semibold tracking-tight text-text-primary sm:text-xl lg:text-2xl">
-                Sell {selectedCategory?.name ?? 'Listing'}
-              </h1>
-              <div className="mt-2 inline-flex items-center gap-2 text-sm text-text-secondary">
-                {selectedGame.game_logo_url ? (
-                  /* eslint-disable-next-line @next/next/no-img-element */
-                  <img
-                    src={selectedGame.game_logo_url}
-                    alt={selectedGame.game_name}
-                    className="h-7 w-7 rounded-md object-cover"
-                  />
-                ) : (
-                  <span className="text-base">{selectedGame.game_emoji ?? '🎮'}</span>
-                )}
-                <span className="font-medium text-text-primary">{selectedGame.game_name}</span>
-              </div>
-            </div>
+            (() => {
+              // V13 — On currency we want the buyer-facing currency name
+              // ("Robux") as the title, with the game ("Roblox") as a quiet
+              // subtitle below. Other categories keep "Game Category" as
+              // a single line.
+              const isCurrency = selectedCategory?.slug === 'currency'
+              const unit =
+                CURRENCY_UNIT_NAMES[selectedGame.game_slug] ?? 'Currency'
+              const title = isCurrency
+                ? unit
+                : `${selectedGame.game_name} ${selectedCategory?.name ?? 'Listing'}`
+              const subtitle = isCurrency ? selectedGame.game_name : null
+              return (
+                <div className="flex items-center justify-center gap-3 text-left sm:gap-4">
+                  {selectedGame.game_logo_url ? (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img
+                      src={selectedGame.game_logo_url}
+                      alt=""
+                      className="h-10 w-10 shrink-0 rounded-xl object-cover ring-1 ring-border-default sm:h-12 sm:w-12"
+                    />
+                  ) : (
+                    <span className="text-3xl">{selectedGame.game_emoji ?? '🎮'}</span>
+                  )}
+                  <div className="min-w-0">
+                    <h1 className="text-xl font-bold leading-tight tracking-tight text-text-primary sm:text-2xl lg:text-[28px]">
+                      {title}
+                    </h1>
+                    {subtitle && (
+                      <p className="mt-0.5 text-[12px] font-medium uppercase tracking-[0.14em] text-text-tertiary sm:text-[13px]">
+                        for {subtitle}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )
+            })()
           ) : (
-            <h1 className="text-xl font-semibold tracking-tight text-text-primary sm:text-2xl lg:text-3xl">
-              {STEPS[step - 1].hint}
-            </h1>
+            <div className="flex flex-col items-center gap-2 text-center">
+              <div className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-lime-tint-border bg-lime-tint-bg text-lime-text sm:h-11 sm:w-11">
+                {step === 1 ? (
+                  <ShoppingBag className="h-5 w-5 sm:h-6 sm:w-6" strokeWidth={2} />
+                ) : (
+                  <Gamepad2 className="h-5 w-5 sm:h-6 sm:w-6" strokeWidth={2} />
+                )}
+              </div>
+              <h1 className="text-xl font-semibold tracking-tight text-text-primary sm:text-2xl lg:text-3xl">
+                {STEPS[step - 1].hint}
+              </h1>
+            </div>
           )}
         </div>
 
-        <AnimatePresence mode="wait">
+        {/* R17 — `initial={false}` skips the entry animation on first mount
+            (page load / refresh) so the wizard body appears in its final
+            position alongside the navbar instead of fading in a beat later.
+            Step-to-step transitions still animate because AnimatePresence
+            re-mounts the child when `key={step}` changes. */}
+        <AnimatePresence mode="wait" initial={false}>
           <motion.div
             key={step}
             initial={{ opacity: 0, y: 12 }}
@@ -556,13 +1010,27 @@ export default function SellWizard({ initialCategories }: { initialCategories: G
                 visual restructure lands. */}
             {step === 3 && selectedCategory && selectedGame && (
               <div className="space-y-5">
+                <PolicyBanner policy={policy} />
                 <Step3Details
                   templateLoading={templateLoading}
                   template={template}
                   topLevel={topLevel}
                   childrenOf={childrenOf}
                   values={fieldValues}
-                  onChange={(id, v) => setFieldValues((prev) => ({ ...prev, [id]: v }))}
+                  onChange={(id, v) =>
+                    setFieldValues((prev) => {
+                      // V15c — Cascade-reset descendants when a parent value
+                      // changes so stale sub-selections (e.g. an Antonio
+                      // leaf left over from Brainrot → Secret) can't sit
+                      // under a now-hidden parent and silently re-appear.
+                      const next: Record<string, unknown> = { ...prev, [id]: v }
+                      const attrs = template?.attributes ?? []
+                      collectDescendantIds(id, attrs).forEach((childId) => {
+                        delete next[childId]
+                      })
+                      return next
+                    })
+                  }
                 />
                 <Step4Publish
                   title={title} setTitle={setTitle}
@@ -578,6 +1046,10 @@ export default function SellWizard({ initialCategories }: { initialCategories: G
                   onUpload={handleImages}
                   onRemoveImage={(i) => setImages((prev) => prev.filter((_, idx) => idx !== i))}
                   imageUploading={imageUploading}
+                  priceGuidance={priceGuidance}
+                  categorySlug={selectedCategory.slug}
+                  gameName={selectedGame.game_name}
+                  gameSlug={selectedGame.game_slug}
                 />
                 <TermsCard
                   agreeSellerRules={agreeSellerRules}
@@ -590,6 +1062,15 @@ export default function SellWizard({ initialCategories }: { initialCategories: G
           </motion.div>
         </AnimatePresence>
 
+      {/* V13 — Tiny tier/limit status sits just above the footer on Step 3
+          so the big lime banner can go. Desktop only; on mobile the sticky
+          publish bar already shows the most important info. */}
+      {step === 3 && (
+        <div className="mt-6 hidden sm:flex sm:justify-end">
+          <PolicyStatusFooter policy={policy} />
+        </div>
+      )}
+
       {/* Footer / publish row.
           Desktop (sm+): inline at the bottom of the wizard card with the
             standard mt-8 border-t pt-6 treatment.
@@ -601,7 +1082,7 @@ export default function SellWizard({ initialCategories }: { initialCategories: G
         'fixed inset-x-0 bottom-0 z-40 flex items-center justify-between gap-2',
         'border-t border-border-subtle bg-bg-raised/95 px-3 py-3 backdrop-blur',
         // Desktop inline
-        'sm:relative sm:mt-8 sm:bg-transparent sm:px-0 sm:pt-6 sm:pb-0 sm:backdrop-blur-none',
+        'sm:relative sm:mt-3 sm:bg-transparent sm:px-0 sm:pt-3 sm:pb-0 sm:backdrop-blur-none',
       )}>
         {step > 1 ? (
           <button
@@ -614,8 +1095,17 @@ export default function SellWizard({ initialCategories }: { initialCategories: G
             Back
           </button>
         ) : (
-          // Spacer keeps the Continue button right-aligned on step 1
-          <span aria-hidden />
+          // D5 — On Step 1 (no Back button), the bottom-left slot becomes
+          // the Bulk-upload entry point. Same border / size grammar as the
+          // Back button so the footer reads as one row. Lime accent only on
+          // hover so it doesn't compete with Continue.
+          <Link
+            href="/sell/bulk"
+            className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-border-default bg-bg-raised px-3 text-sm font-medium text-text-secondary transition-colors hover:border-lime-tint-border hover:text-lime-text sm:px-4"
+          >
+            <FileSpreadsheet className="h-4 w-4" />
+            Bulk upload
+          </Link>
         )}
 
         {step < 3 ? (
@@ -634,31 +1124,22 @@ export default function SellWizard({ initialCategories }: { initialCategories: G
             <ArrowRight className="h-4 w-4" />
           </button>
         ) : (
-          <div className="flex flex-wrap justify-end gap-2">
-            <button
-              type="button"
-              onClick={() => handlePublish(true)}
-              disabled={submitting}
-              className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-border-default bg-bg-raised px-3 text-sm font-medium text-text-primary transition-colors hover:bg-bg-raised-hover disabled:opacity-40"
-            >
-              {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-              Save draft
-            </button>
-            <button
-              type="button"
-              onClick={() => handlePublish(false)}
-              disabled={!canPublish || submitting}
-              className={cn(
-                'inline-flex h-10 items-center gap-1.5 rounded-xl px-4 text-sm font-semibold transition-all sm:px-5',
-                canPublish && !submitting
-                  ? 'bg-lime text-text-inverse shadow-lg shadow-elevated hover:bg-lime-hover hover:shadow-glow'
-                  : 'cursor-not-allowed bg-bg-raised text-text-disabled'
-              )}
-            >
-              {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-              Create Offer
-            </button>
-          </div>
+          // R14 — Save draft removed; Create Offer is now the sole primary CTA.
+          // Bumped to h-11, taller padding, no leading icon — the button
+          // should read as the unambiguous next action, not one of two.
+          <button
+            type="button"
+            onClick={() => handlePublish(false)}
+            disabled={!canPublish || submitting}
+            className={cn(
+              'inline-flex h-11 items-center justify-center rounded-xl px-6 text-sm font-bold uppercase tracking-wider transition-all sm:h-12 sm:px-8 sm:text-base',
+              canPublish && !submitting
+                ? 'bg-lime text-text-inverse shadow-lg shadow-elevated hover:bg-lime-hover hover:shadow-glow'
+                : 'cursor-not-allowed bg-bg-raised text-text-disabled'
+            )}
+          >
+            {submitting ? <Loader2 className="h-5 w-5 animate-spin" /> : (isEditMode ? 'Save Changes' : 'Create Offer')}
+          </button>
         )}
       </div>
       </section>
@@ -675,34 +1156,46 @@ const CATEGORY_THEME: Record<
   string,
   {
     Icon: LucideIcon
-    iconBg: string   // gradient classes for the icon plate
-    ring: string     // hover/active ring accent
+    iconBg: string    // gradient classes for the icon plate
+    ring: string      // hover/active ring accent
+    /**
+     * R15 — concrete one-line example shown on the tile instead of the DB
+     * description. The DB descriptions ran long and got truncated; short
+     * concrete examples (e.g. "Robux, V-Bucks, gold") read faster and
+     * always fit on one line at this card size.
+     */
+    example: string
   }
 > = {
   currency: {
     Icon: Coins,
     iconBg: 'bg-gradient-to-br from-amber-400/30 via-yellow-500/20 to-orange-500/20',
     ring: 'group-hover:border-amber-400/40',
+    example: 'Robux, Gold',
   },
   items: {
     Icon: Backpack,
     iconBg: 'bg-gradient-to-br from-rose-500/30 via-pink-500/20 to-red-500/20',
     ring: 'group-hover:border-rose-400/40',
+    example: 'Pets, Skins, Knives',
   },
   accounts: {
     Icon: UserSquare2,
     iconBg: 'bg-gradient-to-br from-sky-400/30 via-blue-500/20 to-indigo-500/20',
     ring: 'group-hover:border-sky-400/40',
+    example: 'Ranked, Progression',
   },
   'top-up': {
     Icon: Zap,
     iconBg: 'bg-gradient-to-br from-yellow-300/30 via-amber-400/25 to-yellow-500/20',
     ring: 'group-hover:border-yellow-400/40',
+    example: 'Crystals, UC, Crew',
   },
   boosting: {
     Icon: Trophy,
     iconBg: 'bg-gradient-to-br from-violet-400/30 via-purple-500/20 to-fuchsia-500/20',
     ring: 'group-hover:border-violet-400/40',
+    example: 'Rank Pushes, Win Boosts',
   },
 }
 
@@ -713,8 +1206,12 @@ function Step1Category({
   selected: GlobalCategory | null
   onSelect: (c: GlobalCategory) => void
 }) {
+  // R14 — Balanced flex-wrap layout: each tile takes a fixed share of the row
+  // (~half on mobile, ~third on lg) and the last row centers any orphan cards
+  // so the 5-category set reads as 2-2-1 (centered) instead of an
+  // off-balance 3-2 grid.
   return (
-    <div className="mx-auto grid w-full max-w-4xl grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+    <div className="mx-auto flex w-full max-w-3xl flex-wrap justify-center gap-2.5">
       {categories.map((c, i) => {
         const active = selected?.id === c.id
         const disabled = !c.is_active
@@ -726,59 +1223,65 @@ function Step1Category({
             type="button"
             disabled={disabled}
             onClick={() => onSelect(c)}
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.22, delay: i * 0.04 }}
-            whileHover={!disabled ? { y: -2 } : undefined}
+            // R17 — entry animation dropped on first paint. The page is
+            // server-rendered; staggered fade-in made the tiles feel "loaded
+            // later" than the navbar.
+            initial={false}
+            whileHover={!disabled ? { y: -1 } : undefined}
+            transition={{ duration: 0.22 }}
             className={cn(
-              'group relative flex h-full w-full flex-col items-start gap-4 overflow-hidden rounded-2xl border p-5 text-left transition-all sm:p-6',
+              // Flex basis: full width on mobile, half on sm+, third on lg+.
+              // Calc subtracts half the gap (10px / 2 = 5px = 0.3125rem) so
+              // the cards land flush without overflowing the row.
+              'group relative flex items-center gap-3 overflow-hidden rounded-xl border p-3 text-left transition-all sm:p-3.5',
+              'basis-full sm:basis-[calc(50%-0.3125rem)] lg:basis-[calc(33.333%-0.4167rem)]',
               disabled && 'cursor-not-allowed opacity-50',
               active
-                ? 'border-lime bg-lime-tint-bg shadow-[0_0_0_3px_rgba(198,255,61,0.18)]'
-                : cn('border-border-subtle bg-bg-overlay', theme.ring),
+                ? 'border-lime bg-lime-tint-bg shadow-[0_0_0_2px_rgba(198,255,61,0.18)]'
+                : cn('border-border-subtle bg-bg-overlay hover:border-border-strong hover:bg-bg-raised-hover', theme.ring),
             )}
           >
-            {/* Decorative gradient blob in the top-right of the tile */}
+            {/* Icon plate — smaller than the previous tile design */}
             <div
-              aria-hidden
               className={cn(
-                'pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full blur-3xl opacity-60 transition-opacity',
+                'flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-border-default sm:h-11 sm:w-11',
                 theme.iconBg,
               )}
-            />
+            >
+              <Icon className="h-5 w-5 text-text-primary sm:h-6 sm:w-6" strokeWidth={1.75} />
+            </div>
 
-            <div className="relative flex w-full items-center justify-between">
-              <div
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-1.5">
+                <span className="truncate text-sm font-semibold text-text-primary sm:text-base">{c.name}</span>
+                {disabled && (
+                  <span className="inline-flex shrink-0 items-center rounded-full border border-warning bg-warning-bg px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wider text-warning">
+                    Soon
+                  </span>
+                )}
+              </div>
+              {/* R15 — concrete examples (see CATEGORY_THEME.example) replace
+                  the DB description. Brighter color + no truncation so the
+                  helper text is always readable. */}
+              <div className="mt-0.5 truncate text-xs text-text-secondary sm:text-[13px]">
+                {theme.example}
+              </div>
+            </div>
+
+            {/* Trailing indicator */}
+            {!disabled && (
+              <span
+                aria-hidden
                 className={cn(
-                  'flex h-14 w-14 items-center justify-center rounded-2xl border border-border-default',
-                  theme.iconBg,
+                  'flex h-6 w-6 shrink-0 items-center justify-center rounded-full transition-colors',
+                  active
+                    ? 'bg-lime text-text-inverse'
+                    : 'text-text-tertiary group-hover:text-text-primary',
                 )}
               >
-                <Icon className="h-7 w-7 text-text-primary" strokeWidth={1.75} />
-              </div>
-              {disabled ? (
-                <span className="inline-flex items-center gap-1 rounded-full border border-warning bg-warning-bg px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-warning">
-                  Coming soon
-                </span>
-              ) : (
-                <span
-                  aria-hidden
-                  className={cn(
-                    'inline-flex h-8 w-8 items-center justify-center rounded-full border transition-colors',
-                    active
-                      ? 'border-lime bg-lime text-text-inverse'
-                      : 'border-border-default text-text-tertiary group-hover:border-border-strong group-hover:text-text-primary',
-                  )}
-                >
-                  {active ? <Check className="h-4 w-4" strokeWidth={3} /> : <ArrowRight className="h-4 w-4" />}
-                </span>
-              )}
-            </div>
-
-            <div className="relative min-w-0 flex-1">
-              <div className="text-lg font-bold text-text-primary sm:text-xl">{c.name}</div>
-              <div className="mt-1 text-sm text-text-secondary">{c.description ?? ''}</div>
-            </div>
+                {active ? <Check className="h-3.5 w-3.5" strokeWidth={3} /> : <ArrowRight className="h-3.5 w-3.5" />}
+              </span>
+            )}
           </motion.button>
         )
       })}
@@ -832,13 +1335,13 @@ function Step2Game({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2 rounded-2xl border border-border-default bg-bg-raised px-3 backdrop-blur-sm">
-        <Search className="h-4 w-4 text-text-tertiary" />
+      <div className="relative">
+        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary" />
         <input
           value={filter}
           onChange={(e) => onFilter(e.target.value)}
           placeholder={`Search games that sell ${category.name.toLowerCase()}…`}
-          className="h-11 flex-1 bg-transparent text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none"
+          className="h-11 w-full rounded-md border border-border-default bg-transparent pl-9 pr-3 text-sm text-text-primary placeholder:text-text-tertiary transition-colors focus:border-lime focus:outline-none focus:ring-2 focus:ring-lime-tint-bg"
         />
       </div>
 
@@ -1194,6 +1697,17 @@ function FieldInput({
 }) {
   const v = value as any
 
+  // R14 — per-field touched state so required attributes show "required" only
+  // after the user has interacted and moved on (not on first paint).
+  const [touched, setTouched] = useState(false)
+  const isEmpty =
+    v === undefined ||
+    v === null ||
+    v === '' ||
+    (Array.isArray(v) && v.length === 0)
+  const showError = attribute.is_required && touched && isEmpty
+  const markTouched = () => setTouched(true)
+
   return (
     <div>
       <label className="mb-1.5 block">
@@ -1207,8 +1721,11 @@ function FieldInput({
         <input
           value={v ?? ''}
           onChange={(e) => onChange(e.target.value)}
+          onBlur={markTouched}
           placeholder={attribute.placeholder ?? ''}
           maxLength={attribute.max_length ?? undefined}
+          aria-invalid={showError || undefined}
+          aria-required={attribute.is_required || undefined}
           className={inputCls}
         />
       )}
@@ -1217,9 +1734,12 @@ function FieldInput({
         <textarea
           value={v ?? ''}
           onChange={(e) => onChange(e.target.value)}
+          onBlur={markTouched}
           placeholder={attribute.placeholder ?? ''}
           maxLength={attribute.max_length ?? undefined}
           rows={3}
+          aria-invalid={showError || undefined}
+          aria-required={attribute.is_required || undefined}
           className={cn(inputCls, 'h-auto py-2')}
         />
       )}
@@ -1229,9 +1749,12 @@ function FieldInput({
           type="number"
           value={v ?? ''}
           onChange={(e) => onChange(e.target.value)}
+          onBlur={markTouched}
           placeholder={attribute.placeholder ?? ''}
           min={attribute.min_value ?? undefined}
           max={attribute.max_value ?? undefined}
+          aria-invalid={showError || undefined}
+          aria-required={attribute.is_required || undefined}
           className={inputCls}
         />
       )}
@@ -1262,7 +1785,9 @@ function FieldInput({
       {attribute.type === 'select' && (
         <Combobox
           value={typeof v === 'string' ? v : ''}
-          onChange={onChange}
+          onChange={(val) => { onChange(val); markTouched() }}
+          onBlur={markTouched}
+          invalid={showError}
           placeholder={attribute.placeholder || 'Choose…'}
           ariaLabel={attribute.name}
           options={(attribute.options ?? []).map((o) => ({
@@ -1318,14 +1843,15 @@ function FieldInput({
         </div>
       )}
 
-      {/* Helper text — minimal-hint pattern. Skipped for choice-typed fields
-          (select / multiselect / image_select / boolean) since their
-          placeholder already conveys the intent; admin-authored help_text on
-          those is usually redundant ('What Category', etc.). R10. */}
-      {attribute.help_text &&
+      {/* Required-field error — beats the hint when both would show. */}
+      {showError ? (
+        <FieldError className="mt-1.5">This field is required.</FieldError>
+      ) : (
+        attribute.help_text &&
         !(['select', 'multiselect', 'image_select', 'boolean'] as const).includes(attribute.type as any) && (
           <FieldHint className="mt-1.5">{attribute.help_text}</FieldHint>
-        )}
+        )
+      )}
     </div>
   )
 }
@@ -1346,6 +1872,28 @@ interface Step4Props {
   onUpload: (files: FileList | null) => void
   onRemoveImage: (i: number) => void
   imageUploading: boolean
+  // D2 — Price guidance from recently sold listings for this (game,
+  // category). NULL until fetch resolves; when sample_size < 3 we still
+  // return a row but the p25/median/p75 fields are null.
+  priceGuidance: PriceGuidance | null
+  // V13 — Category slug drives the field set. For 'currency' we hide
+  // Title + Photos (auto-filled server-side) and rename Description to
+  // Instructions.
+  categorySlug?: string
+  /** V13 — Used to label the currency banner ("Roblox Robux — title and image…"). */
+  gameName?: string
+  gameSlug?: string
+}
+
+// V13 — Display name for each game's primary currency. Mirrors the
+// server-side map in `publishListing` so the seller-facing banner shows
+// exactly what the buyer will see.
+const CURRENCY_UNIT_NAMES: Record<string, string> = {
+  roblox: 'Robux',
+  fortnite: 'V-Bucks',
+  valorant: 'Valorant Points',
+  'genshin-impact': 'Genesis Crystals',
+  'apex-legends': 'Apex Coins',
 }
 
 /**
@@ -1365,48 +1913,93 @@ function Step4Publish(p: Step4Props) {
     ? Math.round(((parseFloat(p.originalPrice) - priceNum) / parseFloat(p.originalPrice)) * 100)
     : 0
 
+  // R14 — Touched state for required fields. A field is "touched" once it has
+  // received and then lost focus. The error message + red border appear only
+  // for touched-and-empty required fields, so the seller isn't yelled at the
+  // moment the form first renders.
+  const [touched, setTouched] = useState<{
+    title?: boolean
+    price?: boolean
+  }>({})
+  const mark = (k: keyof typeof touched) => setTouched((t) => ({ ...t, [k]: true }))
+
+  const titleInvalid = touched.title && !p.title.trim()
+  const priceInvalid = touched.price && !(parseFloat(p.price) > 0)
+
+  // V13 — Currency listings skip Title + Photos (auto-filled server-side)
+  // and the Description sub-card is re-labelled "Instructions" so buyers
+  // understand it's a how-to, not marketing copy.
+  const isCurrency = p.categorySlug === 'currency'
+
   return (
     <div className="space-y-5">
-      {/* Title */}
-      <SubCard title="Title">
-        <FieldRow>
-          <input
-            value={p.title}
-            onChange={(e) => p.setTitle(e.target.value)}
-            placeholder="e.g., Mythical Brainrot — Tralalero Tralala — Mutation: Golden"
-            maxLength={100}
-            className={inputCls}
-          />
-          <div className="flex justify-between text-[10px] text-text-tertiary">
-            <span className={p.title.length >= 5 ? 'text-success' : ''}>
-              {p.title.length >= 5 ? '✓ Good length' : `${5 - p.title.length} more chars needed`}
-            </span>
-            <span>{p.title.length}/100</span>
-          </div>
-          <FieldHint>
-            Add the most searchable words at the front. Titles have a 100 character limit.
-          </FieldHint>
-        </FieldRow>
-      </SubCard>
+      {/* Title — hidden for currency */}
+      {!isCurrency && (
+        <SubCard title="Title">
+          <FieldRow>
+            <input
+              value={p.title}
+              onChange={(e) => p.setTitle(e.target.value)}
+              onBlur={() => mark('title')}
+              placeholder="e.g., Mythical Brainrot — Tralalero Tralala — Mutation: Golden"
+              maxLength={100}
+              aria-invalid={titleInvalid || undefined}
+              aria-required
+              className={inputCls}
+            />
+            {titleInvalid ? (
+              <FieldError>This field is required.</FieldError>
+            ) : (
+              <FieldHint>
+                Add the most searchable words at the front. Titles have a 100 character limit.
+              </FieldHint>
+            )}
+          </FieldRow>
+        </SubCard>
+      )}
 
-      {/* Description */}
-      <SubCard title="Description">
+      {/* V13 — Currency listings have title + image auto-filled on the
+          server, so the seller just sees a small confirmation here.
+          Label uses the real "Game Currency" pair (e.g. "Roblox Robux"). */}
+      {isCurrency && (() => {
+        const unit = (p.gameSlug && CURRENCY_UNIT_NAMES[p.gameSlug]) || 'Currency'
+        const label = p.gameName ? `${p.gameName} ${unit}` : unit
+        return (
+          <div className="rounded-2xl border border-lime-tint-border bg-lime-tint-bg/40 px-4 py-3">
+            <p className="text-[13px] text-text-secondary">
+              <span className="font-semibold text-lime-text">{label}</span>
+              {' '}— Title and Image are set automatically. You only need to fill
+              Instructions, Price, and Delivery Time.
+            </p>
+          </div>
+        )
+      })()}
+
+      {/* Description (or Instructions for currency) */}
+      <SubCard title={isCurrency ? 'Instructions' : 'Description'}>
         <FieldRow>
           <textarea
             value={p.description}
             onChange={(e) => p.setDescription(e.target.value)}
-            placeholder="What’s included, condition, delivery notes, terms…"
-            rows={4}
-            maxLength={2000}
-            className={cn(inputCls, 'h-auto py-2')}
+            placeholder={
+              isCurrency
+                ? 'e.g.\n1. Send me your Roblox username at checkout.\n2. Join my Roblox group (link in confirmation email).\n3. Wait for group payout — usually under 10 minutes.'
+                : 'What’s included, condition, delivery notes, terms…'
+            }
+            rows={isCurrency ? 6 : 5}
+            maxLength={isCurrency ? 1000 : 2000}
+            className={cn(inputCls, 'h-32 resize-none overflow-y-auto py-2 sm:h-36', isCurrency && 'sm:h-44')}
           />
           <FieldHint>
-            Be specific. Include condition, delivery method, and any terms.
+            {isCurrency
+              ? 'Step-by-step instructions buyers will see on the offer card. Line breaks allowed.'
+              : 'Be specific. Include condition, delivery method, and any terms.'}
           </FieldHint>
         </FieldRow>
       </SubCard>
 
-      {/* Photos */}
+      {/* Photos — hidden for currency (auto-set to currency icon) */}
+      {!isCurrency && (
       <SubCard
         title="Photos"
         right={<span className="text-[10px] text-text-tertiary">{p.images.length}/5</span>}
@@ -1455,13 +2048,14 @@ function Step4Publish(p: Step4Props) {
           Images at least 800px square. First photo is your main thumbnail.
         </FieldHint>
       </SubCard>
+      )}
 
       {/* Pricing */}
       <SubCard title="Pricing">
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className={cn('grid gap-3', !isCurrency && 'sm:grid-cols-2')}>
           <div className="space-y-1.5">
             <label className="block text-xs font-semibold uppercase tracking-wider text-text-secondary">
-              Your price <span className="text-error">*</span>
+              {isCurrency ? 'Price per unit' : 'Your price'} <span className="text-error">*</span>
             </label>
             <div className="relative">
               <DollarSign className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary" />
@@ -1469,34 +2063,53 @@ function Step4Publish(p: Step4Props) {
                 type="number"
                 value={p.price}
                 onChange={(e) => p.setPrice(e.target.value)}
-                placeholder="0.00"
-                step="0.01"
+                onBlur={() => mark('price')}
+                // V13 — Currency: 4-decimal precision (e.g. 0.0045 / Robux).
+                // Other categories: standard 2-decimal pricing.
+                placeholder={isCurrency ? '0.0045' : '0.00'}
+                step={isCurrency ? '0.0001' : '0.01'}
                 min="0"
+                aria-invalid={priceInvalid || undefined}
+                aria-required
                 className={cn(inputCls, 'pl-9')}
               />
             </div>
-          </div>
-          <div className="space-y-1.5">
-            <label className="block text-xs font-semibold uppercase tracking-wider text-text-secondary">
-              Original price <span className="font-normal normal-case tracking-normal text-text-disabled">(optional)</span>
-            </label>
-            <div className="relative">
-              <DollarSign className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary" />
-              <input
-                type="number"
-                value={p.originalPrice}
-                onChange={(e) => p.setOriginalPrice(e.target.value)}
-                placeholder="0.00"
-                step="0.01"
-                min="0"
-                className={cn(inputCls, 'pl-9')}
-              />
-            </div>
-            {discount > 0 && (
-              <FieldHint className="text-success">{discount}% discount badge will show</FieldHint>
+            {priceInvalid && (
+              <FieldError>This field is required.</FieldError>
             )}
           </div>
+          {/* V13 — Original price (discount badge) hidden for currency. */}
+          {!isCurrency && (
+            <div className="space-y-1.5">
+              <label className="block text-xs font-semibold uppercase tracking-wider text-text-secondary">
+                Original price <span className="font-normal normal-case tracking-normal text-text-disabled">(optional)</span>
+              </label>
+              <div className="relative">
+                <DollarSign className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary" />
+                <input
+                  type="number"
+                  value={p.originalPrice}
+                  onChange={(e) => p.setOriginalPrice(e.target.value)}
+                  placeholder="0.00"
+                  step="0.01"
+                  min="0"
+                  className={cn(inputCls, 'pl-9')}
+                />
+              </div>
+              {discount > 0 && (
+                <FieldHint className="text-success">{discount}% discount badge will show</FieldHint>
+              )}
+            </div>
+          )}
         </div>
+
+        {/* D2 — Price guidance band from the last 60 days of sold listings
+            in this (game, category). Only shown when sample_size >= 3
+            (the RPC nulls out the bucket fields otherwise). */}
+        <PriceGuidanceCard
+          guidance={p.priceGuidance}
+          currentPrice={parseFloat(p.price)}
+        />
 
         <FieldHint className="mt-3">
           Competitive prices rank better. Original price triggers a discount badge.
@@ -1529,7 +2142,10 @@ function Step4Publish(p: Step4Props) {
               value={Number.isFinite(parseInt(p.quantity, 10)) ? parseInt(p.quantity, 10) : 1}
               onChange={(v) => p.setQuantity(String(v))}
               minValue={1}
-              maxValue={99_999}
+              // V13 — Currency sellers commonly hold millions of units (e.g.
+              // 22M Robux). Bump the cap to 10M so the field accepts realistic
+              // currency stock levels.
+              maxValue={10_000_000}
               ariaLabel="Stock"
             />
           </div>
@@ -1538,16 +2154,21 @@ function Step4Publish(p: Step4Props) {
               Min order qty
             </label>
             <NumberField
-              value={Number.isFinite(parseInt(p.minQuantity, 10)) ? parseInt(p.minQuantity, 10) : 1}
+              value={Number.isFinite(parseInt(p.minQuantity, 10)) ? parseInt(p.minQuantity, 10) : (isCurrency ? 100 : 1)}
               onChange={(v) => p.setMinQuantity(String(v))}
-              minValue={1}
-              maxValue={Math.max(1, parseInt(p.quantity || '1', 10))}
+              // V14 — Currency listings require a 100-unit minimum order. Below
+              // that, transaction fees eat the seller's margin and buyers tend
+              // to misuse the listing as a top-up. Enforced server-side too.
+              minValue={isCurrency ? 100 : 1}
+              maxValue={Math.max(isCurrency ? 100 : 1, parseInt(p.quantity || '1', 10))}
               ariaLabel="Minimum order quantity"
             />
           </div>
         </div>
         <FieldHint className="mt-3">
-          Set stock to what you can actually fulfill. Min order qty is the smallest amount a buyer can purchase.
+          {isCurrency
+            ? 'Set stock to what you can actually fulfill. Minimum order for currency listings is 100 units — below that, fees eat your margin.'
+            : 'Set stock to what you can actually fulfill. Min order qty is the smallest amount a buyer can purchase.'}
         </FieldHint>
       </SubCard>
 
@@ -1592,16 +2213,30 @@ function Step4Publish(p: Step4Props) {
         {p.deliveryMethod === 'manual' && (
           <div className="mt-5 space-y-2">
             <label className="block text-xs font-semibold uppercase tracking-wider text-text-secondary">Delivery window</label>
-            {/* Bigger pills, spaced out, with higher contrast.
-                One per row on mobile (no wrap weirdness) -> grid layout. */}
+            {/* V13 — Currency listings use minute-based presets + custom.
+                Other categories keep the existing hour-based grid. */}
             <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
-              {DELIVERY_TIMES.map((t) => {
-                const on = p.deliveryTime === t.value
+              {(isCurrency ? DELIVERY_TIMES_CURRENCY : DELIVERY_TIMES).map((t) => {
+                const isCustom = t.value === 'custom'
+                const customActive =
+                  isCustom &&
+                  !(isCurrency ? DELIVERY_TIMES_CURRENCY : DELIVERY_TIMES)
+                    .filter((x) => x.value !== 'custom')
+                    .some((x) => x.value === p.deliveryTime)
+                const on = isCustom ? customActive : p.deliveryTime === t.value
                 return (
                   <button
                     key={t.value}
                     type="button"
-                    onClick={() => p.setDeliveryTime(t.value)}
+                    onClick={() => {
+                      if (isCustom) {
+                        const raw = prompt('Custom delivery (minutes)', '10')
+                        const m = parseInt(raw ?? '', 10)
+                        if (Number.isFinite(m) && m > 0) p.setDeliveryTime(`${m}min`)
+                      } else {
+                        p.setDeliveryTime(t.value)
+                      }
+                    }}
                     className={cn(
                       'h-10 rounded-xl border text-sm font-medium transition-colors',
                       on
@@ -1609,7 +2244,9 @@ function Step4Publish(p: Step4Props) {
                         : 'border-border-default bg-bg-inset text-text-secondary hover:border-border-strong hover:text-text-primary'
                     )}
                   >
-                    {t.label}
+                    {isCustom && customActive
+                      ? p.deliveryTime.replace('min', ' min')
+                      : t.label}
                   </button>
                 )
               })}
@@ -1639,13 +2276,348 @@ function FieldRow({ children, className }: { children: React.ReactNode; classNam
 // ─── FieldHint — small dim text under a control. No surface. ────────────────
 
 /**
- * FieldHint is the standalone version of shadcn's <FormDescription/>.
- * Same styling — text-[11px] leading-snug text-text-tertiary — so we can
- * use it without wiring up react-hook-form yet. Once Step 3 moves to RHF
- * (Phase D-era), every FieldHint maps 1:1 to <FormDescription/>.
+ * FieldHint — small surface containing dim text under a control.
+ * R14: contained in a soft `bg-bg-inset` box with a subtle border so hints
+ * no longer "float". Reverses the R7 "no surface" call after seller feedback
+ * that bare grey text read as out-of-place.
  */
 function FieldHint({ children, className }: { children: React.ReactNode; className?: string }) {
-  return <p className={cn('text-[11px] leading-snug text-text-tertiary', className)}>{children}</p>
+  return (
+    <p
+      className={cn(
+        'rounded-md border border-border-subtle bg-bg-inset px-2.5 py-1.5 text-[11px] leading-snug text-text-tertiary',
+        className,
+      )}
+    >
+      {children}
+    </p>
+  )
+}
+
+/**
+ * FieldError — red message shown beneath a touched-but-empty required field.
+ * Mirrors FieldHint's shape so the layout doesn't jump when error replaces hint.
+ */
+function FieldError({ children, className }: { children: React.ReactNode; className?: string }) {
+  return (
+    <p
+      role="alert"
+      className={cn(
+        'rounded-md border border-error/40 bg-error-bg px-2.5 py-1.5 text-[11px] leading-snug text-error',
+        className,
+      )}
+    >
+      {children}
+    </p>
+  )
+}
+
+// ─── PolicyBanner — D1 moderation/cap status at the top of Step 3 ───────────
+
+/**
+ * D1 — Surfaces the seller's tier, moderation status, and active-listing
+ * cap at the top of Step 3 so they know what to expect BEFORE they hit
+ * Create Offer. Three states:
+ *   1. needs_moderation  → amber  "Your first N listings need review."
+ *   2. at_listing_limit  → red    "You're at your cap — pause one first."
+ *   3. otherwise         → lime   "Auto-publishing as <Tier>."
+ */
+/**
+ * Action-required states (cap reached, needs moderation) keep a small
+ * banner so the seller can't miss them. The default "auto-publishing"
+ * case is rendered as a tiny status footer beneath the Create Offer
+ * button instead (see `<PolicyStatusFooter/>` below).
+ */
+function PolicyBanner({ policy }: { policy: SellerPublishPolicy | null }) {
+  if (!policy) return null
+
+  if (policy.at_listing_limit) {
+    return (
+      <div className="flex items-start gap-2.5 rounded-xl border border-error/40 bg-error-bg px-3 py-2.5">
+        <IconX className="mt-0.5 h-4 w-4 shrink-0 text-error" strokeWidth={3} />
+        <div className="min-w-0 flex-1 text-[13px]">
+          <span className="font-semibold text-error">
+            At your listing cap ({policy.listing_limit}).
+          </span>{' '}
+          <span className="text-text-secondary">
+            Pause one of your existing listings, or level up your tier.
+          </span>
+        </div>
+      </div>
+    )
+  }
+
+  if (policy.needs_moderation) {
+    const remaining = Math.max(
+      0,
+      policy.pre_moderation_listings - policy.approved_listings,
+    )
+    return (
+      <div className="flex items-start gap-2.5 rounded-xl border border-warning/40 bg-warning-bg px-3 py-2.5">
+        <Clock className="mt-0.5 h-4 w-4 shrink-0 text-warning" strokeWidth={2.5} />
+        <div className="min-w-0 flex-1 text-[13px]">
+          <span className="font-semibold text-warning">
+            New seller — {remaining} review{remaining === 1 ? '' : 's'} left.
+          </span>{' '}
+          <span className="text-text-secondary">
+            Your first {policy.pre_moderation_listings} listings are reviewed by our team before going live.
+          </span>
+        </div>
+      </div>
+    )
+  }
+
+  // Default ok state is NOT rendered here — see PolicyStatusFooter below.
+  return null
+}
+
+/**
+ * V13 — Tiny status line shown just above the footer Create Offer button.
+ * Replaces the big lime "Bronze seller — auto-publishing" panel that
+ * dominated the top of Step 3. Pulls weight off the banner area when
+ * everything is fine.
+ */
+function PolicyStatusFooter({ policy }: { policy: SellerPublishPolicy | null }) {
+  if (!policy) return null
+  if (policy.at_listing_limit || policy.needs_moderation) return null // banner handles these
+
+  const tierLabel = policy.tier.charAt(0).toUpperCase() + policy.tier.slice(1)
+  const limitCopy = policy.listing_limit
+    ? `${policy.active_count}/${policy.listing_limit} active`
+    : `${policy.active_count} active`
+
+  return (
+    <div className="inline-flex items-center gap-1.5 text-[11px] text-text-tertiary">
+      <span className="h-1.5 w-1.5 rounded-full bg-success" />
+      <span>
+        Auto-publishing as <span className="font-medium text-text-secondary">{tierLabel}</span>
+        <span className="mx-1.5 text-text-disabled">·</span>
+        {limitCopy}
+      </span>
+    </div>
+  )
+}
+
+// ─── D3 — Buyer-card live preview ──────────────────────────────────────────
+
+/**
+ * D3 — Live preview of what the buyer will see in marketplace search. Mirrors
+ * the visual structure of `src/components/listing-card.tsx` but operates on
+ * raw wizard state (no Listing object required) and renders as a
+ * non-interactive `<div>` instead of a `<Link>` — no wishlist button, no
+ * navigation. Updates in realtime as the seller fills out the form.
+ *
+ * We don't reuse ListingCard directly because it expects a full
+ * `ListingWithRelations` (seller profile, game record, category record,
+ * stable id, etc.) and embeds `<WishlistButton/>` which would call APIs
+ * with a placeholder id. The preview here is the same visual shell minus
+ * those concerns.
+ */
+function BuyerCardPreview({
+  title, price, originalPrice, images, deliveryTime, deliveryMethod,
+  quantity, game, category,
+}: {
+  title: string
+  price: string
+  originalPrice: string
+  images: string[]
+  deliveryTime: string
+  deliveryMethod: 'manual' | 'instant'
+  quantity: string
+  game: SellGameOption
+  category: GlobalCategory
+}) {
+  const primaryImage = images[0] || null
+  const priceNum = parseFloat(price)
+  const origPriceNum = parseFloat(originalPrice)
+  const qtyNum = parseInt(quantity, 10)
+  const hasPriceDrop = Number.isFinite(origPriceNum) && origPriceNum > priceNum && priceNum > 0
+  const discountPct = hasPriceDrop
+    ? Math.round(((origPriceNum - priceNum) / origPriceNum) * 100)
+    : 0
+  const isLowStock = Number.isFinite(qtyNum) && qtyNum > 0 && qtyNum <= 5
+
+  return (
+    <div className="rounded-2xl border border-border-subtle bg-bg-inset p-3 sm:p-4">
+      <div className="mb-2 flex items-center justify-between">
+        <div className="text-[10px] font-semibold uppercase tracking-wider text-text-tertiary">
+          Buyer preview
+        </div>
+        <div className="text-[10px] text-text-tertiary">Updates live</div>
+      </div>
+
+      {/* The card itself — pointer-events-none on the whole thing so nothing
+          here is clickable, but we keep hover styles for visual fidelity. */}
+      <div className="pointer-events-none mx-auto w-full max-w-xs">
+        <div className="group relative flex flex-col overflow-hidden rounded-2xl border border-border-subtle bg-white/[0.04] backdrop-blur-sm">
+          {/* Image area */}
+          <div className="relative aspect-[4/3] overflow-hidden bg-bg-overlay">
+            {primaryImage ? (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img src={primaryImage} alt="" className="h-full w-full object-cover" />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center text-5xl text-text-disabled">
+                {game.game_emoji ?? '🎮'}
+              </div>
+            )}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+
+            {/* Game chip */}
+            <div className="absolute left-2.5 top-2.5 flex items-center gap-1.5 rounded-full border border-white/10 bg-black/60 px-2.5 py-1 backdrop-blur-md">
+              {game.game_emoji && <span className="text-xs">{game.game_emoji}</span>}
+              <span className="text-[10px] font-medium leading-none text-white/80">{game.game_name}</span>
+            </div>
+
+            {/* Stock badge */}
+            {isLowStock && (
+              <div className="absolute right-2.5 top-2.5 rounded-full border border-amber-500/30 bg-amber-500/20 px-2 py-1 text-[10px] font-semibold leading-none text-amber-400 backdrop-blur-md">
+                {qtyNum} left
+              </div>
+            )}
+
+            {/* Price */}
+            <div className="absolute bottom-2.5 left-2.5 flex flex-col items-start gap-0.5">
+              {hasPriceDrop && (
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[11px] leading-none text-white/50 line-through">
+                    ${origPriceNum.toFixed(2)}
+                  </span>
+                  <span className="rounded bg-green-500/90 px-1.5 py-0.5 text-[10px] font-bold leading-none text-white">
+                    -{discountPct}%
+                  </span>
+                </div>
+              )}
+              <span className="font-mono text-xl font-bold text-white drop-shadow-md">
+                {Number.isFinite(priceNum) && priceNum > 0 ? `$${priceNum.toFixed(2)}` : '$—'}
+              </span>
+            </div>
+
+            {/* Delivery time */}
+            {deliveryTime && (
+              <div className="absolute bottom-2.5 right-2.5 flex items-center gap-1 rounded-full bg-black/50 px-2 py-1 backdrop-blur-md">
+                {deliveryMethod === 'instant' ? (
+                  <Zap className="h-3 w-3 text-lime-text" />
+                ) : (
+                  <Clock className="h-3 w-3 text-white/60" />
+                )}
+                <span className="text-[10px] leading-none text-white/70">{deliveryTime}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Body */}
+          <div className="flex flex-1 flex-col gap-2 p-4">
+            <div className="text-[11px] font-medium uppercase tracking-wide text-lime-text/80">
+              {category.name}
+            </div>
+            <h3 className="line-clamp-2 text-sm font-semibold leading-snug text-foreground">
+              {title || 'Your offer title appears here'}
+            </h3>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── D2 — Price guidance band ──────────────────────────────────────────────
+
+/**
+ * Shows a horizontal band representing the p25–p75 range of recent sold
+ * prices for this (game, category), with a marker for the seller's current
+ * price so they immediately see whether they're above / below market.
+ *
+ * Hidden until we have a meaningful sample (>= 3 sales in 60 days). When
+ * the seller is way above p75 we tag the marker red; below p25 yellow;
+ * inside the band lime.
+ */
+function PriceGuidanceCard({
+  guidance, currentPrice,
+}: {
+  guidance: PriceGuidance | null
+  currentPrice: number
+}) {
+  if (!guidance || guidance.sample_size < 3 || guidance.p25 == null || guidance.p75 == null || guidance.median == null) {
+    return null
+  }
+
+  const { p25, median, p75, sample_size } = guidance
+  // Pad each end so the marker has room when the seller types something
+  // wildly off-band; clamp to [0, ∞).
+  const span = p75 - p25
+  const padded_min = Math.max(0, p25 - span * 0.5)
+  const padded_max = p75 + span * 0.5
+  const range = Math.max(0.01, padded_max - padded_min)
+
+  const hasValidPrice = Number.isFinite(currentPrice) && currentPrice > 0
+  const pricePct = hasValidPrice
+    ? Math.min(100, Math.max(0, ((currentPrice - padded_min) / range) * 100))
+    : null
+
+  const p25Pct    = ((p25    - padded_min) / range) * 100
+  const medianPct = ((median - padded_min) / range) * 100
+  const p75Pct    = ((p75    - padded_min) / range) * 100
+
+  const tone: 'good' | 'high' | 'low' | null = hasValidPrice
+    ? currentPrice > p75 ? 'high'
+    : currentPrice < p25 ? 'low'
+    : 'good'
+    : null
+
+  const toneCopy =
+    tone === 'high' ? `Above market — most sold for $${p25.toFixed(2)}–$${p75.toFixed(2)}.`
+    : tone === 'low' ? `Below market — most sold for $${p25.toFixed(2)}–$${p75.toFixed(2)}.`
+    : tone === 'good' ? `In the typical range. Median $${median.toFixed(2)}.`
+    : `Most recent sales went for $${p25.toFixed(2)}–$${p75.toFixed(2)} (median $${median.toFixed(2)}).`
+
+  const toneClass =
+    tone === 'high' ? 'text-error'
+    : tone === 'low' ? 'text-warning'
+    : tone === 'good' ? 'text-lime-text'
+    : 'text-text-secondary'
+
+  return (
+    <div className="mt-3 rounded-xl border border-border-subtle bg-bg-inset p-3">
+      <div className="mb-2 flex items-center justify-between text-[10px] font-semibold uppercase tracking-wider text-text-tertiary">
+        <span>Recent sales</span>
+        <span>{sample_size} sold · last 60 days</span>
+      </div>
+
+      {/* Band */}
+      <div className="relative h-2 w-full rounded-full bg-bg-raised-hover">
+        <div
+          className="absolute inset-y-0 rounded-full bg-lime/40"
+          style={{ left: `${p25Pct}%`, width: `${Math.max(0, p75Pct - p25Pct)}%` }}
+        />
+        <div
+          className="absolute inset-y-0 w-px bg-lime-text"
+          style={{ left: `${medianPct}%` }}
+          aria-hidden
+        />
+        {pricePct !== null && (
+          <div
+            className={cn(
+              'absolute -top-1 h-4 w-1 -translate-x-1/2 rounded-full',
+              tone === 'high' && 'bg-error',
+              tone === 'low'  && 'bg-warning',
+              tone === 'good' && 'bg-lime',
+            )}
+            style={{ left: `${pricePct}%` }}
+            aria-hidden
+          />
+        )}
+      </div>
+
+      {/* Labels */}
+      <div className="mt-1.5 flex justify-between text-[10px] tabular-nums text-text-tertiary">
+        <span>${p25.toFixed(2)}</span>
+        <span>median ${median.toFixed(2)}</span>
+        <span>${p75.toFixed(2)}</span>
+      </div>
+
+      <p className={cn('mt-2 text-[11px] leading-snug', toneClass)}>{toneCopy}</p>
+    </div>
+  )
 }
 
 // ─── TermsCard — final sub-card on Step 3; gates the Create Offer button ────
@@ -1741,7 +2713,7 @@ function SubCard({
       {/* Head row — bigger title (h5-ish: text-base font-bold) with a faint
           horizontal divider beneath that separates the title from the body.
           R9 polish. */}
-      <div className="mb-4 flex items-center justify-between border-b border-border-subtle pb-3 sm:mb-5 sm:pb-4">
+      <div className="mb-7 flex items-center justify-between border-b border-border-subtle pb-1.5 sm:mb-8 sm:pb-2">
         <h2 className="text-base font-bold text-text-primary">{title}</h2>
         {right}
       </div>
@@ -1752,9 +2724,8 @@ function SubCard({
 
 // ─── Shared input styles ─────────────────────────────────────────────────────
 
-// R12 — fully rectangular (rounded-none) + transparent fill so inputs share
-// the sub-card surface and a border defines the field. Removes the
-// black-on-grey contrast that read as 'two surfaces fighting'. Focused border
-// turns lime; the lime tint ring stays as a soft focus halo.
+// R14 — reverted to rounded-md from R12's rounded-none after seller feedback
+// that the sharp corners felt severe. Still transparent over the sub-card
+// surface; border defines the field. Focused border turns lime.
 const inputCls =
-  'h-10 w-full rounded-none border border-border-default bg-transparent px-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-lime focus:outline-none focus:ring-2 focus:ring-lime-tint-bg transition-colors'
+  'h-10 w-full rounded-md border border-border-default bg-transparent px-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-lime focus:outline-none focus:ring-2 focus:ring-lime-tint-bg transition-colors aria-[invalid=true]:border-error aria-[invalid=true]:focus:ring-error-bg'

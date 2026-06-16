@@ -58,11 +58,11 @@ function MetricBar({ label, current, required, format, met }: MetricBarProps) {
           {met && <span className="ml-1 text-emerald-400">✓</span>}
         </span>
       </div>
-      <div className="h-1.5 w-full rounded-full bg-white/[0.06] overflow-hidden">
+      <div className="h-1.5 w-full rounded-full bg-bg-raised-hover overflow-hidden">
         <div
           className={cn(
             'h-full rounded-full transition-all duration-700',
-            met ? 'bg-emerald-500' : 'bg-violet-500'
+            met ? 'bg-emerald-500' : 'bg-lime'
           )}
           style={{ width: `${pct}%` }}
         />
@@ -78,8 +78,8 @@ export default function TierProgressBar({
 }: TierProgressBarProps) {
   if (!nextTier) {
     return (
-      <div className={cn('rounded-xl border border-violet-500/20 bg-violet-500/5 p-4 text-center', className)}>
-        <p className="text-sm font-semibold text-violet-400">Diamond Tier</p>
+      <div className={cn('rounded-xl border border-lime-tint-border bg-lime/5 p-4 text-center', className)}>
+        <p className="text-sm font-semibold text-lime-text">Diamond Tier</p>
         <p className="mt-1 text-xs text-zinc-500">You have reached the highest tier</p>
       </div>
     )

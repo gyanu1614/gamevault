@@ -82,7 +82,7 @@ export default function OpenDisputeButton({ orderId, conversationId }: OpenDispu
     <>
       <button
         onClick={() => setShowModal(true)}
-        className="w-full py-2 border border-red-500/20 bg-red-500/[0.05] hover:bg-red-500/[0.10] hover:border-red-500/35 text-red-400/80 hover:text-red-400 text-sm font-medium rounded-xl transition-all flex items-center justify-center gap-2"
+        className="w-full py-2 border border-error/40 bg-red-500/[0.05] hover:bg-red-500/[0.10] hover:border-red-500/35 text-error/80 hover:text-error text-sm font-medium rounded-xl transition-all flex items-center justify-center gap-2"
       >
         <AlertCircle className="w-4 h-4" />
         Open Dispute
@@ -94,31 +94,31 @@ export default function OpenDisputeButton({ orderId, conversationId }: OpenDispu
           onClick={handleClose}
         >
           <div
-            className="w-full max-w-sm bg-[#0f0f0f] border border-white/[0.08] rounded-2xl p-5"
+            className="w-full max-w-sm bg-[#0f0f0f] border border-border-subtle rounded-2xl p-5"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
             <div className="flex items-start justify-between mb-4">
               <div className="flex items-center gap-2.5">
                 <div className="h-8 w-8 rounded-xl border border-red-500/25 bg-red-500/[0.08] flex items-center justify-center flex-shrink-0">
-                  <ShieldAlert className="h-4 w-4 text-red-400" />
+                  <ShieldAlert className="h-4 w-4 text-error" />
                 </div>
                 <div>
                   <h3 className="text-sm font-bold text-white">Open a Dispute</h3>
-                  <p className="text-[11px] text-gray-600 mt-0.5">Support responds within 24h</p>
+                  <p className="text-[11px] text-text-disabled mt-0.5">Support responds within 24h</p>
                 </div>
               </div>
               <button
                 onClick={handleClose}
-                className="h-6 w-6 rounded-lg border border-white/[0.06] bg-white/[0.03] hover:bg-white/[0.07] flex items-center justify-center transition-colors flex-shrink-0"
+                className="h-6 w-6 rounded-lg border border-border-subtle bg-bg-overlay hover:bg-white/[0.07] flex items-center justify-center transition-colors flex-shrink-0"
               >
-                <X className="h-3.5 w-3.5 text-gray-500" />
+                <X className="h-3.5 w-3.5 text-text-tertiary" />
               </button>
             </div>
 
             {/* Category pills */}
             <div className="mb-4">
-              <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-[0.08em] mb-2 block">
+              <span className="text-[10px] font-semibold text-text-tertiary uppercase tracking-[0.08em] mb-2 block">
                 What went wrong?
               </span>
               <div className="flex flex-wrap gap-1.5">
@@ -128,8 +128,8 @@ export default function OpenDisputeButton({ orderId, conversationId }: OpenDispu
                     onClick={() => setSelectedCategory(cat.value)}
                     className={`px-2.5 py-1 rounded-lg border text-xs font-medium transition-all ${
                       selectedCategory === cat.value
-                        ? 'border-red-500/40 bg-red-500/[0.12] text-red-400'
-                        : 'border-white/[0.07] bg-white/[0.03] text-gray-500 hover:border-white/[0.12] hover:text-gray-400'
+                        ? 'border-red-500/40 bg-red-500/[0.12] text-error'
+                        : 'border-border-subtle bg-bg-overlay text-text-tertiary hover:border-white/[0.12] hover:text-text-secondary'
                     }`}
                   >
                     {cat.label}
@@ -140,14 +140,14 @@ export default function OpenDisputeButton({ orderId, conversationId }: OpenDispu
 
             {/* Description */}
             <div className="mb-5">
-              <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-[0.08em] mb-2 block">
+              <span className="text-[10px] font-semibold text-text-tertiary uppercase tracking-[0.08em] mb-2 block">
                 Details
               </span>
               <textarea
                 value={disputeReason}
                 onChange={(e) => setDisputeReason(e.target.value)}
                 placeholder="Briefly describe what happened..."
-                className="w-full px-3 py-2.5 bg-white/[0.03] border border-white/[0.07] rounded-xl text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-red-500/30 resize-none transition-colors"
+                className="w-full px-3 py-2.5 bg-bg-overlay border border-border-subtle rounded-xl text-sm text-white placeholder:text-text-disabled focus:outline-none focus:border-error/40 resize-none transition-colors"
                 rows={3}
                 disabled={isLoading}
               />
@@ -158,14 +158,14 @@ export default function OpenDisputeButton({ orderId, conversationId }: OpenDispu
               <button
                 onClick={handleClose}
                 disabled={isLoading}
-                className="flex-1 py-2 rounded-xl bg-white/[0.04] hover:bg-white/[0.07] text-sm text-gray-400 font-medium transition-colors disabled:opacity-40"
+                className="flex-1 py-2 rounded-xl bg-bg-raised hover:bg-white/[0.07] text-sm text-text-secondary font-medium transition-colors disabled:opacity-40"
               >
                 Cancel
               </button>
               <button
                 onClick={handleOpenDispute}
                 disabled={isLoading || !canSubmit}
-                className="flex-1 py-2 rounded-xl border border-red-500/25 bg-red-500/[0.08] hover:bg-red-500/[0.15] text-sm text-red-400 font-medium transition-all flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
+                className="flex-1 py-2 rounded-xl border border-red-500/25 bg-red-500/[0.08] hover:bg-red-500/[0.15] text-sm text-error font-medium transition-all flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 {isLoading ? (
                   <>

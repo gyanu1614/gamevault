@@ -51,10 +51,10 @@ export default function CategorySelector({
   if (categories.length === 0) {
     return (
       <div className={className}>
-        <label className="mb-2 block text-sm font-medium text-gray-300">
-          Category <span className="text-red-400">*</span>
+        <label className="mb-2 block text-sm font-medium text-text-secondary">
+          Category <span className="text-error">*</span>
         </label>
-        <div className="rounded-lg border border-white/10 bg-white/5 p-4 text-center text-sm text-gray-400">
+        <div className="rounded-lg border border-white/10 bg-white/5 p-4 text-center text-sm text-text-secondary">
           Select a game first to see available categories
         </div>
       </div>
@@ -63,8 +63,8 @@ export default function CategorySelector({
 
   return (
     <div className={className}>
-      <label className="mb-3 block text-sm font-medium text-gray-300">
-        Category <span className="text-red-400">*</span>
+      <label className="mb-3 block text-sm font-medium text-text-secondary">
+        Category <span className="text-error">*</span>
       </label>
       <div className="flex flex-wrap gap-2">
         {categories.map((category) => {
@@ -81,7 +81,7 @@ export default function CategorySelector({
                 'relative inline-flex items-center gap-2 rounded-lg border-2 px-4 py-2.5 text-sm font-medium transition-all',
                 isSelected
                   ? 'border-primary bg-primary/20 text-white'
-                  : 'border-white/10 bg-white/5 text-gray-400 hover:border-white/20 hover:text-white',
+                  : 'border-white/10 bg-white/5 text-text-secondary hover:border-white/20 hover:text-white',
                 disabled && 'cursor-not-allowed opacity-50'
               )}
             >
@@ -90,7 +90,7 @@ export default function CategorySelector({
 
               {/* Show indicator if special field required */}
               {requiresSpecialField && (
-                <span className="text-xs text-gray-500">
+                <span className="text-xs text-text-tertiary">
                   ({category.metadata.requires_region && 'Region'}
                   {category.metadata.requires_region && category.metadata.requires_platform && '/'}
                   {category.metadata.requires_platform && 'Platform'})

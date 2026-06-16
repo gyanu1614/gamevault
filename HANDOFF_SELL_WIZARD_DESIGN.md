@@ -54,21 +54,24 @@ border is the field. Focused border turns lime, soft halo via
 
 - Wizard card: `rounded-3xl` (24px) — distinctly soft, signals "this is a page-level container."
 - Sub-cards: `rounded-2xl` (16px) — softer than the chrome inside.
-- Tiles (category, game): `rounded-2xl` (Step 1), `rounded-xl` (Step 2).
+- Tiles (category, game): `rounded-xl` (Step 1 R13), `rounded-xl` (Step 2).
 - Buttons (primary CTA + footer): `rounded-xl` (12px) — pill-ish but not capsules.
 - Step chips (top of the card): `rounded-xl`.
-- Inputs (text, textarea, select trigger, number-field wrapper): **`rounded-none` (0px) — fully rectangular**. Industry-standard for serious forms. R12 decision.
+- Inputs (text, textarea, select trigger, number-field wrapper): ~~`rounded-none`~~ → **`rounded-md` (6px)**. Sharp 90° corners felt severe. R14 reverts R12.
 - Checkboxes: `rounded-md` (kept slightly rounded so the affirmative state reads as a soft tick, not a sharp square).
 
 ---
 
 ## R3 — Step navigation (the StepBar)
 
-- Three clickable chip buttons across the top of the card: Category / Game / Details.
-- Active chip: lime tint background + lime text. Completed chips: emerald tint, clickable to jump back. Future chips: muted, disabled.
-- Below the chips: a horizontal lime progress rail filling 33/67/100%.
-- Breadcrumbs are **removed entirely**. The chip row is the only step navigation.
-- Smaller text + softer lime than the launch version (R9 decision): the active state still pops but doesn't shout.
+- Three clickable text labels across the top of the card: Category / Game / Details.
+- ~~Pill chrome (bordered box around each label).~~ **Dropped in R13.**
+- Each step is now a plain text label with a leading number badge (active = lime filled circle, completed = success-green filled circle with check, future = outlined empty circle).
+- Active state: lime text only — no enclosing box.
+- Completed state: secondary text + subtle `hover:bg-bg-raised-hover` so the click affordance is hover-only, not always-visible chrome.
+- Future state: dimmed, no hover.
+- Below the labels: a horizontal lime progress rail filling 33/67/100% (thinner — `h-1` not `h-1.5`).
+- Breadcrumbs are **removed entirely**. The label row is the only step navigation.
 
 ---
 
@@ -87,10 +90,11 @@ const WIZARD_TOP_OFFSET = 128
 
 ## R5 — Step 1 (Category) layout
 
-- Grid of large tiles, NOT row cards.
-- Layout: `grid-cols-1 sm:grid-cols-2 lg:grid-cols-3`, gap `3`.
-- Each tile: rounded-2xl, p-5 sm:p-6, `bg-bg-overlay` with a category-specific gradient blob in the top-right corner.
-- Icon plate: 56×56 rounded-2xl with a gradient color matching the category, Lucide icon centered.
+- **Heading**: centered, with a leading lime-tint circle icon (`ShoppingBag` on Step 1, `Gamepad2` on Step 2). Text: "Choose a category" / "Choose a game". R13.
+- **Tiles**: compact horizontal row cards, NOT large square tiles. R13 revision of R12.
+- Layout: flex-wrap with `justify-center`, `basis-full sm:basis-[calc(50%-0.3125rem)] lg:basis-[calc(33.333%-0.4167rem)]`, gap `2.5`, container `max-w-3xl`. R14 — orphan card on the final row centers instead of leaning left, which the previous `grid-cols-3` layout did with the 5-category set.
+- Each tile: `rounded-xl`, `p-3 sm:p-3.5`, `bg-bg-overlay` with a category-tinted icon plate. Horizontal flex: [icon plate] [title + 1-line description] [trailing chevron/check].
+- Icon plate: 40×40 (sm: 44×44) `rounded-lg` with a gradient tint matching the category, Lucide icon centered.
 - Category color theme (defined in `CATEGORY_THEME` constant):
 
 | Category | Icon | Gradient hue |
@@ -101,8 +105,9 @@ const WIZARD_TOP_OFFSET = 128
 | Top Up | `Zap` | yellow → amber → yellow |
 | Boosting | `Trophy` | violet → purple → fuchsia |
 
-- Right side of each tile: a circular indicator chip (arrow when not selected, lime check when selected).
-- Disabled categories (Boosting at launch): `opacity-50` + `"Coming soon"` warning badge in the indicator slot.
+- Trailing indicator: 24×24 circle, arrow when not selected, lime check when selected. No bordered "chip" — the icon alone signals state.
+- Disabled categories (Boosting at launch): `opacity-50` + small inline `"Soon"` warning badge next to the title.
+- The decorative top-right gradient blob from R12 is gone — the compact layout doesn't need it.
 
 ---
 
@@ -139,8 +144,16 @@ const WIZARD_TOP_OFFSET = 128
 - `FieldRow` = `space-y-2` wrapper, matches what shadcn's `FormItem` provides.
 - Labels: `text-xs font-semibold uppercase tracking-wider text-text-secondary`.
 - Inputs: see `inputCls` constant in `SellWizard.tsx`.
-- Hints: `text-[11px] leading-snug text-text-tertiary`. **No surface**. Just dim text. R7 decision: avoids the "two black boxes" look the boxed hints had.
+- Hints: ~~no surface~~ → small contained box (`rounded-md border-border-subtle bg-bg-inset px-2.5 py-1.5 text-[11px] text-text-tertiary`). R14 reverses R7. Floating bare text felt out of place; a soft inset surface anchors the helper to the input it belongs to.
 - Hints are skipped for choice-typed fields (select, multiselect, image_select, boolean) — the placeholder/value already conveys intent. R10 decision.
+
+### Required-field error state (R14)
+
+- Every required input tracks `touched` (becomes `true` on first blur).
+- When `touched && empty`, the input gets `aria-invalid="true"` and its border + ring turn red (`border-error`, `ring-error-bg`). The corresponding `<FieldHint/>` is replaced by `<FieldError/>` ("This field is required.").
+- `<FieldError/>` mirrors `<FieldHint/>`'s box shape but uses `border-error/40 bg-error-bg text-error` so the layout doesn't jump when error replaces hint.
+- The `Combobox` primitive accepts `invalid` and `onBlur` props; the trigger borders/rings turn red when `invalid && !open`.
+- Title minimum-character requirement: **dropped**. Only emptiness blocks publish. R14 (was R8 / 5-char minimum).
 
 ---
 
@@ -196,10 +209,10 @@ Use `<NumberField/>` (react-aria-components) — NOT `<input type="number">`.
 
 - Mobile (< sm): `fixed inset-x-0 bottom-0 z-40` sticky bar with backdrop blur.
 - Desktop (sm+): inline at the bottom of the wizard card with a `border-t border-border-subtle` separator.
-- Three buttons (in order):
+- Buttons (in order):
   1. **Back** (left). Hidden on step 1.
-  2. **Save draft** (right group). Only on step 3.
-  3. **Create Offer** (right group, primary). Disabled until `canPublish` is true.
+  2. **Create Offer** (right, primary). Disabled until `canPublish` is true. R14 dropped Save draft — the wizard always publishes; drafts are out of scope until Phase D.
+- The Create Offer button: `h-11 sm:h-12`, `px-6 sm:px-8`, `font-bold uppercase tracking-wider`, **no leading icon**. Designed to read as the unambiguous next action.
 
 ---
 
@@ -255,6 +268,9 @@ When fixing bugs:
 - **R11.b** — game tiles 8/row
 - **R11.c** — browser back walks wizard steps
 - **R12** — null fix, transparent square inputs, uniform top spacing, Step 1 tile revamp, this doc
+- **R13** — StepBar pill chrome dropped (plain text labels), centred Step 1/2 headings with leading lime icon, compact horizontal category tiles
+- **R14** — required-field touched error state, inputs back to `rounded-md`, hints in soft inset boxes, Save draft removed, Create Offer beefed up and icon dropped, title min-char rule dropped, category grid balanced via flex-wrap + center
+- **R15** — Category tile subtext switched from DB description (long + truncated + dim) to short concrete examples authored in `CATEGORY_THEME.example`, color bumped from `text-text-tertiary` to `text-text-secondary`
 
 ---
 

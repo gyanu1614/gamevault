@@ -37,17 +37,17 @@ export function DynamicFieldRenderer({
             className="block text-sm font-medium text-white"
           >
             {field.label}
-            {field.required && <span className="text-red-400 ml-1">*</span>}
+            {field.required && <span className="text-error ml-1">*</span>}
           </label>
 
           {renderField(field, values[field.name], onChange, disabled)}
 
           {field.helpText && !errors[field.name] && (
-            <p className="text-xs text-gray-400">{field.helpText}</p>
+            <p className="text-xs text-text-secondary">{field.helpText}</p>
           )}
 
           {errors[field.name] && (
-            <p className="text-xs text-red-400">{errors[field.name]}</p>
+            <p className="text-xs text-error">{errors[field.name]}</p>
           )}
         </div>
       ))}
@@ -62,7 +62,7 @@ function renderField(
   disabled: boolean
 ): React.ReactNode {
   const baseClasses =
-    'w-full px-4 py-3 bg-white/[0.05] border border-white/[0.1] rounded-lg text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent transition-all'
+    'w-full px-4 py-3 bg-bg-overlay border border-white/[0.1] rounded-lg text-white placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent transition-all'
 
   const errorClasses = 'border-red-500 focus:ring-red-500'
 
@@ -133,9 +133,9 @@ function renderField(
             checked={value || false}
             onChange={(e) => onChange(field.name, e.target.checked)}
             disabled={disabled}
-            className="w-5 h-5 rounded border-white/[0.1] bg-white/[0.05] text-violet-500 focus:ring-2 focus:ring-violet-500 focus:ring-offset-0"
+            className="w-5 h-5 rounded border-white/[0.1] bg-bg-overlay text-lime-text focus:ring-2 focus:ring-violet-500 focus:ring-offset-0"
           />
-          <label htmlFor={field.name} className="text-sm text-gray-300">
+          <label htmlFor={field.name} className="text-sm text-text-secondary">
             {field.helpText || 'Enable this option'}
           </label>
         </div>
@@ -170,7 +170,7 @@ function renderField(
             field.options.map((option) => (
               <label
                 key={option.value}
-                className="flex items-center gap-3 p-3 rounded-lg bg-white/[0.03] hover:bg-white/[0.05] border border-white/[0.05] cursor-pointer transition-colors"
+                className="flex items-center gap-3 p-3 rounded-lg bg-bg-overlay hover:bg-bg-overlay border border-border-subtle cursor-pointer transition-colors"
               >
                 <input
                   type="checkbox"
@@ -185,18 +185,18 @@ function renderField(
                     onChange(field.name, newValues)
                   }}
                   disabled={disabled}
-                  className="w-4 h-4 rounded border-white/[0.1] bg-white/[0.05] text-violet-500 focus:ring-2 focus:ring-violet-500"
+                  className="w-4 h-4 rounded border-white/[0.1] bg-bg-overlay text-lime-text focus:ring-2 focus:ring-violet-500"
                 />
                 <div className="flex-1">
                   <div className="text-sm font-medium text-white">{option.label}</div>
                   {option.description && (
-                    <div className="text-xs text-gray-400">{option.description}</div>
+                    <div className="text-xs text-text-secondary">{option.description}</div>
                   )}
                 </div>
               </label>
             ))}
           {'maxSelections' in field && field.maxSelections && (
-            <p className="text-xs text-gray-400">
+            <p className="text-xs text-text-secondary">
               Max selections: {field.maxSelections}
               {Array.isArray(value) && value.length > 0 && (
                 <span className="ml-1">
@@ -225,7 +225,7 @@ function renderField(
       )
 
     default:
-      return <div className="text-sm text-gray-400">Unsupported field type</div>
+      return <div className="text-sm text-text-secondary">Unsupported field type</div>
   }
 }
 

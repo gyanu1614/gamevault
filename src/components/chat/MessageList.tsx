@@ -150,8 +150,8 @@ export default function MessageList({
     return (
       <div className="flex h-full items-center justify-center">
         <div className="flex flex-col items-center gap-3">
-          <Loader2 className="h-8 w-8 animate-spin text-violet-500" />
-          <p className="text-sm text-gray-400">Loading messages...</p>
+          <Loader2 className="h-8 w-8 animate-spin text-lime-text" />
+          <p className="text-sm text-text-secondary">Loading messages...</p>
         </div>
       </div>
     )
@@ -163,7 +163,7 @@ export default function MessageList({
         <div className="text-center">
           <div className="mb-3 text-4xl">💬</div>
           <h3 className="mb-2 text-lg font-semibold text-white">No messages yet</h3>
-          <p className="text-sm text-gray-400">
+          <p className="text-sm text-text-secondary">
             Start the conversation by sending a message below
           </p>
         </div>
@@ -190,7 +190,7 @@ export default function MessageList({
               <div className="w-full border-t border-white/10"></div>
             </div>
             <div className="relative flex justify-center">
-              <span className="bg-black px-3 text-xs font-medium text-gray-500">
+              <span className="bg-black px-3 text-xs font-medium text-text-tertiary">
                 {date}
               </span>
             </div>

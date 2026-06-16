@@ -75,9 +75,16 @@ export function useHeroSlides() {
   // TODO(supabase): replace mock with real query
   // select * from hero_slides where is_active = true order by sort_order limit 3
   // imageSrc would then come from Supabase Storage (public bucket) instead of /public/hero/
+  //
+  // initialData seeds the cache synchronously so the first render already has
+  // slides — eliminates the "headline paints, then carousel pops in"
+  // sequence the homepage had before. Once the query is migrated to real
+  // Supabase data, keep initialData pointing at the mocks (or remove if
+  // SSR-fetched) so first paint stays populated.
   return useQuery({
     queryKey: ['hero-slides'],
     queryFn: async (): Promise<HeroSlide[]> => MOCK_HERO_SLIDES,
+    initialData: MOCK_HERO_SLIDES,
     staleTime: 5 * 60 * 1000,
   })
 }

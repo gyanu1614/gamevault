@@ -85,7 +85,7 @@ export default function ConfirmReceiptButton({
     <>
       <button
         onClick={() => setShowModal(true)}
-        className="w-full py-2 border border-green-500/25 bg-green-500/[0.07] hover:bg-green-500/[0.13] hover:border-green-500/40 text-green-400 text-sm font-medium rounded-xl transition-all flex items-center justify-center gap-2"
+        className="w-full py-2 border border-green-500/25 bg-green-500/[0.07] hover:bg-green-500/[0.13] hover:border-green-500/40 text-success text-sm font-medium rounded-xl transition-all flex items-center justify-center gap-2"
       >
         <CheckCircle2 className="w-4 h-4" />
         Confirm Receipt
@@ -98,7 +98,7 @@ export default function ConfirmReceiptButton({
           onClick={() => !isLoading && setShowModal(false)}
         >
           <div
-            className="w-full max-w-md bg-[#0a0a0f] border border-white/[0.08] rounded-2xl p-6 backdrop-blur-sm"
+            className="w-full max-w-md bg-[#0a0a0f] border border-border-subtle rounded-2xl p-6 backdrop-blur-sm"
             onClick={(e) => e.stopPropagation()}
           >
             <h3 className="text-xl font-semibold text-white mb-2">
@@ -109,8 +109,8 @@ export default function ConfirmReceiptButton({
             </p>
 
             {/* Escrow Release Info Card */}
-            <div className="rounded-xl bg-violet-500/10 border border-violet-500/20 p-4 mb-6">
-              <div className="flex items-center gap-2 text-violet-400 mb-2">
+            <div className="rounded-xl bg-lime/10 border border-lime-tint-border p-4 mb-6">
+              <div className="flex items-center gap-2 text-lime-text mb-2">
                 <CheckCircle2 className="w-5 h-5" />
                 <span className="font-medium text-sm">Escrow Release</span>
               </div>
@@ -124,7 +124,7 @@ export default function ConfirmReceiptButton({
               </ul>
             </div>
 
-            <div className="p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-xl text-xs text-yellow-400 mb-4">
+            <div className="p-3 bg-warning-bg border border-yellow-500/20 rounded-xl text-xs text-warning mb-4">
               ⚠️ This action cannot be undone. Make sure you've verified everything before confirming.
             </div>
 
@@ -136,7 +136,7 @@ export default function ConfirmReceiptButton({
                 value={feedback}
                 onChange={(e) => setFeedback(e.target.value)}
                 placeholder="Share your experience with the seller..."
-                className="w-full px-4 py-3 bg-white/5 border-white/10 focus:border-violet-500 rounded-xl resize-none text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-violet-500/20 border"
+                className="w-full px-4 py-3 bg-white/5 border-white/10 focus:border-violet-500 rounded-xl resize-none text-white placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-violet-500/20 border"
                 rows={3}
                 maxLength={200}
                 disabled={isLoading}
@@ -148,20 +148,20 @@ export default function ConfirmReceiptButton({
 
             {conversationId && (
               <div className="mb-4">
-                <label className="flex items-start gap-3 p-3 bg-green-500/10 border border-green-500/30 rounded-lg cursor-pointer hover:bg-green-500/15 transition-colors">
+                <label className="flex items-start gap-3 p-3 bg-success-bg border border-success/30 rounded-lg cursor-pointer hover:bg-green-500/15 transition-colors">
                   <input
                     type="checkbox"
                     checked={sendNotification}
                     onChange={(e) => setSendNotification(e.target.checked)}
                     disabled={isLoading}
-                    className="mt-0.5 h-4 w-4 rounded border-green-500/50 bg-white/[0.05] text-green-500 focus:ring-2 focus:ring-green-500 focus:ring-offset-0"
+                    className="mt-0.5 h-4 w-4 rounded border-green-500/50 bg-bg-overlay text-success focus:ring-2 focus:ring-green-500 focus:ring-offset-0"
                   />
                   <div className="flex-1">
-                    <div className="flex items-center gap-2 text-sm font-medium text-green-400 mb-1">
+                    <div className="flex items-center gap-2 text-sm font-medium text-success mb-1">
                       <MessageSquare className="w-4 h-4" />
                       Send thank you message to seller
                     </div>
-                    <p className="text-xs text-gray-400">
+                    <p className="text-xs text-text-secondary">
                       Automatically notify the seller that you've confirmed receipt
                       {feedback && ' with your feedback'}
                     </p>
@@ -181,7 +181,7 @@ export default function ConfirmReceiptButton({
               <button
                 onClick={handleConfirm}
                 disabled={isLoading}
-                className="flex-1 py-2.5 px-4 bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 text-white font-semibold rounded-xl shadow-lg shadow-violet-500/25 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1 py-2.5 px-4 bg-gradient-to-r from-lime to-purple-600 hover:from-lime hover:to-purple-700 text-white font-semibold rounded-xl shadow-lg shadow-violet-500/25 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isLoading ? (
                   <>

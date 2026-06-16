@@ -33,8 +33,8 @@ function StatusIcon({ status }: { status: string }) {
   switch (status) {
     case 'pending':    return <Clock        className="w-4 h-4 text-amber-400" />
     case 'processing': return <Loader2      className="w-4 h-4 text-blue-400 animate-spin" />
-    case 'completed':  return <CheckCircle2 className="w-4 h-4 text-green-400" />
-    case 'rejected':   return <XCircle      className="w-4 h-4 text-red-400" />
+    case 'completed':  return <CheckCircle2 className="w-4 h-4 text-success" />
+    case 'rejected':   return <XCircle      className="w-4 h-4 text-error" />
     default:           return null
   }
 }
@@ -117,7 +117,7 @@ export default function PrivacyClient({ requests: initialRequests }: Props) {
       </motion.div>
 
       {/* Data export card */}
-      <motion.div variants={item} className="bg-[#0f0f0f] border border-white/[0.06] rounded-xl p-5">
+      <motion.div variants={item} className="bg-[#0f0f0f] border border-border-subtle rounded-xl p-5">
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-start gap-3">
             <div className="w-10 h-10 bg-blue-500/10 rounded-xl flex items-center justify-center flex-shrink-0">
@@ -152,8 +152,8 @@ export default function PrivacyClient({ requests: initialRequests }: Props) {
       <motion.div variants={item} className="bg-[#0f0f0f] border border-red-500/10 rounded-xl p-5">
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-start gap-3">
-            <div className="w-10 h-10 bg-red-500/10 rounded-xl flex items-center justify-center flex-shrink-0">
-              <Trash2 className="w-5 h-5 text-red-400" />
+            <div className="w-10 h-10 bg-error-bg rounded-xl flex items-center justify-center flex-shrink-0">
+              <Trash2 className="w-5 h-5 text-error" />
             </div>
             <div>
               <h2 className="text-sm font-semibold text-white mb-1">Request Account Deletion</h2>
@@ -184,7 +184,7 @@ export default function PrivacyClient({ requests: initialRequests }: Props) {
               <button
                 onClick={handleDeletionRequest}
                 disabled={requestingDel}
-                className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500/30
+                className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-error-bg text-error hover:bg-red-500/30
                            text-xs font-medium transition-colors disabled:opacity-50"
               >
                 {requestingDel ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
@@ -194,8 +194,8 @@ export default function PrivacyClient({ requests: initialRequests }: Props) {
           ) : (
             <button
               onClick={() => setShowDelConfirm(true)}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-500/10 border border-red-500/20
-                         text-red-400 hover:bg-red-500/15 transition-colors text-sm font-medium whitespace-nowrap"
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-error-bg border border-error/40
+                         text-error hover:bg-red-500/15 transition-colors text-sm font-medium whitespace-nowrap"
             >
               <Trash2 className="w-4 h-4" />
               Request Deletion
@@ -204,9 +204,9 @@ export default function PrivacyClient({ requests: initialRequests }: Props) {
         </div>
 
         {showDelConfirm && (
-          <div className="mt-4 flex items-start gap-2 bg-red-500/10 rounded-lg p-3">
-            <AlertTriangle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
-            <p className="text-xs text-red-300">
+          <div className="mt-4 flex items-start gap-2 bg-error-bg rounded-lg p-3">
+            <AlertTriangle className="w-4 h-4 text-error flex-shrink-0 mt-0.5" />
+            <p className="text-xs text-error">
               This will permanently delete your account, listings, order history, messages, and all personal data.
               This cannot be undone. Click "Confirm Delete" to proceed.
             </p>
@@ -216,11 +216,11 @@ export default function PrivacyClient({ requests: initialRequests }: Props) {
 
       {/* Request history */}
       {requests.length > 0 && (
-        <motion.div variants={item} className="bg-[#0f0f0f] border border-white/[0.06] rounded-xl p-5">
+        <motion.div variants={item} className="bg-[#0f0f0f] border border-border-subtle rounded-xl p-5">
           <h2 className="text-sm font-semibold text-white mb-4">Request History</h2>
           <div className="space-y-3">
             {requests.map(r => (
-              <div key={r.id} className="flex items-center gap-3 py-2.5 border-b border-white/[0.04] last:border-0">
+              <div key={r.id} className="flex items-center gap-3 py-2.5 border-b border-border-subtle last:border-0">
                 <StatusIcon status={r.status} />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm text-white capitalize">{r.type} request</p>
@@ -229,12 +229,12 @@ export default function PrivacyClient({ requests: initialRequests }: Props) {
                     {r.completed_at && ` · Completed ${new Date(r.completed_at).toLocaleDateString()}`}
                   </p>
                   {r.rejection_reason && (
-                    <p className="text-xs text-red-400 mt-0.5">Rejected: {r.rejection_reason}</p>
+                    <p className="text-xs text-error mt-0.5">Rejected: {r.rejection_reason}</p>
                   )}
                 </div>
                 <span className={`text-xs font-medium capitalize px-2 py-0.5 rounded ${
-                  r.status === 'completed' ? 'text-green-400 bg-green-500/10' :
-                  r.status === 'rejected'  ? 'text-red-400 bg-red-500/10'    :
+                  r.status === 'completed' ? 'text-success bg-success-bg' :
+                  r.status === 'rejected'  ? 'text-error bg-error-bg'    :
                   r.status === 'pending'   ? 'text-amber-400 bg-amber-500/10' :
                   'text-blue-400 bg-blue-500/10'
                 }`}>

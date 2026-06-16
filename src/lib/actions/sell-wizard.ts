@@ -33,6 +33,184 @@ function getAdminSupabase() {
 
 type Result<T> = { success: true; data: T } | { success: false; error: string }
 
+// ─── D1: publish policy (moderation + caps) ──────────────────────────────────
+
+/**
+ * Shape returned by the `get_seller_publish_policy` Postgres RPC. Everything
+ * the wizard UI needs to know about the seller's tier + moderation status in
+ * one round-trip.
+ */
+export interface SellerPublishPolicy {
+  tier: string
+  is_verified: boolean
+  listing_limit: number | null
+  active_count: number
+  bulk_daily_cap: number | null
+  bulk_today_count: number
+  auto_approve_single: boolean
+  auto_approve_bulk: boolean
+  approved_listings: number
+  pre_moderation_listings: number
+  needs_moderation: boolean
+  at_listing_limit: boolean
+}
+
+// ─── D4: duplicate listing — fetch a listing's prefillable fields ────────────
+
+/**
+ * The shape the wizard needs to pre-fill itself from an existing listing.
+ * We DON'T return images directly because they live in storage paths the
+ * new listing should own; the seller can re-upload (or keep them, see below).
+ *
+ * Owner check: the action requires the listing belongs to the requester.
+ * Cross-seller duplication isn't a feature and would leak ownership info.
+ */
+export interface DuplicatePrefill {
+  category_slug: string
+  game_id: string
+  game_slug: string
+  title: string
+  description: string
+  price: number
+  original_price: number | null
+  quantity: number
+  min_quantity: number
+  delivery_method: 'manual' | 'instant'
+  delivery_time: string | null
+  region: string | null
+  platform: string | null
+  template_data: Record<string, unknown>
+  /** Carry images over verbatim — same URLs are still valid since they
+   *  live in a public storage bucket. Seller can remove + re-add freely. */
+  images: string[]
+}
+
+export async function fetchListingForDuplicate(
+  listingId: string,
+): Promise<Result<DuplicatePrefill>> {
+  try {
+    const supabase = await createClient()
+    const { data: { user }, error: authErr } = await supabase.auth.getUser()
+    if (authErr || !user) return { success: false, error: 'Not signed in' }
+
+    const { data, error } = await (supabase
+      .from('listings') as any)
+      .select(`
+        id, seller_id, title, description, price, original_price,
+        quantity, min_quantity, delivery_method, delivery_time,
+        images, template_data, region, platform, game_id,
+        game:games(slug),
+        category:categories(metadata)
+      `)
+      .eq('id', listingId)
+      .single()
+    if (error) return { success: false, error: error.message }
+
+    const row = data as {
+      seller_id: string
+      title: string
+      description: string | null
+      price: number
+      original_price: number | null
+      quantity: number
+      min_quantity: number
+      delivery_method: 'manual' | 'instant'
+      delivery_time: string | null
+      images: string[] | null
+      template_data: Record<string, unknown> | null
+      region: string | null
+      platform: string | null
+      game_id: string
+      game: { slug: string } | null
+      category: { metadata: { type?: string } } | null
+    }
+
+    // Owner-only: don't leak fields from other sellers' listings.
+    if (row.seller_id !== user.id) {
+      return { success: false, error: 'You can only duplicate your own listings' }
+    }
+
+    // Map legacy category.metadata.type → global slug. Mirror of the bridge.
+    const legacyType = row.category?.metadata?.type ?? ''
+    const slug =
+      legacyType === 'currency' ? 'currency'
+      : legacyType === 'items'    ? 'items'
+      : legacyType === 'account'  ? 'accounts'
+      : legacyType === 'top_up'   ? 'top-up'
+      : legacyType === 'service'  ? 'boosting'
+      : ''
+    if (!slug) {
+      return { success: false, error: 'Could not map this listing to a category' }
+    }
+
+    return {
+      success: true,
+      data: {
+        category_slug: slug,
+        game_id: row.game_id,
+        game_slug: row.game?.slug ?? '',
+        title: row.title,
+        description: row.description ?? '',
+        price: row.price,
+        original_price: row.original_price,
+        quantity: row.quantity,
+        min_quantity: row.min_quantity,
+        delivery_method: row.delivery_method,
+        delivery_time: row.delivery_time,
+        region: row.region,
+        platform: row.platform,
+        template_data: row.template_data ?? {},
+        images: Array.isArray(row.images) ? row.images : [],
+      },
+    }
+  } catch (e: any) {
+    return { success: false, error: e?.message ?? 'Unknown error' }
+  }
+}
+
+// ─── D2: price guidance ──────────────────────────────────────────────────────
+
+export interface PriceGuidance {
+  sample_size: number
+  p25: number | null
+  median: number | null
+  p75: number | null
+}
+
+export async function fetchPriceGuidance(
+  gameId: string,
+  categorySlug: string,
+): Promise<Result<PriceGuidance>> {
+  try {
+    const supabase = await createClient()
+    const { data, error } = await (supabase.rpc as any)(
+      'get_price_guidance',
+      { p_game_id: gameId, p_category_slug: categorySlug },
+    )
+    if (error) return { success: false, error: error.message }
+    return { success: true, data: data as PriceGuidance }
+  } catch (e: any) {
+    return { success: false, error: e?.message ?? 'Unknown error' }
+  }
+}
+
+export async function fetchPublishPolicy(): Promise<Result<SellerPublishPolicy>> {
+  try {
+    const supabase = await createClient()
+    const { data: { user }, error: authErr } = await supabase.auth.getUser()
+    if (authErr || !user) return { success: false, error: 'Not signed in' }
+
+    const { data, error } = await (supabase.rpc as any)(
+      'get_seller_publish_policy',
+      { p_user_id: user.id },
+    )
+    if (error) return { success: false, error: error.message }
+    return { success: true, data: data as SellerPublishPolicy }
+  } catch (e: any) {
+    return { success: false, error: e?.message ?? 'Unknown error' }
+  }
+}
+
 // ─── READS (thin wrappers) ───────────────────────────────────────────────────
 
 export async function fetchSellCategories(): Promise<Result<GlobalCategory[]>> {
@@ -197,7 +375,7 @@ export interface PublishListingInput {
  * rows. We resolve the old game-scoped category_id from (game_id, type)
  * so marketplace filters like `category_id = X` keep matching.
  */
-export async function publishListing(input: PublishListingInput): Promise<Result<{ id: string }>> {
+export async function publishListing(input: PublishListingInput): Promise<Result<{ id: string; status: string }>> {
   try {
     const supabase = await createClient()
     const { data: { user }, error: authErr } = await supabase.auth.getUser()
@@ -208,6 +386,29 @@ export async function publishListing(input: PublishListingInput): Promise<Result
     // legacy row if it gets through.)
     if (!GLOBAL_SLUG_TO_LEGACY_TYPE[input.category_slug]) {
       return { success: false, error: 'Unknown category' }
+    }
+
+    // ─── D1: tier-based cap + moderation gate ────────────────────────────
+    // Fetch the publish policy in the same request so we can reject early
+    // when the seller is at their listing cap and downgrade `active` to
+    // `pending_approval` when their tier requires it. The DB trigger
+    // (check_listing_moderation) also enforces moderation as a safety net,
+    // but doing it here means the wizard sees the right status back
+    // immediately and the seller gets a clear toast.
+    const policyRes = await (supabase.rpc as any)(
+      'get_seller_publish_policy',
+      { p_user_id: user.id },
+    )
+    if (policyRes.error) {
+      return { success: false, error: policyRes.error.message }
+    }
+    const policy = policyRes.data as SellerPublishPolicy
+
+    if (input.status === 'active' && policy.at_listing_limit) {
+      return {
+        success: false,
+        error: `You're at your active-listing cap (${policy.listing_limit}). Pause one before adding more, or level up your tier.`,
+      }
     }
 
     // Self-healing: look up the legacy categories row for this (game, slug)
@@ -223,24 +424,65 @@ export async function publishListing(input: PublishListingInput): Promise<Result
       return { success: false, error: 'Couldn’t resolve a category for this game. Please contact support.' }
     }
 
+    // D1: downgrade `active` → `pending_approval` when the tier requires it.
+    // Draft / explicit pending_approval pass through unchanged.
+    const finalStatus =
+      input.status === 'active' && (policy.needs_moderation || !policy.auto_approve_single)
+        ? 'pending_approval'
+        : input.status
+
+    // V14 — Enforce minimum 100-unit order for currency listings. Mirrors
+    // the wizard floor so the client and server agree.
+    let resolvedMinQuantity = input.min_quantity
+    if (input.category_slug === 'currency' && resolvedMinQuantity < 100) {
+      resolvedMinQuantity = 100
+    }
+
+    // V13 — Currency listings auto-fill title + image from the game record
+    // so sellers don't have to. The wizard hides those fields in the UI.
+    let resolvedTitle = input.title.trim()
+    let resolvedImages = input.images
+    if (input.category_slug === 'currency') {
+      const { data: gameRow } = await supabase
+        .from('games')
+        .select('name, slug, image_url')
+        .eq('id', input.game_id)
+        .single() as any
+      const gameName: string = gameRow?.name ?? 'Currency'
+      const gameSlug: string = gameRow?.slug ?? ''
+      const gameImage: string | null = gameRow?.image_url ?? null
+      // The buyer-facing currency page reads `title` to show "Robux" etc;
+      // store the canonical currency unit per game.
+      const currencyUnit: Record<string, string> = {
+        roblox: 'Robux',
+        fortnite: 'V-Bucks',
+        valorant: 'Valorant Points',
+        'genshin-impact': 'Genesis Crystals',
+        'apex-legends': 'Apex Coins',
+      }
+      const unit = currencyUnit[gameSlug] ?? `${gameName} currency`
+      if (!resolvedTitle) resolvedTitle = unit
+      if (resolvedImages.length === 0 && gameImage) resolvedImages = [gameImage]
+    }
+
     const insertPayload: Record<string, unknown> = {
       seller_id: user.id,
       game_id: input.game_id,
       category_id: legacyCatId,
-      title: input.title.trim(),
+      title: resolvedTitle || 'Untitled',
       // listings.description is NOT NULL in the legacy schema; default to ''
       description: input.description?.trim() || '',
       price: input.price,
       original_price: input.original_price ?? null,
       quantity: input.quantity,
-      min_quantity: input.min_quantity,
+      min_quantity: resolvedMinQuantity,
       delivery_method: input.delivery_method,
       delivery_time: input.delivery_time ?? null,
-      images: input.images,
+      images: resolvedImages,
       template_data: input.template_data,
       region: input.region ?? null,
       platform: input.platform ?? null,
-      status: input.status,
+      status: finalStatus,
     }
 
     const { data, error } = await (supabase
@@ -251,7 +493,312 @@ export async function publishListing(input: PublishListingInput): Promise<Result
     if (error) return { success: false, error: error.message }
 
     revalidatePath('/account/listings')
-    return { success: true, data: { id: (data as { id: string }).id } }
+    return { success: true, data: { id: (data as { id: string }).id, status: finalStatus } }
+  } catch (e: any) {
+    return { success: false, error: e?.message ?? 'Unknown error' }
+  }
+}
+
+// ─── V14k: Edit existing listing via wizard ─────────────────────────────────
+/**
+ * V14k — Update an existing listing using the same wizard payload. Edit-mode
+ * skips the publish-policy gate (the listing was already approved) and the
+ * legacy-category resolution (the row already has a category_id), but keeps
+ * the currency floor + auto-fill so behaviour stays identical to publish.
+ *
+ * Ownership check: rejects the update if the listing belongs to someone else.
+ */
+export async function updateListingFromWizard(
+  listingId: string,
+  input: PublishListingInput,
+): Promise<Result<{ id: string; status: string }>> {
+  try {
+    const supabase = await createClient()
+    const { data: { user }, error: authErr } = await supabase.auth.getUser()
+    if (authErr || !user) return { success: false, error: 'Not signed in' }
+
+    // Ownership guard.
+    const { data: existing, error: lookupErr } = await (supabase
+      .from('listings') as any)
+      .select('seller_id, status')
+      .eq('id', listingId)
+      .single()
+    if (lookupErr || !existing) return { success: false, error: 'Listing not found' }
+    if ((existing as { seller_id: string }).seller_id !== user.id) {
+      return { success: false, error: 'You can only edit your own listings' }
+    }
+
+    // V14k — Same currency-floor enforcement as publish.
+    let resolvedMinQuantity = input.min_quantity
+    if (input.category_slug === 'currency' && resolvedMinQuantity < 100) {
+      resolvedMinQuantity = 100
+    }
+
+    // V14k — Same currency title/image auto-fill as publish.
+    let resolvedTitle = input.title.trim()
+    let resolvedImages = input.images
+    if (input.category_slug === 'currency') {
+      const { data: gameRow } = await supabase
+        .from('games')
+        .select('name, slug, image_url')
+        .eq('id', input.game_id)
+        .single() as any
+      const gameName: string = gameRow?.name ?? 'Currency'
+      const gameSlug: string = gameRow?.slug ?? ''
+      const gameImage: string | null = gameRow?.image_url ?? null
+      const currencyUnit: Record<string, string> = {
+        roblox: 'Robux',
+        fortnite: 'V-Bucks',
+        valorant: 'Valorant Points',
+        'genshin-impact': 'Genesis Crystals',
+        'apex-legends': 'Apex Coins',
+      }
+      const unit = currencyUnit[gameSlug] ?? `${gameName} currency`
+      if (!resolvedTitle) resolvedTitle = unit
+      if (resolvedImages.length === 0 && gameImage) resolvedImages = [gameImage]
+    }
+
+    const updatePayload: Record<string, unknown> = {
+      title: resolvedTitle || 'Untitled',
+      description: input.description?.trim() || '',
+      price: input.price,
+      original_price: input.original_price ?? null,
+      quantity: input.quantity,
+      min_quantity: resolvedMinQuantity,
+      delivery_method: input.delivery_method,
+      delivery_time: input.delivery_time ?? null,
+      images: resolvedImages,
+      template_data: input.template_data,
+      region: input.region ?? null,
+      platform: input.platform ?? null,
+      // Only let the seller flip between draft ↔ active here; don't let an
+      // edit accidentally reset moderation state.
+      ...(input.status === 'draft' ? { status: 'draft' } : {}),
+    }
+
+    const { error } = await (supabase
+      .from('listings') as any)
+      .update(updatePayload)
+      .eq('id', listingId)
+    if (error) return { success: false, error: error.message }
+
+    revalidatePath('/account/listings')
+    revalidatePath(`/account/listings/${listingId}/edit`)
+    return { success: true, data: { id: listingId, status: (existing as any).status } }
+  } catch (e: any) {
+    return { success: false, error: e?.message ?? 'Unknown error' }
+  }
+}
+
+// ─── D5: Bulk CSV upload ────────────────────────────────────────────────────
+
+/**
+ * Returns the CSV header + a comment row + a single example row for the
+ * given (game, category). Columns:
+ *   - title, description, price, original_price, quantity, min_quantity,
+ *     delivery_method, delivery_time, region, platform
+ *   - one column per attribute in the template (using attribute.slug)
+ *
+ * The seller downloads this, fills it in, and uploads it. The example row
+ * uses placeholders matching each column's expected type.
+ */
+export async function fetchBulkCsvTemplate(
+  gameId: string,
+  categorySlug: string,
+): Promise<Result<{ filename: string; csv: string }>> {
+  try {
+    const supabase = await createClient()
+    const { data: { user }, error: authErr } = await supabase.auth.getUser()
+    if (authErr || !user) return { success: false, error: 'Not signed in' }
+
+    const tplRes = await fetchSellTemplate(gameId, categorySlug)
+    if (!tplRes.success) return { success: false, error: tplRes.error }
+    const template = tplRes.data
+
+    const baseCols = [
+      'title', 'description', 'price', 'original_price',
+      'quantity', 'min_quantity', 'delivery_method', 'delivery_time',
+      'region', 'platform',
+    ]
+    const attrCols = template ? template.attributes.map((a) => a.slug) : []
+    const header = [...baseCols, ...attrCols]
+
+    const example: Record<string, string> = {
+      title: 'Example offer title',
+      description: 'Optional notes',
+      price: '4.99',
+      original_price: '',
+      quantity: '1',
+      min_quantity: '1',
+      delivery_method: 'manual',
+      delivery_time: '1hr',
+      region: '',
+      platform: '',
+    }
+    if (template) {
+      for (const a of template.attributes) {
+        example[a.slug] =
+          a.type === 'select' || a.type === 'multiselect'
+            ? a.options?.[0]?.value ?? ''
+            : a.type === 'boolean'
+              ? 'true'
+              : a.type === 'number'
+                ? '1'
+                : ''
+      }
+    }
+
+    const escape = (v: string) =>
+      /[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v
+    const lines = [
+      header.join(','),
+      header.map((c) => escape(example[c] ?? '')).join(','),
+    ]
+
+    return {
+      success: true,
+      data: {
+        filename: `gamevault-bulk-${categorySlug}.csv`,
+        csv: lines.join('\n'),
+      },
+    }
+  } catch (e: any) {
+    return { success: false, error: e?.message ?? 'Unknown error' }
+  }
+}
+
+export interface BulkRow {
+  /** Original 1-based line number from the seller's CSV (for error reporting) */
+  line: number
+  title: string
+  description: string
+  price: number
+  original_price: number | null
+  quantity: number
+  min_quantity: number
+  delivery_method: 'manual' | 'instant'
+  delivery_time: string | null
+  region: string | null
+  platform: string | null
+  template_data: Record<string, unknown>
+  /** Optional carry-over image URLs; bulk CSV can include image URLs
+   *  comma-separated. Stored under `images` column in the CSV. */
+  images: string[]
+}
+
+export interface BulkPublishResult {
+  ok: number
+  failed: Array<{ line: number; error: string }>
+}
+
+/**
+ * Bulk publish flow. Reads policy, checks `auto_approve_bulk` + daily cap,
+ * then inserts each row in turn. Stops early if the daily cap would be
+ * exceeded; rows that fail validation are reported per-line.
+ *
+ * Status:
+ *   - auto_approve_bulk = true  → status = 'active' (subject to the
+ *     existing moderation trigger; same as the single-listing flow)
+ *   - auto_approve_bulk = false → status = 'pending_approval' even when
+ *     the seller's auto_approve_single is true. Bulk is treated as a
+ *     coarser surface and reviewed by default.
+ */
+export async function bulkPublishListings(
+  gameId: string,
+  categorySlug: string,
+  rows: BulkRow[],
+): Promise<Result<BulkPublishResult>> {
+  try {
+    const supabase = await createClient()
+    const { data: { user }, error: authErr } = await supabase.auth.getUser()
+    if (authErr || !user) return { success: false, error: 'Not signed in' }
+
+    const policyRes = await (supabase.rpc as any)(
+      'get_seller_publish_policy',
+      { p_user_id: user.id },
+    )
+    if (policyRes.error) return { success: false, error: policyRes.error.message }
+    const policy = policyRes.data as SellerPublishPolicy
+
+    const remainingDaily =
+      policy.bulk_daily_cap == null
+        ? Number.POSITIVE_INFINITY
+        : Math.max(0, policy.bulk_daily_cap - policy.bulk_today_count)
+    if (remainingDaily === 0) {
+      return {
+        success: false,
+        error: `Bulk daily cap reached (${policy.bulk_daily_cap}). Try again in 24h or level up your tier.`,
+      }
+    }
+    if (rows.length > remainingDaily) {
+      return {
+        success: false,
+        error: `You can only bulk-upload ${remainingDaily} more today (cap ${policy.bulk_daily_cap}). Trim your CSV and try again.`,
+      }
+    }
+
+    // Resolve legacy category once.
+    const legacyCatId = await ensureLegacyCategoryRow(
+      getAdminSupabase(),
+      gameId,
+      categorySlug,
+    )
+    if (!legacyCatId) {
+      return { success: false, error: 'Couldn’t resolve a category for this game.' }
+    }
+
+    const status =
+      policy.auto_approve_bulk && !policy.needs_moderation ? 'active' : 'pending_approval'
+
+    const failed: Array<{ line: number; error: string }> = []
+    let ok = 0
+
+    for (const r of rows) {
+      try {
+        if (!r.title?.trim()) {
+          failed.push({ line: r.line, error: 'title is required' })
+          continue
+        }
+        if (!Number.isFinite(r.price) || r.price <= 0) {
+          failed.push({ line: r.line, error: 'price must be > 0' })
+          continue
+        }
+        if (!Number.isFinite(r.quantity) || r.quantity < 1) {
+          failed.push({ line: r.line, error: 'quantity must be >= 1' })
+          continue
+        }
+        const payload: Record<string, unknown> = {
+          seller_id: user.id,
+          game_id: gameId,
+          category_id: legacyCatId,
+          title: r.title.trim(),
+          description: r.description?.trim() || '',
+          price: r.price,
+          original_price: r.original_price,
+          quantity: r.quantity,
+          min_quantity: r.min_quantity || 1,
+          delivery_method: r.delivery_method,
+          delivery_time: r.delivery_time,
+          images: r.images,
+          template_data: r.template_data,
+          region: r.region,
+          platform: r.platform,
+          status,
+          metadata: { source: 'bulk' },
+        }
+        const { error } = await (supabase.from('listings') as any).insert(payload)
+        if (error) {
+          failed.push({ line: r.line, error: error.message })
+          continue
+        }
+        ok++
+      } catch (e: any) {
+        failed.push({ line: r.line, error: e?.message ?? 'Unknown error' })
+      }
+    }
+
+    revalidatePath('/account/listings')
+    return { success: true, data: { ok, failed } }
   } catch (e: any) {
     return { success: false, error: e?.message ?? 'Unknown error' }
   }

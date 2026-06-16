@@ -53,13 +53,13 @@ interface SellerOrderDetailClientProps {
 
 function SidebarCard({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className={cn('rounded-2xl border border-white/[0.06] bg-white/[0.025] p-5 transition-colors hover:border-white/[0.09]', className)}>
+    <div className={cn('rounded-2xl border border-border-subtle bg-white/[0.025] p-5 transition-colors hover:border-white/[0.09]', className)}>
       {children}
     </div>
   )
 }
 
-function CardLabel({ icon: Icon, label, color = 'text-gray-500' }: { icon: React.ElementType; label: string; color?: string }) {
+function CardLabel({ icon: Icon, label, color = 'text-text-tertiary' }: { icon: React.ElementType; label: string; color?: string }) {
   return (
     <div className="flex items-center gap-2 mb-4">
       <Icon className={cn('h-3.5 w-3.5', color)} />
@@ -369,15 +369,15 @@ export default function SellerOrderDetailClient({
             <div className="flex-1">
               {/* Show completed view for completed orders, otherwise show progress bar */}
               {order.status === 'completed' ? (
-                <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-4">
+                <div className="rounded-xl border border-border-subtle bg-bg-overlay p-4">
                   {/* Order Completed Header */}
                   <div className="flex items-center gap-3 mb-4">
                     <div className="h-11 w-11 rounded-full bg-green-500/15 border border-green-500/25 flex items-center justify-center flex-shrink-0">
-                      <CheckCircle2 className="w-5 h-5 text-green-400" />
+                      <CheckCircle2 className="w-5 h-5 text-success" />
                     </div>
                     <div>
                       <h3 className="text-lg font-bold text-white mb-1">Order Completed</h3>
-                      <p className="text-xs text-gray-400">
+                      <p className="text-xs text-text-secondary">
                         {order.completed_at ? new Date(order.completed_at).toLocaleString('en-US', {
                           month: 'short',
                           day: 'numeric',
@@ -387,33 +387,33 @@ export default function SellerOrderDetailClient({
                           hour12: true
                         }) : 'Recently'}
                       </p>
-                      <p className="text-xs text-gray-500 mt-1.5">
+                      <p className="text-xs text-text-tertiary mt-1.5">
                         Payment has been released to you. Great work!
                       </p>
                     </div>
                   </div>
 
                   {/* Divider */}
-                  <div className="border-t border-white/[0.06] my-3.5" />
+                  <div className="border-t border-border-subtle my-3.5" />
 
                   {/* Buyer Feedback Section */}
                   <div>
                     <h4 className="text-xs font-semibold text-white mb-3">Buyer feedback</h4>
                     {buyerReview ? (
-                      <div className="rounded-lg bg-white/[0.04] border border-white/[0.06] p-3 flex items-start gap-3">
+                      <div className="rounded-lg bg-bg-raised border border-border-subtle p-3 flex items-start gap-3">
                         {buyerReview.rating >= 4 ? (
-                          <ThumbsUp className="w-4 h-4 text-green-400 fill-current flex-shrink-0 mt-0.5" />
+                          <ThumbsUp className="w-4 h-4 text-success fill-current flex-shrink-0 mt-0.5" />
                         ) : (
-                          <ThumbsDown className="w-4 h-4 text-red-400 fill-current flex-shrink-0 mt-0.5" />
+                          <ThumbsDown className="w-4 h-4 text-error fill-current flex-shrink-0 mt-0.5" />
                         )}
-                        <p className="text-sm text-gray-300 leading-relaxed flex-1">
+                        <p className="text-sm text-text-secondary leading-relaxed flex-1">
                           {buyerReview.comment || buyerReview.title || "No comment provided"}
                         </p>
                       </div>
                     ) : (
                       <div className="flex items-center gap-3">
                         <div className="flex-1">
-                          <p className="text-xs text-gray-500">
+                          <p className="text-xs text-text-tertiary">
                             No feedback yet. Send a friendly reminder to get valuable feedback.
                           </p>
                         </div>
@@ -432,7 +432,7 @@ export default function SellerOrderDetailClient({
                             }
                           }}
                           disabled={!conversationId}
-                          className="flex-shrink-0 px-3 py-1.5 rounded-lg border border-white/10 bg-white/[0.05] hover:bg-white/[0.08] text-[11px] text-gray-300 font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5 whitespace-nowrap"
+                          className="flex-shrink-0 px-3 py-1.5 rounded-lg border border-white/10 bg-bg-overlay hover:bg-bg-raised-hover text-[11px] text-text-secondary font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5 whitespace-nowrap"
                         >
                           <MessageSquare className="w-3 h-3" />
                           Request
@@ -475,15 +475,15 @@ export default function SellerOrderDetailClient({
             <div className="flex-1">
               {/* Show completed view for completed orders, otherwise show progress bar */}
               {order.status === 'completed' ? (
-                <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-4">
+                <div className="rounded-xl border border-border-subtle bg-bg-overlay p-4">
                   {/* Order Completed Header */}
                   <div className="flex items-center gap-3 mb-4">
                     <div className="h-11 w-11 rounded-full bg-green-500/15 border border-green-500/25 flex items-center justify-center flex-shrink-0">
-                      <CheckCircle2 className="w-5 h-5 text-green-400" />
+                      <CheckCircle2 className="w-5 h-5 text-success" />
                     </div>
                     <div>
                       <h3 className="text-lg font-bold text-white mb-1">Order Completed</h3>
-                      <p className="text-xs text-gray-400">
+                      <p className="text-xs text-text-secondary">
                         {order.completed_at ? new Date(order.completed_at).toLocaleString('en-US', {
                           month: 'short',
                           day: 'numeric',
@@ -493,33 +493,33 @@ export default function SellerOrderDetailClient({
                           hour12: true
                         }) : 'Recently'}
                       </p>
-                      <p className="text-xs text-gray-500 mt-1.5">
+                      <p className="text-xs text-text-tertiary mt-1.5">
                         Payment has been released to you. Great work!
                       </p>
                     </div>
                   </div>
 
                   {/* Divider */}
-                  <div className="border-t border-white/[0.06] my-3.5" />
+                  <div className="border-t border-border-subtle my-3.5" />
 
                   {/* Buyer Feedback Section */}
                   <div>
                     <h4 className="text-xs font-semibold text-white mb-3">Buyer feedback</h4>
                     {buyerReview ? (
-                      <div className="rounded-lg bg-white/[0.04] border border-white/[0.06] p-3 flex items-start gap-3">
+                      <div className="rounded-lg bg-bg-raised border border-border-subtle p-3 flex items-start gap-3">
                         {buyerReview.rating >= 4 ? (
-                          <ThumbsUp className="w-4 h-4 text-green-400 fill-current flex-shrink-0 mt-0.5" />
+                          <ThumbsUp className="w-4 h-4 text-success fill-current flex-shrink-0 mt-0.5" />
                         ) : (
-                          <ThumbsDown className="w-4 h-4 text-red-400 fill-current flex-shrink-0 mt-0.5" />
+                          <ThumbsDown className="w-4 h-4 text-error fill-current flex-shrink-0 mt-0.5" />
                         )}
-                        <p className="text-sm text-gray-300 leading-relaxed flex-1">
+                        <p className="text-sm text-text-secondary leading-relaxed flex-1">
                           {buyerReview.comment || buyerReview.title || "No comment provided"}
                         </p>
                       </div>
                     ) : (
                       <div className="flex items-center gap-3">
                         <div className="flex-1">
-                          <p className="text-xs text-gray-500">
+                          <p className="text-xs text-text-tertiary">
                             No feedback yet. Send a friendly reminder to get valuable feedback.
                           </p>
                         </div>
@@ -538,7 +538,7 @@ export default function SellerOrderDetailClient({
                             }
                           }}
                           disabled={!conversationId}
-                          className="flex-shrink-0 px-3 py-1.5 rounded-lg border border-white/10 bg-white/[0.05] hover:bg-white/[0.08] text-[11px] text-gray-300 font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5 whitespace-nowrap"
+                          className="flex-shrink-0 px-3 py-1.5 rounded-lg border border-white/10 bg-bg-overlay hover:bg-bg-raised-hover text-[11px] text-text-secondary font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5 whitespace-nowrap"
                         >
                           <MessageSquare className="w-3 h-3" />
                           Request
@@ -586,10 +586,10 @@ export default function SellerOrderDetailClient({
 
         {/* ── CHAT (2/3) ────────────────────────────────────────────────── */}
         <div className="lg:col-span-2 flex flex-col">
-          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] overflow-hidden flex-1">
+          <div className="rounded-2xl border border-border-subtle bg-bg-overlay overflow-hidden flex-1">
 
             {/* Chat header */}
-            <div className="border-b border-white/[0.05] px-5 py-4 flex items-center gap-3">
+            <div className="border-b border-border-subtle px-5 py-4 flex items-center gap-3">
               {/* Buyer avatar */}
               <div className="relative flex-shrink-0">
                 <AvatarImage
@@ -607,12 +607,12 @@ export default function SellerOrderDetailClient({
                 <div className="text-sm font-semibold text-white truncate leading-tight">
                   @{otherUser.username}
                 </div>
-                <div className="text-[11px] text-gray-500 mt-0.5">Buyer</div>
+                <div className="text-[11px] text-text-tertiary mt-0.5">Buyer</div>
               </div>
 
-              <div className="flex items-center gap-2 flex-shrink-0 rounded-full border border-white/[0.06] bg-white/[0.03] px-3 py-1.5">
-                <MessageSquare className="h-3 w-3 text-gray-600" />
-                <span className="text-[11px] font-mono font-medium text-gray-500">#{orderNum}</span>
+              <div className="flex items-center gap-2 flex-shrink-0 rounded-full border border-border-subtle bg-bg-overlay px-3 py-1.5">
+                <MessageSquare className="h-3 w-3 text-text-disabled" />
+                <span className="text-[11px] font-mono font-medium text-text-tertiary">#{orderNum}</span>
               </div>
             </div>
 
@@ -620,7 +620,7 @@ export default function SellerOrderDetailClient({
             <div className="h-[620px]">
               {conversationLoading ? (
                 <div className="flex h-full items-center justify-center">
-                  <Loader2 className="h-6 w-6 animate-spin text-violet-500/60" />
+                  <Loader2 className="h-6 w-6 animate-spin text-lime-text/60" />
                 </div>
               ) : conversationId && user ? (
                 <ChatInterface
@@ -641,7 +641,7 @@ export default function SellerOrderDetailClient({
                 />
               ) : (
                 <div className="flex h-full items-center justify-center">
-                  <Loader2 className="h-6 w-6 animate-spin text-violet-500/60" />
+                  <Loader2 className="h-6 w-6 animate-spin text-lime-text/60" />
                 </div>
               )}
             </div>
@@ -669,13 +669,13 @@ export default function SellerOrderDetailClient({
 
           {/* Instant Delivery Code Display (for seller) */}
           {isInstantDelivery && order.instant_delivery_code && (
-            <SidebarCard className="border-violet-500/20 bg-violet-500/[0.04]">
+            <SidebarCard className="border-lime-tint-border bg-lime/[0.04]">
               <CardLabel
                 icon={Zap}
                 label="Delivered Code"
-                color="text-violet-400"
+                color="text-lime-text"
               />
-              <p className="text-xs text-gray-500 mb-4 leading-relaxed">
+              <p className="text-xs text-text-tertiary mb-4 leading-relaxed">
                 This code was automatically delivered to the buyer. Keep this for your records.
               </p>
               <InstantDeliveryCodeDisplay
@@ -688,12 +688,12 @@ export default function SellerOrderDetailClient({
 
           {/* ① Mark as Delivered — top priority action */}
           {needsDeliveryAction && (
-            <SidebarCard className="border-violet-500/20 bg-violet-500/[0.04] relative overflow-hidden">
+            <SidebarCard className="border-lime-tint-border bg-lime/[0.04] relative overflow-hidden">
 
               {/* Blur overlay during transition */}
               {isTransitioning && (
                 <div className="absolute inset-0 bg-black/40 backdrop-blur-lg z-10 flex items-center justify-center">
-                  <Loader2 className="w-5 h-5 text-violet-400 animate-spin" />
+                  <Loader2 className="w-5 h-5 text-lime-text animate-spin" />
                 </div>
               )}
 
@@ -707,9 +707,9 @@ export default function SellerOrderDetailClient({
                 <CardLabel
                   icon={order.status === 'paid' ? Package : TrendingUp}
                   label={order.status === 'paid' ? 'Action Required' : 'Delivering'}
-                  color="text-violet-400"
+                  color="text-lime-text"
                 />
-                <p className="text-xs text-gray-500 mb-4 leading-relaxed">
+                <p className="text-xs text-text-tertiary mb-4 leading-relaxed">
                   {order.status === 'paid'
                     ? 'Timer is running. Send the item and mark as delivered.'
                     : "Once you've sent the item, mark it as delivered."
@@ -726,7 +726,7 @@ export default function SellerOrderDetailClient({
                   disabled={isTransitioning}
                   className="w-full py-2.5 border border-white/[0.15] bg-white/[0.07] hover:bg-white/[0.11] hover:border-white/[0.22] text-white font-medium rounded-lg transition-all flex items-center justify-center gap-2 text-sm disabled:opacity-50"
                 >
-                  <Package className="w-4 h-4 text-violet-400" />
+                  <Package className="w-4 h-4 text-lime-text" />
                   Mark as Delivered
                 </button>
                 <div className="mt-3">
@@ -743,13 +743,13 @@ export default function SellerOrderDetailClient({
                 isTransitioning && "blur-sm"
               )}>
                 <h3 className="text-lg font-bold text-white mb-1">Mark Order as Delivered</h3>
-                <p className="text-xs text-gray-500 mb-5 leading-relaxed">
+                <p className="text-xs text-text-tertiary mb-5 leading-relaxed">
                   This starts the 48-hour auto-release timer. The buyer has 48h to confirm receipt or open a dispute.
                 </p>
 
                 {/* Evidence required warning */}
                 {order.delivery_evidence_required && (order.delivery_evidence_urls?.length || 0) === 0 && selectedFiles.length === 0 && (
-                  <div className="mb-4 p-3 rounded-xl bg-red-500/10 border border-red-500/25 text-xs text-red-400">
+                  <div className="mb-4 p-3 rounded-xl bg-error-bg border border-red-500/25 text-xs text-error">
                     ⚠ You must upload at least one delivery proof image before marking as delivered.
                   </div>
                 )}
@@ -757,10 +757,10 @@ export default function SellerOrderDetailClient({
                 {/* Proof upload section */}
                 <div className="mb-5">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-semibold text-gray-400 uppercase tracking-[0.08em]">
+                    <span className="text-xs font-semibold text-text-secondary uppercase tracking-[0.08em]">
                       Delivery Proof
                     </span>
-                    <span className="text-[10px] text-gray-600">
+                    <span className="text-[10px] text-text-disabled">
                       {selectedFiles.length}/4 images · optional
                     </span>
                   </div>
@@ -769,7 +769,7 @@ export default function SellerOrderDetailClient({
                   {previews.length > 0 && (
                     <div className="grid grid-cols-4 gap-2 mb-3">
                       {previews.map((src, i) => (
-                        <div key={i} className="relative aspect-square rounded-lg overflow-hidden border border-white/[0.08] bg-white/[0.03] group">
+                        <div key={i} className="relative aspect-square rounded-lg overflow-hidden border border-border-subtle bg-bg-overlay group">
                           <Image src={src} alt={`proof ${i + 1}`} fill className="object-cover" />
                           <button
                             onClick={() => removeFile(i)}
@@ -787,7 +787,7 @@ export default function SellerOrderDetailClient({
                     <button
                       type="button"
                       onClick={() => fileInputRef.current?.click()}
-                      className="w-full py-3 rounded-xl border border-dashed border-white/[0.12] bg-white/[0.02] hover:bg-white/[0.05] hover:border-violet-500/40 transition-all flex flex-col items-center gap-1.5 text-gray-600 hover:text-gray-400"
+                      className="w-full py-3 rounded-xl border border-dashed border-white/[0.12] bg-bg-overlay hover:bg-bg-overlay hover:border-lime-tint-border transition-all flex flex-col items-center gap-1.5 text-text-disabled hover:text-text-secondary"
                     >
                       <ImagePlus className="h-5 w-5" />
                       <span className="text-xs">Click to add proof images</span>
@@ -815,7 +815,7 @@ export default function SellerOrderDetailClient({
                       }, 150)
                     }}
                     disabled={isLoading || isTransitioning}
-                    className="flex-1 py-2.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.07] text-sm text-gray-400 font-medium transition-colors disabled:opacity-40"
+                    className="flex-1 py-2.5 rounded-xl bg-bg-raised hover:bg-white/[0.07] text-sm text-text-secondary font-medium transition-colors disabled:opacity-40"
                   >
                     Cancel
                   </button>
@@ -846,45 +846,45 @@ export default function SellerOrderDetailClient({
             <CardLabel
               icon={isEscrowReleased ? CheckCircle2 : DollarSign}
               label={isEscrowReleased ? 'Payment Released' : 'Your Payout'}
-              color="text-green-400"
+              color="text-success"
             />
 
             <div className="space-y-2.5">
               <div className="flex justify-between items-center">
-                <span className="text-xs text-gray-500">Order Price</span>
+                <span className="text-xs text-text-tertiary">Order Price</span>
                 <span className="text-xs text-gray-200 font-mono">${(order.total_amount || 0).toFixed(2)}</span>
               </div>
               {feeAmount > 0 && (
                 <div className="flex justify-between items-center">
-                  <span className="text-xs text-gray-500">Commission</span>
-                  <span className="text-xs text-red-400/70 font-mono">-${feeAmount.toFixed(2)}</span>
+                  <span className="text-xs text-text-tertiary">Commission</span>
+                  <span className="text-xs text-error/70 font-mono">-${feeAmount.toFixed(2)}</span>
                 </div>
               )}
-              <div className="pt-2.5 border-t border-white/[0.05] flex justify-between items-center">
+              <div className="pt-2.5 border-t border-border-subtle flex justify-between items-center">
                 <span className="text-xs font-semibold text-white">You receive</span>
-                <span className="text-lg font-bold text-green-400 font-mono">${sellerPayout.toFixed(2)}</span>
+                <span className="text-lg font-bold text-success font-mono">${sellerPayout.toFixed(2)}</span>
               </div>
             </div>
 
             {/* Seller guidance — fills remaining space */}
-            <div className="mt-4 pt-4 border-t border-white/[0.05] space-y-3 flex-1">
+            <div className="mt-4 pt-4 border-t border-border-subtle space-y-3 flex-1">
               <div className="flex items-start gap-2.5">
-                <div className="h-5 w-5 rounded-full bg-green-500/10 border border-green-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <ShieldCheck className="h-2.5 w-2.5 text-green-400" />
+                <div className="h-5 w-5 rounded-full bg-success-bg border border-green-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <ShieldCheck className="h-2.5 w-2.5 text-success" />
                 </div>
-                <p className="text-[11px] text-gray-600 leading-relaxed">Funds will be added to your GameVault balance once the buyer confirms receipt.</p>
+                <p className="text-[11px] text-text-disabled leading-relaxed">Funds will be added to your GameVault balance once the buyer confirms receipt.</p>
               </div>
               <div className="flex items-start gap-2.5">
-                <div className="h-5 w-5 rounded-full bg-green-500/10 border border-green-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <Clock className="h-2.5 w-2.5 text-green-400" />
+                <div className="h-5 w-5 rounded-full bg-success-bg border border-green-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <Clock className="h-2.5 w-2.5 text-success" />
                 </div>
-                <p className="text-[11px] text-gray-600 leading-relaxed">If the buyer does not confirm within 48 hours of delivery, payment is released to you automatically.</p>
+                <p className="text-[11px] text-text-disabled leading-relaxed">If the buyer does not confirm within 48 hours of delivery, payment is released to you automatically.</p>
               </div>
               <div className="flex items-start gap-2.5">
-                <div className="h-5 w-5 rounded-full bg-green-500/10 border border-green-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <Zap className="h-2.5 w-2.5 text-green-400" />
+                <div className="h-5 w-5 rounded-full bg-success-bg border border-green-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <Zap className="h-2.5 w-2.5 text-success" />
                 </div>
-                <p className="text-[11px] text-gray-600 leading-relaxed">Deliver promptly and mark as delivered as soon as the item is sent to start the release timer.</p>
+                <p className="text-[11px] text-text-disabled leading-relaxed">Deliver promptly and mark as delivered as soon as the item is sent to start the release timer.</p>
               </div>
             </div>
           </SidebarCard>

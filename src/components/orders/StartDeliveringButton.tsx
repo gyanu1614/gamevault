@@ -87,7 +87,7 @@ export default function StartDeliveringButton({
               Start Delivering Order
             </h3>
 
-            <p className="text-gray-400 text-sm mb-4">
+            <p className="text-text-secondary text-sm mb-4">
               This will mark the order as "Delivering/Processing". You can then upload delivery evidence and mark it as delivered when ready.
             </p>
 
@@ -98,14 +98,14 @@ export default function StartDeliveringButton({
                     type="checkbox"
                     checked={sendNotification}
                     onChange={(e) => setSendNotification(e.target.checked)}
-                    className="mt-0.5 h-4 w-4 rounded border-blue-500/50 bg-white/[0.05] text-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-offset-0"
+                    className="mt-0.5 h-4 w-4 rounded border-blue-500/50 bg-bg-overlay text-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-offset-0"
                   />
                   <div className="flex-1">
                     <div className="flex items-center gap-2 text-sm font-medium text-blue-400 mb-1">
                       <MessageSquare className="w-4 h-4" />
                       Send notification to buyer
                     </div>
-                    <p className="text-xs text-gray-400">
+                    <p className="text-xs text-text-secondary">
                       Automatically send a message informing the buyer that you're processing their order
                     </p>
                   </div>
@@ -116,7 +116,7 @@ export default function StartDeliveringButton({
             <div className="flex gap-3">
               <button
                 onClick={() => setShowModal(false)}
-                className="flex-1 py-2 bg-white/[0.05] hover:bg-white/[0.08] text-white font-medium rounded-lg transition-colors"
+                className="flex-1 py-2 bg-bg-overlay hover:bg-bg-raised-hover text-white font-medium rounded-lg transition-colors"
                 disabled={isLoading}
               >
                 Cancel

@@ -43,7 +43,7 @@ export default function AuthGate({ children }: AuthGateProps) {
       <div className="flex min-h-screen items-center justify-center bg-black">
         <div className="text-center">
           <Loader2 className="mx-auto h-12 w-12 animate-spin text-primary" />
-          <p className="mt-4 text-sm text-gray-400">Verifying authentication...</p>
+          <p className="mt-4 text-sm text-text-secondary">Verifying authentication...</p>
         </div>
       </div>
     )

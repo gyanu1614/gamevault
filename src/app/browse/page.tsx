@@ -1,43 +1,59 @@
 'use client'
 
-import { useState, useEffect, Suspense } from 'react'
+/**
+ * /browse — universal marketplace browse.
+ *
+ * V3 reskin: GV tokens, Combobox for game/category/sort, NumberField for
+ * price range, Tabs for category quick-switch, ListingCard reused. Mobile
+ * filters slide in from the side via Dialog. Filter chip row shows active
+ * filters with one-click clear.
+ */
+
+import { useState, useEffect, useMemo, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
-import { Search, Filter, SlidersHorizontal } from 'lucide-react'
+import { Search, SlidersHorizontal, X, Loader2, Package } from 'lucide-react'
+
 import { getListings, getGames, getCategories } from '@/lib/api/listings'
 import { ListingCard, ListingCardSkeleton } from '@/components/listing-card'
-import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { Label } from '@/components/ui/label'
+import { Combobox, type ComboboxOption } from '@/components/ui/combobox'
+import { NumberField } from '@/components/ui/number-field'
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
+} from '@/components/ui/dialog'
+import { cn } from '@/lib/utils'
 
 export const dynamic = 'force-dynamic'
+
+type SortBy = 'created_at' | 'price' | 'sales'
+
+const SORT_OPTIONS: ComboboxOption[] = [
+  { value: 'created_at', label: 'Newest first' },
+  { value: 'price', label: 'Price: low to high' },
+  { value: 'sales', label: 'Most popular' },
+]
 
 function BrowseContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
 
-  // Filter state
-  const [search, setSearch] = useState(searchParams.get('search') || '')
-  const [gameId, setGameId] = useState(searchParams.get('game') || '')
-  const [categoryId, setCategoryId] = useState(searchParams.get('category') || '')
-  const [minPrice, setMinPrice] = useState(searchParams.get('minPrice') || '')
-  const [maxPrice, setMaxPrice] = useState(searchParams.get('maxPrice') || '')
-  const [sortBy, setSortBy] = useState<'created_at' | 'price' | 'sales'>(
-    (searchParams.get('sortBy') as any) || 'created_at'
+  const [search, setSearch] = useState(searchParams.get('search') ?? '')
+  const [gameId, setGameId] = useState(searchParams.get('game') ?? '')
+  const [categoryId, setCategoryId] = useState(searchParams.get('category') ?? '')
+  const [minPrice, setMinPrice] = useState<number>(
+    searchParams.get('minPrice') ? parseFloat(searchParams.get('minPrice')!) : 0,
   )
-  const [showFilters, setShowFilters] = useState(false)
+  const [maxPrice, setMaxPrice] = useState<number>(
+    searchParams.get('maxPrice') ? parseFloat(searchParams.get('maxPrice')!) : 0,
+  )
+  const [sortBy, setSortBy] = useState<SortBy>(
+    (searchParams.get('sortBy') as SortBy) ?? 'created_at',
+  )
+  const [filtersOpen, setFiltersOpen] = useState(false)
 
-  // Fetch data
-  const { data: gamesData } = useQuery({
-    queryKey: ['games'],
-    queryFn: getGames,
-  })
-
-  const { data: categoriesData } = useQuery({
-    queryKey: ['categories'],
-    queryFn: getCategories,
-  })
-
+  const { data: gamesData } = useQuery({ queryKey: ['games'], queryFn: getGames })
+  const { data: categoriesData } = useQuery({ queryKey: ['categories'], queryFn: getCategories })
   const { data: listingsData, isLoading } = useQuery({
     queryKey: ['listings', { search, gameId, categoryId, minPrice, maxPrice, sortBy }],
     queryFn: () =>
@@ -45,209 +61,333 @@ function BrowseContent() {
         search: search || undefined,
         gameId: gameId || undefined,
         categoryId: categoryId || undefined,
-        minPrice: minPrice ? parseFloat(minPrice) : undefined,
-        maxPrice: maxPrice ? parseFloat(maxPrice) : undefined,
+        minPrice: minPrice > 0 ? minPrice : undefined,
+        maxPrice: maxPrice > 0 ? maxPrice : undefined,
         sortBy,
         sortOrder: 'desc',
       }),
   })
 
-  const games = gamesData?.data || []
-  const categories = categoriesData?.data || []
-  const listings = listingsData?.data || []
+  const games = gamesData?.data ?? []
+  const categories = categoriesData?.data ?? []
+  const listings = listingsData?.data ?? []
 
-  // Update URL params
+  // URL sync
   useEffect(() => {
     const params = new URLSearchParams()
     if (search) params.set('search', search)
     if (gameId) params.set('game', gameId)
     if (categoryId) params.set('category', categoryId)
-    if (minPrice) params.set('minPrice', minPrice)
-    if (maxPrice) params.set('maxPrice', maxPrice)
+    if (minPrice > 0) params.set('minPrice', String(minPrice))
+    if (maxPrice > 0) params.set('maxPrice', String(maxPrice))
     if (sortBy !== 'created_at') params.set('sortBy', sortBy)
-
-    const newUrl = params.toString() ? `/browse?${params.toString()}` : '/browse'
-    router.replace(newUrl, { scroll: false })
+    const next = params.toString() ? `/browse?${params.toString()}` : '/browse'
+    router.replace(next, { scroll: false })
   }, [search, gameId, categoryId, minPrice, maxPrice, sortBy, router])
 
-  const clearFilters = () => {
+  const gameOptions: ComboboxOption[] = useMemo(
+    () => [
+      { value: '', label: 'All games' },
+      ...games.map((g: any) => ({
+        value: g.id,
+        label: g.emoji ? `${g.emoji}  ${g.name}` : g.name,
+      })),
+    ],
+    [games],
+  )
+
+  const categoryOptions: ComboboxOption[] = useMemo(
+    () => [
+      { value: '', label: 'All categories' },
+      ...categories.map((c: any) => ({
+        value: c.id,
+        label: c.icon ? `${c.icon}  ${c.name}` : c.name,
+      })),
+    ],
+    [categories],
+  )
+
+  const activeFilterCount = [gameId, categoryId, minPrice > 0, maxPrice > 0].filter(Boolean).length
+  const hasActiveFilters = activeFilterCount > 0 || !!search
+
+  const clearAll = () => {
     setSearch('')
     setGameId('')
     setCategoryId('')
-    setMinPrice('')
-    setMaxPrice('')
+    setMinPrice(0)
+    setMaxPrice(0)
     setSortBy('created_at')
   }
 
-  const hasActiveFilters = search || gameId || categoryId || minPrice || maxPrice
+  // Looked-up labels for filter chips
+  const gameLabel = games.find((g: any) => g.id === gameId)?.name
+  const categoryLabel = categories.find((c: any) => c.id === categoryId)?.name
 
-  return (
-    <div className="mx-auto w-full max-w-[95vw] px-4 py-8 sm:max-w-[90vw] md:max-w-5xl lg:max-w-6xl xl:max-w-7xl">
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="mb-2 text-3xl font-bold">Browse Listings</h1>
-        <p className="text-muted-foreground">
-          Find the best gaming items, currency, and accounts
-        </p>
+  // ── Filter panel content (used inline lg+ and inside dialog on mobile) ──
+  const FilterPanel = (
+    <div className="space-y-5">
+      <div className="space-y-1.5">
+        <label className="block text-xs font-semibold uppercase tracking-wider text-text-secondary">
+          Game
+        </label>
+        <Combobox value={gameId} onChange={setGameId} options={gameOptions} unsorted ariaLabel="Game" />
       </div>
 
-      {/* Search & Filters */}
-      <div className="mb-6 space-y-4">
-        {/* Search Bar */}
-        <div className="flex gap-2">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              type="text"
-              placeholder="Search listings..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-10"
+      <div className="space-y-1.5">
+        <label className="block text-xs font-semibold uppercase tracking-wider text-text-secondary">
+          Category
+        </label>
+        <Combobox value={categoryId} onChange={setCategoryId} options={categoryOptions} unsorted ariaLabel="Category" />
+      </div>
+
+      <div className="space-y-1.5">
+        <label className="block text-xs font-semibold uppercase tracking-wider text-text-secondary">
+          Price range
+        </label>
+        <div className="grid grid-cols-2 gap-2">
+          <div className="space-y-1">
+            <span className="text-[10px] uppercase tracking-wider text-text-tertiary">Min</span>
+            <NumberField
+              value={minPrice}
+              onChange={(v) => setMinPrice(v ?? 0)}
+              minValue={0}
+              maxValue={99_999}
+              step={1}
+              ariaLabel="Minimum price"
+              formatOptions={{ style: 'currency', currency: 'USD', maximumFractionDigits: 0 }}
             />
           </div>
+          <div className="space-y-1">
+            <span className="text-[10px] uppercase tracking-wider text-text-tertiary">Max</span>
+            <NumberField
+              value={maxPrice}
+              onChange={(v) => setMaxPrice(v ?? 0)}
+              minValue={0}
+              maxValue={99_999}
+              step={1}
+              ariaLabel="Maximum price"
+              formatOptions={{ style: 'currency', currency: 'USD', maximumFractionDigits: 0 }}
+            />
+          </div>
+        </div>
+      </div>
+
+      {hasActiveFilters && (
+        <Button
+          variant="ghost"
+          onClick={clearAll}
+          className="w-full justify-center text-text-secondary hover:bg-bg-raised-hover hover:text-text-primary"
+        >
+          Clear all filters
+        </Button>
+      )}
+    </div>
+  )
+
+  return (
+    <main className="mx-auto w-full max-w-7xl px-4 pb-16 pt-24 sm:px-6 sm:pt-28 lg:pt-32">
+      {/* Header */}
+      <header className="mb-6">
+        <h1 className="text-2xl font-bold text-text-primary sm:text-3xl">Browse listings</h1>
+        <p className="mt-1 text-sm text-text-secondary">
+          Find verified gaming items, currency, and accounts.
+        </p>
+      </header>
+
+      {/* Search + sort + mobile filters */}
+      <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center">
+        <div className="relative flex-1">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary" />
+          <input
+            type="text"
+            placeholder="Search listings…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="h-11 w-full rounded-md border border-border-default bg-bg-raised pl-9 pr-9 text-sm text-text-primary placeholder:text-text-tertiary transition-colors focus:border-lime focus:outline-none focus:ring-2 focus:ring-lime-tint-bg"
+          />
+          {search && (
+            <button
+              type="button"
+              onClick={() => setSearch('')}
+              className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-text-tertiary hover:bg-bg-raised-hover hover:text-text-primary"
+              aria-label="Clear search"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
+
+        <div className="flex items-center gap-2 sm:w-auto">
+          {/* Sort — visible at all sizes (key control) */}
+          <div className="flex-1 sm:w-52 sm:flex-none">
+            <Combobox
+              value={sortBy}
+              onChange={(v) => setSortBy(v as SortBy)}
+              options={SORT_OPTIONS}
+              unsorted
+              ariaLabel="Sort by"
+            />
+          </div>
+
+          {/* Mobile filter trigger */}
           <Button
             variant="outline"
-            onClick={() => setShowFilters(!showFilters)}
-            className="gap-2"
+            onClick={() => setFiltersOpen(true)}
+            className="h-10 gap-1.5 rounded-md border-border-default bg-bg-raised text-text-primary hover:bg-bg-raised-hover hover:border-lime-tint-border lg:hidden"
           >
             <SlidersHorizontal className="h-4 w-4" />
             Filters
-            {hasActiveFilters && (
-              <span className="ml-1 rounded-full bg-primary px-2 py-0.5 text-xs text-primary-foreground">
-                {[gameId, categoryId, minPrice, maxPrice].filter(Boolean).length}
+            {activeFilterCount > 0 && (
+              <span className="rounded-full bg-lime px-1.5 text-[10px] font-bold text-text-inverse">
+                {activeFilterCount}
               </span>
             )}
           </Button>
         </div>
-
-        {/* Filters Panel */}
-        {showFilters && (
-          <div className="rounded-lg border bg-card p-4">
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-              {/* Game Filter */}
-              <div className="space-y-2">
-                <Label htmlFor="game">Game</Label>
-                <select
-                  id="game"
-                  value={gameId}
-                  onChange={(e) => setGameId(e.target.value)}
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                >
-                  <option value="">All Games</option>
-                  {games.map((game: any) => (
-                    <option key={game.id} value={game.id}>
-                      {game.emoji} {game.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Category Filter */}
-              <div className="space-y-2">
-                <Label htmlFor="category">Category</Label>
-                <select
-                  id="category"
-                  value={categoryId}
-                  onChange={(e) => setCategoryId(e.target.value)}
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                >
-                  <option value="">All Categories</option>
-                  {categories.map((category: any) => (
-                    <option key={category.id} value={category.id}>
-                      {category.icon} {category.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Price Range */}
-              <div className="space-y-2">
-                <Label htmlFor="minPrice">Min Price</Label>
-                <Input
-                  id="minPrice"
-                  type="number"
-                  placeholder="$0"
-                  value={minPrice}
-                  onChange={(e) => setMinPrice(e.target.value)}
-                  min="0"
-                  step="0.01"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="maxPrice">Max Price</Label>
-                <Input
-                  id="maxPrice"
-                  type="number"
-                  placeholder="$1000"
-                  value={maxPrice}
-                  onChange={(e) => setMaxPrice(e.target.value)}
-                  min="0"
-                  step="0.01"
-                />
-              </div>
-            </div>
-
-            {hasActiveFilters && (
-              <div className="mt-4 flex justify-end">
-                <Button variant="outline" size="sm" onClick={clearFilters}>
-                  Clear Filters
-                </Button>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Sort & Results Count */}
-        <div className="flex items-center justify-between">
-          <div className="text-sm text-muted-foreground">
-            {isLoading ? 'Loading...' : `${listings.length} listings found`}
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Label htmlFor="sortBy" className="text-sm">
-              Sort by:
-            </Label>
-            <select
-              id="sortBy"
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as any)}
-              className="h-9 rounded-md border border-input bg-background px-3 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              <option value="created_at">Newest</option>
-              <option value="price">Price: Low to High</option>
-              <option value="sales">Most Popular</option>
-            </select>
-          </div>
-        </div>
       </div>
 
-      {/* Listings Grid */}
-      {isLoading ? (
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {Array.from({ length: 8 }).map((_, i) => (
-            <ListingCardSkeleton key={i} />
-          ))}
-        </div>
-      ) : listings.length === 0 ? (
-        <div className="flex min-h-[400px] flex-col items-center justify-center rounded-lg border border-dashed">
-          <Filter className="mb-4 h-12 w-12 text-muted-foreground" />
-          <h3 className="mb-2 text-lg font-semibold">No listings found</h3>
-          <p className="mb-4 text-sm text-muted-foreground">
-            Try adjusting your filters or search terms
-          </p>
-          {hasActiveFilters && (
-            <Button variant="outline" onClick={clearFilters}>
-              Clear Filters
-            </Button>
+      {/* Active filter chips */}
+      {hasActiveFilters && (
+        <div className="mb-4 flex flex-wrap items-center gap-1.5">
+          {gameLabel && (
+            <FilterChip label={`Game: ${gameLabel}`} onClear={() => setGameId('')} />
           )}
+          {categoryLabel && (
+            <FilterChip label={`Category: ${categoryLabel}`} onClear={() => setCategoryId('')} />
+          )}
+          {minPrice > 0 && (
+            <FilterChip label={`Min $${minPrice}`} onClear={() => setMinPrice(0)} />
+          )}
+          {maxPrice > 0 && (
+            <FilterChip label={`Max $${maxPrice}`} onClear={() => setMaxPrice(0)} />
+          )}
+          {search && (
+            <FilterChip label={`"${search}"`} onClear={() => setSearch('')} />
+          )}
+          <button
+            type="button"
+            onClick={clearAll}
+            className="text-[11px] font-semibold uppercase tracking-wider text-text-tertiary transition-colors hover:text-error"
+          >
+            Clear all
+          </button>
         </div>
-      ) : (
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {listings.map((listing) => (
-            <ListingCard key={listing.id} listing={listing} />
-          ))}
-        </div>
+      )}
+
+      {/* Main grid: sidebar filters lg+, listings */}
+      <div className="grid gap-6 lg:grid-cols-[220px_1fr]">
+        {/* Sidebar */}
+        <aside className="hidden lg:block">
+          <div className="sticky top-32 rounded-2xl border border-border-subtle bg-bg-overlay p-4">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-sm font-bold text-text-primary">Filters</h2>
+              {activeFilterCount > 0 && (
+                <span className="rounded-full bg-lime-tint-bg px-2 py-0.5 text-[10px] font-bold text-lime-text">
+                  {activeFilterCount}
+                </span>
+              )}
+            </div>
+            {FilterPanel}
+          </div>
+        </aside>
+
+        {/* Listings */}
+        <section>
+          <div className="mb-3 flex items-center justify-between text-xs text-text-tertiary">
+            <span>
+              {isLoading
+                ? 'Loading…'
+                : `${listings.length} ${listings.length === 1 ? 'listing' : 'listings'}`}
+            </span>
+          </div>
+
+          {isLoading ? (
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <ListingCardSkeleton key={i} />
+              ))}
+            </div>
+          ) : listings.length === 0 ? (
+            <EmptyState onClear={clearAll} hasActiveFilters={hasActiveFilters} />
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              {listings.map((listing) => (
+                <ListingCard key={listing.id} listing={listing} />
+              ))}
+            </div>
+          )}
+        </section>
+      </div>
+
+      {/* Mobile filter dialog */}
+      <Dialog open={filtersOpen} onOpenChange={setFiltersOpen}>
+        <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Filters</DialogTitle>
+            <DialogDescription>
+              Narrow your search by game, category, and price.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="mt-2">{FilterPanel}</div>
+          <div className="mt-4 flex justify-end gap-2">
+            {hasActiveFilters && (
+              <Button
+                variant="ghost"
+                onClick={clearAll}
+                className="text-text-secondary hover:text-text-primary"
+              >
+                Clear all
+              </Button>
+            )}
+            <Button
+              onClick={() => setFiltersOpen(false)}
+              className="bg-lime text-text-inverse hover:bg-lime-hover"
+            >
+              Done
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </main>
+  )
+}
+
+function FilterChip({ label, onClear }: { label: string; onClear: () => void }) {
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full border border-border-default bg-bg-raised px-2.5 py-1 text-[11px] font-medium text-text-secondary">
+      {label}
+      <button
+        type="button"
+        onClick={onClear}
+        className="rounded p-0.5 text-text-tertiary transition-colors hover:bg-bg-raised-hover hover:text-text-primary"
+        aria-label={`Remove filter ${label}`}
+      >
+        <X className="h-3 w-3" />
+      </button>
+    </span>
+  )
+}
+
+function EmptyState({ onClear, hasActiveFilters }: { onClear: () => void; hasActiveFilters: boolean }) {
+  return (
+    <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-border-subtle bg-bg-overlay p-10 text-center">
+      <div className="flex h-12 w-12 items-center justify-center rounded-full border border-border-default bg-bg-raised">
+        <Package className="h-5 w-5 text-text-tertiary" />
+      </div>
+      <div>
+        <h3 className="text-base font-semibold text-text-primary">No listings found</h3>
+        <p className="mt-1 text-sm text-text-secondary">
+          Try adjusting your filters or search.
+        </p>
+      </div>
+      {hasActiveFilters && (
+        <Button
+          variant="outline"
+          onClick={onClear}
+          className="rounded-md border-border-default bg-bg-raised text-text-primary hover:bg-bg-raised-hover hover:border-lime-tint-border"
+        >
+          Clear all filters
+        </Button>
       )}
     </div>
   )
@@ -255,23 +395,21 @@ function BrowseContent() {
 
 function BrowseLoadingFallback() {
   return (
-    <div className="mx-auto w-full max-w-[95vw] px-4 py-8 sm:max-w-[90vw] md:max-w-5xl lg:max-w-6xl xl:max-w-7xl">
-      <div className="mb-8">
-        <div className="h-9 w-64 bg-muted/50 rounded animate-pulse mb-2"></div>
-        <div className="h-5 w-96 bg-muted/30 rounded animate-pulse"></div>
+    <main className="mx-auto w-full max-w-7xl px-4 pb-16 pt-24 sm:px-6 sm:pt-28 lg:pt-32">
+      <div className="mb-6 space-y-2">
+        <div className="h-8 w-48 animate-pulse rounded-md bg-bg-raised" />
+        <div className="h-4 w-72 animate-pulse rounded-md bg-bg-raised" />
       </div>
-      <div className="mb-6 space-y-4">
-        <div className="flex gap-2">
-          <div className="h-10 flex-1 bg-muted/50 rounded animate-pulse"></div>
-          <div className="h-10 w-24 bg-muted/50 rounded animate-pulse"></div>
-        </div>
+      <div className="mb-4 flex flex-col gap-2 sm:flex-row">
+        <div className="h-11 flex-1 animate-pulse rounded-md bg-bg-raised" />
+        <div className="h-11 w-52 animate-pulse rounded-md bg-bg-raised" />
       </div>
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {Array.from({ length: 8 }).map((_, i) => (
+      <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+        {Array.from({ length: 6 }).map((_, i) => (
           <ListingCardSkeleton key={i} />
         ))}
       </div>
-    </div>
+    </main>
   )
 }
 

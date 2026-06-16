@@ -98,39 +98,39 @@ export default function RecentPurchaseToast() {
 
     toast.custom(
       (t) => (
-        <div className="bg-gradient-to-r from-violet-500/10 to-blue-500/10 backdrop-blur-xl border border-violet-500/20 rounded-xl p-4 shadow-2xl min-w-[320px] max-w-md">
+        <div className="bg-gradient-to-r from-lime/10 to-blue-500/10 backdrop-blur-xl border border-lime-tint-border rounded-xl p-4 shadow-2xl min-w-[320px] max-w-md">
           <div className="flex items-start gap-3">
             {/* Icon */}
-            <div className="flex-shrink-0 p-2 bg-violet-500/20 rounded-lg">
-              <ShoppingCart className="w-5 h-5 text-violet-400" />
+            <div className="flex-shrink-0 p-2 bg-lime/20 rounded-lg">
+              <ShoppingCart className="w-5 h-5 text-lime-text" />
             </div>
 
             {/* Content */}
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1">
-                <Zap className="w-4 h-4 text-violet-400" />
-                <p className="text-sm font-semibold text-white">Recent Purchase</p>
+                <Zap className="w-4 h-4 text-lime-text" />
+                <p className="text-sm font-semibold text-text-primary">Recent Purchase</p>
               </div>
 
-              <p className="text-xs text-gray-300 line-clamp-2 mb-1">
+              <p className="text-xs text-text-secondary line-clamp-2 mb-1">
                 {purchase.buyer_location && (
                   <>
-                    Someone in <span className="font-medium text-violet-300">{purchase.buyer_location}</span>{' '}
+                    Someone in <span className="font-medium text-lime-text">{purchase.buyer_location}</span>{' '}
                   </>
                 )}
                 just bought{' '}
-                <span className="font-medium text-white">
+                <span className="font-medium text-text-primary">
                   {purchase.game_name}
                 </span>
               </p>
 
-              <p className="text-xs text-gray-500">{timeAgo}</p>
+              <p className="text-xs text-text-tertiary">{timeAgo}</p>
             </div>
 
             {/* Dismiss Button */}
             <button
               onClick={() => toast.dismiss(t)}
-              className="flex-shrink-0 text-gray-400 hover:text-white transition-colors"
+              className="flex-shrink-0 text-text-secondary hover:text-text-primary transition-colors"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -271,22 +271,22 @@ export function DailyStatsToast() {
       (t) => (
         <div className="bg-gradient-to-r from-green-500/10 to-emerald-500/10 backdrop-blur-xl border border-green-500/20 rounded-xl p-4 shadow-2xl min-w-[280px]">
           <div className="flex items-center gap-3">
-            <div className="flex-shrink-0 p-2 bg-green-500/20 rounded-lg">
-              <Zap className="w-5 h-5 text-green-400" />
+            <div className="flex-shrink-0 p-2 bg-success-bg rounded-lg">
+              <Zap className="w-5 h-5 text-success" />
             </div>
 
             <div className="flex-1">
-              <p className="text-sm font-semibold text-white mb-1">
+              <p className="text-sm font-semibold text-text-primary mb-1">
                 {count} orders completed today
               </p>
-              <p className="text-xs text-gray-400">
+              <p className="text-xs text-text-secondary">
                 Join thousands of satisfied buyers
               </p>
             </div>
 
             <button
               onClick={() => toast.dismiss(t)}
-              className="flex-shrink-0 text-gray-400 hover:text-white transition-colors"
+              className="flex-shrink-0 text-text-secondary hover:text-text-primary transition-colors"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
