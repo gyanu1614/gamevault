@@ -15,6 +15,7 @@
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { getCanonicalCategorySlug, type CategoryType } from '@/lib/utils/category-canonical'
 
 // ─── slug ↔ metadata.type mapping (single source of truth) ───────────────────
 
@@ -31,13 +32,19 @@ export const LEGACY_TYPE_TO_GLOBAL_SLUG: Record<string, string> = Object.fromEnt
   Object.entries(GLOBAL_SLUG_TO_LEGACY_TYPE).map(([k, v]) => [v, k])
 )
 
-/** Display names and default metadata when we synthesise a legacy row. */
-const GLOBAL_SLUG_DEFAULTS: Record<string, { name: string; slug: string; icon: string; description: string }> = {
-  'currency': { name: 'Currency', slug: 'currency', icon: '💰', description: 'In-game currency' },
-  'items':    { name: 'Items',    slug: 'items',    icon: '🎒', description: 'In-game items' },
-  'accounts': { name: 'Accounts', slug: 'accounts', icon: '👤', description: 'Game accounts' },
-  'top-up':   { name: 'Top Up',   slug: 'top-up',   icon: '⚡', description: 'Official top-ups' },
-  'boosting': { name: 'Boosting', slug: 'boosting', icon: '🚀', description: 'Boosting services' },
+/**
+ * Display name + icon defaults for when we synthesise a legacy row.
+ * Slug is intentionally NOT in here anymore — we derive it from the
+ * canonical slug resolver so every newly-created row follows the SEO
+ * pattern (buy-{currency} / buy-accounts / buy-items / boosting /
+ * top-up). See lib/utils/category-canonical.ts.
+ */
+const GLOBAL_SLUG_DEFAULTS: Record<string, { name: string; icon: string; description: string }> = {
+  'currency': { name: 'Currency', icon: '💰', description: 'In-game currency' },
+  'items':    { name: 'Items',    icon: '🎒', description: 'In-game items' },
+  'accounts': { name: 'Accounts', icon: '👤', description: 'Game accounts' },
+  'top-up':   { name: 'Top Up',   icon: '⚡', description: 'Official top-ups' },
+  'boosting': { name: 'Boosting', icon: '🚀', description: 'Boosting services' },
 }
 
 // ─── Operations ──────────────────────────────────────────────────────────────
@@ -76,16 +83,30 @@ export async function ensureLegacyCategoryRow(
     return row.id
   }
 
-  // Doesn't exist — synthesise it.
+  // Doesn't exist — synthesise it with the SEO-canonical slug.
   const defaults = GLOBAL_SLUG_DEFAULTS[globalCategorySlug]
   if (!defaults) return null
+
+  // V17g — Look up the game's own slug so we can resolve the canonical
+  // category slug for this (game, type) pair (e.g. roblox+currency →
+  // buy-robux). Without this the new row would land with a generic
+  // 'currency' slug and break the marketplace URL.
+  const { data: gameRow } = await supabase
+    .from('games')
+    .select('slug')
+    .eq('id', gameId)
+    .maybeSingle()
+  const gameSlug = (gameRow as { slug: string } | null)?.slug ?? ''
+
+  const canonicalSlug =
+    getCanonicalCategorySlug(gameSlug, legacyType as CategoryType) ?? globalCategorySlug
 
   const { data: created, error } = await supabase
     .from('categories')
     .insert({
       game_id: gameId,
       name: defaults.name,
-      slug: defaults.slug,
+      slug: canonicalSlug,
       icon: defaults.icon,
       description: defaults.description,
       display_order: 0,

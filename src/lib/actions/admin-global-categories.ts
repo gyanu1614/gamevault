@@ -108,7 +108,7 @@ export async function saveGlobalCategory(
     const { error } = await supabase.from('global_categories').update(payload).eq('id', input.id)
     if (error) return { success: false, error: error.message }
     revalidatePath('/admin/categories-v2')
-    revalidatePath('/admin/games-v2')
+    revalidatePath('/admin/games')
     return { success: true, data: { id: input.id } }
   } catch (e: any) {
     return { success: false, error: e?.message ?? 'Unknown error' }

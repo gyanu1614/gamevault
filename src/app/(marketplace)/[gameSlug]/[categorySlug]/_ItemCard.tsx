@@ -22,6 +22,7 @@
  */
 
 import Link from 'next/link'
+import { SmartLink } from '@/components/global/SmartLink'
 import { useRouter } from 'next/navigation'
 import { useTransition } from 'react'
 import { ArrowRight, Clock, Package, ThumbsUp } from 'lucide-react'
@@ -224,8 +225,11 @@ export default function ItemCard({
           the gap falls through to the whole-card Link; the seller chip
           opts back in via `pointer-events-auto`. */}
       <div className="pointer-events-none relative z-10 flex items-center justify-between gap-3 border-t border-border-subtle px-3 py-2 sm:px-3.5">
-        {/* Seller chip — small, only as wide as the avatar + name */}
-        <Link
+        {/* Seller chip — small, only as wide as the avatar + name.
+            V17v — SmartLink handles scroll={false} + scroll-to-top
+            on the new page in one shot. Replaces the previous
+            scroll-fix patch which only handled the source side. */}
+        <SmartLink
           href={`/shop/${offer.seller.username}`}
           onClick={stop}
           className={cn(
@@ -238,7 +242,7 @@ export default function ItemCard({
             {sellerName}
           </span>
           {offer.seller.verified && <VerifiedDot size={12} />}
-        </Link>
+        </SmartLink>
 
         {/* Inline meta — sold count + rating. pointer-events-none so the
             whole-card click passes through. */}

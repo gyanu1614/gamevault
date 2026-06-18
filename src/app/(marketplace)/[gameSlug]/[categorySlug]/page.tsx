@@ -19,7 +19,7 @@ import GameSubNav, { type GameCategory } from '@/components/marketplace/GameSubN
 import CategoryPageLayout from '@/components/marketplace/CategoryPageLayout'
 import { buildSynonymSearchQuery } from '@/lib/utils/gaming-synonyms'
 import { ChevronLeft } from 'lucide-react'
-import { getCurrencyShell, getCurrencyPageData, getCurrencyCanonicalSlug, isCurrencyAlias, listingToOffer } from './_currencyData'
+import { getCurrencyShell, listingToOffer } from './_currencyData'
 import CurrencyPageClient from './_CurrencyPageClient'
 // V15 — Items page dispatch + SEO slug resolver.
 import { loadItemsTaxonomy, listingToOffer as listingToItemOffer } from './_itemsData'
@@ -221,19 +221,14 @@ export default async function CategoryBrowsePage({ params, searchParams }: PageP
   const { gameSlug, categorySlug } = await params
   const resolvedSearchParams = await searchParams
 
-  // V13 — SEO canonical redirect. Each currency has one "buy-{unit}" URL
-  // we want search engines + share links to use. Any other valid alias
-  // (e.g. /roblox/robux, /roblox/currency) 301-redirects to that URL.
-  if (isCurrencyAlias(gameSlug, categorySlug)) {
-    const canonical = getCurrencyCanonicalSlug(gameSlug)
-    if (canonical && canonical !== categorySlug) {
-      redirect(`/${gameSlug}/${canonical}`)
-    }
-  }
+  // V17g — Canonical-redirect block removed. The DB now stores the
+  // canonical slug directly (buy-robux, buy-vbucks, etc.), so every
+  // URL the app serves is already canonical. No aliases → no 301s →
+  // no client flicker.
 
   // V12/V13 — Currency dispatch. When (game, slug) is currency, merge the
   // game's currency shell (copy/FAQ) with real listings from the DB.
-  const currencyShell = getCurrencyShell(gameSlug, categorySlug)
+  const currencyShell = await getCurrencyShell(gameSlug, categorySlug)
   if (currencyShell) {
     const supabase = await createClient()
     const gameRes = await supabase

@@ -1374,7 +1374,10 @@ function Step2Game({
         <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8">
           {ordered.map((g, i) => {
             const active = selected?.game_id === g.game_id
-            const hasCover = !!g.game_cover_url
+            // V17s — Sell wizard always shows the LOGO (icon), never
+            // the cover. Cover art is reserved for the marketing-side
+            // homepage Popular Games shelf. The sell flow is utilitarian
+            // and benefits from consistent, easy-to-scan icons.
             return (
               <motion.button
                 key={g.game_id}
@@ -1391,21 +1394,13 @@ function Step2Game({
                     : 'border-border-default hover:border-border-strong hover:bg-bg-base'
                 )}
               >
-                {hasCover ? (
-                  // Cover-art games: full-bleed image, name overlaid
-                  <div className="relative aspect-square w-full overflow-hidden">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={g.game_cover_url!} alt={g.game_name} className="h-full w-full object-cover" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent" />
-                    <div className="absolute bottom-1.5 left-2 right-2">
-                      <div className="truncate text-xs font-semibold text-text-primary">{g.game_name}</div>
-                    </div>
-                  </div>
-                ) : (
-                  // Logo-only games: logo on a soft tint, name strip below
+                {(
+                  // V17t — Neutral icon tile, no lime tint or radial
+                  // gradient. The logos themselves carry color; the
+                  // backdrop should stay quiet so a grid of games
+                  // doesn't read as a wall of lime.
                   <div className="flex flex-col">
-                    <div className="relative flex aspect-square w-full items-center justify-center overflow-hidden bg-lime-tint-bg">
-                      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(198,255,61,0.12),transparent_60%)]" />
+                    <div className="relative flex aspect-square w-full items-center justify-center overflow-hidden bg-bg-base">
                       {g.game_logo_url ? (
                         /* eslint-disable-next-line @next/next/no-img-element */
                         <img

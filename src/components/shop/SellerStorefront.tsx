@@ -8,7 +8,7 @@
  * uses Combobox (game) and primitives across the board. Mobile-first.
  */
 
-import React, { useMemo, useState } from 'react'
+import React, { useLayoutEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Package, Calendar, Shield, Star, Crown, Gem, Sparkles, Award, ShieldCheck } from 'lucide-react'
@@ -47,6 +47,17 @@ const TIER_CONFIG: Record<string, { label: string; cls: string }> = {
 export default function SellerStorefront({ seller }: SellerStorefrontProps) {
   const [activeTab, setActiveTab] = useState<'shop' | 'reviews' | 'about'>('shop')
   const [selectedGame, setSelectedGame] = useState<string>('all')
+
+  // V17k — Scroll-to-top on mount. Pairs with `scroll={false}` on the
+  // seller chip in _ItemCard, which suppresses Next's pre-navigation
+  // scroll-jump on the SOURCE page. The user should still land at the
+  // top of THIS page; useLayoutEffect runs before paint so there's no
+  // visible flash at the previous scroll position.
+  useLayoutEffect(() => {
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior })
+    }
+  }, [])
 
   // Group listings by game
   const listingsByGame = useMemo(() => {

@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
+import { createClient } from '@/lib/supabase/client'
 import { getGameIcon } from '../lib/game-icons'
 
 /**
@@ -10,101 +11,145 @@ export type GameCategory = 'accounts' | 'items' | 'boosting' | 'currency' | 'top
 export interface PopularGame {
   slug: string
   name: string
-  /** Small square icon — used as fallback only (cover cards no longer show this) */
+  /** Small square icon — used as a fallback only (cover cards no longer show this). */
   iconSrc: string
   /**
    * Portrait cover art for the Popular Games card.
-   * Files live in /public/games/covers/[slug].jpg at 600×800 (3:4 portrait).
-   * Drop in real cover art at the same filename to replace placeholders.
+   * V17q — Now sourced from games.cover_url (admin wizard upload).
+   * If the admin hasn't uploaded a cover yet, falls back to a static
+   * placeholder under /games/covers/{slug}.jpg so nothing breaks
+   * visually during onboarding.
    */
   coverSrc: string
-  /** Per-game category tags shown as chips below the cover */
+  /** Per-game category tags shown as chips below the cover. */
   categories: GameCategory[]
+  /**
+   * V17u — Canonical landing URL for the card. Resolved from the
+   * game's first active category (lowest display_order). Falls back
+   * to /{slug}/buy-currency if nothing's enabled so the click never
+   * 404s. The static /game/{slug} route doesn't exist — this is the
+   * real marketplace path.
+   */
+  href: string
 }
 
-const cover = (slug: string) => `/games/covers/${slug}.jpg`
+const fallbackCover = (slug: string) => `/games/covers/${slug}.jpg`
 
-const MOCK_POPULAR_GAMES: PopularGame[] = [
-  {
-    slug: 'valorant',
-    name: 'Valorant',
-    iconSrc: getGameIcon('valorant'),
-    coverSrc: cover('valorant'),
-    categories: ['accounts', 'boosting', 'currency'],
-  },
-  {
-    slug: 'roblox',
-    name: 'Roblox',
-    iconSrc: getGameIcon('roblox'),
-    coverSrc: cover('roblox'),
-    categories: ['accounts', 'items', 'currency'],
-  },
-  {
-    slug: 'fortnite',
-    name: 'Fortnite',
-    iconSrc: getGameIcon('fortnite'),
-    coverSrc: cover('fortnite'),
-    categories: ['accounts', 'items', 'currency'],
-  },
-  {
-    slug: 'league-of-legends',
-    name: 'League of Legends',
-    iconSrc: getGameIcon('league-of-legends'),
-    coverSrc: cover('league-of-legends'),
-    categories: ['accounts', 'boosting', 'items', 'currency'],
-  },
-  {
-    slug: 'cs2',
-    name: 'CS2',
-    iconSrc: getGameIcon('cs2'),
-    coverSrc: cover('cs2'),
-    categories: ['accounts', 'items'],
-  },
-  {
-    slug: 'genshin-impact',
-    name: 'Genshin Impact',
-    iconSrc: getGameIcon('genshin-impact'),
-    coverSrc: cover('genshin-impact'),
-    categories: ['accounts', 'currency'],
-  },
-  {
-    slug: 'call-of-duty',
-    name: 'Call of Duty',
-    iconSrc: getGameIcon('call-of-duty'),
-    coverSrc: cover('call-of-duty'),
-    categories: ['accounts', 'boosting', 'currency'],
-  },
-  {
-    slug: 'gta-v',
-    name: 'GTA V',
-    iconSrc: getGameIcon('gta-v'),
-    coverSrc: cover('gta-v'),
-    categories: ['accounts', 'currency'],
-  },
-  {
-    slug: 'apex-legends',
-    name: 'Apex Legends',
-    iconSrc: getGameIcon('apex-legends'),
-    coverSrc: cover('apex-legends'),
-    categories: ['accounts', 'boosting'],
-  },
-  {
-    slug: 'minecraft',
-    name: 'Minecraft',
-    iconSrc: getGameIcon('minecraft'),
-    coverSrc: cover('minecraft'),
-    categories: ['accounts', 'items'],
-  },
-]
+// V17q — Map DB metadata.type → the chip vocab the UI uses. Keeps the
+// PopularGame surface area small while letting the source of truth
+// (categories.metadata.type) stay canonical.
+const TYPE_TO_CHIP: Record<string, GameCategory> = {
+  currency: 'currency',
+  items: 'items',
+  account: 'accounts',
+  service: 'boosting',
+  top_up: 'topup',
+}
+
+interface GameRow {
+  slug: string
+  name: string
+  image_url: string | null
+  cover_url: string | null
+  is_active: boolean
+  is_popular: boolean | null
+  sort_order: number | null
+}
+
+interface CategoryRow {
+  game_id: string
+  metadata: { type?: string } | null
+  is_active: boolean
+}
 
 export function usePopularGames() {
-  // TODO(supabase): replace mock with real query
-  // select slug, name, image_url, cover_url, categories from games where is_popular = true order by order_rank limit 8
   return useQuery({
     queryKey: ['popular-games'],
-    queryFn: async (): Promise<PopularGame[]> => MOCK_POPULAR_GAMES,
-    // Seed initial data so first render is populated (no pop-in).
-    initialData: MOCK_POPULAR_GAMES,
+    queryFn: async (): Promise<PopularGame[]> => {
+      const supabase = createClient()
+
+      // Pull active games sorted by sort_order. Use a "popular flag if
+      // available, fall back to sort_order top-N" heuristic so the
+      // shelf is populated even on instances that haven't curated
+      // is_popular yet.
+      // V17s — Two-step fetch with graceful fallback. First attempt
+      // includes is_popular. If the column doesn't exist on this DB
+      // (Phase A migration not run), retry without it so the shelf
+      // still populates from sort_order alone.
+      let rawGames: (GameRow & { id: string })[] | null = null
+      const withPopular = (await supabase
+        .from('games')
+        .select('id, slug, name, image_url, cover_url, is_active, is_popular, sort_order')
+        .eq('is_active', true)
+        .order('sort_order', { ascending: true })) as { data: any; error: any }
+      if (withPopular.error) {
+        console.warn('[popular-games] is_popular column missing, falling back:', withPopular.error.message)
+        const withoutPopular = (await supabase
+          .from('games')
+          .select('id, slug, name, image_url, cover_url, is_active, sort_order')
+          .eq('is_active', true)
+          .order('sort_order', { ascending: true })) as { data: any; error: any }
+        if (withoutPopular.error) {
+          console.error('[popular-games] games fetch failed:', withoutPopular.error.message)
+          return []
+        }
+        rawGames = (withoutPopular.data ?? []).map((g: any) => ({ ...g, is_popular: false }))
+      } else {
+        rawGames = withPopular.data
+      }
+
+      if (!rawGames || rawGames.length === 0) return []
+
+      // V17s — Curation-respecting selection.
+      //   • If any games are starred: show ONLY those. Admin chose.
+      //   • If none are starred (fresh install): fall back to the top
+      //     10 by sort_order so the shelf isn't empty out of the box.
+      const starred = rawGames.filter((g) => g.is_popular)
+      const popularFirst = (starred.length > 0 ? starred : rawGames).slice(0, 10)
+
+      // V17u — Fetch each popular game's first active category so the
+      // card click lands on the real marketplace page (/{game}/{cat}).
+      // One round-trip for all selected games — ordered by
+      // display_order so we can pick the first per game in JS.
+      const gameIds = popularFirst.map((g) => g.id)
+      const { data: cats } = (await supabase
+        .from('categories')
+        .select('game_id, slug, display_order')
+        .in('game_id', gameIds)
+        .eq('is_active', true)
+        .order('display_order', { ascending: true })) as unknown as {
+          data: { game_id: string; slug: string; display_order: number | null }[] | null
+        }
+
+      const firstCategoryByGame = new Map<string, string>()
+      for (const c of cats ?? []) {
+        if (!firstCategoryByGame.has(c.game_id)) {
+          firstCategoryByGame.set(c.game_id, c.slug)
+        }
+      }
+
+      return popularFirst.map((g): PopularGame => {
+        const firstCategory = firstCategoryByGame.get(g.id)
+        // Fallback: if a game somehow has no categories, send the
+        // user to /{slug}/buy-currency. Doesn't 404 (the category
+        // page renders a "no listings" empty state).
+        const href = firstCategory ? `/${g.slug}/${firstCategory}` : `/${g.slug}/buy-currency`
+        return {
+          slug: g.slug,
+          name: g.name,
+          categories: [],
+          iconSrc: g.image_url ?? getGameIcon(g.slug),
+          coverSrc: g.cover_url ?? fallbackCover(g.slug),
+          href,
+        }
+      })
+    },
     staleTime: 5 * 60 * 1000,
+    // V17t — Keep the previous result on screen while a refetch is in
+    // flight. Means the shelf doesn't blank out when the cache goes
+    // stale or the query gets invalidated (e.g. star-toggle from
+    // admin/games → revalidatePath('/')) — the user sees the old
+    // cards until the new ones swap in.
+    placeholderData: (prev) => prev,
   })
 }

@@ -45,6 +45,7 @@ import { useSellerListings } from '@/hooks/use-seller-listings'
 import { ListingStatus } from '@/lib/api/seller-compatible'
 import { canSellerPublish, type SellerStatus } from '@/lib/utils/seller-status'
 import RestrictionBanner from '@/components/seller/RestrictionBanner'
+import { SellerOnlyGate } from '@/components/seller/SellerOnlyGate'
 
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -170,7 +171,18 @@ function StatusBadge({ status }: { status: string }) {
 
 // ─── Main page ───────────────────────────────────────────────────────────────
 
+// V17e — Default export wraps the page in SellerOnlyGate. Buyers and
+// anonymous visitors get redirected; only approved sellers ever render
+// the listings UI below.
 export default function ListingsPage() {
+  return (
+    <SellerOnlyGate>
+      <ListingsContent />
+    </SellerOnlyGate>
+  )
+}
+
+function ListingsContent() {
   const { user, loading: authLoading } = useAuth()
   const router = useRouter()
 
@@ -346,12 +358,16 @@ export default function ListingsPage() {
   }
 
   const onCopyLink = (l: { id: string; game: { slug: string }; categorySlug: string; slug: string }) => {
-    // V14r — Currency listings don't have a per-listing page; they live on
-    // /{gameSlug}/buy-robux (or the canonical alias). Copy that instead of
-    // a 404-prone /marketplace/<game>/currency/<id> URL.
-    const isCurrency = l.categorySlug === 'currency' || l.categorySlug === 'robux'
+    // V17g — Currency listings live on the category page itself
+    // (e.g. /roblox/buy-robux) — no per-listing URL exists for them.
+    // For all other categories (accounts/items/etc.) copy the canonical
+    // /{game}/{category}/{listing-slug} URL. The categorySlug we get is
+    // already canonical because the DB stores it that way.
+    const isCurrency = l.categorySlug?.startsWith('buy-') &&
+      // Treat any of the per-game currency slugs as "no detail page".
+      ['buy-robux','buy-vbucks','buy-vp','buy-gta-money','buy-minecoins','buy-rp','buy-coins','buy-roubles','buy-credits','buy-sheckles','buy-cash'].includes(l.categorySlug)
     const url = isCurrency
-      ? `${window.location.origin}/${l.game.slug || 'game'}/buy-robux`
+      ? `${window.location.origin}/${l.game.slug || 'game'}/${l.categorySlug}`
       : `${window.location.origin}/${l.game.slug || 'game'}/${l.categorySlug || 'category'}/${l.slug || l.id}`
     navigator.clipboard.writeText(url)
     toast.success('Link copied')

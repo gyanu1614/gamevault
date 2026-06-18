@@ -36,12 +36,72 @@
   }
 }
 
+/* ─── V18 — Violet-dusk ambient backdrop tokens ──────────────
+   Layered on top of the design tokens in tokens.css. Two parts:
+   (1) page-wide bg gradient — sits behind every route, paints a
+       soft top-scrim → base → darker floor fade. Subtle.
+   (2) `.ambient` class — opt-in per section. Paints the violet
+       bloom + décor PNG behind whatever section it's applied to.
+       Décor PNG lives at /assets/backdrop-decor.png — drop the
+       real art in there; until you do, the placeholder is a 1×1
+       transparent PNG so the layer renders cleanly.
+   ─────────────────────────────────────────────────────────── */
+:root {
+  --color-glow-violet:      #1E1636;
+  --color-glow-violet-soft: #16112A;
+  --color-bg-top:           #100C18;
+  --color-bg-bottom:        #08080C;
+  --color-vignette:         rgba(0,0,0,0.55);
+
+  --gradient-hero-glow:
+    radial-gradient(130% 75% at 50% -10%,
+      var(--color-glow-violet) 0%,
+      #1E163600 58%);
+
+  --gradient-band-glow:
+    radial-gradient(120% 70% at 50% 0%,
+      var(--color-glow-violet-soft) 0%,
+      #16112A00 60%);
+
+  --gradient-page-scrim:
+    linear-gradient(180deg,
+      var(--color-bg-top)  0%,
+      var(--color-bg-base) 46%,
+      var(--color-bg-bottom) 100%);
+
+  --gradient-vignette:
+    radial-gradient(140% 100% at 50% 120%,
+      var(--color-vignette) 0%,
+      rgba(0,0,0,0) 45%);
+
+  /* Décor — user-supplied PNG with mascots/gamer characters on a
+     transparent bg. `screen` blend lifts bright art out of the
+     dark page; if your PNG is pre-lit on transparent and looks
+     washed out, override --decor-blend: normal on .ambient. */
+  --decor-image:   url("/assets/backdrop-decor.png");
+  --decor-opacity: 0.5;
+  --decor-blend:   screen;
+}
+
 /* ─── GV Base Styles (from design tokens) ──────────────────── */
 @layer base {
   *, *::before, *::after { box-sizing: border-box; }
 
   body {
-    background: var(--color-bg-base);
+    background-color: var(--color-bg-base);
+    /* V18.a — Bloom + scrim BOTH paint on body and BOTH are
+       viewport-attached. Owning the bloom on `body` (not on a
+       per-section `.ambient` class) means there's only ONE painted
+       surface for the bloom — no section boundary can create a
+       seam. Layer order: bloom on top (so it tints the scrim),
+       scrim underneath. */
+    background-image:
+      var(--gradient-hero-glow),
+      var(--gradient-page-scrim);
+    background-repeat:   no-repeat, no-repeat;
+    background-position: top center, top center;
+    background-size:     100% 100%, 100% 100%;
+    background-attachment: fixed, fixed;
     color: var(--color-text-primary);
     font-family: var(--font-display), "Inter", system-ui, sans-serif;
     font-size: var(--text-body-size);
@@ -124,6 +184,52 @@
     background: rgba(139, 92, 246, 0.3);
     color: white;
   }
+}
+
+/* ─── V18.a — Ambient backdrop component ─────────────────────
+   The violet bloom + page scrim live on `body` now (see above),
+   so they're a single continuous painted surface — no section
+   boundary can create a seam at the bloom's edge.
+
+   `.ambient` only owns the décor PNG layer: mascots/characters
+   feathered around the section edges, kept clear in the center.
+   Add `className="ambient"` to sections that should carry the
+   décor art (typically the hero).
+   ─────────────────────────────────────────────────────────── */
+.ambient {
+  position: relative;
+  isolation: isolate;
+}
+
+.ambient::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image:    var(--decor-image);
+  background-repeat:   no-repeat;
+  background-position: center top;
+  background-size:     cover;
+  opacity:             var(--decor-opacity);
+  mix-blend-mode:      var(--decor-blend);
+  /* Center-safe mask + edge feather — keeps the middle clear so
+     the hero carousel sits on a clean canvas, AND fades the décor
+     to fully transparent at all four section edges so there's no
+     hard line where the section ends. */
+  -webkit-mask-image:
+    radial-gradient(62% 52% at 50% 44%, transparent 0%, #000 88%, transparent 100%);
+          mask-image:
+    radial-gradient(62% 52% at 50% 44%, transparent 0%, #000 88%, transparent 100%);
+}
+
+.ambient--band::after { opacity: calc(var(--decor-opacity) * 0.7); }
+
+@media (max-width: 768px) {
+  .ambient::after { opacity: calc(var(--decor-opacity) * 0.55); }
+}
+@media (prefers-reduced-data: reduce) {
+  .ambient::after { display: none; }
 }
 
 /* ─── GV Design System Utilities ────────────────────────────── */
@@ -300,20 +406,122 @@
   }
 }
 
-/* ─── Toast Customization ────────────────────────────────────── */
+/* ─── Toast Customization (V17f — Vercel/Linear style) ───────────
+   Flat dark surface, slim 1px border, no accent strip, no gradient
+   wash. The colored icon (sonner ships with circle-check / x-circle
+   / triangle / info SVGs) carries 100% of the type signal — that's
+   what Vercel + Linear do. Title and description sit in a tight
+   stack; nothing else competes for attention.
+   ─────────────────────────────────────────────────────────────── */
+
 .toast-reduced-glow[data-sonner-toast] {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4) !important;
-  background: var(--gv-surface-2, #1a1a24) !important;
+  /* Compact rectangle, not a card. Vercel's toasts are noticeably
+     narrower and flatter than the default sonner. */
+  border-radius: 10px !important;
+  background: #0e0e11 !important;
   border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  box-shadow:
+    0 1px 0 0 rgba(255, 255, 255, 0.03) inset,
+    0 8px 24px -8px rgba(0, 0, 0, 0.55) !important;
+  color: #e9ebef !important;
+  padding: 12px 14px !important;
+  gap: 10px !important;
+  align-items: center !important;
+  font-family: var(--font-inter), -apple-system, sans-serif !important;
 }
-.toast-reduced-glow[data-sonner-toast][data-type="success"] {
-  box-shadow: 0 4px 16px rgba(16, 185, 129, 0.2) !important;
+
+/* Icon — tight square with a tinted bg matching the type. Mirrors
+   the Vercel toast's small status puck rather than the strip-on-edge
+   approach we had. */
+.toast-reduced-glow[data-sonner-toast] [data-icon] {
+  width: 18px !important;
+  height: 18px !important;
+  margin: 0 !important;
+  flex-shrink: 0 !important;
 }
-.toast-reduced-glow[data-sonner-toast][data-type="error"] {
-  box-shadow: 0 4px 16px rgba(239, 68, 68, 0.2) !important;
+.toast-reduced-glow[data-sonner-toast] [data-icon] > svg {
+  width: 18px !important;
+  height: 18px !important;
 }
-.toast-reduced-glow[data-sonner-toast][data-type="warning"] {
-  box-shadow: 0 4px 16px rgba(245, 158, 11, 0.2) !important;
+
+/* Type colors — applied to the icon only. No surface tint. */
+.toast-reduced-glow[data-sonner-toast][data-type="success"] [data-icon] {
+  color: #b3ff3b !important;
+}
+.toast-reduced-glow[data-sonner-toast][data-type="error"] [data-icon] {
+  color: #ff6b6b !important;
+}
+.toast-reduced-glow[data-sonner-toast][data-type="warning"] [data-icon] {
+  color: #f0b86e !important;
+}
+.toast-reduced-glow[data-sonner-toast][data-type="info"] [data-icon] {
+  color: #7aa8ff !important;
+}
+
+/* Typography — title is the only line most toasts have; we keep
+   description visible but quieter and only when present. */
+.toast-reduced-glow[data-sonner-toast] [data-content] {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 2px !important;
+  padding: 0 !important;
+}
+.toast-reduced-glow[data-sonner-toast] [data-title] {
+  font-weight: 500 !important;
+  font-size: 13.5px !important;
+  line-height: 1.35 !important;
+  letter-spacing: -0.005em !important;
+  color: #f4f5f7 !important;
+}
+.toast-reduced-glow[data-sonner-toast] [data-description] {
+  font-size: 12.5px !important;
+  line-height: 1.4 !important;
+  color: #9a9da6 !important;
+}
+
+/* Close button — minimal, top-right, hover-revealed.
+   Vercel hides it entirely until hover; we follow that. */
+.toast-reduced-glow[data-sonner-toast] [data-close-button] {
+  position: absolute !important;
+  left: auto !important;
+  right: 6px !important;
+  top: 6px !important;
+  transform: none !important;
+  width: 18px !important;
+  height: 18px !important;
+  border-radius: 5px !important;
+  background: transparent !important;
+  border: 0 !important;
+  color: rgba(255, 255, 255, 0.45) !important;
+  opacity: 0;
+  transition: opacity 120ms ease, color 120ms ease, background 120ms ease;
+}
+.toast-reduced-glow[data-sonner-toast]:hover [data-close-button] {
+  opacity: 1;
+}
+.toast-reduced-glow[data-sonner-toast] [data-close-button]:hover {
+  color: rgba(255, 255, 255, 0.95) !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+}
+.toast-reduced-glow[data-sonner-toast] [data-close-button] > svg {
+  width: 12px !important;
+  height: 12px !important;
+}
+
+/* Action button — keeps the lime brand for the primary action so
+   "Undo" / "Retry" stays on-brand without making the whole toast
+   colored. */
+.toast-reduced-glow[data-sonner-toast] [data-button] {
+  background: #b3ff3b !important;
+  color: #0a0a0d !important;
+  font-weight: 600 !important;
+  font-size: 12.5px !important;
+  border-radius: 6px !important;
+  padding: 5px 10px !important;
+  border: 0 !important;
+}
+.toast-reduced-glow[data-sonner-toast] [data-button]:hover {
+  background: #c4ff5e !important;
 }
 
 /* ─── Hero Text Gradient Animation ───────────────────────────── */

@@ -35,6 +35,7 @@ import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import { canSellerPublish } from '@/lib/utils/seller-status'
 import type { SellerStatus } from '@/lib/utils/seller-status'
+import { SellerOnlyGate } from '@/components/seller/SellerOnlyGate'
 import {
   getListingTemplate,
   uploadListingImage,
@@ -174,7 +175,17 @@ function Toggle({ enabled, onChange }: { enabled: boolean; onChange: () => void 
 
 // ─── main component ───────────────────────────────────────────────────────────
 
-export default function CreateListingPage() {
+// V17e — Seller-only gate. Buyers / anon get bounced; only approved
+// sellers see the create-listing flow.
+export default function CreateListingPageWrapper() {
+  return (
+    <SellerOnlyGate>
+      <CreateListingPage />
+    </SellerOnlyGate>
+  )
+}
+
+function CreateListingPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const queryClient = useQueryClient()

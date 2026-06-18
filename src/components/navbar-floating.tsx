@@ -1,14 +1,17 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { SmartLink } from '@/components/global/SmartLink'
+import { usePathname, useRouter } from 'next/navigation'
 import { useState, useRef, useEffect, useMemo } from 'react'
 import { Search, User, LogOut, Menu, X, ChevronDown, Settings, Store, Package, MessageSquare, PlusCircle, Heart, Wallet, Star, List, Bell, LayoutDashboard, Activity, Award, Crown, Gem, Sparkles, Shield, ShieldCheck } from 'lucide-react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence, useMotionValue, useSpring } from 'framer-motion'
+import * as Popover from '@radix-ui/react-popover'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useAuth } from '@/hooks/use-auth'
+import { useAuthDialog } from '@/components/auth/AuthDialog'
 import { cn } from '@/lib/utils'
 import { getAvatarUrl } from '@/lib/utils/avatar'
 
@@ -24,14 +27,64 @@ const TIER_CONFIG: Record<string, { icon: React.ElementType; color: string; bg: 
 
 export function Navbar() {
   const { user, loading } = useAuth()
+  const authDialog = useAuthDialog()
   const queryClient = useQueryClient()
   const pathname = usePathname()
+  const router = useRouter()
   const [searchQuery, setSearchQuery] = useState('')
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null)
+  // V17r — Debounced close. The cursor briefly leaves the trigger
+  // when moving toward the dropdown content; a hard close on
+  // mouseleave makes the dropdown vanish mid-traverse. Holding a
+  // small 160ms grace window lets the user reach the dropdown.
+  // openDropdown cancels any pending close; closeDropdown schedules
+  // a deferred close that openDropdown can cancel.
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // V17v — Ref to the category-tabs container, used as a shared
+  // anchor for all four CategoryDropdown popovers. Centers each
+  // mega-menu over the same midpoint of the navbar instead of
+  // jumping under whichever tab was hovered.
+  const navCategoriesRef = useRef<HTMLDivElement | null>(null)
+  const openDropdown = (id: string) => {
+    if (closeTimerRef.current) {
+      clearTimeout(closeTimerRef.current)
+      closeTimerRef.current = null
+    }
+    setActiveDropdown(id)
+  }
+  const closeDropdown = () => {
+    if (closeTimerRef.current) clearTimeout(closeTimerRef.current)
+    closeTimerRef.current = setTimeout(() => {
+      setActiveDropdown(null)
+      closeTimerRef.current = null
+    }, 160)
+  }
+  useEffect(() => () => {
+    if (closeTimerRef.current) clearTimeout(closeTimerRef.current)
+  }, [])
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const [notificationsOpen, setNotificationsOpen] = useState(false)
   const [activityOpen, setActivityOpen] = useState(false)
+
+  // V18.b — Scroll-snap navbar. At rest the navbar floats as a pill
+  // centered in the page. Once the user scrolls past `SNAP_PX` the
+  // pill morphs into a solid full-width bar pinned at top-0. Stripe
+  // / Cron pattern — keeps the premium floating feel at the top of
+  // the page and turns into honest product chrome once the user is
+  // reading content (which is where content-bleeding-behind-pill
+  // becomes a problem).
+  const [scrolled, setScrolled] = useState(false)
+  useEffect(() => {
+    // 40px feels like the right threshold — far enough that casual
+    // mouse-wheel jiggle doesn't trip it, close enough that any
+    // intentional scroll commits the morph immediately.
+    const SNAP_PX = 40
+    const onScroll = () => setScrolled(window.scrollY > SNAP_PX)
+    onScroll()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
 
   // V14u — Force-close every navbar dropdown on route change. Catches
   // cases where the user navigates via the browser back button, a
@@ -201,7 +254,22 @@ export function Navbar() {
     queryClient.invalidateQueries({ queryKey: ['unread-notifications', user.id] })
   }
 
-  // Close dropdowns when clicking outside
+  // Close dropdowns when clicking outside.
+  //
+  // V17w — ROOT-CAUSE FIX. The category dropdown (activeDropdown) is
+  // now driven by Radix Popover, which lives in a PORTAL outside the
+  // navbar's DOM tree. The legacy `target.closest('[data-dropdown]')`
+  // check fails for clicks inside the portalled Popover content, so
+  // EVERY click inside the dropdown — including on a game tile —
+  // would set activeDropdown=null, unmounting the popover before
+  // the browser's click event could fire. Result: the link never
+  // navigates.
+  //
+  // Removing the setActiveDropdown(null) from this legacy handler
+  // hands dropdown-dismiss responsibility entirely to Radix +
+  // SmartLink's onClick={onSelect}. The other legacy dropdowns
+  // (user menu, notifications, activity) still use the old
+  // pattern, so we keep those.
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as HTMLElement
@@ -209,7 +277,7 @@ export function Navbar() {
         setUserMenuOpen(false)
         setNotificationsOpen(false)
         setActivityOpen(false)
-        setActiveDropdown(null)
+        // setActiveDropdown(null) — removed: Radix handles it.
       }
     }
 
@@ -252,6 +320,9 @@ export function Navbar() {
 
   // Group categories by metadata type → map of type → [{game, categorySlug}]
   const gamesByType = useMemo(() => {
+    // V17g — Alias rewrite removed. The DB now stores canonical slugs
+    // (buy-robux, buy-vbucks, …) directly, so cat.slug IS the final
+    // URL slug. No client-side translation needed.
     const groups: Record<string, Array<{ game: any; categorySlug: string }>> = {}
     navCatsData?.forEach((cat: any) => {
       const type = cat.metadata?.type
@@ -286,26 +357,44 @@ export function Navbar() {
 
   return (
     <>
-      {/* Top black bar to hide content scrolling above navbar */}
-      <div className="fixed left-0 right-0 top-0 z-50 h-6 bg-black" />
-
-      {/*
-        Floating Navbar — R17: dropped the slide-in animation that ran on
-        every page load. It made the navbar feel like it "loaded later" than
-        the page body even though both painted at the same time. Now it's
-        in its final position from frame 1.
-      */}
+      {/* V18.b - Scroll-snap navbar driven by framer-motion springs.
+          Tailwind class-swap was cranky because max-width and
+          border-radius cannot interpolate from a length to the
+          keyword none as a continuous CSS transition, so the browser
+          stepped between them mid-morph. Framer animates numeric
+          values and runs a single spring through every property in
+          lockstep, which makes the whole bar morph feel like one
+          motion instead of three properties glitching out of sync. */}
       <motion.nav
         initial={false}
-        className="fixed left-0 right-0 top-6 z-50 flex justify-center"
+        animate={{ top: scrolled ? 0 : 12 }}
+        className="fixed left-0 right-0 z-50 flex justify-center"
       >
-        <div className="w-full max-w-[95vw] px-2 sm:max-w-[90vw] md:max-w-5xl lg:max-w-6xl xl:max-w-7xl">
+        <motion.div
+          initial={false}
+          animate={{
+            maxWidth: scrolled ? 1920 : 1280,
+            paddingLeft: scrolled ? 0 : 16,
+            paddingRight: scrolled ? 0 : 16,
+          }}
+          className="w-full"
+        >
           <motion.div
-            // R17 — Dropped `transition-all duration-300`. The pill is
-            // content-width; when the auth-dependent icons swap in, even a
-            // 1px width delta gets animated as a visible 300ms stretch.
-            // Nothing on this element actually needs an animated transition.
-            className="flex items-center justify-between gap-2 rounded-full border border-white/10 bg-black px-3 py-3 shadow-2xl backdrop-blur-xl sm:gap-3 sm:px-6"
+            initial={false}
+            animate={{
+              borderRadius: scrolled ? 0 : 9999,
+              borderBottomWidth: scrolled ? 1 : 1,
+              borderLeftWidth: scrolled ? 0 : 1,
+              borderRightWidth: scrolled ? 0 : 1,
+              borderTopWidth: scrolled ? 0 : 1,
+            }}
+            style={{ borderColor: scrolled ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.10)' }}
+            className={cn(
+              'flex items-center justify-between gap-2 bg-black px-3 py-3 backdrop-blur-xl sm:gap-3 sm:px-6',
+              scrolled
+                ? 'shadow-[0_1px_0_0_rgba(255,255,255,0.02),0_8px_24px_-12px_rgba(0,0,0,0.6)]'
+                : 'shadow-2xl',
+            )}
           >
             {/* Logo */}
             <Link href="/" className="flex shrink-0 items-center gap-2">
@@ -317,19 +406,25 @@ export function Navbar() {
 
             <div className="hidden h-6 w-px bg-white/20 md:block" />
 
-            {/* Categories - Desktop */}
-            <div className="hidden flex-1 items-center justify-center gap-1 md:flex">
+            {/* Categories - Desktop. V17v — wrapper div holds a ref
+                used as the shared Popover anchor so every dropdown
+                opens centered under the category strip, not under the
+                individual tab that was hovered. Centers the mega-menu
+                Stripe/Linear-style. */}
+            <div
+              ref={navCategoriesRef}
+              className="hidden flex-1 items-center justify-center gap-1 md:flex"
+            >
               {NAV_TABS.map((tab) => (
                 <CategoryDropdown
                   key={tab.id}
                   tab={tab}
                   gameEntries={gamesByType[tab.type] || []}
                   isActive={activeDropdown === tab.id}
-                  onHoverStart={() => setActiveDropdown(tab.id)}
-                  onHoverEnd={() => setActiveDropdown(null)}
-                  // V14u — Force-close the dropdown when a game is picked
-                  // so it doesn't linger on the destination page.
+                  onHoverStart={() => openDropdown(tab.id)}
+                  onHoverEnd={() => closeDropdown()}
                   onSelect={() => setActiveDropdown(null)}
+                  anchorRef={navCategoriesRef}
                 />
               ))}
             </div>
@@ -863,7 +958,6 @@ export function Navbar() {
                                 e.stopPropagation()
 
                                 try {
-                                  // Set logging out state immediately to prevent UI flash
                                   setIsLoggingOut(true)
                                   setUserMenuOpen(false)
 
@@ -871,17 +965,48 @@ export function Navbar() {
                                   const { createClient } = await import('@/lib/supabase/client')
                                   const supabase = createClient()
                                   const { error } = await supabase.auth.signOut()
+                                  if (error) console.error('Logout error:', error)
 
-                                  if (error) {
-                                    console.error('Logout error:', error)
+                                  // V16 — Smart redirect after logout.
+                                  // Protected paths (account / checkout /
+                                  // cart / sell / seller) bounce to home;
+                                  // everything else stays put and just
+                                  // refreshes server-rendered content so
+                                  // navbar avatar, wishlist, etc. flip to
+                                  // signed-out state without a full
+                                  // window.location reload.
+                                  const PROTECTED = [
+                                    '/account',
+                                    '/checkout',
+                                    '/cart',
+                                    '/sell',
+                                    '/seller',
+                                    '/admin',
+                                  ]
+                                  const isProtected = PROTECTED.some((p) =>
+                                    pathname?.startsWith(p),
+                                  )
+
+                                  // Clear cached query data so the next
+                                  // page render doesn't show stale
+                                  // user-scoped data (wishlists, orders).
+                                  queryClient.clear()
+
+                                  if (isProtected) {
+                                    router.replace('/')
                                   }
-
-                                  // Force reload to clear all state
-                                  window.location.href = '/'
+                                  router.refresh()
+                                  // Tiny toast hint.
+                                  try {
+                                    const { toast } = await import('sonner')
+                                    toast.success('Signed out')
+                                  } catch {}
+                                  setIsLoggingOut(false)
                                 } catch (error) {
                                   console.error('Logout failed:', error)
-                                  // Force reload anyway
-                                  window.location.href = '/'
+                                  setIsLoggingOut(false)
+                                  router.replace('/')
+                                  router.refresh()
                                 }
                               }}
                               className="flex w-full items-center gap-3 rounded-lg px-4 py-2 text-sm text-red-400 transition-colors hover:bg-red-500/10 cursor-pointer"
@@ -896,24 +1021,28 @@ export function Navbar() {
                   </AnimatePresence>
                 </div>
               ) : (
+                // V17 — Buttons open the AuthDialog modal instead of
+                // navigating to /login or /signup. Modal handles the
+                // smooth in/out transition; URL stays at the current
+                // page so the user never loses their browsing context.
                 <div className="flex items-center gap-2">
-                  <Link href="/login">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-9 rounded-full text-gray-300 hover:bg-white/10 hover:text-white"
-                    >
-                      Log in
-                    </Button>
-                  </Link>
-                  <Link href="/signup">
-                    <Button
-                      size="sm"
-                      className="h-9 rounded-lg bg-white text-black hover:bg-white/90 font-medium"
-                    >
-                      Sign up
-                    </Button>
-                  </Link>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => authDialog.open('login')}
+                    className="h-9 rounded-full text-gray-300 hover:bg-white/10 hover:text-white"
+                  >
+                    Log in
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={() => authDialog.open('signup')}
+                    className="h-9 rounded-lg bg-white text-black hover:bg-white/90 font-medium"
+                  >
+                    Sign up
+                  </Button>
                 </div>
               )}
 
@@ -928,7 +1057,7 @@ export function Navbar() {
               </Button>
             </div>
           </motion.div>
-        </div>
+        </motion.div>
       </motion.nav>
 
       {/* Mobile Menu */}
@@ -986,19 +1115,28 @@ export function Navbar() {
               })}
             </div>
 
-            {/* Mobile Auth Links */}
+            {/* Mobile Auth Buttons — V17: open AuthDialog modal */}
             {!loading && !user && (
               <div className="mt-6 space-y-2">
-                <Link href="/login" className="block" onClick={() => setMobileMenuOpen(false)}>
-                  <Button variant="outline" className="w-full rounded-full border-white/20 text-white hover:bg-white/10">
-                    Log in
-                  </Button>
-                </Link>
-                <Link href="/signup" className="block" onClick={() => setMobileMenuOpen(false)}>
-                  <Button className="w-full rounded-full bg-white text-black hover:bg-white/90">
-                    Sign up
-                  </Button>
-                </Link>
+                <Button
+                  variant="outline"
+                  className="w-full rounded-full border-white/20 text-white hover:bg-white/10"
+                  onClick={() => {
+                    setMobileMenuOpen(false)
+                    authDialog.open('login')
+                  }}
+                >
+                  Log in
+                </Button>
+                <Button
+                  className="w-full rounded-full bg-white text-black hover:bg-white/90"
+                  onClick={() => {
+                    setMobileMenuOpen(false)
+                    authDialog.open('signup')
+                  }}
+                >
+                  Sign up
+                </Button>
               </div>
             )}
           </motion.div>
@@ -1019,6 +1157,7 @@ function CategoryDropdown({
   onHoverStart,
   onHoverEnd,
   onSelect,
+  anchorRef,
 }: {
   tab: { id: string; label: string; type: string }
   gameEntries: Array<{ game: any; categorySlug: string }>
@@ -1027,6 +1166,13 @@ function CategoryDropdown({
   onHoverEnd: () => void
   /** V14u — Called when the user picks a game so the dropdown can close. */
   onSelect: () => void
+  /**
+   * V17v — Optional shared anchor for the mega-menu pattern. When
+   * provided, the popover content positions relative to this element
+   * instead of the trigger button — so every dropdown opens in the
+   * same horizontal location regardless of which tab triggered it.
+   */
+  anchorRef?: React.RefObject<HTMLDivElement | null>
 }) {
   // V15n — Split layout. Left = popular (top 5 by sort_order). Right =
   // searchable list of every game in this category. The search input is
@@ -1053,115 +1199,174 @@ function CategoryDropdown({
     )
   }, [gameEntries, q])
 
+  // V17v — modal={false} stops Radix from setting aria-modal + focus
+  // trap, which were swallowing link clicks. Hover-controlled popovers
+  // don't need focus management. Combined with anchor pointing at the
+  // navbar container, this gives a mega-menu that stays centered
+  // regardless of which tab triggered it.
   return (
-    <div
-      className="relative"
-      data-dropdown
-      onMouseEnter={onHoverStart}
-      onMouseLeave={onHoverEnd}
-    >
-      <button className="flex items-center gap-1 rounded-full px-4 py-2 text-sm font-medium text-gray-300 transition-colors hover:bg-white/10 hover:text-white whitespace-nowrap">
-        {tab.label}
-        <ChevronDown className={cn('h-3 w-3 transition-transform', isActive && 'rotate-180')} />
-      </button>
-
-      <AnimatePresence>
-        {isActive && gameEntries.length > 0 && (
+    <Popover.Root open={isActive && gameEntries.length > 0} modal={false}>
+      <Popover.Trigger asChild>
+        <button
+          data-dropdown
+          onMouseEnter={onHoverStart}
+          onMouseLeave={onHoverEnd}
+          className="flex items-center gap-1 rounded-full px-4 py-2 text-sm font-medium text-gray-300 transition-colors hover:bg-white/10 hover:text-white whitespace-nowrap"
+        >
+          {tab.label}
+          <ChevronDown className={cn('h-3 w-3 transition-transform', isActive && 'rotate-180')} />
+        </button>
+      </Popover.Trigger>
+      {/* V17v — Anchor the popover content to the shared element
+          (the category-tabs container) so all four dropdowns open
+          centered over the same point. We render Popover.Anchor
+          unconditionally — Radix gracefully falls back to the
+          trigger when virtualRef.current is still null. */}
+      {anchorRef && (
+        <Popover.Anchor virtualRef={anchorRef as React.RefObject<HTMLElement>} />
+      )}
+      <Popover.Portal>
+        <Popover.Content
+          align="center"
+          side="bottom"
+          // V17w — Real breathing room (12px) between navbar pill and
+          // dropdown card. The visible gap is bridged by an invisible
+          // pt-3 padding on the motion.div below, which extends the
+          // popover's hover area UP into the gap — so cursor crossing
+          // the visual gap still counts as hovering the popover.
+          sideOffset={12}
+          collisionPadding={16}
+          avoidCollisions
+          onOpenAutoFocus={(e) => e.preventDefault()}
+          onCloseAutoFocus={(e) => e.preventDefault()}
+          // V17w — Block Radix's built-in dismiss on outside
+          // interactions. With modal={false} the popover doesn't
+          // trap focus, so ANY click (including inside the dropdown
+          // content like the search input or a game tile) is routed
+          // through Radix's "did the user click outside?" detector.
+          // For a hover-controlled mega-menu we don't want Radix to
+          // close anything — our hover handlers and the link
+          // onClick={onSelect} handle close explicitly.
+          onPointerDownOutside={(e) => e.preventDefault()}
+          onInteractOutside={(e) => e.preventDefault()}
+          onFocusOutside={(e) => e.preventDefault()}
+          onMouseEnter={onHoverStart}
+          onMouseLeave={onHoverEnd}
+          className="z-50 outline-none"
+          asChild
+        >
           <motion.div
             initial={{ opacity: 0, y: 10, scale: 0.97 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 10, scale: 0.97 }}
             transition={{ duration: 0.18 }}
-            className="absolute left-1/2 top-full z-50 -translate-x-1/2 pt-2"
+            // V17w — Invisible hover bridge. pt-3 (12px) of transparent
+            // padding on top makes the popover's pointer-event area
+            // include the visual gap above the dropdown card. Cursor
+            // moving from navbar button → dropdown card crosses this
+            // bridge and counts as "inside popover," so the close
+            // debounce never fires mid-traverse.
+            className="pt-3"
           >
-            <div className="w-[640px] max-w-[92vw] overflow-hidden rounded-2xl border border-white/10 bg-black shadow-2xl backdrop-blur-xl">
-              <div className="grid grid-cols-1 md:grid-cols-[200px_1fr]">
+            {/* V17p — Dropdown scaled up to match the navbar's own
+                width and breathing room. ~960px wide (capped at 92vw),
+                with bigger type and 3-column game grid on the right so
+                a 20-game list fits without scrolling on most screens. */}
+            {/* V17v — Fixed min-height so all four tabs render at the
+                same overall popover height. Currency/Boosting have
+                fewer games but the popover doesn't shrink — the empty
+                lower area absorbs visually instead of changing layout
+                when you hover between tabs. */}
+            <div className="w-[min(960px,92vw)] min-h-[520px] overflow-hidden rounded-2xl border border-white/10 bg-black shadow-2xl backdrop-blur-xl">
+              <div className="grid grid-cols-1 md:grid-cols-[260px_1fr]">
                 {/* LEFT — Popular */}
-                <div className="border-b border-white/10 bg-white/[0.02] p-3 md:border-b-0 md:border-r">
-                  <div className="mb-2 px-1.5 text-[10.5px] font-bold uppercase tracking-[0.12em] text-lime-text">
+                <div className="border-b border-white/10 bg-white/[0.02] p-4 md:border-b-0 md:border-r">
+                  <div className="mb-3 px-1.5 text-[12px] font-bold uppercase tracking-[0.12em] text-lime-text">
                     Popular {tab.label}
                   </div>
-                  <ul className="flex flex-col gap-0.5">
+                  <ul className="flex flex-col gap-1">
                     {popular.map(({ game, categorySlug }) => (
                       <li key={game.slug}>
-                        <Link
+                        {/* V17v — SmartLink fixes the scroll-to-top
+                            glitch users were seeing when clicking a
+                            game in the dropdown. */}
+                        <SmartLink
                           href={`/${game.slug}/${categorySlug}`}
                           onClick={onSelect}
-                          className="group flex items-center gap-2.5 rounded-lg p-1.5 transition-colors hover:bg-white/[0.06]"
+                          className="group flex items-center gap-3 rounded-lg p-2.5 transition-colors hover:bg-white/[0.06]"
                         >
                           {game.image_url ? (
                             <img
                               src={game.image_url}
                               alt=""
-                              className="h-7 w-7 shrink-0 rounded-md object-contain"
+                              className="h-9 w-9 shrink-0 rounded-lg object-contain"
                             />
                           ) : (
-                            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-white/10 text-[10px] font-bold text-gray-300">
+                            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/10 text-[11px] font-bold text-gray-300">
                               {game.name.slice(0, 2).toUpperCase()}
                             </span>
                           )}
-                          <span className="truncate text-[13px] font-semibold text-gray-200 group-hover:text-white">
+                          <span className="truncate text-[14.5px] font-semibold text-gray-200 group-hover:text-white">
                             {game.name}
                           </span>
-                        </Link>
+                        </SmartLink>
                       </li>
                     ))}
                   </ul>
                 </div>
 
                 {/* RIGHT — Searchable */}
-                <div className="flex max-h-[440px] flex-col p-3">
-                  <div className="relative mb-2">
-                    <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-500" />
+                <div className="flex max-h-[520px] flex-col p-4">
+                  <div className="relative mb-3">
+                    <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
                     <input
                       ref={searchRef}
                       type="text"
                       value={q}
                       onChange={(e) => setQ(e.target.value)}
                       placeholder={`Search ${tab.label.toLowerCase()}…`}
-                      className="h-9 w-full rounded-lg border border-white/10 bg-white/5 pl-9 pr-3 text-[13px] text-white placeholder:text-gray-500 outline-none transition-colors focus:border-lime-tint-border focus:bg-white/[0.08]"
+                      className="h-11 w-full rounded-xl border border-white/10 bg-white/5 pl-10 pr-3 text-[14px] text-white placeholder:text-gray-500 outline-none transition-colors focus:border-lime-tint-border focus:bg-white/[0.08]"
                     />
                   </div>
-                  <div className="mb-1.5 flex items-center justify-between px-1">
-                    <div className="text-[10.5px] font-bold uppercase tracking-[0.12em] text-gray-400">
+                  <div className="mb-2 flex items-center justify-between px-1">
+                    <div className="text-[12px] font-bold uppercase tracking-[0.12em] text-gray-400">
                       All {tab.label}
                     </div>
-                    <div className="text-[10.5px] tabular-nums text-gray-500">
+                    <div className="text-[12px] tabular-nums text-gray-500">
                       {filtered.length} game{filtered.length === 1 ? '' : 's'}
                     </div>
                   </div>
                   <div className="-mr-1 flex-1 overflow-y-auto pr-1">
                     {filtered.length === 0 ? (
-                      <div className="flex flex-col items-center justify-center py-8 text-center">
-                        <Search className="mb-1.5 h-4 w-4 text-gray-600" />
-                        <p className="text-[12px] text-gray-500">
+                      <div className="flex flex-col items-center justify-center py-10 text-center">
+                        <Search className="mb-2 h-5 w-5 text-gray-600" />
+                        <p className="text-[13px] text-gray-500">
                           No games match "{q}"
                         </p>
                       </div>
                     ) : (
-                      <ul className="grid grid-cols-2 gap-0.5">
+                      <ul className="grid grid-cols-2 gap-1 lg:grid-cols-3">
                         {filtered.map(({ game, categorySlug }) => (
                           <li key={game.slug}>
-                            <Link
+                            <SmartLink
                               href={`/${game.slug}/${categorySlug}`}
                               onClick={onSelect}
-                              className="group flex items-center gap-2.5 rounded-lg p-2 transition-colors hover:bg-white/[0.06]"
+                              className="group flex items-center gap-2.5 rounded-lg p-2.5 transition-colors hover:bg-white/[0.06]"
                             >
                               {game.image_url ? (
                                 <img
                                   src={game.image_url}
                                   alt=""
-                                  className="h-7 w-7 shrink-0 rounded-md object-contain"
+                                  className="h-8 w-8 shrink-0 rounded-md object-contain"
                                 />
                               ) : (
-                                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-white/10 text-[10px] font-bold text-gray-300">
+                                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-white/10 text-[11px] font-bold text-gray-300">
                                   {game.name.slice(0, 2).toUpperCase()}
                                 </span>
                               )}
-                              <span className="truncate text-[12.5px] font-semibold text-gray-200 group-hover:text-white">
+                              <span className="truncate text-[13.5px] font-semibold text-gray-200 group-hover:text-white">
                                 {game.name}
                               </span>
-                            </Link>
+                            </SmartLink>
                           </li>
                         ))}
                       </ul>
@@ -1171,9 +1376,9 @@ function CategoryDropdown({
               </div>
             </div>
           </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
+        </Popover.Content>
+      </Popover.Portal>
+    </Popover.Root>
   )
 }
 
@@ -1228,6 +1433,7 @@ function GlobalSearch({
 
   // Build a flat (game, primary categorySlug) index — first category
   // listed wins as the link target when the user clicks the game.
+  // V17g — Alias rewrite removed; DB stores canonical slugs.
   const gameIndex = useMemo(() => {
     const map = new Map<
       string,

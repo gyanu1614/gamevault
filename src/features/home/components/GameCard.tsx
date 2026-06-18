@@ -1,26 +1,32 @@
-import Link from 'next/link'
 import Image from 'next/image'
+import { SmartLink } from '@/components/global/SmartLink'
 
 export interface GameCardProps {
   slug: string
   name: string
   /** Portrait cover art, 3:4 ratio (e.g. 600×800). */
   coverSrc: string
+  /**
+   * V17u — Canonical landing href, resolved by usePopularGames from
+   * the game's first active category (e.g. /roblox/buy-robux).
+   * Optional only for backwards compat; the hook always supplies one.
+   */
+  href?: string
 }
 
 /**
  * Popular Games card — portrait cover-art tile (Steam-library style).
  * HOVER: lift 4px, name turns lime, subtle scale on the cover image.
- * CLICK: navigates to /game/[slug]
+ * CLICK: navigates to the game's canonical category landing.
  */
-export function GameCard({ slug, name, coverSrc }: GameCardProps) {
+export function GameCard({ slug, name, coverSrc, href }: GameCardProps) {
   return (
-    <Link
-      href={`/game/${slug}`}
+    <SmartLink
+      href={href ?? `/${slug}/buy-currency`}
       className="group flex flex-col cursor-pointer transition-all duration-default ease-gv hover:-translate-y-1 focus-visible:shadow-focus-ring"
     >
       {/* Cover art — 3:4 portrait, rounded card */}
-      <div className="relative w-full aspect-[3/4] overflow-hidden rounded-2xl border border-border-subtle bg-bg-raised shadow-elevated group-hover:border-border-strong transition-colors">
+      <div className="relative w-full aspect-[4/5] overflow-hidden rounded-2xl border border-border-subtle bg-bg-raised shadow-elevated group-hover:border-border-strong transition-colors">
         <Image
           src={coverSrc}
           alt={name}
@@ -39,6 +45,6 @@ export function GameCard({ slug, name, coverSrc }: GameCardProps) {
       <span className="font-display font-bold text-body-lg text-text-primary leading-tight mt-3 px-1 truncate group-hover:text-lime transition-colors">
         {name}
       </span>
-    </Link>
+    </SmartLink>
   )
 }

@@ -19,7 +19,7 @@ import { toast } from 'sonner'
 import {
   ArrowLeft, Plus, Pencil, Trash2, Loader2,
   Sparkles, GitBranch, Hash, Type, ToggleLeft, List, AlignLeft, Image as ImageIcon,
-  CheckSquare, AlertCircle, Save, X, GripVertical,
+  CheckSquare, AlertCircle, Save, X, GripVertical, ChevronRight, ChevronDown,
   ClipboardPaste,
 } from 'lucide-react'
 import {
@@ -130,7 +130,7 @@ export default function TemplateBuilder({ initial }: { initial: BuilderState }) 
       {/* ── Breadcrumb / header ── */}
       <header className="space-y-2">
         <Link
-          href={`/admin/games-v2/${state.header.game_id}/edit`}
+          href={`/admin/games/${state.header.game_id}/edit`}
           className="inline-flex items-center gap-1.5 text-xs text-text-tertiary transition-colors hover:text-text-primary"
         >
           <ArrowLeft className="h-3 w-3" />
@@ -396,6 +396,14 @@ function FieldNode({ attribute, depth, childrenOf, selectedId, onSelect, onDelet
     }
   }
 
+  // V17n — Collapse state for the whole sub-tree under this field. Big
+  // dropdowns (Brainrot has 12 options × N sub-fields each) make the
+  // sidebar unmanageable; admin can fold a parent away to focus on the
+  // rest of the schema. Defaults to expanded so first-time edits aren't
+  // surprising.
+  const [collapsed, setCollapsed] = useState(false)
+  const hasSubtree = buckets.length > 0
+
   // padding-left per depth (12 px each)
   const indentPx = depth * 14
 
@@ -403,11 +411,30 @@ function FieldNode({ attribute, depth, childrenOf, selectedId, onSelect, onDelet
     <li>
       <div
         className={cn(
-          'group flex items-center gap-2 rounded-md py-1.5 pr-2 transition-colors',
+          'group flex items-center gap-1.5 rounded-md py-1.5 pr-2 transition-colors',
           selected ? 'bg-lime-tint-bg text-text-primary' : 'hover:bg-bg-raised text-text-secondary'
         )}
-        style={{ paddingLeft: 12 + indentPx }}
+        style={{ paddingLeft: 6 + indentPx }}
       >
+        {/* Collapse chevron. Renders even when there's no sub-tree so
+            every row has the same left-edge alignment. Disabled +
+            invisible icon for leaf nodes. */}
+        {hasSubtree ? (
+          <button
+            type="button"
+            onClick={() => setCollapsed((c) => !c)}
+            className="rounded p-0.5 text-text-tertiary transition-colors hover:bg-bg-overlay hover:text-text-primary"
+            title={collapsed ? 'Expand sub-fields' : 'Collapse sub-fields'}
+            aria-expanded={!collapsed}
+          >
+            {collapsed
+              ? <ChevronRight className="h-3 w-3" />
+              : <ChevronDown className="h-3 w-3" />
+            }
+          </button>
+        ) : (
+          <span className="inline-block h-4 w-4" aria-hidden />
+        )}
         <Icon className="h-3.5 w-3.5 shrink-0 text-text-tertiary" />
         <button
           type="button"
@@ -430,8 +457,8 @@ function FieldNode({ attribute, depth, childrenOf, selectedId, onSelect, onDelet
         </button>
       </div>
 
-      {/* Sub-tree per choice */}
-      {buckets.length > 0 && (
+      {/* Sub-tree per choice — hidden when this node is collapsed. */}
+      {!collapsed && buckets.length > 0 && (
         <ul className="space-y-0.5">
           {buckets.map((b) => {
             const children = inner.get(b.key) ?? []

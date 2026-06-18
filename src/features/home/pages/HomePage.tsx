@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import {
@@ -21,6 +21,8 @@ import {
 
 import { HeroCarousel } from '../components/HeroCarousel'
 import { RowHeader } from '../components/RowHeader'
+import { TopUpsBanner } from '../components/TopUpsBanner'
+import GameVaultExplainer from '../components/GameVaultExplainer'
 import { HorizontalScroller } from '../components/HorizontalScroller'
 import { GameCard } from '../components/GameCard'
 import { CurrencyCard } from '../components/CurrencyCard'
@@ -91,14 +93,82 @@ const WHY_CARDS = [
 ] as const
 
 /**
+ * V17u — Scroll-triggered explainer wrapper. IntersectionObserver
+ * flips `inView` once the animation enters the viewport (with a 25%
+ * intersection threshold for a nice early-start) and back to false
+ * when it leaves. The explainer's Stage subscribes via externalPlay
+ * and pauses its rAF loop when off-screen — saves CPU and matches
+ * the Apple/Linear "play in view" pattern users expect.
+ *
+ * `once` semantics could be nice (start once, keep playing) but
+ * pausing off-screen is the more polished default — the user comes
+ * back to a fresh scene when they scroll back.
+ */
+function ScrollTriggeredExplainer() {
+  const ref = useRef<HTMLDivElement | null>(null)
+  const [inView, setInView] = useState(false)
+  // V18.a — Client-only mount gate. The explainer reads useTime()
+  // throughout and renders different numbers of children at t=0 vs
+  // t>0 (coins/box only render in their time windows). That makes
+  // SSR produce a different DOM tree than client-render, which
+  // React surfaces as "Expected server HTML to contain a matching
+  // <div> in <div>". Gating the whole tree to post-mount means SSR
+  // emits an empty container and the hydration tree matches it.
+  // Same visual result; just no SSR snapshot of the animation
+  // (which was a useless snapshot anyway — t=0 is never what the
+  // user sees by the time their browser paints).
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => { setMounted(true) }, [])
+
+  useEffect(() => {
+    const el = ref.current
+    if (!el || typeof IntersectionObserver === 'undefined') {
+      setInView(true)
+      return
+    }
+    const io = new IntersectionObserver(
+      ([entry]) => setInView(entry.isIntersecting),
+      { threshold: 0.2 },
+    )
+    io.observe(el)
+    return () => io.disconnect()
+  }, [])
+
+  const Explainer = GameVaultExplainer as any
+  return (
+    <div ref={ref} className="h-full w-full">
+      {mounted && <Explainer autoplay={false} externalPlay={inView} />}
+    </div>
+  )
+}
+
+/**
  * Popular Games shelf — 10 games in a horizontal scroller, 6 visible per page,
  * arrow buttons page through. Cards always sized to ~1/6th of the panel width.
  */
 function PopularGamesShelf({ games }: { games: ReturnType<typeof usePopularGames>['data'] }) {
+  // V17t — Hooks declared first (React rules-of-hooks: no conditional
+  // hook calls). The empty-list early return is BELOW so it doesn't
+  // skip the hook calls on the loading frame.
   const list = games ?? []
   const scrollerRef = useRef<HTMLDivElement | null>(null)
   const [atStart, setAtStart] = useState(true)
   const [atEnd, setAtEnd] = useState(false)
+
+  // Loading state — skeleton tiles matching the real card geometry so
+  // the section doesn't pop in.
+  if (list.length === 0) {
+    return (
+      <div className="grid grid-flow-col auto-cols-[calc((100%-1.25rem*5)/6)] gap-5 overflow-hidden">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div key={i}>
+            <div className="aspect-[4/5] w-full animate-pulse rounded-2xl bg-bg-overlay/60 border border-border-subtle" />
+            <div className="mt-3 px-1 h-5 w-24 animate-pulse rounded bg-bg-overlay/60" />
+          </div>
+        ))}
+      </div>
+    )
+  }
 
   const onScroll = () => {
     const el = scrollerRef.current
@@ -129,6 +199,7 @@ function PopularGamesShelf({ games }: { games: ReturnType<typeof usePopularGames
               slug={game.slug}
               name={game.name}
               coverSrc={game.coverSrc}
+              href={game.href}
             />
           </div>
         ))}
@@ -300,13 +371,22 @@ export function HomePage() {
           HERO — headline + full-width carousel
           Fits viewport height (100vh - nav). No scroll needed.
           ================================================================ */}
-      <section className="relative flex flex-col h-[calc(100vh-68px)] py-5 overflow-hidden">
-        {/* Faint lime wash — NOT an orb */}
-        <div
-          aria-hidden="true"
-          className="absolute left-1/2 top-0 -translate-x-1/2 w-[72%] h-[64%] pointer-events-none z-0"
-          style={{ background: 'radial-gradient(ellipse at center top, rgba(198,255,61,0.06), transparent 64%)' }}
-        />
+      {/* V17f — Trimmed hero height. Was 100vh-68px which made the
+          carousel claim the full viewport and overflow on shorter
+          laptops; -160px leaves comfortable space for the next
+          section's top edge to peek in without forcing the page to
+          scroll. */}
+      {/* V18 — `.ambient` paints the violet bloom + décor PNG behind
+          the hero. Décor PNG lives at /public/assets/backdrop-decor.png
+          — placeholder transparent 1×1 until art lands. */}
+      <section className="ambient relative flex flex-col h-[calc(100vh-160px)] py-5 overflow-hidden">
+        {/* V18.a — Removed the lime radial wash that used to sit
+            behind the headline. Against the new violet-dusk body
+            backdrop it read as a soft glow / oval bloom around
+            "Game More. Grind Less.", and the lime sweep in the
+            text gradient was cutting through it — making the
+            headline look like it was punching through a halo. The
+            section's own `.ambient` paint is more than enough. */}
 
         {/* Headline — vertically centered in the space above the carousel */}
         <div className="mx-auto text-center flex flex-col items-center justify-center relative z-10 flex-[1.5_1_0%] min-h-0 px-6">
@@ -363,7 +443,12 @@ export function HomePage() {
           }}
         />
         <div className="max-w-container mx-auto px-6 relative z-10">
-          <RowHeader title="Popular Games" viewAllHref="/games" />
+          <RowHeader
+            eyebrow="Trending now"
+            title="Popular Games"
+            subtitle="The games our buyers and sellers are most active in right now."
+            viewAllHref="/games"
+          />
           {/* Single rounded glass panel containing the 10-game shelf with arrow paging */}
           <div
             className="rounded-3xl border border-border-default bg-bg-raised/70 backdrop-blur-md shadow-elevated p-6 md:p-8"
@@ -422,52 +507,53 @@ export function HomePage() {
       </section>
 
       {/* ================================================================
-          HOW IT WORKS — 4-step escrow explainer
+          HOW IT WORKS — Animated escrow explainer (V17o)
+          Replaces the static 4-card grid with a 32s looping animation
+          built from the design handoff (GameVaultExplainer.jsx).
           ================================================================ */}
-      <section className="relative py-20 overflow-hidden">
-        {/* ASSET: cinematic backdrop — 2400×900 JPG, drop replacement at same path */}
-        <Image
-          src="/section-bg/how-it-works.jpg"
-          alt=""
-          fill
-          aria-hidden="true"
-          className="object-cover blur-md saturate-[0.7] scale-105 z-0"
-          sizes="100vw"
-          priority={false}
-        />
-        {/* Dark overlay — readability */}
+      {/* V17p — Narrower, centered trust section. Heading uses the same
+          text-display scale as the other section titles. Animation now
+          floats edge-to-edge inside a hairline border (Apple-notch
+          style) instead of being padded inside a card surface. */}
+      <section className="relative py-24 overflow-hidden">
         <div
           aria-hidden="true"
           className="pointer-events-none absolute inset-0 z-0"
           style={{
             background:
-              'linear-gradient(180deg, rgba(10,10,15,0.92) 0%, rgba(10,10,15,0.78) 50%, rgba(10,10,15,0.95) 100%)',
+              'radial-gradient(80% 60% at 50% 30%, rgba(198,255,61,0.05), transparent 60%)',
           }}
         />
-        {/* Vignette — fade edges back to bg-base */}
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-0 z-0"
-          style={{
-            background:
-              'radial-gradient(ellipse at center, transparent 40%, rgba(10,10,15,0.6) 100%)',
-          }}
-        />
-        <div className="max-w-container mx-auto px-6 relative z-10">
-          <div className="flex justify-between items-end gap-8 mb-12 flex-wrap">
-            <div>
-              <span className="text-overline uppercase text-white text-[15px]">How it works</span>
-              <h2 className="font-display text-display mt-[10px]">Safe in four steps.</h2>
+        <div className="mx-auto max-w-[1200px] px-6 relative z-10">
+          <div className="mx-auto max-w-2xl text-center mb-12">
+            <div className="mb-2 flex items-center justify-center gap-2">
+              <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-lime-text">
+                How it works
+              </span>
+              <span className="h-px w-8 bg-gradient-to-r from-lime/40 to-transparent" aria-hidden />
             </div>
+            <h2 className="font-display text-display">Safe in four steps.</h2>
+            <p className="mt-3 text-body-sm text-text-secondary">
+              Watch how your money stays protected from the moment you buy to the moment you confirm delivery.
+            </p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {HOW_IT_WORKS_STEPS.map((step, index) => (
-              <HowStep
-                key={step.num}
-                {...step}
-                showConnector={index < HOW_IT_WORKS_STEPS.length - 1}
-              />
-            ))}
+
+          {/* V17u — Slim alpha mask. The fade is now ~4% on each edge
+              (was 14%) so the hard letterbox seam softens into the
+              page bg without eating the animation's own headlines.
+              Mask runs through transparent at the very edge → opaque
+              by 4% → opaque through 96% → transparent again at 100%. */}
+          <div
+            className="mx-auto max-w-[1100px] overflow-hidden bg-transparent"
+            style={{
+              aspectRatio: '16 / 9',
+              WebkitMaskImage:
+                'linear-gradient(180deg, transparent 0%, #000 4%, #000 96%, transparent 100%)',
+              maskImage:
+                'linear-gradient(180deg, transparent 0%, #000 4%, #000 96%, transparent 100%)',
+            }}
+          >
+            <ScrollTriggeredExplainer />
           </div>
         </div>
       </section>
@@ -476,13 +562,31 @@ export function HomePage() {
           SHOP BY CATEGORY — tabbed: Currencies / Items / Accounts
           Replaces three separate sections with one consolidated shelf.
           ================================================================ */}
-      <section className="py-20">
+      <section className="relative py-20 overflow-hidden">
+        {/* V17i — Subtle backdrop wash matching the other backdrop'd
+            sections. Faint lime+steel radial pair so this section isn't
+            visually flat next to Popular Games. No image asset needed. */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 z-0"
+          style={{
+            background:
+              'radial-gradient(80% 60% at 15% 20%, rgba(198,255,61,0.05), transparent 55%),' +
+              'radial-gradient(70% 50% at 85% 85%, rgba(120,168,255,0.04), transparent 60%)',
+          }}
+        />
         <div className="max-w-container mx-auto px-6 relative z-10">
-          <div className="flex justify-between items-end gap-8 mb-6 flex-wrap">
-            <div>
-              <span className="text-overline uppercase text-white text-[15px]">Marketplace</span>
-              <h2 className="font-display text-display mt-[10px]">Shop by category.</h2>
+          <div className="mb-6">
+            <div className="mb-1.5 flex items-center gap-2">
+              <span className="text-[10.5px] font-bold uppercase tracking-[0.16em] text-lime-text">
+                Marketplace
+              </span>
+              <span className="h-px w-8 bg-gradient-to-r from-lime/40 to-transparent" aria-hidden />
             </div>
+            <h2 className="font-display text-display">Shop by category.</h2>
+            <p className="mt-1.5 text-body-sm text-text-secondary max-w-2xl">
+              Currencies, items, accounts — pick how you want to play and we'll show you the matching deals.
+            </p>
           </div>
           <div
             className="rounded-3xl border border-border-default bg-bg-raised/70 backdrop-blur-md shadow-elevated p-6 md:p-8"
@@ -504,9 +608,19 @@ export function HomePage() {
           TOP-UPS & GIFT CARDS
           DYNAMIC: popular top-ups — from /api/popular/topups
           ================================================================ */}
-      <section className="py-20 bg-bg-raised border-y border-border-subtle">
+      {/* V17m — Section gets the chibi-mascot banner backdrop per the
+          design handoff. Image is layered behind via TopUpsBanner; the
+          content stack lives at z-10 and uses the center ~60% of the
+          width so it sits on the dark negative-space strip. */}
+      <section className="relative py-20 border-y border-border-subtle overflow-hidden">
+        <TopUpsBanner />
         <div className="max-w-container mx-auto px-6 relative z-10">
-          <RowHeader title="Top-Ups & Gift Cards" viewAllHref="/topups" />
+          <RowHeader
+            eyebrow="Direct top-ups"
+            title="Top-Ups & Gift Cards"
+            subtitle="Official codes and direct top-ups — delivered the same way you'd buy them at retail."
+            viewAllHref="/topups"
+          />
           <HorizontalScroller>
             {popularTopups.map((topup) => (
               <CurrencyCard key={topup.slug} {...topup} hrefBase="/topup" />
@@ -536,12 +650,19 @@ export function HomePage() {
               'radial-gradient(ellipse at center, rgba(100,160,255,0.14), transparent 60%)',
           }}
         />
-        <div className="max-w-container mx-auto px-6 relative z-10">
-          <div className="flex justify-between items-end gap-8 mb-12 flex-wrap">
-            <div>
-              <span className="text-overline uppercase text-white">Why Choose GameVault</span>
-              <h2 className="font-display text-display mt-[10px]">Built so you can&apos;t get burned.</h2>
+        {/* V17p — Narrower max-width + centered intro to match the
+            "How it works" trust section. Creates rhythm by alternating
+            wide content rows (Popular Games, Top-Ups) with narrower
+            centered trust rows (How it works, Why GameVault). */}
+        <div className="mx-auto max-w-[1200px] px-6 relative z-10">
+          <div className="mx-auto max-w-2xl text-center mb-12">
+            <div className="mb-2 flex items-center justify-center gap-2">
+              <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-lime-text">
+                Why Choose GameVault
+              </span>
+              <span className="h-px w-8 bg-gradient-to-r from-lime/40 to-transparent" aria-hidden />
             </div>
+            <h2 className="font-display text-display">Built so you can&apos;t get burned.</h2>
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
             {WHY_CARDS.map((card) => (
@@ -555,15 +676,33 @@ export function HomePage() {
           LIVE RECENTLY-SOLD TICKER
           DYNAMIC: from /api/recent-sales, WebSocket for real-time updates
           ================================================================ */}
-      <section className="py-12 border-t border-border-subtle">
-        <div className="max-w-container mx-auto px-6 flex items-center justify-between mb-5 gap-3">
-          <span className="inline-flex items-center gap-[9px] font-body font-semibold text-body-sm">
-            <span className="w-2 h-2 rounded-full bg-success animate-pulse-success" aria-hidden="true" />
-            Live · just sold
-          </span>
+      <section className="relative py-12 border-t border-border-subtle overflow-hidden">
+        {/* V17i — Subtle pulse-glow behind the ticker so the "live"
+            beat is felt in the background, not just on the dot. */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 z-0 animate-pulse"
+          style={{
+            background:
+              'radial-gradient(80% 100% at 50% 0%, rgba(74,222,128,0.04), transparent 65%)',
+            animationDuration: '3.5s',
+          }}
+        />
+        <div className="relative z-10 max-w-container mx-auto px-6 flex items-center justify-between mb-5 gap-3">
+          <div className="flex items-center gap-3">
+            <span className="inline-flex items-center gap-[9px] font-body font-semibold text-body-sm">
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full rounded-full bg-success opacity-75 animate-ping" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-success" />
+              </span>
+              Live · just sold
+            </span>
+          </div>
           <span className="text-body-sm text-text-tertiary">Updated in real time across every game</span>
         </div>
-        <RecentlySoldTicker items={recentSales} />
+        <div className="relative z-10">
+          <RecentlySoldTicker items={recentSales} />
+        </div>
       </section>
 
       {/* ================================================================

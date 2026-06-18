@@ -68,31 +68,13 @@ export default function GameSubNav({
     }
   }, [isPendingNav, pendingSlug])
 
-  // V15j — Eliminate the /roblox/robux → /roblox/buy-robux flash by
-  // rewriting known currency aliases to their canonical slug BEFORE
-  // we fire router.push. The server still redirects non-canonical
-  // aliases (so external links keep working), but our own sub-nav
-  // never makes the user pay the round-trip.
-  const CURRENCY_CANONICAL_BY_GAME: Record<string, string> = {
-    roblox: 'buy-robux',
-    fortnite: 'buy-vbucks',
-    valorant: 'buy-valorant-points',
-    'genshin-impact': 'buy-genesis-crystals',
-    'apex-legends': 'buy-apex-coins',
-  }
-  const CURRENCY_ALIASES = new Set(['currency', 'robux', 'v-bucks', 'vbucks', 'valorant-points', 'genesis-crystals', 'apex-coins'])
-
+  // V17g — Alias rewrite removed. DB stores canonical slugs directly
+  // so the slug we receive is already the final URL slug.
   const goToCategory = (slug: string) => {
     if (slug === currentCategorySlug) return
-    // Rewrite if this slug is a known currency alias for this game and a
-    // canonical exists.
-    const canonical = CURRENCY_ALIASES.has(slug)
-      ? CURRENCY_CANONICAL_BY_GAME[gameSlug]
-      : undefined
-    const targetSlug = canonical ?? slug
-    setPendingSlug(targetSlug)
+    setPendingSlug(slug)
     startNavTransition(() => {
-      router.push(`/${gameSlug}/${targetSlug}`)
+      router.push(`/${gameSlug}/${slug}`)
     })
   }
 
@@ -144,15 +126,8 @@ export default function GameSubNav({
           >
             {categories.map((cat) => {
               const isActive = cat.slug === currentCategorySlug
-              // V15j — Spinner-pending compares against EITHER the DB slug
-              // OR its canonical alias, so the spinner still lights up
-              // when we rewrote the click to the canonical (currency tabs).
-              const canonicalForCat = CURRENCY_ALIASES.has(cat.slug)
-                ? CURRENCY_CANONICAL_BY_GAME[gameSlug]
-                : undefined
-              const isPending =
-                pendingSlug === cat.slug ||
-                (canonicalForCat !== undefined && pendingSlug === canonicalForCat)
+              // V17g — Slug is the slug; no alias indirection anymore.
+              const isPending = pendingSlug === cat.slug
               // V14s — Only swap to the spinner / lime tint after the
               // 150ms grace period. Sub-150ms navs stay clean — no flash.
               const showLoading = isPending && spinnerVisible

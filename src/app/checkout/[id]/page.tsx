@@ -46,14 +46,15 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
     redirect(`/account/listings/${listing.id}/edit`)
   }
 
-  // V14l — Resolve the right "back" target.
+  // V17g — Resolve the right "back" target.
   //
-  // Currency listings don't have individual detail pages — they all live on
-  // the currency page (e.g. /roblox/buy-robux). For everything else, go to
-  // the listing detail page like before.
+  // Currency listings don't have individual detail pages — they all
+  // live on the currency category page. Use the category's canonical
+  // slug from the DB directly (e.g. buy-robux for Roblox, buy-vbucks
+  // for Fortnite). Non-currency listings go to their own detail page.
   const isCurrency = listing.category?.metadata?.type === 'currency'
   const backHref = isCurrency
-    ? `/${listing.game.slug}/buy-robux` // Canonical currency URL (handles Robux, V-Bucks, etc — alias-redirected)
+    ? `/${listing.game.slug}/${listing.category.slug}`
     : `/${listing.game.slug}/${listing.category.slug}/${listing.slug}`
   const backLabel = isCurrency
     ? `Back to ${listing.game.name}`
