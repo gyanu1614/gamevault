@@ -1,8 +1,8 @@
 'use client'
 
 /**
- * GameWizard — shared client component for /admin/games-v2/new and
- * /admin/games-v2/[id]/edit. Single source of truth for the redesigned
+ * GameWizard — shared client component for /admin/games/new and
+ * /admin/games/[id]/edit. Single source of truth for the redesigned
  * add/edit flow. Apple-feel using existing glass-* primitives.
  *
  * Steps:
@@ -100,15 +100,39 @@ const STEPS = [
 
 // ─── Step indicator ───────────────────────────────────────────────────────────
 
-function Stepper({ current, completed }: { current: number; completed: Set<number> }) {
+function Stepper({
+  current,
+  completed,
+  onJump,
+}: {
+  current: number
+  completed: Set<number>
+  /**
+   * V17n — When provided, the stepper renders each step as a clickable
+   * button. Used in edit mode so admins can hop straight to any step
+   * since all data is already loaded. In create mode the parent leaves
+   * this undefined, keeping the linear "Save and continue" flow.
+   */
+  onJump?: (id: number) => void
+}) {
   return (
     <ol className="flex items-center gap-0">
       {STEPS.map((s, i) => {
         const done = completed.has(s.id) || current > s.id
         const active = current === s.id
+        const clickable = !!onJump
+        const Item = clickable ? 'button' : 'div'
         return (
           <li key={s.id} className="flex items-center">
-            <div className="flex items-center gap-3">
+            <Item
+              type={clickable ? 'button' : undefined}
+              onClick={clickable ? () => onJump!(s.id) : undefined}
+              className={cn(
+                'flex items-center gap-3 rounded-lg',
+                clickable && 'cursor-pointer transition-colors hover:bg-bg-raised/60 p-1 -m-1',
+              )}
+              aria-current={active ? 'step' : undefined}
+            >
               <span
                 className={cn(
                   'flex h-8 w-8 items-center justify-center rounded-full border text-xs font-semibold transition-colors',
@@ -116,18 +140,19 @@ function Stepper({ current, completed }: { current: number; completed: Set<numbe
                     ? 'border-success bg-success-bg text-success'
                     : active
                       ? 'border-lime bg-lime-tint-bg text-lime-text'
-                      : 'border-border-default bg-bg-raised text-text-tertiary'
+                      : 'border-border-default bg-bg-raised text-text-tertiary',
+                  clickable && !active && 'group-hover:border-lime',
                 )}
               >
                 {done ? <Check className="h-3.5 w-3.5" /> : s.id}
               </span>
-              <div className="hidden sm:block">
+              <div className="hidden text-left sm:block">
                 <div className={cn('text-xs font-semibold', active ? 'text-text-primary' : done ? 'text-success' : 'text-text-tertiary')}>
                   {s.label}
                 </div>
                 <div className="text-[10px] text-text-disabled">{s.description}</div>
               </div>
-            </div>
+            </Item>
             {i < STEPS.length - 1 && (
               <div className="mx-4 h-px w-10 bg-bg-raised sm:w-16">
                 <div className={cn('h-px transition-all', done ? 'w-full bg-success' : 'w-0')} />
@@ -257,8 +282,8 @@ export default function GameWizard({ mode, game, globalCategories, initialGameCa
     const sp = new URLSearchParams(params?.toString() ?? '')
     sp.set('step', String(step))
     const base = mode === 'create'
-      ? '/admin/games-v2/new'
-      : (game ? `/admin/games-v2/${game.id}/edit` : null)
+      ? '/admin/games/new'
+      : (game ? `/admin/games/${game.id}/edit` : null)
     if (base) router.replace(`${base}?${sp.toString()}`, { scroll: false })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step])
@@ -408,7 +433,7 @@ export default function GameWizard({ mode, game, globalCategories, initialGameCa
     setIsSaving(false)
     if (allOk) {
       toast.success(mode === 'create' ? 'Game created' : 'Game updated')
-      startTransition(() => router.push('/admin/games-v2'))
+      startTransition(() => router.push('/admin/games'))
     }
   }
 
@@ -423,34 +448,39 @@ export default function GameWizard({ mode, game, globalCategories, initialGameCa
   const enabledCount = categories.filter((c) => c.is_enabled).length
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6">
+    // V17l — Wizard now uses the full admin content width (same as the
+    // games list) so the page geometry doesn't jump when you click Edit
+    // or New. Was max-w-4xl which made forms feel cramped + visually
+    // off-center against the list.
+    <div className="space-y-6">
       {/* ── Header ── */}
       <header className="space-y-3">
         <Link
-          href="/admin/games-v2"
-          className="inline-flex items-center gap-1.5 text-xs text-text-tertiary transition-colors hover:text-text-primary"
+          href="/admin/games"
+          className="inline-flex items-center gap-1.5 text-[12.5px] text-text-tertiary transition-colors hover:text-text-primary"
         >
           <ArrowLeft className="h-3 w-3" />
           Back to games
         </Link>
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-semibold tracking-tight text-text-primary">
-                {mode === 'create' ? 'New game' : `Edit ${game?.name ?? 'game'}`}
-              </h1>
-              <span className="inline-flex items-center gap-1 rounded-full border border-lime-tint-border bg-lime-tint-bg px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-lime-text">
-                <Sparkles className="h-3 w-3" />
-                wizard
-              </span>
-            </div>
-            <p className="mt-1 text-sm text-text-secondary">
+            <h1 className="text-[26px] font-semibold tracking-tight text-text-primary">
+              {mode === 'create' ? 'New game' : `Edit ${game?.name ?? 'game'}`}
+            </h1>
+            <p className="mt-1.5 text-[13.5px] text-text-secondary">
               {mode === 'create'
                 ? 'Fill in identity, upload branding, choose which categories the game supports.'
                 : 'Update game details and per-category settings.'}
             </p>
           </div>
-          <Stepper current={step} completed={completed} />
+          <Stepper
+            current={step}
+            completed={completed}
+            // V17n — Clickable steps in edit mode. The game already exists,
+            // every step is safe to land on. In create mode we keep the
+            // linear flow so admins can't skip past required setup.
+            onJump={mode === 'edit' ? (id) => setStep(id) : undefined}
+          />
         </div>
       </header>
 
@@ -773,7 +803,7 @@ export default function GameWizard({ mode, game, globalCategories, initialGameCa
 
                           {gameId && (
                             <Link
-                              href={`/admin/games-v2/${gameId}/templates/${c.slug}`}
+                              href={`/admin/games/${gameId}/templates/${c.slug}`}
                               className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-lime-tint-border bg-lime-tint-bg px-3 text-[11px] font-semibold text-lime-text transition-colors hover:bg-lime-tint-bg"
                             >
                               <Sparkles className="h-3 w-3" />

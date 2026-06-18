@@ -116,6 +116,27 @@ export async function toggleGameActive(id: string, isActive: boolean) {
   return { success: true }
 }
 
+/**
+ * V17s — Flip games.is_popular so the homepage Popular Games shelf
+ * picks up / drops the game. Pair input matches toggleGameActive:
+ * pass the CURRENT flag and the action flips it.
+ */
+export async function toggleGamePopular(id: string, isPopular: boolean) {
+  await requireAdmin()
+  const supabase = getAdminSupabase()
+
+  const { error } = await (supabase
+    .from('games') as any)
+    .update({ is_popular: !isPopular })
+    .eq('id', id)
+
+  if (error) return { success: false, error: error.message }
+  revalidatePath('/admin/games')
+  // Also bust the homepage's cache. The hook keys are 'popular-games'.
+  revalidatePath('/')
+  return { success: true }
+}
+
 // ─── Game Icon Upload ─────────────────────────────────────────────────────────
 
 export async function uploadGameIcon(

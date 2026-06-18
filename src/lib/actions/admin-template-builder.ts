@@ -7,7 +7,7 @@
  *   - attribute_options
  *   - attribute_conditional_rules
  *
- * Used only by /admin/games-v2/[id]/templates/[categorySlug] and the
+ * Used only by /admin/games/[id]/templates/[categorySlug] and the
  * builder client component. Never touches the live legacy tables.
  */
 
@@ -295,7 +295,7 @@ export async function createAttribute(input: CreateAttributeInput): Promise<Resu
       .select('id, slug')
       .single()
     if (error) return { success: false, error: error.message }
-    revalidatePath('/admin/games-v2', 'layout')
+    revalidatePath('/admin/games', 'layout')
     return { success: true, data: { id: (data as any).id, slug: (data as any).slug } }
   } catch (e: any) {
     return { success: false, error: e?.message ?? 'Unknown error' }
@@ -376,7 +376,7 @@ export async function createSubAttribute(
       return { success: false, error: ruleErr.message }
     }
 
-    revalidatePath('/admin/games-v2', 'layout')
+    revalidatePath('/admin/games', 'layout')
     return { success: true, data: { id: attrId, slug: (attr as any).slug, rule_id: (rule as any).id } }
   } catch (e: any) {
     return { success: false, error: e?.message ?? 'Unknown error' }
@@ -425,7 +425,7 @@ export async function updateAttribute(input: UpdateAttributeInput): Promise<Resu
       }
       return { success: false, error: error.message }
     }
-    revalidatePath('/admin/games-v2', 'layout')
+    revalidatePath('/admin/games', 'layout')
     return { success: true, data: { id: input.id } }
   } catch (e: any) {
     return { success: false, error: e?.message ?? 'Unknown error' }
@@ -438,7 +438,7 @@ export async function deleteAttribute(id: string): Promise<Result<{ id: string }
     const supabase = getAdminSupabase()
     const { error } = await supabase.from('attributes').delete().eq('id', id)
     if (error) return { success: false, error: error.message }
-    revalidatePath('/admin/games-v2', 'layout')
+    revalidatePath('/admin/games', 'layout')
     return { success: true, data: { id } }
   } catch (e: any) {
     return { success: false, error: e?.message ?? 'Unknown error' }
@@ -454,7 +454,7 @@ export async function reorderOptions(orderedIds: string[]): Promise<Result<{ cou
         supabase.from('attribute_options').update({ sort_order: idx }).eq('id', id)
       )
     )
-    revalidatePath('/admin/games-v2', 'layout')
+    revalidatePath('/admin/games', 'layout')
     return { success: true, data: { count: orderedIds.length } }
   } catch (e: any) {
     return { success: false, error: e?.message ?? 'Unknown error' }
@@ -471,7 +471,7 @@ export async function reorderAttributes(orderedIds: string[]): Promise<Result<{ 
         supabase.from('attributes').update({ sort_order: idx }).eq('id', id)
       )
     )
-    revalidatePath('/admin/games-v2', 'layout')
+    revalidatePath('/admin/games', 'layout')
     return { success: true, data: { count: orderedIds.length } }
   } catch (e: any) {
     return { success: false, error: e?.message ?? 'Unknown error' }
@@ -519,7 +519,7 @@ export async function createOption(input: CreateOptionInput): Promise<Result<{ i
       .select('id')
       .single()
     if (error) return { success: false, error: error.message }
-    revalidatePath('/admin/games-v2', 'layout')
+    revalidatePath('/admin/games', 'layout')
     return { success: true, data: { id: (data as any).id } }
   } catch (e: any) {
     return { success: false, error: e?.message ?? 'Unknown error' }
@@ -615,7 +615,7 @@ export async function bulkCreateOptions(
     })
 
     if (rows.length === 0) {
-      revalidatePath('/admin/games-v2', 'layout')
+      revalidatePath('/admin/games', 'layout')
       return { success: true, data: { created: 0, skipped } }
     }
 
@@ -624,7 +624,7 @@ export async function bulkCreateOptions(
       .insert(rows)
     if (insertErr) return { success: false, error: insertErr.message }
 
-    revalidatePath('/admin/games-v2', 'layout')
+    revalidatePath('/admin/games', 'layout')
     return { success: true, data: { created: rows.length, skipped } }
   } catch (e: any) {
     return { success: false, error: e?.message ?? 'Unknown error' }
@@ -661,7 +661,7 @@ export async function bulkDeleteOptions(input: {
     const { data, error } = await q.select('id')
     if (error) return { success: false, error: error.message }
 
-    revalidatePath('/admin/games-v2', 'layout')
+    revalidatePath('/admin/games', 'layout')
     return { success: true, data: { deleted: Array.isArray(data) ? data.length : 0 } }
   } catch (e: any) {
     return { success: false, error: e?.message ?? 'Unknown error' }
@@ -690,7 +690,7 @@ export async function updateOption(input: UpdateOptionInput): Promise<Result<{ i
     if (Object.keys(patch).length === 0) return { success: true, data: { id: input.id } }
     const { error } = await supabase.from('attribute_options').update(patch).eq('id', input.id)
     if (error) return { success: false, error: error.message }
-    revalidatePath('/admin/games-v2', 'layout')
+    revalidatePath('/admin/games', 'layout')
     return { success: true, data: { id: input.id } }
   } catch (e: any) {
     return { success: false, error: e?.message ?? 'Unknown error' }
@@ -753,7 +753,7 @@ export async function uploadOptionIcon(
       .eq('id', optionId)
     if (updErr) return { success: false, error: updErr.message }
 
-    revalidatePath('/admin/games-v2', 'layout')
+    revalidatePath('/admin/games', 'layout')
     return { success: true, data: { url: publicUrl } }
   } catch (e: any) {
     return { success: false, error: e?.message ?? 'Upload failed' }
@@ -766,7 +766,7 @@ export async function deleteOption(id: string): Promise<Result<{ id: string }>> 
     const supabase = getAdminSupabase()
     const { error } = await supabase.from('attribute_options').delete().eq('id', id)
     if (error) return { success: false, error: error.message }
-    revalidatePath('/admin/games-v2', 'layout')
+    revalidatePath('/admin/games', 'layout')
     return { success: true, data: { id } }
   } catch (e: any) {
     return { success: false, error: e?.message ?? 'Unknown error' }
@@ -799,7 +799,7 @@ export async function saveRule(input: SaveRuleInput): Promise<Result<{ id: strin
     if (input.id) {
       const { error } = await supabase.from('attribute_conditional_rules').update(payload).eq('id', input.id)
       if (error) return { success: false, error: error.message }
-      revalidatePath('/admin/games-v2', 'layout')
+      revalidatePath('/admin/games', 'layout')
       return { success: true, data: { id: input.id } }
     }
     const { data, error } = await supabase
@@ -808,7 +808,7 @@ export async function saveRule(input: SaveRuleInput): Promise<Result<{ id: strin
       .select('id')
       .single()
     if (error) return { success: false, error: error.message }
-    revalidatePath('/admin/games-v2', 'layout')
+    revalidatePath('/admin/games', 'layout')
     return { success: true, data: { id: (data as any).id } }
   } catch (e: any) {
     return { success: false, error: e?.message ?? 'Unknown error' }
@@ -821,7 +821,7 @@ export async function deleteRule(id: string): Promise<Result<{ id: string }>> {
     const supabase = getAdminSupabase()
     const { error } = await supabase.from('attribute_conditional_rules').delete().eq('id', id)
     if (error) return { success: false, error: error.message }
-    revalidatePath('/admin/games-v2', 'layout')
+    revalidatePath('/admin/games', 'layout')
     return { success: true, data: { id } }
   } catch (e: any) {
     return { success: false, error: e?.message ?? 'Unknown error' }

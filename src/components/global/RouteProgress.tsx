@@ -154,19 +154,24 @@ export default function RouteProgress() {
       const currentPathSearch = `${window.location.pathname}${window.location.search}`
       if (targetPathSearch === currentPathSearch) return
 
-      // V15r — Hard-scroll BOTH window and the documentElement to top
-      // immediately. This kills the "I clicked at the bottom of page A
-      // and now see the footer of page B for a frame" bug: when Next
-      // streams the new page in, the document's scroll position is
-      // already 0, so the first paint lands at the top.
-      try {
-        window.scrollTo({ top: 0, left: 0, behavior: 'instant' as ScrollBehavior })
-        document.documentElement.scrollTop = 0
-        document.body.scrollTop = 0
-      } catch {
-        /* noop — defensive */
-      }
-
+      // V17x — Scroll-to-top REMOVED from the click handler.
+      //
+      // The old V15r implementation scrolled the SOURCE page to (0, 0)
+      // at click time, intending to prevent the "footer of page B for
+      // a frame" glitch on streaming render. But the scroll runs
+      // BEFORE the new page renders — so the user sees their current
+      // page rubber-band to the top before navigation completes. That
+      // is the visible jump, not a fix for one.
+      //
+      // The pathname-change effect below (V15r's second site) already
+      // handles scroll reset on the destination page, BEFORE its first
+      // paint commits. That's the correct place — it runs in the new
+      // document context, before content lands, so the user never sees
+      // the source page move.
+      //
+      // Removing the source scroll here is the root fix for the
+      // "click → page jumps to top → progress bar → new page" UX bug
+      // reported across cards, dropdowns, and seller chips.
       start()
     }
 

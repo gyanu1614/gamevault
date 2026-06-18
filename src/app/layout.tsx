@@ -69,16 +69,17 @@ export default function RootLayout({
       <body className={`${inter.variable} ${jetbrainsMono.variable} font-sans antialiased`} style={{ '--font-display': 'var(--font-inter)', '--font-body': 'var(--font-inter)' } as React.CSSProperties}>
         <Providers>
           <LayoutWrapper>{children}</LayoutWrapper>
+          {/* V17c — react-aria-inspired styling: subtle glass surface
+              with a thin lime accent strip for success (and matching
+              soft accents for error/warning/info). Skipping
+              `richColors` because that flips on sonner's saturated
+              defaults, which fight our globals.css custom palette. */}
           <Toaster
             position="top-right"
-            richColors
             theme="dark"
-            duration={2000}
+            duration={2200}
             closeButton
             toastOptions={{
-              style: {
-                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.4)',
-              },
               className: 'toast-reduced-glow',
             }}
           />

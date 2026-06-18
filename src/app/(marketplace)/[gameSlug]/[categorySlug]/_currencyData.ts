@@ -65,6 +65,14 @@ export interface CurrencyPageData {
   steps: { n: number; title: string; body: string }[]
 }
 
+/**
+ * V17y — Kept as a reference for what a fully-populated CurrencyPageData
+ * looks like. The runtime now hydrates from `category_configs` in the
+ * DB; the Roblox seed migration (20260619_category_configs.sql)
+ * inserts equivalent values. Don't delete — useful for new-game
+ * default suggestions.
+ */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const ROBUX: CurrencyPageData = {
   currency: {
     name: 'Robux',
@@ -128,48 +136,98 @@ const ROBUX: CurrencyPageData = {
 }
 
 /**
- * Per-game shell — describes the currency (name, tagline, glyph, copy) but
- * not the offers. Real offers come from the listings table at runtime.
+ * V17y — Per-game shell now hydrates from the DB (category_configs).
  *
- * Aliases describe every URL slug that should resolve to this currency.
- * `canonical` is the SEO-friendly URL we want search engines to index
- * (e.g. `/roblox/buy-robux`).
+ * Previously we kept a hardcoded `REGISTRY` of currency copy keyed by
+ * game slug. That doesn't scale — every new game with a currency
+ * needed code changes. Now the admin sets unit_label / pricing rules
+ * / FAQ / steps in /admin/games/[id]/edit → Currency tab, and this
+ * function pulls those values at request time.
+ *
+ * The function stays the only public entry point; callers add `await`.
+ * Returns null when the URL isn't the game's canonical currency slug
+ * (so the page falls through to the generic items grid).
  */
-interface CurrencyEntry {
-  shell: CurrencyPageData
-  aliases: string[]
-  canonical: string
-}
+import { GAME_CURRENCY_SLUGS } from '@/lib/utils/category-canonical'
+import { fetchCategoryConfigBySlug } from '@/lib/actions/admin-category-configs'
 
-const REGISTRY: Record<string, CurrencyEntry> = {
-  roblox: {
-    shell: ROBUX,
-    // Every slug that should serve the Robux page.
-    aliases: ['buy-robux', 'robux', 'currency'],
-    // The one we want search engines + share links to use.
-    canonical: 'buy-robux',
-  },
-}
-
-export function getCurrencyShell(
+export async function getCurrencyShell(
   gameSlug: string,
   categorySlug: string,
-): CurrencyPageData | null {
-  const entry = REGISTRY[gameSlug]
-  if (!entry) return null
-  return entry.aliases.includes(categorySlug) ? entry.shell : null
+): Promise<CurrencyPageData | null> {
+  const expectedSlug = GAME_CURRENCY_SLUGS[gameSlug]
+  if (!expectedSlug) return null
+  // Only serve the shell when the URL is the canonical currency slug
+  // for this game.
+  if (categorySlug !== `buy-${expectedSlug}`) return null
+
+  // Fetch the per-game currency config. If admin hasn't set one yet,
+  // hydrate a minimal shell from the slug so the page still renders
+  // an empty state rather than 404-ing.
+  const cfg = await fetchCategoryConfigBySlug(gameSlug, 'currency')
+
+  if (!cfg) {
+    // Empty-state shell: enough copy for the page chrome, no FAQ or
+    // steps, no hero offer. The category page renders "no listings"
+    // when sellers haven't joined yet.
+    return {
+      currency: {
+        name: capitalize(expectedSlug.replace(/-/g, ' ')),
+        game: capitalize(gameSlug.replace(/-/g, ' ')),
+        glyph: '$',
+        tagline: 'In-game currency.',
+        trust: { trades: '0', avgDelivery: '—', shield: 'VaultShield' },
+        unitLabel: capitalize(expectedSlug.replace(/-/g, ' ')),
+        variants: [],
+      },
+      hero: BLANK_HERO,
+      sellers: [],
+      faq: [],
+      steps: DEFAULT_STEPS,
+    }
+  }
+
+  return {
+    currency: {
+      name: cfg.unit_label,
+      game: capitalize(gameSlug.replace(/-/g, ' ')),
+      glyph: cfg.glyph,
+      tagline: cfg.tagline,
+      trust: { trades: '0', avgDelivery: '—', shield: 'VaultShield' },
+      unitLabel: cfg.unit_label,
+      variants: [],
+    },
+    hero: BLANK_HERO,
+    sellers: [],
+    faq: cfg.faq,
+    steps: cfg.steps,
+  }
 }
 
-/** Returns the SEO-canonical slug for this game's currency page, or null. */
-export function getCurrencyCanonicalSlug(gameSlug: string): string | null {
-  return REGISTRY[gameSlug]?.canonical ?? null
+function capitalize(s: string): string {
+  return s.replace(/\b\w/g, (c) => c.toUpperCase())
 }
 
-/** True when the given URL slug is a known currency alias for the game. */
-export function isCurrencyAlias(gameSlug: string, categorySlug: string): boolean {
-  const entry = REGISTRY[gameSlug]
-  return !!entry && entry.aliases.includes(categorySlug)
+const BLANK_HERO: Offer = {
+  id: 'placeholder',
+  seller: 'No seller yet',
+  avatarHue: 200,
+  verified: false,
+  rating: 0,
+  reviews: 0,
+  pricePerUnit: 0,
+  minQty: 100,
+  stock: 0,
+  deliveryMin: 0,
+  deliveryMax: 0,
+  blurb: 'Be the first to list this currency.',
 }
+
+const DEFAULT_STEPS = [
+  { n: 1, title: 'Pick an offer',          body: 'Compare verified sellers by price, rating, and delivery speed.' },
+  { n: 2, title: 'Pay securely',           body: 'Your payment is held by VaultShield escrow until you confirm delivery.' },
+  { n: 3, title: 'Receive your currency',  body: "The seller delivers via the game's transfer method. Confirm receipt and you're done." },
+]
 
 /** Parse the wizard's delivery_time string ("10min" / "instant" / "1hr"). */
 function parseDeliveryTime(s: string | null | undefined): { min: number; max: number } {
@@ -231,11 +289,11 @@ export function listingToOffer(listing: any): Offer {
   }
 }
 
-// Back-compat: keep the old name so existing imports work, falling back
-// to the shell for read-only consumers.
-export function getCurrencyPageData(
+// Back-compat: keep the old name so existing imports work, falling
+// back to the shell for read-only consumers.
+export async function getCurrencyPageData(
   gameSlug: string,
   categorySlug: string,
-): CurrencyPageData | null {
+): Promise<CurrencyPageData | null> {
   return getCurrencyShell(gameSlug, categorySlug)
 }

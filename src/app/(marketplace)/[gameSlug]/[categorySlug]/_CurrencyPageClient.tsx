@@ -264,9 +264,10 @@ export default function CurrencyPageClient({
   const [filter, setFilter] = useState<'recommended' | 'cheapest' | 'fastest'>('recommended')
   const heroRef = useRef<HTMLDivElement>(null)
 
-  // V14v — Always land at the top on mount. Covers: arriving via redirect
-  // (e.g. /roblox/robux → /roblox/buy-robux preserves scroll), back/forward
-  // navigation in some browsers, and deep-links from elsewhere on the site.
+  // V14v — Always land at the top on mount. Covers back/forward
+  // navigation in some browsers, and deep-links from elsewhere on the
+  // site. (As of V17g there are no slug redirects in play — the DB
+  // stores canonical slugs and the URL is the URL.)
   //
   // useLayoutEffect (not useEffect) so the scroll happens BEFORE the
   // browser paints the new route. Otherwise the user sees one frame at

@@ -1,7 +1,7 @@
 /**
  * Admin write actions for the redesigned game wizard (Phase B).
  *
- * Used ONLY by /admin/games-v2/new and /admin/games-v2/[id]/edit.
+ * Used ONLY by /admin/games/new and /admin/games/[id]/edit.
  * Nothing in the live app calls these — they sit alongside the existing
  * admin-games.ts actions and write to:
  *   - public.games          (existing — shared with classic admin)
@@ -110,7 +110,15 @@ export async function fetchGameById(id: string): Promise<GameDetail | null> {
   return data as GameDetail
 }
 
-/** All game_categories rows for one game, joined with global_categories for display. */
+/**
+ * All game_categories rows for one game, joined with global_categories
+ * for display.
+ *
+ * V17n — Adds a legacy-fallback: if `game_categories` has no rows for
+ * this game (Phase A backfill never ran for it), we synthesise the
+ * enabled-set from the legacy `categories` table so the wizard's
+ * Categories step still shows what's actually live on the marketplace.
+ */
 export async function fetchGameCategoryRows(gameId: string): Promise<GameCategoryRow[]> {
   await requireAdmin()
   const supabase = getAdminSupabase()
@@ -133,25 +141,85 @@ export async function fetchGameCategoryRows(gameId: string): Promise<GameCategor
     `)
     .eq('game_id', gameId)
 
-  if (error || !data) return []
-  return (data as any[]).map((r) => ({
-    id: r.id,
-    game_id: r.game_id,
-    global_category_id: r.global_category_id,
-    is_enabled: !!r.is_enabled,
-    requires_region: !!r.requires_region,
-    available_regions: Array.isArray(r.available_regions) ? r.available_regions : [],
-    requires_platform: !!r.requires_platform,
-    available_platforms: Array.isArray(r.available_platforms) ? r.available_platforms : [],
-    delivery_modes: Array.isArray(r.delivery_modes) ? r.delivery_modes : ['manual'],
-    sort_order: r.sort_order ?? 0,
-    seo_title: r.seo_title ?? null,
-    seo_description: r.seo_description ?? null,
-    global_category_slug:   r.global_category?.slug   ?? '',
-    global_category_name:   r.global_category?.name   ?? '',
-    global_category_emoji:  r.global_category?.icon_emoji ?? null,
-    global_category_active: !!r.global_category?.is_active,
-  }))
+  if (!error && data && data.length > 0) {
+    return (data as any[]).map((r) => ({
+      id: r.id,
+      game_id: r.game_id,
+      global_category_id: r.global_category_id,
+      is_enabled: !!r.is_enabled,
+      requires_region: !!r.requires_region,
+      available_regions: Array.isArray(r.available_regions) ? r.available_regions : [],
+      requires_platform: !!r.requires_platform,
+      available_platforms: Array.isArray(r.available_platforms) ? r.available_platforms : [],
+      delivery_modes: Array.isArray(r.delivery_modes) ? r.delivery_modes : ['manual'],
+      sort_order: r.sort_order ?? 0,
+      seo_title: r.seo_title ?? null,
+      seo_description: r.seo_description ?? null,
+      global_category_slug:   r.global_category?.slug   ?? '',
+      global_category_name:   r.global_category?.name   ?? '',
+      global_category_emoji:  r.global_category?.icon_emoji ?? null,
+      global_category_active: !!r.global_category?.is_active,
+    }))
+  }
+
+  // V17n — Legacy fallback. Pull active categories from the legacy
+  // table and map their metadata.type → global slug so the wizard sees
+  // "this game has Currency + Items enabled" even when Phase A's
+  // backfill never created the join rows.
+  const TYPE_TO_GLOBAL_SLUG: Record<string, string> = {
+    currency: 'currency',
+    items: 'items',
+    account: 'accounts',
+    top_up: 'top-up',
+    service: 'boosting',
+  }
+
+  const [legacyRes, globalsRes] = await Promise.all([
+    supabase
+      .from('categories')
+      .select('id, game_id, slug, metadata, display_order, is_active')
+      .eq('game_id', gameId)
+      .eq('is_active', true),
+    supabase
+      .from('global_categories')
+      .select('id, slug, name, icon_emoji, is_active'),
+  ])
+
+  if (legacyRes.error || !legacyRes.data) return []
+
+  const globalsBySlug = new Map<string, any>()
+  for (const g of (globalsRes.data ?? []) as any[]) globalsBySlug.set(g.slug, g)
+
+  return (legacyRes.data as any[])
+    .map((row) => {
+      const type: string | undefined = row.metadata?.type
+      const globalSlug = type ? TYPE_TO_GLOBAL_SLUG[type] : undefined
+      const global = globalSlug ? globalsBySlug.get(globalSlug) : undefined
+      if (!global) return null
+      const synthesized: GameCategoryRow = {
+        id: row.id, // legacy id; saving will go through upsert which keys on (game,global_category)
+        game_id: row.game_id,
+        global_category_id: global.id,
+        is_enabled: true,
+        requires_region: !!row.metadata?.requires_region,
+        available_regions: Array.isArray(row.metadata?.available_regions) ? row.metadata.available_regions : [],
+        requires_platform: !!row.metadata?.requires_platform,
+        available_platforms: Array.isArray(row.metadata?.available_platforms) ? row.metadata.available_platforms : [],
+        delivery_modes:
+          type === 'currency' || type === 'items'
+            ? ['manual']
+            : ['manual', 'instant'],
+        sort_order: row.display_order ?? 0,
+        seo_title: null,
+        seo_description: null,
+        global_category_slug: global.slug,
+        global_category_name: global.name,
+        global_category_emoji: global.icon_emoji,
+        global_category_active: !!global.is_active,
+      }
+      return synthesized
+    })
+    .filter((r): r is GameCategoryRow => r !== null)
 }
 
 /** All global categories (active + inactive) — used by the wizard's toggle list. */
@@ -201,8 +269,8 @@ export async function saveGameIdentity(
       const { error } = await supabase.from('games').update(payload).eq('id', input.id)
       if (error) return { success: false, error: error.message }
       revalidatePath('/admin/games')
-      revalidatePath('/admin/games-v2')
-      revalidatePath(`/admin/games-v2/${input.id}/edit`)
+      revalidatePath('/admin/games')
+      revalidatePath(`/admin/games/${input.id}/edit`)
       return { success: true, data: { id: input.id } }
     } else {
       // Insert — slug uniqueness will throw a 23505 error from Postgres
@@ -218,7 +286,7 @@ export async function saveGameIdentity(
         return { success: false, error: error.message }
       }
       revalidatePath('/admin/games')
-      revalidatePath('/admin/games-v2')
+      revalidatePath('/admin/games')
       return { success: true, data: { id: (data as any).id } }
     }
   } catch (e: any) {
@@ -298,8 +366,8 @@ export async function uploadGameLogoV2(
     if (updErr) return { success: false, error: updErr.message }
 
     revalidatePath('/admin/games')
-    revalidatePath('/admin/games-v2')
-    revalidatePath(`/admin/games-v2/${gameId}/edit`)
+    revalidatePath('/admin/games')
+    revalidatePath(`/admin/games/${gameId}/edit`)
     return { success: true, data: { url: publicUrl } }
   } catch (e: any) {
     return { success: false, error: e?.message ?? 'Upload failed' }
@@ -364,8 +432,8 @@ export async function uploadGameCoverV2(
       .eq('id', gameId)
     if (updErr) return { success: false, error: updErr.message }
 
-    revalidatePath('/admin/games-v2')
-    revalidatePath(`/admin/games-v2/${gameId}/edit`)
+    revalidatePath('/admin/games')
+    revalidatePath(`/admin/games/${gameId}/edit`)
     return { success: true, data: { url: publicUrl } }
   } catch (e: any) {
     return { success: false, error: e?.message ?? 'Upload failed' }
@@ -400,8 +468,8 @@ export async function deleteGameCoverV2(gameId: string): Promise<Result<{ id: st
       .eq('id', gameId)
     if (error) return { success: false, error: error.message }
 
-    revalidatePath('/admin/games-v2')
-    revalidatePath(`/admin/games-v2/${gameId}/edit`)
+    revalidatePath('/admin/games')
+    revalidatePath(`/admin/games/${gameId}/edit`)
     return { success: true, data: { id: gameId } }
   } catch (e: any) {
     return { success: false, error: e?.message ?? 'Delete failed' }
@@ -437,8 +505,8 @@ export async function deleteGameLogoV2(gameId: string): Promise<Result<{ id: str
     if (error) return { success: false, error: error.message }
 
     revalidatePath('/admin/games')
-    revalidatePath('/admin/games-v2')
-    revalidatePath(`/admin/games-v2/${gameId}/edit`)
+    revalidatePath('/admin/games')
+    revalidatePath(`/admin/games/${gameId}/edit`)
     return { success: true, data: { id: gameId } }
   } catch (e: any) {
     return { success: false, error: e?.message ?? 'Delete failed' }
@@ -518,7 +586,7 @@ export async function upsertGameCategory(
       console.warn('legacy categories sync failed (non-fatal):', e)
     }
 
-    revalidatePath('/admin/games-v2')
+    revalidatePath('/admin/games')
     return { success: true, data: { id: gameCategoryRowId } }
   } catch (e: any) {
     return { success: false, error: e?.message ?? 'Unknown error' }

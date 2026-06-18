@@ -1,6 +1,10 @@
 /**
- * /admin/games-v2/[id]/edit — server entry for the edit wizard.
- * Loads the game + its game_categories and renders the shared GameWizard.
+ * /admin/games/[id]/edit — server entry for the game detail panel.
+ *
+ * V17y — Renders the tabbed GameDetailTabs instead of jumping
+ * straight into the linear wizard. The wizard still lives behind
+ * the Setup tab; new Currency / Items / Accounts / Boosting tabs
+ * surface per-category configuration.
  */
 
 import { notFound } from 'next/navigation'
@@ -9,7 +13,7 @@ import {
   fetchGameCategoryRows,
   fetchGlobalCategoriesForWizard,
 } from '@/lib/actions/admin-game-wizard'
-import GameWizard from '../../_components/GameWizard'
+import GameDetailTabs from '../../_components/GameDetailTabs'
 
 export const dynamic = 'force-dynamic'
 
@@ -28,8 +32,7 @@ export default async function EditGamePage({
   if (!game) notFound()
 
   return (
-    <GameWizard
-      mode="edit"
+    <GameDetailTabs
       game={game}
       globalCategories={globalCategories}
       initialGameCategories={rows}

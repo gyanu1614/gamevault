@@ -33,7 +33,7 @@ export default async function AdminRedesignHub() {
     icon: React.ComponentType<{ className?: string }>
   }> = [
     {
-      href: '/admin/games-v2',
+      href: '/admin/games',
       title: 'Games',
       description: 'Manage games, branding, and which categories each game supports.',
       metric: `${activeGames} active / ${games.length} total`,
@@ -47,14 +47,14 @@ export default async function AdminRedesignHub() {
       icon: FolderTree,
     },
     {
-      href: '/admin/games-v2/new',
+      href: '/admin/games/new',
       title: 'New game wizard',
       description: 'Add a game with the redesigned step-by-step flow.',
       metric: 'Add new',
       icon: Wand2,
     },
     {
-      href: '/admin/games-v2',
+      href: '/admin/games',
       title: 'Attribute templates',
       description: 'Build per-(game, category) attribute templates with conditional rules.',
       metric: `${enabledPairs} (game · category) pairs enabled`,

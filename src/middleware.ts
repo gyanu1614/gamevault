@@ -38,6 +38,34 @@ export async function middleware(request: NextRequest) {
         return NextResponse.redirect(redirectUrl)
       }
 
+      // V17e — Seller-only sections. Buyers and unapproved accounts
+      // hitting any /account/listings* route or /account/dashboard
+      // get bounced to "/". This is the authoritative server-side
+      // gate; the client-side SellerOnlyGate handles UX (toast +
+      // loader) for snappy feedback.
+      const isSellerOnlyRoute =
+        pathname.startsWith('/account/listings') ||
+        pathname.startsWith('/account/dashboard') ||
+        pathname.startsWith('/account/analytics') ||
+        pathname.startsWith('/account/earnings')
+
+      if (isSellerOnlyRoute) {
+        const { data: approvedApp } = await supabase
+          .from('seller_applications')
+          .select('status')
+          .eq('user_id', user.id)
+          .eq('status', 'approved')
+          .maybeSingle()
+
+        if (!approvedApp) {
+          // Not an approved seller — push to home with a query flag
+          // so the homepage can surface a toast if it wants to.
+          const homeUrl = new URL('/', request.url)
+          homeUrl.searchParams.set('access', 'seller-only')
+          return NextResponse.redirect(homeUrl)
+        }
+      }
+
       // CRITICAL: Block restricted/banned sellers from creating/editing listings
       const isListingMutation = pathname.startsWith('/account/listings/new') ||
                                 pathname.startsWith('/sell/') ||

@@ -1,5 +1,5 @@
 /**
- * /admin/games-v2/[id]/templates/[categorySlug]
+ * /admin/games/[id]/templates/[categorySlug]
  *
  * Server entry for the attribute template builder. Loads the full builder
  * state (game + category + template + attributes + options + rules) and

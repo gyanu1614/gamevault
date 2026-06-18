@@ -6,6 +6,8 @@ import { ThemeProvider } from 'next-themes'
 import { Suspense, useState } from 'react'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import RouteProgress from '@/components/global/RouteProgress'
+import AccessDeniedToast from '@/components/global/AccessDeniedToast'
+import { AuthDialogProvider } from '@/components/auth/AuthDialog'
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -33,7 +35,18 @@ export function Providers({ children }: { children: React.ReactNode }) {
           <Suspense fallback={null}>
             <RouteProgress />
           </Suspense>
-          {children}
+          {/* V17e — Surfaces a toast when the middleware bounced the
+              user with ?access=… so they understand WHY they landed
+              on the homepage instead of the seller route they tried. */}
+          <Suspense fallback={null}>
+            <AccessDeniedToast />
+          </Suspense>
+          {/* V17 — Global auth modal. Mounted once at the root so any
+              "Log in / Sign up" button anywhere in the app can open it
+              via useAuthDialog(). */}
+          <AuthDialogProvider>
+            {children}
+          </AuthDialogProvider>
         </TooltipProvider>
       </ThemeProvider>
       <ReactQueryDevtools initialIsOpen={false} />
