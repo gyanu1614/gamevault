@@ -366,7 +366,8 @@ export const ordersApi = {
           category:categories!listings_category_id_fkey (
             id,
             name,
-            slug
+            slug,
+            metadata
           )
         ),
         buyer:buyer_id (
@@ -506,7 +507,8 @@ export const buyerOrdersApi = {
           category:categories!listings_category_id_fkey (
             id,
             name,
-            slug
+            slug,
+            metadata
           )
         ),
         seller:seller_id (

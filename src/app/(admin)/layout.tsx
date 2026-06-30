@@ -44,12 +44,12 @@ export default async function AdminLayout({
   }
 
   return (
-    <div className="min-h-screen bg-black relative text-[110%]">
-      {/* Dark gradient background */}
-      <div className="fixed inset-0 bg-gradient-to-br from-black via-gray-950 to-black">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-violet-900/20 via-transparent to-transparent" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_right,_var(--tw-gradient-stops))] from-indigo-900/20 via-transparent to-transparent" />
-      </div>
+    <div className="min-h-screen bg-bg-base relative text-text-primary">
+      {/* V19/P22 — Replaced violet+indigo radial gradients with a
+          neutral bg-bg-base canvas. Admin chrome is now on-brand with
+          the rest of GameVault (lime accent on dark) rather than a
+          standalone purple theme. */}
+      <div className="fixed inset-0 bg-bg-base" />
 
       {/* Sidebar */}
       <Sidebar role={adminRole.role} user={user} />

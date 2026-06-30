@@ -55,6 +55,10 @@ export interface Currency {
   trust: { trades: string; avgDelivery: string; shield: string }
   unitLabel: string
   variants: Variant[]
+  /** V21/P7.i — Optional category logo (e.g. Robux icon) admin-uploaded
+   *  via category_configs.currency_icon_url. Renders in the left card
+   *  of the recommended-seller hero block. */
+  iconUrl?: string | null
 }
 
 export interface CurrencyPageData {
@@ -148,18 +152,28 @@ const ROBUX: CurrencyPageData = {
  * Returns null when the URL isn't the game's canonical currency slug
  * (so the page falls through to the generic items grid).
  */
-import { GAME_CURRENCY_SLUGS } from '@/lib/utils/category-canonical'
 import { fetchCategoryConfigBySlug } from '@/lib/actions/admin-category-configs'
+import { createClient as createAnonClient } from '@/lib/supabase/server'
 
 export async function getCurrencyShell(
   gameSlug: string,
   categorySlug: string,
 ): Promise<CurrencyPageData | null> {
-  const expectedSlug = GAME_CURRENCY_SLUGS[gameSlug]
-  if (!expectedSlug) return null
-  // Only serve the shell when the URL is the canonical currency slug
-  // for this game.
-  if (categorySlug !== `buy-${expectedSlug}`) return null
+  // V19/P5 — Route by DB metadata, not by the static GAME_CURRENCY_SLUGS
+  // map. The old map gated the rich currency layout on a hardcoded list,
+  // which meant new games created via the admin wizard fell through to
+  // the legacy `CategoryPageLayout`. Now any (game, category) pair where
+  // categories.metadata.type === 'currency' renders the rich layout.
+  const supabase = await createAnonClient()
+  const { data: row } = await supabase
+    .from('categories')
+    .select('metadata, game:games!categories_game_id_fkey(slug)')
+    .eq('slug', categorySlug)
+    .eq('game.slug', gameSlug)
+    .eq('is_active', true)
+    .limit(1)
+    .maybeSingle() as any
+  if (!row || row.metadata?.type !== 'currency') return null
 
   // Fetch the per-game currency config. If admin hasn't set one yet,
   // hydrate a minimal shell from the slug so the page still renders
@@ -167,17 +181,22 @@ export async function getCurrencyShell(
   const cfg = await fetchCategoryConfigBySlug(gameSlug, 'currency')
 
   if (!cfg) {
-    // Empty-state shell: enough copy for the page chrome, no FAQ or
-    // steps, no hero offer. The category page renders "no listings"
-    // when sellers haven't joined yet.
+    // V19/P5 — Empty-state shell when admin hasn't filled the
+    // currency config for this game yet. We derive the label from the
+    // URL slug (strip a leading "buy-" if present, prettify the rest)
+    // so the page still has reasonable copy and the rich layout shows
+    // up the moment a new game is added.
+    const labelFromSlug = capitalize(
+      categorySlug.replace(/^buy-/, '').replace(/-/g, ' '),
+    )
     return {
       currency: {
-        name: capitalize(expectedSlug.replace(/-/g, ' ')),
+        name: labelFromSlug,
         game: capitalize(gameSlug.replace(/-/g, ' ')),
         glyph: '$',
         tagline: 'In-game currency.',
         trust: { trades: '0', avgDelivery: '—', shield: 'VaultShield' },
-        unitLabel: capitalize(expectedSlug.replace(/-/g, ' ')),
+        unitLabel: labelFromSlug,
         variants: [],
       },
       hero: BLANK_HERO,

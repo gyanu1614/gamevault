@@ -177,91 +177,81 @@ export default function WithdrawPage() {
 
   if (isLoadingEarnings) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-lime-text" />
       </div>
     )
   }
 
+  const requiredFields = selectedMethod ? getRequiredFields(selectedMethod.method_type) : []
+
   return (
-    <div className="min-h-screen bg-black pb-20">
-      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+    // V22 — Withdraw revamp: single focused column, hero-glass cards,
+    // rounded-lg, lime brand, compact density. No bg-black slab.
+    <div className="min-h-screen pb-20">
+      <div className="mx-auto w-full max-w-2xl px-4 sm:px-6 lg:px-8">
         {/* Header */}
-        <div className="mb-6">
+        <div className="mb-5">
           <Link
             href="/account/wallet"
-            className="inline-flex items-center gap-2 text-sm text-text-secondary hover:text-white transition-colors mb-4"
+            className="mb-3 inline-flex items-center gap-1.5 text-sm text-text-secondary transition-colors hover:text-text-primary"
           >
             <ArrowLeft className="h-4 w-4" />
             Back to Wallet
           </Link>
-
-          <h1 className="text-2xl font-bold text-white">Withdraw Funds</h1>
-          <p className="text-sm text-text-secondary mt-1">Choose your preferred withdrawal method to manage your assets.</p>
+          <h1 className="text-2xl font-bold text-text-primary">Withdraw Funds</h1>
+          <p className="mt-1 text-sm text-text-secondary">
+            {selectedMethod
+              ? `Withdraw to ${selectedMethod.display_name}.`
+              : 'Choose how you want to receive your funds.'}
+          </p>
         </div>
 
-        {/* Balance Cards */}
-        <div className="mb-6 grid grid-cols-2 gap-4">
-          {/* Available Balance */}
-          <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <Wallet className="h-3.5 w-3.5 text-emerald-400" />
-              <p className="text-[10px] text-emerald-400/70 font-semibold uppercase tracking-wider">Available</p>
-            </div>
-            <p className="text-2xl font-bold text-white">${earningsStats.available_balance.toFixed(2)}</p>
+        {/* Available balance strip */}
+        <div className="mb-5 flex items-center justify-between rounded-lg border border-border-subtle card-frost py-3">
+          <div className="flex items-center gap-2">
+            <Wallet className="h-4 w-4 text-success" />
+            <span className="text-[12px] font-semibold uppercase tracking-wider text-text-secondary">Available</span>
           </div>
-
-          {/* Pending Balance */}
-          <div className="rounded-xl border border-border-subtle bg-bg-overlay p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <Clock className="h-3.5 w-3.5 text-text-tertiary" />
-              <p className="text-[10px] text-text-tertiary font-semibold uppercase tracking-wider">Pending</p>
-            </div>
-            <p className="text-2xl font-bold text-text-secondary">${earningsStats.pending_balance.toFixed(2)}</p>
-          </div>
+          <span className="text-xl font-bold text-text-primary">${earningsStats.available_balance.toFixed(2)}</span>
         </div>
 
         <AnimatePresence mode="wait">
-          {/* Step 1: Select Method */}
+          {/* Step 1 — pick a method */}
           {!selectedMethod && (
             <motion.div
               key="select-method"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.18 }}
             >
               {isLoadingMethods ? (
                 <div className="flex items-center justify-center py-12">
-                  <Loader2 className="h-8 w-8 animate-spin text-lime-text" />
+                  <Loader2 className="h-7 w-7 animate-spin text-lime-text" />
                 </div>
               ) : (
-                <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-3">
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                   {methods.map((method) => {
                     const iconPath = getMethodIcon(method.method_name)
                     const isCustomIcon = iconPath !== '/payment-methods/default.png'
-
                     return (
                       <button
                         key={method.id}
                         onClick={() => handleMethodSelect(method)}
-                        className="group relative flex flex-col items-center justify-center gap-2 rounded-xl border border-border-subtle bg-bg-overlay hover:bg-bg-overlay hover:border-lime-tint-border p-4 transition-all aspect-square"
+                        className="group flex items-center gap-3 rounded-lg border border-border-subtle card-frost text-left transition-colors hover:border-lime-tint-border hover:bg-white/[0.07]"
                       >
-                        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-lime/10 border border-lime-tint-border group-hover:bg-lime/20 transition-colors">
+                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-lime-tint-border bg-lime/10">
                           {isCustomIcon ? (
-                            <Image
-                              src={iconPath}
-                              alt={method.display_name}
-                              width={28}
-                              height={28}
-                              className="object-contain"
-                            />
+                            <Image src={iconPath} alt={method.display_name} width={22} height={22} className="object-contain" />
                           ) : (
-                            <Building2 className="h-6 w-6 text-lime-text" />
+                            <Building2 className="h-5 w-5 text-lime-text" />
                           )}
-                        </div>
-                        <div className="text-center">
-                          <h3 className="text-xs font-semibold text-white">{method.display_name}</h3>
-                        </div>
+                        </span>
+                        <span className="min-w-0">
+                          <span className="block truncate text-sm font-semibold text-text-primary">{method.display_name}</span>
+                          <span className="block text-[11px] text-text-secondary">Min ${method.min_withdrawal}</span>
+                        </span>
                       </button>
                     )
                   })}
@@ -270,188 +260,124 @@ export default function WithdrawPage() {
             </motion.div>
           )}
 
-          {/* Step 2 & 3: Amount & Details (Combined) */}
+          {/* Step 2 — amount + details (single focused column) */}
           {selectedMethod && (
             <motion.div
               key="withdrawal-form"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="grid lg:grid-cols-2 gap-6"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.18 }}
+              className="space-y-4"
             >
-              {/* Left Column: Form */}
-              <div className="space-y-6">
-                {/* Amount Details */}
-                <div className="rounded-2xl border border-border-subtle bg-bg-overlay p-6">
-                  <div className="flex items-center gap-2 mb-4">
-                    <div className="h-1 w-1 rounded-full bg-lime"></div>
-                    <h2 className="text-lg font-bold text-white">Amount Details</h2>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-medium text-text-secondary uppercase tracking-wider mb-2">
-                        Withdrawal Amount
-                      </label>
-                      <div className="relative">
-                        <input
-                          type="number"
-                          value={amount}
-                          onChange={(e) => setAmount(e.target.value)}
-                          placeholder="0.00"
-                          min={selectedMethod.min_withdrawal}
-                          max={Math.min(selectedMethod.max_withdrawal || Infinity, earningsStats.available_balance)}
-                          step="0.01"
-                          className="w-full rounded-lg border border-white/10 bg-black/40 px-3 py-2.5 text-lg font-semibold text-white placeholder:text-white/20 focus:border-lime focus:outline-none focus:ring-2 focus:ring-violet-500/20 transition-all"
-                        />
-                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-text-tertiary">USD</span>
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-medium text-text-secondary uppercase tracking-wider mb-2">
-                        Payment Fees
-                      </label>
-                      <div className="rounded-lg border border-white/10 bg-black/40 px-3 py-2.5">
-                        <span className="text-lg font-semibold text-white">${fee.toFixed(2)}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="mt-4">
-                    <label className="block text-xs font-medium text-text-secondary uppercase tracking-wider mb-2">
-                      You Receive
-                    </label>
-                    <div className="rounded-lg border border-lime-tint-border bg-lime/5 px-4 py-3">
-                      <span className="text-2xl font-bold text-lime-text">${netAmount.toFixed(2)}</span>
-                    </div>
-                  </div>
+              {/* Amount */}
+              <div className="rounded-lg border border-border-subtle card-frost p-5">
+                <label className="mb-1.5 block text-[12px] font-semibold uppercase tracking-wider text-text-secondary">
+                  Amount
+                </label>
+                <div className="relative">
+                  <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-lg font-semibold text-text-tertiary">$</span>
+                  <input
+                    type="number"
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                    placeholder="0.00"
+                    min={selectedMethod.min_withdrawal}
+                    max={Math.min(selectedMethod.max_withdrawal || Infinity, earningsStats.available_balance)}
+                    step="0.01"
+                    className="w-full rounded-lg border border-border-default bg-bg-base/60 py-2.5 pl-7 pr-16 text-lg font-semibold text-text-primary placeholder:text-text-disabled focus:border-lime focus:outline-none focus:ring-2 focus:ring-lime/20 transition-colors"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setAmount(earningsStats.available_balance.toFixed(2))}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md border border-border-subtle px-2 py-1 text-[11px] font-semibold text-lime-text transition-colors hover:bg-lime/10"
+                  >
+                    Max
+                  </button>
                 </div>
+                <div className="mt-1.5 flex items-center justify-between text-[12px] text-text-secondary">
+                  <span>Min ${selectedMethod.min_withdrawal.toFixed(2)}</span>
+                  <span>Available ${earningsStats.available_balance.toFixed(2)}</span>
+                </div>
+              </div>
 
-                {/* Payment Details Form */}
-                <div className="rounded-2xl border border-border-subtle bg-bg-overlay p-6">
-                  <div className="flex items-center gap-2 mb-4">
-                    <div className="h-1 w-1 rounded-full bg-lime"></div>
-                    <h2 className="text-lg font-bold text-white">
-                      {selectedMethod.method_type === 'crypto' ? 'Wallet Details' : 'Bank Details'}
-                    </h2>
-                  </div>
-
-                  <div className="space-y-4">
-                    {getRequiredFields(selectedMethod.method_type).map((field) => (
+              {/* Payout details */}
+              {requiredFields.length > 0 && (
+                <div className="rounded-lg border border-border-subtle card-frost p-5">
+                  <h2 className="mb-3 text-sm font-bold text-text-primary">
+                    {selectedMethod.method_type === 'crypto' ? 'Wallet Details' : 'Payout Details'}
+                  </h2>
+                  <div className="space-y-3">
+                    {requiredFields.map((field) => (
                       <div key={field.key}>
-                        <label className="block text-xs font-medium text-text-secondary uppercase tracking-wider mb-2">
-                          {field.label}
-                        </label>
+                        <label className="mb-1 block text-[12px] font-medium text-text-secondary">{field.label}</label>
                         <input
                           type="text"
                           value={paymentDetails[field.key] || ''}
-                          onChange={(e) =>
-                            setPaymentDetails({ ...paymentDetails, [field.key]: e.target.value })
-                          }
+                          onChange={(e) => setPaymentDetails({ ...paymentDetails, [field.key]: e.target.value })}
                           placeholder={field.placeholder}
-                          className="w-full rounded-lg border border-white/10 bg-black/40 px-4 py-2.5 text-sm text-white placeholder:text-white/30 focus:border-lime focus:outline-none focus:ring-2 focus:ring-violet-500/20 transition-all"
+                          className="w-full rounded-lg border border-border-default bg-bg-base/60 px-3 py-2.5 text-sm text-text-primary placeholder:text-text-disabled focus:border-lime focus:outline-none focus:ring-2 focus:ring-lime/20 transition-colors"
                         />
                       </div>
                     ))}
                   </div>
                 </div>
+              )}
 
-                {/* Action Buttons */}
-                <div className="flex gap-3">
-                  <button
-                    onClick={() => {
-                      setSelectedMethod(null)
-                      setAmount('')
-                      setPaymentDetails({})
-                    }}
-                    disabled={isSubmitting}
-                    className="flex-1 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 px-4 py-3 text-sm font-medium text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Back
-                  </button>
-                  <button
-                    onClick={handleSubmit}
-                    disabled={isSubmitting || !amount || parseFloat(amount) <= 0}
-                    className="flex-2 rounded-lg bg-gradient-to-br from-lime to-purple-600 hover:from-lime hover:to-purple-700 disabled:from-lime/50 disabled:to-purple-600/50 px-6 py-3 text-sm font-semibold text-white transition-all shadow-lg hover:shadow-violet-500/25 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                  >
-                    {isSubmitting ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Submitting...
-                      </>
-                    ) : (
-                      <>
-                        Confirm Withdrawal
-                        <ArrowDownToLine className="h-4 w-4" />
-                      </>
-                    )}
-                  </button>
-                </div>
-              </div>
-
-              {/* Right Column: Summary */}
-              <div className="space-y-6">
-                {/* Transaction Summary */}
-                <div className="rounded-2xl border border-border-subtle bg-bg-overlay p-6">
-                  <h3 className="text-base font-bold text-white mb-4">Transaction Summary</h3>
-
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-text-secondary">Minimum withdrawal</span>
-                      <span className="font-semibold text-white">${selectedMethod.min_withdrawal.toFixed(2)}</span>
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-text-secondary">Processing fee</span>
-                      <span className="font-semibold text-white">${fee.toFixed(2)}</span>
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-text-secondary">Exchange rate</span>
-                      <span className="font-semibold text-white">1 USD = 1.00 USD</span>
-                    </div>
-
-                    <div className="h-px bg-white/10 my-3" />
-
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium text-text-secondary uppercase tracking-wide">Total to Receive</span>
-                      <span className="text-2xl font-bold text-lime-text">${netAmount.toFixed(2)}</span>
-                    </div>
+              {/* Summary */}
+              <div className="rounded-lg border border-border-subtle card-frost p-5">
+                <div className="space-y-2 text-sm">
+                  <div className="flex items-center justify-between">
+                    <span className="text-text-secondary">Withdrawal amount</span>
+                    <span className="font-semibold text-text-primary">${(parseFloat(amount) || 0).toFixed(2)}</span>
                   </div>
-                </div>
-
-                {/* Processing Time */}
-                <div className="rounded-2xl border border-blue-500/20 bg-blue-500/5 p-5">
-                  <div className="flex gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-500/20 flex-shrink-0">
-                      <Clock className="h-5 w-5 text-blue-400" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-blue-400 mb-1">Processing Time</p>
-                      <p className="text-xs text-blue-400/70 leading-relaxed">
-                        {selectedMethod.method_type === 'crypto'
-                          ? 'Crypto transfers are typically processed within 24-48 hours. Please ensure all details are correct to avoid delays.'
-                          : 'Bank transfers are typically curated and delivered within 1-3 business days. Please ensure all details are precise to avoid royal delays.'
-                        }
-                      </p>
-                    </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-text-secondary">Processing fee</span>
+                    <span className="font-semibold text-text-primary">-${fee.toFixed(2)}</span>
                   </div>
-                </div>
-
-                {/* Security Notice */}
-                <div className="rounded-2xl border border-lime-tint-border bg-gradient-to-br from-lime/10 to-purple-500/5 p-5">
-                  <div className="flex gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-lime/20 flex-shrink-0">
-                      <Shield className="h-5 w-5 text-lime-text" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-lime-text mb-1">Regal Security</p>
-                      <p className="text-xs text-lime-text/70 leading-relaxed">
-                        Your assets are protected by top-tier military-grade encryption.
-                      </p>
-                    </div>
+                  <div className="my-2 h-px bg-border-subtle" />
+                  <div className="flex items-center justify-between">
+                    <span className="text-[12px] font-semibold uppercase tracking-wide text-text-secondary">You Receive</span>
+                    <span className="text-2xl font-bold text-lime-text">${netAmount.toFixed(2)}</span>
                   </div>
                 </div>
               </div>
+
+              {/* Processing-time note */}
+              <p className="flex items-center gap-2 text-[12px] text-text-secondary">
+                <Clock className="h-3.5 w-3.5 shrink-0 text-text-tertiary" />
+                {selectedMethod.method_type === 'crypto'
+                  ? 'Crypto transfers process within 24–48 hours after admin review.'
+                  : 'Bank/PayPal transfers arrive within 1–3 business days after admin review.'}
+              </p>
+
+              {/* Actions */}
+              <div className="flex gap-3">
+                <button
+                  onClick={() => { setSelectedMethod(null); setAmount(''); setPaymentDetails({}) }}
+                  disabled={isSubmitting}
+                  className="rounded-lg border border-border-default bg-bg-raised px-4 py-2.5 text-sm font-medium text-text-primary transition-colors hover:bg-bg-raised-hover disabled:opacity-50"
+                >
+                  Back
+                </button>
+                <button
+                  onClick={handleSubmit}
+                  disabled={isSubmitting || !amount || parseFloat(amount) <= 0}
+                  className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-lime px-6 py-2.5 text-sm font-semibold text-text-inverse transition-colors hover:bg-lime/90 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isSubmitting ? (
+                    <><Loader2 className="h-4 w-4 animate-spin" /> Submitting…</>
+                  ) : (
+                    <>Confirm Withdrawal <ArrowDownToLine className="h-4 w-4" /></>
+                  )}
+                </button>
+              </div>
+
+              {/* Security note */}
+              <p className="flex items-center justify-center gap-1.5 text-[12px] text-text-tertiary">
+                <Shield className="h-3.5 w-3.5 text-lime-text" />
+                Encrypted & reviewed by our team before payout.
+              </p>
             </motion.div>
           )}
         </AnimatePresence>

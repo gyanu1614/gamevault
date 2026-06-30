@@ -18,6 +18,8 @@ import {
 } from 'lucide-react'
 import * as Collapsible from '@radix-ui/react-collapsible'
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip'
+import { Card } from '@/components/ui/card'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
 import type { CurrencyPageData, Offer } from './_currencyData'
 
@@ -25,6 +27,24 @@ import type { CurrencyPageData, Offer } from './_currencyData'
 
 function unitPrice(p: number) { return `$${p.toFixed(4)}` }
 function money(n: number) { return `$${n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` }
+
+// V21/P7.i — Professional, fully-spelled delivery copy. Renders
+// "15 Minutes" / "5–12 Minutes" / "2 Hours", never "15 min" / "2 hr".
+function fmtMinutes(min: number, max: number): string {
+  const unitWord = (n: number, singular: string, plural: string) =>
+    n === 1 ? singular : plural
+  // Promote to hours when both bounds are clean multiples of 60.
+  if (min >= 60 && min % 60 === 0 && max % 60 === 0) {
+    const lo = min / 60
+    const hi = max / 60
+    return lo === hi
+      ? `${lo} ${unitWord(lo, 'Hour', 'Hours')}`
+      : `${lo}–${hi} Hours`
+  }
+  return min === max
+    ? `${min} ${unitWord(min, 'Minute', 'Minutes')}`
+    : `${min}–${max} Minutes`
+}
 function compact(n: number) {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`
   if (n >= 1_000) return `${(n / 1_000).toFixed(n >= 10_000 ? 0 : 1)}K`
@@ -319,7 +339,7 @@ export default function CurrencyPageClient({
   const total = unit * qty
 
   return (
-    <main className="min-h-screen bg-bg-base pb-24 pt-3 sm:pt-4">
+    <main className="min-h-screen pb-24 pt-3 sm:pt-4">
       <div className="mx-auto w-full max-w-7xl px-3 sm:px-6 lg:px-8">
         {/* V14b — No outer wrapping card. Each section is its own surface
             with its own external title and gap, so the page reads as a
@@ -333,10 +353,13 @@ export default function CurrencyPageClient({
           </div>
         )}
 
-        {/* Hero — title sits OUTSIDE the card */}
+        {/* Hero — title + product logo sit OUTSIDE the card */}
         <SectionHeader
           title={`Buy ${data.currency.name}`}
           subtitle={`Recommended seller for ${data.currency.game}`}
+          iconUrl={data.currency.iconUrl ?? null}
+          iconFallback={data.currency.name.slice(0, 2).toUpperCase()}
+          size="hero"
         />
         <div ref={heroRef} className="mt-3">
           <HeroCard
@@ -364,24 +387,25 @@ export default function CurrencyPageClient({
               />
             }
           />
-          <SectionCard tone="raised" className="mt-3">
-            <div className="space-y-2">
-              {otherSellers.length === 0 ? (
-                <EmptyState />
-              ) : (
-                otherSellers.map((o) => (
-                  <SellerRow
-                    key={o.id}
-                    offer={o}
-                    unitLabel={data.currency.unitLabel}
-                    unitGlyph={data.currency.glyph}
-                    onSelect={() => pickOffer(o.id)}
-                    isOwn={!!viewerId && o.sellerId === viewerId}
-                  />
-                ))
-              )}
-            </div>
-          </SectionCard>
+          {/* V19/P24/P7.pp — Outer SectionCard removed. Rows float
+              directly on the page; each <SellerRow> renders its own
+              <Card> surface. Matches the bundle page treatment. */}
+          <div className="mt-3 space-y-2">
+            {otherSellers.length === 0 ? (
+              <EmptyState />
+            ) : (
+              otherSellers.map((o) => (
+                <SellerRow
+                  key={o.id}
+                  offer={o}
+                  unitLabel={data.currency.unitLabel}
+                  unitGlyph={data.currency.glyph}
+                  onSelect={() => pickOffer(o.id)}
+                  isOwn={!!viewerId && o.sellerId === viewerId}
+                />
+              ))
+            )}
+          </div>
         </div>
 
         {/* Trust sections — narrower max-width since they don't need to
@@ -398,44 +422,9 @@ export default function CurrencyPageClient({
           mimics the Vercel/Linear "soft glow + spinner" pattern. */}
       {navigating && <RouteLoader label="Preparing checkout" />}
 
-      {showBuyBar && !isOwnOffer && (
-        <div
-          className={cn(
-            'fixed inset-x-0 bottom-0 z-40 border-t border-border-default bg-bg-raised/95 backdrop-blur-md transition-transform duration-300 sm:hidden',
-            'shadow-[0_-12px_30px_rgba(0,0,0,0.4)]',
-          )}
-          style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
-        >
-          <div className="flex items-center gap-3 px-4 py-3">
-            <div className="min-w-0 flex-1">
-              <div className="text-[11px] uppercase tracking-wider text-text-tertiary">
-                Qty {qty.toLocaleString('en-US')}
-              </div>
-              <div className="text-lg font-bold tabular-nums text-text-primary">
-                {money(total)}
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={() => goToCheckout(activeOffer.id, qty)}
-              disabled={navigating}
-              className="inline-flex h-12 items-center gap-1.5 rounded-xl border border-lime bg-lime-tint-bg px-5 text-sm font-bold uppercase tracking-wider text-lime-text transition-colors hover:bg-lime hover:text-text-inverse active:scale-[0.985] disabled:cursor-wait disabled:opacity-80"
-            >
-              {navigating ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Loading
-                </>
-              ) : (
-                <>
-                  Buy now
-                  <ArrowRight className="h-4 w-4" />
-                </>
-              )}
-            </button>
-          </div>
-        </div>
-      )}
+      {/* V21/P7.i — Legacy mobile sticky buy bar removed. The new
+          HeroCard renders an inline mobile price tile + slide-up
+          Dialog that replaces this. */}
     </main>
   )
 }
@@ -444,23 +433,65 @@ export default function CurrencyPageClient({
 // subtitle on the left, optional trailing element (e.g. filter chips)
 // on the right. Gives the page a strong rhythm without the box-in-box look.
 function SectionHeader({
-  title, subtitle, trailing,
+  title, subtitle, trailing, iconUrl, iconFallback, size = 'default',
 }: {
   title: string
   subtitle?: string
   trailing?: ReactNode
+  /** V21/P7.i — Optional product logo rendered before the title.
+   *  Used on the currency hero header to show the admin-uploaded icon. */
+  iconUrl?: string | null
+  iconFallback?: string
+  /** V21/P7.j — 'hero' matches the bundle page's bigger header
+   *  (text-[20px] → sm:26 → lg:30, font-black). 'default' is the
+   *  smaller section heading used by "Other sellers" etc. */
+  size?: 'default' | 'hero'
 }) {
+  const showIcon = iconUrl !== undefined
   return (
     <div className="flex flex-wrap items-end justify-between gap-3 px-1">
-      <div className="min-w-0">
-        <h2 className="text-[20px] font-bold leading-tight text-text-primary sm:text-[22px]">
-          {title}
-        </h2>
-        {subtitle && (
-          <p className="mt-0.5 text-[13px] text-text-tertiary sm:text-[13.5px]">
-            {subtitle}
-          </p>
+      <div className="flex min-w-0 items-center gap-3">
+        {showIcon && (
+          iconUrl ? (
+            /* V21/P7.i — Floating logo, no frame. Transparent PNG sits
+               directly on the page. Fallback (no icon) keeps a subtle
+               tile so the two-letter monogram has something to sit on. */
+            /* eslint-disable-next-line @next/next/no-img-element */
+            <img
+              src={iconUrl}
+              alt=""
+              className="h-14 w-14 flex-shrink-0 rounded-xl object-contain sm:h-[60px] sm:w-[60px]"
+            />
+          ) : (
+            <span className="grid h-12 w-12 flex-shrink-0 place-items-center rounded-lg border border-border-default bg-bg-overlay text-[15px] font-extrabold tracking-tight text-lime-text">
+              {iconFallback}
+            </span>
+          )
         )}
+        <div className="min-w-0">
+          <h2
+            className={cn(
+              'leading-tight text-text-primary',
+              size === 'hero'
+                ? 'text-[20px] font-black tracking-tight sm:text-[26px] lg:text-[30px]'
+                : 'text-[20px] font-bold sm:text-[22px]',
+            )}
+          >
+            {title}
+          </h2>
+          {subtitle && (
+            <p
+              className={cn(
+                'mt-1 text-text-secondary',
+                size === 'hero'
+                  ? 'text-[13px] font-medium sm:text-[14px]'
+                  : 'text-[13px] sm:text-[13.5px]',
+              )}
+            >
+              {subtitle}
+            </p>
+          )}
+        </div>
       </div>
       {trailing && <div className="shrink-0">{trailing}</div>}
     </div>
@@ -480,7 +511,7 @@ function SectionCard({
   return (
     <section
       className={cn(
-        'relative overflow-hidden rounded-3xl border border-border-default p-5 sm:p-6 lg:p-8',
+        'relative overflow-hidden rounded-xl border border-border-default p-5 sm:p-6 lg:p-8',
         tone === 'raised' && 'bg-bg-raised shadow-elevated',
         tone === 'overlay' && 'bg-bg-overlay/60 shadow-[0_8px_24px_-12px_rgba(0,0,0,0.5)]',
         tone === 'gradient' && 'bg-gradient-to-br from-bg-raised via-bg-raised to-bg-overlay/40 shadow-elevated',
@@ -537,6 +568,7 @@ function HeroCard({
   isOwnOffer: boolean
 }) {
   const [descExpanded, setDescExpanded] = useState(false)
+  const [mobileOpen, setMobileOpen] = useState(false)
   const outOfStock = offer.stock === 0
   // V14 — Step size scales with the seller's minimum. For a 100-floor
   // (typical Robux), step by 100; for bigger floors keep 1000 chunks.
@@ -544,32 +576,34 @@ function HeroCard({
   const stepUp = () => setQty(Math.min(offer.stock || qty + stepSize, qty + stepSize))
   const stepDown = () => setQty(Math.max(offer.minQty, qty - stepSize))
 
-  return (
-    <section
-      className={cn(
-        'relative overflow-hidden rounded-3xl border border-border-default bg-bg-raised p-5 sm:p-6 lg:p-8',
-        'shadow-[0_24px_60px_-12px_rgba(0,0,0,0.65),inset_0_1px_0_rgba(255,255,255,0.06)]',
-      )}
-      aria-label="Recommended offer"
-    >
-      <div className="absolute right-5 top-5 z-10 sm:right-6 sm:top-6">
-        {/* V14d — Outlined-lime chip. Less green per pixel; still clearly
-            "marked as the pick". */}
-        <span className="inline-flex items-center gap-1 rounded-full border border-lime-tint-border bg-lime-tint-bg px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-lime-text">
-          <Star className="h-3 w-3 fill-lime-text" />
-          Recommended
-        </span>
-      </div>
+  // V21/P7.i — Reused by both the desktop right card and the mobile sheet.
+  const purchasePanel = (
+    <PurchasePanel
+      offer={offer}
+      unitLabel={unitLabel}
+      qty={qty}
+      setQty={setQty}
+      stepUp={stepUp}
+      stepDown={stepDown}
+      unit={unit}
+      total={total}
+      onBuy={onBuy}
+      buying={buying}
+      isOwnOffer={isOwnOffer}
+      outOfStock={outOfStock}
+    />
+  )
 
-      {/* V14 — Two-column split with a real vertical divider running edge
-          to edge (like the sell wizard's Title↔Description split, but
-          vertical). Each side is its own breathing column. */}
-      <div className="grid gap-6 lg:grid-cols-[1fr_auto_1fr] lg:gap-0">
-        {/* LEFT — Seller identity + delivery + stock + instructions */}
-        <div className="space-y-4 lg:pr-8">
+  return (
+    <section aria-label="Recommended offer">
+      <div className="grid gap-4 lg:grid-cols-[1fr_minmax(360px,440px)]">
+        {/* LEFT CARD — Product identity + seller + delivery + stock + instructions.
+            Canonical OrderCard shape: rounded-lg, border-border-default,
+            bg-bg-raised, no glass/blur. */}
+        <Card className="bg-bg-raised p-5 sm:p-6">
           <a
             href={`/shop/${offer.seller}`}
-            className="group -m-1 flex items-center gap-3 rounded-xl p-1 transition-colors hover:bg-bg-raised-hover"
+            className="group -m-1 mb-1 flex items-center gap-3 rounded-lg p-1 transition-colors hover:bg-bg-raised-hover"
           >
             <Avatar name={offer.seller} hue={offer.avatarHue} imageUrl={offer.avatarUrl} size={48} />
             <div className="min-w-0 flex-1">
@@ -586,37 +620,42 @@ function HeroCard({
             <ArrowRight className="h-4 w-4 text-text-tertiary transition-colors group-hover:text-lime-text" />
           </a>
 
-          {/* Delivery time + Stock — stacked rows, same chrome */}
-          <div className="space-y-2">
-            <InfoRow label="Delivery time">
-              <span className="text-[14px] font-semibold tabular-nums text-text-primary">
-                {offer.deliveryMin === offer.deliveryMax
-                  ? `${offer.deliveryMin} min`
-                  : `${offer.deliveryMin}–${offer.deliveryMax} min`}
+          {/* V19/P24/P7.rr — Equal py-3.5 rhythm on all three rows.
+              Instructions clamps to 5 lines (whichever comes first
+              between line count and ~180 chars) and exposes a
+              View more / View less toggle. */}
+          <div className="flex items-center justify-between gap-3 border-t border-border-subtle py-3.5">
+            <span className="text-[14px] font-semibold text-text-primary">
+              Delivery Time
+            </span>
+            <span className="text-[14px] font-medium tabular-nums text-text-secondary">
+              {fmtMinutes(offer.deliveryMin, offer.deliveryMax)}
+            </span>
+          </div>
+          <div className="flex items-center justify-between gap-3 border-t border-border-subtle py-3.5">
+            <span className="text-[14px] font-semibold text-text-primary">
+              In Stock
+            </span>
+            {outOfStock ? (
+              <span className="text-[14px] font-medium text-text-secondary">
+                Out Of Stock
               </span>
-            </InfoRow>
-            <InfoRow label="In stock">
-              {outOfStock ? (
-                <span className="text-[14px] font-semibold text-text-tertiary">
-                  Out of stock
-                </span>
-              ) : (
-                <span className="inline-flex items-center gap-1.5 text-[14px] font-semibold tabular-nums text-text-primary">
-                  <span className="h-1.5 w-1.5 rounded-full bg-success" aria-hidden />
-                  {offer.stock.toLocaleString('en-US')} {unitLabel}
-                </span>
-              )}
-            </InfoRow>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 text-[14px] font-medium tabular-nums text-text-secondary">
+                <span className="h-1.5 w-1.5 rounded-full bg-success" aria-hidden />
+                {offer.stock.toLocaleString('en-US')} {unitLabel}
+              </span>
+            )}
           </div>
 
-          <div>
-            <div className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-text-tertiary">
-              Instructions
+          <div className="border-t border-border-subtle py-3.5">
+            <div className="text-[14px] font-semibold text-text-primary">
+              Delivery Instructions
             </div>
             <p
               className={cn(
-                'whitespace-pre-line text-[13px] leading-relaxed text-text-secondary',
-                !descExpanded && 'line-clamp-4',
+                'mt-1.5 whitespace-pre-line text-[13px] leading-snug text-text-secondary',
+                !descExpanded && 'line-clamp-5',
               )}
             >
               {offer.blurb?.trim() || (
@@ -625,23 +664,29 @@ function HeroCard({
                 </span>
               )}
             </p>
-            {offer.blurb && offer.blurb.length > 180 && (
-              <button
-                type="button"
-                onClick={() => setDescExpanded((v) => !v)}
-                className="mt-1 text-[13px] font-semibold text-lime-text transition-colors hover:text-lime"
-              >
-                {descExpanded ? 'Show less' : 'Show more'}
-              </button>
-            )}
+            {(() => {
+              const txt = offer.blurb ?? ''
+              const lineCount = txt.split(/\r?\n/).length
+              const looksTruncated = lineCount > 5 || txt.length > 220
+              if (!looksTruncated) return null
+              return (
+                <button
+                  type="button"
+                  onClick={() => setDescExpanded((v) => !v)}
+                  className="mt-1.5 text-[12.5px] font-semibold text-lime-text transition-colors hover:text-lime"
+                >
+                  {descExpanded ? 'View less' : 'View more'}
+                </button>
+              )
+            })()}
           </div>
 
           {offer.badges?.length ? (
-            <ul className="flex flex-wrap gap-2">
+            <ul className="mt-3 flex flex-wrap gap-2 border-t border-border-subtle pt-3.5">
               {offer.badges.map((b) => (
                 <li
                   key={b}
-                  className="inline-flex items-center gap-1 rounded-full border border-border-subtle bg-bg-overlay px-2.5 py-1 text-[11.5px] text-text-secondary"
+                  className="inline-flex items-center gap-1 rounded-md border border-border-subtle bg-bg-overlay px-2.5 py-1 text-[11.5px] text-text-secondary"
                 >
                   <ShieldCheck className="h-3 w-3 text-lime-text" />
                   {b}
@@ -649,155 +694,244 @@ function HeroCard({
               ))}
             </ul>
           ) : null}
+        </Card>
+
+        {/* RIGHT CARD — Price + quantity + buy + trust.
+            Desktop only — mobile uses the sticky bar + slide-up sheet.
+            Same canonical shape: rounded-lg shadcn Card on bg-raised. */}
+        <Card className="relative hidden bg-bg-raised p-5 sm:p-6 lg:block">
+          <div className="absolute right-5 top-5 z-10">
+            <span className="inline-flex items-center gap-1 rounded-md border border-lime-tint-border bg-lime-tint-bg px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-lime-text">
+              <Star className="h-3 w-3 fill-lime-text" />
+              Recommended
+            </span>
+          </div>
+          {purchasePanel}
+        </Card>
+      </div>
+
+      {/* MOBILE — Sticky bottom price/CTA tile. Tapping opens the
+          slide-up sheet (Dialog) with the full purchase panel.
+          Mirrors GameBoost / Eldorado mobile pattern. */}
+      <div className="mt-3 lg:hidden">
+        {isOwnOffer ? (
+          <a
+            href={`/sell/edit/${offer.id}`}
+            className="flex h-14 w-full items-center justify-center gap-2 rounded-lg border border-amber-500/35 bg-amber-500/10 text-[14px] font-bold uppercase tracking-wider text-amber-300"
+          >
+            <Store className="h-4 w-4" />
+            Your Listing — Edit
+          </a>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setMobileOpen(true)}
+            disabled={outOfStock}
+            className={cn(
+              'flex h-14 w-full items-center justify-between gap-3 rounded-lg border px-4 text-left transition-colors',
+              outOfStock
+                ? 'cursor-not-allowed border-border-default bg-bg-overlay text-text-tertiary'
+                : 'border-lime bg-lime-tint-bg text-lime-text hover:bg-lime hover:text-text-inverse',
+            )}
+          >
+            <div>
+              <div className="text-[11px] font-semibold uppercase tracking-[0.12em] opacity-80">
+                {outOfStock ? 'Out Of Stock' : 'Price'}
+              </div>
+              <div className="text-[16px] font-bold tabular-nums">
+                {outOfStock ? '—' : `${money(total)} · ${qty.toLocaleString('en-US')} ${unitLabel}`}
+              </div>
+            </div>
+            {!outOfStock && (
+              <span className="inline-flex items-center gap-1.5 text-[14px] font-bold uppercase tracking-wider">
+                <Zap className="h-4 w-4" />
+                Buy Now
+              </span>
+            )}
+          </button>
+        )}
+      </div>
+
+      <Dialog open={mobileOpen} onOpenChange={setMobileOpen}>
+        <DialogContent className="max-w-[640px] gap-5 p-6 sm:p-7">
+          <DialogHeader className="gap-1.5">
+            <DialogTitle className="text-[20px] font-bold tracking-tight">
+              Confirm Your Purchase
+            </DialogTitle>
+            <DialogDescription className="text-[14px] leading-[1.5] text-text-secondary">
+              Review quantity and price below, then continue to checkout.
+            </DialogDescription>
+          </DialogHeader>
+          {purchasePanel}
+        </DialogContent>
+      </Dialog>
+    </section>
+  )
+}
+
+/**
+ * PurchasePanel — V21/P7.i
+ *
+ * Right-card body extracted so the desktop card and the mobile
+ * slide-up Dialog can share one implementation. Renders price + qty
+ * stepper + min/in-stock helper + CTA + trust tiles.
+ */
+function PurchasePanel({
+  offer, unitLabel, qty, setQty, stepUp, stepDown, unit, total, onBuy, buying,
+  isOwnOffer, outOfStock,
+}: {
+  offer: Offer
+  unitLabel: string
+  qty: number
+  setQty: (n: number) => void
+  stepUp: () => void
+  stepDown: () => void
+  unit: number
+  total: number
+  onBuy: () => void
+  buying: boolean
+  isOwnOffer: boolean
+  outOfStock: boolean
+}) {
+  return (
+    <>
+      <div>
+        <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-text-tertiary">
+          Price Per Unit
         </div>
-
-        {/* CENTRE — Vertical divider. Horizontal hairline on mobile. */}
-        <div className="hidden w-px bg-border-subtle lg:block" aria-hidden />
-        <div className="block h-px w-full bg-border-subtle lg:hidden" aria-hidden />
-
-        {/* RIGHT — Price + quantity + buy + trust */}
-        <div className="lg:pl-8">
-          <div>
-            <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-text-tertiary">Price per unit</div>
-            <div className="mt-0.5 text-[22px] font-bold tabular-nums leading-none text-text-primary sm:text-[26px]">
-              {unitPrice(unit)}
-            </div>
-          </div>
-
-          {/* V13b — Unified pill stepper (per image 3) with quiet footer line.
-              Buttons sit flush inside a single bordered surface so the
-              control feels like one premium component, not three. */}
-          <div className="mt-3 sm:mt-4">
-            <div className="flex h-12 items-center overflow-hidden rounded-xl border border-border-default bg-bg-overlay focus-within:border-lime focus-within:ring-2 focus-within:ring-lime-tint-bg sm:h-[52px]">
-              <button
-                type="button"
-                onClick={stepDown}
-                disabled={qty <= offer.minQty}
-                aria-label="Decrease quantity"
-                className={cn(
-                  'flex h-full w-12 shrink-0 items-center justify-center text-text-secondary transition-colors sm:w-14',
-                  'hover:text-text-primary',
-                  'disabled:cursor-not-allowed disabled:opacity-40',
-                )}
-              >
-                <Minus className="h-4 w-4" />
-              </button>
-              <span aria-hidden className="h-6 w-px bg-border-subtle" />
-              <input
-                type="number"
-                value={qty}
-                onChange={(e) => {
-                  const n = parseInt(e.target.value || '0', 10)
-                  setQty(Number.isFinite(n) ? n : offer.minQty)
-                }}
-                onBlur={() => { if (qty < offer.minQty) setQty(offer.minQty) }}
-                min={offer.minQty}
-                max={offer.stock || undefined}
-                aria-label="Quantity"
-                inputMode="numeric"
-                className="h-full min-w-0 flex-1 border-0 bg-transparent text-center text-[17px] font-semibold tabular-nums text-text-primary outline-none [appearance:textfield] sm:text-[18px] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-              />
-              <span aria-hidden className="h-6 w-px bg-border-subtle" />
-              <button
-                type="button"
-                onClick={stepUp}
-                aria-label="Increase quantity"
-                className="flex h-full w-12 shrink-0 items-center justify-center text-text-secondary transition-colors hover:text-text-primary sm:w-14"
-              >
-                <Plus className="h-4 w-4" />
-              </button>
-            </div>
-            <div className="mt-1.5 flex items-center justify-between px-1 text-[11.5px] text-text-tertiary">
-              <span>Min. qty.: <span className="text-text-secondary">{offer.minQty.toLocaleString('en-US')} {unitLabel}</span></span>
-              <span>{outOfStock ? 'Out of stock' : <>In stock: <span className="text-text-secondary">{offer.stock.toLocaleString('en-US')} {unitLabel}</span></>}</span>
-            </div>
-          </div>
-
-          {/* V14m — Three states: own listing → edit link, out of stock →
-              notify me, otherwise → outlined Buy now button. */}
-          {isOwnOffer ? (
-            <a
-              href={`/account/listings/${offer.id}/edit`}
-              className="mt-3 flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-amber-500/35 bg-amber-500/10 text-sm font-bold uppercase tracking-wider text-amber-300 transition-colors hover:bg-amber-500/15 sm:text-[15px]"
-            >
-              <Store className="h-4 w-4" />
-              This is your listing — edit
-            </a>
-          ) : outOfStock ? (
-            <button
-              type="button"
-              disabled
-              className="mt-3 flex h-12 w-full cursor-not-allowed items-center justify-center rounded-xl border border-border-default bg-bg-overlay text-sm font-semibold text-text-tertiary"
-            >
-              Out of stock — notify me
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={onBuy}
-              disabled={buying}
-              className={cn(
-                'group mt-3 flex h-12 w-full items-center justify-center gap-2 rounded-xl border text-sm font-bold uppercase tracking-wider sm:text-[15px]',
-                'border-lime bg-lime-tint-bg text-lime-text',
-                'transition-colors hover:bg-lime hover:text-text-inverse active:scale-[0.99]',
-                'disabled:cursor-wait disabled:opacity-80',
-              )}
-            >
-              {buying ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Loading checkout…
-                </>
-              ) : (
-                <>
-                  <Zap className="h-4 w-4" />
-                  Buy now · <span className="tabular-nums">{money(total)}</span>
-                </>
-              )}
-            </button>
-          )}
-
-          <div className="mt-3 grid grid-cols-3 gap-1.5">
-            <TrustChip
-              icon={Zap}
-              title="Instant"
-              sub="Avg 8 min"
-              tipTitle="Fast Delivery"
-              tipBullets={[
-                'Each seller sets their own delivery window',
-                'Automated sellers deliver in under 1 minute',
-                'Manual sellers deliver within their stated range',
-                'You get notified the moment your order is on the way',
-              ]}
-            />
-            <TrustChip
-              icon={ShieldCheck}
-              title="Escrow"
-              sub="VaultShield"
-              tipTitle="Buyer Protection"
-              tipBullets={[
-                'Your payment is held safely until delivery is confirmed',
-                'Seller is paid only after you receive your currency',
-                'No delivery = full refund, no questions asked',
-                'No password sharing — delivery is in-game only',
-              ]}
-            />
-            <TrustChip
-              icon={CreditCard}
-              title="24/7 Support"
-              sub="Real humans"
-              tipTitle="Always Online"
-              tipBullets={[
-                'Live human agents available around the clock',
-                'Average first-reply under 5 minutes',
-                'Mediation if a seller goes silent',
-                'Multilingual support across US, EU, and APAC',
-              ]}
-            />
-          </div>
+        <div className="mt-0.5 text-[26px] font-bold tabular-nums leading-none text-text-primary">
+          {unitPrice(unit)}
         </div>
       </div>
-    </section>
+
+      <div className="mt-4 border-t border-border-subtle pt-4">
+        <div className="flex h-12 items-center overflow-hidden rounded-lg border border-border-default bg-bg-overlay focus-within:border-lime focus-within:ring-2 focus-within:ring-lime-tint-bg sm:h-[52px]">
+          <button
+            type="button"
+            onClick={stepDown}
+            disabled={qty <= offer.minQty}
+            aria-label="Decrease quantity"
+            className={cn(
+              'flex h-full w-12 shrink-0 items-center justify-center text-text-secondary transition-colors sm:w-14',
+              'hover:text-text-primary',
+              'disabled:cursor-not-allowed disabled:opacity-40',
+            )}
+          >
+            <Minus className="h-4 w-4" />
+          </button>
+          <span aria-hidden className="h-6 w-px bg-border-subtle" />
+          <input
+            type="number"
+            value={qty}
+            onChange={(e) => {
+              const n = parseInt(e.target.value || '0', 10)
+              setQty(Number.isFinite(n) ? n : offer.minQty)
+            }}
+            onBlur={() => { if (qty < offer.minQty) setQty(offer.minQty) }}
+            min={offer.minQty}
+            max={offer.stock || undefined}
+            aria-label="Quantity"
+            inputMode="numeric"
+            className="h-full min-w-0 flex-1 border-0 bg-transparent text-center text-[17px] font-semibold tabular-nums text-text-primary outline-none [appearance:textfield] sm:text-[18px] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+          />
+          <span aria-hidden className="h-6 w-px bg-border-subtle" />
+          <button
+            type="button"
+            onClick={stepUp}
+            aria-label="Increase quantity"
+            className="flex h-full w-12 shrink-0 items-center justify-center text-text-secondary transition-colors hover:text-text-primary sm:w-14"
+          >
+            <Plus className="h-4 w-4" />
+          </button>
+        </div>
+        <div className="mt-1.5 flex items-center justify-between px-1 text-[11.5px] text-text-tertiary">
+          <span>Min. Qty.: <span className="text-text-secondary">{offer.minQty.toLocaleString('en-US')} {unitLabel}</span></span>
+          <span>{outOfStock ? 'Out Of Stock' : <>In Stock: <span className="text-text-secondary">{offer.stock.toLocaleString('en-US')} {unitLabel}</span></>}</span>
+        </div>
+      </div>
+
+      {isOwnOffer ? (
+        <a
+          href={`/sell/edit/${offer.id}`}
+          className="mt-4 flex h-12 w-full items-center justify-center gap-2 rounded-lg border border-amber-500/35 bg-amber-500/10 text-[14px] font-bold uppercase tracking-wider text-amber-300 transition-colors hover:bg-amber-500/15"
+        >
+          <Store className="h-4 w-4" />
+          Your Listing — Edit
+        </a>
+      ) : outOfStock ? (
+        <button
+          type="button"
+          disabled
+          className="mt-4 flex h-12 w-full cursor-not-allowed items-center justify-center rounded-lg border border-border-default bg-bg-overlay text-[14px] font-semibold text-text-tertiary"
+        >
+          Out Of Stock — Notify Me
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={onBuy}
+          disabled={buying}
+          className={cn(
+            'group mt-4 flex h-12 w-full items-center justify-center gap-2 rounded-lg text-[14.5px] font-bold uppercase tracking-wider',
+            'bg-lime text-text-inverse hover:bg-lime-hover',
+            'shadow-[0_6px_18px_rgba(198,255,61,0.22)]',
+            'transition-colors active:scale-[0.99]',
+            'disabled:cursor-wait disabled:opacity-80',
+          )}
+        >
+          {buying ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Loading Checkout…
+            </>
+          ) : (
+            <>
+              <Zap className="h-4 w-4" />
+              Buy Now · <span className="tabular-nums">{money(total)}</span>
+            </>
+          )}
+        </button>
+      )}
+
+      <div className="mt-4 grid grid-cols-3 gap-1.5 border-t border-border-subtle pt-4">
+        <TrustChip
+          icon={Zap}
+          title="Instant"
+          sub="Avg 8 min"
+          tipTitle="Fast Delivery"
+          tipBullets={[
+            'Each seller sets their own delivery window',
+            'Automated sellers deliver in under 1 minute',
+            'Manual sellers deliver within their stated range',
+            'You get notified the moment your order is on the way',
+          ]}
+        />
+        <TrustChip
+          icon={ShieldCheck}
+          title="Escrow"
+          sub="VaultShield"
+          tipTitle="Buyer Protection"
+          tipBullets={[
+            'Your payment is held safely until delivery is confirmed',
+            'Seller is paid only after you receive your currency',
+            'No delivery = full refund, no questions asked',
+            'No password sharing — delivery is in-game only',
+          ]}
+        />
+        <TrustChip
+          icon={CreditCard}
+          title="24/7 Support"
+          sub="Real humans"
+          tipTitle="Always Online"
+          tipBullets={[
+            'Live human agents available around the clock',
+            'Average first-reply under 5 minutes',
+            'Mediation if a seller goes silent',
+            'Multilingual support across US, EU, and APAC',
+          ]}
+        />
+      </div>
+    </>
   )
 }
 
@@ -908,8 +1042,11 @@ function SellerRow({
     <Collapsible.Root open={open} onOpenChange={setOpen} asChild>
       <article
         className={cn(
-          'overflow-hidden rounded-xl border bg-bg-raised transition-colors',
-          open ? 'border-lime-tint-border bg-bg-raised-hover' : 'border-border-subtle hover:bg-bg-raised-hover',
+          // V19/P24/P7.pp — Standalone card surface (rounded-lg) since
+          // the outer SectionCard wrapper is gone. Border bumped to
+          // border-default so each row reads as its own card.
+          'overflow-hidden rounded-lg border bg-bg-raised transition-colors',
+          open ? 'border-lime-tint-border bg-bg-raised-hover' : 'border-border-default hover:bg-bg-raised-hover',
         )}
       >
         {/* V13b — Restructured to fix the button-in-button hydration error.
@@ -991,7 +1128,7 @@ function SellerRow({
                 // V14m — Viewer's own listing: clearly mark with an amber
                 // "Yours" chip linking to edit. Can't select your own offer.
                 <a
-                  href={`/account/listings/${offer.id}/edit`}
+                  href={`/sell/edit/${offer.id}`}
                   onClick={(e) => e.stopPropagation()}
                   className="inline-flex h-10 items-center justify-center gap-1.5 rounded-lg border border-amber-500/35 bg-amber-500/10 px-4 text-[13px] font-bold uppercase tracking-wider text-amber-300 transition-colors hover:bg-amber-500/15"
                 >
@@ -1062,7 +1199,7 @@ function SellerRow({
             <div className="flex flex-wrap items-center gap-3 pt-1">
               {isOwn ? (
                 <a
-                  href={`/account/listings/${offer.id}/edit`}
+                  href={`/sell/edit/${offer.id}`}
                   onClick={(e) => e.stopPropagation()}
                   className="inline-flex h-9 items-center gap-1 rounded-md border border-amber-500/35 bg-amber-500/10 px-3 text-[12.5px] font-bold uppercase tracking-wider text-amber-300 transition-colors hover:bg-amber-500/15"
                 >

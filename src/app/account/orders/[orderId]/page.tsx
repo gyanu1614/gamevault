@@ -24,6 +24,7 @@ import { cn } from '@/lib/utils'
 import BuyerOrderDetailClient from '@/components/orders/BuyerOrderDetailClientCompact'
 import SellerOrderDetailClient from '@/components/orders/SellerOrderDetailClientCompact'
 import CopyOrderId from '@/components/orders/CopyOrderId'
+import { OrderClient } from './_OrderClient'
 
 interface PageProps {
   params: Promise<{ orderId: string }>
@@ -37,7 +38,12 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   }
 }
 
-async function checkOrderAccess(orderId: string, userId: string) {
+type OrderRole = 'buyer' | 'seller' | 'admin'
+
+async function checkOrderAccess(
+  orderId: string,
+  userId: string,
+): Promise<{ hasAccess: boolean; userRole: OrderRole | null }> {
   const supabase = await createClient()
   const { data: order } = await supabase
     .from('orders')
@@ -47,6 +53,7 @@ async function checkOrderAccess(orderId: string, userId: string) {
   if (!order) return { hasAccess: false, userRole: null }
   const isBuyer  = order.buyer_id  === userId
   const isSeller = order.seller_id === userId
+  // TODO V21/P9 — also check admin role via permissions table
   return {
     hasAccess: isBuyer || isSeller,
     userRole: isBuyer ? 'buyer' : isSeller ? 'seller' : null,
@@ -204,99 +211,121 @@ export default async function OrderDetailPage({ params }: PageProps) {
   const protectionRemaining = protectionDate ? Math.max(0, protectionDate.getTime() - now.getTime()) : 0
   const protectionDays    = Math.floor(protectionRemaining / (1000 * 60 * 60 * 24))
 
-  const orderNum       = order.order_number || order.id.slice(0, 8).toUpperCase()
+  // V21/P3.b — Display-layer rebrand: GV- → DM-. DB rows keep their
+  // legacy order_number until a migration regenerates them; the URL
+  // resolver work is tracked separately. New orders are emitted with
+  // DM- prefix at the action level.
+  const rawOrderNum    = order.order_number || order.id.slice(0, 8).toUpperCase()
+  const orderNum       = rawOrderNum.replace(/^GV-/, 'DM-')
   const listingImageUrl = order.listing?.images?.[0]
   const gameImageUrl   = game?.image_url
   const listingTitle   = order.listing?.title
   const gameName       = game?.name
   const categoryName   = category?.name
 
+  // V21/P2 — derive SLA window from listing delivery_time (minutes).
+  // Falls back to 60 min if missing so the bar still renders. Real
+  // start time is order.delivery_started_at if seller hit "Start
+  // Delivering"; otherwise the order's created_at acts as the clock.
+  const slaMinutes = Number(order.listing?.delivery_time ?? 60) || 60
+  const slaSeconds = slaMinutes * 60
+  const slaStartedAt: string = order.delivery_started_at ?? order.created_at
+
+  const placedAtDate = new Date(order.created_at)
+  const placedAtLabel = placedAtDate.toLocaleTimeString('en-US', {
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  })
+
+  // V21/P5 — Resolve (or lazily create) the order-scoped conversation
+  // so the chat hero can render on first paint. Pure server-side work.
+  const { data: convo } = await supabase
+    .from('conversations')
+    .select('id')
+    .eq('order_id', orderId)
+    .maybeSingle() as any
+
+  let conversationId: string | null = convo?.id ?? null
+  if (!conversationId) {
+    const { data: created } = await (supabase.from('conversations').insert as any)({
+      order_id:  orderId,
+      buyer_id:  order.buyer_id,
+      seller_id: order.seller_id,
+    })
+      .select('id')
+      .single() as any
+    conversationId = created?.id ?? null
+  }
+
+  // V21/P5.l — Pull the buyer's review for this order (if any).
+  // Used on BOTH sides: buyer view morphs the strip to "Review
+  // Submitted"; seller view shows a "Buyer's Review" card in the rail.
+  // recommends_seller isn't a real column; derive from rating>=4.
+  let existingReview: {
+    rating: number
+    comment: string
+    recommendsSeller?: boolean | null
+    createdAt: string
+  } | null = null
+  // Use the buyer_id for the lookup so the seller (or admin) sees the
+  // SAME review the buyer wrote, not a row for themselves.
+  const reviewerForLookup = order.buyer_id
+  if (reviewerForLookup) {
+    const { data: reviewRow, error: reviewErr } = await supabase
+      .from('reviews')
+      .select('rating, comment, created_at')
+      .eq('order_id', orderId)
+      .eq('reviewer_id', reviewerForLookup)
+      .maybeSingle() as any
+    if (reviewErr) {
+      console.error('[order page] review lookup failed', reviewErr)
+    }
+    if (reviewRow) {
+      const r = Number(reviewRow.rating ?? 0)
+      existingReview = {
+        rating: r,
+        comment: String(reviewRow.comment ?? ''),
+        recommendsSeller: r >= 4,
+        createdAt: reviewRow.created_at,
+      }
+    }
+  }
+
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#0a0a0f] via-[#0d0d14] to-[#0a0a0f]">
-      {/* Scale wrapper - 110% for better readability */}
-      <div style={{ transform: 'scale(1.1)', transformOrigin: 'top' }}>
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-8 md:pt-6">
-
-        {/* Back link */}
-        <Link
-          href="/account/orders"
-          className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-border-subtle bg-bg-overlay hover:bg-bg-raised-hover hover:border-white/[0.12] text-sm text-text-secondary hover:text-white transition-all mb-7"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back to Orders
-        </Link>
-
-        {/* ── Page header ─────────────────────────────────────────────── */}
-        <div className="mb-7 flex items-center gap-4">
-          {/* Listing image (fallback to game icon) */}
-          {listingImageUrl || gameImageUrl ? (
-            <Image
-              src={listingImageUrl || gameImageUrl}
-              alt={listingTitle || gameName || 'Order'}
-              width={72}
-              height={72}
-              className="rounded-xl object-cover flex-shrink-0 ring-1 ring-white/10 shadow-lg"
-            />
-          ) : (
-            <div className="h-18 w-18 rounded-xl bg-bg-overlay border border-border-subtle flex-shrink-0" />
-          )}
-
-          {/* Left: title + game + category + order ID */}
-          <div className="min-w-0 flex-1">
-            <h1 className="text-xl font-bold text-white leading-tight truncate">
-              {listingTitle || 'Order Details'}
-            </h1>
-            <div className="flex items-center gap-2 mt-1.5 truncate">
-              {gameName && (
-                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-bg-raised border border-border-subtle text-xs font-medium text-text-secondary">
-                  <Package className="h-3 w-3 text-text-tertiary" />
-                  {gameName}
-                </span>
-              )}
-              {categoryName && (
-                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-bg-raised border border-border-subtle text-xs font-medium text-text-secondary">
-                  {categoryName}
-                </span>
-              )}
-            </div>
-            <div className="mt-1.5">
-              <CopyOrderId orderNum={orderNum} />
-            </div>
-          </div>
-
-          {/* Right: status pills — stacked when escrow released */}
-          <div className={cn(
-            'flex flex-shrink-0 gap-2',
-            order.escrow_status === 'released' ? 'flex-col items-end' : 'flex-row items-center'
-          )}>
-            <StatusPill status={order.status} disputeResolved={!!disputeResolution} />
-            <EscrowPill escrowStatus={order.escrow_status} disputeResolved={!!disputeResolution} />
-          </div>
-        </div>
-
-        {/* Client component — buyer or seller view */}
-        {userRole === 'buyer' ? (
-          <BuyerOrderDetailClient
-            order={order}
-            disputeResolution={disputeResolution}
-            timeRemaining={timeRemaining}
-            hoursRemaining={hoursRemaining}
-            minutesRemaining={minutesRemaining}
-            protectionDays={protectionDays}
-          />
-        ) : (
-          <SellerOrderDetailClient
-            order={order}
-            disputeResolution={disputeResolution}
-            sellerPayout={order.seller_payout || 0}
-            timeRemaining={timeRemaining}
-            hoursRemaining={hoursRemaining}
-            minutesRemaining={minutesRemaining}
-          />
-        )}
-
-        </div>
-      </div>
-    </div>
+    <>
+      {/* V21/P5.y — Preload the hero backdrop so it's cached by the
+          time the .hero-backdrop element mounts. Otherwise the AVIF
+          (referenced as a CSS background-image) is invisible to the
+          HTML preloader and only starts downloading after CSS parses,
+          producing visible pop-in on every navigation into the page.
+          Same trick used on the homepage (src/app/page.tsx). */}
+      <link
+        rel="preload"
+        as="image"
+        href="/assets/heroes/order.avif"
+        type="image/avif"
+        // @ts-expect-error — fetchpriority is valid HTML; React types lag.
+        fetchpriority="high"
+      />
+      <OrderClient
+        order={order}
+        userRole={userRole}
+        disputeResolution={disputeResolution}
+        itemImageUrl={listingImageUrl ?? gameImageUrl ?? null}
+        itemTitle={listingTitle ?? 'Order Details'}
+        gameName={gameName ?? null}
+        gameIconUrl={game?.image_url ?? null}
+        categoryName={categoryName ?? null}
+        categorySlug={category?.slug ?? null}
+        orderNumber={orderNum}
+        slaStartedAt={slaStartedAt}
+        slaSeconds={slaSeconds}
+        placedAtLabel={placedAtLabel}
+        conversationId={conversationId}
+        currentUserId={user.id}
+        existingReview={existingReview}
+      />
+    </>
   )
 }

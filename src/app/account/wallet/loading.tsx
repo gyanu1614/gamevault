@@ -8,13 +8,13 @@
 
 function Block({ className = '' }: { className?: string }) {
   return (
-    <div className={`animate-pulse rounded-md bg-bg-overlay/80 ${className}`} />
+    <div className={`animate-pulse rounded-md bg-white/[0.07] ${className}`} />
   )
 }
 
 export default function WalletLoading() {
   return (
-    <div className="min-h-screen bg-black pb-20">
+    <div className="min-h-screen pb-20">
       <div className="mx-auto w-full max-w-full px-4 pt-6 sm:px-6 md:max-w-7xl lg:px-8">
         {/* Header */}
         <div className="mb-6">
@@ -27,7 +27,7 @@ export default function WalletLoading() {
           </div>
 
           {/* Balance card */}
-          <div className="rounded-2xl border border-border-default bg-bg-overlay p-6">
+          <div className="rounded-lg border border-border-subtle card-frost p-6">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div className="space-y-2">
                 <Block className="h-3 w-24" />
@@ -51,7 +51,7 @@ export default function WalletLoading() {
           {Array.from({ length: 8 }).map((_, i) => (
             <div
               key={i}
-              className="flex items-center gap-3 rounded-xl border border-border-default bg-bg-overlay p-4"
+              className="flex items-center gap-3 rounded-xl border border-border-subtle card-frost p-4"
             >
               <Block className="h-10 w-10 shrink-0 rounded-lg" />
               <div className="min-w-0 flex-1 space-y-1.5">

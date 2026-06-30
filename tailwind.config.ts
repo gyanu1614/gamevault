@@ -212,6 +212,10 @@ const config: Config = {
           '70%':  { opacity: '1' },
           '100%': { transform: 'rotate(215deg) translateX(-500px)', opacity: '0' },
         },
+        marquee: {
+          '0%':   { transform: 'translateX(0)' },
+          '100%': { transform: 'translateX(-50%)' },
+        },
 
         // New
         shimmer: {
@@ -262,6 +266,9 @@ const config: Config = {
         'accordion-down':  'accordion-down 0.2s ease-out',
         'accordion-up':    'accordion-up 0.2s ease-out',
         'meteor-effect':   'meteor 5s linear infinite',
+        // V19/P24/P7.bb — Checkout footer trust marquee. Track is
+        // rendered twice; the `-50%` slide creates seamless wrap.
+        marquee:           'marquee 38s linear infinite',
 
         // New
         shimmer:           'shimmer 1.6s ease-in-out infinite',

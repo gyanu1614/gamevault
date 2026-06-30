@@ -22,7 +22,7 @@ export interface ItemOffer {
   /** SEO-friendly slug used in the canonical URL, e.g. "neon-garama-mandundung". */
   slug: string
   /** V15h — Stored listing slug from the listings table. Used to build
-   *  the canonical detail URL `/marketplace/{game}/{category}/{slug}`.
+   *  the canonical detail URL `/{game}/{category}/{slug}`.
    *  Falls back to the listing id when missing. */
   detailSlug: string
   /** V15h — Real category slug from the listings.category row (e.g.

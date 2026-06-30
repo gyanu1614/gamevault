@@ -156,7 +156,10 @@ export async function approveListing(
     // await sendListingApprovedEmail(listing.seller_id, listingId)
 
     revalidatePath('/admin/moderation')
-    revalidatePath('/marketplace')
+    // V21/P7.d — Marketplace tree lives at `/{gameSlug}/...` now;
+    // homepage surfaces featured/popular listings so revalidating
+    // `/` covers the public-facing impact of a moderation change.
+    revalidatePath('/')
 
     return {
       success: true,

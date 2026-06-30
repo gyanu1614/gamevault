@@ -89,19 +89,15 @@
 
   body {
     background-color: var(--color-bg-base);
-    /* V18.a — Bloom + scrim BOTH paint on body and BOTH are
-       viewport-attached. Owning the bloom on `body` (not on a
-       per-section `.ambient` class) means there's only ONE painted
-       surface for the bloom — no section boundary can create a
-       seam. Layer order: bloom on top (so it tints the scrim),
-       scrim underneath. */
-    background-image:
-      var(--gradient-hero-glow),
-      var(--gradient-page-scrim);
-    background-repeat:   no-repeat, no-repeat;
-    background-position: top center, top center;
-    background-size:     100% 100%, 100% 100%;
-    background-attachment: fixed, fixed;
+    /* V20 — Just the page scrim on body. Ambient corner glows
+       live on body::after (see below). Single-hue centre bloom
+       retired: dual-hue corners look premium, single bloom looks
+       dated. */
+    background-image: var(--gradient-page-scrim);
+    background-repeat: no-repeat;
+    background-position: top center;
+    background-size:   100% 100%;
+    background-attachment: fixed;
     color: var(--color-text-primary);
     font-family: var(--font-display), "Inter", system-ui, sans-serif;
     font-size: var(--text-body-size);
@@ -119,6 +115,33 @@
     pointer-events: none;
     opacity: 0.5;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+  }
+
+  /* V20 — Ambient corner glows: lime top-left, violet bottom-right.
+     position: fixed keeps them GPU-composited and pinned to the
+     viewport on scroll. Low alpha (0.10) reads as light, not paint. */
+  body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background:
+      radial-gradient(var(--glow-size) var(--glow-size) at 0% 0%,
+        var(--glow-tl) 0%, transparent 85%),
+      radial-gradient(var(--glow-size) var(--glow-size) at 100% 100%,
+        var(--glow-br) 0%, transparent 85%);
+  }
+
+  @media (max-width: 640px) {
+    :root {
+      --hero-height: 460px;
+      --glow-size:   95vmax;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    body::after { opacity: 0.6; }
   }
 
   ::selection { background: var(--color-accent-default); color: var(--color-text-inverse); }
@@ -186,6 +209,60 @@
   }
 }
 
+/* ─── V20 — Per-page hero backdrop + section fade ────────────
+   Drop <div class="hero-backdrop"></div> as the first child of
+   a section with class="has-backdrop". The section sets
+   --page-hero-image inline (or via a wrapper) and the .hero-backdrop
+   div picks it up. Scrim + vignette are stacked in CSS (never baked
+   into the image file), so you ship one flat .avif per game and the
+   CSS does the fade work. Add `section-fade-bottom` to the last
+   content section to melt it into the footer with no hard seam.
+   ─────────────────────────────────────────────────────────── */
+.hero-backdrop {
+  position: absolute;
+  top: calc(var(--hero-offset, 0px) * -1);
+  left: 0;
+  right: 0;
+  height: var(--hero-height);
+  z-index: 0;
+  pointer-events: none;
+  /* `cover` everywhere. The contract that makes this work without
+     per-page overrides: source images are authored at 8:3 aspect
+     (2880×1080) and `--hero-height` is fluid (clamp). Together they
+     keep the box aspect close to the source aspect so `cover` never
+     over-zooms or letterboxes. Do not introduce a `--page-hero-size`
+     escape hatch — fix the source or the height instead. */
+  background:
+    var(--hero-vignette),
+    var(--hero-scrim),
+    var(--page-hero-image) center top / cover no-repeat;
+}
+
+.has-backdrop { position: relative; }
+.has-backdrop > *:not(.hero-backdrop) { position: relative; z-index: 1; }
+
+/* V22 — Optional extra dim for a specific hero (e.g. account area), applied
+   via HeroBackdrop's className. Adds a small uniform scrim on top of the
+   shared hero so just this surface reads darker, without touching the
+   global --hero-scrim that every page shares. */
+.hero-dim > .hero-backdrop::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(10, 10, 15, 0.18);
+  pointer-events: none;
+}
+
+.section-fade-bottom { position: relative; }
+.section-fade-bottom::after {
+  content: "";
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: 240px;
+  pointer-events: none;
+  background: linear-gradient(to bottom, transparent, var(--color-bg-base));
+}
+
 /* ─── V18.a — Ambient backdrop component ─────────────────────
    The violet bloom + page scrim live on `body` now (see above),
    so they're a single continuous painted surface — no section
@@ -242,6 +319,18 @@
     transition: transform 200ms cubic-bezier(0.22,1,0.36,1);
   }
   .disco-card:hover::after { transform: scaleX(1); }
+
+  /* V22 — Frosted card surface: the standard translucent-dark panel used
+     across account pages + marketplace cards. Lets the hero bleed through
+     with a glossy finish. Tune the alpha here once, not per-component.
+     `.card-frost-hover` adds the lift for interactive rows/tiles. */
+  .card-frost {
+    background-color: rgba(20, 20, 27, 0.56);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+  .card-frost-hover { transition: background-color 150ms ease; }
+  .card-frost-hover:hover { background-color: rgba(26, 26, 35, 0.70); }
 
   /* Ticker */
   .mask-fade-x {
@@ -332,11 +421,13 @@
 @layer utilities {
   /* Skeleton shimmer — apply to skeleton elements */
   .skeleton {
+    /* V22 — Neutral white shimmer (was off-brand violet) so .skeleton loaders
+       match the items/currency `bg-white/[0.07]` pulse convention. */
     background: linear-gradient(
       90deg,
-      rgba(139, 92, 246, 0.04) 25%,
-      rgba(139, 92, 246, 0.10) 50%,
-      rgba(139, 92, 246, 0.04) 75%
+      rgba(255, 255, 255, 0.04) 25%,
+      rgba(255, 255, 255, 0.09) 50%,
+      rgba(255, 255, 255, 0.04) 75%
     );
     background-size: 200% 100%;
     animation: shimmer 1.6s ease-in-out infinite;

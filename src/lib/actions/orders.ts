@@ -7,9 +7,7 @@ import { rateLimitCreateOrder } from '@/lib/utils/rate-limit'
 import { getCommissionRate } from '@/lib/utils/tier-commission'
 import Stripe from 'stripe'
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-02-24.acacia',
-})
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
 
 // P4.1 — import tier helpers from shared util (not from server action)
 import { getTierFeeRate, TIER_WARRANTY_HOURS } from '@/lib/utils/vaultshield-tiers'
@@ -201,9 +199,15 @@ export async function createOrder(data: CreateOrderData): Promise<{
       console.error('Error creating order:', orderError)
       // ✅ AUDIT: Log order creation failure
       await logFailure('order_created', 'orders', orderError.message, data.listingId)
+      // V21/P3.g — Surface the actual DB error in dev so missing columns
+      // or RLS issues are diagnosable without grepping server logs. The
+      // generic message stays as the fallback for production.
+      const isDev = process.env.NODE_ENV !== 'production'
       return {
         success: false,
-        error: 'Failed to create order',
+        error: isDev
+          ? `Failed to create order: ${orderError.message ?? 'unknown DB error'}`
+          : 'Failed to create order',
       }
     }
 
@@ -325,7 +329,12 @@ export async function createOrder(data: CreateOrderData): Promise<{
     }
 
     revalidatePath('/orders')
-    revalidatePath(`/marketplace/${listing.game_id}/${listing.category_id}`)
+    // V21/P7.d — The previous `/marketplace/{game_id}/{category_id}`
+    // path used UUIDs in a slug-routed URL space — it never matched
+    // a real route. Listing detail revalidates its own page on next
+    // request anyway; revalidating `/` covers the public marketing
+    // surface (homepage features popular listings).
+    revalidatePath('/')
 
     return {
       success: true,
@@ -526,6 +535,54 @@ export async function startDelivering(
       success: false,
       error: error.message || 'Failed to start delivery',
     }
+  }
+}
+
+/**
+ * V21/P4.e — Atomically flip an order from 'paid' → 'delivering' when
+ * the seller sends activity (typically their first chat message).
+ *
+ * Designed to be safe to call on every seller message:
+ *  - The UPDATE is guarded by `status = 'paid'` AND `seller_id = auth.uid()`,
+ *    so the row only flips on the FIRST eligible call. Subsequent calls
+ *    affect 0 rows and return success.
+ *  - No client trust: the auth.uid() match is enforced by RLS + the
+ *    explicit eq() clause, so a malicious buyer can't fire it.
+ *  - Idempotent: safe to call from optimistic UI hooks without dedup.
+ *  - Single round-trip: one SQL statement, no read-modify-write.
+ *
+ * Returns silently — this is a side-effect call, not user-facing.
+ * Caller should NOT block UI on it.
+ *
+ * Future hardening (tracked as V21/F2): move to a Postgres trigger on
+ * messages INSERT so we don't depend on the client to make the call.
+ */
+export async function notifySellerActivity(orderId: string): Promise<void> {
+  try {
+    const supabase = await createClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+    if (!user) return
+
+    // The update is atomic + race-safe via the WHERE clause. If two
+    // messages land in the same tick, only the first matching row
+    // flips; the second is a 0-row no-op.
+    await (supabase
+      .from('orders')
+      .update as any)({
+        status: 'delivering',
+        delivering_at: new Date().toISOString(),
+      })
+      .eq('id', orderId)
+      .eq('seller_id', user.id)
+      .eq('status', 'paid')
+
+    revalidatePath(`/account/orders/${orderId}`)
+  } catch (e) {
+    // Fire-and-forget. A failure here doesn't block the message send
+    // — the user already saw their message land in the chat.
+    console.error('[notifySellerActivity]', e)
   }
 }
 

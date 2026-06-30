@@ -3,8 +3,8 @@
 import Link from 'next/link'
 import { SmartLink } from '@/components/global/SmartLink'
 import { usePathname, useRouter } from 'next/navigation'
-import { useState, useRef, useEffect, useMemo } from 'react'
-import { Search, User, LogOut, Menu, X, ChevronDown, Settings, Store, Package, MessageSquare, PlusCircle, Heart, Wallet, Star, List, Bell, LayoutDashboard, Activity, Award, Crown, Gem, Sparkles, Shield, ShieldCheck } from 'lucide-react'
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
+import { Search, User, LogOut, Menu, X, ChevronDown, Settings, Store, Package, MessageSquare, MessagesSquare, PlusCircle, Heart, Wallet, Star, List, Bell, BellDot, LayoutDashboard, Activity, Gauge, Award, Crown, Gem, Sparkles, Shield, ShieldCheck } from 'lucide-react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence, useMotionValue, useSpring } from 'framer-motion'
 import * as Popover from '@radix-ui/react-popover'
@@ -14,6 +14,9 @@ import { useAuth } from '@/hooks/use-auth'
 import { useAuthDialog } from '@/components/auth/AuthDialog'
 import { cn } from '@/lib/utils'
 import { getAvatarUrl } from '@/lib/utils/avatar'
+import { searchAttributeOptions, type AttrOptionHit } from '@/lib/actions/search'
+import { setStorePaused, getMyStorePaused } from '@/lib/actions/seller-presence'
+import { toast } from 'sonner'
 
 // ── Tier visual config ────────────────────────────────────────────────────────
 const TIER_CONFIG: Record<string, { icon: React.ElementType; color: string; bg: string; border: string }> = {
@@ -25,7 +28,15 @@ const TIER_CONFIG: Record<string, { icon: React.ElementType; color: string; bg: 
   diamond:    { icon: Sparkles,     color: 'text-lime-text', bg: 'bg-lime/10', border: 'border-lime-tint-border' },
 }
 
-export function Navbar() {
+/**
+ * V19/P15.b — `forceScrolled` pins the navbar in its full-width "bar"
+ * mode regardless of scroll position. Used by /sell/* and any other
+ * surface that wants the navbar to sit flush at top-0 from the start
+ * (no floating pill at rest). The framer-motion morph still runs on
+ * mount so the visual transition is identical to what scrolling
+ * triggers.
+ */
+export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = {}) {
   const { user, loading } = useAuth()
   const authDialog = useAuthDialog()
   const queryClient = useQueryClient()
@@ -33,6 +44,9 @@ export function Navbar() {
   const router = useRouter()
   const [searchQuery, setSearchQuery] = useState('')
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  // V21/P7.r — Expanding search. When true, the category links + right
+  // icons collapse and GlobalSearch grows to fill the freed space.
+  const [searchExpanded, setSearchExpanded] = useState(false)
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null)
   // V17r — Debounced close. The cursor briefly leaves the trigger
   // when moving toward the dropdown content; a hard close on
@@ -46,6 +60,10 @@ export function Navbar() {
   // mega-menu over the same midpoint of the navbar instead of
   // jumping under whichever tab was hovered.
   const navCategoriesRef = useRef<HTMLDivElement | null>(null)
+  // V21/P7.y — The mega-menu anchors to the centered navbar pill (not the
+  // left-of-center category cluster) so every dropdown opens centered to
+  // the page rather than drifting left.
+  const navBarRef = useRef<HTMLDivElement | null>(null)
   const openDropdown = (id: string) => {
     if (closeTimerRef.current) {
       clearTimeout(closeTimerRef.current)
@@ -74,17 +92,21 @@ export function Navbar() {
   // the page and turns into honest product chrome once the user is
   // reading content (which is where content-bleeding-behind-pill
   // becomes a problem).
-  const [scrolled, setScrolled] = useState(false)
+  const [scrolledNative, setScrolledNative] = useState(false)
   useEffect(() => {
     // 40px feels like the right threshold — far enough that casual
     // mouse-wheel jiggle doesn't trip it, close enough that any
     // intentional scroll commits the morph immediately.
     const SNAP_PX = 40
-    const onScroll = () => setScrolled(window.scrollY > SNAP_PX)
+    const onScroll = () => setScrolledNative(window.scrollY > SNAP_PX)
     onScroll()
     window.addEventListener('scroll', onScroll, { passive: true })
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
+  // V19/P15.b — `forceScrolled` short-circuits the scroll listener so
+  // pages like /sell/* can lock the navbar in its full-width bar mode
+  // even at scrollY=0. Everywhere else falls through to live scroll.
+  const scrolled = forceScrolled || scrolledNative
 
   // V14u — Force-close every navbar dropdown on route change. Catches
   // cases where the user navigates via the browser back button, a
@@ -100,6 +122,11 @@ export function Navbar() {
   const [activityTab, setActivityTab] = useState<'buying' | 'selling'>('buying')
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const [isAdmin, setIsAdmin] = useState(false)
+  // V21/P7.ae — Offline Mode (store pause). When on, the seller's offers
+  // are taken down for buyers until toggled back. `pendingOffline` blocks
+  // double-clicks while the server action is in flight.
+  const [offlineMode, setOfflineMode] = useState(false)
+  const [pendingOffline, setPendingOffline] = useState(false)
 
   // Check if user is admin
   useEffect(() => {
@@ -124,6 +151,31 @@ export function Navbar() {
 
     checkAdminStatus()
   }, [user?.id])
+
+  // V21/P7.ae — Hydrate Offline Mode for approved sellers.
+  useEffect(() => {
+    if (!user?.isApprovedSeller) { setOfflineMode(false); return }
+    let active = true
+    getMyStorePaused().then((v) => { if (active) setOfflineMode(v) })
+    return () => { active = false }
+  }, [user?.id, user?.isApprovedSeller])
+
+  // V21/P7.ae — Toggle store online/offline. Optimistic flip with
+  // rollback on failure.
+  const toggleOfflineMode = useCallback(async () => {
+    if (pendingOffline) return
+    const next = !offlineMode
+    setOfflineMode(next)
+    setPendingOffline(true)
+    const res = await setStorePaused(next)
+    setPendingOffline(false)
+    if (!res.success) {
+      setOfflineMode(!next) // rollback
+      toast.error('Could not update store status')
+      return
+    }
+    toast.success(next ? 'Store is now offline — your offers are hidden' : 'Store is back online')
+  }, [offlineMode, pendingOffline])
 
   // Get unread message count
   const { data: unreadData } = useQuery({
@@ -309,13 +361,30 @@ export function Navbar() {
       const supabase = createClient()
       const { data } = await supabase
         .from('categories')
-        .select('slug, metadata, game:games!categories_game_id_fkey(name, slug, emoji, image_url, sort_order)')
+        .select('slug, name, metadata, game_id, game:games!categories_game_id_fkey(name, slug, emoji, image_url, sort_order)')
         .eq('is_active', true)
         .order('display_order')
       return data || []
     },
     staleTime: 1000 * 60 * 5,
     refetchOnMount: true,
+  })
+
+  // V21/P7.u — Category icons (admin-uploaded currency_icon_url) live
+  // on category_configs, keyed by (game_id, category_type). Pulled
+  // here and passed to GlobalSearch so the dropdown can show e.g. the
+  // Robux icon next to the Robux row.
+  const { data: catConfigData } = useQuery({
+    queryKey: ['nav-category-configs'],
+    queryFn: async () => {
+      const { createClient } = await import('@/lib/supabase/client')
+      const supabase = createClient()
+      const { data } = await supabase
+        .from('category_configs')
+        .select('game_id, category_type, config')
+      return data || []
+    },
+    staleTime: 1000 * 60 * 5,
   })
 
   // Group categories by metadata type → map of type → [{game, categorySlug}]
@@ -357,6 +426,49 @@ export function Navbar() {
 
   return (
     <>
+      {/* V21/P5.b — Full-screen blur loader during signOut. Sits above
+          everything (z-[100]) so the dropdown closing doesn't unmount
+          the loader. Pointer-events trap so users can't click underneath
+          while signOut completes. */}
+      {isLoggingOut && (
+        <div
+          aria-live="polite"
+          aria-busy="true"
+          className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-bg-base/40 backdrop-blur-md"
+        >
+          <div className="flex flex-col items-center gap-4">
+            <span className="grid h-14 w-14 place-items-center rounded-full bg-bg-raised/80 ring-1 ring-white/10">
+              <span
+                aria-hidden
+                className="h-7 w-7 animate-spin rounded-full border-2 border-white/[0.08] border-t-lime"
+              />
+            </span>
+            <p className="text-[13px] font-semibold text-text-primary">Signing You Out…</p>
+          </div>
+        </div>
+      )}
+
+      {/* V21/P7.w — Spotlight scrim behind the expanded search. Blurs +
+          dims the page so the search panel reads as a focused overlay
+          instead of floating over a busy hero. Sits below the navbar
+          (z-50) but above page content (z-40). Clicking it collapses
+          search via the panel's own click-outside handler, but we also
+          close on direct click for snappiness. */}
+      <AnimatePresence>
+        {searchExpanded && (
+          <motion.div
+            key="search-scrim"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.18 }}
+            onMouseDown={() => setSearchExpanded(false)}
+            className="fixed inset-0 z-40 bg-black/50 backdrop-blur-md"
+            aria-hidden
+          />
+        )}
+      </AnimatePresence>
+
       {/* V18.b - Scroll-snap navbar driven by framer-motion springs.
           Tailwind class-swap was cranky because max-width and
           border-radius cannot interpolate from a length to the
@@ -373,13 +485,14 @@ export function Navbar() {
         <motion.div
           initial={false}
           animate={{
-            maxWidth: scrolled ? 1920 : 1280,
+            maxWidth: scrolled ? 1920 : 1400,
             paddingLeft: scrolled ? 0 : 16,
             paddingRight: scrolled ? 0 : 16,
           }}
           className="w-full"
         >
           <motion.div
+            ref={navBarRef}
             initial={false}
             animate={{
               borderRadius: scrolled ? 0 : 9999,
@@ -388,12 +501,21 @@ export function Navbar() {
               borderRightWidth: scrolled ? 0 : 1,
               borderTopWidth: scrolled ? 0 : 1,
             }}
-            style={{ borderColor: scrolled ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.10)' }}
+            style={{
+              borderColor: scrolled ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.10)',
+              // V22 — Navbar bar uses the same frosted grey as the sidebar
+              // (`card-frost`). Slightly higher alpha than the cards (0.66/0.56)
+              // so the bar stays readable over bright hero areas. Dropdowns are
+              // intentionally left on their own darker surfaces.
+              backgroundColor: scrolled
+                ? 'rgba(20, 20, 27, 0.66)'
+                : 'rgba(20, 20, 27, 0.56)',
+            }}
             className={cn(
-              'flex items-center justify-between gap-2 bg-black px-3 py-3 backdrop-blur-xl sm:gap-3 sm:px-6',
+              'flex items-center justify-between gap-2 px-3 py-3 backdrop-blur-2xl backdrop-saturate-150 sm:gap-3 sm:px-6',
               scrolled
-                ? 'shadow-[0_1px_0_0_rgba(255,255,255,0.02),0_8px_24px_-12px_rgba(0,0,0,0.6)]'
-                : 'shadow-2xl',
+                ? 'shadow-[0_1px_0_0_rgba(255,255,255,0.04),0_8px_24px_-12px_rgba(0,0,0,0.7)]'
+                : 'shadow-[0_4px_24px_-12px_rgba(0,0,0,0.5)]',
             )}
           >
             {/* Logo */}
@@ -404,44 +526,62 @@ export function Navbar() {
               <span className="hidden font-bold text-white sm:inline-block">GameVault</span>
             </Link>
 
-            <div className="hidden h-6 w-px bg-white/20 md:block" />
+            {/* V21/P7.r — Divider hides while search is expanded. */}
+            {!searchExpanded && (
+              <div className="hidden h-6 w-px bg-white/20 md:block" />
+            )}
 
             {/* Categories - Desktop. V17v — wrapper div holds a ref
                 used as the shared Popover anchor so every dropdown
                 opens centered under the category strip, not under the
                 individual tab that was hovered. Centers the mega-menu
-                Stripe/Linear-style. */}
+                Stripe/Linear-style.
+                V21/P7.r — Collapses out when search is expanded. */}
+            {!searchExpanded && (
+              <div
+                ref={navCategoriesRef}
+                className="hidden flex-1 items-center justify-center gap-1 md:flex"
+              >
+                {NAV_TABS.map((tab) => (
+                  <CategoryDropdown
+                    key={tab.id}
+                    tab={tab}
+                    gameEntries={gamesByType[tab.type] || []}
+                    isActive={activeDropdown === tab.id}
+                    onHoverStart={() => openDropdown(tab.id)}
+                    onHoverEnd={() => closeDropdown()}
+                    onSelect={() => setActiveDropdown(null)}
+                    anchorRef={navBarRef}
+                  />
+                ))}
+              </div>
+            )}
+
+            {!searchExpanded && (
+              <div className="hidden h-6 w-px bg-white/20 md:block" />
+            )}
+
+            {/* Right Side — grows to fill the row when search expands. */}
             <div
-              ref={navCategoriesRef}
-              className="hidden flex-1 items-center justify-center gap-1 md:flex"
+              className={cn(
+                'flex items-center gap-1 sm:gap-2',
+                searchExpanded ? 'flex-1' : 'shrink-0',
+              )}
             >
-              {NAV_TABS.map((tab) => (
-                <CategoryDropdown
-                  key={tab.id}
-                  tab={tab}
-                  gameEntries={gamesByType[tab.type] || []}
-                  isActive={activeDropdown === tab.id}
-                  onHoverStart={() => openDropdown(tab.id)}
-                  onHoverEnd={() => closeDropdown()}
-                  onSelect={() => setActiveDropdown(null)}
-                  anchorRef={navCategoriesRef}
-                />
-              ))}
-            </div>
-
-            <div className="hidden h-6 w-px bg-white/20 md:block" />
-
-            {/* Right Side */}
-            <div className="flex shrink-0 items-center gap-1 sm:gap-2">
               {/* V15n — Global game autocomplete. Replaces the
                   single-keyword form input that just submitted to /browse.
                   Now: type a game name → live filtered dropdown of
                   matching games across every category. Enter or "View all
                   results" still goes to /browse for full marketplace
                   search. */}
-              <div className="hidden lg:block">
+              {/* V21/P7.ab — mr pushes the collapsed search bar left, away
+                  from the icon cluster, for a bit more breathing room. */}
+              <div className={cn('hidden lg:block', searchExpanded ? 'flex-1' : 'mr-3 xl:mr-5')}>
                 <GlobalSearch
                   navCatsData={navCatsData ?? []}
+                  catConfigData={catConfigData ?? []}
+                  expanded={searchExpanded}
+                  onExpandedChange={setSearchExpanded}
                   onSubmitFallback={(q) => {
                     window.location.href = `/browse?search=${encodeURIComponent(q)}`
                   }}
@@ -455,15 +595,17 @@ export function Navbar() {
                   localStorage cache before `loading` flips to false — without
                   the `!user` guard we'd briefly render BOTH the skeletons
                   AND the real icons side by side. */}
+              {/* V21/P7.t — Icons stay visible while search is expanded
+                  (the input grows into the freed category space, not
+                  the icon cluster). */}
               {loading && !user && (
                 <>
-                  {/* h-9 w-9 to match the real bell/messages/activity
-                      Buttons: `cn()` uses tailwind-merge, so the className
-                      `h-9 w-9` overrides the default `h-10 w-10` from
-                      `size="icon"`. Real buttons render 36×36. */}
-                  <div className="h-9 w-9 animate-pulse rounded-full bg-white/10" />
-                  <div className="h-9 w-9 animate-pulse rounded-full bg-white/10" />
-                  <div className="h-9 w-9 animate-pulse rounded-full bg-white/10" />
+                  {/* h-10 w-10 to match the real bell/messages/activity
+                      Buttons (40×40) so the navbar width is identical
+                      before and after auth resolves. */}
+                  <div className="h-10 w-10 animate-pulse rounded-full bg-white/10" />
+                  <div className="h-10 w-10 animate-pulse rounded-full bg-white/10" />
+                  <div className="h-10 w-10 animate-pulse rounded-full bg-white/10" />
                 </>
               )}
 
@@ -474,16 +616,20 @@ export function Navbar() {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="relative h-9 w-9 rounded-full text-gray-300 hover:bg-white/10 hover:text-white"
+                      className="relative h-10 w-10 rounded-full text-gray-100 hover:bg-white/15 hover:text-white"
                       onClick={() => {
                         setNotificationsOpen(!notificationsOpen)
                         setActivityOpen(false)
                         setUserMenuOpen(false)
                       }}
                     >
-                      <Bell className="h-5 w-5" />
+                      {unreadNotificationCount > 0 ? (
+                        <BellDot className="h-[21px] w-[21px]" />
+                      ) : (
+                        <Bell className="h-[21px] w-[21px]" />
+                      )}
                       {unreadNotificationCount > 0 && (
-                        <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
+                        <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-lime px-1 text-[10px] font-bold text-text-inverse">
                           {unreadNotificationCount > 9 ? '9+' : unreadNotificationCount}
                         </span>
                       )}
@@ -575,11 +721,11 @@ export function Navbar() {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="relative h-9 w-9 rounded-full text-gray-300 hover:bg-white/10 hover:text-white"
+                      className="relative h-10 w-10 rounded-full text-gray-100 hover:bg-white/15 hover:text-white"
                     >
-                      <MessageSquare className="h-5 w-5" />
+                      <MessagesSquare className="h-[21px] w-[21px]" />
                       {unreadCount > 0 && (
-                        <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
+                        <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-lime px-1 text-[10px] font-bold text-text-inverse">
                           {unreadCount}
                         </span>
                       )}
@@ -591,16 +737,16 @@ export function Navbar() {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="relative h-9 w-9 rounded-full text-gray-300 hover:bg-white/10 hover:text-white"
+                      className="relative h-10 w-10 rounded-full text-gray-100 hover:bg-white/15 hover:text-white"
                       onClick={() => {
                         setActivityOpen(!activityOpen)
                         setNotificationsOpen(false)
                         setUserMenuOpen(false)
                       }}
                     >
-                      <Activity className="h-5 w-5" />
+                      <Package className="h-[21px] w-[21px]" />
                       {totalActiveOrders > 0 && (
-                        <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-lime text-[10px] font-bold text-text-inverse">
+                        <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-lime px-1 text-[10px] font-bold text-text-inverse">
                           {totalActiveOrders > 9 ? '9+' : totalActiveOrders}
                         </span>
                       )}
@@ -700,6 +846,12 @@ export function Navbar() {
                 </>
               )}
 
+              {/* V21/P7.ac — Divider + spacing sets the avatar apart from
+                  the icon cluster so it doesn't crowd the activity icon. */}
+              {user && (
+                <div className="ml-1 hidden h-6 w-px bg-white/15 sm:block" />
+              )}
+
               {/* User/Auth */}
               {(loading && !user) || isLoggingOut ? (
                 // R17 — match the real avatar button (h-10 w-10) so the
@@ -733,9 +885,16 @@ export function Navbar() {
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: 10, scale: 0.95 }}
                         transition={{ duration: 0.2 }}
-                        className="absolute right-0 top-full mt-2 w-[300px] max-w-[85vw]"
+                        className="absolute -right-3 top-full mt-3 w-[300px] max-w-[85vw] sm:-right-6"
                       >
-                        <div className="rounded-2xl border border-white/10 bg-black p-2 shadow-2xl backdrop-blur-xl">
+                        {/* V21/P7.ad — Translucent navbar-matched glass
+                            (was flat black), squarer corners, and a bit
+                            of vertical breathing room above (mt-3) to
+                            mirror the navbar↔page gap. */}
+                        <div
+                          className="rounded-xl border border-white/10 p-1.5 shadow-2xl backdrop-blur-2xl backdrop-saturate-150"
+                          style={{ backgroundColor: 'rgba(8, 8, 12, 0.985)' }}
+                        >
                           {/* User Info card */}
                           <div className="border-b border-white/10 p-2 pb-2.5">
                             {user.isApprovedSeller ? (
@@ -769,17 +928,17 @@ export function Navbar() {
                                     })()}
                                   </div>
                                 </Link>
-                                {/* Divider */}
-                                <div className="w-px h-8 bg-white/10 flex-shrink-0" />
-                                {/* Right — Sell button */}
-                                <Link
-                                  href="/sell/new"
-                                  onClick={() => setUserMenuOpen(false)}
-                                  className="flex-shrink-0 flex items-center gap-1.5 pr-3 pl-2.5 py-2.5 text-sm font-semibold text-white hover:text-primary transition-colors whitespace-nowrap"
-                                >
-                                  <PlusCircle className="h-4 w-4" />
-                                  Sell
-                                </Link>
+                                {/* Right — Sell button (pill CTA) */}
+                                <div className="flex-shrink-0 pr-2">
+                                  <Link
+                                    href="/sell/new"
+                                    onClick={() => setUserMenuOpen(false)}
+                                    className="flex items-center gap-1.5 rounded-lg bg-lime px-3 py-1.5 text-sm font-bold text-text-inverse transition-colors hover:bg-lime/90 whitespace-nowrap"
+                                  >
+                                    <PlusCircle className="h-4 w-4" />
+                                    Sell
+                                  </Link>
+                                </div>
                               </div>
                             ) : (
                               <div className="flex items-center gap-2.5 w-full rounded-xl px-3 py-2.5 bg-white/[0.04] border border-white/[0.06]">
@@ -816,44 +975,140 @@ export function Navbar() {
                               </>
                             )}
 
-                            {/* Dashboard - For All Users */}
-                            <Link
-                              href="/account/dashboard"
-                              className={cn(
-                                "flex items-center gap-3 rounded-lg px-4 py-2 text-sm transition-colors font-medium mb-1",
-                                user.isApprovedSeller
-                                  ? "bg-white text-black hover:bg-white/90"
-                                  : "text-gray-300 hover:bg-white/10 hover:text-white"
-                              )}
-                              onClick={() => setUserMenuOpen(false)}
-                            >
-                              <LayoutDashboard className="h-4 w-4" />
-                              Dashboard
-                            </Link>
-
-                            {/* My Listings - Sellers Only */}
-                            {user.isApprovedSeller && (
+                            {/* V21/P7.ae — SELLER MENU. Order:
+                                Seller Dashboard → My Offers → My Orders →
+                                ─ → Messages, Feedback → ─ → Offline Mode
+                                toggle → ─ → Settings, Support.
+                                Icons are swappable mask SVGs in
+                                /public/assets/menu-icons/. */}
+                            {user.isApprovedSeller ? (
                               <>
+                                {/* V21/P7.ag — Primary item: soft elevated
+                                    fill + lime icon, distinct from the
+                                    lime-bordered Admin Panel above and the
+                                    plain hover rows below. No more jarring
+                                    white block. */}
                                 <Link
-                                  href="/account/listings"
-                                  className="flex items-center gap-3 rounded-lg px-4 py-2 text-sm text-gray-300 transition-colors hover:bg-white/10 hover:text-white"
+                                  href="/account/dashboard"
+                                  className="mb-1 flex items-center gap-3 rounded-lg border border-white/10 bg-white/[0.06] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-white/[0.10]"
                                   onClick={() => setUserMenuOpen(false)}
                                 >
-                                  <List className="h-4 w-4" />
-                                  My Listings
+                                  <MenuIcon name="seller-dashboard" className="text-lime-text" />
+                                  Seller Dashboard
+                                </Link>
+
+                                <Link
+                                  href="/account/listings"
+                                  className="flex items-center gap-3 rounded-lg px-4 py-2 text-sm text-gray-200 transition-colors hover:bg-white/10 hover:text-white"
+                                  onClick={() => setUserMenuOpen(false)}
+                                >
+                                  <MenuIcon name="my-offers" />
+                                  My Offers
+                                </Link>
+
+                                <Link
+                                  href="/account/orders"
+                                  className="flex items-center gap-3 rounded-lg px-4 py-2 text-sm text-gray-200 transition-colors hover:bg-white/10 hover:text-white"
+                                  onClick={() => setUserMenuOpen(false)}
+                                >
+                                  <MenuIcon name="my-orders" />
+                                  My Orders
                                 </Link>
 
                                 <div className="my-2 h-px bg-white/10" />
-                              </>
-                            )}
 
-                            {/* Pending/Non-Seller Actions */}
-                            {!user.isApprovedSeller && (
+                                <Link
+                                  href="/account/messages"
+                                  className="flex items-center gap-3 rounded-lg px-4 py-2 text-sm text-gray-200 transition-colors hover:bg-white/10 hover:text-white"
+                                  onClick={() => setUserMenuOpen(false)}
+                                >
+                                  <MenuIcon name="messages" />
+                                  Messages
+                                </Link>
+
+                                <Link
+                                  href="/account/reviews"
+                                  className="flex items-center gap-3 rounded-lg px-4 py-2 text-sm text-gray-200 transition-colors hover:bg-white/10 hover:text-white"
+                                  onClick={() => setUserMenuOpen(false)}
+                                >
+                                  <MenuIcon name="feedback" />
+                                  Feedback
+                                </Link>
+
+                                <div className="my-2 h-px bg-white/10" />
+
+                                {/* Offline Mode toggle — pauses all offers
+                                    (hidden from buyers) until toggled back. */}
+                                <button
+                                  type="button"
+                                  role="switch"
+                                  aria-checked={offlineMode}
+                                  disabled={pendingOffline}
+                                  onClick={toggleOfflineMode}
+                                  className="flex w-full items-center gap-3 rounded-lg px-4 py-2 text-sm text-gray-200 transition-colors hover:bg-white/10 hover:text-white disabled:opacity-60"
+                                >
+                                  <MenuIcon
+                                    name="power"
+                                    className={offlineMode ? 'text-amber-400' : 'text-gray-200'}
+                                  />
+                                  <span className="flex min-w-0 flex-col items-start">
+                                    <span className="leading-tight">Offline Mode</span>
+                                    <span className="text-[11px] leading-tight text-gray-500">
+                                      {offlineMode ? 'Offers hidden from buyers' : 'Your offers are live'}
+                                    </span>
+                                  </span>
+                                  {/* Track */}
+                                  <span
+                                    className={cn(
+                                      'ml-auto flex h-5 w-9 shrink-0 items-center rounded-full px-0.5 transition-colors',
+                                      offlineMode ? 'bg-amber-400/90' : 'bg-white/15',
+                                    )}
+                                  >
+                                    <span
+                                      className={cn(
+                                        'h-4 w-4 rounded-full bg-white shadow transition-transform',
+                                        offlineMode ? 'translate-x-4' : 'translate-x-0',
+                                      )}
+                                    />
+                                  </span>
+                                </button>
+
+                                <div className="my-2 h-px bg-white/10" />
+
+                                <Link
+                                  href="/account/settings"
+                                  className="flex items-center gap-3 rounded-lg px-4 py-2 text-sm text-gray-200 transition-colors hover:bg-white/10 hover:text-white"
+                                  onClick={() => setUserMenuOpen(false)}
+                                >
+                                  <MenuIcon name="settings" />
+                                  Settings
+                                </Link>
+
+                                <Link
+                                  href="/support"
+                                  className="flex items-center gap-3 rounded-lg px-4 py-2 text-sm text-gray-200 transition-colors hover:bg-white/10 hover:text-white"
+                                  onClick={() => setUserMenuOpen(false)}
+                                >
+                                  <MenuIcon name="support" />
+                                  Support
+                                </Link>
+                              </>
+                            ) : (
+                              /* BUYER / PENDING-SELLER MENU (unchanged flow) */
                               <>
+                                <Link
+                                  href="/account/dashboard"
+                                  className="mb-1 flex items-center gap-3 rounded-lg px-4 py-2 text-sm font-medium text-gray-300 transition-colors hover:bg-white/10 hover:text-white"
+                                  onClick={() => setUserMenuOpen(false)}
+                                >
+                                  <LayoutDashboard className="h-4 w-4" />
+                                  Dashboard
+                                </Link>
+
                                 {user.sellerApplicationStatus === 'pending' || user.sellerApplicationStatus === 'under_review' ? (
                                   <Link
                                     href="/account/seller-status"
-                                    className="flex items-center gap-3 rounded-lg px-4 py-2 mb-1 text-sm text-yellow-400 transition-colors hover:bg-yellow-500/10 border border-yellow-500/20"
+                                    className="mb-1 flex items-center gap-3 rounded-lg border border-yellow-500/20 px-4 py-2 text-sm text-yellow-400 transition-colors hover:bg-yellow-500/10"
                                     onClick={() => setUserMenuOpen(false)}
                                   >
                                     <Store className="h-4 w-4" />
@@ -862,92 +1117,55 @@ export function Navbar() {
                                 ) : (
                                   <Link
                                     href="/account/become-seller"
-                                    className="flex items-center gap-3 rounded-lg px-4 py-2 mb-1 text-sm text-primary transition-colors hover:bg-primary/10 border border-primary/20 font-medium"
+                                    className="mb-1 flex items-center gap-3 rounded-lg border border-primary/20 px-4 py-2 text-sm font-medium text-primary transition-colors hover:bg-primary/10"
                                     onClick={() => setUserMenuOpen(false)}
                                   >
                                     <Store className="h-4 w-4" />
                                     Become a Seller
                                   </Link>
                                 )}
+
+                                <div className="my-2 h-px bg-white/10" />
+
+                                <Link
+                                  href="/account"
+                                  className="flex items-center gap-3 rounded-lg px-4 py-2 text-sm text-gray-300 transition-colors hover:bg-white/10 hover:text-white"
+                                  onClick={() => setUserMenuOpen(false)}
+                                >
+                                  <User className="h-4 w-4" />
+                                  My Account
+                                </Link>
+
+                                <Link
+                                  href="/account/wishlist"
+                                  className="flex items-center gap-3 rounded-lg px-4 py-2 text-sm text-gray-300 transition-colors hover:bg-white/10 hover:text-white"
+                                  onClick={() => setUserMenuOpen(false)}
+                                >
+                                  <Heart className="h-4 w-4" />
+                                  Wishlist
+                                </Link>
+
+                                <Link
+                                  href="/account/wallet"
+                                  className="flex items-center gap-3 rounded-lg px-4 py-2 text-sm text-gray-300 transition-colors hover:bg-white/10 hover:text-white"
+                                  onClick={() => setUserMenuOpen(false)}
+                                >
+                                  <Wallet className="h-4 w-4" />
+                                  Wallet
+                                </Link>
+
+                                <div className="my-2 h-px bg-white/10" />
+
+                                <Link
+                                  href="/account/settings"
+                                  className="flex items-center gap-3 rounded-lg px-4 py-2 text-sm text-gray-300 transition-colors hover:bg-white/10 hover:text-white"
+                                  onClick={() => setUserMenuOpen(false)}
+                                >
+                                  <Settings className="h-4 w-4" />
+                                  Settings
+                                </Link>
                               </>
                             )}
-
-                            <div className="my-2 h-px bg-white/10" />
-
-                            {/* Profile & Activity */}
-                            {user.isApprovedSeller ? (
-                              <Link
-                                href={`/shop/${user.profile?.shop_slug || user.profile?.username || user.id}`}
-                                className="flex items-center gap-3 rounded-lg px-4 py-2 text-sm text-gray-300 transition-colors hover:bg-white/10 hover:text-white"
-                                onClick={() => setUserMenuOpen(false)}
-                              >
-                                <Store className="h-4 w-4" />
-                                My Shop
-                              </Link>
-                            ) : (
-                              <Link
-                                href="/account"
-                                className="flex items-center gap-3 rounded-lg px-4 py-2 text-sm text-gray-300 transition-colors hover:bg-white/10 hover:text-white"
-                                onClick={() => setUserMenuOpen(false)}
-                              >
-                                <User className="h-4 w-4" />
-                                My Account
-                              </Link>
-                            )}
-
-                            {/* My Orders - Sellers Only */}
-                            {user.isApprovedSeller && (
-                              <Link
-                                href="/account/orders"
-                                className="flex items-center gap-3 rounded-lg px-4 py-2 text-sm text-gray-300 transition-colors hover:bg-white/10 hover:text-white"
-                                onClick={() => setUserMenuOpen(false)}
-                              >
-                                <Package className="h-4 w-4" />
-                                My Orders
-                              </Link>
-                            )}
-
-                            {/* My Feedback - Sellers Only */}
-                            {user.isApprovedSeller && (
-                              <Link
-                                href="/account/reviews"
-                                className="flex items-center gap-3 rounded-lg px-4 py-2 text-sm text-gray-300 transition-colors hover:bg-white/10 hover:text-white"
-                                onClick={() => setUserMenuOpen(false)}
-                              >
-                                <Star className="h-4 w-4" />
-                                My Feedback
-                              </Link>
-                            )}
-
-                            <Link
-                              href="/account/wishlist"
-                              className="flex items-center gap-3 rounded-lg px-4 py-2 text-sm text-gray-300 transition-colors hover:bg-white/10 hover:text-white"
-                              onClick={() => setUserMenuOpen(false)}
-                            >
-                              <Heart className="h-4 w-4" />
-                              Wishlist
-                            </Link>
-
-                            <Link
-                              href="/account/wallet"
-                              className="flex items-center gap-3 rounded-lg px-4 py-2 text-sm text-gray-300 transition-colors hover:bg-white/10 hover:text-white"
-                              onClick={() => setUserMenuOpen(false)}
-                            >
-                              <Wallet className="h-4 w-4" />
-                              Wallet
-                            </Link>
-
-                            <div className="my-2 h-px bg-white/10" />
-
-                            {/* Settings */}
-                            <Link
-                              href="/account/settings"
-                              className="flex items-center gap-3 rounded-lg px-4 py-2 text-sm text-gray-300 transition-colors hover:bg-white/10 hover:text-white"
-                              onClick={() => setUserMenuOpen(false)}
-                            >
-                              <Settings className="h-4 w-4" />
-                              Settings
-                            </Link>
                           </div>
 
                           {/* Logout */}
@@ -957,24 +1175,25 @@ export function Navbar() {
                                 e.preventDefault()
                                 e.stopPropagation()
 
+                                // V21/P5.b — Sign-out flow:
+                                //  1. Show full-screen blur+loader overlay
+                                //  2. Sign out + clear client caches
+                                //  3. If on a protected path: replace('/')
+                                //     If on a public path: scroll to top +
+                                //     refresh in place so the user lands
+                                //     at the top of the same page (not
+                                //     stranded mid-scroll). Both keep the
+                                //     overlay visible until navigation
+                                //     settles, eliminating the "stuck at
+                                //     bottom" race we used to see.
+                                setIsLoggingOut(true)
+                                setUserMenuOpen(false)
                                 try {
-                                  setIsLoggingOut(true)
-                                  setUserMenuOpen(false)
-
-                                  // Sign out using client supabase
                                   const { createClient } = await import('@/lib/supabase/client')
                                   const supabase = createClient()
                                   const { error } = await supabase.auth.signOut()
                                   if (error) console.error('Logout error:', error)
 
-                                  // V16 — Smart redirect after logout.
-                                  // Protected paths (account / checkout /
-                                  // cart / sell / seller) bounce to home;
-                                  // everything else stays put and just
-                                  // refreshes server-rendered content so
-                                  // navbar avatar, wishlist, etc. flip to
-                                  // signed-out state without a full
-                                  // window.location reload.
                                   const PROTECTED = [
                                     '/account',
                                     '/checkout',
@@ -987,26 +1206,37 @@ export function Navbar() {
                                     pathname?.startsWith(p),
                                   )
 
-                                  // Clear cached query data so the next
-                                  // page render doesn't show stale
-                                  // user-scoped data (wishlists, orders).
                                   queryClient.clear()
+
+                                  // Scroll to top BEFORE we paint the next
+                                  // page so the user lands cleanly.
+                                  if (typeof window !== 'undefined') {
+                                    window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior })
+                                  }
 
                                   if (isProtected) {
                                     router.replace('/')
+                                  } else {
+                                    router.refresh()
                                   }
-                                  router.refresh()
-                                  // Tiny toast hint.
+
                                   try {
                                     const { toast } = await import('sonner')
                                     toast.success('Signed out')
                                   } catch {}
-                                  setIsLoggingOut(false)
+
+                                  // Hold the overlay through the next tick
+                                  // so the new server-rendered page paints
+                                  // before we lift it. 350ms covers most
+                                  // sub-second route changes.
+                                  setTimeout(() => setIsLoggingOut(false), 350)
                                 } catch (error) {
                                   console.error('Logout failed:', error)
-                                  setIsLoggingOut(false)
+                                  if (typeof window !== 'undefined') {
+                                    window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior })
+                                  }
                                   router.replace('/')
-                                  router.refresh()
+                                  setTimeout(() => setIsLoggingOut(false), 350)
                                 }
                               }}
                               className="flex w-full items-center gap-3 rounded-lg px-4 py-2 text-sm text-red-400 transition-colors hover:bg-red-500/10 cursor-pointer"
@@ -1234,7 +1464,7 @@ function CategoryDropdown({
           // pt-3 padding on the motion.div below, which extends the
           // popover's hover area UP into the gap — so cursor crossing
           // the visual gap still counts as hovering the popover.
-          sideOffset={12}
+          sideOffset={4}
           collisionPadding={16}
           avoidCollisions
           onOpenAutoFocus={(e) => e.preventDefault()}
@@ -1265,7 +1495,7 @@ function CategoryDropdown({
             // moving from navbar button → dropdown card crosses this
             // bridge and counts as "inside popover," so the close
             // debounce never fires mid-traverse.
-            className="pt-3"
+            className="pt-2"
           >
             {/* V17p — Dropdown scaled up to match the navbar's own
                 width and breathing room. ~960px wide (capped at 92vw),
@@ -1276,8 +1506,22 @@ function CategoryDropdown({
                 fewer games but the popover doesn't shrink — the empty
                 lower area absorbs visually instead of changing layout
                 when you hover between tabs. */}
-            <div className="w-[min(960px,92vw)] min-h-[520px] overflow-hidden rounded-2xl border border-white/10 bg-black shadow-2xl backdrop-blur-xl">
-              <div className="grid grid-cols-1 md:grid-cols-[260px_1fr]">
+            {/* V21/P7.z — Translucent navbar-matched surface instead of
+                flat black, so backdrop-blur actually engages and the
+                dropdown reads as glass over the page (same token as the
+                search panel). */}
+            <div
+              className="w-[min(960px,92vw)] overflow-hidden rounded-2xl border border-white/10 shadow-2xl backdrop-blur-2xl backdrop-saturate-150"
+              style={{ backgroundColor: 'rgba(10, 10, 15, 0.92)' }}
+            >
+              {/* V21/P7.aa — min-h on the GRID (not the card) so the left
+                  "Popular" column's background + right border stretch the
+                  full height even on tabs with few games. Previously the
+                  card had the min-h while the grid only filled its content
+                  height, leaving a lighter-bg gap below the short column —
+                  read as a stray horizontal divider on Currency/Top
+                  Up/Boosting. */}
+              <div className="grid min-h-[520px] grid-cols-1 items-stretch md:grid-cols-[260px_1fr]">
                 {/* LEFT — Popular */}
                 <div className="border-b border-white/10 bg-white/[0.02] p-4 md:border-b-0 md:border-r">
                   <div className="mb-3 px-1.5 text-[12px] font-bold uppercase tracking-[0.12em] text-lime-text">
@@ -1395,6 +1639,60 @@ function CategoryDropdown({
    stay neutral so it doesn't fight them.
    ────────────────────────────────────────────────────────────────── */
 
+// V21/P7.u — Placeholder category icons by canonical type. Admin can
+// override per game via category_configs.currency_icon_url; this is the
+// default art when none is set. Swap the SVGs in
+// /public/assets/category-icons/ to change the defaults.
+// V21/P7.ae — currentColor mask icon for the profile menu. Drop a new
+// SVG into /public/assets/menu-icons/<name>.svg to swap the art; the
+// mask inherits the row's text color so hover/active states tint it.
+function MenuIcon({ name, className }: { name: string; className?: string }) {
+  return (
+    <span
+      aria-hidden
+      className={cn('inline-block h-[18px] w-[18px] shrink-0 bg-current', className)}
+      style={{
+        WebkitMaskImage: `url(/assets/menu-icons/${name}.svg)`,
+        maskImage: `url(/assets/menu-icons/${name}.svg)`,
+        WebkitMaskRepeat: 'no-repeat',
+        maskRepeat: 'no-repeat',
+        WebkitMaskPosition: 'center',
+        maskPosition: 'center',
+        WebkitMaskSize: 'contain',
+        maskSize: 'contain',
+      }}
+    />
+  )
+}
+
+function categoryFallbackIcon(
+  type: string | undefined,
+  slug: string,
+): string | null {
+  const key = (type || slug || '')
+    .toLowerCase()
+    .replace(/^buy-/, '')
+  const map: Record<string, string> = {
+    currency: '/assets/category-icons/items.svg', // currency uses admin icon; rarely hits this
+    items: '/assets/category-icons/items.svg',
+    item: '/assets/category-icons/items.svg',
+    account: '/assets/category-icons/accounts.svg',
+    accounts: '/assets/category-icons/accounts.svg',
+    service: '/assets/category-icons/boosting.svg',
+    boosting: '/assets/category-icons/boosting.svg',
+    boost: '/assets/category-icons/boosting.svg',
+    top_up: '/assets/category-icons/top-up.svg',
+    'top-up': '/assets/category-icons/top-up.svg',
+    topup: '/assets/category-icons/top-up.svg',
+    gift_card: '/assets/category-icons/gift-cards.svg',
+    'gift-cards': '/assets/category-icons/gift-cards.svg',
+    giftcards: '/assets/category-icons/gift-cards.svg',
+    limiteds: '/assets/category-icons/limiteds.svg',
+    limited: '/assets/category-icons/limiteds.svg',
+  }
+  return map[key] ?? null
+}
+
 interface NavGame {
   name: string
   slug: string
@@ -1410,120 +1708,315 @@ interface NavCatRow {
 
 function GlobalSearch({
   navCatsData,
+  catConfigData = [],
   onSubmitFallback,
+  expanded = false,
+  onExpandedChange,
 }: {
   navCatsData: any[]
+  catConfigData?: any[]
   onSubmitFallback: (q: string) => void
+  /** V21/P7.r — When true, the input fills the navbar row and shows a
+   *  close button. The parent collapses the category links + icons. */
+  expanded?: boolean
+  onExpandedChange?: (v: boolean) => void
 }) {
+  const router = useRouter()
   const [q, setQ] = useState('')
   const [focused, setFocused] = useState(false)
   const [highlightIdx, setHighlightIdx] = useState(-1)
+  // V21/P7.v — In-game item / filter-value matches (e.g. "garama",
+  // "nfr parrot") fetched from the server (attribute_options). Game and
+  // category-name matches stay client-side off navCatsData below.
+  const [optionHits, setOptionHits] = useState<AttrOptionHit[]>([])
+  // V21/P7.v — True while the server search is in flight so the panel
+  // shows a loading state instead of a premature "No matches".
+  const [searching, setSearching] = useState(false)
   const containerRef = useRef<HTMLDivElement | null>(null)
+  const inputRef = useRef<HTMLInputElement | null>(null)
 
-  // Click-outside closes the panel.
+  const collapse = useCallback(() => {
+    setFocused(false)
+    onExpandedChange?.(false)
+    // V21/P7.aa — Clearing on collapse resets the bar fully so it doesn't
+    // reopen with a stale query / leftover results next time.
+    setQ('')
+    setOptionHits([])
+  }, [onExpandedChange])
+
+  const expand = useCallback(() => {
+    onExpandedChange?.(true)
+    setFocused(true)
+    // Focus after the layout animation kicks off.
+    requestAnimationFrame(() => inputRef.current?.focus())
+  }, [onExpandedChange])
+
+  // V21/P7.r — Cmd/Ctrl+K opens search; Esc closes it.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault()
+        expand()
+      } else if (e.key === 'Escape' && expanded) {
+        collapse()
+      }
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [expand, collapse, expanded])
+
+  // Click-outside closes the panel (and collapses the expanded bar).
   useEffect(() => {
     const onClick = (e: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setFocused(false)
+        // V21/P7.aa — Full reset (clears query + results) so clicking out
+        // without searching leaves no lingering half-open search.
+        collapse()
       }
     }
     document.addEventListener('mousedown', onClick)
     return () => document.removeEventListener('mousedown', onClick)
-  }, [])
+  }, [collapse])
 
-  // Build a flat (game, primary categorySlug) index — first category
-  // listed wins as the link target when the user clicks the game.
-  // V17g — Alias rewrite removed; DB stores canonical slugs.
+  // V21/P7.t — Build a (game → categories) index where each category
+  // carries its display label so we can match BOTH the game name AND
+  // the category name. "Robux" → Roblox ▸ Robux. "Garama" → Steal a
+  // Brainrot ▸ Items. Each result row is a game with the categories
+  // that matched nested under it.
+  // Map of `${game_id}:${category_type}` → currency_icon_url.
+  const catIconMap = useMemo(() => {
+    const m = new Map<string, string>()
+    for (const row of (catConfigData ?? []) as any[]) {
+      const url = row?.config?.currency_icon_url
+      if (url && row.game_id && row.category_type) {
+        m.set(`${row.game_id}:${row.category_type}`, url)
+      }
+    }
+    return m
+  }, [catConfigData])
+
   const gameIndex = useMemo(() => {
     const map = new Map<
       string,
-      { game: NavGame; primaryCategorySlug: string; categories: string[] }
+      {
+        game: NavGame
+        categories: { slug: string; label: string; iconUrl?: string | null }[]
+      }
     >()
-    for (const row of navCatsData as NavCatRow[]) {
+    for (const row of navCatsData as any[]) {
       const game = row.game
       if (!game?.slug) continue
-      const existing = map.get(game.slug)
-      if (existing) {
-        existing.categories.push(row.slug)
+      // V21/P7.x — Prefer the category's own `name` (e.g. "V-Bucks") so
+      // the search label matches the subnav exactly. The metadata label
+      // and slug-derived fallback only kick in when name is missing
+      // (slug fallback "buy-vbucks" → "Vbucks" was the wrong casing).
+      const label =
+        (row.name as string) ||
+        (row.metadata?.label as string) ||
+        (row.metadata?.name as string) ||
+        row.slug
+          .replace(/^buy-/, '')
+          .replace(/[-_]+/g, ' ')
+          .replace(/\b\w/g, (c: string) => c.toUpperCase())
+      // V21/P7.u — Icon resolution: admin-uploaded currency_icon_url
+      // first (keyed by game_id:category_type), else a static
+      // placeholder SVG by category type from
+      // /public/assets/category-icons/. Replace those SVGs to swap the
+      // default per-category art.
+      const catType = row.metadata?.type as string | undefined
+      const adminIcon =
+        row.game_id && catType
+          ? catIconMap.get(`${row.game_id}:${catType}`) ?? null
+          : null
+      const iconUrl = adminIcon ?? categoryFallbackIcon(catType, row.slug)
+      const entry = map.get(game.slug)
+      if (entry) {
+        entry.categories.push({ slug: row.slug, label, iconUrl })
       } else {
-        map.set(game.slug, {
-          game,
-          primaryCategorySlug: row.slug,
-          categories: [row.slug],
-        })
+        map.set(game.slug, { game, categories: [{ slug: row.slug, label, iconUrl }] })
       }
     }
     return Array.from(map.values()).sort(
       (a, b) => (a.game.sort_order ?? 99) - (b.game.sort_order ?? 99),
     )
-  }, [navCatsData])
+  }, [navCatsData, catIconMap])
 
   const trimmed = q.trim()
+  // Each match = a game + the subset of its categories that matched.
+  // If the GAME name matches, show all its categories. If only a
+  // CATEGORY matches, show just that category nested under the game.
+  type CatRow = { slug: string; label: string; iconUrl?: string | null }
   const matches = useMemo(() => {
-    if (!trimmed) return [] as typeof gameIndex
+    if (!trimmed) return [] as { game: NavGame; categories: CatRow[] }[]
     const needle = trimmed.toLowerCase()
-    return gameIndex
-      .filter((g) =>
+    const out: { game: NavGame; categories: CatRow[] }[] = []
+    for (const g of gameIndex) {
+      const gameHit =
         g.game.name.toLowerCase().includes(needle) ||
-        g.game.slug.toLowerCase().includes(needle),
+        g.game.slug.toLowerCase().includes(needle)
+      const catHits = g.categories.filter((c) =>
+        c.label.toLowerCase().includes(needle) ||
+        c.slug.toLowerCase().includes(needle),
       )
-      .slice(0, 8)
+      if (gameHit) {
+        out.push({ game: g.game, categories: g.categories })
+      } else if (catHits.length > 0) {
+        out.push({ game: g.game, categories: catHits })
+      }
+    }
+    return out.slice(0, 6)
   }, [gameIndex, trimmed])
+
+  // V21/P7.v — Debounced server search over filter VALUES so in-game
+  // item names ("garama", "nfr parrot") resolve to game ▸ category with
+  // the filter pre-applied. Stale responses are discarded via the
+  // `active` guard so a slow earlier query can't clobber a newer one.
+  useEffect(() => {
+    if (trimmed.length < 2) {
+      setOptionHits([])
+      setSearching(false)
+      return
+    }
+    let active = true
+    setSearching(true)
+    const t = setTimeout(async () => {
+      try {
+        const hits = await searchAttributeOptions(trimmed)
+        if (active) setOptionHits(hits)
+      } catch {
+        if (active) setOptionHits([])
+      } finally {
+        if (active) setSearching(false)
+      }
+    }, 180)
+    return () => {
+      active = false
+      clearTimeout(t)
+    }
+  }, [trimmed])
+
+  // Flatten into navigable rows (game header + its category links) for
+  // keyboard nav. Each row = one category destination. Option hits come
+  // after the game/category rows.
+  const flatRows = useMemo(
+    () => [
+      ...matches.flatMap((m) =>
+        m.categories.map((c) => ({
+          kind: 'category' as const,
+          game: m.game,
+          category: c,
+        })),
+      ),
+      ...optionHits.map((h) => ({ kind: 'option' as const, hit: h })),
+    ],
+    [matches, optionHits],
+  )
 
   // Reset highlight when query changes.
   useEffect(() => {
-    setHighlightIdx(matches.length > 0 ? 0 : -1)
-  }, [trimmed, matches.length])
+    setHighlightIdx(flatRows.length > 0 ? 0 : -1)
+  }, [trimmed, flatRows.length])
 
-  const goToGame = (g: (typeof matches)[number]) => {
+  const goToCategory = (game: NavGame, categorySlug: string) => {
     setFocused(false)
     setQ('')
-    window.location.href = `/${g.game.slug}/${g.primaryCategorySlug}`
+    setOptionHits([])
+    onExpandedChange?.(false)
+    router.push(`/${game.slug}/${categorySlug}`)
+  }
+
+  // V21/P7.v — Option hit → deep-link to its category with the filter
+  // pre-applied via ?attr_<slug>=<optionSlug>.
+  const goToOption = (h: AttrOptionHit) => {
+    setFocused(false)
+    setQ('')
+    setOptionHits([])
+    onExpandedChange?.(false)
+    router.push(
+      `/${h.gameSlug}/${h.categorySlug}?attr_${h.attrSlug}=${encodeURIComponent(h.optionSlug)}`,
+    )
+  }
+
+  const goToRow = (row: (typeof flatRows)[number]) => {
+    if (row.kind === 'category') goToCategory(row.game, row.category.slug)
+    else goToOption(row.hit)
   }
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (!focused) return
     if (e.key === 'ArrowDown') {
       e.preventDefault()
-      setHighlightIdx((i) => Math.min(matches.length - 1, i + 1))
+      setHighlightIdx((i) => Math.min(flatRows.length - 1, i + 1))
     } else if (e.key === 'ArrowUp') {
       e.preventDefault()
       setHighlightIdx((i) => Math.max(0, i - 1))
     } else if (e.key === 'Enter') {
       e.preventDefault()
-      if (matches[highlightIdx]) goToGame(matches[highlightIdx])
-      else if (trimmed) onSubmitFallback(trimmed)
+      const row = flatRows[highlightIdx] ?? flatRows[0]
+      if (row) goToRow(row)
     } else if (e.key === 'Escape') {
-      setFocused(false)
+      collapse()
     }
   }
 
-  const open = focused && (matches.length > 0 || trimmed.length > 0)
+  const hasResults = matches.length > 0 || optionHits.length > 0
+  const open = focused && (hasResults || trimmed.length > 0)
 
   return (
-    <div ref={containerRef} className="relative">
+    <motion.div
+      ref={containerRef}
+      layout
+      className={cn('relative', expanded && 'w-full')}
+      transition={{ type: 'spring', stiffness: 420, damping: 36 }}
+    >
       <div className="relative">
-        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+        <Search className="pointer-events-none absolute left-3.5 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-gray-400" />
         <input
+          ref={inputRef}
           type="text"
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          onFocus={() => setFocused(true)}
+          onFocus={() => { setFocused(true); onExpandedChange?.(true) }}
+          onClick={() => { if (!expanded) expand() }}
           onKeyDown={onKeyDown}
-          placeholder="Search games…"
+          placeholder={expanded ? 'Type to search — e.g. Fortnite, Roblox, Garama…' : 'Type to search…'}
           aria-label="Search games"
           aria-autocomplete="list"
           aria-expanded={open}
+          // V21/P7.s — Both states are rounded-full bordered pills. The
+          // expanded fill is very faint (white/[0.04]) with a hairline
+          // border so the bar has visible bounds without reading as a
+          // heavy box-in-box. No lime focus ring (fought the brand).
           className={cn(
-            'h-9 w-44 rounded-full border bg-white/5 pl-10 pr-3 text-sm text-white placeholder:text-gray-500 outline-none transition-colors xl:w-56',
-            // V15n — Subtle border-default + white-overlay focus, no lime
-            // glow. The lime accent stays for active dropdowns / nav state.
-            focused
-              ? 'border-white/20 bg-white/[0.08]'
-              : 'border-white/10 hover:border-white/20',
+            // focus-visible:shadow-none overrides the global lime focus
+            // ring (globals.css :focus-visible) — it looked wrong on the
+            // search bar.
+            // V21/P7.t — rounded-lg (rectangular) so the search reads as
+            // a distinct field, not a second pill matching the navbar's
+            // rounded-full shape.
+            'h-10 rounded-lg border pl-11 text-sm text-white placeholder:text-gray-500 outline-none ring-0 transition-colors focus:outline-none focus:ring-0 focus-visible:shadow-none',
+            expanded
+              ? 'w-full border-white/[0.14] bg-white/[0.04] pr-11'
+              : cn(
+                  'w-56 cursor-pointer bg-white/5 pr-3 xl:w-72',
+                  focused
+                    ? 'border-white/20 bg-white/[0.08]'
+                    : 'border-white/10 hover:border-white/20',
+                ),
           )}
         />
-        {q && (
+        {/* Expanded → close (X) collapses the bar. Collapsed w/ text →
+            clear (X) just empties it. */}
+        {expanded ? (
+          <button
+            type="button"
+            onClick={() => { setQ(''); collapse() }}
+            aria-label="Close search"
+            className="absolute right-3 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full text-gray-400 transition-colors hover:bg-white/10 hover:text-white"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        ) : q ? (
           <button
             type="button"
             onClick={() => { setQ(''); setFocused(true) }}
@@ -1532,7 +2025,7 @@ function GlobalSearch({
           >
             <X className="h-3 w-3" />
           </button>
-        )}
+        ) : null}
       </div>
 
       {/* Result panel */}
@@ -1543,89 +2036,178 @@ function GlobalSearch({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 6 }}
             transition={{ duration: 0.15 }}
-            className="absolute right-0 top-full mt-2 w-[360px] overflow-hidden rounded-2xl border border-white/10 bg-black shadow-2xl backdrop-blur-xl"
+            // V21/P7.t — Translucent navbar-matched surface (not flat
+            // black). Width tracks the bar: full when expanded, fixed
+            // when collapsed.
+            className={cn(
+              'absolute top-full mt-2 overflow-hidden rounded-xl border border-white/[0.12] shadow-[0_16px_50px_rgba(0,0,0,0.6)] backdrop-blur-2xl backdrop-saturate-150',
+              expanded ? 'inset-x-0' : 'right-0 w-[440px]',
+            )}
+            style={{ backgroundColor: 'rgba(10, 10, 15, 0.94)' }}
           >
-            <div className="max-h-[360px] overflow-y-auto">
-              {matches.length === 0 ? (
-                <div className="flex flex-col items-center justify-center px-6 py-8 text-center">
-                  <Search className="mb-2 h-5 w-5 text-gray-600" />
-                  <p className="text-[13px] font-semibold text-gray-300">
-                    No games match "{trimmed}"
+            <div className="max-h-[420px] overflow-y-auto p-1.5">
+              {searching && !hasResults ? (
+                // V21/P7.v — In-flight: spinner, never a premature "no
+                // matches". The empty state only shows once the search
+                // settles with nothing found.
+                <div className="flex flex-col items-center justify-center px-6 py-10 text-center">
+                  <span className="mb-2.5 h-6 w-6 animate-spin rounded-full border-2 border-white/[0.12] border-t-lime" />
+                  <p className="text-[14px] font-semibold text-gray-300">
+                    Searching…
                   </p>
-                  <button
-                    type="button"
-                    onClick={() => onSubmitFallback(trimmed)}
-                    className="mt-3 inline-flex h-8 items-center gap-1.5 rounded-full border border-white/15 bg-white/5 px-3 text-[12px] font-semibold text-gray-200 transition-colors hover:bg-white/10"
-                  >
-                    Search marketplace listings instead
-                    <ArrowRightIcon />
-                  </button>
+                </div>
+              ) : !hasResults ? (
+                <div className="flex flex-col items-center justify-center px-6 py-10 text-center">
+                  <Search className="mb-2.5 h-6 w-6 text-gray-600" />
+                  <p className="text-[14px] font-semibold text-gray-300">
+                    No matches for &ldquo;{trimmed}&rdquo;
+                  </p>
+                  <p className="mt-1 text-[12.5px] text-gray-500">
+                    Try a game, category, or item name.
+                  </p>
                 </div>
               ) : (
-                <ul className="p-1.5">
-                  {matches.map((m, i) => {
-                    const highlighted = i === highlightIdx
-                    return (
-                      <li key={m.game.slug}>
-                        <button
-                          type="button"
-                          onClick={() => goToGame(m)}
-                          onMouseEnter={() => setHighlightIdx(i)}
-                          className={cn(
-                            'flex w-full items-center gap-3 rounded-lg p-2 text-left transition-colors',
-                            highlighted ? 'bg-white/[0.08]' : 'hover:bg-white/[0.06]',
-                          )}
-                        >
-                          {m.game.image_url ? (
-                            <img
-                              src={m.game.image_url}
-                              alt=""
-                              className="h-8 w-8 shrink-0 rounded-md object-contain"
-                            />
-                          ) : (
-                            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-white/10 text-[11px] font-bold text-gray-300">
-                              {m.game.name.slice(0, 2).toUpperCase()}
-                            </span>
-                          )}
-                          <div className="min-w-0 flex-1">
-                            <div className="truncate text-[13.5px] font-semibold text-white">
+                // V21/P7.t/v — Game header + nested category links, then a
+                // grouped "In-Game Items" section for filter-value hits.
+                // "Robux" → Roblox ▸ Robux. "Garama" → Steal a Brainrot ▸
+                // Items · Garama (deep-links with the filter pre-applied).
+                // rowIdx is a single running counter shared across both
+                // sections so it stays in lockstep with `flatRows` for
+                // keyboard nav.
+                (() => {
+                  let rowIdx = -1
+                  return (
+                    <div className="space-y-1">
+                      {matches.map((m) => (
+                        <div key={m.game.slug}>
+                          {/* Game header (non-clickable label row) */}
+                          <div className="flex items-center gap-3 px-2.5 pb-1 pt-2.5">
+                            {m.game.image_url ? (
+                              /* eslint-disable-next-line @next/next/no-img-element */
+                              <img
+                                src={m.game.image_url}
+                                alt=""
+                                className="h-8 w-8 shrink-0 rounded-md object-cover ring-1 ring-white/10"
+                              />
+                            ) : (
+                              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-white/10 text-[11px] font-bold text-gray-300">
+                                {m.game.name.slice(0, 2).toUpperCase()}
+                              </span>
+                            )}
+                            <span className="truncate text-[15px] font-bold text-white">
                               {m.game.name}
-                            </div>
-                            <div className="truncate text-[11px] text-gray-500">
-                              {m.categories.length} categor
-                              {m.categories.length === 1 ? 'y' : 'ies'}
-                            </div>
+                            </span>
                           </div>
-                          <span className="text-gray-500">
-                            <ArrowRightIcon />
-                          </span>
-                        </button>
-                      </li>
-                    )
-                  })}
-                </ul>
+                          {/* Nested category rows — each with its own admin
+                              icon (currency_icon_url) when available. */}
+                          <ul>
+                            {m.categories.map((c) => {
+                              rowIdx += 1
+                              const idx = rowIdx
+                              const highlighted = idx === highlightIdx
+                              return (
+                                <li key={c.slug}>
+                                  <button
+                                    type="button"
+                                    onClick={() => goToCategory(m.game, c.slug)}
+                                    onMouseEnter={() => setHighlightIdx(idx)}
+                                    className={cn(
+                                      'flex w-full items-center justify-between gap-3 rounded-lg py-2.5 pl-2.5 pr-2.5 text-left transition-colors',
+                                      highlighted ? 'bg-white/[0.08]' : 'hover:bg-white/[0.05]',
+                                    )}
+                                  >
+                                    <span className="flex min-w-0 items-center gap-3">
+                                      {/* Category icon, indented under the game. */}
+                                      <span className="ml-8 flex h-7 w-7 shrink-0 items-center justify-center">
+                                        {c.iconUrl ? (
+                                          /* eslint-disable-next-line @next/next/no-img-element */
+                                          <img
+                                            src={c.iconUrl}
+                                            alt=""
+                                            className="h-7 w-7 rounded-md object-contain"
+                                          />
+                                        ) : (
+                                          <span className="h-1.5 w-1.5 rounded-full bg-white/25" />
+                                        )}
+                                      </span>
+                                      <span className="truncate text-[14px] font-semibold text-text-primary">
+                                        {c.label}
+                                      </span>
+                                    </span>
+                                    <span className="text-gray-500">
+                                      <ArrowRightIcon />
+                                    </span>
+                                  </button>
+                                </li>
+                              )
+                            })}
+                          </ul>
+                        </div>
+                      ))}
+
+                      {/* V21/P7.v — In-game item / filter-value matches. */}
+                      {optionHits.length > 0 && (
+                        <div>
+                          <div className="px-2.5 pb-1 pt-3 text-[11px] font-bold uppercase tracking-wider text-gray-500">
+                            In-Game Items
+                          </div>
+                          <ul>
+                            {optionHits.map((h) => {
+                              rowIdx += 1
+                              const idx = rowIdx
+                              const highlighted = idx === highlightIdx
+                              return (
+                                <li key={`${h.gameSlug}|${h.categorySlug}|${h.optionSlug}`}>
+                                  <button
+                                    type="button"
+                                    onClick={() => goToOption(h)}
+                                    onMouseEnter={() => setHighlightIdx(idx)}
+                                    className={cn(
+                                      'flex w-full items-center justify-between gap-3 rounded-lg py-2.5 pl-2.5 pr-2.5 text-left transition-colors',
+                                      highlighted ? 'bg-white/[0.08]' : 'hover:bg-white/[0.05]',
+                                    )}
+                                  >
+                                    <span className="flex min-w-0 items-center gap-3">
+                                      {h.gameImage ? (
+                                        /* eslint-disable-next-line @next/next/no-img-element */
+                                        <img
+                                          src={h.gameImage}
+                                          alt=""
+                                          className="h-8 w-8 shrink-0 rounded-md object-cover ring-1 ring-white/10"
+                                        />
+                                      ) : (
+                                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-white/10 text-[11px] font-bold text-gray-300">
+                                          {h.gameName.slice(0, 2).toUpperCase()}
+                                        </span>
+                                      )}
+                                      <span className="flex min-w-0 flex-col">
+                                        <span className="truncate text-[14px] font-semibold text-text-primary">
+                                          {h.optionLabel}
+                                        </span>
+                                        <span className="truncate text-[12px] text-gray-500">
+                                          {h.gameName} · {h.categoryLabel}
+                                        </span>
+                                      </span>
+                                    </span>
+                                    <span className="text-gray-500">
+                                      <ArrowRightIcon />
+                                    </span>
+                                  </button>
+                                </li>
+                              )
+                            })}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })()
               )}
             </div>
-            {/* Footer: explicit "search all listings" link */}
-            {trimmed && matches.length > 0 && (
-              <div className="border-t border-white/10 bg-white/[0.02] p-1.5">
-                <button
-                  type="button"
-                  onClick={() => onSubmitFallback(trimmed)}
-                  className="flex w-full items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-[12.5px] font-semibold text-gray-300 transition-colors hover:bg-white/[0.06] hover:text-white"
-                >
-                  <span className="inline-flex items-center gap-1.5">
-                    <Search className="h-3.5 w-3.5" />
-                    View all results for "{trimmed}"
-                  </span>
-                  <ArrowRightIcon />
-                </button>
-              </div>
-            )}
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
+    </motion.div>
   )
 }
 

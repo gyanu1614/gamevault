@@ -8,7 +8,7 @@
 
 function Block({ className = '' }: { className?: string }) {
   return (
-    <div className={`animate-pulse rounded-md bg-bg-overlay/80 ${className}`} />
+    <div className={`animate-pulse rounded-md bg-white/[0.07] ${className}`} />
   )
 }
 
@@ -39,7 +39,7 @@ export default function OrderDetailLoading() {
           {/* Left — main content */}
           <div className="space-y-5">
             {/* Progress bar card */}
-            <div className="rounded-2xl border border-border-default bg-bg-overlay p-5">
+            <div className="rounded-lg border border-border-subtle card-frost p-5">
               <Block className="mb-3 h-4 w-32" />
               <Block className="mb-2 h-2 w-full rounded-full" />
               <div className="mt-4 flex justify-between">
@@ -51,7 +51,7 @@ export default function OrderDetailLoading() {
             </div>
 
             {/* Order details card */}
-            <div className="rounded-2xl border border-border-default bg-bg-overlay p-5">
+            <div className="rounded-lg border border-border-subtle card-frost p-5">
               <Block className="mb-4 h-5 w-28" />
               <div className="space-y-3">
                 {Array.from({ length: 5 }).map((_, i) => (
@@ -64,7 +64,7 @@ export default function OrderDetailLoading() {
             </div>
 
             {/* Timeline card */}
-            <div className="rounded-2xl border border-border-default bg-bg-overlay p-5">
+            <div className="rounded-lg border border-border-subtle card-frost p-5">
               <Block className="mb-4 h-5 w-28" />
               <div className="space-y-4">
                 {Array.from({ length: 4 }).map((_, i) => (
@@ -82,7 +82,7 @@ export default function OrderDetailLoading() {
 
           {/* Right — chat / actions rail */}
           <div className="lg:sticky lg:top-24 lg:self-start">
-            <div className="rounded-2xl border border-border-default bg-bg-overlay">
+            <div className="rounded-lg border border-border-subtle card-frost">
               {/* Chat header */}
               <div className="flex items-center gap-2 border-b border-border-subtle p-4">
                 <Block className="h-8 w-8 rounded-full" />

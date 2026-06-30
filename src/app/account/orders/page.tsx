@@ -1,13 +1,14 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, Suspense } from 'react'
 import { useAuth } from '@/hooks/use-auth'
+import AccountPageHeader from '@/components/account/AccountPageHeader'
 import { useBuyerOrders } from '@/hooks/use-buyer-orders'
 import { useSellerOrders } from '@/hooks/use-seller-orders'
 import { OrderStatus } from '@/lib/api/seller-compatible'
 import { getAvatarUrl } from '@/lib/utils/avatar'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Image from 'next/image'
 import {
   Search,
@@ -39,6 +40,15 @@ import { createClient } from '@/lib/supabase/client'
 type FilterStatus = 'all' | 'pending' | 'completed' | 'disputed' | 'cancelled'
 type ViewTab = 'purchases' | 'sales'
 
+// V22 — Status options for the Status filter dropdown (replaces the chip row).
+const STATUS_OPTIONS: { value: FilterStatus; label: string }[] = [
+  { value: 'all', label: 'All Status' },
+  { value: 'pending', label: 'Pending' },
+  { value: 'completed', label: 'Completed' },
+  { value: 'disputed', label: 'Disputed' },
+  { value: 'cancelled', label: 'Cancelled' },
+]
+
 // Advanced filter state
 interface AdvancedFilters {
   status: FilterStatus
@@ -50,18 +60,22 @@ interface AdvancedFilters {
   searchQuery: string
 }
 
-export default function OrdersPage() {
+function OrdersContent() {
   const { user, loading: authLoading } = useAuth()
   const router = useRouter()
-  const [activeTab, setActiveTab] = useState<ViewTab>('purchases')
+  const searchParams = useSearchParams()
   const [disputeResolutions, setDisputeResolutions] = useState<Record<string, any>>({})
 
-  // Set initial tab based on user type (sellers default to 'sales')
-  useEffect(() => {
-    if (user?.isApprovedSeller) {
-      setActiveTab('sales')
-    }
-  }, [user?.isApprovedSeller])
+  // V22 — Sub-page driven by ?type=sold|purchases (mirrors Offers). The
+  // sidebar sub-items + the tab row both write this param. Sellers default
+  // to Sold Orders, buyers to Purchases.
+  const typeParam = searchParams.get('type')
+  const activeTab: ViewTab =
+    typeParam === 'sold' ? 'sales'
+    : typeParam === 'purchases' ? 'purchases'
+    : user?.isApprovedSeller ? 'sales' : 'purchases'
+  const setActiveTab = (t: ViewTab) =>
+    router.push(`/account/orders?type=${t === 'sales' ? 'sold' : 'purchases'}`)
 
   // Combined filter state
   const [filters, setFilters] = useState<AdvancedFilters>({
@@ -75,7 +89,7 @@ export default function OrdersPage() {
   })
 
   // Dropdown open state
-  const [openDropdown, setOpenDropdown] = useState<'game' | 'category' | 'date' | null>(null)
+  const [openDropdown, setOpenDropdown] = useState<'status' | 'game' | 'category' | 'date' | null>(null)
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -317,95 +331,93 @@ export default function OrdersPage() {
     : 'Purchases'
 
   return (
-    <div className="min-h-screen bg-bg-base pb-20">
+    <div className="min-h-screen pb-20">
       <div className="mx-auto w-full max-w-full px-4 sm:px-6 md:max-w-7xl lg:px-8">
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-6"
-      >
-        <h1 className="text-3xl font-bold text-text-primary">{pageTitle}</h1>
-        <p className="text-sm text-text-secondary mt-1">
-          {activeTab === 'purchases'
-            ? 'Track your orders and manage your gaming purchases'
-            : 'Manage your sales and customer orders'
-          }
-        </p>
-        </motion.div>
-
-        {/* Tabs - Only show if seller */}
-        {isSeller && (
-        <div className="mb-6 flex gap-3">
-          <button
-            onClick={() => setActiveTab('sales')}
-            className={cn(
-              activeTab === 'sales'
-                ? "flex items-center gap-2 px-4 py-3 text-sm font-semibold rounded-xl border-2 border-lime bg-gradient-to-br from-lime/15 to-lime/5 text-text-primary shadow-lg shadow-elevated transition-all"
-                : "flex items-center gap-2 px-4 py-3 text-sm font-medium rounded-xl border border-border-subtle bg-bg-overlay text-text-secondary hover:border-lime-tint-border hover:bg-bg-overlay hover:text-text-secondary transition-all"
-            )}
-          >
-            <Store className="w-4 h-4" />
-            Sold Orders
-          </button>
-          <button
-            onClick={() => setActiveTab('purchases')}
-            className={cn(
+        {/* V21/P7.al — Standard account header. */}
+        <div className="mb-6">
+          <AccountPageHeader
+            icon="orders"
+            title={pageTitle}
+            subtitle={
               activeTab === 'purchases'
-                ? "flex items-center gap-2 px-4 py-3 text-sm font-semibold rounded-xl border-2 border-lime bg-gradient-to-br from-lime/15 to-lime/5 text-text-primary shadow-lg shadow-elevated transition-all"
-                : "flex items-center gap-2 px-4 py-3 text-sm font-medium rounded-xl border border-border-subtle bg-bg-overlay text-text-secondary hover:border-lime-tint-border hover:bg-bg-overlay hover:text-text-secondary transition-all"
-            )}
-          >
-            <ShoppingCart className="w-4 h-4" />
-            Purchases
-          </button>
+                ? 'Track your orders and manage your gaming purchases'
+                : 'Manage your sales and customer orders'
+            }
+          />
         </div>
-        )}
 
-        {/* Status Tabs (replacing stats cards) */}
-        <div className="mb-6 flex items-center gap-2 flex-wrap">
-          {[
-            { label: 'All', value: 'all' as FilterStatus, count: statusCounts.all },
-            { label: 'Pending', value: 'pending' as FilterStatus, count: statusCounts.pending },
-            { label: 'Completed', value: 'completed' as FilterStatus, count: statusCounts.completed },
-            { label: 'Disputed', value: 'disputed' as FilterStatus, count: statusCounts.disputed },
-            { label: 'Cancelled', value: 'cancelled' as FilterStatus, count: statusCounts.cancelled },
-          ].map((tab) => (
-            <button
-              key={tab.value}
-              onClick={() => setFilters({ ...filters, status: tab.value })}
-              className={cn(
-                'flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-xl transition-all',
-                filters.status === tab.value
-                  ? 'border-2 border-lime bg-gradient-to-br from-lime/15 to-lime/5 text-text-primary shadow-lg shadow-elevated'
-                  : 'border border-border-subtle bg-bg-overlay text-text-secondary hover:border-lime-tint-border hover:bg-bg-overlay hover:text-text-secondary'
-              )}
-            >
-              {tab.label}
-              <span className={cn(
-                'px-1.5 py-0.5 rounded-md text-xs font-semibold',
-                filters.status === tab.value
-                  ? 'bg-lime-tint-bg text-lime-text'
-                  : 'bg-bg-overlay text-text-tertiary'
-              )}>
-                {tab.count}
-              </span>
-            </button>
-          ))}
-        </div>
+        {/* V22 — Sub-page selection lives in the sidebar (Orders → Sold
+            Orders / Purchases); no in-page tab row needed. */}
+
+        {/* V22 — Sold Orders trials the darker frosted surface on its filter
+            controls too (chips + dropdowns), matching the row cards. Purchases
+            keeps the lighter glass so the two can be compared. */}
+
+        {/* V22 — Status moved from a chip row into a Status dropdown at the
+            start of the filter bar (matches Game/Category/Date). The picked
+            status also surfaces as an active-filter chip below. */}
 
         {/* Advanced Filter Bar */}
         <div className="mb-6 space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+            {/* Status Filter */}
+            <div className="relative">
+              <button
+                onClick={() => setOpenDropdown(openDropdown === 'status' ? null : 'status')}
+                className={cn(
+                  "w-full flex items-center justify-between gap-2 px-4 py-2.5 rounded-lg border text-sm transition-all",
+                  openDropdown === 'status'
+                    ? "border-lime-tint-border card-frost text-text-primary"
+                    : "border-border-subtle card-frost text-text-secondary hover:border-lime-tint-border card-frost-hover"
+                )}
+              >
+                <div className="flex items-center gap-2">
+                  <FilterIcon className="h-4 w-4" />
+                  <span>{STATUS_OPTIONS.find(s => s.value === filters.status)?.label ?? 'All Status'}</span>
+                </div>
+                <ChevronDown className={cn("h-4 w-4 transition-transform", openDropdown === 'status' && "rotate-180")} />
+              </button>
+
+              {/* Status Dropdown Panel */}
+              {openDropdown === 'status' && (
+                <div className="absolute z-50 mt-2 w-full min-w-[220px] rounded-lg border border-border-subtle bg-bg-overlay shadow-2xl shadow-black/50 overflow-hidden">
+                  <div className="p-2 space-y-1">
+                    {STATUS_OPTIONS.map((s) => {
+                      const isSelected = filters.status === s.value
+                      return (
+                        <button
+                          key={s.value}
+                          onClick={() => {
+                            setFilters({ ...filters, status: s.value })
+                            setOpenDropdown(null)
+                          }}
+                          className={cn(
+                            "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all text-left",
+                            isSelected
+                              ? "bg-lime-tint-bg text-text-primary border border-lime-tint-border"
+                              : "text-text-secondary hover:bg-white/[0.05] hover:text-text-primary"
+                          )}
+                        >
+                          <span className="flex-1">{s.label}</span>
+                          <span className="text-xs tabular-nums text-text-tertiary">{statusCounts[s.value]}</span>
+                          {isSelected && <CheckCircle2 className="h-4 w-4 text-lime-text flex-shrink-0" />}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+
             {/* Game Filter */}
             <div className="relative">
               <button
                 onClick={() => setOpenDropdown(openDropdown === 'game' ? null : 'game')}
                 className={cn(
-                  "w-full flex items-center justify-between gap-2 px-4 py-2.5 rounded-xl border text-sm transition-all",
+                  "w-full flex items-center justify-between gap-2 px-4 py-2.5 rounded-lg border text-sm transition-all",
                   openDropdown === 'game'
-                    ? "border-lime bg-bg-overlay text-text-primary"
-                    : "border-border-subtle bg-bg-overlay text-text-secondary hover:border-lime-tint-border hover:bg-bg-overlay"
+                    ? "border-lime-tint-border card-frost text-text-primary"
+                    : "border-border-subtle card-frost text-text-secondary hover:border-lime-tint-border card-frost-hover"
                 )}
               >
                 <div className="flex items-center gap-2">
@@ -417,7 +429,7 @@ export default function OrdersPage() {
 
               {/* Game Dropdown Panel */}
               {openDropdown === 'game' && availableGames.length > 0 && (
-                <div className="absolute z-50 mt-2 w-full min-w-[280px] rounded-xl border border-border-subtle bg-bg-overlay shadow-2xl shadow-black/50 max-h-[320px] overflow-y-auto">
+                <div className="absolute z-50 mt-2 w-full min-w-[280px] rounded-lg border border-border-subtle bg-bg-overlay shadow-2xl shadow-black/50 max-h-[320px] overflow-y-auto">
                   <div className="p-2 space-y-1">
                     {availableGames.map((game) => {
                       const isSelected = filters.games.includes(game.id)
@@ -435,7 +447,7 @@ export default function OrdersPage() {
                             "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all text-left",
                             isSelected
                               ? "bg-lime-tint-bg text-text-primary border border-lime-tint-border"
-                              : "text-text-secondary hover:bg-bg-overlay hover:text-text-primary"
+                              : "text-text-secondary hover:bg-white/[0.05] hover:text-text-primary"
                           )}
                         >
                           {game.image_url && (
@@ -463,10 +475,10 @@ export default function OrdersPage() {
               <button
                 onClick={() => setOpenDropdown(openDropdown === 'category' ? null : 'category')}
                 className={cn(
-                  "w-full flex items-center justify-between gap-2 px-4 py-2.5 rounded-xl border text-sm transition-all",
+                  "w-full flex items-center justify-between gap-2 px-4 py-2.5 rounded-lg border text-sm transition-all",
                   openDropdown === 'category'
-                    ? "border-lime bg-bg-overlay text-text-primary"
-                    : "border-border-subtle bg-bg-overlay text-text-secondary hover:border-lime-tint-border hover:bg-bg-overlay"
+                    ? "border-lime-tint-border card-frost text-text-primary"
+                    : "border-border-subtle card-frost text-text-secondary hover:border-lime-tint-border card-frost-hover"
                 )}
               >
                 <div className="flex items-center gap-2">
@@ -478,7 +490,7 @@ export default function OrdersPage() {
 
               {/* Category Dropdown Panel */}
               {openDropdown === 'category' && availableCategories.length > 0 && (
-                <div className="absolute z-50 mt-2 w-full min-w-[240px] rounded-xl border border-border-subtle bg-bg-overlay shadow-2xl shadow-black/50 max-h-[280px] overflow-y-auto">
+                <div className="absolute z-50 mt-2 w-full min-w-[240px] rounded-lg border border-border-subtle bg-bg-overlay shadow-2xl shadow-black/50 max-h-[280px] overflow-y-auto">
                   <div className="p-2 space-y-1">
                     <button
                       onClick={() => {
@@ -489,7 +501,7 @@ export default function OrdersPage() {
                         "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all text-left",
                         !filters.category
                           ? "bg-lime-tint-bg text-text-primary border border-lime-tint-border"
-                          : "text-text-secondary hover:bg-bg-overlay hover:text-text-primary"
+                          : "text-text-secondary hover:bg-white/[0.05] hover:text-text-primary"
                       )}
                     >
                       <span className="flex-1">All Categories</span>
@@ -508,7 +520,7 @@ export default function OrdersPage() {
                             "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all text-left",
                             isSelected
                               ? "bg-lime-tint-bg text-text-primary border border-lime-tint-border"
-                              : "text-text-secondary hover:bg-bg-overlay hover:text-text-primary"
+                              : "text-text-secondary hover:bg-white/[0.05] hover:text-text-primary"
                           )}
                         >
                           <span className="flex-1">{category.name}</span>
@@ -526,10 +538,10 @@ export default function OrdersPage() {
               <button
                 onClick={() => setOpenDropdown(openDropdown === 'date' ? null : 'date')}
                 className={cn(
-                  "w-full flex items-center justify-between gap-2 px-4 py-2.5 rounded-xl border text-sm transition-all",
+                  "w-full flex items-center justify-between gap-2 px-4 py-2.5 rounded-lg border text-sm transition-all",
                   openDropdown === 'date'
-                    ? "border-lime bg-bg-overlay text-text-primary"
-                    : "border-border-subtle bg-bg-overlay text-text-secondary hover:border-lime-tint-border hover:bg-bg-overlay"
+                    ? "border-lime-tint-border card-frost text-text-primary"
+                    : "border-border-subtle card-frost text-text-secondary hover:border-lime-tint-border card-frost-hover"
                 )}
               >
                 <div className="flex items-center gap-2">
@@ -548,7 +560,7 @@ export default function OrdersPage() {
 
               {/* Date Range Dropdown Panel */}
               {openDropdown === 'date' && (
-                <div className="absolute z-50 mt-2 w-full min-w-[200px] rounded-xl border border-border-subtle bg-bg-overlay shadow-2xl shadow-black/50">
+                <div className="absolute z-50 mt-2 w-full min-w-[200px] rounded-lg border border-border-subtle bg-bg-overlay shadow-2xl shadow-black/50">
                   <div className="p-2 space-y-1">
                     {[
                       { label: 'All Time', value: 'all' as const },
@@ -569,7 +581,7 @@ export default function OrdersPage() {
                             "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all text-left",
                             isSelected
                               ? "bg-lime-tint-bg text-text-primary border border-lime-tint-border"
-                              : "text-text-secondary hover:bg-bg-overlay hover:text-text-primary"
+                              : "text-text-secondary hover:bg-white/[0.05] hover:text-text-primary"
                           )}
                         >
                           <span className="flex-1">{option.label}</span>
@@ -590,7 +602,7 @@ export default function OrdersPage() {
                 placeholder="Search listings..."
                 value={filters.searchQuery}
                 onChange={(e) => setFilters({ ...filters, searchQuery: e.target.value })}
-                className="w-full rounded-xl border border-border-subtle bg-bg-overlay py-2.5 pl-10 pr-10 text-text-primary text-sm placeholder:text-text-tertiary focus:border-lime-tint-border focus:outline-none focus:ring-2 focus:ring-violet-500/20"
+                className="w-full rounded-lg border border-border-subtle card-frost py-2.5 pl-10 pr-10 text-text-primary text-sm placeholder:text-text-tertiary focus:border-lime-tint-border focus:outline-none focus:ring-2 focus:ring-lime/20"
               />
               {filters.searchQuery && (
                 <button
@@ -604,8 +616,21 @@ export default function OrdersPage() {
           </div>
 
           {/* Active Filter Pills & Clear All */}
-          {(filters.games.length > 0 || filters.category || filters.dateRange !== 'all' || filters.searchQuery) && (
+          {(filters.status !== 'all' || filters.games.length > 0 || filters.category || filters.dateRange !== 'all' || filters.searchQuery) && (
             <div className="flex flex-wrap items-center gap-2">
+              {filters.status !== 'all' && (
+                <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-lime-tint-bg border border-lime-tint-border text-xs text-lime-text">
+                  <FilterIcon className="h-3 w-3" />
+                  <span>{STATUS_OPTIONS.find(s => s.value === filters.status)?.label}</span>
+                  <button
+                    onClick={() => setFilters({ ...filters, status: 'all' })}
+                    className="hover:text-lime"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              )}
+
               {filters.games.map(gameId => {
                 const game = availableGames.find(g => g.id === gameId)
                 return game ? (
@@ -614,7 +639,7 @@ export default function OrdersPage() {
                     <span>{game.name}</span>
                     <button
                       onClick={() => setFilters({ ...filters, games: filters.games.filter(id => id !== gameId) })}
-                      className="hover:text-violet-100"
+                      className="hover:text-lime"
                     >
                       <X className="h-3 w-3" />
                     </button>
@@ -628,7 +653,7 @@ export default function OrdersPage() {
                   <span>{availableCategories.find(c => c.id === filters.category)?.name}</span>
                   <button
                     onClick={() => setFilters({ ...filters, category: null })}
-                    className="hover:text-violet-100"
+                    className="hover:text-lime"
                   >
                     <X className="h-3 w-3" />
                   </button>
@@ -647,7 +672,7 @@ export default function OrdersPage() {
                   </span>
                   <button
                     onClick={() => setFilters({ ...filters, dateRange: 'all' })}
-                    className="hover:text-violet-100"
+                    className="hover:text-lime"
                   >
                     <X className="h-3 w-3" />
                   </button>
@@ -660,7 +685,7 @@ export default function OrdersPage() {
                   <span className="max-w-[120px] truncate">{filters.searchQuery}</span>
                   <button
                     onClick={() => setFilters({ ...filters, searchQuery: '' })}
-                    className="hover:text-violet-100"
+                    className="hover:text-lime"
                   >
                     <X className="h-3 w-3" />
                   </button>
@@ -688,7 +713,7 @@ export default function OrdersPage() {
 
         {/* Orders List */}
         {filteredOrders.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-2xl border border-border-subtle bg-white/[0.025] p-12">
+        <div className="flex flex-col items-center justify-center rounded-lg border border-border-subtle card-frost p-12">
           <ShoppingCart className="mb-4 h-16 w-16 text-lime-text/40" />
           <h3 className="mb-2 text-xl font-bold text-text-primary">
             {activeTab === 'purchases' ? 'No purchases found' : 'No sales found'}
@@ -703,7 +728,7 @@ export default function OrdersPage() {
           </p>
         </div>
         ) : (
-        <div className="space-y-3">
+        <div className="flex flex-col gap-3">
           {filteredOrders.map((order, index) => {
             const otherParty = activeTab === 'purchases' ? (order as any).seller : (order as any).buyer
             const gameData = order.listing?.game || (order as any).game
@@ -722,162 +747,137 @@ export default function OrdersPage() {
             )
 
             return (
-              <Link key={order.id} href={`/account/orders/${order.id}`}>
+              <Link key={order.id} href={`/account/orders/${order.id}`} className="block">
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.03 }}
-                  className="group rounded-xl border border-border-subtle bg-white/[0.025] p-4 backdrop-blur-sm transition-all hover:border-white/[0.09] hover:bg-bg-overlay cursor-pointer"
+                  className="group cursor-pointer rounded-lg border border-border-subtle p-4 transition-colors card-frost card-frost-hover"
                 >
                   <div className="flex items-center gap-4">
                     {/* Listing Image (fallback to Game Logo) */}
-                    <div className="flex-shrink-0">
-                      {displayImage ? (
-                        <div className="relative h-14 w-14 overflow-hidden rounded-lg border border-border-subtle">
-                          <Image
-                            src={displayImage}
-                            alt={order.listing?.title || gameName || 'Order'}
-                            fill
-                            className="object-cover"
-                            unoptimized
-                          />
-                        </div>
-                      ) : (
-                        <div className="flex h-14 w-14 items-center justify-center rounded-lg border border-border-subtle bg-bg-overlay">
-                          <ShoppingCart className="h-6 w-6 text-text-disabled" />
-                        </div>
-                      )}
-                    </div>
+                    {displayImage ? (
+                      <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-lg border border-border-subtle">
+                        <Image
+                          src={displayImage}
+                          alt={order.listing?.title || gameName || 'Order'}
+                          fill
+                          className="object-cover"
+                          unoptimized
+                        />
+                      </div>
+                    ) : (
+                      <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg border border-border-subtle bg-bg-overlay">
+                        <ShoppingCart className="h-6 w-6 text-text-disabled" />
+                      </div>
+                    )}
 
                     {/* Main Content */}
                     <div className="flex-1 min-w-0">
-                      {/* Top Row: Order Number + Status */}
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="font-mono text-[10px] font-semibold text-text-tertiary uppercase tracking-wider">
-                          {order.order_number || order.id.slice(0, 8).toUpperCase()}
+                      {/* Order # + status */}
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-[10px] font-semibold uppercase tracking-wider text-text-tertiary">
+                          {(order.order_number || order.id.slice(0, 8).toUpperCase()).replace(/^GV-/, 'DM-')}
                         </span>
                         {(() => {
-                          // Show "Resolved" instead of "Disputed" if dispute was resolved
                           const displayStatus = (order.status === 'disputed' && disputeResolutions[order.id])
                             ? 'resolved'
                             : order.status
                           return (
-                            <div className={cn('flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide', getStatusColor(displayStatus))}>
+                            <span className={cn('inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide', getStatusColor(displayStatus))}>
                               {getStatusIcon(displayStatus)}
                               {displayStatus}
-                            </div>
+                            </span>
                           )
                         })()}
-                      </div>
-
-                      {/* Item Name */}
-                      <div className="flex items-center gap-2 mb-1">
-                        <h3 className="text-base font-bold text-text-primary truncate">
-                          {order.listing?.title || 'Unknown Listing'}
-                        </h3>
-
-                        {/* Dispute Outcome Badge */}
                         {hasDisputeResolution && (
-                          <div className={cn(
-                            'flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider flex-shrink-0',
+                          <span className={cn(
+                            'inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider',
                             userWonDispute
-                              ? 'bg-green-500/15 text-success border border-success/30'
-                              : 'bg-red-500/15 text-error border border-error/40'
+                              ? 'border border-success/30 bg-green-500/15 text-success'
+                              : 'border border-error/40 bg-red-500/15 text-error',
                           )}>
-                            {userWonDispute ? (
-                              <>
-                                <ShieldCheck className="h-2.5 w-2.5" />
-                                <span>Won</span>
-                              </>
-                            ) : (
-                              <>
-                                <ShieldX className="h-2.5 w-2.5" />
-                                <span>Lost</span>
-                              </>
-                            )}
-                          </div>
+                            {userWonDispute ? <ShieldCheck className="h-2.5 w-2.5" /> : <ShieldX className="h-2.5 w-2.5" />}
+                            {userWonDispute ? 'Won' : 'Lost'}
+                          </span>
                         )}
                       </div>
 
-                      {/* Game + Category */}
-                      <div className="flex items-center gap-2 text-xs text-text-secondary mb-2">
-                        <span>{gameName || 'Unknown Game'}</span>
+                      {/* Item name */}
+                      <h3 className="mt-1.5 truncate text-base font-bold text-text-primary">
+                        {order.listing?.title || 'Unknown Listing'}
+                      </h3>
+
+                      {/* Game · Category · party — one compact meta line */}
+                      <div className="mt-1 flex items-center gap-1.5 text-xs text-text-secondary">
+                        <span className="truncate">{gameName || 'Unknown Game'}</span>
                         {order.listing?.category?.name && (
                           <>
-                            <span className="text-gray-700">•</span>
-                            <span>{order.listing.category.name}</span>
+                            <span className="text-text-tertiary">·</span>
+                            <span className="truncate">{order.listing.category.name}</span>
                           </>
                         )}
-                      </div>
-
-                      {/* Seller/Buyer Info */}
-                      <div className="flex items-center gap-2">
-                        <span className="text-[10px] text-text-tertiary font-medium">
-                          {activeTab === 'purchases' ? 'Seller:' : 'Buyer:'}
-                        </span>
-                        {otherParty ? (
-                          <div
-                            onClick={(e) => {
-                              e.preventDefault()
-                              e.stopPropagation()
-                              window.location.href = `/shop/${otherParty.shop_slug || otherParty.username}`
-                            }}
-                            className="flex items-center gap-1.5 group/seller hover:opacity-80 transition-opacity"
-                          >
-                            <div className="relative h-5 w-5 flex-shrink-0">
-                              <Image
-                                src={getAvatarUrl(otherParty.avatar_url, otherParty.username)}
-                                alt={otherParty.username}
-                                fill
-                                className="rounded-full ring-1 ring-white/10"
-                                unoptimized
-                              />
-                            </div>
-                            <span className="text-xs font-medium text-text-primary group-hover/seller:text-lime-text transition-colors">
-                              {otherParty.shop_name || otherParty.username}
-                            </span>
-                          </div>
-                        ) : (
-                          <span className="text-xs text-text-tertiary">Unknown</span>
+                        {otherParty && (
+                          <>
+                            <span className="text-text-tertiary">·</span>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.preventDefault()
+                                e.stopPropagation()
+                                window.location.href = `/shop/${otherParty.shop_slug || otherParty.username}`
+                              }}
+                              className="group/seller flex min-w-0 items-center gap-1.5 transition-opacity hover:opacity-80"
+                            >
+                              <span className="relative h-4 w-4 shrink-0">
+                                <Image
+                                  src={getAvatarUrl(otherParty.avatar_url, otherParty.username)}
+                                  alt={otherParty.username}
+                                  fill
+                                  className="rounded-full ring-1 ring-white/10"
+                                  unoptimized
+                                />
+                              </span>
+                              <span className="truncate font-medium text-text-secondary group-hover/seller:text-lime-text">
+                                {otherParty.shop_name || otherParty.username}
+                              </span>
+                            </button>
+                          </>
                         )}
                       </div>
                     </div>
 
-                    {/* Right Side: Price + Actions */}
-                    <div className="flex flex-col items-end justify-between gap-2">
-                      {/* Price */}
-                      <div className="text-right">
+                    {/* Right Side: Price + review */}
+                    <div className="flex shrink-0 flex-col items-end gap-2">
+                      <div className="text-right leading-tight">
                         <div className="text-xl font-bold text-text-primary">
                           ${order.total_amount?.toFixed(2) || '0.00'}
                         </div>
-                        <div className="text-[10px] text-text-tertiary">Total</div>
+                        <div className="text-[10px] uppercase tracking-wider text-text-tertiary">Total</div>
                       </div>
 
-                      {/* Review Indicator / Button */}
                       {order.status === 'completed' && (
                         <div onClick={(e) => e.stopPropagation()}>
                           {activeTab === 'sales' ? (
-                            // Sold Orders - Show review indicator
                             hasReview ? (
-                              <div className="flex items-center gap-1 text-[10px] text-success">
+                              <span className="inline-flex items-center gap-1 rounded-md border border-success/25 bg-green-500/10 px-2 py-0.5 text-[10px] font-medium text-success">
                                 <Star className="h-3 w-3 fill-current" />
-                                <span>Reviewed</span>
-                              </div>
+                                Reviewed
+                              </span>
                             ) : (
-                              <div className="flex items-center gap-1 text-[10px] text-text-tertiary">
+                              <span className="inline-flex items-center gap-1 rounded-md border border-border-subtle px-2 py-0.5 text-[10px] font-medium text-text-tertiary">
                                 <Star className="h-3 w-3" />
-                                <span>No review</span>
-                              </div>
+                                No review
+                              </span>
                             )
                           ) : (
-                            // Buy Orders - Show leave review button
                             !hasReview && (
                               <LeaveReviewButton
                                 orderId={order.id}
-                                orderNumber={order.order_number || order.id.slice(0, 8).toUpperCase()}
+                                orderNumber={(order.order_number || order.id.slice(0, 8).toUpperCase()).replace(/^GV-/, 'DM-')}
                                 sellerName={otherParty?.shop_name || otherParty?.username || 'Seller'}
                                 compact={true}
-                                className="flex items-center gap-1 rounded-lg bg-lime-tint-bg hover:bg-lime-tint-bg border border-lime-tint-border px-2 py-1 text-[10px] font-medium text-lime-text transition-all"
+                                className="inline-flex items-center gap-1 rounded-md border border-lime-tint-border bg-lime-tint-bg px-2 py-0.5 text-[10px] font-medium text-lime-text transition-all hover:bg-lime-tint-bg/80"
                               />
                             )
                           )}
@@ -893,5 +893,14 @@ export default function OrdersPage() {
         )}
       </div>
     </div>
+  )
+}
+
+// V22 — Suspense boundary for useSearchParams (?type= sub-page).
+export default function OrdersPage() {
+  return (
+    <Suspense fallback={null}>
+      <OrdersContent />
+    </Suspense>
   )
 }

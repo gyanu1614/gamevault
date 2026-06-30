@@ -142,8 +142,13 @@ export default function MessageBubble({
   // Buyer messages go RIGHT, Seller messages go LEFT
   const alignRight = isAdminView ? isBuyerMessage : isOwn
   const alignLeft = isAdminView ? isSellerMessage : !isOwn
+  // V21/P5.e — Avatars render on BOTH sides for the first message in
+  // a sender's sequence. Falls back to a spacer when missing so the
+  // bubble column stays aligned within the conversation.
   const showLeftAvatar = alignLeft && showAvatar && senderAvatar
-  const showRightSpacer = alignRight && showAvatar
+  const showLeftSpacer = alignLeft && !showLeftAvatar
+  const showRightAvatar = alignRight && showAvatar && senderAvatar
+  const showRightSpacer = alignRight && !showRightAvatar
 
   // Regular user messages (buyer/seller)
   return (
@@ -156,14 +161,14 @@ export default function MessageBubble({
         alignRight ? 'justify-end' : 'justify-start'
       )}
     >
-      {/* Avatar or spacer (for left-aligned messages) */}
+      {/* Left-side avatar (theirs) or spacer */}
       {alignLeft && (
         <div className="flex-shrink-0">
           {showLeftAvatar ? (
             <img
               src={senderAvatar}
               alt={senderName || 'User'}
-              className="h-8 w-8 rounded-full ring-2 ring-white/10"
+              className="h-8 w-8 rounded-full ring-1 ring-white/10"
             />
           ) : (
             <div className="w-8" />
@@ -180,13 +185,15 @@ export default function MessageBubble({
           </span>
         )}
 
-        {/* Message Bubble */}
+        {/* V21/P5.c — Canonical bubble: lime-tinted for own messages,
+            neutral raised for theirs. rounded with the same tail shape
+            the handoff specified — 14/5/14/14 mirrored per side. */}
         <div
           className={cn(
-            'rounded-2xl px-4 py-2.5 break-words',
+            'px-3.5 py-2 break-words border',
             alignRight
-              ? 'bg-gradient-to-br from-lime to-purple-600 text-white'
-              : 'bg-bg-raised-hover text-gray-100 border border-white/10'
+              ? 'rounded-[14px] rounded-tr-[5px] bg-lime/[0.13] border-lime/[0.22] text-text-primary'
+              : 'rounded-[14px] rounded-tl-[5px] bg-bg-overlay border-border-subtle text-text-primary'
           )}
         >
           <p className="text-sm leading-relaxed whitespace-pre-wrap">{renderMarkdown(message.content)}</p>
@@ -227,10 +234,19 @@ export default function MessageBubble({
         </div>
       </div>
 
-      {/* Spacer for right-aligned messages to maintain alignment */}
-      {showRightSpacer && (
-        <div className="w-8 flex-shrink-0" />
-      )}
+      {/* V21/P5.e — Right-side own-avatar or spacer */}
+      {alignRight &&
+        (showRightAvatar ? (
+          <div className="flex-shrink-0">
+            <img
+              src={senderAvatar}
+              alt={senderName || 'You'}
+              className="h-8 w-8 rounded-full ring-1 ring-white/10"
+            />
+          </div>
+        ) : (
+          <div className="w-8 flex-shrink-0" />
+        ))}
     </motion.div>
   )
 }

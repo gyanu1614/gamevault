@@ -13,6 +13,7 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { toast } from 'sonner'
+import AccountPageHeader from '@/components/account/AccountPageHeader'
 import {
   ShieldCheck, FileText, AlertTriangle, CheckCircle2,
   Clock, Loader2, ChevronRight, Info,
@@ -38,7 +39,7 @@ function Field({
 }) {
   return (
     <div>
-      <label className="block text-xs font-medium text-white/60 mb-1.5">
+      <label className="block text-xs font-medium text-text-secondary mb-1.5">
         {label}{required && <span className="text-error ml-0.5">*</span>}
       </label>
       <input
@@ -49,9 +50,9 @@ function Field({
         placeholder={placeholder}
         required={required}
         className="w-full bg-bg-raised border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-white
-                   placeholder:text-white/20 focus:outline-none focus:border-lime transition-colors"
+                   placeholder:text-text-disabled focus:outline-none focus:border-lime transition-colors"
       />
-      {hint && <p className="text-xs text-white/30 mt-1">{hint}</p>}
+      {hint && <p className="text-xs text-text-tertiary mt-1">{hint}</p>}
     </div>
   )
 }
@@ -61,11 +62,11 @@ function Field({
 function StatusBanner({ status, rejectionReason }: { status: string; rejectionReason?: string | null }) {
   if (status === 'certified') {
     return (
-      <div className="flex items-start gap-3 bg-success-bg border border-green-500/20 rounded-xl p-4">
+      <div className="flex items-start gap-3 bg-success-bg border border-success/20 rounded-lg p-4">
         <CheckCircle2 className="w-5 h-5 text-success flex-shrink-0 mt-0.5" />
         <div>
           <p className="text-sm font-semibold text-success">Disclosure Certified</p>
-          <p className="text-xs text-white/50 mt-0.5">
+          <p className="text-xs text-text-secondary mt-0.5">
             Your identity has been verified. You are compliant with INFORM Act requirements.
           </p>
         </div>
@@ -74,11 +75,11 @@ function StatusBanner({ status, rejectionReason }: { status: string; rejectionRe
   }
   if (status === 'submitted') {
     return (
-      <div className="flex items-start gap-3 bg-amber-500/10 border border-amber-500/20 rounded-xl p-4">
-        <Clock className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
+      <div className="flex items-start gap-3 bg-warning-bg border border-warning/20 rounded-lg p-4">
+        <Clock className="w-5 h-5 text-warning flex-shrink-0 mt-0.5" />
         <div>
-          <p className="text-sm font-semibold text-amber-400">Under Review</p>
-          <p className="text-xs text-white/50 mt-0.5">
+          <p className="text-sm font-semibold text-warning">Under Review</p>
+          <p className="text-xs text-text-secondary mt-0.5">
             We've received your disclosure and are verifying the information. This typically takes 1-3 business days.
           </p>
         </div>
@@ -87,12 +88,12 @@ function StatusBanner({ status, rejectionReason }: { status: string; rejectionRe
   }
   if (status === 'rejected') {
     return (
-      <div className="flex items-start gap-3 bg-error-bg border border-error/40 rounded-xl p-4">
+      <div className="flex items-start gap-3 bg-error-bg border border-error/40 rounded-lg p-4">
         <AlertTriangle className="w-5 h-5 text-error flex-shrink-0 mt-0.5" />
         <div>
           <p className="text-sm font-semibold text-error">Disclosure Rejected — Resubmission Required</p>
           {rejectionReason && (
-            <p className="text-xs text-white/50 mt-0.5">Reason: {rejectionReason}</p>
+            <p className="text-xs text-text-secondary mt-0.5">Reason: {rejectionReason}</p>
           )}
         </div>
       </div>
@@ -164,28 +165,29 @@ export default function InformDisclosureClient({
   // ── Not required ─────────────────────────────────────────────────────────
   if (!required) {
     return (
-      <motion.div variants={container} initial="hidden" animate="show" className="max-w-2xl mx-auto space-y-6 pb-10">
+      <motion.div variants={container} initial="hidden" animate="show" className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 space-y-6 pb-10">
         <motion.div variants={item}>
-          <h1 className="text-2xl font-bold text-white mb-1 flex items-center gap-2.5">
-            <ShieldCheck className="w-6 h-6 text-lime-text" />
-            INFORM Act Compliance
-          </h1>
-          <p className="text-white/40 text-sm">Identity verification for high-volume sellers.</p>
+          {/* V21/P7.al — Standard account header. */}
+          <AccountPageHeader
+            icon="inform"
+            title="INFORM Act Compliance"
+            subtitle="Identity verification for high-volume sellers."
+          />
         </motion.div>
 
-        <motion.div variants={item} className="bg-[#0f0f0f] border border-border-subtle rounded-xl p-5">
+        <motion.div variants={item} className="rounded-lg border border-border-subtle card-frost p-5">
           <div className="flex items-start gap-3">
-            <Info className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
+            <Info className="w-5 h-5 text-lime-text flex-shrink-0 mt-0.5" />
             <div>
               <p className="text-sm font-semibold text-white mb-2">No Action Required</p>
-              <p className="text-sm text-white/50">
+              <p className="text-sm text-text-secondary">
                 The INFORM Consumers Act requires identity verification for sellers who exceed:
               </p>
-              <ul className="mt-2 space-y-1 text-sm text-white/50">
-                <li><ChevronRight className="w-3.5 h-3.5 inline mr-1 text-white/30" />{salesThreshold}+ transactions, OR</li>
-                <li><ChevronRight className="w-3.5 h-3.5 inline mr-1 text-white/30" />${revenueThreshold.toLocaleString()}+ in gross sales</li>
+              <ul className="mt-2 space-y-1 text-sm text-text-secondary">
+                <li><ChevronRight className="w-3.5 h-3.5 inline mr-1 text-text-tertiary" />{salesThreshold}+ transactions, OR</li>
+                <li><ChevronRight className="w-3.5 h-3.5 inline mr-1 text-text-tertiary" />${revenueThreshold.toLocaleString()}+ in gross sales</li>
               </ul>
-              <p className="mt-3 text-sm text-white/40">
+              <p className="mt-3 text-sm text-text-tertiary">
                 You have not yet reached these thresholds. We'll notify you if this changes.
               </p>
             </div>
@@ -198,7 +200,7 @@ export default function InformDisclosureClient({
   // ── Certified or submitted — show status, no form ─────────────────────
   if (status === 'certified' || status === 'submitted') {
     return (
-      <motion.div variants={container} initial="hidden" animate="show" className="max-w-2xl mx-auto space-y-6 pb-10">
+      <motion.div variants={container} initial="hidden" animate="show" className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 space-y-6 pb-10">
         <motion.div variants={item}>
           <h1 className="text-2xl font-bold text-white mb-1 flex items-center gap-2.5">
             <ShieldCheck className="w-6 h-6 text-lime-text" />
@@ -209,8 +211,8 @@ export default function InformDisclosureClient({
           <StatusBanner status={status} rejectionReason={disclosure?.rejection_reason} />
         </motion.div>
         {disclosure && (
-          <motion.div variants={item} className="bg-[#0f0f0f] border border-border-subtle rounded-xl p-5 space-y-2">
-            <p className="text-xs font-medium text-white/40 uppercase tracking-wider mb-3">Submitted Information</p>
+          <motion.div variants={item} className="rounded-lg border border-border-subtle card-frost p-5 space-y-2">
+            <p className="text-xs font-medium text-text-tertiary uppercase tracking-wider mb-3">Submitted Information</p>
             {[
               ['Legal Name',    disclosure.legal_name],
               ['Address',       `${disclosure.address_line1}${disclosure.address_line2 ? ', ' + disclosure.address_line2 : ''}, ${disclosure.city}, ${disclosure.state_province} ${disclosure.postal_code}, ${disclosure.country}`],
@@ -219,7 +221,7 @@ export default function InformDisclosureClient({
               ['Contact Phone', disclosure.contact_phone],
             ].map(([k, v]) => (
               <div key={k} className="flex justify-between text-sm">
-                <span className="text-white/40">{k}</span>
+                <span className="text-text-tertiary">{k}</span>
                 <span className="text-white">{v}</span>
               </div>
             ))}
@@ -231,13 +233,13 @@ export default function InformDisclosureClient({
 
   // ── Required or rejected — show form ─────────────────────────────────────
   return (
-    <motion.div variants={container} initial="hidden" animate="show" className="max-w-2xl mx-auto space-y-6 pb-10">
+    <motion.div variants={container} initial="hidden" animate="show" className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 space-y-6 pb-10">
       <motion.div variants={item}>
         <h1 className="text-2xl font-bold text-white mb-1 flex items-center gap-2.5">
-          <FileText className="w-6 h-6 text-amber-400" />
+          <FileText className="w-6 h-6 text-warning" />
           INFORM Act Disclosure Required
         </h1>
-        <p className="text-white/40 text-sm">
+        <p className="text-text-tertiary text-sm">
           You've reached the high-volume seller threshold. US law requires us to collect and verify
           the following information. This data is kept confidential and used solely for regulatory compliance.
         </p>
@@ -253,8 +255,8 @@ export default function InformDisclosureClient({
         <form onSubmit={handleSubmit} className="space-y-5">
 
           {/* Identity */}
-          <div className="bg-[#0f0f0f] border border-border-subtle rounded-xl p-5 space-y-4">
-            <p className="text-xs font-semibold text-white/50 uppercase tracking-wider">Legal Identity</p>
+          <div className="rounded-lg border border-border-subtle card-frost p-5 space-y-4">
+            <p className="text-xs font-semibold text-text-secondary uppercase tracking-wider">Legal Identity</p>
             <Field label="Legal Full Name or Business Name" name="legalName" value={form.legalName}
               onChange={set('legalName')} required placeholder="Jane Doe or Acme LLC" />
             <Field label="Address Line 1" name="addressLine1" value={form.addressLine1}
@@ -274,8 +276,8 @@ export default function InformDisclosureClient({
           </div>
 
           {/* Financial identifiers */}
-          <div className="bg-[#0f0f0f] border border-border-subtle rounded-xl p-5 space-y-4">
-            <p className="text-xs font-semibold text-white/50 uppercase tracking-wider">Financial Identifiers</p>
+          <div className="rounded-lg border border-border-subtle card-frost p-5 space-y-4">
+            <p className="text-xs font-semibold text-text-secondary uppercase tracking-wider">Financial Identifiers</p>
             <Field label="Tax ID — Last 4 digits only (SSN or EIN)" name="taxIdLast4" value={form.taxIdLast4}
               onChange={set('taxIdLast4')} required placeholder="4321"
               hint="We store only the last 4 digits for verification purposes." />
@@ -285,9 +287,9 @@ export default function InformDisclosureClient({
           </div>
 
           {/* Public contact */}
-          <div className="bg-[#0f0f0f] border border-border-subtle rounded-xl p-5 space-y-4">
-            <p className="text-xs font-semibold text-white/50 uppercase tracking-wider">Public Contact Information</p>
-            <p className="text-xs text-white/30">
+          <div className="rounded-lg border border-border-subtle card-frost p-5 space-y-4">
+            <p className="text-xs font-semibold text-text-secondary uppercase tracking-wider">Public Contact Information</p>
+            <p className="text-xs text-text-tertiary">
               Under the INFORM Act, buyers may request this contact information. It will only be
               shared in response to a valid consumer request, not displayed publicly on your profile.
             </p>
@@ -300,14 +302,14 @@ export default function InformDisclosureClient({
           {/* Consent checkbox */}
           <div
             onClick={() => setConsented(v => !v)}
-            className={`flex items-start gap-3 p-4 rounded-xl border cursor-pointer transition-colors ${
+            className={`flex items-start gap-3 p-4 rounded-lg border cursor-pointer transition-colors ${
               consented
                 ? 'bg-lime/10 border-lime-tint-border'
                 : 'bg-bg-overlay border-border-subtle hover:border-white/[0.1]'
             }`}
           >
             <div className={`w-4 h-4 mt-0.5 rounded flex-shrink-0 border transition-colors ${
-              consented ? 'bg-lime border-violet-400' : 'border-white/20'
+              consented ? 'bg-lime border-lime-tint-border' : 'border-white/20'
             }`}>
               {consented && (
                 <svg viewBox="0 0 12 12" fill="none" className="w-full h-full p-0.5">
@@ -315,7 +317,7 @@ export default function InformDisclosureClient({
                 </svg>
               )}
             </div>
-            <p className="text-xs text-white/50">
+            <p className="text-xs text-text-secondary">
               I certify that the information provided above is accurate and complete to the best of my knowledge.
               I understand that providing false information is a violation of GameVault's Terms of Service and
               may be subject to legal penalties under applicable law.
@@ -325,7 +327,7 @@ export default function InformDisclosureClient({
           <button
             type="submit"
             disabled={saving || !consented}
-            className="w-full py-3 rounded-xl bg-lime hover:bg-lime-hover text-text-inverse font-semibold text-sm
+            className="w-full py-3 rounded-lg bg-lime hover:bg-lime-hover text-text-inverse font-semibold text-sm
                        transition-colors disabled:opacity-40 flex items-center justify-center gap-2"
           >
             {saving && <Loader2 className="w-4 h-4 animate-spin" />}

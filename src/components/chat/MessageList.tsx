@@ -20,6 +20,8 @@ interface Message {
 interface MessageListProps {
   messages: Message[]
   currentUserId: string
+  /** Own user's avatar — rendered on right-side bubbles. */
+  currentUserAvatar?: string
   otherUser?: {
     id: string
     username: string
@@ -58,6 +60,7 @@ interface MessageListProps {
 export default function MessageList({
   messages,
   currentUserId,
+  currentUserAvatar,
   otherUser,
   order,
   disputeResolution,
@@ -71,8 +74,16 @@ export default function MessageList({
   const [adminUsers, setAdminUsers] = useState<Record<string, { username: string; avatar_url?: string }>>({})
   const supabase = createClient()
 
-  // Check if this is admin view (both buyer and seller are present)
-  const isAdminView = !!(order?.buyer && order?.seller)
+  // V21/P5.n — Admin view = viewer isn't the buyer OR the seller.
+  // Previous heuristic just checked "both parties present" which was
+  // true on EVERY order page, so the seller's own messages got
+  // routed through the admin branch (buyer = right, seller = left)
+  // and ended up on the wrong side. Now we only flip to admin layout
+  // when the viewer truly is a third party.
+  const isAdminView =
+    !!(order?.buyer && order?.seller) &&
+    currentUserId !== order.buyer.id &&
+    currentUserId !== order.seller.id
 
   // Fetch admin info for messages sent by admins
   useEffect(() => {
@@ -176,9 +187,26 @@ export default function MessageList({
       ref={containerRef}
       className="flex-1 overflow-y-auto px-4 py-6 space-y-4 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-white/10 hover:scrollbar-thumb-white/20"
     >
-      {/* Order Card (if this is an order conversation) */}
-      {order && (
-        <OrderMessageCard order={order} onViewOrder={onViewOrder} disputeResolution={disputeResolution} />
+      {/* V21/P5.c — Welcome banner shown only on empty state (no user
+          messages yet). Once a real message lands, the banner is gone
+          for good. Order context (id / item) lives in the chat header
+          above + the right rail; no need to repeat the heavy order card
+          inside the message stream. */}
+      {order && messages.filter(m => m.sender_id !== '00000000-0000-0000-0000-000000000000').length === 0 && (
+        <div className="flex flex-col items-center justify-center px-6 py-10 text-center">
+          <span className="mb-3 grid h-12 w-12 place-items-center rounded-full bg-lime/[0.12] text-lime-text">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5">
+              <path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8v.5z"/>
+            </svg>
+          </span>
+          <p className="max-w-md text-[14.5px] font-bold leading-snug text-text-primary">
+            Thanks for choosing DropMarket
+            {order.listing?.title ? <> for <span className="text-lime-text">{order.listing.title}</span></> : ''}.
+          </p>
+          <p className="mt-1.5 max-w-md text-[12.5px] leading-relaxed text-text-secondary">
+            Chat below with your {otherUser?.username ? <span className="font-semibold text-text-primary">{otherUser.username}</span> : 'partner'} to begin the trade.
+          </p>
+        </div>
       )}
 
       {/* Messages grouped by date */}
@@ -190,7 +218,7 @@ export default function MessageList({
               <div className="w-full border-t border-white/10"></div>
             </div>
             <div className="relative flex justify-center">
-              <span className="bg-black px-3 text-xs font-medium text-text-tertiary">
+              <span className="bg-bg-raised px-3 text-[11px] font-semibold uppercase tracking-wider text-text-tertiary">
                 {date}
               </span>
             </div>
@@ -234,13 +262,20 @@ export default function MessageList({
               const isOwn = message.sender_id === currentUserId
               const isAdminMessage = adminUsers[message.sender_id] !== undefined
 
-              // Determine sender info and party flags
-              let senderInfo = otherUser
+              // V21/P5.e — Resolve sender info for BOTH sides. The "own"
+              // user isn't in otherUser; we fall through to:
+              //  (1) match against order.buyer/seller if we have them
+              //  (2) fall back to the currentUserAvatar prop
+              // so right-side bubbles render the seller's/buyer's own
+              // avatar on first-of-sequence — same pattern every modern
+              // chat uses.
+              let senderInfo:
+                | { id?: string; username?: string; avatar_url?: string }
+                | undefined = otherUser
               let isBuyerMessage = false
               let isSellerMessage = false
 
               if (order?.buyer && order?.seller) {
-                // Admin view or multi-party view - determine sender by ID
                 if (message.sender_id === order.buyer.id) {
                   senderInfo = order.buyer
                   isBuyerMessage = true
@@ -250,10 +285,22 @@ export default function MessageList({
                 }
               }
 
-              const showAvatar = !isOwn && !isAdminMessage && (
-                index === 0 ||
-                dateMessages[index - 1]?.sender_id !== message.sender_id
-              )
+              // If this is our OWN message and we still couldn't resolve
+              // a senderInfo (no order context), synthesize one from the
+              // currentUserAvatar prop.
+              if (isOwn && (!senderInfo || senderInfo.id !== currentUserId)) {
+                senderInfo = {
+                  id: currentUserId,
+                  avatar_url: currentUserAvatar,
+                }
+              }
+
+              // V21/P5.e — Show avatar on the FIRST message of any
+              // sender's sequence — own side included. Standard chat
+              // pattern (iMessage, WhatsApp, Discord).
+              const showAvatar =
+                !isAdminMessage &&
+                (index === 0 || dateMessages[index - 1]?.sender_id !== message.sender_id)
 
               return (
                 <MessageBubble

@@ -83,7 +83,7 @@ export function HeroCarousel({ slides, intervalMs = 6000 }: HeroCarouselProps) {
           positioned layer and toggle opacity to get the fade effect.
           Embla still handles index state + autoplay; we just hide the
           horizontal transform under a CSS crossfade. */}
-      <div className="flex-1 min-h-0 relative rounded-xl border border-border-default bg-bg-raised shadow-elevated overflow-hidden">
+      <div className="flex-1 min-h-0 relative rounded-xl overflow-hidden">
         <div className="h-full overflow-hidden" ref={emblaRef}>
           <div className="flex h-full">
             {slides.map((slide, index) => (

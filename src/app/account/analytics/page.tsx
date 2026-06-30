@@ -61,7 +61,7 @@ export default function AnalyticsPage() {
       label: 'Total Revenue',
       value: `$${getEarningsForRange().toFixed(2)}`,
       icon: DollarSign,
-      gradient: 'from-green-500 to-emerald-500',
+      gradient: 'bg-lime/10 text-lime-text',
       trend: '+12.5%',
       trendUp: true,
     },
@@ -69,7 +69,7 @@ export default function AnalyticsPage() {
       label: 'Total Orders',
       value: stats.orders.completed.toString(),
       icon: ShoppingCart,
-      gradient: 'from-blue-500 to-cyan-500',
+      gradient: 'bg-lime/10 text-lime-text',
       trend: '+8.2%',
       trendUp: true,
     },
@@ -77,7 +77,7 @@ export default function AnalyticsPage() {
       label: 'Avg Order Value',
       value: `$${(stats.orders.completed > 0 ? getEarningsForRange() / stats.orders.completed : 0).toFixed(2)}`,
       icon: Target,
-      gradient: 'from-purple-500 to-pink-500',
+      gradient: 'bg-lime/10 text-lime-text',
       trend: '+3.1%',
       trendUp: true,
     },
@@ -85,7 +85,7 @@ export default function AnalyticsPage() {
       label: 'Conversion Rate',
       value: `${stats.performance.conversionRate.toFixed(1)}%`,
       icon: TrendingUp,
-      gradient: 'from-orange-500 to-red-500',
+      gradient: 'bg-lime/10 text-lime-text',
       trend: '+5.4%',
       trendUp: true,
     },
@@ -138,10 +138,10 @@ export default function AnalyticsPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.1 }}
-            className="rounded-xl border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] backdrop-blur-md p-4"
+            className="rounded-lg border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] backdrop-blur-md p-4"
           >
             <div className="mb-3 flex items-center justify-between">
-              <div className={cn('rounded-lg bg-gradient-to-br p-2', card.gradient)}>
+              <div className={cn('rounded-lg p-2', card.gradient)}>
                 <card.icon className="h-5 w-5 text-white" />
               </div>
               <div className="flex items-center gap-1 text-xs">
@@ -161,7 +161,7 @@ export default function AnalyticsPage() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.4 }}
-        className="mb-6 rounded-xl border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] backdrop-blur-md p-4 sm:p-6"
+        className="mb-6 rounded-lg border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] backdrop-blur-md p-4 sm:p-6"
       >
         <div className="mb-4 flex items-center justify-between">
           <div>
@@ -210,7 +210,7 @@ export default function AnalyticsPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5 }}
-          className="rounded-xl border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] backdrop-blur-md overflow-hidden"
+          className="rounded-lg border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] backdrop-blur-md overflow-hidden"
         >
           <div className="p-4 border-b border-white/10">
             <h2 className="text-base font-semibold text-white">Top Performing Listings</h2>
@@ -257,7 +257,7 @@ export default function AnalyticsPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.6 }}
-          className="rounded-xl border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] backdrop-blur-md overflow-hidden"
+          className="rounded-lg border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] backdrop-blur-md overflow-hidden"
         >
           <div className="p-4 border-b border-white/10">
             <h2 className="text-base font-semibold text-white">Performance Metrics</h2>
@@ -268,8 +268,8 @@ export default function AnalyticsPage() {
             {/* Total Views */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="rounded-lg bg-blue-500/10 p-2">
-                  <Eye className="h-4 w-4 text-blue-400" />
+                <div className="rounded-lg bg-lime/10 p-2">
+                  <Eye className="h-4 w-4 text-lime-text" />
                 </div>
                 <div>
                   <p className="text-sm text-text-secondary">Total Views</p>
@@ -322,8 +322,8 @@ export default function AnalyticsPage() {
             {/* Active Listings */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="rounded-lg bg-purple-500/10 p-2">
-                  <Package className="h-4 w-4 text-purple-400" />
+                <div className="rounded-lg bg-lime/10 p-2">
+                  <Package className="h-4 w-4 text-lime-text" />
                 </div>
                 <div>
                   <p className="text-sm text-text-secondary">Active Listings</p>
@@ -341,10 +341,10 @@ export default function AnalyticsPage() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.7 }}
-        className="rounded-xl border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] backdrop-blur-md p-4 sm:p-6"
+        className="rounded-lg border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] backdrop-blur-md p-4 sm:p-6"
       >
         <div className="mb-4 flex items-center gap-2">
-          <div className="rounded-lg bg-gradient-to-br from-cyan-500 to-blue-500 p-2">
+          <div className="rounded-lg bg-lime/10 p-2">
             <Activity className="h-5 w-5 text-white" />
           </div>
           <div>
@@ -354,8 +354,8 @@ export default function AnalyticsPage() {
         </div>
 
         <div className="space-y-3">
-          <div className="rounded-lg border border-cyan-500/30 bg-cyan-500/10 p-3">
-            <p className="text-sm text-cyan-100">
+          <div className="rounded-lg border border-lime-tint-border bg-lime/10 p-3">
+            <p className="text-sm text-text-secondary">
               💡 Your conversion rate is <span className="font-semibold">{stats.performance.conversionRate.toFixed(1)}%</span> higher than average sellers. Keep up the great work!
             </p>
           </div>

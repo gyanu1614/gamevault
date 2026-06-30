@@ -13,6 +13,7 @@
  */
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import * as Popover from '@radix-ui/react-popover'
 import { Check, ChevronDown, Search, SlidersHorizontal, Gamepad2, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -43,6 +44,9 @@ interface ItemsPageClientProps {
   offers: ItemOffer[]
   taxonomy: ItemsTaxonomy
   viewerId?: string | null
+  /** V21/P7.l — Category label for the header (e.g. "Items",
+   *  "Accounts", "Boosting"). Defaults to "Items" for back-compat. */
+  categoryLabel?: string
 }
 
 export default function ItemsPageClient({
@@ -52,6 +56,7 @@ export default function ItemsPageClient({
   offers,
   taxonomy,
   viewerId,
+  categoryLabel = 'Items',
 }: ItemsPageClientProps) {
   // V14v — Scroll to top on mount before paint.
   useLayoutEffect(() => {
@@ -69,10 +74,28 @@ export default function ItemsPageClient({
     return () => clearTimeout(t)
   }, [q])
 
+  // V21/P7.v — Seed filters from the URL so a navbar search hit like
+  // "garama" can deep-link to this page with the filter pre-applied:
+  // /steal-a-brainrot/buy-items?attr_category=garama. We read each
+  // `attr_<slug>` param and keep only those whose option actually exists
+  // in this category's taxonomy (defensive against stale links).
+  const searchParams = useSearchParams()
+  const initialAttrFilters = useMemo(() => {
+    const seeded: Record<string, string> = {}
+    for (const f of taxonomy.filters ?? []) {
+      const v = searchParams.get(`attr_${f.slug}`)
+      if (v && f.options.some((o) => o.slug === v)) seeded[f.slug] = v
+    }
+    return seeded
+    // Seed once from the initial params; subsequent filter changes are
+    // local state, not URL-driven.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   // V15b — One filter value per attribute, keyed by attribute slug.
   // Default sentinel is 'all'. A filter is only "active" (i.e. applied
   // AND visible in the UI) when its value is not 'all'.
-  const [attrFilters, setAttrFilters] = useState<Record<string, string>>({})
+  const [attrFilters, setAttrFilters] = useState<Record<string, string>>(initialAttrFilters)
   const setAttrFilter = (slug: string, value: string) => {
     setAttrFilters((prev) => {
       const next = { ...prev, [slug]: value }
@@ -199,23 +222,13 @@ export default function ItemsPageClient({
     opts.find((o) => o.slug === slug)?.label ?? slug
 
   return (
-    <main className="min-h-screen bg-bg-base">
+    <main className="min-h-screen">
       {/* Filter band */}
-      <section
-        className="relative overflow-hidden border-b border-border-subtle"
-        style={{
-          background:
-            'linear-gradient(180deg, #0c0c13, #0a0a0f)',
-        }}
-      >
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-0"
-          style={{
-            background:
-              'radial-gradient(680px 300px at 88% -50%, rgba(198,255,61,0.07), transparent 60%)',
-          }}
-        />
+      {/* V19/P24/P7.mm — Hero section bg removed so the body's violet
+          gradient bleeds through. The hero is now a transparent
+          layer with just a bottom hairline; matches the currency
+          pages. */}
+      <section className="relative overflow-hidden border-b border-border-subtle">
         <div className="relative mx-auto w-full max-w-7xl px-4 pb-6 pt-5 sm:px-6 sm:pb-7 sm:pt-6 lg:px-8">
           {/* V15s — Page header restored: big game logo on the left,
               single-line "{Game} Items" title beside it. Sits between
@@ -242,7 +255,7 @@ export default function ItemsPageClient({
                 Marketplace
               </div>
               <h1 className="mt-0.5 truncate text-[22px] font-black leading-tight tracking-tight text-text-primary sm:text-[28px] lg:text-[32px]">
-                {gameName} Items
+                {gameName} {categoryLabel}
               </h1>
               {/* V15t — Item count moved into the subtitle so the page
                   has a single anchored block with title+count, then
@@ -308,7 +321,7 @@ export default function ItemsPageClient({
               onChange={(e) => setQ(e.target.value)}
               placeholder="Search items or sellers…"
               aria-label="Search items"
-              className="h-11 w-full rounded-xl border border-border-default bg-bg-overlay px-4 pl-11 text-[14.5px] text-text-primary outline-none transition-colors placeholder:text-text-tertiary focus:border-lime focus:ring-2 focus:ring-lime-tint-bg sm:h-12 sm:text-[15px]"
+              className="h-11 w-full rounded-lg border border-border-default bg-bg-overlay px-4 pl-11 text-[14.5px] text-text-primary outline-none transition-colors placeholder:text-text-tertiary focus:border-lime focus:ring-2 focus:ring-lime-tint-bg sm:h-12 sm:text-[15px]"
             />
           </div>
         </div>
@@ -343,7 +356,7 @@ export default function ItemsPageClient({
                 <button
                   type="button"
                   onClick={() => setPage((p) => p + 1)}
-                  className="inline-flex items-center gap-2 rounded-xl border border-border-default bg-bg-raised px-6 py-3 text-[14px] font-bold text-text-primary transition-colors hover:border-lime-tint-border hover:bg-lime-tint-bg/30 hover:text-lime-text"
+                  className="inline-flex items-center gap-2 rounded-lg border border-border-default bg-bg-raised px-6 py-3 text-[14px] font-bold text-text-primary transition-colors hover:border-lime-tint-border hover:bg-lime-tint-bg/30 hover:text-lime-text"
                 >
                   Load more items
                   <span aria-hidden className="text-text-tertiary">·</span>
@@ -475,7 +488,7 @@ function SearchableFilterChip({
             aria-expanded={open}
             aria-haspopup="listbox"
             className={cn(
-              'h-11 w-full rounded-xl border border-border-default bg-bg-overlay pl-3.5 text-[14px] font-medium text-text-primary outline-none transition-colors',
+              'h-11 w-full rounded-lg border border-border-default bg-bg-overlay pl-3.5 text-[14px] font-medium text-text-primary outline-none transition-colors',
               'hover:border-border-strong',
               'focus:border-lime focus:bg-bg-base focus:ring-2 focus:ring-lime-tint-bg',
               // V15x — Cursor: pointer when closed (acts as a button),
@@ -548,7 +561,7 @@ function SearchableFilterChip({
             // z-[60] guarantees the panel paints above sticky nav, sticky
             // sub-nav, and any z-50 sibling. Portal already takes it out
             // of the cards' stacking context.
-            'z-[60] overflow-hidden rounded-xl border border-border-default bg-bg-overlay shadow-[0_16px_40px_rgba(0,0,0,0.5)]',
+            'z-[60] overflow-hidden rounded-lg border border-border-default bg-bg-overlay shadow-[0_16px_40px_rgba(0,0,0,0.5)]',
             'min-w-[var(--radix-popover-trigger-width,220px)]',
             'data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95',
             'data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95',
@@ -602,7 +615,7 @@ function SortSelect({
       <Popover.Trigger asChild>
         <button
           type="button"
-          className="inline-flex h-10 items-center gap-2 rounded-xl border border-border-subtle bg-transparent px-3.5 text-[13.5px] font-semibold text-text-primary transition-colors hover:border-border-default"
+          className="inline-flex h-10 items-center gap-2 rounded-lg border border-border-subtle bg-transparent px-3.5 text-[13.5px] font-semibold text-text-primary transition-colors hover:border-border-default"
         >
           <SlidersHorizontal className="h-3.5 w-3.5 text-text-tertiary" aria-hidden />
           {label}
@@ -614,7 +627,7 @@ function SortSelect({
           sideOffset={6}
           align="end"
           className={cn(
-            'z-50 min-w-[210px] rounded-xl border border-border-default bg-bg-overlay p-1.5 shadow-[0_16px_40px_rgba(0,0,0,0.5)]',
+            'z-50 min-w-[210px] rounded-lg border border-border-default bg-bg-overlay p-1.5 shadow-[0_16px_40px_rgba(0,0,0,0.5)]',
             'data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95',
             'data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95',
           )}
@@ -662,7 +675,7 @@ function EmptyState({ onClear }: { onClear: () => void }) {
       <button
         type="button"
         onClick={onClear}
-        className="mt-5 inline-flex h-10 items-center gap-1.5 rounded-xl border border-border-default bg-bg-overlay px-4 text-[13.5px] font-semibold text-text-primary transition-colors hover:border-lime-tint-border hover:bg-lime-tint-bg/30 hover:text-lime-text"
+        className="mt-5 inline-flex h-10 items-center gap-1.5 rounded-lg border border-border-default bg-bg-overlay px-4 text-[13.5px] font-semibold text-text-primary transition-colors hover:border-lime-tint-border hover:bg-lime-tint-bg/30 hover:text-lime-text"
       >
         Clear filters
       </button>

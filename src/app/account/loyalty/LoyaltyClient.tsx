@@ -7,6 +7,7 @@ import {
 } from 'lucide-react'
 import type { LoyaltyStats } from '@/lib/actions/loyalty'
 import type { LoyaltyCredit } from '@/types/database'
+import AccountPageHeader from '@/components/account/AccountPageHeader'
 
 interface LoyaltyClientProps {
   stats: LoyaltyStats
@@ -30,11 +31,11 @@ function StatCard({
   const colors = {
     violet: 'text-lime-text bg-lime/10 border-lime-tint-border',
     green:  'text-success  bg-success-bg  border-green-500/20',
-    amber:  'text-amber-400  bg-amber-500/10  border-amber-500/20',
-    blue:   'text-blue-400   bg-blue-500/10   border-blue-500/20',
+    amber:  "text-warning bg-warning-bg border-warning/20",
+    blue:   "text-lime-text bg-lime/10 border-lime-tint-border",
   }
   return (
-    <div className="rounded-xl border border-border-subtle bg-bg-overlay p-5">
+    <div className="rounded-lg border border-border-subtle card-frost p-5">
       <div className={`inline-flex items-center justify-center h-10 w-10 rounded-lg border mb-3 ${colors[color]}`}>
         <Icon className="h-5 w-5" />
       </div>
@@ -107,23 +108,22 @@ export default function LoyaltyClient({ stats, cashbackRate }: LoyaltyClientProp
   const rateLabel = `${(cashbackRate * 100).toFixed(0)}%`
 
   return (
-    <div className="min-h-screen bg-black pb-20">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
+    <div className="min-h-screen pb-20">
+      <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
 
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold text-white">Rewards &amp; Cashback</h1>
-          <p className="text-sm text-text-secondary mt-1">
-            Earn <span className="text-lime-text font-medium">{rateLabel} cashback</span> on
-            every purchase you complete.
-          </p>
-        </div>
+        {/* V21/P7.al — Standard account header. */}
+        <AccountPageHeader
+          icon="rewards"
+          title="Rewards & Cashback"
+          subtitle={`Earn ${rateLabel} cashback on every purchase you complete.`}
+          className="mb-8"
+        />
 
         {/* Balance hero card */}
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          className="rounded-2xl border border-lime-tint-border bg-gradient-to-br from-lime/10 via-purple-500/5 to-transparent p-6 mb-6"
+          className="rounded-lg border border-lime-tint-border bg-gradient-to-br from-lime/10 to-transparent p-6 mb-6"
         >
           <div className="flex items-center gap-2 mb-2">
             <Star className="h-4 w-4 text-lime-text" />
@@ -137,9 +137,9 @@ export default function LoyaltyClient({ stats, cashbackRate }: LoyaltyClientProp
           </p>
 
           {stats.pendingFromOrders > 0 && (
-            <div className="mt-4 flex items-center gap-2 rounded-xl bg-amber-500/10 border border-amber-500/20 px-4 py-2.5">
-              <Clock className="h-4 w-4 text-amber-400 shrink-0" />
-              <span className="text-sm text-amber-300">
+            <div className="mt-4 flex items-center gap-2 rounded-lg bg-warning-bg border border-warning/20 px-4 py-2.5">
+              <Clock className="h-4 w-4 text-warning shrink-0" />
+              <span className="text-sm text-warning">
                 <span className="font-semibold">${stats.pendingFromOrders.toFixed(2)}</span> cashback
                 pending — confirm your deliveries to unlock.
               </span>
@@ -180,7 +180,7 @@ export default function LoyaltyClient({ stats, cashbackRate }: LoyaltyClientProp
         </div>
 
         {/* How it works */}
-        <div className="rounded-xl border border-border-subtle bg-bg-overlay p-5 mb-8">
+        <div className="rounded-lg border border-border-subtle card-frost p-5 mb-8">
           <h2 className="text-sm font-semibold text-white mb-4">How cashback works</h2>
           <div className="space-y-3">
             {[
@@ -200,7 +200,7 @@ export default function LoyaltyClient({ stats, cashbackRate }: LoyaltyClientProp
         </div>
 
         {/* Credits history */}
-        <div className="rounded-xl border border-border-subtle bg-bg-overlay overflow-hidden">
+        <div className="rounded-lg border border-border-subtle card-frost overflow-hidden">
           <div className="flex items-center justify-between px-5 py-4 border-b border-border-subtle">
             <h2 className="text-sm font-semibold text-white">Credits History</h2>
             {stats.recentCredits.length > 0 && (

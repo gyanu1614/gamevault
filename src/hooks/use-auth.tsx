@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { createContext, useContext, useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import type { User } from '@supabase/supabase-js'
 import type { Profile } from '@/types/database'
@@ -76,7 +76,23 @@ export function invalidateAuthCache(userId?: string) {
   }
 }
 
-export function useAuth() {
+// V22 — Shared auth state.
+//
+// PREVIOUSLY this hook ran standalone in every one of ~39 consumers, so the
+// session lookup + profile fetch + onAuthStateChange subscription all fired
+// N times per page (the same profile fetched in parallel by sidebar, header,
+// page, gate…). Now the logic lives in ONE `AuthProvider` and every consumer
+// reads the shared context — a single fetch + single subscription per app.
+type AuthContextValue = {
+  user: AuthUser | null
+  profile: Profile | null
+  loading: boolean
+  isAuthenticated: boolean
+}
+
+const AuthContext = createContext<AuthContextValue | null>(null)
+
+function useAuthState(): AuthContextValue {
   const [user, setUser] = useState<AuthUser | null>(null)
   const [loading, setLoading] = useState(true)
   const supabase = createClient()
@@ -152,38 +168,56 @@ export function useAuth() {
               setCachedProfile(userId, profile)
             }
 
-            // Check seller application status with increased timeout
+            // V22 — Seller status resolution, optimized.
+            //
+            // `profiles.role` is the source of truth for APPROVED sellers:
+            // admin approval sets `profiles.role = 'seller'` (see
+            // admin-seller-review.ts), so an approved seller is fully known
+            // from the profile row we just fetched — no second round-trip.
+            //
+            // Only NON-approved users need the seller_applications query (to
+            // surface a pending/rejected application in the navbar). That's
+            // the rare path; approved sellers (the hot path that hits the
+            // seller dashboard/orders/offers) skip it entirely.
             let isApprovedSeller = cachedSellerStatus?.isApprovedSeller || false
             let sellerApplicationStatus = cachedSellerStatus?.status || null
 
-            try {
-              const sellerAppPromise = supabase
-                .from('seller_applications')
-                .select('status')
-                .eq('user_id', userId)
-                .order('created_at', { ascending: false })
-                .limit(1)
-                .single()
+            if ((profile as any)?.role === 'seller') {
+              isApprovedSeller = true
+              sellerApplicationStatus = 'approved'
+              setCachedSellerStatus(userId, true, 'approved')
+            } else {
+              // Not an approved seller — check for a pending/rejected app once.
+              isApprovedSeller = false
+              try {
+                const sellerAppPromise = supabase
+                  .from('seller_applications')
+                  .select('status')
+                  .eq('user_id', userId)
+                  .order('created_at', { ascending: false })
+                  .limit(1)
+                  .single()
 
-              const sellerTimeout = new Promise((_, reject) =>
-                setTimeout(() => reject(new Error('Seller status timeout')), 5000) // Increased from 2s to 5s
-              )
+                const sellerTimeout = new Promise((_, reject) =>
+                  setTimeout(() => reject(new Error('Seller status timeout')), 5000)
+                )
 
-              const { data: sellerApp } = await Promise.race([
-                sellerAppPromise,
-                sellerTimeout
-              ]) as any
+                const { data: sellerApp } = await Promise.race([
+                  sellerAppPromise,
+                  sellerTimeout,
+                ]) as any
 
-              if (sellerApp) {
-                sellerApplicationStatus = sellerApp.status
-                isApprovedSeller = sellerApp.status === 'approved'
-                // Cache the seller status
-                setCachedSellerStatus(userId, isApprovedSeller, sellerApplicationStatus)
+                if (sellerApp) {
+                  sellerApplicationStatus = sellerApp.status
+                  isApprovedSeller = sellerApp.status === 'approved'
+                  setCachedSellerStatus(userId, isApprovedSeller, sellerApplicationStatus)
+                } else {
+                  setCachedSellerStatus(userId, false, null)
+                }
+              } catch (err) {
+                // On timeout/error keep cached value instead of resetting.
+                console.warn('⚠️ Seller status check failed, using cached value:', err)
               }
-            } catch (err) {
-              // On timeout or error, keep the cached value instead of resetting to false
-              console.warn('⚠️ Seller status check failed, using cached value:', err)
-              // Don't reset - keep cached values
             }
 
             if (mounted) {
@@ -355,6 +389,28 @@ export function useAuth() {
     loading,
     isAuthenticated: !!user,
   }
+}
+
+/**
+ * AuthProvider — mount once near the app root. Runs the session lookup +
+ * profile fetch + auth-change subscription a single time and shares the
+ * result with every `useAuth()` consumer via context.
+ */
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const value = useAuthState()
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
+}
+
+/**
+ * useAuth — reads the shared auth context. Must be used under <AuthProvider/>
+ * (mounted once at the app root in providers.tsx).
+ */
+export function useAuth(): AuthContextValue {
+  const ctx = useContext(AuthContext)
+  if (ctx === null) {
+    throw new Error('useAuth must be used within <AuthProvider>')
+  }
+  return ctx
 }
 
 // Hook for requiring authentication

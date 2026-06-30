@@ -31,61 +31,55 @@ import {
   AlertTriangle,
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { getAvatarUrl } from '@/lib/utils/avatar'
+// V19/P21 — Library primitives: shadcn Switch / Card / Tabs replace
+// the hand-rolled Toggle / SectionCard / button-sidebar tab UI. ARIA
+// + keyboard nav for free.
+import { Switch } from '@/components/ui/switch'
+import { Card } from '@/components/ui/card'
+import AccountPageHeader from '@/components/account/AccountPageHeader'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Label } from '@/components/ui/label'
 
 type SettingsTab = 'profile' | 'seller' | 'payouts' | 'notifications' | 'security'
 
-// ── Reusable input component ──────────────────────────────────────────────────
+// ── Reusable input wrapper (label + hint) ────────────────────────
+// V19/P21 — Thin Label-driven wrapper. The actual <input> element is
+// passed as children and styled via inputCls (kept consistent with
+// the rest of the seller surfaces).
 function SettingInput({
   label, hint, required, children,
 }: { label: string; hint?: string; required?: boolean; children: React.ReactNode }) {
   return (
-    <div>
-      <label className="mb-2 block text-sm font-medium text-text-secondary">
+    <div className="space-y-2">
+      <Label className="text-sm font-medium text-text-secondary">
         {label}{required && <span className="ml-1 text-error">*</span>}
-      </label>
+      </Label>
       {children}
-      {hint && <p className="mt-1.5 text-xs text-text-tertiary">{hint}</p>}
+      {hint && <p className="text-xs text-text-tertiary">{hint}</p>}
     </div>
   )
 }
 
-// ── Toggle switch ─────────────────────────────────────────────────────────────
-function Toggle({ enabled, onChange }: { enabled: boolean; onChange: () => void }) {
-  return (
-    <button
-      onClick={onChange}
-      className={cn(
-        'relative h-6 w-11 rounded-full transition-all duration-200 focus:outline-none',
-        enabled ? 'bg-lime' : 'bg-bg-raised-hover'
-      )}
-    >
-      <div className={cn(
-        'absolute top-1 h-4 w-4 rounded-full bg-white shadow-sm transition-all duration-200',
-        enabled ? 'left-6' : 'left-1'
-      )} />
-    </button>
-  )
-}
-
-// ── Section card ─────────────────────────────────────────────────────────────
+// ── Section card (shadcn Card alias) ─────────────────────────────
 function SectionCard({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className={cn('rounded-2xl border border-border-subtle bg-bg-overlay p-6', className)}>
+    <Card className={cn('rounded-lg border-border-subtle card-frost shadow-none', className)}>
       {children}
-    </div>
+    </Card>
   )
 }
 
-// ── Input field style ─────────────────────────────────────────────────────────
-const inputCls = 'w-full rounded-xl border border-border-subtle bg-bg-raised px-4 py-3 text-sm text-white placeholder:text-text-disabled focus:border-lime focus:outline-none focus:ring-2 focus:ring-violet-500/20 transition-all'
+// V19/P21 — Input style. Replaced the violet-500 ring with the
+// project's lime-tinted ring so focus matches the rest of the site.
+const inputCls = 'w-full rounded-lg border border-border-subtle bg-bg-raised px-4 py-3 text-sm text-text-primary placeholder:text-text-disabled focus:border-lime focus:outline-none focus:ring-2 focus:ring-lime-tint-bg transition-all'
 
 export default function SettingsPage() {
   const { user, loading: authLoading } = useAuth()
   const { profile, isLoading: profileLoading, updateProfile, isUpdating } = useSellerSettings()
   const [activeTab, setActiveTab] = useState<SettingsTab>('profile')
-  const [saveSuccess, setSaveSuccess] = useState(false)
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
   const [avatarError, setAvatarError] = useState<string | null>(null)
 
@@ -219,11 +213,11 @@ export default function SettingsPage() {
         await supabase.auth.refreshSession()
       }
 
-      setSaveSuccess(true)
+      toast.success('Settings saved', { description: 'Your changes are live' })
       setShowShopNameConfirmation(false)
-      setTimeout(() => setSaveSuccess(false), 3000)
     } catch (error) {
       console.error('Failed to save settings:', error)
+      toast.error('Couldn’t save settings', { description: 'Try again in a moment.' })
     }
   }
 
@@ -266,8 +260,7 @@ export default function SettingsPage() {
       // Update avatar preview with new URL
       if (result.avatarUrl) {
         setAvatar(result.avatarUrl)
-        setSaveSuccess(true)
-        setTimeout(() => setSaveSuccess(false), 3000)
+        toast.success('Avatar updated')
       }
     } catch (error: any) {
       console.error('Avatar upload error:', error)
@@ -310,39 +303,21 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-bg-base pb-20">
-      <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
-        {/* Success toast */}
-        <AnimatePresence>
-        {saveSuccess && (
-          <motion.div
-            initial={{ opacity: 0, y: -20, scale: 0.96 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -20, scale: 0.96 }}
-            className="fixed right-4 top-4 z-50 flex items-center gap-3 rounded-2xl border border-success/30 bg-success-bg px-5 py-3.5 backdrop-blur-xl shadow-2xl"
-          >
-            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-green-500">
-              <Check className="h-4 w-4 text-white" />
-            </div>
-            <div>
-              <div className="text-sm font-semibold text-white">Settings saved</div>
-              <div className="text-xs text-success">Your changes are live</div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+    // V22 — Transparent shell (was opaque bg-bg-base "black box") so the
+    // account hero bleeds through like every other sidebar page; max-w-7xl
+    // + shared AccountPageHeader to match their alignment + title size.
+    <div className="min-h-screen pb-20">
+      <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
+        {/* V19/P21 — Success toasts now go through the global sonner
+            instance (RootLayout). No more page-local AnimatePresence. */}
 
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-6"
-        >
-          <h1 className="text-2xl font-bold text-white">Settings</h1>
-          <p className="text-sm text-text-secondary mt-1">Manage your account preferences and configuration</p>
-        </motion.div>
+        <AccountPageHeader
+          icon="settings"
+          title="Settings"
+          subtitle="Manage your account preferences and configuration"
+        />
 
-        <div className="grid gap-6 lg:grid-cols-[220px_1fr]">
+        <div className="mt-6 grid gap-6 lg:grid-cols-[220px_1fr]">
 
           {/* ── Sidebar nav ── */}
           <motion.div
@@ -351,7 +326,7 @@ export default function SettingsPage() {
             transition={{ delay: 0.05 }}
             className="lg:sticky lg:top-8 h-fit"
           >
-            <div className="rounded-2xl border border-border-subtle bg-bg-overlay p-2 space-y-0.5">
+            <div className="rounded-lg border border-border-subtle card-frost p-2 space-y-0.5">
               {tabs.map((tab) => {
                 const Icon = tab.icon
                 const active = activeTab === tab.id
@@ -360,10 +335,10 @@ export default function SettingsPage() {
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
                     className={cn(
-                      'group flex w-full items-center gap-3 rounded-xl px-3.5 py-3 text-left transition-all duration-150',
+                      'group flex w-full items-center gap-3 rounded-lg px-3.5 py-3 text-left transition-all duration-150',
                       active
                         ? 'bg-lime/15 border border-lime-tint-border text-text-inverse'
-                        : 'text-text-secondary hover:bg-bg-raised hover:text-white border border-transparent'
+                        : 'text-text-secondary hover:bg-bg-raised hover:text-text-primary border border-transparent'
                     )}
                   >
                     <div className={cn(
@@ -375,7 +350,7 @@ export default function SettingsPage() {
                       <Icon className="h-4 w-4" />
                     </div>
                     <div className="min-w-0">
-                      <div className={cn('text-sm font-medium leading-tight', active ? 'text-white' : '')}>{tab.label}</div>
+                      <div className={cn('text-sm font-medium leading-tight', active ? 'text-text-primary' : '')}>{tab.label}</div>
                       <div className="text-[11px] text-text-disabled mt-0.5 truncate">{tab.desc}</div>
                     </div>
                     {active && <ChevronRight className="ml-auto h-3.5 w-3.5 text-lime-text shrink-0" />}
@@ -405,12 +380,12 @@ export default function SettingsPage() {
                         src={avatar}
                         alt="Avatar"
                         className={cn(
-                          "h-20 w-20 rounded-2xl object-cover ring-2 ring-white/10",
+                          "h-20 w-20 rounded-lg object-cover ring-2 ring-white/10",
                           uploadingAvatar && "opacity-50"
                         )}
                       />
                       <label className={cn(
-                        "absolute -bottom-1.5 -right-1.5 flex h-7 w-7 cursor-pointer items-center justify-center rounded-full border border-border-subtle bg-gray-900 text-white shadow-lg transition hover:bg-gray-800",
+                        "absolute -bottom-1.5 -right-1.5 flex h-7 w-7 cursor-pointer items-center justify-center rounded-full border border-border-subtle bg-bg-overlay text-text-primary shadow-lg transition hover:bg-bg-raised-hover",
                         uploadingAvatar && "cursor-not-allowed opacity-50"
                       )}>
                         {uploadingAvatar ? (
@@ -428,7 +403,7 @@ export default function SettingsPage() {
                       </label>
                     </div>
                     <div>
-                      <div className="text-base font-semibold text-white">{username || 'Your Name'}</div>
+                      <div className="text-base font-semibold text-text-primary">{username || 'Your Name'}</div>
                       <div className="text-sm text-text-tertiary mt-0.5">{email}</div>
                       <div className="mt-2 text-xs text-text-disabled">JPG, PNG or GIF · Max 5 MB</div>
                       {avatarError && (
@@ -447,7 +422,7 @@ export default function SettingsPage() {
                 </SectionCard>
 
                 <SectionCard>
-                  <h2 className="text-sm font-semibold text-white mb-5">Profile Information</h2>
+                  <h2 className="text-sm font-semibold text-text-primary mb-5">Profile Information</h2>
                   <div className="space-y-5">
                     <div className="grid gap-4 sm:grid-cols-2">
                       <SettingInput label="Username" required hint="Your unique handle on GameVault">
@@ -500,7 +475,7 @@ export default function SettingsPage() {
             {activeTab === 'seller' && (
               <>
                 <SectionCard>
-                  <h2 className="text-sm font-semibold text-white mb-5">Shop Identity</h2>
+                  <h2 className="text-sm font-semibold text-text-primary mb-5">Shop Identity</h2>
                   <div className="space-y-5">
                     {/* Shop name */}
                     <div>
@@ -509,9 +484,9 @@ export default function SettingsPage() {
                       </label>
 
                       {!profile?.shop_name && (
-                        <div className="mb-3 flex items-center gap-2 rounded-xl border border-amber-500/20 bg-amber-500/10 px-4 py-2.5">
-                          <AlertCircle className="h-4 w-4 shrink-0 text-amber-400" />
-                          <span className="text-sm text-amber-300">You must set a shop name before your store goes live</span>
+                        <div className="mb-3 flex items-center gap-2 rounded-lg border border-warning/20 bg-warning-bg px-4 py-2.5">
+                          <AlertCircle className="h-4 w-4 shrink-0 text-warning" />
+                          <span className="text-sm text-warning">You must set a shop name before your store goes live</span>
                         </div>
                       )}
 
@@ -527,7 +502,7 @@ export default function SettingsPage() {
                       />
 
                       {isWithinCooldown ? (
-                        <div className="mt-2 flex items-center gap-2 text-xs text-cyan-400">
+                        <div className="mt-2 flex items-center gap-2 text-xs text-warning">
                           <Clock className="h-3.5 w-3.5" />
                           <span>Next change in {daysRemaining} day{daysRemaining !== 1 ? 's' : ''}</span>
                         </div>
@@ -536,7 +511,7 @@ export default function SettingsPage() {
                           <Globe className="h-3.5 w-3.5" />
                           <span>
                             gamevault.gg/shop/
-                            <span className="text-cyan-400">
+                            <span className="text-lime-text">
                               {shopName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')}
                             </span>
                           </span>
@@ -560,35 +535,35 @@ export default function SettingsPage() {
                         onChange={(e) => setBusinessType(e.target.value)}
                         className={cn(inputCls, 'bg-bg-raised')}
                       >
-                        <option value="individual" className="bg-gray-900">Individual</option>
-                        <option value="company" className="bg-gray-900">Company / Business</option>
+                        <option value="individual" className="bg-bg-overlay">Individual</option>
+                        <option value="company" className="bg-bg-overlay">Company / Business</option>
                       </select>
                     </SettingInput>
                   </div>
                 </SectionCard>
 
                 <SectionCard>
-                  <h2 className="text-sm font-semibold text-white mb-4">Store Controls</h2>
+                  <h2 className="text-sm font-semibold text-text-primary mb-4">Store Controls</h2>
                   <div className="space-y-4">
                     {/* Vacation mode */}
-                    <div className="flex items-center justify-between rounded-xl border border-border-subtle bg-bg-overlay px-4 py-3.5">
+                    <div className="flex items-center justify-between rounded-lg border border-border-subtle bg-bg-overlay px-4 py-3.5">
                       <div>
-                        <div className="text-sm font-medium text-white">Vacation Mode</div>
+                        <div className="text-sm font-medium text-text-primary">Vacation Mode</div>
                         <div className="text-xs text-text-tertiary mt-0.5">Temporarily hide all your listings</div>
                       </div>
-                      <Toggle enabled={vacationMode} onChange={() => setVacationMode(!vacationMode)} />
+                      <Switch checked={vacationMode} onCheckedChange={setVacationMode} />
                     </div>
                     {vacationMode && (
-                      <div className="flex items-center gap-2 rounded-xl border border-amber-500/20 bg-amber-500/10 px-4 py-2.5">
-                        <AlertCircle className="h-4 w-4 shrink-0 text-amber-400" />
-                        <span className="text-sm text-amber-300">Listings are hidden from buyers</span>
+                      <div className="flex items-center gap-2 rounded-lg border border-warning/20 bg-warning-bg px-4 py-2.5">
+                        <AlertCircle className="h-4 w-4 shrink-0 text-warning" />
+                        <span className="text-sm text-warning">Listings are hidden from buyers</span>
                       </div>
                     )}
                   </div>
                 </SectionCard>
 
                 <SectionCard>
-                  <h2 className="text-sm font-semibold text-white mb-4">Auto-Reply</h2>
+                  <h2 className="text-sm font-semibold text-text-primary mb-4">Auto-Reply</h2>
                   <SettingInput label="Message" hint="Automatically sent when a buyer starts a conversation">
                     <textarea
                       value={autoReply}
@@ -609,21 +584,21 @@ export default function SettingsPage() {
                 <motion.div
                   initial={{ opacity: 0, y: 16 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="rounded-2xl border border-success/30 bg-gradient-to-br from-green-500/10 via-emerald-500/5 to-transparent p-6"
+                  className="rounded-lg border border-success/30 bg-success-bg p-6"
                 >
                   <div className="flex items-center gap-2 mb-1">
                     <DollarSign className="h-4 w-4 text-success" />
                     <span className="text-sm font-medium text-success">Available Balance</span>
                   </div>
-                  <div className="text-4xl font-bold text-white tracking-tight mb-4">$1,234.56</div>
-                  <button className="inline-flex items-center gap-2 rounded-xl bg-white px-5 py-2.5 text-sm font-semibold text-black transition-all hover:bg-white/90 active:scale-95">
+                  <div className="text-4xl font-bold text-text-primary tracking-tight mb-4">$1,234.56</div>
+                  <button className="inline-flex items-center gap-2 rounded-lg bg-white px-5 py-2.5 text-sm font-semibold text-black transition-all hover:bg-white/90 active:scale-95">
                     <DollarSign className="h-4 w-4" />
                     Request Payout
                   </button>
                 </motion.div>
 
                 <SectionCard>
-                  <h2 className="text-sm font-semibold text-white mb-5">Payout Method</h2>
+                  <h2 className="text-sm font-semibold text-text-primary mb-5">Payout Method</h2>
                   <div className="space-y-4">
                     <SettingInput label="PayPal Email" required hint="Earnings will be sent to this PayPal account">
                       <div className="relative">
@@ -644,35 +619,35 @@ export default function SettingsPage() {
                         className={cn(inputCls, 'bg-bg-raised')}
                       >
                         {['10','25','50','100','500'].map(v => (
-                          <option key={v} value={v} className="bg-gray-900">${v}</option>
+                          <option key={v} value={v} className="bg-bg-overlay">${v}</option>
                         ))}
                       </select>
                     </SettingInput>
 
-                    <div className="flex items-center justify-between rounded-xl border border-border-subtle bg-bg-overlay px-4 py-3.5">
+                    <div className="flex items-center justify-between rounded-lg border border-border-subtle bg-bg-overlay px-4 py-3.5">
                       <div>
-                        <div className="text-sm font-medium text-white">Auto-Withdraw</div>
+                        <div className="text-sm font-medium text-text-primary">Auto-Withdraw</div>
                         <div className="text-xs text-text-tertiary mt-0.5">Automatically request payout when balance hits minimum</div>
                       </div>
-                      <Toggle enabled={autoWithdraw} onChange={() => setAutoWithdraw(!autoWithdraw)} />
+                      <Switch checked={autoWithdraw} onCheckedChange={setAutoWithdraw} />
                     </div>
                   </div>
                 </SectionCard>
 
                 <SectionCard>
-                  <h2 className="text-sm font-semibold text-white mb-4">Recent Payouts</h2>
+                  <h2 className="text-sm font-semibold text-text-primary mb-4">Recent Payouts</h2>
                   <div className="space-y-2">
                     {[
                       { date: 'Jan 15, 2024', amount: 456.78 },
                       { date: 'Jan 1, 2024', amount: 892.34 },
                       { date: 'Dec 15, 2023', amount: 234.56 },
                     ].map((p, i) => (
-                      <div key={i} className="flex items-center justify-between rounded-xl border border-border-subtle bg-bg-overlay px-4 py-3">
+                      <div key={i} className="flex items-center justify-between rounded-lg border border-border-subtle bg-bg-overlay px-4 py-3">
                         <div>
-                          <div className="text-sm font-medium text-white">${p.amount.toFixed(2)}</div>
+                          <div className="text-sm font-medium text-text-primary">${p.amount.toFixed(2)}</div>
                           <div className="text-xs text-text-tertiary">{p.date}</div>
                         </div>
-                        <div className="flex items-center gap-1.5 rounded-full border border-green-500/20 bg-success-bg px-3 py-1 text-xs font-medium text-success">
+                        <div className="flex items-center gap-1.5 rounded-full border border-success/20 bg-success-bg px-3 py-1 text-xs font-medium text-success">
                           <Check className="h-3 w-3" /> Completed
                         </div>
                       </div>
@@ -687,7 +662,7 @@ export default function SettingsPage() {
               <SectionCard>
                 <div className="flex items-center gap-2 mb-1">
                   <Bell className="h-4 w-4 text-lime-text" />
-                  <h2 className="text-sm font-semibold text-white">Email Notifications</h2>
+                  <h2 className="text-sm font-semibold text-text-primary">Email Notifications</h2>
                 </div>
                 <p className="text-xs text-text-tertiary mb-6">Choose which emails you want to receive</p>
                 <div className="space-y-0.5">
@@ -704,7 +679,7 @@ export default function SettingsPage() {
                       <div
                         key={n.key}
                         className={cn(
-                          'flex items-center justify-between rounded-xl px-4 py-3.5 transition-all',
+                          'flex items-center justify-between rounded-lg px-4 py-3.5 transition-all',
                           enabled ? 'bg-bg-overlay border border-border-subtle' : 'border border-transparent'
                         )}
                       >
@@ -716,13 +691,13 @@ export default function SettingsPage() {
                             <Icon className="h-4 w-4" />
                           </div>
                           <div>
-                            <div className="text-sm font-medium text-white">{n.label}</div>
+                            <div className="text-sm font-medium text-text-primary">{n.label}</div>
                             <div className="text-xs text-text-tertiary">{n.desc}</div>
                           </div>
                         </div>
-                        <Toggle
-                          enabled={enabled}
-                          onChange={() => setEmailNotifications({ ...emailNotifications, [n.key]: !enabled })}
+                        <Switch
+                          checked={enabled}
+                          onCheckedChange={(v) => setEmailNotifications({ ...emailNotifications, [n.key]: v })}
                         />
                       </div>
                     )
@@ -738,20 +713,20 @@ export default function SettingsPage() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <div className={cn(
-                        'flex h-10 w-10 items-center justify-center rounded-xl border',
-                        twoFactorEnabled ? 'bg-green-500/15 border-green-500/25 text-success' : 'bg-bg-raised border-border-subtle text-text-tertiary'
+                        'flex h-10 w-10 items-center justify-center rounded-lg border',
+                        twoFactorEnabled ? 'bg-success-bg border-success/25 text-success' : 'bg-bg-raised border-border-subtle text-text-tertiary'
                       )}>
                         <Smartphone className="h-5 w-5" />
                       </div>
                       <div>
-                        <div className="text-sm font-semibold text-white">Two-Factor Authentication</div>
+                        <div className="text-sm font-semibold text-text-primary">Two-Factor Authentication</div>
                         <div className="text-xs text-text-tertiary mt-0.5">Protect your account with an authenticator app</div>
                       </div>
                     </div>
-                    <Toggle enabled={twoFactorEnabled} onChange={() => setTwoFactorEnabled(!twoFactorEnabled)} />
+                    <Switch checked={twoFactorEnabled} onCheckedChange={setTwoFactorEnabled} />
                   </div>
                   {twoFactorEnabled && (
-                    <div className="mt-4 flex items-center gap-2 rounded-xl border border-green-500/20 bg-success-bg px-4 py-2.5">
+                    <div className="mt-4 flex items-center gap-2 rounded-lg border border-success/20 bg-success-bg px-4 py-2.5">
                       <ShieldCheck className="h-4 w-4 text-success" />
                       <span className="text-sm text-green-300">2FA is active — your account is protected</span>
                     </div>
@@ -759,7 +734,7 @@ export default function SettingsPage() {
                 </SectionCard>
 
                 <SectionCard>
-                  <h2 className="text-sm font-semibold text-white mb-5">Change Password</h2>
+                  <h2 className="text-sm font-semibold text-text-primary mb-5">Change Password</h2>
                   <div className="space-y-4">
                     <SettingInput label="Current Password">
                       <div className="relative">
@@ -773,7 +748,7 @@ export default function SettingsPage() {
                         <button
                           type="button"
                           onClick={() => setShowPassword(!showPassword)}
-                          className="absolute right-3.5 top-1/2 -translate-y-1/2 text-text-tertiary hover:text-white transition-colors"
+                          className="absolute right-3.5 top-1/2 -translate-y-1/2 text-text-tertiary hover:text-text-primary transition-colors"
                         >
                           {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                         </button>
@@ -789,20 +764,20 @@ export default function SettingsPage() {
                       </SettingInput>
                     </div>
 
-                    <button className="inline-flex items-center gap-2 rounded-xl border border-border-subtle bg-bg-overlay px-5 py-2.5 text-sm font-medium text-white transition-all hover:bg-bg-raised-hover active:scale-95">
+                    <button className="inline-flex items-center gap-2 rounded-lg border border-border-subtle bg-bg-overlay px-5 py-2.5 text-sm font-medium text-text-primary transition-all hover:bg-bg-raised-hover active:scale-95">
                       <Lock className="h-4 w-4" />
                       Update Password
                     </button>
                   </div>
                 </SectionCard>
 
-                <div className="rounded-2xl border border-error/40 bg-red-500/[0.04] p-6">
+                <div className="rounded-lg border border-error/40 bg-error-bg p-6">
                   <div className="flex items-center gap-2 mb-1">
                     <AlertTriangle className="h-4 w-4 text-error" />
                     <span className="text-sm font-semibold text-error">Danger Zone</span>
                   </div>
                   <p className="text-xs text-text-tertiary mb-4">Permanently delete your account and all associated data. This cannot be undone.</p>
-                  <button className="flex items-center gap-2 rounded-xl border border-error/40 bg-error-bg px-5 py-2.5 text-sm font-semibold text-error transition-all hover:bg-error-bg active:scale-95">
+                  <button className="flex items-center gap-2 rounded-lg border border-error/40 bg-error-bg px-5 py-2.5 text-sm font-semibold text-error transition-all hover:bg-error-bg active:scale-95">
                     <Trash2 className="h-4 w-4" />
                     Delete Account
                   </button>
@@ -816,7 +791,7 @@ export default function SettingsPage() {
                 <button
                   onClick={handleSave}
                   disabled={isUpdating}
-                  className="inline-flex items-center gap-2 rounded-xl bg-lime px-6 py-2.5 text-sm font-semibold text-text-inverse transition-all hover:bg-lime active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="inline-flex items-center gap-2 rounded-lg bg-lime px-6 py-2.5 text-sm font-semibold text-text-inverse transition-all hover:bg-lime active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isUpdating ? (
                     <><Loader2 className="h-4 w-4 animate-spin" /> Saving…</>
@@ -845,16 +820,16 @@ export default function SettingsPage() {
               initial={{ opacity: 0, scale: 0.95, y: 16 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 16 }}
-              className="fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-border-subtle bg-gray-950 p-6 shadow-2xl"
+              className="fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-lg border border-border-subtle bg-[rgba(12,12,16,0.96)] backdrop-blur-2xl p-6 shadow-2xl"
             >
               <div className="flex items-start gap-4 mb-5">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-500/15 border border-amber-500/25">
-                  <AlertCircle className="h-5 w-5 text-amber-400" />
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-warning-bg border border-warning/25">
+                  <AlertCircle className="h-5 w-5 text-warning" />
                 </div>
                 <div>
-                  <h3 className="text-base font-semibold text-white">Confirm shop name change</h3>
+                  <h3 className="text-base font-semibold text-text-primary">Confirm shop name change</h3>
                   <p className="mt-1 text-sm text-text-secondary">
-                    You're changing your shop name to <span className="text-white font-medium">"{shopName}"</span>.
+                    You're changing your shop name to <span className="text-text-primary font-medium">"{shopName}"</span>.
                     You won't be able to change it again for 30 days.
                   </p>
                 </div>
@@ -862,14 +837,14 @@ export default function SettingsPage() {
               <div className="flex gap-3">
                 <button
                   onClick={() => setShowShopNameConfirmation(false)}
-                  className="flex-1 rounded-xl border border-border-subtle bg-bg-raised px-4 py-2.5 text-sm font-medium text-white transition-all hover:bg-bg-raised-hover"
+                  className="flex-1 rounded-lg border border-border-subtle bg-bg-raised px-4 py-2.5 text-sm font-medium text-text-primary transition-all hover:bg-bg-raised-hover"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={saveSettings}
                   disabled={isUpdating}
-                  className="flex-1 rounded-xl bg-lime px-4 py-2.5 text-sm font-semibold text-text-inverse transition-all hover:bg-lime active:scale-95 disabled:opacity-50"
+                  className="flex-1 rounded-lg bg-lime px-4 py-2.5 text-sm font-semibold text-text-inverse transition-all hover:bg-lime active:scale-95 disabled:opacity-50"
                 >
                   {isUpdating ? 'Saving…' : 'Confirm Change'}
                 </button>

@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '@/hooks/use-auth'
+import AccountPageHeader from '@/components/account/AccountPageHeader'
 import { useSellerEarnings } from '@/hooks/use-seller-earnings'
 import { createClient } from '@/lib/supabase/client'
 import { getWalletBalance, getWalletTransactions, createTopUpCheckout } from '@/lib/actions/wallet'
@@ -293,14 +294,14 @@ function StatCard({ icon: Icon, label, value, sub, color = 'violet' }: {
     blue:   'text-blue-400   bg-blue-500/10   border-blue-500/20',
   }
   return (
-    <div className="rounded-xl border border-border-subtle bg-bg-overlay px-3 py-2.5 flex items-center gap-2.5">
+    <div className="rounded-lg border border-border-subtle card-frost px-3 py-2.5 flex items-center gap-2.5">
       <div className={cn('flex-shrink-0 inline-flex items-center justify-center h-7 w-7 rounded-lg border', colors[color])}>
         <Icon className="h-3.5 w-3.5" />
       </div>
       <div className="min-w-0">
         <div className="text-base font-bold text-white leading-tight">{value}</div>
         <div className="text-[11px] text-text-tertiary truncate">{label}</div>
-        {sub && <div className="text-[10px] text-gray-700 truncate">{sub}</div>}
+        {sub && <div className="text-[10px] text-text-tertiary truncate">{sub}</div>}
       </div>
     </div>
   )
@@ -458,7 +459,7 @@ export default function WalletPage() {
   // CRITICAL: Always show loader while auth is loading to prevent flash of buyer UI for sellers
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-lime-text" />
       </div>
     )
@@ -470,7 +471,7 @@ export default function WalletPage() {
       // Seller: Must have both wallet and earnings loaded
       if (!walletData || earningsLoading) {
         return (
-          <div className="min-h-screen bg-black flex items-center justify-center">
+          <div className="min-h-screen flex items-center justify-center">
             <Loader2 className="h-8 w-8 animate-spin text-lime-text" />
           </div>
         )
@@ -479,7 +480,7 @@ export default function WalletPage() {
       // Buyer: Only needs wallet data
       if (!walletData) {
         return (
-          <div className="min-h-screen bg-black flex items-center justify-center">
+          <div className="min-h-screen flex items-center justify-center">
             <Loader2 className="h-8 w-8 animate-spin text-lime-text" />
           </div>
         )
@@ -488,57 +489,84 @@ export default function WalletPage() {
   }
 
   return (
-    <div className="min-h-screen bg-black pb-20">
+    <div className="min-h-screen pb-20">
       <div className="mx-auto w-full max-w-full px-4 sm:px-6 md:max-w-7xl lg:px-8">
         {/* ── Header ── */}
         <div className="mb-6">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-lime-tint-border bg-lime/10">
-              <Wallet className="h-5 w-5 text-lime-text" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold text-white">Wallet</h1>
-              <p className="text-sm text-text-secondary">Purchases, sales &amp; payouts</p>
-            </div>
-          </div>
+          <AccountPageHeader
+            icon="wallet"
+            title="Wallet"
+            subtitle="Purchases, sales & payouts"
+            className="mb-4"
+          />
 
-          {/* Seller Balance Card with Withdraw Button */}
+          {/* V22 — Seller balance: Available + Pending cards, then a
+              compact real-data stats strip. Replaces the full-width slab. */}
           {isSeller && (
-            <div className="rounded-2xl border border-border-subtle bg-bg-overlay p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="flex items-center gap-2 mb-2">
-                    <DollarSign className="h-4 w-4 text-emerald-400" />
-                    <p className="text-xs text-text-secondary font-semibold uppercase tracking-wider">Total Balance</p>
-                  </div>
-                  <p className="text-4xl font-bold text-white mb-1">${earningsStats.available_balance.toFixed(2)}</p>
-                  <p className="text-sm text-text-tertiary">Available to withdraw</p>
-
-                  {/* Pending Balance */}
-                  {earningsStats.pending_balance > 0 && (
-                    <p className="text-xs text-amber-400 mt-2">
-                      +${earningsStats.pending_balance.toFixed(2)} pending
+            <div className="space-y-3">
+              <div className="grid gap-3 sm:grid-cols-2">
+                {/* Available — value left, Withdraw CTA right (like the ref) */}
+                <div className="flex items-start justify-between gap-4 rounded-lg border border-border-subtle card-frost p-5">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 text-text-secondary">
+                      <DollarSign className="h-4 w-4 text-success" />
+                      <span className="text-[12px] font-semibold uppercase tracking-wider">Available Balance</span>
+                    </div>
+                    <p className="mt-1.5 text-3xl font-bold leading-tight text-text-primary">
+                      ${earningsStats.available_balance.toFixed(2)}
                     </p>
-                  )}
+                    <p className="mt-2 text-[12px] text-text-secondary">Ready to withdraw to your payout method.</p>
+                  </div>
+                  <Link
+                    href="/account/wallet/withdraw"
+                    className={cn(
+                      'inline-flex shrink-0 items-center gap-2 rounded-lg bg-lime px-4 py-2.5 text-sm font-semibold text-text-inverse transition-colors hover:bg-lime/90',
+                      earningsStats.available_balance <= 0 && 'pointer-events-none opacity-50',
+                    )}
+                  >
+                    <ArrowDownToLine className="h-4 w-4" />
+                    Withdraw
+                  </Link>
                 </div>
-                <Link
-                  href="/account/wallet/withdraw"
-                  className={cn(
-                    "inline-flex items-center gap-2 rounded-xl bg-gradient-to-br from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 px-6 py-3 text-sm font-semibold text-white transition-all shadow-lg hover:shadow-emerald-500/25",
-                    earningsStats.available_balance <= 0 && "opacity-50 pointer-events-none cursor-not-allowed"
-                  )}
-                >
-                  <ArrowDownToLine className="h-4 w-4" />
-                  Withdraw
-                </Link>
+
+                {/* Pending — in escrow */}
+                <div className="rounded-lg border border-border-subtle card-frost p-5">
+                  <div className="flex items-center gap-2 text-text-secondary">
+                    <Clock className="h-4 w-4 text-amber-400" />
+                    <span className="text-[12px] font-semibold uppercase tracking-wider">Pending Sales</span>
+                  </div>
+                  <p className="mt-1.5 text-3xl font-bold leading-tight text-text-primary">
+                    ${earningsStats.pending_balance.toFixed(2)}
+                  </p>
+                  <p className="mt-2 text-[12px] text-text-secondary">
+                    Revenue from active orders — added to your balance once each order completes.
+                  </p>
+                </div>
+              </div>
+
+              {/* Real-data stats strip */}
+              <div className="grid grid-cols-3 gap-3">
+                {[
+                  { label: 'This Month', value: earningsStats.this_month_earnings, icon: TrendingUp },
+                  { label: 'Lifetime Earned', value: earningsStats.total_earnings, icon: DollarSign },
+                  { label: 'Withdrawn', value: earningsStats.total_payouts, icon: ArrowDownToLine },
+                ].map((s) => (
+                  <div key={s.label} className="rounded-lg border border-border-subtle card-frost py-3">
+                    <div className="flex items-center gap-2 text-text-tertiary">
+                      <s.icon className="h-3.5 w-3.5" />
+                      <span className="text-[11px] font-medium uppercase tracking-wide">{s.label}</span>
+                    </div>
+                    <p className="mt-1 text-lg font-bold text-text-primary">${(s.value ?? 0).toFixed(2)}</p>
+                  </div>
+                ))}
               </div>
             </div>
           )}
 
           {/* ── Wallet Balance Card (Buyers Only - No Withdrawals) ── */}
           {!isSeller && (
-            <div className="rounded-2xl border border-border-subtle bg-gradient-to-br from-lime/10 via-purple-500/5 to-transparent p-1 shadow-xl">
-              <div className="rounded-xl bg-black/40 backdrop-blur-sm p-6">
+            <div className="rounded-lg border border-border-subtle bg-gradient-to-br from-lime/10 to-transparent p-1 shadow-xl">
+              <div className="rounded-lg bg-black/40 backdrop-blur-sm p-6">
                 <div className="flex items-start justify-between mb-6">
                   <div>
                     <div className="flex items-center gap-2 mb-1.5">
@@ -556,7 +584,7 @@ export default function WalletPage() {
                     <button
                       onClick={() => handleTopUp(25)}
                       disabled={isTopUpLoading}
-                      className="group relative flex items-center justify-center gap-1.5 rounded-lg bg-gradient-to-br from-lime to-purple-600 hover:from-lime hover:to-purple-700 disabled:from-lime/50 disabled:to-purple-600/50 px-4 py-2 text-sm font-semibold text-white transition-all shadow-lg hover:shadow-violet-500/25 disabled:cursor-not-allowed"
+                      className="group relative flex items-center justify-center gap-1.5 rounded-lg bg-lime text-text-inverse hover:bg-lime/90 px-4 py-2 text-sm font-semibold text-white transition-all disabled:cursor-not-allowed"
                     >
                       {isTopUpLoading ? (
                         <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -570,7 +598,7 @@ export default function WalletPage() {
                     <button
                       onClick={() => handleTopUp(50)}
                       disabled={isTopUpLoading}
-                      className="group relative flex items-center justify-center gap-1.5 rounded-lg bg-gradient-to-br from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 disabled:from-purple-500/50 disabled:to-pink-600/50 px-4 py-2 text-sm font-semibold text-white transition-all shadow-lg hover:shadow-purple-500/25 disabled:cursor-not-allowed"
+                      className="group relative flex items-center justify-center gap-1.5 rounded-lg border border-border-default bg-bg-raised hover:bg-bg-raised-hover hover:border-lime-tint-border px-4 py-2 text-sm font-semibold text-white transition-all disabled:cursor-not-allowed"
                     >
                       {isTopUpLoading ? (
                         <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -651,8 +679,8 @@ export default function WalletPage() {
               onClick={() => { setActiveTab(tab.id); setSearchQuery(''); setFilterStatus('all') }}
               className={cn(
                 isActive
-                  ? 'flex items-center gap-2 px-4 py-3 text-sm font-semibold rounded-xl border-2 border-lime bg-gradient-to-br from-lime/20 to-lime/5 text-white shadow-lg shadow-violet-500/20 transition-all'
-                  : 'flex items-center gap-2 px-4 py-3 text-sm font-medium rounded-xl border border-border-subtle bg-bg-overlay text-text-secondary hover:border-lime-tint-border hover:bg-bg-overlay hover:text-text-secondary transition-all'
+                  ? 'flex items-center gap-2 px-4 py-3 text-sm font-semibold rounded-lg border-2 border-lime bg-gradient-to-br from-lime/20 to-lime/5 text-white shadow-elevated transition-all'
+                  : 'flex items-center gap-2 px-4 py-3 text-sm font-medium rounded-lg border border-border-subtle card-frost text-text-secondary hover:border-lime-tint-border hover:bg-bg-overlay hover:text-text-secondary transition-all'
               )}
             >
               <Icon className="h-4 w-4 flex-shrink-0" />
@@ -671,7 +699,7 @@ export default function WalletPage() {
             placeholder={activeTab === 'purchases' ? 'Search by item, game, order…' : 'Search by item, buyer, order…'}
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
-            className="w-full rounded-lg border border-border-subtle bg-bg-overlay py-2 pl-9 pr-8 text-sm text-white placeholder:text-text-disabled focus:border-lime focus:outline-none focus:ring-1 focus:ring-violet-500/20 transition-all"
+            className="w-full rounded-lg border border-border-subtle card-frost py-2 pl-9 pr-8 text-sm text-white placeholder:text-text-disabled focus:border-lime focus:outline-none focus:ring-1 focus:ring-lime/20 transition-all"
           />
           {searchQuery && (
             <button onClick={() => setSearchQuery('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-text-tertiary hover:text-white transition-colors">
@@ -683,7 +711,7 @@ export default function WalletPage() {
           <select
             value={filterStatus}
             onChange={e => setFilterStatus(e.target.value)}
-            className="rounded-lg border border-border-subtle bg-bg-overlay px-3 py-2 text-xs text-white focus:border-lime focus:outline-none transition-all"
+            className="rounded-lg border border-border-subtle card-frost px-3 py-2 text-xs text-white focus:border-lime focus:outline-none transition-all"
           >
             <option value="all">All Status</option>
             <option value="completed">Completed</option>
@@ -697,10 +725,10 @@ export default function WalletPage() {
 
       {/* ════════════════ TAB: PURCHASES ════════════════ */}
       {activeTab === 'purchases' && (
-        <div className="rounded-xl border border-border-subtle bg-bg-overlay overflow-hidden">
+        <div className="rounded-lg border border-border-subtle card-frost overflow-hidden">
           {filteredPurchases.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-center">
-              <ShoppingCart className="h-10 w-10 text-gray-700 mb-3" />
+              <ShoppingCart className="h-10 w-10 text-text-tertiary mb-3" />
               <p className="text-sm font-medium text-text-secondary">
                 {searchQuery || filterStatus !== 'all' ? 'No matching purchases' : 'No purchases yet'}
               </p>
@@ -737,7 +765,7 @@ export default function WalletPage() {
                         )}
                         {txn.categoryName && (
                           <>
-                            <span className="text-gray-700">·</span>
+                            <span className="text-text-tertiary">·</span>
                             <span className="text-[10px] text-text-tertiary">{txn.categoryName}</span>
                           </>
                         )}
@@ -747,7 +775,7 @@ export default function WalletPage() {
                         {txn.orderNumber && (
                           <span className="text-[11px] text-lime-text">#{txn.orderNumber}</span>
                         )}
-                        <span className="text-[11px] text-text-disabled">{timeAgo(txn.createdAt)}</span>
+                        <span className="text-[11px] text-text-tertiary">{timeAgo(txn.createdAt)}</span>
                       </div>
                     </div>
 
@@ -764,7 +792,7 @@ export default function WalletPage() {
                       </div>
                     </div>
 
-                    <ChevronRight className="h-4 w-4 text-gray-700 group-hover:text-text-secondary flex-shrink-0 transition-colors" />
+                    <ChevronRight className="h-4 w-4 text-text-tertiary group-hover:text-text-secondary flex-shrink-0 transition-colors" />
                   </Link>
                 </motion.div>
               ))}
@@ -776,7 +804,7 @@ export default function WalletPage() {
 
       {/* ════════════════ TAB: SALES ════════════════ */}
       {activeTab === 'earnings' && (
-        <div className="rounded-xl border border-border-subtle bg-bg-overlay overflow-hidden">
+        <div className="rounded-lg border border-border-subtle card-frost overflow-hidden">
           {salesLoading ? (
             <div className="flex flex-col items-center justify-center py-16">
               <Loader2 className="h-8 w-8 animate-spin text-lime-text mb-3" />
@@ -784,7 +812,7 @@ export default function WalletPage() {
             </div>
           ) : filteredSales.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-center px-4">
-              <Package className="h-10 w-10 text-gray-700 mb-3" />
+              <Package className="h-10 w-10 text-text-tertiary mb-3" />
               <p className="text-sm font-medium text-text-secondary">{searchQuery ? 'No matching sales' : 'No sales yet'}</p>
               <p className="text-xs text-text-disabled mt-1 mb-4">
                 {searchQuery ? 'Try adjusting your search' : 'Start listing items to earn money'}
@@ -792,7 +820,7 @@ export default function WalletPage() {
               {!searchQuery && (
                 <Link
                   href="/sell/new"
-                  className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-br from-lime to-purple-600 hover:from-lime hover:to-purple-700 px-4 py-2 text-sm font-semibold text-white transition-all shadow-lg hover:shadow-violet-500/25"
+                  className="inline-flex items-center gap-2 rounded-lg bg-lime text-text-inverse hover:bg-lime/90 px-4 py-2 text-sm font-semibold text-white transition-all"
                 >
                   <Plus className="h-4 w-4" />
                   Create Listing
@@ -823,7 +851,7 @@ export default function WalletPage() {
                         )}
                         {txn.categoryName && (
                           <>
-                            <span className="text-gray-700">·</span>
+                            <span className="text-text-tertiary">·</span>
                             <span className="text-[10px] text-text-tertiary">{txn.categoryName}</span>
                           </>
                         )}
@@ -832,10 +860,10 @@ export default function WalletPage() {
                       <div className="flex items-center gap-2 mt-0.5">
                         <User className="h-3 w-3 text-text-disabled flex-shrink-0" />
                         <span className="text-[11px] text-text-secondary font-medium">{txn.buyerUsername}</span>
-                        <span className="text-gray-700">·</span>
+                        <span className="text-text-tertiary">·</span>
                         <span className="text-[11px] text-lime-text">#{txn.orderNumber}</span>
-                        <span className="text-gray-700">·</span>
-                        <span className="text-[11px] text-text-disabled">{timeAgo(txn.createdAt)}</span>
+                        <span className="text-text-tertiary">·</span>
+                        <span className="text-[11px] text-text-tertiary">{timeAgo(txn.createdAt)}</span>
                       </div>
                     </div>
 
@@ -853,7 +881,7 @@ export default function WalletPage() {
                       </div>
                     </div>
 
-                    <ChevronRight className="h-4 w-4 text-gray-700 group-hover:text-text-secondary flex-shrink-0 transition-colors" />
+                    <ChevronRight className="h-4 w-4 text-text-tertiary group-hover:text-text-secondary flex-shrink-0 transition-colors" />
                   </Link>
                 </motion.div>
               ))}
@@ -864,7 +892,7 @@ export default function WalletPage() {
 
       {/* ════════════════ TAB: PAYOUTS ════════════════ */}
       {activeTab === 'payouts' && (
-        <div className="rounded-xl border border-border-subtle bg-bg-overlay overflow-hidden">
+        <div className="rounded-lg border border-border-subtle card-frost overflow-hidden">
           {/* Stripe Connect prompt if seller hasn't connected */}
           {isSeller && (
             <div className="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-4 bg-lime/5">
@@ -883,7 +911,7 @@ export default function WalletPage() {
 
           {payouts.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-center">
-              <CreditCard className="h-10 w-10 text-gray-700 mb-3" />
+              <CreditCard className="h-10 w-10 text-text-tertiary mb-3" />
               <p className="text-sm font-medium text-text-secondary">No payouts yet</p>
               <p className="text-xs text-text-disabled mt-1">Payouts appear once you've completed sales</p>
             </div>
@@ -938,7 +966,7 @@ export default function WalletPage() {
       {isSeller && withdrawalRequestsData && withdrawalRequestsData.length > 0 && (
         <div className="mt-6">
           <h2 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
-            <ArrowDownToLine className="h-5 w-5 text-emerald-400" />
+            <ArrowDownToLine className="h-5 w-5 text-success" />
             Withdrawal Requests
           </h2>
           <div className="grid gap-3">

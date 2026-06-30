@@ -25,7 +25,7 @@
 import * as React from 'react'
 import * as Popover from '@radix-ui/react-popover'
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from 'cmdk'
-import { Check, ChevronDown } from 'lucide-react'
+import { Check, ChevronDown, Search } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 export interface ComboboxOption {
@@ -111,7 +111,7 @@ export function Combobox({
             'flex h-10 w-full cursor-pointer items-center justify-between rounded-md border bg-transparent px-3 text-sm transition-colors',
             'border-border-default text-text-primary',
             'hover:border-border-strong',
-            open && 'border-lime ring-2 ring-lime-tint-bg',
+            open && 'border-lime-tint-border ring-1 ring-lime/30',
             // Invalid (touched + empty) — overrides default border/ring.
             invalid && !open && 'border-error ring-2 ring-error-bg',
             disabled && 'cursor-not-allowed opacity-50',
@@ -138,7 +138,9 @@ export function Combobox({
           // above it. Radix exposes the trigger width via a CSS var.
           style={{ width: 'var(--radix-popover-trigger-width)' }}
           className={cn(
-            'z-50 overflow-hidden rounded-xl border border-border-default bg-bg-overlay shadow-elevated',
+            // Rectangular, translucent glass panel — matches the account-page theme.
+            'z-50 overflow-hidden rounded-lg border border-border-subtle shadow-elevated',
+            'bg-[rgba(12,12,16,0.92)] backdrop-blur-2xl backdrop-saturate-150',
             'data-[state=open]:animate-in data-[state=closed]:animate-out',
             'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
             'data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95'
@@ -160,12 +162,13 @@ export function Combobox({
             className="flex w-full flex-col"
           >
             <div className="flex items-center gap-2 border-b border-border-subtle px-3 py-2">
+              <Search className="h-3.5 w-3.5 shrink-0 text-text-tertiary" />
               <CommandInput
                 value={query}
                 onValueChange={setQuery}
-                placeholder={selected?.label ? `Search… (currently: ${selected.label})` : 'Search…'}
+                placeholder="Search…"
                 autoFocus
-                className="h-7 flex-1 bg-transparent text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none"
+                className="h-6 flex-1 border-0 bg-transparent text-sm text-text-primary placeholder:text-text-tertiary outline-none focus:outline-none focus-visible:outline-none focus-visible:shadow-none focus-visible:[box-shadow:none]"
               />
             </div>
             <CommandList className="max-h-72 overflow-y-auto p-1">
@@ -188,7 +191,7 @@ export function Combobox({
                       className={cn(
                         'flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-sm outline-none',
                         'text-text-secondary',
-                        'data-[selected=true]:bg-state-hover data-[selected=true]:text-text-primary'
+                        'data-[selected=true]:bg-white/[0.06] data-[selected=true]:text-text-primary'
                       )}
                     >
                       {o.icon_url && (

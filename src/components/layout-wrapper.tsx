@@ -10,10 +10,17 @@ export function LayoutWrapper({ children }: { children: React.ReactNode }) {
   // Don't show navbar and footer on admin pages
   const isAdminPage = pathname?.startsWith('/admin')
 
-  // /sell/* shows the homepage navbar (consistent shell) but skips the
-  // footer to keep the wizard focused. The wizard's own step indicator
-  // sits below the navbar.
+  // V19/P15.b — Sell wizard pages keep the global navbar (forced into
+  // its scrolled full-width mode via Navbar's `forceScrolled` prop —
+  // see navbar-floating.tsx). Footer stays hidden so the wizard owns
+  // the canvas below.
   const isSellWizard = pathname?.startsWith('/sell')
+
+  // V19/P24/P7.r — /checkout/* has its own slim layout: stripped
+  // navbar + checkout-specific footer so the buyer can't leak out
+  // mid-purchase. Matches industry pattern (G2A, G2G, Eldorado,
+  // 2Game) which Baymard found lifts conversion 5–15%.
+  const isCheckout = pathname?.startsWith('/checkout')
 
   // Check if we're on a seller page with sidebar (not /new or /edit)
   const isSellerPageWithSidebar = pathname?.startsWith('/seller') &&
@@ -28,9 +35,9 @@ export function LayoutWrapper({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex min-h-screen flex-col">
-      {!isAdminPage && <Navbar />}
+      {!isAdminPage && !isCheckout && <Navbar forceScrolled={isSellWizard} />}
       <main className="flex-1">{children}</main>
-      {!isAdminPage && !isSellWizard && <Footer hasSellerSidebar={hasSidebar} />}
+      {!isAdminPage && !isSellWizard && !isCheckout && <Footer hasSellerSidebar={hasSidebar} />}
     </div>
   )
 }
