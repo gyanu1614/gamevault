@@ -21,7 +21,31 @@ import { buildSynonymSearchQuery } from '@/lib/utils/gaming-synonyms'
 import { ChevronLeft } from 'lucide-react'
 import { getCurrencyShell, listingToOffer } from './_currencyData'
 import CurrencyPageClient from './_CurrencyPageClient'
+import BundleCurrencyPageClient, {
+  type BundleCurrencyPageData,
+  type BundleOffer,
+} from './_BundleCurrencyPageClient'
+import { fetchCategoryConfigBySlug } from '@/lib/actions/admin-category-configs'
+import { normalizePlatformOptions } from '@/lib/types/category-configs'
+
+// V19/P24/P4 — Inline delivery formatter for bundle offers. The
+// `_currencyData.ts` formatter is wrapped around the flexible-Offer
+// shape; copying the small humanizer here keeps the bundle path
+// from depending on currency-data internals.
+// V19/P24/P7.f — Humanize delivery labels: "20 Minutes" instead of
+// "20 min", "1 Hour" / "2 Hours" instead of "1 h". Matches the format
+// used in the seller wizard so buyer-side reads as written.
+function formatBundleDelivery(raw: string | null | undefined): string {
+  if (!raw) return '10 Minutes'
+  if (raw === 'instant') return 'Instant'
+  const m = raw.match(/^(\d+)\s*(min|hr)$/)
+  if (!m) return raw
+  const n = parseInt(m[1], 10)
+  if (m[2] === 'hr') return `${n} ${n === 1 ? 'Hour' : 'Hours'}`
+  return `${n} ${n === 1 ? 'Minute' : 'Minutes'}`
+}
 // V15 — Items page dispatch + SEO slug resolver.
+import { getPausedSellerIds } from '@/lib/actions/seller-presence'
 import { loadItemsTaxonomy, listingToOffer as listingToItemOffer } from './_itemsData'
 import ItemsPageClient from './_ItemsPageClient'
 import { resolveItemBySlug } from './_itemResolver'
@@ -150,10 +174,22 @@ async function getAllGameCategories(gameId: string): Promise<GameCategory[]> {
   return (data || []) as GameCategory[]
 }
 
+// V21/P7.ae — Apply an "exclude offline sellers" filter to a listings
+// query. Sellers in Offline Mode have all their offers hidden from
+// buyers. Takes a PRE-FETCHED paused-id list (fetched once per page) so
+// it stays synchronous — awaiting a thenable PostgREST builder would
+// EXECUTE it and break the chain (.order is not a function). No-op when
+// nobody is paused, so the empty `.not(... in ())` edge case never fires.
+function excludePausedSellers(query: any, pausedIds: string[]) {
+  if (pausedIds.length === 0) return query
+  return query.not('seller_id', 'in', `(${pausedIds.join(',')})`)
+}
+
 async function getListings(
   gameId: string,
   categoryId: string,
-  searchParams: Awaited<PageProps['searchParams']>
+  searchParams: Awaited<PageProps['searchParams']>,
+  pausedSellerIds: string[]
 ) {
   const supabase = await createClient()
   const LISTINGS_PER_PAGE = 12
@@ -173,6 +209,8 @@ async function getListings(
     .eq('game_id', gameId)
     .eq('category_id', categoryId)
     .eq('status', 'active')
+
+  query = excludePausedSellers(query, pausedSellerIds)
 
   if (searchParams.minPrice) query = query.gte('price', parseFloat(searchParams.minPrice))
   if (searchParams.maxPrice) query = query.lte('price', parseFloat(searchParams.maxPrice))
@@ -221,6 +259,11 @@ export default async function CategoryBrowsePage({ params, searchParams }: PageP
   const { gameSlug, categorySlug } = await params
   const resolvedSearchParams = await searchParams
 
+  // V21/P7.ae — Fetch the offline-seller set ONCE per page render and
+  // reuse it across every listing query branch (currency / bundle /
+  // items / generic). One indexed read, no per-query refetch.
+  const pausedSellerIds = await getPausedSellerIds()
+
   // V17g — Canonical-redirect block removed. The DB now stores the
   // canonical slug directly (buy-robux, buy-vbucks, etc.), so every
   // URL the app serves is already canonical. No aliases → no 301s →
@@ -229,6 +272,134 @@ export default async function CategoryBrowsePage({ params, searchParams }: PageP
   // V12/V13 — Currency dispatch. When (game, slug) is currency, merge the
   // game's currency shell (copy/FAQ) with real listings from the DB.
   const currencyShell = await getCurrencyShell(gameSlug, categorySlug)
+  // V19/P24/P4 — Read the currency config to detect bundle mode. When
+  // bundles exist, we render the BundleCurrencyPageClient (region +
+  // bundle grid + sticky offer panel) instead of the flexible
+  // CurrencyPageClient (hero + seller rows + stepper).
+  const currencyConfig = currencyShell
+    ? await fetchCategoryConfigBySlug(gameSlug, 'currency')
+    : null
+  const bundles = (currencyConfig?.bundles ?? []).filter(
+    (b) => b && b.id && b.name,
+  )
+  if (currencyShell && bundles.length > 0) {
+    const supabase = await createClient()
+    const gameRes = await supabase
+      .from('games')
+      .select('id, name, image_url')
+      .eq('slug', gameSlug)
+      .eq('is_active', true)
+      .single() as any
+    const game = gameRes.data
+    const categories = game ? await getAllGameCategories(game.id) : []
+
+    // Listings for any bundle under the currency category. The
+    // BundleCurrencyPageClient does its own (bundle, region) filtering
+    // on the client; we just send all active bundle-tagged rows.
+    let bundleOffers: BundleOffer[] = []
+    let realCategorySlug: string | null = null
+    if (game?.id) {
+      const catRow = await supabase
+        .from('categories')
+        .select('id, slug')
+        .eq('game_id', game.id)
+        .or('slug.eq.currency,metadata->>type.eq.currency')
+        .eq('is_active', true)
+        .limit(1)
+        .maybeSingle() as any
+      const categoryId = catRow.data?.id
+      realCategorySlug = catRow.data?.slug ?? null
+      if (categoryId) {
+        let bundleQuery: any = supabase
+          .from('listings')
+          .select(`
+            id, description, price, quantity, delivery_time, is_unlimited,
+            bundle_id, region, platform,
+            seller:profiles!listings_seller_id_fkey(
+              id, username, shop_name, avatar_url, seller_tier,
+              seller_rating, total_reviews, is_verified
+            )
+          `)
+          .eq('game_id', game.id)
+          .eq('category_id', categoryId)
+          .eq('status', 'active')
+          .not('bundle_id', 'is', null)
+          .order('price', { ascending: true })
+          .limit(200)
+        bundleQuery = excludePausedSellers(bundleQuery, pausedSellerIds)
+        const { data: listings } = await bundleQuery as any
+        bundleOffers = (listings ?? []).map((l: any) => ({
+          listingId: l.id,
+          sellerId: l.seller?.id ?? null,
+          sellerUsername: l.seller?.username ?? null,
+          sellerName: l.seller?.shop_name ?? l.seller?.username ?? 'Seller',
+          sellerAvatarUrl: l.seller?.avatar_url ?? null,
+          verified:
+            !!l.seller?.is_verified ||
+            (!!l.seller?.seller_tier && l.seller.seller_tier !== 'unverified'),
+          rating: Math.min(99.9, Math.max(0, Number(l.seller?.seller_rating ?? 95))),
+          reviews: l.seller?.total_reviews ?? 0,
+          pricePerBundle: Number(l.price ?? 0),
+          stock: l.is_unlimited ? 1_000_000_000 : (l.quantity ?? 0),
+          deliveryLabel: formatBundleDelivery(l.delivery_time),
+          deliveryMin: 0,
+          deliveryMax: 0,
+          blurb: (l.description ?? '').trim(),
+          bundleId: l.bundle_id,
+          region: l.region ?? null,
+          platform: l.platform ?? null,
+        }))
+      }
+    }
+
+    const { data: { user: viewer } } = await supabase.auth.getUser()
+
+    const data: BundleCurrencyPageData = {
+      unitLabel: currencyConfig?.unit_label ?? 'Currency',
+      tagline: currencyConfig?.tagline ?? '',
+      gameName: game?.name ?? gameSlug,
+      gameSlug,
+      currencyIconUrl: currencyConfig?.currency_icon_url ?? null,
+      bundles: [...bundles].sort(
+        (a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0),
+      ),
+      regions: currencyConfig?.platform_fields?.region?.enabled
+        ? normalizePlatformOptions(
+            currencyConfig.platform_fields.region.options,
+          ).map((o) => o.value)
+        : [],
+      // V19/P24/P7 — Platforms keep their PlatformOption shape so the
+      // buyer page can render logos. normalizePlatformOptions also
+      // handles legacy string[] data transparently.
+      platforms: currencyConfig?.platform_fields?.platform?.enabled
+        ? normalizePlatformOptions(
+            currencyConfig.platform_fields.platform.options,
+          )
+        : [],
+      offers: bundleOffers,
+      // V19/P24/P7.d — Surface How it works + FAQ on the bundle page,
+      // same shape and source as the flexible currency page uses.
+      steps: currencyConfig?.steps ?? [],
+      faq: currencyConfig?.faq ?? [],
+    }
+
+    return (
+      <>
+        <GameSubNav
+          gameSlug={gameSlug}
+          gameName={game?.name ?? gameSlug}
+          gameImageUrl={game?.image_url}
+          currentCategorySlug={realCategorySlug ?? 'currency'}
+          categories={categories}
+        />
+        <BundleCurrencyPageClient
+          data={data}
+          viewerId={viewer?.id ?? null}
+        />
+      </>
+    )
+  }
+
   if (currencyShell) {
     const supabase = await createClient()
     const gameRes = await supabase
@@ -262,7 +433,7 @@ export default async function CategoryBrowsePage({ params, searchParams }: PageP
       const categoryId = catRow.data?.id
       realCategorySlug = catRow.data?.slug ?? null
       if (categoryId) {
-        const { data: listings } = await supabase
+        let currencyQuery: any = supabase
           .from('listings')
           .select(`
             id, title, description, price, original_price, quantity,
@@ -275,20 +446,23 @@ export default async function CategoryBrowsePage({ params, searchParams }: PageP
           .eq('game_id', game.id)
           .eq('category_id', categoryId)
           .eq('status', 'active')
-          // V14h — Hide legacy currency listings that don't conform to the
-          // new per-unit pricing model. Anything priced above $1/unit is a
-          // bulk-bundle leftover from the old wizard (e.g. "$10 for 1000
-          // Robux") and shouldn't appear next to the new fractional rows.
-          // Min-quantity floor is enforced separately at the offer level.
-          .lte('price', 1)
+          // V19/P8 — Removed the legacy `.lte('price', 1)` filter. It was
+          // built for the old "$ per single unit" Robux pricing model and
+          // hid any new currency listing priced > $1 in the per-K/M
+          // granularity model (e.g. a Blade Ball seller listing $3.50/K
+          // Tokens stores `price=3.50` and was wrongly filtered out).
+          // Quantity floors are still enforced by the JS filter below.
           .order('price', { ascending: true })
-          .limit(50) as any
+          .limit(50)
+        currencyQuery = excludePausedSellers(currencyQuery, pausedSellerIds)
+        const { data: listings } = await currencyQuery as any
         realOffers = (listings ?? [])
           .map(listingToOffer)
-          // V14h — Belt-and-braces filter: only currency rows that meet the
-          // new floor (100 minimum) and have a sub-dollar per-unit price
-          // ever reach the buyer-facing page.
-          .filter((o: { minQty: number; pricePerUnit: number }) => o.minQty >= 100 && o.pricePerUnit > 0 && o.pricePerUnit < 1)
+          // V19/P8 — Quantity floor only. Dropped the price < 1 belt-
+          // and-braces filter (same reason as above). Sanity check
+          // pricePerUnit > 0 to skip zero-priced rows that shouldn't
+          // have made it past the wizard but defensive in case they do.
+          .filter((o: { minQty: number; pricePerUnit: number }) => o.minQty >= 100 && o.pricePerUnit > 0)
       }
     }
 
@@ -303,6 +477,15 @@ export default async function CategoryBrowsePage({ params, searchParams }: PageP
         hero,
         sellers: rest,
       }
+    }
+    // V21/P7.i — Surface the admin-uploaded category icon on the currency
+    // object so HeroCard can render it as the product logo.
+    mergedData = {
+      ...mergedData,
+      currency: {
+        ...mergedData.currency,
+        iconUrl: currencyConfig?.currency_icon_url ?? null,
+      },
     }
 
     // V14m — Resolve the viewer so the client can block self-purchase
@@ -363,18 +546,37 @@ export default async function CategoryBrowsePage({ params, searchParams }: PageP
 
   // V15 — Items dispatch. When the page is the per-game items catalogue,
   // render the new Showcase-grid client with admin-driven taxonomy and
-  // SEO-friendly URLs. Falls through to the legacy CategoryPageLayout
-  // for everything else (Accounts, Top-up, Boosting, etc).
-  const isItemsCategory =
-    category.slug === 'items' || (category as any).metadata?.type === 'items'
-  if (isItemsCategory) {
+  // SEO-friendly URLs. V19/P24/P7.kk — Accounts / Boosting / Top-up
+  // now also use this client. They get the same landscape card grid
+  // + filter band; taxonomy() returns empty when no template exists,
+  // so cards render cleanly with just title + photo + price.
+  const categoryType = (category as any).metadata?.type as string | undefined
+  const isItemsLikeCategory =
+    category.slug === 'items' ||
+    categoryType === 'items' ||
+    categoryType === 'account' ||
+    categoryType === 'service' ||
+    categoryType === 'top_up'
+  if (isItemsLikeCategory) {
+    // V19/P24/P7.nn — Taxonomy lookups go through `global_categories`
+    // which uses canonical slugs (`items`, `accounts`, `boosting`,
+    // `top-up`). The URL slug (`buy-items`, etc.) and the category
+    // type (`account`, `service`, `top_up`) both differ from those.
+    // Map here so the attribute_templates load correctly.
+    const taxonomySlug = (() => {
+      if (categoryType === 'items') return 'items'
+      if (categoryType === 'account') return 'accounts'
+      if (categoryType === 'service') return 'boosting'
+      if (categoryType === 'top_up') return 'top-up'
+      return 'items'
+    })()
     const [allCategories, taxonomy, viewerRes, listingsRaw] = await Promise.all([
       getAllGameCategories(game.id),
-      loadItemsTaxonomy(game.id, 'items'),
+      loadItemsTaxonomy(game.id, taxonomySlug),
       (await createClient()).auth.getUser(),
       (async () => {
         const sb = await createClient()
-        const { data } = await sb
+        let itemsQuery: any = sb
           .from('listings')
           .select(`
             id, slug, title, price, images, template_data, status,
@@ -388,7 +590,9 @@ export default async function CategoryBrowsePage({ params, searchParams }: PageP
           .eq('category_id', category.id)
           .eq('status', 'active')
           .order('updated_at', { ascending: false })
-          .limit(200) as any
+          .limit(200)
+        itemsQuery = excludePausedSellers(itemsQuery, pausedSellerIds)
+        const { data } = await itemsQuery as any
         return (data ?? []) as any[]
       })(),
     ])
@@ -405,25 +609,30 @@ export default async function CategoryBrowsePage({ params, searchParams }: PageP
           currentCategorySlug={category.slug}
           categories={allCategories}
         />
-        <ItemsPageClient
-          gameSlug={gameSlug}
-          gameName={game.name}
-          gameImageUrl={(game as any).image_url ?? null}
-          tagline={
-            (category as any).description ||
-            `Browse verified, escrow-protected ${game.name} listings — secured by VaultShield.`
-          }
-          offers={offers}
-          taxonomy={taxonomy}
-          viewerId={viewer?.id ?? null}
-        />
+        {/* Suspense boundary required for the client's useSearchParams
+            (reads ?attr_<slug>= deep-link filters from a navbar search). */}
+        <Suspense fallback={null}>
+          <ItemsPageClient
+            gameSlug={gameSlug}
+            gameName={game.name}
+            gameImageUrl={(game as any).image_url ?? null}
+            categoryLabel={category.name}
+            tagline={
+              (category as any).description ||
+              `Browse verified, escrow-protected ${game.name} listings — secured by VaultShield.`
+            }
+            offers={offers}
+            taxonomy={taxonomy}
+            viewerId={viewer?.id ?? null}
+          />
+        </Suspense>
       </>
     )
   }
 
   const [allCategories, listingsData] = await Promise.all([
     getAllGameCategories(game.id),
-    getListings(game.id, category.id, resolvedSearchParams),
+    getListings(game.id, category.id, resolvedSearchParams, pausedSellerIds),
   ])
 
   const { listings, hasMore, currentPage, totalListings } = listingsData

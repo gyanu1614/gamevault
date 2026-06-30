@@ -49,6 +49,21 @@ const SCHEMAS = [
 export default function Page() {
   return (
     <>
+      {/* V20/P22 — Preload the hero backdrop so it's already cached by
+          the time the .hero-backdrop element mounts. Without this, the
+          image is invisible to the HTML preloader (CSS background-image)
+          and only starts downloading after CSS parses → visible pop-in
+          on every navigation back to home. */}
+      <link
+        rel="preload"
+        as="image"
+        href="/assets/heroes/home.avif"
+        type="image/avif"
+        // @ts-expect-error — `fetchpriority` is valid HTML, React types
+        // lag the spec. High priority puts it ahead of carousel images.
+        fetchpriority="high"
+      />
+
       {/* JSON-LD */}
       {SCHEMAS.map((s, i) => (
         <script

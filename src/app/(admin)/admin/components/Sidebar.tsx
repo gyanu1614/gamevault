@@ -172,14 +172,14 @@ export function Sidebar({ role, user }: SidebarProps) {
           {/* Logo */}
           <div className="h-[3.85rem] flex items-center px-3 border-b border-white/[0.06] flex-shrink-0">
             <Link href="/admin" className="flex items-center gap-2.5">
-              <div className="h-9 w-9 rounded-lg bg-gradient-to-br from-violet-500 to-indigo-500 flex items-center justify-center flex-shrink-0 shadow-lg shadow-violet-500/20">
+              <div className="h-9 w-9 rounded-lg bg-lime flex items-center justify-center flex-shrink-0 shadow-lg shadow-lime/20">
                 <span className="text-white text-sm font-bold">GV</span>
               </div>
               <div className="flex flex-col">
                 <span className="text-sm font-semibold text-white">
                   GameVault
                 </span>
-                <span className="text-[11px] text-violet-400/80 font-medium">
+                <span className="text-[11px] text-lime-text/80 font-medium">
                   Admin
                 </span>
               </div>
@@ -201,18 +201,18 @@ export function Sidebar({ role, user }: SidebarProps) {
                     "relative flex items-center gap-3 px-3 py-2.5 rounded-lg",
                     "text-sm font-medium transition-all duration-150",
                     isActive
-                      ? "bg-violet-500/15 text-white"
+                      ? "bg-lime-tint-bg text-white"
                       : "text-gray-400 hover:text-white hover:bg-white/[0.04]"
                   )}
                 >
                   {/* Active indicator bar */}
                   {isActive && (
-                    <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-gradient-to-b from-violet-400 to-indigo-500 rounded-r-full" />
+                    <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-lime rounded-r-full" />
                   )}
 
                   <Icon className={cn(
                     "h-5 w-5 transition-colors flex-shrink-0",
-                    isActive ? "text-violet-400" : "text-gray-500"
+                    isActive ? "text-lime-text" : "text-gray-500"
                   )} />
                   <span className="whitespace-nowrap">{link.label}</span>
                 </Link>
@@ -270,14 +270,14 @@ export function Sidebar({ role, user }: SidebarProps) {
                     onClick={() => setIsMobileMenuOpen(false)}
                     className="flex items-center gap-2.5"
                   >
-                    <div className="h-9 w-9 rounded-lg bg-gradient-to-br from-violet-500 to-indigo-500 flex items-center justify-center shadow-lg shadow-violet-500/20">
+                    <div className="h-9 w-9 rounded-lg bg-lime flex items-center justify-center shadow-lg shadow-lime/20">
                       <span className="text-white text-sm font-bold">GV</span>
                     </div>
                     <div className="flex flex-col">
                       <span className="text-sm font-semibold text-white">
                         GameVault
                       </span>
-                      <span className="text-[11px] text-violet-400/80 font-medium">
+                      <span className="text-[11px] text-lime-text/80 font-medium">
                         Admin
                       </span>
                     </div>
@@ -300,16 +300,16 @@ export function Sidebar({ role, user }: SidebarProps) {
                           "relative flex items-center gap-3 px-3 py-2.5 rounded-lg",
                           "text-sm font-medium transition-all duration-150",
                           isActive
-                            ? "bg-violet-500/15 text-white"
+                            ? "bg-lime-tint-bg text-white"
                             : "text-gray-400 hover:text-white hover:bg-white/[0.04]"
                         )}
                       >
                         {isActive && (
-                          <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-gradient-to-b from-violet-400 to-indigo-500 rounded-r-full" />
+                          <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-lime rounded-r-full" />
                         )}
                         <Icon className={cn(
                           "h-5 w-5",
-                          isActive ? "text-violet-400" : "text-gray-500"
+                          isActive ? "text-lime-text" : "text-gray-500"
                         )} />
                         <span>{link.label}</span>
                       </Link>

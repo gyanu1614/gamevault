@@ -1,29 +1,19 @@
 /**
- * V14k — Edit listing entry point.
+ * V19/P11 — Redirect to the canonical edit route under (sell) group.
  *
- * Replaces the legacy standalone edit form with the canonical SellWizard
- * running in edit mode. The wizard pre-fills from the existing listing,
- * lands the seller on Step 3 (details / pricing / delivery), and submits
- * via updateListingFromWizard on save.
- *
- * The route shape (/account/listings/<id>/edit) is unchanged so existing
- * "Edit" links from the listings table still work.
+ * The seller wizard now lives under /sell — both /sell/new (create)
+ * and /sell/edit/[id] (edit) share the same no-sidebar layout. This
+ * old URL stays as a permanent redirect so any bookmarked or
+ * in-product links keep working.
  */
 
-import { fetchSellCategories } from '@/lib/actions/sell-wizard'
-import SellWizard from '@/app/(sell)/_components/SellWizard'
+import { permanentRedirect } from 'next/navigation'
 
-export const dynamic = 'force-dynamic'
-
-interface EditListingPageProps {
+export default async function LegacyEditRedirect({
+  params,
+}: {
   params: Promise<{ id: string }>
-}
-
-export default async function EditListingPage({ params }: EditListingPageProps) {
-  const [{ id }, res] = await Promise.all([
-    params,
-    fetchSellCategories(),
-  ])
-  const categories = res.success ? res.data : []
-  return <SellWizard initialCategories={categories} editListingId={id} />
+}) {
+  const { id } = await params
+  permanentRedirect(`/sell/edit/${id}`)
 }

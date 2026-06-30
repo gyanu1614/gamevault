@@ -324,7 +324,7 @@ export default function CompactDashboard({ stats, activities, admin }: CompactDa
           <div className="rounded-xl border border-white/[0.06] bg-white/[0.025] p-4">
             <div className="flex items-center gap-2.5 mb-2">
               <div className="h-8 w-8 rounded-lg bg-violet-500/10 flex items-center justify-center">
-                <Store className="h-4 w-4 text-violet-400" />
+                <Store className="h-4 w-4 text-lime-text" />
               </div>
               <p className="text-sm text-gray-500">Sellers</p>
             </div>
@@ -354,7 +354,7 @@ export default function CompactDashboard({ stats, activities, admin }: CompactDa
                     <Icon className={cn("h-5 w-5", page.color)} />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold text-white group-hover:text-violet-300 transition-colors">
+                    <p className="text-sm font-semibold text-white group-hover:text-lime-text transition-colors">
                       {page.title}
                     </p>
                     <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">
@@ -380,7 +380,7 @@ export default function CompactDashboard({ stats, activities, admin }: CompactDa
                 className={cn(
                   "px-3 py-1 text-xs font-medium rounded-md transition-all",
                   activityFilter === 'active'
-                    ? "bg-violet-500/20 text-violet-300 border border-violet-500/30"
+                    ? "bg-lime-tint-bg text-lime-text border border-lime-tint-border"
                     : "text-gray-500 hover:text-gray-400"
                 )}
               >
@@ -483,7 +483,7 @@ export default function CompactDashboard({ stats, activities, admin }: CompactDa
                               )}
                               <div className="flex items-center gap-2">
                                 {activity.metadata.amount && (
-                                  <p className="text-xs font-medium text-violet-400">
+                                  <p className="text-xs font-medium text-lime-text">
                                     {formatCurrency(activity.metadata.amount)}
                                   </p>
                                 )}
@@ -537,12 +537,12 @@ export default function CompactDashboard({ stats, activities, admin }: CompactDa
                   {hasMore && (
                     <Link
                       href="/admin/activities"
-                      className="flex items-center justify-center gap-2 p-3 rounded-lg border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04] hover:border-violet-500/30 transition-all group mt-2"
+                      className="flex items-center justify-center gap-2 p-3 rounded-lg border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04] hover:border-lime-tint-border transition-all group mt-2"
                     >
-                      <span className="text-sm font-medium text-violet-400 group-hover:text-violet-300">
+                      <span className="text-sm font-medium text-lime-text group-hover:text-lime-text">
                         View All Activities
                       </span>
-                      <ArrowRight className="h-4 w-4 text-violet-400 group-hover:translate-x-0.5 transition-transform" />
+                      <ArrowRight className="h-4 w-4 text-lime-text group-hover:translate-x-0.5 transition-transform" />
                     </Link>
                   )}
                 </div>

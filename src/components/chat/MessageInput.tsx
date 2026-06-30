@@ -1,7 +1,25 @@
 'use client'
 
-import { useState, useRef, KeyboardEvent } from 'react'
+/**
+ * MessageInput — V21/P5.e
+ *
+ * Composes a chat message. Rewritten on shadcn <Textarea> + <Button>
+ * so the surface matches the rest of the design system: solid
+ * `bg-bg-overlay` field, `rounded-lg` (canonical card radius), lime
+ * focus ring via shadcn's built-in focus state, and a square send
+ * button with the same shape.
+ *
+ *  - Auto-growing textarea (1–5 lines, scrollbar after)
+ *  - Enter sends, Shift+Enter inserts newline
+ *  - Disabled state during send + when parent disabled
+ *  - Character counter only when within 100 chars of the cap
+ *  - Inline keyboard hint moved to a faint helper below the input
+ */
+
+import { useState, useRef, KeyboardEvent, ChangeEvent } from 'react'
 import { Send, Loader2 } from 'lucide-react'
+import { Textarea } from '@/components/ui/textarea'
+import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
 interface MessageInputProps {
@@ -13,7 +31,7 @@ interface MessageInputProps {
 
 export default function MessageInput({
   onSend,
-  placeholder = 'Type a message...',
+  placeholder = 'Type a message…',
   disabled = false,
   maxLength = 2000,
 }: MessageInputProps) {
@@ -21,99 +39,90 @@ export default function MessageInput({
   const [isSending, setIsSending] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
-  const handleSend = async () => {
-    if (!message.trim() || isSending) return
+  const canSend = message.trim().length > 0 && !isSending && !disabled
 
+  const handleSend = async () => {
+    if (!canSend) return
     setIsSending(true)
     try {
       await onSend(message.trim())
       setMessage('')
-      // Reset textarea height
-      if (textareaRef.current) {
-        textareaRef.current.style.height = 'auto'
-      }
-    } catch (error) {
-      console.error('Failed to send message:', error)
+      if (textareaRef.current) textareaRef.current.style.height = 'auto'
+    } catch (e) {
+      console.error('Failed to send message:', e)
     } finally {
       setIsSending(false)
     }
   }
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-    // Send on Enter (without Shift)
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
-      handleSend()
+      void handleSend()
     }
   }
 
-  const handleInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+  const handleChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
     setMessage(e.target.value)
-
-    // Auto-grow textarea
-    const textarea = e.target
-    textarea.style.height = 'auto'
-    textarea.style.height = `${Math.min(textarea.scrollHeight, 150)}px`
+    // Auto-grow up to ~5 lines (~120px).
+    const ta = e.target
+    ta.style.height = 'auto'
+    ta.style.height = `${Math.min(ta.scrollHeight, 120)}px`
   }
 
-  const remainingChars = maxLength - message.length
-  const isNearLimit = remainingChars < 100
+  const remaining = maxLength - message.length
+  const showCounter = remaining < 100
 
   return (
-    <div className="border-t border-white/10 bg-black/50 p-4">
-      <div className="relative">
-        {/* Textarea */}
-        <textarea
+    <div className="border-t border-border-subtle bg-bg-raised px-4 py-3">
+      <div className="flex items-end gap-2">
+        <Textarea
           ref={textareaRef}
           value={message}
-          onChange={handleInput}
+          onChange={handleChange}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
           disabled={disabled || isSending}
           maxLength={maxLength}
           rows={1}
           className={cn(
-            'w-full resize-none rounded-xl border border-white/10 bg-white/5 px-4 py-3 pr-14 text-sm text-white placeholder:text-text-tertiary',
-            'focus:border-lime focus:outline-none focus:ring-2 focus:ring-violet-500/20',
-            'disabled:cursor-not-allowed disabled:opacity-50',
-            'transition-all duration-200'
+            'min-h-[40px] max-h-[120px] flex-1 resize-none rounded-lg border-border-default bg-bg-overlay px-3.5 py-2.5 text-[13.5px] leading-[1.45] text-text-primary placeholder:text-text-tertiary',
+            'focus-visible:border-lime focus-visible:ring-2 focus-visible:ring-lime/30 focus-visible:ring-offset-0',
           )}
-          style={{ minHeight: '44px', maxHeight: '150px' }}
         />
-
-        {/* Send Button */}
-        <button
+        <Button
+          type="button"
           onClick={handleSend}
-          disabled={!message.trim() || isSending || disabled}
+          disabled={!canSend}
+          size="icon"
           className={cn(
-            'absolute bottom-2 right-2 flex h-8 w-8 items-center justify-center rounded-lg transition-all',
-            message.trim() && !isSending && !disabled
-              ? 'bg-gradient-to-br from-lime to-purple-600 text-white hover:scale-105 hover:shadow-lg hover:shadow-violet-500/50'
-              : 'bg-white/5 text-text-tertiary cursor-not-allowed'
+            'h-10 w-10 flex-shrink-0 rounded-lg',
+            canSend
+              ? 'bg-lime text-text-inverse hover:bg-lime-hover'
+              : 'bg-bg-overlay text-text-tertiary hover:bg-bg-overlay',
           )}
+          aria-label="Send message"
         >
           {isSending ? (
             <Loader2 className="h-4 w-4 animate-spin" />
           ) : (
             <Send className="h-4 w-4" />
           )}
-        </button>
+        </Button>
       </div>
 
-      {/* Character Counter */}
-      {isNearLimit && (
-        <div className={cn(
-          'mt-1.5 text-right text-xs',
-          remainingChars < 50 ? 'text-error' : 'text-text-tertiary'
-        )}>
-          {remainingChars} characters remaining
-        </div>
-      )}
-
-      {/* Hint */}
-      <div className="mt-2 text-xs text-text-tertiary">
-        Press <kbd className="rounded bg-white/10 px-1.5 py-0.5 font-mono">Enter</kbd> to send,
-        <kbd className="ml-1 rounded bg-white/10 px-1.5 py-0.5 font-mono">Shift+Enter</kbd> for new line
+      <div className="mt-2 flex items-center justify-between text-[11px] text-text-tertiary">
+        <span>
+          <kbd className="rounded bg-white/[0.06] px-1.5 py-0.5 font-mono text-[10px] text-text-secondary">Enter</kbd>{' '}
+          to send ·{' '}
+          <kbd className="rounded bg-white/[0.06] px-1.5 py-0.5 font-mono text-[10px] text-text-secondary">Shift+Enter</kbd>{' '}
+          for new line
+        </span>
+        {showCounter && (
+          <span className={cn(remaining < 50 ? 'text-error' : 'text-text-tertiary')}>
+            {remaining} left
+          </span>
+        )}
       </div>
     </div>
   )

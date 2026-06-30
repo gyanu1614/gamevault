@@ -315,7 +315,7 @@ export default function ModerationQueuePage() {
                         Request Changes
                       </button>
                       <Link
-                        href={`/marketplace/${listing.game.slug}/${listing.category.slug}/${listing.slug}`}
+                        href={`/${listing.game.slug}/${listing.category.slug}/${listing.slug}`}
                         className="px-4 py-2 bg-white/[0.05] hover:bg-white/[0.08] text-white font-medium rounded-lg transition-colors flex items-center gap-2"
                       >
                         <Eye className="w-4 h-4" />

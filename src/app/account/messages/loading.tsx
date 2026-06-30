@@ -8,7 +8,7 @@
 
 function Block({ className = '' }: { className?: string }) {
   return (
-    <div className={`animate-pulse rounded-md bg-bg-overlay/80 ${className}`} />
+    <div className={`animate-pulse rounded-md bg-white/[0.07] ${className}`} />
   )
 }
 
@@ -23,7 +23,7 @@ export default function MessagesLoading() {
 
       <div className="grid h-[calc(100vh-200px)] grid-cols-1 gap-3 lg:grid-cols-[360px_1fr]">
         {/* Conversation rail */}
-        <div className="overflow-hidden rounded-2xl border border-border-default bg-bg-overlay">
+        <div className="overflow-hidden rounded-lg border border-border-subtle card-frost">
           {/* Search input */}
           <div className="border-b border-border-subtle p-3">
             <Block className="h-9 w-full rounded-xl" />
@@ -49,7 +49,7 @@ export default function MessagesLoading() {
         </div>
 
         {/* Chat thread */}
-        <div className="flex flex-col overflow-hidden rounded-2xl border border-border-default bg-bg-overlay">
+        <div className="flex flex-col overflow-hidden rounded-lg border border-border-subtle card-frost">
           {/* Thread header */}
           <div className="flex items-center justify-between gap-3 border-b border-border-subtle p-4">
             <div className="flex items-center gap-3">
@@ -73,7 +73,7 @@ export default function MessagesLoading() {
                 >
                   <Block
                     className={`h-12 ${mine ? 'w-2/5' : 'w-1/2'} ${
-                      mine ? 'rounded-2xl rounded-br-sm' : 'rounded-2xl rounded-bl-sm'
+                      mine ? 'rounded-lg rounded-br-sm' : 'rounded-lg rounded-bl-sm'
                     }`}
                   />
                 </div>

@@ -1,8 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useSearchParams } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '@/lib/utils'
 import { useQuery } from '@tanstack/react-query'
@@ -18,10 +18,6 @@ import {
   LogOut,
   Menu,
   X,
-  Store,
-  Award,
-  Crown,
-  Gem,
   Sparkles,
   Shield,
   ShieldCheck,
@@ -32,16 +28,6 @@ import {
   Ban,
 } from 'lucide-react'
 
-// ── Tier visual config ────────────────────────────────────────────────────────
-const TIER_CONFIG: Record<string, { icon: React.ElementType; color: string; bg: string; border: string }> = {
-  unverified: { icon: Shield,      color: 'text-zinc-400',   bg: 'bg-zinc-500/10',   border: 'border-zinc-500/20' },
-  bronze:     { icon: Award,       color: 'text-orange-400', bg: 'bg-orange-500/10', border: 'border-orange-500/20' },
-  silver:     { icon: ShieldCheck, color: 'text-slate-300',  bg: 'bg-slate-500/10',  border: 'border-slate-500/20' },
-  gold:       { icon: Crown,       color: 'text-warning', bg: 'bg-warning-bg', border: 'border-yellow-500/20' },
-  platinum:   { icon: Gem,         color: 'text-cyan-400',   bg: 'bg-cyan-500/10',   border: 'border-cyan-500/20' },
-  diamond:    { icon: Sparkles,    color: 'text-lime-text', bg: 'bg-lime/10', border: 'border-lime-tint-border' },
-}
-
 interface NavItem {
   label: string
   href: string
@@ -50,6 +36,8 @@ interface NavItem {
   showForBuyer?: boolean
   showForSeller?: boolean
   requiresSeller?: boolean
+  /** V21/P7.ai — Nested sub-items (e.g. Offers → Currency/Items/...). */
+  children?: { label: string; href: string }[]
 }
 
 interface AccountSidebarProps {
@@ -63,12 +51,18 @@ interface AccountSidebarProps {
     shop_name?: string | null
     shop_slug?: string | null
     seller_status?: 'active' | 'restricted' | 'banned'
+    joinedAt?: string
   }
 }
 
 export default function AccountSidebar({ user }: AccountSidebarProps) {
   const pathname = usePathname()
+  const searchParams = useSearchParams()
   const [isMobileOpen, setIsMobileOpen] = useState(false)
+  // V22 — Accordion: at most one grouped item (Offers / Orders) is open at a
+  // time. `null` = none open. Clicking a parent navigates AND opens its group,
+  // closing any other. Initialized lazily from the active route below.
+  const [openGroup, setOpenGroup] = useState<string | null>(null)
 
   // Get unread message count
   const { data: unreadCount } = useQuery({
@@ -112,11 +106,29 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
     return pathname === href || pathname.startsWith(href + '/')
   }
 
+  // V22 — When the route lands on a grouped section (e.g. /account/listings),
+  // open that group so its sub-items are visible. Keyed on pathname only, so
+  // switching ?type= within the same group doesn't reset a user's choice.
+  useEffect(() => {
+    if (pathname.startsWith('/account/listings')) setOpenGroup('Offers')
+    else if (pathname.startsWith('/account/orders')) setOpenGroup('Orders')
+  }, [pathname])
+
   // Navigation split into seller tools and account tools (with divider between)
   const getSellerToolItems = (): NavItem[] => [
     { label: 'Dashboard',   href: '/account/dashboard',  icon: LayoutDashboard, requiresSeller: true, showForBuyer: false, showForSeller: true },
-    { label: 'Orders',      href: '/account/orders',     icon: ShoppingCart,    requiresSeller: true, showForBuyer: false, showForSeller: true },
-    { label: 'Listings',    href: '/account/listings',   icon: Package, requiresSeller: true, showForBuyer: false, showForSeller: true },
+    { label: 'Orders',      href: '/account/orders',     icon: ShoppingCart,    requiresSeller: true, showForBuyer: false, showForSeller: true,
+      children: [
+        { label: 'Sold Orders', href: '/account/orders?type=sold' },
+        { label: 'Purchases',   href: '/account/orders?type=purchases' },
+      ] },
+    { label: 'Offers',      href: '/account/listings',   icon: Package, requiresSeller: true, showForBuyer: false, showForSeller: true,
+      children: [
+        { label: 'Currency', href: '/account/listings?type=currency' },
+        { label: 'Items',    href: '/account/listings?type=items' },
+        { label: 'Accounts', href: '/account/listings?type=accounts' },
+        { label: 'Top Ups',  href: '/account/listings?type=top-up' },
+      ] },
     { label: 'Messages',    href: '/account/messages',   icon: MessageSquare, badge: unreadCount ? unreadCount.toString() : undefined, requiresSeller: true, showForBuyer: false, showForSeller: true },
     { label: 'Wallet',      href: '/account/wallet',     icon: Wallet,          requiresSeller: true, showForBuyer: false, showForSeller: true },
   ]
@@ -160,72 +172,72 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
 
   const NavItems = () => (
     <>
-      {/* User Profile */}
+      {/* V22 — Clean floating identity: avatar + name, "Joined …" beneath.
+          No bordered box / tier pill — just the user, modern and minimal.
+          Sellers' block links to their public shop. */}
       <div className="p-4 border-b border-border-subtle">
-        {user?.isApprovedSeller ? (
-          <Link
-            href={`/shop/${user?.shop_slug || user?.username || ''}`}
-            onClick={() => setIsMobileOpen(false)}
-            className="flex items-center gap-3 w-full rounded-2xl px-3 py-3.5 bg-gradient-to-br from-lime/10 via-purple-500/5 to-transparent hover:from-lime/15 border border-lime-tint-border hover:border-lime-tint-border transition-all duration-200 group"
-          >
-            {/* Avatar */}
-            <div className="relative flex-shrink-0">
-              {user?.avatar_url ? (
-                <img
-                  src={user.avatar_url}
-                  alt={user.username}
-                  className="h-12 w-12 rounded-full object-cover ring-2 ring-violet-500/30 group-hover:ring-violet-500/50 transition-all"
-                />
-              ) : (
-                <div className="h-12 w-12 rounded-full flex items-center justify-center text-white font-bold text-base bg-gradient-to-br from-lime to-purple-600 ring-2 ring-violet-500/30 group-hover:ring-violet-500/50 transition-all">
-                  {user?.username?.[0]?.toUpperCase() || 'S'}
-                </div>
-              )}
-              <div className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-green-400 border-2 border-black shadow-lg" />
-            </div>
-            {/* Name + Tier */}
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-white truncate leading-tight">
-                {user?.shop_name || user?.username || 'Seller'}
-              </p>
-              {(() => {
-                const tier = (user?.seller_tier || 'unverified').toLowerCase()
-                const cfg = TIER_CONFIG[tier] ?? TIER_CONFIG.unverified
-                const TierIcon = cfg.icon
-                return (
-                  <div className={cn('mt-1.5 inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold capitalize', cfg.color, cfg.bg, cfg.border)}>
-                    <TierIcon className="h-2.5 w-2.5" />
-                    {tier}
+        {(() => {
+          const isSeller = !!user?.isApprovedSeller
+          const displayName = isSeller
+            ? (user?.shop_name || user?.username || 'Seller')
+            : (user?.username || 'User')
+          const joinedDate = user?.joinedAt
+            ? new Date(user.joinedAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+            : null
+
+          const inner = (
+            <>
+              <div className="relative flex-shrink-0">
+                {user?.avatar_url ? (
+                  <img
+                    src={user.avatar_url}
+                    alt={displayName}
+                    className="h-14 w-14 rounded-full object-cover"
+                  />
+                ) : (
+                  <div className="flex h-14 w-14 items-center justify-center rounded-full bg-lime/15 text-lg font-bold text-lime-text">
+                    {displayName[0]?.toUpperCase() || 'U'}
                   </div>
-                )
-              })()}
-            </div>
-            <Store className="h-4 w-4 text-lime-text flex-shrink-0" />
-          </Link>
-        ) : (
-          <div className="flex items-center gap-3 w-full rounded-2xl px-3 py-3.5 bg-bg-overlay border border-border-subtle">
-            <div className="relative flex-shrink-0">
-              {user?.avatar_url ? (
-                <img
-                  src={user.avatar_url}
-                  alt={user?.username}
-                  className="h-12 w-12 rounded-full object-cover ring-2 ring-white/10"
-                />
-              ) : (
-                <div className="h-12 w-12 rounded-full flex items-center justify-center text-white font-bold text-base bg-gradient-to-br from-blue-500 to-cyan-600">
-                  {user?.username?.[0]?.toUpperCase() || 'U'}
+                )}
+                <div className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-success ring-2 ring-bg-base" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1.5">
+                  <p className="truncate text-sm font-semibold leading-tight text-text-primary">{displayName}</p>
+                  {isSeller && (
+                    /* Verified badge. Swap public/assets/badges/verified.png to
+                       use your own (square image, transparent bg). */
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img
+                      src="/assets/badges/verified.png"
+                      alt="Verified"
+                      className="h-4 w-4 shrink-0 object-contain"
+                    />
+                  )}
                 </div>
-              )}
-              <div className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-green-400 border-2 border-black shadow-lg" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-white truncate leading-tight">
-                {user?.username || 'User'}
-              </p>
-              <p className="mt-1 text-[11px] text-text-tertiary">Buyer Account</p>
-            </div>
-          </div>
-        )}
+                <p className="mt-0.5 truncate text-[11px] text-text-tertiary">
+                  {joinedDate ? (
+                    <>Joined: <span className="font-semibold text-text-secondary">{joinedDate}</span></>
+                  ) : (
+                    isSeller ? 'Seller' : 'Buyer'
+                  )}
+                </p>
+              </div>
+            </>
+          )
+
+          return isSeller ? (
+            <Link
+              href={`/shop/${user?.shop_slug || user?.username || ''}`}
+              onClick={() => setIsMobileOpen(false)}
+              className="group flex w-full items-center gap-3 rounded-lg px-1 py-1 transition-colors hover:bg-white/[0.04]"
+            >
+              {inner}
+            </Link>
+          ) : (
+            <div className="flex w-full items-center gap-3 px-1 py-1">{inner}</div>
+          )
+        })()}
 
         {/* Restriction Status - Only for approved sellers who are restricted/banned */}
         {user?.isApprovedSeller && user?.seller_status && user.seller_status !== 'active' && (
@@ -254,31 +266,83 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
         {sellerItems.map((item) => {
           const Icon = item.icon
           const active = isActive(item.href)
+          const activeType = searchParams.get('type')
+          // V22 — Accordion: a grouped item's children show only when it's the
+          // open group. Clicking a parent (below) sets it open + closes others.
+          const showChildren = !!item.children && openGroup === item.label
           return (
-            <Link
-              key={item.label}
-              href={item.href}
-              onClick={() => setIsMobileOpen(false)}
-              className={cn(
-                'flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200',
-                active
-                  ? 'bg-lime text-text-inverse shadow-lg shadow-violet-500/25'
-                  : 'text-text-secondary hover:text-white hover:bg-bg-raised-hover'
-              )}
-            >
-              <div className="flex items-center gap-3">
-                <Icon className="h-[18px] w-[18px] flex-shrink-0" />
-                <span>{item.label}</span>
-              </div>
-              {item.badge && (
-                <span className={cn(
-                  'px-2 py-0.5 text-[11px] font-bold rounded-full',
-                  active ? 'bg-white/20 text-text-inverse' : 'bg-lime/20 text-lime-text'
-                )}>
-                  {item.badge}
-                </span>
-              )}
-            </Link>
+            <div key={item.label}>
+              <Link
+                href={item.href}
+                onClick={() => {
+                  setIsMobileOpen(false)
+                  // Grouped parents act as an accordion: open this one (closing
+                  // any other). Leaf items close all groups.
+                  setOpenGroup(item.children ? item.label : null)
+                }}
+                className={cn(
+                  'flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200',
+                  active
+                    ? 'bg-lime text-text-inverse shadow-elevated'
+                    : 'text-text-secondary hover:text-white hover:bg-bg-raised-hover'
+                )}
+              >
+                <div className="flex items-center gap-3">
+                  <Icon className="h-[18px] w-[18px] flex-shrink-0" />
+                  <span>{item.label}</span>
+                </div>
+                {item.badge && (
+                  <span className={cn(
+                    'px-2 py-0.5 text-[11px] font-bold rounded-full',
+                    active ? 'bg-white/20 text-text-inverse' : 'bg-lime/20 text-lime-text'
+                  )}>
+                    {item.badge}
+                  </span>
+                )}
+              </Link>
+
+              {/* V21/P7.ai/aj — Nested sub-items (Offers → Currency/…).
+                  Animated open/close with framer-motion (height + opacity).
+                  Active sub-item matched on the ?type= query param. */}
+              <AnimatePresence initial={false}>
+                {item.children && showChildren && (
+                  <motion.div
+                    key="subnav"
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.25, ease: 'easeOut' }}
+                    className="overflow-hidden"
+                  >
+                    <div className="mt-1 ml-4 flex flex-col gap-0.5 border-l border-bg-raised-hover pl-3">
+                      {item.children.map((sub, subIdx) => {
+                        const subType = sub.href.split('type=')[1] ?? null
+                        // Default to the first child when no ?type= is set,
+                        // so the group works for any section (Offers,
+                        // Orders, …) without a hardcoded default.
+                        const firstType = item.children![0].href.split('type=')[1] ?? null
+                        const subActive = (activeType ?? firstType) === subType
+                        return (
+                          <Link
+                            key={sub.label}
+                            href={sub.href}
+                            onClick={() => setIsMobileOpen(false)}
+                            className={cn(
+                              'rounded-lg px-3 py-2 text-[13px] font-medium transition-colors',
+                              subActive
+                                ? 'bg-lime/15 text-lime-text'
+                                : 'text-text-tertiary hover:bg-bg-raised-hover hover:text-text-secondary'
+                            )}
+                          >
+                            {sub.label}
+                          </Link>
+                        )
+                      })}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           )
         })}
 
@@ -299,7 +363,7 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
               href={item.href}
               onClick={() => setIsMobileOpen(false)}
               className={cn(
-                'flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200',
+                'flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200',
                 active
                   ? 'bg-lime text-text-inverse shadow-lg shadow-violet-500/25'
                   : 'text-text-secondary hover:text-white hover:bg-bg-raised-hover'
@@ -335,7 +399,7 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
               href={item.href}
               onClick={() => setIsMobileOpen(false)}
               className={cn(
-                'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200',
+                'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200',
                 active
                   ? 'bg-lime text-text-inverse shadow-lg shadow-violet-500/25'
                   : 'text-text-secondary hover:text-white hover:bg-bg-raised-hover'
@@ -349,7 +413,7 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
 
         {/* Logout */}
         <button
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-text-secondary hover:text-error hover:bg-red-500/[0.08] transition-all duration-200"
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-text-secondary hover:text-error hover:bg-red-500/[0.08] transition-all duration-200"
         >
           <LogOut className="h-[18px] w-[18px] flex-shrink-0" />
           <span>Logout</span>
@@ -363,7 +427,7 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
       {/* Mobile Menu Button */}
       <button
         onClick={() => setIsMobileOpen(!isMobileOpen)}
-        className="fixed top-[4.5rem] left-3 z-50 lg:hidden p-2.5 rounded-xl bg-black/50 backdrop-blur-xl border border-border-subtle text-white shadow-lg hover:bg-black/70 transition-all"
+        className="fixed top-[4.5rem] left-3 z-50 lg:hidden p-2.5 rounded-lg bg-black/50 backdrop-blur-xl border border-border-subtle text-white shadow-lg hover:bg-black/70 transition-all"
       >
         {isMobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
       </button>
@@ -382,8 +446,12 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
       </AnimatePresence>
 
       {/* Desktop Sidebar - Modern Floating Card */}
-      <aside className="hidden lg:flex lg:flex-col lg:fixed lg:left-4 lg:top-24 lg:bottom-4 lg:w-64 bg-black/40 backdrop-blur-2xl border border-border-subtle rounded-3xl shadow-2xl overflow-hidden">
-        <NavItems />
+      <aside className="hidden lg:flex lg:flex-col lg:fixed lg:left-4 lg:top-24 lg:bottom-4 lg:w-72 card-frost border border-border-subtle rounded-lg shadow-2xl overflow-hidden">
+        {/* V21/P7.aj — Call as a function, not <NavItems/>, so it inlines
+            into this render tree. As a child component it got a fresh
+            identity every parent re-render, remounting the subtree and
+            killing AnimatePresence (collapse snapped instead of animating). */}
+        {NavItems()}
       </aside>
 
       {/* Mobile Sidebar */}
@@ -394,9 +462,9 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
             animate={{ x: 0 }}
             exit={{ x: '-100%' }}
             transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-            className="fixed top-4 bottom-4 left-4 w-56 bg-black/50 backdrop-blur-2xl border border-border-subtle rounded-3xl z-40 lg:hidden flex flex-col shadow-2xl"
+            className="fixed top-4 bottom-4 left-4 w-64 card-frost border border-border-subtle rounded-lg z-40 lg:hidden flex flex-col shadow-2xl"
           >
-            <NavItems />
+            {NavItems()}
           </motion.aside>
         )}
       </AnimatePresence>

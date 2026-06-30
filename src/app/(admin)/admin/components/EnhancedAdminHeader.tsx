@@ -278,7 +278,7 @@ export default function EnhancedAdminHeader({ role, user }: EnhancedAdminHeaderP
               <div className="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none">
                 <Search className={cn(
                   "h-3.5 w-3.5 transition-colors",
-                  searchFocused ? "text-violet-400" : "text-gray-500"
+                  searchFocused ? "text-lime-text" : "text-gray-500"
                 )} />
               </div>
               <input
@@ -298,9 +298,9 @@ export default function EnhancedAdminHeader({ role, user }: EnhancedAdminHeaderP
                   "w-full pl-8 pr-3 py-1.5 bg-white/[0.04] rounded-lg",
                   "text-white text-xs placeholder-gray-500",
                   "border transition-all",
-                  "focus:outline-none focus:ring-1 focus:ring-violet-500/50",
+                  "focus:outline-none focus:ring-1 focus:ring-lime-tint-bg",
                   searchFocused
-                    ? "border-violet-500/30 bg-white/[0.06]"
+                    ? "border-lime-tint-border bg-white/[0.06]"
                     : "border-white/[0.06] hover:border-white/[0.12]"
                 )}
               />
@@ -333,7 +333,7 @@ export default function EnhancedAdminHeader({ role, user }: EnhancedAdminHeaderP
                     router.push(`/admin/search?q=${encodeURIComponent(searchQuery)}`)
                     setShowSearchResults(false)
                   }}
-                  className="text-[10px] text-violet-400 hover:text-violet-300 font-medium"
+                  className="text-[10px] text-lime-text hover:text-lime-text/80 font-medium"
                 >
                   View all results →
                 </button>
@@ -387,7 +387,7 @@ export default function EnhancedAdminHeader({ role, user }: EnhancedAdminHeaderP
               }}
               className="p-2.5 rounded-xl hover:bg-white/[0.06] transition-all group"
             >
-              <Zap className="h-5 w-5 text-gray-400 group-hover:text-violet-400 transition-colors" />
+              <Zap className="h-5 w-5 text-gray-400 group-hover:text-lime-text transition-colors" />
             </button>
 
             <AnimatePresence>
@@ -452,7 +452,7 @@ export default function EnhancedAdminHeader({ role, user }: EnhancedAdminHeaderP
             >
               <Bell className="h-5 w-5 text-gray-400 group-hover:text-white transition-colors" />
               {unreadNotificationCount > 0 && (
-                <span className="absolute -top-1 -right-1 h-5 w-5 bg-violet-500 rounded-full flex items-center justify-center ring-2 ring-black">
+                <span className="absolute -top-1 -right-1 h-5 w-5 bg-lime rounded-full flex items-center justify-center ring-2 ring-black">
                   <span className="text-[10px] text-white font-bold">
                     {unreadNotificationCount > 9 ? '9+' : unreadNotificationCount}
                   </span>
@@ -472,7 +472,7 @@ export default function EnhancedAdminHeader({ role, user }: EnhancedAdminHeaderP
                     <div className="flex items-center justify-between">
                       <h3 className="text-sm font-semibold text-white">Notifications</h3>
                       {unreadNotificationCount > 0 && (
-                        <span className="px-2.5 py-1 text-xs font-medium bg-violet-500/20 text-violet-400 rounded-full">
+                        <span className="px-2.5 py-1 text-xs font-medium bg-lime-tint-bg text-lime-text rounded-full">
                           {unreadNotificationCount} new
                         </span>
                       )}
@@ -515,7 +515,7 @@ export default function EnhancedAdminHeader({ role, user }: EnhancedAdminHeaderP
                     <Link
                       href="/admin/notifications"
                       onClick={() => setShowNotifications(false)}
-                      className="block w-full text-center text-sm text-violet-400 hover:text-violet-300 font-medium transition-colors"
+                      className="block w-full text-center text-sm text-lime-text hover:text-lime-text/80 font-medium transition-colors"
                     >
                       View all notifications
                     </Link>
@@ -535,7 +535,7 @@ export default function EnhancedAdminHeader({ role, user }: EnhancedAdminHeaderP
               }}
               className="flex items-center gap-2.5 p-2 rounded-xl hover:bg-white/[0.06] transition-all"
             >
-              <div className="h-10 w-10 rounded-full bg-gradient-to-br from-violet-500 to-indigo-500 flex items-center justify-center border border-violet-400/20">
+              <div className="h-10 w-10 rounded-full bg-lime flex items-center justify-center border border-lime-tint-border">
                 <span className="text-white text-sm font-bold">{displayInitial}</span>
               </div>
               <ChevronDown className="h-4 w-4 text-gray-400 hidden md:block" />
@@ -552,7 +552,7 @@ export default function EnhancedAdminHeader({ role, user }: EnhancedAdminHeaderP
                   <div className="p-4 border-b border-white/[0.06]">
                     <p className="text-sm font-medium text-white">{admin.full_name || admin.username}</p>
                     <p className="text-xs text-gray-500 mt-1">{admin.email}</p>
-                    <p className="text-xs text-violet-400 mt-1.5 capitalize">{admin.role.replace('_', ' ')}</p>
+                    <p className="text-xs text-lime-text mt-1.5 capitalize">{admin.role.replace('_', ' ')}</p>
                   </div>
                   <div className="p-2">
                     <button

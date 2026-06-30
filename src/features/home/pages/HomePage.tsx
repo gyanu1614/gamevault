@@ -28,6 +28,8 @@ import { GameCard } from '../components/GameCard'
 import { CurrencyCard } from '../components/CurrencyCard'
 import { CategoryCard } from '../components/CategoryCard'
 import { StatTile } from '../components/StatTile'
+import { StatsMarquee } from '../components/StatsMarquee'
+import { HowItWorks } from '../components/HowItWorks'
 import { HowStep } from '../components/HowStep'
 import { WhyCard } from '../components/WhyCard'
 import { RecentlySoldTicker } from '../components/RecentlySoldTicker'
@@ -352,7 +354,20 @@ export function HomePage() {
   const { data: recentSales = [] } = useRecentSales()
 
   return (
-    <main className="relative">
+    <div
+      className="has-backdrop relative"
+      style={{
+        '--page-hero-image': "url('/assets/heroes/home.avif')",
+        '--hero-offset': '80px',
+      } as React.CSSProperties}
+    >
+      {/* V20 — Hero backdrop lives at the <main> level so the art
+          extends UP behind the floating navbar (no black band between
+          navbar pill and hero art). The .has-backdrop class makes
+          this `relative`, and the .hero-backdrop div is pinned to the
+          top of <main> spanning --hero-height. */}
+      <div className="hero-backdrop" aria-hidden="true" />
+
       {/* ================================================================
           GLOBAL NOISE TEXTURE — sits above background, below content.
           Fixed so it doesn't scroll. Very low opacity = "alive" not "noisy".
@@ -367,32 +382,13 @@ export function HomePage() {
         }}
       />
 
-      {/* ================================================================
-          HERO — headline + full-width carousel
-          Fits viewport height (100vh - nav). No scroll needed.
-          ================================================================ */}
-      {/* V17f — Trimmed hero height. Was 100vh-68px which made the
-          carousel claim the full viewport and overflow on shorter
-          laptops; -160px leaves comfortable space for the next
-          section's top edge to peek in without forcing the page to
-          scroll. */}
-      {/* V18 — `.ambient` paints the violet bloom + décor PNG behind
-          the hero. Décor PNG lives at /public/assets/backdrop-decor.png
-          — placeholder transparent 1×1 until art lands. */}
-      <section className="ambient relative flex flex-col h-[calc(100vh-160px)] py-5 overflow-hidden">
-        {/* V18.a — Removed the lime radial wash that used to sit
-            behind the headline. Against the new violet-dusk body
-            backdrop it read as a soft glow / oval bloom around
-            "Game More. Grind Less.", and the lime sweep in the
-            text gradient was cutting through it — making the
-            headline look like it was punching through a halo. The
-            section's own `.ambient` paint is more than enough. */}
+      <section className="relative flex flex-col h-[calc(100vh-160px)] py-5 px-6 overflow-hidden">
 
         {/* Headline — vertically centered in the space above the carousel */}
-        <div className="mx-auto text-center flex flex-col items-center justify-center relative z-10 flex-[1.5_1_0%] min-h-0 px-6">
+        <div className="mx-auto text-center flex flex-col items-center justify-center relative z-10 flex-[1.5_1_0%] min-h-0">
           <h1 className="font-display text-heading md:text-display lg:text-display-lg whitespace-nowrap">
             <span
-              className="block p-[5px] bg-clip-text text-transparent bg-[length:400%_auto] animate-gradient-x"
+              className="block bg-clip-text text-transparent bg-[length:400%_auto] animate-gradient-x"
               style={{
                 backgroundImage:
                   'linear-gradient(90deg, #ffffff 0%, #ffffff 35%, var(--color-accent-default) 50%, #ffffff 65%, #ffffff 100%)',
@@ -404,7 +400,7 @@ export function HomePage() {
         </div>
 
         {/* DYNAMIC: hero carousel — admin-editable 3 games */}
-        <div className="flex-[4_1_0%] min-h-0 flex flex-col px-6">
+        <div className="flex-[4_1_0%] min-h-0 flex flex-col">
           <HeroCarousel slides={heroSlides} />
         </div>
       </section>
@@ -413,97 +409,35 @@ export function HomePage() {
           POPULAR GAMES — portrait cover-art cards on backdrop
           DYNAMIC: popular games row — from /api/popular/games
           ================================================================ */}
-      <section className="relative py-20 overflow-hidden">
-        {/* ASSET: cinematic backdrop — 2400×900 JPG, drop replacement at same path */}
-        <Image
-          src="/section-bg/popular-games.jpg"
-          alt=""
-          fill
-          aria-hidden="true"
-          className="object-cover blur-md saturate-[0.65] scale-105 z-0"
-          sizes="100vw"
-          priority={false}
-        />
-        {/* Dark overlay — readability */}
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-0 z-0"
-          style={{
-            background:
-              'linear-gradient(180deg, rgba(10,10,15,0.90) 0%, rgba(10,10,15,0.72) 50%, rgba(10,10,15,0.94) 100%)',
-          }}
-        />
-        {/* Vignette */}
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-0 z-0"
-          style={{
-            background:
-              'radial-gradient(ellipse at center, transparent 35%, rgba(10,10,15,0.55) 100%)',
-          }}
-        />
-        <div className="max-w-container mx-auto px-6 relative z-10">
-          <RowHeader
-            eyebrow="Trending now"
-            title="Popular Games"
-            subtitle="The games our buyers and sellers are most active in right now."
-            viewAllHref="/games"
-          />
-          {/* Single rounded glass panel containing the 10-game shelf with arrow paging */}
-          <div
-            className="rounded-3xl border border-border-default bg-bg-raised/70 backdrop-blur-md shadow-elevated p-6 md:p-8"
-            style={{
-              background:
-                'linear-gradient(180deg, rgba(20,20,28,0.78) 0%, rgba(14,14,20,0.85) 100%)',
-            }}
-          >
-            <PopularGamesShelf games={popularGames} />
+      <section className="relative py-20">
+        <div className="max-w-container mx-auto px-6">
+          {/* V20/P13 — Centered, floating heading. Section bg + overlays
+              removed so the body's ambient glows continue through. */}
+          <div className="mb-10 flex flex-col items-center text-center">
+            <div className="mb-3 inline-flex items-center gap-2">
+              <span className="h-px w-10 bg-gradient-to-l from-lime/50 to-transparent" aria-hidden />
+              <span className="text-[12px] font-bold uppercase tracking-[0.18em] text-lime-text">
+                Trending now
+              </span>
+              <span className="h-px w-10 bg-gradient-to-r from-lime/50 to-transparent" aria-hidden />
+            </div>
+            <h2 className="font-display text-[44px] font-extrabold leading-[1.04] tracking-tight lg:text-[56px]">
+              Popular Games
+            </h2>
+            <p className="mt-4 max-w-2xl text-body-lg text-text-secondary">
+              The games our buyers and sellers are most active in right now.
+            </p>
           </div>
+          <PopularGamesShelf games={popularGames} />
         </div>
       </section>
 
       {/* ================================================================
-          TRUST STATS — animated count-up on scroll
+          TRUST STATS — V20/P15 horizontal scrolling marquee of stat chips
+          No bg, edge-fades, pauses on hover. Hero art continues through.
           ================================================================ */}
-      <section className="relative border-y border-border-subtle bg-bg-raised overflow-hidden">
-        {/* Soft lime sweep behind stats */}
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-0 z-0"
-          style={{
-            background:
-              'radial-gradient(60% 120% at 20% 50%, rgba(198,255,61,0.08), transparent 60%), radial-gradient(60% 120% at 80% 50%, rgba(120,180,255,0.05), transparent 60%)',
-          }}
-        />
-        <div className="relative z-10 max-w-container mx-auto px-6 grid grid-cols-2 lg:grid-cols-4">
-          <StatTile
-            value={1_240_000}
-            suffix="+"
-            compact
-            accent
-            label="Orders delivered"
-            className="border-r border-border-subtle"
-          />
-          <StatTile
-            value={48}
-            prefix="$"
-            suffix="M+"
-            label="Traded securely"
-            className="lg:border-r border-border-subtle"
-          />
-          <StatTile
-            value={4.9}
-            decimals={1}
-            label="Avg seller rating"
-            className="border-r border-border-subtle border-t lg:border-t-0"
-          />
-          <StatTile
-            value={180}
-            suffix="+"
-            label="Games supported"
-            className="border-t lg:border-t-0"
-          />
-        </div>
+      <section className="relative py-10">
+        <StatsMarquee />
       </section>
 
       {/* ================================================================
@@ -511,52 +445,10 @@ export function HomePage() {
           Replaces the static 4-card grid with a 32s looping animation
           built from the design handoff (GameVaultExplainer.jsx).
           ================================================================ */}
-      {/* V17p — Narrower, centered trust section. Heading uses the same
-          text-display scale as the other section titles. Animation now
-          floats edge-to-edge inside a hairline border (Apple-notch
-          style) instead of being padded inside a card surface. */}
-      <section className="relative py-24 overflow-hidden">
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-0 z-0"
-          style={{
-            background:
-              'radial-gradient(80% 60% at 50% 30%, rgba(198,255,61,0.05), transparent 60%)',
-          }}
-        />
-        <div className="mx-auto max-w-[1200px] px-6 relative z-10">
-          <div className="mx-auto max-w-2xl text-center mb-12">
-            <div className="mb-2 flex items-center justify-center gap-2">
-              <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-lime-text">
-                How it works
-              </span>
-              <span className="h-px w-8 bg-gradient-to-r from-lime/40 to-transparent" aria-hidden />
-            </div>
-            <h2 className="font-display text-display">Safe in four steps.</h2>
-            <p className="mt-3 text-body-sm text-text-secondary">
-              Watch how your money stays protected from the moment you buy to the moment you confirm delivery.
-            </p>
-          </div>
-
-          {/* V17u — Slim alpha mask. The fade is now ~4% on each edge
-              (was 14%) so the hard letterbox seam softens into the
-              page bg without eating the animation's own headlines.
-              Mask runs through transparent at the very edge → opaque
-              by 4% → opaque through 96% → transparent again at 100%. */}
-          <div
-            className="mx-auto max-w-[1100px] overflow-hidden bg-transparent"
-            style={{
-              aspectRatio: '16 / 9',
-              WebkitMaskImage:
-                'linear-gradient(180deg, transparent 0%, #000 4%, #000 96%, transparent 100%)',
-              maskImage:
-                'linear-gradient(180deg, transparent 0%, #000 4%, #000 96%, transparent 100%)',
-            }}
-          >
-            <ScrollTriggeredExplainer />
-          </div>
-        </div>
-      </section>
+      {/* V20/P16 — Apple-style scroll-pinned How It Works. Sticky stage
+          on the right cross-fades through 4 hero illustrations as the
+          copy column on the left scrolls past 4 stages. */}
+      <HowItWorks />
 
       {/* ================================================================
           SHOP BY CATEGORY — tabbed: Currencies / Items / Accounts
@@ -588,19 +480,11 @@ export function HomePage() {
               Currencies, items, accounts — pick how you want to play and we'll show you the matching deals.
             </p>
           </div>
-          <div
-            className="rounded-3xl border border-border-default bg-bg-raised/70 backdrop-blur-md shadow-elevated p-6 md:p-8"
-            style={{
-              background:
-                'linear-gradient(180deg, rgba(20,20,28,0.78) 0%, rgba(14,14,20,0.85) 100%)',
-            }}
-          >
-            <ShopByCategoryShelf
-              currencies={popularCurrencies}
-              items={popularItems}
-              accounts={popularAccounts}
-            />
-          </div>
+          <ShopByCategoryShelf
+            currencies={popularCurrencies}
+            items={popularItems}
+            accounts={popularAccounts}
+          />
         </div>
       </section>
 
@@ -766,6 +650,6 @@ export function HomePage() {
           </div>
         </div>
       </section>
-    </main>
+    </div>
   )
 }

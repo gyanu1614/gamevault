@@ -8,6 +8,7 @@ import { TooltipProvider } from '@/components/ui/tooltip'
 import RouteProgress from '@/components/global/RouteProgress'
 import AccessDeniedToast from '@/components/global/AccessDeniedToast'
 import { AuthDialogProvider } from '@/components/auth/AuthDialog'
+import { AuthProvider } from '@/hooks/use-auth'
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -44,9 +45,13 @@ export function Providers({ children }: { children: React.ReactNode }) {
           {/* V17 — Global auth modal. Mounted once at the root so any
               "Log in / Sign up" button anywhere in the app can open it
               via useAuthDialog(). */}
-          <AuthDialogProvider>
-            {children}
-          </AuthDialogProvider>
+          {/* V22 — Single shared auth context. Runs the session + profile
+              fetch + auth subscription ONCE; all useAuth() consumers read it. */}
+          <AuthProvider>
+            <AuthDialogProvider>
+              {children}
+            </AuthDialogProvider>
+          </AuthProvider>
         </TooltipProvider>
       </ThemeProvider>
       <ReactQueryDevtools initialIsOpen={false} />

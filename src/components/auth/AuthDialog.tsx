@@ -109,80 +109,37 @@ interface AuthDialogProps {
 
 function AuthDialog({ open, onOpenChange, mode, onModeChange, redirectRef }: AuthDialogProps) {
   const router = useRouter()
-  const { user } = useAuth()
-  // V17c — `finalizing` keeps the modal open with an in-place loader
-  // overlay AFTER the server auth call succeeded, until useAuth() has
-  // observed the new session and the navbar has flipped to the avatar.
-  // This is what prevents the "still seeing Log in button" flash the
-  // user reported. We don't close the dialog the instant the action
-  // resolves — we wait until the client-side auth state catches up.
-  const [finalizing, setFinalizing] = useState(false)
-  // Hard ceiling so we never strand the modal if the auth listener
-  // hiccups (e.g. cached profile fails to fetch). 2.2s is well past
-  // the p99 of a healthy local session restore.
-  const finalizingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  // V22 — Auth state is now a single shared context (AuthProvider). The
+  // login/signup forms already call supabase.auth.refreshSession() before
+  // onSuccess(), which broadcasts SIGNED_IN → the shared context updates the
+  // navbar synchronously. So on success we simply close the modal: no
+  // "finalizing" overlay that waits for useAuth to catch up (that was a
+  // workaround for the old per-hook auth and is what stranded the modal on
+  // "Signing you in…" while the navbar had already flipped to the avatar).
   const handleAuthSuccess = useCallback(() => {
     const redirect = redirectRef.current
-    // 1. Start the in-modal loader. Modal stays mounted; an overlay
-    //    inside the dialog hides the form behind a spinner. Submit
-    //    button on the form is already disabled at this point.
-    setFinalizing(true)
-    // 2. Scroll-to-top right now so when we eventually close, the
-    //    page underneath is already at the top of the redirect target.
+    redirectRef.current = null
+
     if (typeof window !== 'undefined') {
       window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior })
     }
-    // 3. Kick off the navigation + refresh. The modal stays open —
-    //    the page can render underneath the overlay; we only swap to
-    //    it once the navbar's auth state has caught up.
+
+    // Close the modal immediately — the navbar is already updated.
+    onOpenChange(false)
+
+    // Navigate if a redirect was requested; otherwise stay put (public
+    // pages just reflect the new auth state in the navbar — no full reload).
     if (redirect) {
       router.replace(redirect)
+    } else {
+      router.refresh()
     }
-    router.refresh()
-    redirectRef.current = null
-    // 4. Safety net: if useAuth never resolves user, close anyway.
-    if (finalizingTimeoutRef.current) clearTimeout(finalizingTimeoutRef.current)
-    finalizingTimeoutRef.current = setTimeout(() => {
-      setFinalizing(false)
-      onOpenChange(false)
-    }, 2200)
   }, [onOpenChange, redirectRef, router])
-
-  // V17c — Watch useAuth(). The moment `user` becomes truthy while
-  // we're in the finalizing window, close the modal. This is the
-  // canonical "navbar has the profile now" signal. Small delay so
-  // the user sees a clean handoff rather than an instant snap.
-  useEffect(() => {
-    if (!finalizing || !user) return
-    const t = setTimeout(() => {
-      setFinalizing(false)
-      onOpenChange(false)
-      if (finalizingTimeoutRef.current) {
-        clearTimeout(finalizingTimeoutRef.current)
-        finalizingTimeoutRef.current = null
-      }
-    }, 220)
-    return () => clearTimeout(t)
-  }, [finalizing, user, onOpenChange])
-
-  // Cleanup the safety timeout on unmount.
-  useEffect(() => () => {
-    if (finalizingTimeoutRef.current) clearTimeout(finalizingTimeoutRef.current)
-  }, [])
 
   return (
     <>
-    <Dialog.Root
-      open={open}
-      onOpenChange={(next) => {
-        // V17c — Lock the modal closed-only path while finalizing.
-        // Without this, an overlay click or Escape press during the
-        // brief loader window could dismiss the dialog mid-handshake.
-        if (finalizing && !next) return
-        onOpenChange(next)
-      }}
-    >
+    <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <AnimatePresence>
         {open && (
           <Dialog.Portal forceMount>
@@ -242,50 +199,16 @@ function AuthDialog({ open, onOpenChange, mode, onModeChange, redirectRef }: Aut
                     : 'Sign up to start buying and selling on GameVault.'}
                 </Dialog.Description>
 
-                {/* Close button is hidden during the finalize step —
-                    we don't want the user to bail mid-signin while the
-                    session is propagating. */}
-                {!finalizing && (
-                  <Dialog.Close asChild>
-                    <button
-                      type="button"
-                      aria-label="Close"
-                      className="absolute right-4 top-4 z-10 flex h-9 w-9 items-center justify-center rounded-full border border-border-subtle bg-bg-base/60 text-text-secondary backdrop-blur-md transition-colors hover:border-border-default hover:text-text-primary"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
-                  </Dialog.Close>
-                )}
-
-                {/* V17c — In-modal finalize overlay. Sits ABOVE the
-                    form + hero panel, fades in instantly on success,
-                    fades out once useAuth() reports a user (i.e. the
-                    navbar can show the avatar). Keeping the dialog
-                    visible during this window is what eliminates the
-                    "Log in button briefly visible after sign-in" flash. */}
-                <AnimatePresence>
-                  {finalizing && (
-                    <motion.div
-                      key="finalize"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      transition={{ duration: 0.18 }}
-                      className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 bg-bg-overlay/95 backdrop-blur-sm"
-                    >
-                      <div className="relative">
-                        <div className="absolute inset-0 rounded-full bg-lime/20 blur-xl" />
-                        <Loader2 className="relative h-9 w-9 animate-spin text-lime" />
-                      </div>
-                      <p className="text-[14px] font-medium text-text-primary">
-                        {mode === 'login' ? 'Signing you in…' : 'Creating your account…'}
-                      </p>
-                      <p className="text-[12.5px] text-text-tertiary">
-                        Just a moment while we set things up.
-                      </p>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+                {/* Close button — always available (X dismisses the modal). */}
+                <Dialog.Close asChild>
+                  <button
+                    type="button"
+                    aria-label="Close"
+                    className="absolute right-4 top-4 z-10 flex h-9 w-9 items-center justify-center rounded-full border border-border-subtle bg-bg-base/60 text-text-secondary backdrop-blur-md transition-colors hover:border-border-default hover:text-text-primary"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </Dialog.Close>
 
                 {/* Left — form panel */}
                 <div className="flex w-full flex-col overflow-y-auto md:w-1/2">

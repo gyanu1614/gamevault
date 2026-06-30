@@ -117,7 +117,7 @@ export default function ApplicationStatusPage() {
   // Loading state
   if (authLoading || loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-black">
+      <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">
           <Loader2 className="mx-auto h-12 w-12 animate-spin text-primary" />
           <p className="mt-4 text-sm text-text-secondary">Loading application status...</p>
@@ -129,7 +129,7 @@ export default function ApplicationStatusPage() {
   // Error state
   if (error) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-black">
+      <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">
           <AlertCircle className="mx-auto h-12 w-12 text-error" />
           <p className="mt-4 text-lg text-white">Error</p>
@@ -148,7 +148,7 @@ export default function ApplicationStatusPage() {
   // No application found
   if (!applicationStatus || applicationStatus.status === 'none') {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-black">
+      <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">
           <FileText className="mx-auto h-12 w-12 text-text-tertiary" />
           <p className="mt-4 text-lg text-white">No Application Found</p>
@@ -179,7 +179,7 @@ export default function ApplicationStatusPage() {
       under_review: {
         icon: Clock,
         text: 'Under Review',
-        color: 'text-blue-400 bg-blue-500/10 border-blue-500/20',
+        color: 'text-lime-text bg-lime/10 border-lime-tint-border',
       },
       approved: {
         icon: CheckCircle2,
@@ -384,7 +384,7 @@ export default function ApplicationStatusPage() {
   }
 
   return (
-    <div className="min-h-screen bg-black">
+    <div className="min-h-screen">
       {/* Background */}
       <div className="fixed inset-0 z-0">
         <div className="absolute inset-0 bg-gradient-to-br from-black via-black/95 to-black/90" />
@@ -393,7 +393,7 @@ export default function ApplicationStatusPage() {
       {/* Main Content */}
       <div className="relative z-10">
         {/* Header */}
-        <div className="border-b border-white/5 bg-black/40 backdrop-blur-xl">
+        <div className="border-b border-border-subtle bg-[rgba(10,10,15,0.5)] backdrop-blur-xl">
           <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
             <button
               onClick={() => router.push('/')}
@@ -466,7 +466,7 @@ export default function ApplicationStatusPage() {
                 <div
                   className={`relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full ring-4 ring-black ${
                     status === 'under_review' || application?.reviewed_at
-                      ? 'bg-blue-500/10 text-blue-400'
+                      ? 'bg-lime/10 text-lime-text'
                       : 'bg-white/5 text-text-tertiary'
                   }`}
                 >
@@ -576,7 +576,7 @@ export default function ApplicationStatusPage() {
           />
 
           {/* Modal */}
-          <div className="relative z-10 w-full max-w-md rounded-2xl border border-white/10 bg-black/90 p-6 shadow-2xl">
+          <div className="relative z-10 w-full max-w-md rounded-lg border border-border-default bg-[rgba(10,10,15,0.95)] backdrop-blur-2xl p-6 shadow-2xl">
             <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-error-bg">
               <AlertCircle className="h-6 w-6 text-error" />
             </div>

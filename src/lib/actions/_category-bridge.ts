@@ -16,6 +16,7 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { getCanonicalCategorySlug, type CategoryType } from '@/lib/utils/category-canonical'
+import { DEFAULT_CURRENCY_CONFIG } from '@/lib/types/category-configs'
 
 // ─── slug ↔ metadata.type mapping (single source of truth) ───────────────────
 
@@ -117,6 +118,23 @@ export async function ensureLegacyCategoryRow(
     .single()
 
   if (error || !created) return null
+
+  // V19/P5 — Auto-seed a category_configs row for currency categories.
+  // Without this, new games created via the admin wizard fall back to
+  // the legacy CategoryPageLayout because getCurrencyShell finds no
+  // config. We INSERT ... ON CONFLICT DO NOTHING (Supabase upsert with
+  // ignoreDuplicates) so an existing manually-tuned row is preserved.
+  if (legacyType === 'currency') {
+    await (supabase.from('category_configs') as any).upsert(
+      {
+        game_id: gameId,
+        category_type: 'currency',
+        config: DEFAULT_CURRENCY_CONFIG,
+      },
+      { onConflict: 'game_id,category_type', ignoreDuplicates: true },
+    )
+  }
+
   return (created as { id: string }).id
 }
 

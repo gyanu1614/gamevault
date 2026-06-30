@@ -334,7 +334,7 @@ export default function VaultShieldPage() {
             </p>
 
             <Link
-              href="/marketplace"
+              href="/"
               className="inline-flex items-center gap-2 px-8 py-4 bg-violet-500 hover:bg-violet-600 text-white font-semibold rounded-lg transition-colors"
             >
               Browse Marketplace

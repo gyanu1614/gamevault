@@ -164,7 +164,7 @@ export default function ListingDetailClient({
   }, [])
 
   const onBuy = () => {
-    if (isOwn) { router.push(`/account/listings/${listing.id}/edit`); return }
+    if (isOwn) { router.push(`/sell/edit/${listing.id}`); return }
     startNav(() => router.push(`/checkout/${listing.id}`))
   }
 
@@ -533,7 +533,7 @@ export default function ListingDetailClient({
                       variant="outline"
                       className="h-12 w-full border-amber-500/35 bg-amber-500/10 text-amber-300 hover:bg-amber-500/15"
                     >
-                      <Link href={`/account/listings/${listing.id}/edit`}>Edit your listing</Link>
+                      <Link href={`/sell/edit/${listing.id}`}>Edit your listing</Link>
                     </Button>
                   ) : (
                     <Button

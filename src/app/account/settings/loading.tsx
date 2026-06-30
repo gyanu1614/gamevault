@@ -6,7 +6,7 @@ export default function SettingsLoading() {
         <div className="skeleton h-4 w-40 rounded" />
       </div>
       {/* Profile section */}
-      <div className="rounded-2xl bg-bg-raised border border-border-subtle p-6 space-y-5">
+      <div className="rounded-lg card-frost border border-border-subtle p-6 space-y-5">
         <div className="skeleton h-4 w-28 rounded" />
         <div className="flex items-center gap-4">
           <div className="skeleton h-16 w-16 rounded-full" />
@@ -23,7 +23,7 @@ export default function SettingsLoading() {
         ))}
       </div>
       {/* Security section */}
-      <div className="rounded-2xl bg-bg-raised border border-border-subtle p-6 space-y-5">
+      <div className="rounded-lg card-frost border border-border-subtle p-6 space-y-5">
         <div className="skeleton h-4 w-24 rounded" />
         {Array.from({ length: 2 }).map((_, i) => (
           <div key={i} className="space-y-1.5">

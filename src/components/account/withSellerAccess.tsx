@@ -2,13 +2,17 @@
 
 import { useAuth } from '@/hooks/use-auth'
 import { useRouter } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import BecomeSellerBanner from './BecomeSellerBanner'
 import { Loader2 } from 'lucide-react'
 
 /**
- * HOC that wraps seller-only pages with access control
- * Shows BecomeSellerBanner if user is not an approved seller
+ * HOC that wraps seller-only pages with access control.
+ * Shows BecomeSellerBanner if the user is not an approved seller.
+ *
+ * V22 — Reads seller status straight from useAuth (`isApprovedSeller`,
+ * derived from the fresh profiles.role). No separate seller_applications
+ * query — that was a redundant per-page round-trip.
  */
 export function withSellerAccess<P extends object>(
   Component: React.ComponentType<P>
@@ -16,8 +20,6 @@ export function withSellerAccess<P extends object>(
   return function SellerProtectedPage(props: P) {
     const { user, loading } = useAuth()
     const router = useRouter()
-    const [sellerStatusChecked, setSellerStatusChecked] = useState(false)
-    const [isApprovedSeller, setIsApprovedSeller] = useState(false)
 
     // Redirect if not authenticated
     useEffect(() => {
@@ -26,47 +28,17 @@ export function withSellerAccess<P extends object>(
       }
     }, [user, loading, router])
 
-    // Verify seller status
-    useEffect(() => {
-      const checkSellerStatus = async () => {
-        if (user && !sellerStatusChecked) {
-          // Trust the useAuth hook first
-          if (user.isApprovedSeller === true) {
-            setIsApprovedSeller(true)
-            setSellerStatusChecked(true)
-            return
-          }
-
-          // Fallback: check directly from database
-          const { createClient } = await import('@/lib/supabase/client')
-          const supabase = createClient()
-
-          const { data } = await supabase
-            .from('seller_applications')
-            .select('status')
-            .eq('user_id', user.id)
-            .eq('status', 'approved')
-            .single()
-
-          setIsApprovedSeller(!!data)
-          setSellerStatusChecked(true)
-        }
-      }
-
-      checkSellerStatus()
-    }, [user, sellerStatusChecked])
-
     // Loading state
-    if (loading || !user || !sellerStatusChecked) {
+    if (loading || !user) {
       return (
-        <div className="flex min-h-screen items-center justify-center bg-black">
+        <div className="flex min-h-screen items-center justify-center">
           <Loader2 className="h-8 w-8 animate-spin text-lime-text" />
         </div>
       )
     }
 
     // Not approved seller - show banner
-    if (!isApprovedSeller) {
+    if (!user.isApprovedSeller) {
       return <BecomeSellerBanner />
     }
 

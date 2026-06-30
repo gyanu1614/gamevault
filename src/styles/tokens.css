@@ -23,9 +23,9 @@
 
   /* ── Text ── */
   --color-text-primary:    #F3F3F6;
-  --color-text-secondary:  #9EA0AB;
-  --color-text-tertiary:   #65666F;
-  --color-text-disabled:   #43444C;
+  --color-text-secondary:  #C8CAD2;
+  --color-text-tertiary:   #9698A2;
+  --color-text-disabled:   #6E6F78;
   --color-text-inverse:    #0A0A0F;
   --color-text-footer:     #E2E3E8;
 
@@ -100,4 +100,51 @@
   --duration-fast: 120ms;
   --duration-default: 200ms;
   --duration-slow: 360ms;
+
+  /* ── Background system — ambient corner glows + per-page hero art ──
+     Two-hue ambient: lime top-left + violet bottom-right. Low alpha
+     so it reads as light, not paint. Replaces the old centre-top
+     violet bloom — single-hue washes look flat, dual-hue corners
+     give the page real depth (the move every premium marketplace
+     uses: GameBoost, 2Game, Eldorado). */
+  --glow-tl:   rgba(198, 255, 61, 0.06);
+  --glow-br:   rgba(124, 108, 255, 0.06);
+  --glow-size: 56vmax;
+
+  /* Per-page hero art band. Override --page-hero-image at the route
+     wrapper to swap the image. Scrim + vignette stay identical for
+     brand consistency. */
+  --page-hero-image: none;
+  /* Hero box is intentionally tall — the visible art is the top
+     ~30% and the rest fades into bg-base via --hero-scrim. Making
+     this fluid with clamp() keeps the box aspect in a tight band
+     across laptops → ultrawides so `cover` never produces visible
+     over-zoom or letterboxing.
+       - min  900px : sane floor for 13" laptops
+       - pref 78vw  : scales linearly with viewport
+       - max  1800px: cap so 4K monitors don't get an absurd tower
+     Pair with source images authored at 16:9 (2880×1600) with the
+     focal subject in the center band — see hero-backdrop memory. */
+  --hero-height:     clamp(900px, 78vw, 1800px);
+
+  /* V21/P7.h — Center band darkened so the hero reads as ambient
+     atmosphere everywhere, not just at the edges. Stop 2 (18%) was
+     deliberately light to let art breathe; that was producing the
+     too-bright midband on homepage / account / items. The whole
+     vertical pass now stays ≥ 0.86 opaque. Edges keep their existing
+     vignette treatment. Tune via these stops, not per-page overrides. */
+  --hero-scrim: linear-gradient(
+    to bottom,
+    rgba(10, 10, 15, 0.90) 0%,
+    rgba(10, 10, 15, 0.86) 18%,
+    rgba(10, 10, 15, 0.92) 55%,
+    rgba(10, 10, 15, 0.97) 78%,
+    var(--color-bg-base)   100%
+  );
+
+  --hero-vignette: radial-gradient(
+    110% 90% at 50% 35%,
+    transparent          25%,
+    rgba(10, 10, 15, 0.82) 100%
+  );
 }

@@ -17,9 +17,9 @@
  *   - status counts per filter chip
  */
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { toast } from 'sonner'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -41,6 +41,8 @@ import {
 import { formatDeliveryLabel } from '@/lib/utils/delivery-time'
 
 import { useAuth } from '@/hooks/use-auth'
+import AccountPageHeader from '@/components/account/AccountPageHeader'
+import { getMyStorePaused } from '@/lib/actions/seller-presence'
 import { useSellerListings } from '@/hooks/use-seller-listings'
 import { ListingStatus } from '@/lib/api/seller-compatible'
 import { canSellerPublish, type SellerStatus } from '@/lib/utils/seller-status'
@@ -51,7 +53,6 @@ import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Combobox } from '@/components/ui/combobox'
 import { NumberField } from '@/components/ui/number-field'
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent,
   DropdownMenuItem, DropdownMenuSeparator,
@@ -100,15 +101,6 @@ const SORT_OPTIONS: { value: SortBy; label: string }[] = [
   { value: 'sales', label: 'Best selling' },
 ]
 
-const CATEGORY_OPTIONS = [
-  { value: 'all', label: 'All categories' },
-  { value: 'currency', label: 'Currency' },
-  { value: 'items', label: 'Items' },
-  { value: 'accounts', label: 'Accounts' },
-  { value: 'top-up', label: 'Top Up' },
-  { value: 'boosting', label: 'Boosting' },
-]
-
 const STATUS_TABS: { value: FilterStatus; label: string }[] = [
   { value: 'all', label: 'All' },
   { value: 'active', label: 'Active' },
@@ -150,7 +142,45 @@ function MetricCell({
   )
 }
 
-function StatusBadge({ status }: { status: string }) {
+// V21/P7.ai — The 4 Offers sections. A listing's category type
+// (metadata.type) maps to one of these; slug is a fallback for rows
+// whose metadata is missing. Order matches the sidebar.
+type OfferType = 'currency' | 'items' | 'accounts' | 'top-up'
+const OFFER_TABS: { type: OfferType; label: string }[] = [
+  { type: 'currency', label: 'Currency' },
+  { type: 'items', label: 'Items' },
+  { type: 'accounts', label: 'Accounts' },
+  { type: 'top-up', label: 'Top Ups' },
+]
+function classifyOfferType(
+  metaType: string | undefined,
+  slug: string | undefined,
+): OfferType {
+  const t = (metaType || '').toLowerCase()
+  if (t === 'currency') return 'currency'
+  if (t === 'account') return 'accounts'
+  if (t === 'top_up') return 'top-up'
+  if (t === 'items' || t === 'item') return 'items'
+  // Slug fallback when metadata.type is absent.
+  const s = (slug || '').toLowerCase()
+  if (/vbuck|robux|coin|gold|gem|currenc|points?|credits?/.test(s)) return 'currency'
+  if (/account/.test(s)) return 'accounts'
+  if (/top-?up/.test(s)) return 'top-up'
+  return 'items'
+}
+
+function StatusBadge({ status, offline = false }: { status: string; offline?: boolean }) {
+  // V21/P7.ae — When the seller's store is in Offline Mode, listings that
+  // would read "Active" show "Offline" instead (amber). Paused/sold/etc.
+  // keep their own status; only live ones are overridden.
+  if (offline && status === 'active') {
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-full border border-warning/30 bg-warning-bg px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-warning">
+        <span className="h-1.5 w-1.5 rounded-full bg-warning" />
+        Offline
+      </span>
+    )
+  }
   const cfg: Record<string, { dot: string; text: string; bg: string; border: string; label: string }> = {
     active:           { dot: 'bg-success', text: 'text-success', bg: 'bg-success-bg', border: 'border-success/30', label: 'Active' },
     paused:           { dot: 'bg-warning', text: 'text-warning', bg: 'bg-warning-bg', border: 'border-warning/30', label: 'Paused' },
@@ -186,10 +216,28 @@ function ListingsContent() {
   const { user, loading: authLoading } = useAuth()
   const router = useRouter()
 
+  // V21/P7.ai — Active Offers section from ?type= (currency by default).
+  // The sidebar sub-items + the tab row both drive this param.
+  const searchParams = useSearchParams()
+  const activeOfferType: OfferType = (() => {
+    const t = (searchParams.get('type') || '').toLowerCase()
+    return OFFER_TABS.some((o) => o.type === t) ? (t as OfferType) : 'currency'
+  })()
+
+  // V21/P7.ae — Seller's Offline Mode state. When paused, active listings
+  // render an "Offline" badge instead of "Active".
+  const [storePaused, setStorePaused] = useState(false)
+  useEffect(() => {
+    if (!user?.id) return
+    let active = true
+    getMyStorePaused().then((v) => { if (active) setStorePaused(v) })
+    return () => { active = false }
+  }, [user?.id])
+
   // Filters
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedStatus, setSelectedStatus] = useState<FilterStatus>('all')
-  const [selectedCategory, setSelectedCategory] = useState<string>('all')
+  const [selectedGame, setSelectedGame] = useState<string>('all')
   const [sortBy, setSortBy] = useState<SortBy>('newest')
 
   // Selection + bulk
@@ -225,6 +273,10 @@ function ListingsContent() {
       game: { name: l.game?.name || 'Unknown', slug: l.game?.slug || '', emoji: l.game?.emoji || '🎮' },
       category: l.category?.name || 'Uncategorized',
       categorySlug: l.category?.slug || '',
+      offerType: classifyOfferType(
+        ((l.category as any)?.metadata)?.type,
+        l.category?.slug,
+      ),
       slug: l.id,
       price: l.price,
       originalPrice: undefined as number | undefined,
@@ -245,11 +297,10 @@ function ListingsContent() {
   }, [dbListings])
 
   const filteredListings = useMemo(() => {
-    let result = [...listings]
-    if (selectedCategory !== 'all') {
-      result = result.filter(
-        (l) => l.categorySlug?.toLowerCase() === selectedCategory || l.category?.toLowerCase() === selectedCategory,
-      )
+    // V21/P7.ai — Always scope to the active Offers section first.
+    let result = listings.filter((l) => l.offerType === activeOfferType)
+    if (selectedGame !== 'all') {
+      result = result.filter((l) => l.game.slug === selectedGame)
     }
     result.sort((a, b) => {
       switch (sortBy) {
@@ -262,16 +313,26 @@ function ListingsContent() {
       }
     })
     return result
-  }, [listings, sortBy, selectedCategory])
+  }, [listings, sortBy, selectedGame, activeOfferType])
 
-  const statusCounts = useMemo(() => ({
-    all:              listings.length,
-    active:           listings.filter((l) => l.status === 'active').length,
-    paused:           listings.filter((l) => l.status === 'paused').length,
-    sold:             listings.filter((l) => l.status === 'sold').length,
-    draft:            listings.filter((l) => l.status === 'draft').length,
-    pending_approval: listings.filter((l) => (l.status as any) === 'pending_approval').length,
-  }), [listings])
+  // Game options for the filter dropdown — derived from the seller's own
+  // listings in the active section, deduped by slug.
+  const gameOptions = useMemo(() => {
+    const seen = new Map<string, string>()
+    for (const l of listings) {
+      if (l.game.slug && !seen.has(l.game.slug)) seen.set(l.game.slug, l.game.name)
+    }
+    return [
+      { value: 'all', label: 'All games' },
+      ...Array.from(seen, ([value, label]) => ({ value, label })),
+    ]
+  }, [listings])
+
+  // Status options reuse the canonical status list.
+  const statusOptions = useMemo(
+    () => STATUS_TABS.map((t) => ({ value: t.value, label: t.label })),
+    [],
+  )
 
   // ── Handlers ──────────────────────────────────────────────────────────────
 
@@ -392,7 +453,7 @@ function ListingsContent() {
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <div className="min-h-screen bg-bg-base pb-24">
+    <div className="min-h-screen pb-24">
       <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
         {isRestricted && (
           <RestrictionBanner
@@ -402,62 +463,43 @@ function ListingsContent() {
           />
         )}
 
-        {/* Header */}
-        <header className="flex flex-col gap-3 pt-6 sm:flex-row sm:items-end sm:justify-between sm:pt-8">
-          <div>
-            <h1 className="text-2xl font-bold text-text-primary sm:text-3xl">My listings</h1>
-            <p className="mt-1 text-sm text-text-secondary">
-              Manage your offers, prices, and stock.
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <Link href="/sell/bulk">
-              <Button variant="outline" className="h-10 gap-1.5 rounded-md border-border-default bg-bg-raised text-text-primary hover:bg-bg-raised-hover hover:border-lime-tint-border">
-                <FileSpreadsheet className="h-4 w-4" />
-                Bulk upload
-              </Button>
-            </Link>
-            {isRestricted ? (
-              <Link href="/account/restrictions">
-                <Button variant="outline" className="h-10 gap-1.5 rounded-md border-warning/40 bg-warning-bg text-warning hover:bg-warning-bg">
-                  <ShieldAlert className="h-4 w-4" />
-                  Selling restricted
+        {/* V21/P7.al — Standard account header (logo + title + actions). */}
+        <AccountPageHeader
+          icon="offers"
+          title={`${OFFER_TABS.find((o) => o.type === activeOfferType)?.label} Offers`}
+          subtitle={`Manage your ${OFFER_TABS.find((o) => o.type === activeOfferType)?.label.toLowerCase()} offers, prices, and stock.`}
+          actions={
+            <>
+              <Link href="/sell/bulk">
+                <Button variant="outline" className="h-10 gap-1.5 rounded-md border-border-default bg-bg-raised text-text-primary hover:bg-bg-raised-hover hover:border-lime-tint-border">
+                  <FileSpreadsheet className="h-4 w-4" />
+                  Bulk upload
                 </Button>
               </Link>
-            ) : (
-              <Link href="/sell/new">
-                <Button className="h-10 gap-1.5 rounded-md bg-lime text-text-inverse font-semibold shadow-elevated hover:bg-lime-hover hover:shadow-glow">
-                  <Plus className="h-4 w-4" />
-                  Create listing
-                </Button>
-              </Link>
-            )}
-          </div>
-        </header>
+              {isRestricted ? (
+                <Link href="/account/restrictions">
+                  <Button variant="outline" className="h-10 gap-1.5 rounded-md border-warning/40 bg-warning-bg text-warning hover:bg-warning-bg">
+                    <ShieldAlert className="h-4 w-4" />
+                    Selling restricted
+                  </Button>
+                </Link>
+              ) : (
+                <Link href="/sell/new">
+                  <Button className="h-10 gap-1.5 rounded-md bg-lime text-text-inverse font-semibold shadow-elevated hover:bg-lime-hover hover:shadow-glow">
+                    <Plus className="h-4 w-4" />
+                    Create listing
+                  </Button>
+                </Link>
+              )}
+            </>
+          }
+        />
 
-        {/* Status tabs */}
-        <Tabs
-          value={selectedStatus}
-          onValueChange={(v) => setSelectedStatus(v as FilterStatus)}
-          className="mt-5"
-        >
-          <div className="overflow-x-auto scrollbar-hide">
-            <TabsList variant="underline" className="min-w-max">
-              {STATUS_TABS.map((t) => (
-                <TabsTrigger key={t.value} value={t.value} className="gap-1.5">
-                  {t.label}
-                  <span className="rounded-full bg-bg-inset px-1.5 text-[10px] font-semibold text-text-tertiary data-[state=active]:bg-lime-tint-bg data-[state=active]:text-lime-text">
-                    {statusCounts[t.value as keyof typeof statusCounts] ?? 0}
-                  </span>
-                </TabsTrigger>
-              ))}
-            </TabsList>
-          </div>
-        </Tabs>
-
-        {/* Filter row */}
-        <div className="mt-4 flex flex-col gap-3 lg:flex-row lg:items-center">
-          {/* Search */}
+        {/* V22 — Offer-type selection lives in the sidebar now; the in-page
+            tab row + status pill row were removed. Filtering is two dropdowns
+            (Game + Status) plus a sort, with a glassy search. */}
+        <div className="mt-5 flex flex-col gap-3 lg:flex-row lg:items-center">
+          {/* Search — translucent glass, not a flat black box */}
           <div className="relative flex-1 lg:max-w-md">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary" />
             <input
@@ -465,12 +507,12 @@ function ListingsContent() {
               placeholder="Search your listings…"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="h-10 w-full rounded-md border border-border-default bg-bg-raised pl-9 pr-9 text-sm text-text-primary placeholder:text-text-tertiary transition-colors focus:border-lime focus:outline-none focus:ring-2 focus:ring-lime-tint-bg"
+              className="h-10 w-full rounded-md border border-border-subtle card-frost text-text-primary placeholder:text-text-tertiary transition-colors focus:border-lime focus:bg-white/[0.06] focus:outline-none focus:ring-2 focus:ring-lime-tint-bg"
             />
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery('')}
-                className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-text-tertiary hover:bg-bg-raised-hover hover:text-text-primary"
+                className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-text-tertiary hover:bg-white/[0.08] hover:text-text-primary"
                 aria-label="Clear search"
               >
                 <X className="h-3.5 w-3.5" />
@@ -478,19 +520,30 @@ function ListingsContent() {
             )}
           </div>
 
-          {/* Category */}
-          <div className="lg:w-52">
+          {/* Game filter */}
+          <div className="lg:w-48">
             <Combobox
-              value={selectedCategory}
-              onChange={setSelectedCategory}
-              options={CATEGORY_OPTIONS}
-              ariaLabel="Filter by category"
+              value={selectedGame}
+              onChange={setSelectedGame}
+              options={gameOptions}
+              ariaLabel="Filter by game"
+              unsorted
+            />
+          </div>
+
+          {/* Status filter */}
+          <div className="lg:w-44">
+            <Combobox
+              value={selectedStatus}
+              onChange={(v) => setSelectedStatus(v as FilterStatus)}
+              options={statusOptions}
+              ariaLabel="Filter by status"
               unsorted
             />
           </div>
 
           {/* Sort */}
-          <div className="lg:w-52">
+          <div className="lg:w-48">
             <Combobox
               value={sortBy}
               onChange={(v) => setSortBy(v as SortBy)}
@@ -509,7 +562,7 @@ function ListingsContent() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -8 }}
               transition={{ duration: 0.18 }}
-              className="mt-3 flex flex-wrap items-center gap-2 rounded-xl border border-lime-tint-border bg-lime-tint-bg px-3 py-2"
+              className="mt-3 flex flex-wrap items-center gap-2 rounded-lg border border-lime-tint-border bg-lime-tint-bg px-3 py-2"
             >
               <span className="text-xs font-semibold text-lime-text">
                 {selectedListings.size} selected
@@ -594,6 +647,7 @@ function ListingsContent() {
                 key={l.id}
                 listing={l}
                 index={i}
+                storeOffline={storePaused}
                 selected={selectedListings.has(l.id)}
                 onToggleSelect={() => toggleSelectOne(l.id)}
                 editingPrice={editingPrices[l.id]}
@@ -606,7 +660,7 @@ function ListingsContent() {
                 onRequestDelete={() => setConfirmingDeleteId(l.id)}
                 onCopyLink={() => onCopyLink(l)}
                 onView={() => router.push(`/listings/${l.id}`)}
-                onEdit={() => router.push(`/account/listings/${l.id}/edit`)}
+                onEdit={() => router.push(`/sell/edit/${l.id}`)}
                 isUpdating={updatingListings.has(l.id)}
                 isDeleting={deletingListings.has(l.id)}
               />
@@ -706,7 +760,7 @@ function ListingsContent() {
 
 function EmptyState({ searchQuery, isRestricted }: { searchQuery: string; isRestricted: boolean }) {
   return (
-    <div className="mt-6 flex flex-col items-center justify-center gap-3 rounded-2xl border border-border-subtle bg-bg-overlay p-10 text-center">
+    <div className="mt-6 flex flex-col items-center justify-center gap-3 rounded-lg border border-border-subtle card-frost p-10 text-center">
       <div className="flex h-12 w-12 items-center justify-center rounded-full border border-border-default bg-bg-raised">
         <Package className="h-5 w-5 text-text-tertiary" />
       </div>
@@ -772,6 +826,8 @@ interface ListingRowProps {
   onEdit: () => void
   isUpdating: boolean
   isDeleting: boolean
+  /** V21/P7.ae — Seller store offline → active listings show "Offline". */
+  storeOffline?: boolean
 }
 
 function ListingRow(p: ListingRowProps) {
@@ -789,11 +845,11 @@ function ListingRow(p: ListingRowProps) {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.18, delay: Math.min(p.index, 8) * 0.02 }}
       className={cn(
-        'flex flex-col gap-3 rounded-xl border bg-bg-raised p-3 transition-colors sm:p-4',
+        'flex flex-col gap-3 rounded-lg border p-3 backdrop-blur-xl transition-colors sm:p-4',
         'sm:flex-row sm:items-center',
         p.selected
           ? 'border-lime-tint-border bg-lime-tint-bg/40'
-          : 'border-border-subtle hover:border-border-default',
+          : 'border-border-subtle card-frost hover:border-border-default hover:card-frost',
       )}
     >
       {/* Left — checkbox + image + content */}
@@ -810,7 +866,7 @@ function ListingRow(p: ListingRowProps) {
           <img
             src={p.listing.image}
             alt=""
-            className="h-16 w-16 rounded-xl border border-border-default object-cover shadow-sm sm:h-20 sm:w-20"
+            className="h-16 w-16 rounded-lg border border-border-default object-cover shadow-sm sm:h-20 sm:w-20"
           />
           {/* Tiny game-icon overlay (Mercari / Goat pattern) */}
           <div className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full border border-border-default bg-bg-raised shadow-elevated">
@@ -823,7 +879,7 @@ function ListingRow(p: ListingRowProps) {
           <div className="flex flex-wrap items-center gap-1.5">
             {/* Game chip: actual logo + name for accessibility + scanability */}
             <span
-              className="inline-flex items-center gap-1.5 rounded-md border border-border-subtle bg-bg-overlay py-0.5 pl-0.5 pr-2"
+              className="inline-flex items-center gap-1.5 rounded-md border border-border-subtle card-frost py-0.5 pl-0.5 pr-2"
               aria-label={`Game: ${p.listing.game.name}`}
             >
               <GameIcon slug={p.listing.game.slug} emoji={p.listing.game.emoji} size="xs" />
@@ -842,7 +898,7 @@ function ListingRow(p: ListingRowProps) {
               delivery moved to the right metric rail so every listing's
               columns align in a clean vertical stack. */}
           <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-            <StatusBadge status={p.listing.status} />
+            <StatusBadge status={p.listing.status} offline={p.storeOffline} />
             {isLowStock && !isUnlimited && (
               <span
                 className="inline-flex items-center gap-1 rounded-full border border-warning/30 bg-warning-bg px-2 py-0.5 text-[10px] font-medium text-warning"

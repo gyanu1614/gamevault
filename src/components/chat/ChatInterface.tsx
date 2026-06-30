@@ -22,6 +22,9 @@ interface Message {
 interface ChatInterfaceProps {
   conversationId: string
   currentUserId: string
+  /** Used to render the OWN-side bubble avatar. Pass the auth user's
+   *  avatar (DiceBear fallback if unset) — same source as everywhere. */
+  currentUserAvatar?: string
   otherUser?: {
     id: string
     username: string
@@ -66,6 +69,7 @@ interface ChatInterfaceProps {
 export default function ChatInterface({
   conversationId,
   currentUserId,
+  currentUserAvatar,
   otherUser,
   order,
   disputeResolution,
@@ -307,6 +311,16 @@ export default function ChatInterface({
       queryClient.invalidateQueries({ queryKey: ['unread-messages', currentUserId] })
       queryClient.invalidateQueries({ queryKey: ['unread-messages'] })
       queryClient.invalidateQueries({ queryKey: ['seller', 'messages', 'conversations'] })
+
+      // V21/P4.e — If this message is the seller speaking on a 'paid'
+      // order, flip status to 'delivering' atomically server-side. The
+      // server action is guarded so it's a no-op for buyers or for
+      // orders already past 'paid'. Fire-and-forget — failure here
+      // never blocks the chat.
+      if (order && order.status === 'paid' && order.seller?.id === currentUserId) {
+        const { notifySellerActivity } = await import('@/lib/actions/orders')
+        void notifySellerActivity(order.id)
+      }
     } catch (err) {
       console.error('Error sending message:', err)
       // Remove optimistic message on error
@@ -340,7 +354,7 @@ export default function ChatInterface({
   }
 
   return (
-    <div className={`flex h-full flex-col bg-black ${className}`}>
+    <div className={`flex h-full flex-col bg-bg-raised ${className}`}>
       {/* Admin View: Party Indicators */}
       {isAdmin && order?.buyer && order?.seller && (
         <div className="bg-gradient-to-r from-gray-500/10 via-black to-lime/10 border-b border-border-subtle px-4 py-2">
@@ -385,10 +399,48 @@ export default function ChatInterface({
       )}
 
 
+      {/* V21/P5.c — Compact party header. Avatar + name + slim
+          subtitle with order id + item title. Sits above the messages
+          area so the chat reads as a real conversation surface and
+          not just a stream of bubbles. */}
+      {otherUser && (
+        <div className="flex items-center gap-3 border-b border-border-subtle px-4 py-3">
+          <div className="relative flex-shrink-0">
+            {otherUser.avatar_url ? (
+              <img
+                src={otherUser.avatar_url}
+                alt=""
+                className="h-9 w-9 rounded-full object-cover ring-1 ring-white/10"
+              />
+            ) : (
+              <span className="grid h-9 w-9 place-items-center rounded-full bg-bg-overlay text-[12px] font-bold text-text-secondary ring-1 ring-white/10">
+                {otherUser.username?.charAt(0).toUpperCase()}
+              </span>
+            )}
+            <span
+              aria-hidden
+              className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-green-400 ring-2 ring-bg-raised"
+            />
+          </div>
+          <div className="min-w-0 flex-1 leading-tight">
+            <div className="flex items-center gap-1.5 text-[13.5px] font-bold text-text-primary">
+              {otherUser.username ?? 'User'}
+            </div>
+            {order && (
+              <div className="mt-0.5 truncate text-[11.5px] text-text-secondary">
+                Order #{(order.order_number ?? '').replace(/^GV-/, 'DM-') || order.id.slice(0, 8).toUpperCase()}
+                {order.listing?.title ? ` · ${order.listing.title}` : ''}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Messages List */}
       <MessageList
         messages={messages}
         currentUserId={currentUserId}
+        currentUserAvatar={currentUserAvatar}
         otherUser={otherUser}
         order={order}
         disputeResolution={disputeResolution}

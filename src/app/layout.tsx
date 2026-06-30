@@ -1,11 +1,12 @@
 import type { Metadata } from 'next'
-import { Inter, JetBrains_Mono } from 'next/font/google'
+import { Inter, JetBrains_Mono, Red_Hat_Display, Manrope } from 'next/font/google'
 import './globals.css'
 import { Providers } from '@/components/providers'
 import { LayoutWrapper } from '@/components/layout-wrapper'
 import { Toaster } from 'sonner'
 import RecentPurchaseToast, { DailyStatsToast } from '@/components/marketplace/RecentPurchaseToast'
 import { Analytics } from "@vercel/analytics/next"
+import { AllHeroesPreload } from '@/components/hero-backdrop'
 
 // Inter — single font for everything (display + body), same approach as Eldorado/G2G
 // Exposed as both --font-display (new) and --font-inter (legacy alias for existing components)
@@ -13,6 +14,26 @@ const inter = Inter({
   subsets: ['latin'],
   weight: ['400', '500', '600', '700', '800', '900'],
   variable: '--font-inter',
+  display: 'swap',
+})
+
+// Manrope — V21/P2.c clean geometric sans used by Eldorado / Linear.
+// Exposed as --font-manrope; opted-in per-page via fontFamily inline
+// style (e.g. on the order detail page).
+const manrope = Manrope({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700', '800'],
+  variable: '--font-manrope',
+  display: 'swap',
+})
+
+// Red Hat Display — V20/P19 trial display face for marketing sections.
+// Exposed as --font-rhd; opt in via `font-[var(--font-rhd)]` or by
+// applying the .font-rhd utility class.
+const redHatDisplay = Red_Hat_Display({
+  subsets: ['latin'],
+  weight: ['400', '500', '700', '800', '900'],
+  variable: '--font-rhd',
   display: 'swap',
 })
 
@@ -65,8 +86,15 @@ export default function RootLayout({
       className="dark"
       suppressHydrationWarning
     >
-      <head />
-      <body className={`${inter.variable} ${jetbrainsMono.variable} font-sans antialiased`} style={{ '--font-display': 'var(--font-inter)', '--font-body': 'var(--font-inter)' } as React.CSSProperties}>
+      <head>
+        {/* V21/P7.g — Warm-preload every hero AVIF at app load so
+            SPA navigations between routes show their backdrops
+            instantly without a black flash. fetchpriority=low so
+            this doesn't compete with the LCP hero on the landing
+            page. */}
+        <AllHeroesPreload />
+      </head>
+      <body className={`${inter.variable} ${redHatDisplay.variable} ${manrope.variable} ${jetbrainsMono.variable} font-sans antialiased`} style={{ '--font-display': 'var(--font-inter)', '--font-body': 'var(--font-inter)' } as React.CSSProperties}>
         <Providers>
           <LayoutWrapper>{children}</LayoutWrapper>
           {/* V17c — react-aria-inspired styling: subtle glass surface

@@ -135,7 +135,7 @@ export default function ItemCard({
         // so it matches the filter chips above. The page is bg-base
         // (near-black); cards on bg-overlay (subtle grey) now visibly
         // lift off the background instead of melting into it.
-        'group relative flex cursor-pointer flex-col overflow-hidden rounded-2xl border border-border-default bg-bg-overlay',
+        'group relative flex cursor-pointer flex-col overflow-hidden rounded-lg border border-border-default bg-bg-overlay',
         'transition-[transform,border-color,box-shadow] duration-150',
         'hover:-translate-y-0.5 hover:border-lime-tint-border hover:shadow-[0_18px_40px_-14px_rgba(0,0,0,0.6)]',
       )}
@@ -190,7 +190,7 @@ export default function ItemCard({
               // shouldn't be funneled to the listing detail page; they go
               // to edit.
               <Link
-                href={`/account/listings/${offer.id}/edit`}
+                href={`/sell/edit/${offer.id}`}
                 onClick={stop}
                 className="pointer-events-auto relative z-10 inline-flex shrink-0 items-center gap-1.5 rounded-full border border-amber-500/35 bg-amber-500/10 px-3 py-1.5 text-[11.5px] font-bold uppercase tracking-wider text-amber-300 transition-colors hover:bg-amber-500/15"
               >
@@ -201,7 +201,7 @@ export default function ItemCard({
         </div>
 
         {/* Right column — square thumbnail */}
-        <div className="relative z-10 aspect-square h-full w-[88px] shrink-0 self-start overflow-hidden rounded-xl bg-bg-base sm:w-[110px]">
+        <div className="relative z-10 aspect-square h-full w-[88px] shrink-0 self-start overflow-hidden rounded-md bg-bg-base sm:w-[110px]">
           {offer.imageUrl ? (
             /* eslint-disable-next-line @next/next/no-img-element */
             <img

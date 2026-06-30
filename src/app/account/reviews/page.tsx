@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import { useAuth } from '@/hooks/use-auth'
+import AccountPageHeader from '@/components/account/AccountPageHeader'
 import { useSellerReviews } from '@/hooks/use-seller-reviews'
 import { getAvatarUrl } from '@/lib/utils/avatar'
 import { motion } from 'framer-motion'
@@ -119,7 +120,7 @@ export default function ReviewsPage() {
 
   if (isLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-black">
+      <div className="flex min-h-screen items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
           <p className="text-text-secondary">Loading reviews...</p>
@@ -129,17 +130,15 @@ export default function ReviewsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-black pb-20">
+    <div className="min-h-screen pb-20">
       <div className="mx-auto w-full max-w-full px-4 sm:px-6 md:max-w-7xl lg:px-8">
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
+        {/* V21/P7.al — Standard account header. */}
+        <AccountPageHeader
+          icon="feedback"
+          title="Feedback"
+          subtitle="Manage your reviews and feedback"
           className="mb-6"
-        >
-          <h1 className="text-2xl font-bold text-white">Feedback</h1>
-          <p className="text-sm text-text-secondary mt-1">Manage your reviews and feedback</p>
-        </motion.div>
+        />
 
         {/* Stats Overview (only for received reviews) */}
         {activeTab === 'received' && user?.isApprovedSeller && (
@@ -147,7 +146,7 @@ export default function ReviewsPage() {
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="rounded-xl border border-white/10 bg-gradient-to-br from-primary/20 to-primary/10 p-4"
+              className="rounded-lg border border-white/10 bg-gradient-to-br from-primary/20 to-primary/10 p-4"
             >
               <div className="text-sm text-text-secondary">Average Rating</div>
               <div className="mt-1 flex items-baseline gap-2">
@@ -160,7 +159,7 @@ export default function ReviewsPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.05 }}
-              className="rounded-xl border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] p-4"
+              className="rounded-lg border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] p-4"
             >
               <div className="text-sm text-text-secondary">Total Reviews</div>
               <div className="mt-1 text-2xl font-bold text-white">{stats.totalReviews}</div>
@@ -170,7 +169,7 @@ export default function ReviewsPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
-              className="rounded-xl border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] p-4"
+              className="rounded-lg border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] p-4"
             >
               <div className="text-sm text-text-secondary">Response Rate</div>
               <div className="mt-1 text-2xl font-bold text-white">{stats.responseRate}%</div>
@@ -180,7 +179,7 @@ export default function ReviewsPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.15 }}
-              className="rounded-xl border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] p-4"
+              className="rounded-lg border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] p-4"
             >
               <div className="text-sm text-text-secondary">5-Star Reviews</div>
               <div className="mt-1 text-2xl font-bold text-white">
@@ -196,8 +195,8 @@ export default function ReviewsPage() {
             onClick={() => setActiveTab('received')}
             className={cn(
               activeTab === 'received'
-                ? "flex items-center gap-2 px-4 py-3 text-sm font-semibold rounded-xl border-2 border-lime bg-gradient-to-br from-lime/20 to-lime/5 text-white shadow-lg shadow-violet-500/20 transition-all"
-                : "flex items-center gap-2 px-4 py-3 text-sm font-medium rounded-xl border border-border-subtle bg-bg-overlay text-text-secondary hover:border-lime-tint-border hover:bg-bg-overlay hover:text-text-secondary transition-all"
+                ? "flex items-center gap-2 rounded-lg border border-lime-tint-border bg-lime-tint-bg px-4 py-2.5 text-sm font-semibold text-lime-text transition-colors"
+                : "flex items-center gap-2 rounded-lg border border-border-subtle card-frost px-4 py-2.5 text-sm font-medium text-text-secondary transition-colors hover:border-lime-tint-border hover:text-text-primary"
             )}
           >
             <TrendingDown className="w-4 h-4" />
@@ -207,8 +206,8 @@ export default function ReviewsPage() {
             onClick={() => setActiveTab('given')}
             className={cn(
               activeTab === 'given'
-                ? "flex items-center gap-2 px-4 py-3 text-sm font-semibold rounded-xl border-2 border-lime bg-gradient-to-br from-lime/20 to-lime/5 text-white shadow-lg shadow-violet-500/20 transition-all"
-                : "flex items-center gap-2 px-4 py-3 text-sm font-medium rounded-xl border border-border-subtle bg-bg-overlay text-text-secondary hover:border-lime-tint-border hover:bg-bg-overlay hover:text-text-secondary transition-all"
+                ? "flex items-center gap-2 rounded-lg border border-lime-tint-border bg-lime-tint-bg px-4 py-2.5 text-sm font-semibold text-lime-text transition-colors"
+                : "flex items-center gap-2 rounded-lg border border-border-subtle card-frost px-4 py-2.5 text-sm font-medium text-text-secondary transition-colors hover:border-lime-tint-border hover:text-text-primary"
             )}
           >
             <TrendingUp className="w-4 h-4" />
@@ -225,7 +224,7 @@ export default function ReviewsPage() {
               animate={{ opacity: 1, y: 0 }}
               onClick={() => setSelectedRating(rating)}
               className={cn(
-                'rounded-xl border p-3 text-left transition-all',
+                'rounded-lg border p-3 text-left transition-all',
                 selectedRating === rating
                   ? 'border-primary bg-gradient-to-br from-primary/20 to-primary/10'
                   : 'border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] hover:border-white/20'
@@ -263,7 +262,7 @@ export default function ReviewsPage() {
 
         {/* Reviews List */}
         {filteredReviews.length === 0 ? (
-          <div className="flex flex-col items-center justify-center rounded-xl border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] p-12 backdrop-blur-md">
+          <div className="flex flex-col items-center justify-center rounded-lg border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] p-12 backdrop-blur-md">
             <Award className="mb-4 h-16 w-16 text-lime-text" />
             <h3 className="mb-2 text-xl font-bold text-white">No reviews found</h3>
             <p className="text-text-secondary">
@@ -278,7 +277,7 @@ export default function ReviewsPage() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.05 }}
-                className="rounded-xl border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] p-6 backdrop-blur-md"
+                className="rounded-lg border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] p-6 backdrop-blur-md"
               >
                 {/* Review Header */}
                 <div className="mb-4 flex items-start justify-between gap-4">

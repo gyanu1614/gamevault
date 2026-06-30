@@ -32,9 +32,19 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { Button } from '@/components/ui/button'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Combobox } from '@/components/ui/combobox'
 import { Checkbox } from '@/components/ui/checkbox'
 import { NumberField } from '@/components/ui/number-field'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import {
   fetchSellGamesForCategory,
   fetchSellTemplate,
@@ -43,11 +53,19 @@ import {
   fetchPublishPolicy,
   fetchPriceGuidance,
   fetchListingForDuplicate,
+  fetchExistingCurrencyListingId,
+  fetchExistingBundleListingId,
   type SellerPublishPolicy,
   type PriceGuidance,
   uploadSellImage,
   type SellGameOption,
 } from '@/lib/actions/sell-wizard'
+// V19/P2 — Pull the per-(game, category) currency config so the seller
+// wizard knows the right unit label (Robux, Orbs, V-Bucks, ...) and
+// minimum-quantity rules. Replaces the static CURRENCY_UNIT_NAMES map.
+import { fetchCategoryConfigBySlug } from '@/lib/actions/admin-category-configs'
+import { normalizePlatformOptions, type CurrencyBundle, type CurrencyConfig, type PlatformFields, type PlatformFieldKind } from '@/lib/types/category-configs'
+import { visiblePlatformKinds } from './PlatformFieldsBlock'
 import type {
   GlobalCategory,
   AttributeTemplateFull,
@@ -63,21 +81,21 @@ const STEPS = [
 ] as const
 
 const DELIVERY_TIMES = [
-  { value: '20min', label: '20 min' },
-  { value: '1hr',   label: '1 hour' },
-  { value: '3hr',   label: '3 hours' },
-  { value: '6hr',   label: '6 hours' },
-  { value: '12hr',  label: '12 hours' },
-  { value: '24hr',  label: '1 day' },
+  { value: '20min', label: '20 Minutes' },
+  { value: '1hr',   label: '1 Hour' },
+  { value: '3hr',   label: '3 Hours' },
+  { value: '6hr',   label: '6 Hours' },
+  { value: '12hr',  label: '12 Hours' },
+  { value: '24hr',  label: '1 Day' },
 ]
 
 // V13 — Currency sellers think in minutes. Tighter preset grid.
 const DELIVERY_TIMES_CURRENCY = [
   { value: 'instant', label: 'Instant' },
-  { value: '5min',    label: '5 min' },
-  { value: '15min',   label: '15 min' },
-  { value: '30min',   label: '30 min' },
-  { value: '1hr',     label: '1 hour' },
+  { value: '5min',    label: '5 Minutes' },
+  { value: '15min',   label: '15 Minutes' },
+  { value: '30min',   label: '30 Minutes' },
+  { value: '1hr',     label: '1 Hour' },
   { value: 'custom',  label: 'Custom' },
 ]
 
@@ -94,6 +112,9 @@ interface WizardSnapshot {
   gameId: string | null
   region: string
   platform: string
+  // V19/P24/P3 — Bundle id for fixed-bundle currency listings.
+  // Optional so old snapshots still parse.
+  bundleId?: string
   title: string
   description: string
   price: string
@@ -312,6 +333,15 @@ export default function SellWizard({
   // both are set; surfaced in the Pricing sub-card so the seller sees the
   // going rate before they price too high/low.
   const [priceGuidance, setPriceGuidance] = useState<PriceGuidance | null>(null)
+  // V19/P2 — Per-(game, category) currency config (unit_label, min_quantity,
+  // glyph, ...). Null until both selectedGame and selectedCategory resolve
+  // AND the category is currency. Used by Step 3 thumbnail label and Step 4
+  // Pricing / Stock cards.
+  const [currencyConfig, setCurrencyConfig] = useState<CurrencyConfig | null>(null)
+  // V19/P16 — Track config fetch so Step 3 + 4 can suppress the
+  // "Currency" placeholder flicker that used to flash before the
+  // admin-set unit_label ("Tokens", "Robux") arrived.
+  const [currencyConfigLoading, setCurrencyConfigLoading] = useState(false)
 
   const [games, setGames] = useState<SellGameOption[]>([])
   const [gamesLoading, setGamesLoading] = useState(false)
@@ -325,6 +355,23 @@ export default function SellWizard({
   const [fieldValues, setFieldValues] = useState<Record<string, unknown>>({})
   const [region, setRegion] = useState<string>('')
   const [platform, setPlatform] = useState<string>('')
+  // V19/P3 — Device is the third platform-style field (iOS / Android /
+  // PC client, etc.). Driven by the per-category currencyConfig
+  // platform_fields, NOT the game-level settings. Empty string when
+  // the field isn't enabled for the chosen game.
+  const [device, setDevice] = useState<string>('')
+  // V19/P24/P3 — Bundle id for fixed-bundle currencies. Empty when
+  // the currency is in flexible mode (no bundles defined for this
+  // game) or the seller hasn't picked one yet. Required to publish
+  // when bundles exist; gated in canPublish.
+  const [bundleId, setBundleId] = useState<string>('')
+  // V19/P24/P6 — Existing-listing id for the current (game, bundle,
+  // region) combo. Surfaced as an inline banner above the bundle
+  // picker so the seller can jump straight into edit mode instead of
+  // filling the whole form and failing at publish. Empty string =
+  // "no dup". The check is best-effort; the publish-time guard is the
+  // hard enforcement.
+  const [existingBundleListingId, setExistingBundleListingId] = useState<string>('')
 
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
@@ -353,19 +400,27 @@ export default function SellWizard({
   //     the start.
   //   - step changes:  smooth scroll to the same target.
   // The offset (-128) leaves a generous gap below the floating homepage navbar.
+  // V19/P13 — Skip the auto-scroll on first paint AND on the edit-mode
+  // initialization jump (when the wizard mounts on step 1, hydrates the
+  // listing data, then programmatically jumps to step 3). Both cases
+  // are "first arrival" — the user wants to see the top of the page,
+  // not the wizard card mid-screen. User-driven step changes after that
+  // still scroll smooth so the new step's header is in view.
   const WIZARD_TOP_OFFSET = 128
   const didMountRef = useRef(false)
+  const initialEditJumpDoneRef = useRef(!isEditMode)
   useEffect(() => {
+    if (!didMountRef.current) {
+      didMountRef.current = true
+      return
+    }
+    if (!initialEditJumpDoneRef.current) {
+      initialEditJumpDoneRef.current = true
+      return
+    }
     if (!cardRef.current) return
     const top =
       cardRef.current.getBoundingClientRect().top + window.scrollY - WIZARD_TOP_OFFSET
-    if (!didMountRef.current) {
-      didMountRef.current = true
-      // Instant on initial paint so the user doesn't see a scroll animation
-      // from a wrong starting position.
-      window.scrollTo({ top, behavior: 'auto' })
-      return
-    }
     window.scrollTo({ top, behavior: 'smooth' })
   }, [step])
 
@@ -400,6 +455,7 @@ export default function SellWizard({
         typeof snap.step === 'number' && snap.step >= 1 && snap.step <= 3 ? snap.step : null
       setRegion(snap.region ?? '')
       setPlatform(snap.platform ?? '')
+      setBundleId(snap.bundleId ?? '')
       setTitle(snap.title ?? '')
       setDescription(snap.description ?? '')
       setPrice(snap.price ?? '')
@@ -459,6 +515,7 @@ export default function SellWizard({
       gameId: selectedGame?.game_id ?? null,
       region,
       platform,
+      bundleId,
       title,
       description,
       price,
@@ -547,6 +604,7 @@ export default function SellWizard({
       setDeliveryTime(d.delivery_time ?? '1hr')
       setRegion(d.region ?? '')
       setPlatform(d.platform ?? '')
+      setBundleId((d as any).bundle_id ?? '')
       setFieldValues(d.template_data ?? {})
       setImages(d.images)
       toast.success(isEditMode ? 'Loaded your listing for editing' : 'Pre-filled from your existing listing')
@@ -628,21 +686,6 @@ export default function SellWizard({
     return () => { cancelled = true }
   }, [selectedCategory, selectedGame])
 
-  // V13 — When the seller picks Currency, pre-seed sensible defaults so
-  // they don't have to fix them manually. Currency listings sell in bulk:
-  // 100 min order qty is a friendly floor (Robux, V-Bucks, etc.) and
-  // stock 1000 prevents the seller from accidentally publishing with
-  // qty=1.
-  useEffect(() => {
-    if (selectedCategory?.slug !== 'currency') return
-    // V14 — Enforce min-100 floor on currency. If the seller picked currency
-    // after typing a smaller min qty (e.g. switched category), bump it up.
-    setMinQuantity((cur) => {
-      const n = parseInt(cur, 10)
-      return !Number.isFinite(n) || n < 100 ? '100' : cur
-    })
-    setQuantity((cur) => (cur === '1' || cur === '' ? '1000' : cur))
-  }, [selectedCategory])
 
   // D2 — Fetch price guidance whenever (game, category) is set. Cheap
   // RPC; runs in parallel with template-load. The Pricing card consumes it.
@@ -658,6 +701,52 @@ export default function SellWizard({
     })
     return () => { cancelled = true }
   }, [selectedCategory, selectedGame])
+
+  // V19/P2 — Fetch currency config when a currency category is chosen so the
+  // wizard can render the unit label (Robux, Orbs, V-Bucks, ...) the admin
+  // configured for this game. Non-currency categories clear it.
+  useEffect(() => {
+    if (!selectedGame || selectedCategory?.slug !== 'currency') {
+      setCurrencyConfig(null)
+      setCurrencyConfigLoading(false)
+      return
+    }
+    let cancelled = false
+    setCurrencyConfigLoading(true)
+    fetchCategoryConfigBySlug(selectedGame.game_slug, 'currency').then((cfg) => {
+      if (cancelled) return
+      setCurrencyConfig(cfg)
+      setCurrencyConfigLoading(false)
+    })
+    return () => { cancelled = true }
+  }, [selectedCategory, selectedGame])
+
+  // V19/P24/P6 — Bundle-dup eager check. Fires whenever the seller
+  // changes their bundle pick or region. Skipped in edit mode (we
+  // ARE the existing listing). The result drives the inline banner
+  // above the bundle picker. Errors are silent — the publish-time
+  // guard catches anything we miss here.
+  useEffect(() => {
+    if (isEditMode) {
+      setExistingBundleListingId('')
+      return
+    }
+    if (!selectedGame || !bundleId) {
+      setExistingBundleListingId('')
+      return
+    }
+    let cancelled = false
+    fetchExistingBundleListingId(
+      selectedGame.game_id,
+      bundleId,
+      region || null,
+      platform || null,
+    )
+      .then((res) => {
+        if (!cancelled) setExistingBundleListingId(res?.id ?? '')
+      })
+    return () => { cancelled = true }
+  }, [selectedGame, bundleId, region, platform, isEditMode])
 
   // Force allowed delivery mode
   useEffect(() => {
@@ -719,7 +808,8 @@ export default function SellWizard({
     if (step === 2) {
       if (!selectedGame) return false
       if (selectedGame.requires_region && !region) return false
-      if (selectedGame.requires_platform && !platform) return false
+      // V19/P24/P7.b — Platform gate moved to Step 3 (canPublish);
+      // the Step-1 picker is gone so we can't gate here anymore.
       return true
     }
     return false
@@ -740,12 +830,24 @@ export default function SellWizard({
     const q = parseInt(quantity, 10)
     if (!Number.isFinite(q) || q < 1) return false
     if (!agreeSellerRules || !agreeTos) return false
+    // V19/P3 — Currency platform fields. Any enabled+non-empty kind on the
+    // currency config must be picked before the seller can publish. We
+    // read straight from the same currencyConfig the form does so admin
+    // edits propagate without an extra source of truth.
+    if (isCurrency) {
+      const kinds = visiblePlatformKinds(currencyConfig?.platform_fields)
+      const vals: Record<'region' | 'platform' | 'device', string> = { region, platform, device }
+      if (kinds.some((k) => !vals[k])) return false
+      // V19/P24/P3 — Bundle currencies REQUIRE a bundle pick. Flexible
+      // currencies (no bundles defined) skip this check.
+      if ((currencyConfig?.bundles?.length ?? 0) > 0 && !bundleId) return false
+    }
     // D1 — block clicking Create Offer when the seller is at their tier's
     // active-listing cap. The server enforces this too, but blocking the
     // button avoids the round-trip + error toast.
     if (policy?.at_listing_limit) return false
     return true
-  }, [allRequiredFilled, title, images, price, quantity, agreeSellerRules, agreeTos, policy, selectedCategory])
+  }, [allRequiredFilled, title, images, price, quantity, agreeSellerRules, agreeTos, policy, selectedCategory, currencyConfig, region, platform, device, bundleId])
 
   const handleImages = async (files: FileList | null) => {
     if (!files || files.length === 0) return
@@ -791,13 +893,24 @@ export default function SellWizard({
         price: parseFloat(price),
         original_price: originalPrice ? parseFloat(originalPrice) : null,
         quantity: parseInt(quantity, 10),
-        min_quantity: parseInt(minQuantity, 10) || 1,
+        // V19/P24/P7.b — Min-order-qty input dropped from the wizard;
+        // always send 1. Server-side floors (if any) still apply.
+        min_quantity: 1,
         delivery_method: deliveryMethod,
         delivery_time: deliveryTime,
         images,
         template_data: templateData,
         region: region || null,
         platform: platform || null,
+        // V19/P3 — Device is gated by admin currency config. Until the
+        // listings table has a `device` column + the server zod schema
+        // accepts it, the field is sent for forward-compatibility but
+        // dropped server-side. UI is the source of truth for now.
+        device: device || null,
+        // V19/P24/P3 — Bundle id for fixed-bundle currency listings.
+        // Wired all the way through PublishListingInput → DB column;
+        // empty string becomes null so non-bundle listings stay clean.
+        bundle_id: bundleId || null,
         status: (asDraft ? 'draft' : 'active') as 'draft' | 'active',
       }
       // V14k — Edit mode UPDATES the existing row; publish/duplicate INSERTs
@@ -837,7 +950,7 @@ export default function SellWizard({
   // flash by — they only care about editing the details).
   if (isEditMode && editLoading) {
     return (
-      <main className="mx-auto flex w-full max-w-4xl items-center justify-center px-3 pb-24 pt-24 sm:px-6 sm:pt-28 lg:max-w-5xl lg:pt-32">
+      <main className="mx-auto flex w-full max-w-4xl items-center justify-center px-3 pb-24 pt-20 sm:px-6 sm:pt-20 lg:max-w-5xl lg:pt-20">
         <section
           className="relative flex w-full flex-col items-center gap-4 rounded-3xl border border-border-default bg-bg-raised p-10 shadow-elevated sm:p-14"
           aria-live="polite"
@@ -873,11 +986,13 @@ export default function SellWizard({
     )
   }
 
-  // R12 — main top padding matches WIZARD_TOP_OFFSET so first paint already
-  // shows the right gap before the JS scroll runs; the JS scroll then keeps
-  // that gap consistent on every step transition.
+  // V19/P14 — Top padding reduced so the wizard sits flush below the
+  // scrolled-bar navbar (≈64px). The old pt-24/28/32 left a
+  // 32–64px scroll-up zone above the card; with the auto-scroll
+  // gone (V19/P13), that empty band was reachable as the user could
+  // scroll up into nothing. pt-20 = navbar height + 16px breath.
   return (
-    <main className="mx-auto w-full max-w-4xl px-3 pb-24 pt-24 sm:px-6 sm:pt-28 lg:max-w-5xl lg:pt-32">
+    <main className="mx-auto w-full max-w-4xl px-3 pb-24 pt-20 sm:px-6 sm:pt-20 lg:max-w-5xl lg:pt-20">
       {/* Wizard card — elevated grey surface on bg-bg-base. Per spec §2,
           no lime tint on the wrapper; sub-cards inside go one shade deeper
           (bg-bg-overlay) for visual hierarchy.
@@ -887,6 +1002,31 @@ export default function SellWizard({
         ref={cardRef}
         className="relative isolate overflow-visible rounded-3xl border border-border-default bg-bg-raised p-4 shadow-elevated sm:p-5 lg:p-6"
       >
+        {/* V19/P15.c — Back affordance via shadcn Button (ghost). On
+            step 1 (or any step in edit mode) it leaves the wizard back
+            to the seller's listings. On steps 2/3 of a new listing it
+            walks back one step so the seller can change their
+            category/game pick without losing in-progress data. */}
+        <div className="mb-3 -ml-2 -mt-1 sm:mb-4">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              if (isEditMode || step === 1) {
+                router.push('/account/listings')
+                return
+              }
+              setStep((s) => (s > 1 ? ((s - 1) as 1 | 2 | 3) : s))
+            }}
+            className="gap-1 text-text-tertiary hover:text-text-primary"
+            aria-label={isEditMode || step === 1 ? 'Back to listings' : 'Back to previous step'}
+          >
+            <ChevronLeft className="h-4 w-4" />
+            {isEditMode || step === 1 ? 'Back to Listings' : 'Back'}
+          </Button>
+        </div>
+
         <StepBar
           step={step}
           // V14o — In edit mode the seller can't change category/game on
@@ -908,12 +1048,18 @@ export default function SellWizard({
               // subtitle below. Other categories keep "Game Category" as
               // a single line.
               const isCurrency = selectedCategory?.slug === 'currency'
-              const unit =
-                CURRENCY_UNIT_NAMES[selectedGame.game_slug] ?? 'Currency'
+              // V19/P7 — Single-line "{Game} {unit}" for currency
+              // listings ("Blade Ball Tokens", "Roblox Robux"). Drops
+              // the separate FOR {GAME} subtitle line. Non-currency
+              // keeps the existing "{Game} {Category}" format.
+              // V19/P16 — While the currency config is still fetching,
+              // suppress the title so we don't render "Currency" and
+              // then flicker to the admin-set unit_label ("Tokens").
+              const unit = currencyConfig?.unit_label
+              const showTitle = !isCurrency || !currencyConfigLoading
               const title = isCurrency
-                ? unit
+                ? `${selectedGame.game_name} ${unit ?? ''}`.trim()
                 : `${selectedGame.game_name} ${selectedCategory?.name ?? 'Listing'}`
-              const subtitle = isCurrency ? selectedGame.game_name : null
               return (
                 <div className="flex items-center justify-center gap-3 text-left sm:gap-4">
                   {selectedGame.game_logo_url ? (
@@ -928,13 +1074,16 @@ export default function SellWizard({
                   )}
                   <div className="min-w-0">
                     <h1 className="text-xl font-bold leading-tight tracking-tight text-text-primary sm:text-2xl lg:text-[28px]">
-                      {title}
+                      {/* V19/P16 — Render a width-stable skeleton while
+                          the currency config is loading. Same line
+                          height as the real title so the row doesn't
+                          jump when the data arrives. */}
+                      {showTitle ? (
+                        title
+                      ) : (
+                        <span className="inline-block h-[1em] w-48 animate-pulse rounded-md bg-bg-overlay align-middle" />
+                      )}
                     </h1>
-                    {subtitle && (
-                      <p className="mt-0.5 text-[12px] font-medium uppercase tracking-[0.14em] text-text-tertiary sm:text-[13px]">
-                        for {subtitle}
-                      </p>
-                    )}
                   </div>
                 </div>
               )
@@ -982,15 +1131,30 @@ export default function SellWizard({
                 games={games}
                 loading={gamesLoading}
                 selected={selectedGame}
-                onSelect={(g) => {
+                onSelect={async (g) => {
+                  // V19/P9 — One currency listing per (seller, game). If the
+                  // seller already has one, redirect to its edit page instead
+                  // of letting them advance to Step 3 and discover the
+                  // collision at publish-time. Non-currency categories skip
+                  // the check entirely (zero overhead for items / accounts /
+                  // boosting / top-up).
+                  if (selectedCategory?.slug === 'currency' && !isEditMode) {
+                    const existing = await fetchExistingCurrencyListingId(g.game_id)
+                    if (existing?.id) {
+                      toast.success(
+                        `You already have a currency listing for ${g.game_name}. Opening it for editing…`,
+                      )
+                      router.push(`/sell/edit/${existing.id}`)
+                      return
+                    }
+                  }
+
                   setSelectedGame(g)
                   rememberGame(g.game_id)
-                  // R8: auto-advance to Step 3 unless this (game, category)
-                  // needs region or platform input first — in that case the
-                  // pickers render inline and the user uses Continue.
-                  if (!g.requires_region && !g.requires_platform) {
-                    setStep(3)
-                  }
+                  // V19/P24/P7.b — Region + Platform both live in Step 3
+                  // now (driven by currency platform_fields), so picking
+                  // the game always jumps straight to Details.
+                  setStep(3)
                 }}
                 filter={gameFilter}
                 onFilter={setGameFilter}
@@ -1050,6 +1214,16 @@ export default function SellWizard({
                   categorySlug={selectedCategory.slug}
                   gameName={selectedGame.game_name}
                   gameSlug={selectedGame.game_slug}
+                  unitLabel={currencyConfig?.unit_label ?? null}
+                  unitLabelLoading={currencyConfigLoading}
+                  granularity={currencyConfig?.quantity_granularity ?? 'unit'}
+                  platformFields={currencyConfig?.platform_fields ?? null}
+                  region={region} onRegion={setRegion}
+                  platform={platform} onPlatform={setPlatform}
+                  device={device} onDevice={setDevice}
+                  bundles={currencyConfig?.bundles ?? null}
+                  bundleId={bundleId} onBundleId={setBundleId}
+                  existingBundleListingId={existingBundleListingId}
                 />
                 <TermsCard
                   agreeSellerRules={agreeSellerRules}
@@ -1428,27 +1602,10 @@ function Step2Game({
         </div>
       )}
 
-      {selected?.requires_region && selected.available_regions.length > 0 && (
-        <div className="rounded-2xl border border-border-default bg-bg-raised p-4">
-          <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-text-secondary">Region</div>
-          <PillRow
-            options={selected.available_regions.map((r) => ({ value: r.code, label: r.name }))}
-            value={region}
-            onChange={onRegion}
-          />
-        </div>
-      )}
-
-      {selected?.requires_platform && selected.available_platforms.length > 0 && (
-        <div className="rounded-2xl border border-border-default bg-bg-raised p-4">
-          <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-text-secondary">Platform</div>
-          <PillRow
-            options={selected.available_platforms.map((p) => ({ value: p, label: p }))}
-            value={platform}
-            onChange={onPlatform}
-          />
-        </div>
-      )}
+      {/* V19/P24/P7.b — Game-step Region + Platform pickers removed.
+          Both live in Step 3 (Details) now, driven by the per-(game,
+          currency) platform_fields admin config. Picking a game on
+          this step always jumps straight to Details. */}
     </div>
   )
 }
@@ -1581,11 +1738,14 @@ function FieldCard({
     ? inner.get(currentValue) ?? []
     : []
 
-  // Inside the SubCard wrapper now, top-level fields are flat rows;
-  // nested fields get a subtle inset to indicate the parent-child chain.
+  // V19/P20 — Inside the SubCard wrapper, top-level fields are flat rows;
+  // nested (depth > 0) fields previously used bg-bg-inset which made them
+  // read as a black hole sitting inside the lime rail. Switching to a
+  // slightly raised tone (bg-bg-overlay/30) keeps the hierarchy cue
+  // without the heavy contrast.
   const shell = depth === 0
     ? ''
-    : 'rounded-xl border border-border-subtle bg-bg-inset p-4'
+    : 'rounded-xl border border-border-subtle bg-bg-overlay/30 p-4'
 
   return (
     <motion.div
@@ -1631,12 +1791,12 @@ function FieldCard({
             transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
             className="overflow-hidden"
           >
-            {/* Sub-field group — a thin lime left rail signals "this group
-                depends on the parent". A tiny uppercase eyebrow above shows
-                which parent value triggered it. R10 — replaces the
-                'because you chose X' chip. */}
+            {/* V19/P20 — Sub-field group. Lime left rail + a tiny
+                eyebrow signal "this group depends on the parent". The
+                eyebrow now sits on its own line above the cards with
+                a clear breath, not crammed against them. */}
             <div className="mt-4 border-l-2 border-lime-tint-border pl-4">
-              <div className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-text-tertiary">
+              <div className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-text-tertiary">
                 <span className="text-text-secondary">{attribute.name}:</span>{' '}
                 <span className="text-lime-text">{labelFor(attribute, currentValue as string)}</span>
               </div>
@@ -1878,17 +2038,72 @@ interface Step4Props {
   /** V13 — Used to label the currency banner ("Roblox Robux — title and image…"). */
   gameName?: string
   gameSlug?: string
+  /**
+   * V19/P2 — Admin-configured unit label for currency listings
+   * ("Robux", "V-Bucks", "Orbs", "Crystals"). Null when not a currency
+   * category or when the config is still loading. Used to render the
+   * confirmation banner, "Price per X" label, and the suffix shown
+   * inside the Total / Min Offer quantity inputs.
+   */
+  unitLabel?: string | null
+  /** V19/P16 — True while the fetch for `unitLabel` is in flight. */
+  unitLabelLoading?: boolean
+  /**
+   * V19/P7 — Quantity granularity from admin config. Drives the
+   * suffix on "Price per K" (vs "Price per Tokens"), and the suffix
+   * inside the Stock card inputs. Defaults to 'unit' so non-currency
+   * categories don't need to know.
+   */
+  granularity?: 'unit' | 'thousand' | 'million'
+  /**
+   * V19/P3 — Per-(game, currency) platform-style requirements. Each
+   * enabled kind gets a Select in the publish card. Null when not a
+   * currency category or when admin hasn't configured any platform
+   * fields for this game.
+   */
+  platformFields?: PlatformFields | null
+  region: string; onRegion: (v: string) => void
+  platform: string; onPlatform: (v: string) => void
+  device: string; onDevice: (v: string) => void
+  /**
+   * V19/P24/P3 — Bundle list from admin currency config. When at
+   * least one bundle exists, the seller MUST pick one — the wizard
+   * switches the Stock card from free-quantity to "how many of this
+   * bundle" and the price label becomes "Price per {bundle.name}".
+   * Null/empty = flexible-quantity currency (Robux-style).
+   */
+  bundles?: CurrencyBundle[] | null
+  bundleId: string
+  onBundleId: (v: string) => void
+  /**
+   * V19/P24/P6 — Listing id (if any) of a seller-owned bundle that
+   * already exists for the current (game, bundle, region) combo.
+   * Renders an inline "you already list this" banner above the
+   * bundle picker so the seller can jump straight to edit instead
+   * of failing at publish.
+   */
+  existingBundleListingId?: string
 }
 
-// V13 — Display name for each game's primary currency. Mirrors the
-// server-side map in `publishListing` so the seller-facing banner shows
-// exactly what the buyer will see.
-const CURRENCY_UNIT_NAMES: Record<string, string> = {
-  roblox: 'Robux',
-  fortnite: 'V-Bucks',
-  valorant: 'Valorant Points',
-  'genshin-impact': 'Genesis Crystals',
-  'apex-legends': 'Apex Coins',
+/**
+ * V19/P7 — Pick the natural per-unit display for a currency listing:
+ *   • granularity=thousand → "K" (Robux, V-Bucks bulk markets)
+ *   • granularity=million  → "M" (GTA-money, very high-volume tokens)
+ *   • granularity=unit     → the currency's own name ("Robux", "Tokens")
+ *
+ * Used by Step 4 ("Price per K") and the Stock card suffix. Falling
+ * back to "unit" keeps non-currency callers working.
+ */
+function formatPriceSuffix(
+  granularity: 'unit' | 'thousand' | 'million' | undefined,
+  unitLabel: string | null | undefined,
+): string {
+  switch (granularity) {
+    case 'thousand': return 'K'
+    case 'million':  return 'M'
+    case 'unit':
+    default:         return unitLabel || 'unit'
+  }
 }
 
 /**
@@ -1903,7 +2118,11 @@ const CURRENCY_UNIT_NAMES: Record<string, string> = {
  */
 function Step4Publish(p: Step4Props) {
   const priceNum = parseFloat(p.price || '0')
-  const youReceive = priceNum > 0 ? (priceNum * 0.896).toFixed(2) : null
+  // V19/P24/P7.b — Custom-delivery dialog replaces window.prompt().
+  // Local state lives at this scope because the trigger and the
+  // submit handler need to reach `p.setDeliveryTime`.
+  const [customOpen, setCustomOpen] = useState(false)
+  const [customDraft, setCustomDraft] = useState('10')
   const discount = p.originalPrice && priceNum > 0
     ? Math.round(((parseFloat(p.originalPrice) - priceNum) / parseFloat(p.originalPrice)) * 100)
     : 0
@@ -1957,7 +2176,16 @@ function Step4Publish(p: Step4Props) {
           server, so the seller just sees a small confirmation here.
           Label uses the real "Game Currency" pair (e.g. "Roblox Robux"). */}
       {isCurrency && (() => {
-        const unit = (p.gameSlug && CURRENCY_UNIT_NAMES[p.gameSlug]) || 'Currency'
+        // V19/P16 — Hold the banner until the unit label is loaded so
+        // it doesn't flash "Currency" then swap to "Tokens".
+        if (p.unitLabelLoading) {
+          return (
+            <div className="rounded-2xl border border-border-default bg-bg-overlay/40 px-4 py-3">
+              <span className="inline-block h-3.5 w-72 max-w-full animate-pulse rounded-md bg-bg-overlay" />
+            </div>
+          )
+        }
+        const unit = p.unitLabel ?? 'Currency'
         const label = p.gameName ? `${p.gameName} ${unit}` : unit
         return (
           <div className="rounded-2xl border border-lime-tint-border bg-lime-tint-bg/40 px-4 py-3">
@@ -1970,17 +2198,119 @@ function Step4Publish(p: Step4Props) {
         )
       })()}
 
+      {/* V19/P24/P7.b — Listing details (platform / region / device)
+          moved ABOVE the bundle picker. Each enabled kind renders as
+          a tile row with the admin-uploaded logo (when present),
+          matching the bundle picker look. Replaces the prior pair of
+          shadcn Selects. */}
+      {isCurrency && visiblePlatformKinds(p.platformFields).length > 0 && (
+        <SubCard title="Listing details">
+          <PlatformTileRows
+            fields={p.platformFields}
+            values={{ region: p.region, platform: p.platform, device: p.device }}
+            onChange={(kind, v) => {
+              if (kind === 'region') p.onRegion(v)
+              else if (kind === 'platform') p.onPlatform(v)
+              else if (kind === 'device') p.onDevice(v)
+            }}
+          />
+        </SubCard>
+      )}
+
+      {/* V19/P24/P3 — Bundle picker. Visual grid (like Step 3's
+          image_select) instead of a hidden dropdown — admins put
+          art on the bundles, so the seller should see it. Built on
+          Radix RadioGroup for proper keyboard nav + radio semantics,
+          rendered as tiles with thumbnail + name + amount. */}
+      {isCurrency && (p.bundles?.length ?? 0) > 0 && (
+        <SubCard title="Bundle">
+          {/* V19/P24/P6 — Eager dup banner. When the seller already
+              has a listing for the picked bundle+region, surface it
+              now so they can edit instead of filling the whole form
+              and failing at publish. */}
+          {p.existingBundleListingId && (
+            <div className="mb-3 flex items-center justify-between gap-3 rounded-xl border border-warning/40 bg-warning-bg/30 px-4 py-3">
+              <p className="text-[12.5px] text-text-secondary">
+                <span className="font-semibold text-text-primary">
+                  You already list this bundle.
+                </span>{' '}
+                Update the existing listing instead of creating a duplicate.
+              </p>
+              <Link
+                href={`/sell/edit/${p.existingBundleListingId}`}
+                className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-lime-tint-border bg-lime-tint-bg px-3 py-1.5 text-[12.5px] font-semibold text-lime-text transition-colors hover:bg-lime-tint-bg/80"
+              >
+                Update it
+                <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
+            </div>
+          )}
+          {/* V19/P24/P3 — Fixed-width tiles (~128px) in a flex-wrap so
+              tiles pack from the left regardless of count. A single
+              tile sits at its natural width on the left instead of
+              stretching to fill the row. Mobile gets a tighter ~112px
+              tile so two fit side by side on a narrow screen. */}
+          <RadioGroup
+            value={p.bundleId || undefined}
+            onValueChange={p.onBundleId}
+            className="flex flex-wrap gap-2 sm:gap-3"
+            aria-required
+          >
+            {[...(p.bundles ?? [])]
+              .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+              .map((bundle) => {
+                const on = p.bundleId === bundle.id
+                return (
+                  <label
+                    key={bundle.id}
+                    className={cn(
+                      'relative flex w-[112px] cursor-pointer flex-col items-center gap-2 rounded-xl border p-3 transition-colors sm:w-[128px]',
+                      on
+                        ? 'border-lime bg-lime-tint-bg'
+                        : 'border-border-default bg-bg-inset hover:bg-bg-raised-hover',
+                    )}
+                  >
+                    <RadioGroupItem value={bundle.id} className="sr-only" />
+                    {/* V19/P24/P7.b — object-contain so the seller sees
+                        the full bundle art (matches the buyer-page
+                        tile). Background goes darker to give the art
+                        breathing room instead of cropping it. */}
+                    <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-lg bg-bg-overlay sm:h-16 sm:w-16">
+                      {bundle.icon_url ? (
+                        /* eslint-disable-next-line @next/next/no-img-element */
+                        <img src={bundle.icon_url} alt="" className="h-full w-full object-contain p-1" />
+                      ) : (
+                        <ImageIcon className="h-5 w-5 text-text-disabled" />
+                      )}
+                    </div>
+                    <span className="line-clamp-1 w-full text-center text-[12.5px] font-semibold text-text-primary">
+                      {bundle.name || '(unnamed bundle)'}
+                    </span>
+                    {on && (
+                      <span
+                        aria-hidden
+                        className="absolute right-2 top-2 flex h-5 w-5 items-center justify-center rounded-full bg-lime text-text-inverse"
+                      >
+                        <Check className="h-3 w-3" strokeWidth={3} />
+                      </span>
+                    )}
+                  </label>
+                )
+              })}
+          </RadioGroup>
+          <FieldHint className="mt-3">
+            Pick the bundle you’re selling. Buyers see your listing under this exact bundle.
+          </FieldHint>
+        </SubCard>
+      )}
+
       {/* Description (or Instructions for currency) */}
       <SubCard title={isCurrency ? 'Instructions' : 'Description'}>
         <FieldRow>
           <textarea
             value={p.description}
             onChange={(e) => p.setDescription(e.target.value)}
-            placeholder={
-              isCurrency
-                ? 'e.g.\n1. Send me your Roblox username at checkout.\n2. Join my Roblox group (link in confirmation email).\n3. Wait for group payout — usually under 10 minutes.'
-                : 'What’s included, condition, delivery notes, terms…'
-            }
+            placeholder={isCurrency ? 'Type here…' : 'What’s included, condition, delivery notes, terms…'}
             rows={isCurrency ? 6 : 5}
             maxLength={isCurrency ? 1000 : 2000}
             className={cn(inputCls, 'h-32 resize-none overflow-y-auto py-2 sm:h-36', isCurrency && 'sm:h-44')}
@@ -2045,213 +2375,317 @@ function Step4Publish(p: Step4Props) {
       </SubCard>
       )}
 
-      {/* Pricing */}
-      <SubCard title="Pricing">
-        <div className={cn('grid gap-3', !isCurrency && 'sm:grid-cols-2')}>
-          <div className="space-y-1.5">
-            <label className="block text-xs font-semibold uppercase tracking-wider text-text-secondary">
-              {isCurrency ? 'Price per unit' : 'Your price'} <span className="text-error">*</span>
-            </label>
-            <div className="relative">
-              <DollarSign className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary" />
-              <input
-                type="number"
-                value={p.price}
-                onChange={(e) => p.setPrice(e.target.value)}
-                onBlur={() => mark('price')}
-                // V13 — Currency: 4-decimal precision (e.g. 0.0045 / Robux).
-                // Other categories: standard 2-decimal pricing.
-                placeholder={isCurrency ? '0.0045' : '0.00'}
-                step={isCurrency ? '0.0001' : '0.01'}
-                min="0"
-                aria-invalid={priceInvalid || undefined}
-                aria-required
-                className={cn(inputCls, 'pl-9')}
-              />
-            </div>
-            {priceInvalid && (
-              <FieldError>This field is required.</FieldError>
-            )}
-          </div>
-          {/* V13 — Original price (discount badge) hidden for currency. */}
-          {!isCurrency && (
-            <div className="space-y-1.5">
-              <label className="block text-xs font-semibold uppercase tracking-wider text-text-secondary">
-                Original price <span className="font-normal normal-case tracking-normal text-text-disabled">(optional)</span>
-              </label>
-              <div className="relative">
-                <DollarSign className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary" />
-                <input
-                  type="number"
-                  value={p.originalPrice}
-                  onChange={(e) => p.setOriginalPrice(e.target.value)}
-                  placeholder="0.00"
-                  step="0.01"
-                  min="0"
-                  className={cn(inputCls, 'pl-9')}
-                />
+      {/* V19/P24/P7.b — Old Listing details SubCard removed; moved
+          above the Bundle picker as PlatformTileRows. */}
+
+      {/* V19/P24/P7.b — Price + Stock combined into one SubCard.
+          Left column = Price, right column = Stock. Min order qty
+          dropped (bundle mode never needed it; flexible mode falls
+          back to a server-side floor). Fee breakdown removed
+          everywhere — buyers pay the listed price, sellers can do
+          the math from a separate fees page if needed. */}
+      <SubCard title="Pricing & stock">
+        {(() => {
+          const selectedBundle = p.bundleId
+            ? p.bundles?.find((b) => b.id === p.bundleId)
+            : null
+          const isBundleMode = !!selectedBundle
+          // V19/P24/P7.c — Bundles ARE the unit, so the seller reads
+          // "1 unit" / "1,000 units" instead of "1 V-Bucks". Flexible
+          // currencies still use the granularity suffix ("K Tokens"),
+          // non-currency listings keep no suffix.
+          const suffix = isBundleMode
+            ? 'unit'
+            : isCurrency
+              ? formatPriceSuffix(p.granularity, p.unitLabel)
+              : null
+          return (
+            <>
+              <div className="grid gap-4 sm:grid-cols-2">
+                {/* Price */}
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-text-secondary">
+                    Price <span className="text-error">*</span>
+                  </label>
+                  {/* V19/P24/P7.c — NumberField-style trailing
+                      $ USD suffix, matching the Stock card look.
+                      Field on the left, suffix in a divided
+                      right slot. */}
+                  <div
+                    className={cn(
+                      'flex h-10 w-full overflow-hidden rounded-md border border-border-default bg-transparent transition-colors focus-within:border-lime focus-within:ring-2 focus-within:ring-lime-tint-bg',
+                      priceInvalid && 'border-error focus-within:ring-error-bg',
+                    )}
+                  >
+                    <input
+                      type="number"
+                      value={p.price}
+                      onChange={(e) => p.setPrice(e.target.value)}
+                      onBlur={() => mark('price')}
+                      onFocus={(e) => e.currentTarget.select()}
+                      placeholder="Price"
+                      step={isCurrency && !isBundleMode ? '0.0001' : '0.01'}
+                      min="0"
+                      aria-invalid={priceInvalid || undefined}
+                      aria-required
+                      className="flex-1 bg-transparent px-3 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none"
+                    />
+                    <span className="flex items-center gap-1 border-l border-border-default bg-bg-inset px-3 text-sm font-semibold text-text-secondary">
+                      <DollarSign className="h-3.5 w-3.5" /> USD
+                    </span>
+                  </div>
+                  {priceInvalid && (
+                    <FieldError>This field is required.</FieldError>
+                  )}
+                </div>
+                {/* Stock */}
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-text-secondary">
+                    <Package className="mr-1 inline h-3.5 w-3.5" /> Stock
+                  </label>
+                  <NumberField
+                    value={Number.isFinite(parseInt(p.quantity, 10)) ? parseInt(p.quantity, 10) : 1}
+                    onChange={(v) => p.setQuantity(String(v))}
+                    minValue={1}
+                    maxValue={10_000_000}
+                    ariaLabel="Stock"
+                    suffix={suffix}
+                  />
+                </div>
               </div>
-              {discount > 0 && (
-                <FieldHint className="text-success">{discount}% discount badge will show</FieldHint>
+
+              {/* Top-up original price stays — discount badge depends
+                  on it. Renders as a single-column row below. */}
+              {p.categorySlug === 'top-up' && (
+                <div className="mt-4 space-y-1.5">
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-text-secondary">
+                    Original price{' '}
+                    <span className="font-normal normal-case tracking-normal text-text-disabled">
+                      (optional)
+                    </span>
+                  </label>
+                  <div className="relative">
+                    <DollarSign className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary" />
+                    <input
+                      type="number"
+                      value={p.originalPrice}
+                      onChange={(e) => p.setOriginalPrice(e.target.value)}
+                      placeholder="0.00"
+                      step="0.01"
+                      min="0"
+                      className={cn(inputCls, 'pl-9')}
+                    />
+                  </div>
+                  {discount > 0 && (
+                    <FieldHint className="text-success">
+                      {discount}% discount badge will show
+                    </FieldHint>
+                  )}
+                </div>
               )}
-            </div>
-          )}
-        </div>
 
-        {/* D2 — Price guidance band from the last 60 days of sold listings
-            in this (game, category). Only shown when sample_size >= 3
-            (the RPC nulls out the bucket fields otherwise). */}
-        <PriceGuidanceCard
-          guidance={p.priceGuidance}
-          currentPrice={parseFloat(p.price)}
-        />
+              <PriceGuidanceCard
+                guidance={p.priceGuidance}
+                currentPrice={parseFloat(p.price)}
+              />
 
-        <FieldHint className="mt-3">
-          Competitive prices rank better. Original price triggers a discount badge.
-        </FieldHint>
-
-        {youReceive && (
-          <div className="mt-4 rounded-xl border border-border-subtle bg-bg-inset p-3 text-xs">
-            <div className="mb-1.5 font-semibold uppercase tracking-wider text-text-tertiary">Fee breakdown</div>
-            <div className="space-y-1 text-text-secondary">
-              <div className="flex justify-between"><span>Listing price</span><span className="text-text-primary">${priceNum.toFixed(2)}</span></div>
-              <div className="flex justify-between"><span>Platform fee (6.9%)</span><span className="text-error">−${(priceNum * 0.069).toFixed(2)}</span></div>
-              <div className="flex justify-between"><span>Payment processing (3.5%)</span><span className="text-error">−${(priceNum * 0.035).toFixed(2)}</span></div>
-              <div className="mt-1.5 flex justify-between border-t border-border-subtle pt-1.5 font-semibold">
-                <span className="text-text-primary">You receive</span>
-                <span className="text-lime-text">${youReceive}</span>
-              </div>
-            </div>
-          </div>
-        )}
-      </SubCard>
-
-      {/* Stock */}
-      <SubCard title="Stock">
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-1.5">
-            <label className="block text-xs font-semibold uppercase tracking-wider text-text-secondary">
-              <Package className="mr-1 inline h-3.5 w-3.5" /> Available quantity
-            </label>
-            <NumberField
-              value={Number.isFinite(parseInt(p.quantity, 10)) ? parseInt(p.quantity, 10) : 1}
-              onChange={(v) => p.setQuantity(String(v))}
-              minValue={1}
-              // V13 — Currency sellers commonly hold millions of units (e.g.
-              // 22M Robux). Bump the cap to 10M so the field accepts realistic
-              // currency stock levels.
-              maxValue={10_000_000}
-              ariaLabel="Stock"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <label className="block text-xs font-semibold uppercase tracking-wider text-text-secondary">
-              Min order qty
-            </label>
-            <NumberField
-              value={Number.isFinite(parseInt(p.minQuantity, 10)) ? parseInt(p.minQuantity, 10) : (isCurrency ? 100 : 1)}
-              onChange={(v) => p.setMinQuantity(String(v))}
-              // V14 — Currency listings require a 100-unit minimum order. Below
-              // that, transaction fees eat the seller's margin and buyers tend
-              // to misuse the listing as a top-up. Enforced server-side too.
-              minValue={isCurrency ? 100 : 1}
-              maxValue={Math.max(isCurrency ? 100 : 1, parseInt(p.quantity || '1', 10))}
-              ariaLabel="Minimum order quantity"
-            />
-          </div>
-        </div>
-        <FieldHint className="mt-3">
-          {isCurrency
-            ? 'Set stock to what you can actually fulfill. Minimum order for currency listings is 100 units — below that, fees eat your margin.'
-            : 'Set stock to what you can actually fulfill. Min order qty is the smallest amount a buyer can purchase.'}
-        </FieldHint>
+              <FieldHint className="mt-3">
+                {isBundleMode
+                  ? 'Stock counts each individual bundle you can fulfill.'
+                  : isCurrency
+                    ? 'Stock is how many units you can fulfill. Competitive prices rank higher.'
+                    : 'Competitive prices improve your offer’s ranking in the offer list.'}
+              </FieldHint>
+            </>
+          )
+        })()}
       </SubCard>
 
       {/* Delivery */}
       <SubCard title="Delivery">
+        {/* V19/P19 — Radio-card group built on Radix RadioGroup. Each
+            card is a real <RadioGroupItem> wrapped in a label, so the
+            picker gets keyboard arrow navigation, proper ARIA roles
+            (role="radiogroup" / role="radio"), and disabled handling
+            for free. The visual treatment (icon + title + subtitle in
+            a lime-tinted card on select) is preserved. */}
         <div className="space-y-1.5">
-          <label className="block text-xs font-semibold uppercase tracking-wider text-text-secondary">Delivery method</label>
-          <div className="grid gap-2 sm:grid-cols-2">
+          <label className="block text-xs font-semibold uppercase tracking-wider text-text-secondary">
+            Delivery method
+          </label>
+          <RadioGroup
+            value={p.deliveryMethod}
+            onValueChange={(v) => p.setDeliveryMethod(v as 'manual' | 'instant')}
+            className="grid gap-2 sm:grid-cols-2"
+          >
             {(['manual', 'instant'] as const).map((m) => {
               const allowed = p.allowedDeliveryModes.includes(m)
               const on = p.deliveryMethod === m
               const Icon = m === 'manual' ? Clock : Zap
               return (
-                <button
+                <label
                   key={m}
-                  type="button"
-                  disabled={!allowed}
-                  onClick={() => p.setDeliveryMethod(m)}
                   className={cn(
-                    'flex items-start gap-3 rounded-xl border p-3 text-left transition-colors sm:p-4',
+                    'relative flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition-colors sm:p-4',
                     !allowed && 'cursor-not-allowed opacity-40',
                     on && allowed
                       ? 'border-lime bg-lime-tint-bg'
-                      : 'border-border-default bg-bg-inset hover:bg-bg-raised-hover'
+                      : 'border-border-default bg-bg-inset hover:bg-bg-raised-hover',
                   )}
                 >
-                  <Icon className={cn('h-5 w-5 shrink-0', on ? 'text-lime-text' : 'text-text-tertiary')} />
+                  <RadioGroupItem
+                    value={m}
+                    disabled={!allowed}
+                    className="sr-only"
+                  />
+                  <Icon className={cn('h-5 w-5 shrink-0 sm:h-6 sm:w-6', on ? 'text-lime-text' : 'text-text-tertiary')} />
                   <div>
-                    <div className="text-sm font-semibold text-text-primary">
-                      {m === 'manual' ? 'Manual delivery' : 'Instant delivery'}
+                    <div className="text-[15px] font-semibold text-text-primary sm:text-base">
+                      {m === 'manual' ? 'Manual Delivery' : 'Instant Delivery'}
                     </div>
-                    <div className="text-[11px] leading-snug text-text-secondary">
-                      {m === 'manual' ? 'You deliver within your chosen time window.' : 'Codes/credentials sent automatically.'}
+                    <div className="mt-0.5 text-[13px] leading-snug text-text-secondary">
+                      {m === 'manual' ? 'You deliver within your chosen time window.' : 'Codes and credentials sent automatically.'}
                     </div>
                   </div>
-                </button>
+                </label>
               )
             })}
-          </div>
+          </RadioGroup>
         </div>
 
-        {p.deliveryMethod === 'manual' && (
-          <div className="mt-5 space-y-2">
-            <label className="block text-xs font-semibold uppercase tracking-wider text-text-secondary">Delivery window</label>
-            {/* V13 — Currency listings use minute-based presets + custom.
-                Other categories keep the existing hour-based grid. */}
-            <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
-              {(isCurrency ? DELIVERY_TIMES_CURRENCY : DELIVERY_TIMES).map((t) => {
-                const isCustom = t.value === 'custom'
-                const customActive =
-                  isCustom &&
-                  !(isCurrency ? DELIVERY_TIMES_CURRENCY : DELIVERY_TIMES)
-                    .filter((x) => x.value !== 'custom')
-                    .some((x) => x.value === p.deliveryTime)
-                const on = isCustom ? customActive : p.deliveryTime === t.value
-                return (
-                  <button
-                    key={t.value}
+        {p.deliveryMethod === 'manual' && (() => {
+          // V19/P19 — Delivery-window picker built on Radix RadioGroup.
+          // Each preset is a real <RadioGroupItem> (keyboard arrow nav,
+          // proper ARIA roles). The "Custom" preset is split out as a
+          // separate <Button> because it triggers a prompt() rather
+          // than acting as a normal radio selection — semantically a
+          // different action, so it stays outside the radio group.
+          const presets = (isCurrency ? DELIVERY_TIMES_CURRENCY : DELIVERY_TIMES)
+            .filter((t) => t.value !== 'custom')
+          const hasCustomOption = (isCurrency ? DELIVERY_TIMES_CURRENCY : DELIVERY_TIMES)
+            .some((t) => t.value === 'custom')
+          const customActive = hasCustomOption && !presets.some((t) => t.value === p.deliveryTime)
+          return (
+            <div className="mt-5 space-y-2">
+              <label className="block text-xs font-semibold uppercase tracking-wider text-text-secondary">
+                Delivery window
+              </label>
+              <RadioGroup
+                value={customActive ? '' : p.deliveryTime}
+                onValueChange={(v) => p.setDeliveryTime(v)}
+                className="grid grid-cols-3 gap-2 sm:grid-cols-6"
+              >
+                {presets.map((t) => {
+                  const on = p.deliveryTime === t.value
+                  return (
+                    <label
+                      key={t.value}
+                      className={cn(
+                        'flex h-10 cursor-pointer items-center justify-center rounded-xl border text-sm font-medium transition-colors',
+                        on
+                          ? 'border-lime bg-lime-tint-bg text-lime-text'
+                          : 'border-border-default bg-bg-inset text-text-secondary hover:border-border-strong hover:text-text-primary',
+                      )}
+                    >
+                      <RadioGroupItem value={t.value} className="sr-only" />
+                      {t.label}
+                    </label>
+                  )
+                })}
+                {hasCustomOption && (
+                  <Button
                     type="button"
+                    variant="outline"
                     onClick={() => {
-                      if (isCustom) {
-                        const raw = prompt('Custom delivery (minutes)', '10')
-                        const m = parseInt(raw ?? '', 10)
-                        if (Number.isFinite(m) && m > 0) p.setDeliveryTime(`${m}min`)
-                      } else {
-                        p.setDeliveryTime(t.value)
-                      }
+                      // V19/P24/P7.b — Open shadcn Dialog instead of
+                      // window.prompt() (browser-default styling, no
+                      // dark-mode support, jumped to top-left). Pre-fill
+                      // with current custom value if present.
+                      const cur = customActive
+                        ? p.deliveryTime.replace(/min$/, '')
+                        : '10'
+                      setCustomDraft(cur)
+                      setCustomOpen(true)
                     }}
                     className={cn(
                       'h-10 rounded-xl border text-sm font-medium transition-colors',
-                      on
-                        ? 'border-lime bg-lime-tint-bg text-lime-text'
-                        : 'border-border-default bg-bg-inset text-text-secondary hover:border-border-strong hover:text-text-primary'
+                      customActive
+                        ? 'border-lime bg-lime-tint-bg text-lime-text hover:bg-lime-tint-bg hover:text-lime-text'
+                        : 'border-border-default bg-bg-inset text-text-secondary hover:border-border-strong hover:text-text-primary',
                     )}
                   >
-                    {isCustom && customActive
-                      ? p.deliveryTime.replace('min', ' min')
-                      : t.label}
-                  </button>
-                )
-              })}
+                    {customActive ? p.deliveryTime.replace('min', ' min') : 'Custom'}
+                  </Button>
+                )}
+              </RadioGroup>
+              <FieldHint>
+                Faster windows rank higher in search and convert better.
+              </FieldHint>
             </div>
-            <FieldHint>
-              Faster windows rank higher in search and convert better.
-            </FieldHint>
-          </div>
-        )}
+          )
+        })()}
       </SubCard>
+
+      {/* V19/P24/P7.b — Custom delivery dialog. Replaces window.prompt().
+          Submits `<n>min` into deliveryTime (matches preset format). */}
+      <Dialog open={customOpen} onOpenChange={setCustomOpen}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Custom delivery window</DialogTitle>
+            <DialogDescription>
+              How long until you can deliver, in minutes.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-1.5">
+            <label className="block text-xs font-semibold uppercase tracking-wider text-text-secondary">
+              Minutes
+            </label>
+            <input
+              type="number"
+              autoFocus
+              min={1}
+              max={1440}
+              step={1}
+              value={customDraft}
+              onChange={(e) => setCustomDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault()
+                  const m = parseInt(customDraft, 10)
+                  if (Number.isFinite(m) && m > 0) {
+                    p.setDeliveryTime(`${m}min`)
+                    setCustomOpen(false)
+                  }
+                }
+              }}
+              className={cn(inputCls)}
+              placeholder="10"
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setCustomOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={() => {
+                const m = parseInt(customDraft, 10)
+                if (Number.isFinite(m) && m > 0) {
+                  p.setDeliveryTime(`${m}min`)
+                  setCustomOpen(false)
+                }
+              }}
+              className="bg-lime text-text-inverse hover:bg-lime-hover"
+            >
+              Set
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
@@ -2713,6 +3147,84 @@ function SubCard({
         {right}
       </div>
       {children}
+    </div>
+  )
+}
+
+// ─── PlatformTileRows — seller-side tile picker for Listing details ─────────
+//
+// V19/P24/P7.b — Replaces the prior PlatformFieldsBlock dropdowns. Each
+// enabled kind (region / platform / device) renders as a single row of
+// tile chips. Platform tiles show the admin-uploaded logo when one is
+// set; region/device tiles stay text-only (admin doesn't upload icons
+// for those). Picking a tile sets the value; the publish gate stays in
+// canPublish, no change there.
+
+const TILE_KIND_LABELS: Record<PlatformFieldKind, string> = {
+  region: 'Region',
+  platform: 'Platform',
+  device: 'Device',
+}
+
+function PlatformTileRows({
+  fields,
+  values,
+  onChange,
+}: {
+  fields: PlatformFields | null | undefined
+  values: Record<PlatformFieldKind, string>
+  onChange: (kind: PlatformFieldKind, v: string) => void
+}) {
+  const visible = visiblePlatformKinds(fields)
+  if (visible.length === 0) return null
+
+  return (
+    <div className="space-y-5">
+      {visible.map((kind) => {
+        const options = normalizePlatformOptions(fields?.[kind]?.options)
+        const value = values[kind]
+        return (
+          <div key={kind} className="space-y-2">
+            <label className="block text-xs font-semibold uppercase tracking-wider text-text-secondary">
+              {TILE_KIND_LABELS[kind]} <span className="text-error">*</span>
+            </label>
+            <RadioGroup
+              value={value || undefined}
+              onValueChange={(v) => onChange(kind, v)}
+              className="flex flex-wrap gap-2 sm:gap-3"
+            >
+              {options.map((opt) => {
+                const on = value === opt.value
+                return (
+                  <label
+                    key={opt.value}
+                    className={cn(
+                      'relative flex h-12 cursor-pointer items-center gap-2 rounded-xl border px-3 text-[13px] font-semibold transition-colors',
+                      on
+                        ? 'border-lime bg-lime-tint-bg text-lime-text'
+                        : 'border-border-default bg-bg-inset text-text-secondary hover:border-border-strong hover:text-text-primary',
+                    )}
+                  >
+                    <RadioGroupItem value={opt.value} className="sr-only" />
+                    {kind === 'platform' && opt.icon_url ? (
+                      /* eslint-disable-next-line @next/next/no-img-element */
+                      <img
+                        src={opt.icon_url}
+                        alt=""
+                        className="h-6 w-6 shrink-0 object-contain"
+                      />
+                    ) : null}
+                    <span className="uppercase tracking-wide">{opt.value}</span>
+                    {on && (
+                      <Check className="h-3.5 w-3.5 shrink-0" strokeWidth={3} />
+                    )}
+                  </label>
+                )
+              })}
+            </RadioGroup>
+          </div>
+        )
+      })}
     </div>
   )
 }

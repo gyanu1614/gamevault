@@ -12,11 +12,12 @@
  *   1. useAuth still loading        → render the loader (no decision yet)
  *   2. No user at all               → toast + replace('/login?redirect=…')
  *   3. user.isApprovedSeller true   → render children
- *   4. user.isApprovedSeller false  → DB fallback (handles the case
- *      where useAuth's cache is stale — newly-approved sellers
- *      shouldn't be locked out, and freshly-demoted users
- *      shouldn't sneak in).
- *   5. DB confirms not approved     → toast + replace('/')
+ *   4. user.isApprovedSeller false  → toast + replace('/')
+ *
+ * V22 — No per-page DB re-query. `useAuth` derives `isApprovedSeller` from
+ * the freshly-fetched `profiles.role` on every load (admin approval sets
+ * role='seller'), so the hook's flag is authoritative and current — the
+ * old seller_applications fallback here was a redundant round-trip.
  *
  * Always uses router.replace so the protected URL doesn't sit in
  * history; back-button shouldn't loop the user back into the gate.
@@ -44,36 +45,8 @@ export function SellerOnlyGate({ children }: { children: React.ReactNode }) {
       return
     }
 
-    // Trust the hook's cached flag when it's positive — flipping it to
-    // negative still falls through to a DB check below to avoid stale
-    // cache locking out a real seller.
-    if (user.isApprovedSeller === true) {
-      setStatus('allowed')
-      return
-    }
-
-    let cancelled = false
-    ;(async () => {
-      try {
-        const { createClient } = await import('@/lib/supabase/client')
-        const supabase = createClient()
-        const { data } = await supabase
-          .from('seller_applications')
-          .select('status')
-          .eq('user_id', user.id)
-          .eq('status', 'approved')
-          .maybeSingle()
-        if (cancelled) return
-        setStatus(data ? 'allowed' : 'denied-buyer')
-      } catch {
-        if (cancelled) return
-        // Treat unknown errors as not-approved — failing closed is the
-        // right default for a seller-only page.
-        setStatus('denied-buyer')
-      }
-    })()
-
-    return () => { cancelled = true }
+    // useAuth's flag is authoritative (derived from fresh profiles.role).
+    setStatus(user.isApprovedSeller === true ? 'allowed' : 'denied-buyer')
   }, [loading, user])
 
   // Once we know the user is denied, fire the toast + redirect once

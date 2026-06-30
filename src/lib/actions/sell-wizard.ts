@@ -194,6 +194,140 @@ export async function fetchPriceGuidance(
   }
 }
 
+/**
+ * V19/P9 — Pre-flight check used by SellWizard the moment a seller
+ * picks a game in Step 2 for the currency category. Returns the id
+ * of their existing currency listing for that game (if any), so the
+ * wizard can redirect them straight into edit mode instead of
+ * letting them advance to Step 3 only to fail on publish.
+ *
+ * Scope mirrors the publish-time guard in publishListing: any
+ * non-archived status counts as "you already have one".
+ */
+export async function fetchExistingCurrencyListingId(
+  gameId: string,
+): Promise<{ id: string } | null> {
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return null
+
+    // V19/P24/P5 — Bundle currencies allow many listings per game
+    // (one per bundle, optionally per region). At Step 2 game-pick
+    // time the seller hasn't chosen a bundle yet, so we CAN'T know
+    // which existing listing to redirect them to. Skip the intercept
+    // entirely for bundle-mode games; the publish-time guard catches
+    // exact duplicates and redirects from there.
+    const { data: configRow } = await supabase
+      .from('category_configs')
+      .select('config')
+      .eq('game_id', gameId)
+      .eq('category_type', 'currency')
+      .maybeSingle() as any
+    const bundles = configRow?.config?.bundles
+    if (Array.isArray(bundles) && bundles.length > 0) return null
+
+    // Resolve the legacy currency category for this game. Same path
+    // used by publishListing and the buyer page; keeps "what counts
+    // as currency for this game" centralised.
+    const { data: catRow } = await supabase
+      .from('categories')
+      .select('id')
+      .eq('game_id', gameId)
+      .or('slug.eq.currency,metadata->>type.eq.currency')
+      .eq('is_active', true)
+      .limit(1)
+      .maybeSingle() as any
+    const categoryId = catRow?.id
+    if (!categoryId) return null
+
+    const { data: existing } = await supabase
+      .from('listings')
+      .select('id')
+      .eq('seller_id', user.id)
+      .eq('game_id', gameId)
+      .eq('category_id', categoryId)
+      .in('status', ['active', 'draft', 'paused', 'pending_approval'])
+      // Defensive: only intercept against flexible-mode listings.
+      // Any bundle-tagged listing on a game whose config just lost
+      // its bundles (admin removed them) shouldn't auto-redirect.
+      .is('bundle_id', null)
+      .limit(1)
+      .maybeSingle() as any
+    return existing?.id ? { id: existing.id } : null
+  } catch {
+    // Treat failures as "no existing listing" so the wizard never
+    // hard-blocks; the server guard in publishListing is the real
+    // safety net.
+    return null
+  }
+}
+
+/**
+ * V19/P24/P6 — Bundle-aware variant of fetchExistingCurrencyListingId.
+ * Used by the wizard the moment the seller picks a bundle (and a
+ * region, if regions are enabled). Returns the listing id of an
+ * existing match so the wizard can show "you already list this -
+ * update it?" inline instead of letting the seller fill the form
+ * and only learning at publish.
+ *
+ * Match scope mirrors the publish-time guard:
+ *   (seller, game, currency-category, bundle_id, region, platform)
+ * NULL region and NULL platform are their own slots. V19/P24/P7.d —
+ * platform added to the key so 800 V-Bucks/PC and 800 V-Bucks/Xbox
+ * are distinct listings.
+ *
+ * Falls back to null on any error (don't block the seller; the
+ * publish guard is the safety net).
+ */
+export async function fetchExistingBundleListingId(
+  gameId: string,
+  bundleId: string,
+  region: string | null,
+  platform: string | null = null,
+): Promise<{ id: string } | null> {
+  try {
+    if (!bundleId) return null
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return null
+
+    const { data: catRow } = await supabase
+      .from('categories')
+      .select('id')
+      .eq('game_id', gameId)
+      .or('slug.eq.currency,metadata->>type.eq.currency')
+      .eq('is_active', true)
+      .limit(1)
+      .maybeSingle() as any
+    const categoryId = catRow?.id
+    if (!categoryId) return null
+
+    let query = supabase
+      .from('listings')
+      .select('id')
+      .eq('seller_id', user.id)
+      .eq('game_id', gameId)
+      .eq('category_id', categoryId)
+      .eq('bundle_id', bundleId)
+      .in('status', ['active', 'draft', 'paused', 'pending_approval'])
+    if (region) {
+      query = query.eq('region', region)
+    } else {
+      query = query.is('region', null)
+    }
+    if (platform) {
+      query = query.eq('platform', platform)
+    } else {
+      query = query.is('platform', null)
+    }
+    const { data: existing } = await query.limit(1).maybeSingle() as any
+    return existing?.id ? { id: existing.id } : null
+  } catch {
+    return null
+  }
+}
+
 export async function fetchPublishPolicy(): Promise<Result<SellerPublishPolicy>> {
   try {
     const supabase = await createClient()
@@ -366,6 +500,13 @@ export interface PublishListingInput {
   template_data: Record<string, unknown>
   region?: string | null
   platform?: string | null
+  /**
+   * V19/P24 — Bundle id, only set for currency listings against an
+   * admin-defined bundle. Free-text reference to
+   * category_configs.config.bundles[].id. NULL for flexible
+   * currency and every other category.
+   */
+  bundle_id?: string | null
   status: 'draft' | 'active'
 }
 
@@ -431,10 +572,64 @@ export async function publishListing(input: PublishListingInput): Promise<Result
         ? 'pending_approval'
         : input.status
 
+    // V19/P9 — One currency listing per (seller, game) in flexible
+    // mode (Robux-style).
+    // V19/P24/P5 — Bundle currencies extend the uniqueness key to
+    // (seller, game, bundle_id, region). A V-Bucks seller can have
+    // separate listings for 600/1200/6500 V-Bucks and for EU vs US,
+    // but not two identical (bundle, region) rows.
+    if (input.category_slug === 'currency') {
+      let dupQuery = supabase
+        .from('listings')
+        .select('id')
+        .eq('seller_id', user.id)
+        .eq('game_id', input.game_id)
+        .eq('category_id', legacyCatId)
+        .in('status', ['active', 'draft', 'paused', 'pending_approval'])
+      if (input.bundle_id) {
+        // Bundle mode: match exact (bundle, region, platform). null
+        // region/platform are their own slots (treated as "no
+        // region" / "no platform"). V19/P24/P7.d — platform added so
+        // 800 V-Bucks/PC and 800 V-Bucks/Xbox are distinct.
+        dupQuery = dupQuery.eq('bundle_id', input.bundle_id)
+        if (input.region) {
+          dupQuery = dupQuery.eq('region', input.region)
+        } else {
+          dupQuery = dupQuery.is('region', null)
+        }
+        if (input.platform) {
+          dupQuery = dupQuery.eq('platform', input.platform)
+        } else {
+          dupQuery = dupQuery.is('platform', null)
+        }
+      } else {
+        // Flexible mode: any non-bundle currency listing is a dup.
+        dupQuery = dupQuery.is('bundle_id', null)
+      }
+      const { data: existing } = await dupQuery.limit(1).maybeSingle() as any
+      if (existing?.id) {
+        return {
+          success: false,
+          error: input.bundle_id
+            ? 'You already list this bundle on this platform/region. Editing it instead.'
+            : 'You already have a currency listing for this game. Editing it instead.',
+          // Cast lets the client narrow on `existingId` without breaking
+          // the Result<T> contract for other call sites.
+          ...({ existingId: existing.id as string } as any),
+        }
+      }
+    }
+
     // V14 — Enforce minimum 100-unit order for currency listings. Mirrors
     // the wizard floor so the client and server agree.
+    // V19/P24/P5 — Bundle listings sell whole-bundle-only, so the
+    // 100-floor doesn't apply (a bundle of "600 V-Bucks" is one unit).
     let resolvedMinQuantity = input.min_quantity
-    if (input.category_slug === 'currency' && resolvedMinQuantity < 100) {
+    if (
+      input.category_slug === 'currency' &&
+      !input.bundle_id &&
+      resolvedMinQuantity < 100
+    ) {
       resolvedMinQuantity = 100
     }
 
@@ -443,26 +638,47 @@ export async function publishListing(input: PublishListingInput): Promise<Result
     let resolvedTitle = input.title.trim()
     let resolvedImages = input.images
     if (input.category_slug === 'currency') {
-      const { data: gameRow } = await supabase
-        .from('games')
-        .select('name, slug, image_url')
-        .eq('id', input.game_id)
-        .single() as any
+      // V19/P9 — Pull title from the live category_configs row (admin
+      // sets unit_label per game). Falls back to "{Game} currency" if
+      // config hasn't been edited yet. Replaces the hardcoded
+      // currencyUnit map that mirrored the old client-side map we
+      // deleted in V19/P4.
+      const [{ data: gameRow }, { data: cfgRow }] = await Promise.all([
+        supabase
+          .from('games')
+          .select('name, slug, image_url')
+          .eq('id', input.game_id)
+          .single() as any,
+        supabase
+          .from('category_configs')
+          .select('config')
+          .eq('game_id', input.game_id)
+          .eq('category_type', 'currency')
+          .maybeSingle() as any,
+      ])
       const gameName: string = gameRow?.name ?? 'Currency'
-      const gameSlug: string = gameRow?.slug ?? ''
       const gameImage: string | null = gameRow?.image_url ?? null
-      // The buyer-facing currency page reads `title` to show "Robux" etc;
-      // store the canonical currency unit per game.
-      const currencyUnit: Record<string, string> = {
-        roblox: 'Robux',
-        fortnite: 'V-Bucks',
-        valorant: 'Valorant Points',
-        'genshin-impact': 'Genesis Crystals',
-        'apex-legends': 'Apex Coins',
+      const unitLabel: string | undefined = cfgRow?.config?.unit_label
+      const unit = unitLabel || `${gameName} currency`
+      // V19/P24/P6 — Bundle listings auto-fill title with the bundle
+      // name so the listing detail page reads "Fortnite 600 V-Bucks"
+      // instead of "Fortnite V-Bucks", and the seller's My Listings
+      // table can tell two bundles apart at a glance. Bundle's image
+      // also overrides the game logo as the default listing image.
+      const bundles: Array<{ id: string; name?: string; icon_url?: string }> =
+        cfgRow?.config?.bundles ?? []
+      const matchedBundle = input.bundle_id
+        ? bundles.find((b) => b.id === input.bundle_id)
+        : null
+      if (!resolvedTitle) {
+        resolvedTitle = matchedBundle?.name
+          ? `${gameName} ${matchedBundle.name}`
+          : `${gameName} ${unit}`
       }
-      const unit = currencyUnit[gameSlug] ?? `${gameName} currency`
-      if (!resolvedTitle) resolvedTitle = unit
-      if (resolvedImages.length === 0 && gameImage) resolvedImages = [gameImage]
+      if (resolvedImages.length === 0) {
+        const fallbackImage = matchedBundle?.icon_url || gameImage
+        if (fallbackImage) resolvedImages = [fallbackImage]
+      }
     }
 
     const insertPayload: Record<string, unknown> = {
@@ -482,6 +698,9 @@ export async function publishListing(input: PublishListingInput): Promise<Result
       template_data: input.template_data,
       region: input.region ?? null,
       platform: input.platform ?? null,
+      // V19/P24 — Bundle id for fixed-bundle currencies. NULL for
+      // flexible currency listings and every non-currency listing.
+      bundle_id: input.bundle_id ?? null,
       status: finalStatus,
     }
 
@@ -529,33 +748,57 @@ export async function updateListingFromWizard(
     }
 
     // V14k — Same currency-floor enforcement as publish.
+    // V19/P24/P5 — Bundle listings skip the 100-floor (each bundle
+    // is its own atomic unit).
     let resolvedMinQuantity = input.min_quantity
-    if (input.category_slug === 'currency' && resolvedMinQuantity < 100) {
+    if (
+      input.category_slug === 'currency' &&
+      !input.bundle_id &&
+      resolvedMinQuantity < 100
+    ) {
       resolvedMinQuantity = 100
     }
 
     // V14k — Same currency title/image auto-fill as publish.
+    // V19/P24/P6 — Pulled the hardcoded currencyUnit Record out and
+    // wired the edit path to read the same category_configs row +
+    // bundle list that publishListing uses. Bundle listings get a
+    // "{Game} {bundle.name}" title so edits don't regress to a
+    // bundle-less generic name.
     let resolvedTitle = input.title.trim()
     let resolvedImages = input.images
     if (input.category_slug === 'currency') {
-      const { data: gameRow } = await supabase
-        .from('games')
-        .select('name, slug, image_url')
-        .eq('id', input.game_id)
-        .single() as any
+      const [{ data: gameRow }, { data: cfgRow }] = await Promise.all([
+        supabase
+          .from('games')
+          .select('name, image_url')
+          .eq('id', input.game_id)
+          .single() as any,
+        supabase
+          .from('category_configs')
+          .select('config')
+          .eq('game_id', input.game_id)
+          .eq('category_type', 'currency')
+          .maybeSingle() as any,
+      ])
       const gameName: string = gameRow?.name ?? 'Currency'
-      const gameSlug: string = gameRow?.slug ?? ''
       const gameImage: string | null = gameRow?.image_url ?? null
-      const currencyUnit: Record<string, string> = {
-        roblox: 'Robux',
-        fortnite: 'V-Bucks',
-        valorant: 'Valorant Points',
-        'genshin-impact': 'Genesis Crystals',
-        'apex-legends': 'Apex Coins',
+      const unitLabel: string | undefined = cfgRow?.config?.unit_label
+      const unit = unitLabel || `${gameName} currency`
+      const bundles: Array<{ id: string; name?: string; icon_url?: string }> =
+        cfgRow?.config?.bundles ?? []
+      const matchedBundle = input.bundle_id
+        ? bundles.find((b) => b.id === input.bundle_id)
+        : null
+      if (!resolvedTitle) {
+        resolvedTitle = matchedBundle?.name
+          ? `${gameName} ${matchedBundle.name}`
+          : `${gameName} ${unit}`
       }
-      const unit = currencyUnit[gameSlug] ?? `${gameName} currency`
-      if (!resolvedTitle) resolvedTitle = unit
-      if (resolvedImages.length === 0 && gameImage) resolvedImages = [gameImage]
+      if (resolvedImages.length === 0) {
+        const fallbackImage = matchedBundle?.icon_url || gameImage
+        if (fallbackImage) resolvedImages = [fallbackImage]
+      }
     }
 
     const updatePayload: Record<string, unknown> = {
@@ -571,6 +814,9 @@ export async function updateListingFromWizard(
       template_data: input.template_data,
       region: input.region ?? null,
       platform: input.platform ?? null,
+      // V19/P24 — Bundle id propagated on edit too so the seller can
+      // re-target a different bundle from the wizard.
+      bundle_id: input.bundle_id ?? null,
       // Only let the seller flip between draft ↔ active here; don't let an
       // edit accidentally reset moderation state.
       ...(input.status === 'draft' ? { status: 'draft' } : {}),
@@ -583,6 +829,11 @@ export async function updateListingFromWizard(
     if (error) return { success: false, error: error.message }
 
     revalidatePath('/account/listings')
+    // V19/P11 — Canonical edit URL is /sell/edit/[id]; the old
+    // /account/listings/[id]/edit is now a permanent redirect, so we
+    // revalidate the new path. Keeping the old revalidate as a
+    // belt-and-braces measure costs nothing.
+    revalidatePath(`/sell/edit/${listingId}`)
     revalidatePath(`/account/listings/${listingId}/edit`)
     return { success: true, data: { id: listingId, status: (existing as any).status } }
   } catch (e: any) {

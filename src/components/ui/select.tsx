@@ -171,6 +171,12 @@ const SelectItem = React.forwardRef<
       'data-[highlighted]:bg-state-hover data-[highlighted]:text-text-primary',
       'data-[state=checked]:bg-state-selected data-[state=checked]:text-text-primary',
       'data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
+      // V19/P12 — Kill the global :focus-visible ring (defined in
+      // globals.css as a 4px lime double-shadow). On Radix Select the
+      // highlighted item is keyboard-focused, which made the global
+      // rule paint a lime box around the option. The data-highlighted
+      // bg above is the only highlight we want here.
+      'focus-visible:shadow-none focus-visible:outline-none',
       className
     )}
     {...props}

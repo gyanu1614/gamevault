@@ -7,13 +7,13 @@
 
 function Block({ className = '' }: { className?: string }) {
   return (
-    <div className={`animate-pulse rounded-md bg-bg-overlay/80 ${className}`} />
+    <div className={`animate-pulse rounded-md bg-white/[0.07] ${className}`} />
   )
 }
 
 function OrderCardSkeleton() {
   return (
-    <div className="rounded-2xl border border-border-default bg-bg-overlay p-4 sm:p-5">
+    <div className="rounded-lg border border-border-subtle card-frost p-4 sm:p-5">
       <div className="flex items-start gap-4">
         <Block className="h-16 w-16 shrink-0 rounded-xl" />
         <div className="min-w-0 flex-1 space-y-2">
@@ -39,7 +39,7 @@ function OrderCardSkeleton() {
 
 export default function OrdersLoading() {
   return (
-    <div className="min-h-screen bg-bg-base pb-20">
+    <div className="min-h-screen pb-20">
       <div className="mx-auto w-full max-w-full px-4 pt-6 sm:px-6 md:max-w-7xl lg:px-8">
         {/* Page header */}
         <div className="mb-6 space-y-1.5">

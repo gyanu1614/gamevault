@@ -7,13 +7,13 @@
 
 function Block({ className = '' }: { className?: string }) {
   return (
-    <div className={`animate-pulse rounded-md bg-bg-overlay/80 ${className}`} />
+    <div className={`animate-pulse rounded-md bg-white/[0.07] ${className}`} />
   )
 }
 
 function MiniListingCard() {
   return (
-    <div className="overflow-hidden rounded-2xl border border-border-default bg-bg-overlay">
+    <div className="overflow-hidden rounded-lg border border-border-subtle card-frost">
       <Block className="aspect-square w-full rounded-none" />
       <div className="space-y-2 p-3">
         <Block className="h-4 w-3/4" />
@@ -28,7 +28,7 @@ function MiniListingCard() {
 
 export default function WishlistLoading() {
   return (
-    <div className="min-h-screen bg-black pb-20">
+    <div className="min-h-screen pb-20">
       <div className="mx-auto max-w-4xl px-4 pt-6 sm:px-6 lg:px-8">
         {/* Page header */}
         <div className="mb-6 space-y-1.5">
@@ -41,7 +41,7 @@ export default function WishlistLoading() {
           {Array.from({ length: 3 }).map((_, i) => (
             <div
               key={i}
-              className="rounded-2xl border border-border-default bg-bg-overlay/60 p-4"
+              className="rounded-lg border border-border-subtle card-frost p-4"
             >
               <Block className="mb-2 h-3 w-20" />
               <Block className="h-7 w-16" />

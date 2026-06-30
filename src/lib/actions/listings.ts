@@ -493,7 +493,9 @@ export async function createListing(
     const requiresModeration = data.status === 'pending_approval'
 
     revalidatePath('/account/listings')
-    revalidatePath('/marketplace')
+    // V21/P7.d — Marketplace tree lives at `/{gameSlug}/...` now;
+    // revalidate `/` (homepage features popular listings).
+    revalidatePath('/')
 
     return {
       success: true,
@@ -774,7 +776,9 @@ export async function updateListing(
     if (updateError) throw updateError
 
     revalidatePath('/account/listings')
-    revalidatePath('/marketplace')
+    // V21/P7.d — Marketplace tree lives at `/{gameSlug}/...` now;
+    // revalidate `/` (homepage features popular listings).
+    revalidatePath('/')
 
     return { success: true, listing: data }
   } catch (error: any) {

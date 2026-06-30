@@ -117,16 +117,16 @@ export default function RestrictionStatus({ profile, restrictions }: Restriction
 
               {/* Contact Support */}
               {!isActive && (
-                <div className="flex items-start gap-2.5 bg-blue-500/10 border border-blue-500/20 rounded-lg p-2.5">
-                  <AlertCircle className="h-4 w-4 text-blue-400 flex-shrink-0 mt-0.5" />
+                <div className="flex items-start gap-2.5 bg-lime/10 border border-lime-tint-border rounded-lg p-2.5">
+                  <AlertCircle className="h-4 w-4 text-lime-text flex-shrink-0 mt-0.5" />
                   <div>
-                    <p className="text-xs font-medium text-blue-400 mb-0.5">Need Help?</p>
+                    <p className="text-xs font-medium text-lime-text mb-0.5">Need Help?</p>
                     <p className="text-xs text-text-secondary mb-1.5">
                       Contact support to appeal this restriction.
                     </p>
                     <a
                       href="mailto:test@gmail.com"
-                      className="inline-flex items-center gap-1.5 text-xs font-medium text-blue-400 hover:text-blue-300 transition-colors"
+                      className="inline-flex items-center gap-1.5 text-xs font-medium text-lime-text hover:text-lime transition-colors"
                     >
                       <Mail className="h-3.5 w-3.5" />
                       test@gmail.com
@@ -268,7 +268,7 @@ export default function RestrictionStatus({ profile, restrictions }: Restriction
               exit={{ opacity: 0, scale: 0.95 }}
               transition={{ type: "spring", duration: 0.3, bounce: 0.2 }}
               onClick={(e) => e.stopPropagation()}
-              className="relative w-full max-w-2xl max-h-[80vh] overflow-y-auto bg-black/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl"
+              className="relative w-full max-w-2xl max-h-[80vh] overflow-y-auto bg-[rgba(10,10,15,0.95)] backdrop-blur-2xl border border-border-default rounded-lg shadow-2xl"
             >
               {/* Close Button */}
               <button

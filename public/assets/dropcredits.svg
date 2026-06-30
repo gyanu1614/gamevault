@@ -1,0 +1,10 @@
+<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Drop Credits">
+  <defs>
+    <linearGradient id="dc-bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FFE36A" />
+      <stop offset="100%" stop-color="#F2A900" />
+    </linearGradient>
+  </defs>
+  <circle cx="12" cy="12" r="11" fill="url(#dc-bg)" stroke="#B5780C" stroke-width="1" />
+  <text x="12" y="16" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="11" font-weight="900" fill="#5A3A02">DC</text>
+</svg>

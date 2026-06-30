@@ -6,6 +6,7 @@
 
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { HeroBackdrop, HeroBackdropPreload } from '@/components/hero-backdrop'
 
 export default async function SellLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
@@ -16,14 +17,16 @@ export default async function SellLayout({ children }: { children: React.ReactNo
     redirect('/login?redirect=/sell/new')
   }
 
+  // V21/P7.c — Sell wizard gets its own hero (`sell.avif`). Distinct
+  // amber/lime accent vs. marketplace so creator-mode feels different
+  // from buyer-mode. The wizard card sits as the only opaque surface
+  // on top; the hero frames it the same way as marketplace pages.
   return (
-    <div className="relative min-h-screen bg-bg-base text-text-primary">
-      {/* Subtle lime glow on the page surface — matches the homepage idiom */}
-      <div className="pointer-events-none fixed inset-0 -z-10">
-        <div className="absolute inset-0 bg-bg-base" />
-        <div className="absolute top-0 left-1/2 h-[520px] w-[520px] -translate-x-1/2 rounded-full bg-lime-tint-bg blur-[110px] opacity-60" />
-      </div>
-      {children}
-    </div>
+    <>
+      <HeroBackdropPreload name="sell" />
+      <HeroBackdrop name="sell" className="text-text-primary">
+        {children}
+      </HeroBackdrop>
+    </>
   )
 }

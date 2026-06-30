@@ -8,9 +8,9 @@ export default function TiersLoading() {
         <div className="skeleton h-4 w-52 rounded" />
       </div>
       {/* Current tier card */}
-      <div className="rounded-2xl bg-bg-raised border border-border-subtle p-6 space-y-4">
+      <div className="rounded-lg card-frost border border-border-subtle p-6 space-y-4">
         <div className="flex items-center gap-4">
-          <div className="skeleton h-12 w-12 rounded-2xl" />
+          <div className="skeleton h-12 w-12 rounded-lg" />
           <div className="space-y-2">
             <div className="skeleton h-5 w-24 rounded-lg" />
             <div className="skeleton h-3 w-36 rounded" />
@@ -28,7 +28,7 @@ export default function TiersLoading() {
       {/* All tiers */}
       <div className="space-y-3">
         {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="rounded-2xl bg-bg-raised border border-border-subtle p-4 flex items-center gap-4">
+          <div key={i} className="rounded-lg card-frost border border-border-subtle p-4 flex items-center gap-4">
             <div className="skeleton h-10 w-10 rounded-xl" />
             <div className="space-y-1.5 flex-1">
               <div className="skeleton h-4 w-24 rounded" />

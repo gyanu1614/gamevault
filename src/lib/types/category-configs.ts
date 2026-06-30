@@ -16,6 +16,72 @@
  * blobs in the DB still have the old key. Migrate intentionally.
  */
 
+/* ── Platform fields (shared) ─────────────────────────────────────
+   Used to express "the seller must pick a Region / Platform / Device
+   from these options before listing." Lives at the (game, category)
+   level so PoE currency can require Region while Genshin currency
+   doesn't. The seller wizard renders a shadcn Select for each enabled
+   field; an empty `options` list disables the field even if enabled. */
+
+export type PlatformFieldKind = 'region' | 'platform' | 'device'
+
+/**
+ * V19/P24/P7 — Each option carries an optional icon_url. Original
+ * shape was `string[]` (plain labels). We accept both formats at
+ * read time via `normalizePlatformOptions` below — old data keeps
+ * working, new data gets icons.
+ */
+export interface PlatformOption {
+  value: string
+  icon_url?: string | null
+}
+
+export interface PlatformFieldDef {
+  enabled: boolean
+  /**
+   * Options the seller picks from. Empty list = treat as disabled.
+   * V19/P24/P7 — Stored as PlatformOption[] going forward; legacy
+   * `string[]` blobs in the DB are still readable. Use
+   * `normalizePlatformOptions(opts)` to convert at the boundary.
+   */
+  options: PlatformOption[]
+}
+
+export type PlatformFields = Partial<Record<PlatformFieldKind, PlatformFieldDef>>
+
+export const DEFAULT_PLATFORM_FIELDS: PlatformFields = {
+  region:   { enabled: false, options: [] },
+  platform: { enabled: false, options: [] },
+  device:   { enabled: false, options: [] },
+}
+
+/**
+ * V19/P24/P7 — Back-compat reader. Old JSONB rows stored options as
+ * `string[]`; new rows store `PlatformOption[]`. Both flow into the
+ * same downstream code via this helper. Safe to call on undefined/
+ * null/wrong-typed input — always returns a PlatformOption[].
+ */
+export function normalizePlatformOptions(
+  raw: unknown,
+): PlatformOption[] {
+  if (!Array.isArray(raw)) return []
+  return raw
+    .map((entry): PlatformOption | null => {
+      if (typeof entry === 'string') return { value: entry, icon_url: null }
+      if (entry && typeof entry === 'object' && 'value' in entry) {
+        const value = String((entry as any).value ?? '').trim()
+        if (!value) return null
+        const icon = (entry as any).icon_url
+        return {
+          value,
+          icon_url: typeof icon === 'string' && icon ? icon : null,
+        }
+      }
+      return null
+    })
+    .filter((x): x is PlatformOption => x !== null)
+}
+
 /* ── Currency ────────────────────────────────────────────────────── */
 
 export interface CurrencyConfig {
@@ -35,12 +101,64 @@ export interface CurrencyConfig {
   min_quantity: number
   /** Step the +/- buttons use on the quantity stepper. */
   quantity_step: number
+  /**
+   * V19/P2.b — Quantity granularity: the unit each "1" of quantity
+   * represents in this category. Drives the suffix shown next to
+   * quantity inputs/displays everywhere (seller wizard Stock card,
+   * buyer page stepper, listing cards). Pick `unit` for currencies
+   * that trade in absolute counts (e.g. PoE Orbs), `thousand` for
+   * Robux/V-Bucks-style bulk currencies, `million` for high-volume
+   * tokens.
+   */
+  quantity_granularity: 'unit' | 'thousand' | 'million'
   /** Placeholder shown in the seller's "instructions to buyer" field. */
   seller_instructions_placeholder: string
   /** FAQ block on the buyer page. */
   faq: Array<{ q: string; a: string }>
   /** "How it works" 3-step trust band. */
   steps: Array<{ n: number; title: string; body: string }>
+  /**
+   * V19/P3 — Per-game platform/region/device requirements. Empty
+   * object (or any kind set to enabled:false) means the seller
+   * wizard skips that field. Currency for Roblox / Robux skips all
+   * three; PoE currency requires Region + Device; etc.
+   */
+  platform_fields?: PlatformFields
+  /**
+   * V19/P24 — Image URL for the currency's own logo (the V-Bucks
+   * pile, the Robux R$, the Genshin Crystal). Shown beside the
+   * page title on the buyer page. Optional; empty falls back to the
+   * game's logo.
+   */
+  currency_icon_url?: string | null
+  /**
+   * V19/P24 — Fixed-bundle list. When empty/undefined the currency
+   * is in "flexible" mode (sellers pick any quantity, buyers use a
+   * stepper — the Robux flow). When at least one bundle exists the
+   * currency switches to "bundle" mode: sellers pick from this
+   * list, buyers pick region + bundle and see sellers for that
+   * exact combo. Mirrors how Fortnite V-Bucks / Apex Coins / mobile
+   * top-ups sell in fixed bundles.
+   *
+   * `amount` is the headline number (used for sorting low → high
+   * and as a tiebreaker price comparison). Subscriptions like
+   * "Crew 1 Month" use amount: 0 plus an explicit sort_order so
+   * they group above the count-based bundles.
+   */
+  bundles?: CurrencyBundle[]
+}
+
+export interface CurrencyBundle {
+  /** Stable id used by listings.bundle_id. Generate with uuid or slug. */
+  id: string
+  /** Display label ("800 V-Bucks", "Fortnite Crew 1 Month"). */
+  name: string
+  /** Headline amount. 0 for subscriptions / non-quantitative bundles. */
+  amount: number
+  /** Image shown in the bundle card (publicly-served URL). */
+  icon_url?: string | null
+  /** Manual sort order; smaller renders first. Defaults to 0. */
+  sort_order?: number
 }
 
 export const DEFAULT_CURRENCY_CONFIG: CurrencyConfig = {
@@ -52,6 +170,7 @@ export const DEFAULT_CURRENCY_CONFIG: CurrencyConfig = {
   recommended_price: 0.01,
   min_quantity: 100,
   quantity_step: 100,
+  quantity_granularity: 'unit',
   seller_instructions_placeholder: "Describe how you'll deliver the currency.",
   faq: [],
   steps: [
@@ -59,6 +178,9 @@ export const DEFAULT_CURRENCY_CONFIG: CurrencyConfig = {
     { n: 2, title: 'Pay securely', body: 'Your payment is held by VaultShield escrow until you confirm delivery.' },
     { n: 3, title: 'Receive your currency', body: "The seller delivers via the game's transfer method. Confirm receipt and you're done." },
   ],
+  platform_fields: DEFAULT_PLATFORM_FIELDS,
+  currency_icon_url: null,
+  bundles: [],
 }
 
 /* ── Account ─────────────────────────────────────────────────────── */

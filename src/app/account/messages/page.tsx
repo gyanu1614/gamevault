@@ -100,7 +100,7 @@ export default function MessagesPage() {
   }
 
   return (
-    <main className="mx-auto w-full max-w-7xl px-4 pb-16 pt-6 sm:px-6 lg:px-8">
+    <main className="mx-auto w-full max-w-7xl px-4 pb-16 pt-2 sm:px-6 lg:px-8">
       <header className="mb-4">
         <h1 className="text-2xl font-bold text-text-primary sm:text-3xl">Messages</h1>
         <p className="mt-1 text-sm text-text-secondary">
@@ -110,7 +110,7 @@ export default function MessagesPage() {
 
       <div className="grid h-[calc(100vh-200px)] grid-cols-1 gap-3 lg:grid-cols-[360px_1fr]">
         {/* ── Conversations list ────────────────────────────────────── */}
-        <aside className="flex flex-col overflow-hidden rounded-2xl border border-border-default bg-bg-raised">
+        <aside className="flex flex-col overflow-hidden rounded-lg border border-border-default bg-bg-raised">
           <div className="border-b border-border-subtle p-3">
             <div className="relative">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary" />
@@ -209,7 +209,7 @@ export default function MessagesPage() {
         </aside>
 
         {/* ── Chat area ─────────────────────────────────────────────── */}
-        <section className="flex flex-col overflow-hidden rounded-2xl border border-border-default bg-bg-raised">
+        <section className="flex flex-col overflow-hidden rounded-lg border border-border-default bg-bg-raised">
           {selectedConversation ? (
             <>
               {/* Header */}

@@ -8,13 +8,13 @@
 
 function Block({ className = '' }: { className?: string }) {
   return (
-    <div className={`animate-pulse rounded-md bg-bg-overlay/80 ${className}`} />
+    <div className={`animate-pulse rounded-md bg-white/[0.07] ${className}`} />
   )
 }
 
 function ListingRowSkeleton() {
   return (
-    <div className="rounded-xl border border-border-default bg-bg-overlay p-3 sm:p-4">
+    <div className="rounded-xl border border-border-subtle card-frost p-3 sm:p-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         {/* Left: checkbox + image + content */}
         <div className="flex flex-1 items-center gap-3 sm:gap-4">
@@ -55,10 +55,13 @@ function ListingRowSkeleton() {
 
 export default function ListingsLoading() {
   return (
-    <div className="min-h-screen bg-bg-base pb-24">
+    // V21/P7.ah — Transparent (no bg-bg-base) so the persisted account
+    // HeroBackdrop shows through during the skeleton instead of a black/
+    // flat slab painting over it.
+    <div className="min-h-screen pb-24">
       <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
         {/* Header */}
-        <header className="flex flex-col gap-3 pt-6 sm:flex-row sm:items-end sm:justify-between sm:pt-8">
+        <header className="flex flex-col gap-3 pt-2 sm:flex-row sm:items-end sm:justify-between">
           <div className="space-y-1.5">
             <Block className="h-8 w-44" />
             <Block className="h-4 w-64" />

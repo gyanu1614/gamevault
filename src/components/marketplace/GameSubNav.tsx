@@ -80,15 +80,23 @@ export default function GameSubNav({
 
   return (
     /* V14f — Non-sticky. Scrolls away with the rest of the page so the
-       viewport opens up as the user moves down. */
-    <div className="relative z-40 flex justify-center py-6 sm:py-8 md:py-10 pointer-events-none bg-bg-base px-3">
+       viewport opens up as the user moves down.
+       V19/P24/P7.o — Outer wrapper bg removed so the body's violet
+       gradient bleeds through. The inner pill keeps its own opaque
+       bg + blur so it stays readable on top of the gradient. */
+    <div className="relative z-40 flex justify-center py-6 sm:py-8 md:py-10 pointer-events-none px-3">
       <div
         className={cn(
           'pointer-events-auto w-full max-w-fit',
           'flex items-center gap-0.5',
-          'rounded-full border border-white/[0.1] bg-bg-base shadow-2xl backdrop-blur-xl',
+          // V21/P7.k — Match the floating navbar: translucent dark
+          // surface + heavy blur so the hero/gradient bleeds through
+          // instead of a flat black pill. Inline rgba because our
+          // tokens are raw hex (Tailwind /opacity doesn't apply).
+          'rounded-full border border-white/[0.1] shadow-2xl backdrop-blur-2xl backdrop-saturate-150',
           'px-2 py-2 sm:px-3 sm:py-2.5',
         )}
+        style={{ backgroundColor: 'rgba(28, 28, 37, 0.30)' }}
       >
         {/* ── Game name / logo ───────────────────────────────────────── */}
         <Link

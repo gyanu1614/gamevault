@@ -1,8 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { CheckoutForm } from './CheckoutForm'
-import Link from 'next/link'
-import { ArrowLeft, ShieldCheck } from 'lucide-react'
 
 interface CheckoutPageProps {
   params: Promise<{ id: string }>
@@ -39,50 +37,51 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
 
   const { data: { user } } = await supabase.auth.getUser()
 
+  // V19/P24/P7.l — Bundle currency: pull the matching bundle row out
+  // of the game's currency category_config so the checkout summary
+  // can show the bundle's name + icon instead of the auto-generated
+  // listing title. Falls back gracefully if anything is missing.
+  let bundleSummary: {
+    name: string
+    iconUrl: string | null
+  } | null = null
+  if (listing.bundle_id) {
+    const { data: configRow } = await supabase
+      .from('category_configs')
+      .select('config')
+      .eq('game_id', listing.game.id)
+      .eq('category_type', 'currency')
+      .maybeSingle() as any
+    const bundles = configRow?.config?.bundles as
+      | Array<{ id: string; name: string; icon_url?: string | null }>
+      | undefined
+    const match = bundles?.find((b) => b.id === listing.bundle_id)
+    if (match) {
+      bundleSummary = {
+        name: match.name,
+        iconUrl: match.icon_url ?? null,
+      }
+    }
+  }
+
   // V14m — Block self-purchase. Sellers can't escrow money to themselves,
   // and the order/refund flow would loop on the same account. Bounce back
   // to the edit page for currency / listing page otherwise.
   if (user && listing.seller?.id === user.id) {
-    redirect(`/account/listings/${listing.id}/edit`)
+    redirect(`/sell/edit/${listing.id}`)
   }
 
-  // V17g — Resolve the right "back" target.
-  //
-  // Currency listings don't have individual detail pages — they all
-  // live on the currency category page. Use the category's canonical
-  // slug from the DB directly (e.g. buy-robux for Roblox, buy-vbucks
-  // for Fortnite). Non-currency listings go to their own detail page.
-  const isCurrency = listing.category?.metadata?.type === 'currency'
-  const backHref = isCurrency
-    ? `/${listing.game.slug}/${listing.category.slug}`
-    : `/${listing.game.slug}/${listing.category.slug}/${listing.slug}`
-  const backLabel = isCurrency
-    ? `Back to ${listing.game.name}`
-    : 'Back to listing'
-
   return (
-    // V14m — Tightened further. Floating navbar ends ~64px; pt-16 (64px)
-    // tucks the Back chip right up under it so important content is in
-    // view immediately without scroll.
-    <main className="mx-auto w-full max-w-7xl px-4 pb-16 pt-16 sm:px-6 sm:pt-20">
-      {/* V14m — Back chip with tighter vertical rhythm. */}
-      <Link
-        href={backHref}
-        className="group inline-flex items-center gap-2 rounded-full border border-border-subtle bg-bg-raised px-3.5 py-1.5 text-[12.5px] font-semibold text-text-secondary transition-colors hover:border-lime-tint-border hover:bg-lime-tint-bg/30 hover:text-lime-text"
-      >
-        <ArrowLeft className="h-3.5 w-3.5 transition-transform group-hover:-translate-x-0.5" />
-        {backLabel}
-      </Link>
-
-      <header className="mt-3 mb-5 flex flex-wrap items-center gap-3">
-        <h1 className="text-2xl font-bold text-text-primary sm:text-3xl">Checkout</h1>
-        <span className="inline-flex items-center gap-1.5 rounded-full border border-lime-tint-border bg-lime-tint-bg px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-lime-text">
-          <ShieldCheck className="h-3.5 w-3.5" />
-          Protected
-        </span>
-      </header>
-
-      <CheckoutForm listing={listing} user={user} initialQty={parsedQty} />
+    // V19/P24/P7.bb — Full-bleed checkout: no max-width container, no
+    // Back chip. The CheckoutForm's two halves now extend edge-to-edge
+    // of the viewport. Browser back handles return navigation.
+    <main className="w-full">
+      <CheckoutForm
+        listing={listing}
+        user={user}
+        initialQty={parsedQty}
+        bundleSummary={bundleSummary}
+      />
     </main>
   )
 }

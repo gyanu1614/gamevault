@@ -15,7 +15,7 @@ function Block({ className = '' }: { className?: string }) {
 
 export default function SellNewLoading() {
   return (
-    <main className="mx-auto w-full max-w-4xl px-3 pb-24 pt-24 sm:px-6 sm:pt-28 lg:max-w-5xl lg:pt-32">
+    <main className="mx-auto w-full max-w-4xl px-3 pb-24 pt-20 sm:px-6 sm:pt-20 lg:max-w-5xl lg:pt-20">
       <section className="relative isolate overflow-visible rounded-3xl border border-border-default bg-bg-raised p-4 shadow-elevated sm:p-5 lg:p-6">
         {/* StepBar */}
         <nav className="mb-5">

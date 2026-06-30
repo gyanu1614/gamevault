@@ -58,9 +58,9 @@ export default async function SellerTiersPage() {
     : null
 
   return (
-    <div className="min-h-screen bg-black">
+    <div className="min-h-screen">
       {/* ── Header ─────────────────────────────────────────────────────────── */}
-      <div className="border-b border-border-subtle bg-black/60 backdrop-blur-xl">
+      <div className="border-b border-border-subtle bg-[rgba(10,10,15,0.6)] backdrop-blur-xl">
         <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
           <Link
             href="/account/dashboard"
@@ -79,7 +79,7 @@ export default async function SellerTiersPage() {
       <div className="mx-auto max-w-5xl px-4 pb-10 sm:px-6 space-y-10">
 
         {/* ── Hero: current tier ──────────────────────────────────────────── */}
-        <div className="rounded-2xl border border-border-subtle bg-bg-overlay p-6 sm:p-8">
+        <div className="rounded-lg border border-border-subtle card-frost p-6 sm:p-8">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
               <p className="text-xs font-medium uppercase tracking-wider text-zinc-500 mb-2">
@@ -87,7 +87,7 @@ export default async function SellerTiersPage() {
               </p>
               <TierBadge tier={currentTier} size="md" />
               {eligibleTier !== currentTier && (
-                <p className="mt-2 text-xs text-emerald-400">
+                <p className="mt-2 text-xs text-success">
                   You qualify for <strong>{eligibleTier}</strong> — upgrade runs daily at 3 AM UTC
                 </p>
               )}
@@ -110,7 +110,7 @@ export default async function SellerTiersPage() {
 
         {/* ── Progress toward next tier ───────────────────────────────────── */}
         {myData && (
-          <div className="rounded-2xl border border-border-subtle bg-bg-overlay p-6">
+          <div className="rounded-lg border border-border-subtle card-frost p-6">
             <TierProgressBar
               stats={myData.stats}
               nextTier={nextTierForProgress}
