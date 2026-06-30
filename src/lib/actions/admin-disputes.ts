@@ -6,7 +6,7 @@ import { logAdminActivity } from '@/lib/admin/activity-log'
 import { ADMIN_ACTIONS } from '@/lib/admin/permissions-constants'
 import { sendDisputeResolvedEmail } from '@/lib/email'
 import { revalidatePath } from 'next/cache'
-import { createRefund } from '@/lib/actions/stripe-payment'
+import { refundToWallet } from '@/lib/wallet/wallet'
 
 // ============================================
 // TYPES
@@ -317,10 +317,10 @@ export async function resolveDispute(
     return { success: false, error: fetchError.message }
   }
 
-  // Get the order with payment details
+  // Get the order with payment + party details
   const { data: order, error: orderError } = await supabase
     .from('orders')
-    .select('id, stripe_payment_intent_id, total_amount, escrow_status, status')
+    .select('id, buyer_id, currency, total_amount, escrow_status, status')
     .eq('id', (dispute as any).transaction_id)
     .single() as any
 
@@ -328,31 +328,32 @@ export async function resolveDispute(
     return { success: false, error: 'Order not found' }
   }
 
-  if (!order.stripe_payment_intent_id) {
-    return { success: false, error: 'No payment intent found for this order' }
-  }
-
-  // Process Stripe refund if applicable
+  // V23 — Refund to the buyer's WALLET (ledger-backed), not Stripe. Crypto
+  // payments are irreversible, so refunds are an inbound wallet credit the
+  // buyer can re-spend or withdraw. Idempotent per order (refundToWallet keys
+  // on the order id), so a re-resolved dispute can't double-refund.
   if (resolution.resolutionType === 'refund_full' || resolution.resolutionType === 'refund_partial') {
     const refundAmount = resolution.resolvedAmount || dispute.disputed_amount
+    const currency = (order.currency || 'EUR').toUpperCase()
+    const amountMinor = BigInt(Math.round(Number(refundAmount) * 100))
 
-    console.log(`[Dispute] Processing ${resolution.resolutionType} of $${refundAmount} for payment intent ${order.stripe_payment_intent_id}`)
+    console.log(`[Dispute] Refunding ${resolution.resolutionType} of ${refundAmount} ${currency} to wallet for buyer ${order.buyer_id}`)
 
-    const refundResult = await createRefund(
-      order.stripe_payment_intent_id,
-      refundAmount,
-      'requested_by_customer'
-    )
-
-    if (!refundResult.success) {
-      console.error('[Dispute] Stripe refund failed:', refundResult.error)
+    try {
+      await refundToWallet({
+        userId: order.buyer_id,
+        amountMinor,
+        currency,
+        orderId: order.id,
+      })
+    } catch (e: any) {
+      console.error('[Dispute] Wallet refund failed:', e?.message)
       return {
         success: false,
-        error: `Failed to process refund: ${refundResult.error}. Please try again or contact support.`
+        error: `Failed to process refund: ${e?.message ?? 'unknown error'}. Please try again or contact support.`,
       }
     }
-
-    console.log(`[Dispute] Stripe refund successful: ${refundResult.refundId}`)
+    console.log('[Dispute] Wallet refund posted')
   }
 
   // Update dispute status
@@ -437,8 +438,16 @@ export async function resolveDispute(
     .eq('id', (dispute as any).transaction_id)
 
   if (orderUpdateError) {
-    console.error('[Dispute] Failed to update order status:', orderUpdateError)
-    // Non-fatal - dispute is already resolved in database
+    // FATAL: the refund (if any) has already fired and the dispute row is
+    // marked resolved, but the order is still in `disputed`. Swallowing this
+    // is exactly the bug that left full-refund orders stuck (the transition
+    // map lacked `refunded` until 20260628_fix_refunded_transition.sql).
+    // Surface it loudly so a future regression can't silently lose state.
+    console.error('[Dispute] CRITICAL: order status update failed after refund/resolution:', orderUpdateError)
+    return {
+      success: false,
+      error: `Refund/resolution processed but the order status could not be updated (${orderUpdateError.message}). This needs manual reconciliation — contact support.`,
+    }
   }
 
   // Send resolution message to order conversation

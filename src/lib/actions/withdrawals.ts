@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service'
+import { requireAdmin } from '@/lib/actions/admin-permissions'
 
 // Types
 export interface WithdrawalMethod {
@@ -255,9 +256,10 @@ export async function approveWithdrawalRequest(params: {
   error?: string
 }> {
   try {
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) throw new Error('Not authenticated')
+    // SECURITY: admin-only. Gate on admin_roles BEFORE switching to the
+    // RLS-bypassing service-role client. Previously this only checked
+    // "is logged in", letting any user self-approve their own cash-out.
+    const admin = await requireAdmin()
 
     const serviceClient = createServiceRoleClient()
     const { error } = await (serviceClient as any)
@@ -265,7 +267,7 @@ export async function approveWithdrawalRequest(params: {
       .update({
         status: 'approved',
         approved_at: new Date().toISOString(),
-        processed_by: user.id,
+        processed_by: admin.userId,
         admin_notes: params.adminNotes
       })
       .eq('id', params.requestId)
@@ -290,9 +292,10 @@ export async function rejectWithdrawalRequest(params: {
   error?: string
 }> {
   try {
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) throw new Error('Not authenticated')
+    // SECURITY: admin-only. Gate on admin_roles BEFORE switching to the
+    // RLS-bypassing service-role client. Previously this only checked
+    // "is logged in", letting any user grief others' pending withdrawals.
+    const admin = await requireAdmin()
 
     const serviceClient = createServiceRoleClient()
     const { error } = await (serviceClient as any)
@@ -300,7 +303,7 @@ export async function rejectWithdrawalRequest(params: {
       .update({
         status: 'rejected',
         rejected_at: new Date().toISOString(),
-        processed_by: user.id,
+        processed_by: admin.userId,
         admin_notes: params.reason
       })
       .eq('id', params.requestId)

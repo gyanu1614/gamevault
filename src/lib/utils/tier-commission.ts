@@ -6,8 +6,8 @@
  * always in sync with the migration — no more hardcoded values.
  *
  * Returns a PERCENTAGE (e.g. 8.9 for 0.0890) to be compatible
- * with the existing `platformFeeRate / 100` usage in stripe-payment.ts
- * and orders.ts.
+ * with the `platformFeeRate / 100` usage in the checkout/order flow
+ * (checkout.ts, orders.ts).
  *
  * Uses a short in-process cache (5 min) to avoid a round-trip on
  * every checkout — safe because tier configs change very rarely.
