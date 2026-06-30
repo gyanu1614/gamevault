@@ -8,14 +8,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
-// This should be set in environment variables for security
-const CRON_SECRET = process.env.CRON_SECRET || 'your-secret-key'
+// Must be set in environment variables. No fallback — fail closed if unset
+// so a missing CRON_SECRET can never be triggered with a known default token.
+const CRON_SECRET = process.env.CRON_SECRET
 
 export async function GET(request: NextRequest) {
   try {
-    // Verify cron secret
+    // Verify cron secret (fail closed when the secret is not configured)
     const authHeader = request.headers.get('authorization')
-    if (authHeader !== `Bearer ${CRON_SECRET}`) {
+    if (!CRON_SECRET || authHeader !== `Bearer ${CRON_SECRET}`) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
