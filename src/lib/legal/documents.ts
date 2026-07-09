@@ -22,7 +22,7 @@ export const LEGAL_ENTITY = {
   website: 'dropmarket.gg',
   email: 'support@dropmarket.gg',
   effectiveDate: '1 July 2026',
-  lastUpdated: '1 July 2026',
+  lastUpdated: '8 July 2026',
 } as const
 
 export type LegalBlock =
@@ -54,26 +54,64 @@ const DEFINED_TERMS = p(
 )
 
 export const LEGAL_DOCS: LegalDoc[] = [
+  /**
+   * Terms of Use — DRAFT v2 (expanded), Model A: licensed PSP holds all
+   * funds; DropMarket never takes custody. PSP-agnostic wording.
+   * Pending solicitor sign-off (tracked here, stripped from the public
+   * text): agent-of-payee/discharge wording vs PSP contract + PSRs 2017
+   * (§1.4, §9.2); publisher-personnel clause enforceability (§3.5); P2B
+   * statement-of-reasons duties (§5.5); unclaimed PSP balances (§5.7);
+   * HMRC/OECD platform-reporting scope (§6.5); trademark referential-use
+   * (§8.3); DMCC facilitator duties (§10.3); VAT deemed-supplier / OSS
+   * (§11.3); recovery clause vs unfair-terms rules (§12.3); content-
+   * licence scope (§13.2); liability cap reasonableness (§16.3);
+   * indemnity vs consumers (§17); PSP third-party rights (§21.6).
+   */
   {
     slug: 'terms',
     title: 'Terms of Use',
     description:
-      'The master terms governing use of the DropMarket platform: our venue role, SafeDrop payments, eligibility, consumer rights, liability, and governing law.',
+      'The master terms governing use of the DropMarket platform: our venue role, SafeDrop payments through a licensed PSP, eligibility, accounts, consumer rights, liability, and governing law.',
     sections: [
-      { blocks: [DEFINED_TERMS] },
       {
-        h: '1. Who we are and what DropMarket is',
+        h: '1. Introduction',
         blocks: [
           p(
-            'DropMarket Ltd (“DropMarket”, “we”, “us”) operates the online marketplace at dropmarket.gg. DropMarket is a **venue** that connects independent Buyers and Sellers of gaming virtual goods and services. **DropMarket does not own, sell, or supply any item listed and is not a party to the sale.** Each contract of sale is formed **directly between the Buyer and the Seller**. DropMarket acts (a) as an intermediary providing the Platform and dispute-handling tools, and (b) as the Seller’s **disclosed limited payment-collection agent (agent of payee)**: when a Buyer pays, the Buyer’s payment obligation to the Seller is discharged on receipt of the funds by our licensed PSP.',
+            '1.1. DropMarket Ltd (“**DropMarket**”, “we”, “us”, “our”) operates the online marketplace available at dropmarket.gg and any associated applications and services (the “**Platform**”). The Platform is a **venue** that allows independent sellers to offer, sell, and deliver gaming virtual goods and services to independent buyers.',
+          ),
+          p(
+            '1.2. **DropMarket is not a party to any sale.** We do not own, create, buy, sell, or supply any item listed on the Platform. Each contract of sale is formed **directly between the Buyer and the Seller**. DropMarket provides the Platform, the SafeDrop payment-protection flow, dispute-handling tools, and related services — nothing in these Terms makes DropMarket the seller, reseller, or supplier of any Listing.',
+          ),
+          p(
+            '1.3. These Terms of Use, together with the policies listed in Section 2.2 (the “**Policies**”), form the agreement between you and DropMarket governing your access to and use of the Platform (together, the “**Agreement**”). By accessing or using the Platform you agree to this Agreement. If you do not agree, do not use the Platform.',
+          ),
+          p(
+            '1.4. **Summary of how money moves (binding description).** When a Buyer pays for an Order, payment is collected and held by a **licensed third-party payment service provider** (the “**PSP**”) — not by DropMarket. DropMarket acts as the Seller’s **disclosed limited payment-collection agent (agent of payee)** solely for the purpose of directing the PSP: the Buyer’s payment obligation to the Seller is **discharged when the PSP receives the Buyer’s funds**. Funds remain with the PSP until released under the SafeDrop Escrow Terms, and are paid out to the Seller by the PSP on DropMarket’s instruction. **DropMarket does not hold, control, or take custody of user funds at any time, is not the merchant of record for Seller items, and is not a bank, e-money issuer, or money transmitter.**',
+          ),
+          p(
+            '1.5. The PSP(s) currently used, and their regulatory status, are identified at checkout and on the Fees & Charges page. Payment processing is subject to the PSP’s own terms, which you accept when transacting.',
           ),
         ],
       },
       {
-        h: '2. No holding of funds',
+        h: '2. Definitions and Policies',
         blocks: [
+          p('2.1. In this Agreement (and identically in every Policy):'),
+          ul([
+            '“**Buyer**” — a User purchasing or seeking to purchase through the Platform.',
+            '“**Seller**” — a User listing or selling through the Platform.',
+            '“**User**” / “you” — any person accessing the Platform, registered or not.',
+            '“**Account**” — a registered user account on the Platform.',
+            '“**Listing**” — an offer to sell an item or service published by a Seller.',
+            '“**Order**” — a Buyer’s purchase of a Listing.',
+            '“**SafeDrop**” — DropMarket’s payment-protection flow described in the SafeDrop Escrow Terms, operated through the PSP.',
+            '“**PSP**” — the licensed third-party payment service provider(s) that collect, hold, convert, and pay out funds.',
+            '“**Protection Window**” — the per-category period after delivery in which a Buyer must confirm delivery or open a dispute (see Refund & Dispute Policy).',
+            '“**Seller Balance**” — the record shown in a Seller’s Account of the Seller’s entitlement to funds **held at the PSP**; the Seller Balance is a ledger entry, not money held by DropMarket.',
+            '“**Platform Content**” — all content made available by DropMarket on the Platform (text, graphics, logos, software, data, and design).',
+          ]),
           p(
-            'DropMarket does not hold, control, or operate an account into which Buyer funds are paid before onward payment to the Seller. Funds are held and moved solely by the PSP. DropMarket is **not the merchant of record and not a money transmitter.**',
+            '2.2. The following Policies are incorporated into this Agreement: Buyer Terms & Buyer Protection; Seller Agreement; SafeDrop Escrow Terms; Refund & Dispute Policy; Prohibited Items & Conduct Policy; Acceptable Use Policy; Privacy Policy; Cookie Policy; AML/KYC Policy; Risk Disclosure; Fees & Charges; Chargeback & Payment Policy; Complaints Handling / Dispute Resolution; IP / Notice-and-Takedown Policy; Community Guidelines / Trust & Safety. If a Policy conflicts with these Terms, the more specific document prevails for its subject matter.',
           ),
         ],
       },
@@ -81,87 +119,300 @@ export const LEGAL_DOCS: LegalDoc[] = [
         h: '3. Eligibility',
         blocks: [
           p(
-            'You must be at least 18 and able to form a binding contract, and not barred under applicable sanctions or export-control laws.',
+            '3.1. You may use the Platform only if you are **at least 18 years old**, capable of forming a binding contract, and not barred from using the Platform under the laws of any applicable jurisdiction (including UK, EU, UN, and US sanctions and export-control regimes).',
+          ),
+          p(
+            '3.2. If you use the Platform on behalf of a company or other legal entity, you warrant that you are authorised to bind that entity, and “you” includes that entity.',
+          ),
+          p(
+            '3.3. You warrant that you are acting on your own behalf, control your own login credentials, and are not acting for an undisclosed third party.',
+          ),
+          p(
+            '3.4. We may verify age, identity, and eligibility at any time (see Section 6 and the AML/KYC Policy) and may refuse, suspend, or close any Account at our reasonable discretion where eligibility is not established.',
+          ),
+          p(
+            '3.5. No employee, contractor, agent, or affiliate of any game publisher or developer acting in that capacity is authorised to access the Platform or use the Services for investigation, enforcement, or evidence-gathering purposes without our prior written consent.',
           ),
         ],
       },
       {
-        h: '4. Real-money-trading (RMT) / publisher-EULA risk',
+        h: '4. Changes to these Terms',
         blocks: [
           p(
-            'Items traded are gaming assets. Buying or selling these assets, or account access, **may breach the End-User Licence Agreement (EULA) or terms of the relevant game publisher** and can result in suspension, ban, or clawback by the publisher. **DropMarket is not affiliated with, endorsed by, or authorised by any game publisher.** You accept this risk (see the Risk Disclosure).',
+            '4.1. We may amend this Agreement or any Policy. For material changes we will give **at least 14 days’ prior notice** by posting the amended version on the Platform and notifying registered Users via the Platform or email. Changes take effect on the stated effective date; your continued use after that date constitutes acceptance. Changes do not apply retroactively to Orders already placed.',
+          ),
+          p(
+            '4.2. Where a change is required by law, by a PSP, or for security reasons, it may take effect immediately with notice as soon as practicable.',
           ),
         ],
       },
       {
-        h: '5. Accounts and security',
+        h: '5. Accounts',
         blocks: [
           p(
-            'You are responsible for your DropMarket account and all activity under it. Report unauthorised use to support@dropmarket.gg.',
+            '5.1. **Registration.** You must provide true, accurate, current, and complete information and keep it updated. We may refuse registration at our reasonable discretion.',
+          ),
+          p(
+            '5.2. **Single Account.** Each User may hold **one** Account unless we authorise otherwise in writing. Creating, controlling, or using multiple Accounts — including after suspension — is prohibited. We may suspend or terminate duplicate Accounts and may withhold instruction of payouts pending investigation of duplicate-account activity.',
+          ),
+          p(
+            '5.3. **No Account transfer.** Accounts, usernames, and credentials are personal to you and may not be sold, gifted, assigned, or otherwise transferred. **The prohibition on account sale applies to DropMarket Accounts, not to game accounts lawfully listed for sale on the Platform in accordance with the Prohibited Items & Conduct Policy.**',
+          ),
+          p(
+            '5.4. **Security.** You are responsible for the confidentiality of your credentials and all activity under your Account, including enabling two-factor authentication where offered. Notify support@dropmarket.gg immediately of any suspected compromise. We are not liable for losses caused by your failure to secure your Account.',
+          ),
+          p(
+            '5.5. **Suspension and termination by us.** We may suspend, restrict, or terminate an Account, remove Listings, or withhold instruction of payouts where, acting reasonably: (a) you breach this Agreement or any Policy; (b) we suspect fraud, money laundering, sanctions exposure, or other unlawful activity; (c) information you provided appears untrue or incomplete; (d) required verification is not completed; (e) your conduct creates risk or possible legal exposure for DropMarket, the PSP, or other Users; or (f) we are required to do so by law, a regulator, or a PSP. Where we suspend or terminate a Seller who is a business user, we will provide a statement of reasons unless prohibited by law or legitimate fraud-prevention grounds.',
+          ),
+          p(
+            '5.6. **Closing your Account.** You may close your Account at any time via support. Closure does not affect open Orders, accrued fees, pending disputes, or amounts recoverable under Section 12, and Sections that by their nature survive (including 12, 15–20) continue to apply. Any remaining Seller Balance will be paid out via the PSP after completion of open Orders and any required verification.',
+          ),
+          p(
+            '5.7. **Inactive Accounts.** If an Account shows no login activity for 12 consecutive months, we may designate it inactive, delist its Listings, and contact the User to arrange payout of any remaining Seller Balance. We do not charge inactivity fees.',
           ),
         ],
       },
       {
-        h: '6. SafeDrop, payment and crypto irreversibility',
+        h: '6. Verification, AML and sanctions',
         blocks: [
           p(
-            'All Orders use the SafeDrop flow (see the SafeDrop Escrow Terms). Funds are held and moved by a licensed PSP — **CoinGate** (crypto), operated by UAB “Decentralized” (Lithuania), authorised by the Bank of Lithuania as a MiCA Crypto-Asset Service Provider and payment institution; **Tazapay** (cards/escrow) is planned. **Crypto payments are irreversible and cannot be charged back.** Card payments (when available) are subject to card-scheme chargeback rules.',
+            '6.1. Sellers must complete identity verification (KYC) **before listing or receiving payouts**, and Buyers may be required to verify identity for higher-value Orders or where risk indicators arise, per the AML/KYC Policy.',
+          ),
+          p(
+            '6.2. We (and the PSP) may require additional documentation at any time — including government ID, proof of address, source of funds, and proof of ownership of the payout account — and may delay Listings, releases, or payout instructions pending verification.',
+          ),
+          p(
+            '6.3. Payouts may only be made to a bank account, payment account, or wallet **registered in the name of the Account holder**. Payouts to third parties are prohibited.',
+          ),
+          p(
+            '6.4. We screen Users and transactions against applicable sanctions lists (UN, UK OFSI, EU, US OFAC) and will refuse, block, or report transactions as required by law. We may disclose information to law enforcement, regulators, and the PSP as described in the Privacy Policy, and may file reports required under the Proceeds of Crime Act 2002 and related legislation without notice to you.',
+          ),
+          p(
+            '6.5. We may report Seller information and transaction data to HMRC (and equivalent authorities) under the UK’s digital-platform reporting rules implementing the OECD Model Reporting Rules for Digital Platforms.',
           ),
         ],
       },
       {
-        h: '7. Fees and pricing',
+        h: '7. The marketplace; transaction risks',
         blocks: [
           p(
-            'DropMarket earns a commission on completed sales and may charge service fees (see Fees & Charges). Prices shown to Buyers are **inclusive of all mandatory charges** (no drip pricing), consistent with the Digital Markets, Competition and Consumers Act 2024.',
+            '7.1. **Venue only.** We provide the Platform and tools; we do not manufacture, inspect, warehouse, or deliver items, and we do not guarantee the existence, quality, safety, legality, or description of any Listing, the truth or accuracy of Seller content, the ability of any Seller to deliver, or the ability of any Buyer to pay.',
+          ),
+          p(
+            '7.2. **Binding sales.** When a Buyer places an Order for a Listing, a binding contract of sale is formed between Buyer and Seller on the terms of the Listing and this Agreement. Sellers must deliver promptly per the Seller Agreement; Buyers must confirm delivery or raise a dispute within the Protection Window.',
+          ),
+          p(
+            '7.3. **Transaction risks.** Buying and selling gaming virtual goods involves risks, including: misdescribed or defective items; delayed or failed delivery; account recovery by a prior owner; publisher enforcement (Section 8); fraud by counterparties acting under false pretences; and price volatility of crypto assets. **You use the Platform at your own risk and assume these transaction risks**, subject always to your statutory rights (Section 10) and the protections in the SafeDrop Escrow Terms and Refund & Dispute Policy.',
+          ),
+          p(
+            '7.4. We use verification, escrow-style protection via the PSP, ratings, and monitoring to reduce these risks, but we cannot eliminate them and do not underwrite them, except as expressly stated in the Refund & Dispute Policy.',
           ),
         ],
       },
       {
-        h: '8. Prohibited conduct',
+        h: '8. Publisher EULAs, RMT risk, and non-affiliation',
         blocks: [
           p(
-            'You must comply with the Prohibited Items & Conduct Policy and the Acceptable Use Policy. Breach may lead to listing removal, withheld payouts, suspension, and reporting to authorities.',
+            '8.1. Items traded on the Platform are virtual goods, currencies, accounts, and services connected to third-party games. **Buying or selling such assets, or transferring account access, may breach the End-User Licence Agreement or terms of service of the relevant game publisher** and may result in warnings, suspension, permanent ban, or confiscation/clawback of items or accounts by the publisher.',
+          ),
+          p(
+            '8.2. **You accept this risk.** DropMarket is not liable for publisher enforcement actions, and such actions do not, by themselves, entitle a Buyer to a refund outside the terms of the Refund & Dispute Policy (see the Risk Disclosure for details, including category-specific warranty terms).',
+          ),
+          p(
+            '8.3. **Non-affiliation.** DropMarket is not affiliated, associated, authorised, endorsed by, or in any way officially connected with any game publisher or developer, including (without limitation) Roblox Corporation; Epic Games, Inc.; Riot Games, Inc.; Valve Corporation; Activision Blizzard, Inc.; Electronic Arts Inc.; Take-Two Interactive Software, Inc.; miHoYo/HoYoverse; Mojang AB; Supercell Oy; Jagex Ltd; Tencent; and Krafton, Inc. All game names, marks, emblems, and images are trademarks or registered trademarks of their respective owners. References to games and in-game items on the Platform are made solely to **identify the goods and services to which Listings relate**, consistent with honest practices in industrial and commercial matters (see s.11(2) Trade Marks Act 1994 and, for EEA users, Article 14 of Regulation (EU) 2017/1001). Official publisher websites are linked from the game category pages.',
           ),
         ],
       },
       {
-        h: '9. Consumer rights',
+        h: '9. SafeDrop, payments, payouts and crypto',
         blocks: [
           p(
-            'Where a Seller is a *trader* and a Buyer is a *consumer*, statutory rights under the Consumer Rights Act 2015 and the Consumer Contracts (Information, Cancellation and Additional Charges) Regulations 2013 apply and are not excluded. Digital content must be of satisfactory quality, fit for purpose and as described. The 14-day distance-cancellation right for digital content is **lost once supply begins with the consumer’s express consent and acknowledgement** that the right will be lost (CCR Reg. 37) — captured at checkout. See the Buyer Terms and the Refund & Dispute Policy.',
+            '9.1. **All Orders run through SafeDrop.** The Buyer pays the PSP; the PSP holds the funds; the funds are released from buyer protection only after delivery is confirmed (or the Protection Window lapses, or a dispute resolves) per the SafeDrop Escrow Terms.',
+          ),
+          p(
+            '9.2. **Discharge.** The Buyer’s payment obligation to the Seller is discharged when the PSP receives the Buyer’s payment in full.',
+          ),
+          p(
+            '9.3. **Seller Balance and payouts.** After release, the Seller’s entitlement is recorded in the Seller Balance. Funds remain held at the PSP until the Seller requests a payout from their Account, at which point we instruct the PSP to pay the Seller’s verified payout method. A minimum payout amount and payout fees apply (see Fees & Charges). We may delay payout instructions pending verification, dispute resolution, chargeback exposure, or as required by the PSP or law.',
+          ),
+          p(
+            '9.4. **Refunds go to source.** Approved refunds are returned to the Buyer’s original payment method, per the Refund & Dispute Policy. We do not maintain buyer wallets or stored buyer balances.',
+          ),
+          p(
+            '9.5. **Crypto payments.** Where crypto/stablecoin payment is offered, payments are processed and converted by the PSP. **Crypto transactions are irreversible once broadcast**; send exactly the displayed amount on the displayed network within the displayed time. Underpayments, overpayments, wrong-network transfers, and late payments are handled per the PSP’s rules and the Refund & Dispute Policy; recovery may be impossible and reasonable recovery costs may be deducted where recovery is attempted.',
+          ),
+          p(
+            '9.6. **Card payments.** Card payments (where available) are subject to card-scheme rules, including chargeback rules — see the Chargeback & Payment Policy.',
+          ),
+          p(
+            '9.7. **Currency and pricing.** Prices are displayed in the currency shown at checkout, **inclusive of all mandatory charges** (Digital Markets, Competition and Consumers Act 2024 — no drip pricing). Applicable Buyer service fees and payment fees are itemised before payment.',
           ),
         ],
       },
       {
-        h: '10. Intellectual property',
+        h: '10. Consumer rights',
         blocks: [
           p(
-            'See the IP / Copyright / Notice-and-Takedown Policy. Report infringement to support@dropmarket.gg.',
+            '10.1. Nothing in this Agreement excludes or limits rights that cannot lawfully be excluded. Where a Seller acts as a **trader** and a Buyer as a **consumer**, the Consumer Rights Act 2015 and the Consumer Contracts (Information, Cancellation and Additional Charges) Regulations 2013 apply between them: digital content must be of satisfactory quality, fit for purpose, and as described.',
+          ),
+          p(
+            '10.2. The 14-day distance-cancellation right for digital content is **lost once supply begins with the consumer’s express consent and acknowledgement** that the right is lost (CCR Reg. 37); this consent is captured at checkout before delivery begins.',
+          ),
+          p(
+            '10.3. Sellers are responsible for identifying themselves accurately as trader or private seller. The Platform displays this status on Listings.',
           ),
         ],
       },
       {
-        h: '11. Limitation of liability',
+        h: '11. Fees and taxes',
         blocks: [
           p(
-            'Nothing excludes or limits liability for death or personal injury caused by negligence, for fraud, or for any liability that cannot lawfully be excluded (including under the CRA 2015 where the Buyer is a consumer). Subject to that: DropMarket is not liable for the acts or omissions of Buyers or Sellers, for publisher actions (bans/clawbacks), for account-recovery by prior owners, or for indirect, special or consequential loss; and DropMarket’s total aggregate liability for any Order is limited to the commission DropMarket actually earned on that Order.',
+            '11.1. DropMarket charges Sellers a commission on completed sales and may charge Buyers service and payment-processing fees, all as published on the Fees & Charges page. Fee changes follow Section 4 (14 days’ notice; promotions excepted).',
+          ),
+          p(
+            '11.2. Fees are deducted before amounts are credited to the Seller Balance, or charged at checkout, as described on the Fees & Charges page.',
+          ),
+          p(
+            '11.3. **Taxes.** Users are responsible for their own taxes arising from their sales and purchases, including income tax and VAT where applicable. Listing prices must be stated on an all-taxes-included basis. DropMarket does not provide tax advice and is not responsible for Users’ tax obligations, except any collection or reporting obligation imposed on DropMarket by law (see 6.5).',
           ),
         ],
       },
       {
-        h: '12. Governing law and jurisdiction',
+        h: '12. User disputes, reversals, and recovery',
         blocks: [
           p(
-            'These Terms and any non-contractual obligations are governed by the law of **England & Wales**, and the **courts of England and Wales** have exclusive jurisdiction (a consumer resident elsewhere may also have the protection of mandatory local law and their local courts). Complaints are handled per the Complaints Handling / Dispute Resolution policy.',
+            '12.1. **Platform-first dispute process.** Buyer–Seller disputes about an Order must be raised through the Platform’s dispute process within the Protection Window (see Refund & Dispute Policy). We investigate transaction disputes (delivery, description) — we do not adjudicate the general quality, safety, or legality of items beyond their Listing description. Users agree to cooperate with the process and not to escalate to external channels in respect of an open, pending dispute before the process completes; this does not limit any User’s legal rights, statutory complaints channels, or recourse to the courts or to their payment provider.',
+          ),
+          p(
+            '12.2. **Outcomes.** Dispute outcomes may include: release to Seller; full or partial refund to Buyer (to source); redelivery; or cancellation. Outcomes are implemented via instruction to the PSP.',
+          ),
+          p(
+            '12.3. **Recovery from Sellers.** Where a refund, chargeback, reversal, or fine imposed by a card scheme or PSP results from a Seller’s failure to deliver, misdescription, breach of this Agreement, or fraud, the Seller must reimburse the amounts involved (including PSP/chargeback fees reasonably incurred). The Seller authorises us to instruct the PSP to debit or withhold such amounts from the Seller Balance or future release entitlements; if the Balance is insufficient, the Seller must pay the shortfall within 14 days of notice, failing which we may use lawful collection mechanisms. Recoverable amounts are limited to **amounts we or the PSP actually incur or are liable for, plus reasonable administrative costs** — we do not levy punitive fines.',
+          ),
+          p(
+            '12.4. **Buyer misuse.** Raising chargebacks on delivered, confirmed Orders instead of using the dispute process, false dispute claims, and friendly fraud may lead to Account suspension and recovery of amounts owed — see the Chargeback & Payment Policy. This does not limit a consumer’s statutory or card-scheme rights in respect of genuine claims.',
           ),
         ],
       },
       {
-        h: '13. Changes',
+        h: '13. Listings and User content',
         blocks: [
           p(
-            'We may update these Terms; material changes will be notified and continued use constitutes acceptance.',
+            '13.1. Sellers must list accurately and completely: item, scope, delivery method and time, region restrictions, and all material terms. Listings must be placed in the correct category with accurate tags and must be removed promptly when no longer available. Specific listing warranties (including for game accounts: personal, non-commercial origin; no cheat/hack-derived goods; no stolen or fraudulently obtained items) are set out in the Seller Agreement and Prohibited Items & Conduct Policy.',
+          ),
+          p(
+            '13.2. You retain ownership of content you post. You grant DropMarket a worldwide, non-exclusive, royalty-free, sublicensable licence to host, display, reproduce, and use your content for operating, promoting, and improving the Platform, for as long as the content remains on the Platform plus a reasonable archival period, and you waive moral rights to the extent permitted by law solely for those purposes.',
+          ),
+          p(
+            '13.3. You warrant that your content and Listings do not infringe third-party rights and that you have all rights needed to sell what you list. We may remove any content or Listing at our reasonable discretion, including content we consider unlawful, infringing, misleading, or in breach of the Policies.',
+          ),
+          p(
+            '13.4. Prohibited content and conduct are set out in the Prohibited Items & Conduct Policy and Acceptable Use Policy, and include (without limitation): fraudulent or deceptive listings; stolen or unlawfully obtained goods; cheat/hack software and cheat-derived goods or services; malware; harassment or hate; spam; sanctions-violating transactions; content harmful to minors; and circumvention of Platform fees (off-platform dealing to avoid fees).',
+          ),
+        ],
+      },
+      {
+        h: '14. Platform IP and licence to you',
+        blocks: [
+          p(
+            '14.1. The Platform and Platform Content are owned by or licensed to DropMarket and protected by intellectual-property laws. “DropMarket”, “SafeDrop”, and associated logos are our marks; unauthorised use is prohibited.',
+          ),
+          p(
+            '14.2. We grant you a limited, revocable, non-exclusive, non-transferable licence to access and use the Platform for its intended purpose. You must not: copy, scrape, or systematically retrieve Platform Content (including via robots or AI training pipelines) without written permission; reverse engineer the Platform except as permitted by law; interfere with its integrity or security; or use it to build or support a competing service.',
+          ),
+        ],
+      },
+      {
+        h: '15. Disclaimers',
+        blocks: [
+          p(
+            '15.1. The Platform and Services are provided **“as is” and “as available”**. To the fullest extent permitted by law, we exclude all implied warranties, conditions, and terms, including satisfactory quality, fitness for purpose, and non-infringement, in respect of the Platform itself — this does not affect the Buyer–Seller statutory rights described in Section 10.',
+          ),
+          p(
+            '15.2. We do not warrant uninterrupted or error-free operation, that defects will be corrected, or that the Platform is free of viruses or harmful components. We may modify, suspend, or discontinue features with reasonable notice where practicable; we are not liable for the consequences of doing so except as required by law.',
+          ),
+          p(
+            '15.3. Third-party content and third-party websites linked from the Platform are the responsibility of their providers; we do not endorse and are not liable for them.',
+          ),
+        ],
+      },
+      {
+        h: '16. Limitation of liability',
+        blocks: [
+          p(
+            '16.1. **Nothing in this Agreement excludes or limits our liability** for death or personal injury caused by our negligence; fraud or fraudulent misrepresentation; or any liability that cannot lawfully be excluded or limited (including, where applicable, under the Consumer Rights Act 2015).',
+          ),
+          p(
+            '16.2. Subject to 16.1, we are not liable for: acts or omissions of Buyers or Sellers; publisher enforcement (bans, clawbacks, confiscations); account recovery by prior owners; PSP outages or delays outside our control; loss of profits, revenue, business, goodwill, or data; or indirect, special, incidental, or consequential loss.',
+          ),
+          p(
+            '16.3. Subject to 16.1, **our total aggregate liability** to you arising out of or in connection with any Order is limited to the greater of (a) the total fees and commission DropMarket actually earned on that Order, and (b) £100; and our total aggregate liability for all claims in any 12-month period is limited to the total fees you paid to DropMarket in that period.',
+          ),
+        ],
+      },
+      {
+        h: '17. Indemnity',
+        blocks: [
+          p(
+            'To the extent permitted by law, you will indemnify DropMarket, its directors, officers, and employees against losses, liabilities, and reasonable costs (including legal costs) arising from: your breach of this Agreement or the Policies; your Listings, content, items, or services; your infringement of third-party rights; or your violation of law — except to the extent caused by our own breach or negligence. We may assume the defence of any matter subject to this indemnity, in which case you will cooperate. This clause does not apply to consumers to the extent it would be unenforceable against them.',
+          ),
+        ],
+      },
+      {
+        h: '18. Force majeure',
+        blocks: [
+          p(
+            'We are not liable for delay or failure caused by events beyond our reasonable control, including internet or telecommunications failures, power failures, PSP or banking-system outages, blockchain network congestion or forks, strikes, civil disturbance, war, governmental action, or acts of God.',
+          ),
+        ],
+      },
+      {
+        h: '19. Notices',
+        blocks: [
+          p(
+            'We may give notice via the Platform, your Account, or the email address on your Account; notice is deemed received when posted to the Platform or sent by email. You may give notice to support@dropmarket.gg or by post to our registered office. Keep your contact details current.',
+          ),
+        ],
+      },
+      {
+        h: '20. Governing law and jurisdiction',
+        blocks: [
+          p(
+            '20.1. This Agreement and any non-contractual obligations arising from it are governed by the law of **England and Wales**.',
+          ),
+          p(
+            '20.2. The **courts of England and Wales** have exclusive jurisdiction, except that a consumer resident in another country retains any mandatory protections and jurisdiction rights of their local law.',
+          ),
+          p(
+            '20.3. Complaints are handled first through the Complaints Handling / Dispute Resolution policy. Nothing in this Agreement requires arbitration, prevents you from bringing individual claims, or waives collective rights that cannot lawfully be waived.',
+          ),
+        ],
+      },
+      {
+        h: '21. Miscellaneous',
+        blocks: [
+          p(
+            '21.1. **Entire agreement.** This Agreement (including the Policies) is the entire agreement between you and DropMarket regarding the Platform and supersedes prior agreements on the same subject.',
+          ),
+          p('21.2. **Severability.** If any provision is held invalid, it is severed and the remainder continues in force.'),
+          p('21.3. **No waiver.** Failure to enforce a provision is not a waiver of it.'),
+          p(
+            '21.4. **Assignment.** You may not assign this Agreement. We may assign it to an affiliate or in connection with a merger, acquisition, or sale of assets, with notice to you.',
+          ),
+          p(
+            '21.5. **Relationship.** Except for the limited payment-collection agency described in Sections 1.4 and 9.2, nothing creates any agency, partnership, joint venture, or employment relationship between you and DropMarket.',
+          ),
+          p(
+            '21.6. **Third-party rights.** Except for the PSP (which may rely on Sections 1.4, 9, and 12), no third party has rights under the Contracts (Rights of Third Parties) Act 1999 to enforce this Agreement.',
+          ),
+          p('21.7. **Language.** These Terms are drafted in English; translations are provided for convenience only.'),
+        ],
+      },
+      {
+        h: '22. Contact',
+        blocks: [
+          p(
+            'DropMarket Ltd · Company No. 17309867 · Registered in England & Wales · 82a James Carter Road, Mildenhall, Bury St. Edmunds, IP28 7DE, United Kingdom · support@dropmarket.gg',
           ),
         ],
       },
