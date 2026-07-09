@@ -249,7 +249,7 @@ export default function MarkAsDeliveredButton({
             {/* Proof upload section */}
             <div className="mb-5">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-semibold text-text-secondary uppercase tracking-[0.08em]">
+                <span className="text-[11px] font-semibold text-text-secondary uppercase tracking-wider">
                   Delivery Proof
                 </span>
                 <span className="text-[10px] text-text-disabled">

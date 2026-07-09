@@ -7,7 +7,7 @@
 import { getInformDisclosures, getInformRequiredSellers } from '@/lib/actions/inform-act'
 import InformAdminClient from './InformAdminClient'
 
-export const metadata = { title: 'INFORM Act | Admin — GameVault' }
+export const metadata = { title: 'INFORM Act' }
 
 export default async function AdminInformPage() {
   const [discsResult, requiredResult] = await Promise.all([

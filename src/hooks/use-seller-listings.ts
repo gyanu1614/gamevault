@@ -120,7 +120,13 @@ export function useSellerListings(options?: UseListingsOptions) {
       toast.success(`${ids.length} listings deleted successfully!`)
     },
     onError: (error: any) => {
-      toast.error(error.message || 'Failed to delete listings')
+      // Listings referenced by orders can't be hard-deleted
+      // (orders_listing_id_fkey) — surface that clearly instead of the
+      // raw Postgres constraint message.
+      const msg = /foreign key/i.test(error?.message ?? '')
+        ? 'Some of these offers have order history and can’t be deleted — archive those instead.'
+        : error.message || 'Failed to delete listings'
+      toast.error(msg)
     },
   })
 

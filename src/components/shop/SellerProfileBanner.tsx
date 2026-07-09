@@ -209,7 +209,7 @@ export default function SellerProfileBanner({
                     <Check className="h-3 w-3" strokeWidth={3} />
                   </span>
                 </TooltipTrigger>
-                <TooltipContent>Verified by GameVault</TooltipContent>
+                <TooltipContent>Verified by DropMarket</TooltipContent>
               </Tooltip>
             )}
             <span

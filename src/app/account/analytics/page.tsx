@@ -311,7 +311,7 @@ export default function AnalyticsPage() {
                     className={cn(
                       'h-3 w-3',
                       star <= Math.round(stats.performance.avgRating)
-                        ? 'fill-yellow-400 text-warning'
+                        ? 'fill-warning text-warning'
                         : 'text-text-disabled'
                     )}
                   />
@@ -360,13 +360,13 @@ export default function AnalyticsPage() {
             </p>
           </div>
           <div className="rounded-lg border border-success/30 bg-success-bg p-3">
-            <p className="text-sm text-green-100">
+            <p className="text-sm text-success">
               📈 Revenue increased by <span className="font-semibold">12.5%</span> compared to last period. Your listings are performing well!
             </p>
           </div>
           {stats.listings.active < 3 && (
             <div className="rounded-lg border border-warning/40 bg-warning-bg p-3">
-              <p className="text-sm text-yellow-100">
+              <p className="text-sm text-warning">
                 ⚠️ Consider adding more listings to increase your reach and potential earnings.
               </p>
             </div>

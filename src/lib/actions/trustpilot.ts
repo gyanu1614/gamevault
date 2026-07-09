@@ -90,7 +90,7 @@ export async function sendTrustpilotInvitation(orderId: string): Promise<{
               recipientName: buyerName,
               referenceId: orderId,
               locale: 'en-US',
-              tags: ['gamevault', 'order'],
+              tags: ['dropmarket', 'order'],
             }),
           }
         )

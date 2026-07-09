@@ -34,14 +34,16 @@ export function DeliveryInstructions({
   listingId,
 }: DeliveryInstructionsProps) {
   const trimmed = instructions?.trim() ?? ''
-  if (!trimmed) return null
 
   // Split on newlines; each non-empty line becomes a numbered step.
   // If the seller didn't break it into lines, render as a single para.
+  // Runs before the empty-state return — hooks must stay unconditional.
   const steps = useMemo(() => {
     const lines = trimmed.split(/\r?\n/).map((l) => l.trim()).filter(Boolean)
     return lines.length > 1 ? lines : null
   }, [trimmed])
+
+  if (!trimmed) return null
 
   if (role === 'seller') {
     return (
@@ -74,7 +76,7 @@ export function DeliveryInstructions({
         <span className="text-[13.5px] font-bold tracking-tight text-text-primary">
           How To Receive Your Order
         </span>
-        <span className="ml-auto rounded-[7px] border border-lime/30 px-2 py-0.5 text-[10.5px] font-bold uppercase tracking-wide text-lime-text">
+        <span className="ml-auto rounded-[7px] border border-lime/30 px-2 py-0.5 text-[11.5px] font-bold uppercase tracking-[0.14em] text-lime-text">
           Action Needed
         </span>
       </div>

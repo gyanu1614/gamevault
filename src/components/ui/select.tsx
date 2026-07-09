@@ -3,7 +3,7 @@
 /**
  * Select — shadcn-style wrapper around @radix-ui/react-select.
  *
- * Styled with GameVault design tokens (lime accent, bg-bg-overlay surfaces,
+ * Styled with DropMarket design tokens (lime accent, bg-bg-overlay surfaces,
  * border-border-default chrome). Portaled content so it never gets trapped
  * inside an overflow-hidden parent — fixes the overlap-with-fields-below
  * bug that the hand-rolled dropdown had.
@@ -151,7 +151,7 @@ const SelectLabel = React.forwardRef<
   <SelectPrimitive.Label
     ref={ref}
     className={cn(
-      'px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-text-tertiary',
+      'px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-text-tertiary',
       className
     )}
     {...props}

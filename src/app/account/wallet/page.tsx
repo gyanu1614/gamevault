@@ -520,7 +520,7 @@ export default function WalletPage() {
                   <Link
                     href="/account/wallet/withdraw"
                     className={cn(
-                      'inline-flex shrink-0 items-center gap-2 rounded-lg bg-lime px-4 py-2.5 text-sm font-semibold text-text-inverse transition-colors hover:bg-lime/90',
+                      'inline-flex shrink-0 items-center gap-2 rounded-lg bg-lime px-4 py-2.5 text-sm font-semibold text-text-inverse transition-colors hover:bg-lime-hover',
                       earningsStats.available_balance <= 0 && 'pointer-events-none opacity-50',
                     )}
                   >
@@ -584,7 +584,7 @@ export default function WalletPage() {
                     <button
                       onClick={() => handleTopUp(25)}
                       disabled={isTopUpLoading}
-                      className="group relative flex items-center justify-center gap-1.5 rounded-lg bg-lime text-text-inverse hover:bg-lime/90 px-4 py-2 text-sm font-semibold text-white transition-all disabled:cursor-not-allowed"
+                      className="group relative flex items-center justify-center gap-1.5 rounded-lg bg-lime text-text-inverse hover:bg-lime-hover px-4 py-2 text-sm font-semibold transition-all disabled:cursor-not-allowed"
                     >
                       {isTopUpLoading ? (
                         <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -761,7 +761,7 @@ export default function WalletPage() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-0.5">
                         {txn.gameName && (
-                          <span className="text-[10px] font-semibold text-lime-text uppercase tracking-wide">{txn.gameName}</span>
+                          <span className="text-[11.5px] font-bold text-lime-text uppercase tracking-[0.14em]">{txn.gameName}</span>
                         )}
                         {txn.categoryName && (
                           <>
@@ -820,7 +820,7 @@ export default function WalletPage() {
               {!searchQuery && (
                 <Link
                   href="/sell/new"
-                  className="inline-flex items-center gap-2 rounded-lg bg-lime text-text-inverse hover:bg-lime/90 px-4 py-2 text-sm font-semibold text-white transition-all"
+                  className="inline-flex items-center gap-2 rounded-lg bg-lime text-text-inverse hover:bg-lime-hover px-4 py-2 text-sm font-semibold transition-all"
                 >
                   <Plus className="h-4 w-4" />
                   Create Listing
@@ -847,7 +847,7 @@ export default function WalletPage() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-0.5">
                         {txn.gameName && (
-                          <span className="text-[10px] font-semibold text-lime-text uppercase tracking-wide">{txn.gameName}</span>
+                          <span className="text-[11.5px] font-bold text-lime-text uppercase tracking-[0.14em]">{txn.gameName}</span>
                         )}
                         {txn.categoryName && (
                           <>
@@ -913,7 +913,7 @@ export default function WalletPage() {
             <div className="flex flex-col items-center justify-center py-16 text-center">
               <CreditCard className="h-10 w-10 text-text-tertiary mb-3" />
               <p className="text-sm font-medium text-text-secondary">No payouts yet</p>
-              <p className="text-xs text-text-disabled mt-1">Payouts appear once you've completed sales</p>
+              <p className="text-xs text-text-disabled mt-1">Payouts appear once you&apos;ve completed sales</p>
             </div>
           ) : (
             <>

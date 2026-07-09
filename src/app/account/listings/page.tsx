@@ -1,1080 +1,975 @@
 'use client'
 
 /**
- * /account/listings — seller's listing inventory.
+ * /account/listings — seller offer tables ("Offers" in the sidebar).
  *
- * V4 reskin: GV tokens, Radix primitives, NumberField for prices, Combobox
- * for category/sort, DropdownMenu for row actions, Dialog for delete
- * confirmation, Checkbox for selection, Tabs for status filter. Mobile-
- * responsive layout: 2-card grid on mobile, 3-up on lg; full-width status
- * tabs scroll horizontally on narrow screens.
+ * V33 — Offers-table revamp (replaces the V4 card grid). One shared
+ * table framework renders all four offer sections via ?type=
+ * (currency | items | accounts | top-up — the sidebar sub-items drive
+ * the param):
  *
- * Behavior preserved end-to-end from the previous file:
- *   - useSellerListings for data + mutations (update, delete, bulk*)
- *   - inline price edit per row with optimistic state
- *   - bulk activate / pause / delete / set-price
- *   - restriction banner when the seller is restricted
- *   - status counts per filter chip
+ *   header (title + Add New Offer) → filter row (Game / Status / Bulk
+ *   Actions / search / sort) → results card (table) → pagination.
+ *
+ * Columns: Offer (logo + title + game), Offer ID (sequential
+ * offer_number chip w/ copy — falls back to a short UUID prefix until
+ * the add-offer-number migration runs), Delivery Time, Price (inline
+ * PriceField — grey tick clean, lime tick dirty→save), Status, Stock,
+ * Min Quantity, Delivery Method, Updated, ⋮ actions.
+ *
+ * Status display mapping (UI only, no schema change): active→Active,
+ * paused→Paused, draft→Draft, archived+sold→Closed, suspended→
+ * Suspended (admin), pending_approval→Under Review; store Offline Mode
+ * overrides Active with an amber Offline chip.
+ *
+ * Design: rectangular geometry (rounded-lg card / rounded-md inner),
+ * grey hovers, no green fills — only the green tick. Approved via
+ * /dev/offers-preview.
+ *
+ * Data + mutations preserved from the old page: useSellerListings
+ * (update / bulkUpdate / bulkDelete), RestrictionBanner + publish
+ * gating, getMyStorePaused offline badge.
  */
 
+import * as React from 'react'
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { toast } from 'sonner'
-import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Search, Plus, Trash2, Pause, Play, Eye, MoreVertical, X, Loader2,
-  AlertCircle, Edit2, ShieldAlert, Check, Package,
-  Share2, FileSpreadsheet, ListFilter, TrendingUp,
+  Archive, ArrowUpDown, Check, ChevronDown, ChevronLeft, ChevronRight,
+  ChevronsLeft, ChevronsRight, Clock, Copy, ExternalLink, LayoutGrid,
+  Link2, Loader2, MoreVertical, Package, Pause, Pencil, Play, Plus,
+  Search, Trash2, X,
 } from 'lucide-react'
-// V14r — Tabler icons for the metric rail. Lucide's basic icons (Boxes,
-// Truck) read as clip-art; Tabler's stroke-style set is more premium
-// and consistent with how dashboards like Linear / Vercel render metrics.
-import {
-  IconEye,
-  IconCoins,
-  IconPackages,
-  IconInfinity,
-  IconRocket,
-  IconBolt,
-} from '@tabler/icons-react'
-import { formatDeliveryLabel } from '@/lib/utils/delivery-time'
 
 import { useAuth } from '@/hooks/use-auth'
-import AccountPageHeader from '@/components/account/AccountPageHeader'
-import { getMyStorePaused } from '@/lib/actions/seller-presence'
 import { useSellerListings } from '@/hooks/use-seller-listings'
-import { ListingStatus } from '@/lib/api/seller-compatible'
+import type { Listing } from '@/lib/api/seller-compatible'
+import { formatDeliveryLabel } from '@/lib/utils/delivery-time'
 import { canSellerPublish, type SellerStatus } from '@/lib/utils/seller-status'
+import { getMyStorePaused } from '@/lib/actions/seller-presence'
+import AccountPageHeader from '@/components/account/AccountPageHeader'
 import RestrictionBanner from '@/components/seller/RestrictionBanner'
 import { SellerOnlyGate } from '@/components/seller/SellerOnlyGate'
 
-import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Combobox } from '@/components/ui/combobox'
-import { NumberField } from '@/components/ui/number-field'
+import { PriceField } from '@/components/ui/price-field'
 import {
-  DropdownMenu, DropdownMenuTrigger, DropdownMenuContent,
-  DropdownMenuItem, DropdownMenuSeparator,
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
+  DropdownMenuSeparator, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle,
-  DialogDescription, DialogFooter,
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader,
+  DialogTitle,
 } from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
-// ─── Game icon helpers (carry-over) ──────────────────────────────────────────
+// ─── Offer sections ──────────────────────────────────────────────────────────
 
-const GAME_ICON_MAP: Record<string, string> = {
-  'steal-a-brainrot': 'sab',
-  'grow-a-garden': 'gag',
-  'apex-legends': 'apexlegends',
-  'escape-from-tarkov': 'escapefromtarkov',
-  'r6-siege': 'r6',
-  'league-of-legends': 'lol',
-  'gta-v': 'gta-v',
-}
-function gameIconUrl(slug: string): string {
-  return `/games/${GAME_ICON_MAP[slug] ?? slug}.png`
-}
-function GameIcon({ slug, emoji, size = 'sm' }: { slug: string; emoji: string; size?: 'xs' | 'sm' }) {
-  const [failed, setFailed] = useState(false)
-  const cls = size === 'xs' ? 'h-4 w-4 text-xs' : 'h-5 w-5 text-sm'
-  if (!slug || failed) {
-    return <span className={cn('inline-flex shrink-0 items-center justify-center leading-none', cls)}>{emoji || '🎮'}</span>
-  }
-  /* eslint-disable-next-line @next/next/no-img-element */
-  return <img src={gameIconUrl(slug)} alt="" className={cn(cls, 'shrink-0 rounded object-cover')} onError={() => setFailed(true)} />
+import { classifyOfferType, type OfferType } from '@/lib/utils/offer-type'
+
+const OFFER_META: Record<OfferType, { title: string }> = {
+  currency: { title: 'Currency Offers' },
+  items: { title: 'Item Offers' },
+  accounts: { title: 'Account Offers' },
+  'top-up': { title: 'Top Up Offers' },
 }
 
-// ─── Constants ───────────────────────────────────────────────────────────────
+// ─── Status chips ────────────────────────────────────────────────────────────
 
-type SortBy = 'newest' | 'oldest' | 'price-low' | 'price-high' | 'views' | 'sales'
-type FilterStatus = 'all' | 'active' | 'paused' | 'sold' | 'draft' | 'archived' | 'suspended' | 'pending_approval'
+type ChipKey = 'active' | 'paused' | 'draft' | 'closed' | 'suspended' | 'pending' | 'offline'
 
-const SORT_OPTIONS: { value: SortBy; label: string }[] = [
-  { value: 'newest', label: 'Newest first' },
-  { value: 'oldest', label: 'Oldest first' },
-  { value: 'price-low', label: 'Price: low to high' },
-  { value: 'price-high', label: 'Price: high to low' },
-  { value: 'views', label: 'Most viewed' },
-  { value: 'sales', label: 'Best selling' },
-]
+const STATUS_CHIP: Record<ChipKey, { label: string; cls: string }> = {
+  active: { label: 'Active', cls: 'border-[rgba(198,255,61,0.22)] bg-[rgba(198,255,61,0.10)] text-lime-text' },
+  offline: { label: 'Offline', cls: 'border-amber-400/25 bg-amber-400/10 text-amber-300' },
+  paused: { label: 'Paused', cls: 'border-amber-400/25 bg-amber-400/10 text-amber-300' },
+  draft: { label: 'Draft', cls: 'border-white/[0.12] bg-white/[0.05] text-text-secondary' },
+  pending: { label: 'Under Review', cls: 'border-sky-400/25 bg-sky-400/10 text-sky-300' },
+  closed: { label: 'Closed', cls: 'border-white/[0.08] bg-white/[0.03] text-text-tertiary' },
+  suspended: { label: 'Suspended', cls: 'border-red-500/25 bg-red-500/10 text-red-300' },
+}
 
-const STATUS_TABS: { value: FilterStatus; label: string }[] = [
-  { value: 'all', label: 'All' },
-  { value: 'active', label: 'Active' },
-  { value: 'pending_approval', label: 'Under review' },
-  { value: 'paused', label: 'Paused' },
-  { value: 'sold', label: 'Sold' },
-  { value: 'draft', label: 'Drafts' },
-]
+/** DB status → display chip (Closed = archived + sold; Offline Mode
+ *  overrides Active). */
+function chipKeyFor(status: string, storePaused: boolean): ChipKey {
+  if (status === 'active') return storePaused ? 'offline' : 'active'
+  if (status === 'paused') return 'paused'
+  if (status === 'draft') return 'draft'
+  if (status === 'pending_approval') return 'pending'
+  if (status === 'suspended') return 'suspended'
+  return 'closed' // archived, sold, anything legacy
+}
 
-// ─── Status badge ────────────────────────────────────────────────────────────
-
-// V14q — Listing-row metric cell. Same shape as the currency-page seller
-// row's MetricCol: small icon + bold value on top, caption beneath.
-// Fixed width per column so every row's columns align vertically.
-// V14t — Caption bumped from 10px / tracking-wider to 11.5px / tracking-[0.06em]
-// per design call: was too thin to read. Still Inter (app default font).
-function MetricCell({
-  icon: Icon, label, value, valueClass, width = 84,
-}: {
-  icon: React.ComponentType<{ className?: string }>
-  label: string
-  value: string
-  valueClass?: string
-  width?: number
-}) {
+function StatusChip({ k }: { k: ChipKey }) {
+  const c = STATUS_CHIP[k]
   return (
-    <div className="shrink-0" style={{ width }}>
-      <div className={cn(
-        'flex items-center gap-1.5 text-[15px] font-semibold tabular-nums leading-tight text-text-primary',
-        valueClass,
-      )}>
-        <Icon className="h-4 w-4 shrink-0 text-text-tertiary" />
-        <span className="truncate">{value}</span>
-      </div>
-      <div className="mt-1 text-[11.5px] font-medium uppercase tracking-[0.06em] text-text-tertiary">
-        {label}
-      </div>
-    </div>
-  )
-}
-
-// V21/P7.ai — The 4 Offers sections. A listing's category type
-// (metadata.type) maps to one of these; slug is a fallback for rows
-// whose metadata is missing. Order matches the sidebar.
-type OfferType = 'currency' | 'items' | 'accounts' | 'top-up'
-const OFFER_TABS: { type: OfferType; label: string }[] = [
-  { type: 'currency', label: 'Currency' },
-  { type: 'items', label: 'Items' },
-  { type: 'accounts', label: 'Accounts' },
-  { type: 'top-up', label: 'Top Ups' },
-]
-function classifyOfferType(
-  metaType: string | undefined,
-  slug: string | undefined,
-): OfferType {
-  const t = (metaType || '').toLowerCase()
-  if (t === 'currency') return 'currency'
-  if (t === 'account') return 'accounts'
-  if (t === 'top_up') return 'top-up'
-  if (t === 'items' || t === 'item') return 'items'
-  // Slug fallback when metadata.type is absent.
-  const s = (slug || '').toLowerCase()
-  if (/vbuck|robux|coin|gold|gem|currenc|points?|credits?/.test(s)) return 'currency'
-  if (/account/.test(s)) return 'accounts'
-  if (/top-?up/.test(s)) return 'top-up'
-  return 'items'
-}
-
-function StatusBadge({ status, offline = false }: { status: string; offline?: boolean }) {
-  // V21/P7.ae — When the seller's store is in Offline Mode, listings that
-  // would read "Active" show "Offline" instead (amber). Paused/sold/etc.
-  // keep their own status; only live ones are overridden.
-  if (offline && status === 'active') {
-    return (
-      <span className="inline-flex items-center gap-1.5 rounded-full border border-warning/30 bg-warning-bg px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-warning">
-        <span className="h-1.5 w-1.5 rounded-full bg-warning" />
-        Offline
-      </span>
-    )
-  }
-  const cfg: Record<string, { dot: string; text: string; bg: string; border: string; label: string }> = {
-    active:           { dot: 'bg-success', text: 'text-success', bg: 'bg-success-bg', border: 'border-success/30', label: 'Active' },
-    paused:           { dot: 'bg-warning', text: 'text-warning', bg: 'bg-warning-bg', border: 'border-warning/30', label: 'Paused' },
-    sold:             { dot: 'bg-text-tertiary', text: 'text-text-tertiary', bg: 'bg-bg-inset', border: 'border-border-subtle', label: 'Sold out' },
-    draft:            { dot: 'bg-info', text: 'text-info', bg: 'bg-info-bg', border: 'border-info/30', label: 'Draft' },
-    pending_approval: { dot: 'bg-warning', text: 'text-warning', bg: 'bg-warning-bg', border: 'border-warning/30', label: 'Under review' },
-    suspended:        { dot: 'bg-error', text: 'text-error', bg: 'bg-error-bg', border: 'border-error/30', label: 'Suspended' },
-    archived:         { dot: 'bg-text-disabled', text: 'text-text-tertiary', bg: 'bg-bg-inset', border: 'border-border-subtle', label: 'Archived' },
-  }
-  const c = cfg[status] ?? cfg.draft
-  return (
-    <span className={cn('inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider', c.bg, c.border, c.text)}>
-      <span className={cn('h-1.5 w-1.5 rounded-full', c.dot)} />
+    <span className={cn('inline-flex items-center whitespace-nowrap rounded-md border px-2 py-[3px] text-[11.5px] font-bold', c.cls)}>
       {c.label}
     </span>
   )
 }
 
-// ─── Main page ───────────────────────────────────────────────────────────────
+type FilterStatus = 'all' | 'active' | 'paused' | 'draft' | 'closed' | 'pending_approval'
 
-// V17e — Default export wraps the page in SellerOnlyGate. Buyers and
-// anonymous visitors get redirected; only approved sellers ever render
-// the listings UI below.
+const FILTER_STATUSES: { value: FilterStatus; label: string }[] = [
+  { value: 'all', label: 'All' },
+  { value: 'active', label: 'Active' },
+  { value: 'paused', label: 'Paused' },
+  { value: 'draft', label: 'Draft' },
+  { value: 'closed', label: 'Closed' },
+  { value: 'pending_approval', label: 'Under Review' },
+]
+
+function matchesStatusFilter(status: string, f: FilterStatus): boolean {
+  const closed = status === 'archived' || status === 'sold'
+  // Default view is the working set — Closed offers only show when the
+  // Closed filter is explicitly picked.
+  if (f === 'all') return !closed
+  if (f === 'closed') return closed
+  return status === f
+}
+
+// ─── Formatters ──────────────────────────────────────────────────────────────
+
+/** Compact stock: 1580 → 1.5K, 99e9 → 99B (capitalized per design). */
+function fmtCompact(n: number): string {
+  const fmt = (v: number, suffix: string) => {
+    const r = Math.round(v * 10) / 10
+    return `${r % 1 === 0 ? r.toFixed(0) : r.toFixed(1)}${suffix}`
+  }
+  if (n >= 1e9) return fmt(n / 1e9, 'B')
+  if (n >= 1e6) return fmt(n / 1e6, 'M')
+  if (n >= 1e3) return fmt(n / 1e3, 'K')
+  return String(n)
+}
+
+function fmtRelative(iso: string): string {
+  const then = new Date(iso).getTime()
+  if (!Number.isFinite(then)) return '—'
+  const mins = Math.max(0, Math.round((Date.now() - then) / 60_000))
+  if (mins < 1) return 'just now'
+  if (mins < 60) return `${mins} min ago`
+  const hours = Math.round(mins / 60)
+  if (hours < 24) return `${hours} ${hours === 1 ? 'hour' : 'hours'} ago`
+  const days = Math.round(hours / 24)
+  if (days === 1) return 'yesterday'
+  if (days < 7) return `${days} days ago`
+  const weeks = Math.round(days / 7)
+  if (weeks < 5) return `${weeks} ${weeks === 1 ? 'week' : 'weeks'} ago`
+  const months = Math.round(days / 30)
+  return `${months} ${months === 1 ? 'month' : 'months'} ago`
+}
+
+function methodLabel(method: string | null | undefined): string {
+  const m = (method || 'manual').toLowerCase()
+  if (m === 'instant') return 'Instant'
+  if (m === 'manual') return 'Manual'
+  // Future per-game methods (in-game / gifting / …) display Title Cased.
+  return m.replace(/[-_]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+}
+
+function escapeRegExp(v: string): string {
+  return v.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+/** Currency rows: sellers often prefix titles with the game name the row
+ *  already shows underneath ("Fortnite 800 V-Bucks"). Show just the
+ *  bundle name ("800 V-Bucks"). Display-only — the stored title is
+ *  untouched. */
+function displayTitle(l: Listing, type: OfferType): string {
+  if (type !== 'currency' || !l.game?.name) return l.title
+  const stripped = l.title
+    .replace(new RegExp(`^\\s*${escapeRegExp(l.game.name)}\\s*[-–—:|]?\\s*`, 'i'), '')
+    .trim()
+  return stripped || l.title
+}
+
+/** Public listing URL (mirrors the marketplace route shape). */
+function publicPath(l: Listing): string {
+  return `/${l.game?.slug ?? ''}/${l.category?.slug ?? ''}/${(l.slug && l.slug.trim()) || l.id}`
+}
+
+const SORTS = [
+  { value: 'newest', label: 'Newest' },
+  { value: 'oldest', label: 'Oldest' },
+  { value: 'price-desc', label: 'Price: High to Low' },
+  { value: 'price-asc', label: 'Price: Low to High' },
+  { value: 'stock', label: 'Stock' },
+] as const
+type SortKey = (typeof SORTS)[number]['value']
+
+/** Bulk delivery-time presets — union of the wizard's grids. */
+const DELIVERY_TIME_OPTIONS = ['instant', '5min', '15min', '30min', '1hr', '3hr', '6hr', '12hr', '24hr']
+
+// ─── Dense rectangular menu recipe (matches /dev/offers-preview) ────────────
+
+const MENU_CLS =
+  // Platform-card material, opaque enough to read over the table: border-2
+  // plate + top sheen (before:) + deep drop shadow + heavy blur.
+  "relative overflow-hidden rounded-lg border-2 border-border-default bg-[rgba(17,18,26,0.96)] p-1.5 shadow-[0_18px_44px_-14px_rgba(0,0,0,0.75)] backdrop-blur-xl before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:h-10 before:bg-[linear-gradient(to_bottom,rgba(255,255,255,0.05),transparent)] before:content-['']"
+const ITEM_CLS =
+  'h-9 cursor-pointer gap-2.5 rounded-[5px] px-2.5 text-[13px] font-semibold text-text-secondary focus:text-text-primary'
+const LABEL_CLS =
+  'px-2.5 pb-1 pt-1.5 text-[11px] font-extrabold uppercase tracking-[0.08em] text-text-tertiary'
+
+// ─── Small building blocks ───────────────────────────────────────────────────
+
+const FilterTrigger = React.forwardRef<
+  HTMLButtonElement,
+  React.ButtonHTMLAttributes<HTMLButtonElement> & {
+    active?: boolean
+    /** Show a small ✕ instead of the chevron; clicking it runs onClear
+     *  AND still opens the menu (no stopPropagation — Radix's trigger
+     *  fires as usual). Clicking anywhere else keeps the selection. */
+    clearable?: boolean
+    onClear?: () => void
+  }
+>(({ children, active = false, disabled = false, clearable = false, onClear, className, ...props }, ref) => (
+  <button
+    ref={ref}
+    type="button"
+    disabled={disabled}
+    {...props}
+    className={cn(
+      // Bundle platform-card surface: blackened plate + top sheen, hover
+      // lift + border-strong. Active (filter applied) holds the lifted
+      // plate — no lime.
+      'relative flex h-[42px] min-w-[132px] items-center justify-between gap-2.5 overflow-hidden whitespace-nowrap rounded-md border-2 px-4 text-[13.5px] font-semibold backdrop-blur-md transition-all duration-200',
+      active
+        ? 'border-border-strong bg-[rgba(26,26,35,0.70)] text-text-primary'
+        : 'border-border-default bg-[rgba(20,20,27,0.56)] text-text-secondary',
+      disabled
+        ? 'cursor-not-allowed opacity-50'
+        : 'hover:-translate-y-0.5 hover:border-border-strong hover:bg-[rgba(26,26,35,0.70)] hover:text-text-primary hover:shadow-[0_12px_24px_-12px_rgba(0,0,0,0.6)]',
+      className,
+    )}
+  >
+    <span
+      aria-hidden
+      className="pointer-events-none absolute inset-x-0 top-0 h-1/2 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.06),transparent)]"
+    />
+    {children}
+    {clearable ? (
+      <span
+        role="button"
+        tabIndex={-1}
+        aria-label="Clear filter"
+        onPointerDown={() => onClear?.()}
+        className="-mr-1 flex h-5 w-5 items-center justify-center rounded text-text-tertiary transition-colors hover:bg-white/[0.10] hover:text-text-primary"
+      >
+        <X className="h-3.5 w-3.5" />
+      </span>
+    ) : (
+      <ChevronDown className="h-3.5 w-3.5 text-text-tertiary" />
+    )}
+  </button>
+))
+FilterTrigger.displayName = 'FilterTrigger'
+
+/** #33404-style chip. Falls back to a short UUID prefix until the
+ *  offer_number migration has run. */
+function OfferIdChip({ listing }: { listing: Listing }) {
+  const display = listing.offer_number != null ? `#${listing.offer_number}` : `#${listing.id.slice(0, 8).toUpperCase()}`
+  const [copied, setCopied] = useState(false)
+  const copy = () => {
+    void navigator.clipboard?.writeText(display)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 1200)
+  }
+  return (
+    <span className="inline-flex h-8 items-stretch overflow-hidden rounded-md border border-white/[0.08] bg-white/[0.03]">
+      <span className="flex items-center px-2.5 text-[12.5px] font-semibold tabular-nums text-text-secondary">
+        {display}
+      </span>
+      <button
+        type="button"
+        onClick={copy}
+        aria-label={`Copy offer ID ${display}`}
+        className="flex w-8 items-center justify-center border-l border-white/[0.08] text-text-tertiary transition-colors hover:bg-white/[0.05] hover:text-text-primary"
+      >
+        {copied ? <Check className="h-3.5 w-3.5 text-lime-text" /> : <Copy className="h-3.5 w-3.5" />}
+      </button>
+    </span>
+  )
+}
+
+// ─── Page ────────────────────────────────────────────────────────────────────
+
 export default function ListingsPage() {
   return (
     <SellerOnlyGate>
-      <ListingsContent />
+      <OffersContent />
     </SellerOnlyGate>
   )
 }
 
-function ListingsContent() {
-  const { user, loading: authLoading } = useAuth()
+function OffersContent() {
   const router = useRouter()
-
-  // V21/P7.ai — Active Offers section from ?type= (currency by default).
-  // The sidebar sub-items + the tab row both drive this param.
+  const { user } = useAuth()
   const searchParams = useSearchParams()
-  const activeOfferType: OfferType = (() => {
+
+  const type: OfferType = (() => {
     const t = (searchParams.get('type') || '').toLowerCase()
-    return OFFER_TABS.some((o) => o.type === t) ? (t as OfferType) : 'currency'
+    return t in OFFER_META ? (t as OfferType) : 'currency'
   })()
 
-  // V21/P7.ae — Seller's Offline Mode state. When paused, active listings
-  // render an "Offline" badge instead of "Active".
+  const { listings, isLoading, error, updateListing, deleteListing, bulkUpdate, bulkDelete } = useSellerListings()
+
+  // Restriction + Offline Mode (carried over from the old page).
+  const sellerStatus = (((user?.profile as Record<string, unknown> | undefined)?.seller_status as SellerStatus) || 'active')
+  const isRestricted = !canSellerPublish(sellerStatus)
   const [storePaused, setStorePaused] = useState(false)
   useEffect(() => {
-    if (!user?.id) return
     let active = true
     getMyStorePaused().then((v) => { if (active) setStorePaused(v) })
     return () => { active = false }
-  }, [user?.id])
+  }, [])
 
-  // Filters
-  const [searchQuery, setSearchQuery] = useState('')
-  const [selectedStatus, setSelectedStatus] = useState<FilterStatus>('all')
-  const [selectedGame, setSelectedGame] = useState<string>('all')
-  const [sortBy, setSortBy] = useState<SortBy>('newest')
+  // ── Filters / sort / pagination state ──
+  const [gameId, setGameId] = useState<string>('all')
+  const [statusFilter, setStatusFilter] = useState<FilterStatus>('all')
+  const [search, setSearch] = useState('')
+  const [sort, setSort] = useState<SortKey>('newest')
+  const [perPage, setPerPage] = useState(15)
+  const [page, setPage] = useState(1)
+  const [selected, setSelected] = useState<Set<string>>(new Set())
 
-  // Selection + bulk
-  const [selectedListings, setSelectedListings] = useState<Set<string>>(new Set())
-  const [bulkPriceOpen, setBulkPriceOpen] = useState(false)
-  const [bulkPrice, setBulkPrice] = useState<number>(0)
-  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
-
-  // Per-row inline edits
-  const [editingPrices, setEditingPrices] = useState<Record<string, number>>({})
-  const [updatingListings, setUpdatingListings] = useState<Set<string>>(new Set())
-  const [deletingListings, setDeletingListings] = useState<Set<string>>(new Set())
-  const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null)
-
-  const {
-    listings: dbListings,
-    isLoading: listingsLoading,
-    updateListing,
-    deleteListing,
-    bulkUpdate,
-    bulkDelete,
-    isUpdating,
-    isDeleting,
-  } = useSellerListings({
-    search: searchQuery,
-    status: selectedStatus !== 'all' ? (selectedStatus as ListingStatus) : undefined,
-  })
-
-  const listings = useMemo(() => {
-    return dbListings.map((l) => ({
-      id: l.id,
-      title: l.title,
-      game: { name: l.game?.name || 'Unknown', slug: l.game?.slug || '', emoji: l.game?.emoji || '🎮' },
-      category: l.category?.name || 'Uncategorized',
-      categorySlug: l.category?.slug || '',
-      offerType: classifyOfferType(
-        ((l.category as any)?.metadata)?.type,
-        l.category?.slug,
-      ),
-      slug: l.id,
-      price: l.price,
-      originalPrice: undefined as number | undefined,
-      quantity: l.quantity,
-      isUnlimited: !!l.is_unlimited,
-      status: l.status,
-      views: l.views,
-      sales: l.sales,
-      delivery_method: l.delivery_method || 'manual',
-      delivery_time: l.delivery_time || '1-24 hours',
-      image:
-        l.images?.length
-          ? l.images[0]
-          : `https://placehold.co/400x300/6366f1/fff?text=${encodeURIComponent(l.title.slice(0, 20))}`,
-      createdAt: l.created_at,
-      updatedAt: l.updated_at,
-    }))
-  }, [dbListings])
-
-  const filteredListings = useMemo(() => {
-    // V21/P7.ai — Always scope to the active Offers section first.
-    let result = listings.filter((l) => l.offerType === activeOfferType)
-    if (selectedGame !== 'all') {
-      result = result.filter((l) => l.game.slug === selectedGame)
-    }
-    result.sort((a, b) => {
-      switch (sortBy) {
-        case 'newest':     return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-        case 'oldest':     return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-        case 'price-low':  return a.price - b.price
-        case 'price-high': return b.price - a.price
-        case 'views':      return b.views - a.views
-        case 'sales':      return b.sales - a.sales
-      }
-    })
-    return result
-  }, [listings, sortBy, selectedGame, activeOfferType])
-
-  // Game options for the filter dropdown — derived from the seller's own
-  // listings in the active section, deduped by slug.
-  const gameOptions = useMemo(() => {
-    const seen = new Map<string, string>()
-    for (const l of listings) {
-      if (l.game.slug && !seen.has(l.game.slug)) seen.set(l.game.slug, l.game.name)
-    }
-    return [
-      { value: 'all', label: 'All games' },
-      ...Array.from(seen, ([value, label]) => ({ value, label })),
-    ]
-  }, [listings])
-
-  // Status options reuse the canonical status list.
-  const statusOptions = useMemo(
-    () => STATUS_TABS.map((t) => ({ value: t.value, label: t.label })),
-    [],
+  // Section rows + the games represented in them (for the Game filter).
+  const typed = useMemo(
+    () => listings.filter((l) => classifyOfferType(l.category?.metadata?.type, l.category?.slug) === type),
+    [listings, type],
   )
+  const games = useMemo(() => {
+    const seen = new Map<string, { id: string; name: string; image?: string | null }>()
+    for (const l of typed) {
+      if (l.game && !seen.has(l.game.id)) {
+        seen.set(l.game.id, { id: l.game.id, name: l.game.name, image: l.game.image_url })
+      }
+    }
+    return Array.from(seen.values()).sort((a, b) => a.name.localeCompare(b.name))
+  }, [typed])
 
-  // ── Handlers ──────────────────────────────────────────────────────────────
+  const visible = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    const rows = typed.filter(
+      (l) =>
+        (gameId === 'all' || l.game_id === gameId) &&
+        matchesStatusFilter(l.status, statusFilter) &&
+        (q === '' ||
+          l.title.toLowerCase().includes(q) ||
+          (l.offer_number != null && `#${l.offer_number}`.includes(q))),
+    )
+    const by: Record<SortKey, (a: Listing, b: Listing) => number> = {
+      newest: (a, b) => +new Date(b.created_at) - +new Date(a.created_at),
+      oldest: (a, b) => +new Date(a.created_at) - +new Date(b.created_at),
+      'price-desc': (a, b) => b.price - a.price,
+      'price-asc': (a, b) => a.price - b.price,
+      stock: (a, b) => (b.is_unlimited ? Infinity : b.quantity ?? 0) - (a.is_unlimited ? Infinity : a.quantity ?? 0),
+    }
+    return [...rows].sort(by[sort])
+  }, [typed, gameId, statusFilter, search, sort])
 
-  const sellerStatus = ((user?.profile as any)?.seller_status as SellerStatus) || 'active'
-  const isRestricted = !canSellerPublish(sellerStatus)
+  const pageCount = Math.max(1, Math.ceil(visible.length / perPage))
+  const safePage = Math.min(page, pageCount)
+  const paged = visible.slice((safePage - 1) * perPage, safePage * perPage)
 
-  const toggleSelectOne = (id: string) => {
-    setSelectedListings((prev) => {
+  // Reset page + selection when the view changes underneath them.
+  useEffect(() => { setPage(1) }, [type, gameId, statusFilter, search, perPage, sort])
+  useEffect(() => { setSelected(new Set()); setGameId('all'); setSearch('') }, [type])
+
+  const allSelected = paged.length > 0 && paged.every((l) => selected.has(l.id))
+  const toggleAll = () =>
+    setSelected(allSelected ? new Set() : new Set(paged.map((l) => l.id)))
+  const toggleOne = (id: string) =>
+    setSelected((prev) => {
       const next = new Set(prev)
-      next.has(id) ? next.delete(id) : next.add(id)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
       return next
     })
-  }
-  const toggleSelectAll = () => {
-    setSelectedListings((prev) =>
-      prev.size === filteredListings.length ? new Set() : new Set(filteredListings.map((l) => l.id)),
-    )
-  }
-  const clearSelection = () => setSelectedListings(new Set())
 
-  const onBulkActivate = async () => {
-    if (isRestricted) { toast.error('Your account is restricted.'); return }
-    await bulkUpdate({ ids: Array.from(selectedListings), updates: { status: 'active' } })
-    clearSelection()
-  }
-  const onBulkPause = async () => {
-    await bulkUpdate({ ids: Array.from(selectedListings), updates: { status: 'paused' } })
-    clearSelection()
-  }
-  const onBulkDelete = async () => {
-    await bulkDelete(Array.from(selectedListings))
-    setBulkDeleteOpen(false)
-    clearSelection()
-  }
-  const onBulkPriceApply = async () => {
-    if (!bulkPrice || bulkPrice <= 0) { toast.error('Enter a valid price'); return }
-    await bulkUpdate({ ids: Array.from(selectedListings), updates: { price: bulkPrice } })
-    setBulkPriceOpen(false)
-    setBulkPrice(0)
-    clearSelection()
-  }
+  // ── Mutations ──
+  const [archiveTarget, setArchiveTarget] = useState<Listing | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<Listing | null>(null)
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
+  const [bulkDeliveryOpen, setBulkDeliveryOpen] = useState(false)
+  const [busy, setBusy] = useState(false)
 
-  const onUpdatePrice = async (id: string) => {
-    const v = editingPrices[id]
-    if (!v || v <= 0) { toast.error('Price must be greater than 0'); return }
-    setUpdatingListings((s) => new Set(s).add(id))
+  const savePrice = async (l: Listing, next: number) => {
+    await updateListing({ id: l.id, updates: { price: next }, silent: true })
+    toast.success('Price updated')
+  }
+  const setStatus = async (l: Listing, status: 'active' | 'paused') => {
+    if (status === 'active' && isRestricted) {
+      toast.error('Your account is restricted — offers can’t be activated right now.')
+      return
+    }
+    await updateListing({ id: l.id, updates: { status }, silent: true })
+    toast.success(status === 'active' ? 'Offer activated' : 'Offer paused')
+  }
+  const archive = async () => {
+    if (!archiveTarget) return
+    setBusy(true)
     try {
-      await updateListing({ id, updates: { price: v }, silent: true })
-      toast.success('Price updated')
-      setEditingPrices((p) => { const n = { ...p }; delete n[id]; return n })
-    } catch (e: any) {
-      toast.error(e.message ?? 'Failed to update price')
+      await updateListing({ id: archiveTarget.id, updates: { status: 'archived' }, silent: true })
+      toast.success('Offer archived')
+      setArchiveTarget(null)
     } finally {
-      setUpdatingListings((s) => { const n = new Set(s); n.delete(id); return n })
+      setBusy(false)
+    }
+  }
+  const isFkViolation = (e: unknown) => {
+    const err = e as { code?: string; message?: string } | null
+    return err?.code === '23503' || /foreign key/i.test(err?.message ?? '')
+  }
+  const removeOne = async () => {
+    if (!deleteTarget) return
+    setBusy(true)
+    try {
+      await deleteListing({ id: deleteTarget.id, silent: true })
+      toast.success('Offer deleted')
+      setDeleteTarget(null)
+    } catch (e) {
+      if (isFkViolation(e)) {
+        // Order rows reference this listing — it must stay for history.
+        await updateListing({ id: deleteTarget.id, updates: { status: 'archived' }, silent: true })
+        toast.info('This offer has order history, so it can’t be permanently deleted — it was archived instead.')
+        setDeleteTarget(null)
+      } else {
+        toast.error((e as Error)?.message || 'Failed to delete offer')
+      }
+    } finally {
+      setBusy(false)
+    }
+  }
+  const copyUrl = (l: Listing) => {
+    void navigator.clipboard?.writeText(`${window.location.origin}${publicPath(l)}`)
+    toast.success('Public link copied')
+  }
+  const ids = () => Array.from(selected)
+  const bulkStatus = async (status: 'active' | 'paused') => {
+    if (status === 'active' && isRestricted) {
+      toast.error('Your account is restricted — offers can’t be activated right now.')
+      return
+    }
+    await bulkUpdate({ ids: ids(), updates: { status } })
+    setSelected(new Set())
+  }
+  const bulkDelivery = async (value: string) => {
+    setBusy(true)
+    try {
+      await bulkUpdate({ ids: ids(), updates: { delivery_time: value } })
+      setSelected(new Set())
+      setBulkDeliveryOpen(false)
+    } finally {
+      setBusy(false)
+    }
+  }
+  const bulkRemove = async () => {
+    setBusy(true)
+    try {
+      await bulkDelete(ids())
+      setSelected(new Set())
+      setBulkDeleteOpen(false)
+    } catch {
+      // Hook already toasts (incl. the friendly order-history message).
+    } finally {
+      setBusy(false)
     }
   }
 
-  const onToggleStatus = async (id: string, current: string) => {
-    const next = current === 'active' ? 'paused' : 'active'
-    if (next === 'active' && isRestricted) { toast.error('Your account is restricted.'); return }
-    setUpdatingListings((s) => new Set(s).add(id))
-    try {
-      await updateListing({ id, updates: { status: next } })
-      toast.success(`Listing ${next === 'active' ? 'activated' : 'paused'}`)
-    } catch (e: any) {
-      toast.error(e.message ?? 'Failed to update status')
-    } finally {
-      setUpdatingListings((s) => { const n = new Set(s); n.delete(id); return n })
-    }
-  }
+  const gameName = gameId === 'all' ? null : games.find((g) => g.id === gameId)
+  const rangeStart = visible.length === 0 ? 0 : (safePage - 1) * perPage + 1
+  const rangeEnd = Math.min(safePage * perPage, visible.length)
 
-  const onConfirmDelete = async () => {
-    if (!confirmingDeleteId) return
-    setDeletingListings((s) => new Set(s).add(confirmingDeleteId))
-    try {
-      await deleteListing({ id: confirmingDeleteId, silent: true })
-      toast.success('Listing deleted')
-    } catch (e: any) {
-      toast.error(e.message ?? 'Failed to delete listing')
-    } finally {
-      setDeletingListings((s) => { const n = new Set(s); n.delete(confirmingDeleteId); return n })
-      setConfirmingDeleteId(null)
-    }
-  }
-
-  const onCopyLink = (l: { id: string; game: { slug: string }; categorySlug: string; slug: string }) => {
-    // V17g — Currency listings live on the category page itself
-    // (e.g. /roblox/buy-robux) — no per-listing URL exists for them.
-    // For all other categories (accounts/items/etc.) copy the canonical
-    // /{game}/{category}/{listing-slug} URL. The categorySlug we get is
-    // already canonical because the DB stores it that way.
-    const isCurrency = l.categorySlug?.startsWith('buy-') &&
-      // Treat any of the per-game currency slugs as "no detail page".
-      ['buy-robux','buy-vbucks','buy-vp','buy-gta-money','buy-minecoins','buy-rp','buy-coins','buy-roubles','buy-credits','buy-sheckles','buy-cash'].includes(l.categorySlug)
-    const url = isCurrency
-      ? `${window.location.origin}/${l.game.slug || 'game'}/${l.categorySlug}`
-      : `${window.location.origin}/${l.game.slug || 'game'}/${l.categorySlug || 'category'}/${l.slug || l.id}`
-    navigator.clipboard.writeText(url)
-    toast.success('Link copied')
-  }
-
-  // ── Loading / auth ────────────────────────────────────────────────────────
-
-  if (authLoading || listingsLoading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="flex flex-col items-center gap-3">
-          <Loader2 className="h-7 w-7 animate-spin text-lime-text" />
-          <p className="text-sm text-text-tertiary">Loading listings…</p>
+  return (
+    // Navbar clearance comes from the account layout (pt-14 — V21/P7.ak);
+    // this wrapper only adds internal rhythm.
+    <div className="mx-auto w-full max-w-[1400px] px-4 pb-20 pt-2 sm:px-6 lg:px-10 xl:px-14">
+      {isRestricted && (
+        <div className="mb-6">
+          <RestrictionBanner status={sellerStatus} />
         </div>
-      </div>
-    )
-  }
-
-  const allSelected = selectedListings.size > 0 && selectedListings.size === filteredListings.length
-  const someSelected = selectedListings.size > 0
-
-  // ── Render ────────────────────────────────────────────────────────────────
-
-  return (
-    <div className="min-h-screen pb-24">
-      <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
-        {isRestricted && (
-          <RestrictionBanner
-            status={sellerStatus}
-            reason={(user?.profile as any)?.seller_restriction_reason}
-            dismissible={false}
-          />
-        )}
-
-        {/* V21/P7.al — Standard account header (logo + title + actions). */}
-        <AccountPageHeader
-          icon="offers"
-          title={`${OFFER_TABS.find((o) => o.type === activeOfferType)?.label} Offers`}
-          subtitle={`Manage your ${OFFER_TABS.find((o) => o.type === activeOfferType)?.label.toLowerCase()} offers, prices, and stock.`}
-          actions={
-            <>
-              <Link href="/sell/bulk">
-                <Button variant="outline" className="h-10 gap-1.5 rounded-md border-border-default bg-bg-raised text-text-primary hover:bg-bg-raised-hover hover:border-lime-tint-border">
-                  <FileSpreadsheet className="h-4 w-4" />
-                  Bulk upload
-                </Button>
-              </Link>
-              {isRestricted ? (
-                <Link href="/account/restrictions">
-                  <Button variant="outline" className="h-10 gap-1.5 rounded-md border-warning/40 bg-warning-bg text-warning hover:bg-warning-bg">
-                    <ShieldAlert className="h-4 w-4" />
-                    Selling restricted
-                  </Button>
-                </Link>
-              ) : (
-                <Link href="/sell/new">
-                  <Button className="h-10 gap-1.5 rounded-md bg-lime text-text-inverse font-semibold shadow-elevated hover:bg-lime-hover hover:shadow-glow">
-                    <Plus className="h-4 w-4" />
-                    Create listing
-                  </Button>
-                </Link>
-              )}
-            </>
-          }
-        />
-
-        {/* V22 — Offer-type selection lives in the sidebar now; the in-page
-            tab row + status pill row were removed. Filtering is two dropdowns
-            (Game + Status) plus a sort, with a glassy search. */}
-        <div className="mt-5 flex flex-col gap-3 lg:flex-row lg:items-center">
-          {/* Search — translucent glass, not a flat black box */}
-          <div className="relative flex-1 lg:max-w-md">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary" />
-            <input
-              type="text"
-              placeholder="Search your listings…"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="h-10 w-full rounded-md border border-border-subtle card-frost text-text-primary placeholder:text-text-tertiary transition-colors focus:border-lime focus:bg-white/[0.06] focus:outline-none focus:ring-2 focus:ring-lime-tint-bg"
-            />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery('')}
-                className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-text-tertiary hover:bg-white/[0.08] hover:text-text-primary"
-                aria-label="Clear search"
-              >
-                <X className="h-3.5 w-3.5" />
-              </button>
-            )}
-          </div>
-
-          {/* Game filter */}
-          <div className="lg:w-48">
-            <Combobox
-              value={selectedGame}
-              onChange={setSelectedGame}
-              options={gameOptions}
-              ariaLabel="Filter by game"
-              unsorted
-            />
-          </div>
-
-          {/* Status filter */}
-          <div className="lg:w-44">
-            <Combobox
-              value={selectedStatus}
-              onChange={(v) => setSelectedStatus(v as FilterStatus)}
-              options={statusOptions}
-              ariaLabel="Filter by status"
-              unsorted
-            />
-          </div>
-
-          {/* Sort */}
-          <div className="lg:w-48">
-            <Combobox
-              value={sortBy}
-              onChange={(v) => setSortBy(v as SortBy)}
-              options={SORT_OPTIONS}
-              ariaLabel="Sort"
-              unsorted
-            />
-          </div>
-        </div>
-
-        {/* Bulk action bar — appears when items selected */}
-        <AnimatePresence>
-          {someSelected && (
-            <motion.div
-              initial={{ opacity: 0, y: -8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.18 }}
-              className="mt-3 flex flex-wrap items-center gap-2 rounded-lg border border-lime-tint-border bg-lime-tint-bg px-3 py-2"
-            >
-              <span className="text-xs font-semibold text-lime-text">
-                {selectedListings.size} selected
-              </span>
-              <span className="hidden h-3 w-px bg-border-default sm:block" />
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={onBulkActivate}
-                disabled={isUpdating}
-                className="h-8 gap-1.5 rounded-md border-border-default bg-bg-raised text-text-primary hover:bg-bg-raised-hover"
-              >
-                {isUpdating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
-                Activate
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={onBulkPause}
-                disabled={isUpdating}
-                className="h-8 gap-1.5 rounded-md border-border-default bg-bg-raised text-text-primary hover:bg-bg-raised-hover"
-              >
-                {isUpdating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Pause className="h-3.5 w-3.5" />}
-                Pause
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => setBulkPriceOpen(true)}
-                disabled={isUpdating}
-                className="h-8 gap-1.5 rounded-md border-border-default bg-bg-raised text-text-primary hover:bg-bg-raised-hover"
-              >
-                <TrendingUp className="h-3.5 w-3.5" />
-                Set price
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => setBulkDeleteOpen(true)}
-                disabled={isDeleting}
-                className="h-8 gap-1.5 rounded-md border-error/40 bg-error-bg text-error hover:bg-error-bg hover:border-error"
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-                Delete
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={clearSelection}
-                className="ml-auto h-8 gap-1.5 text-text-tertiary hover:text-text-primary"
-              >
-                <X className="h-3.5 w-3.5" />
-                Clear
-              </Button>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Select-all row */}
-        {filteredListings.length > 0 && (
-          <div className="mt-4 flex items-center gap-2 text-xs text-text-tertiary">
-            <Checkbox
-              checked={allSelected}
-              onCheckedChange={toggleSelectAll}
-              aria-label="Select all"
-            />
-            <span>
-              {allSelected
-                ? `All ${filteredListings.length} selected`
-                : `${filteredListings.length} listing${filteredListings.length === 1 ? '' : 's'}`}
-            </span>
-          </div>
-        )}
-
-        {/* Listings */}
-        {filteredListings.length === 0 ? (
-          <EmptyState searchQuery={searchQuery} isRestricted={isRestricted} />
-        ) : (
-          <div className="mt-3 space-y-2">
-            {filteredListings.map((l, i) => (
-              <ListingRow
-                key={l.id}
-                listing={l}
-                index={i}
-                storeOffline={storePaused}
-                selected={selectedListings.has(l.id)}
-                onToggleSelect={() => toggleSelectOne(l.id)}
-                editingPrice={editingPrices[l.id]}
-                onPriceChange={(v) => setEditingPrices((p) => ({ ...p, [l.id]: v }))}
-                onSavePrice={() => onUpdatePrice(l.id)}
-                onCancelPrice={() =>
-                  setEditingPrices((p) => { const n = { ...p }; delete n[l.id]; return n })
-                }
-                onToggleStatus={() => onToggleStatus(l.id, l.status)}
-                onRequestDelete={() => setConfirmingDeleteId(l.id)}
-                onCopyLink={() => onCopyLink(l)}
-                onView={() => router.push(`/listings/${l.id}`)}
-                onEdit={() => router.push(`/sell/edit/${l.id}`)}
-                isUpdating={updatingListings.has(l.id)}
-                isDeleting={deletingListings.has(l.id)}
-              />
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* ── Dialogs ─────────────────────────────────────────────────── */}
-
-      {/* Delete single listing */}
-      <Dialog open={!!confirmingDeleteId} onOpenChange={(o) => !o && setConfirmingDeleteId(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Delete this listing?</DialogTitle>
-            <DialogDescription>
-              This can't be undone. Buyers will no longer see the listing in the marketplace.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="ghost"
-              onClick={() => setConfirmingDeleteId(null)}
-              className="text-text-secondary hover:text-text-primary"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={onConfirmDelete}
-              disabled={deletingListings.has(confirmingDeleteId ?? '')}
-              className="bg-error text-text-primary hover:bg-error/90"
-            >
-              {deletingListings.has(confirmingDeleteId ?? '') ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                'Delete listing'
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Bulk delete */}
-      <Dialog open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Delete {selectedListings.size} listing{selectedListings.size === 1 ? '' : 's'}?</DialogTitle>
-            <DialogDescription>
-              This can't be undone. The listings will be removed from the marketplace immediately.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setBulkDeleteOpen(false)}>Cancel</Button>
-            <Button onClick={onBulkDelete} disabled={isDeleting} className="bg-error text-text-primary hover:bg-error/90">
-              {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : `Delete ${selectedListings.size}`}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Bulk set price */}
-      <Dialog open={bulkPriceOpen} onOpenChange={(o) => { setBulkPriceOpen(o); if (!o) setBulkPrice(0) }}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Set a new price for {selectedListings.size} listing{selectedListings.size === 1 ? '' : 's'}</DialogTitle>
-            <DialogDescription>
-              All selected listings will be updated to this price.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-1.5">
-            <label className="block text-xs font-semibold uppercase tracking-wider text-text-secondary">
-              New price (USD)
-            </label>
-            <NumberField
-              value={bulkPrice}
-              onChange={(v) => setBulkPrice(v ?? 0)}
-              minValue={0.01}
-              maxValue={99_999}
-              step={0.01}
-              ariaLabel="Bulk price"
-              formatOptions={{ style: 'currency', currency: 'USD' }}
-            />
-          </div>
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setBulkPriceOpen(false)}>Cancel</Button>
-            <Button onClick={onBulkPriceApply} disabled={isUpdating || bulkPrice <= 0} className="bg-lime text-text-inverse hover:bg-lime-hover">
-              {isUpdating ? <Loader2 className="h-4 w-4 animate-spin" /> : `Apply to ${selectedListings.size}`}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
-  )
-}
-
-// ─── Empty state ─────────────────────────────────────────────────────────────
-
-function EmptyState({ searchQuery, isRestricted }: { searchQuery: string; isRestricted: boolean }) {
-  return (
-    <div className="mt-6 flex flex-col items-center justify-center gap-3 rounded-lg border border-border-subtle card-frost p-10 text-center">
-      <div className="flex h-12 w-12 items-center justify-center rounded-full border border-border-default bg-bg-raised">
-        <Package className="h-5 w-5 text-text-tertiary" />
-      </div>
-      <div>
-        <h3 className="text-base font-semibold text-text-primary">No listings found</h3>
-        <p className="mt-1 text-sm text-text-secondary">
-          {searchQuery ? 'Try adjusting your search or filters.' : 'Create your first listing to get started.'}
-        </p>
-      </div>
-      {!searchQuery &&
-        (isRestricted ? (
-          <Button disabled variant="outline" className="gap-1.5 rounded-md">
-            <Plus className="h-4 w-4" />
-            Create listing
-          </Button>
-        ) : (
-          <Link href="/sell/new">
-            <Button className="gap-1.5 rounded-md bg-lime text-text-inverse hover:bg-lime-hover">
-              <Plus className="h-4 w-4" />
-              Create listing
-            </Button>
-          </Link>
-        ))}
-    </div>
-  )
-}
-
-// ─── Single listing row ──────────────────────────────────────────────────────
-
-interface ListingRowProps {
-  listing: {
-    id: string
-    title: string
-    game: { slug: string; emoji: string; name: string }
-    category: string
-    categorySlug: string
-    slug: string
-    price: number
-    originalPrice?: number
-    quantity: number
-    /** V14q — Real is_unlimited flag from the DB. Replaces the bogus
-     *  "quantity > 10k → unlimited" heuristic that was lying about the
-     *  stock state on currency listings. */
-    isUnlimited: boolean
-    status: string
-    views: number
-    sales: number
-    delivery_method: string
-    delivery_time: string
-    image: string
-  }
-  index: number
-  selected: boolean
-  onToggleSelect: () => void
-  editingPrice: number | undefined
-  onPriceChange: (v: number) => void
-  onSavePrice: () => void
-  onCancelPrice: () => void
-  onToggleStatus: () => void
-  onRequestDelete: () => void
-  onCopyLink: () => void
-  onView: () => void
-  onEdit: () => void
-  isUpdating: boolean
-  isDeleting: boolean
-  /** V21/P7.ae — Seller store offline → active listings show "Offline". */
-  storeOffline?: boolean
-}
-
-function ListingRow(p: ListingRowProps) {
-  const isEditing = p.editingPrice !== undefined
-  const canToggleStatus = p.listing.status === 'active' || p.listing.status === 'paused'
-  const isLowStock = p.listing.quantity > 0 && p.listing.quantity <= 5
-  // V14q — Honour the actual is_unlimited flag from the DB. The previous
-  // "quantity > 10k" heuristic mislabelled currency listings (e.g. 150k
-  // Robux stock) as Unlimited even though they have a finite supply.
-  const isUnlimited = p.listing.isUnlimited
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 4 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.18, delay: Math.min(p.index, 8) * 0.02 }}
-      className={cn(
-        'flex flex-col gap-3 rounded-lg border p-3 backdrop-blur-xl transition-colors sm:p-4',
-        'sm:flex-row sm:items-center',
-        p.selected
-          ? 'border-lime-tint-border bg-lime-tint-bg/40'
-          : 'border-border-subtle card-frost hover:border-border-default hover:card-frost',
       )}
-    >
-      {/* Left — checkbox + image + content */}
-      <div className="flex flex-1 items-center gap-3 sm:gap-4">
-        <Checkbox
-          checked={p.selected}
-          onCheckedChange={p.onToggleSelect}
-          aria-label={`Select ${p.listing.title}`}
-        />
 
-        {/* Listing image — bigger, with a subtle ring like StockX/Mercari */}
-        <div className="relative shrink-0">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={p.listing.image}
-            alt=""
-            className="h-16 w-16 rounded-lg border border-border-default object-cover shadow-sm sm:h-20 sm:w-20"
-          />
-          {/* Tiny game-icon overlay (Mercari / Goat pattern) */}
-          <div className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full border border-border-default bg-bg-raised shadow-elevated">
-            <GameIcon slug={p.listing.game.slug} emoji={p.listing.game.emoji} size="xs" />
-          </div>
-        </div>
+      {/* ── Header — standard account title block (V21/P7.al). ── */}
+      <AccountPageHeader
+        icon="offers"
+        title={OFFER_META[type].title}
+        actions={
+          <Link
+            href="/sell/new"
+            className="flex h-10 items-center gap-2 rounded-md bg-lime px-4 text-[13.5px] font-bold text-text-inverse shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] transition-colors hover:bg-lime-hover"
+          >
+            <Plus className="h-4 w-4" strokeWidth={2.75} />
+            Add New Offer
+          </Link>
+        }
+      />
 
-        <div className="min-w-0 flex-1">
-          {/* Game + category chip row — proper sized, lime accent for the game */}
-          <div className="flex flex-wrap items-center gap-1.5">
-            {/* Game chip: actual logo + name for accessibility + scanability */}
-            <span
-              className="inline-flex items-center gap-1.5 rounded-md border border-border-subtle card-frost py-0.5 pl-0.5 pr-2"
-              aria-label={`Game: ${p.listing.game.name}`}
-            >
-              <GameIcon slug={p.listing.game.slug} emoji={p.listing.game.emoji} size="xs" />
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-text-secondary">
-                {p.listing.game.name}
-              </span>
-            </span>
-            <span className="text-[10px] font-medium uppercase tracking-wider text-text-tertiary">
-              {p.listing.category}
-            </span>
-          </div>
-          <h3 className="mt-1 truncate text-sm font-semibold text-text-primary sm:text-base">
-            {p.listing.title}
-          </h3>
-          {/* V14q — Left side keeps only the status pill. Stock and
-              delivery moved to the right metric rail so every listing's
-              columns align in a clean vertical stack. */}
-          <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-            <StatusBadge status={p.listing.status} offline={p.storeOffline} />
-            {isLowStock && !isUnlimited && (
-              <span
-                className="inline-flex items-center gap-1 rounded-full border border-warning/30 bg-warning-bg px-2 py-0.5 text-[10px] font-medium text-warning"
-                title="Low stock — top up soon"
-              >
-                <AlertCircle className="h-2.5 w-2.5" />
-                Low stock
-              </span>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* V14q — Fixed-width metric columns mirror the currency-page seller
-          row layout. Every column (Views · Sales · Stock · Delivery · Price ·
-          Actions) gets a locked width and a small icon + uppercase caption
-          so the row stays scannable at any density. */}
-      <div className="flex items-center justify-end gap-5 sm:gap-6">
-        {/* Views + Sales — lg+ only (saves space on smaller screens) */}
-        <div className="hidden items-start gap-5 lg:flex">
-          <MetricCell icon={IconEye} label="Views" value={p.listing.views.toLocaleString('en-US')} width={76} />
-          <MetricCell icon={IconCoins} label="Sales" value={p.listing.sales.toLocaleString('en-US')} width={76} />
-        </div>
-
-        {/* Stock + Delivery — md+, key inventory info */}
-        <div className="hidden items-start gap-5 md:flex">
-          <MetricCell
-            icon={isUnlimited ? IconInfinity : IconPackages}
-            label="Stock"
-            value={isUnlimited ? '∞' : p.listing.quantity.toLocaleString('en-US')}
-            valueClass={isUnlimited ? 'text-success' : isLowStock ? 'text-warning' : undefined}
-            width={108}
-          />
-          <MetricCell
-            icon={p.listing.delivery_method === 'instant' ? IconBolt : IconRocket}
-            label="Delivery"
-            value={
-              p.listing.delivery_method === 'instant'
-                ? 'Instant'
-                : formatDeliveryLabel(p.listing.delivery_time)
-            }
-            valueClass={p.listing.delivery_method === 'instant' ? 'text-info' : undefined}
-            width={108}
-          />
-        </div>
-
-        {/* Price column — locked width so all prices form a vertical rail. */}
-        {(() => {
-          const needsFractional = p.listing.price > 0 && p.listing.price < 1
-          const decimals = needsFractional ? 4 : 2
-          const step = needsFractional ? 0.0001 : 0.01
-          const minValue = needsFractional ? 0.0001 : 0.01
-          return (
-            <div className="w-[140px] shrink-0 sm:w-[160px]">
-              {isEditing ? (
-                <div className="flex items-center gap-1.5">
-                  <NumberField
-                    value={p.editingPrice ?? 0}
-                    onChange={(v) => p.onPriceChange(v ?? 0)}
-                    minValue={minValue}
-                    maxValue={99_999}
-                    step={step}
-                    ariaLabel="Edit price"
-                    formatOptions={{
-                      style: 'currency',
-                      currency: 'USD',
-                      minimumFractionDigits: decimals,
-                      maximumFractionDigits: decimals,
-                    }}
-                    className="h-9"
-                  />
-                  <Button
-                    size="sm"
-                    onClick={p.onSavePrice}
-                    disabled={p.isUpdating}
-                    className="h-9 rounded-md bg-lime px-2.5 text-text-inverse hover:bg-lime-hover"
-                    aria-label="Save price"
-                  >
-                    {p.isUpdating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" strokeWidth={3} />}
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={p.onCancelPrice}
-                    disabled={p.isUpdating}
-                    className="h-9 rounded-md px-2 text-text-tertiary hover:text-text-primary"
-                    aria-label="Cancel price edit"
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
+      {/* ── Filter row ── */}
+      <div className="mt-5 flex flex-wrap items-center gap-2.5">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <FilterTrigger active={gameId !== 'all'} clearable={gameId !== 'all'} onClear={() => setGameId('all')}>
+              {gameName ? (
+                <>
+                  {gameName.image ? (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img src={gameName.image} alt="" className="h-[18px] w-[18px] rounded object-cover" />
+                  ) : null}
+                  {gameName.name}
+                </>
               ) : (
-                <button
-                  type="button"
-                  onClick={() => p.onPriceChange(p.listing.price)}
-                  // V14q — Full-width button so every price sits in the same
-                  // horizontal slot. justify-between pins price left and
-                  // pencil right; tabular-nums keeps digit columns aligned.
-                  className="flex h-9 w-full items-center justify-between gap-2 rounded-md border border-border-default bg-bg-overlay px-3 text-sm font-semibold tabular-nums text-text-primary transition-colors hover:border-lime-tint-border hover:text-lime-text"
-                  title="Click to edit price"
-                >
-                  <span>${p.listing.price.toFixed(decimals)}</span>
-                  <Edit2 className="h-3 w-3 shrink-0 text-text-tertiary" />
-                </button>
+                'Game'
               )}
-            </div>
-          )
-        })()}
+            </FilterTrigger>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className={cn('w-60', MENU_CLS)}>
+            <DropdownMenuItem onClick={() => setGameId('all')} className={ITEM_CLS}>
+              <LayoutGrid className="h-5 w-5 p-[3px] text-text-tertiary" />
+              <span className="flex-1 truncate">All Games</span>
+              {gameId === 'all' && <Check className="h-4 w-4 text-lime-text" />}
+            </DropdownMenuItem>
+            {games.map((g) => (
+              <DropdownMenuItem key={g.id} onClick={() => setGameId(g.id)} className={ITEM_CLS}>
+                {g.image ? (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img src={g.image} alt="" className="h-5 w-5 rounded object-cover ring-1 ring-white/10" />
+                ) : (
+                  <span className="h-5 w-5" />
+                )}
+                <span className="flex-1 truncate">{g.name}</span>
+                {gameId === g.id && <Check className="h-4 w-4 text-lime-text" />}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
 
-        {/* Actions cluster */}
-        {/* V14q — Locked-width actions rail so the trailing dropdown sits
-            in the same column whether or not the Pause/Play button renders.
-            Empty slot keeps the dropdown's horizontal position stable. */}
-        <div className="flex w-[84px] shrink-0 items-center justify-end gap-1">
-          {canToggleStatus ? (
-            <Button
-              size="icon"
-              variant="ghost"
-              onClick={p.onToggleStatus}
-              disabled={p.isUpdating}
-              className="h-9 w-9 rounded-md text-text-secondary hover:bg-bg-raised-hover hover:text-text-primary"
-              title={p.listing.status === 'active' ? 'Pause' : 'Resume'}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <FilterTrigger active={statusFilter !== 'all'}>
+              {statusFilter === 'all' ? 'Status' : FILTER_STATUSES.find((s) => s.value === statusFilter)?.label}
+            </FilterTrigger>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className={cn('w-52', MENU_CLS)}>
+            {FILTER_STATUSES.map((s) => (
+              <DropdownMenuItem key={s.value} onClick={() => setStatusFilter(s.value)} className={ITEM_CLS}>
+                <span className="flex-1">{s.label}</span>
+                {statusFilter === s.value && <Check className="h-4 w-4 text-lime-text" />}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        <DropdownMenu modal={false}>
+          <DropdownMenuTrigger asChild>
+            <FilterTrigger disabled={selected.size === 0} active={selected.size > 0}>
+              Bulk Actions
+              {selected.size > 0 && (
+                <span className="rounded bg-white/[0.08] px-1.5 py-0.5 text-[11px] font-bold tabular-nums text-text-primary">
+                  {selected.size}
+                </span>
+              )}
+            </FilterTrigger>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className={cn('w-60', MENU_CLS)}>
+            <DropdownMenuLabel className={LABEL_CLS}>{selected.size} Selected</DropdownMenuLabel>
+            <DropdownMenuItem className={ITEM_CLS} onClick={() => void bulkStatus('active')}>
+              <Play className="h-4 w-4" /> Activate
+            </DropdownMenuItem>
+            <DropdownMenuItem className={ITEM_CLS} onClick={() => void bulkStatus('paused')}>
+              <Pause className="h-4 w-4" /> Pause
+            </DropdownMenuItem>
+            <DropdownMenuItem className={ITEM_CLS} onClick={() => setBulkDeliveryOpen(true)}>
+              <Clock className="h-4 w-4" /> Change Delivery Time
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              className={cn(ITEM_CLS, 'text-red-400 focus:text-red-300')}
+              onClick={() => setBulkDeleteOpen(true)}
             >
-              {p.isUpdating ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : p.listing.status === 'active' ? (
-                <Pause className="h-4 w-4" />
-              ) : (
-                <Play className="h-4 w-4" />
-              )}
-            </Button>
-          ) : (
-            // Empty placeholder so the dropdown stays in the same column.
-            <span aria-hidden className="h-9 w-9" />
-          )}
+              <Trash2 className="h-4 w-4" /> Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
 
+        <div className="relative min-w-[220px] flex-1 sm:max-w-[320px]">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary" />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search offers…"
+            className="h-[42px] w-full rounded-md border-2 border-border-default bg-[rgba(20,20,27,0.56)] pl-9 pr-3 text-[13px] font-medium text-text-primary backdrop-blur-md transition-colors placeholder:text-text-tertiary focus:border-border-strong focus:outline-none focus-visible:shadow-none"
+          />
+        </div>
+
+        <div className="ml-auto">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button
-                size="icon"
-                variant="ghost"
-                className="h-9 w-9 rounded-md text-text-secondary hover:bg-bg-raised-hover hover:text-text-primary"
-                aria-label="Open listing menu"
+              <button
+                type="button"
+                className="flex h-[42px] items-center gap-1.5 whitespace-nowrap px-1 text-[13.5px] font-semibold text-text-secondary transition-colors hover:text-text-primary"
               >
-                <MoreVertical className="h-4 w-4" />
-              </Button>
+                <ArrowUpDown className="h-3.5 w-3.5" />
+                {SORTS.find((s) => s.value === sort)?.label}
+                <ChevronDown className="h-3.5 w-3.5 text-text-tertiary" />
+              </button>
             </DropdownMenuTrigger>
-            {/* V14r — Trimmed to actions the seller actually uses on a
-                listing row: View, Edit, Copy link, Delete. Duplicate and
-                Analytics were aspirational stubs — Duplicate went to
-                /sell/new?from=… which works but never gets used at this
-                density, and Analytics pointed at a route we don't have a
-                proper per-listing page for. Removed to keep the menu
-                focused on real actions. */}
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onSelect={p.onView}>
-                <Eye className="h-3.5 w-3.5" />
-                View listing
-              </DropdownMenuItem>
-              <DropdownMenuItem onSelect={p.onEdit}>
-                <Edit2 className="h-3.5 w-3.5" />
-                Edit details
-              </DropdownMenuItem>
-              <DropdownMenuItem onSelect={p.onCopyLink}>
-                <Share2 className="h-3.5 w-3.5" />
-                Copy link
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem variant="destructive" onSelect={p.onRequestDelete}>
-                <Trash2 className="h-3.5 w-3.5" />
-                Delete listing
-              </DropdownMenuItem>
+            <DropdownMenuContent align="end" className={cn('w-52', MENU_CLS)}>
+              {SORTS.map((s) => (
+                <DropdownMenuItem key={s.value} onClick={() => setSort(s.value)} className={ITEM_CLS}>
+                  <span className="flex-1">{s.label}</span>
+                  {sort === s.value && <Check className="h-4 w-4 text-lime-text" />}
+                </DropdownMenuItem>
+              ))}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
       </div>
-    </motion.div>
+
+      {/* ── Results card ── */}
+      <div className="relative mt-4 overflow-hidden rounded-lg border border-border-default bg-[rgba(20,20,27,0.56)] shadow-elevated backdrop-blur-md">
+        {/* Top sheen — the bundle-card light-from-above, on the card itself. */}
+        <span aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.05),transparent)]" />
+
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[1160px] border-collapse text-left">
+            <thead>
+              <tr className="text-[11px] font-extrabold uppercase tracking-[0.08em] text-[#6d7488]">
+                <th className="w-12 py-3 pl-5 pr-2">
+                  <Checkbox checked={allSelected} onCheckedChange={toggleAll} aria-label="Select all offers" />
+                </th>
+                <th className="min-w-[220px] px-3 py-3">Offer</th>
+                <th className="px-3 py-3 whitespace-nowrap">Delivery Time</th>
+                <th className="px-3 py-3">Price</th>
+                <th className="px-3 py-3">Status</th>
+                <th className="px-3 py-3">Stock</th>
+                <th className="px-3 py-3 whitespace-nowrap">Min Quantity</th>
+                <th className="px-3 py-3 whitespace-nowrap">Delivery Method</th>
+                <th className="px-3 py-3 whitespace-nowrap">Offer ID</th>
+                <th className="px-3 py-3 whitespace-nowrap">Updated</th>
+                <th className="sticky right-0 z-10 w-24 bg-[linear-gradient(to_right,rgba(16,17,23,0)_0%,rgba(16,17,23,0.92)_42%,rgba(16,17,23,0.99)_68%)] py-3 pl-10 pr-5" />
+              </tr>
+            </thead>
+            <tbody>
+              {isLoading &&
+                Array.from({ length: 4 }).map((_, i) => (
+                  <tr key={`s${i}`} className="border-t border-white/[0.06]">
+                    <td colSpan={11} className="px-5 py-3">
+                      <div className="h-10 animate-pulse rounded-md bg-white/[0.04]" />
+                    </td>
+                  </tr>
+                ))}
+
+              {!isLoading && error != null && (
+                <tr className="border-t border-white/[0.06]">
+                  <td colSpan={11} className="px-5 py-10 text-center text-[13px] text-red-300">
+                    Couldn’t load your offers. Refresh to try again.
+                  </td>
+                </tr>
+              )}
+
+              {!isLoading && !error && paged.map((l) => {
+                const chip = chipKeyFor(l.status, storePaused)
+                const logo = (type === 'items' || type === 'accounts' ? l.images?.[0] : null) || l.game?.image_url
+                return (
+                  <tr
+                    key={l.id}
+                    className={cn(
+                      'border-t border-white/[0.06] transition-colors',
+                      selected.has(l.id) && 'bg-white/[0.03]',
+                    )}
+                  >
+                    <td className="py-4 pl-5 pr-2">
+                      <Checkbox
+                        checked={selected.has(l.id)}
+                        onCheckedChange={() => toggleOne(l.id)}
+                        aria-label={`Select ${l.title}`}
+                      />
+                    </td>
+                    <td className="px-3 py-4">
+                      <span className="flex items-center gap-3">
+                        {logo ? (
+                          /* eslint-disable-next-line @next/next/no-img-element */
+                          <img src={logo} alt="" className="h-10 w-10 flex-none rounded-md object-cover ring-1 ring-white/10" />
+                        ) : (
+                          <span className="flex h-10 w-10 flex-none items-center justify-center rounded-md bg-white/[0.05] ring-1 ring-white/10">
+                            <Package className="h-4 w-4 text-text-tertiary" />
+                          </span>
+                        )}
+                        <span className="min-w-0">
+                          <span className="block max-w-[240px] truncate text-[13.5px] font-bold text-text-primary">
+                            {displayTitle(l, type)}
+                          </span>
+                          <span className="mt-0.5 block text-[12px] text-text-tertiary">{l.game?.name ?? '—'}</span>
+                        </span>
+                      </span>
+                    </td>
+                    <td className="whitespace-nowrap px-3 py-4 text-[13px] text-text-secondary">
+                      {formatDeliveryLabel(l.delivery_time)}
+                    </td>
+                    <td className="px-3 py-4">
+                      <PriceField value={l.price} unit="Unit" onSave={(next) => savePrice(l, next)} />
+                    </td>
+                    <td className="px-3 py-4"><StatusChip k={chip} /></td>
+                    <td className="px-3 py-4 text-[13.5px] font-bold tabular-nums text-text-primary">
+                      {l.is_unlimited ? '∞' : fmtCompact(l.quantity ?? 0)}
+                    </td>
+                    <td className="whitespace-nowrap px-3 py-4 text-[13px] tabular-nums text-text-secondary">
+                      {(l.min_quantity ?? 1).toLocaleString()} Unit
+                    </td>
+                    <td className="px-3 py-4">
+                      <span className="whitespace-nowrap rounded-md border border-white/[0.08] bg-white/[0.04] px-2 py-[3px] text-[11px] font-semibold text-text-secondary">
+                        {methodLabel(l.delivery_method)}
+                      </span>
+                    </td>
+                    <td className="px-3 py-4"><OfferIdChip listing={l} /></td>
+                    <td className="whitespace-nowrap px-3 py-4 text-[12.5px] text-text-tertiary">
+                      {fmtRelative(l.updated_at)}
+                    </td>
+                    <td className="sticky right-0 z-10 bg-[linear-gradient(to_right,rgba(16,17,23,0)_0%,rgba(16,17,23,0.92)_42%,rgba(16,17,23,0.99)_68%)] py-4 pl-10 pr-5">
+                      <DropdownMenu modal={false}>
+                        <DropdownMenuTrigger asChild>
+                          <button
+                            type="button"
+                            aria-label={`Actions for ${l.title}`}
+                            className="flex h-8 w-8 items-center justify-center rounded-md border border-transparent text-text-tertiary transition-colors hover:border-white/[0.12] hover:bg-white/[0.05] hover:text-text-primary"
+                          >
+                            <MoreVertical className="h-4 w-4" />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className={cn('w-60', MENU_CLS)}>
+                          <DropdownMenuLabel className={LABEL_CLS}>Offer Actions</DropdownMenuLabel>
+                          <DropdownMenuItem className={ITEM_CLS} onClick={() => router.push(`/sell/edit/${l.id}`)}>
+                            <Pencil className="h-4 w-4" /> Edit Offer
+                          </DropdownMenuItem>
+                          {l.status === 'active' && (
+                            <DropdownMenuItem className={ITEM_CLS} onClick={() => void setStatus(l, 'paused')}>
+                              <Pause className="h-4 w-4" /> Pause Offer
+                            </DropdownMenuItem>
+                          )}
+                          {l.status === 'paused' && (
+                            <DropdownMenuItem className={ITEM_CLS} onClick={() => void setStatus(l, 'active')}>
+                              <Play className="h-4 w-4" /> Activate Offer
+                            </DropdownMenuItem>
+                          )}
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem className={ITEM_CLS} onClick={() => window.open(publicPath(l), '_blank')}>
+                            <ExternalLink className="h-4 w-4" /> View Public Offer
+                          </DropdownMenuItem>
+                          <DropdownMenuItem className={ITEM_CLS} onClick={() => copyUrl(l)}>
+                            <Link2 className="h-4 w-4" /> Copy Public URL
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            className={cn(ITEM_CLS, 'text-red-400 focus:text-red-300')}
+                            onClick={() => setArchiveTarget(l)}
+                          >
+                            <Archive className="h-4 w-4" /> Archive Offer
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            className={cn(ITEM_CLS, 'text-red-400 focus:text-red-300')}
+                            onClick={() => setDeleteTarget(l)}
+                          >
+                            <Trash2 className="h-4 w-4" /> Delete Offer
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </td>
+                  </tr>
+                )
+              })}
+
+              {!isLoading && !error && paged.length === 0 && (
+                <tr className="border-t border-white/[0.06]">
+                  <td colSpan={11} className="px-5 py-12 text-center">
+                    <p className="text-[13.5px] font-semibold text-text-secondary">
+                      {typed.length === 0 ? `No ${OFFER_META[type].title.toLowerCase()} yet.` : 'No offers match these filters.'}
+                    </p>
+                    {typed.length === 0 && (
+                      <Link
+                        href="/sell/new"
+                        className="mt-3 inline-flex h-9 items-center gap-2 rounded-md bg-lime px-3.5 text-[13px] font-bold text-text-inverse transition-colors hover:bg-lime-hover"
+                      >
+                        <Plus className="h-4 w-4" strokeWidth={2.75} />
+                        Add New Offer
+                      </Link>
+                    )}
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* ── Pagination footer ── */}
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/[0.06] px-5 py-3.5">
+          <div className="flex items-center gap-5 text-[12.5px] text-text-tertiary">
+            <span>
+              Showing <span className="font-semibold text-text-secondary">{rangeStart}–{rangeEnd}</span> of{' '}
+              <span className="font-semibold text-text-secondary">{visible.length}</span>
+            </span>
+            <span className="flex items-center gap-2">
+              Per page:
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type="button"
+                    className="flex h-8 items-center gap-1.5 rounded-md border border-white/[0.08] bg-[#12151e] px-2.5 text-[12.5px] font-semibold text-text-secondary transition-colors hover:border-white/[0.16] hover:text-text-primary"
+                  >
+                    {perPage} <ChevronDown className="h-3 w-3 text-text-tertiary" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className={cn('w-24', MENU_CLS)}>
+                  {[15, 25, 50].map((n) => (
+                    <DropdownMenuItem key={n} onClick={() => setPerPage(n)} className={ITEM_CLS}>
+                      <span className="flex-1">{n}</span>
+                      {perPage === n && <Check className="h-4 w-4 text-lime-text" />}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </span>
+          </div>
+          <div className="flex items-center gap-1">
+            <PagerButton disabled={safePage <= 1} onClick={() => setPage(1)}><ChevronsLeft className="h-4 w-4" /></PagerButton>
+            <PagerButton disabled={safePage <= 1} onClick={() => setPage(safePage - 1)}><ChevronLeft className="h-4 w-4" /></PagerButton>
+            <span className="flex h-8 min-w-8 items-center justify-center rounded-md bg-white/[0.08] px-2 text-[12.5px] font-bold tabular-nums text-text-primary">
+              {safePage}
+            </span>
+            <PagerButton disabled={safePage >= pageCount} onClick={() => setPage(safePage + 1)}><ChevronRight className="h-4 w-4" /></PagerButton>
+            <PagerButton disabled={safePage >= pageCount} onClick={() => setPage(pageCount)}><ChevronsRight className="h-4 w-4" /></PagerButton>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Archive confirm ── */}
+      <Dialog open={archiveTarget != null} onOpenChange={(o) => !o && setArchiveTarget(null)}>
+        <DialogContent className="rounded-lg">
+          <DialogHeader>
+            <DialogTitle>Archive This Offer?</DialogTitle>
+            <DialogDescription>
+              “{archiveTarget?.title}” will be delisted and moved to Closed. You can re-activate it later
+              from the Closed filter.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setArchiveTarget(null)} disabled={busy}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() => void archive()}
+              disabled={busy}
+              className="border-red-500/30 bg-red-500/10 text-red-300 hover:bg-red-500/20 hover:text-red-200 focus-visible:ring-0 focus-visible:ring-offset-0"
+              variant="outline"
+            >
+              {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Archive className="h-4 w-4" />}
+              Archive Offer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Delete confirm (single offer) ── */}
+      <Dialog open={deleteTarget != null} onOpenChange={(o) => !o && setDeleteTarget(null)}>
+        <DialogContent className="rounded-lg">
+          <DialogHeader>
+            <DialogTitle>Delete This Offer?</DialogTitle>
+            <DialogDescription>
+              “{deleteTarget?.title}” will be permanently removed. This can’t be undone — archive it
+              instead if you might relist later. Offers with order history can’t be deleted and will
+              be archived automatically.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteTarget(null)} disabled={busy}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() => void removeOne()}
+              disabled={busy}
+              className="border-red-500/30 bg-red-500/10 text-red-300 hover:bg-red-500/20 hover:text-red-200 focus-visible:ring-0 focus-visible:ring-offset-0"
+              variant="outline"
+            >
+              {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+              Delete Offer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Bulk delete confirm ── */}
+      <Dialog open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen}>
+        <DialogContent className="rounded-lg">
+          <DialogHeader>
+            <DialogTitle>Delete {selected.size} {selected.size === 1 ? 'Offer' : 'Offers'}?</DialogTitle>
+            <DialogDescription>
+              This permanently removes the selected offers. This can’t be undone — pause or archive them
+              instead if you might relist.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBulkDeleteOpen(false)} disabled={busy}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() => void bulkRemove()}
+              disabled={busy}
+              className="border-red-500/30 bg-red-500/10 text-red-300 hover:bg-red-500/20 hover:text-red-200 focus-visible:ring-0 focus-visible:ring-offset-0"
+              variant="outline"
+            >
+              {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+              Delete Offers
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Bulk delivery time ── */}
+      <Dialog open={bulkDeliveryOpen} onOpenChange={setBulkDeliveryOpen}>
+        <DialogContent className="rounded-lg">
+          <DialogHeader>
+            <DialogTitle>Change Delivery Time</DialogTitle>
+            <DialogDescription>
+              Applies to {selected.size} selected {selected.size === 1 ? 'offer' : 'offers'}.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-3 gap-2">
+            {DELIVERY_TIME_OPTIONS.map((v) => (
+              <button
+                key={v}
+                type="button"
+                disabled={busy}
+                onClick={() => void bulkDelivery(v)}
+                className="flex h-10 items-center justify-center rounded-md border border-white/[0.08] bg-[#12151e] text-[13px] font-semibold text-text-secondary transition-colors hover:border-white/[0.16] hover:text-text-primary disabled:opacity-50"
+              >
+                {formatDeliveryLabel(v)}
+              </button>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  )
+}
+
+function PagerButton({
+  children, disabled, onClick,
+}: { children: React.ReactNode; disabled?: boolean; onClick?: () => void }) {
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onClick}
+      className={cn(
+        'flex h-8 w-8 items-center justify-center rounded-md border border-white/[0.08] text-text-tertiary transition-colors',
+        disabled ? 'opacity-40' : 'hover:border-white/[0.16] hover:text-text-primary',
+      )}
+    >
+      {children}
+    </button>
   )
 }

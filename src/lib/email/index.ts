@@ -2,7 +2,7 @@ import { Resend } from 'resend'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
-const FROM_EMAIL = 'GameVault <noreply@gamevault.com>'
+const FROM_EMAIL = 'DropMarket <noreply@dropmarket.com>'
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
 
 // ============================================
@@ -35,7 +35,7 @@ export async function sendApplicationApprovedEmail({
 
             <div style="text-align: center; margin-bottom: 32px;">
               <h1 style="font-size: 28px; font-weight: bold; margin: 0; background: linear-gradient(90deg, #6366f1, #8b5cf6); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
-                GameVault
+                DropMarket
               </h1>
             </div>
 
@@ -48,7 +48,7 @@ export async function sendApplicationApprovedEmail({
             </h2>
 
             <p style="font-size: 16px; line-height: 1.6; color: #a1a1aa; text-align: center; margin: 0 0 24px 0;">
-              Your seller application for <strong style="color: #ffffff;">"${displayName}"</strong> has been approved! You can now start listing your gaming items on GameVault.
+              Your seller application for <strong style="color: #ffffff;">"${displayName}"</strong> has been approved! You can now start listing your gaming items on DropMarket.
             </p>
 
             <div style="background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.3); border-radius: 12px; padding: 20px; margin-bottom: 24px;">
@@ -70,13 +70,13 @@ export async function sendApplicationApprovedEmail({
             </div>
 
             <p style="font-size: 14px; color: #71717a; text-align: center; margin: 0;">
-              Welcome to the GameVault seller community!
+              Welcome to the DropMarket seller community!
             </p>
 
           </div>
 
           <p style="font-size: 12px; color: #52525b; text-align: center; margin-top: 24px;">
-            © 2026 GameVault. All rights reserved.
+            © 2026 DropMarket. All rights reserved.
           </p>
         </body>
         </html>
@@ -110,7 +110,7 @@ export async function sendApplicationRejectedEmail({
     const { data, error } = await resend.emails.send({
       from: FROM_EMAIL,
       to,
-      subject: 'Update on Your Seller Application - GameVault',
+      subject: 'Update on Your Seller Application - DropMarket',
       html: `
         <!DOCTYPE html>
         <html>
@@ -123,7 +123,7 @@ export async function sendApplicationRejectedEmail({
 
             <div style="text-align: center; margin-bottom: 32px;">
               <h1 style="font-size: 28px; font-weight: bold; margin: 0; background: linear-gradient(90deg, #6366f1, #8b5cf6); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
-                GameVault
+                DropMarket
               </h1>
             </div>
 
@@ -156,7 +156,7 @@ export async function sendApplicationRejectedEmail({
             </div>
 
             <div style="text-align: center; margin-bottom: 24px;">
-              <a href="${APP_URL}/seller/register" style="display: inline-block; background: linear-gradient(90deg, #6366f1, #8b5cf6); color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600; font-size: 16px;">
+              <a href="${APP_URL}/account/become-seller" style="display: inline-block; background: #C6FF3D; color: #0A0A0F; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600; font-size: 16px;">
                 Apply Again
               </a>
             </div>
@@ -198,7 +198,7 @@ export async function sendInfoRequestedEmail({
     const { data, error } = await resend.emails.send({
       from: FROM_EMAIL,
       to,
-      subject: 'Action Required: Additional Information Needed - GameVault',
+      subject: 'Action Required: Additional Information Needed - DropMarket',
       html: `
         <!DOCTYPE html>
         <html>
@@ -211,7 +211,7 @@ export async function sendInfoRequestedEmail({
 
             <div style="text-align: center; margin-bottom: 32px;">
               <h1 style="font-size: 28px; font-weight: bold; margin: 0; background: linear-gradient(90deg, #6366f1, #8b5cf6); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
-                GameVault
+                DropMarket
               </h1>
             </div>
 
@@ -282,8 +282,8 @@ export async function sendDisputeOpenedEmail({
   reason: string
 }) {
   const subject = role === 'buyer'
-    ? 'Your Dispute Has Been Submitted - GameVault'
-    : 'A Dispute Has Been Filed Against Your Transaction - GameVault'
+    ? 'Your Dispute Has Been Submitted - DropMarket'
+    : 'A Dispute Has Been Filed Against Your Transaction - DropMarket'
 
   const { data, error } = await resend.emails.send({
     from: FROM_EMAIL,
@@ -297,7 +297,7 @@ export async function sendDisputeOpenedEmail({
 
           <div style="text-align: center; margin-bottom: 32px;">
             <h1 style="font-size: 28px; font-weight: bold; margin: 0; background: linear-gradient(90deg, #6366f1, #8b5cf6); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
-              GameVault
+              DropMarket
             </h1>
           </div>
 
@@ -349,7 +349,7 @@ export async function sendDisputeResolvedEmail({
   const { data, error } = await resend.emails.send({
     from: FROM_EMAIL,
     to,
-    subject: 'Your Dispute Has Been Resolved - GameVault',
+    subject: 'Your Dispute Has Been Resolved - DropMarket',
     html: `
       <!DOCTYPE html>
       <html>
@@ -358,7 +358,7 @@ export async function sendDisputeResolvedEmail({
 
           <div style="text-align: center; margin-bottom: 32px;">
             <h1 style="font-size: 28px; font-weight: bold; margin: 0; background: linear-gradient(90deg, #6366f1, #8b5cf6); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
-              GameVault
+              DropMarket
             </h1>
           </div>
 
@@ -440,7 +440,7 @@ export async function sendNewOrderNotificationEmail({
 
           <div style="text-align: center; margin-bottom: 32px;">
             <h1 style="font-size: 28px; font-weight: bold; margin: 0; background: linear-gradient(90deg, #6366f1, #8b5cf6); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
-              GameVault
+              DropMarket
             </h1>
           </div>
 
@@ -482,7 +482,7 @@ export async function sendNewOrderNotificationEmail({
 
           <div style="background: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.3); border-radius: 12px; padding: 16px; margin-bottom: 24px;">
             <p style="margin: 0; color: #a1a1aa; font-size: 14px; line-height: 1.6;">
-              <strong style="color: #818cf8;">Next step:</strong> Head to your order dashboard and deliver the item to the buyer. Funds are held in VaultShield escrow and will be released once the buyer confirms receipt (or automatically after 48 hours).
+              <strong style="color: #818cf8;">Next step:</strong> Head to your order dashboard and deliver the item to the buyer. Funds are held in SafeDrop escrow and will be released once the buyer confirms receipt (or automatically after 48 hours).
             </p>
           </div>
 
@@ -493,7 +493,7 @@ export async function sendNewOrderNotificationEmail({
           </div>
 
           <p style="font-size: 12px; color: #6b7280; text-align: center; margin: 0;">
-            You are receiving this because you are a seller on GameVault.<br>
+            You are receiving this because you are a seller on DropMarket.<br>
             Manage your notifications in <a href="${APP_URL}/account/settings" style="color: #6366f1;">account settings</a>.
           </p>
 
@@ -526,7 +526,7 @@ export async function sendTrustpilotInvitationEmail({
   const { data, error } = await resend.emails.send({
     from: FROM_EMAIL,
     to,
-    subject: `How was your GameVault experience? Leave us a review`,
+    subject: `How was your DropMarket experience? Leave us a review`,
     html: `
       <!DOCTYPE html>
       <html>
@@ -539,7 +539,7 @@ export async function sendTrustpilotInvitationEmail({
 
           <div style="text-align: center; margin-bottom: 32px;">
             <h1 style="font-size: 28px; font-weight: bold; margin: 0; background: linear-gradient(90deg, #6366f1, #8b5cf6); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
-              GameVault
+              DropMarket
             </h1>
           </div>
 
@@ -552,7 +552,7 @@ export async function sendTrustpilotInvitationEmail({
           </h2>
 
           <p style="font-size: 16px; line-height: 1.6; color: #a1a1aa; text-align: center; margin: 0 0 24px 0;">
-            We hope you enjoyed your purchase on GameVault. Your feedback helps us improve and helps other gamers make informed decisions.
+            We hope you enjoyed your purchase on DropMarket. Your feedback helps us improve and helps other gamers make informed decisions.
           </p>
 
           <div style="background: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.3); border-radius: 12px; padding: 16px; margin-bottom: 24px; text-align: center;">
@@ -583,7 +583,7 @@ export async function sendTrustpilotInvitationEmail({
           </div>
 
           <p style="font-size: 12px; color: #6b7280; text-align: center; margin: 0;">
-            You are receiving this because you recently completed an order on GameVault.<br>
+            You are receiving this because you recently completed an order on DropMarket.<br>
             If you did not make a purchase, please <a href="${APP_URL}/support" style="color: #6366f1;">contact support</a>.
           </p>
 

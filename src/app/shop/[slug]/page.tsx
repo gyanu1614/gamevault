@@ -73,7 +73,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   if (!profile || !hasApprovedApplication) {
     return {
-      title: 'Shop Not Found | GameVault',
+      title: 'Shop Not Found',
       description: 'The requested seller shop could not be found.'
     }
   }
@@ -95,14 +95,14 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     : '0.0'
 
   const businessName = profile.shop_name || profile.business_name || profile.username
-  const description = `Shop for gaming accounts, items, and services from ${businessName}. ${totalSales || 0} sales • ${avgRating}/5 rating • Trusted GameVault seller.`
+  const description = `Shop for gaming accounts, items, and services from ${businessName}. ${totalSales || 0} sales • ${avgRating}/5 rating • Trusted DropMarket seller.`
 
-  const shopUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://gamevault.com'}/shop/${slug}`
+  const shopUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://dropmarket.com'}/shop/${slug}`
   const { getAvatarUrl: getAvatar } = await import('@/lib/utils/avatar')
   const avatarUrl = getAvatar(profile.avatar_url, slug)
 
   return {
-    title: `${businessName}'s Shop | GameVault`,
+    title: `${businessName}'s Shop`,
     description: description.slice(0, 160), // Optimal length for SEO
     keywords: [
       businessName,
@@ -111,11 +111,11 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       'game accounts',
       'gaming services',
       'trusted seller',
-      'GameVault seller'
+      'DropMarket seller'
     ],
     authors: [{ name: businessName }],
     creator: businessName,
-    publisher: 'GameVault',
+    publisher: 'DropMarket',
 
     // Open Graph
     openGraph: {
@@ -123,7 +123,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       url: shopUrl,
       title: `${businessName} - Gaming Marketplace Seller`,
       description,
-      siteName: 'GameVault',
+      siteName: 'DropMarket',
       images: [
         {
           url: avatarUrl,
@@ -138,10 +138,10 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     // Twitter Card
     twitter: {
       card: 'summary',
-      title: `${businessName}'s Shop | GameVault`,
+      title: `${businessName}'s Shop`,
       description: description.slice(0, 200),
       images: [avatarUrl],
-      creator: '@gamevault', // Update with your actual Twitter handle
+      creator: '@dropmarket', // Update with your actual Twitter handle
     },
 
     // Additional meta tags

@@ -83,7 +83,7 @@ export default async function AdminMFAPage() {
         </div>
 
         <p className="mt-6 text-center text-xs text-gray-600">
-          GameVault Admin · Protected by TOTP MFA
+          DropMarket Admin · Protected by TOTP MFA
         </p>
       </div>
     </div>

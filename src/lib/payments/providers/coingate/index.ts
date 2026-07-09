@@ -80,7 +80,7 @@ export function makeCoinGateProvider(deps?: {
         receive_currency: COINGATE_RECEIVE_CURRENCY,
         callback_url: `${publicApiUrl()}/api/webhooks/coingate?token=${token}`,
         success_url: input.returnUrl,
-        cancel_url: input.returnUrl,
+        cancel_url: input.cancelUrl ?? input.returnUrl,
         title: `DropMarket order ${input.orderId}`,
       })
       const res = await fetchImpl(`${coinGateBase()}/orders`, {

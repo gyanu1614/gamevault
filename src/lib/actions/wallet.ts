@@ -135,7 +135,7 @@ export async function createTopUpCheckout(amount: number): Promise<{
           currency: 'usd',
           product_data: {
             name: 'Wallet Top-Up',
-            description: `Add $${amount.toFixed(2)} to your GameVault wallet`,
+            description: `Add $${amount.toFixed(2)} to your DropMarket wallet`,
           },
           unit_amount: Math.round(amount * 100), // Convert to cents
         },

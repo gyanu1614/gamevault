@@ -146,9 +146,12 @@
 
   ::selection { background: var(--color-accent-default); color: var(--color-text-inverse); }
 
+  /* V33 — was a chunky 2px-offset + 4px lime double-ring; now one thin,
+     quiet line. Keyboard users still get a visible cue, but focus no
+     longer paints a bright green box around inputs/buttons on click. */
   :focus-visible {
     outline: none;
-    box-shadow: 0 0 0 2px var(--color-bg-base), 0 0 0 4px var(--color-focus-ring);
+    box-shadow: 0 0 0 1.5px rgba(198, 255, 61, 0.3);
     border-radius: var(--radius-sm);
   }
 

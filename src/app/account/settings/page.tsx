@@ -425,7 +425,7 @@ export default function SettingsPage() {
                   <h2 className="text-sm font-semibold text-text-primary mb-5">Profile Information</h2>
                   <div className="space-y-5">
                     <div className="grid gap-4 sm:grid-cols-2">
-                      <SettingInput label="Username" required hint="Your unique handle on GameVault">
+                      <SettingInput label="Username" required hint="Your unique handle on DropMarket">
                         <input
                           type="text"
                           value={username}
@@ -510,7 +510,7 @@ export default function SettingsPage() {
                         <div className="mt-2 flex items-center gap-2 text-xs text-text-tertiary">
                           <Globe className="h-3.5 w-3.5" />
                           <span>
-                            gamevault.gg/shop/
+                            dropmarket.gg/shop/
                             <span className="text-lime-text">
                               {shopName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')}
                             </span>
@@ -791,7 +791,7 @@ export default function SettingsPage() {
                 <button
                   onClick={handleSave}
                   disabled={isUpdating}
-                  className="inline-flex items-center gap-2 rounded-lg bg-lime px-6 py-2.5 text-sm font-semibold text-text-inverse transition-all hover:bg-lime active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="inline-flex items-center gap-2 rounded-lg bg-lime px-6 py-2.5 text-sm font-semibold text-text-inverse transition-all hover:bg-lime-hover active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isUpdating ? (
                     <><Loader2 className="h-4 w-4 animate-spin" /> Saving…</>
@@ -829,8 +829,8 @@ export default function SettingsPage() {
                 <div>
                   <h3 className="text-base font-semibold text-text-primary">Confirm shop name change</h3>
                   <p className="mt-1 text-sm text-text-secondary">
-                    You're changing your shop name to <span className="text-text-primary font-medium">"{shopName}"</span>.
-                    You won't be able to change it again for 30 days.
+                    You&apos;re changing your shop name to <span className="text-text-primary font-medium">&ldquo;{shopName}&rdquo;</span>.
+                    You won&apos;t be able to change it again for 30 days.
                   </p>
                 </div>
               </div>
@@ -844,7 +844,7 @@ export default function SettingsPage() {
                 <button
                   onClick={saveSettings}
                   disabled={isUpdating}
-                  className="flex-1 rounded-lg bg-lime px-4 py-2.5 text-sm font-semibold text-text-inverse transition-all hover:bg-lime active:scale-95 disabled:opacity-50"
+                  className="flex-1 rounded-lg bg-lime px-4 py-2.5 text-sm font-semibold text-text-inverse transition-all hover:bg-lime-hover active:scale-95 disabled:opacity-50"
                 >
                   {isUpdating ? 'Saving…' : 'Confirm Change'}
                 </button>

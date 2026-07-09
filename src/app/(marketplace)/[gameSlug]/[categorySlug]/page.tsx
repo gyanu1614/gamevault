@@ -12,7 +12,7 @@ import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/server'
 import Image from 'next/image'
-import VaultShieldBadge from '@/components/vaultshield/VaultShieldBadge'
+import SafeDropBadge from '@/components/safedrop/SafeDropBadge'
 import PresenceIndicator from '@/components/presence/PresenceIndicator'
 import CategoryPills from '@/components/marketplace/CategoryPills'
 import GameSubNav, { type GameCategory } from '@/components/marketplace/GameSubNav'
@@ -80,7 +80,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     .eq('slug', gameSlug)
     .single() as any
 
-  if (!game) return { title: 'Not Found | GameVault' }
+  if (!game) return { title: 'Not Found' }
 
   const { data: category } = await supabase
     .from('categories')
@@ -100,8 +100,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
         .map((p) => p.charAt(0).toUpperCase() + p.slice(1))
         .join(' ')
       return {
-        title: `Buy ${prettyTitle} (${game.name}) — Cheap & Instant | GameVault`,
-        description: `Buy ${prettyTitle} for ${game.name} from verified sellers. Escrow-protected by VaultShield. Instant delivery available.`,
+        title: `Buy ${prettyTitle} (${game.name}) — Cheap & Instant`,
+        description: `Buy ${prettyTitle} for ${game.name} from verified sellers. Escrow-protected by SafeDrop. Instant delivery available.`,
         keywords: [
           `${game.name.toLowerCase()} ${prettyTitle.toLowerCase()}`,
           `buy ${prettyTitle.toLowerCase()}`,
@@ -109,18 +109,18 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
           `${prettyTitle.toLowerCase()} for sale`,
         ],
         openGraph: {
-          title: `${prettyTitle} (${game.name}) — GameVault`,
+          title: `${prettyTitle} (${game.name}) — DropMarket`,
           description: `Secure peer-to-peer marketplace for ${game.name} items.`,
           type: 'website',
         },
       }
     }
-    return { title: 'Not Found | GameVault' }
+    return { title: 'Not Found' }
   }
 
   return {
-    title: `${game.name} ${category.name} for Sale | GameVault`,
-    description: `Browse verified ${game.name} ${category.name.toLowerCase()} listings. Secure transactions with VaultShield escrow. Instant delivery guaranteed.`,
+    title: `${game.name} ${category.name} for Sale`,
+    description: `Browse verified ${game.name} ${category.name.toLowerCase()} listings. Secure transactions with SafeDrop escrow. Instant delivery guaranteed.`,
     keywords: [
       `${game.name.toLowerCase()} ${category.name.toLowerCase()}`,
       `buy ${game.name.toLowerCase()} ${category.name.toLowerCase()}`,
@@ -128,7 +128,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       `${game.name.toLowerCase()} marketplace`,
     ],
     openGraph: {
-      title: `${game.name} ${category.name} - GameVault`,
+      title: `${game.name} ${category.name} - DropMarket`,
       description: `Buy and sell ${game.name} ${category.name.toLowerCase()} safely`,
       type: 'website',
     },
@@ -363,10 +363,13 @@ export default async function CategoryBrowsePage({ params, searchParams }: PageP
       bundles: [...bundles].sort(
         (a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0),
       ),
+      // V51 — Regions keep their PlatformOption shape (flag icons);
+      // legacy string[] rows normalize to { value, icon_url: null }
+      // and the client resolves a preset flag by name.
       regions: currencyConfig?.platform_fields?.region?.enabled
         ? normalizePlatformOptions(
             currencyConfig.platform_fields.region.options,
-          ).map((o) => o.value)
+          )
         : [],
       // V19/P24/P7 — Platforms keep their PlatformOption shape so the
       // buyer page can render logos. normalizePlatformOptions also
@@ -509,6 +512,7 @@ export default async function CategoryBrowsePage({ params, searchParams }: PageP
           data={mergedData}
           gameImageUrl={game?.image_url ?? `/games/${gameSlug}.png`}
           viewerId={viewer?.id ?? null}
+          gameSlug={gameSlug}
         />
       </>
     )
@@ -579,7 +583,8 @@ export default async function CategoryBrowsePage({ params, searchParams }: PageP
         let itemsQuery: any = sb
           .from('listings')
           .select(`
-            id, slug, title, price, images, template_data, status,
+            id, slug, title, price, original_price, delivery_time,
+            quantity, is_unlimited, images, template_data, status,
             seller:profiles!listings_seller_id_fkey(
               id, username, shop_name, avatar_url, seller_tier,
               seller_rating, total_reviews, total_sales, is_verified
@@ -619,7 +624,7 @@ export default async function CategoryBrowsePage({ params, searchParams }: PageP
             categoryLabel={category.name}
             tagline={
               (category as any).description ||
-              `Browse verified, escrow-protected ${game.name} listings — secured by VaultShield.`
+              `Browse verified, escrow-protected ${game.name} listings — secured by SafeDrop.`
             }
             offers={offers}
             taxonomy={taxonomy}
@@ -808,9 +813,9 @@ function ListingCard({
           )}
           <div className="absolute inset-0 bg-gradient-to-t from-bg-base/80 via-transparent to-transparent" />
 
-          {/* VaultShield badge — top-left */}
+          {/* SafeDrop badge — top-left */}
           <div className="absolute left-2.5 top-2.5">
-            <VaultShieldBadge
+            <SafeDropBadge
               level={listing.price >= 500 ? 'premium' : listing.price >= 100 ? 'enhanced' : 'standard'}
               size="sm"
               showLabel={false}

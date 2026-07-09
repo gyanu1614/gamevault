@@ -2,6 +2,8 @@ import { requireAdmin } from '@/lib/actions/admin-permissions'
 import { getDashboardStats, getRecentActivity } from '@/lib/actions/admin-dashboard'
 import CompactDashboard from './components/CompactDashboard'
 
+export const metadata = { title: 'Dashboard' }
+
 export default async function AdminDashboardPage() {
   const admin = await requireAdmin()
 

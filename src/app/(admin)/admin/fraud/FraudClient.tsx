@@ -14,7 +14,7 @@ import { useState, useTransition } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
 import {
-  ShieldAlert, AlertTriangle, CheckCircle2, Clock,
+  ShieldAlert, AlertTriangle, CheckCircle2,
   Loader2, RefreshCw, UserX, Tag, Zap, TrendingDown,
   BarChart3, X, CircleDot,
 } from 'lucide-react'
@@ -24,6 +24,8 @@ import {
   resolveFraudFlag,
 } from '@/lib/actions/fraud-detection'
 import type { FraudFlag, FraudSeverity, FraudStatus } from '@/lib/actions/fraud-detection'
+import { cn } from '@/lib/utils'
+import { IconChip, StatCard, SectionLabel, TABLE } from '../components/kit'
 
 // ── Animation variants ─────────────────────────────────────────────────────
 
@@ -58,27 +60,6 @@ function SeverityBadge({ severity }: { severity: FraudSeverity }) {
   )
 }
 
-// ── Stat card ──────────────────────────────────────────────────────────────
-
-function StatCard({ label, value, icon, color }: {
-  label: string; value: number; icon: React.ReactNode; color: string
-}) {
-  return (
-    <motion.div
-      variants={item}
-      className="bg-[#0d0d0d] border border-white/[0.06] rounded-xl p-4 flex items-center gap-3"
-    >
-      <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${color}`}>
-        {icon}
-      </div>
-      <div>
-        <p className="text-xl font-bold font-mono text-white">{value}</p>
-        <p className="text-xs text-white/40">{label}</p>
-      </div>
-    </motion.div>
-  )
-}
-
 // ── Flag row ───────────────────────────────────────────────────────────────
 
 function timeAgo(iso: string): string {
@@ -104,55 +85,55 @@ function FlagRow({ flag, onResolve, resolving }: FlagRowProps) {
   return (
     <motion.tr
       layout
-      initial={{ opacity: 0, y: 8 }}
+      initial={false}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -8 }}
-      className="border-b border-white/[0.04] hover:bg-white/[0.02] transition-colors"
+      className={TABLE.row}
     >
       {/* User */}
-      <td className="px-4 py-3">
+      <td className={TABLE.tdPrimary}>
         <div>
-          <p className="text-sm text-white font-medium">
-            {flag.username ? `@${flag.username}` : <span className="text-white/30 italic">unknown</span>}
+          <p className="text-sm text-text-primary font-medium">
+            {flag.username ? `@${flag.username}` : <span className="text-text-tertiary italic">unknown</span>}
           </p>
-          <p className="text-xs text-white/30">{flag.email ?? ''}</p>
+          <p className="text-xs text-text-tertiary">{flag.email ?? ''}</p>
           {flag.role && (
-            <span className="text-[10px] text-white/30 capitalize">{flag.role}</span>
+            <span className="text-[10px] text-text-tertiary capitalize">{flag.role}</span>
           )}
         </div>
       </td>
 
       {/* Rule */}
-      <td className="px-4 py-3">
-        <div className="flex items-center gap-1.5 text-white/60">
+      <td className={TABLE.td}>
+        <div className="flex items-center gap-1.5 text-text-secondary">
           {rule.icon}
           <span className="text-xs">{rule.label}</span>
         </div>
       </td>
 
       {/* Severity */}
-      <td className="px-4 py-3">
+      <td className={TABLE.td}>
         <SeverityBadge severity={flag.severity as FraudSeverity} />
       </td>
 
       {/* Description */}
-      <td className="px-4 py-3 max-w-xs">
-        <p className="text-xs text-white/50 leading-relaxed">{flag.description}</p>
+      <td className={cn(TABLE.td, 'max-w-xs')}>
+        <p className="text-xs text-text-tertiary leading-relaxed">{flag.description}</p>
       </td>
 
       {/* Age */}
-      <td className="px-4 py-3 text-xs text-white/30 whitespace-nowrap">
+      <td className={cn(TABLE.td, 'text-xs text-text-tertiary whitespace-nowrap')}>
         {timeAgo(flag.created_at)}
       </td>
 
       {/* Actions */}
-      <td className="px-4 py-3">
+      <td className={TABLE.td}>
         {flag.status === 'open' ? (
           <div className="flex items-center gap-1.5">
             <button
               disabled={busy}
               onClick={() => onResolve(flag.id, 'resolved')}
-              className="flex items-center gap-1 px-2 py-1 rounded text-[11px] bg-green-500/10 text-green-400 hover:bg-green-500/20 transition-colors disabled:opacity-40"
+              className="flex items-center gap-1 px-2 py-1 rounded-md text-[11px] bg-green-500/10 border border-green-500/20 text-green-400 hover:bg-green-500/20 transition-colors disabled:opacity-40"
             >
               {busy ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCircle2 className="w-3 h-3" />}
               Resolve
@@ -160,14 +141,14 @@ function FlagRow({ flag, onResolve, resolving }: FlagRowProps) {
             <button
               disabled={busy}
               onClick={() => onResolve(flag.id, 'dismissed')}
-              className="flex items-center gap-1 px-2 py-1 rounded text-[11px] bg-white/[0.05] text-white/40 hover:bg-white/[0.08] transition-colors disabled:opacity-40"
+              className="flex items-center gap-1 px-2 py-1 rounded-md text-[11px] border border-border-default bg-bg-overlay text-text-secondary hover:bg-bg-raised-hover hover:text-text-primary transition-colors disabled:opacity-40"
             >
               <X className="w-3 h-3" />
               Dismiss
             </button>
           </div>
         ) : (
-          <span className={`text-xs capitalize ${flag.status === 'resolved' ? 'text-green-400' : 'text-white/30'}`}>
+          <span className={`text-xs capitalize ${flag.status === 'resolved' ? 'text-green-400' : 'text-text-tertiary'}`}>
             {flag.status}
           </span>
         )}
@@ -249,9 +230,12 @@ export default function FraudClient({ initialFlags, stats, fetchError }: Props) 
   ]
 
   return (
+    // initial={false}: no opacity-0 SSR gate — the hidden→show entrance
+    // animation can silently never fire under the heavy admin tree,
+    // leaving the whole page invisible (same root cause as analytics).
     <motion.div
       variants={container}
-      initial="hidden"
+      initial={false}
       animate="show"
       className="space-y-6 pb-10"
     >
@@ -259,10 +243,10 @@ export default function FraudClient({ initialFlags, stats, fetchError }: Props) 
       <motion.div variants={item} className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <div className="flex items-center gap-3 mb-1">
-            <ShieldAlert className="w-6 h-6 text-red-400" />
-            <h1 className="text-2xl font-bold text-white">Fraud Detection</h1>
+            <IconChip icon={ShieldAlert} tone="error" size="sm" />
+            <h1 className="text-[26px] font-extrabold leading-tight tracking-tight text-text-primary">Fraud Detection</h1>
           </div>
-          <p className="text-white/40 text-sm">
+          <p className="text-text-secondary text-sm">
             Rules-based engine scanning orders, users, and payment patterns.
           </p>
         </div>
@@ -270,8 +254,8 @@ export default function FraudClient({ initialFlags, stats, fetchError }: Props) 
         <button
           onClick={handleScan}
           disabled={scanning}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-500/10 border border-red-500/20
-                     text-red-400 hover:bg-red-500/15 transition-colors disabled:opacity-50 text-sm font-medium"
+          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-lime-pressed hover:bg-lime
+                     text-text-inverse transition-colors disabled:opacity-50 text-sm font-bold"
         >
           {scanning
             ? <Loader2 className="w-4 h-4 animate-spin" />
@@ -282,24 +266,34 @@ export default function FraudClient({ initialFlags, stats, fetchError }: Props) 
 
       {/* ── Stat cards ──────────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-3">
-        <StatCard label="Open Flags"       value={stats.open}          icon={<ShieldAlert  className="w-4 h-4 text-red-400"   />} color="bg-red-500/10"   />
-        <StatCard label="High Severity"    value={stats.high}          icon={<AlertTriangle className="w-4 h-4 text-red-400"   />} color="bg-red-500/10"   />
-        <StatCard label="Medium Severity"  value={stats.medium}        icon={<AlertTriangle className="w-4 h-4 text-amber-400" />} color="bg-amber-500/10" />
-        <StatCard label="Low Severity"     value={stats.low}           icon={<CircleDot     className="w-4 h-4 text-blue-400"  />} color="bg-blue-500/10"  />
-        <StatCard label="Resolved Today"   value={stats.resolvedToday} icon={<CheckCircle2  className="w-4 h-4 text-green-400" />} color="bg-green-500/10" />
+        <motion.div variants={item}>
+          <StatCard label="Open Flags" value={stats.open} icon={ShieldAlert} tone="error" />
+        </motion.div>
+        <motion.div variants={item}>
+          <StatCard label="High Severity" value={stats.high} icon={AlertTriangle} tone="error" />
+        </motion.div>
+        <motion.div variants={item}>
+          <StatCard label="Medium Severity" value={stats.medium} icon={AlertTriangle} tone="warning" />
+        </motion.div>
+        <motion.div variants={item}>
+          <StatCard label="Low Severity" value={stats.low} icon={CircleDot} tone="info" />
+        </motion.div>
+        <motion.div variants={item}>
+          <StatCard label="Resolved Today" value={stats.resolvedToday} icon={CheckCircle2} tone="success" />
+        </motion.div>
       </div>
 
       {/* ── Rules reference ─────────────────────────────────────────────── */}
       <motion.div
         variants={item}
-        className="bg-[#0d0d0d] border border-white/[0.06] rounded-xl p-4"
+        className="rounded-xl border border-border-default bg-bg-raised p-4"
       >
-        <p className="text-xs text-white/40 font-medium uppercase tracking-wider mb-3">Active Rules</p>
+        <SectionLabel>Active Rules</SectionLabel>
         <div className="flex flex-wrap gap-2">
           {Object.entries(RULE_META).map(([ruleId, { label, icon }]) => (
             <div
               key={ruleId}
-              className="flex items-center gap-1.5 text-xs text-white/50 bg-white/[0.04] px-2.5 py-1 rounded-full"
+              className="flex items-center gap-1.5 text-xs text-text-secondary border border-border-default bg-bg-overlay px-2.5 py-1 rounded-full"
             >
               {icon}
               {label}
@@ -309,17 +303,17 @@ export default function FraudClient({ initialFlags, stats, fetchError }: Props) 
       </motion.div>
 
       {/* ── Flags table ─────────────────────────────────────────────────── */}
-      <motion.div variants={item} className="bg-[#0d0d0d] border border-white/[0.06] rounded-xl overflow-hidden">
+      <motion.div variants={item} className="rounded-xl border border-border-default bg-bg-raised overflow-hidden">
         {/* Tab bar */}
-        <div className="flex border-b border-white/[0.06]">
+        <div className="flex border-b border-border-default">
           {tabs.map(t => (
             <button
               key={t.key}
               onClick={() => handleTabChange(t.key)}
-              className={`px-4 py-3 text-sm font-medium transition-colors ${
+              className={`px-4 py-3 text-sm font-medium border-b-2 -mb-px transition-colors ${
                 activeTab === t.key
-                  ? 'text-white border-b-2 border-red-400'
-                  : 'text-white/40 hover:text-white/60'
+                  ? 'border-lime text-text-primary'
+                  : 'border-transparent text-text-tertiary hover:text-text-secondary'
               }`}
             >
               {t.label}
@@ -335,12 +329,12 @@ export default function FraudClient({ initialFlags, stats, fetchError }: Props) 
         )}
 
         {/* Table */}
-        <div className="overflow-x-auto">
-          <table className="w-full">
+        <div className={TABLE.wrap}>
+          <table className={TABLE.table}>
             <thead>
-              <tr className="border-b border-white/[0.04]">
+              <tr>
                 {['User', 'Rule', 'Severity', 'Description', 'Age', 'Actions'].map(h => (
-                  <th key={h} className="px-4 py-3 text-left text-[11px] uppercase tracking-wider text-white/30 font-medium">
+                  <th key={h} className={TABLE.th}>
                     {h}
                   </th>
                 ))}
@@ -351,14 +345,14 @@ export default function FraudClient({ initialFlags, stats, fetchError }: Props) 
                 {tabLoading ? (
                   <tr>
                     <td colSpan={6} className="text-center py-12">
-                      <Loader2 className="w-6 h-6 animate-spin text-white/30 mx-auto" />
+                      <Loader2 className="w-6 h-6 animate-spin text-lime mx-auto" />
                     </td>
                   </tr>
                 ) : flags.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="text-center py-12">
                       <CheckCircle2 className="w-8 h-8 text-green-400/50 mx-auto mb-2" />
-                      <p className="text-sm text-white/30">
+                      <p className="text-sm text-text-tertiary">
                         {activeTab === 'open' ? 'No open fraud flags — run a scan to check.' : `No ${activeTab} flags.`}
                       </p>
                     </td>

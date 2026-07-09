@@ -69,75 +69,11 @@ export interface CurrencyPageData {
   steps: { n: number; title: string; body: string }[]
 }
 
-/**
- * V17y — Kept as a reference for what a fully-populated CurrencyPageData
- * looks like. The runtime now hydrates from `category_configs` in the
- * DB; the Roblox seed migration (20260619_category_configs.sql)
- * inserts equivalent values. Don't delete — useful for new-game
- * default suggestions.
- */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const ROBUX: CurrencyPageData = {
-  currency: {
-    name: 'Robux',
-    game: 'Roblox',
-    glyph: 'R$',
-    tagline:
-      'In-game currency for Roblox — buy avatar items, game passes, and premium content.',
-    trust: { trades: '12,847', avgDelivery: '8 min', shield: 'VaultShield' },
-    unitLabel: 'Robux',
-    variants: [],
-  },
-  hero: {
-    id: 'h1',
-    seller: 'ApexGoods',
-    avatarHue: 86,
-    verified: true,
-    rating: 99.8,
-    reviews: 4218,
-    pricePerUnit: 0.0047,
-    minQty: 1000,
-    stock: 4_200_000,
-    deliveryMin: 5,
-    deliveryMax: 12,
-    badges: ['Money-back guarantee', 'Instant delivery', 'VaultShield protected'],
-    blurb:
-      'Top-rated bulk seller. 24/7 automated delivery, no password required — gifted via group payout.',
-    ladder: [
-      { min: 1000, price: 0.0047 },
-      { min: 5000, price: 0.0044 },
-      { min: 10000, price: 0.0041 },
-      { min: 50000, price: 0.0038 },
-    ],
-    payments: ['card', 'paypal', 'crypto', 'applepay'],
-  },
-  sellers: [
-    { id: 's2',  seller: 'NovaMarket',  avatarHue: 200, verified: true,  rating: 99.6, reviews: 3110, pricePerUnit: 0.0048, minQty: 500,   stock: 1_800_000,  deliveryMin: 8,  deliveryMax: 20, recommended: 96, blurb: 'Reliable mid-volume seller. Manual delivery within stated window, friendly support in EU hours.', payments: ['card','paypal','crypto'] },
-    { id: 's3',  seller: 'PixelVault',  avatarHue: 320, verified: true,  rating: 99.9, reviews: 8740, pricePerUnit: 0.0051, minQty: 1000,  stock: 9_200_000,  deliveryMin: 3,  deliveryMax: 7,  recommended: 95, blurb: 'Highest review count on the platform. Fully automated payout, instant 24/7. Slightly higher price for that reliability.', payments: ['card','paypal','crypto','applepay'] },
-    { id: 's4',  seller: 'QuickCoin',   avatarHue: 28,  verified: true,  rating: 98.4, reviews: 1290, pricePerUnit: 0.0045, minQty: 2000,  stock: 600_000,    deliveryMin: 2,  deliveryMax: 6,  recommended: 90, blurb: 'Cheapest verified seller for bulk orders. Limited stock, restocks daily. Crypto preferred for fastest release.', payments: ['crypto','card'] },
-    { id: 's5',  seller: 'GuildSupply', avatarHue: 260, verified: true,  rating: 99.2, reviews: 2050, pricePerUnit: 0.0049, minQty: 1000,  stock: 3_400_000,  deliveryMin: 10, deliveryMax: 30, recommended: 88, blurb: 'Established guild-run shop. Delivery via in-experience gifting; provide your username at checkout.', payments: ['card','paypal'] },
-    { id: 's6',  seller: 'ByteBazaar',  avatarHue: 150, verified: false, rating: 97.1, reviews: 412,  pricePerUnit: 0.0043, minQty: 5000,  stock: 250_000,    deliveryMin: 15, deliveryMax: 45, recommended: 78, blurb: 'New unverified seller, lowest headline price. Larger minimum order. Building reputation — buyer protection still applies.', payments: ['crypto'] },
-    { id: 's7',  seller: 'OrbitTrades', avatarHue: 12,  verified: true,  rating: 99.4, reviews: 5630, pricePerUnit: 0.0050, minQty: 1000,  stock: 7_100_000,  deliveryMin: 5,  deliveryMax: 15, recommended: 92, blurb: 'High-volume veteran. Multiple delivery methods available; supports NA & EU regions with localized support.', payments: ['card','paypal','crypto','applepay'] },
-    { id: 's8',  seller: 'LunaGoods',   avatarHue: 290, verified: true,  rating: 98.9, reviews: 980,  pricePerUnit: 0.0052, minQty: 500,   stock: 120_000,    deliveryMin: 6,  deliveryMax: 18, recommended: 84, blurb: 'Small boutique seller, fast responses. Low minimum order — good for top-ups rather than bulk.', payments: ['paypal','card'] },
-    { id: 's9',  seller: 'TitanReserve',avatarHue: 220, verified: true,  rating: 99.7, reviews: 6420, pricePerUnit: 0.0046, minQty: 10000, stock: 22_000_000, deliveryMin: 4,  deliveryMax: 10, recommended: 93, blurb: 'Largest stock on the marketplace. Built for very large orders (10k+). Automated, instant, money-back guaranteed.', payments: ['card','paypal','crypto','applepay'] },
-    { id: 's10', seller: 'EchoMart',    avatarHue: 340, verified: false, rating: 96.3, reviews: 188,  pricePerUnit: 0.0044, minQty: 3000,  stock: 80_000,     deliveryMin: 20, deliveryMax: 60, recommended: 70, blurb: 'Budget option, unverified. Manual delivery, slower window. Decent for non-urgent bulk buys.', payments: ['crypto'] },
-    { id: 's11', seller: 'AuroraTrade', avatarHue: 175, verified: true,  rating: 99.1, reviews: 1740, pricePerUnit: 0.0049, minQty: 1000,  stock: 2_600_000,  deliveryMin: 7,  deliveryMax: 22, recommended: 86, blurb: 'Consistent seller with strong dispute record. Standard automated delivery during stated window.', payments: ['card','paypal','crypto'] },
-  ],
-  faq: [
-    { q: 'How fast is delivery?', a: 'Most orders are delivered automatically within minutes — the average across all Robux sellers is about 8 minutes. Each seller lists their own delivery window on their offer; automated sellers are near-instant, while manual sellers deliver within the range shown. You’ll get a notification the moment your currency is on the way.' },
-    { q: 'Is buying Robux safe?', a: 'Yes. Every trade on GameVault is covered by VaultShield, which holds your payment until you confirm you’ve received your Robux. Sellers are rated by real buyers, and verified sellers have passed identity and reliability checks. If anything goes wrong, you’re protected by our money-back guarantee.' },
-    { q: 'What if I don’t receive my currency?', a: 'If a seller fails to deliver within their stated window, open a dispute from your order page. VaultShield has not released the funds yet, so you get a full refund automatically. Our support team reviews disputes 24/7 and most are resolved within an hour.' },
-    { q: 'Do I need to share my password?', a: 'No — never. Legitimate Robux delivery on GameVault is done through in-experience gifting or group payouts, which only require your username. Any seller asking for your password is violating our rules; report them and your order is protected.' },
-    { q: 'What payment methods do you accept?', a: 'We accept major credit and debit cards, PayPal, Apple Pay, and a range of cryptocurrencies. Individual sellers may accept a subset — the methods each seller supports are shown when you expand their offer.' },
-    { q: 'What’s your refund policy?', a: 'Because payments are held in escrow by VaultShield until delivery is confirmed, you can request a full refund any time before you confirm receipt. After confirmation, refunds are handled case-by-case through our dispute process.' },
-    { q: 'Why is your price different from buying in-game?', a: 'Marketplace prices reflect supply and demand between independent sellers, and are often lower per unit than first-party pricing — especially in bulk. Prices also vary by platform and region due to local pricing and fees, which is why you can filter by both above.' },
-  ],
-  steps: [
-    { n: 1, title: 'Pick an offer',           body: 'Compare verified sellers by price, rating, and delivery speed. The recommended offer balances all three.' },
-    { n: 2, title: 'Pay securely',            body: 'Your payment is held by VaultShield escrow — the seller is only paid once you confirm delivery.' },
-    { n: 3, title: 'Receive your currency',   body: 'The seller delivers via in-game gifting. Confirm receipt and you’re done — no password ever required.' },
-  ],
-}
+// V24 — Removed the `ROBUX` demo constant. It held a fully-populated
+// CurrencyPageData with FAKE competitor sellers (NovaMarket, PixelVault,
+// ApexGoods, s2–s11) as a "reference". It was unreferenced dead code, and
+// the runtime hydrates real copy from `category_configs` in the DB (Roblox
+// seed: 20260619_category_configs.sql). No fake seller data in the tree.
 
 /**
  * V17y — Per-game shell now hydrates from the DB (category_configs).
@@ -195,7 +131,7 @@ export async function getCurrencyShell(
         game: capitalize(gameSlug.replace(/-/g, ' ')),
         glyph: '$',
         tagline: 'In-game currency.',
-        trust: { trades: '0', avgDelivery: '—', shield: 'VaultShield' },
+        trust: { trades: '0', avgDelivery: '—', shield: 'SafeDrop' },
         unitLabel: labelFromSlug,
         variants: [],
       },
@@ -212,7 +148,7 @@ export async function getCurrencyShell(
       game: capitalize(gameSlug.replace(/-/g, ' ')),
       glyph: cfg.glyph,
       tagline: cfg.tagline,
-      trust: { trades: '0', avgDelivery: '—', shield: 'VaultShield' },
+      trust: { trades: '0', avgDelivery: '—', shield: 'SafeDrop' },
       unitLabel: cfg.unit_label,
       variants: [],
     },
@@ -244,7 +180,7 @@ const BLANK_HERO: Offer = {
 
 const DEFAULT_STEPS = [
   { n: 1, title: 'Pick an offer',          body: 'Compare verified sellers by price, rating, and delivery speed.' },
-  { n: 2, title: 'Pay securely',           body: 'Your payment is held by VaultShield escrow until you confirm delivery.' },
+  { n: 2, title: 'Pay securely',           body: 'Your payment is held by SafeDrop escrow until you confirm delivery.' },
   { n: 3, title: 'Receive your currency',  body: "The seller delivers via the game's transfer method. Confirm receipt and you're done." },
 ]
 

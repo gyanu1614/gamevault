@@ -91,7 +91,7 @@ export function ActionPanel({
 
   return (
     <OrderCard className="px-5 pb-5 pt-4">
-      <div className="mb-3 inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.16em] text-lime-text">
+      <div className="mb-3 inline-flex items-center gap-2 text-[11.5px] font-bold uppercase tracking-[0.14em] text-lime-text">
         <Zap className="h-3 w-3" />
         {cfg.title}
       </div>

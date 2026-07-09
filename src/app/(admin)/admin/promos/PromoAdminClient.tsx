@@ -1,5 +1,13 @@
 'use client'
 
+/**
+ * P5.3 — Admin Promo Code Management Client
+ *
+ * V53 restyle — admin kit design language: PageHeader, neutral
+ * bg-bg-raised surfaces, lime primary actions, StatusBadge pills,
+ * kit-style inputs and modal.
+ */
+
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
@@ -13,11 +21,16 @@ import {
   deletePromoCode,
 } from '@/lib/actions/promo'
 import type { PromoCode } from '@/types/database'
+import { PageHeader, StatusBadge } from '../components/kit'
 
 interface Props {
   initialCodes: PromoCode[]
   fetchError?: string
 }
+
+const INPUT =
+  'w-full rounded-lg border border-border-default bg-bg-base px-3 py-2 text-sm text-text-primary placeholder:text-text-disabled focus:border-lime focus:outline-none'
+const LABEL = 'block text-xs font-medium text-text-tertiary mb-1.5'
 
 // ── Create form ───────────────────────────────────────────────────────────────
 function CreatePromoForm({ onCreated }: { onCreated: (code: PromoCode) => void }) {
@@ -66,7 +79,7 @@ function CreatePromoForm({ onCreated }: { onCreated: (code: PromoCode) => void }
     <div>
       <button
         onClick={() => setOpen(true)}
-        className="flex items-center gap-2 rounded-xl bg-violet-500 hover:bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors"
+        className="flex items-center gap-2 rounded-lg bg-lime-pressed px-4 py-2.5 text-sm font-bold text-text-inverse transition-colors hover:bg-lime"
       >
         <Plus className="h-4 w-4" />
         New Promo Code
@@ -79,18 +92,18 @@ function CreatePromoForm({ onCreated }: { onCreated: (code: PromoCode) => void }
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={() => setOpen(false)}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
           >
             <motion.div
               initial={{ scale: 0.95 }}
               animate={{ scale: 1 }}
               exit={{ scale: 0.95 }}
               onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-lg rounded-2xl border border-white/10 bg-[#0a0a0a] p-6 shadow-2xl"
+              className="w-full max-w-lg rounded-xl border border-border-default bg-bg-raised p-6"
             >
-              <div className="flex items-center justify-between mb-5">
-                <h2 className="text-lg font-bold text-white">Create Promo Code</h2>
-                <button onClick={() => setOpen(false)} className="text-gray-500 hover:text-white">
+              <div className="mb-5 flex items-center justify-between">
+                <h2 className="text-lg font-bold text-text-primary">Create Promo Code</h2>
+                <button onClick={() => setOpen(false)} className="text-text-tertiary transition-colors hover:text-text-primary">
                   <X className="h-5 w-5" />
                 </button>
               </div>
@@ -99,21 +112,21 @@ function CreatePromoForm({ onCreated }: { onCreated: (code: PromoCode) => void }
                 {/* Code + Type */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-medium text-gray-400 mb-1.5">Code *</label>
+                    <label className={LABEL}>Code *</label>
                     <input
                       value={form.code}
                       onChange={e => setForm(f => ({ ...f, code: e.target.value.toUpperCase() }))}
                       placeholder="SUMMER20"
                       required
-                      className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white uppercase tracking-widest placeholder:text-gray-600 focus:border-violet-500 focus:outline-none"
+                      className={`${INPUT} uppercase tracking-widest`}
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-400 mb-1.5">Type *</label>
+                    <label className={LABEL}>Type *</label>
                     <select
                       value={form.type}
                       onChange={e => setForm(f => ({ ...f, type: e.target.value as 'percentage' | 'flat' }))}
-                      className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white focus:border-violet-500 focus:outline-none"
+                      className={INPUT}
                     >
                       <option value="percentage">Percentage (%)</option>
                       <option value="flat">Flat ($)</option>
@@ -124,7 +137,7 @@ function CreatePromoForm({ onCreated }: { onCreated: (code: PromoCode) => void }
                 {/* Value + Description */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-medium text-gray-400 mb-1.5">
+                    <label className={LABEL}>
                       Value * {form.type === 'percentage' ? '(%)' : '($)'}
                     </label>
                     <input
@@ -136,16 +149,16 @@ function CreatePromoForm({ onCreated }: { onCreated: (code: PromoCode) => void }
                       onChange={e => setForm(f => ({ ...f, value: e.target.value }))}
                       placeholder={form.type === 'percentage' ? '10' : '5.00'}
                       required
-                      className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:border-violet-500 focus:outline-none"
+                      className={INPUT}
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-400 mb-1.5">Description</label>
+                    <label className={LABEL}>Description</label>
                     <input
                       value={form.description}
                       onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
                       placeholder="Summer sale 20% off"
-                      className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:border-violet-500 focus:outline-none"
+                      className={INPUT}
                     />
                   </div>
                 </div>
@@ -153,24 +166,24 @@ function CreatePromoForm({ onCreated }: { onCreated: (code: PromoCode) => void }
                 {/* Min order + Max discount */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-medium text-gray-400 mb-1.5">Min Order ($)</label>
+                    <label className={LABEL}>Min Order ($)</label>
                     <input
                       type="number" min="0" step="0.01"
                       value={form.minOrderAmount}
                       onChange={e => setForm(f => ({ ...f, minOrderAmount: e.target.value }))}
                       placeholder="0.00"
-                      className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:border-violet-500 focus:outline-none"
+                      className={INPUT}
                     />
                   </div>
                   {form.type === 'percentage' && (
                     <div>
-                      <label className="block text-xs font-medium text-gray-400 mb-1.5">Max Discount ($)</label>
+                      <label className={LABEL}>Max Discount ($)</label>
                       <input
                         type="number" min="0" step="0.01"
                         value={form.maxDiscount}
                         onChange={e => setForm(f => ({ ...f, maxDiscount: e.target.value }))}
                         placeholder="No cap"
-                        className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:border-violet-500 focus:outline-none"
+                        className={INPUT}
                       />
                     </div>
                   )}
@@ -179,31 +192,31 @@ function CreatePromoForm({ onCreated }: { onCreated: (code: PromoCode) => void }
                 {/* Usage limit + Per-user limit + Expires */}
                 <div className="grid grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-xs font-medium text-gray-400 mb-1.5">Total Uses</label>
+                    <label className={LABEL}>Total Uses</label>
                     <input
                       type="number" min="1"
                       value={form.usageLimit}
                       onChange={e => setForm(f => ({ ...f, usageLimit: e.target.value }))}
                       placeholder="Unlimited"
-                      className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:border-violet-500 focus:outline-none"
+                      className={INPUT}
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-400 mb-1.5">Per User</label>
+                    <label className={LABEL}>Per User</label>
                     <input
                       type="number" min="1"
                       value={form.perUserLimit}
                       onChange={e => setForm(f => ({ ...f, perUserLimit: e.target.value }))}
-                      className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white focus:border-violet-500 focus:outline-none"
+                      className={INPUT}
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-400 mb-1.5">Expires</label>
+                    <label className={LABEL}>Expires</label>
                     <input
                       type="date"
                       value={form.expiresAt}
                       onChange={e => setForm(f => ({ ...f, expiresAt: e.target.value }))}
-                      className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white focus:border-violet-500 focus:outline-none"
+                      className={INPUT}
                     />
                   </div>
                 </div>
@@ -211,7 +224,7 @@ function CreatePromoForm({ onCreated }: { onCreated: (code: PromoCode) => void }
                 <button
                   type="submit"
                   disabled={saving}
-                  className="w-full flex items-center justify-center gap-2 rounded-xl bg-violet-500 hover:bg-violet-600 disabled:opacity-50 py-3 text-sm font-semibold text-white transition-colors"
+                  className="flex w-full items-center justify-center gap-2 rounded-lg bg-lime-pressed py-3 text-sm font-bold text-text-inverse transition-colors hover:bg-lime disabled:opacity-50"
                 >
                   {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
                   Create Code
@@ -256,36 +269,34 @@ export default function PromoAdminClient({ initialCodes, fetchError }: Props) {
   }
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
+    <div className="mx-auto max-w-6xl">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-white">Promo Codes</h1>
-          <p className="text-sm text-gray-400 mt-0.5">
-            Create and manage discount codes for buyers at checkout.
-          </p>
-        </div>
-        <CreatePromoForm
-          onCreated={(code) => setCodes(prev => [code, ...prev])}
-        />
-      </div>
+      <PageHeader
+        title="Promo Codes"
+        description="Create and manage discount codes for buyers at checkout."
+        actions={
+          <CreatePromoForm
+            onCreated={(code) => setCodes(prev => [code, ...prev])}
+          />
+        }
+      />
 
       {fetchError && (
-        <div className="mb-4 rounded-xl bg-red-500/10 border border-red-500/30 px-4 py-3 text-sm text-red-400">
+        <div className="mb-4 rounded-xl border border-[rgba(255,92,92,0.25)] bg-error-bg px-4 py-3 text-sm text-error">
           {fetchError}
         </div>
       )}
 
       {/* Codes table */}
       {codes.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 rounded-xl border border-white/[0.08] bg-white/[0.02]">
-          <Tag className="h-12 w-12 text-gray-700 mb-3" />
-          <p className="text-sm font-medium text-gray-500">No promo codes yet</p>
-          <p className="text-xs text-gray-600 mt-1">Create your first code to get started.</p>
+        <div className="flex flex-col items-center justify-center rounded-xl border border-border-default bg-bg-raised py-20">
+          <Tag className="mb-3 h-12 w-12 text-text-disabled" />
+          <p className="text-sm font-medium text-text-secondary">No promo codes yet</p>
+          <p className="mt-1 text-xs text-text-tertiary">Create your first code to get started.</p>
         </div>
       ) : (
-        <div className="rounded-xl border border-white/[0.08] bg-white/[0.02] overflow-hidden">
-          <div className="grid grid-cols-[1fr_auto_auto_auto_auto_auto_auto] gap-4 px-5 py-3 border-b border-white/[0.08] text-[11px] font-semibold uppercase tracking-widest text-gray-600">
+        <div className="overflow-hidden rounded-xl border border-border-default bg-bg-raised">
+          <div className="grid grid-cols-[1fr_auto_auto_auto_auto_auto_auto] gap-4 border-b border-border-subtle px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-text-tertiary">
             <span>Code</span>
             <span>Type</span>
             <span>Value</span>
@@ -302,45 +313,45 @@ export default function PromoAdminClient({ initialCodes, fetchError }: Props) {
             return (
               <div
                 key={code.id}
-                className="grid grid-cols-[1fr_auto_auto_auto_auto_auto_auto] gap-4 items-center px-5 py-3.5 border-b border-white/[0.05] last:border-0 hover:bg-white/[0.02] transition-colors"
+                className="grid grid-cols-[1fr_auto_auto_auto_auto_auto_auto] items-center gap-4 border-b border-border-subtle px-5 py-3.5 transition-colors last:border-0 hover:bg-bg-overlay"
               >
                 {/* Code + description */}
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="font-mono text-sm font-bold text-white tracking-widest">{code.code}</span>
+                    <span className="font-mono text-sm font-bold tracking-widest text-text-primary">{code.code}</span>
                     {code.min_order_amount > 0 && (
-                      <span className="text-[10px] text-gray-600">min ${code.min_order_amount.toFixed(0)}</span>
+                      <span className="text-[10px] text-text-tertiary">min ${code.min_order_amount.toFixed(0)}</span>
                     )}
                   </div>
                   {code.description && (
-                    <p className="text-xs text-gray-500 mt-0.5">{code.description}</p>
+                    <p className="mt-0.5 text-xs text-text-tertiary">{code.description}</p>
                   )}
                 </div>
 
                 {/* Type icon */}
-                <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-white/[0.04]">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-border-subtle bg-bg-overlay">
                   {code.type === 'percentage'
-                    ? <Percent className="h-3.5 w-3.5 text-violet-400" />
-                    : <DollarSign className="h-3.5 w-3.5 text-green-400" />
+                    ? <Percent className="h-3.5 w-3.5 text-lime-text" />
+                    : <DollarSign className="h-3.5 w-3.5 text-success" />
                   }
                 </div>
 
                 {/* Value */}
-                <span className="text-sm font-semibold text-white">
+                <span className="text-sm font-semibold tabular-nums text-text-primary">
                   {code.type === 'percentage' ? `${code.value}%` : `$${code.value.toFixed(2)}`}
                   {code.max_discount && (
-                    <span className="text-[10px] text-gray-600 ml-1">max ${code.max_discount}</span>
+                    <span className="ml-1 text-[10px] text-text-tertiary">max ${code.max_discount}</span>
                   )}
                 </span>
 
                 {/* Usage */}
-                <div className="flex items-center gap-1 text-xs text-gray-400">
+                <div className="flex items-center gap-1 text-xs tabular-nums text-text-secondary">
                   <Users className="h-3 w-3" />
                   {code.total_used}{code.usage_limit ? `/${code.usage_limit}` : ''}
                 </div>
 
                 {/* Expires */}
-                <div className="flex items-center gap-1 text-xs text-gray-400">
+                <div className="flex items-center gap-1 text-xs text-text-secondary">
                   <Calendar className="h-3 w-3" />
                   {code.expires_at
                     ? new Date(code.expires_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' })
@@ -348,33 +359,29 @@ export default function PromoAdminClient({ initialCodes, fetchError }: Props) {
                 </div>
 
                 {/* Status badge */}
-                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
-                  !code.is_active || isExpired || isFull
-                    ? 'bg-gray-500/10 text-gray-500 border-gray-500/20'
-                    : 'bg-green-500/10 text-green-400 border-green-500/20'
-                }`}>
-                  {!code.is_active ? 'Inactive' : isExpired ? 'Expired' : isFull ? 'Full' : 'Active'}
-                </span>
+                <StatusBadge
+                  status={!code.is_active ? 'Inactive' : isExpired ? 'Expired' : isFull ? 'Full' : 'Active'}
+                />
 
                 {/* Actions */}
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => handleToggle(code.id)}
                     disabled={loading === code.id}
-                    className="text-gray-500 hover:text-white transition-colors"
+                    className="text-text-tertiary transition-colors hover:text-text-primary"
                     title={code.is_active ? 'Deactivate' : 'Activate'}
                   >
                     {loading === code.id
                       ? <Loader2 className="h-4 w-4 animate-spin" />
                       : code.is_active
-                      ? <ToggleRight className="h-5 w-5 text-green-400" />
+                      ? <ToggleRight className="h-5 w-5 text-success" />
                       : <ToggleLeft className="h-5 w-5" />
                     }
                   </button>
                   <button
                     onClick={() => handleDelete(code.id)}
                     disabled={loading === code.id + '-del'}
-                    className="text-gray-600 hover:text-red-400 transition-colors"
+                    className="text-text-tertiary transition-colors hover:text-error"
                     title="Delete"
                   >
                     {loading === code.id + '-del'

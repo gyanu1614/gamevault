@@ -141,11 +141,16 @@ export async function createCheckout(input: CreateCheckoutInput): Promise<Create
     }
 
     // Create the CoinGate charge for the remaining amount.
+    //  • success → the order page (paid=1 marks a payment return so the page
+    //    collapses history → the back button skips the CoinGate invoice).
+    //  • cancel  → back to checkout so the buyer can retry.
+    const base = publicAppUrl()
     const provider = getProvider('coingate')
     const charge = await provider.createCharge({
       orderId,
       amount: chargeMoney,
-      returnUrl: `${publicAppUrl()}/orders/${orderId}?status=pending`,
+      returnUrl: `${base}/account/orders/${orderId}?paid=1`,
+      cancelUrl: `${base}/checkout/${input.listingId}`,
       metadata: { listing_id: input.listingId },
     })
 

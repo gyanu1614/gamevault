@@ -19,7 +19,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
-import { GlassCard } from '@/components/ui/glass-card'
+import { PageHeader, AdminPanel } from '../components/kit'
 import {
   fetchAdminGlobalCategories,
   saveGlobalCategory,
@@ -70,10 +70,10 @@ function CategoryCard({ row, onSaved }: { row: GlobalCategoryAdminRow; onSaved: 
   }
 
   return (
-    <GlassCard intensity="light" rounded="2xl" className="p-0">
+    <AdminPanel pad={false}>
       <div className="flex items-start gap-4 p-6">
         {/* Big icon */}
-        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-border-default bg-bg-raised text-3xl">
+        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border border-border-default bg-bg-overlay text-3xl">
           {iconEmoji || '📦'}
         </div>
 
@@ -84,7 +84,7 @@ function CategoryCard({ row, onSaved }: { row: GlobalCategoryAdminRow; onSaved: 
               <input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="h-9 w-full rounded-lg border border-border-default bg-bg-raised px-3 text-sm text-text-primary focus:border-lime focus:outline-none focus:ring-2 focus:ring-lime-tint-bg"
+                className="h-9 w-full rounded-lg border border-border-default bg-bg-base px-3 text-sm text-text-primary focus:border-lime focus:outline-none"
               />
             </div>
             <div>
@@ -93,7 +93,7 @@ function CategoryCard({ row, onSaved }: { row: GlobalCategoryAdminRow; onSaved: 
                 value={iconEmoji}
                 onChange={(e) => setIconEmoji(e.target.value)}
                 maxLength={4}
-                className="h-9 w-full rounded-lg border border-border-default bg-bg-raised px-3 text-center text-lg text-text-primary focus:border-lime focus:outline-none focus:ring-2 focus:ring-lime-tint-bg"
+                className="h-9 w-full rounded-lg border border-border-default bg-bg-base px-3 text-center text-lg text-text-primary focus:border-lime focus:outline-none"
               />
             </div>
             <div>
@@ -102,7 +102,7 @@ function CategoryCard({ row, onSaved }: { row: GlobalCategoryAdminRow; onSaved: 
                 type="number"
                 value={sortOrder}
                 onChange={(e) => setSortOrder(parseInt(e.target.value || '0', 10))}
-                className="h-9 w-full rounded-lg border border-border-default bg-bg-raised px-3 text-sm text-text-primary focus:border-lime focus:outline-none focus:ring-2 focus:ring-lime-tint-bg"
+                className="h-9 w-full rounded-lg border border-border-default bg-bg-base px-3 text-sm text-text-primary focus:border-lime focus:outline-none"
               />
             </div>
             <div>
@@ -121,7 +121,7 @@ function CategoryCard({ row, onSaved }: { row: GlobalCategoryAdminRow; onSaved: 
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={2}
-              className="w-full rounded-lg border border-border-default bg-bg-raised px-3 py-2 text-sm text-text-primary focus:border-lime focus:outline-none focus:ring-2 focus:ring-lime-tint-bg"
+              className="w-full rounded-lg border border-border-default bg-bg-base px-3 py-2 text-sm text-text-primary focus:border-lime focus:outline-none"
             />
           </div>
 
@@ -141,14 +141,14 @@ function CategoryCard({ row, onSaved }: { row: GlobalCategoryAdminRow; onSaved: 
                   value={seoTitle}
                   onChange={(e) => setSeoTitle(e.target.value)}
                   placeholder="SEO title"
-                  className="h-9 w-full rounded-lg border border-border-default bg-bg-raised px-3 text-sm text-text-primary focus:border-lime focus:outline-none focus:ring-2 focus:ring-lime-tint-bg"
+                  className="h-9 w-full rounded-lg border border-border-default bg-bg-base px-3 text-sm text-text-primary placeholder:text-text-disabled focus:border-lime focus:outline-none"
                 />
                 <textarea
                   value={seoDescription}
                   onChange={(e) => setSeoDescription(e.target.value)}
                   rows={2}
                   placeholder="SEO meta description"
-                  className="w-full rounded-lg border border-border-default bg-bg-raised px-3 py-2 text-sm text-text-primary focus:border-lime focus:outline-none focus:ring-2 focus:ring-lime-tint-bg"
+                  className="w-full rounded-lg border border-border-default bg-bg-base px-3 py-2 text-sm text-text-primary focus:border-lime focus:outline-none"
                 />
               </div>
             )}
@@ -182,10 +182,10 @@ function CategoryCard({ row, onSaved }: { row: GlobalCategoryAdminRow; onSaved: 
               onClick={handleSave}
               disabled={!dirty || saving}
               className={cn(
-                'inline-flex h-9 items-center gap-1.5 rounded-xl px-3 text-sm font-semibold transition-colors',
+                'inline-flex h-9 items-center gap-1.5 rounded-lg px-3 text-sm font-bold transition-colors',
                 dirty
-                  ? 'bg-lime text-text-inverse hover:bg-lime-hover'
-                  : 'bg-bg-raised text-text-disabled cursor-not-allowed'
+                  ? 'bg-lime-pressed text-text-inverse hover:bg-lime'
+                  : 'bg-bg-overlay text-text-disabled cursor-not-allowed'
               )}
             >
               {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
@@ -194,7 +194,7 @@ function CategoryCard({ row, onSaved }: { row: GlobalCategoryAdminRow; onSaved: 
           </div>
         </div>
       </div>
-    </GlassCard>
+    </AdminPanel>
   )
 }
 
@@ -229,28 +229,27 @@ export default function AdminCategoriesV2Page() {
             Classic admin
           </Link>
         </div>
-        <div className="flex items-end justify-between gap-3">
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-semibold tracking-tight text-text-primary">Categories</h1>
-              <span className="inline-flex items-center gap-1 rounded-full border border-lime-tint-border bg-lime-tint-bg px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-lime-text">
+        <PageHeader
+          className="mb-0"
+          title={
+            <span className="inline-flex items-center gap-2">
+              Categories
+              <span className="inline-flex items-center gap-1 rounded-full border border-lime-tint-border bg-lime-tint-bg px-2 py-0.5 align-middle text-[10px] font-semibold uppercase tracking-wider text-lime-text">
                 <Sparkles className="h-3 w-3" />
                 new
               </span>
-            </div>
-            <p className="mt-1 text-sm text-text-secondary">
-              The 5 global categories every game can opt into. Per-game settings live in the game wizard.
-            </p>
-          </div>
-        </div>
+            </span>
+          }
+          description="The 5 global categories every game can opt into. Per-game settings live in the game wizard."
+        />
       </header>
 
       {isLoading ? (
-        <div className="rounded-2xl border border-border-subtle bg-bg-base p-10 text-center text-sm text-text-tertiary">
+        <div className="rounded-xl border border-border-default bg-bg-raised p-10 text-center text-sm text-text-tertiary">
           Loading…
         </div>
       ) : (data ?? []).length === 0 ? (
-        <div className="rounded-2xl border border-border-subtle bg-bg-base p-10 text-center text-sm text-text-tertiary">
+        <div className="rounded-xl border border-border-default bg-bg-raised p-10 text-center text-sm text-text-tertiary">
           No global categories found. Run the Phase A migration first.
         </div>
       ) : (

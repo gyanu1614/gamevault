@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <defs>
+    <linearGradient id="bl" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#DCE1E7"/>
+      <stop offset="1" stop-color="#8C95A1"/>
+    </linearGradient>
+    <linearGradient id="bd" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#99A2AD"/>
+      <stop offset="1" stop-color="#5E6673"/>
+    </linearGradient>
+    <linearGradient id="gr" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#767F8B"/>
+      <stop offset="1" stop-color="#41474F"/>
+    </linearGradient>
+  </defs>
+  <g transform="rotate(45 128 128)">
+    <!-- blade: two faces for a bevel -->
+    <path d="M128 18 C133 18 137 21 138 26 L140 128 L128 132 L116 128 L118 26 C119 21 123 18 128 18 Z" fill="url(#bl)"/>
+    <path d="M128 18 C133 18 137 21 138 26 L140 128 L128 132 Z" fill="url(#bd)"/>
+    <!-- crossguard -->
+    <rect x="86" y="130" width="84" height="22" rx="11" fill="url(#gr)"/>
+    <rect x="86" y="130" width="84" height="9" rx="4.5" fill="#9AA2AE" opacity="0.55"/>
+    <!-- grip -->
+    <rect x="117" y="152" width="22" height="52" rx="10" fill="url(#gr)"/>
+    <rect x="117" y="163" width="22" height="6" rx="3" fill="#2F343C" opacity="0.6"/>
+    <rect x="117" y="177" width="22" height="6" rx="3" fill="#2F343C" opacity="0.6"/>
+    <rect x="117" y="191" width="22" height="6" rx="3" fill="#2F343C" opacity="0.6"/>
+    <!-- pommel -->
+    <circle cx="128" cy="212" r="15" fill="url(#bl)"/>
+    <circle cx="128" cy="212" r="7" fill="url(#gr)"/>
+  </g>
+</svg>

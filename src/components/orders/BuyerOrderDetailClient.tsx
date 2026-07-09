@@ -159,14 +159,14 @@ export default function BuyerOrderDetailClient({
           </div>
         )}
 
-        {/* VaultShield Protection */}
+        {/* SafeDrop Protection */}
         {protectionDays > 0 && order.status !== 'completed' && (
           <div className="bg-lime/10 border border-lime-tint-border rounded-xl p-4">
             <div className="flex items-center gap-3">
               <Shield className="w-5 h-5 text-lime-text flex-shrink-0" />
               <div>
                 <div className="text-sm font-medium text-lime-text">
-                  VaultShield Protection Active
+                  SafeDrop Protection Active
                 </div>
                 <div className="text-xs text-text-secondary">
                   Protected for {protectionDays} more days • Full refund guarantee
@@ -334,7 +334,7 @@ export default function BuyerOrderDetailClient({
           </div>
         </div>
 
-        {/* VaultShield Protection Details */}
+        {/* SafeDrop Protection Details */}
         <div className="bg-bg-overlay border border-border-subtle rounded-xl p-6">
           <h2 className="text-lg font-semibold text-white mb-4">Your Protection</h2>
 
@@ -373,10 +373,10 @@ export default function BuyerOrderDetailClient({
           </div>
 
           <Link
-            href="/vaultshield"
+            href="/safedrop"
             className="mt-3 block text-center text-xs text-lime-text hover:text-lime-text transition-colors"
           >
-            Learn more about VaultShield →
+            Learn more about SafeDrop →
           </Link>
         </div>
 

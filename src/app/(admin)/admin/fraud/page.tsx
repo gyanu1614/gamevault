@@ -7,7 +7,7 @@
 import { getFraudFlags, getFraudStats } from '@/lib/actions/fraud-detection'
 import FraudClient from './FraudClient'
 
-export const metadata = { title: 'Fraud Detection | Admin — GameVault' }
+export const metadata = { title: 'Fraud Detection' }
 
 export default async function AdminFraudPage() {
   const [flagsResult, statsResult] = await Promise.all([

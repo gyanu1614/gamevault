@@ -28,7 +28,7 @@ function CardShell({ className = '', children }: { className?: string; children?
 export default function ListingDetailLoading() {
   return (
     <main className="min-h-screen bg-bg-base pb-32 sm:pb-12">
-      <div className="mx-auto w-full max-w-7xl px-3 pt-4 sm:px-6 sm:pt-6 lg:px-8">
+      <div className="mx-auto w-full max-w-7xl px-3 pt-8 sm:px-6 sm:pt-10 lg:px-8">
         {/* Breadcrumb */}
         <div className="mb-4 flex items-center gap-1.5 sm:mb-5">
           <Block className="h-4 w-32" />

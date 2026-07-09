@@ -65,23 +65,23 @@ function CollapsibleSection({
   const [isOpen, setIsOpen] = useState(defaultOpen)
 
   return (
-    <div className="bg-black/40 backdrop-blur-xl border border-white/[0.08] rounded-2xl overflow-hidden">
+    <div className="bg-bg-raised border border-border-default rounded-xl overflow-hidden">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full px-6 py-4 flex items-center justify-between hover:bg-white/[0.02] transition-colors"
+        className="w-full px-6 py-4 flex items-center justify-between hover:bg-bg-raised-hover transition-colors"
       >
         <div className="flex items-center gap-3">
-          <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-violet-500/20 to-purple-500/20 border border-violet-500/20 flex items-center justify-center">
-            <Icon className="h-4.5 w-4.5 text-violet-400" />
+          <div className="h-9 w-9 rounded-lg bg-bg-overlay border border-border-subtle flex items-center justify-center">
+            <Icon className="h-4.5 w-4.5 text-lime-text" />
           </div>
-          <h3 className="text-base font-semibold text-white">{title}</h3>
+          <h3 className="text-base font-semibold text-text-primary">{title}</h3>
           {badge}
         </div>
         <motion.div
           animate={{ rotate: isOpen ? 180 : 0 }}
           transition={{ duration: 0.2 }}
         >
-          <ChevronDown className="h-5 w-5 text-gray-400" />
+          <ChevronDown className="h-5 w-5 text-text-secondary" />
         </motion.div>
       </button>
 
@@ -107,10 +107,10 @@ function CollapsibleSection({
 function InfoField({ label, value, icon: Icon }: { label: string; value: string | React.ReactNode; icon?: any }) {
   return (
     <div className="space-y-1.5">
-      <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">{label}</p>
+      <p className="text-xs font-medium text-text-tertiary uppercase tracking-wide">{label}</p>
       <div className="flex items-center gap-2">
-        {Icon && <Icon className="h-4 w-4 text-gray-400 flex-shrink-0" />}
-        <p className="text-sm text-white font-medium">{value || 'Not provided'}</p>
+        {Icon && <Icon className="h-4 w-4 text-text-secondary flex-shrink-0" />}
+        <p className="text-sm text-text-primary font-medium">{value || 'Not provided'}</p>
       </div>
     </div>
   )
@@ -291,24 +291,24 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
         {/* Main Content */}
         <div className="space-y-4">
           {/* Merged Profile Card */}
-          <div className="bg-gradient-to-br from-violet-500/10 via-purple-500/5 to-transparent border border-violet-500/20 rounded-2xl p-6">
+          <div className="bg-bg-raised border border-border-default rounded-xl p-6">
             {/* Header with Avatar */}
             <div className="flex items-start justify-between mb-6">
               <div className="flex items-center gap-4">
                 <img
                   src={getAvatarUrl(application.user.avatar_url, application.user.username || application.user.email)}
                   alt={application.user.full_name || application.user.username || 'Profile'}
-                  className="h-16 w-16 rounded-full object-cover border-2 border-violet-400/30 bg-gradient-to-br from-violet-500/20 to-indigo-500/20"
+                  className="h-16 w-16 rounded-full object-cover border border-border-default bg-bg-overlay"
                 />
                 <div>
                   <div className="flex items-center gap-3 mb-2">
-                    <h1 className="text-2xl font-bold text-white">{application.display_name}</h1>
+                    <h1 className="text-2xl font-bold text-text-primary">{application.display_name}</h1>
                     {getStatusBadge(application.status)}
                   </div>
-                  <h2 className="text-sm text-gray-300 mb-1">
+                  <h2 className="text-sm text-text-secondary mb-1">
                     {application.user.full_name || application.user.username || 'Unknown User'}
                   </h2>
-                  <div className="flex flex-wrap items-center gap-3 text-xs text-gray-400">
+                  <div className="flex flex-wrap items-center gap-3 text-xs text-text-secondary">
                     <span className="flex items-center gap-1.5">
                       <Mail className="h-3.5 w-3.5" />
                       {application.user.email}
@@ -325,19 +325,19 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
                 </div>
               </div>
               <div className="text-right">
-                <p className="text-xs text-gray-500 mb-1">Application ID</p>
-                <p className="text-xs font-mono text-gray-400">{application.id.split('-')[0]}</p>
+                <p className="text-xs text-text-tertiary mb-1">Application ID</p>
+                <p className="text-xs font-mono text-text-secondary">{application.id.split('-')[0]}</p>
               </div>
             </div>
 
             {/* Games */}
-            <div className="pt-4 border-t border-white/[0.1]">
-              <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2.5">Primary Games</p>
+            <div className="pt-4 border-t border-border-default">
+              <p className="text-xs font-medium text-text-tertiary uppercase tracking-wide mb-2.5">Primary Games</p>
               <div className="flex flex-wrap gap-2">
                 {(application.game_names || application.primary_games || []).map((game: string, idx: number) => (
                   <span
                     key={idx}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-violet-500/20 border border-violet-500/30 text-violet-300 text-sm font-medium"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-bg-overlay border border-border-default text-text-secondary text-sm font-medium"
                   >
                     <Gamepad2 className="h-3.5 w-3.5" />
                     {game}
@@ -405,7 +405,7 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
                 )}
               </div>
               {application.company_address && (
-                <div className="mt-4 pt-4 border-t border-white/[0.08]">
+                <div className="mt-4 pt-4 border-t border-border-subtle">
                   <InfoField label="Company Address" value={application.company_address} icon={MapPin} />
                 </div>
               )}
@@ -416,17 +416,17 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
             <div className="space-y-4">
               {application.profile_bio && (
                 <div>
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Bio</p>
-                  <p className="text-sm text-gray-300 leading-relaxed">{application.profile_bio}</p>
+                  <p className="text-xs font-medium text-text-tertiary uppercase tracking-wide mb-2">Bio</p>
+                  <p className="text-sm text-text-secondary leading-relaxed">{application.profile_bio}</p>
                 </div>
               )}
 
               {application.languages_spoken.length > 0 && (
                 <div>
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2.5">Languages</p>
+                  <p className="text-xs font-medium text-text-tertiary uppercase tracking-wide mb-2.5">Languages</p>
                   <div className="flex flex-wrap gap-2">
                     {application.languages_spoken.map((lang, idx) => (
-                      <span key={idx} className="px-3 py-1 rounded-lg bg-white/[0.05] border border-white/[0.08] text-gray-300 text-sm">
+                      <span key={idx} className="px-3 py-1 rounded-lg bg-bg-overlay-2 border border-border-subtle text-text-secondary text-sm">
                         {lang}
                       </span>
                     ))}
@@ -444,29 +444,29 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
               </div>
 
               {application.expected_monthly_volume && (
-                <div className="pt-4 border-t border-white/[0.08]">
+                <div className="pt-4 border-t border-border-subtle">
                   <InfoField label="Expected Monthly Volume" value={application.expected_monthly_volume} icon={Receipt} />
                 </div>
               )}
 
               {(application.refund_policy || application.delivery_timeframe || application.terms_of_service) && (
-                <div className="pt-4 border-t border-white/[0.08] space-y-4">
+                <div className="pt-4 border-t border-border-subtle space-y-4">
                   {application.refund_policy && (
                     <div>
-                      <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Refund Policy</p>
-                      <p className="text-sm text-gray-300 leading-relaxed">{application.refund_policy}</p>
+                      <p className="text-xs font-medium text-text-tertiary uppercase tracking-wide mb-2">Refund Policy</p>
+                      <p className="text-sm text-text-secondary leading-relaxed">{application.refund_policy}</p>
                     </div>
                   )}
                   {application.delivery_timeframe && (
                     <div>
-                      <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Delivery Timeframe</p>
-                      <p className="text-sm text-gray-300">{application.delivery_timeframe}</p>
+                      <p className="text-xs font-medium text-text-tertiary uppercase tracking-wide mb-2">Delivery Timeframe</p>
+                      <p className="text-sm text-text-secondary">{application.delivery_timeframe}</p>
                     </div>
                   )}
                   {application.terms_of_service && (
                     <div>
-                      <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Terms of Service</p>
-                      <p className="text-sm text-gray-300 leading-relaxed">{application.terms_of_service}</p>
+                      <p className="text-xs font-medium text-text-tertiary uppercase tracking-wide mb-2">Terms of Service</p>
+                      <p className="text-sm text-text-secondary leading-relaxed">{application.terms_of_service}</p>
                     </div>
                   )}
                 </div>
@@ -512,9 +512,9 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
               )}
             </div>
             {application.crypto_wallet_address && (
-              <div className="mt-4 pt-4 border-t border-white/[0.08]">
-                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Crypto Wallet</p>
-                <p className="text-xs font-mono text-gray-400 break-all bg-white/[0.03] px-3 py-2 rounded-lg border border-white/[0.08]">
+              <div className="mt-4 pt-4 border-t border-border-subtle">
+                <p className="text-xs font-medium text-text-tertiary uppercase tracking-wide mb-2">Crypto Wallet</p>
+                <p className="text-xs font-mono text-text-secondary break-all bg-bg-overlay px-3 py-2 rounded-lg border border-border-subtle">
                   {application.crypto_wallet_address}
                 </p>
               </div>
@@ -526,7 +526,7 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
             icon={Shield}
             defaultOpen={true}
             badge={
-              <span className="text-xs px-2 py-1 rounded-md bg-violet-500/20 text-violet-400 border border-violet-500/30">
+              <span className="text-xs px-2 py-1 rounded-md bg-lime-tint-bg text-lime-text border border-lime-tint-border">
                 {application.documents.length} files
               </span>
             }
@@ -536,7 +536,7 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
                 {application.documents.map((doc) => (
                   <div
                     key={doc.id}
-                    className="bg-white/[0.03] border border-white/[0.08] rounded-xl p-4 hover:bg-white/[0.05] transition-colors"
+                    className="bg-bg-overlay border border-border-subtle rounded-xl p-4 hover:bg-bg-overlay-2 transition-colors"
                   >
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex items-start gap-3 flex-1">
@@ -553,27 +553,27 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1">
-                            <p className="text-sm font-medium text-white capitalize">
+                            <p className="text-sm font-medium text-text-primary capitalize">
                               {doc.document_type.replace(/_/g, ' ')}
                             </p>
                             {doc.verified && (
                               <CheckCircle className="h-4 w-4 text-green-400" />
                             )}
                           </div>
-                          <p className="text-xs text-gray-500 mb-2">
+                          <p className="text-xs text-text-tertiary mb-2">
                             Uploaded {new Date(doc.uploaded_at).toLocaleDateString('en-US', {
                               month: 'short',
                               day: 'numeric',
                               year: 'numeric'
                             })}
                           </p>
-                          <p className="text-xs text-gray-400 font-mono truncate">{doc.file_name}</p>
+                          <p className="text-xs text-text-secondary font-mono truncate">{doc.file_name}</p>
                         </div>
                       </div>
 
                       <div className="flex gap-2 flex-shrink-0">
                         {loadingUrls ? (
-                          <div className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-white/[0.05] text-sm text-gray-500">
+                          <div className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-bg-overlay-2 text-sm text-text-tertiary">
                             <Loader2 className="h-3.5 w-3.5 animate-spin" />
                           </div>
                         ) : documentUrls[doc.file_path] ? (
@@ -582,7 +582,7 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
                               href={documentUrls[doc.file_path]}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-white/[0.05] hover:bg-white/[0.1] text-sm text-gray-300 transition-colors"
+                              className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-bg-overlay-2 hover:bg-[#2B2B37] text-sm text-text-secondary transition-colors"
                             >
                               <ExternalLink className="h-3.5 w-3.5" />
                               View
@@ -590,7 +590,7 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
                             <a
                               href={documentUrls[doc.file_path]}
                               download={doc.file_name}
-                              className="inline-flex items-center justify-center p-2 rounded-lg bg-white/[0.05] hover:bg-white/[0.1] text-gray-300 transition-colors"
+                              className="inline-flex items-center justify-center p-2 rounded-lg bg-bg-overlay-2 hover:bg-[#2B2B37] text-text-secondary transition-colors"
                             >
                               <Download className="h-3.5 w-3.5" />
                             </a>
@@ -608,16 +608,16 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
               </div>
             ) : (
               <div className="py-12 text-center">
-                <FileText className="h-12 w-12 text-gray-600 mx-auto mb-3" />
-                <p className="text-sm text-gray-400">No documents uploaded yet</p>
+                <FileText className="h-12 w-12 text-text-disabled mx-auto mb-3" />
+                <p className="text-sm text-text-secondary">No documents uploaded yet</p>
               </div>
             )}
           </CollapsibleSection>
 
           {/* Verification Status */}
-          <div className="bg-black/40 backdrop-blur-xl border border-white/[0.08] rounded-2xl p-6">
+          <div className="bg-bg-raised border border-border-default rounded-xl p-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wide">Verification Status</h3>
+              <h3 className="text-sm font-semibold text-text-secondary uppercase tracking-wide">Verification Status</h3>
               {(() => {
                 const status = calculateVerificationStatus(application.documents, {
                   identity_verified: application.identity_verified,
@@ -644,7 +644,7 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
                 { label: 'Tax Documents', verified: application.tax_verified || calculateVerificationStatus(application.documents).tax_verified }
               ].map((item) => (
                 <div key={item.label} className="flex items-center justify-between py-2">
-                  <span className="text-sm text-gray-300">{item.label}</span>
+                  <span className="text-sm text-text-secondary">{item.label}</span>
                   <div className="flex items-center gap-2">
                     {item.verified ? (
                       <>
@@ -653,8 +653,8 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
                       </>
                     ) : (
                       <>
-                        <XCircle className="h-4 w-4 text-gray-600" />
-                        <span className="text-xs text-gray-500 font-medium">Pending</span>
+                        <XCircle className="h-4 w-4 text-text-disabled" />
+                        <span className="text-xs text-text-tertiary font-medium">Pending</span>
                       </>
                     )}
                   </div>
@@ -672,7 +672,7 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
                     <AlertCircle className="h-4 w-4 text-blue-400" />
                     <p className="text-xs font-semibold text-blue-400 uppercase tracking-wide">Admin Notes</p>
                   </div>
-                  <p className="text-sm text-gray-300 leading-relaxed">{application.admin_notes}</p>
+                  <p className="text-sm text-text-secondary leading-relaxed">{application.admin_notes}</p>
                 </div>
               )}
 
@@ -682,7 +682,7 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
                     <XCircle className="h-4 w-4 text-red-400" />
                     <p className="text-xs font-semibold text-red-400 uppercase tracking-wide">Rejection Reason</p>
                   </div>
-                  <p className="text-sm text-gray-300 leading-relaxed">{application.rejection_reason}</p>
+                  <p className="text-sm text-text-secondary leading-relaxed">{application.rejection_reason}</p>
                 </div>
               )}
             </div>
@@ -693,16 +693,16 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
         <div className="space-y-4">
           <div className="sticky top-20 md:top-24 space-y-4">
             {/* Status Card */}
-            <div className="bg-black/40 backdrop-blur-xl border border-white/[0.08] rounded-2xl p-5">
-              <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-4">Status</h3>
+            <div className="bg-bg-raised border border-border-default rounded-xl p-5">
+              <h3 className="text-sm font-semibold text-text-secondary uppercase tracking-wide mb-4">Status</h3>
               <div className="flex justify-center mb-4">
                 {getStatusBadge(application.status)}
               </div>
 
               {application.reviewed_at && (
                 <div className="text-center">
-                  <p className="text-xs text-gray-500 mb-1">Reviewed on</p>
-                  <p className="text-sm text-gray-300 font-medium">
+                  <p className="text-xs text-text-tertiary mb-1">Reviewed on</p>
+                  <p className="text-sm text-text-secondary font-medium">
                     {new Date(application.reviewed_at).toLocaleDateString('en-US', {
                       month: 'short',
                       day: 'numeric',
@@ -714,8 +714,8 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
 
               {!application.reviewed_at && (
                 <div className="text-center">
-                  <p className="text-xs text-gray-500 mb-1">Submitted</p>
-                  <p className="text-sm text-gray-300 font-medium">
+                  <p className="text-xs text-text-tertiary mb-1">Submitted</p>
+                  <p className="text-sm text-text-secondary font-medium">
                     {new Date(application.created_at).toLocaleDateString('en-US', {
                       month: 'short',
                       day: 'numeric',
@@ -728,18 +728,18 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
 
             {/* Actions */}
             {application.status === 'pending' && (
-              <div className="bg-black/40 backdrop-blur-xl border border-white/[0.08] rounded-2xl p-5">
-                <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-3">Actions</h3>
+              <div className="bg-bg-raised border border-border-default rounded-xl p-5">
+                <h3 className="text-sm font-semibold text-text-secondary uppercase tracking-wide mb-3">Actions</h3>
 
                 {/* Admin Notes Input */}
                 <div className="mb-3">
-                  <label className="block text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">
+                  <label className="block text-xs font-medium text-text-secondary uppercase tracking-wide mb-2">
                     Admin Notes (Optional)
                   </label>
                   <textarea
                     value={adminNotes}
                     onChange={(e) => setAdminNotes(e.target.value)}
-                    className="w-full px-2.5 py-2 bg-white/[0.03] border border-white/[0.08] rounded-lg text-xs text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-violet-500/50 resize-none transition-all"
+                    className="w-full px-2.5 py-2 bg-bg-base border border-border-default rounded-lg text-xs text-text-primary placeholder:text-text-tertiary focus:border-lime focus:outline-none resize-none transition-colors"
                     rows={2}
                     placeholder="Add internal notes..."
                   />
@@ -751,8 +751,8 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
                     disabled={isProcessing}
                     className={cn(
                       "w-full px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200",
-                      "bg-gradient-to-r from-green-500 to-emerald-500 text-white",
-                      "hover:from-green-600 hover:to-emerald-600 hover:shadow-lg hover:shadow-green-500/25",
+                      "bg-lime-pressed text-text-inverse font-bold",
+                      "hover:bg-lime",
                       "disabled:opacity-50 disabled:cursor-not-allowed",
                       "flex items-center justify-center gap-1.5"
                     )}
@@ -785,8 +785,8 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
 
             {/* Seller Restriction Actions - For Approved Sellers */}
             {application.status === 'approved' && (
-              <div className="bg-black/40 backdrop-blur-xl border border-white/[0.08] rounded-2xl p-5">
-                <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-3">Seller Management</h3>
+              <div className="bg-bg-raised border border-border-default rounded-xl p-5">
+                <h3 className="text-sm font-semibold text-text-secondary uppercase tracking-wide mb-3">Seller Management</h3>
 
                 {/* Show current restriction status */}
                 {application.user.seller_status && application.user.seller_status !== 'active' && (
@@ -810,12 +810,12 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
                       </p>
                     </div>
                     {application.user.seller_restriction_reason && (
-                      <p className="text-xs text-gray-300 mb-2">
+                      <p className="text-xs text-text-secondary mb-2">
                         Reason: {application.user.seller_restriction_reason}
                       </p>
                     )}
                     {application.user.seller_restricted_at && (
-                      <p className="text-xs text-gray-500">
+                      <p className="text-xs text-text-tertiary">
                         Since: {new Date(application.user.seller_restricted_at).toLocaleDateString('en-US', {
                           month: 'short',
                           day: 'numeric',
@@ -834,8 +834,8 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
                       disabled={isProcessing}
                       className={cn(
                         "w-full px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200",
-                        "bg-gradient-to-r from-green-500 to-emerald-500 text-white",
-                        "hover:from-green-600 hover:to-emerald-600 hover:shadow-lg hover:shadow-green-500/25",
+                        "bg-lime-pressed text-text-inverse font-bold",
+                        "hover:bg-lime",
                         "disabled:opacity-50 disabled:cursor-not-allowed",
                         "flex items-center justify-center gap-1.5"
                       )}
@@ -894,8 +894,8 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
                       onClick={handleViewHistory}
                       className={cn(
                         "w-full px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 mt-2",
-                        "bg-white/5 text-gray-300 border border-white/10",
-                        "hover:bg-white/10 hover:border-white/20",
+                        "bg-bg-overlay text-text-secondary border border-border-default",
+                        "hover:bg-bg-overlay-2 hover:border-border-strong",
                         "flex items-center justify-center gap-1.5"
                       )}
                     >
@@ -917,14 +917,14 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
 
             {/* Rejected Application - Allow Re-approval */}
             {application.status === 'rejected' && (
-              <div className="bg-black/40 backdrop-blur-xl border border-white/[0.08] rounded-2xl p-5">
-                <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-3">Re-evaluate</h3>
+              <div className="bg-bg-raised border border-border-default rounded-xl p-5">
+                <h3 className="text-sm font-semibold text-text-secondary uppercase tracking-wide mb-3">Re-evaluate</h3>
 
                 {/* Show rejection reason */}
                 {application.rejection_reason && (
                   <div className="mb-3 p-2 bg-red-500/10 border border-red-500/20 rounded-lg">
                     <p className="text-[11px] font-medium text-red-400 mb-1">Rejection Reason:</p>
-                    <p className="text-[11px] text-gray-300">{application.rejection_reason}</p>
+                    <p className="text-[11px] text-text-secondary">{application.rejection_reason}</p>
                   </div>
                 )}
 
@@ -934,8 +934,8 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
                     disabled={isProcessing}
                     className={cn(
                       "w-full px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200",
-                      "bg-gradient-to-r from-green-500 to-emerald-500 text-white",
-                      "hover:from-green-600 hover:to-emerald-600 hover:shadow-lg hover:shadow-green-500/25",
+                      "bg-lime-pressed text-text-inverse font-bold",
+                      "hover:bg-lime",
                       "disabled:opacity-50 disabled:cursor-not-allowed",
                       "flex items-center justify-center gap-1.5"
                     )}
@@ -969,7 +969,7 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+              className="absolute inset-0 bg-black/60"
               onClick={() => !isProcessing && setShowApproveModal(false)}
             />
 
@@ -979,16 +979,16 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
               transition={{ type: "spring", duration: 0.3, bounce: 0.3 }}
-              className="relative w-full max-w-md bg-black/95 backdrop-blur-xl border border-white/[0.1] rounded-2xl p-6 shadow-2xl"
+              className="relative w-full max-w-md bg-bg-raised border border-border-default rounded-xl p-6 shadow-2xl"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="text-center mb-6">
-                <div className="mx-auto w-14 h-14 rounded-2xl bg-gradient-to-br from-green-500/20 to-emerald-500/20 border border-green-500/30 flex items-center justify-center mb-4">
+                <div className="mx-auto w-14 h-14 rounded-xl bg-green-500/10 border border-green-500/25 flex items-center justify-center mb-4">
                   <CheckCircle className="h-7 w-7 text-green-400" />
                 </div>
-                <h3 className="text-xl font-bold text-white mb-2">Approve Application?</h3>
-                <p className="text-sm text-gray-400 leading-relaxed">
-                  This will grant <span className="text-white font-medium">{application.display_name}</span> access to the seller dashboard and allow them to start listing products.
+                <h3 className="text-xl font-bold text-text-primary mb-2">Approve Application?</h3>
+                <p className="text-sm text-text-secondary leading-relaxed">
+                  This will grant <span className="text-text-primary font-medium">{application.display_name}</span> access to the seller dashboard and allow them to start listing products.
                 </p>
               </div>
 
@@ -996,7 +996,7 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
                 <button
                   onClick={() => setShowApproveModal(false)}
                   disabled={isProcessing}
-                  className="flex-1 px-3 py-2 rounded-lg border border-white/[0.1] text-gray-300 hover:bg-white/[0.05] transition-colors disabled:opacity-50 text-sm font-medium"
+                  className="flex-1 px-3 py-2 rounded-lg border border-border-default text-text-secondary hover:bg-bg-overlay transition-colors disabled:opacity-50 text-sm font-medium"
                 >
                   Cancel
                 </button>
@@ -1005,8 +1005,8 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
                   disabled={isProcessing}
                   className={cn(
                     "flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-all",
-                    "bg-gradient-to-r from-green-500 to-emerald-500 text-white",
-                    "hover:from-green-600 hover:to-emerald-600",
+                    "bg-lime-pressed text-text-inverse font-bold",
+                    "hover:bg-lime",
                     "disabled:opacity-50 disabled:cursor-not-allowed",
                     "flex items-center justify-center gap-1.5"
                   )}
@@ -1038,7 +1038,7 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+              className="absolute inset-0 bg-black/60"
               onClick={() => setShowRejectModal(false)}
             />
 
@@ -1048,27 +1048,27 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
               transition={{ type: "spring", duration: 0.3, bounce: 0.3 }}
-              className="relative w-full max-w-md max-h-[90vh] overflow-y-auto bg-black/95 backdrop-blur-xl border border-white/[0.1] rounded-2xl p-6 shadow-2xl"
+              className="relative w-full max-w-md max-h-[90vh] overflow-y-auto bg-bg-raised border border-border-default rounded-xl p-6 shadow-2xl"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="text-center mb-6">
-                <div className="mx-auto w-14 h-14 rounded-2xl bg-gradient-to-br from-red-500/20 to-rose-500/20 border border-red-500/30 flex items-center justify-center mb-4">
+                <div className="mx-auto w-14 h-14 rounded-xl bg-red-500/10 border border-red-500/25 flex items-center justify-center mb-4">
                   <XCircle className="h-7 w-7 text-red-400" />
                 </div>
-                <h3 className="text-xl font-bold text-white mb-2">Reject Application</h3>
-                <p className="text-sm text-gray-400">
+                <h3 className="text-xl font-bold text-text-primary mb-2">Reject Application</h3>
+                <p className="text-sm text-text-secondary">
                   Please provide a clear reason for rejecting this application.
                 </p>
               </div>
 
               <div className="mb-4">
-                <label className="block text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">
+                <label className="block text-xs font-medium text-text-secondary uppercase tracking-wide mb-2">
                   Rejection Category *
                 </label>
                 <select
                   value={rejectionCategory}
                   onChange={(e) => setRejectionCategory(e.target.value)}
-                  className="w-full px-3 py-2.5 bg-white/[0.03] border border-white/[0.08] rounded-xl text-sm text-white focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:border-red-500/50"
+                  className="w-full px-3 py-2.5 bg-bg-base border border-border-default rounded-lg text-sm text-text-primary focus:border-lime focus:outline-none"
                   required
                 >
                   <option value="incomplete_documentation">Incomplete Documentation</option>
@@ -1081,13 +1081,13 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
               </div>
 
               <div className="mb-6">
-                <label className="block text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">
+                <label className="block text-xs font-medium text-text-secondary uppercase tracking-wide mb-2">
                   Rejection Reason *
                 </label>
                 <textarea
                   value={rejectionReason}
                   onChange={(e) => setRejectionReason(e.target.value)}
-                  className="w-full px-3 py-2.5 bg-white/[0.03] border border-white/[0.08] rounded-xl text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:border-red-500/50 resize-none"
+                  className="w-full px-3 py-2.5 bg-bg-base border border-border-default rounded-lg text-sm text-text-primary placeholder:text-text-tertiary focus:border-lime focus:outline-none resize-none"
                   rows={4}
                   placeholder="Enter detailed reason for rejection..."
                   required
@@ -1097,7 +1097,7 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
               <div className="flex gap-2.5">
                 <button
                   onClick={() => setShowRejectModal(false)}
-                  className="flex-1 px-3 py-2 rounded-lg border border-white/[0.1] text-gray-300 hover:bg-white/[0.05] transition-colors text-sm font-medium"
+                  className="flex-1 px-3 py-2 rounded-lg border border-border-default text-text-secondary hover:bg-bg-overlay transition-colors text-sm font-medium"
                 >
                   Cancel
                 </button>
@@ -1109,7 +1109,7 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
                   disabled={!rejectionReason.trim()}
                   className={cn(
                     "flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-all",
-                    "bg-red-500 text-white hover:bg-red-600",
+                    "bg-red-500 text-text-primary hover:bg-red-600",
                     "disabled:opacity-50 disabled:cursor-not-allowed",
                     "flex items-center justify-center gap-1.5"
                   )}
@@ -1132,7 +1132,7 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+              className="absolute inset-0 bg-black/60"
               onClick={() => {
                 setShowRestrictModal(false)
                 setRestrictionReason('')
@@ -1145,15 +1145,15 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
               transition={{ type: "spring", duration: 0.3, bounce: 0.3 }}
-              className="relative w-full max-w-md max-h-[90vh] overflow-y-auto bg-black/95 backdrop-blur-xl border border-white/[0.1] rounded-2xl p-6 shadow-2xl"
+              className="relative w-full max-w-md max-h-[90vh] overflow-y-auto bg-bg-raised border border-border-default rounded-xl p-6 shadow-2xl"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="text-center mb-6">
                 <div className={cn(
-                  "mx-auto w-14 h-14 rounded-2xl border flex items-center justify-center mb-4",
+                  "mx-auto w-14 h-14 rounded-xl border flex items-center justify-center mb-4",
                   restrictionType === 'banned'
-                    ? "bg-gradient-to-br from-red-500/20 to-rose-500/20 border-red-500/30"
-                    : "bg-gradient-to-br from-yellow-500/20 to-orange-500/20 border-yellow-500/30"
+                    ? "bg-red-500/10 border-red-500/25"
+                    : "bg-yellow-500/10 border-yellow-500/25"
                 )}>
                   {restrictionType === 'banned' ? (
                     <Ban className="h-7 w-7 text-red-400" />
@@ -1161,10 +1161,10 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
                     <ShieldAlert className="h-7 w-7 text-yellow-400" />
                   )}
                 </div>
-                <h3 className="text-xl font-bold text-white mb-2">
+                <h3 className="text-xl font-bold text-text-primary mb-2">
                   {restrictionType === 'banned' ? 'Ban Seller' : 'Restrict Seller'}
                 </h3>
-                <p className="text-sm text-gray-400">
+                <p className="text-sm text-text-secondary">
                   {restrictionType === 'banned'
                     ? 'This will completely ban the seller from accessing seller features.'
                     : 'This will prevent the seller from creating new listings or making existing listings live.'}
@@ -1175,19 +1175,19 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
                 <p className="text-xs text-orange-400">
                   When {restrictionType === 'banned' ? 'banned' : 'restricted'}, the seller will see an error message when attempting to upload or publish listings:
                 </p>
-                <p className="text-xs text-white mt-2 font-mono bg-black/40 p-2 rounded">
-                  "Your seller account is {restrictionType === 'banned' ? 'banned' : 'under review'}. Please contact support at test@gmail.com"
+                <p className="text-xs text-text-primary mt-2 font-mono bg-black/40 p-2 rounded">
+                  &quot;Your seller account is {restrictionType === 'banned' ? 'banned' : 'under review'}. Please contact support at test@gmail.com&quot;
                 </p>
               </div>
 
               <div className="mb-6">
-                <label className="block text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">
+                <label className="block text-xs font-medium text-text-secondary uppercase tracking-wide mb-2">
                   Restriction Reason *
                 </label>
                 <textarea
                   value={restrictionReason}
                   onChange={(e) => setRestrictionReason(e.target.value)}
-                  className="w-full px-3 py-2.5 bg-white/[0.03] border border-white/[0.08] rounded-xl text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-yellow-500/50 focus:border-yellow-500/50 resize-none"
+                  className="w-full px-3 py-2.5 bg-bg-base border border-border-default rounded-lg text-sm text-text-primary placeholder:text-text-tertiary focus:border-lime focus:outline-none resize-none"
                   rows={4}
                   placeholder="Enter detailed reason for restriction..."
                   required
@@ -1201,7 +1201,7 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
                     setRestrictionReason('')
                   }}
                   disabled={isProcessing}
-                  className="flex-1 px-3 py-2 rounded-lg border border-white/[0.1] text-gray-300 hover:bg-white/[0.05] transition-colors text-sm font-medium disabled:opacity-50"
+                  className="flex-1 px-3 py-2 rounded-lg border border-border-default text-text-secondary hover:bg-bg-overlay transition-colors text-sm font-medium disabled:opacity-50"
                 >
                   Cancel
                 </button>
@@ -1213,7 +1213,7 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
                     restrictionType === 'banned'
                       ? "bg-red-500 hover:bg-red-600"
                       : "bg-yellow-500 hover:bg-yellow-600",
-                    "text-white",
+                    "text-text-primary",
                     "disabled:opacity-50 disabled:cursor-not-allowed",
                     "flex items-center justify-center gap-1.5"
                   )}
@@ -1250,7 +1250,7 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setShowHistoryModal(false)}
-              className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+              className="absolute inset-0 bg-black/60"
             />
 
             {/* Modal */}
@@ -1259,19 +1259,19 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
               onClick={(e) => e.stopPropagation()}
-              className="relative w-full max-w-lg bg-black/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl"
+              className="relative w-full max-w-lg bg-bg-raised border border-border-default rounded-xl shadow-2xl"
             >
               {/* Header */}
-              <div className="flex items-center justify-between p-4 border-b border-white/10">
+              <div className="flex items-center justify-between p-4 border-b border-border-subtle">
                 <div className="flex items-center gap-2">
-                  <History className="h-4 w-4 text-violet-400" />
-                  <h3 className="text-base font-semibold text-white">Restriction History</h3>
+                  <History className="h-4 w-4 text-lime-text" />
+                  <h3 className="text-base font-semibold text-text-primary">Restriction History</h3>
                 </div>
                 <button
                   onClick={() => setShowHistoryModal(false)}
-                  className="p-1.5 hover:bg-white/10 rounded-lg transition-colors"
+                  className="p-1.5 hover:bg-bg-overlay rounded-lg transition-colors"
                 >
-                  <X className="h-4 w-4 text-gray-400" />
+                  <X className="h-4 w-4 text-text-secondary" />
                 </button>
               </div>
 
@@ -1279,18 +1279,18 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
               <div className="p-4 max-h-[60vh] overflow-y-auto">
                 {loadingHistory ? (
                   <div className="flex items-center justify-center py-8">
-                    <Loader2 className="h-6 w-6 animate-spin text-violet-400" />
+                    <Loader2 className="h-6 w-6 animate-spin text-lime-text" />
                   </div>
                 ) : restrictionHistory.length === 0 ? (
                   <div className="text-center py-8">
-                    <p className="text-sm text-gray-400">No restriction history found</p>
+                    <p className="text-sm text-text-secondary">No restriction history found</p>
                   </div>
                 ) : (
                   <div className="space-y-2">
                     {restrictionHistory.map((restriction: any) => (
                       <div
                         key={restriction.id}
-                        className="bg-white/5 rounded-lg p-3 border border-white/10"
+                        className="bg-bg-overlay rounded-lg p-3 border border-border-subtle"
                       >
                         <div className="flex items-start justify-between mb-2">
                           <div className="flex items-center gap-2">
@@ -1303,11 +1303,11 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
                             {restriction.restriction_type === 'unrestricted' && (
                               <CheckCircle className="h-3.5 w-3.5 text-green-400" />
                             )}
-                            <span className="text-sm font-medium text-white capitalize">
+                            <span className="text-sm font-medium text-text-primary capitalize">
                               {restriction.restriction_type}
                             </span>
                           </div>
-                          <span className="text-xs text-gray-500">
+                          <span className="text-xs text-text-tertiary">
                             {new Date(restriction.created_at).toLocaleDateString('en-US', {
                               month: 'short',
                               day: 'numeric',
@@ -1319,11 +1319,11 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
                         </div>
 
                         {restriction.reason && (
-                          <p className="text-xs text-gray-400 mb-2">{restriction.reason}</p>
+                          <p className="text-xs text-text-secondary mb-2">{restriction.reason}</p>
                         )}
 
                         {restriction.admin && (
-                          <p className="text-xs text-gray-500">
+                          <p className="text-xs text-text-tertiary">
                             By: {restriction.admin.username || restriction.admin.email}
                           </p>
                         )}

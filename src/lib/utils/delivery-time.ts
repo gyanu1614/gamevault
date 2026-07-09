@@ -8,6 +8,66 @@
  * stays consistent across the app.
  */
 
+/**
+ * parseDeliveryMinutes — convert a delivery_time label into minutes, for the
+ * SafeDrop SLA / delivery progress bar.
+ *
+ * The order page previously did Number(delivery_time), which is NaN for every
+ * stored value ("20min", "1hr", "1-24 hours", …) → it always fell back to 60
+ * min, so a 20-minute listing showed a 1-hour SLA. This parses correctly:
+ *   "5min"/"15min"/"20min"/"30min" → 5/15/20/30
+ *   "1hr"/"3hr"/"6hr"/"12hr"       → 60/180/360/720
+ *   "24hr" / "1 day"               → 1440
+ *   "1-24 hours" (a range)         → upper bound (1440) so the seller isn't
+ *                                    marked overdue before their full window
+ *   "instant"                      → 5 (a short SLA; instant delivery is ~now)
+ *   unparseable / null             → fallback (default 60)
+ */
+const DEFAULT_DELIVERY_MINUTES = 60
+
+export function parseDeliveryMinutes(
+  raw: string | null | undefined,
+  fallback = DEFAULT_DELIVERY_MINUTES,
+): number {
+  if (!raw) return fallback
+  const s = raw.trim().toLowerCase()
+  if (!s) return fallback
+  if (s === 'instant') return 5
+
+  const unitToMin = (value: number, unit: string | undefined): number | null => {
+    if (!Number.isFinite(value) || value <= 0) return null
+    switch (unit) {
+      case 'min':
+      case 'mins':
+      case 'm':
+      case undefined: // bare number → assume minutes
+        return Math.round(value)
+      case 'hr':
+      case 'hrs':
+      case 'hour':
+      case 'hours':
+      case 'h':
+        return Math.round(value * 60)
+      case 'd':
+      case 'day':
+      case 'days':
+        return Math.round(value * 24 * 60)
+      default:
+        return null
+    }
+  }
+
+  // Range like "1-24 hours" → use the UPPER bound (+ its unit).
+  const range = s.match(/^(\d+(?:\.\d+)?)\s*-\s*(\d+(?:\.\d+)?)\s*([a-z]+)?/)
+  if (range) return unitToMin(Number(range[2]), range[3]) ?? fallback
+
+  // Single value like "20min" / "1hr" / "3 hours" / "1 day".
+  const single = s.match(/^(\d+(?:\.\d+)?)\s*([a-z]+)?/)
+  if (single) return unitToMin(Number(single[1]), single[2]) ?? fallback
+
+  return fallback
+}
+
 export function formatDeliveryLabel(s: string | null | undefined): string {
   if (!s) return 'Unspecified'
   const trimmed = s.trim()

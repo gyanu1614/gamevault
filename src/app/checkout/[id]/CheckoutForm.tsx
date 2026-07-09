@@ -1,27 +1,48 @@
 'use client'
 
 /**
- * Checkout — V5 reskin.
+ * Checkout — V80 handoff rebuild.
  *
- * Two-step wizard mirrors the sell-wizard chrome: clickable step labels
- * with a lime progress rail, sub-cards for each section, GV tokens, Radix
- * primitives (Checkbox, RadioGroup, NumberField, Dialog). Stripe Elements
- * theme retuned to lime accent on bg-bg-base surfaces.
+ * Recreates the design_handoff_checkout prototype (2a desktop / 2b
+ * mobile) 1:1 in our stack: one centered card shell (radial slate,
+ * 26px radius) with its own header (glossy D emblem + wordmark + SSL
+ * pill), a "Pay with" method list on the left (horizontal chips on
+ * mobile), the "Your order" panel on the right with the loot-llama
+ * bleeding off its edge, the blue SafeDrop trust panel with the 3D
+ * shield watermark + escrow <details>, and the payment marquee strip.
  *
- * All payment + order logic preserved verbatim from the previous file —
- * only the surface chrome changed.
+ * Handoff lime (#c6f24e / #a9d24a) is mapped onto our tokens
+ * (#C6FF3D / #ABE52B) — alphas as rgba(198,255,61,…) literals since
+ * custom tokens don't compile /alpha suffixes. All payment + order
+ * logic preserved verbatim; amounts stay server-authoritative
+ * (createCheckout).
+ *
+ * Kept from the previous checkout per the handoff brief ("that style
+ * + our existing components"): qty stepper, SafeDrop tier selector,
+ * promo code flow, wallet/credit application, SellerPeek dialog +
+ * header account dropdown. Assets live at public/assets/checkout/ (drop-in
+ * replaceable: shield-3d.png, lock.png, llama.png, dm-coin.png).
  */
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { AnimatePresence, motion } from 'framer-motion'
 import { useRouter } from 'next/navigation'
-import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
 import Link from 'next/link'
 import {
   Shield, Star, Award, Check, Loader2, AlertCircle, Lock, CheckCircle2,
-  Coins, Tag, X, ChevronDown, ChevronRight, ChevronLeft, Zap, CreditCard, ShieldCheck, Wallet,
-  ArrowRight, Plus, Minus,
+  Tag, X, ChevronDown, ChevronRight, ShieldCheck, Info,
 } from 'lucide-react'
+
+import { createCheckout } from '@/lib/actions/checkout'
+import { getAvatarUrl } from '@/lib/utils/avatar'
+import { validatePromoCode, type PromoValidationResult } from '@/lib/actions/promo'
+import { getWalletBalance } from '@/lib/actions/wallet'
+import type { SafeDropTier } from '@/lib/utils/safedrop-tiers'
+
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
+import { SilverIcon } from '@/components/ui/silver-icon'
+import { cn } from '@/lib/utils'
 
 // V14l — Smart price formatter. For currency listings ($0.0045/unit) the
 // per-unit price would round to "$0.00" at 2 decimals — confusing the
@@ -29,42 +50,18 @@ import {
 // 2 decimals since they're always at least a few cents.
 function fmtUnitPrice(n: number): string {
   if (n === 0) return '$0.00'
-  // If 2-decimal would round below half a cent, switch to 4 decimals.
   if (Math.abs(n) < 0.01) return `$${n.toFixed(4)}`
   return `$${n.toFixed(2)}`
 }
 
-import { createCheckout } from '@/lib/actions/checkout'
-import { validatePromoCode, type PromoValidationResult } from '@/lib/actions/promo'
-import { PaymentMethodPicker, type PaymentMethodId } from './_PaymentMethodPicker'
-import {
-  ApplePayIcon,
-  CardIcon,
-  CryptoIcon,
-  GooglePayIcon,
-  KlarnaIcon,
-  PayPalIcon,
-  PaysafeIcon,
-} from './_PaymentBrands'
-import { Card } from '@/components/ui/card'
-import { getWalletBalance } from '@/lib/actions/wallet'
-import type { VaultShieldTier } from '@/lib/utils/vaultshield-tiers'
-
-import { Button } from '@/components/ui/button'
-import { Checkbox } from '@/components/ui/checkbox'
-import { cn } from '@/lib/utils'
-
-
 // ─── Tier config ─────────────────────────────────────────────────────────────
 
 interface TierConfig {
-  id: VaultShieldTier
+  id: SafeDropTier
   name: string
   feeRate: number
   warranty: string
   icon: React.ElementType
-  /** Highlight color when this tier is active. */
-  accent: 'slate' | 'lime' | 'amber'
   badge?: string
   features: string[]
 }
@@ -76,7 +73,6 @@ const TIERS: TierConfig[] = [
     feeRate: 0,
     warranty: '48h protection',
     icon: Shield,
-    accent: 'slate',
     features: [
       '48-hour buyer protection',
       'Escrow payment hold',
@@ -90,7 +86,6 @@ const TIERS: TierConfig[] = [
     feeRate: 2,
     warranty: '7-day warranty',
     icon: Star,
-    accent: 'lime',
     badge: 'Most popular',
     features: [
       'Everything in Standard',
@@ -105,7 +100,6 @@ const TIERS: TierConfig[] = [
     feeRate: 5,
     warranty: '30-day warranty',
     icon: Award,
-    accent: 'amber',
     features: [
       'Everything in Enhanced',
       '30-day extended warranty',
@@ -115,964 +109,112 @@ const TIERS: TierConfig[] = [
   },
 ]
 
-const tierAccentClasses = (accent: TierConfig['accent'], selected: boolean) => {
-  if (!selected) {
-    return 'border-border-subtle bg-bg-overlay hover:border-border-default'
+// ─── Payment methods (handoff order; only crypto is live today) ─────────────
+
+type PayMethod = 'card' | 'apple' | 'google' | 'paysafe' | 'crypto' | 'skrill'
+
+const METHODS: Array<{
+  id: PayMethod
+  title: string
+  chip: string
+  sub?: string
+  soon?: boolean
+}> = [
+  { id: 'card', title: 'Debit / Credit cards', chip: 'Cards', sub: 'All major cards accepted', soon: true },
+  { id: 'apple', title: 'Apple Pay', chip: ' Pay', soon: true },
+  { id: 'google', title: 'Google Pay', chip: 'G Pay', soon: true },
+  { id: 'paysafe', title: 'Paysafe Card', chip: 'Paysafe', sub: 'Prepaid card for online payments', soon: true },
+  { id: 'crypto', title: 'Crypto', chip: 'Crypto', sub: 'BTC · ETH · USDT · USDC +more' },
+  { id: 'skrill', title: 'Skrill', chip: 'Skrill', sub: 'Neteller · Rapid Transfer', soon: true },
+]
+
+// CSS brand marks per the prototype (official SVGs can drop in later).
+function BrandTile({ id, mini }: { id: PayMethod; mini?: boolean }) {
+  if (id === 'card') {
+    return mini ? (
+      <span className="flex h-[15px] w-[22px] flex-none items-center justify-center rounded-[3px] bg-[#1a1f2e] text-[6px] font-extrabold text-[#f7b600]">VISA</span>
+    ) : (
+      <span className="flex flex-none gap-[3px]">
+        <span className="flex h-[18px] w-[26px] items-center justify-center rounded-[4px] bg-[#1a1f2e] text-[7px] font-extrabold text-[#f7b600]">VISA</span>
+        <span className="h-[18px] w-5 rounded-[4px] bg-[linear-gradient(90deg,#eb001b,#f79e1b)]" />
+      </span>
+    )
   }
-  if (accent === 'lime')  return 'border-lime bg-lime-tint-bg'
-  if (accent === 'amber') return 'border-amber-500/40 bg-amber-500/10'
-  return 'border-border-default bg-bg-raised-hover'
-}
-const tierIconClass = (accent: TierConfig['accent']) =>
-  accent === 'lime' ? 'text-lime-text'
-  : accent === 'amber' ? 'text-amber-400'
-  : 'text-text-secondary'
-
-// ─── Step bar ────────────────────────────────────────────────────────────────
-
-// V14n — Seller card. A small but information-dense card surface with
-// avatar, name, verified badge, rating, review count, total sales, and
-// an expandable "More about this seller" section (tier, member-since).
-// Replaces the previous chip-only design which buried the seller's
-// reputation behind a single click.
-interface SellerCardSeller {
-  id?: string
-  username?: string
-  shop_name?: string | null
-  avatar_url?: string | null
-  seller_tier?: string | null
-  seller_rating?: number | null
-  total_reviews?: number | null
-  total_sales?: number | null
-  is_verified?: boolean | null
-  created_at?: string | null
+  const box = mini ? 'h-4 w-4 rounded-[5px] text-[10px]' : 'h-[30px] w-[30px] rounded-[5px] text-[15px]'
+  if (id === 'apple') return <span className={cn(box, 'flex flex-none items-center justify-center bg-black text-white')}>{''}</span>
+  if (id === 'google') return <span className={cn(box, 'flex-none [background:conic-gradient(from_0deg,#ea4335,#fbbc05,#34a853,#4285f4,#ea4335)]')} />
+  if (id === 'paysafe') return <span className={cn(box, 'flex flex-none items-center justify-center bg-[#5b3cc4] text-white')}><Lock className={mini ? 'h-2.5 w-2.5' : 'h-3.5 w-3.5'} /></span>
+  if (id === 'crypto') return <span className={cn(box, 'flex flex-none items-center justify-center bg-[linear-gradient(135deg,#f7931a,#ffb64d)] font-extrabold text-white')}>₿</span>
+  return <span className={cn(box, 'flex flex-none items-center justify-center bg-[#7b1e5b] font-extrabold text-white', mini ? 'text-[6px]' : 'text-[8px]')}>Skrill</span>
 }
 
-function fmtCount(n: number): string {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`
-  if (n >= 1_000) return `${(n / 1_000).toFixed(1).replace(/\.0$/, '')}K`
-  return String(n)
-}
-function memberSince(iso?: string | null): string {
-  if (!iso) return ''
-  const d = new Date(iso)
-  if (isNaN(d.getTime())) return ''
-  return d.toLocaleString('en-US', { month: 'short', year: 'numeric' })
-}
-const TIER_LABEL: Record<string, string> = {
-  unverified: 'Unverified',
-  bronze: 'Bronze',
-  silver: 'Silver',
-  gold: 'Gold',
-  platinum: 'Platinum',
-}
+// ─── Fee row + ⓘ badge ──────────────────────────────────────────────────────
 
-function SellerCard({
-  seller, compact,
-}: {
-  seller: SellerCardSeller | null | undefined
-  /** Compact variant for the right sidebar (smaller paddings, no expand). */
-  compact?: boolean
-}) {
-  const [expanded, setExpanded] = useState(false)
-  if (!seller?.username) return null
-  const displayName = seller.shop_name?.trim() || seller.username
-  const initial = (displayName[0] || 'S').toUpperCase()
-  const isVerified = !!seller.is_verified || (!!seller.seller_tier && seller.seller_tier !== 'unverified')
-  const rating = seller.seller_rating != null ? Number(seller.seller_rating) : null
-  const reviews = seller.total_reviews ?? 0
-  const sales = seller.total_sales ?? 0
-  const tier = seller.seller_tier ?? 'unverified'
-  const since = memberSince(seller.created_at)
-
-  return (
-    <div
-      className={cn(
-        'rounded-xl border border-border-subtle bg-bg-overlay/60 transition-colors',
-        compact ? 'mt-2 p-2.5' : 'mt-3 p-3 sm:p-3.5',
-      )}
-    >
-      <div className="flex items-center gap-3">
-        {/* Avatar */}
-        <Link
-          href={`/shop/${seller.username}`}
-          aria-label={`Visit @${seller.username}'s shop`}
-          className="shrink-0"
-        >
-          {seller.avatar_url ? (
-            /* eslint-disable-next-line @next/next/no-img-element */
-            <img
-              src={seller.avatar_url}
-              alt=""
-              className={cn(
-                'rounded-full object-cover ring-1 ring-border-subtle transition-transform hover:scale-105',
-                compact ? 'h-9 w-9' : 'h-11 w-11',
-              )}
-            />
-          ) : (
-            <span
-              aria-hidden
-              className={cn(
-                'flex items-center justify-center rounded-full bg-bg-raised font-bold text-text-primary ring-1 ring-border-subtle',
-                compact ? 'h-9 w-9 text-sm' : 'h-11 w-11 text-base',
-              )}
-            >
-              {initial}
-            </span>
-          )}
-        </Link>
-
-        {/* Identity + stats */}
-        <div className="min-w-0 flex-1">
-          <Link
-            href={`/shop/${seller.username}`}
-            className="group flex items-center gap-1.5 text-text-primary transition-colors hover:text-lime-text"
-          >
-            <span className={cn('truncate font-bold', compact ? 'text-[13px]' : 'text-[14px] sm:text-[15px]')}>
-              {displayName}
-            </span>
-            {isVerified && (
-              <span
-                aria-label="Verified seller"
-                title={`Verified ${TIER_LABEL[tier] ?? 'seller'}`}
-                className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-lime-tint-bg text-lime-text"
-              >
-                <Check className="h-2.5 w-2.5" strokeWidth={3} />
-              </span>
-            )}
-            <ArrowRight className="h-3.5 w-3.5 shrink-0 text-text-tertiary opacity-0 transition-all group-hover:translate-x-0.5 group-hover:opacity-100 group-hover:text-lime-text" />
-          </Link>
-          {/* Inline stat row — rating · reviews · sales */}
-          <div className={cn(
-            'mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-text-tertiary',
-            compact ? 'text-[11px]' : 'text-[12px]',
-          )}>
-            {rating != null && (
-              <span className="inline-flex items-center gap-1">
-                <Star className="h-3 w-3 fill-lime text-lime" />
-                <span className="font-semibold tabular-nums text-text-primary">
-                  {rating.toFixed(1)}{rating <= 5 ? '' : '%'}
-                </span>
-              </span>
-            )}
-            {reviews > 0 && (
-              <>
-                {rating != null && <span aria-hidden>·</span>}
-                <span><span className="font-semibold tabular-nums text-text-secondary">{fmtCount(reviews)}</span> review{reviews === 1 ? '' : 's'}</span>
-              </>
-            )}
-            {sales > 0 && (
-              <>
-                <span aria-hidden>·</span>
-                <span><span className="font-semibold tabular-nums text-text-secondary">{fmtCount(sales)}</span> sold</span>
-              </>
-            )}
-          </div>
-        </div>
-
-        {/* Expand toggle (non-compact only) */}
-        {!compact && (since || tier !== 'unverified') && (
-          <button
-            type="button"
-            onClick={() => setExpanded((v) => !v)}
-            aria-expanded={expanded}
-            aria-label={expanded ? 'Hide seller details' : 'Show seller details'}
-            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-border-subtle text-text-tertiary transition-colors hover:border-border-default hover:text-text-primary"
-          >
-            <ChevronRight className={cn('h-3.5 w-3.5 transition-transform', expanded && 'rotate-90')} />
-          </button>
-        )}
-      </div>
-
-      {/* Expanded body — tier badge, member since, shop link */}
-      {!compact && expanded && (
-        <div className="mt-3 grid grid-cols-2 gap-2 border-t border-border-subtle pt-3">
-          <div>
-            <div className="text-[10px] font-semibold uppercase tracking-wider text-text-tertiary">Tier</div>
-            <div className="mt-0.5 text-[13px] font-semibold text-text-primary">
-              {TIER_LABEL[tier] ?? 'Unverified'}
-            </div>
-          </div>
-          {since && (
-            <div>
-              <div className="text-[10px] font-semibold uppercase tracking-wider text-text-tertiary">Member since</div>
-              <div className="mt-0.5 text-[13px] font-semibold text-text-primary">{since}</div>
-            </div>
-          )}
-          <Link
-            href={`/shop/${seller.username}`}
-            className="col-span-2 inline-flex h-8 items-center justify-center gap-1.5 rounded-md border border-border-subtle bg-bg-raised text-[12px] font-semibold text-text-secondary transition-colors hover:border-lime-tint-border hover:bg-lime-tint-bg/30 hover:text-lime-text"
-          >
-            View full shop
-            <ArrowRight className="h-3 w-3" />
-          </Link>
-        </div>
-      )}
-    </div>
-  )
-}
-
-function StepBar({ step, onJump }: { step: 1 | 2; onJump: (n: 1 | 2) => void }) {
-  // V19/P24/P7.q — 2Game-style horizontal stepper. 3 nodes (Review,
-  // Payment, Confirmation). Circles with the step number sit on a
-  // connecting line; active is filled lime, done is lime with check,
-  // future is outlined. Label sits under each node.
-  const STEPS = [
-    { n: 1, label: 'Review Order' },
-    { n: 2, label: 'Payment' },
-    { n: 3, label: 'Confirmation' },
-  ] as const
-  return (
-    <nav aria-label="Checkout progress" className="mb-8">
-      <ol className="mx-auto flex w-full max-w-2xl items-center">
-        {STEPS.map((s, i) => {
-          const done = step > s.n
-          const active = step === s.n
-          const clickable = done && s.n < 3
-          const isLast = i === STEPS.length - 1
-          return (
-            <li key={s.n} className="flex flex-1 items-start">
-              <div className="flex flex-1 flex-col items-center">
-                <button
-                  type="button"
-                  disabled={!clickable}
-                  onClick={() => clickable && onJump(s.n as 1 | 2)}
-                  aria-current={active ? 'step' : undefined}
-                  className={cn(
-                    'flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 text-[14px] font-bold transition-colors sm:h-10 sm:w-10',
-                    active && 'border-lime bg-lime text-text-inverse',
-                    done && 'border-lime bg-lime text-text-inverse',
-                    !active && !done && 'border-border-default bg-bg-raised text-text-tertiary',
-                    clickable && 'cursor-pointer hover:scale-105',
-                  )}
-                >
-                  {done ? <Check className="h-4 w-4" strokeWidth={3} /> : s.n}
-                </button>
-                <span
-                  className={cn(
-                    'mt-2 text-center text-[12px] font-semibold sm:text-[13px]',
-                    active && 'text-text-primary',
-                    done && 'text-text-secondary',
-                    !active && !done && 'text-text-tertiary',
-                  )}
-                >
-                  {s.label}
-                </span>
-              </div>
-              {!isLast && (
-                <div
-                  aria-hidden
-                  className={cn(
-                    'mt-[18px] h-0.5 flex-1 sm:mt-[20px]',
-                    done ? 'bg-lime' : 'bg-border-default',
-                  )}
-                />
-              )}
-            </li>
-          )
-        })}
-      </ol>
-    </nav>
-  )
-}
-
-// ─── SubCard ─────────────────────────────────────────────────────────────────
-
-// V19/P24/P7.s — SubCard is now `Section`: tighter padding (p-4
-// instead of p-4 sm:p-5), tighter title block (mb-3, no big divider
-// — header sits directly above content with breathing room). Border
-// stays subtle. Used across the entire checkout body.
-function SubCard({
-  title, right, children,
-}: { title: string; right?: React.ReactNode; children: React.ReactNode }) {
-  return (
-    <section className="rounded-xl border border-border-subtle bg-bg-raised p-4">
-      <div className="mb-3 flex items-center justify-between gap-3">
-        <h2 className="text-[14px] font-semibold text-text-primary">{title}</h2>
-        {right}
-      </div>
-      {children}
-    </section>
-  )
-}
-
-// ─── VaultShieldRow ──────────────────────────────────────────────────────────
-//
-// V19/P24/P7.s — Collapsed-by-default VaultShield tier picker.
-// Shows the current tier as a slim row with an Upgrade chip; expands
-// to the 3-tier comparison only when the buyer asks for it. Replaces
-// the SubCard + 3-column grid that ate ~280px of vertical space.
-function VaultShieldRow({
-  tiers,
-  value,
-  onChange,
-  subtotal,
-}: {
-  tiers: TierConfig[]
-  value: string
-  onChange: (id: any) => void
-  subtotal: number
-}) {
-  const [open, setOpen] = useState(false)
-  const current = tiers.find((t) => t.id === value) ?? tiers[0]
-  const Icon = current.icon
-  return (
-    <section className="rounded-xl border border-border-subtle bg-bg-raised">
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-bg-raised-hover"
-        aria-expanded={open}
-      >
-        <div className="flex min-w-0 items-center gap-2.5">
-          <Icon className={cn('h-4 w-4 shrink-0', tierIconClass(current.accent))} />
-          <div className="min-w-0">
-            <div className="flex items-center gap-1.5">
-              <span className="text-[13.5px] font-semibold text-text-primary">
-                VaultShield {current.name}
-              </span>
-              <span className="rounded-full bg-lime-tint-bg px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-lime-text">
-                {current.feeRate === 0 ? 'Included' : `+${current.feeRate}%`}
-              </span>
-            </div>
-            <div className="text-[11.5px] text-text-tertiary">{current.warranty}</div>
-          </div>
-        </div>
-        <span className="inline-flex items-center gap-1 text-[12px] font-semibold text-lime-text">
-          {open ? 'Hide' : 'Compare'}
-          <ChevronDown
-            className={cn('h-3.5 w-3.5 transition-transform', open && 'rotate-180')}
-          />
-        </span>
-      </button>
-      <AnimatePresence initial={false}>
-        {open && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.18 }}
-            className="overflow-hidden"
-          >
-            <div className="grid grid-cols-1 gap-2 border-t border-border-subtle p-3 sm:grid-cols-3">
-              {tiers.map((tier) => {
-                const TierIcon = tier.icon
-                const selected = value === tier.id
-                return (
-                  <button
-                    key={tier.id}
-                    type="button"
-                    onClick={() => onChange(tier.id)}
-                    aria-pressed={selected}
-                    className={cn(
-                      'flex flex-col gap-1.5 rounded-lg border p-2.5 text-left transition-colors',
-                      selected
-                        ? 'border-lime bg-lime-tint-bg/40'
-                        : 'border-border-subtle bg-bg-inset/40 hover:border-border-default',
-                    )}
-                  >
-                    <div className="flex items-center gap-1.5">
-                      <TierIcon className={cn('h-3.5 w-3.5', tierIconClass(tier.accent))} />
-                      <span className="text-[12.5px] font-semibold text-text-primary">
-                        {tier.name}
-                      </span>
-                      {selected && (
-                        <CheckCircle2 className="ml-auto h-3.5 w-3.5 text-lime-text" />
-                      )}
-                    </div>
-                    <div className="text-[12px] font-semibold tabular-nums text-text-primary">
-                      {tier.feeRate === 0
-                        ? 'Free'
-                        : `+$${((subtotal * tier.feeRate) / 100).toFixed(2)}`}
-                    </div>
-                    <p className="text-[11px] leading-snug text-text-tertiary">
-                      {tier.warranty}
-                    </p>
-                  </button>
-                )
-              })}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </section>
-  )
-}
-
-// ─── ProductHeroCard ─────────────────────────────────────────────────────────
-//
-// V19/P24/P7.q — 2Game-inspired single-product hero card. One large
-// row: art on the left, game eyebrow + product title + qty stepper
-// in the middle, line subtotal on the right. SellerCard slots in at
-// the bottom of the card so the buyer sees reputation + listing in
-// one cohesive surface.
-function ProductHeroCard({
-  listing,
-  bundleSummary,
-  quantity,
-  setQuantity,
-  maxQty,
-  subtotal,
-}: {
-  listing: any
-  bundleSummary: { name: string; iconUrl: string | null } | null | undefined
-  quantity: number
-  setQuantity: (n: number) => void
-  maxQty: number
-  subtotal: number
-}) {
-  const isBundle = !!bundleSummary
-  const title = bundleSummary?.name || listing.title
-  const imageSrc =
-    bundleSummary?.iconUrl ||
-    listing.images?.[0] ||
-    listing.game?.image_url ||
-    '/placeholder-game.jpg'
-  const showStepper =
-    isBundle || (!listing.is_unlimited && listing.quantity > 1)
-
-  return (
-    <section className="overflow-hidden rounded-xl border border-border-subtle bg-bg-raised">
-      <div className="border-b border-border-subtle p-4">
-        <h2 className="mb-3 text-[14px] font-semibold text-text-primary">
-          Your Cart
-        </h2>
-        <div className="flex items-start gap-3">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={imageSrc}
-            alt={title}
-            className={cn(
-              'h-20 w-20 shrink-0 rounded-lg ring-1 ring-border-subtle',
-              isBundle
-                ? 'bg-bg-overlay object-contain p-1.5'
-                : 'object-cover',
-            )}
-          />
-          <div className="min-w-0 flex-1">
-            <div className="mb-0.5 flex items-center gap-1.5 text-[12px] text-text-tertiary">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={listing.game?.image_url || '/placeholder-game.jpg'}
-                alt=""
-                className="h-3.5 w-3.5 rounded object-cover"
-              />
-              <span>{listing.game?.name}</span>
-            </div>
-            <p className="line-clamp-2 text-[15px] font-bold leading-tight text-text-primary">
-              {title}
-            </p>
-            <p className="mt-1 text-[12px] text-text-tertiary">
-              {fmtUnitPrice(listing.price)} per {isBundle ? 'bundle' : 'unit'}
-            </p>
-
-            {showStepper && (
-              <div className="mt-2.5 inline-flex items-center gap-2">
-                <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-text-tertiary">
-                  Qty
-                </span>
-                <div className="inline-flex h-8 items-center overflow-hidden rounded-lg border border-border-default bg-bg-overlay">
-                  <button
-                    type="button"
-                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                    disabled={quantity <= 1}
-                    aria-label="Decrease quantity"
-                    className="flex h-full w-7 items-center justify-center text-text-secondary transition-colors hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-40"
-                  >
-                    <Minus className="h-3 w-3" />
-                  </button>
-                  <span aria-hidden className="h-4 w-px bg-border-subtle" />
-                  <input
-                    type="number"
-                    value={quantity}
-                    onChange={(e) => {
-                      const n = parseInt(e.target.value || '1', 10)
-                      if (Number.isFinite(n)) {
-                        setQuantity(Math.min(maxQty, Math.max(1, n)))
-                      }
-                    }}
-                    onFocus={(e) => e.currentTarget.select()}
-                    min={1}
-                    max={maxQty}
-                    aria-label="Quantity"
-                    inputMode="numeric"
-                    className="h-full w-10 border-0 bg-transparent text-center text-[13px] font-semibold tabular-nums text-text-primary outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                  />
-                  <span aria-hidden className="h-4 w-px bg-border-subtle" />
-                  <button
-                    type="button"
-                    onClick={() => setQuantity(Math.min(maxQty, quantity + 1))}
-                    disabled={quantity >= maxQty}
-                    aria-label="Increase quantity"
-                    className="flex h-full w-7 items-center justify-center text-text-secondary transition-colors hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-40"
-                  >
-                    <Plus className="h-3 w-3" />
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-          <div className="shrink-0 text-right">
-            <p className="text-[20px] font-black tabular-nums leading-none text-text-primary">
-              ${subtotal.toFixed(2)}
-            </p>
-            <p className="mt-1 text-[10px] uppercase tracking-wider text-text-tertiary">
-              USD
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <div className="p-4">
-        <SellerCard seller={listing.seller} compact />
-      </div>
-    </section>
-  )
-}
-
-// ─── Order summary sidebar ───────────────────────────────────────────────────
-
-interface SummaryProps {
-  listing: any
-  quantity: number
-  /** V19/P24/P7.p — When present, the buyer can adjust qty directly
-   *  from the summary (bundle listings only). Removes the duplicate
-   *  "Your order" tile on the left so the form area has more room. */
-  setQuantity?: (n: number) => void
-  maxQty?: number
-  subtotal: number
-  platformFeeRate: number
-  platformFee: number
-  paymentProcessingFee: number
-  selectedTier: TierConfig
-  tierFeeAmount: number
-  promoDiscount: number
-  appliedCode: string | undefined
-  promoResult: PromoValidationResult | null
-  walletAmount: number
-  total: number
-  user: any
-  walletBalance: number
-  useWallet: boolean
-  setUseWallet: (v: boolean) => void
-  /** V19/P24/P7.u — Drop Credits wallet (cashback ledger). DC value
-   *  shown as integer credits; 1 DC = $0.01 of order credit. */
-  dropCreditsBalance: number
-  useDropCredits: boolean
-  setUseDropCredits: (v: boolean) => void
-  /** Selected payment method (for the dynamic Pay With button). */
-  paymentMethod: PaymentMethodId
-  /** Bundle-aware: bundle name + icon for the preview tile. */
-  bundleSummary?: { name: string; iconUrl: string | null } | null
-  /** V19/P24/P7.z — Promo input wiring. */
-  promoInput: string
-  setPromoInput: (v: string) => void
-  handleApplyPromo: () => void
-  handleRemovePromo: () => void
-  promoValidating: boolean
-}
-
-function OrderSummary(p: SummaryProps) {
-  // V19/P24/P7.u — Recommended-Seller-style summary: rounded card,
-  // horizontal grey dividers between every row, generous vertical
-  // padding, no inner section chrome. Dynamic "Pay with {method}"
-  // CTA. Drop Credits + Account Balance toggle rows. Cashback line
-  // sits BELOW the CTA, not in the fee breakdown.
-  //
-  // V19/P24/P7.dd — Discount Code starts collapsed behind a "Have a
-  // discount code?" button (industry standard — G2A, Eldorado,
-  // GameBoost, Stripe Checkout all do this). Buyers without a code
-  // never see the input.
-  const [discountOpen, setDiscountOpen] = useState(false)
-  const isBundle = !!p.bundleSummary
-  const previewTitle = p.bundleSummary?.name || p.listing.title
-  const previewImage =
-    p.bundleSummary?.iconUrl ||
-    p.listing.images?.[0] ||
-    p.listing.game?.image_url ||
-    '/placeholder-game.jpg'
-
-  // 1 DC = $0.01 redemption
-  const dcDollarValue = (p.dropCreditsBalance ?? 0) * 0.01
-  // Cashback earned on THIS order: 2% of subtotal, in DC (so $X * 100 * 0.02)
-  const dcEarned = Math.round(p.subtotal * 100 * 0.02)
-
-  const methodInfo = paymentMethodLabel(p.paymentMethod)
-
-  return (
-    // V19/P24/P7.v — No card chrome. Content flows on the page.
-    <div className="flex flex-col">
-      <div className="pb-4">
-        <h2 className="text-[20px] font-bold text-text-primary">Your Order</h2>
-      </div>
-
-      {/* V19/P24/P7.y — Product preview row: GAME logo on the left
-          (Fortnite, R6, etc.), bundle/listing name as the title, and
-          a small currency-section indicator (Coins icon) beside the
-          game name to mark this as a Currency category purchase. */}
-      <div className="flex items-center gap-3 py-1">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={p.listing.game?.image_url || '/placeholder-game.jpg'}
-          alt={p.listing.game?.name || ''}
-          className="h-12 w-12 shrink-0 rounded-lg object-cover ring-1 ring-border-subtle"
-        />
-        <div className="min-w-0 flex-1">
-          <p className="line-clamp-1 text-[16px] font-bold text-text-primary">
-            {p.quantity}× · {previewTitle}
-          </p>
-          <p className="mt-1 line-clamp-1 inline-flex items-center gap-1.5 text-[14px] font-semibold">
-            <Coins
-              aria-label="Currency"
-              className="h-4 w-4 text-lime-text"
-            />
-            <span className="text-text-primary">{p.listing.game?.name}</span>
-          </p>
-        </div>
-        <div className="shrink-0 text-right text-[16px] font-bold tabular-nums text-text-primary">
-          ${p.subtotal.toFixed(2)}
-        </div>
-      </div>
-
-      {/* V19/P24/P7.dd — Discount Code is collapsed by default. Shows
-          as a "Have a discount code?" trigger; click expands the
-          input + apply button. When applied, swaps to a confirmation
-          chip with a remove (×) button. */}
-      {p.appliedCode ? (
-        <div className="mt-5 flex items-center justify-between gap-2 rounded-xl border border-lime-tint-border bg-lime-tint-bg/30 px-3.5 py-2.5">
-          <div className="flex min-w-0 items-center gap-2">
-            <CheckCircle2 className="h-4 w-4 shrink-0 text-lime-text" />
-            <div className="min-w-0">
-              <span className="font-mono text-[13px] font-bold tracking-widest text-lime-text">
-                {p.appliedCode}
-              </span>
-              <p className="text-[11px] text-text-secondary">
-                {p.promoResult?.description}
-              </p>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={p.handleRemovePromo}
-            aria-label="Remove discount code"
-            className="rounded p-1 text-text-tertiary transition-colors hover:bg-bg-raised-hover hover:text-text-primary"
-          >
-            <X className="h-3.5 w-3.5" />
-          </button>
-        </div>
-      ) : !discountOpen ? (
-        <button
-          type="button"
-          onClick={() => setDiscountOpen(true)}
-          className="mt-5 inline-flex items-center gap-1.5 text-[13px] font-semibold text-text-secondary transition-colors hover:text-text-primary"
-        >
-          <Tag className="h-3.5 w-3.5" />
-          Have a discount code?
-        </button>
-      ) : (
-        // V19/P24/P7.ff — Clean rounded-md field matching the user's
-        // 1st reference: thinner border, no lime focus glow, dark
-        // outlined Apply button sits flush at the right edge.
-        <div className="mt-5 flex items-center gap-2">
-          <input
-            type="text"
-            autoFocus
-            value={p.promoInput}
-            onChange={(e) => p.setPromoInput(e.target.value.toUpperCase())}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault()
-                p.handleApplyPromo()
-              }
-              if (e.key === 'Escape') {
-                setDiscountOpen(false)
-              }
-            }}
-            placeholder="Discount Code"
-            className="h-10 flex-1 rounded-md border border-border-default bg-transparent px-3.5 text-[13.5px] text-text-primary placeholder:text-text-tertiary focus:border-border-strong focus:outline-none"
-          />
-          <button
-            type="button"
-            onClick={p.handleApplyPromo}
-            disabled={!p.promoInput.trim() || p.promoValidating}
-            className="h-10 rounded-md border border-border-default bg-bg-raised px-4 text-[13px] font-semibold text-text-primary transition-colors hover:bg-bg-raised-hover disabled:cursor-not-allowed disabled:text-text-disabled"
-          >
-            {p.promoValidating ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            ) : (
-              'Apply'
-            )}
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              p.setPromoInput('')
-              setDiscountOpen(false)
-            }}
-            aria-label="Cancel"
-            className="rounded p-1 text-text-tertiary transition-colors hover:bg-bg-raised-hover hover:text-text-primary"
-          >
-            <X className="h-3.5 w-3.5" />
-          </button>
-        </div>
-      )}
-
-      {/* 3) Fee block — single divider above, no inner dividers */}
-      <div className="mt-5 space-y-3 border-t border-border-subtle pt-5">
-        <SummaryRow
-          label="Subtotal"
-          value={`$${p.subtotal.toFixed(2)}`}
-        />
-        <SummaryRow
-          label="Marketplace Fee"
-          tooltip={`${p.platformFeeRate.toFixed(1)}% of subtotal`}
-          value={`+$${p.platformFee.toFixed(2)}`}
-        />
-        <SummaryRow
-          label="Processor Fee"
-          tooltip="3.9% payment processor fee"
-          value="+3.9%"
-        />
-
-        {p.selectedTier.feeRate > 0 && (
-          <SummaryRow
-            label={`VaultShield ${p.selectedTier.name}`}
-            value={`+$${p.tierFeeAmount.toFixed(2)}`}
-            valueClass="text-lime-text"
-          />
-        )}
-
-        {p.promoDiscount > 0 && (
-          <SummaryRow
-            label={p.appliedCode ?? 'Promo'}
-            icon={<Tag className="h-3.5 w-3.5 text-success" />}
-            value={`−$${p.promoDiscount.toFixed(2)}`}
-            valueClass="text-success"
-          />
-        )}
-
-        {/* Drop Credits row (with toggle if balance > 0; otherwise read-only) */}
-        <WalletToggleRow
-          label="Drop Credits"
-          sublabel={`${(p.dropCreditsBalance ?? 0).toLocaleString()} DC available`}
-          active={p.useDropCredits}
-          onToggle={() => p.setUseDropCredits(!p.useDropCredits)}
-          disabled={(p.dropCreditsBalance ?? 0) === 0}
-          icon={
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src="/assets/dropcredits.svg"
-              alt=""
-              className="h-5 w-5 shrink-0"
-            />
-          }
-          value={`$${dcDollarValue.toFixed(2)}`}
-        />
-
-        {/* Account Balance row */}
-        <WalletToggleRow
-          label="Account Balance"
-          sublabel={`$${(p.walletBalance ?? 0).toFixed(2)} available`}
-          active={p.useWallet}
-          onToggle={() => p.setUseWallet(!p.useWallet)}
-          disabled={(p.walletBalance ?? 0) === 0}
-          icon={<Wallet className="h-5 w-5 shrink-0 text-success" />}
-          value={`$${(p.walletBalance ?? 0).toFixed(2)}`}
-        />
-      </div>
-
-      {/* 4) Total — single divider above */}
-      <div className="mt-5 flex items-baseline justify-between border-t border-border-subtle pt-5">
-        <span className="text-[16px] font-bold text-text-primary">Total</span>
-        <span className="text-[26px] font-black tabular-nums leading-none text-text-primary">
-          ${p.total.toFixed(2)}
-        </span>
-      </div>
-
-      {/* 10) Pay with [Method] — dynamic */}
-      <button
-        type="submit"
-        form="checkout-form"
-        disabled={methodInfo.disabled}
-        className={cn(
-          'flex h-12 w-full items-center justify-center gap-2 rounded-xl text-[15px] font-bold tracking-wide transition-all',
-          methodInfo.disabled
-            ? 'cursor-not-allowed bg-bg-raised-hover text-text-disabled'
-            : 'bg-lime text-text-inverse shadow-elevated hover:bg-lime-hover hover:shadow-glow',
-        )}
-      >
-        {methodInfo.disabled ? (
-          <>Coming soon — pick Card</>
-        ) : (
-          <>
-            Pay with {methodInfo.label}
-            <ArrowRight className="h-4 w-4" />
-          </>
-        )}
-      </button>
-
-      {/* V19/P24/P7.ii — Bumped contrast: text-secondary (was text-
-          tertiary), 13px (was 11px), text-balance for centered
-          wrap. The consent line is legally important so it can't
-          fade into the background. */}
-      <p className="mt-4 text-balance text-center text-[13px] leading-relaxed text-text-secondary">
-        By clicking{' '}
-        <span className="font-semibold text-text-primary">Pay</span> you agree
-        to our{' '}
-        <a
-          href="/terms"
-          target="_blank"
-          className="font-semibold text-lime-text underline underline-offset-2 hover:text-lime"
-        >
-          Terms
-        </a>{' '}
-        and{' '}
-        <a
-          href="/refund-policy"
-          target="_blank"
-          className="font-semibold text-lime-text underline underline-offset-2 hover:text-lime"
-        >
-          Refund Policy
-        </a>
-        . Payment is held in{' '}
-        <span className="font-semibold text-text-primary">VaultShield™</span>{' '}
-        escrow until delivery is confirmed.
-      </p>
-
-      {/* 11) Cashback line — below CTA, with DC icon */}
-      {p.subtotal > 0 && dcEarned > 0 && (
-        <div className="mt-3 flex items-center justify-center gap-2 text-[13px] text-text-secondary">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/assets/dropcredits.svg" alt="" className="h-4 w-4" />
-          You’ll earn{' '}
-          <span className="font-bold text-lime-text">+{dcEarned} DC</span>{' '}
-          cashback on this order
-        </div>
-      )}
-
-      {/* 12) SSL trust line */}
-      <p className="mt-2 flex items-center justify-center gap-2 text-center text-[13px] text-text-secondary">
-        <ShieldCheck className="h-4 w-4 text-lime-text" />
-        Payment is 256-bit SSL encrypted. We’ve got you covered.
-      </p>
-    </div>
-  )
-}
-
-/* ── Summary helpers ───────────────────────────────────────────── */
-
-function SummaryRow({
+function FeeRow({
   label,
   value,
+  tooltip,
   icon,
   valueClass,
-  tooltip,
+  extra,
 }: {
   label: string
   value: string
+  tooltip?: string
   icon?: React.ReactNode
   valueClass?: string
-  tooltip?: string
+  extra?: React.ReactNode
 }) {
   return (
-    <div className="flex items-center justify-between gap-3 text-[14px]">
-      <span className="inline-flex items-center gap-1.5 text-text-secondary">
+    <div className="flex items-center justify-between gap-3">
+      <span className="inline-flex min-w-0 items-center gap-2">
         {icon}
-        {label}
+        <span className="truncate">{label}</span>
         {tooltip && (
           <span
             title={tooltip}
-            className="inline-flex h-3.5 w-3.5 cursor-help items-center justify-center rounded-full bg-bg-overlay text-[9px] font-bold text-text-tertiary"
             aria-label={tooltip}
+            className="inline-flex h-[15px] w-[15px] flex-none cursor-help items-center justify-center rounded-full bg-[#232838] text-[9px] text-[#7b8398]"
           >
             ?
           </span>
         )}
+        {extra}
       </span>
-      <span className={cn('tabular-nums text-text-primary', valueClass)}>
-        {value}
-      </span>
+      <span className={cn('flex-none tabular-nums text-[#eef1f6]', valueClass)}>{value}</span>
     </div>
   )
 }
 
-// V19/P24/P7.w — Wallet row matches the flat fee-row layout (no inner
-// divider). Icon + label on the left, balance on the right, toggle
-// pill on the far right. When disabled, the toggle still renders but
-// is greyed out and unclickable.
-function WalletToggleRow({
-  label,
-  sublabel,
-  active,
-  onToggle,
-  disabled,
-  icon,
-  value,
-}: {
-  label: string
-  sublabel: string
-  active: boolean
-  onToggle: () => void
-  disabled?: boolean
-  icon: React.ReactNode
-  value: string
-}) {
+// Mini switch used by the Store credit fee row.
+function MiniSwitch({ on, disabled, onToggle, label }: { on: boolean; disabled?: boolean; onToggle: () => void; label: string }) {
   return (
     <button
       type="button"
-      onClick={() => !disabled && onToggle()}
+      role="switch"
+      aria-checked={on}
+      aria-label={label}
       disabled={disabled}
+      onClick={onToggle}
       className={cn(
-        'flex w-full items-center justify-between gap-3 text-left text-[14px] transition-colors',
-        disabled && 'opacity-60',
+        'relative h-[18px] w-[32px] flex-none rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-50',
+        on ? 'bg-lime' : 'bg-[#333950]',
       )}
     >
-      <span className="inline-flex items-center gap-2 text-text-secondary">
-        {icon}
-        <span>
-          {label}{' '}
-          <span className="text-text-tertiary">({sublabel.replace(' available', '')})</span>
-        </span>
-      </span>
-      <span className="tabular-nums text-text-primary">{value}</span>
+      <span className={cn('absolute top-[2px] h-[14px] w-[14px] rounded-full bg-white transition-all', on ? 'left-[16px]' : 'left-[2px]')} />
     </button>
   )
 }
 
-/**
- * V19/P24/P7.u — Map paymentMethod → CTA label + brand icon. Used
- * by the Pay With button on the right-side summary. Coming-soon
- * methods return `disabled: true` so the button locks out and
- * shows a "Coming soon — pick Card" label.
- */
-function paymentMethodLabel(method: PaymentMethodId): {
-  label: string
-  Icon: (p: { className?: string }) => JSX.Element
-  disabled: boolean
-} {
-  switch (method) {
-    case 'card':
-      return { label: 'Card', Icon: CardIcon, disabled: false }
-    case 'apple_pay':
-      return { label: 'Apple Pay', Icon: ApplePayIcon, disabled: true }
-    case 'google_pay':
-      return { label: 'Google Pay', Icon: GooglePayIcon, disabled: true }
-    case 'paypal':
-      return { label: 'PayPal', Icon: PayPalIcon, disabled: true }
-    case 'paysafe':
-      return { label: 'Paysafe', Icon: PaysafeIcon, disabled: true }
-    case 'crypto':
-      return { label: 'Crypto', Icon: CryptoIcon, disabled: true }
-    case 'klarna':
-      return { label: 'Klarna', Icon: KlarnaIcon, disabled: true }
-  }
-}
-
-// ─── CheckoutForm (outer) ────────────────────────────────────────────────────
+// ─── CheckoutForm ────────────────────────────────────────────────────────────
 
 interface CheckoutFormProps {
   listing: any
   user: any
+  /** V73 — buyer's profile row (username + avatar) for the identity strip. */
+  buyerProfile?: { username: string | null; avatar_url: string | null } | null
+  /** V75 — seller's last 5 reviews for the in-checkout seller peek. */
+  sellerReviews?: any[]
   /** V14j — Quantity pre-filled from the deep-link (e.g. ?qty=500 from
    *  the currency-page Buy now). Clamped to the listing's stock + min. */
   initialQty?: number
@@ -1085,12 +227,9 @@ interface CheckoutFormProps {
   bundleSummary?: { name: string; iconUrl: string | null } | null
 }
 
-export function CheckoutForm({ listing, user, initialQty, bundleSummary }: CheckoutFormProps) {
-  // V19/P24/P7.t — Single-screen checkout. The internal 2-step state
-  // is kept for the existing Stripe / payment-intent wiring but the
-  // user always lands on step 2 (the new GameBoost-style split
-  // screen) and never sees the old step 1 review screen.
-  const [step, setStep] = useState<1 | 2>(2)
+export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], initialQty, bundleSummary }: CheckoutFormProps) {
+  const router = useRouter()
+
   // V14j — Seed quantity from URL hint, clamped to [min, available].
   // V19/P24/P7.n — Bundle listings always have an effective min of 1
   // (each bundle is an atomic unit). Legacy bundle rows may still
@@ -1103,41 +242,44 @@ export function CheckoutForm({ listing, user, initialQty, bundleSummary }: Check
     const max = Math.max(min, listing.quantity ?? min)
     return Math.min(max, Math.max(min, initialQty))
   })()
-  const [quantity, setQuantity] = useState(seedQty)
-  const [vaultshieldTier, setVaultshieldTier] = useState<VaultShieldTier>('standard')
-  const [platformFeeRate, setPlatformFeeRate] = useState<number>(9.9)
-  const [, setTierFee] = useState<number>(0)
-  const [loading, setLoading] = useState(false)
+  // P11 — Quantity is chosen on the item page (?qty= deep-link); the
+  // checkout shows it read-only.
+  const [quantity] = useState(seedQty)
+  const [safedropTier, setSafedropTier] = useState<SafeDropTier>('standard')
+  const platformFeeRate = 9.9
+
+  // Crypto is the only live processor (CoinGate); the rest render per
+  // the handoff but stay disabled with a Soon chip until wired.
+  const [method, setMethod] = useState<PayMethod>('crypto')
 
   const [promoInput, setPromoInput] = useState('')
   const [promoValidating, setPromoValidating] = useState(false)
   const [promoResult, setPromoResult] = useState<PromoValidationResult | null>(null)
   const promoDiscount = promoResult?.valid ? (promoResult.discountAmount ?? 0) : 0
-  const promoCodeId = promoResult?.valid ? promoResult.promoCodeId : undefined
   const appliedCode = promoResult?.valid ? promoResult.code : undefined
 
   // V19/P24/P7.u — Two wallets:
   //   • Account Balance: refunds / cash credits the buyer earned from
-  //     cancelled orders. Real $ value, applied 1:1.
+  //     cancelled orders. Real $ value, applied 1:1 ("Store credit").
   //   • Drop Credits (DC): cashback earned from prior purchases. 1 DC
   //     = $0.01 of order credit. Display + toggle here; the real
   //     redemption ledger lives server-side (wired later).
   const [walletBalance, setWalletBalance] = useState<number>(0)
   const [useWallet, setUseWallet] = useState(false)
-  const [dropCreditsBalance, setDropCreditsBalance] = useState<number>(0)
+  const [dropCreditsBalance] = useState<number>(0)
   const [useDropCredits, setUseDropCredits] = useState(false)
-  // V19/P24/P7.t — Lifted out of PaymentForm so OrderSummary can
-  // render a dynamic "Pay with {method}" button + icon.
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethodId>('card')
 
   const subtotal = listing.price * quantity
   const platformFee = subtotal * (platformFeeRate / 100)
   const paymentProcessingFee = subtotal * 0.035
-  const selectedTier = TIERS.find((t) => t.id === vaultshieldTier)!
+  const selectedTier = TIERS.find((t) => t.id === safedropTier)!
   const tierFeeAmount = subtotal * (selectedTier.feeRate / 100)
   const totalBeforeWallet = subtotal + platformFee + paymentProcessingFee + tierFeeAmount - promoDiscount
   const walletAmount = useWallet ? Math.min(walletBalance, totalBeforeWallet) : 0
   const total = Math.max(totalBeforeWallet - walletAmount, 0)
+
+  // Cashback earned on THIS order: 2% of subtotal, in DC.
+  const dcEarned = Math.round(subtotal * 100 * 0.02)
 
   // Fetch wallet balance once (auth users only).
   useEffect(() => {
@@ -1168,216 +310,40 @@ export function CheckoutForm({ listing, user, initialQty, bundleSummary }: Check
   }
   const handleRemovePromo = () => { setPromoInput(''); setPromoResult(null) }
 
-  // V14j — Cap raised so currency listings (Robux, V-Bucks) can be bought in
-  // bulk. Was hard-capped at 10 which made checkout reject 500-Robux orders.
-  const maxQty = Math.max(1, listing.quantity || 1)
 
-  const summaryProps: SummaryProps = {
-    listing, quantity, subtotal, platformFeeRate, platformFee,
-    paymentProcessingFee, selectedTier, tierFeeAmount, promoDiscount,
-    appliedCode, promoResult, walletAmount, total, user, walletBalance,
-    useWallet, setUseWallet,
-    dropCreditsBalance, useDropCredits, setUseDropCredits,
-    paymentMethod,
-    promoInput, setPromoInput, handleApplyPromo, handleRemovePromo,
-    promoValidating,
-    // V19/P24/P7.p — Bundle path: the summary owns the qty stepper +
-    // bundle preview, so the left-side "Your order" tile disappears.
-    bundleSummary,
-    setQuantity: bundleSummary ? setQuantity : undefined,
-    maxQty: bundleSummary ? maxQty : undefined,
-  }
+  // P10 — Dropdown open state (warranty / trust / discount). Animated
+  // via grid-template-rows 0fr→1fr (works everywhere; the native
+  // <details> + ::details-content approach didn't interpolate reliably).
+  const [warrantyOpen, setWarrantyOpen] = useState(false)
+  const [trustOpen, setTrustOpen] = useState(false)
+  const [codeOpen, setCodeOpen] = useState(false)
+  const [descOpen, setDescOpen] = useState(false)
+  // P13 — Description teaser: measure whether the text exceeds the
+  // 2-line collapsed window; only then show the fade + expand chevron.
+  const descRef = useRef<HTMLParagraphElement | null>(null)
+  const [descOverflow, setDescOverflow] = useState(false)
+  useEffect(() => {
+    const el = descRef.current
+    if (el) setDescOverflow(el.scrollHeight > 66)
+  }, [listing.description])
+  const [acctOpen, setAcctOpen] = useState(false)
 
-  return (
-    <>
-      {/* V19/P24/P7.t — Single split-screen checkout. Left = payment
-          method picker (vertical tiles with brand icons). Right =
-          Your Order (product preview + pricing + Pay Now). The
-          stepper is gone — buyers see everything at once. */}
-
-      {/* V19/P24/P7.bb — Full-bleed 50/50 split. Each half is
-          edge-to-edge of the viewport; bg-fill extends to the screen
-          edge with a hard 1px divider down the middle. Inner content
-          is centered with max-w on the inner div. */}
-      <div className="grid min-h-[calc(100vh-3.5rem-9rem)] lg:grid-cols-2">
-      {/* ── LEFT: Payment methods ─────────────────────────────────────── */}
-      <div className="bg-bg-base px-5 py-10 sm:px-8 lg:py-14">
-        <div className="mx-auto w-full max-w-[560px]">
-        <AnimatePresence mode="wait">
-          {step === 1 && (
-            <motion.div
-              key="step1"
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
-              className="space-y-3"
-            >
-              {/* V19/P24/P7.q — 2Game-style product hero card.
-                  Single, large, dominant. Replaces the prior "Your
-                  order" SubCard. Bundle vs non-bundle:
-                    • Bundle: bundle name + bundle icon, qty stepper
-                      inline (always meaningful since bundles are
-                      atomic units the buyer can multiply).
-                    • Non-bundle: listing title + listing image, qty
-                      stepper only when stock > 1. */}
-              <ProductHeroCard
-                listing={listing}
-                bundleSummary={bundleSummary}
-                quantity={quantity}
-                setQuantity={setQuantity}
-                maxQty={maxQty}
-                subtotal={subtotal}
-              />
-
-              {/* V19/P24/P7.s — VaultShield collapsed by default. 95%
-                  of buyers stay on Standard, so the 3-tier comparison
-                  is hidden behind a disclosure. */}
-              <VaultShieldRow
-                tiers={TIERS}
-                value={vaultshieldTier}
-                onChange={setVaultshieldTier}
-                subtotal={subtotal}
-              />
-
-              {/* V19/P24/P7.s — Promo as a single combined pill row,
-                  no big wrapper card. Matches 2Game's checkout style. */}
-              {appliedCode ? (
-                <section className="rounded-xl border border-lime-tint-border bg-lime-tint-bg/40 px-3 py-2.5">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex min-w-0 items-center gap-2">
-                      <CheckCircle2 className="h-4 w-4 shrink-0 text-lime-text" />
-                      <div className="min-w-0">
-                        <span className="font-mono text-[13px] font-bold tracking-widest text-lime-text">
-                          {appliedCode}
-                        </span>
-                        <p className="text-[11px] text-text-secondary">
-                          {promoResult?.description}
-                        </p>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={handleRemovePromo}
-                      className="rounded p-1 text-text-tertiary transition-colors hover:bg-bg-raised-hover hover:text-text-primary"
-                      aria-label="Remove promo code"
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                </section>
-              ) : (
-                <section className="rounded-xl border border-border-subtle bg-bg-raised p-3">
-                  <div className="flex items-center gap-2">
-                    <Tag className="h-3.5 w-3.5 shrink-0 text-text-tertiary" />
-                    <input
-                      type="text"
-                      value={promoInput}
-                      onChange={(e) => setPromoInput(e.target.value.toUpperCase())}
-                      onKeyDown={(e) => e.key === 'Enter' && handleApplyPromo()}
-                      placeholder="Promo code"
-                      className="h-9 flex-1 rounded-md border-0 bg-transparent px-1 font-mono text-[13px] uppercase tracking-widest text-text-primary placeholder:font-sans placeholder:tracking-normal placeholder:text-text-tertiary focus:outline-none"
-                    />
-                    <Button
-                      type="button"
-                      onClick={handleApplyPromo}
-                      disabled={!promoInput.trim() || promoValidating}
-                      className="h-9 rounded-md bg-lime px-3.5 text-[12.5px] font-bold text-text-inverse hover:bg-lime-hover"
-                    >
-                      {promoValidating ? (
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      ) : (
-                        'Apply'
-                      )}
-                    </Button>
-                  </div>
-                </section>
-              )}
-
-              {/* Continue */}
-              <Button
-                type="button"
-                onClick={() => { setStep(2); window.scrollTo({ top: 0, behavior: 'smooth' }) }}
-                className="flex h-12 w-full items-center justify-center gap-2 rounded-xl text-sm font-bold uppercase tracking-wider bg-lime text-text-inverse shadow-elevated hover:bg-lime-hover hover:shadow-glow sm:h-14 sm:text-base"
-              >
-                <CreditCard className="h-5 w-5" />
-                Continue to payment
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </motion.div>
-          )}
-
-          {step === 2 && (
-            <motion.div
-              key="step2"
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
-              className="space-y-3"
-            >
-              {/* V23 — CoinGate hosted-redirect checkout (replaces Stripe
-                  Elements). The buyer pays crypto on CoinGate's page and is
-                  returned to /orders/[id]. The charge amount is computed
-                  server-side in createCheckout — never trusted from here. */}
-              <CryptoPayPanel
-                listingId={listing.id}
-                quantity={quantity}
-                promoDiscount={promoDiscount}
-                walletAmount={walletAmount}
-                total={total}
-              />
-            </motion.div>
-          )}
-        </AnimatePresence>
-        </div>
-      </div>
-
-      {/* ── RIGHT: Your Order. Full-bleed bg-bg-raised + hard left
-          divider; inner content capped at 560px for readability. */}
-      <div className="relative bg-bg-raised px-5 py-10 sm:px-8 lg:border-l lg:border-border-default lg:py-14">
-        <div className="mx-auto w-full max-w-[560px]">
-          <OrderSummary {...summaryProps} />
-        </div>
-      </div>
-      </div>
-    </>
-  )
-}
-
-
-// ─── CryptoPayPanel (CoinGate hosted-redirect checkout) ─────────────────────
-// V23 — Replaces the Stripe Elements PaymentForm. Renders the guest/login
-// choice + a "Pay with crypto" button that POSTs to createCheckout and, on
-// success, redirects the buyer to CoinGate's hosted payment page (or straight
-// to the order if fully covered by wallet credit). All amounts are computed
-// server-side; nothing here is trusted as money.
-function CryptoPayPanel({
-  listingId,
-  quantity,
-  promoDiscount,
-  walletAmount,
-  total,
-}: {
-  listingId: string
-  quantity: number
-  promoDiscount: number
-  walletAmount: number
-  total: number
-}) {
-  const router = useRouter()
-  const [isProcessing, setIsProcessing] = useState(false)
-  const [errorMessage, setErrorMessage] = useState<string | null>(null)
-
+  const [paying, setPaying] = useState(false)
+  const [payError, setPayError] = useState<string | null>(null)
   const handlePay = async () => {
-    setIsProcessing(true)
-    setErrorMessage(null)
+    setPaying(true)
+    setPayError(null)
     try {
-      const result = await createCheckout({ listingId, quantity, promoDiscount, walletAmount })
+      const result = await createCheckout({
+        listingId: listing.id,
+        quantity,
+        promoDiscount,
+        walletAmount,
+      })
       if (!result.success) {
-        setErrorMessage(result.error || 'Checkout failed')
+        setPayError(result.error || 'Checkout failed')
         toast.error(result.error || 'Checkout failed')
-        setIsProcessing(false)
+        setPaying(false)
         return
       }
       if (result.fullyPaidByWallet && result.orderId) {
@@ -1386,78 +352,857 @@ function CryptoPayPanel({
         return
       }
       if (result.checkoutUrl) {
-        // Hand off to CoinGate's hosted page; the buyer returns to /orders/[id].
         window.location.href = result.checkoutUrl
         return
       }
-      setErrorMessage('No checkout URL returned')
-      setIsProcessing(false)
+      setPayError('No checkout URL returned')
+      setPaying(false)
     } catch (err: any) {
-      setErrorMessage(err?.message || 'An unexpected error occurred')
+      setPayError(err?.message || 'An unexpected error occurred')
       toast.error(err?.message || 'An unexpected error occurred')
-      setIsProcessing(false)
+      setPaying(false)
     }
   }
 
+  const isBundle = !!bundleSummary
+  const title = bundleSummary?.name || listing.title
+  const imageSrc =
+    bundleSummary?.iconUrl ||
+    listing.images?.[0] ||
+    listing.game?.image_url ||
+    '/placeholder-game.jpg'
+
   return (
-    <div className="space-y-3">
-      <SubCard title="Pay with crypto">
-        <div className="space-y-3">
-          <div className="flex items-start gap-3 rounded-xl border border-border-subtle bg-bg-overlay p-3">
-            <Coins className="mt-0.5 h-4 w-4 shrink-0 text-lime-text" />
-            <p className="text-xs text-text-secondary">
-              You&apos;ll be taken to our payment partner to complete your crypto payment securely.
-              Funds are held in SafeDrop escrow until you confirm delivery.
-            </p>
+    // P1/P3 — Site-aligned container (max-w-7xl, same gutters as every
+    // other page), sitting directly under the global navbar. The handoff's
+    // outer card shell is gone: sections float on the page canvas.
+    <div className="mx-auto w-full max-w-7xl px-4 pb-2 pt-5 sm:px-6 sm:pb-4 sm:pt-7 lg:px-8">
+        {/* P5 — Checkout-own header: no navbar on this page. Brand goes
+            home; the secure badge balances it on the right. */}
+        <div className="mb-8 flex items-center justify-between sm:mb-10">
+          <Link href="/" className="inline-flex items-center gap-2.5 transition-opacity hover:opacity-85">
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-lime text-[15px] font-black text-text-inverse">
+              D
+            </span>
+            <span className="text-[17px] font-black tracking-tight text-white">DropMarket</span>
+          </Link>
+          <div className="flex items-center gap-4 sm:gap-5">
+            <span className="flex items-center gap-2 text-[12.5px] font-bold text-lime-text">
+              <ShieldCheck className="h-4 w-4" />
+              <span className="hidden sm:inline">256-bit SSL secure</span>
+              <span className="sm:hidden">Secure</span>
+            </span>
+
+            {user ? (
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setAcctOpen((v) => !v)}
+                  aria-expanded={acctOpen}
+                  aria-label="Your account"
+                  className="block rounded-md ring-1 ring-white/[0.12] transition-all hover:ring-[rgba(198,255,61,0.4)]"
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={getAvatarUrl(buyerProfile?.avatar_url, buyerProfile?.username || user.email || 'user')}
+                    alt=""
+                    className="h-9 w-9 rounded-md object-cover"
+                  />
+                </button>
+
+                {acctOpen && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setAcctOpen(false)} />
+                    {/* Navbar-style dropdown: solid panel, gap below the
+                        trigger, CSS entry animation. */}
+                    <div className="absolute right-0 top-full z-50 mt-3 w-[300px] overflow-hidden rounded-lg border border-white/[0.08] bg-[#17171F] shadow-[0_24px_60px_-24px_rgba(0,0,0,0.8)] animate-in fade-in-0 zoom-in-95 slide-in-from-top-2 duration-200">
+                      <div className="relative border-b border-white/[0.07] bg-[linear-gradient(to_bottom,rgba(255,255,255,0.04),transparent)] p-4">
+                        <div className="flex items-center gap-3">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={getAvatarUrl(buyerProfile?.avatar_url, buyerProfile?.username || user.email || 'user')}
+                            alt=""
+                            className="h-10 w-10 rounded-md object-cover ring-1 ring-white/[0.09]"
+                          />
+                          <div className="min-w-0 flex-1">
+                            <div className="truncate text-[14px] font-extrabold text-white">
+                              {buyerProfile?.username || 'Your Account'}
+                            </div>
+                            <div className="mt-0.5 text-[11.5px] text-[#7b8398]">
+                              Member since{' '}
+                              {new Date(user.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
+                            </div>
+                          </div>
+                          <span className="inline-flex flex-none items-center gap-1 text-[11px] font-extrabold text-success">
+                            <Check className="h-3.5 w-3.5" />
+                            Signed In
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex flex-col gap-2.5 p-4">
+                        <div className="flex items-center justify-between gap-3 rounded-md border border-white/[0.07] bg-[#0d1017] px-3 py-2.5">
+                          <span className="text-[11px] font-bold uppercase tracking-wider text-[#7b8398]">Email</span>
+                          <span className="truncate text-[12.5px] font-bold text-white">{user.email}</span>
+                        </div>
+                        <p className="text-center text-[11.5px] leading-relaxed text-[#7b8398]">
+                          Order confirmation and delivery updates go to this profile and email.
+                        </p>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            ) : (
+              <Link href="/login" className="text-[12.5px] font-bold text-white transition-colors hover:text-lime-text">
+                Sign In
+              </Link>
+            )}
+          </div>
+        </div>
+
+        {/* Page heading above the grid so the method list and the order
+            panel top-align underneath it. 3D icon slot renders through
+            SilverIcon — drop the real icon at public/icons/checkout/protection.png. */}
+        <div className="mb-6 hidden items-center gap-2.5 sm:flex">
+          <SilverIcon src="/icons/checkout/cart.svg" className="h-8 w-8" />
+          <h2 className="text-[23px] font-extrabold tracking-[-0.4px] text-white">Secure Checkout</h2>
+        </div>
+
+        {/* ═══ Body grid: pay-with left · order panel right ═══ */}
+        <div className="grid gap-6 sm:gap-8 lg:grid-cols-[minmax(0,1fr)_400px] lg:items-start xl:grid-cols-[minmax(0,1fr)_420px] xl:gap-10">
+
+          {/* ── LEFT: Pay with + SafeDrop protection ── */}
+          <div className="order-2 min-w-0 lg:order-1">
+            {/* Mobile: eyebrow + horizontal chip scroller (2b) */}
+            <div className="sm:hidden">
+              <div className="mx-0.5 mb-2 text-[11px] font-bold tracking-[1px] text-[#7b8398]">PAY WITH</div>
+              <div className="mb-1 flex gap-2 overflow-x-auto pb-2">
+                {/* Live methods lead the scroller so the selected chip is
+                    visible without scrolling (2b leads with the selection). */}
+                {[...METHODS].sort((a, b) => (a.soon ? 1 : 0) - (b.soon ? 1 : 0)).map((m) => {
+                  const on = method === m.id
+                  return (
+                    <button
+                      key={m.id}
+                      type="button"
+                      disabled={m.soon}
+                      onClick={() => setMethod(m.id)}
+                      className={cn(
+                        'flex flex-none items-center gap-[7px] rounded-md border px-[13px] py-2 transition-all',
+                        on
+                          ? 'border-white/[0.16] bg-[#1a2030] shadow-[0_8px_18px_-10px_rgba(0,0,0,0.6)]'
+                          : 'border-white/[0.07] bg-[#12151e]',
+                        m.soon && 'opacity-50',
+                      )}
+                    >
+                      <BrandTile id={m.id} mini />
+                      <span className={cn('text-[12px] font-bold', on ? 'text-white' : 'text-[#a5adbe]')}>{m.chip}</span>
+                      {m.soon && <span className="text-[8.5px] font-extrabold uppercase tracking-wider text-[#7b8398]">Soon</span>}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* Desktop: method rows */}
+            <div className="hidden flex-col gap-2 sm:flex">
+              {METHODS.map((m) => {
+                const on = method === m.id
+                return (
+                  <button
+                    key={m.id}
+                    type="button"
+                    disabled={m.soon}
+                    onClick={() => setMethod(m.id)}
+                    aria-pressed={on}
+                    className={cn(
+                      'flex items-center gap-3 rounded-md border border-white/[0.06] bg-[#12151e] px-3.5 py-2.5 text-left transition-colors duration-150',
+                      m.soon
+                        ? 'cursor-not-allowed opacity-55'
+                        : 'hover:border-white/[0.12] hover:bg-[#1a1f2b]',
+                    )}
+                  >
+                    <BrandTile id={m.id} />
+                    <span className="flex min-w-0 flex-1 items-center gap-2">
+                      <span className="truncate text-[14px] font-bold text-white">{m.title}</span>
+                      {m.sub && (
+                        <span
+                          title={m.sub}
+                          aria-label={m.sub}
+                          className="inline-flex h-[15px] w-[15px] flex-none cursor-help items-center justify-center rounded-full bg-[#232838] text-[9px] text-[#7b8398]"
+                        >
+                          ?
+                        </span>
+                      )}
+                      {m.soon && (
+                        <span className="rounded border border-[rgba(251,191,36,0.3)] bg-[rgba(251,191,36,0.08)] px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-[0.08em] text-warning">
+                          Soon
+                        </span>
+                      )}
+                    </span>
+                    {on ? (
+                      <span className="flex h-[22px] w-[22px] flex-none items-center justify-center rounded-full bg-lime">
+                        <Check className="h-3 w-3 text-[#0c0e14]" strokeWidth={4} />
+                      </span>
+                    ) : (
+                      <span className="h-[22px] w-[22px] flex-none rounded-full border-2 border-[#363c4c]" />
+                    )}
+                  </button>
+                )
+              })}
+            </div>
+
+            {/* P9 — SafeDrop Additional Warranty: lime-glass premium
+                dropdown; picking a tier drives the real fee math
+                (safedropTier → tierFeeAmount → Order Details row).
+                Hero art behind = warranty-hero.png, revealed as the
+                dropdown opens (clipped by the card). */}
+            <div className="group relative mt-8 overflow-hidden rounded-lg border border-[rgba(198,255,61,0.12)] backdrop-blur-md transition-all duration-300 [background:radial-gradient(140%_160%_at_88%_8%,rgba(198,255,61,0.06),rgba(198,255,61,0.02)_45%,rgba(13,15,10,0.92)_82%)] shadow-[0_18px_44px_-20px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.05)] hover:-translate-y-0.5 hover:border-white/[0.16] hover:shadow-[0_26px_56px_-22px_rgba(0,0,0,0.8),inset_0_1px_0_rgba(255,255,255,0.07)] sm:mt-10">
+              <span aria-hidden className="pointer-events-none absolute inset-0 hidden select-none sm:block">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/assets/checkout/warranty-hero.png"
+                  alt=""
+                  className="absolute -right-20 top-1 w-[420px] max-w-none opacity-40 [filter:brightness(0.6)_saturate(0.85)]"
+                />
+                <span className="absolute inset-0 bg-[linear-gradient(to_right,rgba(12,16,7,0.97)_36%,rgba(12,16,7,0.62)_64%,rgba(12,16,7,0.22)_100%)]" />
+                <span className="absolute inset-0 bg-[radial-gradient(130%_150%_at_78%_18%,transparent_30%,rgba(12,16,7,0.82)_100%)]" />
+              </span>
+              {/* grey hover wash — deliberately no lime glow */}
+              <span aria-hidden className="pointer-events-none absolute inset-0 bg-white/[0.04] opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+
+              <button
+                type="button"
+                onClick={() => setWarrantyOpen((v) => !v)}
+                aria-expanded={warrantyOpen}
+                className="relative z-[1] flex w-full cursor-pointer items-center gap-3.5 p-4 text-left sm:p-5"
+              >
+                <SilverIcon src="/icons/checkout/protection.png" className="h-9 w-9" />
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[15px] font-bold text-white">SafeDrop Additional Warranty</span>
+                  <span className="mt-0.5 block text-[12px] text-[#a5adbe]">Extend buyer protection up to 30 days</span>
+                </span>
+                <span className="hidden flex-none items-center rounded-md border border-[rgba(198,255,61,0.3)] bg-[#1d2610] px-2.5 py-1 text-[11.5px] font-bold tabular-nums text-lime-text sm:flex">
+                  {selectedTier.name} · {selectedTier.feeRate === 0 ? 'Free' : `+$${tierFeeAmount.toFixed(2)}`}
+                </span>
+                <ChevronDown className={cn('h-4 w-4 flex-none text-[#9aa3b6] transition-transform duration-300', warrantyOpen && 'rotate-180')} />
+              </button>
+
+              {/* Pinned selected tier — always visible so the collapsed
+                  panel reads the current choice; clicking it (or the
+                  header) opens the other options like a select. */}
+              <div className="relative z-[1] px-4 pb-4 sm:px-5 sm:pb-5">
+                <button
+                  type="button"
+                  onClick={() => setWarrantyOpen((v) => !v)}
+                  aria-expanded={warrantyOpen}
+                  className="relative flex w-full items-center gap-3 overflow-hidden rounded-md border-2 border-border-strong bg-[rgba(26,26,35,0.7)] px-3.5 py-3 text-left shadow-[0_10px_24px_-10px_rgba(0,0,0,0.65)] backdrop-blur-md transition-all duration-200"
+                >
+                  <span aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-1/2 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.06),transparent)]" />
+                  <span className="grid h-9 w-9 flex-none place-items-center rounded-md border border-white/[0.08] bg-white/[0.05]">
+                    <selectedTier.icon className="h-4 w-4 text-[#a5adbe]" />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="flex items-center gap-2 text-[13.5px] font-extrabold text-white">
+                      {selectedTier.name}
+                      {selectedTier.badge && (
+                        <span className="rounded bg-lime px-1.5 py-px text-[8.5px] font-black uppercase tracking-[0.08em] text-[#12200a]">
+                          Popular
+                        </span>
+                      )}
+                    </span>
+                    <span className="mt-0.5 block truncate text-[11.5px] text-[#9aa3b6]">
+                      {selectedTier.warranty} · {selectedTier.features[2]}
+                    </span>
+                  </span>
+                  <span className="flex-none text-[13px] font-extrabold tabular-nums text-white">
+                    {selectedTier.feeRate === 0 ? 'Free' : `+$${tierFeeAmount.toFixed(2)}`}
+                  </span>
+                  <span className="flex h-[18px] w-[18px] flex-none items-center justify-center rounded-full bg-lime">
+                    <Check className="h-2.5 w-2.5 text-[#0c0e14]" strokeWidth={4} />
+                  </span>
+                </button>
+
+                <AnimatePresence initial={false}>
+                  {warrantyOpen && (
+                    <motion.div
+                      key="warranty-options"
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.28, ease: 'easeOut' }}
+                      className="overflow-hidden"
+                    >
+                      <div className="mt-2.5 flex flex-col gap-2.5">
+                        {TIERS.filter((t) => t.id !== safedropTier).map((tier) => {
+                          const TierIcon = tier.icon
+                          const fee = tier.feeRate === 0 ? 'Free' : `+$${((subtotal * tier.feeRate) / 100).toFixed(2)}`
+                          return (
+                            <button
+                              key={tier.id}
+                              type="button"
+                              onClick={() => {
+                                setSafedropTier(tier.id)
+                                setWarrantyOpen(false)
+                              }}
+                              className="relative flex w-full items-center gap-3 overflow-hidden rounded-md border-2 border-border-default bg-[rgba(20,20,27,0.56)] px-3.5 py-3 text-left backdrop-blur-md transition-all duration-200 hover:-translate-y-0.5 hover:border-border-strong hover:bg-[rgba(26,26,35,0.70)] hover:shadow-[0_10px_22px_-10px_rgba(0,0,0,0.6)]"
+                            >
+                              <span aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-1/2 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.06),transparent)]" />
+                              <span className="grid h-9 w-9 flex-none place-items-center rounded-md border border-white/[0.08] bg-white/[0.05]">
+                                <TierIcon className="h-4 w-4 text-[#a5adbe]" />
+                              </span>
+                              <span className="min-w-0 flex-1">
+                                <span className="flex items-center gap-2 text-[13.5px] font-extrabold text-white">
+                                  {tier.name}
+                                  {tier.badge && (
+                                    <span className="rounded bg-lime px-1.5 py-px text-[8.5px] font-black uppercase tracking-[0.08em] text-[#12200a]">
+                                      Popular
+                                    </span>
+                                  )}
+                                </span>
+                                <span className="mt-0.5 block truncate text-[11.5px] text-[#9aa3b6]">
+                                  {tier.warranty} · {tier.features[2]}
+                                </span>
+                              </span>
+                              <span className="flex-none text-[13px] font-extrabold tabular-nums text-white">{fee}</span>
+                              <span className="h-[18px] w-[18px] flex-none rounded-full border-2 border-[#3d4436]" />
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            </div>
+
+            {/* Trust panel
+
+            {/* Trust panel — sized for the column. Watermark = the user's
+                premium locker render (public/assets/checkout/secure-hero.png). */}
+            <div className="relative mt-5 overflow-hidden rounded-lg border border-[rgba(120,175,255,0.24)] p-4 [background:radial-gradient(140%_160%_at_90%_10%,rgba(96,165,255,0.2),rgba(96,165,255,0.05)_42%,#0b1220_80%)] sm:mt-6 sm:p-5">
+              {/* P8 — Proper hero-style bg (per tokens.css --hero-scrim /
+                  --hero-vignette, adapted to the panel's blue): big shield
+                  half-cut off the top-right, scrim keeps the text zone
+                  dark, vignette seals the edges. */}
+              <span aria-hidden className="pointer-events-none absolute inset-0 hidden select-none sm:block">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/assets/checkout/secure-hero.png"
+                  alt=""
+                  className="absolute -bottom-24 -right-14 w-[300px] max-w-none rotate-[8deg] [filter:brightness(0.55)_saturate(0.8)] opacity-30"
+                />
+                <span className="absolute inset-0 bg-[linear-gradient(to_right,rgba(11,18,32,0.95)_32%,rgba(11,18,32,0.55)_60%,rgba(11,18,32,0.16)_100%)]" />
+                <span className="absolute inset-0 bg-[radial-gradient(130%_150%_at_82%_78%,transparent_26%,rgba(11,18,32,0.85)_100%)]" />
+              </span>
+              {/* mobile keeps the quiet corner mark */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/assets/checkout/secure-hero.png"
+                alt=""
+                aria-hidden
+                className="pointer-events-none absolute -bottom-6 -right-6 w-[110px] select-none opacity-10 sm:hidden"
+              />
+              <div className="relative">
+                {/* Whole panel toggles the explainer (same behaviour as the
+                    warranty dropdown): header + pill both live in <summary>. */}
+                <div>
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    aria-expanded={trustOpen}
+                    onClick={() => setTrustOpen((v) => !v)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault()
+                        setTrustOpen((v) => !v)
+                      }
+                    }}
+                    className="cursor-pointer"
+                  >
+                    <div className="flex items-center gap-3.5">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src="/assets/checkout/shield-3d.png"
+                        alt="SafeDrop"
+                        className="h-[38px] w-[38px] flex-none select-none object-contain drop-shadow-[0_6px_14px_rgba(96,165,255,0.4)] sm:h-12 sm:w-12"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <div className="hidden text-[15px] font-bold text-white sm:block">Safe &amp; Secure Payment</div>
+                        <div className="hidden text-[12.5px] leading-snug text-[#9aa3b6] sm:mt-0.5 sm:block">
+                          100% payments guaranteed by{' '}
+                          <Link href="/safedrop" onClick={(e) => e.stopPropagation()} className="text-[#88bbff] transition-colors hover:text-white">SafeDrop</Link>
+                          {' '}&amp; our{' '}
+                          <Link href="/refund-policy" onClick={(e) => e.stopPropagation()} className="text-[#88bbff] transition-colors hover:text-white">Refund Policy</Link>
+                        </div>
+                        <div className="text-[11.5px] leading-[1.4] text-[#a5adbe] sm:hidden">
+                          <span className="font-bold text-white">Safe &amp; Secure.</span> Guaranteed by{' '}
+                          <Link href="/safedrop" onClick={(e) => e.stopPropagation()} className="text-[#88bbff]">SafeDrop</Link> &amp; escrow protected.
+                        </div>
+                      </div>
+                      <span className="hidden flex-none items-center gap-2 sm:flex">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src="/assets/checkout/lock.png" alt="" aria-hidden className="h-7 w-7 select-none object-contain drop-shadow-[0_4px_8px_rgba(0,0,0,0.35)]" />
+                        <span className="text-[13px] font-extrabold text-[#f1d98d]">Funds Safe</span>
+                      </span>
+                    </div>
+
+                    <div className="mt-3 flex items-center gap-2 rounded-md border border-white/[0.09] bg-white/[0.05] px-3 py-[9px] text-[12px] font-semibold text-[#dbe2ee] transition-colors hover:bg-white/[0.08] sm:mt-4 sm:px-3.5 sm:py-2.5 sm:text-[12.5px]">
+                      <Info className="h-[15px] w-[15px] flex-none text-[#88bbff]" />
+                      How your order is protected
+                      <ChevronDown className={cn('ml-auto h-4 w-4 flex-none text-[#9aa3b6] transition-transform duration-300', trustOpen && 'rotate-180')} />
+                    </div>
+                  </div>
+
+                  <AnimatePresence initial={false}>
+                    {trustOpen && (
+                      <motion.div
+                        key="trust-body"
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.28, ease: 'easeOut' }}
+                        className="overflow-hidden"
+                      >
+                        <div className="mt-4 flex flex-col gap-3.5">
+                    {[
+                      ['You pay securely', 'Your funds are held safely in SafeDrop escrow — not sent to the seller yet.'],
+                      ['Seller is notified', 'The seller receives your order and is prompted to deliver it.'],
+                      ['Seller delivers', 'Your item or in-game currency is delivered to your account.'],
+                      ['You confirm delivery', 'Check everything is right, then confirm receipt in your account.'],
+                    ].map(([t, d], i) => (
+                      <div key={t} className="flex items-start gap-3">
+                        <span className="flex h-6 w-6 flex-none items-center justify-center rounded-full border border-white/[0.16] bg-white/[0.05] text-[11px] font-bold text-[#9aa3b6]">
+                          {i + 1}
+                        </span>
+                        <span className="min-w-0">
+                          <span className="block text-[13px] font-bold text-white">{t}</span>
+                          <span className="mt-0.5 block text-[12px] text-[#9aa3b6]">{d}</span>
+                        </span>
+                      </div>
+                    ))}
+                    <div className="flex items-start gap-3">
+                      <span className="flex h-6 w-6 flex-none items-center justify-center rounded-full border border-white/[0.16] bg-white/[0.05] text-[12px] font-bold text-[#9aa3b6]">
+                        ✓
+                      </span>
+                      <span className="min-w-0">
+                        <span className="block text-[13px] font-bold text-lime-text">Funds released — or you&apos;re refunded</span>
+                        <span className="mt-0.5 block text-[12px] text-[#9aa3b6]">
+                          Only then does the seller get paid. No delivery or item not as described? You get a full refund.
+                        </span>
+                      </span>
+                    </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              </div>
+            </div>
           </div>
 
-          <Button
-            type="button"
-            onClick={handlePay}
-            disabled={isProcessing}
-            className={cn(
-              'flex h-12 w-full items-center justify-center gap-2 rounded-xl text-sm font-bold uppercase tracking-wider sm:h-14 sm:text-base',
-              isProcessing
-                ? 'cursor-not-allowed bg-bg-raised text-text-disabled'
-                : 'bg-lime text-text-inverse shadow-elevated hover:bg-lime-hover hover:shadow-glow',
-            )}
-          >
-            {isProcessing ? (
-              <>
-                <Loader2 className="h-5 w-5 animate-spin" />
-                Redirecting to payment…
-              </>
-            ) : (
-              <>
-                <Coins className="h-5 w-5" />
-                Pay {total > 0 ? `$${total.toFixed(2)}` : ''} with crypto
-                <ArrowRight className="h-4 w-4" />
-              </>
-            )}
-          </Button>
+          {/* ── RIGHT: one Order Details card — item · seller · money · pay ── */}
+          <div className="order-1 flex flex-col gap-5 sm:gap-6 lg:order-2 lg:sticky lg:top-6">
+            <div className="relative overflow-hidden rounded-lg border border-white/[0.08] bg-[linear-gradient(180deg,#151a26,#0f131d)] p-4 shadow-[0_20px_50px_rgba(0,0,0,0.4)] sm:p-5">
+              {/* Llama watermark — oversized, peeking from the top-right
+                  and slightly tilted, clipped by the card. */}
+              {/* Llama hero bg — scrim keeps the money zone dark, the
+                  vignette leaves one bright spot at the top-right so it
+                  reads like the site's hero backdrops. */}
+              <span aria-hidden className="pointer-events-none absolute inset-0 hidden select-none sm:block">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/assets/checkout/llama.png"
+                  alt=""
+                  className="absolute -right-32 -top-20 w-[400px] max-w-none rotate-[-12deg] opacity-50 [filter:brightness(0.6)_saturate(0.7)]"
+                />
+                <span className="absolute inset-0 bg-[linear-gradient(to_right,rgba(16,20,30,0.96)_32%,rgba(16,20,30,0.6)_58%,rgba(16,20,30,0.2)_100%)]" />
+                <span className="absolute inset-0 bg-[radial-gradient(130%_150%_at_82%_14%,transparent_26%,rgba(14,18,27,0.88)_100%)]" />
+              </span>
+              <div className="relative">
+                <div className="flex items-center gap-2.5">
+                  <SilverIcon src="/icons/checkout/receipt.svg" className="h-6 w-6" />
+                  <h3 className="text-[16px] font-extrabold text-white">Order Details</h3>
+                </div>
 
-          <p className="text-center text-[11px] text-text-tertiary">
-            By paying, you agree to the Terms of Use and acknowledge the Refund &amp; Dispute Policy.
-          </p>
-        </div>
-      </SubCard>
+                <div className="my-3 h-px bg-white/[0.07]" />
 
-      <AnimatePresence>
-        {errorMessage && (
-          <motion.div
-            initial={{ opacity: 0, y: -6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -6 }}
-            className="flex items-start gap-3 rounded-2xl border border-error/40 bg-error-bg p-4"
-          >
-            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-error" />
-            <div>
-              <p className="text-sm font-semibold text-error">Payment error</p>
-              <p className="mt-0.5 text-sm text-text-secondary">{errorMessage}</p>
+                {/* Item — photo · name · qty · description */}
+                <div className="flex items-start gap-3">
+                  <span
+                    className="relative h-14 w-14 flex-none overflow-hidden rounded-md border border-white/[0.09]"
+                    style={{
+                      background: 'linear-gradient(180deg,#2b3242,#10131b)',
+                      boxShadow: 'inset 0 1px 0 rgba(255,255,255,.3), inset 0 -9px 16px rgba(0,0,0,.42), 0 6px 16px rgba(0,0,0,.45)',
+                    }}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={imageSrc}
+                      alt={title}
+                      className={cn('h-full w-full', isBundle ? 'object-contain p-1.5' : 'object-cover')}
+                    />
+                    <span aria-hidden className="pointer-events-none absolute inset-0 rounded-md bg-[linear-gradient(180deg,rgba(255,255,255,0.24),transparent_44%)]" />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="line-clamp-2 block text-[15.5px] font-bold leading-snug text-white">
+                      {quantity > 1 && <span className="text-lime-text">{quantity}× </span>}
+                      {title}
+                    </span>
+                    <span className="mt-1.5 inline-flex min-w-0 items-center gap-1.5 text-[13px] font-semibold text-[#a5adbe]">
+                      {listing.game?.image_url && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={listing.game.image_url} alt="" aria-hidden className="h-4 w-4 flex-none rounded-sm object-cover" />
+                      )}
+                      <span className="truncate">{listing.game?.name}</span>
+                    </span>
+                  </span>
+                </div>
+
+                {/* Seller — label left, floating profile right */}
+                {listing.seller && (
+                  <div className="mt-3 flex items-center justify-between gap-3">
+                    <span className="text-[13px] font-medium text-[#a5adbe] sm:text-[13.5px]">Seller</span>
+                    <SellerPeek seller={listing.seller} reviews={sellerReviews} />
+                  </div>
+                )}
+
+                {/* Description — half-open: ~2 lines visible, faded tail +
+                    chevron only when there's more to read */}
+                {listing.description?.trim() && (
+                  <div className="mt-2.5">
+                    <button
+                      type="button"
+                      onClick={() => descOverflow && setDescOpen((v) => !v)}
+                      aria-expanded={descOpen}
+                      className={cn(
+                        'flex w-full items-center gap-[9px] py-0.5 text-left text-[13px] font-semibold text-[#a5adbe] transition-colors',
+                        descOverflow ? 'cursor-pointer hover:text-white' : 'cursor-default',
+                      )}
+                    >
+                      Description
+                      {descOverflow && (
+                        <ChevronDown className={cn('ml-auto h-[15px] w-[15px] flex-none text-[#7b8398] transition-transform duration-300', descOpen && 'rotate-180')} />
+                      )}
+                    </button>
+                    <div
+                      className={cn(
+                        'overflow-hidden transition-[max-height] duration-300 ease-out',
+                        descOpen ? 'max-h-[600px]' : 'max-h-[64px]',
+                        !descOpen && descOverflow && '[mask-image:linear-gradient(to_bottom,black_42%,rgba(0,0,0,0.3)_78%,transparent_100%)]',
+                      )}
+                    >
+                      <p ref={descRef} className="mt-1 whitespace-pre-line text-[12.5px] leading-relaxed text-[#8d95a8]">
+                        {listing.description}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                <div className="my-3 h-px bg-white/[0.07]" />
+
+              {!appliedCode && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setCodeOpen((v) => !v)}
+                    aria-expanded={codeOpen}
+                    className="flex w-full cursor-pointer items-center gap-[9px] py-0.5 text-left text-[13px] font-semibold text-[#a5adbe] transition-colors hover:text-white"
+                  >
+                    <Tag className="h-[15px] w-[15px] flex-none text-[#7b8398]" />
+                    Have a discount code?
+                    <ChevronDown className={cn('ml-auto h-[15px] w-[15px] flex-none text-[#7b8398] transition-transform duration-300', codeOpen && 'rotate-180')} />
+                  </button>
+                  <AnimatePresence initial={false}>
+                    {codeOpen && (
+                      <motion.div
+                        key="code-body"
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.28, ease: 'easeOut' }}
+                        className="overflow-hidden"
+                      >
+                        <div className="mt-3 flex gap-2 pb-1">
+                      <span className="flex h-9 min-w-0 flex-1 items-center gap-[9px] rounded-md border border-white/[0.1] bg-[#0d1017] px-3 transition-colors focus-within:border-[rgba(198,255,61,0.45)]">
+                        <Tag className="h-[15px] w-[15px] flex-none text-[#7b8398]" />
+                        <input
+                          value={promoInput}
+                          onChange={(e) => setPromoInput(e.target.value.toUpperCase())}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault()
+                              handleApplyPromo()
+                            }
+                          }}
+                          placeholder="Discount code"
+                          className="h-full min-w-0 flex-1 border-0 bg-transparent text-[12.5px] font-medium uppercase tracking-[0.06em] text-[#eef1f6] outline-none ring-0 focus:outline-none focus:ring-0 focus-visible:outline-none placeholder:normal-case placeholder:tracking-normal placeholder:text-[#6d7488]"
+                        />
+                      </span>
+                      <button
+                        type="button"
+                        onClick={handleApplyPromo}
+                        disabled={!promoInput.trim() || promoValidating}
+                        className="inline-flex h-9 flex-none items-center rounded-md border border-[rgba(198,255,61,0.38)] bg-[rgba(198,255,61,0.12)] px-4 text-[12px] font-bold text-lime-text transition-all duration-200 hover:border-transparent hover:bg-lime hover:text-[#12200a] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-[rgba(198,255,61,0.38)] disabled:hover:bg-[rgba(198,255,61,0.12)] disabled:hover:text-lime-text"
+                      >
+                        {promoValidating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Apply'}
+                      </button>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  <div className="my-4 h-px bg-white/[0.07]" />
+                </>
+              )}
+
+              {/* Fee list */}
+              <div className="flex flex-col gap-3 text-[13px] font-medium text-[#a5adbe] sm:text-[13.5px]">
+                <FeeRow
+                  label="Subtotal"
+                  extra={
+                    quantity > 1 ? (
+                      <span className="tabular-nums text-[11px] text-[#6d7488]">
+                        {fmtUnitPrice(listing.price)} × {quantity}
+                      </span>
+                    ) : undefined
+                  }
+                  value={`$${subtotal.toFixed(2)}`}
+                />
+                <FeeRow
+                  label="Marketplace fee"
+                  tooltip={`${platformFeeRate.toFixed(1)}% of subtotal — keeps escrow, moderation and 24/7 support running`}
+                  value={`+$${platformFee.toFixed(2)}`}
+                />
+                <FeeRow
+                  label="Processor fee"
+                  tooltip="3.5% charged by the crypto payment processor (CoinGate)"
+                  value={`+$${paymentProcessingFee.toFixed(2)}`}
+                />
+                {selectedTier.feeRate > 0 && (
+                  <FeeRow label={`SafeDrop ${selectedTier.name}`} value={`+$${tierFeeAmount.toFixed(2)}`} valueClass="text-lime-text" />
+                )}
+                {appliedCode && (
+                  <FeeRow
+                    label={`Code ${appliedCode}`}
+                    value={`−$${promoDiscount.toFixed(2)}`}
+                    valueClass="text-success"
+                    extra={
+                      <button
+                        type="button"
+                        onClick={handleRemovePromo}
+                        aria-label="Remove discount code"
+                        className="rounded p-0.5 text-[#7b8398] transition-colors hover:bg-white/10 hover:text-white"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    }
+                  />
+                )}
+                <FeeRow
+                  label="Store credit"
+                  icon={
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src="/assets/checkout/dm-coin.png" alt="" aria-hidden className="h-5 w-5 flex-none select-none object-contain" />
+                  }
+                  extra={
+                    walletBalance > 0 ? (
+                      <MiniSwitch on={useWallet} onToggle={() => setUseWallet(!useWallet)} label="Apply store credit" />
+                    ) : undefined
+                  }
+                  value={useWallet && walletAmount > 0 ? `−$${walletAmount.toFixed(2)}` : `$${walletBalance.toFixed(2)}`}
+                  valueClass={useWallet && walletAmount > 0 ? 'text-success' : undefined}
+                />
+                {dropCreditsBalance > 0 && (
+                  <FeeRow
+                    label="Drop Credits"
+                    icon={
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src="/assets/checkout/dm-coin.png" alt="" aria-hidden className="h-5 w-5 flex-none select-none object-contain" />
+                    }
+                    extra={<MiniSwitch on={useDropCredits} onToggle={() => setUseDropCredits(!useDropCredits)} label="Apply Drop Credits" />}
+                    value={`${dropCreditsBalance.toLocaleString()} DC`}
+                  />
+                )}
+              </div>
+
+              <div className="my-4 h-px bg-white/[0.07]" />
+
+              {/* Total + DC earn line */}
+              <div className="mb-4 flex items-end justify-between">
+                <span>
+                  <span className="block text-[18px] font-extrabold text-white">Total</span>
+                  {dcEarned > 0 && (
+                    <span className="mt-[3px] flex items-center gap-1.5 text-[11px] font-medium text-lime-text">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src="/assets/checkout/dm-coin.png" alt="" aria-hidden className="h-[18px] w-[18px] select-none object-contain" />
+                      +{dcEarned} DC earned
+                    </span>
+                  )}
+                </span>
+                <span className="text-[26px] font-extrabold tracking-[-0.5px] tabular-nums text-white">${total.toFixed(2)}</span>
+              </div>
+
+              {/* Pay Now — grey default, muted-lime fill on hover */}
+              <button
+                type="button"
+                onClick={handlePay}
+                disabled={paying}
+                className={cn(
+                  'flex h-11 w-full items-center justify-center gap-2 rounded-md text-[15px] font-extrabold transition-all duration-200',
+                  paying
+                    ? 'cursor-not-allowed border border-white/[0.08] bg-[#12151e] text-[#7b8398]'
+                    : 'bg-lime text-[#12200a] shadow-[inset_0_1px_0_rgba(255,255,255,0.4),0_8px_24px_-8px_rgba(198,255,61,0.45)] hover:bg-lime-hover hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.45),0_10px_28px_-8px_rgba(198,255,61,0.55)] active:scale-[0.99]',
+                )}
+              >
+                {paying ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Redirecting to payment…
+                  </>
+                ) : (
+                  <>
+                    <span aria-hidden className="text-[18px] font-extrabold leading-none">₿</span>
+                    Pay Now
+                  </>
+                )}
+              </button>
+
+              {payError && (
+                <div className="mt-3 flex items-start gap-2 rounded-md border border-error/40 bg-error-bg p-3 animate-in fade-in-0 slide-in-from-top-1 duration-200">
+                  <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-error" />
+                  <p className="text-[12px] leading-relaxed text-text-secondary">{payError}</p>
+                </div>
+              )}
+
+              <p className="mt-3.5 flex items-center justify-center gap-2 text-[12px] text-[#8d95a8]">
+                <Lock className="h-3.5 w-3.5 flex-none text-[#a5adbe]" />
+                <span>
+                  <span className="font-bold text-[#dbe2ee]">256-bit SSL</span> Encrypted payment. You&apos;re safe.
+                </span>
+              </p>
+              <p className="mt-1.5 text-center text-[11.5px] leading-relaxed text-[#7b8398]">
+                By clicking Pay Now you agree to our{' '}
+                <a href="/terms" target="_blank" className="text-[#88bbff] transition-colors hover:text-white">Terms</a> and{' '}
+                <a href="/refund-policy" target="_blank" className="text-[#88bbff] transition-colors hover:text-white">Refund Policy</a>.
+              </p>
+
+              </div>
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          </div>
+        </div>
     </div>
+  )
+}
+
+// ─── SellerPeek ──────────────────────────────────────────────────────────
+//
+// V77 — Seller pill → in-checkout dialog with the seller's stats + last
+// 5 reviews. Deliberately NO profile links: the buyer stays in checkout.
+function SellerPeek({ seller, reviews }: { seller: any; reviews: any[] }) {
+  const [open, setOpen] = useState(false)
+  const name = seller.shop_name?.trim() || seller.username || 'Seller'
+  const rating = seller.seller_rating != null ? Number(seller.seller_rating) : null
+  const sales = seller.total_sales ?? 0
+  const verified = !!seller.is_verified || (!!seller.seller_tier && seller.seller_tier !== 'unverified')
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="group inline-flex min-w-0 items-center gap-2 text-left"
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={getAvatarUrl(seller.avatar_url, seller.username || 'seller')}
+          alt=""
+          className="h-6 w-6 flex-none rounded-md object-cover ring-1 ring-white/[0.12]"
+        />
+        <span className="max-w-[150px] truncate text-[13.5px] font-extrabold text-white transition-colors group-hover:text-lime-text">
+          {name}
+        </span>
+        {verified && <CheckCircle2 className="h-3.5 w-3.5 flex-none fill-lime text-[#12200a]" />}
+        <span className="inline-flex flex-none items-center gap-1 text-[12.5px] font-bold tabular-nums text-[#a5adbe]">
+          <Star className="h-3 w-3 fill-lime text-lime" />
+          {rating != null ? rating.toFixed(1) : '—'}
+        </span>
+        <ChevronRight className="h-4 w-4 flex-none text-[#7b8398] transition-transform group-hover:translate-x-0.5" />
+      </button>
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-w-[440px] gap-0 overflow-hidden rounded-lg border-white/[0.08] bg-[#12151e] p-0">
+          <DialogHeader className="relative border-b border-white/[0.07] bg-[linear-gradient(to_bottom,rgba(255,255,255,0.04),transparent)] p-5 pb-4 text-left">
+            <div className="flex items-center gap-3">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={getAvatarUrl(seller.avatar_url, seller.username || 'seller')}
+                alt=""
+                className="h-12 w-12 rounded-md object-cover ring-1 ring-white/[0.09]"
+              />
+              <div className="min-w-0 flex-1">
+                <DialogTitle className="flex items-center gap-1.5 text-[16px] font-extrabold">
+                  {name}
+                  {verified && <CheckCircle2 className="h-4 w-4 fill-lime text-[#12200a]" />}
+                </DialogTitle>
+                <DialogDescription className="mt-1 flex items-center gap-2 text-[12px] text-[#7b8398]">
+                  <span className="inline-flex items-center gap-1 font-bold tabular-nums text-[#a5adbe]">
+                    <Star className="h-3 w-3 fill-lime text-lime" />
+                    {rating != null ? rating.toFixed(1) : 'No rating yet'}
+                  </span>
+                  <span aria-hidden>·</span>
+                  <span className="tabular-nums">{sales.toLocaleString()} sold</span>
+                  {seller.seller_tier && seller.seller_tier !== 'unverified' && (
+                    <>
+                      <span aria-hidden>·</span>
+                      <span className="text-[10.5px] font-bold uppercase tracking-wider text-[#E8B368]">{seller.seller_tier}</span>
+                    </>
+                  )}
+                </DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+          <div className="max-h-[380px] overflow-y-auto p-5 pt-4">
+            <h4 className="mb-3 text-[12px] font-extrabold uppercase tracking-wider text-[#a5adbe]">
+              Recent Reviews
+            </h4>
+            {reviews.length === 0 ? (
+              <p className="py-6 text-center text-[13px] text-[#7b8398]">
+                No reviews yet — you&apos;d be one of the first.
+              </p>
+            ) : (
+              <div className="flex flex-col gap-2.5">
+                {reviews.map((r) => (
+                  <div key={r.id} className="rounded-md border border-white/[0.07] bg-[#0d1017] p-3">
+                    <div className="flex items-center gap-2">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={getAvatarUrl(r.buyer?.avatar_url, r.buyer?.username || 'buyer')}
+                        alt=""
+                        className="h-5 w-5 rounded-full object-cover"
+                      />
+                      <span className="text-[12.5px] font-bold text-white">{r.buyer?.username || 'Buyer'}</span>
+                      <span className="ml-auto inline-flex items-center gap-0.5">
+                        {Array.from({ length: 5 }, (_, i) => (
+                          <Star
+                            key={i}
+                            className={cn('h-3 w-3', i < (Number(r.rating) || 0) ? 'fill-lime text-lime' : 'fill-[#2C3140] text-[#2C3140]')}
+                          />
+                        ))}
+                      </span>
+                    </div>
+                    {r.comment && (
+                      <p className="mt-1.5 line-clamp-2 text-[12.5px] leading-relaxed text-[#a5adbe]">{r.comment}</p>
+                    )}
+                    <p className="mt-1.5 text-[10.5px] text-[#7b8398]">
+                      {r.created_at ? new Date(r.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : ''}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   )
 }

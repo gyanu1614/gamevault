@@ -26,6 +26,7 @@ import {
   Lock,
   ShieldAlert,
   Ban,
+  ChevronDown,
 } from 'lucide-react'
 
 interface NavItem {
@@ -175,7 +176,7 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
       {/* V22 — Clean floating identity: avatar + name, "Joined …" beneath.
           No bordered box / tier pill — just the user, modern and minimal.
           Sellers' block links to their public shop. */}
-      <div className="p-4 border-b border-border-subtle">
+      <div className="p-3 border-b border-border-subtle">
         {(() => {
           const isSeller = !!user?.isApprovedSeller
           const displayName = isSeller
@@ -192,10 +193,10 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
                   <img
                     src={user.avatar_url}
                     alt={displayName}
-                    className="h-14 w-14 rounded-full object-cover"
+                    className="h-10 w-10 rounded-full object-cover"
                   />
                 ) : (
-                  <div className="flex h-14 w-14 items-center justify-center rounded-full bg-lime/15 text-lg font-bold text-lime-text">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-lime/15 text-[15px] font-bold text-lime-text">
                     {displayName[0]?.toUpperCase() || 'U'}
                   </div>
                 )}
@@ -217,7 +218,7 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
                 </div>
                 <p className="mt-0.5 truncate text-[11px] text-text-tertiary">
                   {joinedDate ? (
-                    <>Joined: <span className="font-semibold text-text-secondary">{joinedDate}</span></>
+                    <>Joined <span className="font-semibold text-text-secondary">{joinedDate}</span></>
                   ) : (
                     isSeller ? 'Seller' : 'Buyer'
                   )}
@@ -272,34 +273,61 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
           const showChildren = !!item.children && openGroup === item.label
           return (
             <div key={item.label}>
+              {item.children ? (
+                /* V79 — Grouped parents (Orders / Offers) are pure dropdown
+                   toggles: clicking never navigates, it opens the group;
+                   picking a sub-item is what navigates. */
+                <button
+                  type="button"
+                  onClick={() => setOpenGroup((prev) => (prev === item.label ? null : item.label))}
+                  aria-expanded={showChildren}
+                  className={cn(
+                    'w-full flex items-center justify-between gap-2.5 px-2.5 py-2 rounded-lg text-[14.5px] font-medium transition-all duration-200',
+                    active
+                      ? 'text-text-primary hover:bg-bg-raised-hover'
+                      : 'text-text-secondary hover:text-white hover:bg-bg-raised-hover'
+                  )}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <Icon className="h-[18px] w-[18px] flex-shrink-0" />
+                    <span>{item.label}</span>
+                  </div>
+                  <ChevronDown
+                    className={cn(
+                      'h-4 w-4 flex-shrink-0 transition-transform duration-200',
+                      showChildren && 'rotate-180',
+                      'text-text-tertiary',
+                    )}
+                  />
+                </button>
+              ) : (
               <Link
                 href={item.href}
                 onClick={() => {
                   setIsMobileOpen(false)
-                  // Grouped parents act as an accordion: open this one (closing
-                  // any other). Leaf items close all groups.
-                  setOpenGroup(item.children ? item.label : null)
+                  setOpenGroup(null)
                 }}
                 className={cn(
-                  'flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200',
+                  'flex items-center justify-between gap-2.5 px-2.5 py-2 rounded-lg text-[14.5px] font-medium transition-all duration-200',
                   active
-                    ? 'bg-lime text-text-inverse shadow-elevated'
+                    ? 'bg-[rgba(198,255,61,0.13)] text-lime-text'
                     : 'text-text-secondary hover:text-white hover:bg-bg-raised-hover'
                 )}
               >
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2.5">
                   <Icon className="h-[18px] w-[18px] flex-shrink-0" />
                   <span>{item.label}</span>
                 </div>
                 {item.badge && (
                   <span className={cn(
                     'px-2 py-0.5 text-[11px] font-bold rounded-full',
-                    active ? 'bg-white/20 text-text-inverse' : 'bg-lime/20 text-lime-text'
+                    'bg-lime/20 text-lime-text'
                   )}>
                     {item.badge}
                   </span>
                 )}
               </Link>
+              )}
 
               {/* V21/P7.ai/aj — Nested sub-items (Offers → Currency/…).
                   Animated open/close with framer-motion (height + opacity).
@@ -314,23 +342,26 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
                     transition={{ duration: 0.25, ease: 'easeOut' }}
                     className="overflow-hidden"
                   >
-                    <div className="mt-1 ml-4 flex flex-col gap-0.5 border-l border-bg-raised-hover pl-3">
+                    <div className="mt-1 ml-6 flex flex-col gap-0.5">
                       {item.children.map((sub, subIdx) => {
                         const subType = sub.href.split('type=')[1] ?? null
                         // Default to the first child when no ?type= is set,
                         // so the group works for any section (Offers,
-                        // Orders, …) without a hardcoded default.
+                        // Orders, …) without a hardcoded default. Only while
+                        // actually on the section's page — the dropdown can
+                        // now be opened from anywhere without navigating.
+                        const onSection = pathname === sub.href.split('?')[0]
                         const firstType = item.children![0].href.split('type=')[1] ?? null
-                        const subActive = (activeType ?? firstType) === subType
+                        const subActive = onSection && (activeType ?? firstType) === subType
                         return (
                           <Link
                             key={sub.label}
                             href={sub.href}
                             onClick={() => setIsMobileOpen(false)}
                             className={cn(
-                              'rounded-lg px-3 py-2 text-[13px] font-medium transition-colors',
+                              'rounded-lg px-3 py-2 text-[13.5px] font-medium transition-colors',
                               subActive
-                                ? 'bg-lime/15 text-lime-text'
+                                ? 'bg-[rgba(198,255,61,0.13)] text-lime-text'
                                 : 'text-text-tertiary hover:bg-bg-raised-hover hover:text-text-secondary'
                             )}
                           >
@@ -363,20 +394,20 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
               href={item.href}
               onClick={() => setIsMobileOpen(false)}
               className={cn(
-                'flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200',
+                'flex items-center justify-between gap-2.5 px-2.5 py-2 rounded-lg text-[14.5px] font-medium transition-all duration-200',
                 active
-                  ? 'bg-lime text-text-inverse shadow-lg shadow-violet-500/25'
+                  ? 'bg-[rgba(198,255,61,0.13)] text-lime-text'
                   : 'text-text-secondary hover:text-white hover:bg-bg-raised-hover'
               )}
             >
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2.5">
                 <Icon className="h-[18px] w-[18px] flex-shrink-0" />
                 <span>{item.label}</span>
               </div>
               {item.badge && (
                 <span className={cn(
                   'px-2 py-0.5 text-[11px] font-bold rounded-full',
-                  active ? 'bg-white/20 text-text-inverse' : 'bg-lime/20 text-lime-text'
+                  'bg-lime/20 text-lime-text'
                 )}>
                   {item.badge}
                 </span>
@@ -399,9 +430,9 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
               href={item.href}
               onClick={() => setIsMobileOpen(false)}
               className={cn(
-                'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200',
+                'flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-[14.5px] font-medium transition-all duration-200',
                 active
-                  ? 'bg-lime text-text-inverse shadow-lg shadow-violet-500/25'
+                  ? 'bg-[rgba(198,255,61,0.13)] text-lime-text'
                   : 'text-text-secondary hover:text-white hover:bg-bg-raised-hover'
               )}
             >
@@ -413,7 +444,7 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
 
         {/* Logout */}
         <button
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-text-secondary hover:text-error hover:bg-red-500/[0.08] transition-all duration-200"
+          className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-[14.5px] font-medium text-text-secondary hover:text-error hover:bg-red-500/[0.08] transition-all duration-200"
         >
           <LogOut className="h-[18px] w-[18px] flex-shrink-0" />
           <span>Logout</span>
@@ -446,7 +477,7 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
       </AnimatePresence>
 
       {/* Desktop Sidebar - Modern Floating Card */}
-      <aside className="hidden lg:flex lg:flex-col lg:fixed lg:left-4 lg:top-24 lg:bottom-4 lg:w-72 card-frost border border-border-subtle rounded-lg shadow-2xl overflow-hidden">
+      <aside className="hidden lg:flex lg:flex-col lg:fixed lg:left-4 lg:top-24 lg:bottom-4 lg:w-64 card-frost border border-border-subtle rounded-lg shadow-2xl overflow-hidden">
         {/* V21/P7.aj — Call as a function, not <NavItems/>, so it inlines
             into this render tree. As a child component it got a fresh
             identity every parent re-render, remounting the subtree and

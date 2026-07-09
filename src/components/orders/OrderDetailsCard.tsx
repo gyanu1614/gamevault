@@ -50,7 +50,7 @@ export default function OrderDetailsCard({ order, role, onClick }: OrderDetailsC
               className="rounded-md object-cover flex-shrink-0"
             />
           )}
-          <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-text-tertiary">Order Details</span>
+          <span className="text-[11px] font-bold uppercase tracking-wider text-text-tertiary">Order Details</span>
         </div>
         {onClick && (
           <button

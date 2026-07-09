@@ -244,7 +244,7 @@ export function StatusStrip({
       (existingReview.recommendsSeller == null && existingReview.rating >= 4)
     return (
       <OrderCard className={sPad} padded={false}>
-        <div className="text-[12px] font-bold uppercase tracking-[0.14em] text-text-secondary">
+        <div className="text-[11px] font-bold uppercase tracking-wider text-text-secondary">
           Your Review
         </div>
         <div className="mt-3.5 flex items-center gap-3">
@@ -352,7 +352,7 @@ export function StatusStrip({
   if (showSellerReview && existingReview) {
     return (
       <OrderCard className={sPad} padded={false}>
-        <div className="text-[12px] font-bold uppercase tracking-[0.14em] text-text-secondary">
+        <div className="text-[11px] font-bold uppercase tracking-wider text-text-secondary">
           Buyer&rsquo;s Feedback
         </div>
         <div className="mt-3.5 flex items-center gap-3">

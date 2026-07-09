@@ -776,7 +776,7 @@ function OrdersContent() {
                     <div className="flex-1 min-w-0">
                       {/* Order # + status */}
                       <div className="flex items-center gap-2">
-                        <span className="font-mono text-[10px] font-semibold uppercase tracking-wider text-text-tertiary">
+                        <span className="font-mono text-[11px] font-semibold uppercase tracking-wider text-text-tertiary">
                           {(order.order_number || order.id.slice(0, 8).toUpperCase()).replace(/^GV-/, 'DM-')}
                         </span>
                         {(() => {
@@ -853,7 +853,7 @@ function OrdersContent() {
                         <div className="text-xl font-bold text-text-primary">
                           ${order.total_amount?.toFixed(2) || '0.00'}
                         </div>
-                        <div className="text-[10px] uppercase tracking-wider text-text-tertiary">Total</div>
+                        <div className="text-[11px] uppercase tracking-wider text-text-tertiary">Total</div>
                       </div>
 
                       {order.status === 'completed' && (

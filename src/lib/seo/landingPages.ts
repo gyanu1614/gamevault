@@ -45,20 +45,20 @@ export const LANDING_PAGES: LandingPage[] = [
   /* ---- Roblox ---- */
   {
     slug: 'buy-roblox-accounts',
-    title: 'Buy Roblox Accounts – Safe & Instant Delivery | GameVault',
+    title: 'Buy Roblox Accounts – Safe & Instant Delivery | DropMarket',
     description:
-      'Browse thousands of verified Roblox accounts for sale. All listings protected by VaultShield escrow. Instant delivery, buyer guarantee.',
+      'Browse thousands of verified Roblox accounts for sale. All listings protected by SafeDrop escrow. Instant delivery, buyer guarantee.',
     headline: 'Buy Roblox Accounts',
     subCopy:
-      'Find high-value, verified Roblox accounts from trusted sellers. Every purchase protected by VaultShield.',
+      'Find high-value, verified Roblox accounts from trusted sellers. Every purchase protected by SafeDrop.',
     gameSlug: 'roblox',
     categorySlug: 'accounts',
     emoji: '🟥',
     schemaCategory: 'Roblox Accounts',
     faqs: [
       {
-        q: 'Is it safe to buy a Roblox account on GameVault?',
-        a: 'Yes. All payments are held in VaultShield escrow until you confirm receipt. Funds only release to the seller after you verify the account credentials.',
+        q: 'Is it safe to buy a Roblox account on DropMarket?',
+        a: 'Yes. All payments are held in SafeDrop escrow until you confirm receipt. Funds only release to the seller after you verify the account credentials.',
       },
       {
         q: 'What Roblox accounts are available?',
@@ -70,18 +70,18 @@ export const LANDING_PAGES: LandingPage[] = [
       },
       {
         q: 'What if the account details don\'t work?',
-        a: 'Open a dispute within 48 hours. GameVault will hold the payment in escrow until the issue is resolved or issue a full refund.',
+        a: 'Open a dispute within 48 hours. DropMarket will hold the payment in escrow until the issue is resolved or issue a full refund.',
       },
     ],
   },
   {
     slug: 'buy-roblox-items',
-    title: 'Buy Roblox Items & Limiteds | GameVault',
+    title: 'Buy Roblox Items & Limiteds | DropMarket',
     description:
       'Shop rare Roblox limiteds, UGC items, and accessories. Secure escrow, instant delivery, trusted sellers.',
     headline: 'Buy Roblox Items & Limiteds',
     subCopy:
-      'Score rare Roblox limited items and UGC accessories from verified sellers — all protected by VaultShield.',
+      'Score rare Roblox limited items and UGC accessories from verified sellers — all protected by SafeDrop.',
     gameSlug: 'roblox',
     categorySlug: 'items',
     emoji: '🟥',
@@ -89,7 +89,7 @@ export const LANDING_PAGES: LandingPage[] = [
     faqs: [
       {
         q: 'Can I buy Roblox limiteds here?',
-        a: 'Yes! GameVault sellers list rare limiteds, classic hats, and UGC items. Browse by item name or price.',
+        a: 'Yes! DropMarket sellers list rare limiteds, classic hats, and UGC items. Browse by item name or price.',
       },
       {
         q: 'How are Roblox items delivered?',
@@ -105,9 +105,9 @@ export const LANDING_PAGES: LandingPage[] = [
   /* ---- Valorant ---- */
   {
     slug: 'buy-valorant-accounts',
-    title: 'Buy Valorant Accounts – Radiant, Immortal & More | GameVault',
+    title: 'Buy Valorant Accounts – Radiant, Immortal & More | DropMarket',
     description:
-      'Find Valorant accounts with rare skins, high ranks, and low prices. VaultShield buyer protection on every order.',
+      'Find Valorant accounts with rare skins, high ranks, and low prices. SafeDrop buyer protection on every order.',
     headline: 'Buy Valorant Accounts',
     subCopy:
       'Skip the grind. Purchase ranked Valorant accounts with top-tier skins from verified sellers.',
@@ -122,22 +122,22 @@ export const LANDING_PAGES: LandingPage[] = [
       },
       {
         q: 'Will my Valorant account get banned after purchase?',
-        a: 'Account trading carries inherent risk per Riot\'s ToS. GameVault sellers are rated by track record; choose sellers with high ratings and clear skin inventories for lowest risk.',
+        a: 'Account trading carries inherent risk per Riot\'s ToS. DropMarket sellers are rated by track record; choose sellers with high ratings and clear skin inventories for lowest risk.',
       },
       {
-        q: 'How does VaultShield protect me?',
+        q: 'How does SafeDrop protect me?',
         a: 'Payment is held in escrow until you confirm the account works and you\'ve changed the credentials. If there\'s an issue, we mediate and refund if necessary.',
       },
     ],
   },
   {
     slug: 'buy-valorant-points',
-    title: 'Buy Valorant Points (VP) – Cheapest Rates | GameVault',
+    title: 'Buy Valorant Points (VP) – Cheapest Rates | DropMarket',
     description:
       'Get Valorant Points for less. Verified sellers, instant delivery, buyer protection on every VP purchase.',
     headline: 'Buy Valorant Points',
     subCopy:
-      'Top up your VP wallet at below-market rates from trusted GameVault sellers.',
+      'Top up your VP wallet at below-market rates from trusted DropMarket sellers.',
     gameSlug: 'valorant',
     categorySlug: 'currency',
     emoji: '🔴',
@@ -149,7 +149,7 @@ export const LANDING_PAGES: LandingPage[] = [
       },
       {
         q: 'Is buying VP against Riot\'s ToS?',
-        a: 'Receiving gifted VP through the official Riot store is the safest method. GameVault sellers use legitimate gifting methods where possible.',
+        a: 'Receiving gifted VP through the official Riot store is the safest method. DropMarket sellers use legitimate gifting methods where possible.',
       },
     ],
   },
@@ -157,7 +157,7 @@ export const LANDING_PAGES: LandingPage[] = [
   /* ---- Fortnite ---- */
   {
     slug: 'buy-fortnite-accounts',
-    title: 'Buy Fortnite Accounts – Rare Skins & OG Accounts | GameVault',
+    title: 'Buy Fortnite Accounts – Rare Skins & OG Accounts | DropMarket',
     description:
       'Buy OG Fortnite accounts with rare skins like Black Knight, Skull Trooper, and more. Safe escrow, fast delivery.',
     headline: 'Buy Fortnite Accounts',
@@ -178,18 +178,18 @@ export const LANDING_PAGES: LandingPage[] = [
       },
       {
         q: 'What if the Epic account is locked after purchase?',
-        a: 'Open a dispute within 48 hours. GameVault holds the escrow payment until the issue is resolved.',
+        a: 'Open a dispute within 48 hours. DropMarket holds the escrow payment until the issue is resolved.',
       },
     ],
   },
   {
     slug: 'buy-fortnite-skins',
-    title: 'Buy Fortnite Skins & Cosmetics | GameVault',
+    title: 'Buy Fortnite Skins & Cosmetics | DropMarket',
     description:
       'Purchase rare Fortnite skins, emotes, pickaxes, and wraps from verified sellers. Instant delivery.',
     headline: 'Buy Fortnite Skins & Cosmetics',
     subCopy:
-      'Get the rarest Fortnite cosmetics without grinding. Verified sellers, VaultShield protected.',
+      'Get the rarest Fortnite cosmetics without grinding. Verified sellers, SafeDrop protected.',
     gameSlug: 'fortnite',
     categorySlug: 'items',
     emoji: '🎮',
@@ -205,7 +205,7 @@ export const LANDING_PAGES: LandingPage[] = [
   /* ---- League of Legends ---- */
   {
     slug: 'buy-league-of-legends-accounts',
-    title: 'Buy League of Legends Accounts – Smurf & Ranked | GameVault',
+    title: 'Buy League of Legends Accounts – Smurf & Ranked | DropMarket',
     description:
       'Shop LoL smurf accounts, ranked accounts, and accounts with rare champion/skin collections. Secure, fast, trusted.',
     headline: 'Buy League of Legends Accounts',
@@ -218,7 +218,7 @@ export const LANDING_PAGES: LandingPage[] = [
     faqs: [
       {
         q: 'What is a LoL smurf account?',
-        a: 'A smurf is a fresh or unranked account for experienced players who want to play at lower MMR. GameVault listings are clearly labeled as smurf or ranked.',
+        a: 'A smurf is a fresh or unranked account for experienced players who want to play at lower MMR. DropMarket listings are clearly labeled as smurf or ranked.',
       },
       {
         q: 'Are LoL accounts region-locked?',
@@ -234,9 +234,9 @@ export const LANDING_PAGES: LandingPage[] = [
   /* ---- General / Cross-game ---- */
   {
     slug: 'sell-game-accounts',
-    title: 'Sell Your Game Accounts Safely | GameVault',
+    title: 'Sell Your Game Accounts Safely | DropMarket',
     description:
-      'List your gaming account or items on GameVault and earn. 0% listing fee, automatic payouts via Stripe, VaultShield protection for sellers.',
+      'List your gaming account or items on DropMarket and earn. 0% listing fee, automatic payouts via Stripe, SafeDrop protection for sellers.',
     headline: 'Sell Your Game Accounts',
     subCopy:
       'Turn your gaming assets into real money. List for free, get paid via Stripe, keep 100% after buyer protection fee.',
@@ -246,8 +246,8 @@ export const LANDING_PAGES: LandingPage[] = [
     schemaCategory: 'Game Account Marketplace',
     faqs: [
       {
-        q: 'How much does it cost to sell on GameVault?',
-        a: 'Listing is free. GameVault takes a small buyer protection fee from the buyer side; sellers keep the full listed price.',
+        q: 'How much does it cost to sell on DropMarket?',
+        a: 'Listing is free. DropMarket takes a small buyer protection fee from the buyer side; sellers keep the full listed price.',
       },
       {
         q: 'How do I get paid?',

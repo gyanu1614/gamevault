@@ -16,9 +16,7 @@ import {
   Truck,
   User,
   Store,
-  Mail,
   Calendar,
-  DollarSign,
   ExternalLink,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -31,7 +29,7 @@ interface PageProps {
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { orderId } = await params
   return {
-    title: `Order ${orderId} | Admin | GameVault`,
+    title: `Order ${orderId}`,
     description: 'Admin order details',
   }
 }
@@ -40,11 +38,11 @@ const STATUS_CONFIG: Record<string, { label: string; pill: string; dot: string; 
   pending:    { label: 'Pending',     pill: 'bg-blue-500/10 text-blue-400 border-blue-500/20',       dot: 'bg-blue-400',    pulse: true,  icon: Clock },
   processing: { label: 'Processing',  pill: 'bg-amber-500/10 text-amber-400 border-amber-500/20',   dot: 'bg-amber-400',  pulse: true,  icon: Clock },
   paid:       { label: 'Paid',        pill: 'bg-green-500/10 text-green-400 border-green-500/20',    dot: 'bg-green-400',  pulse: false, icon: CheckCircle2 },
-  delivering: { label: 'Delivering',  pill: 'bg-violet-500/10 text-violet-400 border-violet-500/20', dot: 'bg-violet-400', pulse: true,  icon: Truck },
+  delivering: { label: 'Delivering',  pill: 'bg-blue-500/10 text-blue-400 border-blue-500/20',       dot: 'bg-blue-400',   pulse: true,  icon: Truck },
   delivered:  { label: 'Delivered',   pill: 'bg-blue-500/10 text-blue-400 border-blue-500/20',       dot: 'bg-blue-400',   pulse: false, icon: Package },
   completed:  { label: 'Completed',   pill: 'bg-green-500/10 text-green-400 border-green-500/20',    dot: 'bg-green-400',  pulse: false, icon: CheckCircle2 },
   disputed:   { label: 'Disputed',    pill: 'bg-red-500/10 text-red-400 border-red-500/20',          dot: 'bg-red-400',    pulse: true,  icon: AlertTriangle },
-  refunded:   { label: 'Refunded',    pill: 'bg-gray-500/10 text-gray-400 border-gray-500/20',       dot: 'bg-gray-400',   pulse: false, icon: RefreshCw },
+  refunded:   { label: 'Refunded',    pill: 'border-border-default bg-bg-overlay text-text-secondary', dot: 'bg-gray-400',   pulse: false, icon: RefreshCw },
   cancelled:  { label: 'Cancelled',   pill: 'bg-orange-500/10 text-orange-400 border-orange-500/20', dot: 'bg-orange-400', pulse: false, icon: XCircle },
 }
 
@@ -66,9 +64,9 @@ function StatusPill({ status }: { status: string }) {
 function EscrowPill({ escrowStatus }: { escrowStatus: string }) {
   const cfg: Record<string, { label: string; pill: string }> = {
     pending:  { label: 'Pending',         pill: 'bg-blue-500/10 text-blue-400/80 border-blue-500/15' },
-    held:     { label: 'In Escrow',       pill: 'bg-violet-500/10 text-violet-400/80 border-violet-500/15' },
+    held:     { label: 'In Escrow',       pill: 'bg-amber-500/10 text-amber-400/80 border-amber-500/15' },
     released: { label: 'Escrow Released', pill: 'bg-blue-500/10 text-blue-400/80 border-blue-500/15' },
-    refunded: { label: 'Refunded',        pill: 'bg-gray-500/10 text-gray-500 border-gray-500/15' },
+    refunded: { label: 'Refunded',        pill: 'border-border-default bg-bg-overlay text-text-tertiary' },
     frozen:   { label: 'Under Review',    pill: 'bg-red-500/10 text-red-400/80 border-red-500/15' },
   }
   const c = cfg[escrowStatus] ?? cfg.pending
@@ -131,7 +129,7 @@ export default async function AdminOrderDetailPage({ params }: PageProps) {
         <div className="flex items-center gap-4">
           <Link
             href="/admin/orders"
-            className="flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors"
+            className="flex items-center gap-2 text-sm text-text-secondary hover:text-text-primary transition-colors"
           >
             <ArrowLeft className="h-4 w-4" />
             Back to Orders
@@ -147,16 +145,16 @@ export default async function AdminOrderDetailPage({ params }: PageProps) {
         {/* Main Content */}
         <div className="lg:col-span-2 space-y-5">
           {/* Order Info Card */}
-          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.025] p-6">
+          <div className="rounded-xl border border-border-default bg-bg-raised p-6">
             <div className="flex items-start justify-between mb-6">
               <div>
-                <h1 className="text-2xl font-bold text-white mb-1">{order.order_number}</h1>
-                <p className="text-sm text-gray-500">Order ID: {order.id}</p>
+                <h1 className="text-2xl font-extrabold tracking-tight text-text-primary mb-1">{order.order_number}</h1>
+                <p className="text-sm text-text-tertiary">Order ID: {order.id}</p>
               </div>
               <Link
                 href={`/account/orders/${order.id}`}
                 target="_blank"
-                className="flex items-center gap-1.5 text-xs text-violet-400 hover:text-violet-300 transition-colors"
+                className="flex items-center gap-1.5 text-xs text-lime-text hover:text-lime transition-colors"
               >
                 View as User
                 <ExternalLink className="h-3 w-3" />
@@ -165,7 +163,7 @@ export default async function AdminOrderDetailPage({ params }: PageProps) {
 
             {/* Listing Details */}
             {order.listing && (
-              <div className="flex gap-4 p-4 rounded-xl bg-white/[0.02] border border-white/[0.04] mb-6">
+              <div className="flex gap-4 p-4 rounded-xl bg-bg-overlay border border-border-subtle mb-6">
                 {game && (
                   game.image_url ? (
                     <img
@@ -174,61 +172,61 @@ export default async function AdminOrderDetailPage({ params }: PageProps) {
                       className="h-16 w-16 rounded-lg object-cover"
                     />
                   ) : (
-                    <div className="h-16 w-16 rounded-lg bg-white/[0.06] flex items-center justify-center text-2xl">
+                    <div className="h-16 w-16 rounded-lg bg-bg-overlay-2 flex items-center justify-center text-2xl">
                       {game.emoji}
                     </div>
                   )
                 )}
                 <div className="flex-1 min-w-0">
-                  <h3 className="text-base font-semibold text-white mb-1">{order.listing.title}</h3>
+                  <h3 className="text-base font-semibold text-text-primary mb-1">{order.listing.title}</h3>
                   {game && (
-                    <p className="text-xs text-gray-500 flex items-center gap-1.5">
+                    <p className="text-xs text-text-tertiary flex items-center gap-1.5">
                       <span>{game.emoji}</span>
                       <span>{game.name}</span>
                       {category && (
                         <>
-                          <span className="text-gray-700">•</span>
+                          <span className="text-text-disabled">•</span>
                           <span>{category.name}</span>
                         </>
                       )}
                     </p>
                   )}
-                  <p className="text-xs text-gray-600 mt-1">Quantity: {order.quantity}</p>
+                  <p className="text-xs text-text-tertiary mt-1">Quantity: {order.quantity}</p>
                 </div>
               </div>
             )}
 
             {/* Financial Breakdown */}
             <div className="space-y-3">
-              <h3 className="text-sm font-semibold text-white">Financial Details</h3>
+              <h3 className="text-sm font-semibold text-text-primary">Financial Details</h3>
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-400">Total Amount</span>
-                  <span className="font-semibold text-white">${order.total_amount.toFixed(2)}</span>
+                  <span className="text-text-secondary">Total Amount</span>
+                  <span className="font-semibold tabular-nums text-text-primary">${order.total_amount.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-400">Platform Fee ({(order.platform_fee_percentage * 100).toFixed(1)}%)</span>
-                  <span className="text-amber-400">-${order.platform_fee.toFixed(2)}</span>
+                  <span className="text-text-secondary">Platform Fee ({(order.platform_fee_percentage * 100).toFixed(1)}%)</span>
+                  <span className="tabular-nums text-amber-400">-${order.platform_fee.toFixed(2)}</span>
                 </div>
-                <div className="flex justify-between text-sm pt-2 border-t border-white/[0.06]">
-                  <span className="text-gray-400">Seller Payout</span>
-                  <span className="font-bold text-green-400">${order.seller_payout.toFixed(2)}</span>
+                <div className="flex justify-between text-sm pt-2 border-t border-border-subtle">
+                  <span className="text-text-secondary">Seller Payout</span>
+                  <span className="font-bold tabular-nums text-green-400">${order.seller_payout.toFixed(2)}</span>
                 </div>
               </div>
             </div>
           </div>
 
           {/* Timeline */}
-          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.025] p-6">
-            <h3 className="text-sm font-semibold text-white mb-4">Order Timeline</h3>
+          <div className="rounded-xl border border-border-default bg-bg-raised p-6">
+            <h3 className="text-sm font-semibold text-text-primary mb-4">Order Timeline</h3>
             <div className="space-y-3">
               <div className="flex items-start gap-3">
                 <div className="h-8 w-8 rounded-full bg-green-500/10 border border-green-500/20 flex items-center justify-center flex-shrink-0">
                   <Calendar className="h-4 w-4 text-green-400" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-white">Order Created</p>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-sm font-medium text-text-primary">Order Created</p>
+                  <p className="text-xs text-text-tertiary">
                     {new Date(order.created_at).toLocaleString('en-US', {
                       month: 'short',
                       day: 'numeric',
@@ -246,8 +244,8 @@ export default async function AdminOrderDetailPage({ params }: PageProps) {
                     <Package className="h-4 w-4 text-blue-400" />
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-white">Delivered</p>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-sm font-medium text-text-primary">Delivered</p>
+                    <p className="text-xs text-text-tertiary">
                       {new Date(order.delivered_at).toLocaleString('en-US', {
                         month: 'short',
                         day: 'numeric',
@@ -266,8 +264,8 @@ export default async function AdminOrderDetailPage({ params }: PageProps) {
                     <CheckCircle2 className="h-4 w-4 text-green-400" />
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-white">Completed</p>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-sm font-medium text-text-primary">Completed</p>
+                    <p className="text-xs text-text-tertiary">
                       {new Date(order.completed_at).toLocaleString('en-US', {
                         month: 'short',
                         day: 'numeric',
@@ -287,25 +285,25 @@ export default async function AdminOrderDetailPage({ params }: PageProps) {
         <div className="space-y-5">
           {/* Buyer Info */}
           {buyer && (
-            <div className="rounded-2xl border border-white/[0.06] bg-white/[0.025] p-5">
-              <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
-                <User className="h-4 w-4 text-violet-400" />
+            <div className="rounded-xl border border-border-default bg-bg-raised p-5">
+              <h3 className="text-sm font-semibold text-text-primary mb-4 flex items-center gap-2">
+                <User className="h-4 w-4 text-lime-text" />
                 Buyer
               </h3>
               <div className="flex items-center gap-3 mb-3">
                 <img
                   src={getAvatarUrl(buyer.avatar_url, buyer.username)}
                   alt={buyer.username}
-                  className="h-10 w-10 rounded-full border border-white/10"
+                  className="h-10 w-10 rounded-full border border-border-default"
                 />
                 <div>
-                  <p className="text-sm font-medium text-white">{buyer.username}</p>
-                  <p className="text-xs text-gray-500">{buyer.email}</p>
+                  <p className="text-sm font-medium text-text-primary">{buyer.username}</p>
+                  <p className="text-xs text-text-tertiary">{buyer.email}</p>
                 </div>
               </div>
               <Link
                 href={`/admin/users/${buyer.id}`}
-                className="text-xs text-violet-400 hover:text-violet-300 transition-colors flex items-center gap-1"
+                className="text-xs text-lime-text hover:text-lime transition-colors flex items-center gap-1"
               >
                 View Profile
                 <ExternalLink className="h-3 w-3" />
@@ -315,25 +313,25 @@ export default async function AdminOrderDetailPage({ params }: PageProps) {
 
           {/* Seller Info */}
           {seller && (
-            <div className="rounded-2xl border border-white/[0.06] bg-white/[0.025] p-5">
-              <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
-                <Store className="h-4 w-4 text-violet-400" />
+            <div className="rounded-xl border border-border-default bg-bg-raised p-5">
+              <h3 className="text-sm font-semibold text-text-primary mb-4 flex items-center gap-2">
+                <Store className="h-4 w-4 text-lime-text" />
                 Seller
               </h3>
               <div className="flex items-center gap-3 mb-3">
                 <img
                   src={getAvatarUrl(seller.avatar_url, seller.username)}
                   alt={seller.username}
-                  className="h-10 w-10 rounded-full border border-white/10"
+                  className="h-10 w-10 rounded-full border border-border-default"
                 />
                 <div>
-                  <p className="text-sm font-medium text-white">{seller.shop_name || seller.username}</p>
-                  <p className="text-xs text-gray-500">{seller.email}</p>
+                  <p className="text-sm font-medium text-text-primary">{seller.shop_name || seller.username}</p>
+                  <p className="text-xs text-text-tertiary">{seller.email}</p>
                 </div>
               </div>
               <Link
                 href={`/admin/active-sellers?seller=${seller.id}`}
-                className="text-xs text-violet-400 hover:text-violet-300 transition-colors flex items-center gap-1"
+                className="text-xs text-lime-text hover:text-lime transition-colors flex items-center gap-1"
               >
                 View Seller Profile
                 <ExternalLink className="h-3 w-3" />
@@ -342,8 +340,8 @@ export default async function AdminOrderDetailPage({ params }: PageProps) {
           )}
 
           {/* Quick Actions */}
-          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.025] p-5">
-            <h3 className="text-sm font-semibold text-white mb-4">Quick Actions</h3>
+          <div className="rounded-xl border border-border-default bg-bg-raised p-5">
+            <h3 className="text-sm font-semibold text-text-primary mb-4">Quick Actions</h3>
             <div className="space-y-2">
               {order.dispute_id && (
                 <Link
@@ -356,7 +354,7 @@ export default async function AdminOrderDetailPage({ params }: PageProps) {
               <Link
                 href={`/account/orders/${order.id}`}
                 target="_blank"
-                className="block w-full px-3 py-2 text-sm font-medium bg-violet-500/10 hover:bg-violet-500/20 text-violet-400 rounded-lg border border-violet-500/20 transition-colors text-center"
+                className="block w-full px-3 py-2 text-sm font-bold bg-lime-pressed hover:bg-lime text-text-inverse rounded-lg transition-colors text-center"
               >
                 Open Order Page
               </Link>

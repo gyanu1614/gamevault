@@ -9,7 +9,7 @@ import { getAdminUser } from '@/lib/actions/admin-permissions'
 import { redirect } from 'next/navigation'
 import AnalyticsClient from './AnalyticsClient'
 
-export const metadata = { title: 'Analytics | Admin — GameVault' }
+export const metadata = { title: 'Analytics' }
 
 export default async function AdminAnalyticsPage() {
   // Pre-check admin status without redirect

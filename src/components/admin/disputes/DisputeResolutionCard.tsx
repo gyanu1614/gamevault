@@ -1,9 +1,8 @@
 'use client'
 
-import { CheckCircle, DollarSign, User, Calendar, FileText, AlertTriangle } from 'lucide-react'
+import { CheckCircle, DollarSign, User, Calendar, FileText } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { cn } from '@/lib/utils'
-import Image from 'next/image'
 
 interface DisputeResolutionCardProps {
   status: string
@@ -77,7 +76,7 @@ export default function DisputeResolutionCard({
   } else if (status === 'resolved_seller_favor') {
     resolutionTitle = 'Resolved in Seller Favor'
     resolutionDescription = 'The dispute has been resolved in favor of the seller. Payment has been released.'
-    resolutionColor = 'purple'
+    resolutionColor = 'lime'
     winner = sellerUsername || 'Seller'
   } else if (status === 'resolved_partial') {
     resolutionTitle = 'Resolved - Partial Refund'
@@ -88,25 +87,22 @@ export default function DisputeResolutionCard({
 
   const colorClasses = {
     blue: {
-      bg: 'bg-gradient-to-br from-blue-500/10 to-cyan-500/10',
       border: 'border-blue-500/30',
-      iconBg: 'bg-gradient-to-br from-blue-500 to-cyan-500',
+      glyph: 'text-blue-400',
       text: 'text-blue-400',
-      badge: 'bg-blue-500/20 text-blue-300 border-blue-500/30'
+      badge: 'bg-blue-500/10 text-blue-400 border-blue-500/30'
     },
-    purple: {
-      bg: 'bg-gradient-to-br from-purple-500/10 to-violet-500/10',
-      border: 'border-purple-500/30',
-      iconBg: 'bg-gradient-to-br from-purple-500 to-violet-500',
-      text: 'text-purple-400',
-      badge: 'bg-purple-500/20 text-purple-300 border-purple-500/30'
+    lime: {
+      border: 'border-lime-tint-border',
+      glyph: 'text-lime-text',
+      text: 'text-lime-text',
+      badge: 'bg-lime-tint-bg text-lime-text border-lime-tint-border'
     },
     green: {
-      bg: 'bg-gradient-to-br from-green-500/10 to-emerald-500/10',
       border: 'border-green-500/30',
-      iconBg: 'bg-gradient-to-br from-green-500 to-emerald-500',
+      glyph: 'text-green-400',
       text: 'text-green-400',
-      badge: 'bg-green-500/20 text-green-300 border-green-500/30'
+      badge: 'bg-green-500/10 text-green-400 border-green-500/30'
     }
   }
 
@@ -117,31 +113,27 @@ export default function DisputeResolutionCard({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       className={cn(
-        'rounded-xl border p-4',
-        colors.bg,
+        'rounded-xl border bg-bg-raised p-4',
         colors.border
       )}
     >
       {/* Header */}
       <div className="flex items-start gap-3 mb-4">
-        <div className={cn(
-          'flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl',
-          colors.iconBg
-        )}>
-          <CheckCircle className="h-5 w-5 text-white" />
+        <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg border border-border-subtle bg-bg-overlay">
+          <CheckCircle className={cn('h-5 w-5', colors.glyph)} />
         </div>
 
         <div className="flex-1 min-w-0">
           <h2 className={cn('text-base font-bold mb-0.5', colors.text)}>
             {resolutionTitle}
           </h2>
-          <p className="text-xs text-gray-400">
+          <p className="text-xs text-text-secondary">
             {resolutionDescription}
           </p>
         </div>
 
         <span className={cn(
-          'inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold border uppercase tracking-wider',
+          'inline-flex items-center px-2.5 py-0.5 rounded-md text-[10px] font-bold border uppercase tracking-wider',
           colors.badge
         )}>
           Completed
@@ -151,7 +143,7 @@ export default function DisputeResolutionCard({
       {/* Order Details Section (if provided) */}
       {(listingTitle || orderNumber || disputeReason) && (
         <div className="mb-4">
-          <div className="flex items-start gap-3 p-3 rounded-lg bg-white/[0.03] border border-white/[0.05]">
+          <div className="flex items-start gap-3 p-3 rounded-lg bg-bg-overlay border border-border-subtle">
             {/* Listing Image */}
             {listingImage && (
               <img
@@ -164,12 +156,12 @@ export default function DisputeResolutionCard({
             {/* Order Info */}
             <div className="flex-1 min-w-0">
               {listingTitle && (
-                <h3 className="text-xs font-semibold text-white mb-0.5 line-clamp-2">
+                <h3 className="text-xs font-semibold text-text-primary mb-0.5 line-clamp-2">
                   {listingTitle}
                 </h3>
               )}
               {orderNumber && (
-                <p className="text-[10px] text-gray-500 mb-1.5">Order #{orderNumber}</p>
+                <p className="text-[10px] text-text-tertiary mb-1.5">Order #{orderNumber}</p>
               )}
 
               {/* Dispute Reason Badge */}
@@ -184,7 +176,7 @@ export default function DisputeResolutionCard({
 
             {/* Status Badge */}
             <span className={cn(
-              'inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold border uppercase tracking-wider flex-shrink-0',
+              'inline-flex items-center px-2.5 py-0.5 rounded-md text-[10px] font-bold border uppercase tracking-wider flex-shrink-0',
               colors.badge
             )}>
               Resolved
@@ -193,9 +185,9 @@ export default function DisputeResolutionCard({
 
           {/* Dispute Description (if provided) */}
           {disputeDescription && (
-            <div className="mt-2 p-2.5 rounded-lg bg-white/[0.02] border border-white/[0.04]">
-              <p className="text-[10px] text-gray-500 mb-0.5 font-medium">Dispute Details:</p>
-              <p className="text-xs text-gray-300">{disputeDescription}</p>
+            <div className="mt-2 p-2.5 rounded-lg bg-bg-overlay border border-border-subtle">
+              <p className="text-[10px] text-text-tertiary mb-0.5 font-medium">Dispute Details:</p>
+              <p className="text-xs text-text-secondary">{disputeDescription}</p>
             </div>
           )}
         </div>
@@ -204,49 +196,49 @@ export default function DisputeResolutionCard({
       {/* Resolution Details Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
         {/* Winner */}
-        <div className="rounded-lg bg-white/[0.03] border border-white/[0.05] p-3">
+        <div className="rounded-lg bg-bg-overlay border border-border-subtle p-3">
           <div className="flex items-center gap-1.5 mb-1.5">
-            <User className="h-3.5 w-3.5 text-gray-500" />
-            <span className="text-[10px] text-gray-500 font-medium">Favored Party</span>
+            <User className="h-3.5 w-3.5 text-text-tertiary" />
+            <span className="text-[10px] text-text-tertiary font-medium">Favored Party</span>
           </div>
-          <p className="text-xs font-semibold text-white">{winner}</p>
+          <p className="text-xs font-semibold text-text-primary">{winner}</p>
         </div>
 
         {/* Amount */}
         {resolvedAmount !== undefined && (
-          <div className="rounded-lg bg-white/[0.03] border border-white/[0.05] p-3">
+          <div className="rounded-lg bg-bg-overlay border border-border-subtle p-3">
             <div className="flex items-center gap-1.5 mb-1.5">
-              <DollarSign className="h-3.5 w-3.5 text-gray-500" />
-              <span className="text-[10px] text-gray-500 font-medium">
+              <DollarSign className="h-3.5 w-3.5 text-text-tertiary" />
+              <span className="text-[10px] text-text-tertiary font-medium">
                 {status === 'resolved_buyer_favor' ? 'Refund Amount' :
                  status === 'resolved_partial' ? 'Partial Refund' :
                  'Seller Payout'}
               </span>
             </div>
-            <p className="text-xs font-semibold text-white">{formatAmount(resolvedAmount)}</p>
+            <p className="text-xs font-semibold tabular-nums text-text-primary">{formatAmount(resolvedAmount)}</p>
           </div>
         )}
 
         {/* Resolved Date */}
         {resolvedAt && (
-          <div className="rounded-lg bg-white/[0.03] border border-white/[0.05] p-3">
+          <div className="rounded-lg bg-bg-overlay border border-border-subtle p-3">
             <div className="flex items-center gap-1.5 mb-1.5">
-              <Calendar className="h-3.5 w-3.5 text-gray-500" />
-              <span className="text-[10px] text-gray-500 font-medium">Resolved On</span>
+              <Calendar className="h-3.5 w-3.5 text-text-tertiary" />
+              <span className="text-[10px] text-text-tertiary font-medium">Resolved On</span>
             </div>
-            <p className="text-[10px] font-medium text-white">{formatDate(resolvedAt)}</p>
+            <p className="text-[10px] font-medium text-text-primary">{formatDate(resolvedAt)}</p>
           </div>
         )}
       </div>
 
       {/* Resolution Notes */}
       {resolutionNotes && (
-        <div className="rounded-lg bg-white/[0.03] border border-white/[0.05] p-3">
+        <div className="rounded-lg bg-bg-overlay border border-border-subtle p-3">
           <div className="flex items-center gap-1.5 mb-2">
-            <FileText className="h-3.5 w-3.5 text-gray-500" />
-            <span className="text-[10px] text-gray-500 font-semibold uppercase tracking-wider">Admin Resolution Notes</span>
+            <FileText className="h-3.5 w-3.5 text-text-tertiary" />
+            <span className="text-[11px] text-text-tertiary font-semibold uppercase tracking-wider">Admin Resolution Notes</span>
           </div>
-          <p className="text-xs text-gray-300 leading-relaxed whitespace-pre-wrap">
+          <p className="text-xs text-text-secondary leading-relaxed whitespace-pre-wrap">
             {resolutionNotes}
           </p>
         </div>
@@ -254,9 +246,9 @@ export default function DisputeResolutionCard({
 
       {/* Resolved By */}
       {resolvedBy && (
-        <div className="mt-3 pt-3 border-t border-white/[0.05]">
-          <p className="text-[10px] text-gray-500">
-            Resolved by <span className="text-gray-400 font-medium">{resolvedBy.full_name || resolvedBy.username || 'Admin'}</span>
+        <div className="mt-3 pt-3 border-t border-border-subtle">
+          <p className="text-[10px] text-text-tertiary">
+            Resolved by <span className="text-text-secondary font-medium">{resolvedBy.full_name || resolvedBy.username || 'Admin'}</span>
           </p>
         </div>
       )}

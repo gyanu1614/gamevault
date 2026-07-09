@@ -17,7 +17,7 @@
 
 function Block({ className = '' }: { className?: string }) {
   return (
-    <div className={`animate-pulse rounded-md bg-white/[0.07] ${className}`} />
+    <div className={`animate-pulse rounded-md bg-bg-overlay-2 ${className}`} />
   )
 }
 
@@ -187,15 +187,15 @@ export default function CurrencySkeleton() {
       {/* GameSubNav skeleton — classNames copy-pasted from
           src/components/marketplace/GameSubNav.tsx so width/padding
           match the real pill exactly. */}
-      <div className="relative z-40 flex justify-center py-6 sm:py-8 md:py-10 pointer-events-none px-3">
-        <div className="pointer-events-auto w-full max-w-fit flex items-center gap-0.5 rounded-full border border-white/[0.1] shadow-2xl backdrop-blur-2xl backdrop-saturate-150 px-2 py-2 sm:px-3 sm:py-2.5" style={{ backgroundColor: 'rgba(28, 28, 37, 0.30)' }}>
+      <div className="relative z-40 flex justify-center py-3 sm:py-4 md:py-5 pointer-events-none px-3">
+        <div className="pointer-events-auto w-full max-w-fit flex items-center gap-0.5 rounded-full border border-white/[0.1] shadow-2xl backdrop-blur-2xl backdrop-saturate-150 px-2 py-1.5 sm:px-2.5 sm:py-2" style={{ backgroundColor: 'rgba(28, 28, 37, 0.30)' }}>
           {/* V21/P7.q — One block per slot (game + each category). */}
-          <div className="flex flex-shrink-0 items-center px-3 py-1.5 sm:px-4 sm:py-2">
+          <div className="flex flex-shrink-0 items-center px-2.5 py-1 sm:px-3.5 sm:py-1.5">
             <Block className="h-3.5 w-20 sm:w-24" />
           </div>
           <div className="mx-1 h-4 w-px bg-white/[0.12] flex-shrink-0 sm:mx-1.5 sm:h-5" aria-hidden />
           {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="flex items-center px-3 py-1.5 sm:px-4 sm:py-2">
+            <div key={i} className="flex items-center px-2.5 py-1 sm:px-3.5 sm:py-1.5">
               <Block className="h-3.5 w-14 sm:w-16" />
             </div>
           ))}

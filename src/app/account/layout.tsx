@@ -6,15 +6,20 @@ import { usePathname, useRouter } from 'next/navigation'
 import { useEffect } from 'react'
 import { Loader2 } from 'lucide-react'
 import { HeroBackdrop, HeroBackdropPreload } from '@/components/hero-backdrop'
+import { isLoggingOut } from '@/lib/auth/logout-signal'
 
 export default function AccountLayout({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
   const pathname = usePathname()
   const router = useRouter()
 
-  // Redirect to login if not authenticated
+  // Redirect to login if not authenticated.
+  // BUT skip it during a user-initiated logout: the navbar already drives the
+  // user home, and racing it with a /login push flashes the login screen +
+  // collapses this page mid-logout. A genuine session expiry (no logout flag)
+  // still redirects to login as before.
   useEffect(() => {
-    if (!loading && !user) {
+    if (!loading && !user && !isLoggingOut()) {
       router.push(`/login?redirect=${encodeURIComponent(pathname || '/account')}`)
     }
   }, [user, loading, pathname, router])
@@ -24,14 +29,23 @@ export default function AccountLayout({ children }: { children: React.ReactNode 
   // screen before the backdrop fades in. Same backdrop the resolved
   // layout uses, so there's no visual swap when auth settles.
   if (loading) {
+    // Context-aware loader copy. Coming back from checkout lands on an order
+    // page — "Preparing your order" reads far better than a bare "Loading…".
+    const loadingLabel = (() => {
+      const p = pathname || ''
+      if (/^\/account\/orders\/[^/]+/.test(p)) return 'Preparing your order…'
+      if (p.startsWith('/account/orders')) return 'Loading your orders…'
+      if (p.startsWith('/account/wallet')) return 'Loading your wallet…'
+      return 'Loading your account…'
+    })()
     return (
       <>
         <HeroBackdropPreload name="account" />
         <HeroBackdrop name="account" className="hero-dim">
           <div className="flex min-h-screen items-center justify-center">
             <div className="flex flex-col items-center gap-4">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              <p className="text-text-secondary">Loading...</p>
+              <Loader2 className="h-8 w-8 animate-spin text-lime-text" />
+              <p className="text-sm font-medium text-text-secondary">{loadingLabel}</p>
             </div>
           </div>
         </HeroBackdrop>
@@ -39,7 +53,10 @@ export default function AccountLayout({ children }: { children: React.ReactNode 
     )
   }
 
-  // Don't render protected content if not authenticated
+  // Don't render protected content if not authenticated. During a logout the
+  // navbar's full-screen overlay is already up and driving the user home, so
+  // returning null here is invisible (and avoids briefly painting this page
+  // logged-out in place — the "bottom of the page" flash).
   if (!user) {
     return null
   }
@@ -89,7 +106,7 @@ export default function AccountLayout({ children }: { children: React.ReactNode 
           account pages: pt-20 = the 80px fixed navbar height, so content
           starts flush under the navbar. Pages must NOT add their own
           navbar-clearance padding on top (only internal content rhythm). */}
-      <HeroBackdrop name="account" className="hero-dim lg:pl-72">
+      <HeroBackdrop name="account" className="hero-dim lg:pl-64">
         <div className="pt-14">{children}</div>
       </HeroBackdrop>
       <AccountSidebar user={sidebarUser} />

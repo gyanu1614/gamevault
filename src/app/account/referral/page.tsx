@@ -9,7 +9,7 @@ import { getReferralStats } from '@/lib/actions/referral'
 import ReferralClient from './ReferralClient'
 
 export const metadata = {
-  title: 'Refer & Earn | GameVault',
+  title: 'Refer & Earn',
   description: 'Share your referral link and earn commissions on every purchase your friends make.',
 }
 

@@ -1873,6 +1873,7 @@ export type Database = {
           images: string[] | null
           min_quantity: number | null
           moderation_notes: string | null
+          offer_number: number | null
           original_price: number | null
           platform: string | null
           price: number
@@ -1906,6 +1907,7 @@ export type Database = {
           images?: string[] | null
           min_quantity?: number | null
           moderation_notes?: string | null
+          offer_number?: number | null
           original_price?: number | null
           platform?: string | null
           price: number
@@ -1939,6 +1941,7 @@ export type Database = {
           images?: string[] | null
           min_quantity?: number | null
           moderation_notes?: string | null
+          offer_number?: number | null
           original_price?: number | null
           platform?: string | null
           price?: number

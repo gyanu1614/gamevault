@@ -249,7 +249,7 @@ export function MarkDeliveredModal({
         {/* Optional note */}
         {stage === 'uploaded' && (
           <label className="mt-2 block">
-            <span className="mb-1.5 block text-[11.5px] font-bold uppercase tracking-[0.12em] text-text-tertiary">
+            <span className="mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-text-tertiary">
               Note To Buyer · Optional
             </span>
             <textarea

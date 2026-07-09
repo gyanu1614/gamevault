@@ -211,7 +211,7 @@ export default function WithdrawPage() {
         <div className="mb-5 flex items-center justify-between rounded-lg border border-border-subtle card-frost py-3">
           <div className="flex items-center gap-2">
             <Wallet className="h-4 w-4 text-success" />
-            <span className="text-[12px] font-semibold uppercase tracking-wider text-text-secondary">Available</span>
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-text-secondary">Available</span>
           </div>
           <span className="text-xl font-bold text-text-primary">${earningsStats.available_balance.toFixed(2)}</span>
         </div>
@@ -272,7 +272,7 @@ export default function WithdrawPage() {
             >
               {/* Amount */}
               <div className="rounded-lg border border-border-subtle card-frost p-5">
-                <label className="mb-1.5 block text-[12px] font-semibold uppercase tracking-wider text-text-secondary">
+                <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-text-secondary">
                   Amount
                 </label>
                 <div className="relative">
@@ -337,7 +337,7 @@ export default function WithdrawPage() {
                   </div>
                   <div className="my-2 h-px bg-border-subtle" />
                   <div className="flex items-center justify-between">
-                    <span className="text-[12px] font-semibold uppercase tracking-wide text-text-secondary">You Receive</span>
+                    <span className="text-[11px] font-semibold uppercase tracking-wider text-text-secondary">You Receive</span>
                     <span className="text-2xl font-bold text-lime-text">${netAmount.toFixed(2)}</span>
                   </div>
                 </div>
@@ -363,7 +363,7 @@ export default function WithdrawPage() {
                 <button
                   onClick={handleSubmit}
                   disabled={isSubmitting || !amount || parseFloat(amount) <= 0}
-                  className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-lime px-6 py-2.5 text-sm font-semibold text-text-inverse transition-colors hover:bg-lime/90 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-lime px-6 py-2.5 text-sm font-semibold text-text-inverse transition-colors hover:bg-lime-hover disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isSubmitting ? (
                     <><Loader2 className="h-4 w-4 animate-spin" /> Submitting…</>

@@ -11,9 +11,9 @@ import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getTemplateFields } from '@/lib/templates'
 import ViewTracker from '@/components/listings/ViewTracker'
-import GameSubNav, { type GameCategory } from '@/components/marketplace/GameSubNav'
 import ListingDetailClient, { type ListingForDetail } from './_ListingDetailClient'
-import { listingToOffer as listingToItemOffer } from '../_itemsData'
+import { listingToOffer as listingToItemOffer, loadItemsTaxonomy } from '../_itemsData'
+import { partitionSameItem } from '../_offerMatching'
 import type { ItemOffer, ItemsTaxonomy } from '../_itemsTypes'
 
 // V15p — Empty taxonomy for ad-hoc ItemOffer shaping in the similar-
@@ -61,12 +61,12 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   }
 
   if (!listing) {
-    return { title: 'Listing Not Found | GameVault' }
+    return { title: 'Listing Not Found' }
   }
 
   return {
-    title: `${listing.title} | ${listing.game.name} ${listing.category.name} | GameVault`,
-    description: listing.description || `Buy ${listing.title} on GameVault. Secure transaction with VaultShield protection. Price: $${listing.price}`,
+    title: `${listing.title} | ${listing.game.name} ${listing.category.name}`,
+    description: listing.description || `Buy ${listing.title} on DropMarket. Secure transaction with SafeDrop protection. Price: $${listing.price}`,
     keywords: [
       listing.game.name.toLowerCase(),
       listing.category.name.toLowerCase(),
@@ -129,18 +129,6 @@ async function getListing(listingSlug: string) {
     .then()
 
   return listing
-}
-
-async function getAllGameCategories(gameId: string): Promise<GameCategory[]> {
-  const supabase = await createClient()
-  const { data } = await supabase
-    .from('categories')
-    .select('id, name, slug')
-    .eq('game_id', gameId)
-    .eq('is_active', true)
-    .order('display_order', { ascending: true })
-    .order('name', { ascending: true }) as any
-  return (data || []) as GameCategory[]
 }
 
 async function getSellerStats(sellerId: string) {
@@ -211,10 +199,11 @@ async function getCarouselListings({
   let query: any = supabase
     .from('listings')
     .select(`
-      id, slug, title, price, images, template_data, status,
+      id, slug, title, price, original_price, delivery_time, quantity,
+      is_unlimited, description, images, template_data, status,
       seller:profiles!listings_seller_id_fkey(
         id, username, shop_name, avatar_url, seller_tier,
-        seller_rating, total_sales, is_verified
+        seller_rating, total_sales, total_reviews, is_verified
       ),
       category:categories!listings_category_id_fkey(slug, name)
     `)
@@ -238,22 +227,69 @@ export default async function ListingDetailPage({ params }: PageProps) {
   const supabase = await createClient()
   const { data: { user: viewer } } = await supabase.auth.getUser()
 
-  const [sellerStats, allCategories, sameSeller, similarOffers] = await Promise.all([
+  // V28 — Items-type categories get the same-item matching treatment
+  // (Other Sellers). Accounts are one-of-a-kind and currency has its own
+  // page type, so those keep the plain relevance carousel.
+  const isItemsCategory =
+    listing.category?.metadata?.type === 'items' ||
+    listing.category?.slug === 'items'
+
+  const [sellerStats, candidates, itemsTaxonomy] = await Promise.all([
     getSellerStats(listing.seller.id),
-    getAllGameCategories(listing.game.id),
-    getCarouselListings({
-      sellerId: listing.seller.id,
-      excludeListingId: listing.id,
-      limit: 12,
-    }),
+    // One wide candidate pool (same game + category); partitioned below
+    // into same-item offers vs related listings.
     getCarouselListings({
       gameId: listing.game.id,
       categoryId: listing.category.id,
       excludeListingId: listing.id,
-      limit: 12,
+      limit: 40,
     }),
+    // Real taxonomy (admin attribute template) so ItemOffer breadcrumbs /
+    // mutation chips resolve to their proper labels in the carousels and
+    // the Other Sellers preview.
+    isItemsCategory
+      ? loadItemsTaxonomy(listing.game.id, 'items')
+      : Promise.resolve(EMPTY_ITEMS_TAXONOMY),
   ])
   const templateFields = getTemplateFields(gameSlug, categorySlug) ?? null
+
+  // V28 — Partition candidates: cross-seller offers of THIS item (tiered:
+  // exact variant first, then same item with a different rarity/mutation)
+  // vs merely-related listings for the Similar carousel.
+  const { sameItem, related } = isItemsCategory
+    ? partitionSameItem(
+        { id: listing.id, title: listing.title, template_data: listing.template_data },
+        candidates as Array<{ id: string; title: string; template_data: Record<string, unknown> | null }>,
+      )
+    : { sameItem: [], related: candidates }
+
+  // Within each tier, cheapest first — it's a price-comparison surface.
+  const otherSellerRows = [...sameItem]
+    .sort((a, b) => a.tier - b.tier || Number((a.listing as any).price ?? 0) - Number((b.listing as any).price ?? 0))
+    .slice(0, 8)
+  let similarOffers = related.slice(0, 12)
+
+  // V28 — Young-marketplace fallback: when the same-category pool is thin
+  // (few sellers yet), top the Similar carousel up with listings from the
+  // REST of the game so the section never runs empty. Only costs an extra
+  // query when actually needed.
+  if (similarOffers.length < 4) {
+    const gameWide = await getCarouselListings({
+      gameId: listing.game.id,
+      excludeListingId: listing.id,
+      limit: 12,
+    })
+    const seen = new Set([
+      ...similarOffers.map((r: any) => r.id),
+      ...otherSellerRows.map((r) => (r.listing as any).id),
+    ])
+    for (const row of gameWide) {
+      if (similarOffers.length >= 12) break
+      if (seen.has(row.id)) continue
+      seen.add(row.id)
+      similarOffers.push(row)
+    }
+  }
 
   // Schema.org structured data
   const schemaData = {
@@ -264,7 +300,7 @@ export default async function ListingDetailPage({ params }: PageProps) {
     image: listing.images || [],
     offers: {
       '@type': 'Offer',
-      url: `${process.env.NEXT_PUBLIC_APP_URL || 'https://gamevault.com'}/${gameSlug}/${categorySlug}/${listingSlug}`,
+      url: `${process.env.NEXT_PUBLIC_APP_URL || 'https://dropmarket.com'}/${gameSlug}/${categorySlug}/${listingSlug}`,
       priceCurrency: 'USD',
       price: listing.price,
       availability: 'https://schema.org/InStock',
@@ -333,28 +369,30 @@ export default async function ListingDetailPage({ params }: PageProps) {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(schemaData) }}
       />
 
-      <GameSubNav
-        gameSlug={gameSlug}
-        gameName={listing.game.name}
-        gameImageUrl={(listing.game as any).image_url}
-        currentCategorySlug={categorySlug}
-        categories={allCategories}
-      />
-
+      {/* V29 — GameSubNav removed on the detail page: the in-page
+          context row (game logo · Game › Category) already covers the
+          back/up-level affordance, so the pill was pure vertical cost.
+          Category pages keep it. */}
       <ListingDetailClient
         listing={shaped}
         viewerId={viewer?.id ?? null}
         templateFields={templateFields}
-        sameSellerListings={sameSeller.map(shapeMini)}
         similarOffers={similarOffers.map(shapeMini)}
         // V15p — Re-use the full ItemCard from the items page for the
         // Similar Offers carousel when the current listing belongs to an
         // items-type category. Same visual + interaction language as the
         // /items page, no drift between surfaces.
         similarOffersAsItems={
-          listing.category?.metadata?.type === 'items' ||
-          listing.category?.slug === 'items'
-            ? similarOffers.map((row) => listingToItemOffer(row, EMPTY_ITEMS_TAXONOMY))
+          isItemsCategory
+            ? similarOffers.map((row) => listingToItemOffer(row, itemsTaxonomy))
+            : null
+        }
+        // V28 — Cross-seller offers of THIS item (replaces "From the same
+        // seller"). Tier-sorted server-side: exact-variant matches first
+        // (cheapest→dearest), then same-item-different-variant.
+        otherSellerOffers={
+          otherSellerRows.length > 0
+            ? otherSellerRows.map((r) => listingToItemOffer(r.listing as any, itemsTaxonomy))
             : null
         }
       />

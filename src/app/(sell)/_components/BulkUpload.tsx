@@ -300,7 +300,7 @@ export default function BulkUpload({ initialCategories }: BulkUploadProps) {
         <div className="space-y-4">
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <label className="block text-xs font-semibold uppercase tracking-wider text-text-secondary">Category</label>
+              <label className="block text-[11px] font-semibold uppercase tracking-wider text-text-secondary">Category</label>
               <Combobox
                 value={selectedCategory?.slug ?? ''}
                 onChange={(slug) => {
@@ -316,7 +316,7 @@ export default function BulkUpload({ initialCategories }: BulkUploadProps) {
               />
             </div>
             <div className="space-y-1.5">
-              <label className="block text-xs font-semibold uppercase tracking-wider text-text-secondary">Game</label>
+              <label className="block text-[11px] font-semibold uppercase tracking-wider text-text-secondary">Game</label>
               <Combobox
                 value={selectedGame?.game_id ?? ''}
                 onChange={(id) => {

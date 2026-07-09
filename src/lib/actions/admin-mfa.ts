@@ -75,7 +75,7 @@ export async function enrollTOTP(): Promise<{
 
     const { data, error } = await supabase.auth.mfa.enroll({
       factorType:   'totp',
-      friendlyName: 'GameVault Admin TOTP',
+      friendlyName: 'DropMarket Admin TOTP',
     })
 
     if (error) return { success: false, error: error.message }

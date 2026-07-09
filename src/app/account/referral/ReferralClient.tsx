@@ -93,7 +93,7 @@ function EarningRow({ earning }: { earning: ReferralEarning }) {
 export default function ReferralClient({ stats }: ReferralClientProps) {
   const [copied, setCopied] = useState(false)
 
-  const appUrl     = process.env.NEXT_PUBLIC_APP_URL || 'https://gamevault.gg'
+  const appUrl     = process.env.NEXT_PUBLIC_APP_URL || 'https://dropmarket.gg'
   const referralUrl = `${appUrl}/signup?ref=${stats.referralCode}`
 
   const copyCode = () => {
@@ -113,8 +113,8 @@ export default function ReferralClient({ stats }: ReferralClientProps) {
   const shareLink = () => {
     if (navigator.share) {
       navigator.share({
-        title: 'Join GameVault',
-        text: `Use my referral code ${stats.referralCode} to sign up on GameVault — the lowest-fee gaming marketplace!`,
+        title: 'Join DropMarket',
+        text: `Use my referral code ${stats.referralCode} to sign up on DropMarket — the lowest-fee gaming marketplace!`,
         url: referralUrl,
       }).catch(() => { /* user cancelled */ })
     } else {

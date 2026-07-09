@@ -79,13 +79,13 @@ export default function EscalateDisputeModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[500px] bg-black/95 backdrop-blur-xl border-white/[0.1]">
+      <DialogContent className="sm:max-w-[500px] rounded-xl border-border-default bg-bg-raised">
         <DialogHeader>
-          <DialogTitle className="text-xl font-bold text-white flex items-center gap-2">
+          <DialogTitle className="text-xl font-bold text-text-primary flex items-center gap-2">
             <AlertOctagon className="h-5 w-5 text-red-400" />
             Escalate to Senior Moderator
           </DialogTitle>
-          <DialogDescription className="text-gray-400">
+          <DialogDescription className="text-text-secondary">
             This dispute will be flagged as urgent and assigned to a senior moderator for review.
           </DialogDescription>
         </DialogHeader>
@@ -94,10 +94,10 @@ export default function EscalateDisputeModal({
           {/* Dispute Info */}
           <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4">
             <div className="text-xs text-red-400 font-semibold mb-1">Dispute</div>
-            <div className="text-sm font-medium text-white mb-2">
+            <div className="text-sm font-medium text-text-primary mb-2">
               {dispute.title}
             </div>
-            <div className="text-xs text-gray-400">
+            <div className="text-xs text-text-secondary">
               {dispute.buyer_username} vs {dispute.seller_username}
             </div>
           </div>
@@ -110,7 +110,7 @@ export default function EscalateDisputeModal({
                 <p className="text-sm font-semibold text-yellow-400 mb-1">
                   Escalation Impact
                 </p>
-                <ul className="text-xs text-gray-300 space-y-1">
+                <ul className="text-xs text-text-secondary space-y-1">
                   <li>• Priority changed to <span className="text-red-400 font-semibold">URGENT</span></li>
                   <li>• Status changed to <span className="text-red-400 font-semibold">ESCALATED</span></li>
                   <li>• Assigned to senior moderator team</li>
@@ -122,7 +122,7 @@ export default function EscalateDisputeModal({
 
           {/* Escalation Reason */}
           <div className="space-y-2">
-            <Label htmlFor="reason" className="text-sm font-semibold text-white">
+            <Label htmlFor="reason" className="text-sm font-semibold text-text-primary">
               Escalation Reason <span className="text-red-400">*</span>
             </Label>
             <Textarea
@@ -130,10 +130,10 @@ export default function EscalateDisputeModal({
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               placeholder="Explain why this dispute requires senior moderator attention. Include any complexity, policy concerns, or special circumstances."
-              className="min-h-[120px] bg-white/[0.05] border-white/[0.1] text-white placeholder:text-gray-500"
+              className="min-h-[120px] rounded-lg bg-bg-base border-border-default text-text-primary placeholder:text-text-tertiary focus:border-lime focus:outline-none"
               required
             />
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-text-tertiary">
               This note will be visible to senior moderators and included in internal logs.
             </p>
           </div>
@@ -145,7 +145,7 @@ export default function EscalateDisputeModal({
             variant="outline"
             onClick={handleClose}
             disabled={isSubmitting}
-            className="border-white/[0.1] hover:bg-white/[0.05]"
+            className="border-border-default bg-bg-overlay text-text-secondary hover:bg-bg-raised-hover hover:text-text-primary"
           >
             Cancel
           </Button>
@@ -153,7 +153,7 @@ export default function EscalateDisputeModal({
             type="button"
             onClick={handleSubmit}
             disabled={isSubmitting || !reason.trim()}
-            className="bg-gradient-to-r from-red-500 to-orange-600 hover:from-red-600 hover:to-orange-700 text-white"
+            className="bg-red-500 hover:bg-red-600 text-white font-bold"
           >
             {isSubmitting ? (
               <>

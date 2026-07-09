@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <defs>
+    <linearGradient id="m" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#D9DEE4"/>
+      <stop offset="0.55" stop-color="#99A2AD"/>
+      <stop offset="1" stop-color="#67707C"/>
+    </linearGradient>
+    <linearGradient id="d" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#7E8793"/>
+      <stop offset="1" stop-color="#4A515C"/>
+    </linearGradient>
+    <linearGradient id="h" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#939BA6"/>
+    </linearGradient>
+  </defs>
+  <!-- handle -->
+  <path d="M28 52 L58 52 L86 148" fill="none" stroke="url(#d)" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- basket body -->
+  <path d="M62 74 L218 74 C227 74 233 82 231 91 L213 150 C211 159 203 165 194 165 L96 165 C87 165 79 159 77 150 L54 84 C52 79 56 74 62 74 Z" fill="url(#m)"/>
+  <!-- basket inner face -->
+  <path d="M78 92 L206 92 C210 92 213 96 212 100 L199 141 C198 146 194 149 189 149 L101 149 C96 149 92 146 91 141 L72 98 C71 95 74 92 78 92 Z" fill="url(#d)" opacity="0.55"/>
+  <!-- top sheen -->
+  <path d="M62 74 L218 74 C227 74 233 82 231 91 L228 100 L58 100 L54 84 C52 79 56 74 62 74 Z" fill="url(#h)" opacity="0.5"/>
+  <!-- wheels -->
+  <circle cx="106" cy="196" r="20" fill="url(#m)"/>
+  <circle cx="106" cy="196" r="9" fill="url(#d)"/>
+  <circle cx="184" cy="196" r="20" fill="url(#m)"/>
+  <circle cx="184" cy="196" r="9" fill="url(#d)"/>
+</svg>

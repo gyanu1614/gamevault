@@ -24,7 +24,7 @@ export function RowHeader({ title, viewAllHref, eyebrow, subtitle }: RowHeaderPr
       <div className="relative flex-1 min-w-0">
         {eyebrow && (
           <div className="mb-2 flex items-center gap-2">
-            <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-lime-text">
+            <span className="text-[11.5px] font-bold uppercase tracking-[0.14em] text-lime-text">
               {eyebrow}
             </span>
             <span className="h-px w-8 bg-gradient-to-r from-lime/40 to-transparent" aria-hidden />

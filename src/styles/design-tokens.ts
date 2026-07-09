@@ -1,5 +1,5 @@
 /**
- * GameVault Design Tokens
+ * DropMarket Design Tokens
  * Single source of truth for all visual design decisions.
  * Used by tailwind.config.ts and referenced in components.
  *

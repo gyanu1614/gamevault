@@ -95,7 +95,7 @@ export default function SellerStorefront({ seller }: SellerStorefrontProps) {
     '@type': 'Store',
     name: businessName,
     image: getAvatarUrl(seller.profile.avatar_url, seller.profile.username),
-    description: `Gaming marketplace seller on GameVault`,
+    description: `Gaming marketplace seller on DropMarket`,
     url: `${typeof window !== 'undefined' ? window.location.origin : ''}/shop/${seller.profile.shop_slug || seller.profile.username}`,
     aggregateRating:
       seller.stats.totalReviews > 0
@@ -108,7 +108,7 @@ export default function SellerStorefront({ seller }: SellerStorefrontProps) {
           }
         : undefined,
     founder: { '@type': 'Person', name: seller.profile.username },
-    memberOf: { '@type': 'Organization', name: 'GameVault' },
+    memberOf: { '@type': 'Organization', name: 'DropMarket' },
   }
 
   return (
@@ -246,7 +246,7 @@ export default function SellerStorefront({ seller }: SellerStorefrontProps) {
                   <div className="space-y-4 text-sm">
                     <PolicyBlock
                       title="Returns & refunds"
-                      body="All sales are covered by GameVault's buyer protection policy. Refunds available within 7 days if the product doesn't match the description."
+                      body="All sales are covered by DropMarket's buyer protection policy. Refunds available within 7 days if the product doesn't match the description."
                     />
                     <PolicyBlock
                       title="Delivery"
@@ -298,7 +298,7 @@ function ShopListingCard({ listing }: { listing: any }) {
           </div>
         )}
         {/* Game chip */}
-        <div className="absolute left-2.5 top-2.5 inline-flex items-center gap-1 rounded-full border border-lime-tint-border bg-lime-tint-bg/80 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-lime-text backdrop-blur-sm">
+        <div className="absolute left-2.5 top-2.5 inline-flex items-center gap-1 rounded-full border border-lime-tint-border bg-lime-tint-bg/80 px-2 py-0.5 text-[11.5px] font-bold uppercase tracking-[0.14em] text-lime-text backdrop-blur-sm">
           {game}
         </div>
         {hasPriceDrop && (
@@ -309,7 +309,7 @@ function ShopListingCard({ listing }: { listing: any }) {
       </div>
 
       <div className="flex flex-1 flex-col gap-2 p-3 sm:p-4">
-        <div className="text-[10px] font-medium uppercase tracking-wider text-text-tertiary">
+        <div className="text-[11px] font-semibold uppercase tracking-wider text-text-tertiary">
           {category}
         </div>
         <h3 className="line-clamp-2 text-sm font-semibold leading-snug text-text-primary group-hover:text-lime-text">

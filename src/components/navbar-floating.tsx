@@ -13,10 +13,23 @@ import { Input } from '@/components/ui/input'
 import { useAuth } from '@/hooks/use-auth'
 import { useAuthDialog } from '@/components/auth/AuthDialog'
 import { cn } from '@/lib/utils'
+import { isProtectedPath } from '@/lib/auth/protected-routes'
+import { beginLogout } from '@/lib/auth/logout-signal'
 import { getAvatarUrl } from '@/lib/utils/avatar'
+import { getGameIcon } from '@/features/home/lib/game-icons'
+import { getWalletBalance } from '@/lib/actions/wallet'
 import { searchAttributeOptions, type AttrOptionHit } from '@/lib/actions/search'
 import { setStorePaused, getMyStorePaused } from '@/lib/actions/seller-presence'
 import { toast } from 'sonner'
+
+// 5 fixed nav tabs with their DB type keys
+const NAV_TABS = [
+  { id: 'currency', label: 'Currency', type: 'currency' },
+  { id: 'accounts', label: 'Accounts', type: 'account' },
+  { id: 'items',    label: 'Items',    type: 'items' },
+  { id: 'top-up',  label: 'Top Up',   type: 'top_up' },
+  { id: 'boosting', label: 'Boosting', type: 'service' },
+]
 
 // ── Tier visual config ────────────────────────────────────────────────────────
 const TIER_CONFIG: Record<string, { icon: React.ElementType; color: string; bg: string; border: string }> = {
@@ -36,6 +49,51 @@ const TIER_CONFIG: Record<string, { icon: React.ElementType; color: string; bg: 
  * mount so the visual transition is identical to what scrolling
  * triggers.
  */
+/** V62 — Live-order row (activity dropdown). Status pill uses token
+ *  tints; 'delivering' gets the lime treatment. */
+function LiveOrderRow({ order, onNavigate }: { order: any; onNavigate: () => void }) {
+  const statusColors: Record<string, string> = {
+    pending: 'bg-warning-bg text-warning',
+    paid: 'bg-info-bg text-info',
+    processing: 'bg-info-bg text-info',
+    delivering: 'bg-lime-tint-bg text-lime-text',
+  }
+  return (
+    <Link
+      href={`/account/orders/${order.id}`}
+      onClick={onNavigate}
+      className="flex items-start gap-3 rounded-md border border-border-subtle bg-white/[0.03] p-3 transition-colors hover:border-border-default hover:bg-white/[0.06]"
+    >
+      <div className="grid h-9 w-9 flex-shrink-0 place-items-center overflow-hidden rounded-md border border-border-subtle bg-bg-overlay">
+        {(order.listing as any)?.game?.slug ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={getGameIcon((order.listing as any).game.slug)}
+            alt=""
+            aria-hidden
+            className="h-full w-full object-cover"
+          />
+        ) : (
+          <Package className="h-4 w-4 text-lime-text" />
+        )}
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-[14px] font-semibold text-text-primary">
+          {(order.listing as any)?.title || 'Order'}
+        </p>
+        <div className="mt-1 flex items-center gap-2">
+          <span className={cn('rounded-md px-2 py-0.5 text-[10px] font-semibold capitalize', statusColors[order.status] || 'bg-white/10 text-text-secondary')}>
+            {order.status}
+          </span>
+          <span className="text-xs tabular-nums text-text-tertiary">
+            ${Number(order.total_amount).toFixed(2)}
+          </span>
+        </div>
+      </div>
+    </Link>
+  )
+}
+
 export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = {}) {
   const { user, loading } = useAuth()
   const authDialog = useAuthDialog()
@@ -119,8 +177,37 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
     setActivityOpen(false)
     setMobileMenuOpen(false)
   }, [pathname])
-  const [activityTab, setActivityTab] = useState<'buying' | 'selling'>('buying')
   const [isLoggingOut, setIsLoggingOut] = useState(false)
+  // V23 — When a protected-path logout redirects home, we hold the opaque
+  // overlay until the home route has actually PAINTED (not a blind timer that
+  // can fire before home mounts, popping content in). This flag arms the
+  // navigation-settle effect below; once pathname becomes '/' we wait two
+  // animation frames (home tree committed + painted) and lift the overlay.
+  const [awaitingHomePaint, setAwaitingHomePaint] = useState(false)
+
+  // V23 — Lift the logout overlay only once home has painted.
+  // When a protected-path logout fires router.replace('/'), we keep the
+  // opaque overlay up and arm `awaitingHomePaint`. This effect watches for
+  // the route to settle on '/', then waits two rAFs (React commits the new
+  // tree, then the browser paints it) before lifting — so the user never
+  // sees a cold home mid-mount. The handler also sets a safety cap so the
+  // overlay can't get stuck if navigation never settles.
+  useEffect(() => {
+    if (!awaitingHomePaint) return
+    if (pathname !== '/') return
+    let raf2 = 0
+    const raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(() => {
+        setIsLoggingOut(false)
+        setAwaitingHomePaint(false)
+      })
+    })
+    return () => {
+      cancelAnimationFrame(raf1)
+      if (raf2) cancelAnimationFrame(raf2)
+    }
+  }, [awaitingHomePaint, pathname])
+
   const [isAdmin, setIsAdmin] = useState(false)
   // V21/P7.ae — Offline Mode (store pause). When on, the seller's offers
   // are taken down for buyers until toggled back. `pendingOffline` blocks
@@ -268,14 +355,14 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
       const [buyResult, sellResult] = await Promise.all([
         supabase
           .from('orders')
-          .select('id, order_number, status, total_amount, created_at, listing:listings!orders_listing_id_fkey(title)')
+          .select('id, order_number, status, total_amount, created_at, listing:listings!orders_listing_id_fkey(title, game:games(slug))')
           .eq('buyer_id', user.id)
           .in('status', ACTIVE)
           .order('created_at', { ascending: false })
           .limit(5),
         supabase
           .from('orders')
-          .select('id, order_number, status, total_amount, created_at, listing:listings!orders_listing_id_fkey(title)')
+          .select('id, order_number, status, total_amount, created_at, listing:listings!orders_listing_id_fkey(title, game:games(slug))')
           .eq('seller_id', user.id)
           .in('status', ACTIVE)
           .order('created_at', { ascending: false })
@@ -286,6 +373,18 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
     enabled: !!user,
     refetchInterval: 30000,
   })
+  // V63 — Wallet balance for the profile-menu Wallet row (sellers).
+  const { data: navWalletBalance } = useQuery({
+    queryKey: ['wallet-balance-navbar', user?.id],
+    queryFn: async () => {
+      const result = await getWalletBalance()
+      return result.success ? result.balance : null
+    },
+    enabled: !!user?.isApprovedSeller,
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
+  })
+
   const activeOrders = activeOrdersData || { buying: [], selling: [] }
   const totalActiveOrders = activeOrders.buying.length + activeOrders.selling.length
 
@@ -408,14 +507,23 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
     return groups
   }, [navCatsData])
 
-  // 5 fixed nav tabs with their DB type keys
-  const NAV_TABS = [
-    { id: 'currency', label: 'Currency', type: 'currency' },
-    { id: 'accounts', label: 'Accounts', type: 'account' },
-    { id: 'items',    label: 'Items',    type: 'items' },
-    { id: 'top-up',  label: 'Top Up',   type: 'top_up' },
-    { id: 'boosting', label: 'Boosting', type: 'service' },
-  ]
+  // V50 — Which nav tab owns the CURRENT page? Matched against the
+  // same category data that powers the dropdowns: a page at
+  // /{gameSlug}/{categorySlug} lights up the tab whose entries include
+  // that exact game+category pair. Null on non-category pages.
+  const currentNavTabId = useMemo(() => {
+    if (!pathname) return null
+    for (const tab of NAV_TABS) {
+      const entries = gamesByType[tab.type] || []
+      const hit = entries.some(
+        ({ game, categorySlug }) =>
+          pathname === `/${game.slug}/${categorySlug}` ||
+          pathname.startsWith(`/${game.slug}/${categorySlug}/`),
+      )
+      if (hit) return tab.id
+    }
+    return null
+  }, [pathname, gamesByType])
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
@@ -426,18 +534,34 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
 
   return (
     <>
-      {/* V21/P5.b — Full-screen blur loader during signOut. Sits above
+      {/* V21/P5.b + V23 — Full-screen loader during signOut. Sits above
           everything (z-[100]) so the dropdown closing doesn't unmount
           the loader. Pointer-events trap so users can't click underneath
-          while signOut completes. */}
+          while signOut completes.
+          V23 — OPAQUE, painted with the SAME surface as <body>
+          (--color-bg-base + --gradient-page-scrim). Previously this was
+          bg-bg-base/40 (40% translucent) — during a logout from a
+          protected page the account layout returns null and home hasn't
+          painted yet, so the bare #0A0A0F body showed THROUGH the 40%
+          scrim as a black flash. An opaque, body-matched fill masks that
+          gap completely: lifting onto either still-unpainted body or
+          painted home is a pixel-identical surface, so there's no swap.
+          backdrop-blur dropped — it's inert once the fill is opaque. */}
       {isLoggingOut && (
         <div
           aria-live="polite"
           aria-busy="true"
-          className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-bg-base/40 backdrop-blur-md"
+          className="fixed inset-0 z-[100] flex flex-col items-center justify-center"
+          style={{
+            backgroundColor: 'var(--color-bg-base)',
+            backgroundImage: 'var(--gradient-page-scrim)',
+            backgroundRepeat: 'no-repeat',
+            backgroundPosition: 'top center',
+            backgroundSize: '100% 100%',
+          }}
         >
           <div className="flex flex-col items-center gap-4">
-            <span className="grid h-14 w-14 place-items-center rounded-full bg-bg-raised/80 ring-1 ring-white/10">
+            <span className="grid h-14 w-14 place-items-center rounded-lg bg-bg-raised/80 ring-1 ring-white/10">
               <span
                 aria-hidden
                 className="h-7 w-7 animate-spin rounded-full border-2 border-white/[0.08] border-t-lime"
@@ -521,9 +645,9 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
             {/* Logo */}
             <Link href="/" className="flex shrink-0 items-center gap-2">
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-lime">
-                <span className="text-lg font-bold text-text-inverse">G</span>
+                <span className="text-lg font-bold text-text-inverse">D</span>
               </div>
-              <span className="hidden font-bold text-white sm:inline-block">GameVault</span>
+              <span className="hidden font-bold text-white sm:inline-block">DropMarket</span>
             </Link>
 
             {/* V21/P7.r — Divider hides while search is expanded. */}
@@ -548,6 +672,7 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                     tab={tab}
                     gameEntries={gamesByType[tab.type] || []}
                     isActive={activeDropdown === tab.id}
+                    isCurrent={currentNavTabId === tab.id}
                     onHoverStart={() => openDropdown(tab.id)}
                     onHoverEnd={() => closeDropdown()}
                     onSelect={() => setActiveDropdown(null)}
@@ -635,32 +760,41 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                       )}
                     </Button>
 
-                    <AnimatePresence>
-                      {notificationsOpen && (
-                        <motion.div
-                          initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                          animate={{ opacity: 1, y: 0, scale: 1 }}
-                          exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                          transition={{ duration: 0.2 }}
-                          className="absolute right-0 top-full mt-2 w-[400px] max-w-[90vw]"
-                        >
-                          <div className="rounded-2xl border border-white/10 bg-black p-4 shadow-2xl backdrop-blur-xl">
-                            {/* Header */}
-                            <div className="mb-3 flex items-center justify-between">
-                              <h3 className="text-sm font-semibold text-white">Notifications</h3>
+                    {/* V61 — CSS entry animation (framer stalls mid-fade
+                        under heavy trees and strands the panel half-visible;
+                        same fix as the admin header). */}
+                    {notificationsOpen && (
+                      <div className="absolute right-0 top-full mt-[27px] w-[480px] max-w-[92vw] animate-in fade-in-0 zoom-in-95 slide-in-from-top-2 duration-200">
+                          {/* V61 — Marketplace glass panel (was flat black):
+                              near-opaque dark surface + top sheen, roomier
+                              type and spacing. */}
+                          <div className="relative overflow-hidden rounded-lg border border-border-default bg-[#17171F] shadow-[0_24px_48px_-12px_rgba(0,0,0,0.85)] p-5">
+                            <span aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-16 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.05),transparent)]" />
+                            {/* Header - hairline separator spans the full panel width */}
+                            <div className="relative -mx-5 mb-4 flex items-center justify-between border-b border-border-subtle px-5 pb-3.5">
+                              <h3 className="text-[16px] font-bold text-text-primary">Notifications</h3>
+                              {unreadNotificationCount > 0 && (
+                                <span className="inline-flex h-6 items-center rounded-md border border-lime-tint-border bg-lime-tint-bg px-2 text-[11.5px] font-bold text-lime-text">
+                                  {unreadNotificationCount} unread
+                                </span>
+                              )}
                             </div>
 
                             {/* Notifications List */}
                             {recentNotifications.length === 0 ? (
-                              <div className="py-12 text-center">
-                                <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-white/5">
-                                  <Bell className="h-6 w-6 text-gray-500" />
-                                </div>
-                                <p className="text-sm text-gray-400">You're all caught up!</p>
-                                <p className="mt-1 text-xs text-gray-500">No new notifications</p>
+                              <div className="relative py-14 text-center">
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img
+                                  src="/characters/sleepy-pup.webp"
+                                  alt=""
+                                  aria-hidden
+                                  className="mx-auto mb-3 h-28 w-auto select-none object-contain"
+                                />
+                                <p className="text-[14.5px] font-semibold text-text-primary">You&apos;re all caught up!</p>
+                                <p className="mt-1 text-[12.5px] text-text-tertiary">No new notifications</p>
                               </div>
                             ) : (
-                              <div className="space-y-2 max-h-[360px] overflow-y-auto pr-1">
+                              <div className="relative max-h-[420px] space-y-2 overflow-y-auto pr-1">
                                 {recentNotifications.map((notification: any) => (
                                   <Link
                                     key={notification.id}
@@ -669,22 +803,22 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                                       markAsRead(notification.id)
                                       setNotificationsOpen(false)
                                     }}
-                                    className="block rounded-lg p-3 transition-colors hover:bg-white/5 bg-lime/10 border border-lime-tint-border"
+                                    className="block rounded-md border border-border-subtle bg-white/[0.03] p-3.5 transition-colors hover:border-border-default hover:bg-white/[0.06]"
                                   >
                                     <div className="flex items-start gap-3">
                                       <div className="flex-shrink-0">
-                                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-lime/20">
+                                        <div className="grid h-9 w-9 place-items-center rounded-md border border-border-subtle bg-bg-overlay">
                                           <Bell className="h-4 w-4 text-lime-text" />
                                         </div>
                                       </div>
                                       <div className="flex-1 min-w-0">
-                                        <p className="text-sm font-medium text-white truncate">
+                                        <p className="truncate text-[14px] font-semibold text-text-primary">
                                           {notification.title}
                                         </p>
-                                        <p className="text-xs text-gray-400 mt-0.5 line-clamp-2">
+                                        <p className="mt-0.5 line-clamp-2 text-[12.5px] leading-relaxed text-text-secondary">
                                           {notification.message}
                                         </p>
-                                        <p className="text-xs text-gray-500 mt-1">
+                                        <p className="mt-1.5 text-[11.5px] text-text-tertiary">
                                           {new Date(notification.created_at).toLocaleDateString('en-US', {
                                             month: 'short',
                                             day: 'numeric',
@@ -693,8 +827,20 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                                           })}
                                         </p>
                                       </div>
-                                      <div className="flex-shrink-0">
-                                        <div className="h-2 w-2 rounded-full bg-lime" />
+                                      <div className="flex flex-shrink-0 flex-col items-end gap-2">
+                                        <button
+                                          type="button"
+                                          aria-label="Dismiss notification"
+                                          className="grid h-6 w-6 place-items-center rounded-md text-text-tertiary transition-colors hover:bg-white/10 hover:text-text-primary"
+                                          onClick={(e) => {
+                                            e.preventDefault()
+                                            e.stopPropagation()
+                                            markAsRead(notification.id)
+                                          }}
+                                        >
+                                          <X className="h-3.5 w-3.5" />
+                                        </button>
+                                        <span aria-hidden className="mr-2 h-2 w-2 rounded-full bg-lime shadow-[0_0_8px_rgba(198,255,61,0.8)]" />
                                       </div>
                                     </div>
                                   </Link>
@@ -705,15 +851,14 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                             {/* View All Button */}
                             <Link
                               href="/notifications"
-                              className="mt-2 block rounded-lg bg-white/5 px-4 py-2 text-center text-sm font-medium text-white transition-colors hover:bg-white/10"
+                              className="relative mt-3 flex h-10 items-center justify-center rounded-md border border-border-default bg-bg-overlay text-[13px] font-semibold text-text-primary transition-colors hover:border-border-strong hover:bg-bg-overlay-2"
                               onClick={() => setNotificationsOpen(false)}
                             >
-                              View all notifications
+                              View All Notifications
                             </Link>
                           </div>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
+                      </div>
+                    )}
                   </div>
 
                   {/* Messages */}
@@ -752,96 +897,72 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                       )}
                     </Button>
 
-                    <AnimatePresence>
-                      {activityOpen && (
-                        <motion.div
-                          initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                          animate={{ opacity: 1, y: 0, scale: 1 }}
-                          exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                          transition={{ duration: 0.2 }}
-                          className="absolute right-0 top-full mt-2 w-[400px] max-w-[90vw]"
-                        >
-                          <div className="rounded-2xl border border-white/10 bg-black p-4 shadow-2xl backdrop-blur-xl">
-                            {/* Header */}
-                            <div className="mb-3 flex items-center justify-between">
-                              <h3 className="text-sm font-semibold text-white">Live Orders</h3>
+                    {activityOpen && (
+                      <div className="absolute right-0 top-full mt-[27px] w-[480px] max-w-[92vw] animate-in fade-in-0 zoom-in-95 slide-in-from-top-2 duration-200">
+                          {/* V61 — Same glass panel as Notifications. */}
+                          <div className="relative overflow-hidden rounded-lg border border-border-default bg-[#17171F] shadow-[0_24px_48px_-12px_rgba(0,0,0,0.85)] p-5">
+                            <span aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-16 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.05),transparent)]" />
+                            {/* Header - hairline separator spans the full panel width */}
+                            <div className="relative -mx-5 mb-4 flex items-center justify-between border-b border-border-subtle px-5 pb-3.5">
+                              <h3 className="text-[16px] font-bold text-text-primary">Live Orders</h3>
                               <Link
                                 href="/account/orders"
-                                className="text-xs text-lime-text hover:text-lime-text transition-colors"
+                                className="text-[12.5px] font-semibold text-lime-text transition-opacity hover:opacity-80"
                                 onClick={() => setActivityOpen(false)}
                               >
-                                View all
+                                View All
                               </Link>
                             </div>
 
-                            {/* Tabs */}
-                            <div className="mb-3 flex rounded-lg bg-white/5 p-1">
-                              {(['buying', 'selling'] as const).map((tab) => (
-                                <button
-                                  key={tab}
-                                  onClick={() => setActivityTab(tab)}
-                                  className={cn(
-                                    'flex-1 rounded-md py-1.5 text-xs font-medium capitalize transition-colors',
-                                    activityTab === tab
-                                      ? 'bg-white/10 text-white'
-                                      : 'text-gray-400 hover:text-gray-300'
-                                  )}
-                                >
-                                  {tab} ({tab === 'buying' ? activeOrders.buying.length : activeOrders.selling.length})
-                                </button>
-                              ))}
-                            </div>
-
-                            {/* Orders list */}
-                            {(activityTab === 'buying' ? activeOrders.buying : activeOrders.selling).length === 0 ? (
-                              <div className="py-12 text-center">
-                                <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-white/5">
-                                  <Activity className="h-6 w-6 text-gray-500" />
-                                </div>
-                                <p className="text-sm text-gray-400">No active orders</p>
-                                <p className="mt-1 text-xs text-gray-500">Orders in progress will appear here</p>
+                            {/* V62 — No tabs: one view. Buying stacks above
+                                Selling; a section renders only when it has
+                                orders, so buyers see just Buying, sellers see
+                                just Selling, and dual-role users see both. */}
+                            {activeOrders.buying.length === 0 && activeOrders.selling.length === 0 ? (
+                              <div className="relative py-14 text-center">
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img
+                                  src="/characters/box-cat.webp"
+                                  alt=""
+                                  aria-hidden
+                                  className="mx-auto mb-3 h-28 w-auto select-none object-contain"
+                                />
+                                <p className="text-[14.5px] font-semibold text-text-primary">No active orders</p>
+                                <p className="mt-1 text-[12.5px] text-text-tertiary">Orders in progress will appear here</p>
                               </div>
                             ) : (
-                              <div className="space-y-2 max-h-[360px] overflow-y-auto pr-1">
-                                {(activityTab === 'buying' ? activeOrders.buying : activeOrders.selling).map((order: any) => {
-                                  const statusColors: Record<string, string> = {
-                                    pending: 'bg-yellow-500/20 text-yellow-400',
-                                    paid: 'bg-blue-500/20 text-blue-400',
-                                    processing: 'bg-blue-500/20 text-blue-400',
-                                    delivering: 'bg-lime/20 text-lime-text',
-                                  }
-                                  return (
-                                    <Link
-                                      key={order.id}
-                                      href={`/account/orders/${order.id}`}
-                                      onClick={() => setActivityOpen(false)}
-                                      className="flex items-start gap-3 rounded-lg p-2.5 transition-colors hover:bg-white/5"
-                                    >
-                                      <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-lime/20">
-                                        <Package className="h-4 w-4 text-lime-text" />
-                                      </div>
-                                      <div className="min-w-0 flex-1">
-                                        <p className="truncate text-sm font-medium text-white">
-                                          {(order.listing as any)?.title || 'Order'}
-                                        </p>
-                                        <div className="mt-1 flex items-center gap-2">
-                                          <span className={cn('rounded-full px-2 py-0.5 text-[10px] font-semibold capitalize', statusColors[order.status] || 'bg-white/10 text-gray-400')}>
-                                            {order.status}
-                                          </span>
-                                          <span className="text-xs text-gray-500">
-                                            ${Number(order.total_amount).toFixed(2)}
-                                          </span>
-                                        </div>
-                                      </div>
-                                    </Link>
-                                  )
-                                })}
+                              <div className="relative max-h-[440px] space-y-4 overflow-y-auto pr-1">
+                                {activeOrders.buying.length > 0 && (
+                                  <div>
+                                    <div className="mb-2 flex items-center gap-2">
+                                      <span className="text-[14px] font-bold text-text-primary">Buying</span>
+                                      <span className="text-[12.5px] font-semibold text-text-tertiary">({activeOrders.buying.length})</span>
+                                    </div>
+                                    <div className="space-y-2">
+                                      {activeOrders.buying.map((order: any) => (
+                                        <LiveOrderRow key={order.id} order={order} onNavigate={() => setActivityOpen(false)} />
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                                {activeOrders.selling.length > 0 && (
+                                  <div className={cn(activeOrders.buying.length > 0 && 'border-t border-border-subtle pt-4')}>
+                                    <div className="mb-2 flex items-center gap-2">
+                                      <span className="text-[14px] font-bold text-text-primary">Selling</span>
+                                      <span className="text-[12.5px] font-semibold text-text-tertiary">({activeOrders.selling.length})</span>
+                                    </div>
+                                    <div className="space-y-2">
+                                      {activeOrders.selling.map((order: any) => (
+                                        <LiveOrderRow key={order.id} order={order} onNavigate={() => setActivityOpen(false)} />
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
                               </div>
                             )}
                           </div>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
+                      </div>
+                    )}
                   </div>
                 </>
               )}
@@ -878,41 +999,32 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                     />
                   </Button>
 
-                  <AnimatePresence>
-                    {userMenuOpen && (
-                      <motion.div
-                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                        transition={{ duration: 0.2 }}
-                        className="absolute -right-3 top-full mt-3 w-[300px] max-w-[85vw] sm:-right-6"
-                      >
-                        {/* V21/P7.ad — Translucent navbar-matched glass
-                            (was flat black), squarer corners, and a bit
-                            of vertical breathing room above (mt-3) to
-                            mirror the navbar↔page gap. */}
-                        <div
-                          className="rounded-xl border border-white/10 p-1.5 shadow-2xl backdrop-blur-2xl backdrop-saturate-150"
-                          style={{ backgroundColor: 'rgba(8, 8, 12, 0.985)' }}
-                        >
+                  {userMenuOpen && (
+                    <div className="absolute -right-3 top-full mt-[25px] w-[360px] max-w-[92vw] sm:-right-6 animate-in fade-in-0 zoom-in-95 slide-in-from-top-2 duration-200">
+                        {/* V61 — Marketplace glass panel: near-opaque dark
+                            surface + top sheen, wider (360px) with roomier
+                            rows so the menu reads as a proper panel, not a
+                            cramped context menu. */}
+                        <div className="relative overflow-hidden rounded-lg border border-border-default bg-[#17171F] p-2 shadow-[0_24px_48px_-12px_rgba(0,0,0,0.85)] max-h-[calc(100vh-110px)] overflow-y-auto">
+                          <span aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-16 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.05),transparent)]" />
                           {/* User Info card */}
-                          <div className="border-b border-white/10 p-2 pb-2.5">
+                          <div className="relative border-b border-border-subtle p-2 pb-2">
                             {user.isApprovedSeller ? (
                               // Outer container — shared bg/border
-                              <div className="flex items-center gap-2.5 w-full rounded-xl bg-white/[0.04] border border-white/[0.06] hover:border-primary/25 transition-all overflow-hidden group/card">
+                              <div className="flex items-center gap-2.5 w-full rounded-md bg-white/[0.04] border border-border-subtle hover:border-border-strong transition-all overflow-hidden group/card">
                                 {/* Left — shop link */}
                                 <Link
                                   href={`/shop/${user.profile?.shop_slug || user.profile?.username || ''}`}
                                   onClick={() => setUserMenuOpen(false)}
-                                  className="flex items-center gap-2.5 flex-1 min-w-0 px-3 py-2.5 hover:bg-white/[0.04] transition-colors group/link"
+                                  className="flex items-center gap-3 flex-1 min-w-0 px-3 py-2.5 hover:bg-white/[0.04] transition-colors group/link"
                                 >
                                   <img
                                     src={getAvatarUrl(user.profile?.avatar_url, user.profile?.username || 'user')}
                                     alt={user.profile?.username || 'User'}
-                                    className="h-9 w-9 rounded-full flex-shrink-0 object-cover ring-2 ring-white/10 group-hover/link:ring-primary/40 transition-all"
+                                    className="h-10 w-10 rounded-full flex-shrink-0 object-cover ring-2 ring-white/10 group-hover/link:ring-[#C6FF3D66] transition-all"
                                   />
                                   <div className="min-w-0">
-                                    <div className="font-semibold text-white text-sm truncate group-hover/link:text-primary/90 transition-colors leading-tight">
+                                    <div className="font-bold text-text-primary text-[15px] truncate group-hover/link:text-lime-text transition-colors leading-tight">
                                       {user.profile?.shop_name || user.profile?.username || 'Seller'}
                                     </div>
                                     {(() => {
@@ -941,37 +1053,48 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                                 </div>
                               </div>
                             ) : (
-                              <div className="flex items-center gap-2.5 w-full rounded-xl px-3 py-2.5 bg-white/[0.04] border border-white/[0.06]">
+                              <div className="flex items-center gap-3 w-full rounded-md px-3 py-2.5 bg-white/[0.04] border border-border-subtle">
+                                {/* V66 — Buyer identity card: Rookie rank chip +
+                                    member-since line. */}
                                 <img
                                   src={getAvatarUrl(user.profile?.avatar_url, user.profile?.username || 'user')}
                                   alt={user.profile?.username || 'User'}
-                                  className="h-9 w-9 rounded-full flex-shrink-0 object-cover ring-2 ring-white/10"
+                                  className="h-10 w-10 rounded-full flex-shrink-0 object-cover ring-2 ring-white/10"
                                 />
                                 <div className="min-w-0 flex-1">
-                                  <div className="font-semibold text-white text-sm truncate leading-tight">
-                                    {user.profile?.username || 'User'}
+                                  <div className="flex items-center gap-2">
+                                    <span className="truncate font-bold text-text-primary text-[15px] leading-tight">
+                                      {user.profile?.username || 'User'}
+                                    </span>
+                                    <span className="inline-flex flex-none items-center gap-1 rounded-md border border-[rgba(96,165,250,0.3)] bg-info-bg px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-info">
+                                      <Sparkles className="h-2.5 w-2.5" />
+                                      Rookie
+                                    </span>
                                   </div>
-                                  <div className="mt-0.5 text-[11px] text-gray-400">Buyer Account</div>
+                                  <div className="mt-0.5 text-[11.5px] text-text-tertiary">
+                                    Member since{' '}
+                                    {new Date(user.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
+                                  </div>
                                 </div>
                               </div>
                             )}
                           </div>
 
                           {/* Menu Items */}
-                          <div className="py-2">
+                          <div className="relative py-1.5">
 
                             {/* Admin Panel - Admins Only */}
                             {isAdmin && (
                               <>
                                 <Link
                                   href="/admin"
-                                  className="mb-2 flex items-center gap-3 rounded-lg border border-lime-tint-border bg-lime-tint-bg px-4 py-2 text-sm font-semibold text-lime-text transition-colors hover:border-lime hover:bg-lime-tint-bg/80"
+                                  className="mb-1.5 flex items-center gap-3 rounded-md border border-lime-tint-border bg-lime-tint-bg px-4 py-2.5 text-[14px] font-semibold text-lime-text transition-colors hover:border-lime"
                                   onClick={() => setUserMenuOpen(false)}
                                 >
-                                  <Shield className="h-4 w-4" />
+                                  <Shield className="h-[18px] w-[18px]" />
                                   Admin Panel
                                 </Link>
-                                <div className="my-2 h-px bg-white/10" />
+                                <div className="my-1.5 h-px bg-border-subtle" />
                               </>
                             )}
 
@@ -990,52 +1113,50 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                                     white block. */}
                                 <Link
                                   href="/account/dashboard"
-                                  className="mb-1 flex items-center gap-3 rounded-lg border border-white/10 bg-white/[0.06] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-white/[0.10]"
+                                  className="mb-1 flex items-center gap-3 rounded-md border border-border-subtle bg-white/[0.06] px-4 py-2.5 text-[14px] font-semibold text-text-primary transition-colors hover:bg-white/[0.10]"
                                   onClick={() => setUserMenuOpen(false)}
                                 >
                                   <MenuIcon name="seller-dashboard" className="text-lime-text" />
                                   Seller Dashboard
                                 </Link>
 
-                                <Link
-                                  href="/account/listings"
-                                  className="flex items-center gap-3 rounded-lg px-4 py-2 text-sm text-gray-200 transition-colors hover:bg-white/10 hover:text-white"
-                                  onClick={() => setUserMenuOpen(false)}
-                                >
-                                  <MenuIcon name="my-offers" />
-                                  My Offers
-                                </Link>
+                                <div className="my-1.5 h-px bg-border-subtle" />
 
+                                {/* V63 — Money section: Orders, Offers, Wallet (with live
+                                    available balance on the right). */}
                                 <Link
                                   href="/account/orders"
-                                  className="flex items-center gap-3 rounded-lg px-4 py-2 text-sm text-gray-200 transition-colors hover:bg-white/10 hover:text-white"
+                                  className="flex items-center gap-3 rounded-md px-4 py-2 text-[14px] text-text-secondary transition-colors hover:bg-white/[0.07] hover:text-text-primary"
                                   onClick={() => setUserMenuOpen(false)}
                                 >
                                   <MenuIcon name="my-orders" />
-                                  My Orders
-                                </Link>
-
-                                <div className="my-2 h-px bg-white/10" />
-
-                                <Link
-                                  href="/account/messages"
-                                  className="flex items-center gap-3 rounded-lg px-4 py-2 text-sm text-gray-200 transition-colors hover:bg-white/10 hover:text-white"
-                                  onClick={() => setUserMenuOpen(false)}
-                                >
-                                  <MenuIcon name="messages" />
-                                  Messages
+                                  Orders
                                 </Link>
 
                                 <Link
-                                  href="/account/reviews"
-                                  className="flex items-center gap-3 rounded-lg px-4 py-2 text-sm text-gray-200 transition-colors hover:bg-white/10 hover:text-white"
+                                  href="/account/listings"
+                                  className="flex items-center gap-3 rounded-md px-4 py-2 text-[14px] text-text-secondary transition-colors hover:bg-white/[0.07] hover:text-text-primary"
                                   onClick={() => setUserMenuOpen(false)}
                                 >
-                                  <MenuIcon name="feedback" />
-                                  Feedback
+                                  <MenuIcon name="my-offers" />
+                                  Offers
                                 </Link>
 
-                                <div className="my-2 h-px bg-white/10" />
+                                <Link
+                                  href="/account/wallet"
+                                  className="flex items-center gap-3 rounded-md px-4 py-2 text-[14px] text-text-secondary transition-colors hover:bg-white/[0.07] hover:text-text-primary"
+                                  onClick={() => setUserMenuOpen(false)}
+                                >
+                                  <Wallet className="h-[18px] w-[18px] shrink-0" />
+                                  Wallet
+                                  {navWalletBalance != null && (
+                                    <span className="ml-auto text-[13.5px] font-semibold tabular-nums text-text-primary">
+                                      ${Number(navWalletBalance.available_balance ?? 0).toFixed(2)}
+                                    </span>
+                                  )}
+                                </Link>
+
+                                <div className="my-1.5 h-px bg-border-subtle" />
 
                                 {/* Offline Mode toggle — pauses all offers
                                     (hidden from buyers) until toggled back. */}
@@ -1045,15 +1166,15 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                                   aria-checked={offlineMode}
                                   disabled={pendingOffline}
                                   onClick={toggleOfflineMode}
-                                  className="flex w-full items-center gap-3 rounded-lg px-4 py-2 text-sm text-gray-200 transition-colors hover:bg-white/10 hover:text-white disabled:opacity-60"
+                                  className="flex w-full items-center gap-3 rounded-md px-4 py-2 text-[14px] text-text-secondary transition-colors hover:bg-white/[0.07] hover:text-text-primary disabled:opacity-60"
                                 >
                                   <MenuIcon
                                     name="power"
-                                    className={offlineMode ? 'text-amber-400' : 'text-gray-200'}
+                                    className={offlineMode ? 'text-amber-400' : 'text-text-secondary'}
                                   />
                                   <span className="flex min-w-0 flex-col items-start">
                                     <span className="leading-tight">Offline Mode</span>
-                                    <span className="text-[11px] leading-tight text-gray-500">
+                                    <span className="text-[11.5px] leading-tight text-text-tertiary">
                                       {offlineMode ? 'Offers hidden from buyers' : 'Your offers are live'}
                                     </span>
                                   </span>
@@ -1073,11 +1194,29 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                                   </span>
                                 </button>
 
-                                <div className="my-2 h-px bg-white/10" />
+                                <div className="my-1.5 h-px bg-border-subtle" />
+
+                                <Link
+                                  href="/account/messages"
+                                  className="flex items-center gap-3 rounded-md px-4 py-2 text-[14px] text-text-secondary transition-colors hover:bg-white/[0.07] hover:text-text-primary"
+                                  onClick={() => setUserMenuOpen(false)}
+                                >
+                                  <MenuIcon name="messages" />
+                                  Messages
+                                </Link>
+
+                                <Link
+                                  href="/account/reviews"
+                                  className="flex items-center gap-3 rounded-md px-4 py-2 text-[14px] text-text-secondary transition-colors hover:bg-white/[0.07] hover:text-text-primary"
+                                  onClick={() => setUserMenuOpen(false)}
+                                >
+                                  <MenuIcon name="feedback" />
+                                  Feedback
+                                </Link>
 
                                 <Link
                                   href="/account/settings"
-                                  className="flex items-center gap-3 rounded-lg px-4 py-2 text-sm text-gray-200 transition-colors hover:bg-white/10 hover:text-white"
+                                  className="flex items-center gap-3 rounded-md px-4 py-2 text-[14px] text-text-secondary transition-colors hover:bg-white/[0.07] hover:text-text-primary"
                                   onClick={() => setUserMenuOpen(false)}
                                 >
                                   <MenuIcon name="settings" />
@@ -1086,7 +1225,7 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
 
                                 <Link
                                   href="/support"
-                                  className="flex items-center gap-3 rounded-lg px-4 py-2 text-sm text-gray-200 transition-colors hover:bg-white/10 hover:text-white"
+                                  className="flex items-center gap-3 rounded-md px-4 py-2 text-[14px] text-text-secondary transition-colors hover:bg-white/[0.07] hover:text-text-primary"
                                   onClick={() => setUserMenuOpen(false)}
                                 >
                                   <MenuIcon name="support" />
@@ -1098,10 +1237,10 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                               <>
                                 <Link
                                   href="/account/dashboard"
-                                  className="mb-1 flex items-center gap-3 rounded-lg px-4 py-2 text-sm font-medium text-gray-300 transition-colors hover:bg-white/10 hover:text-white"
+                                  className="mb-1 flex items-center gap-3 rounded-md px-4 py-2 text-[14px] font-medium text-text-secondary transition-colors hover:bg-white/[0.07] hover:text-text-primary"
                                   onClick={() => setUserMenuOpen(false)}
                                 >
-                                  <LayoutDashboard className="h-4 w-4" />
+                                  <LayoutDashboard className="h-[18px] w-[18px]" />
                                   Dashboard
                                 </Link>
 
@@ -1117,51 +1256,71 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                                 ) : (
                                   <Link
                                     href="/account/become-seller"
-                                    className="mb-1 flex items-center gap-3 rounded-lg border border-primary/20 px-4 py-2 text-sm font-medium text-primary transition-colors hover:bg-primary/10"
+                                    className="mb-1 flex items-center gap-3 rounded-md px-4 py-2 text-[14px] text-text-secondary transition-colors hover:bg-white/[0.07] hover:text-text-primary"
                                     onClick={() => setUserMenuOpen(false)}
                                   >
-                                    <Store className="h-4 w-4" />
+                                    <Store className="h-[18px] w-[18px] text-lime-text" />
                                     Become a Seller
                                   </Link>
                                 )}
 
-                                <div className="my-2 h-px bg-white/10" />
+                                <div className="my-1.5 h-px bg-border-subtle" />
 
+                                {/* V68 — Shopping section: Orders, Wishlist, Wallet */}
                                 <Link
-                                  href="/account"
-                                  className="flex items-center gap-3 rounded-lg px-4 py-2 text-sm text-gray-300 transition-colors hover:bg-white/10 hover:text-white"
+                                  href="/account/orders"
+                                  className="flex items-center gap-3 rounded-md px-4 py-2 text-[14px] text-text-secondary transition-colors hover:bg-white/[0.07] hover:text-text-primary"
                                   onClick={() => setUserMenuOpen(false)}
                                 >
-                                  <User className="h-4 w-4" />
-                                  My Account
+                                  <Package className="h-[18px] w-[18px]" />
+                                  Orders
                                 </Link>
 
                                 <Link
                                   href="/account/wishlist"
-                                  className="flex items-center gap-3 rounded-lg px-4 py-2 text-sm text-gray-300 transition-colors hover:bg-white/10 hover:text-white"
+                                  className="flex items-center gap-3 rounded-md px-4 py-2 text-[14px] text-text-secondary transition-colors hover:bg-white/[0.07] hover:text-text-primary"
                                   onClick={() => setUserMenuOpen(false)}
                                 >
-                                  <Heart className="h-4 w-4" />
+                                  <Heart className="h-[18px] w-[18px]" />
                                   Wishlist
                                 </Link>
 
                                 <Link
                                   href="/account/wallet"
-                                  className="flex items-center gap-3 rounded-lg px-4 py-2 text-sm text-gray-300 transition-colors hover:bg-white/10 hover:text-white"
+                                  className="flex items-center gap-3 rounded-md px-4 py-2 text-[14px] text-text-secondary transition-colors hover:bg-white/[0.07] hover:text-text-primary"
                                   onClick={() => setUserMenuOpen(false)}
                                 >
-                                  <Wallet className="h-4 w-4" />
+                                  <Wallet className="h-[18px] w-[18px]" />
                                   Wallet
                                 </Link>
 
-                                <div className="my-2 h-px bg-white/10" />
+                                <div className="my-1.5 h-px bg-border-subtle" />
+
+                                {/* V68 — Inbox + account management */}
+                                <Link
+                                  href="/account/messages"
+                                  className="flex items-center gap-3 rounded-md px-4 py-2 text-[14px] text-text-secondary transition-colors hover:bg-white/[0.07] hover:text-text-primary"
+                                  onClick={() => setUserMenuOpen(false)}
+                                >
+                                  <MessageSquare className="h-[18px] w-[18px]" />
+                                  Messages
+                                </Link>
+
+                                <Link
+                                  href="/account"
+                                  className="flex items-center gap-3 rounded-md px-4 py-2 text-[14px] text-text-secondary transition-colors hover:bg-white/[0.07] hover:text-text-primary"
+                                  onClick={() => setUserMenuOpen(false)}
+                                >
+                                  <User className="h-[18px] w-[18px]" />
+                                  Account
+                                </Link>
 
                                 <Link
                                   href="/account/settings"
-                                  className="flex items-center gap-3 rounded-lg px-4 py-2 text-sm text-gray-300 transition-colors hover:bg-white/10 hover:text-white"
+                                  className="flex items-center gap-3 rounded-md px-4 py-2 text-[14px] text-text-secondary transition-colors hover:bg-white/[0.07] hover:text-text-primary"
                                   onClick={() => setUserMenuOpen(false)}
                                 >
-                                  <Settings className="h-4 w-4" />
+                                  <Settings className="h-[18px] w-[18px]" />
                                   Settings
                                 </Link>
                               </>
@@ -1169,54 +1328,77 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                           </div>
 
                           {/* Logout */}
-                          <div className="border-t border-white/10 pt-2">
+                          <div className="relative border-t border-border-subtle pt-1.5">
                             <button
                               onClick={async (e) => {
                                 e.preventDefault()
                                 e.stopPropagation()
 
-                                // V21/P5.b — Sign-out flow:
+                                // V21/P5.b + V23 — Sign-out flow:
                                 //  1. Show full-screen blur+loader overlay
-                                //  2. Sign out + clear client caches
-                                //  3. If on a protected path: replace('/')
-                                //     If on a public path: scroll to top +
-                                //     refresh in place so the user lands
-                                //     at the top of the same page (not
-                                //     stranded mid-scroll). Both keep the
-                                //     overlay visible until navigation
-                                //     settles, eliminating the "stuck at
-                                //     bottom" race we used to see.
+                                //  2. NAVIGATE FIRST (for protected paths),
+                                //     THEN sign out. Order matters: signOut()
+                                //     flips the auth state to logged-out, and
+                                //     if we're still on a protected page like
+                                //     /account/orders the page re-renders in
+                                //     place as logged-out (collapsing to its
+                                //     empty/footer fallback) — that's the
+                                //     "see the bottom of the page" flash the
+                                //     user reported. By starting the redirect
+                                //     to '/' BEFORE awaiting signOut, we're
+                                //     already leaving the protected page when
+                                //     the state flips, so it never paints
+                                //     logged-out in place.
+                                //  3. Public paths just refresh in place
+                                //     (scroll to top first so the user lands
+                                //     cleanly, not stranded mid-scroll).
+                                // The overlay stays up the whole time.
                                 setIsLoggingOut(true)
                                 setUserMenuOpen(false)
+
+                                // Raise the cross-component logout flag so the
+                                // protected layouts (e.g. /account) skip their
+                                // "redirect to /login if !user" effect while we
+                                // drive the user home — otherwise the two race
+                                // and flash the login screen mid-logout.
+                                beginLogout()
+
+                                // Shared source of truth with the middleware
+                                // (src/lib/auth/protected-routes.ts) so the two
+                                // can't drift — logging out on a page you can no
+                                // longer access sends you home.
+                                const isProtected = isProtectedPath(pathname)
+
+                                // Scroll to top BEFORE anything paints so the
+                                // user never sees the page mid-scroll.
+                                if (typeof window !== 'undefined') {
+                                  window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior })
+                                }
+
+                                // Kick off the redirect home for protected
+                                // pages immediately — before signOut flips the
+                                // auth state and re-renders the page in place.
+                                // Arm the navigation-settle gate so the opaque
+                                // overlay is lifted by the effect above (when
+                                // pathname === '/' has painted), not by the
+                                // blind timer — which could lift before home
+                                // mounts and pop content in.
+                                if (isProtected) {
+                                  setAwaitingHomePaint(true)
+                                  router.replace('/')
+                                }
+
                                 try {
                                   const { createClient } = await import('@/lib/supabase/client')
                                   const supabase = createClient()
                                   const { error } = await supabase.auth.signOut()
                                   if (error) console.error('Logout error:', error)
 
-                                  const PROTECTED = [
-                                    '/account',
-                                    '/checkout',
-                                    '/cart',
-                                    '/sell',
-                                    '/seller',
-                                    '/admin',
-                                  ]
-                                  const isProtected = PROTECTED.some((p) =>
-                                    pathname?.startsWith(p),
-                                  )
-
                                   queryClient.clear()
 
-                                  // Scroll to top BEFORE we paint the next
-                                  // page so the user lands cleanly.
-                                  if (typeof window !== 'undefined') {
-                                    window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior })
-                                  }
-
-                                  if (isProtected) {
-                                    router.replace('/')
-                                  } else {
+                                  // Public paths stay put — refresh in place so
+                                  // server components re-render logged-out.
+                                  if (!isProtected) {
                                     router.refresh()
                                   }
 
@@ -1225,30 +1407,43 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                                     toast.success('Signed out')
                                   } catch {}
 
-                                  // Hold the overlay through the next tick
-                                  // so the new server-rendered page paints
-                                  // before we lift it. 350ms covers most
-                                  // sub-second route changes.
-                                  setTimeout(() => setIsLoggingOut(false), 350)
+                                  if (isProtected) {
+                                    // Primary lift is the navigation-settle
+                                    // effect (waits for home to paint). This
+                                    // timer is only a SAFETY CAP so the overlay
+                                    // can never get stuck if the route never
+                                    // settles on '/'. Generous (1500ms) so it
+                                    // doesn't pre-empt a slightly slow home mount.
+                                    setTimeout(() => {
+                                      setIsLoggingOut(false)
+                                      setAwaitingHomePaint(false)
+                                    }, 1500)
+                                  } else {
+                                    // Public path: page stays put + refreshed,
+                                    // so a short hold to let it re-render is all
+                                    // that's needed.
+                                    setTimeout(() => setIsLoggingOut(false), 350)
+                                  }
                                 } catch (error) {
                                   console.error('Logout failed:', error)
-                                  if (typeof window !== 'undefined') {
-                                    window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior })
+                                  if (!isProtected) {
+                                    router.replace('/')
                                   }
-                                  router.replace('/')
-                                  setTimeout(() => setIsLoggingOut(false), 350)
+                                  setTimeout(() => {
+                                    setIsLoggingOut(false)
+                                    setAwaitingHomePaint(false)
+                                  }, 1500)
                                 }
                               }}
-                              className="flex w-full items-center gap-3 rounded-lg px-4 py-2 text-sm text-red-400 transition-colors hover:bg-red-500/10 cursor-pointer"
+                              className="flex w-full items-center gap-3 rounded-md px-4 py-2 text-[14px] text-red-400 transition-colors hover:bg-red-500/10 cursor-pointer"
                             >
-                              <LogOut className="h-4 w-4" />
+                              <LogOut className="h-[18px] w-[18px]" />
                               Log Out
                             </button>
                           </div>
                         </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
+                    </div>
+                  )}
                 </div>
               ) : (
                 // V17 — Buttons open the AuthDialog modal instead of
@@ -1305,7 +1500,7 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                 <Input
                   type="text"
-                  placeholder="Search GameVault"
+                  placeholder="Search DropMarket"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="rounded-full border-white/10 bg-white/5 pl-10 text-white placeholder:text-gray-500"
@@ -1384,6 +1579,7 @@ function CategoryDropdown({
   tab,
   gameEntries,
   isActive,
+  isCurrent = false,
   onHoverStart,
   onHoverEnd,
   onSelect,
@@ -1392,6 +1588,8 @@ function CategoryDropdown({
   tab: { id: string; label: string; type: string }
   gameEntries: Array<{ game: any; categorySlug: string }>
   isActive: boolean
+  /** V50 — True when the page being viewed belongs to this category. */
+  isCurrent?: boolean
   onHoverStart: () => void
   onHoverEnd: () => void
   /** V14u — Called when the user picks a game so the dropdown can close. */
@@ -1441,7 +1639,10 @@ function CategoryDropdown({
           data-dropdown
           onMouseEnter={onHoverStart}
           onMouseLeave={onHoverEnd}
-          className="flex items-center gap-1 rounded-full px-4 py-2 text-sm font-medium text-gray-300 transition-colors hover:bg-white/10 hover:text-white whitespace-nowrap"
+          className={cn(
+            'flex items-center gap-1 rounded-full px-4 py-2 text-sm font-medium transition-colors hover:bg-white/10 hover:text-white whitespace-nowrap',
+            isCurrent ? 'bg-white/[0.08] text-white' : 'text-gray-300',
+          )}
         >
           {tab.label}
           <ChevronDown className={cn('h-3 w-3 transition-transform', isActive && 'rotate-180')} />
@@ -1524,7 +1725,7 @@ function CategoryDropdown({
               <div className="grid min-h-[520px] grid-cols-1 items-stretch md:grid-cols-[260px_1fr]">
                 {/* LEFT — Popular */}
                 <div className="border-b border-white/10 bg-white/[0.02] p-4 md:border-b-0 md:border-r">
-                  <div className="mb-3 px-1.5 text-[12px] font-bold uppercase tracking-[0.12em] text-lime-text">
+                  <div className="mb-3 px-1.5 text-[11.5px] font-bold uppercase tracking-[0.14em] text-lime-text">
                     Popular {tab.label}
                   </div>
                   <ul className="flex flex-col gap-1">
@@ -1584,7 +1785,7 @@ function CategoryDropdown({
                       <div className="flex flex-col items-center justify-center py-10 text-center">
                         <Search className="mb-2 h-5 w-5 text-gray-600" />
                         <p className="text-[13px] text-gray-500">
-                          No games match "{q}"
+                          No games match &ldquo;{q}&rdquo;
                         </p>
                       </div>
                     ) : (

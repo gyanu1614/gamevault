@@ -8,7 +8,7 @@
  * Features: All / Unread filter tabs, mark-as-read, mark-all-read, clear-read.
  */
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Bell, Check, CheckCheck, Trash2, ArrowLeft, Loader2 } from 'lucide-react'
@@ -16,7 +16,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/hooks/use-auth'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
-import { motion, AnimatePresence } from 'framer-motion'
+import { HeroBackdrop } from '@/components/hero-backdrop'
 
 type Tab = 'all' | 'unread'
 
@@ -33,14 +33,14 @@ function timeAgo(dateStr: string) {
 // Icon + color per notification type
 function NotificationIcon({ type }: { type: string }) {
   const map: Record<string, { icon: string; bg: string; text: string }> = {
-    order_placed:    { icon: '🛍️', bg: 'bg-blue-500/20',   text: 'text-blue-400' },
+    order_placed:    { icon: '🛍️', bg: 'bg-info-bg',   text: 'text-info' },
     order_delivered: { icon: '📦', bg: 'bg-success-bg',  text: 'text-success' },
     order_completed: { icon: '✅', bg: 'bg-success-bg',  text: 'text-success' },
     order_disputed:  { icon: '⚠️', bg: 'bg-error-bg',    text: 'text-error' },
-    message:         { icon: '💬', bg: 'bg-lime/20', text: 'text-lime-text' },
+    message:         { icon: '💬', bg: 'bg-lime-tint-bg', text: 'text-lime-text' },
     review:          { icon: '⭐', bg: 'bg-warning-bg', text: 'text-warning' },
-    payout:          { icon: '💰', bg: 'bg-emerald-500/20','text': 'text-emerald-400' },
-    system:          { icon: '🔔', bg: 'bg-gray-500/20',   text: 'text-text-secondary' },
+    payout:          { icon: '💰', bg: 'bg-success-bg', text: 'text-success' },
+    system:          { icon: '🔔', bg: 'bg-white/10',   text: 'text-text-secondary' },
   }
   const style = map[type] || map.system
   return (
@@ -109,6 +109,14 @@ export default function NotificationsPage() {
     setMarking(false)
   }
 
+  // V61 — redirect in an effect (render-body router.replace is a React
+  // anti-pattern and loses the return path).
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.replace(`/login?redirect=${encodeURIComponent('/notifications')}`)
+    }
+  }, [authLoading, user, router])
+
   if (authLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-bg-base">
@@ -118,55 +126,54 @@ export default function NotificationsPage() {
   }
 
   if (!user) {
-    router.replace('/login')
     return null
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-black via-gray-900 to-black">
-      <div className="mx-auto max-w-2xl px-4 py-24 sm:px-6">
+    <HeroBackdrop name="marketplace">
+    <div className="min-h-screen">
+      <div className="mx-auto max-w-3xl px-4 py-24 sm:px-6">
         {/* Back + Header */}
         <div className="mb-8 flex items-center gap-4">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-9 w-9 rounded-full text-text-secondary hover:bg-white/10 hover:text-white"
+          <button
+            type="button"
+            aria-label="Go back"
+            className="grid h-10 w-10 flex-none place-items-center rounded-lg border border-border-subtle bg-white/[0.03] text-text-secondary transition-colors hover:border-border-default hover:bg-white/[0.06] hover:text-text-primary"
             onClick={() => router.back()}
           >
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
+            <ArrowLeft className="h-[18px] w-[18px]" />
+          </button>
           <div className="flex-1">
-            <h1 className="text-2xl font-bold text-white">Notifications</h1>
-            <p className="text-sm text-text-secondary">{unreadCount > 0 ? `${unreadCount} unread` : 'All caught up'}</p>
+            <h1 className="font-display text-[28px] font-extrabold leading-tight text-text-primary">Notifications</h1>
+            <p className="mt-0.5 text-[13.5px] text-text-secondary">{unreadCount > 0 ? `${unreadCount} unread` : 'All caught up'}</p>
           </div>
           {unreadCount > 0 && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="gap-1.5 rounded-full text-xs text-text-secondary hover:bg-white/10 hover:text-white"
+            <button
+              type="button"
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border-default bg-bg-overlay px-3.5 text-[13px] font-semibold text-text-primary transition-colors hover:border-border-strong hover:bg-bg-overlay-2 disabled:opacity-60"
               onClick={markAllRead}
               disabled={marking}
             >
-              {marking ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCheck className="h-3.5 w-3.5" />}
-              Mark all read
-            </Button>
+              {marking ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCheck className="h-3.5 w-3.5 text-lime-text" />}
+              Mark All Read
+            </button>
           )}
         </div>
 
         {/* Tabs */}
-        <div className="mb-6 flex rounded-xl bg-bg-raised p-1">
+        <div className="mb-6 flex rounded-lg border border-border-subtle bg-bg-overlay p-1">
           {(['all', 'unread'] as Tab[]).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
               className={cn(
-                'flex-1 rounded-lg py-2 text-sm font-medium capitalize transition-colors',
-                tab === t ? 'bg-white/10 text-white' : 'text-text-secondary hover:text-text-secondary'
+                'flex-1 rounded-md py-2 text-[13.5px] font-semibold capitalize transition-colors',
+                tab === t ? 'bg-white/[0.10] text-text-primary' : 'text-text-tertiary hover:text-text-secondary'
               )}
             >
               {t}
               {t === 'unread' && unreadCount > 0 && (
-                <span className="ml-1.5 rounded-full bg-lime px-1.5 py-0.5 text-[10px] font-bold text-text-inverse">
+                <span className="ml-1.5 rounded-md border border-lime-tint-border bg-lime-tint-bg px-1.5 py-0.5 text-[10.5px] font-bold text-lime-text">
                   {unreadCount}
                 </span>
               )}
@@ -181,75 +188,78 @@ export default function NotificationsPage() {
           </div>
         ) : !notifications || notifications.length === 0 ? (
           <div className="py-20 text-center">
-            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-bg-raised">
-              <Bell className="h-8 w-8 text-text-tertiary" />
+            <div className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-xl border border-border-subtle bg-bg-overlay">
+              <Bell className="h-7 w-7 text-text-tertiary" />
             </div>
-            <h3 className="mb-1 text-lg font-semibold text-white">
+            <h3 className="mb-1 text-[16px] font-bold text-text-primary">
               {tab === 'unread' ? 'No unread notifications' : 'No notifications yet'}
             </h3>
-            <p className="text-sm text-text-secondary">
+            <p className="text-[13.5px] text-text-tertiary">
               {tab === 'unread' ? "You're all caught up!" : "We'll notify you about orders, messages, and more."}
             </p>
           </div>
         ) : (
-          <div className="space-y-2">
-            <AnimatePresence initial={false}>
-              {notifications.map((notification: any) => (
-                <motion.div
-                  key={notification.id}
-                  initial={{ opacity: 0, y: 6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, height: 0, marginBottom: 0 }}
-                  transition={{ duration: 0.15 }}
+          <div className="space-y-2.5">
+            {notifications.map((notification: any) => (
+              <div key={notification.id} className="animate-in fade-in-0 slide-in-from-top-1 duration-200">
+                <Link
+                  href={notification.link || '#'}
+                  onClick={() => {
+                    if (!notification.is_read) markAsRead(notification.id)
+                  }}
+                  className={cn(
+                    'group relative block overflow-hidden rounded-lg border p-4 transition-colors',
+                    'border-border-subtle bg-white/[0.03] hover:border-border-default hover:bg-white/[0.06]',
+                  )}
                 >
-                  <Link
-                    href={notification.link || '#'}
-                    onClick={() => {
-                      if (!notification.is_read) markAsRead(notification.id)
-                    }}
-                    className={cn(
-                      'group flex items-start gap-3 rounded-xl border p-4 transition-all hover:bg-bg-raised',
-                      notification.is_read
-                        ? 'border-border-subtle bg-transparent'
-                        : 'border-lime-tint-border bg-lime/[0.06]'
-                    )}
-                  >
+                  {/* Top sheen */}
+                  <span
+                    aria-hidden
+                    className="pointer-events-none absolute inset-x-0 top-0 h-8 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.03),transparent)]"
+                  />
+                  <div className="relative flex items-start gap-3.5">
                     <NotificationIcon type={notification.type || 'system'} />
 
                     <div className="min-w-0 flex-1">
                       <div className="flex items-start justify-between gap-2">
-                        <p className={cn('text-sm font-semibold leading-snug', notification.is_read ? 'text-text-secondary' : 'text-white')}>
+                        <p className={cn('text-[14.5px] font-semibold leading-snug', notification.is_read ? 'text-text-secondary' : 'text-text-primary')}>
                           {notification.title}
+                          {!notification.is_read && (
+                            <span aria-hidden className="ml-2 inline-block h-2 w-2 rounded-full bg-lime align-middle shadow-[0_0_8px_rgba(198,255,61,0.8)]" />
+                          )}
                         </p>
-                        <span className="flex-shrink-0 text-xs text-text-tertiary">
-                          {timeAgo(notification.created_at)}
-                        </span>
+                        <div className="flex flex-shrink-0 items-center gap-2">
+                          <span className="text-[12px] text-text-tertiary">
+                            {timeAgo(notification.created_at)}
+                          </span>
+                          {!notification.is_read && (
+                            <button
+                              type="button"
+                              aria-label="Mark as read"
+                              className="grid h-6 w-6 place-items-center rounded-md text-text-tertiary transition-colors hover:bg-white/10 hover:text-text-primary"
+                              onClick={(e) => {
+                                e.preventDefault()
+                                e.stopPropagation()
+                                markAsRead(notification.id)
+                              }}
+                            >
+                              <Check className="h-3.5 w-3.5" />
+                            </button>
+                          )}
+                        </div>
                       </div>
                       {notification.message && (
-                        <p className="mt-0.5 line-clamp-2 text-xs text-text-secondary">{notification.message}</p>
+                        <p className="mt-1 line-clamp-2 text-[13px] leading-relaxed text-text-secondary">{notification.message}</p>
                       )}
                     </div>
-
-                    {!notification.is_read && (
-                      <button
-                        className="flex-shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
-                        title="Mark as read"
-                        onClick={(e) => {
-                          e.preventDefault()
-                          e.stopPropagation()
-                          markAsRead(notification.id)
-                        }}
-                      >
-                        <Check className="h-4 w-4 text-lime-text hover:text-lime-text" />
-                      </button>
-                    )}
-                  </Link>
-                </motion.div>
-              ))}
-            </AnimatePresence>
+                  </div>
+                </Link>
+              </div>
+            ))}
           </div>
         )}
       </div>
     </div>
+    </HeroBackdrop>
   )
 }

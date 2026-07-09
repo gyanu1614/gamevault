@@ -16,10 +16,11 @@ import Link from 'next/link'
 import {
   Star, Eye, ShoppingCart, Shield, Zap, ArrowLeft, Infinity,
   Clock, Award, ShieldCheck, Crown, Gem, Sparkles, type LucideIcon,
-  CheckCircle2, MessageSquare, Flag, TrendingDown,
+  CheckCircle2, MessageSquare, TrendingDown,
 } from 'lucide-react'
 import { getListing } from '@/lib/api/listings'
 import { useAuth } from '@/hooks/use-auth'
+import { useAuthDialog } from '@/components/auth/AuthDialog'
 import { Button } from '@/components/ui/button'
 import { NumberField } from '@/components/ui/number-field'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
@@ -40,6 +41,7 @@ export default function ListingDetailPage() {
   const params = useParams()
   const router = useRouter()
   const { user } = useAuth()
+  const { open: openAuth } = useAuthDialog()
   const [quantity, setQuantity] = useState(1)
   const [activeImage, setActiveImage] = useState(0)
 
@@ -65,7 +67,7 @@ export default function ListingDetailPage() {
       <main className="mx-auto w-full max-w-7xl px-4 pb-16 pt-24 sm:px-6 sm:pt-28 lg:pt-32">
         <div className="grid gap-6 lg:grid-cols-[1.1fr_1fr]">
           <div className="space-y-3">
-            <div className="aspect-square animate-pulse rounded-2xl bg-bg-raised" />
+            <div className="aspect-square animate-pulse rounded-lg bg-bg-raised" />
             <div className="grid grid-cols-5 gap-2">
               {Array.from({ length: 4 }).map((_, i) => (
                 <div key={i} className="aspect-square animate-pulse rounded-md bg-bg-raised" />
@@ -86,7 +88,7 @@ export default function ListingDetailPage() {
   if (error || !listing) {
     return (
       <main className="mx-auto w-full max-w-md px-4 pt-24 sm:pt-28 lg:pt-32">
-        <div className="rounded-2xl border border-error/40 bg-error-bg p-6 text-center">
+        <div className="rounded-lg border border-error/40 bg-error-bg p-6 text-center">
           <h1 className="text-lg font-bold text-error">Listing not found</h1>
           <p className="mt-1 text-sm text-text-secondary">
             This listing may have been removed or is no longer available.
@@ -129,7 +131,7 @@ export default function ListingDetailPage() {
       <div className="grid gap-6 lg:grid-cols-[1.1fr_1fr]">
         {/* ── Gallery ─────────────────────────────────────────────────── */}
         <div className="space-y-3">
-          <div className="relative overflow-hidden rounded-2xl border border-border-default bg-bg-raised">
+          <div className="relative overflow-hidden rounded-lg border border-border-default bg-bg-raised">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={primaryImage}
@@ -192,7 +194,7 @@ export default function ListingDetailPage() {
           </div>
 
           {/* Price */}
-          <div className="rounded-2xl border border-border-default bg-bg-raised p-4 sm:p-5">
+          <div className="rounded-lg border border-border-default bg-bg-raised p-4 sm:p-5">
             <div className="flex items-baseline gap-3">
               <span className="font-mono text-4xl font-bold text-text-primary">
                 ${listing.price.toFixed(2)}
@@ -233,9 +235,9 @@ export default function ListingDetailPage() {
 
           {/* Quantity + CTA */}
           {!isOwnListing && !isSoldOut && (
-            <div className="space-y-3 rounded-2xl border border-border-default bg-bg-raised p-4 sm:p-5">
+            <div className="space-y-3 rounded-lg border border-border-default bg-bg-raised p-4 sm:p-5">
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold uppercase tracking-wider text-text-secondary">
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-text-secondary">
                   Quantity
                 </label>
                 <NumberField
@@ -249,8 +251,14 @@ export default function ListingDetailPage() {
               </div>
               <Button
                 size="lg"
-                onClick={() => router.push(`/checkout?listing=${listing.id}&qty=${quantity}`)}
-                className="h-12 w-full rounded-xl bg-lime text-text-inverse font-bold uppercase tracking-wider shadow-lg shadow-elevated transition-all hover:bg-lime-hover hover:shadow-glow"
+                onClick={() => {
+                  const dest = `/checkout/${listing.id}?qty=${quantity}`
+                  // Logged out → open the sign-in modal in place with checkout
+                  // as the post-auth redirect (no bounce to a full /login page).
+                  if (!user) { openAuth('login', { redirect: dest }); return }
+                  router.push(dest)
+                }}
+                className="h-12 w-full rounded-lg bg-lime text-text-inverse font-bold uppercase tracking-wider shadow-lg shadow-elevated transition-all hover:bg-lime-hover hover:shadow-glow"
               >
                 Buy now — ${total.toFixed(2)}
               </Button>
@@ -261,7 +269,7 @@ export default function ListingDetailPage() {
           )}
 
           {isOwnListing && (
-            <div className="rounded-2xl border border-warning/40 bg-warning-bg p-4 text-sm text-warning">
+            <div className="rounded-lg border border-warning/40 bg-warning-bg p-4 text-sm text-warning">
               This is your listing. You can't purchase it.
             </div>
           )}
@@ -286,8 +294,8 @@ export default function ListingDetailPage() {
 
           {/* Seller card */}
           <Link
-            href={`/sellers/${listing.seller.id}`}
-            className="group flex items-center gap-3 rounded-2xl border border-border-default bg-bg-raised p-4 transition-colors hover:bg-bg-raised-hover"
+            href={`/shop/${listing.seller.username}`}
+            className="group flex items-center gap-3 rounded-lg border border-border-default bg-bg-raised p-4 transition-colors hover:bg-bg-raised-hover"
           >
             {listing.seller.avatar_url ? (
               /* eslint-disable-next-line @next/next/no-img-element */
@@ -339,7 +347,7 @@ export default function ListingDetailPage() {
       </div>
 
       {/* ── Details tabs ───────────────────────────────────────────────── */}
-      <div className="mt-8 rounded-2xl border border-border-default bg-bg-raised p-4 sm:p-5">
+      <div className="mt-8 rounded-lg border border-border-default bg-bg-raised p-4 sm:p-5">
         <Tabs defaultValue="description">
           <TabsList variant="underline">
             <TabsTrigger value="description">Description</TabsTrigger>
@@ -385,13 +393,9 @@ export default function ListingDetailPage() {
                 <MessageSquare className="h-4 w-4" />
                 Message seller
               </Link>
-              <button
-                type="button"
-                className="inline-flex h-9 items-center gap-1.5 rounded-md border border-border-default bg-bg-overlay px-3 text-sm font-medium text-text-secondary transition-colors hover:border-error hover:text-error"
-              >
-                <Flag className="h-4 w-4" />
-                Report this listing
-              </button>
+              {/* "Report this listing" button removed — it was a dead control
+                  (no onClick, no report flow exists). Re-add when a report
+                  action is built. */}
             </div>
           </TabsContent>
         </Tabs>

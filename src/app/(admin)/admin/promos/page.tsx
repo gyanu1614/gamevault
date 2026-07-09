@@ -7,7 +7,7 @@
 import { getPromoCodes } from '@/lib/actions/promo'
 import PromoAdminClient from './PromoAdminClient'
 
-export const metadata = { title: 'Promo Codes | Admin — GameVault' }
+export const metadata = { title: 'Promo Codes' }
 
 export default async function AdminPromosPage() {
   const result = await getPromoCodes()

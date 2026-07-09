@@ -10,8 +10,8 @@ import Stripe from 'stripe'
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
 
 // P4.1 — import tier helpers from shared util (not from server action)
-import { getTierFeeRate, TIER_WARRANTY_HOURS } from '@/lib/utils/vaultshield-tiers'
-import type { VaultShieldTier } from '@/lib/utils/vaultshield-tiers'
+import { getTierFeeRate, TIER_WARRANTY_HOURS } from '@/lib/utils/safedrop-tiers'
+import type { SafeDropTier } from '@/lib/utils/safedrop-tiers'
 
 // P5.2 — Loyalty cashback
 import { awardCashback } from '@/lib/actions/loyalty'
@@ -22,7 +22,7 @@ interface CreateOrderData {
   paymentIntentId: string
   listingId: string
   quantity: number
-  vaultshieldTier?: VaultShieldTier   // P4.1 — buyer-chosen tier (default: 'standard')
+  safedropTier?: SafeDropTier   // P4.1 — buyer-chosen tier (default: 'standard')
   isGuest?: boolean
   guestEmail?: string
   promoCodeId?: string                // P5.3 — promo code applied
@@ -126,10 +126,10 @@ export async function createOrder(data: CreateOrderData): Promise<{
     }
 
     // P4.1 — Validate buyer-chosen tier (server-side, never trust client blindly)
-    const validTiers: VaultShieldTier[] = ['standard', 'enhanced', 'premium']
-    const vaultshieldTier: VaultShieldTier =
-      data.vaultshieldTier && validTiers.includes(data.vaultshieldTier)
-        ? data.vaultshieldTier
+    const validTiers: SafeDropTier[] = ['standard', 'enhanced', 'premium']
+    const safedropTier: SafeDropTier =
+      data.safedropTier && validTiers.includes(data.safedropTier)
+        ? data.safedropTier
         : 'standard'
 
     // Calculate amounts — commission rate comes from DB (seller_tier_config)
@@ -139,7 +139,7 @@ export async function createOrder(data: CreateOrderData): Promise<{
     const paymentProcessingFee = subtotal * 0.035 // 3.5% payment processing
 
     // P4.1 — Tier fee (recalculated server-side, not trusted from client)
-    const tierFeeRate = getTierFeeRate(vaultshieldTier)
+    const tierFeeRate = getTierFeeRate(safedropTier)
     const tierFee = subtotal * (tierFeeRate / 100)
 
     // P5.3 — Promo discount (already deducted from Stripe charge; reflect in order total)
@@ -152,11 +152,11 @@ export async function createOrder(data: CreateOrderData): Promise<{
     const protectionUntil = new Date(now)
     protectionUntil.setDate(protectionUntil.getDate() + 30)
 
-    const warrantyHours = TIER_WARRANTY_HOURS[vaultshieldTier]
+    const warrantyHours = TIER_WARRANTY_HOURS[safedropTier]
     const warrantyExpiresAt = new Date(now.getTime() + warrantyHours * 60 * 60 * 1000)
 
     // Delivery evidence required for Enhanced+ (manual/screenshot proof) or large orders
-    const deliveryEvidenceRequired = vaultshieldTier !== 'standard' || subtotal >= 100
+    const deliveryEvidenceRequired = safedropTier !== 'standard' || subtotal >= 100
 
     // Insert order
     const { data: orderRaw, error: orderError } = await (supabase
@@ -181,7 +181,7 @@ export async function createOrder(data: CreateOrderData): Promise<{
         protection_until: protectionUntil.toISOString(),
         auto_release_at: null,
         delivery_evidence_required: deliveryEvidenceRequired,
-        vaultshield_level:          vaultshieldTier,
+        vaultshield_level:          safedropTier,
         vaultshield_tier_fee_rate:  tierFeeRate,
         vaultshield_tier_fee:       tierFee,
         warranty_expires_at:        warrantyExpiresAt.toISOString(),

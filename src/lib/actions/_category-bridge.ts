@@ -66,32 +66,8 @@ export async function ensureLegacyCategoryRow(
   const legacyType = GLOBAL_SLUG_TO_LEGACY_TYPE[globalCategorySlug]
   if (!legacyType) return null
 
-  // Look for an existing matching row first (any is_active state).
-  const { data: existing } = await supabase
-    .from('categories')
-    .select('id, is_active')
-    .eq('game_id', gameId)
-    .filter('metadata->>type', 'eq', legacyType)
-    .maybeSingle()
-
-  if (existing) {
-    const row = existing as { id: string; is_active: boolean }
-    // If it exists but is inactive, flip it back on — the admin enabling
-    // (game, category) in the new wizard is the source of truth now.
-    if (!row.is_active) {
-      await supabase.from('categories').update({ is_active: true }).eq('id', row.id)
-    }
-    return row.id
-  }
-
-  // Doesn't exist — synthesise it with the SEO-canonical slug.
-  const defaults = GLOBAL_SLUG_DEFAULTS[globalCategorySlug]
-  if (!defaults) return null
-
-  // V17g — Look up the game's own slug so we can resolve the canonical
-  // category slug for this (game, type) pair (e.g. roblox+currency →
-  // buy-robux). Without this the new row would land with a generic
-  // 'currency' slug and break the marketplace URL.
+  // Resolve the game slug up front — we need it both to pick the canonical
+  // row among duplicates and to synthesise a new row's slug.
   const { data: gameRow } = await supabase
     .from('games')
     .select('slug')
@@ -101,6 +77,41 @@ export async function ensureLegacyCategoryRow(
 
   const canonicalSlug =
     getCanonicalCategorySlug(gameSlug, legacyType as CategoryType) ?? globalCategorySlug
+
+  // Look for existing matching rows (any is_active state).
+  //
+  // V24 — A game can now legitimately have MORE THAN ONE legacy categories
+  // row sharing the same metadata.type. The new admin lets admins add
+  // sub-categories like "Limiteds" alongside "Items" — both carry
+  // metadata.type='items'. The old `.maybeSingle()` errored on that
+  // ("cannot coerce to single object"), which surfaced as the seller-facing
+  // "Couldn't resolve a category" bug. So fetch ALL matches and pick
+  // deterministically: prefer the canonical-slug row (e.g. buy-items) so
+  // listings land in the primary browse category, then any active row,
+  // then the first.
+  const { data: matches } = await supabase
+    .from('categories')
+    .select('id, is_active, slug')
+    .eq('game_id', gameId)
+    .filter('metadata->>type', 'eq', legacyType)
+
+  const rows = (matches ?? []) as { id: string; is_active: boolean; slug: string }[]
+  if (rows.length > 0) {
+    const chosen =
+      rows.find((r) => r.slug === canonicalSlug) ??
+      rows.find((r) => r.is_active) ??
+      rows[0]
+    // If the chosen row is inactive, flip it back on — admin enabling the
+    // (game, category) pair in the new wizard is the source of truth now.
+    if (!chosen.is_active) {
+      await supabase.from('categories').update({ is_active: true }).eq('id', chosen.id)
+    }
+    return chosen.id
+  }
+
+  // Doesn't exist — synthesise it with the SEO-canonical slug.
+  const defaults = GLOBAL_SLUG_DEFAULTS[globalCategorySlug]
+  if (!defaults) return null
 
   const { data: created, error } = await supabase
     .from('categories')

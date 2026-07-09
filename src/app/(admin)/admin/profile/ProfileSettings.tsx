@@ -1,10 +1,15 @@
 'use client'
 
+/**
+ * Admin profile settings — V53 restyle on the admin kit.
+ * Neutral raised panels, lime accent, kit-style inputs. Entrance
+ * animations removed so the server HTML is visible without JS.
+ */
+
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { IconUser, IconMail, IconShieldCheck, IconDeviceFloppy, IconArrowLeft } from '@tabler/icons-react'
+import { IconUser, IconMail, IconShieldCheck, IconDeviceFloppy } from '@tabler/icons-react'
 import { useRouter } from 'next/navigation'
-import Link from 'next/link'
 
 interface ProfileSettingsProps {
   admin: {
@@ -17,6 +22,11 @@ interface ProfileSettingsProps {
     badges?: string[] // Optional
   }
 }
+
+const INPUT =
+  'w-full pl-10 pr-4 py-3 bg-bg-base border border-border-default rounded-lg text-text-primary placeholder:text-text-disabled focus:border-lime focus:outline-none transition-colors'
+const INPUT_DISABLED =
+  'w-full pl-10 pr-4 py-3 bg-bg-base border border-border-subtle rounded-lg text-text-disabled cursor-not-allowed'
 
 export default function ProfileSettings({ admin }: ProfileSettingsProps) {
   const router = useRouter()
@@ -59,46 +69,42 @@ export default function ProfileSettings({ admin }: ProfileSettingsProps) {
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* Profile Card */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="lg:col-span-1 bg-white/[0.02] backdrop-blur-xl rounded-2xl border border-white/[0.1] p-6"
-        >
+        <div className="rounded-xl border border-border-default bg-bg-raised p-6 lg:col-span-1">
           <div className="flex flex-col items-center text-center">
-            <div className="h-24 w-24 rounded-full bg-gradient-to-br from-violet-500 to-purple-500 flex items-center justify-center mb-4">
-              <span className="text-white text-3xl font-bold">
+            <div className="mb-4 flex h-24 w-24 items-center justify-center rounded-full bg-lime-pressed">
+              <span className="text-3xl font-bold text-text-inverse">
                 {admin.full_name?.[0] || admin.username?.[0] || admin.email[0].toUpperCase()}
               </span>
             </div>
 
-            <h3 className="text-lg font-semibold text-white">
+            <h3 className="text-lg font-semibold text-text-primary">
               {admin.full_name || admin.username || 'Admin User'}
             </h3>
 
-            <div className="mt-2 px-3 py-1 rounded-full bg-violet-500/20 border border-violet-500/30">
-              <p className="text-xs font-medium text-violet-400 capitalize flex items-center gap-1">
+            <div className="mt-2 rounded-full border border-lime-tint-border bg-lime-tint-bg px-3 py-1">
+              <p className="flex items-center gap-1 text-xs font-semibold capitalize text-lime-text">
                 <IconShieldCheck className="h-3 w-3" />
                 {admin.role.replace('_', ' ')}
               </p>
             </div>
 
-            <div className="mt-4 w-full pt-4 border-t border-white/[0.1]">
-              <div className="flex items-center gap-2 text-sm text-gray-400">
+            <div className="mt-4 w-full border-t border-border-subtle pt-4">
+              <div className="flex items-center gap-2 text-sm text-text-secondary">
                 <IconMail className="h-4 w-4" />
                 <span className="truncate">{admin.email}</span>
               </div>
             </div>
 
             {admin.badges && admin.badges.length > 0 && (
-              <div className="mt-4 w-full pt-4 border-t border-white/[0.1]">
-                <p className="text-xs text-gray-500 mb-2">Badges</p>
-                <div className="flex flex-wrap gap-2 justify-center">
+              <div className="mt-4 w-full border-t border-border-subtle pt-4">
+                <p className="mb-2 text-xs text-text-tertiary">Badges</p>
+                <div className="flex flex-wrap justify-center gap-2">
                   {admin.badges.map((badge) => (
                     <span
                       key={badge}
-                      className="px-2 py-1 text-xs rounded-full bg-white/[0.05] text-gray-300 capitalize"
+                      className="rounded-full border border-border-default bg-bg-overlay px-2 py-1 text-xs capitalize text-text-secondary"
                     >
                       {badge}
                     </span>
@@ -107,32 +113,27 @@ export default function ProfileSettings({ admin }: ProfileSettingsProps) {
               </div>
             )}
           </div>
-        </motion.div>
+        </div>
 
         {/* Settings Form */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="lg:col-span-2 bg-white/[0.02] backdrop-blur-xl rounded-2xl border border-white/[0.1] p-6"
-        >
-          <h2 className="text-lg font-semibold text-white mb-6">Account Information</h2>
+        <div className="rounded-xl border border-border-default bg-bg-raised p-6 lg:col-span-2">
+          <h2 className="mb-6 text-lg font-semibold text-text-primary">Account Information</h2>
 
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Full Name */}
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
+              <label className="mb-2 block text-sm font-medium text-text-secondary">
                 Full Name
               </label>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <IconUser className="h-5 w-5 text-gray-500" />
+                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                  <IconUser className="h-5 w-5 text-text-tertiary" />
                 </div>
                 <input
                   type="text"
                   value={formData.full_name}
                   onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
-                  className="w-full pl-10 pr-4 py-3 bg-white/[0.05] border border-white/[0.1] rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-violet-500/50 transition-all"
+                  className={INPUT}
                   placeholder="Enter your full name"
                 />
               </div>
@@ -140,18 +141,18 @@ export default function ProfileSettings({ admin }: ProfileSettingsProps) {
 
             {/* Username */}
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
+              <label className="mb-2 block text-sm font-medium text-text-secondary">
                 Username
               </label>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <IconUser className="h-5 w-5 text-gray-500" />
+                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                  <IconUser className="h-5 w-5 text-text-tertiary" />
                 </div>
                 <input
                   type="text"
                   value={formData.username}
                   onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                  className="w-full pl-10 pr-4 py-3 bg-white/[0.05] border border-white/[0.1] rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-violet-500/50 transition-all"
+                  className={INPUT}
                   placeholder="Enter your username"
                 />
               </div>
@@ -159,40 +160,40 @@ export default function ProfileSettings({ admin }: ProfileSettingsProps) {
 
             {/* Email (Read-only) */}
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
+              <label className="mb-2 block text-sm font-medium text-text-secondary">
                 Email
               </label>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <IconMail className="h-5 w-5 text-gray-500" />
+                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                  <IconMail className="h-5 w-5 text-text-tertiary" />
                 </div>
                 <input
                   type="email"
                   value={admin.email}
                   disabled
-                  className="w-full pl-10 pr-4 py-3 bg-white/[0.02] border border-white/[0.05] rounded-lg text-gray-500 cursor-not-allowed"
+                  className={INPUT_DISABLED}
                 />
               </div>
-              <p className="mt-1 text-xs text-gray-500">Email cannot be changed</p>
+              <p className="mt-1 text-xs text-text-tertiary">Email cannot be changed</p>
             </div>
 
             {/* Role (Read-only) */}
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
+              <label className="mb-2 block text-sm font-medium text-text-secondary">
                 Role
               </label>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <IconShieldCheck className="h-5 w-5 text-gray-500" />
+                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                  <IconShieldCheck className="h-5 w-5 text-text-tertiary" />
                 </div>
                 <input
                   type="text"
                   value={admin.role.replace('_', ' ').toUpperCase()}
                   disabled
-                  className="w-full pl-10 pr-4 py-3 bg-white/[0.02] border border-white/[0.05] rounded-lg text-gray-500 cursor-not-allowed capitalize"
+                  className={`${INPUT_DISABLED} capitalize`}
                 />
               </div>
-              <p className="mt-1 text-xs text-gray-500">Contact a super admin to change your role</p>
+              <p className="mt-1 text-xs text-text-tertiary">Contact a super admin to change your role</p>
             </div>
 
             {/* Message */}
@@ -200,10 +201,10 @@ export default function ProfileSettings({ admin }: ProfileSettingsProps) {
               <motion.div
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className={`p-4 rounded-lg ${
+                className={`rounded-lg border p-4 ${
                   message.type === 'success'
-                    ? 'bg-green-500/10 border border-green-500/20 text-green-400'
-                    : 'bg-red-500/10 border border-red-500/20 text-red-400'
+                    ? 'border-[rgba(63,217,134,0.25)] bg-success-bg text-success'
+                    : 'border-[rgba(255,92,92,0.25)] bg-error-bg text-error'
                 }`}
               >
                 {message.text}
@@ -211,18 +212,16 @@ export default function ProfileSettings({ admin }: ProfileSettingsProps) {
             )}
 
             {/* Submit Button */}
-            <motion.button
+            <button
               type="submit"
               disabled={loading}
-              whileHover={{ scale: 1.01 }}
-              whileTap={{ scale: 0.99 }}
-              className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-violet-500 to-indigo-500 hover:from-violet-600 hover:to-indigo-600 text-white font-medium rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex w-full items-center justify-center gap-2 rounded-lg bg-lime-pressed px-6 py-3 font-bold text-text-inverse transition-colors hover:bg-lime disabled:cursor-not-allowed disabled:opacity-50"
             >
               <IconDeviceFloppy className="h-5 w-5" />
               {loading ? 'Saving...' : 'Save Changes'}
-            </motion.button>
+            </button>
           </form>
-        </motion.div>
+        </div>
       </div>
     </div>
   )

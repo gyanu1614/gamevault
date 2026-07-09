@@ -66,7 +66,7 @@ export default function CreateTestListingsButton() {
       <button
         onClick={handleCreate}
         disabled={isCreating}
-        className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+        className="flex items-center gap-2 rounded-lg bg-lime-pressed px-4 py-2 text-sm font-bold text-text-inverse transition-colors hover:bg-lime disabled:cursor-not-allowed disabled:opacity-50"
       >
         {isCreating ? (
           <>

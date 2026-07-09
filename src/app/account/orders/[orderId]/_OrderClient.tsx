@@ -210,7 +210,6 @@ export function OrderClient(props: OrderClientProps) {
       // navbar via --page-hero-image; --hero-offset pulls it up
       // through the 80px navbar spacer.
       style={{
-        fontFamily: 'var(--font-manrope), Inter, system-ui, sans-serif',
         ['--page-hero-image' as any]: "url('/assets/heroes/order.avif')",
         ['--hero-offset' as any]: '80px',
       }}

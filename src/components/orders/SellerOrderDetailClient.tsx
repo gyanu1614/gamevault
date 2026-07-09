@@ -17,7 +17,7 @@ import {
   Loader2
 } from 'lucide-react'
 import Image from 'next/image'
-import VaultShieldBadge from '@/components/vaultshield/VaultShieldBadge'
+import SafeDropBadge from '@/components/safedrop/SafeDropBadge'
 import MarkAsDeliveredButton from '@/components/orders/MarkAsDeliveredButton'
 import DeliveryEvidenceUpload from '@/components/orders/DeliveryEvidenceUpload'
 import OrderTimeline from '@/components/orders/OrderTimeline'
@@ -269,7 +269,7 @@ export default function SellerOrderDetailClient({
             <DollarSign className="w-4 h-4 inline mr-2" />
             {order.escrow_status === 'released'
               ? 'Funds released to your balance'
-              : 'Funds held in VaultShield escrow'}
+              : 'Funds held in SafeDrop escrow'}
           </div>
         </div>
 

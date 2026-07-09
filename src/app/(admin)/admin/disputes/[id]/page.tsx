@@ -26,6 +26,7 @@ import ResolveDisputeModal from '@/components/admin/disputes/ResolveDisputeModal
 import EscalateDisputeModal from '@/components/admin/disputes/EscalateDisputeModal'
 import EscalationBanner from '@/components/admin/disputes/EscalationBanner'
 import DisputeResolutionCard from '@/components/admin/disputes/DisputeResolutionCard'
+import { IconChip } from '../../components/kit'
 
 export default function DisputeDetailPage() {
   const params = useParams()
@@ -157,7 +158,7 @@ export default function DisputeDetailPage() {
       resolved_buyer_favor: { label: 'Resolved - Buyer', className: 'bg-green-500/20 text-green-400 border-green-500/30' },
       resolved_seller_favor: { label: 'Resolved - Seller', className: 'bg-green-500/20 text-green-400 border-green-500/30' },
       resolved_partial: { label: 'Resolved - Partial', className: 'bg-green-500/20 text-green-400 border-green-500/30' },
-      closed: { label: 'Closed', className: 'bg-gray-500/20 text-gray-400 border-gray-500/30' },
+      closed: { label: 'Closed', className: 'border-border-default bg-bg-overlay text-text-secondary' },
     }
 
     const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.open
@@ -175,7 +176,7 @@ export default function DisputeDetailPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-solid border-violet-500 border-r-transparent"></div>
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-solid border-border-default border-t-lime"></div>
       </div>
     )
   }
@@ -183,9 +184,9 @@ export default function DisputeDetailPage() {
   if (!dispute) {
     return (
       <div className="p-6">
-        <div className="bg-black/50 backdrop-blur-xl border border-white/[0.1] rounded-xl p-12 text-center">
-          <AlertTriangle className="h-12 w-12 text-gray-600 mx-auto mb-4" />
-          <p className="text-lg font-medium text-white">Dispute not found</p>
+        <div className="rounded-xl border border-border-default bg-bg-raised p-12 text-center">
+          <AlertTriangle className="h-12 w-12 text-text-tertiary mx-auto mb-4" />
+          <p className="text-lg font-medium text-text-primary">Dispute not found</p>
         </div>
       </div>
     )
@@ -196,7 +197,7 @@ export default function DisputeDetailPage() {
       {/* Back Button */}
       <button
         onClick={() => router.back()}
-        className="inline-flex items-center gap-2 text-gray-400 hover:text-white transition-colors"
+        className="inline-flex items-center gap-2 text-text-secondary hover:text-text-primary transition-colors"
       >
         <ArrowLeft className="h-4 w-4" />
         Back to Disputes
@@ -252,21 +253,21 @@ export default function DisputeDetailPage() {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-black/50 backdrop-blur-xl border border-white/[0.1] rounded-xl overflow-hidden"
+            className="rounded-xl border border-border-default bg-bg-raised overflow-hidden"
           >
             {/* Product Visual Header */}
-            <div className="relative bg-gradient-to-br from-white/[0.02] to-white/[0.01] border-b border-white/[0.05] p-6">
+            <div className="relative bg-bg-overlay border-b border-border-subtle p-6">
               <div className="flex items-start gap-4">
                 {/* Listing Image */}
                 {order?.listing?.images && order.listing.images.length > 0 ? (
                   <img
                     src={order.listing.images[0]}
                     alt={order?.listing?.title}
-                    className="w-20 h-20 rounded-xl object-cover border border-white/[0.1] flex-shrink-0"
+                    className="w-20 h-20 rounded-xl object-cover border border-border-default flex-shrink-0"
                   />
                 ) : (
-                  <div className="w-20 h-20 rounded-xl bg-white/[0.05] border border-white/[0.1] flex items-center justify-center flex-shrink-0">
-                    <AlertTriangle className="h-8 w-8 text-gray-600" />
+                  <div className="w-20 h-20 rounded-xl bg-bg-overlay-2 border border-border-default flex items-center justify-center flex-shrink-0">
+                    <AlertTriangle className="h-8 w-8 text-text-tertiary" />
                   </div>
                 )}
 
@@ -274,10 +275,10 @@ export default function DisputeDetailPage() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between gap-4 mb-2">
                     <div className="flex-1 min-w-0">
-                      <h1 className="text-xl font-bold text-white mb-1 line-clamp-1">
+                      <h1 className="text-xl font-bold text-text-primary mb-1 line-clamp-1">
                         {order?.listing?.title || 'Order Item'}
                       </h1>
-                      <p className="text-xs text-gray-500 font-medium">
+                      <p className="text-xs text-text-tertiary font-medium">
                         Order #{order?.order_number || dispute.transaction_id?.slice(0, 8).toUpperCase()}
                       </p>
                     </div>
@@ -299,13 +300,13 @@ export default function DisputeDetailPage() {
             <div className="p-6 space-y-6">
               {/* Dispute Description */}
               <div>
-                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                <h3 className="text-xs font-semibold text-text-tertiary uppercase tracking-wider mb-2">
                   Dispute Reason
                 </h3>
-                <p className="text-sm font-medium text-white mb-2">
+                <p className="text-sm font-medium text-text-primary mb-2">
                   {dispute.title}
                 </p>
-                <p className="text-sm text-gray-400 leading-relaxed">
+                <p className="text-sm text-text-secondary leading-relaxed">
                   {dispute.description}
                 </p>
               </div>
@@ -313,24 +314,20 @@ export default function DisputeDetailPage() {
               {/* Metadata Grid */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-violet-500/20 to-indigo-500/20 border border-violet-500/30 flex items-center justify-center flex-shrink-0">
-                    <DollarSign className="h-5 w-5 text-violet-400" />
-                  </div>
+                  <IconChip icon={DollarSign} tone="lime" size="lg" />
                   <div className="min-w-0">
-                    <p className="text-xs text-gray-500">Disputed Amount</p>
-                    <p className="text-sm font-semibold text-white">
+                    <p className="text-xs text-text-tertiary">Disputed Amount</p>
+                    <p className="text-sm font-semibold tabular-nums text-text-primary">
                       {formatAmount(dispute.disputed_amount, dispute.currency)}
                     </p>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-blue-500/20 to-cyan-500/20 border border-blue-500/30 flex items-center justify-center flex-shrink-0">
-                    <Calendar className="h-5 w-5 text-blue-400" />
-                  </div>
+                  <IconChip icon={Calendar} tone="neutral" size="lg" />
                   <div className="min-w-0">
-                    <p className="text-xs text-gray-500">Created</p>
-                    <p className="text-xs font-medium text-white">
+                    <p className="text-xs text-text-tertiary">Created</p>
+                    <p className="text-xs font-medium text-text-primary">
                       {formatDate(dispute.created_at)}
                     </p>
                   </div>
@@ -345,26 +342,26 @@ export default function DisputeDetailPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="bg-black/50 backdrop-blur-xl border border-white/[0.1] rounded-xl overflow-hidden"
+            className="rounded-xl border border-border-default bg-bg-raised overflow-hidden"
           >
             <div
-              className="bg-violet-500/10 border-b border-violet-500/30 px-4 py-3 cursor-pointer hover:bg-violet-500/15 transition-colors"
+              className="bg-lime-tint-bg border-b border-lime-tint-border px-4 py-3 cursor-pointer transition-opacity hover:opacity-80"
               onClick={() => setIsChatCollapsed(!isChatCollapsed)}
             >
               <div className="flex items-center gap-2">
-                <Shield className="w-5 h-5 text-violet-400" />
+                <Shield className="w-5 h-5 text-lime-text" />
                 <div className="flex-1">
-                  <div className="text-sm font-semibold text-violet-400">
+                  <div className="text-sm font-semibold text-lime-text">
                     Order Conversation - Admin View
                   </div>
-                  <div className="text-xs text-gray-400">
+                  <div className="text-xs text-text-secondary">
                     You can view and participate in this conversation
                   </div>
                 </div>
                 {isChatCollapsed ? (
-                  <ChevronDown className="w-5 h-5 text-violet-400 flex-shrink-0" />
+                  <ChevronDown className="w-5 h-5 text-lime-text flex-shrink-0" />
                 ) : (
-                  <ChevronUp className="w-5 h-5 text-violet-400 flex-shrink-0" />
+                  <ChevronUp className="w-5 h-5 text-lime-text flex-shrink-0" />
                 )}
               </div>
             </div>
@@ -381,7 +378,7 @@ export default function DisputeDetailPage() {
               ) : (
                 <div className="flex h-full items-center justify-center">
                   <div className="text-center">
-                    <p className="text-sm text-gray-400">Loading conversation...</p>
+                    <p className="text-sm text-text-secondary">Loading conversation...</p>
                   </div>
                 </div>
               )}
@@ -396,40 +393,40 @@ export default function DisputeDetailPage() {
           <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
-            className="bg-black/50 backdrop-blur-xl border border-white/[0.1] rounded-xl p-6"
+            className="rounded-xl border border-border-default bg-bg-raised p-6"
           >
-            <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">
+            <h3 className="text-[11.5px] font-semibold text-text-tertiary uppercase tracking-wider mb-4">
               Parties
             </h3>
 
             {/* Buyer */}
-            <div className="mb-4 pb-4 border-b border-white/[0.1]">
-              <p className="text-xs text-gray-500 mb-2">Buyer</p>
+            <div className="mb-4 pb-4 border-b border-border-subtle">
+              <p className="text-xs text-text-tertiary mb-2">Buyer</p>
               <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center">
-                  <User className="h-5 w-5 text-white" />
+                <div className="h-10 w-10 rounded-full border border-border-subtle bg-bg-overlay flex items-center justify-center">
+                  <User className="h-5 w-5 text-text-secondary" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-white">
+                  <p className="text-sm font-medium text-text-primary">
                     {dispute.buyer_name || dispute.buyer_username}
                   </p>
-                  <p className="text-xs text-gray-500">{dispute.buyer_email}</p>
+                  <p className="text-xs text-text-tertiary">{dispute.buyer_email}</p>
                 </div>
               </div>
             </div>
 
             {/* Seller */}
             <div>
-              <p className="text-xs text-gray-500 mb-2">Seller</p>
+              <p className="text-xs text-text-tertiary mb-2">Seller</p>
               <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-full bg-gradient-to-br from-violet-500 to-purple-500 flex items-center justify-center">
-                  <User className="h-5 w-5 text-white" />
+                <div className="h-10 w-10 rounded-full border border-border-subtle bg-bg-overlay flex items-center justify-center">
+                  <User className="h-5 w-5 text-text-secondary" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-white">
+                  <p className="text-sm font-medium text-text-primary">
                     {dispute.seller_name || dispute.seller_username}
                   </p>
-                  <p className="text-xs text-gray-500">{dispute.seller_email}</p>
+                  <p className="text-xs text-text-tertiary">{dispute.seller_email}</p>
                 </div>
               </div>
             </div>
@@ -440,39 +437,39 @@ export default function DisputeDetailPage() {
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.1 }}
-            className="bg-black/50 backdrop-blur-xl border border-white/[0.1] rounded-xl p-6 space-y-4"
+            className="rounded-xl border border-border-default bg-bg-raised p-6 space-y-4"
           >
             {dispute.status.startsWith('resolved_') || dispute.status === 'closed' ? (
               <>
-                <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">
+                <h3 className="text-[11.5px] font-semibold text-text-tertiary uppercase tracking-wider">
                   Resolution Details
                 </h3>
 
                 {/* Dispute Reference ID */}
-                <div className="rounded-lg bg-white/[0.03] border border-white/[0.05] p-3">
-                  <p className="text-xs text-gray-500 mb-1">Dispute Reference ID</p>
-                  <p className="text-sm font-mono font-medium text-white">
+                <div className="rounded-lg bg-bg-overlay border border-border-subtle p-3">
+                  <p className="text-xs text-text-tertiary mb-1">Dispute Reference ID</p>
+                  <p className="text-sm font-mono font-medium text-text-primary">
                     #{dispute.id.slice(0, 8).toUpperCase()}
                   </p>
-                  <p className="text-xs text-gray-600 mt-1">Use this ID to reference this case</p>
+                  <p className="text-xs text-text-tertiary mt-1">Use this ID to reference this case</p>
                 </div>
 
                 {/* Resolved By */}
                 {dispute.resolved_by_user && (
-                  <div className="rounded-lg bg-white/[0.03] border border-white/[0.05] p-3">
+                  <div className="rounded-lg bg-bg-overlay border border-border-subtle p-3">
                     <div className="flex items-center gap-2 mb-2">
-                      <User className="h-3.5 w-3.5 text-gray-500" />
-                      <p className="text-xs text-gray-500">Resolved By</p>
+                      <User className="h-3.5 w-3.5 text-text-tertiary" />
+                      <p className="text-xs text-text-tertiary">Resolved By</p>
                     </div>
                     <div className="flex items-center gap-2">
-                      <div className="h-8 w-8 rounded-full bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center flex-shrink-0">
-                        <User className="h-4 w-4 text-white" />
+                      <div className="h-8 w-8 rounded-full border border-border-subtle bg-bg-overlay-2 flex items-center justify-center flex-shrink-0">
+                        <User className="h-4 w-4 text-text-secondary" />
                       </div>
                       <div className="min-w-0">
-                        <p className="text-sm font-medium text-white truncate">
+                        <p className="text-sm font-medium text-text-primary truncate">
                           {dispute.resolved_by_name || dispute.resolved_by_username || 'Admin'}
                         </p>
-                        <p className="text-xs text-gray-500">
+                        <p className="text-xs text-text-tertiary">
                           {dispute.resolved_at ? formatDate(dispute.resolved_at) : ''}
                         </p>
                       </div>
@@ -482,9 +479,9 @@ export default function DisputeDetailPage() {
 
                 {/* Resolution Type */}
                 {dispute.resolution_type && (
-                  <div className="rounded-lg bg-white/[0.03] border border-white/[0.05] p-3">
-                    <p className="text-xs text-gray-500 mb-1">Resolution Type</p>
-                    <p className="text-sm font-medium text-white capitalize">
+                  <div className="rounded-lg bg-bg-overlay border border-border-subtle p-3">
+                    <p className="text-xs text-text-tertiary mb-1">Resolution Type</p>
+                    <p className="text-sm font-medium text-text-primary capitalize">
                       {dispute.resolution_type.replace(/_/g, ' ')}
                     </p>
                   </div>
@@ -492,12 +489,12 @@ export default function DisputeDetailPage() {
 
                 {/* Refund Amount */}
                 {dispute.resolved_amount !== undefined && dispute.resolved_amount > 0 && (
-                  <div className="rounded-lg bg-white/[0.03] border border-white/[0.05] p-3">
+                  <div className="rounded-lg bg-bg-overlay border border-border-subtle p-3">
                     <div className="flex items-center gap-2 mb-1">
-                      <DollarSign className="h-3.5 w-3.5 text-gray-500" />
-                      <p className="text-xs text-gray-500">Refund Amount</p>
+                      <DollarSign className="h-3.5 w-3.5 text-text-tertiary" />
+                      <p className="text-xs text-text-tertiary">Refund Amount</p>
                     </div>
-                    <p className="text-lg font-bold text-green-400">
+                    <p className="text-lg font-bold tabular-nums text-green-400">
                       {formatAmount(dispute.resolved_amount, dispute.currency)}
                     </p>
                   </div>
@@ -505,7 +502,7 @@ export default function DisputeDetailPage() {
               </>
             ) : dispute.status === 'escalated' ? (
               <>
-                <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">
+                <h3 className="text-[11.5px] font-semibold text-text-tertiary uppercase tracking-wider">
                   Escalation Info
                 </h3>
                 <div className="rounded-lg border border-orange-500/30 bg-orange-500/10 px-4 py-3">
@@ -513,14 +510,14 @@ export default function DisputeDetailPage() {
                     <AlertOctagon className="h-4 w-4 text-orange-400" />
                     <div>
                       <p className="text-sm font-medium text-orange-400">Escalated to Senior Admin</p>
-                      <p className="text-xs text-gray-400 mt-1">Requires senior admin review</p>
+                      <p className="text-xs text-text-secondary mt-1">Requires senior admin review</p>
                     </div>
                   </div>
                 </div>
               </>
             ) : (
               <>
-                <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">
+                <h3 className="text-[11.5px] font-semibold text-text-tertiary uppercase tracking-wider">
                   Actions
                 </h3>
 
@@ -543,9 +540,9 @@ export default function DisputeDetailPage() {
                 </Button>
 
                 {/* Dispute Reference ID */}
-                <div className="mt-4 pt-4 border-t border-white/[0.05]">
-                  <p className="text-xs text-gray-500 mb-1">Dispute Reference</p>
-                  <p className="text-xs font-mono font-medium text-gray-400">
+                <div className="mt-4 pt-4 border-t border-border-subtle">
+                  <p className="text-xs text-text-tertiary mb-1">Dispute Reference</p>
+                  <p className="text-xs font-mono font-medium text-text-secondary">
                     #{dispute.id.slice(0, 8).toUpperCase()}
                   </p>
                 </div>

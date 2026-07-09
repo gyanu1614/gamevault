@@ -1,5 +1,5 @@
 /**
- * GAMEVAULT SELLER API (Compatible with existing schema)
+ * DROPMARKET SELLER API (Compatible with existing schema)
  * Works with your existing database structure
  * Date: January 25, 2026
  */
@@ -36,6 +36,12 @@ export interface Listing {
   sales: number
   created_at: string
   updated_at: string
+  /** SEO slug for the public listing URL (nullable on legacy rows). */
+  slug?: string | null
+  /** Minimum purchase quantity (currency offers). */
+  min_quantity?: number | null
+  /** Short sequential offer ID (#33404) — null until the migration runs. */
+  offer_number?: number | null
   // Joined data
   game?: {
     id: string
@@ -48,6 +54,8 @@ export interface Listing {
     id: string
     name: string
     slug: string
+    /** categories.metadata — carries the category type ('currency' | 'items' | …). */
+    metadata?: { type?: string } | null
   }
 }
 
@@ -172,7 +180,7 @@ export const listingsApi = {
       .select(`
         *,
         game:game_id (id, name, slug, emoji, image_url),
-        category:category_id (id, name, slug)
+        category:category_id (id, name, slug, metadata)
       `)
       .eq('seller_id', user.id)  // CRITICAL: Only show current user's listings
       .order('created_at', { ascending: false })
@@ -209,7 +217,7 @@ export const listingsApi = {
       .select(`
         *,
         game:game_id (id, name, slug, emoji, image_url),
-        category:category_id (id, name, slug)
+        category:category_id (id, name, slug, metadata)
       `)
       .eq('id', id)
       .eq('seller_id', user.id)  // CRITICAL: Only allow access to own listings
@@ -247,7 +255,7 @@ export const listingsApi = {
       .select(`
         *,
         game:game_id (id, name, slug, emoji, image_url),
-        category:category_id (id, name, slug)
+        category:category_id (id, name, slug, metadata)
       `)
       .single()
 
@@ -271,7 +279,7 @@ export const listingsApi = {
       .select(`
         *,
         game:game_id (id, name, slug, emoji, image_url),
-        category:category_id (id, name, slug)
+        category:category_id (id, name, slug, metadata)
       `)
       .single()
 
@@ -751,7 +759,7 @@ export const analyticsApi = {
       .select(`
         *,
         game:game_id (id, name, slug, emoji, image_url),
-        category:category_id (id, name, slug)
+        category:category_id (id, name, slug, metadata)
       `)
       .eq('seller_id', user.id)
       .order('sales', { ascending: false })
@@ -980,10 +988,13 @@ export interface Conversation {
     order_number?: string
     status: OrderStatus
     total_amount: number
+    quantity?: number
     listing?: {
       id: string
       title: string
       images: string[]
+      game?: { name: string; slug: string; image_url?: string | null }
+      category?: { name: string; slug: string; metadata?: { type?: string } | null }
     }
   }
 }
@@ -1007,10 +1018,13 @@ export const messagesApi = {
           order_number,
           status,
           total_amount,
+          quantity,
           listing:listings!listing_id(
             id,
             title,
-            images
+            images,
+            game:game_id(name, slug, image_url),
+            category:category_id(name, slug, metadata)
           )
         )
       `)
@@ -1186,10 +1200,13 @@ export const messagesApi = {
           order_number,
           status,
           total_amount,
+          quantity,
           listing:listings!listing_id(
             id,
             title,
-            images
+            images,
+            game:game_id(name, slug, image_url),
+            category:category_id(name, slug, metadata)
           )
         )
       `)
@@ -1258,10 +1275,13 @@ export const messagesApi = {
           order_number,
           status,
           total_amount,
+          quantity,
           listing:listings!listing_id(
             id,
             title,
-            images
+            images,
+            game:game_id(name, slug, image_url),
+            category:category_id(name, slug, metadata)
           )
         )
       `)

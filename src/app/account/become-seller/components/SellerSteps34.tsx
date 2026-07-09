@@ -688,7 +688,7 @@ export default function SellerSteps34({
                   <div className="rounded-lg border border-blue-500/20 bg-blue-500/5 p-3 sm:p-4">
                     <p className="text-xs text-blue-200 sm:text-sm">
                       <span className="font-semibold">ℹ️ Note:</span> These are YOUR seller policies shown to buyers.
-                      You'll accept GameVault's platform terms in the final step.
+                      You'll accept DropMarket's platform terms in the final step.
                     </p>
                   </div>
                 </div>

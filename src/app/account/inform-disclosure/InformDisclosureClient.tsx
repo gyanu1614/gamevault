@@ -212,7 +212,7 @@ export default function InformDisclosureClient({
         </motion.div>
         {disclosure && (
           <motion.div variants={item} className="rounded-lg border border-border-subtle card-frost p-5 space-y-2">
-            <p className="text-xs font-medium text-text-tertiary uppercase tracking-wider mb-3">Submitted Information</p>
+            <p className="text-[11px] font-semibold text-text-tertiary uppercase tracking-wider mb-3">Submitted Information</p>
             {[
               ['Legal Name',    disclosure.legal_name],
               ['Address',       `${disclosure.address_line1}${disclosure.address_line2 ? ', ' + disclosure.address_line2 : ''}, ${disclosure.city}, ${disclosure.state_province} ${disclosure.postal_code}, ${disclosure.country}`],
@@ -256,7 +256,7 @@ export default function InformDisclosureClient({
 
           {/* Identity */}
           <div className="rounded-lg border border-border-subtle card-frost p-5 space-y-4">
-            <p className="text-xs font-semibold text-text-secondary uppercase tracking-wider">Legal Identity</p>
+            <p className="text-[11px] font-semibold text-text-secondary uppercase tracking-wider">Legal Identity</p>
             <Field label="Legal Full Name or Business Name" name="legalName" value={form.legalName}
               onChange={set('legalName')} required placeholder="Jane Doe or Acme LLC" />
             <Field label="Address Line 1" name="addressLine1" value={form.addressLine1}
@@ -277,7 +277,7 @@ export default function InformDisclosureClient({
 
           {/* Financial identifiers */}
           <div className="rounded-lg border border-border-subtle card-frost p-5 space-y-4">
-            <p className="text-xs font-semibold text-text-secondary uppercase tracking-wider">Financial Identifiers</p>
+            <p className="text-[11px] font-semibold text-text-secondary uppercase tracking-wider">Financial Identifiers</p>
             <Field label="Tax ID — Last 4 digits only (SSN or EIN)" name="taxIdLast4" value={form.taxIdLast4}
               onChange={set('taxIdLast4')} required placeholder="4321"
               hint="We store only the last 4 digits for verification purposes." />
@@ -288,7 +288,7 @@ export default function InformDisclosureClient({
 
           {/* Public contact */}
           <div className="rounded-lg border border-border-subtle card-frost p-5 space-y-4">
-            <p className="text-xs font-semibold text-text-secondary uppercase tracking-wider">Public Contact Information</p>
+            <p className="text-[11px] font-semibold text-text-secondary uppercase tracking-wider">Public Contact Information</p>
             <p className="text-xs text-text-tertiary">
               Under the INFORM Act, buyers may request this contact information. It will only be
               shared in response to a valid consumer request, not displayed publicly on your profile.
@@ -319,7 +319,7 @@ export default function InformDisclosureClient({
             </div>
             <p className="text-xs text-text-secondary">
               I certify that the information provided above is accurate and complete to the best of my knowledge.
-              I understand that providing false information is a violation of GameVault's Terms of Service and
+              I understand that providing false information is a violation of DropMarket's Terms of Service and
               may be subject to legal penalties under applicable law.
             </p>
           </div>

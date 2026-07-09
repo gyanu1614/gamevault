@@ -26,6 +26,12 @@ import {
   DEFAULT_PLATFORM_FIELDS,
   normalizePlatformOptions,
 } from '@/lib/types/category-configs'
+import {
+  REGION_PRESETS,
+  PLATFORM_PRESETS,
+  DEVICE_PRESETS,
+  type PresetOption,
+} from '@/lib/marketplace/region-platform-presets'
 
 type Props = {
   gameId: string
@@ -39,29 +45,34 @@ const KINDS: Array<{
   hint: string
   placeholder: string
   supportsIcons: boolean
+  /** V51 — One-click preset options (value + bundled static icon). */
+  presets: PresetOption[]
 }> = [
   {
     key: 'region',
     label: 'Region',
     hint: 'Server region the listing is for. e.g. NA, EU, Asia',
-    placeholder: 'Add a region (e.g. NA)',
-    supportsIcons: false,
+    placeholder: 'Add a custom region (e.g. NA)',
+    // V51 — Regions now carry flag icons (preset art in
+    // public/regions/); the buyer page renders flag + name tiles.
+    supportsIcons: true,
+    presets: REGION_PRESETS,
   },
   {
     key: 'platform',
     label: 'Platform',
     hint: 'Where the buyer plays. e.g. PC, PlayStation, Xbox, Mobile',
-    placeholder: 'Add a platform (e.g. PC)',
-    // V19/P24/P7 — Only platform gets logos in V1. Region/device
-    // stay text-only until we decide they need imagery.
+    placeholder: 'Add a custom platform (e.g. PC)',
     supportsIcons: true,
+    presets: PLATFORM_PRESETS,
   },
   {
     key: 'device',
     label: 'Device',
     hint: 'Specific device when the platform isn’t enough. e.g. iOS, Android',
-    placeholder: 'Add a device (e.g. iOS)',
-    supportsIcons: false,
+    placeholder: 'Add a custom device (e.g. iOS)',
+    supportsIcons: true,
+    presets: DEVICE_PRESETS,
   },
 ]
 
@@ -109,6 +120,7 @@ export function PlatformFieldsSection({ gameId, value, onChange }: Props) {
               hint={k.hint}
               placeholder={k.placeholder}
               supportsIcons={k.supportsIcons}
+              presets={k.presets}
               field={field}
               onToggle={() => patchKind(k.key, { enabled: !field.enabled })}
               onAddOption={(opt) => {
@@ -143,6 +155,7 @@ function PlatformKindCard({
   hint,
   placeholder,
   supportsIcons,
+  presets,
   field,
   onToggle,
   onAddOption,
@@ -154,6 +167,7 @@ function PlatformKindCard({
   hint: string
   placeholder: string
   supportsIcons: boolean
+  presets: PresetOption[]
   field: PlatformFieldDef
   onToggle: () => void
   onAddOption: (opt: PlatformOption) => void
@@ -167,6 +181,19 @@ function PlatformKindCard({
     if (!trimmed) return
     onAddOption({ value: trimmed, icon_url: null })
     setDraft('')
+  }
+
+  // V51 — Preset toggle: click adds the option with its bundled icon;
+  // clicking an already-added preset removes it. Matched by value
+  // (case-insensitive) so custom rows with the same name count too.
+  const isPicked = (preset: PresetOption) =>
+    field.options.some((o) => o.value.toLowerCase() === preset.value.toLowerCase())
+  const togglePreset = (preset: PresetOption) => {
+    const existing = field.options.find(
+      (o) => o.value.toLowerCase() === preset.value.toLowerCase(),
+    )
+    if (existing) onRemoveOption(existing.value)
+    else onAddOption({ value: preset.value, icon_url: preset.icon_url })
   }
 
   return (
@@ -193,9 +220,42 @@ function PlatformKindCard({
 
       {field.enabled && (
         <div className="mt-3 space-y-2 pl-7">
-          {/* V19/P24/P7 — Platform options render as rows with inline
-              icon uploader. Region/device options stay as compact
-              pills (no icon column). */}
+          {/* V51 — Preset quick-add: curated options with bundled
+              icons. Lit = already added; click again to remove. */}
+          {presets.length > 0 && (
+            <div>
+              <div className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-text-tertiary">
+                Presets
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {presets.map((preset) => {
+                  const picked = isPicked(preset)
+                  return (
+                    <button
+                      key={preset.value}
+                      type="button"
+                      onClick={() => togglePreset(preset)}
+                      aria-pressed={picked}
+                      className={
+                        'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[12px] font-medium transition-colors ' +
+                        (picked
+                          ? 'border-lime-tint-border bg-lime-tint-bg text-lime-text'
+                          : 'border-border-default bg-bg-overlay text-text-secondary hover:border-border-strong hover:text-text-primary')
+                      }
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={preset.icon_url} alt="" className="h-4 w-4 shrink-0 object-contain" />
+                      {preset.value}
+                      {picked && <X className="h-3 w-3" />}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* V19/P24/P7 — Options with icons render as rows with inline
+              icon uploader (regions/devices included as of V51). */}
           {supportsIcons ? (
             field.options.length > 0 && (
               <ul className="space-y-1.5">
@@ -204,6 +264,11 @@ function PlatformKindCard({
                     key={opt.value}
                     gameId={gameId}
                     option={opt}
+                    presetIcon={
+                      presets.find(
+                        (pr) => pr.value.toLowerCase() === opt.value.toLowerCase(),
+                      )?.icon_url ?? null
+                    }
                     onChange={(patch) => onUpdateOption(opt.value, patch)}
                     onRemove={() => onRemoveOption(opt.value)}
                   />
@@ -273,11 +338,15 @@ function PlatformKindCard({
 function PlatformOptionRow({
   gameId,
   option,
+  presetIcon,
   onChange,
   onRemove,
 }: {
   gameId: string
   option: PlatformOption
+  /** V51 — Display fallback when the stored option has no icon but a
+   *  preset with the same name ships one (legacy string configs). */
+  presetIcon?: string | null
   onChange: (patch: Partial<PlatformOption>) => void
   onRemove: () => void
 }) {
@@ -315,9 +384,9 @@ function PlatformOptionRow({
         className="relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-md border border-border-default bg-bg-base transition-colors hover:border-lime-tint-border"
         aria-label={`Upload icon for ${option.value}`}
       >
-        {option.icon_url ? (
+        {option.icon_url || presetIcon ? (
           /* eslint-disable-next-line @next/next/no-img-element */
-          <img src={option.icon_url} alt="" className="h-full w-full object-cover" />
+          <img src={option.icon_url ?? presetIcon ?? ''} alt="" className="h-full w-full object-contain" />
         ) : uploading ? (
           <Loader2 className="h-3.5 w-3.5 animate-spin text-text-tertiary" />
         ) : (

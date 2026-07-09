@@ -15,7 +15,7 @@ import {
 } from 'lucide-react'
 
 export const metadata: Metadata = {
-  title: 'My Account | GameVault',
+  title: 'My Account',
   description: 'Manage your orders, messages, and account settings',
 }
 

@@ -31,13 +31,13 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   if (!game) {
     return {
-      title: 'Game Not Found | GameVault'
+      title: 'Game Not Found'
     }
   }
 
   return {
-    title: `${game.name} Marketplace | Buy & Sell ${game.name} Accounts & Items | GameVault`,
-    description: `Browse ${game.name} accounts, items, and currency. ${game.description} All transactions protected by VaultShield escrow.`,
+    title: `${game.name} Marketplace | Buy & Sell ${game.name} Accounts & Items`,
+    description: `Browse ${game.name} accounts, items, and currency. ${game.description} All transactions protected by SafeDrop escrow.`,
     keywords: [
       `${game.name.toLowerCase()} accounts`,
       `buy ${game.name.toLowerCase()} account`,
@@ -46,7 +46,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       `${game.name.toLowerCase()} currency`
     ],
     openGraph: {
-      title: `${game.name} Marketplace - GameVault`,
+      title: `${game.name} Marketplace - DropMarket`,
       description: `Buy and sell ${game.name} accounts and items safely`,
       type: 'website'
     }
@@ -138,10 +138,10 @@ export default async function GameBrowsePage({ params }: PageProps) {
   const categories = game.categories || []
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-black via-gray-900 to-black">
+    <div className="min-h-screen bg-bg-base">
       {/* Hero Section */}
       <section className="relative pt-24 pb-16 px-4 sm:px-6 lg:px-8">
-        <div className="absolute inset-0 bg-gradient-to-b from-lime/5 via-transparent to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-b from-[rgba(198,255,61,0.05)] via-transparent to-transparent" />
 
         <div className="max-w-7xl mx-auto relative">
           {/* Breadcrumb */}
@@ -150,7 +150,7 @@ export default async function GameBrowsePage({ params }: PageProps) {
               Marketplace
             </Link>
             <ArrowRight className="w-4 h-4" />
-            <span className="text-white">{game.name}</span>
+            <span className="text-text-primary">{game.name}</span>
           </nav>
 
           {/* Game Header */}
@@ -167,7 +167,7 @@ export default async function GameBrowsePage({ params }: PageProps) {
             )}
 
             <div className="flex-1">
-              <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
+              <h1 className="text-4xl md:text-5xl font-bold text-text-primary mb-4">
                 {game.name} Marketplace
               </h1>
               <p className="text-xl text-text-secondary mb-6">
@@ -177,13 +177,13 @@ export default async function GameBrowsePage({ params }: PageProps) {
               <div className="flex flex-wrap gap-4">
                 <div className="flex items-center gap-2 px-4 py-2 bg-bg-overlay rounded-lg border border-white/[0.1]">
                   <Package className="w-5 h-5 text-lime-text" />
-                  <span className="text-white font-medium">
+                  <span className="text-text-primary font-medium">
                     {Object.values(listingCounts).reduce((a: number, b: number) => a + b, 0).toLocaleString()} Active Listings
                   </span>
                 </div>
                 <div className="flex items-center gap-2 px-4 py-2 bg-bg-overlay rounded-lg border border-white/[0.1]">
                   <TrendingUp className="w-5 h-5 text-success" />
-                  <span className="text-white font-medium">
+                  <span className="text-text-primary font-medium">
                     {categories.length} Categories
                   </span>
                 </div>
@@ -196,7 +196,7 @@ export default async function GameBrowsePage({ params }: PageProps) {
       {/* Categories */}
       <section className="py-16 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
-          <h2 className="text-3xl font-bold text-white mb-8">Browse by Category</h2>
+          <h2 className="text-3xl font-bold text-text-primary mb-8">Browse by Category</h2>
 
           {categories.length === 0 ? (
             <div className="text-center py-12 bg-bg-overlay border border-border-subtle rounded-xl">
@@ -225,10 +225,10 @@ export default async function GameBrowsePage({ params }: PageProps) {
         <section className="py-16 px-4 sm:px-6 lg:px-8 bg-bg-overlay">
           <div className="max-w-7xl mx-auto">
             <div className="flex items-center justify-between mb-8">
-              <h2 className="text-3xl font-bold text-white">Recent Listings</h2>
+              <h2 className="text-3xl font-bold text-text-primary">Recent Listings</h2>
               <Link
-                href={`/${gameSlug}`}
-                className="text-lime-text hover:text-lime-text font-medium flex items-center gap-2 transition-colors"
+                href="/browse"
+                className="text-lime-text font-medium flex items-center gap-2 transition-opacity hover:opacity-80"
               >
                 View All
                 <ArrowRight className="w-4 h-4" />
@@ -287,7 +287,7 @@ function CategoryCard({
           </span>
         </div>
 
-        <h3 className="text-xl font-semibold text-white mb-2 group-hover:text-lime-text transition-colors">
+        <h3 className="text-xl font-semibold text-text-primary mb-2 group-hover:text-lime-text transition-colors">
           {name}
         </h3>
         <p className="text-sm text-text-secondary mb-4 line-clamp-2">
@@ -336,7 +336,7 @@ function ListingPreviewCard({
     <Link href={`/${gameSlug}/${categorySlug}/${listingSlug}`}>
       <div className="group bg-bg-overlay border border-border-subtle hover:border-lime rounded-xl overflow-hidden transition-all duration-300 hover:scale-105">
         {/* Image */}
-        <div className="relative h-48 bg-gradient-to-br from-lime/20 to-blue-500/20">
+        <div className="relative h-48 bg-gradient-to-br from-[rgba(198,255,61,0.12)] to-[rgba(255,255,255,0.05)]">
           {imageUrl ? (
             <Image src={imageUrl} alt={title} fill className="object-cover" />
           ) : (
@@ -347,13 +347,13 @@ function ListingPreviewCard({
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
 
           <div className="absolute bottom-3 right-3 px-3 py-1.5 bg-lime rounded-lg">
-            <span className="text-white font-bold">${price.toFixed(2)}</span>
+            <span className="text-text-inverse font-bold">${price.toFixed(2)}</span>
           </div>
         </div>
 
         {/* Info */}
         <div className="p-4">
-          <h3 className="text-base font-semibold text-white mb-2 line-clamp-2 group-hover:text-lime-text transition-colors">
+          <h3 className="text-base font-semibold text-text-primary mb-2 line-clamp-2 group-hover:text-lime-text transition-colors">
             {title}
           </h3>
 

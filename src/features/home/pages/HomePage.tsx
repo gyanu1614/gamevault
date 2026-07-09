@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import Image from 'next/image'
 import {
   ChevronLeft,
   ChevronRight,
@@ -16,21 +15,23 @@ import {
   Coins,
   Headset,
   LayoutGrid,
-  Wallet,
+  User,
+  Zap,
+  Rocket,
+  Gift,
+  Swords,
 } from 'lucide-react'
 
 import { HeroCarousel } from '../components/HeroCarousel'
 import { RowHeader } from '../components/RowHeader'
 import { TopUpsBanner } from '../components/TopUpsBanner'
-import GameVaultExplainer from '../components/GameVaultExplainer'
+import DropMarketExplainer from '../components/DropMarketExplainer'
 import { HorizontalScroller } from '../components/HorizontalScroller'
 import { GameCard } from '../components/GameCard'
 import { CurrencyCard } from '../components/CurrencyCard'
 import { CategoryCard } from '../components/CategoryCard'
-import { StatTile } from '../components/StatTile'
 import { StatsMarquee } from '../components/StatsMarquee'
 import { HowItWorks } from '../components/HowItWorks'
-import { HowStep } from '../components/HowStep'
 import { WhyCard } from '../components/WhyCard'
 import { RecentlySoldTicker } from '../components/RecentlySoldTicker'
 
@@ -40,57 +41,46 @@ import { usePopularCurrencies } from '../hooks/usePopularCurrencies'
 import { usePopularItems, usePopularAccounts, usePopularTopups } from '../hooks/usePopularCategories'
 import { useRecentSales } from '../hooks/useRecentSales'
 
-const HOW_IT_WORKS_STEPS = [
-  {
-    num: '01',
-    icon: Tag,
-    title: 'Find your listing',
-    body: 'Browse verified sellers and lock in the lowest price across 180+ games.',
-  },
-  {
-    num: '02',
-    icon: Lock,
-    title: 'Pay into escrow',
-    body: "VaultShield holds your money. The seller can see the order but can't touch a cent.",
-  },
-  {
-    num: '03',
-    icon: Package,
-    title: 'Receive your goods',
-    body: 'Get instant auto-delivery, or chat with the seller for a manual handover.',
-  },
-  {
-    num: '04',
-    icon: CheckCircle2,
-    title: 'Confirm & release',
-    body: 'Happy? Confirm delivery and funds release. A problem? Open a dispute, we step in.',
-  },
+
+/** V57 — Pre-footer category strip (reference: category pills under the
+ *  closing CTA). Icons stay lucide so the strip inherits theme colors. */
+const CTA_CATEGORIES = [
+  { label: 'Accounts', icon: User, href: '/browse' },
+  { label: 'Currencies', icon: Coins, href: '/browse' },
+  { label: 'Top Ups', icon: Zap, href: '/#top-ups' },
+  { label: 'Items', icon: Swords, href: '/browse' },
+  { label: 'Boosting', icon: Rocket, href: '/browse' },
+  { label: 'Gift Cards', icon: Gift, href: '/#top-ups' },
 ] as const
 
 const WHY_CARDS = [
   {
     icon: Lock,
     title: 'Escrow on every order',
-    body: 'Your money is held by VaultShield until you confirm you got exactly what you paid for. Disputes are reviewed by real humans.',
-    badge: '$0 lost to scams',
+    body: "Your money sits in SafeDrop — not the seller's pocket — until you confirm delivery. Anything off? Real humans review it.",
+    tone: 'lime',
+    img: '/icons/trust/money-back.png',
   },
   {
     icon: ShieldCheck,
-    title: 'Only verified sellers',
-    body: 'ID + payment verification, trade history and a public rating on every seller. The sketchy ones never make it in.',
-    badge: '98.7% delivery rate',
+    title: 'Sellers earn their spot',
+    body: 'ID checks, payment verification, live ratings and full trade history on every storefront. The sketchy ones never make it in.',
+    tone: 'success',
+    img: '/icons/safedrop-emblem.png',
   },
   {
     icon: Coins,
-    title: "Fees that aren't a rip-off",
-    body: 'Sellers pay 5–10% instead of the 17–26% competitors charge — which means better prices for you, every time.',
-    badge: '5–10% seller fee',
+    title: "Fees that don't sting",
+    body: 'Sellers pay 5–10% — not the 17–26% the big marketplaces skim — so listings start cheaper here and stay cheaper.',
+    tone: 'warning',
+    img: '/how-it-works/step-2.png',
   },
   {
     icon: Headset,
-    title: '24/7 dispute support',
-    body: 'Stuck mid-trade? Our support team and dispute resolution are online around the clock, every day of the year.',
-    badge: 'Avg reply · 4 min',
+    title: 'Humans, around the clock',
+    body: 'Stuck mid-trade at 4 AM? Support and dispute resolution never close — average first reply lands in four minutes.',
+    tone: 'info',
+    img: '/icons/trust/support.png',
   },
 ] as const
 
@@ -136,7 +126,7 @@ function ScrollTriggeredExplainer() {
     return () => io.disconnect()
   }, [])
 
-  const Explainer = GameVaultExplainer as any
+  const Explainer = DropMarketExplainer as any
   return (
     <div ref={ref} className="h-full w-full">
       {mounted && <Explainer autoplay={false} externalPlay={inView} />}
@@ -161,11 +151,11 @@ function PopularGamesShelf({ games }: { games: ReturnType<typeof usePopularGames
   // the section doesn't pop in.
   if (list.length === 0) {
     return (
-      <div className="grid grid-flow-col auto-cols-[calc((100%-1.25rem*5)/6)] gap-5 overflow-hidden">
+      <div className="grid grid-flow-col auto-cols-[calc((100%-0.75rem)/2)] gap-3 overflow-hidden sm:auto-cols-[calc((100%-1.25rem*2)/3)] sm:gap-5 lg:auto-cols-[calc((100%-1.25rem*5)/6)]">
         {Array.from({ length: 6 }).map((_, i) => (
           <div key={i}>
-            <div className="aspect-[4/5] w-full animate-pulse rounded-2xl bg-bg-overlay/60 border border-border-subtle" />
-            <div className="mt-3 px-1 h-5 w-24 animate-pulse rounded bg-bg-overlay/60" />
+            <div className="aspect-[4/5] w-full animate-pulse rounded-2xl bg-[rgba(28,28,37,0.6)] border border-border-subtle" />
+            <div className="mt-3 px-1 h-5 w-24 animate-pulse rounded bg-[rgba(28,28,37,0.6)]" />
           </div>
         ))}
       </div>
@@ -182,9 +172,9 @@ function PopularGamesShelf({ games }: { games: ReturnType<typeof usePopularGames
   const page = (dir: 1 | -1) => {
     const el = scrollerRef.current
     if (!el) return
-    // Page by ~5 card-widths so a couple of cards overlap (no abrupt jump)
-    const cardWidth = el.clientWidth / 6
-    el.scrollBy({ left: dir * cardWidth * 5, behavior: 'smooth' })
+    // Page by ~85% of the visible width so a card overlaps between
+    // pages — works at every breakpoint (2/3/6 visible columns).
+    el.scrollBy({ left: dir * el.clientWidth * 0.85, behavior: 'smooth' })
   }
 
   return (
@@ -192,7 +182,7 @@ function PopularGamesShelf({ games }: { games: ReturnType<typeof usePopularGames
       <div
         ref={scrollerRef}
         onScroll={onScroll}
-        className="grid grid-flow-col auto-cols-[calc((100%-1.25rem*5)/6)] gap-5 overflow-x-auto scrollbar-hide scroll-smooth"
+        className="grid grid-flow-col auto-cols-[calc((100%-0.75rem)/2)] gap-3 overflow-x-auto scrollbar-hide scroll-smooth sm:auto-cols-[calc((100%-1.25rem*2)/3)] sm:gap-5 lg:auto-cols-[calc((100%-1.25rem*5)/6)]"
         style={{ scrollbarWidth: 'none' }}
       >
         {list.map((game) => (
@@ -213,7 +203,7 @@ function PopularGamesShelf({ games }: { games: ReturnType<typeof usePopularGames
         onClick={() => page(-1)}
         aria-label="Previous games"
         disabled={atStart}
-        className="absolute left-0 top-[40%] -translate-y-1/2 -translate-x-1/2 w-11 h-11 rounded-full bg-bg-base/90 backdrop-blur-md border border-border-default shadow-elevated grid place-items-center text-text-primary hover:bg-bg-raised hover:border-border-strong disabled:opacity-0 disabled:pointer-events-none transition-all duration-fast ease-gv z-10"
+        className="absolute left-0 top-[40%] -translate-y-1/2 -translate-x-1/2 w-11 h-11 rounded-full bg-[rgba(10,10,15,0.9)] backdrop-blur-md border border-border-default shadow-elevated grid place-items-center text-text-primary hover:bg-bg-raised hover:border-border-strong disabled:opacity-0 disabled:pointer-events-none transition-all duration-fast ease-gv z-10"
       >
         <ChevronLeft aria-hidden="true" className="w-5 h-5" />
       </button>
@@ -224,7 +214,7 @@ function PopularGamesShelf({ games }: { games: ReturnType<typeof usePopularGames
         onClick={() => page(1)}
         aria-label="More games"
         disabled={atEnd}
-        className="absolute right-0 top-[40%] -translate-y-1/2 translate-x-1/2 w-11 h-11 rounded-full bg-bg-base/90 backdrop-blur-md border border-border-default shadow-elevated grid place-items-center text-text-primary hover:bg-bg-raised hover:border-border-strong disabled:opacity-0 disabled:pointer-events-none transition-all duration-fast ease-gv z-10"
+        className="absolute right-0 top-[40%] -translate-y-1/2 translate-x-1/2 w-11 h-11 rounded-full bg-[rgba(10,10,15,0.9)] backdrop-blur-md border border-border-default shadow-elevated grid place-items-center text-text-primary hover:bg-bg-raised hover:border-border-strong disabled:opacity-0 disabled:pointer-events-none transition-all duration-fast ease-gv z-10"
       >
         <ChevronRight aria-hidden="true" className="w-5 h-5" />
       </button>
@@ -415,11 +405,11 @@ export function HomePage() {
               removed so the body's ambient glows continue through. */}
           <div className="mb-10 flex flex-col items-center text-center">
             <div className="mb-3 inline-flex items-center gap-2">
-              <span className="h-px w-10 bg-gradient-to-l from-lime/50 to-transparent" aria-hidden />
-              <span className="text-[12px] font-bold uppercase tracking-[0.18em] text-lime-text">
+              <span className="h-px w-10 bg-gradient-to-l from-[#C6FF3D80] to-transparent" aria-hidden />
+              <span className="text-[11.5px] font-bold uppercase tracking-[0.14em] text-lime-text">
                 Trending now
               </span>
-              <span className="h-px w-10 bg-gradient-to-r from-lime/50 to-transparent" aria-hidden />
+              <span className="h-px w-10 bg-gradient-to-r from-[#C6FF3D80] to-transparent" aria-hidden />
             </div>
             <h2 className="font-display text-[44px] font-extrabold leading-[1.04] tracking-tight lg:text-[56px]">
               Popular Games
@@ -443,7 +433,7 @@ export function HomePage() {
       {/* ================================================================
           HOW IT WORKS — Animated escrow explainer (V17o)
           Replaces the static 4-card grid with a 32s looping animation
-          built from the design handoff (GameVaultExplainer.jsx).
+          built from the design handoff (DropMarketExplainer.jsx).
           ================================================================ */}
       {/* V20/P16 — Apple-style scroll-pinned How It Works. Sticky stage
           on the right cross-fades through 4 hero illustrations as the
@@ -467,17 +457,28 @@ export function HomePage() {
               'radial-gradient(70% 50% at 85% 85%, rgba(120,168,255,0.04), transparent 60%)',
           }}
         />
+        {/* V58 — Roblox crew as a full-width backdrop band: the lineup
+            stands across the top of the section BEHIND the heading and
+            fades out on the way down (and at the side edges), so it
+            reads as scene-setting, not decoration. */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/characters/roblox-crew.webp"
+          alt=""
+          aria-hidden
+          className="pointer-events-none absolute left-1/2 top-0 z-0 hidden w-[1240px] max-w-none -translate-x-1/2 select-none object-contain opacity-[0.26] [mask-image:linear-gradient(to_bottom,transparent,black_14%,black_38%,transparent_88%)] md:block"
+        />
         <div className="max-w-container mx-auto px-6 relative z-10">
           <div className="mb-6">
             <div className="mb-1.5 flex items-center gap-2">
-              <span className="text-[10.5px] font-bold uppercase tracking-[0.16em] text-lime-text">
+              <span className="text-[11.5px] font-bold uppercase tracking-[0.14em] text-lime-text">
                 Marketplace
               </span>
-              <span className="h-px w-8 bg-gradient-to-r from-lime/40 to-transparent" aria-hidden />
+              <span className="h-px w-8 bg-gradient-to-r from-[#C6FF3D66] to-transparent" aria-hidden />
             </div>
             <h2 className="font-display text-display">Shop by category.</h2>
             <p className="mt-1.5 text-body-sm text-text-secondary max-w-2xl">
-              Currencies, items, accounts — pick how you want to play and we'll show you the matching deals.
+              Currencies, items, accounts — pick how you want to play and we&apos;ll show you the matching deals.
             </p>
           </div>
           <ShopByCategoryShelf
@@ -496,7 +497,7 @@ export function HomePage() {
           design handoff. Image is layered behind via TopUpsBanner; the
           content stack lives at z-10 and uses the center ~60% of the
           width so it sits on the dark negative-space strip. */}
-      <section className="relative py-20 border-y border-border-subtle overflow-hidden">
+      <section id="top-ups" className="relative py-20 border-y border-border-subtle overflow-hidden">
         <TopUpsBanner />
         <div className="max-w-container mx-auto px-6 relative z-10">
           <RowHeader
@@ -514,7 +515,7 @@ export function HomePage() {
       </section>
 
       {/* ================================================================
-          WHY CHOOSE GAMEVAULT — 4 trust/safety cards
+          WHY CHOOSE DROPMARKET — 4 trust/safety cards
           ================================================================ */}
       <section className="relative py-20 overflow-hidden">
         {/* Aurora blobs — slow drifting lime + cool-blue wash */}
@@ -537,20 +538,37 @@ export function HomePage() {
         {/* V17p — Narrower max-width + centered intro to match the
             "How it works" trust section. Creates rhythm by alternating
             wide content rows (Popular Games, Top-Ups) with narrower
-            centered trust rows (How it works, Why GameVault). */}
+            centered trust rows (How it works, Why DropMarket). */}
+        {/* V58 — Tactical duo as faint background art: large, low
+            opacity, dissolving on every side so it sits IN the scene
+            rather than on top of it. */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/characters/cs-duo.webp"
+          alt=""
+          aria-hidden
+          className="pointer-events-none absolute -right-16 top-1/2 z-0 hidden w-[560px] -translate-y-1/2 select-none object-contain opacity-[0.22] [mask-image:radial-gradient(ellipse_62%_62%_at_center,black_28%,transparent_78%)] lg:block"
+        />
         <div className="mx-auto max-w-[1200px] px-6 relative z-10">
           <div className="mx-auto max-w-2xl text-center mb-12">
             <div className="mb-2 flex items-center justify-center gap-2">
-              <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-lime-text">
-                Why Choose GameVault
+              <span className="h-px w-8 bg-gradient-to-l from-[#C6FF3D66] to-transparent" aria-hidden />
+              <span className="text-[11.5px] font-bold uppercase tracking-[0.14em] text-lime-text">
+                Why Choose DropMarket
               </span>
-              <span className="h-px w-8 bg-gradient-to-r from-lime/40 to-transparent" aria-hidden />
+              <span className="h-px w-8 bg-gradient-to-r from-[#C6FF3D66] to-transparent" aria-hidden />
             </div>
-            <h2 className="font-display text-display">Built so you can&apos;t get burned.</h2>
+            <h2 className="font-display text-display">
+              Built so you can&apos;t get <span className="text-lime-text">burned</span>.
+            </h2>
+            <p className="mt-3 text-body-lg text-text-secondary">
+              Every order runs through the same armor — escrow, vetted sellers, honest fees,
+              and support that actually answers.
+            </p>
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-            {WHY_CARDS.map((card) => (
-              <WhyCard key={card.title} {...card} />
+            {WHY_CARDS.map((card, i) => (
+              <WhyCard key={card.title} {...card} index={i} />
             ))}
           </div>
         </div>
@@ -590,64 +608,77 @@ export function HomePage() {
       </section>
 
       {/* ================================================================
-          CTA BAND
+          CLOSING CTA — V57. Full-bleed: the Fortnite trio stands at
+          center behind the headline, fading CIRCULARLY outward (radial
+          mask) so the art melts into the page. One lime CTA, then the
+          category strip — the whole marketplace, one tap away.
           ================================================================ */}
-      <section className="py-20">
-        <div className="max-w-container mx-auto px-6 relative z-10">
-          <div className="relative flex flex-col lg:flex-row items-start lg:items-center justify-between gap-10 p-12 rounded-xl border border-border-default bg-bg-raised overflow-hidden">
-            {/* ASSET: cinematic backdrop — 2400×900 JPG, drop replacement at same path */}
-            <Image
-              src="/section-bg/cta-band.jpg"
-              alt=""
-              fill
-              aria-hidden="true"
-              className="object-cover saturate-[0.8] z-0"
-              sizes="(max-width: 1280px) 100vw, 1280px"
-              priority={false}
-            />
-            {/* Dark overlay */}
-            <div
-              aria-hidden="true"
-              className="pointer-events-none absolute inset-0 z-0"
-              style={{
-                background:
-                  'linear-gradient(90deg, rgba(10,10,15,0.92) 0%, rgba(10,10,15,0.75) 60%, rgba(10,10,15,0.85) 100%)',
-              }}
-            />
-            {/* Lime tint kept on top for brand wash */}
-            <div
-              aria-hidden="true"
-              className="pointer-events-none absolute inset-0 z-0"
-              style={{
-                background:
-                  'radial-gradient(120% 140% at 0% 0%, rgba(198,255,61,0.10), transparent 50%)',
-              }}
-            />
-            <div className="relative z-10">
-              <h2 className="font-display text-display max-w-[18ch]">
-                Start trading with the lowest fees in the game.
-              </h2>
-              <p className="text-body-lg text-text-secondary max-w-[46ch] mt-[14px]">
-                Join 1.2M gamers buying and selling under VaultShield protection.
-              </p>
-            </div>
-            <div className="relative z-10 flex flex-col gap-3 w-full lg:w-auto">
-              <Link
-                href="/browse"
-                className="inline-flex items-center justify-center gap-2 h-[54px] px-8 bg-lime text-text-inverse font-semibold text-[17px] rounded-lg hover:bg-lime-hover hover:shadow-glow active:bg-lime-pressed transition-all duration-fast ease-gv"
-              >
-                <LayoutGrid aria-hidden="true" className="w-5 h-5" />
-                Browse marketplace
-              </Link>
-              <Link
-                href="/signup"
-                className="inline-flex items-center justify-center gap-2 h-[54px] px-8 bg-transparent text-text-primary font-semibold text-[17px] rounded-lg border border-border-strong hover:bg-state-hover hover:border-text-tertiary transition-all duration-fast ease-gv"
-              >
-                <Wallet aria-hidden="true" className="w-5 h-5" />
-                Create free account
-              </Link>
-            </div>
+      <section className="relative overflow-hidden py-24 lg:py-28">
+        {/* Ambient glow behind the composition */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 z-0"
+          style={{
+            background:
+              'radial-gradient(55% 65% at 50% 42%, rgba(198,255,61,0.07), transparent 65%),' +
+              'radial-gradient(70% 80% at 50% 45%, rgba(120,168,255,0.05), transparent 70%)',
+          }}
+        />
+        {/* Centered character art — fades circularly outward. */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/characters/fortnite-trio.webp"
+          alt=""
+          aria-hidden
+          className="pointer-events-none absolute left-1/2 top-2 z-0 h-[560px] w-auto -translate-x-1/2 select-none object-contain opacity-[0.22] [mask-image:radial-gradient(ellipse_55%_58%_at_50%_42%,black_30%,transparent_80%)] sm:h-[700px] lg:h-[780px]"
+        />
+
+        <div className="relative z-10 mx-auto max-w-4xl px-6 text-center">
+          <h2 className="font-display text-[40px] font-extrabold leading-[1.05] tracking-tight [text-shadow:0_4px_28px_rgba(0,0,0,0.85)] sm:text-[48px] lg:text-[58px]">
+            What are you waiting for?
+          </h2>
+          <p className="mx-auto mt-5 max-w-xl text-body-lg text-text-secondary [text-shadow:0_2px_16px_rgba(0,0,0,0.9)]">
+            Join 1.2M gamers trading currency, items, and accounts — every order
+            guarded by SafeDrop escrow until you confirm delivery.
+          </p>
+          <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
+            <Link
+              href="/browse"
+              className="inline-flex h-[54px] items-center justify-center gap-2 rounded-lg bg-lime px-9 text-[17px] font-bold text-text-inverse transition-all duration-fast ease-gv hover:bg-lime-hover hover:shadow-glow active:bg-lime-pressed"
+            >
+              <LayoutGrid aria-hidden="true" className="h-5 w-5" />
+              Browse Marketplace
+            </Link>
+            <Link
+              href="/signup"
+              className="inline-flex h-[54px] items-center justify-center gap-2 rounded-lg border border-border-strong bg-[rgba(20,20,27,0.56)] px-8 text-[16px] font-semibold text-text-primary backdrop-blur-md transition-all duration-fast ease-gv hover:border-text-tertiary hover:bg-state-hover"
+            >
+              Create free account
+            </Link>
           </div>
+        </div>
+
+        {/* Category strip — glass pills, the whole catalog one tap away. */}
+        <div className="relative z-10 mx-auto mt-16 flex max-w-5xl flex-wrap items-center justify-center gap-3 px-6">
+          {CTA_CATEGORIES.map(({ label, icon: Icon, href }) => (
+            <Link
+              key={label}
+              href={href}
+              className="group relative inline-flex h-12 items-center gap-2.5 overflow-hidden rounded-full border border-border-default bg-[rgba(20,20,27,0.56)] px-5 backdrop-blur-md transition-all duration-200 hover:-translate-y-0.5 hover:border-lime-tint-border hover:bg-[rgba(26,26,35,0.75)]"
+            >
+              <span
+                aria-hidden
+                className="pointer-events-none absolute inset-x-0 top-0 h-1/2 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.05),transparent)]"
+              />
+              <Icon
+                aria-hidden="true"
+                className="relative h-[17px] w-[17px] text-text-tertiary transition-colors group-hover:text-lime-text"
+              />
+              <span className="relative text-[14.5px] font-semibold text-text-secondary transition-colors group-hover:text-text-primary">
+                {label}
+              </span>
+            </Link>
+          ))}
         </div>
       </section>
     </div>
