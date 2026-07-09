@@ -115,7 +115,7 @@ export async function exportMyData(): Promise<{
     const exportPayload = {
       exported_at:        new Date().toISOString(),
       gdpr_basis:         'Article 20 — Right to Data Portability',
-      platform:           'GameVault',
+      platform:           'DropMarket',
       user_id:            uid,
       email:              user.email,
       profile:            profile,

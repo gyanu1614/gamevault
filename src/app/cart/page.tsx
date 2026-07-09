@@ -4,7 +4,7 @@
  * Cart Page - DEPRECATED
  * @deprecated Cart system removed in favor of direct "Buy Now" checkout (Feb 2026).
  * This page now redirects to marketplace.
- * See: progress/24feb/03_CHECKOUT_VAULTSHIELD_CART_FIXES.md
+ * See: progress/24feb/03_CHECKOUT_SAFEDROP_CART_FIXES.md
  */
 
 import { useEffect } from 'react'

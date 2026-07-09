@@ -321,6 +321,11 @@ export default function SellWizard({
   const [editLoading, setEditLoading] = useState<boolean>(isEditMode)
 
   const [step, setStep] = useState(1)
+  // V67 — Step-slide direction: forward steps enter from the right,
+  // Back enters from the left (reference: stacked-card wizard feel).
+  const lastStepRef = useRef(1)
+  const stepDir = step >= lastStepRef.current ? 1 : -1
+  useEffect(() => { lastStepRef.current = step }, [step])
   const [categories] = useState<GlobalCategory[]>(initialCategories)
   const [selectedCategory, setSelectedCategory] = useState<GlobalCategory | null>(null)
 
@@ -384,6 +389,12 @@ export default function SellWizard({
   const [images, setImages] = useState<string[]>([])
   const [imageUploading, setImageUploading] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  // Synchronous re-entrancy guard. `submitting` state drives the button's
+  // disabled/spinner UI, but state updates are async — a very fast double
+  // click can enter handlePublish twice before the re-render disables the
+  // button, creating two listings. This ref flips synchronously so the
+  // second call bails immediately.
+  const submittingRef = useRef(false)
 
   // Terms gate (R8 — both must be checked to enable Create Offer)
   const [agreeSellerRules, setAgreeSellerRules] = useState(false)
@@ -870,7 +881,16 @@ export default function SellWizard({
 
   const handlePublish = async (asDraft: boolean) => {
     if (!selectedGame || !selectedCategory) return
+    // Synchronous double-submit guard — bail if a publish is already in
+    // flight, even if React hasn't re-rendered the disabled button yet.
+    if (submittingRef.current) return
+    submittingRef.current = true
     setSubmitting(true)
+    // On success we navigate away to /account/listings — keep the button
+    // disabled through that transition rather than re-enabling it (which
+    // would let an over-eager click fire a SECOND publish during the nav).
+    // Only reset the guard when we stay on the page (failure / error).
+    let succeeded = false
     try {
       const templateData: Record<string, unknown> = {}
       if (template) {
@@ -938,9 +958,16 @@ export default function SellWizard({
       // also need to invalidate the in-memory cache here.
       queryClient.invalidateQueries({ queryKey: ['seller', 'listings'] })
       queryClient.invalidateQueries({ queryKey: ['seller', 'dashboard'] })
+      succeeded = true
       startTransition(() => router.push('/account/listings'))
     } finally {
-      setSubmitting(false)
+      // Re-enable only if we're staying on the page (failure/error). On
+      // success the navigation unmounts this wizard, so leaving the button
+      // disabled is both correct and prevents a duplicate-publish click.
+      if (!succeeded) {
+        submittingRef.current = false
+        setSubmitting(false)
+      }
     }
   }
 
@@ -1112,10 +1139,10 @@ export default function SellWizard({
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
             key={step}
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+            initial={{ opacity: 0, x: 64 * stepDir }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -64 * stepDir }}
+            transition={{ duration: 0.26, ease: [0.22, 1, 0.36, 1] }}
           >
             {step === 1 && (
               <Step1Category
@@ -1866,7 +1893,7 @@ function FieldInput({
   return (
     <div>
       <label className="mb-1.5 block">
-        <span className="text-xs font-semibold uppercase tracking-wider text-text-secondary">
+        <span className="text-[11px] font-semibold uppercase tracking-wider text-text-secondary">
           {attribute.name}
           {attribute.is_required && <span className="ml-1 text-error">*</span>}
         </span>
@@ -2404,7 +2431,7 @@ function Step4Publish(p: Step4Props) {
               <div className="grid gap-4 sm:grid-cols-2">
                 {/* Price */}
                 <div className="space-y-1.5">
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-text-secondary">
+                  <label className="block text-[11px] font-semibold uppercase tracking-wider text-text-secondary">
                     Price <span className="text-error">*</span>
                   </label>
                   {/* V19/P24/P7.c — NumberField-style trailing
@@ -2440,7 +2467,7 @@ function Step4Publish(p: Step4Props) {
                 </div>
                 {/* Stock */}
                 <div className="space-y-1.5">
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-text-secondary">
+                  <label className="block text-[11px] font-semibold uppercase tracking-wider text-text-secondary">
                     <Package className="mr-1 inline h-3.5 w-3.5" /> Stock
                   </label>
                   <NumberField
@@ -2458,7 +2485,7 @@ function Step4Publish(p: Step4Props) {
                   on it. Renders as a single-column row below. */}
               {p.categorySlug === 'top-up' && (
                 <div className="mt-4 space-y-1.5">
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-text-secondary">
+                  <label className="block text-[11px] font-semibold uppercase tracking-wider text-text-secondary">
                     Original price{' '}
                     <span className="font-normal normal-case tracking-normal text-text-disabled">
                       (optional)
@@ -2510,7 +2537,7 @@ function Step4Publish(p: Step4Props) {
             for free. The visual treatment (icon + title + subtitle in
             a lime-tinted card on select) is preserved. */}
         <div className="space-y-1.5">
-          <label className="block text-xs font-semibold uppercase tracking-wider text-text-secondary">
+          <label className="block text-[11px] font-semibold uppercase tracking-wider text-text-secondary">
             Delivery method
           </label>
           <RadioGroup
@@ -2567,7 +2594,7 @@ function Step4Publish(p: Step4Props) {
           const customActive = hasCustomOption && !presets.some((t) => t.value === p.deliveryTime)
           return (
             <div className="mt-5 space-y-2">
-              <label className="block text-xs font-semibold uppercase tracking-wider text-text-secondary">
+              <label className="block text-[11px] font-semibold uppercase tracking-wider text-text-secondary">
                 Delivery window
               </label>
               <RadioGroup
@@ -2637,7 +2664,7 @@ function Step4Publish(p: Step4Props) {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-1.5">
-            <label className="block text-xs font-semibold uppercase tracking-wider text-text-secondary">
+            <label className="block text-[11px] font-semibold uppercase tracking-wider text-text-secondary">
               Minutes
             </label>
             <input
@@ -2869,7 +2896,7 @@ function BuyerCardPreview({
   return (
     <div className="rounded-2xl border border-border-subtle bg-bg-inset p-3 sm:p-4">
       <div className="mb-2 flex items-center justify-between">
-        <div className="text-[10px] font-semibold uppercase tracking-wider text-text-tertiary">
+        <div className="text-[11px] font-semibold uppercase tracking-wider text-text-tertiary">
           Buyer preview
         </div>
         <div className="text-[10px] text-text-tertiary">Updates live</div>
@@ -3007,7 +3034,7 @@ function PriceGuidanceCard({
 
   return (
     <div className="mt-3 rounded-xl border border-border-subtle bg-bg-inset p-3">
-      <div className="mb-2 flex items-center justify-between text-[10px] font-semibold uppercase tracking-wider text-text-tertiary">
+      <div className="mb-2 flex items-center justify-between text-[11px] font-semibold uppercase tracking-wider text-text-tertiary">
         <span>Recent sales</span>
         <span>{sample_size} sold · last 60 days</span>
       </div>
@@ -3185,7 +3212,7 @@ function PlatformTileRows({
         const value = values[kind]
         return (
           <div key={kind} className="space-y-2">
-            <label className="block text-xs font-semibold uppercase tracking-wider text-text-secondary">
+            <label className="block text-[11px] font-semibold uppercase tracking-wider text-text-secondary">
               {TILE_KIND_LABELS[kind]} <span className="text-error">*</span>
             </label>
             <RadioGroup

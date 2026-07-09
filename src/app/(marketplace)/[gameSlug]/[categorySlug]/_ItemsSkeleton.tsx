@@ -13,69 +13,65 @@
  */
 
 function Block({ className = '' }: { className?: string }) {
-  // V21/P7.p — Solid white-tint fill. The previous bg-bg-overlay/80
-  // was near-invisible now that the skeleton sits over the hero
-  // backdrop (transparent main) — small blocks (title, filter pills)
-  // vanished. white/[0.07] reads clearly on any dark surface.
+  // Greyish solid fill (a step above the card surface) so blocks read as
+  // clear placeholders, not faint transparent ghosts. bg-bg-overlay-2
+  // (#23232E) matches the app's raised-grey surfaces.
   return (
-    <div className={`animate-pulse rounded-md bg-white/[0.07] ${className}`} />
+    <div className={`animate-pulse rounded-md bg-bg-overlay-2 ${className}`} />
   )
 }
 
-/* ── Item card skeleton — mirrors _ItemCard.tsx <article> exactly.
-      Landscape card: outer rounded-2xl border, top row = left text +
-      right square image, bottom strip = seller chip + arrow chip. */
+/* ── Item card skeleton — mirrors the current _ItemCard.tsx <article>:
+      breadcrumb row → content row (2-line title min-h + delivery chip |
+      square image) → bottom strip (price + /Unit left | avatar + name +
+      rating right). No stock pill, no arrow chip (both removed from the
+      real card). */
 function ItemCardSkeleton() {
   return (
     <article
       className="relative flex flex-col overflow-hidden rounded-lg border border-border-default bg-bg-overlay"
       aria-hidden
     >
-      {/* MAIN ROW — left text column + right square image */}
-      <div className="relative z-10 flex items-stretch gap-4 p-3.5 sm:p-4">
-        {/* Left column */}
-        <div className="flex min-w-0 flex-1 flex-col">
-          {/* Name h3 — text-[15.5px] sm:text-[16px], 2 lines */}
-          <div className="space-y-1.5">
-            <Block className="h-[16px] w-3/4" />
-            <Block className="h-[16px] w-1/2" />
-          </div>
+      {/* MAIN BLOCK — breadcrumb + content row */}
+      <div className="relative z-10 flex flex-col p-3.5 sm:p-4">
+        {/* Breadcrumb line */}
+        <Block className="mb-2 h-3 w-40 max-w-[70%]" />
 
-          {/* Meta pills row — delivery + stock */}
-          <div className="mt-2 flex flex-wrap items-center gap-1.5">
-            <Block className="h-6 w-20 rounded-full" />
-            <Block className="h-6 w-16 rounded-full" />
-          </div>
-
-          {/* Price block at bottom — text-[22px] sm:text-[24px] */}
-          <div className="mt-auto flex items-end justify-between gap-3 pt-3">
-            <div className="space-y-1.5">
-              <Block className="h-[24px] w-24" />
-              <Block className="h-3 w-12" />
+        {/* Content row — left (title + delivery chip) + right (image) */}
+        <div className="flex items-stretch gap-4">
+          <div className="flex min-w-0 flex-1 flex-col">
+            {/* Title — reserves the same 2-line min-h as the real card */}
+            <div className="min-h-[2.75rem] space-y-1.5">
+              <Block className="h-[16px] w-3/4" />
+              <Block className="h-[16px] w-1/2" />
+            </div>
+            {/* Delivery chip only */}
+            <div className="mt-2">
+              <Block className="h-7 w-24 rounded-md" />
             </div>
           </div>
-        </div>
 
-        {/* Right column — aspect-square thumbnail w-[88px] sm:w-[110px] */}
-        <Block className="aspect-square h-auto w-[88px] shrink-0 self-start rounded-md sm:w-[110px]" />
+          {/* Square thumbnail — w-[88px] sm:w-[110px] */}
+          <Block className="aspect-square h-auto w-[88px] shrink-0 self-start rounded-md sm:w-[110px]" />
+        </div>
       </div>
 
-      {/* Bottom strip — seller chip + meta + arrow chip */}
-      <div className="relative z-10 flex items-center justify-between gap-3 border-t border-border-subtle px-3 py-2 sm:px-3.5">
-        {/* Seller chip */}
-        <div className="inline-flex max-w-[55%] items-center gap-2 rounded-full border border-border-subtle bg-bg-base/60 px-1.5 py-1 pr-2.5">
-          <Block className="h-[22px] w-[22px] shrink-0 rounded-full" />
-          <Block className="h-3 w-20" />
-        </div>
-
-        {/* Inline meta — sold count + rating */}
-        <div className="flex shrink-0 items-center gap-2">
-          <Block className="h-3 w-12" />
+      {/* Bottom strip — price (left) + seller block (right) */}
+      <div className="relative z-10 flex items-center justify-between gap-3 border-t border-border-subtle px-3 py-2.5 sm:px-3.5">
+        {/* Price + / Unit */}
+        <div className="flex items-baseline gap-1.5">
+          <Block className="h-[22px] w-20" />
           <Block className="h-3 w-10" />
         </div>
 
-        {/* Lime arrow chip — h-8 w-8 round */}
-        <Block className="h-8 w-8 shrink-0 rounded-full" />
+        {/* Seller block — avatar + [name / rating] */}
+        <div className="flex shrink-0 items-center gap-2.5">
+          <Block className="h-[34px] w-[34px] shrink-0 rounded-full" />
+          <div className="space-y-1.5">
+            <Block className="h-3 w-24" />
+            <Block className="h-3 w-16" />
+          </div>
+        </div>
       </div>
     </article>
   )
@@ -87,16 +83,16 @@ export default function ItemsSkeleton() {
       {/* GameSubNav skeleton — identical to currency skeleton's so the
           chrome doesn't jump when the real page mounts and replaces
           the skeleton. */}
-      <div className="relative z-40 flex justify-center py-6 sm:py-8 md:py-10 pointer-events-none px-3">
-        <div className="pointer-events-auto w-full max-w-fit flex items-center gap-0.5 rounded-full border border-white/[0.1] shadow-2xl backdrop-blur-2xl backdrop-saturate-150 px-2 py-2 sm:px-3 sm:py-2.5" style={{ backgroundColor: 'rgba(28, 28, 37, 0.30)' }}>
+      <div className="relative z-40 flex justify-center py-3 sm:py-4 md:py-5 pointer-events-none px-3">
+        <div className="pointer-events-auto w-full max-w-fit flex items-center gap-0.5 rounded-full border border-white/[0.1] shadow-2xl backdrop-blur-2xl backdrop-saturate-150 px-2 py-1.5 sm:px-2.5 sm:py-2" style={{ backgroundColor: 'rgba(28, 28, 37, 0.30)' }}>
           {/* V21/P7.q — One block per slot (game + each category),
               not icon+label pairs — cleaner, less busy. */}
-          <div className="flex flex-shrink-0 items-center px-3 py-1.5 sm:px-4 sm:py-2">
+          <div className="flex flex-shrink-0 items-center px-2.5 py-1 sm:px-3.5 sm:py-1.5">
             <Block className="h-3.5 w-20 sm:w-24" />
           </div>
           <div className="mx-1 h-4 w-px bg-white/[0.12] flex-shrink-0 sm:mx-1.5 sm:h-5" aria-hidden />
           {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="flex items-center px-3 py-1.5 sm:px-4 sm:py-2">
+            <div key={i} className="flex items-center px-2.5 py-1 sm:px-3.5 sm:py-1.5">
               <Block className="h-3.5 w-14 sm:w-16" />
             </div>
           ))}
@@ -108,9 +104,9 @@ export default function ItemsSkeleton() {
           wash; we use a flat bg-bg-overlay/30 here for the skeleton
           surface so the eye doesn't latch onto the gradient first. */}
       <section className="relative overflow-hidden border-b border-border-subtle bg-bg-overlay/30">
-        <div className="relative mx-auto w-full max-w-7xl px-4 pb-6 pt-5 sm:px-6 sm:pb-7 sm:pt-6 lg:px-8">
+        <div className="relative mx-auto w-full max-w-7xl px-4 pb-5 pt-2 sm:px-6 sm:pb-6 sm:pt-3 lg:px-8">
           {/* Page header — logo + "{Game} Items" + listings count */}
-          <div className="mb-6 flex items-center gap-4 sm:mb-7 sm:gap-5">
+          <div className="mb-4 flex items-center gap-4 sm:mb-5 sm:gap-5">
             <Block className="h-14 w-14 shrink-0 rounded-2xl sm:h-16 sm:w-16" />
             <div className="min-w-0 flex-1 space-y-2">
               {/* "Marketplace" eyebrow — text-[11px] uppercase */}
@@ -145,7 +141,7 @@ export default function ItemsSkeleton() {
 
       {/* Results + grid — 1/2/xl-3 col grid, gap-5 sm:gap-6.
           Render 9 cards (enough to fill a typical above-fold view). */}
-      <div className="mx-auto w-full max-w-7xl px-4 pb-20 pt-6 sm:px-6 lg:px-8">
+      <div className="mx-auto w-full max-w-7xl px-4 pb-20 pt-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-6 xl:grid-cols-3">
           {Array.from({ length: 9 }).map((_, i) => (
             <ItemCardSkeleton key={i} />

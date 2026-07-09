@@ -153,12 +153,13 @@ function AuthDialog({ open, onOpenChange, mode, onModeChange, redirectRef }: Aut
               />
             </Dialog.Overlay>
 
-            {/* V17 fix — wrapper handles `position: fixed` centering;
-                inner motion.div handles enter/exit transform. Doing both
-                on one node lets Framer's inline transform clobber the
-                Tailwind -translate-x-1/2/-translate-y-1/2 utilities. */}
-            <Dialog.Content asChild>
-              <div className="fixed inset-0 z-[81] flex items-center justify-center p-3 sm:p-4 pointer-events-none">
+            {/* Centering wrapper is a PLAIN div (pointer-events-none so clicks
+                pass through to the overlay). Dialog.Content is the modal box
+                ITSELF (the inner motion.div) so Radix correctly distinguishes
+                inside vs. outside — making overlay-click, Escape, and the close
+                button all dismiss properly. */}
+            <div className="fixed inset-0 z-[81] flex items-center justify-center p-3 sm:p-4 pointer-events-none">
+              <Dialog.Content asChild>
               <motion.div
                 initial={{ opacity: 0, scale: 0.97, y: 16 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -171,7 +172,7 @@ function AuthDialog({ open, onOpenChange, mode, onModeChange, redirectRef }: Aut
                   // the 50% split is gone — color flows continuously
                   // from the deep-black left edge through to the lime
                   // wash on the right.
-                  'pointer-events-auto relative flex w-full overflow-hidden rounded-2xl border border-border-default shadow-[0_24px_60px_-12px_rgba(0,0,0,0.7)]',
+                  'pointer-events-auto relative flex w-full overflow-hidden rounded-lg border border-border-default shadow-[0_24px_60px_-12px_rgba(0,0,0,0.7)]',
                   'h-[min(92vh,720px)] max-w-[1080px]',
                 )}
                 style={{
@@ -191,24 +192,26 @@ function AuthDialog({ open, onOpenChange, mode, onModeChange, redirectRef }: Aut
                 }}
               >
                 <Dialog.Title className="sr-only">
-                  {mode === 'login' ? 'Sign in to GameVault' : 'Create your GameVault account'}
+                  {mode === 'login' ? 'Sign in to DropMarket' : 'Create your DropMarket account'}
                 </Dialog.Title>
                 <Dialog.Description className="sr-only">
                   {mode === 'login'
                     ? 'Enter your email and password to access your account.'
-                    : 'Sign up to start buying and selling on GameVault.'}
+                    : 'Sign up to start buying and selling on DropMarket.'}
                 </Dialog.Description>
 
-                {/* Close button — always available (X dismisses the modal). */}
-                <Dialog.Close asChild>
-                  <button
-                    type="button"
-                    aria-label="Close"
-                    className="absolute right-4 top-4 z-10 flex h-9 w-9 items-center justify-center rounded-full border border-border-subtle bg-bg-base/60 text-text-secondary backdrop-blur-md transition-colors hover:border-border-default hover:text-text-primary"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                </Dialog.Close>
+                {/* Close button — wired DIRECTLY to onOpenChange (the same
+                    dismiss path outside-click uses) rather than Dialog.Close
+                    asChild, which didn't fire reliably when nested inside the
+                    asChild motion.div Content. Deterministic. */}
+                <button
+                  type="button"
+                  aria-label="Close"
+                  onClick={() => onOpenChange(false)}
+                  className="absolute right-4 top-4 z-30 flex h-9 w-9 items-center justify-center rounded-md border border-border-subtle bg-bg-base/60 text-text-secondary backdrop-blur-md transition-colors hover:border-border-default hover:text-text-primary"
+                >
+                  <X className="h-4 w-4" />
+                </button>
 
                 {/* Left — form panel */}
                 <div className="flex w-full flex-col overflow-y-auto md:w-1/2">
@@ -248,8 +251,8 @@ function AuthDialog({ open, onOpenChange, mode, onModeChange, redirectRef }: Aut
                 {/* Right — hero image panel (desktop only) */}
                 <HeroPanel mode={mode} />
               </motion.div>
-              </div>
-            </Dialog.Content>
+              </Dialog.Content>
+            </div>
           </Dialog.Portal>
         )}
       </AnimatePresence>
@@ -330,18 +333,18 @@ function HeroPanel({ mode }: { mode: AuthMode }) {
               <p className="mt-3 max-w-sm text-[14px] leading-relaxed text-text-secondary">
                 {mode === 'login'
                   ? 'Pick up where you left off — your orders, wishlist, and seller tools are right where you left them.'
-                  : 'Every trade is escrow-protected by VaultShield. Buy in 60 seconds, sell with peace of mind.'}
+                  : 'Every trade is escrow-protected by SafeDrop. Buy in 60 seconds, sell with peace of mind.'}
               </p>
             </motion.div>
           </AnimatePresence>
         </div>
 
         {/* Bottom — trust strip */}
-        <div className="flex items-center gap-2 rounded-full border border-border-subtle bg-bg-base/40 px-4 py-2.5 backdrop-blur-md">
+        <div className="flex items-center gap-2 rounded-md border border-border-subtle bg-bg-base/40 px-4 py-2.5 backdrop-blur-md">
           <ShieldCheck className="h-4 w-4 shrink-0 text-lime-text" />
           <span className="text-[12.5px] text-text-secondary">
             Protected by{' '}
-            <span className="font-semibold text-text-primary">VaultShield</span> escrow
+            <span className="font-semibold text-text-primary">SafeDrop</span> escrow
           </span>
         </div>
       </div>
@@ -405,6 +408,9 @@ function LoginForm({
         return supabase.auth.getSession()
       })
       toast.success('Welcome back')
+      // Reset the button state before handing off — don't rely on the modal
+      // unmounting to hide a stuck "Signing in…" spinner.
+      setLoading(false)
       onSuccess()
     } catch (err: any) {
       setError(err?.message ?? 'Something went wrong')
@@ -420,7 +426,7 @@ function LoginForm({
           weight + uppercase tracking reads as an eyebrow rather than
           a competing title. */}
       <header className="space-y-1">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-lime-text">
+        <p className="text-[11.5px] font-bold uppercase tracking-[0.14em] text-lime-text">
           Sign in
         </p>
         <h2 className="text-[18px] font-semibold leading-snug tracking-tight text-text-primary">
@@ -502,7 +508,7 @@ function LoginForm({
       </form>
 
       <p className="text-center text-[13px] text-text-secondary">
-        Don't have an account?{' '}
+        Don&apos;t have an account?{' '}
         <button
           type="button"
           onClick={onSwitchToSignup}
@@ -663,7 +669,8 @@ function SignupForm({
       await supabase.auth.refreshSession().catch(() => {
         return supabase.auth.getSession()
       })
-      toast.success('Account created — welcome to GameVault!')
+      toast.success('Account created — welcome to DropMarket!')
+      setLoading(false)
       onSuccess()
     } catch (err: any) {
       setError(err?.message ?? 'Something went wrong')
@@ -677,7 +684,7 @@ function SignupForm({
           loud title ("Join 50,000+ gamers"); this side just labels
           the form so the two halves balance instead of competing. */}
       <header className="space-y-1">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-lime-text">
+        <p className="text-[11.5px] font-bold uppercase tracking-[0.14em] text-lime-text">
           Sign up
         </p>
         <h2 className="text-[18px] font-semibold leading-snug tracking-tight text-text-primary">

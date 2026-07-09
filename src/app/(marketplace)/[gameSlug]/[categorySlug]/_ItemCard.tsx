@@ -1,32 +1,35 @@
 'use client'
 
 /**
- * V15e — Horizontal landscape listing card.
+ * V24 — Horizontal landscape listing card (data-rich rebuild).
  *
- * New layout (wider, not taller — inspired by Eldorado/PlayerAuctions
- * style cards):
+ * Layout (wider, not taller — Eldorado/PlayerAuctions style):
  *
  *   ┌──────────────────────────────────────────────────────────────┐
- *   │  Name                                              ┌──────┐ │
- *   │                                                    │ img  │ │
- *   │  ⏱ 20 min   📦 527                                 │      │ │
- *   │                                                    └──────┘ │
- *   │  $3.48 /unit                            ┌──── Buy now ────┐ │
- *   │                                          └─────────────────┘│
+ *   │  Brainrot · Secret                          ┌──────┐ Best deal│
+ *   │  Garama and Madundung — Quick Delivery       │ img  │         │
+ *   │  ⚡ Instant  ▣ 4 in stock  ✦ Neon            │      │         │
+ *   │                                              └──────┘         │
+ *   │  $49.00  $̶5̶9̶.̶0̶0̶  −17%  / unit                                 │
  *   ├──────────────────────────────────────────────────────────────┤
- *   │  ●  StoreGoodMan ✓             35,323 sold    👍 99.86%     │
+ *   │  ●  gyanu1614 ✓            ★ 99.9% (1,381)              →     │
  *   └──────────────────────────────────────────────────────────────┘
  *
- * The whole card is clickable to the listing; the seller chip and Buy
- * button are nested clickable surfaces with stopPropagation.
+ * The whole card links to the listing; the seller chip is a nested
+ * click target (→ /shop) with stopPropagation.
+ *
+ * Everything below the title is DATA-DRIVEN — the meta-chip row renders
+ * only the chips a listing actually carries (delivery + stock always;
+ * then attribute chips: mutations/modifiers like "Neon", which is also
+ * how per-game Region/Platform attributes surface). One component, no
+ * per-game branching.
  */
 
 import Link from 'next/link'
 import { SmartLink } from '@/components/global/SmartLink'
-import { useRouter } from 'next/navigation'
-import { useTransition } from 'react'
-import { ArrowRight, Clock, Package, ThumbsUp } from 'lucide-react'
+import { Bolt, Clock, ThumbsUp, TrendingDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { formatDeliveryLabel, parseDeliveryMinutes } from '@/lib/utils/delivery-time'
 import type { ItemOffer } from './_itemsTypes'
 
 const fmtPrice = (n: number) => {
@@ -40,30 +43,6 @@ const fmtCount = (n: number) => {
   if (n >= 10_000) return `${Math.round(n / 1_000)}K`
   if (n >= 1_000) return `${(n / 1_000).toFixed(1).replace(/\.0$/, '')}K`
   return n.toLocaleString('en-US')
-}
-
-function SellerAvatar({ seller, size = 28 }: { seller: ItemOffer['seller']; size?: number }) {
-  const initial = (seller.shopName || seller.username || 'S').charAt(0).toUpperCase()
-  if (seller.avatarUrl) {
-    return (
-      /* eslint-disable-next-line @next/next/no-img-element */
-      <img
-        src={seller.avatarUrl}
-        alt=""
-        style={{ width: size, height: size }}
-        className="shrink-0 rounded-full object-cover ring-1 ring-border-subtle"
-      />
-    )
-  }
-  return (
-    <span
-      aria-hidden
-      style={{ width: size, height: size, fontSize: Math.round(size * 0.4) }}
-      className="flex shrink-0 items-center justify-center rounded-full bg-bg-overlay font-bold text-text-primary ring-1 ring-border-subtle"
-    >
-      {initial}
-    </span>
-  )
 }
 
 function VerifiedDot({ size = 14 }: { size?: number }) {
@@ -87,120 +66,150 @@ function VerifiedDot({ size = 14 }: { size?: number }) {
   )
 }
 
-/**
- * Pick a sensible "delivery time" pill value.
- *
- * We don't have a normalised delivery_time on the ItemOffer right now —
- * cards in the screenshots show "20 min" which is a seller-set window.
- * Falling back to "Instant" reads well for digital items where the
- * default is automated delivery.
- */
-function deliveryLabel(_offer: ItemOffer): string {
-  return 'Instant'
+/** Plain seller avatar (image or initial fallback). */
+function SellerAvatar({ seller, size = 34 }: { seller: ItemOffer['seller']; size?: number }) {
+  const initial = (seller.shopName || seller.username || 'S').charAt(0).toUpperCase()
+  if (seller.avatarUrl) {
+    return (
+      /* eslint-disable-next-line @next/next/no-img-element */
+      <img
+        src={seller.avatarUrl}
+        alt=""
+        style={{ width: size, height: size }}
+        className="shrink-0 rounded-full object-cover ring-1 ring-border-subtle"
+      />
+    )
+  }
+  return (
+    <span
+      aria-hidden
+      style={{ width: size, height: size, fontSize: Math.round(size * 0.4) }}
+      className="flex shrink-0 items-center justify-center rounded-full bg-bg-overlay-2 font-bold text-text-primary ring-1 ring-border-subtle"
+    >
+      {initial}
+    </span>
+  )
+}
+
+type ChipTone = 'default' | 'success'
+
+/** One meta chip in the data-driven row (delivery, stock, attribute). */
+function MetaPill({
+  icon: Icon,
+  label,
+  tone = 'default',
+}: {
+  icon: React.ComponentType<{ className?: string }>
+  label: string
+  tone?: ChipTone
+}) {
+  return (
+    <span
+      className={cn(
+        'inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-[12.5px] font-semibold',
+        tone === 'success'
+          ? 'border-success/30 bg-success/12 text-success'
+          // Default tone kept greyish/faded — softer label + dimmer icon +
+          // lighter border/bg so it reads as quiet metadata, not stark white.
+          : 'border-border-subtle bg-bg-base/50 text-text-secondary',
+      )}
+    >
+      <Icon className={cn('h-3.5 w-3.5', tone === 'success' ? 'text-success' : 'text-text-tertiary')} />
+      {label}
+    </span>
+  )
 }
 
 export default function ItemCard({
   offer,
   gameSlug,
   isOwn,
+  isBestDeal,
 }: {
   offer: ItemOffer
   gameSlug: string
   isOwn?: boolean
+  isBestDeal?: boolean
 }) {
-  // V15f — Whole-card click goes to the listing page. The Buy CTA on the
-  // card is gone (replaced by a small lime arrow chip bottom-right). The
-  // /checkout/{id} navigation happens from the detail page now.
-  // V15h — Use the canonical detail URL the listing detail page expects
-  // (with price-history chart, full template fields, etc) instead of the
-  // SEO alias. The SEO alias still works via the resolver redirect.
   const stop = (e: React.MouseEvent) => e.stopPropagation()
-  // V15z — Direct link to the canonical detail URL. The /marketplace/...
-  // prefix is a legacy redirect route that just bounces to this same
-  // shape; routing through it caused the visible "click → /marketplace/X
-  // → /X" double-nav and the related scroll glitch.
   const href = `/${gameSlug}/${offer.detailCategorySlug}/${offer.detailSlug}`
-
   const sellerName = offer.seller.shopName || offer.seller.username
+
+  // Delivery: green chip + bolt for instant, neutral clock + window label
+  // otherwise. parseDeliveryMinutes treats "instant" as the 5-min SLA, so
+  // anything ≤5 reads as effectively instant.
+  const isInstant =
+    !!offer.deliveryTime && parseDeliveryMinutes(offer.deliveryTime) <= 5
+  const deliveryText = offer.deliveryTime ? formatDeliveryLabel(offer.deliveryTime) : 'Instant'
+
+  const discountPct =
+    offer.originalPrice && offer.originalPrice > offer.pricePerUnit
+      ? Math.round((1 - offer.pricePerUnit / offer.originalPrice) * 100)
+      : 0
 
   return (
     <article
       className={cn(
-        // V15e — Wider, shorter landscape card. Outer wrapper is the
-        // border surface; inner content is split top (main) + bottom
-        // (seller bar) with a hairline divider.
-        // V15g — `cursor-pointer` on the article so the hover state
-        // clearly signals the whole card is clickable.
-        // V15y — Card surface bumped from `bg-bg-raised` to `bg-bg-overlay`
-        // so it matches the filter chips above. The page is bg-base
-        // (near-black); cards on bg-overlay (subtle grey) now visibly
-        // lift off the background instead of melting into it.
+        // V48 — Bundle-tile hover language: gentle lift + deepened
+        // shadow + surface fill (was color-fill only). Thumbnail stays
+        // static and there's no lime tint — the card remains
+        // data-forward; only the surface gains depth.
         'group relative flex cursor-pointer flex-col overflow-hidden rounded-lg border border-border-default bg-bg-overlay',
-        'transition-[transform,border-color,box-shadow] duration-150',
-        'hover:-translate-y-0.5 hover:border-lime-tint-border hover:shadow-[0_18px_40px_-14px_rgba(0,0,0,0.6)]',
+        'transition-all duration-200',
+        'hover:-translate-y-0.5 hover:border-border-strong hover:bg-bg-overlay-2 hover:shadow-[0_12px_24px_-12px_rgba(0,0,0,0.6)]',
       )}
     >
-      {/* V15g — Whole-card link. Stretched-link pattern: this Link's
-          ::after creates a pseudo-element that covers the entire article,
-          so clicking anywhere on the card navigates without needing each
-          inner element to be a Link. Interactive children (seller chip,
-          edit) use position:relative + z-10 to lift themselves above the
-          pseudo-element and pointer-events:auto on the link target. */}
+      {/* Whole-card stretched link (see V15g pattern). */}
       <Link
         href={href}
         aria-label={offer.name}
-        className={cn(
-          'absolute inset-0 z-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-lime-tint-bg',
-          // Make the link surface explicitly clickable across its area.
-          'pointer-events-auto',
-        )}
+        className="absolute inset-0 z-0 pointer-events-auto focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-lime-tint-bg"
+      />
+      {/* Top sheen — faint light falling from above (bundle-tile look).
+          Sits after the stretched link in the DOM so it paints above the
+          card surface; pointer-events-none keeps the link clickable. */}
+      <span
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-0 h-16 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.05),transparent)]"
       />
 
-      {/* MAIN ROW — left content, right image.
-          V15g — `pointer-events-none` so the whole-card Link beneath
-          gets every click. Interactive descendants (seller chip, owner
-          edit chip) opt back in via `pointer-events-auto`. */}
-      <div className="pointer-events-none relative z-10 flex items-stretch gap-4 p-3.5 sm:p-4">
-        {/* Left column — name + meta pills + price + buy */}
+      {/* MAIN BLOCK — pointer-events-none so the whole-card Link gets clicks;
+          interactive children opt back in. */}
+      <div className="pointer-events-none relative z-10 flex flex-col p-3.5 sm:p-4">
+        {/* Breadcrumb — full-width row across the top so long category
+            chains have the whole card width to wrap into (the image no
+            longer crowds it from the right). Muted/light, not accent —
+            it's metadata, kept minimal. */}
+        {offer.breadcrumb.length > 0 && (
+          <div className="mb-2 line-clamp-1 text-[12px] font-medium text-text-tertiary">
+            {offer.breadcrumb.join(' · ')}
+          </div>
+        )}
+
+        {/* CONTENT ROW — left (title + delivery), right (image). The image
+            aligns to the TITLE, not the breadcrumb above. */}
+        <div className="flex items-stretch gap-4">
+        {/* Left column — name + delivery chip */}
         <div className="flex min-w-0 flex-1 flex-col">
-          <h3 className="text-[15.5px] font-bold leading-snug text-text-primary line-clamp-2 sm:text-[16px]">
+          {/* Title reserves a fixed 2-line height (min-h) even for 1-line
+              names, so the delivery chip below always lands at the same
+              vertical spot across cards — no drift, uniform card heights. */}
+          <h3 className="min-h-[2.75rem] text-[15.5px] font-bold leading-snug text-text-primary line-clamp-2 sm:text-[16px]">
             {offer.name}
           </h3>
 
-          {/* Meta pills row — delivery + stock */}
+          {/* Meta row — Delivery Time only (per product decision). Stock and
+              attribute chips live on the listing detail page, not the card. */}
           <div className="mt-2 flex flex-wrap items-center gap-1.5">
-            <MetaPill icon={Clock} label={deliveryLabel(offer)} />
-            <MetaPill icon={Package} label={fmtCount(offer.seller.sales || 0)} />
-          </div>
-
-          {/* V15f — Price (no Buy button). The card itself is the click
-              target → listing page. Bottom-right gets a small lime arrow
-              chip (rendered at the card level below) as a visual hint. */}
-          <div className="mt-auto flex items-end justify-between gap-3 pt-3">
-            <div className="min-w-0">
-              <div className="flex items-baseline gap-1">
-                <span className="text-[22px] font-bold tabular-nums leading-none text-text-primary sm:text-[24px]">
-                  {fmtPrice(offer.pricePerUnit)}
-                </span>
-                <span className="text-[12px] font-medium text-text-tertiary">/ unit</span>
-              </div>
-            </div>
-            {isOwn && (
-              // Keep an explicit "Yours" affordance for owner since they
-              // shouldn't be funneled to the listing detail page; they go
-              // to edit.
-              <Link
-                href={`/sell/edit/${offer.id}`}
-                onClick={stop}
-                className="pointer-events-auto relative z-10 inline-flex shrink-0 items-center gap-1.5 rounded-full border border-amber-500/35 bg-amber-500/10 px-3 py-1.5 text-[11.5px] font-bold uppercase tracking-wider text-amber-300 transition-colors hover:bg-amber-500/15"
-              >
-                Yours
-              </Link>
-            )}
+            <MetaPill
+              icon={isInstant ? Bolt : Clock}
+              label={deliveryText}
+              tone={isInstant ? 'success' : 'default'}
+            />
           </div>
         </div>
 
-        {/* Right column — square thumbnail */}
+        {/* Right column — square thumbnail + optional Best deal flag */}
         <div className="relative z-10 aspect-square h-full w-[88px] shrink-0 self-start overflow-hidden rounded-md bg-bg-base sm:w-[110px]">
           {offer.imageUrl ? (
             /* eslint-disable-next-line @next/next/no-img-element */
@@ -208,7 +217,7 @@ export default function ItemCard({
               src={offer.imageUrl}
               alt={offer.name}
               loading="lazy"
-              className="absolute inset-0 h-full w-full object-cover transition-transform duration-200 group-hover:scale-[1.03]"
+              className="absolute inset-0 h-full w-full object-cover"
             />
           ) : (
             <div className="flex h-full w-full items-center justify-center text-text-tertiary">
@@ -216,75 +225,98 @@ export default function ItemCard({
             </div>
           )}
         </div>
+        </div>
       </div>
 
-      {/* V15g — Bottom strip. Hairline divider, transparent background.
-          Inside: a small seller chip on the left (its own click target →
-          /shop) + meta on the middle + lime arrow chip on the right
-          (whole card → listing). The strip is `pointer-events-none` so
-          the gap falls through to the whole-card Link; the seller chip
-          opts back in via `pointer-events-auto`. */}
-      <div className="pointer-events-none relative z-10 flex items-center justify-between gap-3 border-t border-border-subtle px-3 py-2 sm:px-3.5">
-        {/* Seller chip — small, only as wide as the avatar + name.
-            V17v — SmartLink handles scroll={false} + scroll-to-top
-            on the new page in one shot. Replaces the previous
-            scroll-fix patch which only handled the source side. */}
-        <SmartLink
-          href={`/shop/${offer.seller.username}`}
-          onClick={stop}
-          className={cn(
-            'pointer-events-auto inline-flex max-w-[55%] items-center gap-2 rounded-full border border-border-subtle bg-bg-base/60 px-1.5 py-1 pr-2.5 transition-colors',
-            'hover:border-lime-tint-border hover:bg-lime-tint-bg/30',
-          )}
-        >
-          <SellerAvatar seller={offer.seller} size={22} />
-          <span className="max-w-full truncate text-[12px] font-semibold text-text-primary">
-            {sellerName}
-          </span>
-          {offer.seller.verified && <VerifiedDot size={12} />}
-        </SmartLink>
+      {/* Bottom strip — single row: price (left) + seller chip & rating
+          (right). The green "buy" arrow is gone — the whole card is the
+          click target.
 
-        {/* Inline meta — sold count + rating. pointer-events-none so the
-            whole-card click passes through. */}
-        <div className="pointer-events-none flex shrink-0 items-center gap-2 text-[11.5px]">
-          <span className="tabular-nums text-text-tertiary">
-            {fmtCount(offer.seller.sales || 0)} sold
+          V26 — Fixed min-height so the "Yours" pill branch (short) and the
+          full seller-chip branch (avatar + 2 text lines, tall) occupy the
+          SAME vertical space. Without this the strip collapses on owned
+          listings and the card ends up shorter than its neighbours, which
+          broke row alignment in the detail-page carousel. */}
+      <div className="pointer-events-none relative z-10 mt-auto flex min-h-[58px] items-center justify-between gap-3 border-t border-border-subtle px-3 py-2.5 sm:px-3.5">
+        {/* Price / unit — left. Optional strikethrough original + a small
+            lowest-price icon (tooltip-on-hover, no default text). */}
+        <div className="flex min-w-0 items-baseline gap-1.5">
+          <span className="text-[20px] font-bold tabular-nums leading-none text-text-primary sm:text-[22px]">
+            {fmtPrice(offer.pricePerUnit)}
           </span>
-          <span className="inline-flex items-center gap-1 text-success">
-            <ThumbsUp className="h-3 w-3 fill-success text-success" aria-hidden />
-            <span className="tabular-nums">{offer.seller.rating.toFixed(1)}%</span>
-          </span>
+          {discountPct > 0 && offer.originalPrice != null && (
+            <span className="text-[12px] font-medium tabular-nums text-text-tertiary line-through">
+              {fmtPrice(offer.originalPrice)}
+            </span>
+          )}
+          <span className="text-[13px] font-semibold text-text-secondary">/ Unit</span>
+
+          {/* Lowest-price signal: icon only by default, label on hover.
+              The `bd-tip` group reveals the tooltip via CSS (see globals
+              — or the inline peer below). Kept subtle so it doesn't crowd
+              the price. */}
+          {isBestDeal && (
+            <span className="group/tip pointer-events-auto relative inline-flex shrink-0 self-center">
+              <span
+                aria-label="Lowest price"
+                className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-success/20 text-success ring-1 ring-success/30"
+              >
+                <TrendingDown className="h-4 w-4" strokeWidth={2.5} aria-hidden />
+              </span>
+              <span
+                role="tooltip"
+                className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-1 -translate-x-1/2 whitespace-nowrap rounded-md border border-border-default bg-bg-overlay-2 px-2 py-1 text-[10.5px] font-semibold text-text-primary opacity-0 shadow-md transition-opacity duration-150 group-hover/tip:opacity-100"
+              >
+                Lowest Price
+              </span>
+            </span>
+          )}
         </div>
 
-        {/* Lime arrow chip — visual buy-now affordance. The chip itself
-            doesn't take clicks; clicking anywhere on the card still goes
-            to the listing. */}
-        {!isOwn && (
-          <span
-            aria-hidden
-            className={cn(
-              'pointer-events-none flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-lime-tint-border bg-lime-tint-bg text-lime-text shadow-sm transition-all duration-150',
-              'group-hover:scale-105 group-hover:border-lime group-hover:bg-lime group-hover:text-text-inverse',
-            )}
+        {/* Right — seller block, OR the owner "Yours" edit link.
+            Direction 2: reputation collapses into ONE trust-score token on
+            the far right; the seller identity (name + verified) + sold count
+            sit quietly beside it, right-aligned. One click target → shop. */}
+        {isOwn ? (
+          <Link
+            href={`/sell/edit/${offer.id}`}
+            onClick={stop}
+            className="pointer-events-auto relative z-10 inline-flex shrink-0 items-center gap-1.5 rounded-md border border-amber-500/35 bg-amber-500/10 px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-amber-300 transition-colors hover:bg-amber-500/15"
           >
-            <ArrowRight className="h-4 w-4" />
-          </span>
+            Yours
+          </Link>
+        ) : (
+          <SmartLink
+            href={`/shop/${offer.seller.username}`}
+            onClick={stop}
+            className="pointer-events-auto inline-flex min-w-0 shrink items-center gap-2.5 rounded-lg py-0.5 pl-0.5 pr-1 transition-colors hover:bg-bg-overlay-2"
+          >
+            {/* Plain seller avatar. */}
+            <SellerAvatar seller={offer.seller} size={34} />
+
+            {/* Seller identity — name + verified on top, rating below. */}
+            <div className="flex min-w-0 flex-col gap-0.5 leading-tight">
+              <div className="flex min-w-0 items-center gap-1.5">
+                <span className="max-w-[104px] truncate text-[12.5px] font-semibold text-text-primary">
+                  {sellerName}
+                </span>
+                {offer.seller.verified && <VerifiedDot size={12} />}
+              </div>
+              {/* Sub-line — rating + order count, so it reads at roughly the
+                  name's width instead of a lonely short number. */}
+              <span className="inline-flex items-center gap-1.5 text-[11.5px]">
+                <span className="inline-flex items-center gap-1 font-semibold text-success">
+                  <ThumbsUp className="h-3 w-3 fill-success" aria-hidden />
+                  <span className="tabular-nums">{offer.seller.rating.toFixed(1)}%</span>
+                </span>
+                <span className="tabular-nums text-text-tertiary">
+                  · {fmtCount(offer.seller.sales)} orders
+                </span>
+              </span>
+            </div>
+          </SmartLink>
         )}
       </div>
     </article>
-  )
-}
-
-function MetaPill({
-  icon: Icon, label,
-}: {
-  icon: React.ComponentType<{ className?: string }>
-  label: string
-}) {
-  return (
-    <span className="inline-flex items-center gap-1.5 rounded-md border border-border-subtle bg-bg-base/70 px-2 py-1 text-[11.5px] font-semibold text-text-secondary">
-      <Icon className="h-3 w-3 text-text-tertiary" />
-      {label}
-    </span>
   )
 }

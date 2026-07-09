@@ -909,7 +909,7 @@ export async function fetchBulkCsvTemplate(
     return {
       success: true,
       data: {
-        filename: `gamevault-bulk-${categorySlug}.csv`,
+        filename: `dropmarket-bulk-${categorySlug}.csv`,
         csv: lines.join('\n'),
       },
     }

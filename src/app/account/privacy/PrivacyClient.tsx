@@ -62,7 +62,7 @@ export default function PrivacyClient({ requests: initialRequests }: Props) {
       const url  = URL.createObjectURL(blob)
       const a    = document.createElement('a')
       a.href     = url
-      a.download = `gamevault-data-export-${new Date().toISOString().slice(0, 10)}.json`
+      a.download = `dropmarket-data-export-${new Date().toISOString().slice(0, 10)}.json`
       document.body.appendChild(a)
       a.click()
       document.body.removeChild(a)
@@ -136,7 +136,7 @@ export default function PrivacyClient({ requests: initialRequests }: Props) {
           <button
             onClick={handleExport}
             disabled={exporting}
-            className="flex items-center gap-2 whitespace-nowrap rounded-lg bg-lime px-4 py-2 text-sm font-semibold text-text-inverse transition-colors hover:bg-lime/90 disabled:opacity-50"
+            className="flex items-center gap-2 whitespace-nowrap rounded-lg bg-lime px-4 py-2 text-sm font-semibold text-text-inverse transition-colors hover:bg-lime-hover disabled:opacity-50"
           >
             {exporting
               ? <Loader2 className="h-4 w-4 animate-spin" />
@@ -204,7 +204,7 @@ export default function PrivacyClient({ requests: initialRequests }: Props) {
             <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0 text-error" />
             <p className="text-xs text-error">
               This will permanently delete your account, listings, order history, messages, and all personal data.
-              This cannot be undone. Click "Confirm Delete" to proceed.
+              This cannot be undone. Click &ldquo;Confirm Delete&rdquo; to proceed.
             </p>
           </div>
         )}
@@ -244,8 +244,8 @@ export default function PrivacyClient({ requests: initialRequests }: Props) {
 
       {/* Legal note */}
       <motion.div variants={item} className="space-y-1 text-xs text-text-tertiary">
-        <p>GameVault processes personal data under GDPR (EU) 2016/679 and applicable privacy laws.</p>
-        <p>For questions, contact <span className="text-text-secondary">privacy@gamevault.gg</span></p>
+        <p>DropMarket processes personal data under GDPR (EU) 2016/679 and applicable privacy laws.</p>
+        <p>For questions, contact <span className="text-text-secondary">privacy@dropmarket.gg</span></p>
       </motion.div>
     </motion.div>
   )

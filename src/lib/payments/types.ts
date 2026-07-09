@@ -46,7 +46,11 @@ export interface CreateChargeInput {
   orderId: string
   amount: Money
   buyerRef?: string
+  /** Where the buyer lands on SUCCESS (e.g. the order page). */
   returnUrl: string
+  /** Where the buyer lands on CANCEL/abandon (e.g. back to checkout to retry).
+   *  Falls back to returnUrl if omitted. */
+  cancelUrl?: string
   metadata?: Record<string, string>
 }
 

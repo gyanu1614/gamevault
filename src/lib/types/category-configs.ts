@@ -175,7 +175,7 @@ export const DEFAULT_CURRENCY_CONFIG: CurrencyConfig = {
   faq: [],
   steps: [
     { n: 1, title: 'Pick an offer', body: 'Compare verified sellers by price, rating, and delivery speed.' },
-    { n: 2, title: 'Pay securely', body: 'Your payment is held by VaultShield escrow until you confirm delivery.' },
+    { n: 2, title: 'Pay securely', body: 'Your payment is held by SafeDrop escrow until you confirm delivery.' },
     { n: 3, title: 'Receive your currency', body: "The seller delivers via the game's transfer method. Confirm receipt and you're done." },
   ],
   platform_fields: DEFAULT_PLATFORM_FIELDS,

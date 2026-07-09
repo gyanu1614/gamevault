@@ -174,7 +174,17 @@ export interface RawListing {
   slug?: string | null
   title: string
   price: number | null
+  /** Pre-discount price; drives the strikethrough + % off on the card. */
+  original_price?: number | null
+  /** Seller-set delivery window label (e.g. "instant", "20min", "1hr"). */
+  delivery_time?: string | null
+  /** Remaining stock. */
+  quantity?: number | null
+  /** Unlimited-stock flag. */
+  is_unlimited?: boolean | null
   images?: string[] | null
+  /** V28 — Seller description; only selected where a surface needs it. */
+  description?: string | null
   template_data?: Record<string, unknown> | null
   seller?: {
     id?: string | null
@@ -268,9 +278,18 @@ export function listingToOffer(
     mutations: mutationLabels,
     mutationSlugs,
     pricePerUnit: Number(listing.price ?? 0),
+    // Only treat as a discount when the original is strictly higher.
+    originalPrice:
+      listing.original_price != null && Number(listing.original_price) > Number(listing.price ?? 0)
+        ? Number(listing.original_price)
+        : null,
+    deliveryTime: listing.delivery_time?.trim() || null,
+    stock: listing.is_unlimited ? null : (listing.quantity ?? null),
+    isUnlimited: !!listing.is_unlimited,
     imageUrl: Array.isArray(listing.images) && listing.images.length > 0
       ? (listing.images[0] as string)
       : null,
+    description: listing.description?.trim() || null,
     seller: {
       id: seller?.id ?? null,
       username: seller?.username ?? 'seller',
@@ -279,24 +298,30 @@ export function listingToOffer(
       verified,
       rating,
       sales: seller?.total_sales ?? 0,
+      reviewCount: seller?.total_reviews ?? 0,
     },
     recommended: Math.round(rating),
     sellerId: seller?.id ?? null,
-    // V15c — Pretty breadcrumb of selected option labels along the
-    // taxonomy chain (e.g. ["Brainrot", "Secret"]). Walks the admin
-    // attributes in declaration order; stops one short of the leaf so
-    // the listing's name (the final identity field) isn't duplicated.
+    // V24 — Pretty breadcrumb of selected option labels along the taxonomy
+    // chain (e.g. ["Brainrot", "Secret"] or ["Blade Ball"]).
+    //
+    // Intent: show the CATEGORY context, without repeating the card title.
+    // The old logic blindly dropped the LAST attribute (assuming it was the
+    // listing's identity, like "Garama and Madundung"). That broke games
+    // whose only attribute is a real category — e.g. Roblox items have a
+    // single `game` attribute ("Blade Ball") that ISN'T the title, so the
+    // breadcrumb came out empty. Now we walk EVERY attribute and only skip
+    // the value that actually matches the displayed name (the true dedup).
     breadcrumb: (() => {
       const out: string[] = []
-      const chain = taxonomy.filters
-      // Drop the final attribute in the chain — that's the listing's
-      // identity ("Garama and Madundung") which is shown as the title.
-      const trail = chain.slice(0, Math.max(0, chain.length - 1))
-      for (const f of trail) {
+      const nameSlug = slugify(name)
+      for (const f of taxonomy.filters) {
         const raw = tpl ? tpl[f.slug] : null
         const value = Array.isArray(raw) ? raw[0] : raw
         if (typeof value !== 'string' || !value) continue
         const sl = slugify(value)
+        // Skip the attribute that produced the title (avoids duplication).
+        if (sl === nameSlug) continue
         const opt = f.options.find((o) => o.slug === sl)
         if (opt) out.push(opt.label)
         else

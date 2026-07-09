@@ -2,7 +2,7 @@
  * Cart Hook
  * @deprecated Cart system removed in favor of direct "Buy Now" checkout (Feb 2026).
  * This file is kept for backwards compatibility but should not be used in new code.
- * See: progress/24feb/03_CHECKOUT_VAULTSHIELD_CART_FIXES.md
+ * See: progress/24feb/03_CHECKOUT_SAFEDROP_CART_FIXES.md
  *
  * Legacy code - DO NOT USE
  */

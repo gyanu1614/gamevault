@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { Inter, JetBrains_Mono, Red_Hat_Display, Manrope } from 'next/font/google'
+import { Inter, JetBrains_Mono } from 'next/font/google'
 import './globals.css'
 import { Providers } from '@/components/providers'
 import { LayoutWrapper } from '@/components/layout-wrapper'
@@ -17,26 +17,6 @@ const inter = Inter({
   display: 'swap',
 })
 
-// Manrope — V21/P2.c clean geometric sans used by Eldorado / Linear.
-// Exposed as --font-manrope; opted-in per-page via fontFamily inline
-// style (e.g. on the order detail page).
-const manrope = Manrope({
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700', '800'],
-  variable: '--font-manrope',
-  display: 'swap',
-})
-
-// Red Hat Display — V20/P19 trial display face for marketing sections.
-// Exposed as --font-rhd; opt in via `font-[var(--font-rhd)]` or by
-// applying the .font-rhd utility class.
-const redHatDisplay = Red_Hat_Display({
-  subsets: ['latin'],
-  weight: ['400', '500', '700', '800', '900'],
-  variable: '--font-rhd',
-  display: 'swap',
-})
-
 // JetBrains Mono — order IDs, timestamps, mono data
 // (Geist Mono not available in next/font/google for Next.js 14; JetBrains Mono is equivalent quality)
 const jetbrainsMono = JetBrains_Mono({
@@ -48,25 +28,25 @@ const jetbrainsMono = JetBrains_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: 'GameVault — Buy & Sell Game Items Safely',
-    template: '%s | GameVault',
+    default: 'DropMarket — Buy & Sell Game Items Safely',
+    template: '%s | DropMarket',
   },
   description:
-    'The safest peer-to-peer marketplace for gaming items, currency, and accounts. Protected by VaultShield escrow. 18+ games, instant delivery.',
+    'The safest peer-to-peer marketplace for gaming items, currency, and accounts. Protected by SafeDrop escrow. 18+ games, instant delivery.',
   keywords: [
     'gaming marketplace', 'buy robux', 'sell game accounts', 'valorant accounts',
-    'roblox robux', 'cs2 skins', 'genshin crystals', 'vaultshield', 'p2p gaming',
+    'roblox robux', 'cs2 skins', 'genshin crystals', 'safedrop', 'p2p gaming',
   ],
   openGraph: {
     type: 'website',
-    siteName: 'GameVault',
-    title: 'GameVault — Buy & Sell Game Items Safely',
-    description: 'Peer-to-peer gaming marketplace with VaultShield escrow protection.',
+    siteName: 'DropMarket',
+    title: 'DropMarket — Buy & Sell Game Items Safely',
+    description: 'Peer-to-peer gaming marketplace with SafeDrop escrow protection.',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'GameVault — Buy & Sell Game Items Safely',
-    description: 'Peer-to-peer gaming marketplace with VaultShield escrow protection.',
+    title: 'DropMarket — Buy & Sell Game Items Safely',
+    description: 'Peer-to-peer gaming marketplace with SafeDrop escrow protection.',
   },
   robots: {
     index: true,
@@ -94,7 +74,7 @@ export default function RootLayout({
             page. */}
         <AllHeroesPreload />
       </head>
-      <body className={`${inter.variable} ${redHatDisplay.variable} ${manrope.variable} ${jetbrainsMono.variable} font-sans antialiased`} style={{ '--font-display': 'var(--font-inter)', '--font-body': 'var(--font-inter)' } as React.CSSProperties}>
+      <body className={`${inter.variable} ${jetbrainsMono.variable} font-sans antialiased`} style={{ '--font-display': 'var(--font-inter)', '--font-body': 'var(--font-inter)' } as React.CSSProperties}>
         <Providers>
           <LayoutWrapper>{children}</LayoutWrapper>
           {/* V17c — react-aria-inspired styling: subtle glass surface

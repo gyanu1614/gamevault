@@ -118,7 +118,7 @@ export default function OpenDisputeButton({ orderId, conversationId }: OpenDispu
 
             {/* Category pills */}
             <div className="mb-4">
-              <span className="text-[10px] font-semibold text-text-tertiary uppercase tracking-[0.08em] mb-2 block">
+              <span className="text-[11px] font-semibold text-text-tertiary uppercase tracking-wider mb-2 block">
                 What went wrong?
               </span>
               <div className="flex flex-wrap gap-1.5">
@@ -140,7 +140,7 @@ export default function OpenDisputeButton({ orderId, conversationId }: OpenDispu
 
             {/* Description */}
             <div className="mb-5">
-              <span className="text-[10px] font-semibold text-text-tertiary uppercase tracking-[0.08em] mb-2 block">
+              <span className="text-[11px] font-semibold text-text-tertiary uppercase tracking-wider mb-2 block">
                 Details
               </span>
               <textarea

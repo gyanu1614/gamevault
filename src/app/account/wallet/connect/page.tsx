@@ -88,7 +88,7 @@ export default function StripeConnectPage() {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="flex flex-col items-center gap-4">
-          <div className="w-10 h-10 rounded-full border-2 border-lime-tint-border border-t-violet-500 animate-spin" />
+          <div className="w-10 h-10 rounded-full border-2 border-lime-tint-border border-t-lime animate-spin" />
           <p className="text-sm text-muted-foreground">Loading your payout account…</p>
         </div>
       </div>
@@ -107,7 +107,7 @@ export default function StripeConnectPage() {
           Back to Wallet
         </Link>
         <div className="flex items-center gap-3 mb-2">
-          <div className="p-2 rounded-xl bg-lime/10 border border-lime-tint-border">
+          <div className="p-2 rounded-lg bg-lime/10 border border-lime-tint-border">
             <DollarSign className="w-6 h-6 text-lime-text" />
           </div>
           <div>
@@ -124,12 +124,12 @@ export default function StripeConnectPage() {
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="flex items-start gap-3 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/25"
+            className="flex items-start gap-3 p-4 rounded-lg bg-success-bg border border-success/25"
           >
-            <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
+            <CheckCircle2 className="w-5 h-5 text-success shrink-0 mt-0.5" />
             <div>
-              <p className="text-sm font-semibold text-emerald-300">Account connected!</p>
-              <p className="text-xs text-emerald-400/70 mt-0.5">
+              <p className="text-sm font-semibold text-success">Account connected!</p>
+              <p className="text-xs text-success/70 mt-0.5">
                 Your bank account is being verified. Payouts will be sent automatically when escrow is released.
               </p>
             </div>
@@ -140,13 +140,13 @@ export default function StripeConnectPage() {
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="flex items-start gap-3 p-4 rounded-xl bg-amber-500/10 border border-amber-500/25"
+            className="flex items-start gap-3 p-4 rounded-lg bg-amber-500/10 border border-amber-500/25"
           >
             <AlertCircle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
             <div>
               <p className="text-sm font-semibold text-amber-300">Onboarding incomplete</p>
               <p className="text-xs text-amber-400/70 mt-0.5">
-                You didn't complete the setup. Click "Continue setup" to finish.
+                You didn&apos;t complete the setup. Click &quot;Continue setup&quot; to finish.
               </p>
             </div>
           </motion.div>
@@ -155,7 +155,7 @@ export default function StripeConnectPage() {
 
       {/* Error */}
       {error && (
-        <div className="flex items-center gap-3 p-4 rounded-xl bg-error-bg border border-red-500/25">
+        <div className="flex items-center gap-3 p-4 rounded-lg bg-error-bg border border-red-500/25">
           <AlertCircle className="w-4 h-4 text-error shrink-0" />
           <p className="text-sm text-error">{error}</p>
         </div>
@@ -188,14 +188,14 @@ export default function StripeConnectPage() {
               label: 'Lifetime Earnings',
               value: `$${status.lifetimeEarnings.toFixed(2)}`,
               icon: <Zap className="w-4 h-4" />,
-              color: 'text-emerald-400',
-              bg: 'bg-emerald-500/10 border-emerald-500/20',
+              color: 'text-success',
+              bg: 'bg-success-bg border-success/20',
             },
           ].map((card) => (
             <motion.div
               key={card.label}
               variants={staggerItem}
-              className={cn('rounded-xl border p-4', card.bg)}
+              className={cn('rounded-lg border p-4', card.bg)}
             >
               <div className={cn('flex items-center gap-2 mb-2', card.color)}>
                 {card.icon}
@@ -262,7 +262,7 @@ export default function StripeConnectPage() {
         {/* Not connected state */}
         {status?.status === 'not_connected' && (
           <div className="text-center py-6">
-            <div className="w-16 h-16 rounded-2xl bg-lime/10 border border-lime-tint-border flex items-center justify-center mx-auto mb-4">
+            <div className="w-16 h-16 rounded-lg bg-lime/10 border border-lime-tint-border flex items-center justify-center mx-auto mb-4">
               <DollarSign className="w-8 h-8 text-lime-text" />
             </div>
             <h2 className="text-lg font-display font-semibold text-foreground mb-2">
@@ -277,11 +277,11 @@ export default function StripeConnectPage() {
               onClick={handleConnect}
               disabled={connecting}
               className={cn(
-                'inline-flex items-center gap-2 px-6 py-3 rounded-xl',
+                'inline-flex items-center gap-2 px-6 py-3 rounded-lg',
                 'bg-lime hover:bg-lime-hover text-text-inverse font-semibold text-sm',
                 'transition-all duration-200 hover:shadow-glow',
                 'disabled:opacity-50 disabled:cursor-not-allowed',
-                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:ring-offset-2 focus-visible:ring-offset-background'
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime focus-visible:ring-offset-2 focus-visible:ring-offset-background'
               )}
             >
               {connecting ? (
@@ -304,7 +304,7 @@ export default function StripeConnectPage() {
               onClick={handleConnect}
               disabled={connecting}
               className={cn(
-                'inline-flex items-center gap-2 px-5 py-2.5 rounded-xl',
+                'inline-flex items-center gap-2 px-5 py-2.5 rounded-lg',
                 'bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 font-semibold text-sm',
                 'border border-amber-500/30 transition-all duration-200'
               )}
@@ -335,7 +335,7 @@ export default function StripeConnectPage() {
                 onClick={handleManageDashboard}
                 disabled={connecting}
                 className={cn(
-                  'inline-flex items-center gap-2 px-4 py-2 rounded-xl',
+                  'inline-flex items-center gap-2 px-4 py-2 rounded-lg',
                   'bg-white/5 hover:bg-white/10 text-sm font-medium text-foreground',
                   'border border-white/10 transition-all duration-200'
                 )}
@@ -352,10 +352,10 @@ export default function StripeConnectPage() {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         {[
           { icon: <Lock className="w-4 h-4" />, title: 'Bank-level security', desc: 'Stripe is PCI-DSS Level 1 certified' },
-          { icon: <Shield className="w-4 h-4" />, title: 'No card details stored', desc: 'GameVault never sees your bank info' },
+          { icon: <Shield className="w-4 h-4" />, title: 'No card details stored', desc: 'DropMarket never sees your bank info' },
           { icon: <Zap className="w-4 h-4" />, title: 'Instant after hold', desc: 'Funds arrive within 2-7 business days' },
         ].map((item) => (
-          <div key={item.title} className="flex items-start gap-3 p-3 rounded-xl bg-bg-overlay border border-border-subtle">
+          <div key={item.title} className="flex items-start gap-3 p-3 rounded-lg bg-bg-overlay border border-border-subtle">
             <span className="text-lime-text shrink-0 mt-0.5">{item.icon}</span>
             <div>
               <p className="text-xs font-semibold text-foreground">{item.title}</p>

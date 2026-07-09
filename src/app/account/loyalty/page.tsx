@@ -11,7 +11,7 @@ const LOYALTY_CASHBACK_RATE = parseFloat(process.env.LOYALTY_CASHBACK_RATE || '0
 import LoyaltyClient from './LoyaltyClient'
 
 export const metadata = {
-  title: 'Rewards & Cashback | GameVault',
+  title: 'Rewards & Cashback',
   description: 'Earn cashback on every purchase and track your loyalty rewards.',
 }
 

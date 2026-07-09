@@ -21,10 +21,12 @@ import {
   Truck,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { parseDeliveryMinutes } from '@/lib/utils/delivery-time'
 import BuyerOrderDetailClient from '@/components/orders/BuyerOrderDetailClientCompact'
 import SellerOrderDetailClient from '@/components/orders/SellerOrderDetailClientCompact'
 import CopyOrderId from '@/components/orders/CopyOrderId'
 import { OrderClient } from './_OrderClient'
+import { PaymentReturnHandler } from './_PaymentReturnHandler'
 
 interface PageProps {
   params: Promise<{ orderId: string }>
@@ -33,7 +35,7 @@ interface PageProps {
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { orderId } = await params
   return {
-    title: `Order ${orderId} | GameVault`,
+    title: `Order ${orderId}`,
     description: 'View your order details and status',
   }
 }
@@ -64,7 +66,7 @@ async function checkOrderAccess(
 
 const STATUS_CONFIG: Record<string, { label: string; pill: string; dot: string; pulse: boolean; icon: React.ElementType }> = {
   paid:       { label: 'Processing',  pill: 'bg-amber-500/10 text-amber-400 border-amber-500/20',   dot: 'bg-amber-400',  pulse: true,  icon: Clock },
-  delivering: { label: 'Delivering',  pill: 'bg-lime/10 text-lime-text border-lime-tint-border', dot: 'bg-violet-400', pulse: true,  icon: Truck },
+  delivering: { label: 'Delivering',  pill: 'bg-lime-tint-bg text-lime-text border-lime-tint-border', dot: 'bg-lime', pulse: true,  icon: Truck },
   delivered:  { label: 'Delivered',   pill: 'bg-blue-500/10 text-blue-400 border-blue-500/20',       dot: 'bg-blue-400',   pulse: false, icon: Package },
   completed:  { label: 'Completed',   pill: 'bg-success-bg text-success border-green-500/20',    dot: 'bg-green-400',  pulse: false, icon: CheckCircle2 },
   disputed:   { label: 'Disputed',    pill: 'bg-error-bg text-error border-error/40',          dot: 'bg-red-400',    pulse: true,  icon: AlertTriangle },
@@ -223,13 +225,14 @@ export default async function OrderDetailPage({ params }: PageProps) {
   const gameName       = game?.name
   const categoryName   = category?.name
 
-  // V21/P2 — derive SLA window from listing delivery_time (minutes).
-  // Falls back to 60 min if missing so the bar still renders. Real
-  // start time is order.delivery_started_at if seller hit "Start
-  // Delivering"; otherwise the order's created_at acts as the clock.
-  const slaMinutes = Number(order.listing?.delivery_time ?? 60) || 60
+  // V21/P2 — derive SLA window from the listing's delivery_time LABEL
+  // ("20min" / "1hr" / "1-24 hours" …) via parseDeliveryMinutes. (The old
+  // Number(delivery_time) was NaN for every stored value → always fell back to
+  // 60 min, so a 20-min listing showed a 1-hour SLA.) Real start time is
+  // order.delivering_at if set; otherwise created_at acts as the clock.
+  const slaMinutes = parseDeliveryMinutes(order.listing?.delivery_time)
   const slaSeconds = slaMinutes * 60
-  const slaStartedAt: string = order.delivery_started_at ?? order.created_at
+  const slaStartedAt: string = (order as any).delivering_at ?? order.created_at
 
   const placedAtDate = new Date(order.created_at)
   const placedAtLabel = placedAtDate.toLocaleTimeString('en-US', {
@@ -294,6 +297,12 @@ export default async function OrderDetailPage({ params }: PageProps) {
 
   return (
     <>
+      {/* Post-payment return from CoinGate (?paid=1): collapse history so Back
+          skips the payment page + acknowledge the payment while the webhook
+          confirms. useSearchParams needs a Suspense boundary. */}
+      <React.Suspense fallback={null}>
+        <PaymentReturnHandler />
+      </React.Suspense>
       {/* V21/P5.y — Preload the hero backdrop so it's cached by the
           time the .hero-backdrop element mounts. Otherwise the AVIF
           (referenced as a CSS background-image) is invisible to the

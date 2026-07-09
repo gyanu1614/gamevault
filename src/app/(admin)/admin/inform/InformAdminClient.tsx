@@ -3,6 +3,11 @@
 /**
  * P6.4 — Admin INFORM Act Client
  *
+ * V53 restyle — rebuilt on the admin kit (PageHeader / StatCard /
+ * StatusBadge / TABLE). Entrance animations removed so content is
+ * visible straight from the server HTML; only user-triggered
+ * transitions (modal, expand/collapse) remain.
+ *
  * Sections:
  *  1. Pending sellers tab — sellers who need to submit but haven't
  *  2. Submissions tab — submitted disclosures awaiting review
@@ -14,8 +19,8 @@ import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
 import {
-  ShieldCheck, FileText, AlertTriangle, CheckCircle2,
-  Clock, Loader2, X, ChevronDown, ChevronUp, RefreshCw, UserX,
+  FileText, CheckCircle2, Clock, AlertTriangle,
+  Loader2, X, ChevronDown, ChevronUp, RefreshCw, UserX,
 } from 'lucide-react'
 import {
   certifyInformDisclosure,
@@ -23,6 +28,9 @@ import {
   runInformThresholdCheck,
 } from '@/lib/actions/inform-act'
 import type { InformDisclosure } from '@/lib/actions/inform-act'
+import {
+  PageHeader, StatCard, StatusBadge, TABLE, type ChipTone,
+} from '../components/kit'
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -31,30 +39,19 @@ type RequiredSeller = {
   total_sales: number; lifetime_earnings: number; inform_status: string
 }
 
-// ── Animation variants ─────────────────────────────────────────────────────
+// ── Status badge (INFORM-specific tone mapping over the kit badge) ─────────
 
-const container = {
-  hidden: { opacity: 0 },
-  show:   { opacity: 1, transition: { staggerChildren: 0.05 } },
+const INFORM_TONE: Record<string, ChipTone> = {
+  submitted:    'warning',
+  certified:    'success',
+  rejected:     'error',
+  needs_update: 'info',
+  required:     'warning',
+  not_required: 'neutral',
 }
-const item = { hidden: { opacity: 0, y: 16 }, show: { opacity: 1, y: 0 } }
 
-// ── Status badge ───────────────────────────────────────────────────────────
-
-function StatusBadge({ status }: { status: string }) {
-  const map: Record<string, string> = {
-    submitted:    'bg-amber-500/15 text-amber-400 border-amber-500/20',
-    certified:    'bg-green-500/15 text-green-400 border-green-500/20',
-    rejected:     'bg-red-500/15 text-red-400 border-red-500/20',
-    needs_update: 'bg-blue-500/15 text-blue-400 border-blue-500/20',
-    required:     'bg-orange-500/15 text-orange-400 border-orange-500/20',
-    not_required: 'bg-white/5 text-white/30 border-white/10',
-  }
-  return (
-    <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded border ${map[status] ?? 'bg-white/5 text-white/30'}`}>
-      {status.replace('_', ' ')}
-    </span>
-  )
+function InformStatusBadge({ status }: { status: string }) {
+  return <StatusBadge status={status} tone={INFORM_TONE[status] ?? 'neutral'} />
 }
 
 // ── Disclosure detail panel (expandable) ───────────────────────────────────
@@ -71,26 +68,26 @@ function DisclosureRow({
   const busy = loading === disc.id
 
   return (
-    <div className="border-b border-white/[0.04] last:border-0">
+    <div className="border-b border-border-subtle last:border-0">
       {/* Row header */}
       <div
-        className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-white/[0.02] transition-colors"
+        className="flex cursor-pointer items-center gap-3 px-4 py-3 transition-colors hover:bg-bg-overlay"
         onClick={() => setExpanded(v => !v)}
       >
-        <div className="flex-1 min-w-0">
-          <p className="text-sm text-white font-medium">
+        <div className="min-w-0 flex-1">
+          <p className="text-[13.5px] font-semibold text-text-primary">
             {disc.username ? `@${disc.username}` : disc.seller_id}
           </p>
-          <p className="text-xs text-white/30">{disc.email}</p>
+          <p className="text-xs text-text-tertiary">{disc.email}</p>
         </div>
-        <div className="text-xs text-white/40 hidden sm:block">
+        <div className="hidden text-xs tabular-nums text-text-tertiary sm:block">
           {disc.total_sales ?? 0} sales · ${(disc.lifetime_earnings ?? 0).toFixed(0)}
         </div>
-        <StatusBadge status={disc.status} />
-        <p className="text-xs text-white/25 hidden md:block">
+        <InformStatusBadge status={disc.status} />
+        <p className="hidden text-xs text-text-tertiary md:block">
           {disc.submitted_at ? new Date(disc.submitted_at).toLocaleDateString() : '—'}
         </p>
-        {expanded ? <ChevronUp className="w-4 h-4 text-white/30" /> : <ChevronDown className="w-4 h-4 text-white/30" />}
+        {expanded ? <ChevronUp className="h-4 w-4 text-text-tertiary" /> : <ChevronDown className="h-4 w-4 text-text-tertiary" />}
       </div>
 
       {/* Expanded detail */}
@@ -102,8 +99,8 @@ function DisclosureRow({
             exit={{ height: 0, opacity: 0 }}
             className="overflow-hidden"
           >
-            <div className="px-4 pb-4 space-y-3">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 bg-white/[0.02] rounded-lg p-4 text-sm">
+            <div className="space-y-3 px-4 pb-4">
+              <div className="grid grid-cols-1 gap-x-6 gap-y-2 rounded-lg border border-border-subtle bg-bg-overlay p-4 text-sm sm:grid-cols-2">
                 {[
                   ['Legal Name',    disc.legal_name],
                   ['Address',       `${disc.address_line1}${disc.address_line2 ? ', ' + disc.address_line2 : ''}`],
@@ -117,14 +114,14 @@ function DisclosureRow({
                   ['Consented At',  new Date(disc.consented_at).toLocaleString()],
                 ].map(([k, v]) => (
                   <div key={k} className="flex justify-between">
-                    <span className="text-white/40">{k}</span>
-                    <span className="text-white font-medium">{v}</span>
+                    <span className="text-text-tertiary">{k}</span>
+                    <span className="font-semibold text-text-primary">{v}</span>
                   </div>
                 ))}
               </div>
 
               {disc.rejection_reason && (
-                <p className="text-xs text-red-400 bg-red-500/10 rounded p-2">
+                <p className="rounded-lg border border-[rgba(255,92,92,0.25)] bg-error-bg p-2 text-xs text-error">
                   Rejection reason: {disc.rejection_reason}
                 </p>
               )}
@@ -134,19 +131,19 @@ function DisclosureRow({
                   <button
                     disabled={busy}
                     onClick={() => onCertify(disc.id)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-500/10 text-green-400 hover:bg-green-500/20
-                               text-xs font-medium transition-colors disabled:opacity-40"
+                    className="flex items-center gap-1.5 rounded-lg border border-[rgba(63,217,134,0.25)] bg-success-bg px-3 py-1.5
+                               text-xs font-semibold text-success transition-colors hover:bg-[rgba(63,217,134,0.22)] disabled:opacity-40"
                   >
-                    {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+                    {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
                     Certify
                   </button>
                   <button
                     disabled={busy}
                     onClick={() => onReject(disc.id)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20
-                               text-xs font-medium transition-colors disabled:opacity-40"
+                    className="flex items-center gap-1.5 rounded-lg border border-[rgba(255,92,92,0.25)] bg-error-bg px-3 py-1.5
+                               text-xs font-semibold text-error transition-colors hover:bg-[rgba(255,92,92,0.22)] disabled:opacity-40"
                   >
-                    <X className="w-3.5 h-3.5" />
+                    <X className="h-3.5 w-3.5" />
                     Reject
                   </button>
                 </div>
@@ -249,31 +246,31 @@ export default function InformAdminClient({ initialDisclosures, requiredSellers,
         {rejectTarget && (
           <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
           >
             <motion.div
               initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-[#111] border border-white/[0.08] rounded-2xl p-6 max-w-md w-full"
+              className="w-full max-w-md rounded-xl border border-border-default bg-bg-raised p-6"
             >
-              <h3 className="text-white font-semibold mb-3">Rejection Reason</h3>
+              <h3 className="mb-3 font-semibold text-text-primary">Rejection Reason</h3>
               <textarea
                 value={rejectReason}
                 onChange={e => setRejectReason(e.target.value)}
                 placeholder="Explain why this disclosure is being rejected…"
                 rows={4}
-                className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2.5 text-sm text-white
-                           placeholder:text-white/20 focus:outline-none resize-none mb-4"
+                className="mb-4 w-full resize-none rounded-lg border border-border-default bg-bg-base px-3 py-2.5 text-sm
+                           text-text-primary placeholder:text-text-disabled focus:border-lime focus:outline-none"
               />
-              <div className="flex gap-2 justify-end">
+              <div className="flex justify-end gap-2">
                 <button onClick={() => setRejectTarget(null)}
-                  className="px-4 py-2 rounded-lg text-sm text-white/50 hover:text-white transition-colors">
+                  className="rounded-lg px-4 py-2 text-sm text-text-tertiary transition-colors hover:text-text-primary">
                   Cancel
                 </button>
                 <button
                   onClick={handleReject}
                   disabled={!rejectReason.trim()}
-                  className="px-4 py-2 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500/30 text-sm font-medium
-                             transition-colors disabled:opacity-40"
+                  className="rounded-lg border border-[rgba(255,92,92,0.25)] bg-error-bg px-4 py-2 text-sm font-semibold text-error
+                             transition-colors hover:bg-[rgba(255,92,92,0.22)] disabled:opacity-40"
                 >
                   Reject Disclosure
                 </button>
@@ -283,55 +280,42 @@ export default function InformAdminClient({ initialDisclosures, requiredSellers,
         )}
       </AnimatePresence>
 
-      <motion.div variants={container} initial="hidden" animate="show" className="space-y-6 pb-10">
+      <div className="space-y-6 pb-10">
         {/* Header */}
-        <motion.div variants={item} className="flex items-start justify-between gap-4 flex-wrap">
-          <div>
-            <div className="flex items-center gap-3 mb-1">
-              <ShieldCheck className="w-6 h-6 text-violet-400" />
-              <h1 className="text-2xl font-bold text-white">INFORM Act</h1>
-            </div>
-            <p className="text-white/40 text-sm">Review and certify high-volume seller identity disclosures.</p>
-          </div>
-          <button
-            onClick={handleThresholdScan}
-            disabled={scanning}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-violet-500/10 border border-violet-500/20
-                       text-violet-400 hover:bg-violet-500/15 transition-colors disabled:opacity-50 text-sm font-medium"
-          >
-            {scanning ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-            {scanning ? 'Scanning…' : 'Run Threshold Check'}
-          </button>
-        </motion.div>
+        <PageHeader
+          title="INFORM Act"
+          description="Review and certify high-volume seller identity disclosures."
+          className="mb-0"
+          actions={
+            <button
+              onClick={handleThresholdScan}
+              disabled={scanning}
+              className="flex items-center gap-2 rounded-lg bg-lime-pressed px-4 py-2 text-sm font-bold text-text-inverse
+                         transition-colors hover:bg-lime disabled:opacity-50"
+            >
+              {scanning ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+              {scanning ? 'Scanning…' : 'Run Threshold Check'}
+            </button>
+          }
+        />
 
         {/* Summary cards */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-          {[
-            { label: 'Pending Review', value: disclosures.length, icon: <Clock className="w-4 h-4 text-amber-400" />, bg: 'bg-amber-500/10' },
-            { label: 'Non-Compliant',  value: requiredSellers.length, icon: <UserX className="w-4 h-4 text-red-400" />, bg: 'bg-red-500/10' },
-            { label: 'Info',           value: 0, icon: <AlertTriangle className="w-4 h-4 text-blue-400" />, bg: 'bg-blue-500/10' },
-          ].map(c => (
-            <motion.div key={c.label} variants={item}
-              className="bg-[#0d0d0d] border border-white/[0.06] rounded-xl p-4 flex items-center gap-3">
-              <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${c.bg}`}>{c.icon}</div>
-              <div>
-                <p className="text-xl font-bold font-mono text-white">{c.value}</p>
-                <p className="text-xs text-white/40">{c.label}</p>
-              </div>
-            </motion.div>
-          ))}
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          <StatCard label="Pending Review" value={disclosures.length}     icon={Clock}         tone="warning" />
+          <StatCard label="Non-Compliant"  value={requiredSellers.length} icon={UserX}         tone="error" />
+          <StatCard label="Info"           value={0}                      icon={AlertTriangle} tone="info" />
         </div>
 
         {/* Table */}
-        <motion.div variants={item} className="bg-[#0d0d0d] border border-white/[0.06] rounded-xl overflow-hidden">
+        <section className="overflow-hidden rounded-xl border border-border-default bg-bg-raised">
           {/* Tabs */}
-          <div className="flex border-b border-white/[0.06] overflow-x-auto">
+          <div className="flex overflow-x-auto border-b border-border-subtle">
             {tabs.map(t => (
               <button key={t.key} onClick={() => handleTabChange(t.key)}
-                className={`px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors ${
+                className={`whitespace-nowrap px-4 py-3 text-sm font-semibold transition-colors ${
                   activeTab === t.key
-                    ? 'text-white border-b-2 border-violet-400'
-                    : 'text-white/40 hover:text-white/60'
+                    ? 'border-b-2 border-lime text-text-primary'
+                    : 'text-text-tertiary hover:text-text-secondary'
                 }`}>
                 {t.label}
               </button>
@@ -339,7 +323,7 @@ export default function InformAdminClient({ initialDisclosures, requiredSellers,
           </div>
 
           {fetchError && (
-            <div className="p-4 text-sm text-red-400 bg-red-500/5">Error: {fetchError}</div>
+            <div className="bg-error-bg p-4 text-sm text-error">Error: {fetchError}</div>
           )}
 
           {/* Pending sellers tab */}
@@ -347,34 +331,36 @@ export default function InformAdminClient({ initialDisclosures, requiredSellers,
             <div>
               {requiredSellers.length === 0 ? (
                 <div className="py-12 text-center">
-                  <CheckCircle2 className="w-8 h-8 text-green-400/50 mx-auto mb-2" />
-                  <p className="text-sm text-white/30">All required sellers have submitted their disclosures.</p>
+                  <CheckCircle2 className="mx-auto mb-2 h-8 w-8 text-success" />
+                  <p className="text-sm text-text-tertiary">All required sellers have submitted their disclosures.</p>
                 </div>
               ) : (
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-white/[0.04]">
-                      {['Seller', 'Sales', 'Lifetime Revenue', 'Status'].map(h => (
-                        <th key={h} className="px-4 py-3 text-left text-[11px] uppercase tracking-wider text-white/30">
-                          {h}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {requiredSellers.map(s => (
-                      <tr key={s.id} className="border-b border-white/[0.04] hover:bg-white/[0.02] transition-colors">
-                        <td className="px-4 py-3">
-                          <p className="text-sm text-white">{s.username ? `@${s.username}` : s.id}</p>
-                          <p className="text-xs text-white/30">{s.email}</p>
-                        </td>
-                        <td className="px-4 py-3 text-sm font-mono text-white/70">{s.total_sales}</td>
-                        <td className="px-4 py-3 text-sm font-mono text-white/70">${s.lifetime_earnings.toFixed(2)}</td>
-                        <td className="px-4 py-3"><StatusBadge status={s.inform_status} /></td>
+                <div className={TABLE.wrap}>
+                  <table className={TABLE.table}>
+                    <thead>
+                      <tr>
+                        {['Seller', 'Sales', 'Lifetime Revenue', 'Status'].map(h => (
+                          <th key={h} className={TABLE.th}>
+                            {h}
+                          </th>
+                        ))}
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {requiredSellers.map(s => (
+                        <tr key={s.id} className={TABLE.row}>
+                          <td className={TABLE.td}>
+                            <p className="text-[13.5px] font-semibold text-text-primary">{s.username ? `@${s.username}` : s.id}</p>
+                            <p className="text-xs text-text-tertiary">{s.email}</p>
+                          </td>
+                          <td className={`${TABLE.td} tabular-nums`}>{s.total_sales}</td>
+                          <td className={`${TABLE.td} tabular-nums`}>${s.lifetime_earnings.toFixed(2)}</td>
+                          <td className={TABLE.td}><InformStatusBadge status={s.inform_status} /></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               )}
             </div>
           )}
@@ -383,12 +369,12 @@ export default function InformAdminClient({ initialDisclosures, requiredSellers,
           {(activeTab === 'submitted' || activeTab === 'all') && (
             tabLoading ? (
               <div className="py-12 text-center">
-                <Loader2 className="w-6 h-6 animate-spin text-white/30 mx-auto" />
+                <Loader2 className="mx-auto h-6 w-6 animate-spin text-text-tertiary" />
               </div>
             ) : disclosures.length === 0 ? (
               <div className="py-12 text-center">
-                <FileText className="w-8 h-8 text-white/20 mx-auto mb-2" />
-                <p className="text-sm text-white/30">No disclosures to review.</p>
+                <FileText className="mx-auto mb-2 h-8 w-8 text-text-disabled" />
+                <p className="text-sm text-text-tertiary">No disclosures to review.</p>
               </div>
             ) : (
               <div>
@@ -404,8 +390,8 @@ export default function InformAdminClient({ initialDisclosures, requiredSellers,
               </div>
             )
           )}
-        </motion.div>
-      </motion.div>
+        </section>
+      </div>
     </>
   )
 }

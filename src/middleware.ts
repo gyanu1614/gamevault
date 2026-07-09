@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { isProtectedPath } from '@/lib/auth/protected-routes'
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
@@ -8,16 +9,12 @@ export async function middleware(request: NextRequest) {
   const requestHeaders = new Headers(request.headers)
   requestHeaders.set('x-pathname', pathname)
 
-  // Protected routes that require authentication
-  const protectedRoutes = [
-    '/orders',
-    '/purchases',
-    '/account/dashboard',
-    '/account/listings',
-    '/account/analytics',
-    '/account/earnings'
-  ]
-  const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route))
+  // Routes requiring authentication — single source of truth shared with the
+  // logout handler (src/lib/auth/protected-routes.ts). Broadened from the old
+  // narrow list to cover all of /account, /checkout, /cart, /sell, /seller,
+  // /wallet, /admin — closing the audit's coverage gaps (e.g. /account/wallet,
+  // /account/settings were previously unprotected).
+  const isProtectedRoute = isProtectedPath(pathname)
 
   // Public seller/account routes (registration, status, etc.)
   const publicSellerRoutes = [

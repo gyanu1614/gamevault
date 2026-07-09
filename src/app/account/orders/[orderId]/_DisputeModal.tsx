@@ -113,7 +113,7 @@ export function DisputeModal({ open, onOpenChange, orderId, conversationId }: Di
         </DialogHeader>
 
         <div>
-          <Label className="mb-2 block text-[12px] font-bold uppercase tracking-[0.14em] text-text-secondary">
+          <Label className="mb-2 block text-[11px] font-bold uppercase tracking-wider text-text-secondary">
             What&rsquo;s The Issue?
           </Label>
           <div className="flex flex-wrap gap-2">
@@ -143,7 +143,7 @@ export function DisputeModal({ open, onOpenChange, orderId, conversationId }: Di
         <div>
           <Label
             htmlFor="dispute-reason"
-            className="mb-2 block text-[12px] font-bold uppercase tracking-[0.14em] text-text-secondary"
+            className="mb-2 block text-[11px] font-bold uppercase tracking-wider text-text-secondary"
           >
             Describe What Happened
           </Label>

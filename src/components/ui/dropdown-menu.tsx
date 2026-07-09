@@ -100,7 +100,9 @@ const DropdownMenuItem = React.forwardRef<
   <DropdownMenuPrimitive.Item
     ref={ref}
     className={cn(
-      'relative flex cursor-pointer select-none items-center gap-2 rounded-md px-2 py-1.5 text-sm outline-none transition-colors',
+      // focus-visible:shadow-none kills the global lime :focus-visible ring
+      // (globals.css) — inside a menu the focus:bg highlight is the cue.
+      'relative flex cursor-pointer select-none items-center gap-2 rounded-md px-2 py-1.5 text-sm outline-none transition-colors focus-visible:shadow-none',
       variant === 'default'
         ? 'text-text-secondary focus:bg-bg-raised-hover focus:text-text-primary'
         : 'text-error focus:bg-error-bg',
@@ -171,7 +173,7 @@ const DropdownMenuLabel = React.forwardRef<
   <DropdownMenuPrimitive.Label
     ref={ref}
     className={cn(
-      'px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-text-tertiary',
+      'px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-text-tertiary',
       inset && 'pl-8',
       className,
     )}

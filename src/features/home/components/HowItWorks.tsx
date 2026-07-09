@@ -117,14 +117,13 @@ export function HowItWorks() {
     <section
       ref={sectionRef}
       className="relative"
-      style={{ fontFamily: 'var(--font-rhd), Inter, system-ui, sans-serif' }}
     >
       {/* Header — centered, no bg, no extra padding. Sits directly on
           whatever's behind (body bg or hero art continuation). */}
       <div className="max-w-container mx-auto px-6 pb-6 pt-12 text-center">
         <div className="mb-3 inline-flex items-center gap-2">
           <span className="h-px w-10 bg-gradient-to-l from-lime/50 to-transparent" aria-hidden />
-          <span className="text-[12px] font-bold uppercase tracking-[0.18em] text-lime-text">
+          <span className="text-[11.5px] font-bold uppercase tracking-[0.14em] text-lime-text">
             How it works
           </span>
           <span className="h-px w-10 bg-gradient-to-r from-lime/50 to-transparent" aria-hidden />
@@ -175,7 +174,7 @@ function StageCopy({ stage, index }: { stage: Stage; index: number }) {
     >
       <div className="max-w-[460px]">
         <div className="mb-4 inline-flex items-center gap-2">
-          <span className="text-[12px] font-bold uppercase tracking-[0.22em] text-lime-text tabular-nums">
+          <span className="text-[11.5px] font-bold uppercase tracking-[0.14em] text-lime-text tabular-nums">
             Step {stage.step}
           </span>
           <span className="h-px w-6 bg-lime/40" aria-hidden />

@@ -74,7 +74,7 @@ export function PlatformFieldsBlock({ fields, values, onChange, showErrors }: Pr
         const selected = options.find((o) => o.value === value)
         return (
           <div key={kind} className="space-y-1.5">
-            <label className="block text-xs font-semibold uppercase tracking-wider text-text-secondary">
+            <label className="block text-[11px] font-semibold uppercase tracking-wider text-text-secondary">
               {cfg.label} <span className="text-error">*</span>
             </label>
             <Select value={value || undefined} onValueChange={(v) => onChange(kind, v)}>

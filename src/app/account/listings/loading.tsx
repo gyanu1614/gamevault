@@ -1,9 +1,11 @@
 /**
- * V16 — Seller listings skeleton.
+ * V33 — Seller offers-table skeleton.
  *
- * Mirrors /account/listings (V14q row layout): max-w-7xl wrapper,
- * header w/ title + bulk upload + new listing buttons, search +
- * status filter row, then a stack of landscape listing rows.
+ * Mirrors the revamped /account/listings layout: title + Add New Offer,
+ * filter chip row (Game / Status / Bulk Actions / search / sort), then
+ * the results card with a count strip, shimmer rows, and the
+ * pagination footer. Transparent so the persisted account HeroBackdrop
+ * shows through (V21/P7.ah).
  */
 
 function Block({ className = '' }: { className?: string }) {
@@ -12,80 +14,55 @@ function Block({ className = '' }: { className?: string }) {
   )
 }
 
-function ListingRowSkeleton() {
-  return (
-    <div className="rounded-xl border border-border-subtle card-frost p-3 sm:p-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        {/* Left: checkbox + image + content */}
-        <div className="flex flex-1 items-center gap-3 sm:gap-4">
-          <Block className="h-4 w-4 shrink-0 rounded" />
-          <Block className="h-16 w-16 shrink-0 rounded-xl sm:h-20 sm:w-20" />
-          <div className="min-w-0 flex-1 space-y-2">
-            <div className="flex flex-wrap gap-1.5">
-              <Block className="h-4 w-20 rounded-md" />
-              <Block className="h-4 w-24 rounded-md" />
-            </div>
-            <Block className="h-5 w-3/4 max-w-xs" />
-            <div className="flex flex-wrap gap-1.5">
-              <Block className="h-4 w-16 rounded-full" />
-              <Block className="h-4 w-20 rounded-full" />
-            </div>
-          </div>
-        </div>
-        {/* Right: metric rail + actions */}
-        <div className="flex items-center justify-end gap-4 sm:gap-5">
-          <div className="hidden gap-5 lg:flex">
-            <Block className="h-10 w-12" />
-            <Block className="h-10 w-12" />
-          </div>
-          <div className="hidden gap-5 md:flex">
-            <Block className="h-10 w-20" />
-            <Block className="h-10 w-20" />
-          </div>
-          <Block className="h-9 w-32 rounded-md" />
-          <div className="flex gap-1.5">
-            <Block className="h-9 w-9 rounded-md" />
-            <Block className="h-9 w-9 rounded-md" />
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-}
-
 export default function ListingsLoading() {
   return (
-    // V21/P7.ah — Transparent (no bg-bg-base) so the persisted account
-    // HeroBackdrop shows through during the skeleton instead of a black/
-    // flat slab painting over it.
-    <div className="min-h-screen pb-24">
-      <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
-        {/* Header */}
-        <header className="flex flex-col gap-3 pt-2 sm:flex-row sm:items-end sm:justify-between">
-          <div className="space-y-1.5">
-            <Block className="h-8 w-44" />
-            <Block className="h-4 w-64" />
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <Block className="h-10 w-32 rounded-md" />
-            <Block className="h-10 w-32 rounded-md" />
-          </div>
-        </header>
-
-        {/* Search + filter row */}
-        <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
-          <Block className="h-10 w-full rounded-xl sm:max-w-md" />
-          <div className="flex gap-2 sm:ml-auto">
-            <Block className="h-10 w-28 rounded-lg" />
-            <Block className="h-10 w-28 rounded-lg" />
-          </div>
+    <div className="min-h-screen pb-20">
+      <div className="mx-auto w-full max-w-[1400px] px-4 pt-2 sm:px-6 lg:px-10 xl:px-14">
+        {/* Header — AccountPageHeader shape: flush title, action right */}
+        <div className="flex items-center justify-between gap-3 pt-2">
+          <Block className="h-8 w-52" />
+          <Block className="h-10 w-40" />
         </div>
 
-        {/* Listings stack */}
-        <div className="mt-5 space-y-3">
-          {Array.from({ length: 8 }).map((_, i) => (
-            <ListingRowSkeleton key={i} />
-          ))}
+        {/* Filter row */}
+        <div className="mt-5 flex flex-wrap items-center gap-2.5">
+          <Block className="h-10 w-28" />
+          <Block className="h-10 w-28" />
+          <Block className="h-10 w-32" />
+          <Block className="h-10 w-full max-w-[320px] flex-1" />
+          <Block className="ml-auto h-10 w-24" />
+        </div>
+
+        {/* Results card */}
+        <div className="mt-4 overflow-hidden rounded-lg border border-border-default bg-[rgba(16,18,25,0.72)]">
+          <div className="border-b border-white/[0.06] px-5 py-3.5">
+            <Block className="h-4 w-20" />
+          </div>
+          <div className="divide-y divide-white/[0.05]">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-4 px-5 py-3.5">
+                <Block className="h-4 w-4 rounded" />
+                <Block className="h-10 w-10 rounded-md" />
+                <div className="min-w-0 flex-1 space-y-1.5">
+                  <Block className="h-4 w-44 max-w-full" />
+                  <Block className="h-3 w-24" />
+                </div>
+                <Block className="hidden h-8 w-24 sm:block" />
+                <Block className="hidden h-10 w-36 md:block" />
+                <Block className="hidden h-6 w-16 lg:block" />
+                <Block className="hidden h-4 w-14 lg:block" />
+                <Block className="h-8 w-8" />
+              </div>
+            ))}
+          </div>
+          <div className="flex items-center justify-between border-t border-white/[0.06] px-5 py-3.5">
+            <Block className="h-4 w-48" />
+            <div className="flex gap-1">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <Block key={i} className="h-8 w-8" />
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     </div>

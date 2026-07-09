@@ -148,7 +148,7 @@ export default function ItemDetailsModal({ isOpen, onClose, order }: ItemDetails
                         </div>
                       </div>
 
-                      {/* VaultShield Explanation */}
+                      {/* SafeDrop Explanation */}
                       {order.vaultshield_tier && (
                         <div className="rounded-lg border border-lime-tint-border bg-gradient-to-br from-lime/10 to-transparent p-4">
                           <div className="flex items-start gap-3">
@@ -157,7 +157,7 @@ export default function ItemDetailsModal({ isOpen, onClose, order }: ItemDetails
                             </div>
                             <div className="flex-1 min-w-0">
                               <h4 className="text-sm font-semibold text-white mb-1">
-                                VaultShield {(order.vaultshield_tier || 'Standard').charAt(0).toUpperCase() + (order.vaultshield_tier || 'Standard').slice(1)} Protection
+                                SafeDrop {(order.vaultshield_tier || 'Standard').charAt(0).toUpperCase() + (order.vaultshield_tier || 'Standard').slice(1)} Protection
                               </h4>
                               <p className="text-xs text-text-secondary leading-relaxed">
                                 {order.vaultshield_tier === 'premium'
@@ -183,7 +183,7 @@ export default function ItemDetailsModal({ isOpen, onClose, order }: ItemDetails
                       {/* Attributes */}
                       {attrRows.length > 0 && (
                         <div>
-                          <h4 className="text-xs font-bold uppercase tracking-wider text-text-tertiary mb-3">Attributes</h4>
+                          <h4 className="text-[11px] font-bold uppercase tracking-wider text-text-tertiary mb-3">Attributes</h4>
                           <div className="space-y-2">
                             {attrRows.map(({ label, value }) => (
                               <div key={label} className="flex items-center justify-between py-2 border-b border-border-subtle last:border-0">
@@ -198,7 +198,7 @@ export default function ItemDetailsModal({ isOpen, onClose, order }: ItemDetails
                       {/* Platform & Region */}
                       {(listing?.platform || listing?.region) && (
                         <div>
-                          <h4 className="text-xs font-bold uppercase tracking-wider text-text-tertiary mb-3">Platform Details</h4>
+                          <h4 className="text-[11px] font-bold uppercase tracking-wider text-text-tertiary mb-3">Platform Details</h4>
                           <div className="space-y-2">
                             {listing.platform && (
                               <div className="flex items-center justify-between py-2 border-b border-border-subtle">
@@ -219,14 +219,14 @@ export default function ItemDetailsModal({ isOpen, onClose, order }: ItemDetails
                       {/* Description */}
                       {listing?.description && (
                         <div>
-                          <h4 className="text-xs font-bold uppercase tracking-wider text-text-tertiary mb-3">Description</h4>
+                          <h4 className="text-[11px] font-bold uppercase tracking-wider text-text-tertiary mb-3">Description</h4>
                           <p className="text-sm text-text-secondary leading-relaxed whitespace-pre-wrap">{listing.description}</p>
                         </div>
                       )}
 
                       {/* Seller Info */}
                       <div className="rounded-xl border border-border-subtle bg-bg-overlay p-4">
-                        <h4 className="text-xs font-bold uppercase tracking-wider text-text-tertiary mb-3">Sold By</h4>
+                        <h4 className="text-[11px] font-bold uppercase tracking-wider text-text-tertiary mb-3">Sold By</h4>
                         <div className="flex items-center gap-3">
                           <div className="relative h-12 w-12 flex-shrink-0">
                             <Image

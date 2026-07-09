@@ -15,6 +15,7 @@ import { PlusCircle, Pencil, Eye, EyeOff, Save, X, Loader2, Trash2, Upload, Imag
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { PageHeader, StatusBadge } from '../components/kit'
 import {
   fetchAdminCategories,
   updateCategory,
@@ -98,7 +99,7 @@ function IconUploadCell({ categoryId, currentIcon, onUploadSuccess }: {
   return (
     <div className="flex items-center gap-2">
       {/* Icon Preview */}
-      <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-white/10 bg-white/5">
+      <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-border-default bg-bg-overlay">
         {currentIcon.type === 'emoji' || !currentIcon.url ? (
           <span className="text-xl">{currentIcon.emoji || '📦'}</span>
         ) : (
@@ -110,7 +111,7 @@ function IconUploadCell({ categoryId, currentIcon, onUploadSuccess }: {
       <button
         onClick={() => fileInputRef.current?.click()}
         disabled={uploading || deleting}
-        className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-white/10 hover:text-white disabled:opacity-50"
+        className="rounded-lg p-1.5 text-text-tertiary transition-colors hover:bg-bg-overlay-2 hover:text-text-primary disabled:opacity-50"
         title="Upload icon image"
       >
         {uploading ? (
@@ -125,7 +126,7 @@ function IconUploadCell({ categoryId, currentIcon, onUploadSuccess }: {
         <button
           onClick={handleDeleteIcon}
           disabled={uploading || deleting}
-          className="rounded-lg p-1.5 text-gray-600 transition-colors hover:bg-red-500/10 hover:text-red-400 disabled:opacity-50"
+          className="rounded-lg p-1.5 text-text-tertiary transition-colors hover:bg-red-500/10 hover:text-error disabled:opacity-50"
           title="Delete uploaded icon"
         >
           {deleting ? (
@@ -165,17 +166,17 @@ function EditRow({
   const set = (key: keyof typeof form, value: any) => setForm((f) => ({ ...f, [key]: value }))
 
   return (
-    <tr className="border-b border-white/[0.05] bg-violet-500/[0.04]">
+    <tr className="border-b border-border-subtle bg-state-selected">
       <td className="px-4 py-3">
         <Input
           value={form.icon_emoji || ''}
           onChange={(e) => set('icon_emoji', e.target.value)}
-          className="h-8 w-14 border-white/10 bg-white/5 text-center text-lg text-white"
+          className="h-8 w-14 border-border-default bg-bg-base text-center text-lg text-text-primary focus:border-lime focus:outline-none"
           placeholder="📦"
         />
       </td>
       <td className="px-4 py-3">
-        <span className="text-xs text-gray-500">Save first to upload image</span>
+        <span className="text-xs text-text-tertiary">Save first to upload image</span>
       </td>
       <td className="px-4 py-3">
         <Input
@@ -184,7 +185,7 @@ function EditRow({
             set('name', e.target.value)
             if (!category.id) set('slug', toSlug(e.target.value))
           }}
-          className="h-8 border-white/10 bg-white/5 text-white"
+          className="h-8 border-border-default bg-bg-base text-text-primary focus:border-lime focus:outline-none"
           placeholder="Category name"
         />
       </td>
@@ -192,7 +193,7 @@ function EditRow({
         <Input
           value={form.slug}
           onChange={(e) => set('slug', toSlug(e.target.value))}
-          className="h-8 border-white/10 bg-white/5 font-mono text-sm text-white"
+          className="h-8 border-border-default bg-bg-base font-mono text-sm text-text-primary focus:border-lime focus:outline-none"
           placeholder="category-slug"
         />
       </td>
@@ -200,7 +201,7 @@ function EditRow({
         <Input
           value={form.description || ''}
           onChange={(e) => set('description', e.target.value)}
-          className="h-8 border-white/10 bg-white/5 text-white"
+          className="h-8 border-border-default bg-bg-base text-text-primary focus:border-lime focus:outline-none"
           placeholder="Description"
         />
       </td>
@@ -209,7 +210,7 @@ function EditRow({
           type="number"
           value={form.sort_order}
           onChange={(e) => set('sort_order', parseInt(e.target.value) || 99)}
-          className="h-8 w-16 border-white/10 bg-white/5 text-white"
+          className="h-8 w-16 border-border-default bg-bg-base text-text-primary focus:border-lime focus:outline-none"
         />
       </td>
       {/* colspan for Listings + Status */}
@@ -219,7 +220,7 @@ function EditRow({
         <div className="flex items-center gap-2">
           <Button
             size="sm"
-            className="h-7 gap-1 bg-violet-600 px-2 text-xs hover:bg-violet-500"
+            className="h-7 gap-1 bg-lime-pressed px-2 text-xs font-bold text-text-inverse hover:bg-lime"
             onClick={() => onSave(form)}
             disabled={saving || !form.name || !form.slug}
           >
@@ -229,7 +230,7 @@ function EditRow({
           <Button
             size="sm"
             variant="ghost"
-            className="h-7 px-2 text-xs text-gray-400 hover:text-white"
+            className="h-7 px-2 text-xs text-text-tertiary hover:text-text-primary"
             onClick={onCancel}
           >
             <X className="h-3 w-3" />
@@ -355,44 +356,42 @@ export default function AdminCategoriesPage() {
   const activeCount = (categories || []).filter((c) => c.is_active).length
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-black via-gray-900 to-black p-6 lg:p-8">
+    <div>
       {/* Header */}
-      <div className="mb-6 flex items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-white">Categories</h1>
-          <p className="text-sm text-gray-400">
-            {activeCount} active / {(categories || []).length} total
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <Link
-            href="/admin/redesign"
-            className="inline-flex h-9 items-center gap-1.5 rounded-md border border-lime-tint-border bg-lime-tint-bg px-3 text-xs font-semibold text-lime-text transition-colors hover:bg-lime/20"
-            title="Open the redesigned admin hub"
-          >
-            <Sparkles className="h-3.5 w-3.5" />
-            Try new admin
-          </Link>
-          <Input
-            value={filterText}
-            onChange={(e) => setFilterText(e.target.value)}
-            placeholder="Filter categories..."
-            className="h-9 w-48 border-white/10 bg-white/5 text-sm text-white placeholder:text-gray-500"
-          />
-          <Button
-            size="sm"
-            className="h-9 gap-2 bg-white text-black hover:bg-white/90"
-            onClick={() => { setAddingNew(true); setEditingId(null) }}
-            disabled={addingNew}
-          >
-            <PlusCircle className="h-4 w-4" />
-            Add Category
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        title="Categories"
+        description={`${activeCount} active / ${(categories || []).length} total`}
+        actions={
+          <>
+            <Link
+              href="/admin/redesign"
+              className="inline-flex h-9 items-center gap-1.5 rounded-md border border-lime-tint-border bg-lime-tint-bg px-3 text-xs font-semibold text-lime-text transition-colors hover:border-lime"
+              title="Open the redesigned admin hub"
+            >
+              <Sparkles className="h-3.5 w-3.5" />
+              Try new admin
+            </Link>
+            <Input
+              value={filterText}
+              onChange={(e) => setFilterText(e.target.value)}
+              placeholder="Filter categories..."
+              className="h-9 w-48 border-border-default bg-bg-base text-sm text-text-primary placeholder:text-text-tertiary focus:border-lime focus:outline-none"
+            />
+            <Button
+              size="sm"
+              className="h-9 gap-2 bg-lime-pressed font-bold text-text-inverse hover:bg-lime"
+              onClick={() => { setAddingNew(true); setEditingId(null) }}
+              disabled={addingNew}
+            >
+              <PlusCircle className="h-4 w-4" />
+              Add Category
+            </Button>
+          </>
+        }
+      />
 
       {/* Legend for inactive */}
-      <div className="mb-3 flex items-center gap-3 text-xs text-gray-500">
+      <div className="mb-3 flex items-center gap-3 text-xs text-text-tertiary">
         <span className="flex items-center gap-1.5">
           <span className="w-2.5 h-2.5 rounded-sm bg-red-500/30 border border-red-500/40 inline-block" />
           Paused categories remain visible here — use the
@@ -401,20 +400,20 @@ export default function AdminCategoriesPage() {
       </div>
 
       {/* Table */}
-      <div className="overflow-hidden rounded-xl border border-white/[0.07] bg-white/[0.02]">
+      <div className="overflow-hidden rounded-xl border border-border-default bg-bg-raised">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead>
-              <tr className="border-b border-white/[0.07] bg-white/[0.03]">
-                <th className="px-4 py-3 font-medium text-gray-400">Emoji</th>
-                <th className="px-4 py-3 font-medium text-gray-400">Icon Upload</th>
-                <th className="px-4 py-3 font-medium text-gray-400">Name</th>
-                <th className="px-4 py-3 font-medium text-gray-400">Slug</th>
-                <th className="px-4 py-3 font-medium text-gray-400">Description</th>
-                <th className="px-4 py-3 font-medium text-gray-400">Order</th>
-                <th className="px-4 py-3 font-medium text-gray-400">Listings</th>
-                <th className="px-4 py-3 font-medium text-gray-400">Status</th>
-                <th className="px-4 py-3 font-medium text-gray-400">Actions</th>
+              <tr className="border-b border-border-subtle bg-bg-overlay">
+                <th className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-text-tertiary">Emoji</th>
+                <th className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-text-tertiary">Icon Upload</th>
+                <th className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-text-tertiary">Name</th>
+                <th className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-text-tertiary">Slug</th>
+                <th className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-text-tertiary">Description</th>
+                <th className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-text-tertiary">Order</th>
+                <th className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-text-tertiary">Listings</th>
+                <th className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-text-tertiary">Status</th>
+                <th className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-text-tertiary">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -430,13 +429,13 @@ export default function AdminCategoriesPage() {
 
               {isLoading ? (
                 <tr>
-                  <td colSpan={9} className="py-16 text-center text-gray-500">
+                  <td colSpan={9} className="py-16 text-center text-text-tertiary">
                     <Loader2 className="mx-auto h-6 w-6 animate-spin" />
                   </td>
                 </tr>
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="py-16 text-center text-gray-500">
+                  <td colSpan={9} className="py-16 text-center text-text-tertiary">
                     No categories found
                   </td>
                 </tr>
@@ -454,9 +453,9 @@ export default function AdminCategoriesPage() {
                     <tr
                       key={category.id}
                       className={cn(
-                        'border-b border-white/[0.04] transition-colors',
+                        'border-b border-border-subtle transition-colors',
                         category.is_active
-                          ? 'hover:bg-white/[0.03]'
+                          ? 'hover:bg-state-hover'
                           : 'bg-red-500/[0.04] hover:bg-red-500/[0.06]'
                       )}
                     >
@@ -475,36 +474,32 @@ export default function AdminCategoriesPage() {
                         />
                       </td>
                       <td className="px-4 py-3">
-                        <span className={cn('font-medium text-white', !category.is_active && 'opacity-50')}>
+                        <span className={cn('font-semibold text-text-primary', !category.is_active && 'opacity-50')}>
                           {category.name}
                         </span>
                         {!category.is_active && (
-                          <span className="ml-2 text-xs text-red-400 font-normal">(paused)</span>
+                          <span className="ml-2 text-xs font-normal text-error">(paused)</span>
                         )}
                       </td>
-                      <td className={cn('px-4 py-3 font-mono text-xs text-gray-400', !category.is_active && 'opacity-50')}>
+                      <td className={cn('px-4 py-3 font-mono text-xs text-text-tertiary', !category.is_active && 'opacity-50')}>
                         {category.slug}
                       </td>
-                      <td className={cn('px-4 py-3 text-gray-300', !category.is_active && 'opacity-50')}>
-                        {category.description || <span className="text-gray-600">—</span>}
+                      <td className={cn('px-4 py-3 text-text-secondary', !category.is_active && 'opacity-50')}>
+                        {category.description || <span className="text-text-disabled">—</span>}
                       </td>
-                      <td className={cn('px-4 py-3 text-gray-300', !category.is_active && 'opacity-50')}>
+                      <td className={cn('px-4 py-3 text-text-secondary', !category.is_active && 'opacity-50')}>
                         {category.sort_order}
                       </td>
                       <td className="px-4 py-3">
-                        <span className="rounded-full bg-white/[0.06] px-2 py-0.5 text-xs text-gray-300">
+                        <span className="rounded-full border border-border-default bg-bg-overlay px-2 py-0.5 text-xs text-text-secondary">
                           {category.listing_count}
                         </span>
                       </td>
                       <td className="px-4 py-3">
-                        <span
-                          className={cn(
-                            'rounded-full px-2 py-0.5 text-xs font-medium',
-                            category.is_active ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
-                          )}
-                        >
-                          {category.is_active ? 'Active' : 'Paused'}
-                        </span>
+                        <StatusBadge
+                          status={category.is_active ? 'Active' : 'Paused'}
+                          tone={category.is_active ? 'success' : 'error'}
+                        />
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-1">
@@ -512,7 +507,7 @@ export default function AdminCategoriesPage() {
                           <button
                             title="Edit"
                             onClick={() => { setEditingId(category.id); setAddingNew(false) }}
-                            className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-white/10 hover:text-white"
+                            className="rounded-lg p-1.5 text-text-tertiary transition-colors hover:bg-bg-overlay-2 hover:text-text-primary"
                           >
                             <Pencil className="h-3.5 w-3.5" />
                           </button>
@@ -525,8 +520,8 @@ export default function AdminCategoriesPage() {
                             className={cn(
                               'rounded-lg p-1.5 transition-colors',
                               category.is_active
-                                ? 'text-gray-400 hover:bg-yellow-500/10 hover:text-yellow-400'
-                                : 'text-green-500 hover:bg-green-500/10 hover:text-green-400'
+                                ? 'text-text-tertiary hover:bg-yellow-500/10 hover:text-warning'
+                                : 'text-success hover:bg-green-500/10 hover:text-success'
                             )}
                           >
                             {togglingId === category.id ? (
@@ -543,7 +538,7 @@ export default function AdminCategoriesPage() {
                             title="Delete permanently"
                             onClick={() => handleDeleteCategory(category)}
                             disabled={deletingId === category.id || (category.listing_count ?? 0) > 0}
-                            className="rounded-lg p-1.5 text-gray-600 transition-colors hover:bg-red-500/10 hover:text-red-400 disabled:opacity-30 disabled:cursor-not-allowed"
+                            className="rounded-lg p-1.5 text-text-tertiary transition-colors hover:bg-red-500/10 hover:text-error disabled:opacity-30 disabled:cursor-not-allowed"
                           >
                             {deletingId === category.id ? (
                               <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -563,12 +558,12 @@ export default function AdminCategoriesPage() {
       </div>
 
       {/* Legend */}
-      <div className="mt-4 flex flex-wrap gap-x-6 gap-y-1 text-xs text-gray-500">
-        <span>• <strong className="text-gray-400">Emoji</strong> — fallback icon when no image uploaded</span>
-        <span>• <strong className="text-gray-400">Icon Upload</strong> — upload PNG/JPG/SVG (max 2MB)</span>
-        <span>• <strong className="text-gray-400">Order</strong> — lower number = shown first in navbar</span>
-        <span>• <EyeOff className="inline w-3 h-3 text-yellow-500" /> Pause hides from marketplace — category stays here so you can resume it</span>
-        <span>• <Trash2 className="inline w-3 h-3 text-red-500" /> Delete is permanent and disabled if category has listings</span>
+      <div className="mt-4 flex flex-wrap gap-x-6 gap-y-1 text-xs text-text-tertiary">
+        <span>• <strong className="text-text-secondary">Emoji</strong> — fallback icon when no image uploaded</span>
+        <span>• <strong className="text-text-secondary">Icon Upload</strong> — upload PNG/JPG/SVG (max 2MB)</span>
+        <span>• <strong className="text-text-secondary">Order</strong> — lower number = shown first in navbar</span>
+        <span>• <EyeOff className="inline w-3 h-3 text-warning" /> Pause hides from marketplace — category stays here so you can resume it</span>
+        <span>• <Trash2 className="inline w-3 h-3 text-error" /> Delete is permanent and disabled if category has listings</span>
       </div>
     </div>
   )

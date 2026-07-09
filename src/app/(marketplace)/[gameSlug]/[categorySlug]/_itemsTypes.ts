@@ -13,8 +13,12 @@ export interface ItemSeller {
   shopName?: string | null
   avatarUrl?: string | null
   verified: boolean
+  /** Approval rating as a percentage (0-100). */
   rating: number
+  /** Lifetime completed sales across all the seller's listings. */
   sales: number
+  /** Number of reviews the rating is based on. Shown as "(1,381)". */
+  reviewCount: number
 }
 
 export interface ItemOffer {
@@ -41,7 +45,21 @@ export interface ItemOffer {
   /** Slugified mutations — drives the Mutation filter. */
   mutationSlugs: string[]
   pricePerUnit: number
+  /** Original (pre-discount) price. Null when there's no discount.
+   *  When set and > pricePerUnit, the card shows a strikethrough + % off. */
+  originalPrice: number | null
+  /** Seller-set delivery window, raw label from listings.delivery_time
+   *  (e.g. "instant", "20min", "1hr", "1-24 hours"). Parsed for display. */
+  deliveryTime: string | null
+  /** Remaining stock (listings.quantity). Null when unlimited. */
+  stock: number | null
+  /** True when the listing is unlimited stock (listings.is_unlimited). */
+  isUnlimited: boolean
   imageUrl: string | null
+  /** V28 — Seller-written description. Only populated where a surface
+   *  needs it (the detail page's Other Sellers quick preview); catalog
+   *  queries may omit it and it stays null. */
+  description?: string | null
   seller: ItemSeller
   /** Recommended score (0-100). Higher = better default sort position. */
   recommended: number

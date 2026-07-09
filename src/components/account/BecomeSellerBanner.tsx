@@ -16,7 +16,7 @@ export default function BecomeSellerBanner() {
 
           {/* Heading */}
           <h1 className="text-4xl font-bold text-white mb-4">
-            Become a Seller on GameVault
+            Become a Seller on DropMarket
           </h1>
           <p className="text-xl text-text-secondary mb-8 max-w-2xl mx-auto">
             Start earning by selling game items, accounts, and services to thousands of gamers worldwide
@@ -42,7 +42,7 @@ export default function BecomeSellerBanner() {
 
             <div className="bg-bg-overlay border border-border-subtle rounded-xl p-6">
               <Users className="w-8 h-8 text-blue-400 mx-auto mb-3" />
-              <h3 className="text-lg font-semibold text-white mb-2">VaultShield Protection</h3>
+              <h3 className="text-lg font-semibold text-white mb-2">SafeDrop Protection</h3>
               <p className="text-sm text-text-secondary">
                 Secure transactions with built-in buyer protection
               </p>

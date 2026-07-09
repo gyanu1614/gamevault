@@ -21,7 +21,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getLandingPage, getAllLandingPageSlugs, LandingPage } from '@/lib/seo/landingPages'
 import type { ListingWithRelations } from '@/types/database'
 
-const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://gamevault.gg'
+const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://dropmarket.gg'
 
 /* ------------------------------------------------------------------ */
 /* Static params                                                        */
@@ -52,7 +52,7 @@ export async function generateMetadata(
       title: page.title,
       description: page.description,
       url,
-      siteName: 'GameVault',
+      siteName: 'DropMarket',
       type: 'website',
     },
     twitter: {
@@ -194,7 +194,7 @@ export default async function SEOLandingPage({
           <div className="mx-auto max-w-5xl text-center relative">
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-lime/10 border border-lime-tint-border text-sm font-medium text-lime-text mb-6">
               <Shield className="w-3.5 h-3.5" />
-              VaultShield Buyer Protection
+              SafeDrop Buyer Protection
             </div>
 
             <h1 className="text-4xl sm:text-5xl md:text-6xl font-display font-bold text-foreground mb-5 leading-tight">
@@ -227,14 +227,14 @@ export default async function SEOLandingPage({
               {page.gameSlug && (
                 <Link
                   href={`/${page.gameSlug}${page.categorySlug ? `/${page.categorySlug}` : ''}`}
-                  className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-lime hover:bg-lime-hover text-text-inverse font-semibold text-sm transition-all duration-200 hover:shadow-[0_0_20px_-4px_rgba(139,92,246,0.6)]"
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-lime hover:bg-lime-hover text-text-inverse font-semibold text-sm transition-all duration-200 hover:shadow-glow"
                 >
                   Browse All Listings
                   <ArrowRight className="w-4 h-4" />
                 </Link>
               )}
               <Link
-                href="/seller/register"
+                href="/account/become-seller"
                 className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-white/[0.06] hover:bg-white/[0.10] border border-white/[0.10] text-sm font-medium text-foreground transition-all duration-200"
               >
                 Sell Instead
@@ -353,7 +353,7 @@ export default async function SEOLandingPage({
               {[
                 {
                   icon: '🛡️',
-                  title: 'VaultShield Escrow',
+                  title: 'SafeDrop Escrow',
                   desc: 'Your payment is held securely until you confirm delivery. No delivery = full refund.',
                 },
                 {
@@ -412,7 +412,7 @@ export default async function SEOLandingPage({
                 Ready to buy?
               </h2>
               <p className="text-muted-foreground text-sm mb-6 max-w-md mx-auto">
-                Browse live listings, pay securely with VaultShield escrow, and receive your purchase fast.
+                Browse live listings, pay securely with SafeDrop escrow, and receive your purchase fast.
               </p>
               <div className="flex flex-wrap items-center justify-center gap-3">
                 {page.gameSlug ? (
@@ -428,12 +428,12 @@ export default async function SEOLandingPage({
                     href="/"
                     className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-lime hover:bg-lime-hover text-text-inverse font-semibold text-sm transition-all duration-200"
                   >
-                    Explore GameVault
+                    Explore DropMarket
                     <ArrowRight className="w-4 h-4" />
                   </Link>
                 )}
                 <Link
-                  href="/seller/register"
+                  href="/account/become-seller"
                   className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-white/[0.06] hover:bg-white/[0.10] border border-white/[0.10] text-sm font-medium text-foreground transition-all duration-200"
                 >
                   Become a Seller

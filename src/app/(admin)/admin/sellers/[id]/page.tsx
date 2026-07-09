@@ -4,6 +4,7 @@ import { getSellerApplication } from '@/lib/actions/admin-sellers'
 import ApplicationDetail from './ApplicationDetail'
 import Link from 'next/link'
 import { ChevronLeft } from 'lucide-react'
+import { PageHeader } from '../../components/kit'
 
 interface Props {
   params: {
@@ -24,17 +25,18 @@ export default async function ApplicationDetailPage({ params }: Props) {
       {/* Back Button */}
       <Link
         href="/admin/sellers"
-        className="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors"
+        className="inline-flex items-center gap-2 text-sm text-text-secondary transition-colors hover:text-text-primary"
       >
         <ChevronLeft className="h-4 w-4" />
         Back to Applications
       </Link>
 
       {/* Page Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-white">Application Review</h1>
-        <p className="text-gray-400 mt-1">Review seller application and documents</p>
-      </div>
+      <PageHeader
+        title="Application Review"
+        description="Review seller application and documents"
+        className="mb-0"
+      />
 
       {/* Application Detail Component */}
       <ApplicationDetail application={application} />

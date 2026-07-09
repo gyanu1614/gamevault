@@ -19,24 +19,40 @@
  *
  * Built on shadcn Card + RadioGroup + our NumberField. Lime "Popular"
  * chip marks the cheapest bundle across all listings.
+ *
+ * V47 — Lower page rewired to the shared marketplace section library
+ * (same stack as the item detail + flexible currency pages): editorial
+ * Other Sellers heading with per-game watermark, pinned HowItWorksBand,
+ * SectionHeading + FaqCards, BlogSection, PaymentsMarquee, and the
+ * SafeDrop-watermarked offer panel with the shared TrustBand.
  */
 
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { BadgeCheck, Check, Clock, Flame, Headphones, Package, ShieldCheck, SlidersHorizontal, Star, Zap, type LucideIcon } from 'lucide-react'
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip'
+import { useAuthDialog } from '@/components/auth/AuthDialog'
+import { BadgeCheck, Check, Clock, Flame, Package, ShieldCheck, SlidersHorizontal, Star, Zap, type LucideIcon  } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Card } from '@/components/ui/card'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { NumberField } from '@/components/ui/number-field'
 import { Button } from '@/components/ui/button'
+import HowItWorksBand from '@/components/marketplace/HowItWorksBand'
+import { SectionHeading } from '@/components/marketplace/SectionHeading'
+import { FaqCards } from '@/components/marketplace/FaqCards'
+import { TrustBand } from '@/components/marketplace/TrustBand'
+import { PaymentsMarquee } from '@/components/marketplace/PaymentsMarquee'
+import { BlogSection } from '@/components/blog/BlogSection'
 import type { CurrencyBundle, PlatformOption } from '@/lib/types/category-configs'
-import { FAQ, HowItWorks, type CurrencyFaq, type CurrencyStep } from './_CurrencyMeta'
+import { getRegionIcon } from '@/lib/marketplace/region-platform-presets'
+import type { CurrencyFaq, CurrencyStep } from './_CurrencyMeta'
 
 export interface BundleOffer {
   listingId: string
@@ -69,8 +85,13 @@ export interface BundleCurrencyPageData {
   currencyIconUrl: string | null
   /** Sorted by sort_order asc (admin-controlled). */
   bundles: CurrencyBundle[]
-  /** All region options the admin enabled (empty array hides the selector). */
-  regions: string[]
+  /**
+   * V51 — All region options the admin enabled (empty array hides the
+   * selector). Now PlatformOption[] so preset flags flow through;
+   * legacy string values are normalized upstream and resolve a flag
+   * via getRegionIcon at render time.
+   */
+  regions: PlatformOption[]
   /**
    * V19/P24/P7 — Platform options the admin enabled, with optional
    * icon_url per option (PS5/Xbox/PC logos). Empty array hides the
@@ -95,7 +116,7 @@ export default function BundleCurrencyPageClient({
   // When admin disabled regions entirely we use empty string as a
   // sentinel ("no region constraint") and skip the region selector
   // section.
-  const [region, setRegion] = useState<string>(data.regions[0] ?? '')
+  const [region, setRegion] = useState<string>(data.regions[0]?.value ?? '')
 
   // V19/P24/P7 — Platform selection. Defaults to the first enabled
   // platform; empty array hides the row entirely. Filters offers the
@@ -194,8 +215,24 @@ export default function BundleCurrencyPageClient({
   const isOwn = !!viewerId && activeOffer?.sellerId === viewerId
   const cappedQty = Math.min(qty, activeOffer?.stock ?? 1)
 
+  const router = useRouter()
+  const { open: openAuth } = useAuthDialog()
+  // Buy handler shared with OfferPanel. Logged out → open the sign-in modal in
+  // place with checkout as the post-auth redirect (no bounce to home).
+  const onBuy = (listingId: string, quantity: number) => {
+    const dest = `/checkout/${listingId}?qty=${quantity}`
+    if (!viewerId) {
+      openAuth('login', { redirect: dest })
+      return
+    }
+    router.push(dest)
+  }
+
   return (
-    <main className="min-h-screen pb-24">
+    // `isolate` keeps the -z-10 backdrop art (game watermark, shield
+    // emblem) inside main's stacking context — same as the flexible
+    // currency page.
+    <main className="relative isolate min-h-screen pb-24">
       {/* Header — currency icon + SEO title + tagline */}
       <header className="relative overflow-hidden border-b border-border-subtle">
         <div className="relative mx-auto flex w-full max-w-7xl items-center gap-4 px-4 py-6 sm:gap-5 sm:px-6 sm:py-8 lg:px-8">
@@ -241,56 +278,19 @@ export default function BundleCurrencyPageClient({
           {/* V19/P24/P7.b — Rectangular tiles matching the bundle
               grid look. Icon centered on top, label below. Sized
               snug so PC / PS / XBOX fit one line on desktop. */}
-          <RadioGroup
-            value={platform}
-            onValueChange={(v) => {
+          <OptionTiles
+            options={data.platforms.map((p) => ({
+              value: p.value,
+              icon: p.icon_url ?? null,
+              label: p.value,
+            }))}
+            selected={platform}
+            uppercase
+            onSelect={(v) => {
               setPlatform(v)
               setPickedListingId('')
             }}
-            className="flex flex-wrap gap-3"
-          >
-            {data.platforms.map((p) => {
-              const on = platform === p.value
-              return (
-                <label key={p.value} className="block">
-                  <RadioGroupItem value={p.value} className="sr-only" />
-                  <Card
-                    className={cn(
-                      'relative flex h-[88px] w-[140px] cursor-pointer flex-col items-center justify-center gap-1.5 overflow-hidden border-2 bg-[rgba(20,20,27,0.56)] p-2 backdrop-blur-md transition-colors',
-                      on
-                        ? 'border-lime'
-                        : 'border-border-default hover:border-border-strong hover:bg-[rgba(26,26,35,0.70)]',
-                    )}
-                  >
-                    {on && (
-                      <span
-                        aria-hidden
-                        className="absolute right-1.5 top-1.5 z-10 flex h-4 w-4 items-center justify-center rounded-full bg-lime text-text-inverse"
-                      >
-                        <Check className="h-2.5 w-2.5" strokeWidth={3} />
-                      </span>
-                    )}
-                    {p.icon_url ? (
-                      /* eslint-disable-next-line @next/next/no-img-element */
-                      <img
-                        src={p.icon_url}
-                        alt=""
-                        className="h-10 w-10 shrink-0 object-contain"
-                      />
-                    ) : (
-                      <div
-                        aria-hidden
-                        className="h-10 w-10 shrink-0 rounded-lg bg-bg-raised-hover"
-                      />
-                    )}
-                    <span className="text-[12.5px] font-semibold uppercase tracking-wide text-text-primary">
-                      {p.value}
-                    </span>
-                  </Card>
-                </label>
-              )
-            })}
-          </RadioGroup>
+          />
         </section>
       )}
 
@@ -303,37 +303,26 @@ export default function BundleCurrencyPageClient({
           <h2 className="mb-3 text-[15px] font-bold text-text-primary">
             Region
           </h2>
-          <RadioGroup
-            value={region}
-            onValueChange={(v) => {
+          <OptionTiles
+            options={data.regions.map((r) => ({
+              value: r.value,
+              // V51 — Flag from the stored option, else resolved by
+              // name for legacy string configs; text-only fallback.
+              icon: r.icon_url ?? getRegionIcon(r.value),
+              label: r.value,
+            }))}
+            selected={region}
+            onSelect={(v) => {
               setRegion(v)
               setPickedListingId('')
             }}
-            className="flex flex-wrap gap-2"
-          >
-            {data.regions.map((r) => {
-              const on = region === r
-              return (
-                <label
-                  key={r}
-                  className={cn(
-                    'inline-flex h-10 cursor-pointer items-center gap-2 rounded-full border px-4 text-[13px] font-semibold transition-colors',
-                    on
-                      ? 'border-lime bg-lime-tint-bg text-lime-text'
-                      : 'border-border-default bg-bg-inset text-text-secondary hover:border-border-strong hover:text-text-primary',
-                  )}
-                >
-                  <RadioGroupItem value={r} className="sr-only" />
-                  {r}
-                  {on && <Check className="h-3.5 w-3.5" strokeWidth={3} />}
-                </label>
-              )
-            })}
-          </RadioGroup>
+          />
         </section>
       )}
 
-      <div className="mx-auto grid w-full max-w-7xl gap-6 px-4 pt-6 sm:px-6 lg:grid-cols-[1fr_360px] lg:items-stretch lg:gap-8 lg:px-8">
+      {/* V52 — pt bumped (was pt-4): the selector rows above and the
+          bundle grid read as separate sections, not one blob. */}
+      <div className="mx-auto grid w-full max-w-7xl gap-6 px-4 pt-10 sm:px-6 sm:pt-12 lg:grid-cols-[1fr_360px] lg:items-stretch lg:gap-8 lg:px-8">
         {/* LEFT COLUMN — bundle grid + other sellers */}
         <div className="space-y-6">
           <section>
@@ -347,7 +336,9 @@ export default function BundleCurrencyPageClient({
                 setQty(1)
                 setPickedListingId('')
               }}
-              className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4"
+              // V47b — 4-up ~195px tiles: middle ground between the
+              // original bulky cards and the too-tight 5-up pass.
+              className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4"
             >
               {data.bundles.map((bundle) => {
                 const cheapestForBundle = data.offers
@@ -365,14 +356,33 @@ export default function BundleCurrencyPageClient({
                 return (
                   <label key={bundle.id} className="block">
                     <RadioGroupItem value={bundle.id} className="sr-only" />
+                    {/* V47b — Refined tile: top sheen, icon spotlight,
+                        floating drop-shadow on the 3D art, hover lift,
+                        soft lime glow + lime price when selected. Alpha
+                        colors are hex/rgba literals (lime/[0.x]
+                        utilities don't compile). */}
                     <Card
                       className={cn(
-                        'relative cursor-pointer overflow-hidden border-2 bg-[rgba(20,20,27,0.56)] p-3 backdrop-blur-md transition-colors',
+                        'group relative cursor-pointer overflow-hidden border-2 bg-[rgba(20,20,27,0.56)] p-3 backdrop-blur-md transition-all duration-200',
                         on
-                          ? 'border-lime'
-                          : 'border-border-default hover:border-border-strong hover:bg-[rgba(26,26,35,0.70)]',
+                          ? 'border-[#ABE52BB3] shadow-[0_10px_26px_-10px_rgba(171,229,43,0.22)]'
+                          : 'border-border-default hover:-translate-y-0.5 hover:border-border-strong hover:bg-[rgba(26,26,35,0.70)] hover:shadow-[0_12px_24px_-12px_rgba(0,0,0,0.6)]',
                       )}
                     >
+                      {/* Top sheen — faint light falling from above. */}
+                      <span
+                        aria-hidden
+                        className="pointer-events-none absolute inset-x-0 top-0 h-1/2 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.06),transparent)]"
+                      />
+                      {/* Icon spotlight — soft pool of light behind the
+                          art so the 3D render pops off the surface. */}
+                      <span
+                        aria-hidden
+                        className={cn(
+                          'pointer-events-none absolute left-1/2 top-2 h-14 w-24 -translate-x-1/2 rounded-full blur-xl transition-colors duration-200',
+                          on ? 'bg-[#C6FF3D24]' : 'bg-white/[0.07]',
+                        )}
+                      />
                       {isPopular && (
                         <span className="absolute left-1.5 top-1.5 z-10 inline-flex items-center gap-0.5 rounded-full bg-lime-text px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-text-inverse">
                           <Flame className="h-2 w-2" /> Popular
@@ -381,18 +391,18 @@ export default function BundleCurrencyPageClient({
                       {on && (
                         <span
                           aria-hidden
-                          className="absolute right-1.5 top-1.5 z-10 flex h-4 w-4 items-center justify-center rounded-full bg-lime text-text-inverse"
+                          className="absolute right-1.5 top-1.5 z-10 flex h-4 w-4 items-center justify-center rounded-full bg-lime-pressed text-text-inverse"
                         >
                           <Check className="h-2.5 w-2.5" strokeWidth={3} />
                         </span>
                       )}
-                      <div className="flex h-16 items-center justify-center sm:h-20">
+                      <div className="relative flex h-14 items-center justify-center sm:h-16">
                         {bundle.icon_url ? (
                           /* eslint-disable-next-line @next/next/no-img-element */
                           <img
                             src={bundle.icon_url}
                             alt=""
-                            className="max-h-full max-w-full object-contain"
+                            className="max-h-full max-w-full object-contain drop-shadow-[0_10px_10px_rgba(0,0,0,0.45)] transition-transform duration-300 group-hover:scale-[1.06]"
                           />
                         ) : (
                           <div
@@ -401,19 +411,30 @@ export default function BundleCurrencyPageClient({
                           />
                         )}
                       </div>
-                      <div className="mt-2 line-clamp-1 text-[13px] font-semibold text-text-primary">
+                      <div className="relative mt-2 line-clamp-1 text-[13px] font-semibold text-text-primary">
                         {bundle.name}
                       </div>
-                      {/* V19/P24/P7.n — Faint divider between name and
-                          price for clearer visual hierarchy. */}
+                      {/* Hairline fading right — softer than a full rule. */}
                       <div
-                        className="mt-2 h-px bg-border-subtle"
+                        className="mt-2 h-px bg-gradient-to-r from-border-default to-transparent"
                         aria-hidden
                       />
-                      <div className="mt-2 text-[12px] text-text-tertiary">
-                        {cheapestForBundle === Infinity
-                          ? 'No offers'
-                          : `from ${formatPrice(cheapestForBundle)}`}
+                      <div className="relative mt-2 text-[11px] text-text-tertiary">
+                        {cheapestForBundle === Infinity ? (
+                          'No offers'
+                        ) : (
+                          <>
+                            from{' '}
+                            <span
+                              className={cn(
+                                'text-[13px] font-bold tabular-nums',
+                                on ? 'text-lime-text' : 'text-text-primary',
+                              )}
+                            >
+                              {formatPrice(cheapestForBundle)}
+                            </span>
+                          </>
+                        )}
                       </div>
                     </Card>
                   </label>
@@ -447,6 +468,7 @@ export default function BundleCurrencyPageClient({
             qty={cappedQty}
             setQty={setQty}
             isOwn={isOwn}
+            onBuy={onBuy}
           />
         </aside>
       </div>
@@ -455,14 +477,29 @@ export default function BundleCurrencyPageClient({
           BELOW the 2-col grid. Bundles + offer card share the
           top area; this section owns its own scroll space. */}
       {bestOffer && (
-        <section className="mx-auto mt-12 w-full max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-wrap items-end justify-between gap-3 px-1">
-            <div className="min-w-0 space-y-1">
-              <h2 className="text-[20px] font-bold text-text-primary sm:text-[22px]">
-                Other Sellers
+        <section className="relative mx-auto mt-12 w-full max-w-7xl px-4 sm:px-6 lg:px-8">
+          {/* V49 — Per-game 3D art backdrop, RIGHT edge of the section,
+              fading softly toward the page content (Lone-Hawk-style
+              edge art). The radial falloff is BAKED into the asset's
+              alpha channel — no CSS mask, so no viewport- or
+              section-boundary clipping can ever cut it. Convention:
+              public/watermarks/{gameSlug}.webp, self-hiding when the
+              file doesn't exist. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={`/watermarks/${data.gameSlug}.webp`}
+            alt=""
+            aria-hidden
+            onError={(e) => { e.currentTarget.style.display = 'none' }}
+            className="pointer-events-none absolute -top-20 right-0 -z-10 hidden h-80 w-80 rotate-12 select-none object-contain opacity-40 lg:block"
+          />
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div className="min-w-0">
+              <h2 className="text-[26px] font-extrabold leading-tight tracking-tight text-text-primary sm:text-[30px]">
+                Other <span className="text-lime-text">Sellers</span>
               </h2>
-              <p className="text-[13px] text-text-tertiary sm:text-[13.5px]">
-                {otherOffers.length} more {otherOffers.length === 1 ? 'offer' : 'offers'} — pick by price, speed, or rating
+              <p className="mt-1.5 text-[13.5px] text-text-tertiary sm:text-[14px]">
+                {otherOffers.length} more {otherOffers.length === 1 ? 'offer' : 'offers'} — pick by price, speed, or rating.
               </p>
             </div>
             {otherOffers.length > 0 && (
@@ -472,11 +509,15 @@ export default function BundleCurrencyPageClient({
               />
             )}
           </div>
+          <div
+            aria-hidden
+            className="mt-4 h-px w-full bg-[linear-gradient(to_right,#C6FF3D66,transparent_40%)]"
+          />
 
           {/* V19/P24/P7.oo — Outer "box-in-box" wrapper removed.
               Seller rows float directly on the page; each row is its
               own <Card> surface (handled in SellerRow). */}
-          <div className="mt-3">
+          <div className="mt-4">
             {otherOffers.length > 0 ? (
               <div className="space-y-2">
                 {otherOffers.map((o) => (
@@ -506,16 +547,224 @@ export default function BundleCurrencyPageClient({
         </section>
       )}
 
-      {/* V19/P24/P7.d — How it works + FAQ. Same blocks as the
-          flexible currency page; admin edits flow through the same
-          currency_config rows. */}
-      {(data.steps.length > 0 || data.faq.length > 0) && (
-        <div className="mx-auto mt-16 w-full max-w-7xl space-y-16 px-4 sm:px-6 lg:px-8">
-          {data.steps.length > 0 && <HowItWorks steps={data.steps} />}
-          {data.faq.length > 0 && <FAQ items={data.faq} />}
-        </div>
-      )}
+      {/* ─── HOW IT WORKS — full-bleed angled band (outside the max-w
+          wrapper), pinned scroll-story with bundle-context copy. */}
+      <HowItWorksBand
+        steps={[
+          { title: 'Pick Your Bundle', body: 'Choose platform, region, and amount.' },
+          { title: 'Pay Securely', body: 'We hold your payment in escrow.' },
+          { title: `Get Your ${data.unitLabel}`, body: 'Delivered to your account within the stated window.' },
+          { title: 'Confirm & Release', body: 'Confirm receipt — or get a full refund.' },
+        ]}
+      />
+
+      <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
+        {/* ─── FAQ — admin-configured items, Flock-geometry cards. */}
+        {data.faq.length > 0 && (
+          <section className="mt-10 sm:mt-14">
+            <SectionHeading
+              kicker="FAQ"
+              title="Frequently Asked"
+              accent="Questions"
+              sub={`Everything you need to know about buying ${data.gameName} ${data.unitLabel}.`}
+            />
+            <FaqCards items={data.faq} />
+          </section>
+        )}
+
+        {/* ─── BLOG — game-relevant guides rail. */}
+        <BlogSection gameSlug={data.gameSlug} gameName={data.gameName} />
+      </div>
+
+      {/* ─── ACCEPTED PAYMENTS — full-bleed wordmark marquee. */}
+      <PaymentsMarquee />
     </main>
+  )
+}
+
+/* ── Option tiles — Region / Platform selector ──────────────────── */
+
+/**
+ * V52 — Column-aware selector row.
+ *
+ * The tiles never cross the "amount line" (the boundary where the
+ * offer-panel column starts): on lg+ the row is capped to the left
+ * column width (100% − 360px panel − 32px gap). Up to 6 options the
+ * tiles lay out as ONE line at full size; 7+ becomes a themed
+ * dropdown (tiles smaller than this read as clutter). Mobile keeps
+ * fixed-size wrapping tiles.
+ */
+function OptionTiles({
+  options,
+  selected,
+  onSelect,
+  uppercase = false,
+}: {
+  options: Array<{ value: string; icon: string | null; label: string }>
+  selected: string
+  onSelect: (value: string) => void
+  uppercase?: boolean
+}) {
+  const n = options.length
+
+  // V52c — Dropdown choreography: the panel always opens BELOW the
+  // trigger, immediately, with its fluid entry animation — and if its
+  // bottom edge is clipped by the viewport, the page then GLIDES down
+  // just enough to reveal it (the popper tracks its anchor, so the
+  // whole trigger+panel assembly moves as one). Sequence reads as
+  // open → reveal, not scroll → pop.
+  //
+  // The glide is rAF-driven with instant steps: native smooth
+  // scrolling gets wedged by the select's scroll lock (an interrupted
+  // CSS-smooth animation keeps ownership of the scroller and silently
+  // eats all later scrollTo calls). Programmatic instant scrolls keep
+  // working while the panel is open.
+  const [open, setOpen] = useState(false)
+  const triggerRef = useRef<HTMLButtonElement | null>(null)
+  const handleOpenChange = (next: boolean) => {
+    setOpen(next)
+    if (!next) return
+    // Let the entry animation mostly play (300ms), measuring the REAL
+    // panel edge mid-flight (zoom is ~97% by then; +18px buffer
+    // covers the remainder), then glide.
+    window.setTimeout(() => {
+      const panel = document.querySelector('[role="listbox"]')
+      const rect = (panel ?? triggerRef.current)?.getBoundingClientRect()
+      if (!rect) return
+      const overflow = rect.bottom + 18 - window.innerHeight
+      if (overflow <= 0) return
+      const startY = window.scrollY
+      const t0 = performance.now()
+      const DURATION = 300
+      const ease = (t: number) => 1 - Math.pow(1 - t, 3)
+      const step = (now: number) => {
+        const t = Math.min(1, (now - t0) / DURATION)
+        window.scrollTo({
+          top: startY + overflow * ease(t),
+          behavior: 'instant' as ScrollBehavior,
+        })
+        if (t < 1) requestAnimationFrame(step)
+      }
+      requestAnimationFrame(step)
+    }, 180)
+  }
+
+  // 7+ options: dropdown, one row of UI regardless of count.
+  if (n > 6) {
+    const active = options.find((o) => o.value === selected)
+    return (
+      <div className="lg:max-w-[calc(100%-24.5rem)]">
+        {/* Themed dropdown — glass surface, rounded-lg (site card
+            geometry), roomy padding; icon + name in trigger and rows. */}
+        <Select value={selected} onValueChange={onSelect} open={open} onOpenChange={handleOpenChange}>
+          <SelectTrigger ref={triggerRef} className="h-[52px] w-full max-w-[320px] rounded-lg border-border-default bg-[rgba(17,17,23,0.92)] px-4 shadow-[0_4px_14px_-6px_rgba(0,0,0,0.5)] backdrop-blur-md hover:bg-[rgba(24,24,32,0.95)]">
+            <SelectValue>
+              {active && (
+                <span className="flex items-center gap-3">
+                  {active.icon && (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img
+                      src={active.icon}
+                      alt=""
+                      className="h-6 w-6 shrink-0 object-contain drop-shadow-[0_4px_6px_rgba(0,0,0,0.4)]"
+                    />
+                  )}
+                  <span className={cn('text-[14px] font-semibold', uppercase && 'uppercase tracking-wide')}>
+                    {active.label}
+                  </span>
+                </span>
+              )}
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent
+            side="bottom"
+            sideOffset={6}
+            avoidCollisions={false}
+            className="max-h-80 min-w-[320px] origin-top rounded-lg border-border-default bg-[rgba(17,17,23,0.97)] p-1.5 backdrop-blur-xl data-[state=open]:duration-300 data-[state=open]:ease-out data-[state=open]:slide-in-from-top-2"
+          >
+            {options.map((o) => (
+              <SelectItem
+                key={o.value}
+                value={o.value}
+                className="rounded-md px-3 py-2.5 text-[13.5px] focus:bg-bg-raised-hover data-[state=checked]:bg-lime-tint-bg/40 data-[state=checked]:text-lime-text"
+              >
+                <span className="flex items-center gap-3">
+                  {o.icon && (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img src={o.icon} alt="" className="h-5 w-5 shrink-0 object-contain" />
+                  )}
+                  <span className={cn('font-medium', uppercase && 'uppercase tracking-wide')}>{o.label}</span>
+                </span>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+    )
+  }
+
+  return (
+    <RadioGroup
+      value={selected}
+      onValueChange={onSelect}
+      className="flex flex-wrap gap-2.5 lg:max-w-[calc(100%-24.5rem)] lg:flex-nowrap lg:gap-3"
+    >
+      {options.map((o) => {
+        const on = selected === o.value
+        return (
+          <label
+            key={o.value}
+            className="block w-[122px] flex-none lg:w-auto lg:min-w-0 lg:max-w-[122px] lg:flex-1"
+          >
+            <RadioGroupItem value={o.value} className="sr-only" />
+            {/* V47b — Refined pick tile: sheen + hover lift + muted
+                lime selection glow. */}
+            <Card
+              className={cn(
+                'group relative flex h-[76px] cursor-pointer flex-col items-center justify-center gap-1.5 overflow-hidden border-2 bg-[rgba(20,20,27,0.56)] p-2 backdrop-blur-md transition-all duration-200',
+                on
+                  ? 'border-[#ABE52BB3] shadow-[0_8px_22px_-8px_rgba(171,229,43,0.22)]'
+                  : 'border-border-default hover:-translate-y-0.5 hover:border-border-strong hover:bg-[rgba(26,26,35,0.70)] hover:shadow-[0_10px_22px_-10px_rgba(0,0,0,0.6)]',
+              )}
+            >
+              <span
+                aria-hidden
+                className="pointer-events-none absolute inset-x-0 top-0 h-1/2 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.06),transparent)]"
+              />
+              {on && (
+                <span
+                  aria-hidden
+                  className="absolute right-1.5 top-1.5 z-10 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-lime-pressed text-text-inverse"
+                >
+                  <Check className="h-2 w-2" strokeWidth={3} />
+                </span>
+              )}
+              {o.icon ? (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img
+                  src={o.icon}
+                  alt=""
+                  className="h-8 w-8 shrink-0 object-contain drop-shadow-[0_6px_8px_rgba(0,0,0,0.45)] transition-transform duration-300 group-hover:scale-105"
+                />
+              ) : (
+                <div
+                  aria-hidden
+                  className="h-8 w-8 shrink-0 rounded-lg bg-bg-raised-hover"
+                />
+              )}
+              <span
+                className={cn(
+                  'max-w-full truncate text-[11px] font-semibold text-text-primary',
+                  uppercase && 'uppercase tracking-wide',
+                )}
+              >
+                {o.label}
+              </span>
+            </Card>
+          </label>
+        )
+      })}
+    </RadioGroup>
   )
 }
 
@@ -526,15 +775,17 @@ function OfferPanel({
   qty,
   setQty,
   isOwn,
+  onBuy,
 }: {
   bestOffer: BundleOffer | null
   qty: number
   setQty: (n: number) => void
   isOwn: boolean
+  onBuy: (listingId: string, quantity: number) => void
 }) {
   if (!bestOffer) {
     return (
-      <Card className="relative overflow-hidden border-border-default bg-[rgba(20,20,27,0.56)] p-6 backdrop-blur-md">
+      <Card className="relative overflow-hidden border-border-default bg-bg-overlay p-6">
         <div className="text-[24px] font-black text-text-disabled">N/A</div>
         <p className="mt-3 text-[13px] text-text-tertiary">
           No sellers for this bundle in the selected region yet. Try another region
@@ -547,7 +798,18 @@ function OfferPanel({
   const total = bestOffer.pricePerBundle * qty
 
   return (
-    <Card className="relative flex h-full min-h-[440px] flex-col overflow-hidden border-border-default bg-[rgba(20,20,27,0.56)] p-5 shadow-elevated backdrop-blur-md">
+    <>
+    {/* V43 — SafeDrop emblem watermark peeks from the corner (matches
+        the item + currency buy panels). `isolate` creates the stacking
+        context so the -z-10 art paints above the card bg but below rows. */}
+    <Card className="relative isolate flex h-full min-h-[440px] flex-col overflow-hidden border-border-default bg-bg-overlay p-5 shadow-elevated">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src="/icons/safedrop-emblem.png"
+        alt=""
+        aria-hidden
+        className="pointer-events-none absolute -bottom-16 -right-8 -z-10 h-44 w-44 rotate-12 select-none opacity-[0.32]"
+      />
       {/* V19/P24/P7.m — Each block is its own row with `py-3` padding
           and a `border-b border-border-subtle` divider, giving the
           panel a clean "stacked table" feel that fills vertical space
@@ -625,18 +887,21 @@ function OfferPanel({
         </div>
       ) : (
         <Button
-          asChild
+          onClick={() => onBuy(bestOffer.listingId, qty)}
           className="mt-4 h-12 w-full bg-lime text-[15px] font-bold tracking-wide text-text-inverse hover:bg-lime-hover"
         >
-          <Link href={`/checkout/${bestOffer.listingId}?qty=${qty}`}>
-            Buy Now
-          </Link>
+          Buy Now
         </Button>
       )}
 
-      {/* 7) Trust band */}
-      <TrustBand />
     </Card>
+
+      {/* 7) Trust tiles — own card below the panel (item-page rail
+          format; same width so alignment is automatic). */}
+      <Card className="relative mt-3 overflow-hidden border-border-default bg-bg-overlay p-4 shadow-elevated">
+        <TrustBand />
+      </Card>
+    </>
   )
 }
 
@@ -688,85 +953,6 @@ function KeyValue({
           (now brightened) + medium weight, not the dim tertiary. */}
       <div className="font-medium text-text-secondary">{value}</div>
     </div>
-  )
-}
-
-/* ── Trust band — 3 hover-revealed guarantees ────────────────────── */
-
-const TRUST_ITEMS: Array<{
-  key: 'guarantee' | 'fast' | 'support'
-  label: string
-  tooltip: string
-  icon: React.ComponentType<{ className?: string }>
-  accent: string
-}> = [
-  {
-    key: 'guarantee',
-    label: 'Money-back',
-    tooltip:
-      'Full refund if the seller doesn’t deliver. Escrow holds your payment until you confirm.',
-    icon: ShieldCheck,
-    accent: 'text-lime-text',
-  },
-  {
-    key: 'fast',
-    label: 'Quick delivery',
-    tooltip:
-      'Average delivery under 15 minutes. Listings are ranked by speed so the fastest sellers come first.',
-    icon: Zap,
-    accent: 'text-warning',
-  },
-  {
-    key: 'support',
-    label: '24/7 support',
-    tooltip:
-      'Live human support every day of the year. Open a ticket or chat in-app any time.',
-    icon: Headphones,
-    accent: 'text-info',
-  },
-]
-
-function TrustBand() {
-  return (
-    <TooltipProvider delayDuration={150}>
-      {/* V19/P24/P7.e.c — Column layout per tile (icon above label),
-          compact so 3 fit without overlap in the 360px panel. Label
-          allowed to wrap to 2 lines, balanced. */}
-      <div className="mt-4 grid grid-cols-3 gap-2">
-        {TRUST_ITEMS.map((item) => {
-          const Icon = item.icon
-          return (
-            <Tooltip key={item.key}>
-              <TooltipTrigger asChild>
-                <button
-                  type="button"
-                  className="group flex min-w-0 flex-col items-center gap-1.5 rounded-xl border border-border-subtle bg-bg-inset/70 px-1.5 py-2.5 transition-colors hover:border-border-default hover:bg-bg-overlay"
-                >
-                  <span
-                    className={cn(
-                      'flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-bg-overlay transition-transform group-hover:scale-110',
-                      item.accent,
-                    )}
-                  >
-                    <Icon className="h-4 w-4" />
-                  </span>
-                  <span className="text-balance text-center text-[10.5px] font-semibold leading-tight text-text-secondary group-hover:text-text-primary">
-                    {item.label}
-                  </span>
-                </button>
-              </TooltipTrigger>
-              <TooltipContent
-                side="top"
-                sideOffset={6}
-                className="max-w-[220px] text-[12.5px] leading-snug"
-              >
-                {item.tooltip}
-              </TooltipContent>
-            </Tooltip>
-          )
-        })}
-      </div>
-    </TooltipProvider>
   )
 }
 
@@ -840,8 +1026,13 @@ function SellerRow({
   onSelect: () => void
 }) {
   return (
-    <Card className="overflow-hidden border-border-default bg-[rgba(20,20,27,0.56)] backdrop-blur-md transition-colors hover:bg-[rgba(26,26,35,0.70)]">
-      <div className="flex items-center gap-3 p-4 sm:gap-5 sm:p-5">
+    <Card className="group relative overflow-hidden border-border-default bg-[rgba(20,20,27,0.56)] backdrop-blur-md transition-all duration-200 hover:-translate-y-0.5 hover:border-border-strong hover:bg-[rgba(26,26,35,0.70)] hover:shadow-[0_12px_24px_-12px_rgba(0,0,0,0.6)]">
+      {/* Top sheen — bundle-tile light-from-above. */}
+      <span
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-0 h-1/2 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.05),transparent)]"
+      />
+      <div className="relative flex items-center gap-3 p-4 sm:gap-5 sm:p-5">
         {/* Seller — leads the row, clickable chip → /shop/{username} */}
         <div className="min-w-0 flex-1">
           <SellerChip offer={offer} />

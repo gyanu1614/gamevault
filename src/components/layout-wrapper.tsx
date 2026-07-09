@@ -20,7 +20,10 @@ export function LayoutWrapper({ children }: { children: React.ReactNode }) {
   // navbar + checkout-specific footer so the buyer can't leak out
   // mid-purchase. Matches industry pattern (G2A, G2G, Eldorado,
   // 2Game) which Baymard found lifts conversion 5–15%.
-  const isCheckout = pathname?.startsWith('/checkout')
+  // (dev-only /dev/checkout-preview mirrors the checkout chrome so the
+  // design harness renders faithfully; route 404s in production.)
+  const isCheckout =
+    pathname?.startsWith('/checkout') || pathname?.startsWith('/dev/checkout-preview')
 
   // Check if we're on a seller page with sidebar (not /new or /edit)
   const isSellerPageWithSidebar = pathname?.startsWith('/seller') &&
@@ -35,6 +38,8 @@ export function LayoutWrapper({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex min-h-screen flex-col">
+      {/* P5 — Checkout strips the global navbar: the page carries its
+          own slim header (brand left · secure badge right). */}
       {!isAdminPage && !isCheckout && <Navbar forceScrolled={isSellWizard} />}
       <main className="flex-1">{children}</main>
       {!isAdminPage && !isSellWizard && !isCheckout && <Footer hasSellerSidebar={hasSidebar} />}

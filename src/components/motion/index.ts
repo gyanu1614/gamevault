@@ -1,5 +1,5 @@
 /**
- * GameVault Motion Components — barrel export
+ * DropMarket Motion Components — barrel export
  *
  * Usage:
  * import { FadeIn, StaggerList, StaggerItem, AnimatedCounter, MagneticButton } from '@/components/motion'

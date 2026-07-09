@@ -84,7 +84,7 @@ export default function GameSubNav({
        V19/P24/P7.o — Outer wrapper bg removed so the body's violet
        gradient bleeds through. The inner pill keeps its own opaque
        bg + blur so it stays readable on top of the gradient. */
-    <div className="relative z-40 flex justify-center py-6 sm:py-8 md:py-10 pointer-events-none px-3">
+    <div className="relative z-40 flex justify-center py-3 sm:py-4 md:py-5 pointer-events-none px-3">
       <div
         className={cn(
           'pointer-events-auto w-full max-w-fit',
@@ -94,23 +94,23 @@ export default function GameSubNav({
           // instead of a flat black pill. Inline rgba because our
           // tokens are raw hex (Tailwind /opacity doesn't apply).
           'rounded-full border border-white/[0.1] shadow-2xl backdrop-blur-2xl backdrop-saturate-150',
-          'px-2 py-2 sm:px-3 sm:py-2.5',
+          'px-2 py-1.5 sm:px-2.5 sm:py-2',
         )}
         style={{ backgroundColor: 'rgba(28, 28, 37, 0.30)' }}
       >
         {/* ── Game name / logo ───────────────────────────────────────── */}
         <Link
           href={`/${gameSlug}`}
-          className="group flex items-center gap-2 flex-shrink-0 rounded-full px-3 py-1.5 sm:px-4 sm:py-2 transition-colors hover:bg-bg-raised-hover"
+          className="group flex items-center gap-2 flex-shrink-0 rounded-full px-2.5 py-1 sm:px-3.5 sm:py-1.5 transition-colors hover:bg-bg-raised-hover"
         >
           {gameImageUrl ? (
             <img
               src={gameImageUrl}
               alt={gameName}
-              className="w-6 h-6 sm:w-7 sm:h-7 rounded-md object-contain opacity-95"
+              className="w-5 h-5 sm:w-[26px] sm:h-[26px] rounded-md object-contain opacity-95"
             />
           ) : null}
-          <span className="text-sm sm:text-[15px] font-bold text-gray-200 group-hover:text-text-primary transition-colors whitespace-nowrap tracking-tight">
+          <span className="text-[13px] sm:text-[14.5px] font-bold text-gray-200 group-hover:text-text-primary transition-colors whitespace-nowrap tracking-tight">
             {gameName}
           </span>
         </Link>
@@ -148,7 +148,7 @@ export default function GameSubNav({
                   onClick={() => goToCategory(cat.slug)}
                   disabled={isPending}
                   className={cn(
-                    'relative flex-shrink-0 flex items-center gap-1.5 px-2.5 py-1 sm:px-3.5 sm:py-1.5 text-xs sm:text-sm font-medium whitespace-nowrap rounded-full transition-colors',
+                    'relative flex-shrink-0 flex items-center gap-1.5 px-2.5 py-1 sm:px-3.5 sm:py-1.5 text-xs sm:text-[13.5px] font-medium whitespace-nowrap rounded-full transition-colors',
                     isActive
                       ? 'text-text-primary'
                       : 'text-text-secondary hover:text-gray-100 hover:bg-bg-overlay',

@@ -65,6 +65,42 @@ function setCachedSellerStatus(userId: string, isApprovedSeller: boolean, status
   } catch {}
 }
 
+// V65 — Profile fetch with timeout + retry.
+//
+// Two real-world failure modes made the navbar render the default avatar
+// until a manual refresh:
+//  1. Brand-new accounts: the `profiles` row is inserted by a DB trigger
+//     and can commit AFTER the client's SIGNED_IN event — the first
+//     `.single()` finds 0 rows.
+//  2. The fetch racing a 5s timeout while the supabase auth lock is held
+//     (see the deferred onAuthStateChange below).
+// A couple of short retries covers both.
+async function fetchProfileWithRetry(
+  supabase: ReturnType<typeof createClient>,
+  userId: string,
+  tries = 3,
+): Promise<Profile | null> {
+  for (let attempt = 0; attempt < tries; attempt++) {
+    try {
+      const profilePromise = supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single()
+      const profileTimeout = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Profile fetch timeout')), 5000)
+      )
+      const { data: profile } = await Promise.race([profilePromise, profileTimeout]) as any
+      if (profile) return profile as Profile
+    } catch (err) {
+      console.warn(`⚠️ Profile fetch attempt ${attempt + 1} failed:`, err)
+    }
+    // brief backoff before retrying (new-account trigger latency)
+    await new Promise((r) => setTimeout(r, 600 * (attempt + 1)))
+  }
+  return null
+}
+
 // Invalidate cache to force a fresh fetch
 export function invalidateAuthCache(userId?: string) {
   if (userId) {
@@ -142,26 +178,9 @@ function useAuthState(): AuthContextValue {
             })
           }
 
-          // Try to get fresh profile with timeout protection
+          // Try to get fresh profile (retry covers new-account trigger lag)
           try {
-            const profilePromise = supabase
-              .from('profiles')
-              .select('*')
-              .eq('id', userId)
-              .single()
-
-            const profileTimeout = new Promise((_, reject) =>
-              setTimeout(() => reject(new Error('Profile fetch timeout')), 5000) // Increased from 3s to 5s
-            )
-
-            const { data: profile, error: profileError } = await Promise.race([
-              profilePromise,
-              profileTimeout,
-            ]) as any
-
-            if (profileError) {
-              console.warn('⚠️ Profile fetch error:', profileError.message)
-            }
+            const profile = await fetchProfileWithRetry(supabase, userId)
 
             // Cache the profile if successfully fetched
             if (profile) {
@@ -257,8 +276,15 @@ function useAuthState(): AuthContextValue {
 
     initAuth()
 
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    // Listen for auth changes.
+    //
+    // V65 — The async work is DEFERRED with setTimeout(0): supabase-js
+    // holds its auth lock while onAuthStateChange callbacks run, and
+    // awaiting a supabase query inside the callback deadlocks against
+    // that lock (documented gotcha). The query then lost the race to our
+    // 5s timeout, we fell back to the cached/null profile, and the navbar
+    // showed the default avatar until a later event (~1 min) retried.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (!mounted) return
 
       if (event === 'SIGNED_OUT') {
@@ -275,6 +301,8 @@ function useAuthState(): AuthContextValue {
         return
       }
 
+      setTimeout(async () => {
+      if (!mounted) return
       if (session?.user) {
         const userId = session.user.id
 
@@ -293,59 +321,55 @@ function useAuthState(): AuthContextValue {
         }
 
         try {
-          // Get profile with timeout
-          const profilePromise = supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', userId)
-            .single()
-
-          const profileTimeout = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('Profile timeout')), 5000) // Increased from 3s to 5s
-          )
-
-          const { data: profile } = await Promise.race([
-            profilePromise,
-            profileTimeout,
-          ]) as any
+          // Get profile (retry covers new-account trigger lag)
+          const profile = await fetchProfileWithRetry(supabase, userId)
 
           // Cache the profile if successfully fetched
           if (profile) {
             setCachedProfile(userId, profile)
           }
 
-          // Check seller application status with timeout
+          // Seller status — MUST mirror initAuth's logic (they were divergent,
+          // which caused the post-login bug: an approved seller showed as a
+          // buyer ("Become a Seller", no Seller Dashboard) until a refresh ran
+          // initAuth). profiles.role is the source of truth for APPROVED sellers
+          // (admin approval sets role='seller'); only non-approved users need
+          // the seller_applications lookup.
           let isApprovedSeller = cachedSellerStatus?.isApprovedSeller || false
           let sellerApplicationStatus = cachedSellerStatus?.status || null
 
-          try {
-            const sellerAppPromise = supabase
-              .from('seller_applications')
-              .select('status')
-              .eq('user_id', userId)
-              .order('created_at', { ascending: false })
-              .limit(1)
-              .single()
+          if ((profile as any)?.role === 'seller') {
+            isApprovedSeller = true
+            sellerApplicationStatus = 'approved'
+            setCachedSellerStatus(userId, true, 'approved')
+          } else {
+            try {
+              const sellerAppPromise = supabase
+                .from('seller_applications')
+                .select('status')
+                .eq('user_id', userId)
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .single()
 
-            const sellerTimeout = new Promise((_, reject) =>
-              setTimeout(() => reject(new Error('Seller status timeout')), 5000) // Increased from 2s to 5s
-            )
+              const sellerTimeout = new Promise((_, reject) =>
+                setTimeout(() => reject(new Error('Seller status timeout')), 5000)
+              )
 
-            const { data: sellerApp } = await Promise.race([
-              sellerAppPromise,
-              sellerTimeout
-            ]) as any
+              const { data: sellerApp } = await Promise.race([
+                sellerAppPromise,
+                sellerTimeout
+              ]) as any
 
-            if (sellerApp) {
-              sellerApplicationStatus = sellerApp.status
-              isApprovedSeller = sellerApp.status === 'approved'
-              // Cache the seller status
-              setCachedSellerStatus(userId, isApprovedSeller, sellerApplicationStatus)
+              if (sellerApp) {
+                sellerApplicationStatus = sellerApp.status
+                isApprovedSeller = sellerApp.status === 'approved'
+                setCachedSellerStatus(userId, isApprovedSeller, sellerApplicationStatus)
+              }
+            } catch (err) {
+              // On timeout/error keep the cached value instead of resetting.
+              console.warn('⚠️ Seller status check failed in auth change, using cached value:', err)
             }
-          } catch (err) {
-            // On timeout or error, keep the cached value instead of resetting to false
-            console.warn('⚠️ Seller status check failed in auth change, using cached value:', err)
-            // Don't reset - keep cached values
           }
 
           if (mounted) {
@@ -375,6 +399,7 @@ function useAuthState(): AuthContextValue {
       if (mounted) {
         setLoading(false)
       }
+      }, 0)
     })
 
     return () => {

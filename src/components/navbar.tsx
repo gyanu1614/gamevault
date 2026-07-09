@@ -27,7 +27,7 @@ export function Navbar() {
             <span className="text-lg font-bold text-primary-foreground">G</span>
           </div>
           <span className="hidden font-bold sm:inline-block">
-            GameVault
+            DropMarket
           </span>
         </Link>
 

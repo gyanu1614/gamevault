@@ -3,7 +3,7 @@
  *
  * Handles upload and management of delivery evidence (screenshots/videos)
  * Bucket: delivery-evidence (private, 50MB limit, images + videos)
- * Used by VaultShield escrow system
+ * Used by SafeDrop escrow system
  */
 
 import { createClient } from '@/lib/supabase/client'

@@ -3,6 +3,11 @@
 /**
  * P6.5 — Admin GDPR Request Management Client
  *
+ * V53 restyle — rebuilt on the admin kit (PageHeader / StatCard /
+ * AdminPanel / StatusBadge / TABLE). Entrance animations removed so
+ * content is visible straight from the server HTML; only user-triggered
+ * transitions (modal, row exit) remain.
+ *
  * Sections:
  *  1. Request list with status tabs (pending / all)
  *  2. Per-request detail: type, user, date
@@ -14,19 +19,11 @@ import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
 import {
-  Shield, Download, Trash2, Clock, CheckCircle2,
-  XCircle, Loader2, AlertTriangle, X,
+  Download, Trash2, CheckCircle2, Loader2, AlertTriangle, X,
 } from 'lucide-react'
 import { processGdprRequest, getGdprRequests } from '@/lib/actions/gdpr'
 import type { GdprRequest } from '@/lib/actions/gdpr'
-
-// ── Animation variants ─────────────────────────────────────────────────────
-
-const container = {
-  hidden: { opacity: 0 },
-  show:   { opacity: 1, transition: { staggerChildren: 0.06 } },
-}
-const item = { hidden: { opacity: 0, y: 16 }, show: { opacity: 1, y: 0 } }
+import { PageHeader, StatCard, StatusBadge, TABLE } from '../components/kit'
 
 // ── Request row ────────────────────────────────────────────────────────────
 
@@ -42,79 +39,73 @@ function RequestRow({ req, onComplete, onReject, loading }: {
   return (
     <motion.tr
       layout
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -8 }}
-      className="border-b border-white/[0.04] hover:bg-white/[0.02] transition-colors"
+      initial={false}
+      exit={{ opacity: 0 }}
+      className={TABLE.row}
     >
       {/* Type */}
-      <td className="px-4 py-3">
-        <div className={`inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded ${
-          isDel ? 'bg-red-500/10 text-red-400' : 'bg-blue-500/10 text-blue-400'
+      <td className={TABLE.td}>
+        <span className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-[11px] font-semibold ${
+          isDel
+            ? 'border-[rgba(255,92,92,0.25)] bg-error-bg text-error'
+            : 'border-[rgba(88,155,255,0.25)] bg-info-bg text-info'
         }`}>
-          {isDel ? <Trash2 className="w-3 h-3" /> : <Download className="w-3 h-3" />}
+          {isDel ? <Trash2 className="h-3 w-3" /> : <Download className="h-3 w-3" />}
           {isDel ? 'Deletion' : 'Export'}
-        </div>
+        </span>
       </td>
 
       {/* User */}
-      <td className="px-4 py-3">
-        <p className="text-sm text-white">{req.username ? `@${req.username}` : '—'}</p>
-        <p className="text-xs text-white/30">{req.email}</p>
+      <td className={TABLE.td}>
+        <p className="text-[13.5px] font-semibold text-text-primary">{req.username ? `@${req.username}` : '—'}</p>
+        <p className="text-[12px] text-text-tertiary">{req.email}</p>
       </td>
 
       {/* Date */}
-      <td className="px-4 py-3 text-xs text-white/40">
+      <td className={`${TABLE.td} text-[12px] text-text-tertiary`}>
         {new Date(req.requested_at).toLocaleDateString('en-US', {
           month: 'short', day: 'numeric', year: 'numeric',
         })}
       </td>
 
       {/* Status */}
-      <td className="px-4 py-3">
-        <span className={`text-xs font-medium capitalize px-2 py-0.5 rounded ${
-          req.status === 'completed' ? 'text-green-400 bg-green-500/10' :
-          req.status === 'rejected'  ? 'text-red-400 bg-red-500/10'    :
-          req.status === 'pending'   ? 'text-amber-400 bg-amber-500/10' :
-          'text-blue-400 bg-blue-500/10'
-        }`}>
-          {req.status}
-        </span>
+      <td className={TABLE.td}>
+        <StatusBadge status={req.status} />
         {req.rejection_reason && (
-          <p className="text-[10px] text-red-400/70 mt-0.5 max-w-[160px] truncate">{req.rejection_reason}</p>
+          <p className="mt-0.5 max-w-[160px] truncate text-[10px] text-error">{req.rejection_reason}</p>
         )}
       </td>
 
       {/* Actions */}
-      <td className="px-4 py-3">
+      <td className={TABLE.td}>
         {req.status === 'pending' || req.status === 'processing' ? (
           <div className="flex items-center gap-1.5">
             <button
               disabled={busy}
               onClick={() => onComplete(req.id)}
-              className={`flex items-center gap-1 px-2 py-1 rounded text-[11px] font-medium transition-colors disabled:opacity-40
+              className={`flex items-center gap-1 rounded-md border px-2 py-1 text-[11px] font-semibold transition-colors disabled:opacity-40
                 ${isDel
-                  ? 'bg-red-500/10 text-red-400 hover:bg-red-500/20'
-                  : 'bg-green-500/10 text-green-400 hover:bg-green-500/20'
+                  ? 'border-[rgba(255,92,92,0.25)] bg-error-bg text-error hover:bg-[rgba(255,92,92,0.22)]'
+                  : 'border-[rgba(63,217,134,0.25)] bg-success-bg text-success hover:bg-[rgba(63,217,134,0.22)]'
                 }`}
             >
               {busy
-                ? <Loader2 className="w-3 h-3 animate-spin" />
-                : isDel ? <Trash2 className="w-3 h-3" /> : <CheckCircle2 className="w-3 h-3" />
+                ? <Loader2 className="h-3 w-3 animate-spin" />
+                : isDel ? <Trash2 className="h-3 w-3" /> : <CheckCircle2 className="h-3 w-3" />
               }
               {isDel ? 'Delete Account' : 'Mark Done'}
             </button>
             <button
               disabled={busy}
               onClick={() => onReject(req.id)}
-              className="flex items-center gap-1 px-2 py-1 rounded text-[11px] bg-white/[0.05] text-white/40 hover:bg-white/[0.08] transition-colors disabled:opacity-40"
+              className="flex items-center gap-1 rounded-md border border-border-default bg-bg-overlay px-2 py-1 text-[11px] font-semibold text-text-secondary transition-colors hover:bg-bg-overlay-2 hover:text-text-primary disabled:opacity-40"
             >
-              <X className="w-3 h-3" />
+              <X className="h-3 w-3" />
               Reject
             </button>
           </div>
         ) : (
-          <span className="text-xs text-white/20">
+          <span className="text-[12px] text-text-tertiary">
             {req.completed_at ? new Date(req.completed_at).toLocaleDateString() : '—'}
           </span>
         )}
@@ -190,29 +181,29 @@ export default function GdprAdminClient({ initialRequests, fetchError }: Props) 
         {rejectTarget && (
           <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
           >
             <motion.div
               initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }}
-              className="bg-[#111] border border-white/[0.08] rounded-2xl p-6 max-w-md w-full"
+              className="w-full max-w-md rounded-xl border border-border-default bg-bg-raised p-6"
             >
-              <h3 className="text-white font-semibold mb-3">Rejection Reason</h3>
+              <h3 className="mb-3 font-semibold text-text-primary">Rejection Reason</h3>
               <textarea
                 value={rejectReason}
                 onChange={e => setRejectReason(e.target.value)}
                 placeholder="Reason for rejection (e.g., active orders pending, outstanding seller balance)…"
                 rows={4}
-                className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2.5 text-sm
-                           text-white placeholder:text-white/20 focus:outline-none resize-none mb-4"
+                className="mb-4 w-full resize-none rounded-lg border border-border-default bg-bg-base px-3 py-2.5 text-sm
+                           text-text-primary placeholder:text-text-disabled focus:border-lime focus:outline-none"
               />
-              <div className="flex gap-2 justify-end">
-                <button onClick={() => setRejectTarget(null)} className="px-4 py-2 text-sm text-white/50 hover:text-white">
+              <div className="flex justify-end gap-2">
+                <button onClick={() => setRejectTarget(null)} className="px-4 py-2 text-sm text-text-tertiary transition-colors hover:text-text-primary">
                   Cancel
                 </button>
                 <button
                   onClick={handleReject}
                   disabled={!rejectReason.trim()}
-                  className="px-4 py-2 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500/30 text-sm font-medium disabled:opacity-40"
+                  className="rounded-lg border border-[rgba(255,92,92,0.25)] bg-error-bg px-4 py-2 text-sm font-semibold text-error transition-colors hover:bg-[rgba(255,92,92,0.22)] disabled:opacity-40"
                 >
                   Reject Request
                 </button>
@@ -222,68 +213,60 @@ export default function GdprAdminClient({ initialRequests, fetchError }: Props) 
         )}
       </AnimatePresence>
 
-      <motion.div variants={container} initial="hidden" animate="show" className="space-y-6 pb-10">
+      <div className="space-y-6 pb-10">
         {/* Header */}
-        <motion.div variants={item} className="flex items-center gap-3">
-          <Shield className="w-6 h-6 text-blue-400" />
-          <div>
-            <h1 className="text-2xl font-bold text-white">GDPR Requests</h1>
-            <p className="text-white/40 text-sm">Data export and account deletion requests.</p>
-          </div>
-        </motion.div>
+        <PageHeader
+          title="GDPR Requests"
+          description="Data export and account deletion requests."
+          className="mb-0"
+        />
 
         {/* Deletion warning */}
         {deletionCount > 0 && (
-          <motion.div variants={item} className="flex items-start gap-3 bg-red-500/10 border border-red-500/20 rounded-xl p-4">
-            <AlertTriangle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+          <div className="flex items-start gap-3 rounded-xl border border-[rgba(255,92,92,0.25)] bg-error-bg p-4">
+            <AlertTriangle className="mt-0.5 h-5 w-5 flex-shrink-0 text-error" />
             <div>
-              <p className="text-sm font-semibold text-red-400">{deletionCount} Account Deletion Request{deletionCount !== 1 ? 's' : ''}</p>
-              <p className="text-xs text-white/50 mt-0.5">
+              <p className="text-sm font-semibold text-error">{deletionCount} Account Deletion Request{deletionCount !== 1 ? 's' : ''}</p>
+              <p className="mt-0.5 text-xs text-text-secondary">
                 Completing a deletion request is irreversible. Verify: no active orders, seller balance = 0,
                 no pending payouts. The auth user will be permanently deleted.
               </p>
             </div>
-          </motion.div>
+          </div>
         )}
 
         {/* Stats */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {[
-            { label: 'Pending',    value: requests.filter(r => r.status === 'pending').length,    color: 'text-amber-400', bg: 'bg-amber-500/10' },
-            { label: 'Deletions',  value: deletionCount,                                          color: 'text-red-400',   bg: 'bg-red-500/10'   },
-            { label: 'Exports',    value: requests.filter(r => r.type === 'export').length,       color: 'text-blue-400',  bg: 'bg-blue-500/10'  },
-            { label: 'Processing', value: requests.filter(r => r.status === 'processing').length, color: 'text-violet-400', bg: 'bg-violet-500/10' },
-          ].map(c => (
-            <motion.div key={c.label} variants={item}
-              className="bg-[#0d0d0d] border border-white/[0.06] rounded-xl p-4">
-              <p className={`text-xl font-bold font-mono ${c.color}`}>{c.value}</p>
-              <p className="text-xs text-white/40 mt-0.5">{c.label}</p>
-            </motion.div>
-          ))}
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <StatCard label="Pending"    value={requests.filter(r => r.status === 'pending').length}    tone="warning" />
+          <StatCard label="Deletions"  value={deletionCount}                                          tone="error" />
+          <StatCard label="Exports"    value={requests.filter(r => r.type === 'export').length}       tone="info" />
+          <StatCard label="Processing" value={requests.filter(r => r.status === 'processing').length} tone="lime" />
         </div>
 
         {/* Table */}
-        <motion.div variants={item} className="bg-[#0d0d0d] border border-white/[0.06] rounded-xl overflow-hidden">
+        <section className="overflow-hidden rounded-xl border border-border-default bg-bg-raised">
           {/* Tabs */}
-          <div className="flex border-b border-white/[0.06]">
+          <div className="flex border-b border-border-subtle">
             {(['pending', 'all'] as Tab[]).map(t => (
               <button key={t} onClick={() => handleTabChange(t)}
-                className={`px-4 py-3 text-sm font-medium capitalize transition-colors ${
-                  activeTab === t ? 'text-white border-b-2 border-blue-400' : 'text-white/40 hover:text-white/60'
+                className={`px-4 py-3 text-sm font-semibold capitalize transition-colors ${
+                  activeTab === t
+                    ? 'border-b-2 border-lime text-text-primary'
+                    : 'text-text-tertiary hover:text-text-secondary'
                 }`}>
                 {t === 'pending' ? 'Pending' : 'All Requests'}
               </button>
             ))}
           </div>
 
-          {fetchError && <div className="p-4 text-sm text-red-400">{fetchError}</div>}
+          {fetchError && <div className="p-4 text-sm text-error">{fetchError}</div>}
 
-          <div className="overflow-x-auto">
-            <table className="w-full">
+          <div className={TABLE.wrap}>
+            <table className={TABLE.table}>
               <thead>
-                <tr className="border-b border-white/[0.04]">
+                <tr>
                   {['Type', 'User', 'Date', 'Status', 'Actions'].map(h => (
-                    <th key={h} className="px-4 py-3 text-left text-[11px] uppercase tracking-wider text-white/30">
+                    <th key={h} className={TABLE.th}>
                       {h}
                     </th>
                   ))}
@@ -293,12 +276,12 @@ export default function GdprAdminClient({ initialRequests, fetchError }: Props) 
                 <AnimatePresence mode="popLayout">
                   {tabLoading ? (
                     <tr><td colSpan={5} className="py-12 text-center">
-                      <Loader2 className="w-6 h-6 animate-spin text-white/30 mx-auto" />
+                      <Loader2 className="mx-auto h-6 w-6 animate-spin text-text-tertiary" />
                     </td></tr>
                   ) : requests.length === 0 ? (
                     <tr><td colSpan={5} className="py-12 text-center">
-                      <CheckCircle2 className="w-8 h-8 text-green-400/50 mx-auto mb-2" />
-                      <p className="text-sm text-white/30">No {activeTab} GDPR requests.</p>
+                      <CheckCircle2 className="mx-auto mb-2 h-8 w-8 text-success" />
+                      <p className="text-sm text-text-tertiary">No {activeTab} GDPR requests.</p>
                     </td></tr>
                   ) : (
                     requests.map(req => (
@@ -315,8 +298,8 @@ export default function GdprAdminClient({ initialRequests, fetchError }: Props) 
               </tbody>
             </table>
           </div>
-        </motion.div>
-      </motion.div>
+        </section>
+      </div>
     </>
   )
 }

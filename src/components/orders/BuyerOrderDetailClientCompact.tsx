@@ -842,7 +842,7 @@ export default function BuyerOrderDetailClient({
 
                 {/* Reason input */}
                 <div className="mb-3">
-                  <span className="text-[9px] font-semibold text-text-disabled uppercase tracking-[0.08em] mb-1.5 block">
+                  <span className="text-[11px] font-semibold text-text-disabled uppercase tracking-wider mb-1.5 block">
                     Reason for cancellation
                   </span>
                   <textarea
@@ -944,7 +944,7 @@ export default function BuyerOrderDetailClient({
 
                 {/* Category pills */}
                 <div className="mb-3">
-                  <span className="text-[9px] font-semibold text-text-disabled uppercase tracking-[0.08em] mb-1.5 block">
+                  <span className="text-[11px] font-semibold text-text-disabled uppercase tracking-wider mb-1.5 block">
                     What went wrong?
                   </span>
                   <div className="flex flex-wrap gap-1.5">
@@ -969,7 +969,7 @@ export default function BuyerOrderDetailClient({
                 {/* Description - only show when "Other" is selected */}
                 {selectedCategory === 'Other' && (
                   <div className="mb-3">
-                    <span className="text-[9px] font-semibold text-text-disabled uppercase tracking-[0.08em] mb-1.5 block">
+                    <span className="text-[11px] font-semibold text-text-disabled uppercase tracking-wider mb-1.5 block">
                       Details
                     </span>
                     <textarea
@@ -1066,7 +1066,7 @@ export default function BuyerOrderDetailClient({
 
                 {cancellationRequest?.reason && (
                   <div className="mb-3">
-                    <span className="text-[9px] font-semibold text-text-disabled uppercase tracking-[0.08em] mb-1.5 block">
+                    <span className="text-[11px] font-semibold text-text-disabled uppercase tracking-wider mb-1.5 block">
                       Your Reason
                     </span>
                     <p className="text-xs text-text-tertiary bg-bg-overlay border border-border-subtle rounded-lg p-2.5 leading-relaxed">
@@ -1179,7 +1179,7 @@ export default function BuyerOrderDetailClient({
             </>
           )}
 
-          {/* ⑧ VaultShield Protection - Clean & Confident */}
+          {/* ⑧ SafeDrop Protection - Clean & Confident */}
           {order.vaultshield_tier && (
             <SidebarCard className="border-lime-tint-border bg-gradient-to-br from-lime/5 to-transparent">
               {/* Header with tier badge */}
@@ -1189,7 +1189,7 @@ export default function BuyerOrderDetailClient({
                     <ShieldCheck className="h-6 w-6 text-white" />
                   </div>
                   <div>
-                    <div className="text-base font-bold text-white">VaultShield™</div>
+                    <div className="text-base font-bold text-white">SafeDrop™</div>
                     <div className="text-xs text-lime-text font-medium">
                       {order.vaultshield_tier === 'standard' && '48-Hour Protection'}
                       {order.vaultshield_tier === 'enhanced' && '7-Day Protection'}
@@ -1275,7 +1275,7 @@ export default function BuyerOrderDetailClient({
                   </button>
                 )}
                 <a
-                  href="/vaultshield"
+                  href="/safedrop"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex-1 flex items-center justify-center gap-2 rounded-lg border border-border-subtle bg-bg-overlay px-3 py-2 text-xs font-medium text-text-secondary transition-colors hover:border-white/[0.12] hover:bg-bg-raised hover:text-text-secondary"
@@ -1311,7 +1311,7 @@ export default function BuyerOrderDetailClient({
                   <div className="flex items-center gap-1.5">
                     <ShieldCheck className="h-3 w-3 text-lime-text" />
                     <span className="text-xs text-lime-text font-medium">
-                      VaultShield {order.vaultshield_tier.charAt(0).toUpperCase() + order.vaultshield_tier.slice(1)}
+                      SafeDrop {order.vaultshield_tier.charAt(0).toUpperCase() + order.vaultshield_tier.slice(1)}
                     </span>
                   </div>
                   <span className="text-xs text-lime-text font-mono">+${order.vaultshield_tier_fee.toFixed(2)}</span>

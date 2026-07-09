@@ -8,7 +8,7 @@ import { MetadataRoute } from 'next'
 import { createClient } from '@/lib/supabase/server'
 import { getAllLandingPageSlugs } from '@/lib/seo/landingPages'
 
-const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://gamevault.com'
+const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://dropmarket.com'
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const supabase = await createClient()
@@ -23,13 +23,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     },
     // /marketplace redirects to / — no separate sitemap entry needed
     {
-      url: `${BASE_URL}/vaultshield`,
+      url: `${BASE_URL}/safedrop`,
       lastModified: new Date(),
       changeFrequency: 'weekly',
       priority: 0.8,
     },
     {
-      url: `${BASE_URL}/seller/register`,
+      url: `${BASE_URL}/account/become-seller`,
       lastModified: new Date(),
       changeFrequency: 'monthly',
       priority: 0.7,

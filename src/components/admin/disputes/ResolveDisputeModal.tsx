@@ -131,12 +131,12 @@ export default function ResolveDisputeModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[480px] max-h-[85vh] overflow-y-auto bg-black/95 backdrop-blur-xl border-white/[0.1]">
+      <DialogContent className="sm:max-w-[480px] max-h-[85vh] overflow-y-auto rounded-xl border-border-default bg-bg-raised">
         <DialogHeader>
-          <DialogTitle className="text-lg font-semibold text-white">
+          <DialogTitle className="text-lg font-semibold text-text-primary">
             Resolve Dispute
           </DialogTitle>
-          <DialogDescription className="text-sm text-gray-400">
+          <DialogDescription className="text-sm text-text-secondary">
             ${dispute.disputed_amount.toFixed(2)} · {dispute.buyer_username} vs {dispute.seller_username}
           </DialogDescription>
         </DialogHeader>
@@ -145,7 +145,7 @@ export default function ResolveDisputeModal({
 
           {/* Resolution Decision */}
           <div className="space-y-2">
-            <Label className="text-xs font-medium text-gray-400">Resolution Decision</Label>
+            <Label className="text-xs font-medium text-text-secondary">Resolution Decision</Label>
             <RadioGroup value={decision} onValueChange={(value) => setDecision(value as ResolutionDecision)}>
               {/* Favor Buyer */}
               <div
@@ -153,16 +153,16 @@ export default function ResolveDisputeModal({
                   'flex items-center gap-3 border rounded-lg p-3 cursor-pointer transition-all',
                   decision === 'buyer_favor'
                     ? 'bg-green-500/10 border-green-500/30 shadow-sm'
-                    : 'bg-white/[0.02] border-white/[0.05] hover:border-white/[0.1]'
+                    : 'bg-bg-overlay border-border-subtle hover:border-border-default'
                 )}
                 onClick={() => setDecision('buyer_favor')}
               >
                 <RadioGroupItem value="buyer_favor" id="buyer_favor" />
                 <div className="flex-1 min-w-0">
-                  <Label htmlFor="buyer_favor" className="text-sm font-medium text-white cursor-pointer">
+                  <Label htmlFor="buyer_favor" className="text-sm font-medium text-text-primary cursor-pointer">
                     Favor Buyer
                   </Label>
-                  <p className="text-xs text-gray-500 mt-0.5">
+                  <p className="text-xs text-text-tertiary mt-0.5">
                     Full refund · Seller $0
                   </p>
                 </div>
@@ -174,21 +174,21 @@ export default function ResolveDisputeModal({
                 className={cn(
                   'flex items-center gap-3 border rounded-lg p-3 cursor-pointer transition-all',
                   decision === 'seller_favor'
-                    ? 'bg-violet-500/10 border-violet-500/30 shadow-sm'
-                    : 'bg-white/[0.02] border-white/[0.05] hover:border-white/[0.1]'
+                    ? 'bg-lime-tint-bg border-lime-tint-border shadow-sm'
+                    : 'bg-bg-overlay border-border-subtle hover:border-border-default'
                 )}
                 onClick={() => setDecision('seller_favor')}
               >
                 <RadioGroupItem value="seller_favor" id="seller_favor" />
                 <div className="flex-1 min-w-0">
-                  <Label htmlFor="seller_favor" className="text-sm font-medium text-white cursor-pointer">
+                  <Label htmlFor="seller_favor" className="text-sm font-medium text-text-primary cursor-pointer">
                     Favor Seller
                   </Label>
-                  <p className="text-xs text-gray-500 mt-0.5">
+                  <p className="text-xs text-text-tertiary mt-0.5">
                     Release payment · No refund
                   </p>
                 </div>
-                <CheckCircle className="h-4 w-4 text-violet-400 flex-shrink-0" />
+                <CheckCircle className="h-4 w-4 text-lime-text flex-shrink-0" />
               </div>
 
               {/* Partial Refund */}
@@ -197,17 +197,17 @@ export default function ResolveDisputeModal({
                   'border rounded-lg cursor-pointer transition-all',
                   decision === 'partial'
                     ? 'bg-blue-500/10 border-blue-500/30 shadow-sm'
-                    : 'bg-white/[0.02] border-white/[0.05] hover:border-white/[0.1]'
+                    : 'bg-bg-overlay border-border-subtle hover:border-border-default'
                 )}
                 onClick={() => setDecision('partial')}
               >
                 <div className="flex items-center gap-3 p-3">
                   <RadioGroupItem value="partial" id="partial" />
                   <div className="flex-1 min-w-0">
-                    <Label htmlFor="partial" className="text-sm font-medium text-white cursor-pointer">
+                    <Label htmlFor="partial" className="text-sm font-medium text-text-primary cursor-pointer">
                       Partial Refund
                     </Label>
-                    <p className="text-xs text-gray-500 mt-0.5">
+                    <p className="text-xs text-text-tertiary mt-0.5">
                       Split amount
                     </p>
                   </div>
@@ -216,9 +216,9 @@ export default function ResolveDisputeModal({
 
                 {/* Partial Amount Input */}
                 {decision === 'partial' && (
-                  <div className="px-3 pb-3 pt-1 border-t border-white/[0.05]">
+                  <div className="px-3 pb-3 pt-1 border-t border-border-subtle">
                     <div className="relative mt-2">
-                      <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-gray-500">$</span>
+                      <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-text-tertiary">$</span>
                       <Input
                         id="partialAmount"
                         type="number"
@@ -228,11 +228,11 @@ export default function ResolveDisputeModal({
                         value={partialAmount}
                         onChange={(e) => setPartialAmount(e.target.value)}
                         placeholder="0.00"
-                        className="pl-6 h-8 text-sm bg-white/[0.05] border-white/[0.1] text-white"
+                        className="pl-6 h-8 text-sm rounded-lg bg-bg-base border-border-default text-text-primary focus:border-lime focus:outline-none"
                       />
                     </div>
                     {partialAmount && parseFloat(partialAmount) > 0 && (
-                      <p className="text-xs text-gray-500 mt-1.5">
+                      <p className="text-xs text-text-tertiary mt-1.5">
                         Seller gets ${(dispute.disputed_amount - parseFloat(partialAmount || '0')).toFixed(2)}
                       </p>
                     )}
@@ -245,28 +245,28 @@ export default function ResolveDisputeModal({
                 className={cn(
                   'flex items-center gap-3 border rounded-lg p-3 cursor-pointer transition-all',
                   decision === 'dismiss'
-                    ? 'bg-gray-500/10 border-gray-500/30 shadow-sm'
-                    : 'bg-white/[0.02] border-white/[0.05] hover:border-white/[0.1]'
+                    ? 'bg-bg-overlay-2 border-border-strong shadow-sm'
+                    : 'bg-bg-overlay border-border-subtle hover:border-border-default'
                 )}
                 onClick={() => setDecision('dismiss')}
               >
                 <RadioGroupItem value="dismiss" id="dismiss" />
                 <div className="flex-1 min-w-0">
-                  <Label htmlFor="dismiss" className="text-sm font-medium text-white cursor-pointer">
+                  <Label htmlFor="dismiss" className="text-sm font-medium text-text-primary cursor-pointer">
                     Dismiss
                   </Label>
-                  <p className="text-xs text-gray-500 mt-0.5">
+                  <p className="text-xs text-text-tertiary mt-0.5">
                     Close without action
                   </p>
                 </div>
-                <XCircle className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                <XCircle className="h-4 w-4 text-text-secondary flex-shrink-0" />
               </div>
             </RadioGroup>
           </div>
 
           {/* Resolution Notes */}
           <div className="space-y-1.5">
-            <Label htmlFor="notes" className="text-xs font-medium text-gray-400">
+            <Label htmlFor="notes" className="text-xs font-medium text-text-secondary">
               Resolution Notes <span className="text-red-400">*</span>
             </Label>
             <Textarea
@@ -274,7 +274,7 @@ export default function ResolveDisputeModal({
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Explain your decision. Both parties will see this."
-              className="min-h-[80px] text-sm bg-white/[0.05] border-white/[0.1] text-white placeholder:text-gray-500"
+              className="min-h-[80px] text-sm rounded-lg bg-bg-base border-border-default text-text-primary placeholder:text-text-tertiary focus:border-lime focus:outline-none"
               required
             />
           </div>
@@ -286,7 +286,7 @@ export default function ResolveDisputeModal({
             variant="outline"
             onClick={handleClose}
             disabled={isSubmitting}
-            className="h-9 border-white/[0.1] hover:bg-white/[0.05] text-sm"
+            className="h-9 border-border-default bg-bg-overlay text-text-secondary hover:bg-bg-raised-hover hover:text-text-primary text-sm"
           >
             Cancel
           </Button>
@@ -294,7 +294,7 @@ export default function ResolveDisputeModal({
             type="button"
             onClick={handleSubmit}
             disabled={isSubmitting || !notes.trim()}
-            className="h-9 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white text-sm"
+            className="h-9 bg-lime-pressed hover:bg-lime text-text-inverse font-bold text-sm"
           >
             {isSubmitting ? (
               <>

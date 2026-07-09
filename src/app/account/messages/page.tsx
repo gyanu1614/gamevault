@@ -18,10 +18,38 @@ import {
 } from 'lucide-react'
 
 import { useAuth } from '@/hooks/use-auth'
+import AccountPageHeader from '@/components/account/AccountPageHeader'
 import { useSellerMessages, useConversationMessages } from '@/hooks/use-seller-messages'
 import { getAvatarUrl } from '@/lib/utils/avatar'
+import { classifyOfferType } from '@/lib/utils/offer-type'
 import MessageList from '@/components/chat/MessageList'
 import { cn } from '@/lib/utils'
+
+type ChatTab = 'all' | 'unread' | 'currency' | 'items' | 'accounts' | 'top-up' | 'dm'
+
+const CHAT_TABS: { value: ChatTab; label: string }[] = [
+  { value: 'all', label: 'All' },
+  { value: 'unread', label: 'Unread' },
+  { value: 'currency', label: 'Currencies' },
+  { value: 'items', label: 'Items' },
+  { value: 'accounts', label: 'Accounts' },
+  { value: 'top-up', label: 'Top Ups' },
+  { value: 'dm', label: 'Direct Messages' },
+]
+
+/** Compact reference-style timestamps: now / 34m / 6h / 3d / 2w / 4mo. */
+function fmtShortRel(iso: string): string {
+  const mins = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60_000))
+  if (mins < 1) return 'now'
+  if (mins < 60) return `${mins}m`
+  const h = Math.round(mins / 60)
+  if (h < 24) return `${h}h`
+  const d = Math.round(h / 24)
+  if (d < 7) return `${d}d`
+  const w = Math.round(d / 7)
+  if (w < 5) return `${w}w`
+  return `${Math.round(d / 30)}mo`
+}
 
 export default function MessagesPage() {
   const { user, loading: authLoading } = useAuth()
@@ -36,6 +64,7 @@ export default function MessagesPage() {
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null)
   const [messageText, setMessageText] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
+  const [tab, setTab] = useState<ChatTab>('all')
   const [isOrderInfoCollapsed, setIsOrderInfoCollapsed] = useState(true)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const prevMessagesLengthRef = useRef<number>(0)
@@ -83,9 +112,16 @@ export default function MessagesPage() {
   }
 
   const filteredConversations = conversations.filter((conv) => {
+    if (tab === 'unread' && !((conv.unread_count ?? 0) > 0)) return false
+    if (tab === 'dm' && conv.order) return false
+    if (tab !== 'all' && tab !== 'unread' && tab !== 'dm') {
+      const cat = conv.order?.listing?.category
+      if (!conv.order || classifyOfferType(cat?.metadata?.type ?? undefined, cat?.slug) !== tab) return false
+    }
     if (!searchQuery) return true
     const otherUser = conv.buyer_id === user?.id ? conv.seller : conv.buyer
-    return otherUser?.username?.toLowerCase().includes(searchQuery.toLowerCase())
+    const hay = `${otherUser?.username ?? ''} ${conv.order?.order_number ?? ''} ${conv.order?.listing?.title ?? ''}`.toLowerCase()
+    return hay.includes(searchQuery.toLowerCase())
   })
 
   if (authLoading || isLoadingConversations) {
@@ -100,17 +136,35 @@ export default function MessagesPage() {
   }
 
   return (
-    <main className="mx-auto w-full max-w-7xl px-4 pb-16 pt-2 sm:px-6 lg:px-8">
-      <header className="mb-4">
-        <h1 className="text-2xl font-bold text-text-primary sm:text-3xl">Messages</h1>
-        <p className="mt-1 text-sm text-text-secondary">
-          Talk to buyers and sellers — directly tied to your orders.
-        </p>
-      </header>
+    <main className="mx-auto w-full max-w-[1400px] px-4 pb-16 pt-2 sm:px-6 lg:px-10 xl:px-14">
+      {/* Standard account title block (V33 style — same as Offers/Orders). */}
+      <AccountPageHeader
+        title="Messages"
+        subtitle="Talk to buyers and sellers — directly tied to your orders."
+        className="mb-4"
+      />
 
-      <div className="grid h-[calc(100vh-200px)] grid-cols-1 gap-3 lg:grid-cols-[360px_1fr]">
+      {/* Chat tabs — segmented control (reference shape, our material). */}
+      <div className="mb-4 flex w-fit max-w-full flex-wrap items-center gap-1 overflow-x-auto rounded-md border border-white/[0.08] bg-[rgba(20,20,27,0.56)] p-1 backdrop-blur-md">
+        {CHAT_TABS.map((t) => (
+          <button
+            key={t.value}
+            type="button"
+            onClick={() => setTab(t.value)}
+            className={cn(
+              'h-8 whitespace-nowrap rounded-[5px] px-3 text-[13px] font-semibold transition-colors',
+              tab === t.value ? 'bg-white/[0.09] text-text-primary' : 'text-text-secondary hover:text-text-primary',
+            )}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="grid h-[calc(100vh-252px)] grid-cols-1 gap-3 lg:grid-cols-[380px_1fr]">
         {/* ── Conversations list ────────────────────────────────────── */}
-        <aside className="flex flex-col overflow-hidden rounded-lg border border-border-default bg-bg-raised">
+        <aside className="relative flex flex-col overflow-hidden rounded-lg border border-border-default bg-[rgba(20,20,27,0.56)] backdrop-blur-md">
+          <span aria-hidden className="pointer-events-none absolute inset-x-0 top-0 z-10 h-14 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.04),transparent)]" />
           <div className="border-b border-border-subtle p-3">
             <div className="relative">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary" />
@@ -119,7 +173,7 @@ export default function MessagesPage() {
                 placeholder="Search conversations…"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="h-10 w-full rounded-md border border-border-default bg-bg-overlay pl-9 pr-3 text-sm text-text-primary placeholder:text-text-tertiary transition-colors focus:border-lime focus:outline-none focus:ring-2 focus:ring-lime-tint-bg"
+                className="h-10 w-full rounded-md border border-border-default bg-bg-overlay pl-9 pr-3 text-sm text-text-primary placeholder:text-text-tertiary transition-colors focus:border-border-strong focus:outline-none focus-visible:shadow-none"
               />
             </div>
           </div>
@@ -131,29 +185,31 @@ export default function MessagesPage() {
                 <p className="text-sm text-text-secondary">No conversations yet</p>
               </div>
             ) : (
-              <ul className="space-y-1 p-2">
+              <ul className="divide-y divide-white/[0.05]">
                 {filteredConversations.map((conversation) => {
                   const otherUser = conversation.buyer_id === user?.id ? conversation.seller : conversation.buyer
-                  const isSeller = conversation.buyer_id === user?.id
                   const isActive = conversation.id === selectedConversationId
+                  const order = conversation.order
+                  const gameLogo = order?.listing?.game?.image_url
+                  const rowTitle = order
+                    ? `#${order.order_number || order.id.slice(0, 6)} · x${order.quantity ?? 1} · ${order.listing?.title ?? 'Order'}`
+                    : otherUser?.username || 'Direct message'
                   return (
                     <li key={conversation.id}>
                       <button
                         type="button"
                         onClick={() => setSelectedConversationId(conversation.id)}
                         className={cn(
-                          'flex w-full items-start gap-3 rounded-lg border p-3 text-left transition-colors',
-                          isActive
-                            ? 'border-lime-tint-border bg-lime-tint-bg'
-                            : 'border-transparent hover:border-border-subtle hover:bg-bg-raised-hover',
+                          'flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors',
+                          isActive ? 'bg-white/[0.05]' : 'hover:bg-white/[0.03]',
                         )}
                       >
                         <div className="relative shrink-0">
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img
-                            src={getAvatarUrl(otherUser?.avatar_url, otherUser?.username || 'user')}
-                            alt={otherUser?.username || 'User'}
-                            className="h-10 w-10 rounded-full object-cover ring-2 ring-border-subtle"
+                            src={gameLogo || getAvatarUrl(otherUser?.avatar_url, otherUser?.username || 'user')}
+                            alt=""
+                            className="h-11 w-11 rounded-full object-cover ring-1 ring-white/10"
                           />
                           {(conversation.unread_count || 0) > 0 && (
                             <span className="absolute -right-1 -top-1 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-error px-1 text-[10px] font-bold text-text-primary">
@@ -163,33 +219,17 @@ export default function MessagesPage() {
                         </div>
 
                         <div className="min-w-0 flex-1">
-                          <div className="mb-0.5 flex items-center justify-between gap-2">
-                            <div className="flex min-w-0 flex-1 items-center gap-1.5">
-                              <span className={cn('truncate text-sm font-semibold', isActive ? 'text-text-primary' : 'text-text-primary')}>
-                                {isSeller
-                                  ? (conversation.order?.listing?.title || otherUser?.username || 'Unknown')
-                                  : (otherUser?.username || 'Unknown seller')}
-                              </span>
-                              {isSeller && <BadgeCheck className="h-3.5 w-3.5 shrink-0 text-lime-text" />}
-                            </div>
-                            <span className="shrink-0 text-[11px] text-text-tertiary">
-                              {new Date(conversation.last_message_at).toLocaleDateString(undefined, {
-                                month: 'short',
-                                day: 'numeric',
-                              })}
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="truncate text-[13.5px] font-bold text-text-primary">{rowTitle}</span>
+                            <span className="shrink-0 text-[11.5px] text-text-tertiary">
+                              {fmtShortRel(conversation.last_message_at)}
                             </span>
                           </div>
-                          {!isSeller && (conversation.order?.listing as any)?.game?.name ? (
-                            <p className="truncate text-xs text-text-tertiary">
-                              {(conversation.order?.listing as any).game.name}
-                              {(conversation.order?.listing as any).category?.name &&
-                                ` → ${(conversation.order?.listing as any).category.name}`}
-                            </p>
-                          ) : conversation.last_message ? (
+                          {conversation.last_message && (
                             <p
                               className={cn(
-                                'truncate text-xs',
-                                conversation.unread_count && conversation.unread_count > 0
+                                'mt-0.5 truncate text-[12.5px]',
+                                (conversation.unread_count ?? 0) > 0
                                   ? 'font-semibold text-text-primary'
                                   : 'text-text-tertiary',
                               )}
@@ -197,7 +237,7 @@ export default function MessagesPage() {
                               {conversation.last_message.sender_id === user?.id && 'You: '}
                               {conversation.last_message.content}
                             </p>
-                          ) : null}
+                          )}
                         </div>
                       </button>
                     </li>
@@ -209,7 +249,8 @@ export default function MessagesPage() {
         </aside>
 
         {/* ── Chat area ─────────────────────────────────────────────── */}
-        <section className="flex flex-col overflow-hidden rounded-lg border border-border-default bg-bg-raised">
+        <section className="relative flex flex-col overflow-hidden rounded-lg border border-border-default bg-[rgba(20,20,27,0.56)] backdrop-blur-md">
+          <span aria-hidden className="pointer-events-none absolute inset-x-0 top-0 z-10 h-14 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.04),transparent)]" />
           {selectedConversation ? (
             <>
               {/* Header */}
@@ -248,15 +289,15 @@ export default function MessagesPage() {
 
               {/* Order banner */}
               {selectedConversation.order && (
-                <div className="mx-3 mt-3 overflow-hidden rounded-xl border border-lime-tint-border bg-lime-tint-bg sm:mx-4 sm:mt-4">
+                <div className="mx-3 mt-3 overflow-hidden rounded-lg border border-border-default bg-white/[0.03] sm:mx-4 sm:mt-4">
                   <button
                     type="button"
                     onClick={() => setIsOrderInfoCollapsed(!isOrderInfoCollapsed)}
-                    className="flex w-full items-center justify-between p-3 transition-colors hover:bg-lime-tint-bg/80"
+                    className="flex w-full items-center justify-between p-3 transition-colors hover:bg-white/[0.05]"
                   >
                     <div className="flex items-center gap-2">
-                      <ShoppingBag className="h-3.5 w-3.5 shrink-0 text-lime-text" />
-                      <span className="text-xs font-semibold text-lime-text">
+                      <ShoppingBag className="h-3.5 w-3.5 shrink-0 text-text-tertiary" />
+                      <span className="text-[12.5px] font-semibold text-text-primary">
                         Order #
                         {selectedConversation.order.order_number ||
                           selectedConversation.order.id.slice(0, 8)}
@@ -347,7 +388,7 @@ export default function MessagesPage() {
                     onKeyPress={handleKeyPress}
                     placeholder="Type a message…"
                     rows={1}
-                    className="min-h-[42px] max-h-32 flex-1 resize-none rounded-md border border-border-default bg-bg-overlay px-3 py-2.5 text-sm text-text-primary placeholder:text-text-tertiary transition-colors focus:border-lime focus:outline-none focus:ring-2 focus:ring-lime-tint-bg"
+                    className="min-h-[42px] max-h-32 flex-1 resize-none rounded-md border border-border-default bg-bg-overlay px-3 py-2.5 text-sm text-text-primary placeholder:text-text-tertiary transition-colors focus:border-border-strong focus:outline-none focus-visible:shadow-none"
                   />
                   <button
                     type="button"

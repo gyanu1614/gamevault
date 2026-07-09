@@ -757,7 +757,7 @@ export default function SellerOrderDetailClient({
                 {/* Proof upload section */}
                 <div className="mb-5">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-semibold text-text-secondary uppercase tracking-[0.08em]">
+                    <span className="text-[11px] font-semibold text-text-secondary uppercase tracking-wider">
                       Delivery Proof
                     </span>
                     <span className="text-[10px] text-text-disabled">
@@ -872,7 +872,7 @@ export default function SellerOrderDetailClient({
                 <div className="h-5 w-5 rounded-full bg-success-bg border border-green-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
                   <ShieldCheck className="h-2.5 w-2.5 text-success" />
                 </div>
-                <p className="text-[11px] text-text-disabled leading-relaxed">Funds will be added to your GameVault balance once the buyer confirms receipt.</p>
+                <p className="text-[11px] text-text-disabled leading-relaxed">Funds will be added to your DropMarket balance once the buyer confirms receipt.</p>
               </div>
               <div className="flex items-start gap-2.5">
                 <div className="h-5 w-5 rounded-full bg-success-bg border border-green-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">

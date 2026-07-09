@@ -274,7 +274,7 @@ function PresenceChip({ presence }: { presence: PartyPresence }) {
         />
       </span>
       <span className="flex flex-col leading-tight">
-        <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-text-tertiary">
+        <span className="text-[11px] font-bold uppercase tracking-wider text-text-tertiary">
           {presence.roleLabel}
         </span>
         <span className="text-[13px] font-semibold text-text-primary">

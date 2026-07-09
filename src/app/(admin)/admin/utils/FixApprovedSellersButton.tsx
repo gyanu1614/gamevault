@@ -53,7 +53,7 @@ export default function FixApprovedSellersButton({ needsUpdate }: Props) {
       <button
         onClick={handleFix}
         disabled={isLoading || needsUpdate === 0}
-        className="px-4 py-2 bg-violet-500 hover:bg-violet-600 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors flex items-center gap-2"
+        className="px-4 py-2 bg-lime-pressed hover:bg-lime disabled:bg-bg-overlay disabled:text-text-disabled disabled:cursor-not-allowed text-text-inverse rounded-lg font-bold transition-colors flex items-center gap-2"
       >
         {isLoading ? (
           <>
@@ -74,33 +74,33 @@ export default function FixApprovedSellersButton({ needsUpdate }: Props) {
         <div
           className={`rounded-lg p-4 ${
             result.success
-              ? 'bg-green-500/10 border border-green-500/20'
-              : 'bg-red-500/10 border border-red-500/20'
+              ? 'bg-success-bg border border-[rgba(63,217,134,0.25)]'
+              : 'bg-error-bg border border-[rgba(255,92,92,0.25)]'
           }`}
         >
           <div className="flex items-start gap-2">
             {result.success ? (
-              <CheckCircle className="h-5 w-5 text-green-400 flex-shrink-0 mt-0.5" />
+              <CheckCircle className="h-5 w-5 text-success flex-shrink-0 mt-0.5" />
             ) : (
-              <AlertCircle className="h-5 w-5 text-red-400 flex-shrink-0 mt-0.5" />
+              <AlertCircle className="h-5 w-5 text-error flex-shrink-0 mt-0.5" />
             )}
             <div className="flex-1">
               <p
                 className={`text-sm font-medium ${
-                  result.success ? 'text-green-400' : 'text-red-400'
+                  result.success ? 'text-success' : 'text-error'
                 }`}
               >
                 {result.message}
               </p>
               {result.updated !== undefined && result.updated > 0 && (
-                <p className="text-xs text-gray-400 mt-1">
+                <p className="text-xs text-text-secondary mt-1">
                   Updated {result.updated} seller profile{result.updated > 1 ? 's' : ''}
                 </p>
               )}
               {result.errors && result.errors.length > 0 && (
                 <div className="mt-2 space-y-1">
                   {result.errors.map((error, idx) => (
-                    <p key={idx} className="text-xs text-red-400">
+                    <p key={idx} className="text-xs text-error">
                       {error}
                     </p>
                   ))}

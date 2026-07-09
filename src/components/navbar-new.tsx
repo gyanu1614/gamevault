@@ -66,7 +66,7 @@ export function Navbar() {
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
             <span className="text-lg font-bold text-primary-foreground">G</span>
           </div>
-          <span className="hidden font-bold sm:inline-block">GameVault</span>
+          <span className="hidden font-bold sm:inline-block">DropMarket</span>
         </Link>
 
         {/* Categories */}
@@ -118,7 +118,7 @@ export function Navbar() {
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 type="text"
-                placeholder="Search GameVault"
+                placeholder="Search DropMarket"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-64 pl-10"
@@ -210,7 +210,7 @@ export function Navbar() {
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   type="text"
-                  placeholder="Search GameVault"
+                  placeholder="Search DropMarket"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-10"

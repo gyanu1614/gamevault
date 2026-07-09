@@ -91,7 +91,7 @@ export default function PreviousDataModal({
 
               {/* What will be pre-filled */}
               <div className="mb-6 rounded-lg bg-bg-overlay border border-border-subtle p-4">
-                <p className="mb-2 text-xs font-semibold text-text-secondary uppercase tracking-wide">
+                <p className="mb-2 text-[11px] font-semibold text-text-secondary uppercase tracking-wider">
                   What will be pre-filled:
                 </p>
                 <ul className="space-y-1.5 text-sm text-text-secondary">

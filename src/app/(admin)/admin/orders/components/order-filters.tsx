@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter, useSearchParams } from 'next/navigation'
-import { IconSearch, IconFilter, IconX } from '@tabler/icons-react'
+import { IconSearch, IconX } from '@tabler/icons-react'
 import { useState, useCallback } from 'react'
 import { cn } from '@/lib/utils'
 
@@ -73,13 +73,13 @@ export function OrderFilters() {
       {/* Search Bar */}
       <form onSubmit={handleSearch} className="flex gap-2">
         <div className="relative flex-1">
-          <IconSearch className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+          <IconSearch className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-tertiary" />
           <input
             type="text"
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
             placeholder="Search by order number, buyer, seller, or listing..."
-            className="w-full rounded-lg border border-white/[0.08] bg-white/[0.03] py-2 pl-10 pr-4 text-sm text-white placeholder:text-gray-600 focus:border-violet-500/50 focus:outline-none focus:ring-1 focus:ring-violet-500/20"
+            className="w-full rounded-lg border border-border-default bg-bg-base py-2 pl-10 pr-4 text-sm text-text-primary placeholder:text-text-tertiary focus:border-lime focus:outline-none"
           />
           {searchInput && (
             <button
@@ -88,15 +88,15 @@ export function OrderFilters() {
                 setSearchInput('')
                 updateFilters({ search: null })
               }}
-              className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-white/10 rounded transition-colors"
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-bg-overlay rounded transition-colors"
             >
-              <IconX className="h-3.5 w-3.5 text-gray-500" />
+              <IconX className="h-3.5 w-3.5 text-text-tertiary" />
             </button>
           )}
         </div>
         <button
           type="submit"
-          className="px-4 py-2 bg-violet-500/10 hover:bg-violet-500/20 text-violet-400 rounded-lg text-sm font-medium border border-violet-500/20 transition-colors"
+          className="px-4 py-2 bg-lime-pressed hover:bg-lime text-text-inverse rounded-lg text-sm font-bold transition-colors"
         >
           Search
         </button>
@@ -104,7 +104,7 @@ export function OrderFilters() {
           <button
             type="button"
             onClick={clearAllFilters}
-            className="px-4 py-2 bg-white/[0.03] hover:bg-white/[0.06] text-gray-400 hover:text-white rounded-lg text-sm font-medium border border-white/[0.08] transition-colors"
+            className="px-4 py-2 bg-bg-overlay hover:bg-bg-raised-hover text-text-secondary hover:text-text-primary rounded-lg text-sm font-medium border border-border-default transition-colors"
           >
             Clear All
           </button>
@@ -115,7 +115,7 @@ export function OrderFilters() {
       <div className="flex flex-wrap gap-2">
         {/* Status Filters */}
         <div className="flex items-center gap-2">
-          <span className="text-xs text-gray-500 font-medium">Status:</span>
+          <span className="text-xs text-text-tertiary font-medium">Status:</span>
           {STATUS_OPTIONS.map((option) => {
             const isSelected = selectedStatuses.includes(option.value)
             return (
@@ -130,7 +130,7 @@ export function OrderFilters() {
                     : option.color === 'blue' ? 'bg-blue-500/15 text-blue-400 border-blue-500/30'
                     : option.color === 'red' ? 'bg-red-500/15 text-red-400 border-red-500/30'
                     : 'bg-orange-500/15 text-orange-400 border-orange-500/30'
-                    : 'bg-white/[0.02] text-gray-500 border-white/[0.06] hover:bg-white/[0.04] hover:text-gray-300'
+                    : 'bg-bg-overlay text-text-tertiary border-border-default hover:bg-bg-raised-hover hover:text-text-secondary'
                 )}
               >
                 {option.label}
@@ -141,7 +141,7 @@ export function OrderFilters() {
 
         {/* Escrow Filters */}
         <div className="flex items-center gap-2">
-          <span className="text-xs text-gray-500 font-medium">Escrow:</span>
+          <span className="text-xs text-text-tertiary font-medium">Escrow:</span>
           {ESCROW_OPTIONS.map((option) => {
             const isSelected = selectedEscrow.includes(option.value)
             return (
@@ -155,7 +155,7 @@ export function OrderFilters() {
                     : option.color === 'amber' ? 'bg-amber-500/15 text-amber-400 border-amber-500/30'
                     : option.color === 'blue' ? 'bg-blue-500/15 text-blue-400 border-blue-500/30'
                     : 'bg-red-500/15 text-red-400 border-red-500/30'
-                    : 'bg-white/[0.02] text-gray-500 border-white/[0.06] hover:bg-white/[0.04] hover:text-gray-300'
+                    : 'bg-bg-overlay text-text-tertiary border-border-default hover:bg-bg-raised-hover hover:text-text-secondary'
                 )}
               >
                 {option.label}

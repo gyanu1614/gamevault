@@ -300,7 +300,7 @@ export interface Database {
           created_at: string
           updated_at: string
           completed_at: string | null
-          // VaultShield tier columns (P4.1)
+          // SafeDrop tier columns (P4.1)
           vaultshield_level: 'standard' | 'enhanced' | 'premium' | null
           vaultshield_tier_fee_rate: number
           vaultshield_tier_fee: number
@@ -351,7 +351,7 @@ export interface Database {
           created_at?: string
           updated_at?: string
           completed_at?: string | null
-          // VaultShield tier columns (P4.1)
+          // SafeDrop tier columns (P4.1)
           vaultshield_level?: 'standard' | 'enhanced' | 'premium' | null
           vaultshield_tier_fee_rate?: number
           vaultshield_tier_fee?: number
@@ -401,7 +401,7 @@ export interface Database {
           created_at?: string
           updated_at?: string
           completed_at?: string | null
-          // VaultShield tier columns (P4.1)
+          // SafeDrop tier columns (P4.1)
           vaultshield_level?: 'standard' | 'enhanced' | 'premium' | null
           vaultshield_tier_fee_rate?: number
           vaultshield_tier_fee?: number

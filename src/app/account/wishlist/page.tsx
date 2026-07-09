@@ -313,7 +313,7 @@ export default function WishlistPage() {
                       className={cn(
                         'flex-1 rounded-lg py-2.5 text-sm font-semibold transition-all',
                         inStock
-                          ? 'bg-lime text-text-inverse hover:bg-lime'
+                          ? 'bg-lime text-text-inverse hover:bg-lime-hover'
                           : 'bg-gray-700/50 text-text-tertiary cursor-not-allowed'
                       )}
                     >
@@ -401,7 +401,7 @@ export default function WishlistPage() {
                       className={cn(
                         'rounded-lg px-5 py-2.5 text-sm font-semibold transition-all',
                         inStock
-                          ? 'bg-lime text-text-inverse hover:bg-lime'
+                          ? 'bg-lime text-text-inverse hover:bg-lime-hover'
                           : 'bg-gray-700/50 text-text-tertiary cursor-not-allowed'
                       )}
                     >

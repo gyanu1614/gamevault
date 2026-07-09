@@ -18,7 +18,7 @@ import TierCard, { type TierConfig } from '@/components/seller/tiers/TierCard'
 import TierProgressBar from '@/components/seller/tiers/TierProgressBar'
 
 export const metadata: Metadata = {
-  title: 'Seller Tiers | GameVault',
+  title: 'Seller Tiers',
   description: 'Understand your seller tier, commission rate, and how to level up.',
 }
 

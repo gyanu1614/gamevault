@@ -37,6 +37,18 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
 
   const { data: { user } } = await supabase.auth.getUser()
 
+  // V73 — Buyer profile for the checkout identity strip (username +
+  // avatar; the auth user alone has only the email).
+  let buyerProfile: { username: string | null; avatar_url: string | null } | null = null
+  if (user) {
+    const { data: prof } = await supabase
+      .from('profiles')
+      .select('username, avatar_url')
+      .eq('id', user.id)
+      .maybeSingle() as any
+    buyerProfile = prof ?? null
+  }
+
   // V19/P24/P7.l — Bundle currency: pull the matching bundle row out
   // of the game's currency category_config so the checkout summary
   // can show the bundle's name + icon instead of the auto-generated
@@ -64,6 +76,19 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
     }
   }
 
+  // V75 — Last 5 reviews for the seller peek dialog (no profile
+  // navigation from checkout — the reviews come to the buyer).
+  let sellerReviews: any[] = []
+  if (listing.seller?.id) {
+    const { data: revs } = await supabase
+      .from('reviews')
+      .select('id, rating, comment, created_at, buyer:profiles!reviews_reviewer_id_fkey (username, avatar_url)')
+      .eq('seller_id', listing.seller.id)
+      .order('created_at', { ascending: false })
+      .limit(5) as any
+    sellerReviews = revs ?? []
+  }
+
   // V14m — Block self-purchase. Sellers can't escrow money to themselves,
   // and the order/refund flow would loop on the same account. Bounce back
   // to the edit page for currency / listing page otherwise.
@@ -79,6 +104,8 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
       <CheckoutForm
         listing={listing}
         user={user}
+        buyerProfile={buyerProfile}
+        sellerReviews={sellerReviews}
         initialQty={parsedQty}
         bundleSummary={bundleSummary}
       />

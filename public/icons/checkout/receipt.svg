@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <defs>
+    <linearGradient id="pp" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#DCE1E7"/>
+      <stop offset="0.6" stop-color="#A4ADB8"/>
+      <stop offset="1" stop-color="#767F8B"/>
+    </linearGradient>
+    <linearGradient id="ln" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#575F6B"/>
+      <stop offset="1" stop-color="#41474F"/>
+    </linearGradient>
+  </defs>
+  <!-- paper with zigzag bottom, straight and compact -->
+  <path d="M64 46 C64 39 69 34 76 34 L180 34 C187 34 192 39 192 46 L192 210 L176 198 L160 210 L144 198 L128 210 L112 198 L96 210 L80 198 L64 210 Z" fill="url(#pp)"/>
+  <!-- top sheen -->
+  <path d="M64 46 C64 39 69 34 76 34 L180 34 C187 34 192 39 192 46 L192 64 L64 64 Z" fill="#FFFFFF" opacity="0.45"/>
+  <!-- lines -->
+  <rect x="82" y="82" width="92" height="13" rx="6.5" fill="url(#ln)"/>
+  <rect x="82" y="110" width="64" height="13" rx="6.5" fill="url(#ln)" opacity="0.8"/>
+  <rect x="82" y="138" width="78" height="13" rx="6.5" fill="url(#ln)" opacity="0.8"/>
+  <!-- total row: label + amount dot -->
+  <rect x="82" y="170" width="42" height="13" rx="6.5" fill="url(#ln)"/>
+  <circle cx="164" cy="176" r="10" fill="url(#ln)"/>
+</svg>

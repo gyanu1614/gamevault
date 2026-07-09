@@ -1,4 +1,5 @@
 import * as React from "react"
+import { Slot } from "@radix-ui/react-slot"
 import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
@@ -9,9 +10,11 @@ const buttonVariants = cva(
       variant: {
         default: "bg-primary text-primary-foreground hover:bg-primary/90",
         destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90",
-        outline: "border border-input bg-background hover:bg-accent hover:text-accent-foreground",
+        // V33 — outline/ghost hovers are neutral grey (site rule: lime is
+        // reserved for real CTAs, not hover feedback on every button).
+        outline: "border border-input bg-background hover:bg-bg-raised-hover hover:text-text-primary",
         secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
-        ghost: "hover:bg-accent hover:text-accent-foreground",
+        ghost: "hover:bg-bg-raised-hover hover:text-text-primary",
         link: "text-primary underline-offset-4 hover:underline",
       },
       size: {
@@ -36,8 +39,14 @@ export interface ButtonProps
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant, size, asChild = false, ...props }, ref) => {
+    // V42 — asChild was accepted but silently IGNORED, so every
+    // `<Button asChild><Link/></Button>` rendered an unstyled <a> nested
+    // inside a styled <button> (invalid HTML, broken layout). Standard
+    // shadcn Slot implementation: the child element receives the button
+    // classes and becomes the rendered node.
+    const Comp = asChild ? Slot : "button"
     return (
-      <button
+      <Comp
         className={cn(buttonVariants({ variant, size, className }))}
         ref={ref}
         {...props}

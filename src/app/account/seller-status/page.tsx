@@ -153,7 +153,7 @@ export default function ApplicationStatusPage() {
           <FileText className="mx-auto h-12 w-12 text-text-tertiary" />
           <p className="mt-4 text-lg text-white">No Application Found</p>
           <p className="mt-2 text-sm text-text-secondary">
-            You haven't submitted a seller application yet.
+            You haven&apos;t submitted a seller application yet.
           </p>
           <button
             onClick={() => router.push('/account/become-seller')}
@@ -174,7 +174,7 @@ export default function ApplicationStatusPage() {
       pending: {
         icon: Clock,
         text: 'Pending Review',
-        color: 'text-warning bg-warning-bg border-yellow-500/20',
+        color: 'text-warning bg-warning-bg border-[rgba(251,191,36,0.25)]',
       },
       under_review: {
         icon: Clock,
@@ -184,7 +184,7 @@ export default function ApplicationStatusPage() {
       approved: {
         icon: CheckCircle2,
         text: 'Approved',
-        color: 'text-success bg-success-bg border-green-500/20',
+        color: 'text-success bg-success-bg border-[rgba(74,222,128,0.25)]',
       },
       rejected: {
         icon: XCircle,
@@ -194,7 +194,7 @@ export default function ApplicationStatusPage() {
       withdrawn: {
         icon: Ban,
         text: 'Withdrawn',
-        color: 'text-text-secondary bg-gray-500/10 border-gray-500/20',
+        color: 'text-text-secondary bg-white/[0.06] border-border-default',
       },
     }
 
@@ -221,7 +221,7 @@ export default function ApplicationStatusPage() {
           </p>
 
           {withdrawal && withdrawal.withdrawalCount >= 3 && (
-            <div className="mt-4 rounded-lg bg-yellow-500/5 p-4 border border-yellow-500/20">
+            <div className="mt-4 rounded-lg bg-warning-bg p-4 border border-[rgba(251,191,36,0.25)]">
               <div className="flex items-start gap-2">
                 <Info className="h-4 w-4 text-warning mt-0.5" />
                 <div className="flex-1">
@@ -250,7 +250,7 @@ export default function ApplicationStatusPage() {
         <div className="rounded-lg border border-white/5 bg-white/5 p-6">
           <h3 className="text-lg font-semibold text-white">🎉 Congratulations! You are now a seller</h3>
           <p className="mt-2 text-sm text-text-secondary">
-            Your application has been approved. You can now start listing your products and services on GameVault.
+            Your application has been approved. You can now start listing your products and services on DropMarket.
           </p>
 
           <button
@@ -287,7 +287,7 @@ export default function ApplicationStatusPage() {
             </div>
 
             {/* Rejection Count & Tier Info */}
-            <div className="mt-4 flex items-start gap-2 rounded-lg bg-yellow-500/5 p-4 border border-yellow-500/20">
+            <div className="mt-4 flex items-start gap-2 rounded-lg bg-warning-bg p-4 border border-[rgba(251,191,36,0.25)]">
               <AlertCircle className="h-4 w-4 text-warning mt-0.5" />
               <div className="flex-1">
                 <p className="text-sm font-medium text-warning">
@@ -336,7 +336,7 @@ export default function ApplicationStatusPage() {
                 className={`mt-6 w-full flex items-center justify-center gap-2 rounded-lg px-6 py-3 text-sm font-medium transition-colors ${
                   cooldownExpired || canReapply
                     ? 'bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20'
-                    : 'bg-gray-500/10 text-text-tertiary cursor-not-allowed border border-gray-500/20'
+                    : 'bg-white/[0.06] text-text-tertiary cursor-not-allowed border border-border-default'
                 }`}
               >
                 <RefreshCcw className="h-4 w-4" />
@@ -473,7 +473,7 @@ export default function ApplicationStatusPage() {
                   {status === 'under_review' || application?.reviewed_at ? (
                     <Clock className="h-4 w-4" />
                   ) : (
-                    <div className="h-2 w-2 rounded-full bg-gray-500" />
+                    <div className="h-2 w-2 rounded-full bg-text-disabled" />
                   )}
                 </div>
                 <div className="flex-1 pb-2">
@@ -492,7 +492,7 @@ export default function ApplicationStatusPage() {
               {/* Step 4: Withdrawal Event (if withdrawn) */}
               {status === 'withdrawn' && withdrawal && (
                 <div className="relative flex items-start gap-4">
-                  <div className="relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gray-500/10 text-text-secondary ring-4 ring-black">
+                  <div className="relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/[0.06] text-text-secondary ring-4 ring-black">
                     <Ban className="h-4 w-4" />
                   </div>
                   <div className="flex-1 pb-2">

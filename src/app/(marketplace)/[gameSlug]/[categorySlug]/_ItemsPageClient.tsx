@@ -209,6 +209,20 @@ export default function ItemsPageClient({
   const visible = sorted.slice(0, page * PAGE_SIZE)
   const hasMore = sorted.length > visible.length
 
+  // Best-deal showcase (Eldorado/G2G pattern): flag the single cheapest
+  // in-stock offer in the current filtered set. Computed from `filtered`
+  // (not `sorted`) so the flagged offer is stable no matter how the user
+  // sorts. Only meaningful when there's more than one offer to compare.
+  const bestDealId = useMemo(() => {
+    const candidates = filtered.filter(
+      (o) => o.pricePerUnit > 0 && (o.isUnlimited || (o.stock ?? 0) > 0),
+    )
+    if (candidates.length < 2) return null
+    return candidates.reduce((best, o) =>
+      o.pricePerUnit < best.pricePerUnit ? o : best,
+    ).id
+  }, [filtered])
+
   const clearFilters = () => {
     setQ('')
     setAttrFilters({})
@@ -229,12 +243,12 @@ export default function ItemsPageClient({
           layer with just a bottom hairline; matches the currency
           pages. */}
       <section className="relative overflow-hidden border-b border-border-subtle">
-        <div className="relative mx-auto w-full max-w-7xl px-4 pb-6 pt-5 sm:px-6 sm:pb-7 sm:pt-6 lg:px-8">
+        <div className="relative mx-auto w-full max-w-7xl px-4 pb-5 pt-2 sm:px-6 sm:pb-6 sm:pt-3 lg:px-8">
           {/* V15s — Page header restored: big game logo on the left,
               single-line "{Game} Items" title beside it. Sits between
               the sub-nav and the filter row so the page has a proper
               entry point instead of dumping filters under the sub-nav. */}
-          <div className="mb-6 flex items-center gap-4 sm:mb-7 sm:gap-5">
+          <div className="mb-4 flex items-center gap-4 sm:mb-5 sm:gap-5">
             {gameImageUrl ? (
               /* eslint-disable-next-line @next/next/no-img-element */
               <img
@@ -251,7 +265,7 @@ export default function ItemsPageClient({
               </span>
             )}
             <div className="min-w-0 flex-1">
-              <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-lime-text">
+              <div className="text-[11.5px] font-bold uppercase tracking-[0.14em] text-lime-text">
                 Marketplace
               </div>
               <h1 className="mt-0.5 truncate text-[22px] font-black leading-tight tracking-tight text-text-primary sm:text-[28px] lg:text-[32px]">
@@ -328,7 +342,7 @@ export default function ItemsPageClient({
       </section>
 
       {/* Results + grid */}
-      <div className="mx-auto w-full max-w-7xl px-4 pb-20 pt-6 sm:px-6 lg:px-8">
+      <div className="mx-auto w-full max-w-7xl px-4 pb-20 pt-4 sm:px-6 lg:px-8">
 
         {sorted.length === 0 ? (
           <EmptyState onClear={clearFilters} />
@@ -347,6 +361,7 @@ export default function ItemsPageClient({
                   offer={o}
                   gameSlug={gameSlug}
                   isOwn={!!viewerId && o.sellerId === viewerId}
+                  isBestDeal={o.id === bestDealId}
                 />
               ))}
             </div>
@@ -570,7 +585,7 @@ function SearchableFilterChip({
           <div className="max-h-[280px] overflow-y-auto p-1.5">
             {filtered.length === 0 ? (
               <div className="px-3 py-4 text-center text-[12px] text-text-tertiary">
-                No matches for "{query}"
+                No matches for &quot;{query}&quot;
               </div>
             ) : (
               <div className="flex flex-col gap-0.5">

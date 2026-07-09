@@ -205,7 +205,7 @@ export default function SellerSteps12({
                           I am 18 years or older
                         </span>
                         <p className="mt-1 text-xs text-text-secondary sm:text-sm">
-                          You must be at least 18 years old to sell on GameVault
+                          You must be at least 18 years old to sell on DropMarket
                         </p>
                       </button>
                     </div>

@@ -9,7 +9,7 @@ import PrivacyClient from './PrivacyClient'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 
-export const metadata = { title: 'Privacy & Data | GameVault' }
+export const metadata = { title: 'Privacy & Data' }
 
 export default async function PrivacyPage() {
   const supabase = await createClient()

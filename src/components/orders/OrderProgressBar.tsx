@@ -110,7 +110,7 @@ export default function OrderProgressBar({ status, order, disputeResolution }: O
             <RefreshCw className="h-4 w-4 text-text-secondary" />
           </div>
           <div className="flex-1">
-            <div className="text-xs font-bold uppercase tracking-[0.1em] text-text-secondary">Refunded</div>
+            <div className="text-[11px] font-bold uppercase tracking-wider text-text-secondary">Refunded</div>
             <div className="text-sm text-text-disabled mt-0.5">Payment returned to your original method</div>
           </div>
         </div>

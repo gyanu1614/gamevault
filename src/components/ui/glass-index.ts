@@ -1,5 +1,5 @@
 /**
- * GameVault Glass Morphism Component Library — barrel export
+ * DropMarket Glass Morphism Component Library — barrel export
  *
  * Usage:
  * import { GlassCard, GlassBadge, GlassModal, GlassInput } from '@/components/ui/glass-index'

@@ -48,28 +48,28 @@ export default function EscalationBanner({
 
           <div className="space-y-2 text-sm">
             {escalatedBy && (
-              <div className="flex items-center gap-2 text-gray-300">
+              <div className="flex items-center gap-2 text-text-secondary">
                 <User className="h-3.5 w-3.5 text-orange-400/60" />
-                <span className="text-xs text-gray-500">Escalated by:</span>
+                <span className="text-xs text-text-tertiary">Escalated by:</span>
                 <span className="font-medium">{escalatedBy.full_name || escalatedBy.username}</span>
               </div>
             )}
 
-            <div className="flex items-center gap-2 text-gray-300">
+            <div className="flex items-center gap-2 text-text-secondary">
               <Calendar className="h-3.5 w-3.5 text-orange-400/60" />
-              <span className="text-xs text-gray-500">Escalated on:</span>
+              <span className="text-xs text-text-tertiary">Escalated on:</span>
               <span className="font-medium">{formatDate(escalatedAt)}</span>
             </div>
 
             {escalationReason && (
               <div className="mt-3 rounded-lg border border-orange-500/20 bg-orange-500/[0.05] p-3">
-                <p className="text-xs text-gray-500 font-semibold mb-1.5">Escalation Reason:</p>
-                <p className="text-sm text-gray-300 leading-relaxed">{escalationReason}</p>
+                <p className="text-xs text-text-tertiary font-semibold mb-1.5">Escalation Reason:</p>
+                <p className="text-sm text-text-secondary leading-relaxed">{escalationReason}</p>
               </div>
             )}
 
             <div className="mt-4 pt-4 border-t border-orange-500/20">
-              <p className="text-xs text-gray-400 leading-relaxed">
+              <p className="text-xs text-text-secondary leading-relaxed">
                 This dispute has been flagged for senior admin review. Senior admins have full authority to review and make final decisions.
               </p>
             </div>

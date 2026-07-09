@@ -1,5 +1,5 @@
 /**
- * GameVault Animation Variants
+ * DropMarket Animation Variants
  * Centralised Framer Motion variants for consistent animations across the app.
  *
  * Philosophy:

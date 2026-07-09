@@ -2,10 +2,9 @@
 
 import { cn } from '@/lib/utils'
 import {
+  type LucideIcon,
   FileText,
   Clock,
-  CheckCircle,
-  XCircle,
   AlertTriangle,
   Users,
   Store,
@@ -15,11 +14,7 @@ import {
   Shield,
   ChevronRight,
   BarChart3,
-  AlertOctagon,
   UserPlus,
-  Eye,
-  Settings,
-  Zap,
   Gamepad2,
   Lock,
   BadgeCheck,
@@ -32,6 +27,15 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { useState } from 'react'
 import type { DashboardStats } from '@/lib/actions/admin-dashboard'
+import {
+  PageHeader,
+  AdminPanel,
+  StatCard,
+  IconChip,
+  StatusBadge,
+  SectionLabel,
+  type ChipTone,
+} from './kit'
 
 interface CompactDashboardProps {
   stats: DashboardStats
@@ -76,123 +80,127 @@ export default function CompactDashboard({ stats, activities, admin }: CompactDa
   }
 
   // Quick action buttons
-  const quickActions = [
+  const quickActions: Array<{
+    label: string
+    href: string
+    icon: LucideIcon
+    tone: ChipTone
+    count: number
+  }> = [
     {
       label: 'Review Applications',
       href: '/admin/sellers?status=pending',
       icon: FileText,
-      color: 'from-yellow-500 to-orange-500',
+      tone: 'warning',
       count: stats.pendingApplications
     },
     {
       label: 'Cancel Requests',
       href: '/admin/orders?tab=cancellations',
       icon: Ban,
-      color: 'from-amber-500 to-orange-500',
+      tone: 'warning',
       count: stats.pendingCancellations
     },
     {
       label: 'View Disputes',
       href: '/admin/disputes',
       icon: MessageSquare,
-      color: 'from-red-500 to-pink-500',
+      tone: 'error',
       count: stats.openDisputes
     },
     {
       label: 'Check Fraud',
       href: '/admin/fraud',
       icon: Shield,
-      color: 'from-purple-500 to-violet-500',
+      tone: 'error',
       count: stats.openFraudFlags
     },
     {
       label: 'Active Sellers',
       href: '/admin/active-sellers',
       icon: Store,
-      color: 'from-blue-500 to-cyan-500',
+      tone: 'info',
       count: stats.activeSellers
     },
   ]
 
   // Admin pages guide
-  const adminPages = [
+  const adminPages: Array<{
+    title: string
+    description: string
+    icon: LucideIcon
+    href: string
+  }> = [
     {
       title: 'Seller Applications',
       description: 'Review and approve new seller registrations',
       icon: FileText,
       href: '/admin/sellers',
-      color: 'text-yellow-400'
     },
     {
       title: 'Active Sellers',
       description: 'Manage and monitor active seller accounts',
       icon: Store,
       href: '/admin/active-sellers',
-      color: 'text-purple-400'
     },
     {
       title: 'Disputes',
       description: 'Handle buyer-seller disputes and refunds',
       icon: MessageSquare,
       href: '/admin/disputes',
-      color: 'text-orange-400'
     },
     {
       title: 'Analytics',
       description: 'View platform metrics and insights',
       icon: BarChart3,
       href: '/admin/analytics',
-      color: 'text-blue-400'
     },
     {
       title: 'Fraud Detection',
       description: 'Monitor and investigate fraud alerts',
       icon: Shield,
       href: '/admin/fraud',
-      color: 'text-red-400'
     },
     {
       title: 'INFORM Act',
       description: 'High-value seller compliance tracking',
       icon: BadgeCheck,
       href: '/admin/inform',
-      color: 'text-indigo-400'
     },
     {
       title: 'GDPR',
       description: 'Data privacy and user rights management',
       icon: Lock,
       href: '/admin/gdpr',
-      color: 'text-green-400'
     },
     {
       title: 'Games',
       description: 'Manage supported games and categories',
       icon: Gamepad2,
       href: '/admin/games',
-      color: 'text-cyan-400'
     },
     {
       title: 'Moderation',
       description: 'Review listings and user content',
       icon: ClipboardCheck,
       href: '/admin/moderation',
-      color: 'text-pink-400'
     },
     {
       title: 'Utilities',
       description: 'Admin tools and system utilities',
       icon: Wrench,
       href: '/admin/utils',
-      color: 'text-gray-400'
     },
   ]
 
   // System health indicator
-  const healthConfig = {
-    good: { label: 'Good', color: 'text-green-400', bg: 'bg-green-500/10', border: 'border-green-500/20' },
-    warning: { label: 'Warning', color: 'text-yellow-400', bg: 'bg-yellow-500/10', border: 'border-yellow-500/20' },
-    critical: { label: 'Critical', color: 'text-red-400', bg: 'bg-red-500/10', border: 'border-red-500/20' },
+  const healthConfig: Record<
+    DashboardStats['systemHealth'],
+    { label: string; dot: string; text: string }
+  > = {
+    good: { label: 'Good', dot: 'bg-success', text: 'text-success' },
+    warning: { label: 'Warning', dot: 'bg-warning', text: 'text-warning' },
+    critical: { label: 'Critical', dot: 'bg-error', text: 'text-error' },
   }
   const health = healthConfig[stats.systemHealth]
 
@@ -201,187 +209,139 @@ export default function CompactDashboard({ stats, activities, admin }: CompactDa
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-start justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-white">
-            Welcome back, {admin.full_name || admin.username || 'Admin'}
-          </h1>
-          <p className="text-sm text-gray-500 mt-1">Platform overview and quick actions</p>
-        </div>
-
-        <div className={cn(
-          "flex items-center gap-2 px-3 py-2 rounded-lg border text-sm font-medium",
-          health.bg, health.border, health.color
-        )}>
-          <div className={cn("h-2 w-2 rounded-full animate-pulse", health.color.replace('text-', 'bg-'))} />
-          System {health.label}
-        </div>
-      </div>
+      <PageHeader
+        title={`Welcome back, ${admin.full_name || admin.username || 'Admin'}`}
+        description="Platform overview and quick actions"
+        actions={
+          <div className="flex items-center gap-2 rounded-lg border border-border-default bg-bg-raised px-3 py-2 text-[12.5px] font-semibold text-text-secondary">
+            <span className={cn('h-2 w-2 animate-pulse rounded-full', health.dot)} />
+            System <span className={health.text}>{health.label}</span>
+          </div>
+        }
+        className="mb-0"
+      />
 
       {/* Quick Actions */}
       <div>
-        <h2 className="text-sm font-bold text-gray-600 uppercase tracking-wider mb-3">Quick Actions</h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {quickActions.map((action) => {
-            const Icon = action.icon
-            return (
-              <Link
-                key={action.href}
-                href={action.href}
-                className="group relative overflow-hidden rounded-xl border border-white/[0.06] bg-white/[0.025] p-4 hover:bg-white/[0.04] hover:border-white/[0.12] transition-all"
-              >
-                <div className="flex items-center justify-between mb-2.5">
-                  <div className={cn(
-                    "h-10 w-10 rounded-lg flex items-center justify-center bg-gradient-to-br",
-                    action.color,
-                    "bg-opacity-10"
-                  )}>
-                    <Icon className="h-5 w-5 text-white" />
-                  </div>
-                  {action.count > 0 && (
-                    <span className="text-xl font-bold text-white">{action.count}</span>
-                  )}
-                </div>
-                <p className="text-sm font-medium text-gray-300">{action.label}</p>
-                <ChevronRight className="h-4 w-4 text-gray-600 absolute bottom-3 right-3 group-hover:text-white transition-colors" />
-              </Link>
-            )
-          })}
+        <SectionLabel>Quick Actions</SectionLabel>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+          {quickActions.map((action) => (
+            <Link
+              key={action.href}
+              href={action.href}
+              className="group relative rounded-xl border border-border-default bg-bg-raised p-4 transition-all hover:-translate-y-0.5 hover:border-border-strong hover:bg-bg-raised-hover"
+            >
+              <div className="mb-2.5 flex items-center justify-between">
+                <IconChip icon={action.icon} tone={action.tone} size="lg" />
+                {action.count > 0 && (
+                  <span className="text-xl font-bold tabular-nums text-lime-text">
+                    {action.count}
+                  </span>
+                )}
+              </div>
+              <p className="text-[13px] font-semibold text-text-secondary transition-colors group-hover:text-text-primary">
+                {action.label}
+              </p>
+              <ChevronRight className="absolute bottom-3 right-3 h-4 w-4 text-text-tertiary transition-colors group-hover:text-text-primary" />
+            </Link>
+          ))}
         </div>
       </div>
 
       {/* Key Metrics Grid */}
       <div>
-        <h2 className="text-sm font-bold text-gray-600 uppercase tracking-wider mb-3">Key Metrics</h2>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-
-          {/* Total Orders */}
-          <div className="rounded-xl border border-white/[0.06] bg-white/[0.025] p-4">
-            <div className="flex items-center gap-2.5 mb-2">
-              <div className="h-8 w-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
-                <FileText className="h-4 w-4 text-blue-400" />
-              </div>
-              <p className="text-sm text-gray-500">Orders</p>
-            </div>
-            <p className="text-2xl font-bold text-white">{stats.totalOrders.toLocaleString()}</p>
-            <p className="text-xs text-gray-600 mt-1">{stats.ordersToday} today</p>
-          </div>
-
-          {/* Active Orders */}
-          <div className="rounded-xl border border-white/[0.06] bg-white/[0.025] p-4">
-            <div className="flex items-center gap-2.5 mb-2">
-              <div className="h-8 w-8 rounded-lg bg-purple-500/10 flex items-center justify-center">
-                <Clock className="h-4 w-4 text-purple-400" />
-              </div>
-              <p className="text-sm text-gray-500">Active</p>
-            </div>
-            <p className="text-2xl font-bold text-white">{stats.activeOrders}</p>
-            <p className="text-xs text-gray-600 mt-1">In progress</p>
-          </div>
-
-          {/* Total Revenue */}
-          <div className="rounded-xl border border-white/[0.06] bg-white/[0.025] p-4">
-            <div className="flex items-center gap-2.5 mb-2">
-              <div className="h-8 w-8 rounded-lg bg-green-500/10 flex items-center justify-center">
-                <DollarSign className="h-4 w-4 text-green-400" />
-              </div>
-              <p className="text-sm text-gray-500">Revenue</p>
-            </div>
-            <p className="text-2xl font-bold text-white">{formatCurrency(stats.totalRevenue)}</p>
-            <p className="text-xs text-gray-600 mt-1">All time</p>
-          </div>
-
-          {/* This Month Revenue */}
-          <div className="rounded-xl border border-white/[0.06] bg-white/[0.025] p-4">
-            <div className="flex items-center gap-2.5 mb-2">
-              <div className="h-8 w-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
-                <TrendingUp className="h-4 w-4 text-emerald-400" />
-              </div>
-              <p className="text-sm text-gray-500">This Month</p>
-            </div>
-            <p className="text-2xl font-bold text-white">{formatCurrency(stats.revenueThisMonth)}</p>
-            <p className={cn(
-              "text-xs mt-1",
-              revenueChange >= 0 ? "text-green-400" : "text-red-400"
-            )}>
-              {revenueChange >= 0 ? '+' : ''}{revenueChange.toFixed(1)}% vs last
-            </p>
-          </div>
-
-          {/* Total Users */}
-          <div className="rounded-xl border border-white/[0.06] bg-white/[0.025] p-4">
-            <div className="flex items-center gap-2.5 mb-2">
-              <div className="h-8 w-8 rounded-lg bg-indigo-500/10 flex items-center justify-center">
-                <Users className="h-4 w-4 text-indigo-400" />
-              </div>
-              <p className="text-sm text-gray-500">Users</p>
-            </div>
-            <p className="text-2xl font-bold text-white">{stats.totalUsers.toLocaleString()}</p>
-            <p className="text-xs text-gray-600 mt-1">{stats.usersToday} today</p>
-          </div>
-
-          {/* Active Sellers */}
-          <div className="rounded-xl border border-white/[0.06] bg-white/[0.025] p-4">
-            <div className="flex items-center gap-2.5 mb-2">
-              <div className="h-8 w-8 rounded-lg bg-violet-500/10 flex items-center justify-center">
-                <Store className="h-4 w-4 text-lime-text" />
-              </div>
-              <p className="text-sm text-gray-500">Sellers</p>
-            </div>
-            <p className="text-2xl font-bold text-white">{stats.activeSellers}</p>
-            <p className="text-xs text-gray-600 mt-1">{stats.approvedToday} approved today</p>
-          </div>
-
+        <SectionLabel>Key Metrics</SectionLabel>
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
+          <StatCard
+            label="Orders"
+            value={stats.totalOrders.toLocaleString()}
+            sub={`${stats.ordersToday} today`}
+            icon={FileText}
+            tone="info"
+          />
+          <StatCard
+            label="Active"
+            value={stats.activeOrders}
+            sub="In progress"
+            icon={Clock}
+            tone="neutral"
+          />
+          <StatCard
+            label="Revenue"
+            value={formatCurrency(stats.totalRevenue)}
+            sub="All time"
+            icon={DollarSign}
+            tone="success"
+          />
+          <StatCard
+            label="This Month"
+            value={formatCurrency(stats.revenueThisMonth)}
+            sub="vs last month"
+            delta={revenueChange}
+            icon={TrendingUp}
+            tone="success"
+          />
+          <StatCard
+            label="Users"
+            value={stats.totalUsers.toLocaleString()}
+            sub={`${stats.usersToday} today`}
+            icon={Users}
+            tone="neutral"
+          />
+          <StatCard
+            label="Sellers"
+            value={stats.activeSellers}
+            sub={`${stats.approvedToday} approved today`}
+            icon={Store}
+            tone="lime"
+          />
         </div>
       </div>
 
       {/* Two Column Layout for Pages Guide and Activity */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
 
         {/* Admin Pages Guide */}
         <div>
-          <h2 className="text-sm font-bold text-gray-600 uppercase tracking-wider mb-3">Admin Pages</h2>
-          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.025] p-4 space-y-2">
-            {adminPages.map((page) => {
-              const Icon = page.icon
-              return (
+          <SectionLabel>Admin Pages</SectionLabel>
+          <AdminPanel pad={false} className="overflow-hidden">
+            <div className="divide-y divide-border-subtle">
+              {adminPages.map((page) => (
                 <Link
                   key={page.href}
                   href={page.href}
-                  className="flex items-start gap-3 p-3 rounded-lg hover:bg-white/[0.03] border border-transparent hover:border-white/[0.06] transition-all group"
+                  className="group flex items-start gap-3 px-4 py-3 transition-colors hover:bg-bg-overlay"
                 >
-                  <div className="h-9 w-9 rounded-lg bg-white/[0.03] flex items-center justify-center flex-shrink-0">
-                    <Icon className={cn("h-5 w-5", page.color)} />
-                  </div>
+                  <IconChip icon={page.icon} tone="neutral" />
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold text-white group-hover:text-lime-text transition-colors">
+                    <p className="text-[13.5px] font-semibold text-text-primary transition-colors group-hover:text-lime-text">
                       {page.title}
                     </p>
-                    <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">
+                    <p className="mt-0.5 line-clamp-1 text-xs text-text-tertiary">
                       {page.description}
                     </p>
                   </div>
-                  <ChevronRight className="h-4 w-4 text-gray-600 group-hover:text-white transition-colors flex-shrink-0 mt-1" />
+                  <ChevronRight className="mt-1 h-4 w-4 shrink-0 text-text-tertiary transition-colors group-hover:text-text-secondary" />
                 </Link>
-              )
-            })}
-          </div>
+              ))}
+            </div>
+          </AdminPanel>
         </div>
 
         {/* Recent Activity */}
         <div>
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-bold text-gray-600 uppercase tracking-wider">Recent Activity</h2>
+          <div className="mb-3 flex items-center justify-between">
+            <SectionLabel className="mb-0">Recent Activity</SectionLabel>
 
             {/* Active/Resolved Toggle */}
-            <div className="flex items-center gap-1 p-1 rounded-lg bg-white/[0.03] border border-white/[0.06]">
+            <div className="flex items-center gap-1 rounded-lg border border-border-default bg-bg-raised p-1">
               <button
                 onClick={() => setActivityFilter('active')}
                 className={cn(
-                  "px-3 py-1 text-xs font-medium rounded-md transition-all",
+                  'rounded-md border px-3 py-1 text-[11.5px] font-semibold transition-colors',
                   activityFilter === 'active'
-                    ? "bg-lime-tint-bg text-lime-text border border-lime-tint-border"
-                    : "text-gray-500 hover:text-gray-400"
+                    ? 'border-lime-tint-border bg-lime-tint-bg text-lime-text'
+                    : 'border-transparent text-text-tertiary hover:text-text-secondary'
                 )}
               >
                 Active
@@ -389,10 +349,10 @@ export default function CompactDashboard({ stats, activities, admin }: CompactDa
               <button
                 onClick={() => setActivityFilter('resolved')}
                 className={cn(
-                  "px-3 py-1 text-xs font-medium rounded-md transition-all",
+                  'rounded-md border px-3 py-1 text-[11.5px] font-semibold transition-colors',
                   activityFilter === 'resolved'
-                    ? "bg-green-500/20 text-green-300 border border-green-500/30"
-                    : "text-gray-500 hover:text-gray-400"
+                    ? 'border-lime-tint-border bg-lime-tint-bg text-lime-text'
+                    : 'border-transparent text-text-tertiary hover:text-text-secondary'
                 )}
               >
                 Resolved
@@ -400,7 +360,7 @@ export default function CompactDashboard({ stats, activities, admin }: CompactDa
             </div>
           </div>
 
-          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.025] p-4">
+          <AdminPanel pad={false} className="overflow-hidden">
             {(() => {
               // Filter activities based on resolved status
               const filteredActivities = activities.filter(activity => {
@@ -415,13 +375,13 @@ export default function CompactDashboard({ stats, activities, admin }: CompactDa
 
               if (displayedActivities.length === 0) {
                 return (
-                  <div className="text-center py-8">
-                    <p className="text-sm text-gray-500">
+                  <div className="px-4 py-10 text-center">
+                    <p className="text-[13px] text-text-tertiary">
                       No {activityFilter} activities
                     </p>
                     {activityFilter === 'active' && (
-                      <p className="text-xs text-gray-600 mt-2">
-                        Check <span className="text-green-400">Resolved</span> for history
+                      <p className="mt-2 text-xs text-text-tertiary">
+                        Check <span className="font-semibold text-text-secondary">Resolved</span> for history
                       </p>
                     )}
                   </div>
@@ -429,42 +389,42 @@ export default function CompactDashboard({ stats, activities, admin }: CompactDa
               }
 
               return (
-                <div className="space-y-2">
+                <div className="divide-y divide-border-subtle">
                   {displayedActivities.map((activity) => {
-                    const typeConfig = {
-                      dispute: { icon: AlertTriangle, color: 'text-red-400', bg: 'bg-red-500/10' },
-                      application: { icon: UserPlus, color: 'text-yellow-400', bg: 'bg-yellow-500/10' },
-                      fraud: { icon: Shield, color: 'text-purple-400', bg: 'bg-purple-500/10' },
+                    const typeConfig: Record<
+                      typeof activity.type,
+                      { icon: LucideIcon; tone: ChipTone }
+                    > = {
+                      dispute: { icon: AlertTriangle, tone: 'error' },
+                      application: { icon: UserPlus, tone: 'info' },
+                      fraud: { icon: Shield, tone: 'warning' },
                     }
                     const config = typeConfig[activity.type]
-                    const Icon = config.icon
 
                     return (
                       <Link
                         key={activity.id}
                         href={activity.link || '#'}
-                        className="flex items-start gap-3 p-3 rounded-lg hover:bg-white/[0.03] border border-transparent hover:border-white/[0.06] transition-all group"
+                        className="group flex items-start gap-3 px-4 py-3 transition-colors hover:bg-bg-overlay"
                       >
                         {/* Icon or Game Logo */}
                         {activity.metadata?.gameIcon ? (
-                          <div className="h-10 w-10 rounded-lg overflow-hidden flex-shrink-0 bg-white/[0.03] border border-white/[0.06]">
+                          <div className="h-9 w-9 shrink-0 overflow-hidden rounded-lg border border-border-subtle bg-bg-overlay">
                             <Image
                               src={activity.metadata.gameIcon}
                               alt={activity.metadata.gameName || 'Game'}
-                              width={40}
-                              height={40}
-                              className="object-cover"
+                              width={36}
+                              height={36}
+                              className="h-full w-full object-cover"
                             />
                           </div>
                         ) : (
-                          <div className={cn("h-10 w-10 rounded-lg flex items-center justify-center flex-shrink-0", config.bg)}>
-                            <Icon className={cn("h-5 w-5", config.color)} />
-                          </div>
+                          <IconChip icon={config.icon} tone={config.tone} />
                         )}
 
                         {/* Content */}
                         <div className="min-w-0 flex-1">
-                          <p className="text-sm font-semibold text-white">
+                          <p className="text-[13.5px] font-semibold text-text-primary">
                             {activity.title}
                           </p>
 
@@ -472,35 +432,35 @@ export default function CompactDashboard({ stats, activities, admin }: CompactDa
                           {activity.type === 'dispute' && activity.metadata ? (
                             <div className="mt-1 space-y-0.5">
                               {activity.metadata.gameName && (
-                                <p className="text-xs text-gray-400">
+                                <p className="text-xs text-text-secondary">
                                   {activity.metadata.gameName}
                                 </p>
                               )}
                               {activity.metadata.itemTitle && (
-                                <p className="text-xs text-gray-500 line-clamp-1">
+                                <p className="line-clamp-1 text-xs text-text-tertiary">
                                   {activity.metadata.itemTitle}
                                 </p>
                               )}
                               <div className="flex items-center gap-2">
                                 {activity.metadata.amount && (
-                                  <p className="text-xs font-medium text-lime-text">
+                                  <p className="text-xs font-semibold tabular-nums text-lime-text">
                                     {formatCurrency(activity.metadata.amount)}
                                   </p>
                                 )}
                                 {activity.metadata.orderNumber && (
-                                  <p className="text-xs text-gray-600">
+                                  <p className="text-xs text-text-tertiary">
                                     #{activity.metadata.orderNumber}
                                   </p>
                                 )}
                               </div>
                             </div>
                           ) : (
-                            <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">
+                            <p className="mt-0.5 line-clamp-1 text-xs text-text-tertiary">
                               {activity.description}
                             </p>
                           )}
 
-                          <p className="text-xs text-gray-600 mt-1.5">
+                          <p className="mt-1.5 text-[11px] text-text-tertiary">
                             {new Date(activity.timestamp).toLocaleString('en-US', {
                               month: 'short',
                               day: 'numeric',
@@ -512,21 +472,8 @@ export default function CompactDashboard({ stats, activities, admin }: CompactDa
 
                         {/* Status Badge */}
                         {activity.status && (
-                          <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                            <span className={cn(
-                              "text-xs font-medium px-2.5 py-1 rounded-md whitespace-nowrap",
-                              activity.status.toLowerCase().includes('resolved') && "bg-green-500/20 text-green-400 border border-green-500/30",
-                              activity.status.toLowerCase().includes('closed') && "bg-gray-500/20 text-gray-400 border border-gray-500/30",
-                              activity.status.toLowerCase().includes('open') && "bg-red-500/20 text-red-400 border border-red-500/30",
-                              activity.status.toLowerCase().includes('review') && "bg-yellow-500/20 text-yellow-400 border border-yellow-500/30",
-                              activity.status.toLowerCase().includes('awaiting') && "bg-orange-500/20 text-orange-400 border border-orange-500/30",
-                              activity.status.toLowerCase().includes('escalated') && "bg-purple-500/20 text-purple-400 border border-purple-500/30",
-                              activity.status.toLowerCase().includes('pending') && "bg-blue-500/20 text-blue-400 border border-blue-500/30",
-                              activity.status.toLowerCase().includes('approved') && "bg-green-500/20 text-green-400 border border-green-500/30",
-                              activity.status.toLowerCase().includes('rejected') && "bg-red-500/20 text-red-400 border border-red-500/30"
-                            )}>
-                              {activity.status}
-                            </span>
+                          <div className="flex shrink-0 flex-col items-end gap-1">
+                            <StatusBadge status={activity.status} />
                           </div>
                         )}
                       </Link>
@@ -537,45 +484,26 @@ export default function CompactDashboard({ stats, activities, admin }: CompactDa
                   {hasMore && (
                     <Link
                       href="/admin/activities"
-                      className="flex items-center justify-center gap-2 p-3 rounded-lg border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04] hover:border-lime-tint-border transition-all group mt-2"
+                      className="group flex items-center justify-center gap-2 px-4 py-3 text-[13px] font-semibold text-lime-text transition-colors hover:bg-bg-overlay"
                     >
-                      <span className="text-sm font-medium text-lime-text group-hover:text-lime-text">
-                        View All Activities
-                      </span>
-                      <ArrowRight className="h-4 w-4 text-lime-text group-hover:translate-x-0.5 transition-transform" />
+                      View All Activities
+                      <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
                     </Link>
                   )}
                 </div>
               )
             })()}
-          </div>
+          </AdminPanel>
         </div>
 
       </div>
 
       {/* Additional Stats Row */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-
-        <div className="rounded-xl border border-white/[0.06] bg-white/[0.025] p-4">
-          <p className="text-sm text-gray-500 mb-2">Pending Reviews</p>
-          <p className="text-2xl font-bold text-white">{stats.pendingReviews}</p>
-        </div>
-
-        <div className="rounded-xl border border-white/[0.06] bg-white/[0.025] p-4">
-          <p className="text-sm text-gray-500 mb-2">High Priority Disputes</p>
-          <p className="text-2xl font-bold text-white">{stats.highPriorityDisputes}</p>
-        </div>
-
-        <div className="rounded-xl border border-white/[0.06] bg-white/[0.025] p-4">
-          <p className="text-sm text-gray-500 mb-2">High Severity Fraud</p>
-          <p className="text-2xl font-bold text-white">{stats.highSeverityFlags}</p>
-        </div>
-
-        <div className="rounded-xl border border-white/[0.06] bg-white/[0.025] p-4">
-          <p className="text-sm text-gray-500 mb-2">Unread Notifications</p>
-          <p className="text-2xl font-bold text-white">{stats.unreadNotifications}</p>
-        </div>
-
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        <StatCard label="Pending Reviews" value={stats.pendingReviews} />
+        <StatCard label="High Priority Disputes" value={stats.highPriorityDisputes} />
+        <StatCard label="High Severity Fraud" value={stats.highSeverityFlags} />
+        <StatCard label="Unread Notifications" value={stats.unreadNotifications} />
       </div>
     </div>
   )

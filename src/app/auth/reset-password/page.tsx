@@ -14,18 +14,34 @@ export default function ResetPasswordPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
+  const [validSession, setValidSession] = useState<boolean | null>(null) // null = checking
   const router = useRouter()
   const supabase = createClient()
 
   useEffect(() => {
-    // Check if we have access_token in the URL (from email link)
-    const hashParams = new URLSearchParams(window.location.hash.substring(1))
-    const accessToken = hashParams.get('access_token')
-
-    if (!accessToken) {
-      setError('Invalid or expired reset link. Please request a new password reset.')
-    }
-  }, [])
+    // A recovery link is valid when Supabase has a session for it. With the
+    // modern (PKCE / @supabase/ssr) flow the link is NOT a hash #access_token —
+    // it's a ?code exchanged for a session, and Supabase emits PASSWORD_RECOVERY.
+    // So we check for an active session (and listen for the recovery event)
+    // rather than sniffing the URL hash (which wrongly rejected valid links).
+    let settled = false
+    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY' || session) {
+        settled = true
+        setValidSession(true)
+      }
+    })
+    supabase.auth.getSession().then(({ data }) => {
+      if (settled) return
+      if (data.session) {
+        setValidSession(true)
+      } else {
+        setValidSession(false)
+        setError('Invalid or expired reset link. Please request a new password reset.')
+      }
+    })
+    return () => sub.subscription.unsubscribe()
+  }, [supabase])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -76,7 +92,7 @@ export default function ResetPasswordPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
               </svg>
             </div>
-            <h2 className="mt-6 text-3xl font-extrabold text-white">
+            <h2 className="mt-6 text-3xl font-extrabold text-text-primary">
               Password Reset Successful!
             </h2>
             <p className="mt-2 text-sm text-text-secondary">
@@ -91,17 +107,17 @@ export default function ResetPasswordPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-bg-base py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
-        <div className="bg-gray-900 py-8 px-4 shadow-xl rounded-lg sm:px-10 border border-gray-800">
+        <div className="bg-bg-raised py-8 px-4 shadow-xl rounded-lg sm:px-10 border border-border-subtle">
           <div>
             <Link
               href="/login"
-              className="flex items-center text-sm text-text-secondary hover:text-white mb-6 transition-colors"
+              className="flex items-center text-sm text-text-secondary hover:text-text-primary mb-6 transition-colors"
             >
               <ArrowLeft className="w-4 h-4 mr-1" />
               Back to login
             </Link>
 
-            <h2 className="text-3xl font-extrabold text-white text-center">
+            <h2 className="text-3xl font-extrabold text-text-primary text-center">
               Reset your password
             </h2>
             <p className="mt-2 text-center text-sm text-text-secondary">
@@ -140,7 +156,7 @@ export default function ResetPasswordPage() {
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="appearance-none block w-full pl-10 pr-10 py-2 bg-gray-800 border border-gray-700 rounded-md shadow-sm placeholder-gray-500 text-white focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm"
+                    className="appearance-none block w-full pl-10 pr-10 py-2 bg-bg-overlay border border-border-default rounded-md shadow-sm placeholder:text-text-disabled text-text-primary focus:outline-none focus:ring-lime focus:border-lime sm:text-sm"
                     placeholder="Enter new password"
                   />
                   <button
@@ -174,7 +190,7 @@ export default function ResetPasswordPage() {
                     required
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="appearance-none block w-full pl-10 pr-10 py-2 bg-gray-800 border border-gray-700 rounded-md shadow-sm placeholder-gray-500 text-white focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm"
+                    className="appearance-none block w-full pl-10 pr-10 py-2 bg-bg-overlay border border-border-default rounded-md shadow-sm placeholder:text-text-disabled text-text-primary focus:outline-none focus:ring-lime focus:border-lime sm:text-sm"
                     placeholder="Confirm new password"
                   />
                   <button
@@ -193,7 +209,7 @@ export default function ResetPasswordPage() {
             </div>
 
             {/* Password Requirements */}
-            <div className="rounded-md bg-gray-800 border border-gray-700 p-4">
+            <div className="rounded-md bg-bg-overlay border border-border-default p-4">
               <div className="text-sm text-text-secondary">
                 <p className="font-medium mb-1">Password requirements:</p>
                 <ul className="list-disc list-inside space-y-1 text-xs text-text-secondary">
@@ -206,10 +222,10 @@ export default function ResetPasswordPage() {
             <div>
               <button
                 type="submit"
-                disabled={loading}
-                className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                disabled={loading || validSession === false}
+                className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md bg-lime text-text-inverse hover:bg-lime-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-lime disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
               >
-                {loading ? 'Resetting password...' : 'Reset Password'}
+                {loading ? 'Resetting password...' : validSession === null ? 'Verifying link…' : 'Reset Password'}
               </button>
             </div>
           </form>

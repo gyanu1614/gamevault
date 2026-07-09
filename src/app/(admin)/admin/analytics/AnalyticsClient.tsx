@@ -3,33 +3,34 @@
 /**
  * P6.2 — Admin Analytics Dashboard Client
  *
+ * V53 restyle — rebuilt on the admin kit (PageHeader / StatCard /
+ * AdminPanel), neutral surfaces + lime accent.
+ *
+ * FIX: the previous version wrapped the ENTIRE page (title included) in
+ * framer-motion `initial="hidden"` stagger variants. Those initial
+ * styles (opacity:0 / translateY) are serialized into the SSR HTML, so
+ * the page rendered invisibly until the client-side animation ran —
+ * and stayed invisible whenever hydration stalled or errored under the
+ * admin tree. Content is now visible in the server HTML itself; no
+ * JS required to see the page.
+ *
  * Sections:
  *  1. KPI stat cards — revenue, GMV, orders, avg order, users, listings
- *  2. 30-day revenue + orders sparkline charts (inline SVG, zero deps)
- *  3. Orders by status breakdown (pill grid)
+ *  2. 30-day revenue + orders charts (inline SVG, zero deps)
+ *  3. Orders by status breakdown
  *  4. User & listing stats
- *  5. Top sellers table
+ *  5. Top sellers
  *  6. Promo code performance + disputes summary
  */
 
-import { motion } from 'framer-motion'
 import {
-  TrendingUp, TrendingDown, DollarSign, ShoppingCart, Users,
-  Package, BarChart3, Tag, AlertTriangle, CheckCircle2, Star,
-  Minus, ArrowUpRight, ArrowDownRight, Activity,
+  TrendingUp, DollarSign, ShoppingCart, Users,
+  Package, Tag, AlertTriangle, CheckCircle2, Star, Activity,
 } from 'lucide-react'
 import type { AnalyticsData, DailyPoint } from '@/lib/actions/admin-analytics'
-
-// ── Animation variants ─────────────────────────────────────────────────────
-
-const container = {
-  hidden: { opacity: 0 },
-  show:   { opacity: 1, transition: { staggerChildren: 0.06 } },
-}
-const item = {
-  hidden: { opacity: 0, y: 20 },
-  show:   { opacity: 1, y: 0,  transition: { duration: 0.35 } },
-}
+import {
+  PageHeader, AdminPanel, StatCard, IconChip, SectionLabel,
+} from '../components/kit'
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -46,11 +47,17 @@ function pctChange(current: number, prev: number): number | null {
 
 // ── Inline SVG sparkline ───────────────────────────────────────────────────
 
-function Sparkline({ points, color = '#22c55e', height = 60 }: {
+function Sparkline({ id, points, color, height = 60 }: {
+  /** Unique gradient id — must differ per chart instance on the page. */
+  id: string
   points: DailyPoint[]
-  color?: string
+  color: string
   height?: number
 }) {
+  // Guard: a line needs at least two points (avoids NaN coords /
+  // undefined access on an empty dataset).
+  if (points.length < 2) return null
+
   const width = 400
   const pad   = 4
   const vals  = points.map(p => p.value)
@@ -73,15 +80,12 @@ function Sparkline({ points, color = '#22c55e', height = 60 }: {
   return (
     <svg viewBox={`0 0 ${width} ${height}`} className="w-full" preserveAspectRatio="none">
       <defs>
-        <linearGradient id={`grad-${color.replace('#', '')}`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%"   stopColor={color} stopOpacity="0.35" />
-          <stop offset="100%" stopColor={color} stopOpacity="0"    />
+        <linearGradient id={`spark-${id}`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%"   stopColor={color} stopOpacity="0.3" />
+          <stop offset="100%" stopColor={color} stopOpacity="0"   />
         </linearGradient>
       </defs>
-      <polygon
-        points={fillPath}
-        fill={`url(#grad-${color.replace('#', '')})`}
-      />
+      <polygon points={fillPath} fill={`url(#spark-${id})`} />
       <polyline
         points={polyline}
         fill="none"
@@ -94,86 +98,46 @@ function Sparkline({ points, color = '#22c55e', height = 60 }: {
   )
 }
 
-// ── KPI Card ───────────────────────────────────────────────────────────────
+// ── Chart panel ────────────────────────────────────────────────────────────
 
-interface KpiCardProps {
-  label:      string
-  value:      string
-  sub?:       string
-  pct?:       number | null
-  icon:       React.ReactNode
-  iconBg:     string
-  sparkline?: DailyPoint[]
-  sparkColor?: string
-}
-
-function KpiCard({ label, value, sub, pct, icon, iconBg, sparkline, sparkColor }: KpiCardProps) {
-  const isPos  = pct !== null && pct !== undefined && pct > 0
-  const isNeg  = pct !== null && pct !== undefined && pct < 0
-  const isFlat = pct !== null && pct !== undefined && pct === 0
-
+function ChartPanel({ id, title, sub, points, color }: {
+  id: string
+  title: string
+  sub: string
+  points: DailyPoint[]
+  color: string
+}) {
   return (
-    <motion.div
-      variants={item}
-      className="bg-[#0d0d0d] border border-white/[0.06] rounded-xl p-5 flex flex-col gap-3 hover:border-white/10 transition-colors"
-    >
-      <div className="flex items-start justify-between">
-        <div>
-          <p className="text-xs text-white/40 font-medium uppercase tracking-wider mb-1">{label}</p>
-          <p className="text-2xl font-bold text-white font-mono">{value}</p>
-          {sub && <p className="text-xs text-white/40 mt-0.5">{sub}</p>}
-        </div>
-        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${iconBg}`}>
-          {icon}
-        </div>
+    <AdminPanel>
+      <SectionLabel>{title}</SectionLabel>
+      <p className="-mt-2 mb-4 text-[12px] text-text-tertiary">{sub}</p>
+      <div className="h-32">
+        {points.length > 1 ? (
+          <Sparkline id={id} points={points} color={color} height={128} />
+        ) : (
+          <p className="flex h-full items-center justify-center text-[12.5px] text-text-tertiary">
+            Not enough data yet
+          </p>
+        )}
       </div>
-
-      {pct !== null && pct !== undefined && (
-        <div className={`flex items-center gap-1 text-xs font-medium ${
-          isPos ? 'text-green-400' : isNeg ? 'text-red-400' : 'text-white/40'
-        }`}>
-          {isPos && <ArrowUpRight className="w-3.5 h-3.5" />}
-          {isNeg && <ArrowDownRight className="w-3.5 h-3.5" />}
-          {isFlat && <Minus className="w-3.5 h-3.5" />}
-          <span>{isPos ? '+' : ''}{pct.toFixed(1)}% vs prev month</span>
-        </div>
-      )}
-
-      {sparkline && sparkline.length > 1 && (
-        <div className="h-12 -mx-1">
-          <Sparkline points={sparkline} color={sparkColor ?? '#22c55e'} height={48} />
-        </div>
-      )}
-    </motion.div>
+      <div className="mt-1 flex justify-between">
+        <span className="text-[10px] tabular-nums text-text-tertiary">{points[0]?.date}</span>
+        <span className="text-[10px] tabular-nums text-text-tertiary">{points[points.length - 1]?.date}</span>
+      </div>
+    </AdminPanel>
   )
 }
 
-// ── Status pill ────────────────────────────────────────────────────────────
+// ── Breakdown row (dot + label + count) ────────────────────────────────────
 
-function StatusPill({ label, count, color }: { label: string; count: number; color: string }) {
+function BreakdownRow({ label, count, dotClass }: { label: string; count: number; dotClass: string }) {
   return (
-    <div className="flex items-center justify-between gap-3 bg-white/[0.03] rounded-lg px-3 py-2.5">
+    <div className="flex items-center justify-between gap-3 rounded-lg border border-border-subtle bg-bg-overlay px-3 py-2.5">
       <div className="flex items-center gap-2">
-        <span className={`w-2 h-2 rounded-full ${color}`} />
-        <span className="text-sm text-white/70">{label}</span>
+        <span className={`h-2 w-2 rounded-full ${dotClass}`} />
+        <span className="text-[13px] text-text-secondary">{label}</span>
       </div>
-      <span className="text-sm font-mono font-semibold text-white">{fmt(count)}</span>
-    </div>
-  )
-}
-
-// ── Section header ─────────────────────────────────────────────────────────
-
-function SectionHeader({ icon, title, sub }: { icon: React.ReactNode; title: string; sub?: string }) {
-  return (
-    <div className="flex items-center gap-2.5 mb-4">
-      <div className="w-8 h-8 bg-white/[0.06] rounded-lg flex items-center justify-center text-white/60">
-        {icon}
-      </div>
-      <div>
-        <h2 className="text-sm font-semibold text-white">{title}</h2>
-        {sub && <p className="text-xs text-white/40">{sub}</p>}
-      </div>
+      <span className="text-[13px] font-semibold tabular-nums text-text-primary">{fmt(count)}</span>
     </div>
   )
 }
@@ -183,13 +147,14 @@ function SectionHeader({ icon, title, sub }: { icon: React.ReactNode; title: str
 function SellerRow({ rank, username, totalSales, lifetimeEarnings }: {
   rank: number; username: string; totalSales: number; lifetimeEarnings: number
 }) {
-  const medals = ['🥇', '🥈', '🥉']
   return (
-    <div className="flex items-center gap-3 py-2.5 border-b border-white/[0.04] last:border-0">
-      <span className="text-lg w-7 text-center">{medals[rank - 1] ?? rank}</span>
-      <span className="flex-1 text-sm text-white font-medium truncate">@{username}</span>
-      <span className="text-xs text-white/40 w-20 text-right">{fmt(totalSales)} sales</span>
-      <span className="text-sm font-mono font-semibold text-green-400 w-24 text-right">
+    <div className="flex items-center gap-3 border-b border-border-subtle py-2.5 last:border-0">
+      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-border-subtle bg-bg-overlay text-[11px] font-bold tabular-nums text-text-secondary">
+        {rank}
+      </span>
+      <span className="flex-1 truncate text-[13.5px] font-semibold text-text-primary">@{username}</span>
+      <span className="w-20 text-right text-[12px] tabular-nums text-text-tertiary">{fmt(totalSales)} sales</span>
+      <span className="w-24 text-right text-[13px] font-semibold tabular-nums text-success">
         {fmtUSD(lifetimeEarnings)}
       </span>
     </div>
@@ -207,11 +172,11 @@ export default function AnalyticsClient({ data, fetchError }: Props) {
   // ── Error state ──────────────────────────────────────────────────────────
   if (fetchError || !data) {
     return (
-      <div className="flex items-center justify-center min-h-[40vh]">
+      <div className="flex min-h-[40vh] items-center justify-center">
         <div className="text-center">
-          <AlertTriangle className="w-10 h-10 text-red-400 mx-auto mb-3" />
-          <p className="text-white font-semibold mb-1">Failed to load analytics</p>
-          <p className="text-white/40 text-sm">{fetchError ?? 'Unknown error'}</p>
+          <AlertTriangle className="mx-auto mb-3 h-10 w-10 text-error" />
+          <p className="mb-1 font-semibold text-text-primary">Failed to load analytics</p>
+          <p className="text-sm text-text-tertiary">{fetchError ?? 'Unknown error'}</p>
         </div>
       </div>
     )
@@ -222,166 +187,115 @@ export default function AnalyticsClient({ data, fetchError }: Props) {
   const usersPct  = pctChange(data.usersNewMtd,        data.usersNewPrevMonth)
 
   return (
-    <motion.div
-      variants={container}
-      initial="hidden"
-      animate="show"
-      className="space-y-8 pb-10"
-    >
+    <div className="space-y-6 pb-10">
       {/* ── Page header ─────────────────────────────────────────────────── */}
-      <motion.div variants={item}>
-        <div className="flex items-center gap-3 mb-1">
-          <BarChart3 className="w-6 h-6 text-violet-400" />
-          <h1 className="text-2xl font-bold text-white">Analytics</h1>
-        </div>
-        <p className="text-white/40 text-sm">Platform-wide performance metrics and revenue insights.</p>
-      </motion.div>
+      <PageHeader
+        title="Analytics"
+        description="Platform-wide performance metrics and revenue insights."
+      />
 
       {/* ── KPI cards row ───────────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-        <KpiCard
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <StatCard
           label="Platform Revenue MTD"
           value={fmtUSD(data.platformRevenueMtd)}
           sub={`All-time: ${fmtUSD(data.platformRevenueTotal)}`}
-          pct={revPct}
-          icon={<DollarSign className="w-4 h-4 text-green-400" />}
-          iconBg="bg-green-500/10"
-          sparkline={data.dailyRevenue}
-          sparkColor="#22c55e"
+          delta={revPct}
+          icon={DollarSign}
+          tone="success"
         />
-        <KpiCard
+        <StatCard
           label="GMV This Month"
           value={fmtUSD(data.gmvMtd)}
           sub={`All-time GMV: ${fmtUSD(data.gmvTotal)}`}
-          icon={<TrendingUp className="w-4 h-4 text-blue-400" />}
-          iconBg="bg-blue-500/10"
+          icon={TrendingUp}
+          tone="info"
         />
-        <KpiCard
+        <StatCard
           label="Orders MTD"
           value={fmt(data.ordersMtd)}
           sub={`Total all-time: ${fmt(data.ordersTotal)}`}
-          pct={ordPct}
-          icon={<ShoppingCart className="w-4 h-4 text-violet-400" />}
-          iconBg="bg-violet-500/10"
-          sparkline={data.dailyOrders}
-          sparkColor="#8b5cf6"
+          delta={ordPct}
+          icon={ShoppingCart}
+          tone="lime"
         />
-        <KpiCard
+        <StatCard
           label="Avg Order Value"
           value={fmtUSD(data.avgOrderValue)}
           sub="Completed orders only"
-          icon={<Activity className="w-4 h-4 text-amber-400" />}
-          iconBg="bg-amber-500/10"
+          icon={Activity}
+          tone="warning"
         />
-        <KpiCard
+        <StatCard
           label="New Users MTD"
           value={fmt(data.usersNewMtd)}
           sub={`Total users: ${fmt(data.usersTotal)}`}
-          pct={usersPct}
-          icon={<Users className="w-4 h-4 text-cyan-400" />}
-          iconBg="bg-cyan-500/10"
+          delta={usersPct}
+          icon={Users}
+          tone="info"
         />
-        <KpiCard
+        <StatCard
           label="Active Listings"
           value={fmt(data.listingsActive)}
           sub={`Total: ${fmt(data.listingsTotal)} · New MTD: ${fmt(data.listingsNewMtd)}`}
-          icon={<Package className="w-4 h-4 text-orange-400" />}
-          iconBg="bg-orange-500/10"
+          icon={Package}
+          tone="neutral"
         />
       </div>
 
       {/* ── Charts row ──────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-        {/* Daily revenue chart */}
-        <motion.div
-          variants={item}
-          className="bg-[#0d0d0d] border border-white/[0.06] rounded-xl p-5"
-        >
-          <SectionHeader
-            icon={<DollarSign className="w-4 h-4" />}
-            title="Daily Platform Revenue"
-            sub="Last 30 days"
-          />
-          <div className="h-32">
-            <Sparkline points={data.dailyRevenue} color="#22c55e" height={128} />
-          </div>
-          {/* X-axis labels — first + last */}
-          <div className="flex justify-between mt-1">
-            <span className="text-[10px] text-white/25">{data.dailyRevenue[0]?.date}</span>
-            <span className="text-[10px] text-white/25">{data.dailyRevenue[data.dailyRevenue.length - 1]?.date}</span>
-          </div>
-        </motion.div>
-
-        {/* Daily orders chart */}
-        <motion.div
-          variants={item}
-          className="bg-[#0d0d0d] border border-white/[0.06] rounded-xl p-5"
-        >
-          <SectionHeader
-            icon={<ShoppingCart className="w-4 h-4" />}
-            title="Daily Orders"
-            sub="Last 30 days"
-          />
-          <div className="h-32">
-            <Sparkline points={data.dailyOrders} color="#8b5cf6" height={128} />
-          </div>
-          <div className="flex justify-between mt-1">
-            <span className="text-[10px] text-white/25">{data.dailyOrders[0]?.date}</span>
-            <span className="text-[10px] text-white/25">{data.dailyOrders[data.dailyOrders.length - 1]?.date}</span>
-          </div>
-        </motion.div>
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+        <ChartPanel
+          id="daily-revenue"
+          title="Daily Platform Revenue"
+          sub="Last 30 days"
+          points={data.dailyRevenue}
+          color="var(--color-success)"
+        />
+        <ChartPanel
+          id="daily-orders"
+          title="Daily Orders"
+          sub="Last 30 days"
+          points={data.dailyOrders}
+          color="var(--color-accent-default)"
+        />
       </div>
 
       {/* ── Bottom row: orders breakdown + user stats + sellers ─────────── */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
 
         {/* Orders by status */}
-        <motion.div
-          variants={item}
-          className="bg-[#0d0d0d] border border-white/[0.06] rounded-xl p-5"
-        >
-          <SectionHeader
-            icon={<ShoppingCart className="w-4 h-4" />}
-            title="Orders by Status"
-            sub={`${fmt(data.ordersTotal)} total`}
-          />
+        <AdminPanel>
+          <SectionLabel>Orders by Status</SectionLabel>
+          <p className="-mt-2 mb-4 text-[12px] text-text-tertiary">{fmt(data.ordersTotal)} total</p>
           <div className="space-y-2">
-            <StatusPill label="Completed"  count={data.ordersCompleted} color="bg-green-400"  />
-            <StatusPill label="Disputed"   count={data.ordersDisputed}  color="bg-red-400"    />
-            <StatusPill label="Refunded"   count={data.ordersRefunded}  color="bg-amber-400"  />
-            <StatusPill label="Guest"      count={data.ordersGuest}     color="bg-white/20"   />
+            <BreakdownRow label="Completed" count={data.ordersCompleted} dotClass="bg-success" />
+            <BreakdownRow label="Disputed"  count={data.ordersDisputed}  dotClass="bg-error" />
+            <BreakdownRow label="Refunded"  count={data.ordersRefunded}  dotClass="bg-warning" />
+            <BreakdownRow label="Guest"     count={data.ordersGuest}     dotClass="bg-text-tertiary" />
           </div>
-        </motion.div>
+        </AdminPanel>
 
         {/* User & listing stats */}
-        <motion.div
-          variants={item}
-          className="bg-[#0d0d0d] border border-white/[0.06] rounded-xl p-5"
-        >
-          <SectionHeader
-            icon={<Users className="w-4 h-4" />}
-            title="Users & Listings"
-          />
+        <AdminPanel>
+          <SectionLabel>Users &amp; Listings</SectionLabel>
           <div className="space-y-2">
-            <StatusPill label="Active Sellers" count={data.sellersActive}  color="bg-violet-400" />
-            <StatusPill label="Buyers"          count={data.buyersTotal}    color="bg-cyan-400"   />
-            <StatusPill label="Active Listings" count={data.listingsActive} color="bg-orange-400" />
-            <StatusPill label="New Listings MTD" count={data.listingsNewMtd} color="bg-blue-400" />
+            <BreakdownRow label="Active Sellers"   count={data.sellersActive}  dotClass="bg-lime" />
+            <BreakdownRow label="Buyers"           count={data.buyersTotal}    dotClass="bg-info" />
+            <BreakdownRow label="Active Listings"  count={data.listingsActive} dotClass="bg-text-tertiary" />
+            <BreakdownRow label="New Listings MTD" count={data.listingsNewMtd} dotClass="bg-success" />
           </div>
-        </motion.div>
+        </AdminPanel>
 
         {/* Top sellers */}
-        <motion.div
-          variants={item}
-          className="bg-[#0d0d0d] border border-white/[0.06] rounded-xl p-5"
-        >
-          <SectionHeader
-            icon={<Star className="w-4 h-4" />}
-            title="Top Sellers"
-            sub="By lifetime earnings"
-          />
+        <AdminPanel>
+          <div className="mb-3 flex items-center justify-between">
+            <SectionLabel className="mb-0">Top Sellers</SectionLabel>
+            <IconChip icon={Star} tone="lime" size="sm" />
+          </div>
+          <p className="-mt-2 mb-2 text-[12px] text-text-tertiary">By lifetime earnings</p>
           {data.topSellers.length === 0 ? (
-            <p className="text-white/30 text-sm text-center py-6">No seller data yet</p>
+            <p className="py-6 text-center text-sm text-text-tertiary">No seller data yet</p>
           ) : (
             <div>
               {data.topSellers.map((s, i) => (
@@ -395,54 +309,48 @@ export default function AnalyticsClient({ data, fetchError }: Props) {
               ))}
             </div>
           )}
-        </motion.div>
+        </AdminPanel>
       </div>
 
       {/* ── Promos & Disputes ────────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
 
         {/* Promo performance */}
-        <motion.div
-          variants={item}
-          className="bg-[#0d0d0d] border border-white/[0.06] rounded-xl p-5"
-        >
-          <SectionHeader
-            icon={<Tag className="w-4 h-4" />}
-            title="Promo Code Performance"
-          />
+        <AdminPanel>
+          <div className="mb-3 flex items-center justify-between">
+            <SectionLabel className="mb-0">Promo Code Performance</SectionLabel>
+            <IconChip icon={Tag} size="sm" />
+          </div>
           <div className="grid grid-cols-2 gap-3">
-            <div className="bg-white/[0.03] rounded-lg p-3">
-              <p className="text-xs text-white/40 mb-1">Total Usages</p>
-              <p className="text-xl font-bold font-mono text-white">{fmt(data.promoUsages)}</p>
+            <div className="rounded-lg border border-border-subtle bg-bg-overlay p-3">
+              <p className="mb-1 text-[11.5px] text-text-tertiary">Total Usages</p>
+              <p className="text-xl font-extrabold tabular-nums text-text-primary">{fmt(data.promoUsages)}</p>
             </div>
-            <div className="bg-white/[0.03] rounded-lg p-3">
-              <p className="text-xs text-white/40 mb-1">Total Discounts Given</p>
-              <p className="text-xl font-bold font-mono text-red-400">{fmtUSD(data.promoTotalDiscount)}</p>
+            <div className="rounded-lg border border-border-subtle bg-bg-overlay p-3">
+              <p className="mb-1 text-[11.5px] text-text-tertiary">Total Discounts Given</p>
+              <p className="text-xl font-extrabold tabular-nums text-error">{fmtUSD(data.promoTotalDiscount)}</p>
             </div>
           </div>
-          <p className="text-xs text-white/25 mt-3">
+          <p className="mt-3 text-[11.5px] text-text-tertiary">
             Discount cost absorbed by platform. Seller payouts unaffected.
           </p>
-        </motion.div>
+        </AdminPanel>
 
         {/* Disputes summary */}
-        <motion.div
-          variants={item}
-          className="bg-[#0d0d0d] border border-white/[0.06] rounded-xl p-5"
-        >
-          <SectionHeader
-            icon={<AlertTriangle className="w-4 h-4" />}
-            title="Disputes"
-          />
+        <AdminPanel>
+          <div className="mb-3 flex items-center justify-between">
+            <SectionLabel className="mb-0">Disputes</SectionLabel>
+            <IconChip icon={AlertTriangle} tone="warning" size="sm" />
+          </div>
           <div className="grid grid-cols-2 gap-3">
-            <div className="bg-red-500/[0.06] border border-red-500/10 rounded-lg p-3">
-              <p className="text-xs text-red-400/70 mb-1">Open / Under Review</p>
-              <p className="text-xl font-bold font-mono text-red-400">{fmt(data.disputesOpen)}</p>
+            <div className="rounded-lg border border-[rgba(255,92,92,0.25)] bg-error-bg p-3">
+              <p className="mb-1 text-[11.5px] text-error">Open / Under Review</p>
+              <p className="text-xl font-extrabold tabular-nums text-error">{fmt(data.disputesOpen)}</p>
             </div>
-            <div className="bg-green-500/[0.06] border border-green-500/10 rounded-lg p-3">
-              <p className="text-xs text-green-400/70 mb-1">Resolved</p>
-              <p className="text-xl font-bold font-mono text-green-400">
-                <CheckCircle2 className="w-4 h-4 inline mr-1 mb-0.5" />
+            <div className="rounded-lg border border-[rgba(63,217,134,0.25)] bg-success-bg p-3">
+              <p className="mb-1 text-[11.5px] text-success">Resolved</p>
+              <p className="text-xl font-extrabold tabular-nums text-success">
+                <CheckCircle2 className="mb-0.5 mr-1 inline h-4 w-4" />
                 {fmt(data.disputesResolved)}
               </p>
             </div>
@@ -450,13 +358,13 @@ export default function AnalyticsClient({ data, fetchError }: Props) {
           {data.disputesOpen > 0 && (
             <a
               href="/admin/disputes"
-              className="block mt-3 text-xs text-amber-400 hover:text-amber-300 transition-colors"
+              className="mt-3 block text-[12px] font-semibold text-warning transition-colors hover:text-text-primary"
             >
               → {data.disputesOpen} dispute{data.disputesOpen !== 1 ? 's' : ''} need attention
             </a>
           )}
-        </motion.div>
+        </AdminPanel>
       </div>
-    </motion.div>
+    </div>
   )
 }

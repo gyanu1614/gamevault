@@ -127,26 +127,26 @@ function BrowseContent() {
   const FilterPanel = (
     <div className="space-y-5">
       <div className="space-y-1.5">
-        <label className="block text-xs font-semibold uppercase tracking-wider text-text-secondary">
+        <label className="block text-[11px] font-semibold uppercase tracking-wider text-text-secondary">
           Game
         </label>
         <Combobox value={gameId} onChange={setGameId} options={gameOptions} unsorted ariaLabel="Game" />
       </div>
 
       <div className="space-y-1.5">
-        <label className="block text-xs font-semibold uppercase tracking-wider text-text-secondary">
+        <label className="block text-[11px] font-semibold uppercase tracking-wider text-text-secondary">
           Category
         </label>
         <Combobox value={categoryId} onChange={setCategoryId} options={categoryOptions} unsorted ariaLabel="Category" />
       </div>
 
       <div className="space-y-1.5">
-        <label className="block text-xs font-semibold uppercase tracking-wider text-text-secondary">
+        <label className="block text-[11px] font-semibold uppercase tracking-wider text-text-secondary">
           Price range
         </label>
         <div className="grid grid-cols-2 gap-2">
           <div className="space-y-1">
-            <span className="text-[10px] uppercase tracking-wider text-text-tertiary">Min</span>
+            <span className="text-[11px] uppercase tracking-wider text-text-tertiary">Min</span>
             <NumberField
               value={minPrice}
               onChange={(v) => setMinPrice(v ?? 0)}
@@ -158,7 +158,7 @@ function BrowseContent() {
             />
           </div>
           <div className="space-y-1">
-            <span className="text-[10px] uppercase tracking-wider text-text-tertiary">Max</span>
+            <span className="text-[11px] uppercase tracking-wider text-text-tertiary">Max</span>
             <NumberField
               value={maxPrice}
               onChange={(v) => setMaxPrice(v ?? 0)}

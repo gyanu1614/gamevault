@@ -13,7 +13,7 @@ import InformDisclosureClient from './InformDisclosureClient'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 
-export const metadata = { title: 'INFORM Act Disclosure | GameVault' }
+export const metadata = { title: 'INFORM Act Disclosure' }
 
 export default async function InformDisclosurePage() {
   const supabase = await createClient()

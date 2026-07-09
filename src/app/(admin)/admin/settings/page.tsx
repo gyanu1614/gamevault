@@ -1,11 +1,17 @@
 'use client'
 
+/**
+ * /admin/settings — V53 restyle on the admin kit.
+ * Neutral surfaces, lime primary for the active tab.
+ */
+
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { IconSettings, IconUser } from '@tabler/icons-react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import ProfileSettings from '../profile/ProfileSettings'
+import { PageHeader } from '../components/kit'
 
 export default function SettingsPage() {
   const router = useRouter()
@@ -52,8 +58,8 @@ export default function SettingsPage() {
 
   if (loading || !admin) {
     return (
-      <div className="flex items-center justify-center min-h-[50vh]">
-        <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-violet-500 border-r-transparent"></div>
+      <div className="flex min-h-[50vh] items-center justify-center">
+        <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-lime border-r-transparent"></div>
       </div>
     )
   }
@@ -61,19 +67,20 @@ export default function SettingsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-white">Settings</h1>
-        <p className="text-gray-400 mt-1">Manage your admin account and preferences</p>
-      </div>
+      <PageHeader
+        className="mb-0"
+        title="Settings"
+        description="Manage your admin account and preferences"
+      />
 
       {/* Tabs */}
-      <div className="bg-black/50 backdrop-blur-xl border border-white/[0.1] rounded-xl p-1.5 inline-flex">
+      <div className="inline-flex rounded-xl border border-border-default bg-bg-raised p-1.5">
         <button
           onClick={() => setActiveTab('profile')}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+          className={`rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${
             activeTab === 'profile'
-              ? 'bg-violet-500 text-white'
-              : 'text-gray-400 hover:text-white hover:bg-white/[0.05]'
+              ? 'bg-lime-pressed text-text-inverse'
+              : 'text-text-tertiary hover:bg-state-hover hover:text-text-primary'
           }`}
         >
           <div className="flex items-center gap-2">
@@ -83,10 +90,10 @@ export default function SettingsPage() {
         </button>
         <button
           onClick={() => setActiveTab('admin')}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+          className={`rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${
             activeTab === 'admin'
-              ? 'bg-violet-500 text-white'
-              : 'text-gray-400 hover:text-white hover:bg-white/[0.05]'
+              ? 'bg-lime-pressed text-text-inverse'
+              : 'text-text-tertiary hover:bg-state-hover hover:text-text-primary'
           }`}
         >
           <div className="flex items-center gap-2">
@@ -106,10 +113,10 @@ export default function SettingsPage() {
         {activeTab === 'profile' ? (
           <ProfileSettings admin={admin} />
         ) : (
-          <div className="bg-black/40 backdrop-blur-xl border border-white/[0.08] rounded-2xl p-12 text-center">
-            <IconSettings className="h-16 w-16 text-gray-600 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-white mb-2">Admin Settings</h3>
-            <p className="text-gray-400">
+          <div className="rounded-xl border border-border-default bg-bg-raised p-12 text-center">
+            <IconSettings className="mx-auto mb-4 h-16 w-16 text-text-disabled" />
+            <h3 className="mb-2 text-xl font-semibold text-text-primary">Admin Settings</h3>
+            <p className="text-text-secondary">
               Admin-level settings and configurations will be available here.
             </p>
           </div>

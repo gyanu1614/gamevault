@@ -39,7 +39,7 @@ function DigitBlock({ value, label, color }: { value: number; label: string; col
       )}>
         {str}
       </div>
-      <span className="text-[9px] font-medium uppercase tracking-[0.08em] text-text-disabled">{label}</span>
+      <span className="text-[11px] font-semibold uppercase tracking-wider text-text-disabled">{label}</span>
     </div>
   )
 }
@@ -187,7 +187,7 @@ export default function DeliveryTimer({
     const ws = windowSec % 60
     return (
       <div className="h-full rounded-2xl border border-border-subtle bg-white/[0.025] px-4 py-3 flex flex-col items-center justify-center">
-        <div className="text-[10px] font-bold uppercase tracking-[0.1em] text-text-tertiary mb-2">
+        <div className="text-[11px] font-bold uppercase tracking-wider text-text-tertiary mb-2">
           {role === 'buyer' ? 'Delivery Timer' : 'Delivery Window'}
         </div>
         <div className="flex items-end gap-2">
