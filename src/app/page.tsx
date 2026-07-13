@@ -4,22 +4,22 @@ import { HomePage } from '@/features/home/pages/HomePage'
 export const metadata: Metadata = {
   title: 'DropMarket | Buy & Sell Game Accounts, Items & Currency Safely',
   description:
-    'The trusted marketplace for gaming accounts, items, and currency. Buy and sell Roblox, Fortnite, Valorant, and LoL assets with SafeDrop buyer protection. Lowest fees, instant delivery, 48-hour escrow.',
+    'The trusted marketplace for gaming accounts, items, and currency. Buy and sell Roblox, Fortnite, Valorant, and LoL assets with SafeDrop Buyer Protection on every order. Lowest fees, instant delivery.',
   keywords: [
     'buy game accounts', 'sell game items', 'gaming marketplace',
     'roblox accounts', 'fortnite accounts', 'valorant accounts',
-    'lol accounts', 'game currency', 'safe game trading', 'escrow gaming marketplace',
+    'lol accounts', 'game currency', 'safe game trading', 'buyer protection gaming marketplace',
   ],
   openGraph: {
     title: 'DropMarket — Safe Gaming Marketplace',
-    description: 'Buy and sell game assets with SafeDrop escrow protection',
+    description: 'Buy and sell game assets with SafeDrop Buyer Protection',
     type: 'website',
     siteName: 'DropMarket',
   },
   twitter: {
     card: 'summary_large_image',
     title: 'DropMarket — Safe Gaming Marketplace',
-    description: 'Buy and sell game assets with SafeDrop escrow protection',
+    description: 'Buy and sell game assets with SafeDrop Buyer Protection',
   },
 }
 
@@ -42,7 +42,7 @@ const SCHEMAS = [
     '@type': 'Organization',
     name: 'DropMarket',
     url: 'https://dropmarket.gg',
-    description: 'Trusted gaming marketplace with SafeDrop buyer protection',
+    description: 'Trusted gaming marketplace with SafeDrop Buyer Protection on every order',
   },
 ]
 

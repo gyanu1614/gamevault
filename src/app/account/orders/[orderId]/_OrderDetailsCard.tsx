@@ -7,7 +7,7 @@
  *  1. Order Details card — centered icon + title at top, then tabular
  *     rows. For the seller view the rows are de-duplicated against the
  *     payout block (no Sale Price / After Fees here).
- *  2. SafeDrop Escrow inset (buyer + admin) inside the details card.
+ *  2. SafeDrop Buyer Protection inset (buyer + admin) inside the details card.
  *  3. Party button at the bottom of the details card.
  *  4. Payout card (seller + admin) — separate sibling card below.
  *
@@ -140,10 +140,10 @@ function Row({
 /**
  * SafeDropBody — V21/P5.k
  *
- * Buyer's escrow card body, mirrors PayoutBody for the seller:
- * flat rows + dynamic status row at the bottom. Lives in a sibling
- * OrderCard (not nested), so the buyer rail reads as
- *   [Order Details] → [SafeDrop Escrow] → [Audit ...]
+ * Buyer's SafeDrop protection card body, mirrors PayoutBody for the
+ * seller: flat rows + dynamic status row at the bottom. Lives in a
+ * sibling OrderCard (not nested), so the buyer rail reads as
+ *   [Order Details] → [SafeDrop Protection] → [Audit ...]
  * just like the seller's
  *   [Order Details] → [Your Payout] → [...]
  *
@@ -163,38 +163,38 @@ function SafeDropBody({
   onOpenDispute?: () => void
 }) {
   // Row + caption depend on order state.
-  let amountLabel = 'Amount Held'
+  let amountLabel = 'Amount Covered'
   let caption: React.ReactNode =
-    "Your funds are held with us. Confirm Receipt once your order arrives, and we'll release them to the seller."
+    "Your purchase is covered by SafeDrop Buyer Protection. Not delivered or not as described? You get your money back."
   let showDisputeCta = false
 
   if (orderStatus === 'completed') {
-    amountLabel = 'Amount Released'
+    amountLabel = 'Seller Paid'
     caption = (
       <>
-        Funds have been released to the seller. If anything was off with
+        The seller has been paid for this order. If anything was off with
         your order, you can still open a dispute within the protection
         window.
       </>
     )
     showDisputeCta = true
   } else if (orderStatus === 'delivered') {
-    amountLabel = 'Amount Held'
+    amountLabel = 'Amount Covered'
     caption =
-      "Your order arrived. Confirm Receipt to release the funds to the seller, or open a dispute if something's off."
+      "Your order arrived. Confirm Delivery so the seller gets paid, or open a dispute if something's off."
     showDisputeCta = true
   } else if (orderStatus === 'refunded') {
     amountLabel = 'Amount Refunded'
     caption =
-      'Funds have been refunded to your DropMarket wallet. The order is closed.'
+      'Your refund has been issued. The order is closed.'
   } else if (orderStatus === 'disputed') {
-    amountLabel = 'Amount Frozen'
+    amountLabel = 'Amount In Dispute'
     caption =
-      'A DropMarket admin is reviewing your dispute. Funds stay frozen until resolved.'
+      'A DropMarket admin is reviewing your dispute. The seller payout is paused until it resolves.'
   } else if (orderStatus === 'cancelled') {
     amountLabel = 'Amount Refunded'
     caption =
-      'Order cancelled. Funds returned to your DropMarket wallet.'
+      'Order cancelled — refund issued.'
   }
 
   return (
@@ -249,10 +249,10 @@ function SafeDropStatusRow({ orderStatus }: { orderStatus: string }) {
 
   const label =
     orderStatus === 'completed'
-      ? 'Funds Released To Seller'
+      ? 'Seller Paid Out'
       : orderStatus === 'delivered'
-      ? 'Confirm Receipt To Release'
-      : 'Funds Held In Escrow'
+      ? 'Confirm Delivery To Complete'
+      : 'Covered By SafeDrop'
 
   return (
     <div className={cn('mt-3 flex items-center gap-2 rounded-[9px] px-3 py-2', tone.bg)}>
@@ -308,10 +308,10 @@ function PayoutStatusRow({ orderStatus }: { orderStatus: string }) {
 
   const label =
     orderStatus === 'completed'
-      ? 'Funds Released To Wallet'
+      ? 'Added To Your Seller Balance'
       : orderStatus === 'delivered'
-      ? 'Funds Queued For Release'
-      : 'Funds Held In Escrow'
+      ? 'Payout Pending — Protection Window Open'
+      : 'Payout After Delivery Is Confirmed'
 
   return (
     <div className={cn('mt-3 flex items-center gap-2 rounded-[9px] px-3 py-2', tone.bg)}>
@@ -564,7 +564,7 @@ export function OrderDetailsCard(props: OrderDetailsCardProps) {
 
       {(role === 'buyer' || role === 'admin') && (
         <OrderCard className="px-5 pb-4 pt-5">
-          <CardHeader iconSrc="/assets/order-icons/escrow.svg" title="SafeDrop™ Escrow" />
+          <CardHeader iconSrc="/assets/order-icons/escrow.svg" title="SafeDrop™ Buyer Protection" />
           <SafeDropBody
             amount={escrowAmount}
             orderStatus={orderStatus}

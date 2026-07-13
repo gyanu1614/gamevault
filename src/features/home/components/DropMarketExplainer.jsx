@@ -1,6 +1,6 @@
 // V17o — GameVault explainer animation. Imported from the design handoff
 // (GameVaultVideo.jsx). Self-contained 32s looping 16:9 explainer that
-// walks buyers through the escrow flow. Hand-rolled timeline engine —
+// walks buyers through the SafeDrop buyer-protection flow. Hand-rolled timeline engine —
 // no external animation library needed.
 //
 // Conversions from the handoff:
@@ -714,7 +714,7 @@ if (typeof window !== 'undefined') {
 }
 
 /* ════════════════════════════════════════════════════════════════════════
-   GAMEVAULT — "How escrow keeps you safe" explainer
+   DROPMARKET — "How SafeDrop keeps you safe" explainer
    ════════════════════════════════════════════════════════════════════════ */
 
 const C = {
@@ -836,7 +836,7 @@ function BrandMark() {
         <Icon name="lock" size={21} color={C.lime} stroke={2.2} />
       </div>
       <span style={{ fontFamily: FD, fontWeight: 700, fontSize: 26, color: C.white, letterSpacing: '-0.02em' }}>
-        Game<span style={{ color: C.lime }}>Vault</span>
+        Drop<span style={{ color: C.lime }}>Market</span>
       </span>
     </div>
   );
@@ -870,7 +870,7 @@ function Caption({ lt, num, icon, title, desc, x = 120, y = 380, w = 560 }) {
 
 // ── Bottom step progress indicator ───────────────────────────────────────────
 function StepProgress({ active }) {
-  const steps = ['Find', 'Pay', 'Receive', 'Release'];
+  const steps = ['Find', 'Pay', 'Receive', 'Confirm'];
   const targets = [3.7, 8.1, 12.4, 17.8]; // jump-to time for each section
   const { setTime, setPlaying } = useTimeline();
   return (
@@ -955,7 +955,7 @@ function IntroScene() {
       <div style={{
         fontFamily: FD, fontWeight: 700, fontSize: 92, color: C.white, letterSpacing: '-0.03em',
         opacity: wm, transform: `translateY(${(1 - wm) * 22}px)`, marginBottom: 26,
-      }}>Game<span style={{ color: C.lime }}>Vault</span></div>
+      }}>Drop<span style={{ color: C.lime }}>Market</span></div>
       <div style={{
         fontFamily: FB, fontWeight: 600, fontSize: 32, color: C.white, opacity: tag,
         transform: `translateY(${(1 - tag) * 14}px)`, marginBottom: 16,
@@ -963,7 +963,7 @@ function IntroScene() {
       <div style={{
         fontFamily: FB, fontWeight: 450, fontSize: 24, color: C.muted, opacity: sub,
         transform: `translateY(${(1 - sub) * 12}px)`,
-      }}>Here's how your money stays protected, every order.</div>
+      }}>Get what you ordered, or your money back — here's how.</div>
     </div>
   );
 }
@@ -985,7 +985,7 @@ function SearchScene() {
   return (
     <div style={{ position: 'absolute', inset: 0, opacity: out }}>
       <Caption lt={localTime} num="01" icon="tag" title={'Find your\nlisting'}
-        desc="Search thousands of verified listings across 180+ games and lock in the lowest price." />
+        desc="Search verified listings from KYC-checked sellers and lock in the lowest price." />
       <Panel x={748} y={250} w={1052} h={580} scaleIn={0.96 + 0.04 * panel} opacity={panel}>
         {/* search bar */}
         <div style={{ padding: '30px 36px 8px' }}>
@@ -1099,7 +1099,7 @@ function BuyScene() {
             boxShadow: placed > 0 ? 'none' : '0 10px 30px rgba(198,242,74,0.3)',
           }}>
             {placed > 0
-              ? <React.Fragment><Icon name="checkCircle" size={26} color={C.lime} stroke={2.2} /><span style={{ fontFamily: FD, fontWeight: 700, fontSize: 24, color: C.lime }}>Order placed — paid into escrow</span></React.Fragment>
+              ? <React.Fragment><Icon name="checkCircle" size={26} color={C.lime} stroke={2.2} /><span style={{ fontFamily: FD, fontWeight: 700, fontSize: 24, color: C.lime }}>Order placed — covered by SafeDrop</span></React.Fragment>
               : <span style={{ fontFamily: FD, fontWeight: 700, fontSize: 24, color: '#0a0c0a' }}>Buy now · $27.10</span>}
           </div>
         </div>
@@ -1139,7 +1139,7 @@ function FlowNode({ cx, cy, w = 250, label, sub, icon, active, accent = C.lime, 
   );
 }
 
-// ════════ SCENE 4 — MONEY INTO ESCROW (hero) ════════
+// ════════ SCENE 4 — SAFEDROP COVERAGE (hero) ════════
 const BUYER = { x: 320, y: 470 };
 const VAULT = { x: 960, y: 470 };
 const SELLER = { x: 1600, y: 470 };
@@ -1155,7 +1155,7 @@ function EscrowScene() {
 
   return (
     <div style={{ position: 'absolute', inset: 0, opacity: out }}>
-      <SceneTitle lt={localTime} num="03" text="Your money goes into escrow" />
+      <SceneTitle lt={localTime} num="03" text="Your order is covered by SafeDrop" />
 
       {/* link buyer → vault (active, flowing) */}
       <DashLink x1={BUYER.x + 60} x2={VAULT.x - 70} y={BUYER.y} active flow={localTime} />
@@ -1190,18 +1190,18 @@ function EscrowScene() {
         </div>
       </div>
       <div style={{ position: 'absolute', left: VAULT.x - 125, top: VAULT.y + 84, width: 250, textAlign: 'center', opacity: intro }}>
-        <div style={{ fontFamily: FD, fontWeight: 700, fontSize: 28, color: C.white }}>GameVault</div>
-        <div style={{ fontFamily: FM, fontSize: 14, color: C.lime, marginTop: 6, letterSpacing: '0.06em' }}>SECURE ESCROW</div>
+        <div style={{ fontFamily: FD, fontWeight: 700, fontSize: 28, color: C.white }}>DropMarket</div>
+        <div style={{ fontFamily: FM, fontSize: 14, color: C.lime, marginTop: 6, letterSpacing: '0.06em' }}>SAFEDROP PROTECTION</div>
       </div>
-      <FlowNode cx={SELLER.x} cy={SELLER.y} label="Seller" sub="CAN'T TOUCH IT" icon="user" active={false} p={intro} />
+      <FlowNode cx={SELLER.x} cy={SELLER.y} label="Seller" sub="NOT PAID YET" icon="user" active={false} p={intro} />
 
       {/* inline label on the buyer → vault segment */}
-      <FloatLabel x={(BUYER.x + VAULT.x) / 2} y={BUYER.y + 86} text="We hold your money" p={cap} />
+      <FloatLabel x={(BUYER.x + VAULT.x) / 2} y={BUYER.y + 86} text="Delivered — or your money back" p={cap} />
     </div>
   );
 }
 
-// ════════ SCENE 5 — DELIVERY & RELEASE ════════
+// ════════ SCENE 5 — DELIVERY & SELLER PAYOUT ════════
 function ReleaseScene() {
   const { localTime, duration } = useSprite();
   const out = 1 - seg(localTime, duration - 0.45, duration, Easing.easeInCubic);
@@ -1220,7 +1220,7 @@ function ReleaseScene() {
 
   return (
     <div style={{ position: 'absolute', inset: 0, opacity: out }}>
-      <SceneTitle lt={localTime} num="04" text="Delivery, then we release the funds" />
+      <SceneTitle lt={localTime} num="04" text="Delivery, then the seller gets paid" />
 
       <DashLink x1={BUYER.x + 60} x2={VAULT.x - 70} y={BUYER.y} active={false} />
       <DashLink x1={VAULT.x + 70} x2={SELLER.x - 60} y={BUYER.y} active={localTime > releaseStart} flow={localTime > releaseStart ? localTime : null} />
@@ -1254,14 +1254,14 @@ function ReleaseScene() {
         </div>
       </div>
       <div style={{ position: 'absolute', left: VAULT.x - 125, top: VAULT.y + 84, width: 250, textAlign: 'center', opacity: intro }}>
-        <div style={{ fontFamily: FD, fontWeight: 700, fontSize: 28, color: C.white }}>GameVault</div>
-        <div style={{ fontFamily: FM, fontSize: 14, color: C.lime, marginTop: 6, letterSpacing: '0.06em' }}>{localTime > releaseStart ? 'RELEASING…' : 'SECURE ESCROW'}</div>
+        <div style={{ fontFamily: FD, fontWeight: 700, fontSize: 28, color: C.white }}>DropMarket</div>
+        <div style={{ fontFamily: FM, fontSize: 14, color: C.lime, marginTop: 6, letterSpacing: '0.06em' }}>{localTime > releaseStart ? 'PAYING SELLER…' : 'SAFEDROP PROTECTION'}</div>
       </div>
       <FlowNode cx={SELLER.x} cy={SELLER.y} label="Seller" sub={sellerPaid > 0.5 ? 'PAID' : 'DELIVERS ITEM'} icon={sellerPaid > 0.5 ? 'checkCircle' : 'user'} active={sellerPaid > 0.3} p={intro} />
 
       {/* inline labels on the active segments */}
       <FloatLabel x={(BUYER.x + VAULT.x) / 2} y={BUYER.y + 86} text="Seller delivers to you" p={pDeliver} />
-      <FloatLabel x={(VAULT.x + SELLER.x) / 2} y={BUYER.y + 86} text="Funds released" p={pRelease} />
+      <FloatLabel x={(VAULT.x + SELLER.x) / 2} y={BUYER.y + 86} text="Seller paid out" p={pRelease} />
     </div>
   );
 }
@@ -1307,7 +1307,7 @@ function DashLink({ x1, x2, y, active, locked, flow, lockPulse = 1 }) {
           <div style={{ width: 44, height: 44, borderRadius: 12, background: C.card, border: `1.5px solid ${C.mutedDim}`, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 0 ${10 + 14 * lockPulse}px rgba(255,122,89,0.25)` }}>
             <Icon name="lock" size={22} color={C.danger} stroke={2} />
           </div>
-          <span style={{ fontFamily: FM, fontSize: 12, color: C.danger, letterSpacing: '0.1em' }}>LOCKED</span>
+          <span style={{ fontFamily: FM, fontSize: 12, color: C.danger, letterSpacing: '0.1em' }}>PAID AFTER DELIVERY</span>
         </div>
       )}
     </div>
@@ -1334,7 +1334,7 @@ function DisputeScene() {
           And if something goes wrong?
         </div>
         <div style={{ fontFamily: FB, fontWeight: 450, fontSize: 26, color: C.muted, marginTop: 16 }}>
-          Every order is covered by <span style={{ color: C.lime, fontWeight: 600 }}>Guaranteed Delivery</span>.
+          Every order is covered by <span style={{ color: C.lime, fontWeight: 600 }}>SafeDrop Buyer Protection</span>.
         </div>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
@@ -1368,10 +1368,10 @@ function DisputeScene() {
 
 // ════════ SCENE 7 — OUTRO / FOUR STEPS ════════
 const OUTRO_CARDS = [
-  { n: '01', icon: 'tag', t: 'Find your listing', d: 'Browse verified sellers across 180+ games.' },
-  { n: '02', icon: 'lock', t: 'Pay into escrow', d: "We hold your money — the seller can't touch it." },
+  { n: '01', icon: 'tag', t: 'Find your listing', d: 'Browse listings from verified sellers.' },
+  { n: '02', icon: 'shield', t: 'Pay with protection', d: 'Every order is covered by SafeDrop Buyer Protection.' },
   { n: '03', icon: 'box', t: 'Receive your goods', d: 'Instant auto-delivery or a guided handover.' },
-  { n: '04', icon: 'checkCircle', t: 'Confirm & release', d: 'Happy? Release funds. Problem? We refund.' },
+  { n: '04', icon: 'checkCircle', t: 'Confirm delivery', d: 'Happy? The seller gets paid. Problem? Full refund.' },
 ];
 function OutroScene() {
   const { localTime, duration } = useSprite();
@@ -1431,7 +1431,7 @@ function OutroScene() {
         <div style={{
           fontFamily: FD, fontWeight: 800, fontSize: 92, color: C.white, letterSpacing: '-0.03em',
           opacity: wm, transform: `translateY(${(1 - wm) * 22}px)`, marginBottom: 44,
-        }}>Game<span style={{ color: C.lime }}>Vault</span></div>
+        }}>Drop<span style={{ color: C.lime }}>Market</span></div>
         <div style={{
           padding: '22px 48px', borderRadius: 16, background: C.lime,
           fontFamily: FD, fontWeight: 700, fontSize: 30, color: '#0a0c0a',

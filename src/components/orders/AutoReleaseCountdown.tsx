@@ -98,13 +98,13 @@ export default function AutoReleaseCountdown({
             }`}
           >
             {total === 0
-              ? 'Auto-Release Processing'
-              : 'Payment Auto-Release Timer'}
+              ? 'Completing Order'
+              : 'Order Auto-Complete Timer'}
           </h4>
           <p className="text-sm text-text-secondary mb-3">
             {total === 0
-              ? 'Payment is being released to the seller...'
-              : 'Funds will be automatically released to the seller in:'}
+              ? 'The order is completing and the seller is being paid out...'
+              : 'Order auto-completes in:'}
           </p>
 
           {/* Countdown Display */}
@@ -144,8 +144,8 @@ export default function AutoReleaseCountdown({
             {total === 0
               ? 'The page will refresh automatically.'
               : isUrgent
-              ? '⚠️ Timer expiring soon! Confirm receipt now to release payment early.'
-              : 'You can confirm receipt early to release payment immediately.'}
+              ? '⚠️ Timer expiring soon! Confirm delivery now if your order has arrived.'
+              : "Confirm delivery once you've received your order — the seller is paid out right away."}
           </p>
         </div>
       </div>

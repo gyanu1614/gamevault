@@ -239,14 +239,14 @@ function InlineCountdown({ autoReleaseAt }: { autoReleaseAt: string }) {
   // Still loading calculation
   if (total === null) return null
 
-  if (total === 0) return <div className="text-[9px] text-text-tertiary mt-1">Releasing…</div>
+  if (total === 0) return <div className="text-[9px] text-text-tertiary mt-1">Completing…</div>
 
   return (
     <div className={cn(
       'mt-1.5 flex items-center gap-1 text-[9px] font-mono font-semibold tabular-nums',
       isUrgent ? 'text-error' : 'text-text-tertiary'
     )}>
-      <span>auto-release</span>
+      <span>auto-completes</span>
       <span className={cn('px-1 py-0.5 rounded border', isUrgent ? 'border-error/40 bg-error-bg text-error' : 'border-white/10 bg-bg-raised text-text-secondary')}>
         {String(h).padStart(2,'0')}:{String(m).padStart(2,'0')}:{String(s).padStart(2,'0')}
       </span>

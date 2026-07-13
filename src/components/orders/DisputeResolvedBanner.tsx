@@ -110,11 +110,11 @@ export default function DisputeResolvedBanner({
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-success mt-0.5">✓</span>
-                    <span>Refund has been processed to your original payment method</span>
+                    <span>A full refund has been issued for this order</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-success mt-0.5">✓</span>
-                    <span>Funds will appear in your account within 3-5 business days</span>
+                    <span>Refunds typically complete within 3-5 business days</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-success mt-0.5">✓</span>
@@ -129,7 +129,7 @@ export default function DisputeResolvedBanner({
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-error mt-0.5">✗</span>
-                    <span>Payment has been released to the seller</span>
+                    <span>The seller has been paid out</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-error mt-0.5">✗</span>

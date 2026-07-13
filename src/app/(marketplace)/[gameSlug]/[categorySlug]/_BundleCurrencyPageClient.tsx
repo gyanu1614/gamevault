@@ -552,9 +552,9 @@ export default function BundleCurrencyPageClient({
       <HowItWorksBand
         steps={[
           { title: 'Pick Your Bundle', body: 'Choose platform, region, and amount.' },
-          { title: 'Pay Securely', body: 'We hold your payment in escrow.' },
+          { title: 'Pay At Checkout', body: 'Every order is covered by SafeDrop Buyer Protection.' },
           { title: `Get Your ${data.unitLabel}`, body: 'Delivered to your account within the stated window.' },
-          { title: 'Confirm & Release', body: 'Confirm receipt — or get a full refund.' },
+          { title: 'Confirm Delivery', body: 'Confirm receipt and the seller gets paid — or you get a full refund.' },
         ]}
       />
 

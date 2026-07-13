@@ -130,7 +130,7 @@ export default function StripeConnectPage() {
             <div>
               <p className="text-sm font-semibold text-success">Account connected!</p>
               <p className="text-xs text-success/70 mt-0.5">
-                Your bank account is being verified. Payouts will be sent automatically when escrow is released.
+                Your bank account is being verified. Payouts are sent automatically once the buyer confirms delivery or the protection window closes.
               </p>
             </div>
           </motion.div>
@@ -178,7 +178,7 @@ export default function StripeConnectPage() {
               bg: 'bg-lime/10 border-lime-tint-border',
             },
             {
-              label: 'Pending (Escrow)',
+              label: 'Pending Payout',
               value: `$${status.pendingBalance.toFixed(2)}`,
               icon: <Clock className="w-4 h-4" />,
               color: 'text-amber-400',
@@ -215,10 +215,11 @@ export default function StripeConnectPage() {
           <div className="flex items-start gap-3">
             <Clock className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
             <div>
-              <p className="text-sm font-semibold text-amber-300">14-day new seller hold active</p>
+              <p className="text-sm font-semibold text-amber-300">New Seller Payout Delay</p>
               <p className="text-xs text-muted-foreground mt-1">
-                Earnings from your first 3 orders are held for 14 days as a security measure.
-                After completing 3 orders and 14 days as a seller, payouts are automatic.
+                Payouts from your first 3 orders become available 14 days after each sale — a
+                standard security measure for new sellers. After completing 3 orders and 14 days
+                as a seller, payouts are automatic.
               </p>
             </div>
           </div>
@@ -320,7 +321,7 @@ export default function StripeConnectPage() {
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-2">
             <div className="text-sm text-muted-foreground">
               {status.payoutsEnabled
-                ? 'Payouts are automatic. You\'ll receive funds within 2-7 business days after escrow release.'
+                ? 'Payouts are automatic. You\'ll receive your money within 2-7 business days after the buyer confirms delivery.'
                 : 'Your account is set up, but payouts may be restricted. Check your Stripe dashboard.'}
             </div>
             <div className="flex gap-2 shrink-0">
@@ -353,7 +354,7 @@ export default function StripeConnectPage() {
         {[
           { icon: <Lock className="w-4 h-4" />, title: 'Bank-level security', desc: 'Stripe is PCI-DSS Level 1 certified' },
           { icon: <Shield className="w-4 h-4" />, title: 'No card details stored', desc: 'DropMarket never sees your bank info' },
-          { icon: <Zap className="w-4 h-4" />, title: 'Instant after hold', desc: 'Funds arrive within 2-7 business days' },
+          { icon: <Zap className="w-4 h-4" />, title: 'Fast Payouts', desc: 'Payouts arrive within 2-7 business days' },
         ].map((item) => (
           <div key={item.title} className="flex items-start gap-3 p-3 rounded-lg bg-bg-overlay border border-border-subtle">
             <span className="text-lime-text shrink-0 mt-0.5">{item.icon}</span>

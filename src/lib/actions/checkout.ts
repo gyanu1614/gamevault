@@ -20,7 +20,7 @@
  */
 
 import { createClient } from '@/lib/supabase/server'
-import { getCommissionRate } from '@/lib/utils/tier-commission'
+import { buyerFee, commissionAmount, protectionWindowHours, round2 } from '@/lib/fees'
 import { getProvider } from '@/lib/payments/registry'
 import { spendWallet, getWalletBalance } from '@/lib/wallet/wallet'
 import { fromDecimal, money } from '@/lib/money'
@@ -55,7 +55,7 @@ export async function createCheckout(input: CreateCheckoutInput): Promise<Create
     // Listing + seller tier (server-side; never trust client amounts).
     const { data: listingRaw, error: listingError } = await supabase
       .from('listings')
-      .select('*, seller:seller_id ( id, seller_tier, username )')
+      .select('*, seller:seller_id ( id, seller_tier, username ), game:game_id ( slug ), category:category_id ( slug, metadata )')
       .eq('id', input.listingId)
       .single() as any
     const listing = listingRaw as any
@@ -66,14 +66,24 @@ export async function createCheckout(input: CreateCheckoutInput): Promise<Create
       return { success: false, error: `Insufficient stock. Only ${listing.quantity} available` }
     }
 
-    // Server-computed amounts (mirrors createOrder; promo clamped, no client money trusted).
-    const subtotal = listing.price * quantity
-    const platformFeeRate = await getCommissionRate(listing.seller?.seller_tier)
-    const platformFee = subtotal * (platformFeeRate / 100)
-    const paymentProcessingFee = subtotal * 0.035
+    // Server-computed amounts (mirrors createOrder; promo clamped, no client
+    // money trusted). Fee spec: buyer pays a single Processing & Buyer
+    // Protection fee (5% + 2%); seller pays a per-category commission on the
+    // item price only — never both fees (lib/fees is the single source).
+    const subtotal = round2(listing.price * quantity)
+    const fee = buyerFee(subtotal)
+    const feeInput = {
+      categoryMetaType: listing.category?.metadata?.type as string | undefined,
+      categorySlug: listing.category?.slug as string | undefined,
+      gameSlug: listing.game?.slug as string | undefined,
+    }
+    const commission = commissionAmount(subtotal, feeInput)
     const promoDiscount = Math.min(Math.max(input.promoDiscount ?? 0, 0), subtotal)
-    const totalAmount = subtotal + platformFee + paymentProcessingFee - promoDiscount
-    const sellerPayout = subtotal - platformFee - paymentProcessingFee
+    const totalAmount = round2(subtotal + fee.amount - promoDiscount)
+    const sellerPayout = round2(subtotal - commission)
+    // Per-category protection window (hours) — consumed at delivery time to
+    // set auto_release_at; stored implicitly via markDelivered (lib/fees).
+    void protectionWindowHours
 
     // Create the order at PENDING. Confirmed only by the verified webhook.
     const { data: orderRaw, error: orderError } = await (supabase
@@ -85,10 +95,10 @@ export async function createCheckout(input: CreateCheckoutInput): Promise<Create
         quantity,
         unit_price: listing.price,
         subtotal,
-        platform_fee_rate: platformFeeRate,
-        payment_processing_fee_rate: 3.5,
-        platform_fee: platformFee,
-        payment_processing_fee: paymentProcessingFee,
+        platform_fee_rate: fee.marketplacePct,
+        payment_processing_fee_rate: fee.processingPct,
+        platform_fee: fee.marketplaceAmount,
+        payment_processing_fee: fee.processingAmount,
         total_amount: totalAmount,
         seller_payout: sellerPayout,
         currency: ORDER_CURRENCY,

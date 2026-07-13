@@ -325,7 +325,7 @@ function HeroPanel({ mode }: { mode: AuthMode }) {
                   </>
                 ) : (
                   <>
-                    Join 50,000+ gamers.<br />
+                    Buy & sell game assets safely.<br />
                     <span className="text-lime-text">Safe, fast, fair trades.</span>
                   </>
                 )}
@@ -333,7 +333,7 @@ function HeroPanel({ mode }: { mode: AuthMode }) {
               <p className="mt-3 max-w-sm text-[14px] leading-relaxed text-text-secondary">
                 {mode === 'login'
                   ? 'Pick up where you left off — your orders, wishlist, and seller tools are right where you left them.'
-                  : 'Every trade is escrow-protected by SafeDrop. Buy in 60 seconds, sell with peace of mind.'}
+                  : 'Every order is covered by SafeDrop Buyer Protection. Buy in 60 seconds, sell with peace of mind.'}
               </p>
             </motion.div>
           </AnimatePresence>
@@ -343,8 +343,8 @@ function HeroPanel({ mode }: { mode: AuthMode }) {
         <div className="flex items-center gap-2 rounded-md border border-border-subtle bg-bg-base/40 px-4 py-2.5 backdrop-blur-md">
           <ShieldCheck className="h-4 w-4 shrink-0 text-lime-text" />
           <span className="text-[12.5px] text-text-secondary">
-            Protected by{' '}
-            <span className="font-semibold text-text-primary">SafeDrop</span> escrow
+            Covered by{' '}
+            <span className="font-semibold text-text-primary">SafeDrop</span> Buyer Protection
           </span>
         </div>
       </div>

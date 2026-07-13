@@ -161,10 +161,10 @@ export default function ItemDetailsModal({ isOpen, onClose, order }: ItemDetails
                               </h4>
                               <p className="text-xs text-text-secondary leading-relaxed">
                                 {order.vaultshield_tier === 'premium'
-                                  ? 'Full protection for 30 days. File claims for incorrect items, missing content, or account issues. Your purchase is fully protected.'
+                                  ? '30-day protection window. File claims for incorrect items, missing content, or account issues — not delivered or not as described means your money back.'
                                   : order.vaultshield_tier === 'enhanced'
-                                  ? 'Enhanced protection for 7 days. File claims for incorrect items or missing content. Extended dispute resolution window.'
-                                  : 'Standard 48-hour protection. File claims for incorrect items or missing content. Basic buyer protection included.'}
+                                  ? '7-day protection window. File claims for incorrect items or missing content — resolved with a refund if the order isn’t as described.'
+                                  : 'Standard protection window. File claims for incorrect items or missing content — full refund if not delivered or not as described.'}
                               </p>
                               {order.warranty_expires_at && (
                                 <p className="text-xs text-lime-text mt-2">

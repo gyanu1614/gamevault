@@ -294,7 +294,7 @@ export default function BuyerOrderDetailClient({
           }
         }
 
-        toast.success('Order confirmed! Payment has been released to the seller.')
+        toast.success('Delivery confirmed! The seller has been paid out.')
 
         // Flip to review form
         setShowConfirmForm(false)
@@ -393,7 +393,7 @@ export default function BuyerOrderDetailClient({
                       }) : 'Recently'}
                     </p>
                     <p className="text-xs text-text-tertiary mt-1.5">
-                      Payment has been released to the seller.
+                      The seller has been paid out.
                     </p>
                   </div>
                 </div>
@@ -468,7 +468,7 @@ export default function BuyerOrderDetailClient({
                       }) : 'Recently'}
                     </p>
                     <p className="text-xs text-text-tertiary mt-1.5">
-                      Payment has been released to the seller.
+                      The seller has been paid out.
                     </p>
                   </div>
                 </div>
@@ -632,14 +632,14 @@ export default function BuyerOrderDetailClient({
 
                 {order.status === 'delivering' && (
                   <p className="text-xs text-text-tertiary mb-3 leading-relaxed">
-                    Your item is being delivered. You'll be able to confirm receipt soon.
+                    Your item is being delivered. You'll be able to confirm delivery soon.
                   </p>
                 )}
 
                 {order.status === 'delivered' && (
                   <p className="text-xs text-text-tertiary mb-3 leading-relaxed">
                     {order.delivered_at
-                      ? 'Seller has marked this as delivered. Has your item arrived? Confirm to release payment.'
+                      ? 'Seller has marked this as delivered. Has your item arrived? Confirm delivery to complete the order.'
                       : 'Has your item arrived? Only confirm if you have received it.'}
                   </p>
                 )}
@@ -659,7 +659,7 @@ export default function BuyerOrderDetailClient({
                       className="w-full py-2 border border-green-500/25 bg-green-500/[0.07] hover:bg-green-500/[0.13] hover:border-green-500/40 text-success text-sm font-medium rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50"
                     >
                       <CheckCircle2 className="w-4 h-4" />
-                      Mark as Received
+                      Confirm Delivery
                     </button>
 
                     {/* Cancel Request (only for 6h+ delivery time, after 1hr) OR Dispute */}
@@ -723,7 +723,7 @@ export default function BuyerOrderDetailClient({
               )}>
                 <div className="flex items-center gap-2 mb-3">
                   <CheckCircle2 className="h-4 w-4 text-success" />
-                  <span className="text-xs font-bold uppercase tracking-wider text-success">Confirm Receipt</span>
+                  <span className="text-xs font-bold uppercase tracking-wider text-success">Confirm Delivery</span>
                 </div>
 
                 {!order.delivered_at && (
@@ -733,7 +733,7 @@ export default function BuyerOrderDetailClient({
                       <div>
                         <p className="text-[10px] text-amber-400 font-semibold mb-1">Seller hasn't marked as delivered yet</p>
                         <p className="text-[9px] text-amber-400/70 leading-relaxed">
-                          Only confirm if you have actually received your item. Payment will be released immediately.
+                          Only confirm if you have actually received your item. The seller is paid out immediately.
                         </p>
                       </div>
                     </div>
@@ -749,7 +749,7 @@ export default function BuyerOrderDetailClient({
                 <ul className="text-xs text-text-tertiary mb-3 space-y-1.5 list-disc list-inside">
                   <li>You have received the order</li>
                   <li>Everything is as described</li>
-                  <li>Payment will be released to seller</li>
+                  <li>The seller will be paid out</li>
                 </ul>
 
                 <div className="p-2.5 bg-warning-bg border border-warning/40 rounded-lg text-[10px] text-warning mb-4">
@@ -782,7 +782,7 @@ export default function BuyerOrderDetailClient({
                         Confirming...
                       </>
                     ) : (
-                      'Confirm & Release'
+                      'Confirm Delivery'
                     )}
                   </button>
                 </div>
@@ -1172,7 +1172,7 @@ export default function BuyerOrderDetailClient({
                   </div>
                   <div>
                     <div className="text-sm font-bold text-success">Order Complete</div>
-                    <div className="text-xs text-text-disabled mt-0.5">Payment released to seller</div>
+                    <div className="text-xs text-text-disabled mt-0.5">Seller paid out</div>
                   </div>
                 </div>
               </SidebarCard>
@@ -1237,7 +1237,7 @@ export default function BuyerOrderDetailClient({
                   <div className="h-7 w-7 rounded-lg bg-lime/10 flex items-center justify-center flex-shrink-0">
                     <CheckCircle2 className="h-4 w-4 text-lime-text" />
                   </div>
-                  <span className="text-sm text-text-secondary font-medium">Escrow-protected funds</span>
+                  <span className="text-sm text-text-secondary font-medium">Get what you ordered, or your money back</span>
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="h-7 w-7 rounded-lg bg-lime/10 flex items-center justify-center flex-shrink-0">
@@ -1323,7 +1323,7 @@ export default function BuyerOrderDetailClient({
               </div>
             </div>
 
-            {/* Escrow protection badge */}
+            {/* SafeDrop protection badge */}
             <div className={cn(
               "rounded-xl px-4 py-3",
               order.status === 'cancelled'
@@ -1360,17 +1360,17 @@ export default function BuyerOrderDetailClient({
                       : "text-lime-text"
                   )}>
                     {order.status === 'cancelled'
-                      ? 'Refunded to Wallet'
+                      ? 'Refund Issued'
                       : order.status === 'completed'
-                      ? 'Funds Released to Seller'
-                      : 'Funds in Escrow'}
+                      ? 'Seller Paid Out'
+                      : 'Covered by SafeDrop'}
                   </div>
                   <div className="text-[10px] text-text-tertiary leading-relaxed">
                     {order.status === 'cancelled'
-                      ? 'Full refund credited to your wallet'
+                      ? 'Your full refund has been issued'
                       : order.status === 'completed'
-                      ? 'Payment successfully transferred'
-                      : 'Held securely until delivery confirmed'}
+                      ? 'The seller has been paid for this order'
+                      : 'Not delivered or not as described? Full refund.'}
                   </div>
                 </div>
               </div>

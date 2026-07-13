@@ -45,7 +45,7 @@ const footerLinks = {
     { name: 'Cookie Policy', href: '/cookies' },
   ],
   Support: [
-    { name: 'SafeDrop Escrow', href: '/safedrop-policy' },
+    { name: 'SafeDrop Protection Terms', href: '/safedrop-policy' },
     { name: 'Trust & Safety', href: '/trust-safety' },
     { name: 'Complaints', href: '/complaints' },
     { name: 'Risk Disclosure', href: '/risk' },
@@ -133,7 +133,7 @@ export function Footer({ hasSellerSidebar = false }: FooterProps) {
 
             <p className="mt-5 max-w-md text-[15.5px] leading-relaxed text-text-secondary">
               The player-to-player marketplace for game items, currency, and
-              accounts — every order protected by SafeDrop escrow.
+              accounts — every order covered by SafeDrop Buyer Protection.
             </p>
 
             {/* Newsletter */}

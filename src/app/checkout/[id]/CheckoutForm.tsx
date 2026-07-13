@@ -9,7 +9,7 @@
  * pill), a "Pay with" method list on the left (horizontal chips on
  * mobile), the "Your order" panel on the right with the loot-llama
  * bleeding off its edge, the blue SafeDrop trust panel with the 3D
- * shield watermark + escrow <details>, and the payment marquee strip.
+ * shield watermark + protection <details>, and the payment marquee strip.
  *
  * Handoff lime (#c6f24e / #a9d24a) is mapped onto our tokens
  * (#C6FF3D / #ABE52B) — alphas as rgba(198,255,61,…) literals since
@@ -43,6 +43,8 @@ import type { SafeDropTier } from '@/lib/utils/safedrop-tiers'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { SilverIcon } from '@/components/ui/silver-icon'
 import { cn } from '@/lib/utils'
+import { buyerFee, MARKETPLACE_FEE_LABEL, PROCESSING_FEE_LABEL, WARRANTY_ENABLED } from '@/lib/fees'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 
 // V14l — Smart price formatter. For currency listings ($0.0045/unit) the
 // per-unit price would round to "$0.00" at 2 decimals — confusing the
@@ -71,11 +73,11 @@ const TIERS: TierConfig[] = [
     id: 'standard',
     name: 'Standard',
     feeRate: 0,
-    warranty: '48h protection',
+    warranty: 'Standard protection',
     icon: Shield,
     features: [
-      '48-hour buyer protection',
-      'Escrow payment hold',
+      'Full category protection window',
+      'Seller paid only after delivery',
       'Dispute resolution',
       'Email support',
     ],
@@ -171,13 +173,20 @@ function FeeRow({
         {icon}
         <span className="truncate">{label}</span>
         {tooltip && (
-          <span
-            title={tooltip}
-            aria-label={tooltip}
-            className="inline-flex h-[15px] w-[15px] flex-none cursor-help items-center justify-center rounded-full bg-[#232838] text-[9px] text-[#7b8398]"
-          >
-            ?
-          </span>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span
+                tabIndex={0}
+                aria-label={tooltip}
+                className="inline-flex h-[15px] w-[15px] flex-none cursor-help items-center justify-center rounded-full bg-[#232838] text-[9px] text-[#7b8398]"
+              >
+                ?
+              </span>
+            </TooltipTrigger>
+            <TooltipContent side="top" className="max-w-[240px] text-[12px] leading-snug">
+              {tooltip}
+            </TooltipContent>
+          </Tooltip>
         )}
         {extra}
       </span>
@@ -246,7 +255,6 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
   // checkout shows it read-only.
   const [quantity] = useState(seedQty)
   const [safedropTier, setSafedropTier] = useState<SafeDropTier>('standard')
-  const platformFeeRate = 9.9
 
   // Crypto is the only live processor (CoinGate); the rest render per
   // the handoff but stay disabled with a Soon chip until wired.
@@ -270,11 +278,12 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
   const [useDropCredits, setUseDropCredits] = useState(false)
 
   const subtotal = listing.price * quantity
-  const platformFee = subtotal * (platformFeeRate / 100)
-  const paymentProcessingFee = subtotal * 0.035
+  // Single buyer fee per the fee spec (5% processing + 2% marketplace),
+  // mirrored server-side in createCheckout — lib/fees is the one source.
+  const fee = buyerFee(subtotal)
   const selectedTier = TIERS.find((t) => t.id === safedropTier)!
-  const tierFeeAmount = subtotal * (selectedTier.feeRate / 100)
-  const totalBeforeWallet = subtotal + platformFee + paymentProcessingFee + tierFeeAmount - promoDiscount
+  const tierFeeAmount = WARRANTY_ENABLED ? subtotal * (selectedTier.feeRate / 100) : 0
+  const totalBeforeWallet = subtotal + fee.amount + tierFeeAmount - promoDiscount
   const walletAmount = useWallet ? Math.min(walletBalance, totalBeforeWallet) : 0
   const total = Math.max(totalBeforeWallet - walletAmount, 0)
 
@@ -296,8 +305,8 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
 
   // V23 — No payment-intent pre-creation. The CoinGate flow creates the order
   // + charge at submit time (createCheckout), with all amounts computed
-  // server-side. The displayed platformFeeRate uses the default estimate; the
-  // authoritative amount is computed server-side when the buyer pays.
+  // server-side. The displayed fee uses lib/fees; the authoritative amount
+  // is recomputed server-side from the same module when the buyer pays.
 
   const handleApplyPromo = async () => {
     if (!promoInput.trim()) return
@@ -555,8 +564,9 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
             {/* P9 — SafeDrop Additional Warranty: lime-glass premium
                 dropdown; picking a tier drives the real fee math
                 (safedropTier → tierFeeAmount → Order Details row).
-                Hero art behind = warranty-hero.png, revealed as the
-                dropdown opens (clipped by the card). */}
+                Feature-flagged OFF until warranty payout caps are
+                configured (fee spec §4 — strictly opt-in when live). */}
+            {WARRANTY_ENABLED && (
             <div className="group relative mt-8 overflow-hidden rounded-lg border border-[rgba(198,255,61,0.12)] backdrop-blur-md transition-all duration-300 [background:radial-gradient(140%_160%_at_88%_8%,rgba(198,255,61,0.06),rgba(198,255,61,0.02)_45%,rgba(13,15,10,0.92)_82%)] shadow-[0_18px_44px_-20px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.05)] hover:-translate-y-0.5 hover:border-white/[0.16] hover:shadow-[0_26px_56px_-22px_rgba(0,0,0,0.8),inset_0_1px_0_rgba(255,255,255,0.07)] sm:mt-10">
               <span aria-hidden className="pointer-events-none absolute inset-0 hidden select-none sm:block">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -675,6 +685,7 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
                 </AnimatePresence>
               </div>
             </div>
+            )}
 
             {/* Trust panel
 
@@ -730,20 +741,20 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
                       <div className="min-w-0 flex-1">
                         <div className="hidden text-[15px] font-bold text-white sm:block">Safe &amp; Secure Payment</div>
                         <div className="hidden text-[12.5px] leading-snug text-[#9aa3b6] sm:mt-0.5 sm:block">
-                          100% payments guaranteed by{' '}
+                          Every order is covered by{' '}
                           <Link href="/safedrop" onClick={(e) => e.stopPropagation()} className="text-[#88bbff] transition-colors hover:text-white">SafeDrop</Link>
-                          {' '}&amp; our{' '}
+                          {' '}Buyer Protection &amp; our{' '}
                           <Link href="/refund-policy" onClick={(e) => e.stopPropagation()} className="text-[#88bbff] transition-colors hover:text-white">Refund Policy</Link>
                         </div>
                         <div className="text-[11.5px] leading-[1.4] text-[#a5adbe] sm:hidden">
-                          <span className="font-bold text-white">Safe &amp; Secure.</span> Guaranteed by{' '}
-                          <Link href="/safedrop" onClick={(e) => e.stopPropagation()} className="text-[#88bbff]">SafeDrop</Link> &amp; escrow protected.
+                          <span className="font-bold text-white">Safe &amp; Secure.</span> Covered by{' '}
+                          <Link href="/safedrop" onClick={(e) => e.stopPropagation()} className="text-[#88bbff]">SafeDrop</Link> — get what you ordered, or your money back.
                         </div>
                       </div>
                       <span className="hidden flex-none items-center gap-2 sm:flex">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img src="/assets/checkout/lock.png" alt="" aria-hidden className="h-7 w-7 select-none object-contain drop-shadow-[0_4px_8px_rgba(0,0,0,0.35)]" />
-                        <span className="text-[13px] font-extrabold text-[#f1d98d]">Funds Safe</span>
+                        <span className="text-[13px] font-extrabold text-[#f1d98d]">Money-Back</span>
                       </span>
                     </div>
 
@@ -766,10 +777,10 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
                       >
                         <div className="mt-4 flex flex-col gap-3.5">
                     {[
-                      ['You pay securely', 'Your funds are held safely in SafeDrop escrow — not sent to the seller yet.'],
+                      ['You pay at checkout', 'Your order is covered by SafeDrop Buyer Protection from the moment you pay.'],
                       ['Seller is notified', 'The seller receives your order and is prompted to deliver it.'],
                       ['Seller delivers', 'Your item or in-game currency is delivered to your account.'],
-                      ['You confirm delivery', 'Check everything is right, then confirm receipt in your account.'],
+                      ['You confirm delivery', 'Check everything is right, then confirm delivery in your account.'],
                     ].map(([t, d], i) => (
                       <div key={t} className="flex items-start gap-3">
                         <span className="flex h-6 w-6 flex-none items-center justify-center rounded-full border border-white/[0.16] bg-white/[0.05] text-[11px] font-bold text-[#9aa3b6]">
@@ -786,9 +797,9 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
                         ✓
                       </span>
                       <span className="min-w-0">
-                        <span className="block text-[13px] font-bold text-lime-text">Funds released — or you&apos;re refunded</span>
+                        <span className="block text-[13px] font-bold text-lime-text">Seller gets paid — or you get a refund</span>
                         <span className="mt-0.5 block text-[12px] text-[#9aa3b6]">
-                          Only then does the seller get paid. No delivery or item not as described? You get a full refund.
+                          The seller is paid out only after you confirm delivery. Not delivered or not as described? Full refund.
                         </span>
                       </span>
                     </div>
@@ -969,15 +980,18 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
                   }
                   value={`$${subtotal.toFixed(2)}`}
                 />
+                {/* Buyer fee, itemised as two lines (marketplace 2% +
+                    processing 5%) — both always included in the displayed
+                    total (DMCCA). */}
                 <FeeRow
-                  label="Marketplace fee"
-                  tooltip={`${platformFeeRate.toFixed(1)}% of subtotal — keeps escrow, moderation and 24/7 support running`}
-                  value={`+$${platformFee.toFixed(2)}`}
+                  label={MARKETPLACE_FEE_LABEL}
+                  tooltip={`${fee.marketplacePct}% — keeps every order covered by SafeDrop Buyer Protection.`}
+                  value={`+$${fee.marketplaceAmount.toFixed(2)}`}
                 />
                 <FeeRow
-                  label="Processor fee"
-                  tooltip="3.5% charged by the crypto payment processor (CoinGate)"
-                  value={`+$${paymentProcessingFee.toFixed(2)}`}
+                  label={PROCESSING_FEE_LABEL}
+                  tooltip={`${fee.processingPct}% — card and crypto payment processing. Always included in the total you see.`}
+                  value={`+$${fee.processingAmount.toFixed(2)}`}
                 />
                 {selectedTier.feeRate > 0 && (
                   <FeeRow label={`SafeDrop ${selectedTier.name}`} value={`+$${tierFeeAmount.toFixed(2)}`} valueClass="text-lime-text" />
@@ -1079,6 +1093,12 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
                 <Lock className="h-3.5 w-3.5 flex-none text-[#a5adbe]" />
                 <span>
                   <span className="font-bold text-[#dbe2ee]">256-bit SSL</span> Encrypted payment. You&apos;re safe.
+                </span>
+              </p>
+              <p className="mt-1.5 flex items-start justify-center gap-2 text-center text-[12px] leading-relaxed text-[#8d95a8]">
+                <ShieldCheck className="mt-0.5 h-3.5 w-3.5 flex-none text-lime-text" />
+                <span>
+                  Covered by <span className="font-bold text-[#dbe2ee]">SafeDrop</span> — full refund if not delivered or not as described.
                 </span>
               </p>
               <p className="mt-1.5 text-center text-[11.5px] leading-relaxed text-[#7b8398]">

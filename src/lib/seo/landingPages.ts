@@ -47,10 +47,10 @@ export const LANDING_PAGES: LandingPage[] = [
     slug: 'buy-roblox-accounts',
     title: 'Buy Roblox Accounts – Safe & Instant Delivery | DropMarket',
     description:
-      'Browse thousands of verified Roblox accounts for sale. All listings protected by SafeDrop escrow. Instant delivery, buyer guarantee.',
+      'Browse verified Roblox accounts for sale. Every order covered by SafeDrop Buyer Protection. Instant delivery, money-back guarantee.',
     headline: 'Buy Roblox Accounts',
     subCopy:
-      'Find high-value, verified Roblox accounts from trusted sellers. Every purchase protected by SafeDrop.',
+      'Find high-value, verified Roblox accounts from trusted sellers. Every purchase covered by SafeDrop Buyer Protection.',
     gameSlug: 'roblox',
     categorySlug: 'accounts',
     emoji: '🟥',
@@ -58,7 +58,7 @@ export const LANDING_PAGES: LandingPage[] = [
     faqs: [
       {
         q: 'Is it safe to buy a Roblox account on DropMarket?',
-        a: 'Yes. All payments are held in SafeDrop escrow until you confirm receipt. Funds only release to the seller after you verify the account credentials.',
+        a: 'Yes. Every order is covered by SafeDrop Buyer Protection, and the seller is only paid out after you verify the account credentials and confirm delivery. If your order isn\'t delivered or isn\'t as described, you get a full refund.',
       },
       {
         q: 'What Roblox accounts are available?',
@@ -70,7 +70,7 @@ export const LANDING_PAGES: LandingPage[] = [
       },
       {
         q: 'What if the account details don\'t work?',
-        a: 'Open a dispute within 48 hours. DropMarket will hold the payment in escrow until the issue is resolved or issue a full refund.',
+        a: 'Open a dispute within your protection window (5–14 days for accounts, depending on risk band). The seller\'s payout is paused while we investigate — if the issue can\'t be resolved, you get a full refund.',
       },
     ],
   },
@@ -78,10 +78,10 @@ export const LANDING_PAGES: LandingPage[] = [
     slug: 'buy-roblox-items',
     title: 'Buy Roblox Items & Limiteds | DropMarket',
     description:
-      'Shop rare Roblox limiteds, UGC items, and accessories. Secure escrow, instant delivery, trusted sellers.',
+      'Shop rare Roblox limiteds, UGC items, and accessories. SafeDrop Buyer Protection, instant delivery, trusted sellers.',
     headline: 'Buy Roblox Items & Limiteds',
     subCopy:
-      'Score rare Roblox limited items and UGC accessories from verified sellers — all protected by SafeDrop.',
+      'Score rare Roblox limited items and UGC accessories from verified sellers — all covered by SafeDrop Buyer Protection.',
     gameSlug: 'roblox',
     categorySlug: 'items',
     emoji: '🟥',
@@ -107,7 +107,7 @@ export const LANDING_PAGES: LandingPage[] = [
     slug: 'buy-valorant-accounts',
     title: 'Buy Valorant Accounts – Radiant, Immortal & More | DropMarket',
     description:
-      'Find Valorant accounts with rare skins, high ranks, and low prices. SafeDrop buyer protection on every order.',
+      'Find Valorant accounts with rare skins, high ranks, and low prices. SafeDrop Buyer Protection on every order.',
     headline: 'Buy Valorant Accounts',
     subCopy:
       'Skip the grind. Purchase ranked Valorant accounts with top-tier skins from verified sellers.',
@@ -126,7 +126,7 @@ export const LANDING_PAGES: LandingPage[] = [
       },
       {
         q: 'How does SafeDrop protect me?',
-        a: 'Payment is held in escrow until you confirm the account works and you\'ve changed the credentials. If there\'s an issue, we mediate and refund if necessary.',
+        a: 'Every order is covered by SafeDrop Buyer Protection: the seller is only paid out after you confirm the account works and you\'ve changed the credentials. If there\'s an issue, we mediate and refund if necessary.',
       },
     ],
   },
@@ -159,10 +159,10 @@ export const LANDING_PAGES: LandingPage[] = [
     slug: 'buy-fortnite-accounts',
     title: 'Buy Fortnite Accounts – Rare Skins & OG Accounts | DropMarket',
     description:
-      'Buy OG Fortnite accounts with rare skins like Black Knight, Skull Trooper, and more. Safe escrow, fast delivery.',
+      'Buy OG Fortnite accounts with rare skins like Black Knight, Skull Trooper, and more. SafeDrop Buyer Protection, fast delivery.',
     headline: 'Buy Fortnite Accounts',
     subCopy:
-      'Find OG Fortnite accounts with season-1 skins and rare cosmetics. All sellers verified, all payments protected.',
+      'Find OG Fortnite accounts with season-1 skins and rare cosmetics. All sellers verified, every order covered by SafeDrop.',
     gameSlug: 'fortnite',
     categorySlug: 'accounts',
     emoji: '🎮',
@@ -178,7 +178,7 @@ export const LANDING_PAGES: LandingPage[] = [
       },
       {
         q: 'What if the Epic account is locked after purchase?',
-        a: 'Open a dispute within 48 hours. DropMarket holds the escrow payment until the issue is resolved.',
+        a: 'Open a dispute within your protection window (5–14 days for accounts, depending on risk band). The seller\'s payout is paused while we investigate — if the issue can\'t be resolved, you get a full refund.',
       },
     ],
   },
@@ -189,7 +189,7 @@ export const LANDING_PAGES: LandingPage[] = [
       'Purchase rare Fortnite skins, emotes, pickaxes, and wraps from verified sellers. Instant delivery.',
     headline: 'Buy Fortnite Skins & Cosmetics',
     subCopy:
-      'Get the rarest Fortnite cosmetics without grinding. Verified sellers, SafeDrop protected.',
+      'Get the rarest Fortnite cosmetics without grinding. Verified sellers, covered by SafeDrop Buyer Protection.',
     gameSlug: 'fortnite',
     categorySlug: 'items',
     emoji: '🎮',
@@ -236,10 +236,10 @@ export const LANDING_PAGES: LandingPage[] = [
     slug: 'sell-game-accounts',
     title: 'Sell Your Game Accounts Safely | DropMarket',
     description:
-      'List your gaming account or items on DropMarket and earn. 0% listing fee, automatic payouts via Stripe, SafeDrop protection for sellers.',
+      'List your gaming account or items on DropMarket and earn. 0% listing fee, fast payouts once delivery is confirmed, verified buyers.',
     headline: 'Sell Your Game Accounts',
     subCopy:
-      'Turn your gaming assets into real money. List for free, get paid via Stripe, keep 100% after buyer protection fee.',
+      'Turn your gaming assets into real money. List for free, get paid out fast after delivery is confirmed, keep 100% of your listed price.',
     gameSlug: null,
     categorySlug: null,
     emoji: '💰',
@@ -251,7 +251,7 @@ export const LANDING_PAGES: LandingPage[] = [
       },
       {
         q: 'How do I get paid?',
-        a: 'Connect your bank account via Stripe. Once the buyer confirms delivery, funds are released automatically. New sellers have a 14-day hold on the first 3 orders.',
+        a: 'Your sale proceeds are credited to your Seller Balance once the buyer confirms delivery or the protection window closes. From there you can withdraw to your linked payout method.',
       },
       {
         q: 'Can I sell accounts from any game?',

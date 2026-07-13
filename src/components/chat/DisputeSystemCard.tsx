@@ -31,7 +31,7 @@ export default function DisputeSystemCard({ category, reason }: DisputeSystemCar
             </div>
             <div className="mt-3 pt-3 border-t border-error/40">
               <p className="text-xs text-text-secondary">
-                Funds are now held in escrow while our support team reviews this case. Both parties will be contacted within 24-48 hours.
+                The seller payout is paused pending dispute resolution. Both parties will be contacted within 24-48 hours.
               </p>
             </div>
           </div>

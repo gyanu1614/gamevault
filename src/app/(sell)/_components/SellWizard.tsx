@@ -32,6 +32,7 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { commissionPct, netProceeds } from '@/lib/fees'
 import { Button } from '@/components/ui/button'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Combobox } from '@/components/ui/combobox'
@@ -2463,6 +2464,18 @@ function Step4Publish(p: Step4Props) {
                   </div>
                   {priceInvalid && (
                     <FieldError>This field is required.</FieldError>
+                  )}
+                  {/* Fee spec §1 — the seller sees their exact commission
+                      and estimated net proceeds before publishing. */}
+                  {Number(p.price) > 0 && (
+                    <p className="text-[12px] text-text-tertiary">
+                      You’ll receive{' '}
+                      <span className="font-semibold text-lime-text">
+                        ${netProceeds(Number(p.price), { categorySlug: p.categorySlug, gameSlug: p.gameSlug }).toFixed(2)}
+                      </span>
+                      {isCurrency ? ` per ${suffix}` : ''} after the{' '}
+                      {commissionPct({ categorySlug: p.categorySlug, gameSlug: p.gameSlug })}% commission.
+                    </p>
                   )}
                 </div>
                 {/* Stock */}

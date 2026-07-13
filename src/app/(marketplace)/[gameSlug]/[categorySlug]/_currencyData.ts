@@ -180,8 +180,8 @@ const BLANK_HERO: Offer = {
 
 const DEFAULT_STEPS = [
   { n: 1, title: 'Pick an offer',          body: 'Compare verified sellers by price, rating, and delivery speed.' },
-  { n: 2, title: 'Pay securely',           body: 'Your payment is held by SafeDrop escrow until you confirm delivery.' },
-  { n: 3, title: 'Receive your currency',  body: "The seller delivers via the game's transfer method. Confirm receipt and you're done." },
+  { n: 2, title: 'Pay at checkout',        body: 'Every order is covered by SafeDrop Buyer Protection.' },
+  { n: 3, title: 'Receive your currency',  body: "The seller delivers via the game's transfer method — most orders complete in minutes. Confirm receipt and the seller gets paid. Not delivered or not as described? Full refund." },
 ]
 
 /** Parse the wizard's delivery_time string ("10min" / "instant" / "1hr"). */

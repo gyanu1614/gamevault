@@ -139,27 +139,27 @@ export default function SellerOrderDetailClient({
               <Clock className="w-5 h-5 text-blue-400 flex-shrink-0" />
               <div>
                 <div className="text-sm font-medium text-blue-400">
-                  Auto-release in {hoursRemaining}h {minutesRemaining}m
+                  Payout available in {hoursRemaining}h {minutesRemaining}m
                 </div>
                 <div className="text-xs text-text-secondary">
-                  Funds will be automatically released if buyer doesn't respond
+                  You're paid out automatically unless the buyer opens a dispute
                 </div>
               </div>
             </div>
           </div>
         )}
 
-        {/* Escrow Released */}
+        {/* Payout complete */}
         {order.escrow_status === 'released' && (
           <div className="bg-success-bg border border-success/30 rounded-xl p-4">
             <div className="flex items-center gap-3">
               <CheckCircle2 className="w-5 h-5 text-success flex-shrink-0" />
               <div>
                 <div className="text-sm font-medium text-success">
-                  Payment Released
+                  Paid Out
                 </div>
                 <div className="text-xs text-text-secondary">
-                  ${sellerPayout.toFixed(2)} has been transferred to your balance
+                  ${sellerPayout.toFixed(2)} has been added to your Seller Balance
                 </div>
               </div>
             </div>
@@ -221,7 +221,7 @@ export default function SellerOrderDetailClient({
           <div className="bg-bg-overlay border border-border-subtle rounded-xl p-6">
             <h2 className="text-lg font-semibold text-white mb-3">Mark as Delivered</h2>
             <p className="text-sm text-text-secondary mb-4">
-              Once you've delivered the order, mark it as delivered to start the 48-hour auto-release timer.
+              Once you've delivered the order, mark it as delivered to start the buyer's protection window — you're paid out when they confirm or the window closes.
             </p>
             <MarkAsDeliveredButton
               orderId={order.id}
@@ -268,8 +268,8 @@ export default function SellerOrderDetailClient({
           <div className="p-3 bg-success-bg border border-success/30 rounded-lg text-xs text-success">
             <DollarSign className="w-4 h-4 inline mr-2" />
             {order.escrow_status === 'released'
-              ? 'Funds released to your balance'
-              : 'Funds held in SafeDrop escrow'}
+              ? 'Added to your Seller Balance'
+              : 'Paid out after the buyer confirms delivery'}
           </div>
         </div>
 

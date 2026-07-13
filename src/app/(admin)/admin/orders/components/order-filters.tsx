@@ -16,8 +16,8 @@ const STATUS_OPTIONS = [
 
 const ESCROW_OPTIONS = [
   { value: 'pending', label: 'Pending', color: 'blue' },
-  { value: 'held', label: 'Held', color: 'amber' },
-  { value: 'released', label: 'Released', color: 'green' },
+  { value: 'held', label: 'Payout Pending', color: 'amber' },
+  { value: 'released', label: 'Seller Paid Out', color: 'green' },
   { value: 'refunded', label: 'Refunded', color: 'red' },
 ]
 
@@ -139,9 +139,9 @@ export function OrderFilters() {
           })}
         </div>
 
-        {/* Escrow Filters */}
+        {/* Payout Filters (escrowStatus param/values stay — DB keys) */}
         <div className="flex items-center gap-2">
-          <span className="text-xs text-text-tertiary font-medium">Escrow:</span>
+          <span className="text-xs text-text-tertiary font-medium">Payout:</span>
           {ESCROW_OPTIONS.map((option) => {
             const isSelected = selectedEscrow.includes(option.value)
             return (

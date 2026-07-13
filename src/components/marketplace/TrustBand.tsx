@@ -34,7 +34,7 @@ const TRUST_ITEMS: Array<{
     key: 'guarantee',
     label: 'Money-Back',
     title: 'Money-Back Guarantee',
-    body: 'Every order is held by us in escrow — the seller is only paid after you confirm delivery. No product? Full refund.',
+    body: 'Every order is covered by SafeDrop Buyer Protection — the seller is only paid after you confirm delivery. No product? Full refund.',
     img: '/icons/trust/money-back.png',
     glow: '#4FA3F7',
   },

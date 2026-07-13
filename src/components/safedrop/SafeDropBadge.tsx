@@ -30,7 +30,7 @@ const levelConfig = {
     bgColor: 'bg-blue-500/10',
     borderColor: 'border-blue-500/20',
     description: 'Basic buyer protection for orders under $100',
-    features: ['48-hour escrow', 'Dispute resolution', 'Refund protection']
+    features: ['Covered by SafeDrop Buyer Protection', 'Dispute resolution', 'Refund protection']
   },
   enhanced: {
     icon: ShieldCheck,
@@ -40,7 +40,7 @@ const levelConfig = {
     borderColor: 'border-lime-tint-border',
     description: 'Advanced protection for orders $100-$499',
     features: [
-      '48-hour escrow',
+      'Covered by SafeDrop Buyer Protection',
       'Delivery evidence required',
       'Priority dispute resolution',
       'Full refund guarantee'
@@ -54,7 +54,7 @@ const levelConfig = {
     borderColor: 'border-amber-500/20',
     description: 'Maximum protection for orders $500+',
     features: [
-      '48-hour escrow',
+      'Covered by SafeDrop Buyer Protection',
       'Mandatory delivery evidence',
       'Priority dispute resolution',
       'Full refund guarantee',

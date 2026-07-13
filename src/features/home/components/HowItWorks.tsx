@@ -9,10 +9,10 @@
  * cross-fades between four hero illustrations.
  *
  * Hero artwork is loaded from `/public/assets/howitworks/`:
- *   - stage-1.svg  (You Pay In)
- *   - stage-2.svg  (We Hold It)
+ *   - stage-1.svg  (You Pay)
+ *   - stage-2.svg  (You're Covered)
  *   - stage-3.svg  (They Deliver)
- *   - stage-4.svg  (We Release)
+ *   - stage-4.svg  (Seller Gets Paid)
  *
  * Use Storyset's "SVG AND CSS" export (single .svg with embedded CSS
  * animations). Rendered via plain <img> so the CSS animations inside
@@ -46,43 +46,41 @@ interface Stage {
 const STAGES: Stage[] = [
   {
     step: '01',
-    label: 'You Pay In',
+    label: 'You Pay',
     copy: [
-      { type: 'plain',  text: 'Your money goes to ' },
+      { type: 'plain',  text: 'Check out on ' },
       { type: 'strong', text: 'DropMarket' },
-      { type: 'plain',  text: ' — ' },
-      { type: 'accent', text: 'not the seller' },
-      { type: 'plain',  text: '. It sits with us, ' },
-      { type: 'accent', text: 'locked tight' },
-      { type: 'plain',  text: ', until they deliver what you bought.' },
+      { type: 'plain',  text: ' like any store — and your order is covered by ' },
+      { type: 'accent', text: 'SafeDrop Buyer Protection' },
+      { type: 'plain',  text: ' from the first second.' },
     ],
   },
   {
     step: '02',
-    label: 'We Hold It',
+    label: "You're Covered",
     copy: [
       { type: 'strong', text: 'SafeDrop™' },
-      { type: 'plain',  text: ' kicks in. Sellers ' },
-      { type: 'accent', text: "can't touch your funds" },
-      { type: 'plain',  text: '. Change your mind before delivery? Pull out any time.' },
+      { type: 'plain',  text: ' guarantees the outcome: ' },
+      { type: 'accent', text: 'get what you ordered, or your money back' },
+      { type: 'plain',  text: '. Change your mind before delivery? Cancel any time.' },
     ],
   },
   {
     step: '03',
     label: 'They Deliver',
     copy: [
-      { type: 'plain',  text: 'Seller hands over the goods — items, currency, accounts, whatever. ' },
-      { type: 'accent', text: 'You check it, you decide' },
-      { type: 'plain',  text: " if it's real." },
+      { type: 'plain',  text: 'Seller hands over the goods — items, currency, accounts, whatever. Most orders ' },
+      { type: 'accent', text: 'complete in minutes' },
+      { type: 'plain',  text: '. You check it, you decide if it’s as described.' },
     ],
   },
   {
     step: '04',
-    label: 'We Release',
+    label: 'Seller Gets Paid',
     copy: [
-      { type: 'plain',  text: 'Confirm the drop and we pay the seller. Something off? ' },
+      { type: 'plain',  text: 'Confirm the drop and the seller is paid out. Something off? ' },
       { type: 'accent', text: 'We step in' },
-      { type: 'plain',  text: ". Either way, you don't eat the loss." },
+      { type: 'plain',  text: " — full refund if it's not delivered or not as described." },
     ],
   },
 ]
@@ -132,7 +130,7 @@ export function HowItWorks() {
           Safe drops, <span className="text-lime-text">every time</span>.
         </h2>
         <p className="mx-auto mt-4 max-w-2xl text-[17px] leading-relaxed text-text-secondary">
-          Powered by <span className="font-bold text-text-primary">SafeDrop™</span> — your money stays protected from the moment you buy to the moment you confirm delivery.
+          Every order is covered by <span className="font-bold text-text-primary">SafeDrop™ Buyer Protection</span> — get what you ordered, or your money back.
         </p>
       </div>
 

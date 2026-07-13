@@ -1,8 +1,9 @@
 /**
- * SafeDrop Protection Landing Page
+ * SafeDrop Buyer Protection Landing Page
  *
- * Marketing page explaining DropMarket's buyer protection system
- * Shows protection levels, how it works, and FAQs
+ * Marketing page explaining DropMarket's buyer-protection programme:
+ * what's covered, protection windows by category, how disputes work,
+ * seller payouts, and FAQs.
  */
 
 import React from 'react'
@@ -10,27 +11,34 @@ import { Metadata } from 'next'
 import {
   Shield,
   ShieldCheck,
-  ShieldAlert,
-  Lock,
   Clock,
   FileText,
   CheckCircle2,
+  XCircle,
   AlertCircle,
   Users,
-  TrendingUp,
-  Award
+  Award,
+  Coins,
+  Package,
+  Zap,
+  Rocket,
+  UserCheck,
+  MessageSquare,
+  Scale,
+  Wallet,
+  CreditCard
 } from 'lucide-react'
 import Link from 'next/link'
 import { TrustpilotCarousel } from '@/components/trustpilot/TrustpilotWidget'
 
 export const metadata: Metadata = {
-  title: 'SafeDrop Protection',
+  title: 'SafeDrop Buyer Protection',
   description:
-    'Learn about SafeDrop, our comprehensive buyer protection system. Secure escrow, delivery verification, and full refund guarantee for all transactions.',
+    "SafeDrop is DropMarket's buyer-protection programme, included on every order. Not delivered or not as described? You get your money back.",
   openGraph: {
-    title: 'SafeDrop Protection',
+    title: 'SafeDrop Buyer Protection',
     description:
-      'Secure escrow and buyer protection for game asset purchases',
+      'Buyer protection on every DropMarket order — get what you ordered, or your money back',
     type: 'website'
   }
 }
@@ -46,23 +54,23 @@ export default function SafeDropPage() {
         "name": "What happens if the seller doesn't deliver?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "If the seller fails to deliver within the agreed timeframe or you don't receive what you paid for, you can open a dispute. Our team will review the case and issue a full refund if the seller is at fault."
+          "text": "Every order is covered by SafeDrop Buyer Protection. If your order isn't delivered or isn't as described, you get a full refund."
         }
       },
       {
         "@type": "Question",
-        "name": "How long does the escrow period last?",
+        "name": "How long do I have to check my order?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "All orders have a 48-hour escrow period. This gives you time to verify the delivery and report any issues. After 48 hours, the payment is automatically released to the seller unless you've opened a dispute."
+          "text": "Each category has its own protection window: 48 hours for currency and top-ups, 72 hours for items and boosting, and 5, 7, or 14 days for accounts depending on the account's risk band. Raise any issue within the window and you're covered."
         }
       },
       {
         "@type": "Question",
-        "name": "What is delivery evidence?",
+        "name": "What does SafeDrop cover?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "For Enhanced ($100+) and Premium ($500+) orders, sellers must upload screenshots or videos proving they delivered the items. This creates a clear record of delivery and helps resolve disputes quickly."
+          "text": "SafeDrop covers orders that aren't delivered, items that aren't as described, and accounts recovered by their previous owner within the warranty terms in our Risk Disclosure. It doesn't cover a change of mind, publisher bans after delivery outside warranty terms, or deals made off-platform."
         }
       },
       {
@@ -70,23 +78,31 @@ export default function SafeDropPage() {
         "name": "Can I get a refund after confirming delivery?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "Once you manually confirm delivery, the payment is released immediately and refunds are no longer available unless you can prove the seller engaged in fraud. Always verify items before confirming."
+          "text": "Confirming delivery tells us you received your order as described, so refunds are generally no longer available afterwards unless you can show the seller acted fraudulently. Always check your order carefully before confirming."
         }
       },
       {
         "@type": "Question",
-        "name": "What if I have a dispute?",
+        "name": "How do disputes work?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "You can open a dispute during the 48-hour escrow period. Our support team will review all evidence (messages, delivery proof, etc.) and make a fair decision. Most disputes are resolved within 24-48 hours."
+          "text": "Contact the seller first — most issues are resolved in chat. If nothing is fixed within the 12-hour grace period, open a dispute. Both sides then have 24 hours to submit evidence, and our team issues a decision within 3 days."
         }
       },
       {
         "@type": "Question",
-        "name": "Is there any fee for SafeDrop?",
+        "name": "Is there a fee for SafeDrop?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "No! SafeDrop protection is completely free and automatically applied to every purchase. It's our commitment to creating a safe marketplace for all buyers and sellers."
+          "text": "Standard SafeDrop protection is included free on every order. Optional Enhanced and Premium warranty tiers with longer coverage are available at checkout."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "When do sellers get paid?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Your sale proceeds are credited to your Seller Balance once the buyer confirms delivery or the protection window closes."
         }
       }
     ]
@@ -112,105 +128,50 @@ export default function SafeDropPage() {
             </div>
 
             <h1 className="text-5xl md:text-6xl font-bold text-white mb-6">
-              SafeDrop Protection
+              SafeDrop Buyer Protection
             </h1>
 
             <p className="text-xl text-gray-300 max-w-3xl mx-auto mb-8">
-              Every purchase is protected by our comprehensive escrow system.
-              Buy with confidence knowing your money is secure until delivery is confirmed.
+              Not delivered or not as described? You get your money back.
+              SafeDrop is DropMarket&apos;s buyer-protection programme, included
+              on every order.
             </p>
 
             <div className="flex flex-wrap items-center justify-center gap-4">
               <div className="flex items-center gap-2 px-4 py-2 bg-white/[0.05] rounded-lg border border-white/[0.1]">
                 <CheckCircle2 className="w-5 h-5 text-green-400" />
-                <span className="text-white font-medium">48-Hour Escrow</span>
+                <span className="text-white font-medium">Included on Every Order</span>
               </div>
               <div className="flex items-center gap-2 px-4 py-2 bg-white/[0.05] rounded-lg border border-white/[0.1]">
                 <CheckCircle2 className="w-5 h-5 text-green-400" />
-                <span className="text-white font-medium">Full Refund Guarantee</span>
+                <span className="text-white font-medium">Money-Back Guarantee</span>
               </div>
               <div className="flex items-center gap-2 px-4 py-2 bg-white/[0.05] rounded-lg border border-white/[0.1]">
                 <CheckCircle2 className="w-5 h-5 text-green-400" />
-                <span className="text-white font-medium">Delivery Verification</span>
+                <span className="text-white font-medium">Verified Sellers</span>
               </div>
             </div>
           </div>
 
-          {/* Stats */}
+          {/* Trust Signals */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-20">
             <StatCard
-              icon={Users}
-              value="50,000+"
-              label="Protected Buyers"
-              color="text-lime-text"
-            />
-            <StatCard
-              icon={TrendingUp}
-              value="$2.5M+"
-              label="Total Secured"
+              icon={ShieldCheck}
+              value="Every Order"
+              label="Covered by SafeDrop Buyer Protection"
               color="text-lime-text"
             />
             <StatCard
               icon={Award}
-              value="99.8%"
-              label="Success Rate"
+              value="UK-Registered"
+              label="DropMarket is a UK-registered company"
+              color="text-lime-text"
+            />
+            <StatCard
+              icon={Users}
+              value="Verified Sellers"
+              label="Every seller is verified before they can sell"
               color="text-amber-400"
-            />
-          </div>
-        </div>
-      </section>
-
-      {/* Protection Levels */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-              Three Levels of Protection
-            </h2>
-            <p className="text-gray-400 text-lg max-w-2xl mx-auto">
-              Automatically applied based on your order value
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <ProtectionLevelCard
-              icon={Shield}
-              level="Standard"
-              priceRange="Under $100"
-              color="lime"
-              features={[
-                '48-hour escrow hold',
-                'Dispute resolution',
-                'Refund protection'
-              ]}
-            />
-
-            <ProtectionLevelCard
-              icon={ShieldCheck}
-              level="Enhanced"
-              priceRange="$100 - $499"
-              color="lime"
-              featured
-              features={[
-                '48-hour escrow hold',
-                'Delivery evidence required',
-                'Priority dispute resolution',
-                'Full refund guarantee'
-              ]}
-            />
-
-            <ProtectionLevelCard
-              icon={ShieldAlert}
-              level="Premium"
-              priceRange="$500+"
-              color="amber"
-              features={[
-                '48-hour escrow hold',
-                'Mandatory delivery evidence',
-                'Priority dispute resolution',
-                'Full refund guarantee',
-                'Extended verification'
-              ]}
             />
           </div>
         </div>
@@ -224,38 +185,222 @@ export default function SafeDropPage() {
               How SafeDrop Works
             </h2>
             <p className="text-gray-400 text-lg">
-              Simple, transparent, and automatic protection
+              Simple, transparent, and automatic on every order
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <HowItWorksStep
               number={1}
-              icon={Lock}
-              title="Payment Secured"
-              description="Your payment is held safely in escrow, not released to the seller yet"
+              icon={CreditCard}
+              title="Buyer Pays at Checkout"
+              description="Place your order and pay as normal — SafeDrop coverage applies automatically"
             />
 
             <HowItWorksStep
               number={2}
-              icon={FileText}
-              title="Delivery"
-              description="Seller delivers your items and provides evidence for Enhanced/Premium orders"
+              icon={Zap}
+              title="Seller Delivers"
+              description="Most orders complete in minutes"
             />
 
             <HowItWorksStep
               number={3}
+              icon={CheckCircle2}
+              title="Buyer Confirms, Seller Gets Paid"
+              description="Confirm delivery and the seller is paid out. Not delivered or not as described? Full refund."
+            />
+          </div>
+        </div>
+      </section>
+
+      {/* What's Covered */}
+      <section className="py-20 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+              What&apos;s Covered
+            </h2>
+            <p className="text-gray-400 text-lg max-w-2xl mx-auto">
+              Clear rules, no fine-print surprises
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="bg-white/[0.03] border border-white/[0.05] rounded-xl p-6">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="inline-flex p-3 rounded-lg bg-lime/10 border border-lime/20">
+                  <CheckCircle2 className="w-6 h-6 text-lime-text" />
+                </div>
+                <h3 className="text-xl font-bold text-white">Covered by SafeDrop</h3>
+              </div>
+              <div className="space-y-3">
+                <div className="flex items-start gap-2">
+                  <CheckCircle2 className="w-5 h-5 flex-shrink-0 text-lime-text" />
+                  <span className="text-sm text-gray-300">
+                    Your order isn&apos;t delivered
+                  </span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <CheckCircle2 className="w-5 h-5 flex-shrink-0 text-lime-text" />
+                  <span className="text-sm text-gray-300">
+                    The item isn&apos;t as described — wrong item, wrong amount,
+                    or a misleading listing
+                  </span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <CheckCircle2 className="w-5 h-5 flex-shrink-0 text-lime-text" />
+                  <span className="text-sm text-gray-300">
+                    An account is recovered by its previous owner within the
+                    warranty terms in our Risk Disclosure
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white/[0.03] border border-white/[0.05] rounded-xl p-6">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="inline-flex p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                  <XCircle className="w-6 h-6 text-amber-400" />
+                </div>
+                <h3 className="text-xl font-bold text-white">Not Covered</h3>
+              </div>
+              <div className="space-y-3">
+                <div className="flex items-start gap-2">
+                  <XCircle className="w-5 h-5 flex-shrink-0 text-amber-400" />
+                  <span className="text-sm text-gray-300">
+                    Change of mind after delivery
+                  </span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <XCircle className="w-5 h-5 flex-shrink-0 text-amber-400" />
+                  <span className="text-sm text-gray-300">
+                    Publisher bans or suspensions after delivery, outside
+                    warranty terms
+                  </span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <XCircle className="w-5 h-5 flex-shrink-0 text-amber-400" />
+                  <span className="text-sm text-gray-300">
+                    Deals or payments made outside DropMarket
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Protection Windows */}
+      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-white/[0.02]">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+              Protection Windows by Category
+            </h2>
+            <p className="text-gray-400 text-lg max-w-2xl mx-auto">
+              Your protection window is the time you have to check your order
+              and raise an issue. Sellers are paid out when you confirm
+              delivery or the window closes.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
+            <ProtectionWindowCard icon={Coins} category="Currency" window="48 Hours" />
+            <ProtectionWindowCard icon={Package} category="Items" window="72 Hours" />
+            <ProtectionWindowCard icon={Zap} category="Top-Ups" window="48 Hours" />
+            <ProtectionWindowCard icon={Rocket} category="Boosting" window="72 Hours" />
+            <ProtectionWindowCard
+              icon={UserCheck}
+              category="Accounts"
+              window="5–14 Days"
+              note="5, 7, or 14 days by risk band"
+            />
+          </div>
+        </div>
+      </section>
+
+      {/* How Disputes Work */}
+      <section className="py-20 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+              How Disputes Work
+            </h2>
+            <p className="text-gray-400 text-lg">
+              A clear process with fixed timelines — no black box
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-8">
+            <HowItWorksStep
+              number={1}
+              icon={MessageSquare}
+              title="Contact the Seller"
+              description="Message the seller first — most issues are resolved in chat"
+            />
+
+            <HowItWorksStep
+              number={2}
               icon={Clock}
-              title="Review Period"
-              description="You have 48 hours to confirm delivery and report any issues"
+              title="12-Hour Grace Period"
+              description="The seller has 12 hours to put things right"
+            />
+
+            <HowItWorksStep
+              number={3}
+              icon={Shield}
+              title="Open a Dispute"
+              description="Still unresolved? Escalate it to the DropMarket team"
             />
 
             <HowItWorksStep
               number={4}
-              icon={CheckCircle2}
-              title="Auto-Release"
-              description="Payment released to seller after 48 hours, or immediately when you confirm"
+              icon={FileText}
+              title="24-Hour Evidence Window"
+              description="Both sides have 24 hours to submit evidence"
             />
+
+            <HowItWorksStep
+              number={5}
+              icon={Scale}
+              title="Decision Within 3 Days"
+              description="Our team reviews and decides within 3 days — if your claim stands, you get a full refund"
+            />
+          </div>
+        </div>
+      </section>
+
+      {/* For Sellers */}
+      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-white/[0.02]">
+        <div className="max-w-4xl mx-auto">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+              For Sellers
+            </h2>
+            <p className="text-gray-400 text-lg">
+              SafeDrop protects both sides of every order
+            </p>
+          </div>
+
+          <div className="bg-white/[0.03] border border-white/[0.05] rounded-xl p-8 text-center">
+            <div className="inline-flex p-4 rounded-2xl bg-lime/10 border border-lime/20 mb-6">
+              <Wallet className="w-8 h-8 text-lime-text" />
+            </div>
+            <h3 className="text-xl font-bold text-white mb-4">
+              Fast, Guaranteed Payouts
+            </h3>
+            <p className="text-gray-300 mb-4 max-w-2xl mx-auto">
+              You&apos;re paid out after the buyer confirms delivery or the
+              protection window closes — payout guaranteed once the window
+              closes.
+            </p>
+            <p className="text-gray-400 text-sm max-w-2xl mx-auto">
+              Your sale proceeds are credited to your Seller Balance once the
+              buyer confirms delivery or the protection window closes. Evidence
+              requirements and a structured dispute process protect you from
+              bad-faith claims.
+            </p>
           </div>
         </div>
       </section>
@@ -272,32 +417,37 @@ export default function SafeDropPage() {
           <div className="space-y-6">
             <FAQItem
               question="What happens if the seller doesn't deliver?"
-              answer="If the seller fails to deliver within the agreed timeframe or you don't receive what you paid for, you can open a dispute. Our team will review the case and issue a full refund if the seller is at fault."
+              answer="Every order is covered by SafeDrop Buyer Protection. If your order isn't delivered or isn't as described, you get a full refund."
             />
 
             <FAQItem
-              question="How long does the escrow period last?"
-              answer="All orders have a 48-hour escrow period. This gives you time to verify the delivery and report any issues. After 48 hours, the payment is automatically released to the seller unless you've opened a dispute."
+              question="How long do I have to check my order?"
+              answer="Each category has its own protection window: 48 hours for currency and top-ups, 72 hours for items and boosting, and 5, 7, or 14 days for accounts depending on the account's risk band. Raise any issue within the window and you're covered."
             />
 
             <FAQItem
-              question="What is delivery evidence?"
-              answer="For Enhanced ($100+) and Premium ($500+) orders, sellers must upload screenshots or videos proving they delivered the items. This creates a clear record of delivery and helps resolve disputes quickly."
+              question="What does SafeDrop cover?"
+              answer="SafeDrop covers orders that aren't delivered, items that aren't as described, and accounts recovered by their previous owner within the warranty terms in our Risk Disclosure. It doesn't cover a change of mind, publisher bans after delivery outside warranty terms, or deals made off-platform."
             />
 
             <FAQItem
               question="Can I get a refund after confirming delivery?"
-              answer="Once you manually confirm delivery, the payment is released immediately and refunds are no longer available unless you can prove the seller engaged in fraud. Always verify items before confirming."
+              answer="Confirming delivery tells us you received your order as described, so refunds are generally no longer available afterwards unless you can show the seller acted fraudulently. Always check your order carefully before confirming."
             />
 
             <FAQItem
-              question="What if I have a dispute?"
-              answer="You can open a dispute during the 48-hour escrow period. Our support team will review all evidence (messages, delivery proof, etc.) and make a fair decision. Most disputes are resolved within 24-48 hours."
+              question="How do disputes work?"
+              answer="Contact the seller first — most issues are resolved in chat. If nothing is fixed within the 12-hour grace period, open a dispute. Both sides then have 24 hours to submit evidence, and our team issues a decision within 3 days."
             />
 
             <FAQItem
-              question="Is there any fee for SafeDrop?"
-              answer="No! SafeDrop protection is completely free and automatically applied to every purchase. It's our commitment to creating a safe marketplace for all buyers and sellers."
+              question="Is there a fee for SafeDrop?"
+              answer="Standard SafeDrop protection is included free on every order. Optional Enhanced and Premium warranty tiers with longer coverage are available at checkout."
+            />
+
+            <FAQItem
+              question="When do sellers get paid?"
+              answer="Your sale proceeds are credited to your Seller Balance once the buyer confirms delivery or the protection window closes."
             />
           </div>
         </div>
@@ -311,7 +461,7 @@ export default function SafeDropPage() {
               Trusted by Gamers Worldwide
             </h2>
             <p className="text-gray-400 text-lg">
-              See what buyers and sellers say about our protection system
+              See what buyers and sellers say about shopping with SafeDrop
             </p>
           </div>
           <TrustpilotCarousel />
@@ -329,8 +479,8 @@ export default function SafeDropPage() {
             </h2>
 
             <p className="text-gray-300 text-lg mb-8 max-w-2xl mx-auto">
-              Every purchase is protected by SafeDrop. Browse thousands of listings
-              and buy with complete confidence.
+              Every order is covered by SafeDrop Buyer Protection — get what
+              you ordered, or your money back.
             </p>
 
             <Link
@@ -364,66 +514,26 @@ function StatCard({ icon: Icon, value, label, color }: StatCardProps) {
   )
 }
 
-// Component: Protection Level Card
-interface ProtectionLevelCardProps {
+// Component: Protection Window Card
+interface ProtectionWindowCardProps {
   icon: React.ElementType
-  level: string
-  priceRange: string
-  color: 'lime' | 'amber'
-  features: string[]
-  featured?: boolean
+  category: string
+  window: string
+  note?: string
 }
 
-function ProtectionLevelCard({
+function ProtectionWindowCard({
   icon: Icon,
-  level,
-  priceRange,
-  color,
-  features,
-  featured = false
-}: ProtectionLevelCardProps) {
-  const colorClasses = {
-    lime: {
-      text: 'text-lime-text',
-      bg: 'bg-lime/10',
-      border: 'border-lime/20'
-    },
-    amber: {
-      text: 'text-amber-400',
-      bg: 'bg-amber-500/10',
-      border: 'border-amber-500/20'
-    }
-  }
-
-  const colors = colorClasses[color]
-
+  category,
+  window: windowLabel,
+  note
+}: ProtectionWindowCardProps) {
   return (
-    <div
-      className={`relative bg-white/[0.03] border rounded-xl p-6 ${
-        featured ? 'ring-2 ring-lime/50 scale-105' : 'border-white/[0.05]'
-      }`}
-    >
-      {featured && (
-        <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-lime text-text-inverse text-xs font-semibold rounded-full">
-          Most Popular
-        </div>
-      )}
-
-      <div className={`inline-flex p-3 rounded-lg ${colors.bg} ${colors.border} border mb-4`}>
-        <Icon className={`w-6 h-6 ${colors.text}`} />
-      </div>
-
-      <h3 className="text-xl font-bold text-white mb-1">{level} Protection</h3>
-      <p className="text-gray-400 text-sm mb-6">{priceRange}</p>
-
-      <div className="space-y-3">
-        {features.map((feature, index) => (
-          <div key={index} className="flex items-start gap-2">
-            <CheckCircle2 className={`w-5 h-5 flex-shrink-0 ${colors.text}`} />
-            <span className="text-sm text-gray-300">{feature}</span>
-          </div>
-        ))}
-      </div>
+    <div className="bg-white/[0.03] border border-white/[0.05] rounded-xl p-6 text-center">
+      <Icon className="w-8 h-8 text-lime-text mx-auto mb-3" />
+      <div className="text-sm text-gray-400 mb-1">{category}</div>
+      <div className="text-2xl font-bold text-white">{windowLabel}</div>
+      {note && <div className="text-xs text-gray-500 mt-2">{note}</div>}
     </div>
   )
 }

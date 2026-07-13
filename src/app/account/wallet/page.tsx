@@ -529,7 +529,7 @@ export default function WalletPage() {
                   </Link>
                 </div>
 
-                {/* Pending — in escrow */}
+                {/* Pending — sales awaiting completion */}
                 <div className="rounded-lg border border-border-subtle card-frost p-5">
                   <div className="flex items-center gap-2 text-text-secondary">
                     <Clock className="h-4 w-4 text-amber-400" />
@@ -539,7 +539,8 @@ export default function WalletPage() {
                     ${earningsStats.pending_balance.toFixed(2)}
                   </p>
                   <p className="mt-2 text-[12px] text-text-secondary">
-                    Revenue from active orders — added to your balance once each order completes.
+                    Sale proceeds from active orders — credited to your Seller Balance once the
+                    buyer confirms delivery or the protection window closes.
                   </p>
                 </div>
               </div>

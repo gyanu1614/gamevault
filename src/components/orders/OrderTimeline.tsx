@@ -21,7 +21,7 @@ export default function OrderTimeline({ order }: OrderTimelineProps) {
     events.push({
       icon: <DollarSign className="w-5 h-5" />,
       title: 'Order Placed',
-      description: 'Payment secured in escrow',
+      description: 'Covered by SafeDrop Buyer Protection',
       timestamp: order.created_at,
       color: 'text-blue-400',
       bgColor: 'bg-blue-500/10',
@@ -46,8 +46,8 @@ export default function OrderTimeline({ order }: OrderTimelineProps) {
   if (order.buyer_confirmed_at) {
     events.push({
       icon: <CheckCircle2 className="w-5 h-5" />,
-      title: 'Receipt Confirmed',
-      description: 'Buyer confirmed receipt of order',
+      title: 'Delivery Confirmed',
+      description: 'Buyer confirmed delivery of order',
       timestamp: order.buyer_confirmed_at,
       color: 'text-success',
       bgColor: 'bg-success-bg',
@@ -60,7 +60,7 @@ export default function OrderTimeline({ order }: OrderTimelineProps) {
     events.push({
       icon: <Shield className="w-5 h-5" />,
       title: 'Order Completed',
-      description: `Payment released to seller${order.release_method ? ` (${order.release_method})` : ''}`,
+      description: `Seller paid out${order.release_method ? ` (${order.release_method})` : ''}`,
       timestamp: order.completed_at,
       color: 'text-success',
       bgColor: 'bg-success-bg',

@@ -110,11 +110,11 @@ export default function DisputeResolvedSellerBanner({
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-success mt-0.5">✓</span>
-                    <span>Funds will be released to your account</span>
+                    <span>Your payout will be added to your Seller Balance</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-success mt-0.5">✓</span>
-                    <span>Payment will be processed within 3-5 business days</span>
+                    <span>Your payout will be processed within 3-5 business days</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-success mt-0.5">✓</span>
@@ -133,7 +133,7 @@ export default function DisputeResolvedSellerBanner({
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-orange-400 mt-0.5">⚠</span>
-                    <span>Payment will not be released to you</span>
+                    <span>No payout will be issued for this order</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-text-tertiary mt-0.5">•</span>

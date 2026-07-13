@@ -32,7 +32,7 @@ export const metadata: Metadata = {
     template: '%s | DropMarket',
   },
   description:
-    'The safest peer-to-peer marketplace for gaming items, currency, and accounts. Protected by SafeDrop escrow. 18+ games, instant delivery.',
+    'The safest peer-to-peer marketplace for gaming items, currency, and accounts. Every order covered by SafeDrop Buyer Protection. 18+ games, instant delivery.',
   keywords: [
     'gaming marketplace', 'buy robux', 'sell game accounts', 'valorant accounts',
     'roblox robux', 'cs2 skins', 'genshin crystals', 'safedrop', 'p2p gaming',
@@ -41,12 +41,12 @@ export const metadata: Metadata = {
     type: 'website',
     siteName: 'DropMarket',
     title: 'DropMarket — Buy & Sell Game Items Safely',
-    description: 'Peer-to-peer gaming marketplace with SafeDrop escrow protection.',
+    description: 'Peer-to-peer gaming marketplace with SafeDrop Buyer Protection on every order.',
   },
   twitter: {
     card: 'summary_large_image',
     title: 'DropMarket — Buy & Sell Game Items Safely',
-    description: 'Peer-to-peer gaming marketplace with SafeDrop escrow protection.',
+    description: 'Peer-to-peer gaming marketplace with SafeDrop Buyer Protection on every order.',
   },
   robots: {
     index: true,

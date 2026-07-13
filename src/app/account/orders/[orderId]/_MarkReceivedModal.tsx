@@ -3,10 +3,10 @@
 /**
  * MarkReceivedModal — V21/P5.f
  *
- * Buyer's "Confirm Receipt" flow. Centered shadcn Dialog. Layout:
+ * Buyer's "Confirm Delivery" flow. Centered shadcn Dialog. Layout:
  *   1. Amber warning banner — "Only confirm if you received your
  *      order in full."
- *   2. Centered SafeDrop release block — title + amount stacked.
+ *   2. Centered SafeDrop payout block — title + amount stacked.
  *   3. Mandatory review block — thumbs up/down + quick chips that
  *      pre-fill the comment + a textarea. Must be filled before
  *      Confirm activates.
@@ -136,12 +136,12 @@ export function MarkReceivedModal({
       // Review" CTA → opens this same modal in review mode).
       const res = await confirmOrderReceipt(orderId)
       if (!res.success) {
-        toast.error(res.error ?? 'Could not confirm receipt')
+        toast.error(res.error ?? 'Could not confirm delivery')
         setSubmitting(false)
         return
       }
 
-      toast.success(`${fmtUsd(amount)} released to the seller`)
+      toast.success(`Delivery confirmed — ${fmtUsd(amount)} paid out to the seller`)
       onConfirmed?.()
       setTimeout(() => {
         onOpenChange(false)
@@ -149,7 +149,7 @@ export function MarkReceivedModal({
       }, 500)
     } catch (e: any) {
       console.error('confirmOrderReceipt failed', e)
-      toast.error(e?.message ?? 'Could not confirm receipt')
+      toast.error(e?.message ?? 'Could not confirm delivery')
       setSubmitting(false)
     }
   }
@@ -167,12 +167,12 @@ export function MarkReceivedModal({
       <DialogContent className="max-w-[640px] gap-5 border-border-default bg-bg-raised p-7 sm:p-8">
         <DialogHeader className="gap-2">
           <DialogTitle className="text-[26px] font-bold tracking-tight">
-            {mode === 'review' ? 'Leave A Review' : 'Confirm Receipt'}
+            {mode === 'review' ? 'Leave A Review' : 'Confirm Delivery'}
           </DialogTitle>
           <DialogDescription className="text-[15px] leading-[1.5] text-text-secondary">
             {mode === 'review'
               ? 'Share your experience to help other buyers.'
-              : 'Confirming releases the held funds to the seller.'}
+              : 'Once you confirm, the seller is paid out for this order.'}
           </DialogDescription>
         </DialogHeader>
 
@@ -187,14 +187,14 @@ export function MarkReceivedModal({
                 </span>
               </div>
               <p className="text-[15.5px] leading-[1.55] text-text-primary">
-                <span className="font-bold text-amber">Only confirm receipt</span> if you received your order in full.
+                <span className="font-bold text-amber">Only confirm delivery</span> if you received your order in full.
               </p>
             </div>
 
             <div className="mt-3 flex items-center justify-between px-1">
               <span className="inline-flex items-center gap-2 text-[15px] font-semibold text-text-secondary">
                 <Shield className="h-[18px] w-[18px] text-lime-text" />
-                Amount Releasing
+                Seller Payout
               </span>
               <span className="text-[22px] font-extrabold tabular-nums text-lime-text">
                 {fmtUsd(amount)}

@@ -22,7 +22,7 @@ export default function CancelOrderButton({ orderId, orderNumber, role = 'seller
     try {
       const result = await cancelOrder(orderId)
       if (result.success) {
-        toast.success(role === 'seller' ? 'Order cancelled — buyer will be refunded' : 'Order cancelled — full refund issued to your payment method')
+        toast.success(role === 'seller' ? 'Order cancelled — buyer will be refunded' : 'Order cancelled — refund issued')
         setShowConfirm(false)
         router.refresh()
       } else {
@@ -45,7 +45,7 @@ export default function CancelOrderButton({ orderId, orderNumber, role = 'seller
             <div className="text-[10px] text-error/70 mt-0.5 leading-relaxed">
               {role === 'seller'
                 ? 'The buyer will receive a full refund within 5–10 business days.'
-                : 'A full refund will be returned to your original payment method within 5–10 business days.'}
+                : 'A full refund will be issued within 5–10 business days.'}
             </div>
           </div>
         </div>
