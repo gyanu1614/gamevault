@@ -37,7 +37,7 @@ const GROUPS: Array<{ title: string; items: Array<[string, string]> }> = [
     items: [
       ['/icons/set/shield-check.svg', 'Protection'],
       ['/icons/set/warranty.svg', 'Warranty'],
-      ['/icons/set/vault.svg', 'Escrow'],
+      ['/icons/set/vault.svg', 'SafeDrop'],
       ['/icons/set/lock.svg', 'Secure'],
       ['/icons/set/refund.svg', 'Refund'],
       ['/icons/set/support.svg', 'Support'],

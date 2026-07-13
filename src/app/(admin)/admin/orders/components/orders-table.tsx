@@ -8,6 +8,14 @@ import { IconChevronLeft, IconChevronRight, IconExternalLink } from '@tabler/ico
 import { getAvatarUrl } from '@/lib/utils/avatar'
 import { StatusBadge, TABLE } from '../../components/kit'
 
+// Model C display labels for the escrow_status DB values (identifiers stay).
+const ESCROW_DISPLAY: Record<string, string> = {
+  pending: 'Pending',
+  held: 'Payout Pending',
+  released: 'Seller Paid Out',
+  refunded: 'Refunded',
+}
+
 interface OrdersTableProps {
   orders: AdminOrder[]
   pagination: {
@@ -56,7 +64,7 @@ export function OrdersTable({ orders, pagination }: OrdersTableProps) {
                 <th className={TABLE.th}>Listing</th>
                 <th className={cn(TABLE.th, 'text-right')}>Amount</th>
                 <th className={cn(TABLE.th, 'text-center')}>Status</th>
-                <th className={cn(TABLE.th, 'text-center')}>Escrow</th>
+                <th className={cn(TABLE.th, 'text-center')}>Payout</th>
                 <th className={cn(TABLE.th, 'text-right')}>Date</th>
               </tr>
             </thead>
@@ -129,7 +137,7 @@ export function OrdersTable({ orders, pagination }: OrdersTableProps) {
                     <StatusBadge status={order.status} />
                   </td>
                   <td className={cn(TABLE.td, 'text-center')}>
-                    <StatusBadge status={order.escrow_status} />
+                    <StatusBadge status={ESCROW_DISPLAY[order.escrow_status ?? ''] ?? order.escrow_status} />
                   </td>
                   <td className={cn(TABLE.td, 'text-right')}>
                     <div className="text-sm text-text-secondary">

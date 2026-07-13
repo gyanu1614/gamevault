@@ -37,7 +37,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   return {
     title: `${game.name} Marketplace | Buy & Sell ${game.name} Accounts & Items`,
-    description: `Browse ${game.name} accounts, items, and currency. ${game.description} All transactions protected by SafeDrop escrow.`,
+    description: `Browse ${game.name} accounts, items, and currency. ${game.description} Every order is covered by SafeDrop Buyer Protection.`,
     keywords: [
       `${game.name.toLowerCase()} accounts`,
       `buy ${game.name.toLowerCase()} account`,

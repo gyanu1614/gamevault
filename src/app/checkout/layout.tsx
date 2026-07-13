@@ -62,7 +62,7 @@ function CheckoutFooter() {
         <div className="flex flex-col gap-1.5 text-[12.5px] text-text-tertiary sm:flex-row sm:items-center sm:gap-4">
           <span className="inline-flex items-center gap-2">
             <ShieldCheck className="h-4 w-4 text-lime-text" />
-            All transactions are SSL secured and escrow protected.
+            All transactions are SSL secured and covered by SafeDrop Buyer Protection.
           </span>
           <span className="hidden text-[11.5px] sm:inline">© {new Date().getFullYear()} DropMarket Ltd</span>
         </div>

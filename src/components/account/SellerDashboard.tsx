@@ -97,7 +97,7 @@ export default function SellerDashboard({ username }: { username: string }) {
             icon={ShoppingBag}
             label="Pending Payout"
             value={kpis ? usd(kpis.pendingPayout) : '—'}
-            hint="In escrow"
+            hint="Awaiting Delivery Confirmation"
             loading={loading}
           />
           <KpiCard

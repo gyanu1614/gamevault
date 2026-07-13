@@ -108,7 +108,7 @@ export function DisputeModal({ open, onOpenChange, orderId, conversationId }: Di
             Open A Dispute
           </DialogTitle>
           <DialogDescription className="text-[15px] leading-[1.5] text-text-secondary">
-            A DropMarket admin reviews disputes within 24 hours. Funds stay held until the case resolves.
+            A DropMarket admin reviews disputes within 24 hours. The seller payout is paused until the case resolves.
           </DialogDescription>
         </DialogHeader>
 

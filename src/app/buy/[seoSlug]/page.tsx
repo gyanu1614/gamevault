@@ -353,8 +353,8 @@ export default async function SEOLandingPage({
               {[
                 {
                   icon: '🛡️',
-                  title: 'SafeDrop Escrow',
-                  desc: 'Your payment is held securely until you confirm delivery. No delivery = full refund.',
+                  title: 'SafeDrop Buyer Protection',
+                  desc: 'Get what you ordered, or your money back. Not delivered or not as described = full refund.',
                 },
                 {
                   icon: '⚡',
@@ -412,7 +412,7 @@ export default async function SEOLandingPage({
                 Ready to buy?
               </h2>
               <p className="text-muted-foreground text-sm mb-6 max-w-md mx-auto">
-                Browse live listings, pay securely with SafeDrop escrow, and receive your purchase fast.
+                Browse live listings, check out with SafeDrop Buyer Protection on every order, and receive your purchase fast.
               </p>
               <div className="flex flex-wrap items-center justify-center gap-3">
                 {page.gameSlug ? (

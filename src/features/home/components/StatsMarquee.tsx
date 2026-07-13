@@ -1,20 +1,21 @@
 /**
  * StatsMarquee — V20/P15
  *
- * Infinite horizontal marquee of stat chips. Replaces the static 4-tile
+ * Infinite horizontal marquee of trust chips. Replaces the static 4-tile
  * stats grid so the hero art behind it stays visible. Pure CSS animation
  * (translateX 0 → -50% with a doubled track), pauses on hover, edge fades
  * via mask-image. No background — floats over whatever's behind.
+ *
+ * Copy rule: honest pre-launch signals only — no invented order counts,
+ * traded volumes, or seller totals.
  */
 import {
-  ShoppingBag,
   ShieldCheck,
-  Star,
-  Gamepad2,
+  BadgeCheck,
+  Building2,
   Zap,
-  Users,
-  Lock,
-  Globe2,
+  RotateCcw,
+  Headset,
 } from 'lucide-react'
 
 interface Stat {
@@ -26,14 +27,12 @@ interface Stat {
 }
 
 const STATS: Stat[] = [
-  { Icon: ShoppingBag,  value: '1.24M+', label: 'Orders Delivered',   tone: 'lime'    },
-  { Icon: ShieldCheck,  value: '$48M+',  label: 'Traded Securely',    tone: 'success' },
-  { Icon: Star,         value: '4.9',    label: 'Avg Seller Rating',  tone: 'warning' },
-  { Icon: Gamepad2,     value: '180+',   label: 'Games Supported',    tone: 'info'    },
-  { Icon: Zap,          value: '<5 min', label: 'Average Delivery',   tone: 'lime'    },
-  { Icon: Users,        value: '92K+',   label: 'Active Sellers',     tone: 'info'    },
-  { Icon: Lock,         value: '100%',   label: 'Escrow Protected',   tone: 'success' },
-  { Icon: Globe2,       value: '24/7',   label: 'Support Worldwide',  tone: 'warning' },
+  { Icon: ShieldCheck,  value: 'SafeDrop',   label: 'Buyer Protection on Every Order', tone: 'success' },
+  { Icon: Building2,    value: 'UK Ltd',     label: 'Registered Company',              tone: 'info'    },
+  { Icon: BadgeCheck,   value: 'Verified',   label: 'KYC-Checked Sellers',             tone: 'lime'    },
+  { Icon: Zap,          value: 'Fast',       label: 'Quick Seller Payouts',            tone: 'warning' },
+  { Icon: RotateCcw,    value: 'Money-Back', label: 'Guarantee',                       tone: 'success' },
+  { Icon: Headset,      value: '24/7',       label: 'Human Support',                   tone: 'info'    },
 ]
 
 const TONE_CLASSES: Record<NonNullable<Stat['tone']>, string> = {

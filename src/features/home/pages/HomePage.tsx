@@ -56,8 +56,8 @@ const CTA_CATEGORIES = [
 const WHY_CARDS = [
   {
     icon: Lock,
-    title: 'Escrow on every order',
-    body: "Your money sits in SafeDrop — not the seller's pocket — until you confirm delivery. Anything off? Real humans review it.",
+    title: 'SafeDrop on Every Order',
+    body: 'The seller is only paid after you confirm delivery. Not delivered or not as described? You get your money back — and real humans review anything off.',
     tone: 'lime',
     img: '/icons/trust/money-back.png',
   },
@@ -78,7 +78,7 @@ const WHY_CARDS = [
   {
     icon: Headset,
     title: 'Humans, around the clock',
-    body: 'Stuck mid-trade at 4 AM? Support and dispute resolution never close — average first reply lands in four minutes.',
+    body: 'Stuck mid-trade at 4 AM? Support and dispute resolution never close — real people, around the clock.',
     tone: 'info',
     img: '/icons/trust/support.png',
   },
@@ -562,8 +562,8 @@ export function HomePage() {
               Built so you can&apos;t get <span className="text-lime-text">burned</span>.
             </h2>
             <p className="mt-3 text-body-lg text-text-secondary">
-              Every order runs through the same armor — escrow, vetted sellers, honest fees,
-              and support that actually answers.
+              Every order runs through the same armor — SafeDrop Buyer Protection, vetted
+              sellers, honest fees, and support that actually answers.
             </p>
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
@@ -638,8 +638,8 @@ export function HomePage() {
             What are you waiting for?
           </h2>
           <p className="mx-auto mt-5 max-w-xl text-body-lg text-text-secondary [text-shadow:0_2px_16px_rgba(0,0,0,0.9)]">
-            Join 1.2M gamers trading currency, items, and accounts — every order
-            guarded by SafeDrop escrow until you confirm delivery.
+            Trade currency, items, and accounts with confidence — every order is
+            covered by SafeDrop Buyer Protection. Get what you ordered, or your money back.
           </p>
           <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
             <Link

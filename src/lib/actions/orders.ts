@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { logOrderAction, logUnauthorizedAccess, logFailure } from '@/lib/audit'
 import { rateLimitCreateOrder } from '@/lib/utils/rate-limit'
-import { getCommissionRate } from '@/lib/utils/tier-commission'
+import { buyerFee, commissionAmount, protectionWindowHours, round2, WARRANTY_ENABLED } from '@/lib/fees'
 import Stripe from 'stripe'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
@@ -87,7 +87,9 @@ export async function createOrder(data: CreateOrderData): Promise<{
           id,
           seller_tier,
           username
-        )
+        ),
+        game:game_id ( slug ),
+        category:category_id ( slug, metadata )
       `)
       .eq('id', data.listingId)
       .single() as any
@@ -132,20 +134,27 @@ export async function createOrder(data: CreateOrderData): Promise<{
         ? data.safedropTier
         : 'standard'
 
-    // Calculate amounts — commission rate comes from DB (seller_tier_config)
-    const subtotal = listing.price * data.quantity
-    const platformFeeRate = await getCommissionRate(listing.seller?.seller_tier)
-    const platformFee = subtotal * (platformFeeRate / 100)
-    const paymentProcessingFee = subtotal * 0.035 // 3.5% payment processing
+    // Calculate amounts — fee spec (lib/fees): buyer pays one Processing &
+    // Buyer Protection fee; seller pays a per-category commission on the
+    // item price only.
+    const subtotal = round2(listing.price * data.quantity)
+    const fee = buyerFee(subtotal)
+    const feeInput = {
+      categoryMetaType: listing.category?.metadata?.type as string | undefined,
+      categorySlug: listing.category?.slug as string | undefined,
+      gameSlug: listing.game?.slug as string | undefined,
+    }
+    const commission = commissionAmount(subtotal, feeInput)
 
-    // P4.1 — Tier fee (recalculated server-side, not trusted from client)
-    const tierFeeRate = getTierFeeRate(safedropTier)
-    const tierFee = subtotal * (tierFeeRate / 100)
+    // P4.1 — Tier fee (recalculated server-side; warranty upsells are
+    // feature-flagged OFF until payout caps are configured — spec §4)
+    const tierFeeRate = WARRANTY_ENABLED ? getTierFeeRate(safedropTier) : 0
+    const tierFee = round2(subtotal * (tierFeeRate / 100))
 
-    // P5.3 — Promo discount (already deducted from Stripe charge; reflect in order total)
+    // P5.3 — Promo discount (already deducted from charge; reflect in order total)
     const promoDiscount = Math.min(data.promoDiscount ?? 0, subtotal)
-    const totalAmount   = subtotal + platformFee + paymentProcessingFee + tierFee - promoDiscount
-    const sellerPayout  = subtotal - platformFee - paymentProcessingFee // seller unaffected by promo
+    const totalAmount   = round2(subtotal + fee.amount + tierFee - promoDiscount)
+    const sellerPayout  = round2(subtotal - commission) // seller unaffected by promo
 
     // P4.1 — Protection until: 30 days; warranty_expires_at based on tier
     const now = new Date()
@@ -168,10 +177,10 @@ export async function createOrder(data: CreateOrderData): Promise<{
         quantity: data.quantity,
         unit_price: listing.price,
         subtotal: subtotal,
-        platform_fee_rate: platformFeeRate,
-        payment_processing_fee_rate: 3.5,
-        platform_fee: platformFee,
-        payment_processing_fee: paymentProcessingFee,
+        platform_fee_rate: fee.marketplacePct,
+        payment_processing_fee_rate: fee.processingPct,
+        platform_fee: fee.marketplaceAmount,
+        payment_processing_fee: fee.processingAmount,
         total_amount: totalAmount,
         seller_payout: sellerPayout,
         stripe_payment_intent_id: data.paymentIntentId,
@@ -613,7 +622,7 @@ export async function markOrderAsDelivered(
     // Get order
     const { data: order, error: orderError } = await supabase
       .from('orders')
-      .select('*')
+      .select('*, listing:listings!orders_listing_id_fkey( game:game_id ( slug ), category:category_id ( slug, metadata ) )')
       .eq('id', orderId)
       .eq('seller_id', user.id) // Ensure seller owns this order
       .single() as any
@@ -625,12 +634,20 @@ export async function markOrderAsDelivered(
       }
     }
 
-    // Update order (auto_release_at is set automatically by database trigger)
+    // Update order. The per-category protection window (fee spec §1) sets
+    // auto_release_at; the DB trigger only falls back to 48h when the app
+    // doesn't supply one (see update-fee-structure.sql).
+    const windowHours = protectionWindowHours({
+      categoryMetaType: order.listing?.category?.metadata?.type,
+      categorySlug: order.listing?.category?.slug,
+      gameSlug: order.listing?.game?.slug,
+    })
     const { error: updateError } = await (supabase
       .from('orders')
       .update as any)({
         status: 'delivered',
         delivered_at: new Date().toISOString(),
+        auto_release_at: new Date(Date.now() + windowHours * 3_600_000).toISOString(),
       })
       .eq('id', orderId)
 
@@ -650,7 +667,7 @@ export async function markOrderAsDelivered(
         userId: (order as any).buyer_id,
         type: 'order_delivered',
         title: 'Order Delivered',
-        message: `Your order #${orderRef} has been marked as delivered. Please confirm receipt within 48 hours.`,
+        message: `Your order #${orderRef} has been marked as delivered. Please review it and confirm delivery within your protection window.`,
         link: `/account/orders/${orderId}`,
       })
     } catch (notifError) {

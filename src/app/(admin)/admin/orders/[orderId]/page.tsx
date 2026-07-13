@@ -64,8 +64,8 @@ function StatusPill({ status }: { status: string }) {
 function EscrowPill({ escrowStatus }: { escrowStatus: string }) {
   const cfg: Record<string, { label: string; pill: string }> = {
     pending:  { label: 'Pending',         pill: 'bg-blue-500/10 text-blue-400/80 border-blue-500/15' },
-    held:     { label: 'In Escrow',       pill: 'bg-amber-500/10 text-amber-400/80 border-amber-500/15' },
-    released: { label: 'Escrow Released', pill: 'bg-blue-500/10 text-blue-400/80 border-blue-500/15' },
+    held:     { label: 'Payout Pending',  pill: 'bg-amber-500/10 text-amber-400/80 border-amber-500/15' },
+    released: { label: 'Seller Paid Out', pill: 'bg-blue-500/10 text-blue-400/80 border-blue-500/15' },
     refunded: { label: 'Refunded',        pill: 'border-border-default bg-bg-overlay text-text-tertiary' },
     frozen:   { label: 'Under Review',    pill: 'bg-red-500/10 text-red-400/80 border-red-500/15' },
   }

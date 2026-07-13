@@ -149,10 +149,10 @@ export default function BuyerOrderDetailClient({
               <Clock className="w-5 h-5 text-blue-400 flex-shrink-0" />
               <div>
                 <div className="text-sm font-medium text-blue-400">
-                  Auto-release in {hoursRemaining}h {minutesRemaining}m
+                  Order auto-completes in {hoursRemaining}h {minutesRemaining}m
                 </div>
                 <div className="text-xs text-text-secondary">
-                  Review and confirm receipt, or open dispute if there's an issue
+                  Confirm delivery once you've received it, or open a dispute if there's an issue
                 </div>
               </div>
             </div>
@@ -186,7 +186,7 @@ export default function BuyerOrderDetailClient({
                   Order Completed
                 </div>
                 <div className="text-xs text-text-secondary">
-                  Thank you! Payment has been released to the seller.
+                  Thank you! The seller has been paid out.
                 </div>
               </div>
             </div>
@@ -263,7 +263,7 @@ export default function BuyerOrderDetailClient({
         {/* Confirm Receipt */}
         {order.status === 'delivered' && order.escrow_status === 'held' && (
           <div className="bg-bg-overlay border border-border-subtle rounded-xl p-6">
-            <h2 className="text-lg font-semibold text-white mb-3">Confirm Receipt</h2>
+            <h2 className="text-lg font-semibold text-white mb-3">Confirm Delivery</h2>
             <p className="text-sm text-text-secondary mb-4">
               Have you received your order and verified everything is correct?
             </p>
@@ -327,9 +327,9 @@ export default function BuyerOrderDetailClient({
           <div className="p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg text-xs text-blue-400">
             <Shield className="w-4 h-4 inline mr-2" />
             {order.escrow_status === 'held'
-              ? 'Payment held securely in escrow'
+              ? 'Covered by SafeDrop Buyer Protection'
               : order.escrow_status === 'released'
-              ? 'Payment released to seller'
+              ? 'Seller paid out'
               : 'Payment being processed'}
           </div>
         </div>
@@ -342,15 +342,15 @@ export default function BuyerOrderDetailClient({
             <div className="flex items-start gap-2">
               <CheckCircle2 className="w-4 h-4 text-success flex-shrink-0 mt-0.5" />
               <div>
-                <div className="font-medium text-white">Secure Escrow</div>
-                <div className="text-text-secondary">Funds held until delivery confirmed</div>
+                <div className="font-medium text-white">SafeDrop Buyer Protection</div>
+                <div className="text-text-secondary">Get what you ordered, or your money back</div>
               </div>
             </div>
 
             <div className="flex items-start gap-2">
               <CheckCircle2 className="w-4 h-4 text-success flex-shrink-0 mt-0.5" />
               <div>
-                <div className="font-medium text-white">48-Hour Window</div>
+                <div className="font-medium text-white">Protection Window</div>
                 <div className="text-text-secondary">Time to verify your order</div>
               </div>
             </div>

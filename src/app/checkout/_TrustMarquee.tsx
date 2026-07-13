@@ -21,13 +21,13 @@ interface TrustItem {
 
 const TRUST_ITEMS: TrustItem[] = [
   { Icon: Lock, text: '256-bit SSL encrypted transactions' },
-  { Icon: ShieldCheck, text: 'Escrow protected — buyer covered until delivery' },
-  { Icon: Zap, text: 'Average delivery under 15 minutes' },
-  { Icon: RefreshCw, text: '100% money-back if delivery fails' },
-  { Icon: Star, text: '4.9/5 rating across 50,000+ orders' },
+  { Icon: ShieldCheck, text: 'SafeDrop Buyer Protection on every order' },
+  { Icon: Zap, text: 'Most orders complete in minutes' },
+  { Icon: RefreshCw, text: 'Full refund if not delivered or not as described' },
+  { Icon: Star, text: 'Get what you ordered — or your money back' },
   { Icon: CheckCircle2, text: 'Verified sellers · KYC checked' },
-  { Icon: ShieldCheck, text: 'Visa · Mastercard · Amex · PayPal accepted' },
-  { Icon: Lock, text: 'Stripe-powered payment processing' },
+  { Icon: ShieldCheck, text: 'UK-registered company' },
+  { Icon: Lock, text: 'Secure crypto payments via CoinGate' },
 ]
 
 export function TrustMarquee() {

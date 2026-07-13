@@ -1199,7 +1199,7 @@ function FAQSection({ gameName, categoryName }: { gameName: string; categoryName
     () => [
       {
         q: `Is it safe to buy ${gameName} ${cat} on DropMarket?`,
-        a: `Yes — every ${gameName} ${cat} purchase on DropMarket is protected by SafeDrop escrow. Your payment is held safely until you confirm delivery of your ${gameName} ${cat}, which means sellers are only paid once you actually receive what you ordered. If a ${gameName} seller fails to deliver or the ${cat} aren't as described, you get a full refund — no questions asked. Thousands of ${gameName} ${cat} trades happen on DropMarket every week with zero risk to the buyer.`,
+        a: `Yes — every ${gameName} ${cat} purchase on DropMarket is covered by SafeDrop Buyer Protection. Sellers are paid out only after you confirm delivery of your ${gameName} ${cat}, so you're paying for an outcome: get what you ordered, or your money back. If a ${gameName} seller fails to deliver or the ${cat} aren't as described, you get a full refund — no questions asked. Every ${gameName} seller on DropMarket is verified before they can list.`,
       },
       {
         q: `How fast is ${gameName} ${cat} delivery?`,
@@ -1207,7 +1207,7 @@ function FAQSection({ gameName, categoryName }: { gameName: string; categoryName
       },
       {
         q: `What if I don't receive my ${gameName} ${cat}?`,
-        a: `If a seller misses their stated ${gameName} ${cat} delivery window, you can open a dispute directly from your order page. Because SafeDrop holds the payment until you confirm receipt, you get a full refund automatically — the seller never receives the money. Our 24/7 support team reviews ${gameName} ${cat} disputes within minutes and most are resolved within an hour.`,
+        a: `If a seller misses their stated ${gameName} ${cat} delivery window, you can open a dispute directly from your order page. Because sellers are paid out only after you confirm delivery, an undelivered ${gameName} ${cat} order means a full refund for you — the seller is never paid for it. Our support team reviews ${gameName} ${cat} disputes and refunds every order that isn't delivered as described.`,
       },
       {
         q: `Do I need to share my password to buy ${gameName} ${cat}?`,
@@ -1215,7 +1215,7 @@ function FAQSection({ gameName, categoryName }: { gameName: string; categoryName
       },
       {
         q: `Why buy ${gameName} ${cat} from DropMarket instead of in-game?`,
-        a: `${gameName} ${cat} on the DropMarket marketplace are usually significantly cheaper than the in-game store. Independent sellers compete on price, speed, and reputation, which keeps ${gameName} ${cat} prices buyer-friendly. Plus every ${gameName} ${cat} order is escrow-protected by SafeDrop, which the in-game store simply can't match — you get the cheap price AND the safety net.`,
+        a: `${gameName} ${cat} on the DropMarket marketplace are usually significantly cheaper than the in-game store. Independent sellers compete on price, speed, and reputation, which keeps ${gameName} ${cat} prices buyer-friendly. Plus every ${gameName} ${cat} order is covered by SafeDrop Buyer Protection — get what you ordered, or your money back — so you get the cheap price AND the safety net.`,
       },
       {
         q: `What payment methods are accepted for ${gameName} ${cat}?`,

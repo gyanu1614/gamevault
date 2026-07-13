@@ -307,7 +307,7 @@ export default function SellerOrderDetailClient({
             await (supabase.from('messages').insert as any)({
               conversation_id: conversationId,
               sender_id: user.id,
-              content: `I've marked your order as delivered! Here's the delivery proof. Please confirm receipt within 48 hours.`,
+              content: `I've marked your order as delivered! Here's the delivery proof. Please confirm delivery once you've received it.`,
               attachments: uploadedUrls,
               is_read: false,
             })
@@ -331,7 +331,7 @@ export default function SellerOrderDetailClient({
             await (supabase.from('messages').insert as any)({
               conversation_id: conversationId,
               sender_id: user.id,
-              content: `I've marked your order as delivered! The 48-hour auto-release timer has started. Please confirm receipt when you receive the item.`,
+              content: `I've marked your order as delivered! Your protection window has started. Please confirm delivery when you receive the item.`,
               attachments: [],
               is_read: false,
             })
@@ -345,7 +345,7 @@ export default function SellerOrderDetailClient({
         }
       }
 
-      toast.success('Order marked as delivered! Auto-release timer started.')
+      toast.success("Order marked as delivered! The buyer's protection window has started.")
       setShowDeliveryForm(false)
       setSelectedFiles([])
       setPreviews([])
@@ -388,7 +388,7 @@ export default function SellerOrderDetailClient({
                         }) : 'Recently'}
                       </p>
                       <p className="text-xs text-text-tertiary mt-1.5">
-                        Payment has been released to you. Great work!
+                        Your payout has been added to your Seller Balance. Great work!
                       </p>
                     </div>
                   </div>
@@ -494,7 +494,7 @@ export default function SellerOrderDetailClient({
                         }) : 'Recently'}
                       </p>
                       <p className="text-xs text-text-tertiary mt-1.5">
-                        Payment has been released to you. Great work!
+                        Your payout has been added to your Seller Balance. Great work!
                       </p>
                     </div>
                   </div>
@@ -744,7 +744,7 @@ export default function SellerOrderDetailClient({
               )}>
                 <h3 className="text-lg font-bold text-white mb-1">Mark Order as Delivered</h3>
                 <p className="text-xs text-text-tertiary mb-5 leading-relaxed">
-                  This starts the 48-hour auto-release timer. The buyer has 48h to confirm receipt or open a dispute.
+                  This starts the buyer's protection window. You're paid out once they confirm delivery or the window closes.
                 </p>
 
                 {/* Evidence required warning */}
@@ -845,7 +845,7 @@ export default function SellerOrderDetailClient({
           <SidebarCard className={`flex-1 flex flex-col ${isEscrowReleased ? 'border-green-500/20 bg-green-500/[0.04]' : ''}`}>
             <CardLabel
               icon={isEscrowReleased ? CheckCircle2 : DollarSign}
-              label={isEscrowReleased ? 'Payment Released' : 'Your Payout'}
+              label={isEscrowReleased ? 'Paid Out' : 'Your Payout'}
               color="text-success"
             />
 
@@ -872,19 +872,19 @@ export default function SellerOrderDetailClient({
                 <div className="h-5 w-5 rounded-full bg-success-bg border border-green-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
                   <ShieldCheck className="h-2.5 w-2.5 text-success" />
                 </div>
-                <p className="text-[11px] text-text-disabled leading-relaxed">Funds will be added to your DropMarket balance once the buyer confirms receipt.</p>
+                <p className="text-[11px] text-text-disabled leading-relaxed">Your sale proceeds are credited to your Seller Balance once the buyer confirms delivery or the protection window closes.</p>
               </div>
               <div className="flex items-start gap-2.5">
                 <div className="h-5 w-5 rounded-full bg-success-bg border border-green-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
                   <Clock className="h-2.5 w-2.5 text-success" />
                 </div>
-                <p className="text-[11px] text-text-disabled leading-relaxed">If the buyer does not confirm within 48 hours of delivery, payment is released to you automatically.</p>
+                <p className="text-[11px] text-text-disabled leading-relaxed">If the buyer does not confirm before the protection window closes, you are paid out automatically.</p>
               </div>
               <div className="flex items-start gap-2.5">
                 <div className="h-5 w-5 rounded-full bg-success-bg border border-green-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
                   <Zap className="h-2.5 w-2.5 text-success" />
                 </div>
-                <p className="text-[11px] text-text-disabled leading-relaxed">Deliver promptly and mark as delivered as soon as the item is sent to start the release timer.</p>
+                <p className="text-[11px] text-text-disabled leading-relaxed">Deliver promptly and mark as delivered as soon as the item is sent to start the buyer's protection window.</p>
               </div>
             </div>
           </SidebarCard>

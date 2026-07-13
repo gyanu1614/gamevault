@@ -454,9 +454,9 @@ export default function CurrencyPageClient({
       <HowItWorksBand
         steps={[
           { title: 'Pick Your Amount', body: 'Choose a seller and how much you need.' },
-          { title: 'Pay Securely', body: 'We hold your payment in escrow.' },
+          { title: 'Pay At Checkout', body: 'Every order is covered by SafeDrop Buyer Protection.' },
           { title: `Get Your ${data.currency.name}`, body: 'Delivered in-game within the stated window.' },
-          { title: 'Confirm & Release', body: 'Confirm receipt — or get a full refund.' },
+          { title: 'Confirm Delivery', body: 'Confirm receipt and the seller gets paid — or you get a full refund.' },
         ]}
       />
 
@@ -1257,7 +1257,7 @@ function SellerRow({
               </div>
             </div>
 
-            {/* Action bar — CTA left, escrow assurance right */}
+            {/* Action bar — CTA left, buyer-protection assurance right */}
             <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
               {isOwn ? (
                 <a
@@ -1279,7 +1279,7 @@ function SellerRow({
               )}
               <span className="inline-flex items-center gap-1.5 text-[12px] text-text-tertiary">
                 <ShieldCheck className="h-3.5 w-3.5 text-lime-text" aria-hidden />
-                Escrow-protected — funds release only after you confirm delivery
+                SafeDrop Buyer Protection — sellers are paid out only after you confirm delivery
               </span>
             </div>
           </div>
@@ -1341,10 +1341,10 @@ function SeoBlock({ currency }: { currency: CurrencyPageData['currency'] }) {
             How delivery and safety work here
           </h3>
           <p className="mt-2">
-            Every order is held by SafeDrop escrow until you confirm delivery, which means
-            sellers are paid only after you&apos;ve received your {currency.name}. No password
+            Every order is covered by SafeDrop Buyer Protection, and sellers are paid out only
+            after you confirm delivery of your {currency.name}. No password
             sharing is ever required — delivery is through in-game gifting or group payouts.
-            If anything goes wrong, you get a full refund.
+            Not delivered or not as described? You get a full refund.
           </p>
         </div>
       </div>

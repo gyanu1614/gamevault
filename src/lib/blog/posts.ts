@@ -53,7 +53,7 @@ export const BLOG_POSTS: BlogPost[] = [
     slug: 'spot-overpriced-brainrots',
     title: 'How to spot an overpriced brainrot — a buyer’s checklist',
     excerpt:
-      'Five quick checks before you hit Buy: income math, variant comparison, seller history, delivery terms, and the escrow safety net.',
+      'Five quick checks before you hit Buy: income math, variant comparison, seller history, delivery terms, and the SafeDrop safety net.',
     author: 'DropMarket Team',
     readMinutes: 5,
     publishedAt: '2026-06-18',
@@ -63,8 +63,8 @@ export const BLOG_POSTS: BlogPost[] = [
       'The fastest way to overpay is to buy the first listing you see. The Other Sellers rail on every DropMarket listing exists precisely so you don’t: it lines up every offer for the same item, cheapest first.',
       'Check income per dollar. Divide the brainrot’s income rate by the asking price — that one number makes wildly different listings directly comparable.',
       'Compare variants deliberately. A Diamond variant at 3× the base price can be a bargain or a ripoff depending on its actual income multiplier. The variant chips on each offer row tell you what you’re looking at.',
-      'Look at the seller, not just the price. A 99% rating across hundreds of orders is worth a small premium over an unproven account — though SafeDrop escrow protects you either way.',
-      'And that’s the final check: never trade outside escrow. If a deal moves off-platform, the safety net is gone.',
+      'Look at the seller, not just the price. A 99% rating across hundreds of orders is worth a small premium over an unproven account — though SafeDrop Buyer Protection covers you either way.',
+      'And that’s the final check: never take a deal off-platform. The moment a trade leaves DropMarket, the safety net is gone.',
     ],
   },
   {
@@ -81,24 +81,24 @@ export const BLOG_POSTS: BlogPost[] = [
       'In Adopt Me, the pet is only half the story. The other half is its abilities: F (Fly), R (Ride), FR (Fly+Ride) and the Neon/Mega evolutions each step the value up significantly.',
       'An NFR (Neon Fly Ride) version of a pet routinely trades at several times the base version. When you browse listings, the trait attribute tells you exactly which version you’re buying — treat FR and NFR as different items, because the market does.',
       'Egg generation matters too. Pets from retired eggs can’t be hatched anymore, which makes their supply fixed while demand keeps growing — the classic recipe for appreciation.',
-      'As always: compare across sellers before buying, and keep every trade inside SafeDrop escrow so a mis-delivery becomes a refund, not a loss.',
+      'As always: compare across sellers before buying, and keep every trade on DropMarket, where SafeDrop Buyer Protection turns a mis-delivery into a refund, not a loss.',
     ],
   },
   {
     slug: 'how-safedrop-escrow-works',
-    title: 'How SafeDrop escrow protects every trade',
+    title: 'How SafeDrop Buyer Protection covers every order',
     excerpt:
-      'Your money sits in escrow until you confirm delivery — here’s the full lifecycle of a protected order, step by step.',
+      'Get what you ordered, or your money back — here’s the full lifecycle of a covered order, step by step.',
     author: 'DropMarket Team',
     readMinutes: 4,
     publishedAt: '2026-06-06',
     games: [],
     cover: '/section-bg/how-it-works.jpg',
     body: [
-      'Every order on DropMarket runs through SafeDrop, our escrow system. When you pay, the money doesn’t go to the seller — it goes into a held balance that neither side can touch.',
-      'The seller then delivers in-game within their stated window. You confirm receipt from your order page, and only that confirmation releases the funds to the seller.',
-      'If something goes wrong — no delivery, wrong item, mis-described listing — you open a dispute and the held payment comes back to you in full. The seller is never paid for an order you didn’t confirm.',
-      'This is why the same item often costs less on DropMarket than in official stores while being just as safe: sellers compete on price, and escrow removes the trust problem that usually comes with player-to-player trading.',
+      'Every order on DropMarket is covered by SafeDrop, our buyer protection programme. The promise is simple: get what you ordered, or your money back — and the seller isn’t paid out until the order is actually delivered.',
+      'The seller delivers in-game within their stated window. You confirm receipt from your order page — the seller is paid out once you confirm, or once your protection window closes without an issue.',
+      'If something goes wrong — no delivery, wrong item, mis-described listing — you open a dispute and get a full refund. The seller’s payout is paused while a dispute is open, and a seller is never paid for an order that wasn’t delivered as described.',
+      'This is why the same item often costs less on DropMarket than in official stores while being just as safe: sellers compete on price, and SafeDrop removes the trust problem that usually comes with player-to-player trading.',
     ],
   },
   {
@@ -113,10 +113,10 @@ export const BLOG_POSTS: BlogPost[] = [
     cover: '/section-bg/cta-band.jpg',
     body: [
       'First: never share your password. Legitimate item delivery happens in-game through trading or gifting — no seller ever needs your account credentials.',
-      'Second: don’t move deals off-platform. A discount for “direct trade” is the oldest scam in the book; the moment a trade leaves escrow, you have no protection.',
+      'Second: don’t move deals off-platform. A discount for “direct trade” is the oldest scam in the book; the moment a trade leaves DropMarket, you have no protection.',
       'Third: read the delivery window. Manual sellers state how long delivery takes — buying a 24-hour listing and expecting 10-minute delivery ends in frustration, not fraud.',
       'Fourth: check variant attributes before comparing prices. Two listings with the same title can be different variants with legitimately different values.',
-      'Fifth: confirm delivery only after you actually have the item. Confirmation is what releases payment — it’s your lever, don’t pull it early.',
+      'Fifth: confirm delivery only after you actually have the item. Confirmation is what pays the seller out — it’s your lever, don’t pull it early.',
     ],
   },
   {
@@ -132,7 +132,7 @@ export const BLOG_POSTS: BlogPost[] = [
     body: [
       'Instant-delivery listings are fulfilled automatically the moment payment clears — ideal when you want to be back in the game in minutes. They usually carry a small convenience premium.',
       'Manual listings are fulfilled by the seller personally within their stated window — 20 minutes, an hour, sometimes a day. The best manual sellers are often faster than their stated window; the window is a promise, not an average.',
-      'Whichever you pick, the timer is enforced by escrow: a seller who misses their window is a dispute away from an automatic refund.',
+      'Whichever you pick, the timer is enforced by SafeDrop: a seller who misses their window is a dispute away from a full refund.',
       'Rule of thumb: pay the instant premium when time matters, take the manual discount when it doesn’t.',
     ],
   },

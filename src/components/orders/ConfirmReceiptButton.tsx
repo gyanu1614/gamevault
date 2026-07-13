@@ -1,7 +1,8 @@
 /**
- * Confirm Receipt Button Component
+ * Confirm Delivery Button Component
  *
- * Allows buyer to confirm order receipt (early release)
+ * Allows buyer to confirm delivery early (before the protection
+ * window closes), which triggers the seller payout.
  * Shows review modal immediately after confirmation
  */
 
@@ -47,7 +48,7 @@ export default function ConfirmReceiptButton({
         if (sendNotification && conversationId) {
           try {
             const customMessage = feedback.trim()
-              ? `Order received! Thank you for the smooth transaction. ${feedback}\n\nI've confirmed receipt and payment has been released.`
+              ? `Order received! Thank you for the smooth transaction. ${feedback}\n\nI've confirmed delivery, so your payout is on the way.`
               : undefined // Use default template if no feedback
 
             await messagesApi.sendSmartActionMessage(conversationId, 'received', customMessage)
@@ -57,7 +58,7 @@ export default function ConfirmReceiptButton({
           }
         }
 
-        toast.success('Order confirmed! Payment has been released to the seller.')
+        toast.success('Delivery confirmed! The seller has been paid out.')
         setShowModal(false)
 
         // Show review modal after brief delay
@@ -88,7 +89,7 @@ export default function ConfirmReceiptButton({
         className="w-full py-2 border border-green-500/25 bg-green-500/[0.07] hover:bg-green-500/[0.13] hover:border-green-500/40 text-success text-sm font-medium rounded-xl transition-all flex items-center justify-center gap-2"
       >
         <CheckCircle2 className="w-4 h-4" />
-        Confirm Receipt
+        Confirm Delivery
       </button>
 
       {/* Confirmation Modal */}
@@ -102,20 +103,20 @@ export default function ConfirmReceiptButton({
             onClick={(e) => e.stopPropagation()}
           >
             <h3 className="text-xl font-semibold text-white mb-2">
-              Confirm Order Receipt
+              Confirm Delivery
             </h3>
             <p className="text-sm text-white/60 mb-6">
-              This will release payment to the seller
+              Once you confirm, the seller is paid out for this order
             </p>
 
-            {/* Escrow Release Info Card */}
+            {/* Seller Payout Info Card */}
             <div className="rounded-xl bg-lime/10 border border-lime-tint-border p-4 mb-6">
               <div className="flex items-center gap-2 text-lime-text mb-2">
                 <CheckCircle2 className="w-5 h-5" />
-                <span className="font-medium text-sm">Escrow Release</span>
+                <span className="font-medium text-sm">Seller Payout</span>
               </div>
               <p className="text-xs text-white/60 mb-1">
-                Payment will be transferred to seller's account
+                Confirm only if all of the following are true:
               </p>
               <ul className="text-xs text-white/50 space-y-1 mt-3">
                 <li>• You have received the order</li>
@@ -162,7 +163,7 @@ export default function ConfirmReceiptButton({
                       Send thank you message to seller
                     </div>
                     <p className="text-xs text-text-secondary">
-                      Automatically notify the seller that you've confirmed receipt
+                      Automatically notify the seller that you've confirmed delivery
                       {feedback && ' with your feedback'}
                     </p>
                   </div>
@@ -191,7 +192,7 @@ export default function ConfirmReceiptButton({
                 ) : (
                   <>
                     <CheckCircle2 className="w-4 h-4" />
-                    Confirm Receipt
+                    Confirm Delivery
                   </>
                 )}
               </button>

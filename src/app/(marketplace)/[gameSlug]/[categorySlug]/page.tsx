@@ -101,7 +101,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
         .join(' ')
       return {
         title: `Buy ${prettyTitle} (${game.name}) — Cheap & Instant`,
-        description: `Buy ${prettyTitle} for ${game.name} from verified sellers. Escrow-protected by SafeDrop. Instant delivery available.`,
+        description: `Buy ${prettyTitle} for ${game.name} from verified sellers. Covered by SafeDrop Buyer Protection. Instant delivery available.`,
         keywords: [
           `${game.name.toLowerCase()} ${prettyTitle.toLowerCase()}`,
           `buy ${prettyTitle.toLowerCase()}`,
@@ -120,7 +120,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   return {
     title: `${game.name} ${category.name} for Sale`,
-    description: `Browse verified ${game.name} ${category.name.toLowerCase()} listings. Secure transactions with SafeDrop escrow. Instant delivery guaranteed.`,
+    description: `Browse verified ${game.name} ${category.name.toLowerCase()} listings. Every order covered by SafeDrop Buyer Protection. Instant delivery available.`,
     keywords: [
       `${game.name.toLowerCase()} ${category.name.toLowerCase()}`,
       `buy ${game.name.toLowerCase()} ${category.name.toLowerCase()}`,
@@ -492,8 +492,8 @@ export default async function CategoryBrowsePage({ params, searchParams }: PageP
     }
 
     // V14m — Resolve the viewer so the client can block self-purchase
-    // (a seller can't buy their own listing — confusing & escrow doesn't
-    // make sense). Anonymous viewers get null.
+    // (a seller can't buy their own listing — confusing & buyer
+    // protection doesn't make sense). Anonymous viewers get null.
     const { data: { user: viewer } } = await supabase.auth.getUser()
 
     return (
@@ -624,7 +624,7 @@ export default async function CategoryBrowsePage({ params, searchParams }: PageP
             categoryLabel={category.name}
             tagline={
               (category as any).description ||
-              `Browse verified, escrow-protected ${game.name} listings — secured by SafeDrop.`
+              `Browse verified ${game.name} listings — every order covered by SafeDrop Buyer Protection.`
             }
             offers={offers}
             taxonomy={taxonomy}

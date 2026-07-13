@@ -246,7 +246,7 @@ export default function SellerStorefront({ seller }: SellerStorefrontProps) {
                   <div className="space-y-4 text-sm">
                     <PolicyBlock
                       title="Returns & refunds"
-                      body="All sales are covered by DropMarket's buyer protection policy. Refunds available within 7 days if the product doesn't match the description."
+                      body="Every order is covered by SafeDrop Buyer Protection. Not delivered or not as described within your protection window? Full refund."
                     />
                     <PolicyBlock
                       title="Delivery"
@@ -373,7 +373,7 @@ function EmptyShop({ sellerName }: { sellerName: string }) {
       <div>
         <h3 className="text-base font-semibold text-text-primary">No listings yet</h3>
         <p className="mt-1 text-sm text-text-secondary">
-          @{sellerName} hasn't listed anything in this category.
+          @{sellerName} hasn’t listed anything in this category.
         </p>
       </div>
     </div>

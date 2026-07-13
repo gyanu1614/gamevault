@@ -131,7 +131,7 @@ export default function MarkAsDeliveredButton({
             await (supabase.from('messages').insert as any)({
               conversation_id: conversationId,
               sender_id: user.id,
-              content: `I've marked your order as delivered! Here's the delivery proof. Please confirm receipt within 48 hours.`,
+              content: `I've marked your order as delivered! Here's the delivery proof. Please confirm delivery once you've received it.`,
               attachments: uploadedUrls,
               is_read: false,
             })
@@ -156,7 +156,7 @@ export default function MarkAsDeliveredButton({
             await (supabase.from('messages').insert as any)({
               conversation_id: conversationId,
               sender_id: user.id,
-              content: `I've marked your order as delivered! The 48-hour auto-release timer has started. Please confirm receipt when you receive the item.`,
+              content: `I've marked your order as delivered! Your protection window has started. Please confirm delivery when you receive the item.`,
               attachments: [],
               is_read: false,
             })
@@ -170,7 +170,7 @@ export default function MarkAsDeliveredButton({
         }
       }
 
-      toast.success('Order marked as delivered! Auto-release timer started.')
+      toast.success("Order marked as delivered! The buyer's protection window has started.")
       setShowModal(false)
       router.refresh()
     } catch (error) {
@@ -236,7 +236,7 @@ export default function MarkAsDeliveredButton({
           >
             <h3 className="text-lg font-bold text-white mb-1">Mark Order as Delivered</h3>
             <p className="text-xs text-text-tertiary mb-5 leading-relaxed">
-              This starts the 48-hour auto-release timer. The buyer has 48h to confirm receipt or open a dispute.
+              This starts the buyer's protection window. You're paid out once they confirm delivery or the window closes.
             </p>
 
             {/* Evidence required warning */}

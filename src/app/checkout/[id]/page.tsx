@@ -89,7 +89,7 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
     sellerReviews = revs ?? []
   }
 
-  // V14m — Block self-purchase. Sellers can't escrow money to themselves,
+  // V14m — Block self-purchase. Sellers can't buy their own listings,
   // and the order/refund flow would loop on the same account. Bounce back
   // to the edit page for currency / listing page otherwise.
   if (user && listing.seller?.id === user.id) {

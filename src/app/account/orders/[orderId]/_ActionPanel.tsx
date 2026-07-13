@@ -36,7 +36,7 @@ type Role = 'buyer' | 'seller' | 'admin'
 interface ActionPanelProps {
   role: Role
   status: string
-  /** Amount that will be released — interpolated into the confirm face. */
+  /** Seller payout amount — interpolated into the confirm face. */
   releaseAmount: number
   /** Whether the primary CTA is enabled. Buyer waits until `delivered`,
    *  seller is always active during paid/delivering. Disabled CTAs still
@@ -244,8 +244,8 @@ function buildCfg(
     if (status === 'paid' || status === 'delivering') {
       return {
         title: 'Your Actions',
-        primaryLabel: 'Mark As Received',
-        confirmLabel: `Confirm — Release ${fmtUsd(releaseAmount)} →`,
+        primaryLabel: 'Confirm Delivery',
+        confirmLabel: `Confirm — Seller Gets ${fmtUsd(releaseAmount)} →`,
         PrimaryIcon: CheckCircle2,
         hint: 'Available once the seller marks delivered',
         tiles: [
@@ -257,8 +257,8 @@ function buildCfg(
     if (status === 'delivered') {
       return {
         title: 'Your Actions',
-        primaryLabel: 'Mark As Received',
-        confirmLabel: `Confirm — Release ${fmtUsd(releaseAmount)} →`,
+        primaryLabel: 'Confirm Delivery',
+        confirmLabel: `Confirm — Seller Gets ${fmtUsd(releaseAmount)} →`,
         PrimaryIcon: CheckCircle2,
         tiles: [
           { Icon: AlertTriangle, label: 'Open Dispute', caption: 'Something Wrong?', tone: 'red', href: disputeHref },
@@ -273,7 +273,7 @@ function buildCfg(
         confirmLabel: 'Open Review Form →',
         PrimaryIcon: Star,
         tiles: [
-          { Icon: AlertTriangle, label: 'Report Issue', caption: 'Within 30 Days', tone: 'red', href: disputeHref },
+          { Icon: AlertTriangle, label: 'Report Issue', caption: 'Within Protection Window', tone: 'red', href: disputeHref },
           { Icon: CheckCircle2, label: 'View Receipt', caption: 'Download PDF', tone: 'neutral' },
         ],
       }

@@ -33,7 +33,7 @@ export function HowItWorks({ steps }: { steps: CurrencyStep[] }) {
       <div className="text-center">
         <h2 className="text-[22px] font-bold text-text-primary sm:text-[26px]">How it works</h2>
         <p className="mt-1.5 text-[13.5px] text-text-tertiary">
-          Every purchase is escrow-protected from checkout to delivery.
+          Every order is covered by SafeDrop Buyer Protection — get what you ordered, or your money back.
         </p>
       </div>
       <div className="mt-7 grid gap-3 sm:grid-cols-3">

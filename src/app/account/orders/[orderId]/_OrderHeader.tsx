@@ -55,10 +55,10 @@ const STATUS_CFG: Record<
 }
 
 const ESCROW_CFG: Record<string, { label: string; color: string; border: string }> = {
-  held:     { label: 'Funds In SafeDrop™',         color: 'text-text-primary', border: 'border-white/10' },
-  released: { label: 'Released To Seller',          color: 'text-green-400',    border: 'border-green-400/25' },
-  refunded: { label: 'Refunded To Wallet',          color: 'text-blue-400',     border: 'border-blue-400/25' },
-  frozen:   { label: 'Frozen — Under Review',      color: 'text-violet-400',   border: 'border-violet-400/25' },
+  held:     { label: 'Covered By SafeDrop™',        color: 'text-text-primary', border: 'border-white/10' },
+  released: { label: 'Seller Paid Out',             color: 'text-green-400',    border: 'border-green-400/25' },
+  refunded: { label: 'Refund Issued',               color: 'text-blue-400',     border: 'border-blue-400/25' },
+  frozen:   { label: 'Payout Paused — Under Review', color: 'text-violet-400',   border: 'border-violet-400/25' },
   resolved: { label: 'Resolved',                    color: 'text-green-400',    border: 'border-green-400/25' },
 }
 

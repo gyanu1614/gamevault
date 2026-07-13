@@ -28,7 +28,7 @@ const levelConfig = {
     borderColor: 'border-blue-500/20',
     description: 'Essential buyer protection for peace of mind',
     features: [
-      { icon: Clock, text: '48-hour secure escrow hold' },
+      { icon: Clock, text: 'Protection window to review your order' },
       { icon: Shield, text: 'Dispute resolution support' },
       { icon: Check, text: 'Full refund if seller fails to deliver' }
     ],
@@ -42,7 +42,7 @@ const levelConfig = {
     borderColor: 'border-lime-tint-border',
     description: 'Advanced security for valuable purchases',
     features: [
-      { icon: Clock, text: '48-hour secure escrow hold' },
+      { icon: Clock, text: 'Protection window to review your order' },
       { icon: FileText, text: 'Delivery evidence required from seller' },
       { icon: Shield, text: 'Priority dispute resolution' },
       { icon: Check, text: 'Full refund guarantee' }
@@ -57,7 +57,7 @@ const levelConfig = {
     borderColor: 'border-amber-500/20',
     description: 'Maximum security for high-value transactions',
     features: [
-      { icon: Clock, text: '48-hour secure escrow hold' },
+      { icon: Clock, text: 'Protection window to review your order' },
       { icon: FileText, text: 'Mandatory delivery evidence (screenshots/video)' },
       { icon: Shield, text: 'Priority dispute resolution' },
       { icon: Check, text: 'Full refund guarantee' },

@@ -66,7 +66,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   return {
     title: `${listing.title} | ${listing.game.name} ${listing.category.name}`,
-    description: listing.description || `Buy ${listing.title} on DropMarket. Secure transaction with SafeDrop protection. Price: $${listing.price}`,
+    description: listing.description || `Buy ${listing.title} on DropMarket. Covered by SafeDrop Buyer Protection. Price: $${listing.price}`,
     keywords: [
       listing.game.name.toLowerCase(),
       listing.category.name.toLowerCase(),

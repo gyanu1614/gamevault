@@ -185,7 +185,7 @@ export default function ResolveDisputeModal({
                     Favor Seller
                   </Label>
                   <p className="text-xs text-text-tertiary mt-0.5">
-                    Release payment · No refund
+                    Seller paid out · No refund
                   </p>
                 </div>
                 <CheckCircle className="h-4 w-4 text-lime-text flex-shrink-0" />

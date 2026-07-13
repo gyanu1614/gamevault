@@ -1,6 +1,11 @@
 /**
  * tier-commission.ts
  *
+ * ⚠️ DEPRECATED (12 Jul 2026, fee spec): checkout/orders now use the
+ * per-category commission in src/lib/fees. No call sites remain; kept
+ * only because the admin seller_tier_config UI still reads the table.
+ * Remove together with that admin surface.
+ *
  * Single source of truth for commission-rate lookups.
  * Reads from the `seller_tier_config` DB table so rates are
  * always in sync with the migration — no more hardcoded values.

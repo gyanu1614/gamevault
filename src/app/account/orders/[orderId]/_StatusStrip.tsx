@@ -35,8 +35,8 @@ interface StatusStripProps {
   /** Review the buyer left for this order, if any.
    *  Buyer view (completed) → strip morphs into "Review Submitted"
    *  panel showing their own review back.
-   *  Seller view (completed) → "Funds Added To Wallet" panel grows
-   *  to include "Buyer's Feedback" with a divider + review body. */
+   *  Seller view (completed) → "Added To Your Seller Balance" panel
+   *  grows to include "Buyer's Feedback" with a divider + review body. */
   existingReview?: {
     rating: number
     comment: string
@@ -91,19 +91,19 @@ const STRIPS: Record<
     completed: {
       Icon: CheckCircle2,
       title: 'Order Complete',
-      caption: 'Funds released. Leave a review when you can.',
+      caption: 'The seller has been paid. Leave a review when you can.',
       tone: 'lime',
     },
     disputed: {
       Icon: AlertTriangle,
       title: 'Dispute Under Review',
-      caption: 'A DropMarket admin is reviewing. Average resolution: 24h.',
+      caption: 'A DropMarket admin is reviewing. Support responds within 24h.',
       tone: 'amber',
     },
     refunded: {
       Icon: RefreshCw,
       title: 'Refund Issued',
-      caption: 'Funds returned to your DropMarket wallet.',
+      caption: 'Your refund has been issued.',
       tone: 'blue',
     },
     cancelled: {
@@ -129,28 +129,28 @@ const STRIPS: Record<
     delivered: {
       Icon: CheckCircle2,
       title: 'Order Delivered',
-      caption: 'Waiting on the buyer to confirm receipt.',
+      caption: 'Waiting on the buyer to confirm delivery.',
       tone: 'lime',
     },
     completed: {
       Icon: Wallet,
       // V21/P3.b — Interpolated with the actual amount in the component
       // body below; see the {AMOUNT} placeholder for the substitution.
-      title: 'Funds Added To Wallet · {AMOUNT}',
+      title: 'Added To Your Seller Balance · {AMOUNT}',
       caption: 'Available to withdraw or use for purchases.',
       tone: 'lime',
     },
     disputed: {
       Icon: AlertTriangle,
       title: 'Dispute Opened',
-      caption: 'Respond in chat. Escrow is frozen until resolved.',
+      caption: 'Respond in chat. Payout paused pending dispute resolution.',
       tone: 'amber',
     },
     // V21/P7 — Terminal states so the seller strip never renders blank.
     refunded: {
       Icon: RefreshCw,
       title: 'Order Refunded',
-      caption: 'Escrow was returned to the buyer. No payout for this order.',
+      caption: 'The buyer was refunded. No payout for this order.',
       tone: 'blue',
     },
     cancelled: {
@@ -163,8 +163,8 @@ const STRIPS: Record<
   admin: {
     paid: { Icon: Clock, title: 'Pre-Delivery', caption: 'Seller has not started yet.', tone: 'gray' },
     delivering: { Icon: Clock, title: 'In Delivery', caption: 'Seller is working on the order.', tone: 'amber' },
-    delivered: { Icon: CheckCircle2, title: 'Awaiting Buyer Confirm', caption: 'Auto-release in 24h.', tone: 'lime' },
-    completed: { Icon: CheckCircle2, title: 'Complete', caption: 'Funds released to seller.', tone: 'lime' },
+    delivered: { Icon: CheckCircle2, title: 'Awaiting Buyer Confirm', caption: 'Auto-completes when the protection window closes.', tone: 'lime' },
+    completed: { Icon: CheckCircle2, title: 'Complete', caption: 'Seller paid out.', tone: 'lime' },
     disputed: { Icon: AlertTriangle, title: 'Dispute Open', caption: 'Awaiting your decision.', tone: 'amber' },
   },
 }
@@ -294,7 +294,7 @@ export function StatusStrip({
               <div className={cn(sTitle, 'font-bold text-text-primary')}>Order Delivered</div>
               {promoted && (
                 <div className={cn('mt-0.5 text-text-secondary', sCaption)}>
-                  Review your order, then release the funds.
+                  Review your order, then confirm delivery.
                 </div>
               )}
             </div>
@@ -302,7 +302,7 @@ export function StatusStrip({
           {onMarkReceived && (
             <button type="button" onClick={onMarkReceived} className={sCtaCls}>
               <CheckCircle2 className={sCtaGlyph} />
-              Confirm Receipt
+              Confirm Delivery
             </button>
           )}
         </div>
@@ -322,7 +322,7 @@ export function StatusStrip({
   const ctaLabel = showMarkDeliveredCTA
     ? 'Mark As Delivered'
     : showMarkReceivedCTA
-    ? 'Confirm Receipt'
+    ? 'Confirm Delivery'
     : showLeaveReviewCTA
     ? 'Leave Review'
     : null
@@ -334,7 +334,7 @@ export function StatusStrip({
     ? onLeaveReview
     : undefined
 
-  // V21/P5.s — When the seller's "Funds Added To Wallet" panel has a
+  // V21/P5.s — When the seller's "Added To Your Seller Balance" panel has a
   // buyer review attached, show the review inside the same card with
   // a divider — no second card. Otherwise the original single-row
   // layout (icon + title/caption + optional CTA).
@@ -345,8 +345,8 @@ export function StatusStrip({
     (existingReview.recommendsSeller === true ||
       (existingReview.recommendsSeller == null && existingReview.rating >= 4))
 
-  // V21/P5.t — Seller-completed + has review → strip the wallet
-  // header entirely. "Funds Released To Wallet" already lives on the
+  // V21/P5.t — Seller-completed + has review → strip the balance
+  // header entirely. The payout status already lives on the
   // Payout card below; no need to repeat it here. The card becomes
   // a dedicated Buyer's Feedback panel.
   if (showSellerReview && existingReview) {

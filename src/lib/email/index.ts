@@ -482,7 +482,7 @@ export async function sendNewOrderNotificationEmail({
 
           <div style="background: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.3); border-radius: 12px; padding: 16px; margin-bottom: 24px;">
             <p style="margin: 0; color: #a1a1aa; font-size: 14px; line-height: 1.6;">
-              <strong style="color: #818cf8;">Next step:</strong> Head to your order dashboard and deliver the item to the buyer. Funds are held in SafeDrop escrow and will be released once the buyer confirms receipt (or automatically after 48 hours).
+              <strong style="color: #818cf8;">Next step:</strong> Head to your order dashboard and deliver the item to the buyer. You'll be paid out once the buyer confirms receipt — or automatically when the order's protection window closes.
             </p>
           </div>
 

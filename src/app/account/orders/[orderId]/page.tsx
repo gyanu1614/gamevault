@@ -94,9 +94,9 @@ function StatusPill({ status, disputeResolved }: { status: string; disputeResolv
 
 function EscrowPill({ escrowStatus, disputeResolved }: { escrowStatus: string; disputeResolved?: boolean }) {
   const cfg: Record<string, { label: string; pill: string }> = {
-    held:     { label: 'Funds in Escrow',             pill: 'bg-lime/10 text-lime-text/80 border-lime-tint-border' },
-    released: { label: 'Payment Released to Seller', pill: 'bg-blue-500/10 text-blue-400/80 border-blue-500/15' },
-    refunded: { label: 'Refunded to Wallet',         pill: 'bg-cyan-500/10 text-cyan-400/80 border-cyan-500/15' },
+    held:     { label: 'Covered by SafeDrop',        pill: 'bg-lime/10 text-lime-text/80 border-lime-tint-border' },
+    released: { label: 'Seller Paid Out',            pill: 'bg-blue-500/10 text-blue-400/80 border-blue-500/15' },
+    refunded: { label: 'Refund Issued',              pill: 'bg-cyan-500/10 text-cyan-400/80 border-cyan-500/15' },
     frozen:   { label: 'Under Review',               pill: 'bg-error-bg text-error/80 border-red-500/15' },
     resolved: { label: 'Resolved',                   pill: 'bg-success-bg text-success/80 border-green-500/15' },
   }
