@@ -250,7 +250,7 @@ export default function ReferralClient({ stats }: ReferralClientProps) {
               <Gift className="h-12 w-12 text-gray-700 mb-3" />
               <p className="text-sm font-medium text-text-tertiary">No earnings yet</p>
               <p className="text-xs text-text-disabled mt-1 max-w-xs">
-                Start sharing your referral link. You'll earn commissions once your
+                Start sharing your referral link. You’ll earn commissions once your
                 referrals make purchases.
               </p>
             </div>
