@@ -27,6 +27,12 @@ export default function robots(): MetadataRoute.Robots {
           '/wallet/',
           '/wishlist/',
           '/checkout/',
+          // Parameterized duplicates: sorted views and campaign-tagged
+          // URLs render the same content as the canonical page.
+          '/*?sort=',
+          '/*&sort=',
+          '/*?utm_',
+          '/*&utm_',
         ],
       },
     ],

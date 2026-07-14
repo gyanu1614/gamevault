@@ -18,6 +18,7 @@ import { revalidatePath } from 'next/cache'
 import { getGlobalCategories, getGamesForGlobalCategory, getAttributeTemplateFull } from '@/lib/actions/new-schema'
 import type { GlobalCategory, GameCategory, AttributeTemplateFull, Attribute } from '@/lib/actions/new-schema'
 import { ensureLegacyCategoryRow, GLOBAL_SLUG_TO_LEGACY_TYPE } from '@/lib/actions/_category-bridge'
+import { pingIndexNow } from '@/lib/seo/indexnow'
 
 /** Service-role supabase client — bypasses RLS so we can self-heal a missing
  *  legacy categories row on the publish path. The user-bound client can't
@@ -707,11 +708,35 @@ export async function publishListing(input: PublishListingInput): Promise<Result
     const { data, error } = await (supabase
       .from('listings') as any)
       .insert(insertPayload)
-      .select('id')
+      // slug is DB-generated (set_listing_slug trigger) — read it back
+      // so we can ping IndexNow with the live listing URL.
+      .select('id, slug')
       .single()
     if (error) return { success: false, error: error.message }
 
     revalidatePath('/account/listings')
+
+    // SEO — IndexNow ping for the freshly published listing + the pages
+    // it appears on. Only 'active' listings are publicly crawlable;
+    // pending_approval/draft get picked up by the sitemap once live.
+    // NOTE: later client-side status changes (pause/activate/price edits
+    // in the seller offers table) are deliberately NOT wired to IndexNow
+    // — the sitemap's lastmod (max listing updated_at) covers those.
+    if (finalStatus === 'active') {
+      const [{ data: pingGame }, { data: pingCat }] = await Promise.all([
+        supabase.from('games').select('slug').eq('id', input.game_id).maybeSingle() as any,
+        supabase.from('categories').select('slug').eq('id', legacyCatId).maybeSingle() as any,
+      ])
+      if (pingGame?.slug && pingCat?.slug) {
+        const listingSlug = (data as { id: string; slug?: string | null }).slug
+        await pingIndexNow([
+          ...(listingSlug ? [`/${pingGame.slug}/${pingCat.slug}/${listingSlug}`] : []),
+          `/${pingGame.slug}`,
+          `/${pingGame.slug}/${pingCat.slug}`,
+        ])
+      }
+    }
+
     return { success: true, data: { id: (data as { id: string }).id, status: finalStatus } }
   } catch (e: any) {
     return { success: false, error: e?.message ?? 'Unknown error' }
@@ -1049,6 +1074,21 @@ export async function bulkPublishListings(
     }
 
     revalidatePath('/account/listings')
+
+    // SEO — one IndexNow ping for the game hub + category page when bulk
+    // rows went live. Individual listing URLs are skipped here (slugs
+    // are DB-generated and not selected back in the loop); the sitemap
+    // picks them up on the next crawl.
+    if (ok > 0 && status === 'active') {
+      const [{ data: pingGame }, { data: pingCat }] = await Promise.all([
+        supabase.from('games').select('slug').eq('id', gameId).maybeSingle() as any,
+        supabase.from('categories').select('slug').eq('id', legacyCatId).maybeSingle() as any,
+      ])
+      if (pingGame?.slug && pingCat?.slug) {
+        await pingIndexNow([`/${pingGame.slug}`, `/${pingGame.slug}/${pingCat.slug}`])
+      }
+    }
+
     return { success: true, data: { ok, failed } }
   } catch (e: any) {
     return { success: false, error: e?.message ?? 'Unknown error' }

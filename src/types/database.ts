@@ -208,6 +208,7 @@ export interface Database {
           seller_id: string
           game_id: string
           category_id: string
+          slug?: string | null
           title: string
           description: string
           price: number

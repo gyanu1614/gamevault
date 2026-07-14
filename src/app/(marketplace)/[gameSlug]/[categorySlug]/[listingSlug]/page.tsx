@@ -6,6 +6,7 @@
  */
 
 import { SITE_URL } from '@/config/site'
+import { JsonLd, breadcrumbList } from '@/lib/seo/jsonld'
 import React from 'react'
 import { Metadata } from 'next'
 import { notFound } from 'next/navigation'
@@ -66,7 +67,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   }
 
   return {
-    title: `${listing.title} | ${listing.game.name} ${listing.category.name}`,
+    // Root template appends " | DropMarket"; game/category stay in the
+    // description. Long seller titles are truncated to keep ≤60 chars.
+    title: listing.title.length > 48 ? `${listing.title.slice(0, 48).trimEnd()}…` : listing.title,
     description: listing.description || `Buy ${listing.title} on DropMarket. Covered by SafeDrop Buyer Protection. Price: $${listing.price}`,
     keywords: [
       listing.game.name.toLowerCase(),
@@ -292,16 +295,23 @@ export default async function ListingDetailPage({ params }: PageProps) {
     }
   }
 
-  // Schema.org structured data
+  // Canonical path from the DB slugs (URL params may be aliases).
+  const canonicalPath = `/${listing.game.slug}/${listing.category.slug}/${listing.slug || listing.id}`
+
+  // Schema.org structured data — outcome language only, no fabricated
+  // ratings (removed the seller-rating-as-product-rating block; product
+  // reviews don't exist yet, so no aggregateRating is the honest markup).
   const schemaData = {
     '@context': 'https://schema.org',
     '@type': 'Product',
     name: listing.title,
-    description: listing.description,
+    description:
+      listing.description ||
+      `Buy ${listing.title} on DropMarket — get what you ordered, or your money back with SafeDrop Buyer Protection.`,
     image: listing.images || [],
     offers: {
       '@type': 'Offer',
-      url: `${SITE_URL}/${gameSlug}/${categorySlug}/${listingSlug}`,
+      url: `${SITE_URL}${canonicalPath}`,
       priceCurrency: 'USD',
       price: listing.price,
       availability: 'https://schema.org/InStock',
@@ -314,13 +324,16 @@ export default async function ListingDetailPage({ params }: PageProps) {
       '@type': 'Brand',
       name: listing.game.name
     },
-    category: listing.category.name,
-    aggregateRating: listing.seller.rating ? {
-      '@type': 'AggregateRating',
-      ratingValue: listing.seller.rating || 5,
-      reviewCount: sellerStats.totalSales
-    } : undefined
+    category: listing.category.name
   }
+
+  // BreadcrumbList — Home › Game › Category › Listing.
+  const breadcrumbData = breadcrumbList([
+    { name: 'Home', path: '/' },
+    { name: listing.game.name, path: `/${listing.game.slug}` },
+    { name: listing.category.name, path: `/${listing.game.slug}/${listing.category.slug}` },
+    { name: listing.title, path: canonicalPath },
+  ])
 
 
   // V15i — Shape the raw row into the ListingForDetail contract.
@@ -369,6 +382,7 @@ export default async function ListingDetailPage({ params }: PageProps) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(schemaData) }}
       />
+      <JsonLd data={breadcrumbData} />
 
       {/* V29 — GameSubNav removed on the detail page: the in-page
           context row (game logo · Game › Category) already covers the

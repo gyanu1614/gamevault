@@ -12,6 +12,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { ArrowRight, Package, TrendingUp } from 'lucide-react'
 import Image from 'next/image'
+import { JsonLd, breadcrumbList } from '@/lib/seo/jsonld'
 
 interface PageProps {
   params: Promise<{
@@ -25,7 +26,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   const { data: game } = await supabase
     .from('games')
-    .select('name, description')
+    .select('id, name, description')
     .eq('slug', gameSlug)
     .single() as any
 
@@ -35,9 +36,33 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     }
   }
 
+  // Index bar (mirrors sitemap.ts): an empty hub — no active listings
+  // and no curated currency config — stays out of the index until it
+  // has something real to rank ({index:false, follow:true}).
+  const [{ count: listingCount }, { data: curatedCfg }] = await Promise.all([
+    supabase
+      .from('listings')
+      .select('id', { count: 'exact', head: true })
+      .eq('game_id', game.id)
+      .eq('status', 'active'),
+    supabase
+      .from('category_configs')
+      .select('game_id')
+      .eq('game_id', game.id)
+      .eq('category_type', 'currency')
+      .limit(1),
+  ] as const) as any
+  const indexable = (listingCount ?? 0) > 0 || (curatedCfg?.length ?? 0) > 0
+
   return {
-    title: `${game.name} Marketplace | Buy & Sell ${game.name} Accounts & Items`,
-    description: `Browse ${game.name} accounts, items, and currency. ${game.description} Every order is covered by SafeDrop Buyer Protection.`,
+    // Root template appends " | DropMarket". Long game names get the
+    // short pattern so the rendered title stays ≤60 chars.
+    title:
+      game.name.length > 12
+        ? `Buy & Sell ${game.name} Items`
+        : `Buy & Sell ${game.name} Accounts, Items & Currency`,
+    description: `Browse ${game.name} accounts, items, and currency. ${game.description ? `${game.description} ` : ''}Every order is covered by SafeDrop Buyer Protection.`,
+    robots: indexable ? undefined : { index: false, follow: true },
     keywords: [
       `${game.name.toLowerCase()} accounts`,
       `buy ${game.name.toLowerCase()} account`,
@@ -139,6 +164,12 @@ export default async function GameBrowsePage({ params }: PageProps) {
 
   return (
     <div className="min-h-screen bg-bg-base">
+      <JsonLd
+        data={breadcrumbList([
+          { name: 'Home', path: '/' },
+          { name: game.name, path: `/${gameSlug}` },
+        ])}
+      />
       {/* Hero Section */}
       <section className="relative pt-24 pb-16 px-4 sm:px-6 lg:px-8">
         <div className="absolute inset-0 bg-gradient-to-b from-[rgba(198,255,61,0.05)] via-transparent to-transparent" />

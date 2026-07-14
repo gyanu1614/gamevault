@@ -108,9 +108,13 @@ export interface BundleCurrencyPageData {
 export default function BundleCurrencyPageClient({
   data,
   viewerId,
+  introLine,
 }: {
   data: BundleCurrencyPageData
   viewerId: string | null
+  /** SEO intro sentence (live stats), server-computed so it lands in
+   *  the initial HTML. Rendered under the header tagline. */
+  introLine?: string | null
 }) {
   // V19/P24/P4 — Region selection defaults to the first enabled region.
   // When admin disabled regions entirely we use empty string as a
@@ -260,6 +264,11 @@ export default function BundleCurrencyPageClient({
             {data.tagline && (
               <p className="mt-1 line-clamp-2 text-[13px] font-medium text-text-secondary sm:text-[14px]">
                 {data.tagline}
+              </p>
+            )}
+            {introLine && (
+              <p className="mt-1 text-[12px] text-text-tertiary sm:text-[12.5px]">
+                {introLine}
               </p>
             )}
           </div>
