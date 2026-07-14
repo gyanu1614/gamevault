@@ -23,7 +23,7 @@ export default function BlogIndexPage() {
             — Blog —
           </div>
           <h1 className="mt-0.5 text-[30px] font-extrabold leading-[1.05] tracking-tight text-text-primary sm:text-[40px]">
-            Guides From The <span className="text-lime-text">Vault</span>
+            Guides From The <span className="text-lime-text">Drop</span>
           </h1>
           <p className="mx-auto mt-2 max-w-xl text-[15px] text-text-tertiary sm:text-[16.5px]">
             Trading guides, safety tips, and marketplace know-how from the team.
