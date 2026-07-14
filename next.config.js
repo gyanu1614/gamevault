@@ -50,6 +50,14 @@ const nextConfig = {
         destination: '/blog/how-safedrop-buyer-protection-works',
         permanent: true,
       },
+      {
+        // Legacy protection-brand URL. Must live here, not in a page:
+        // permanentRedirect() in the statically prerendered route shipped
+        // a 308 with no Location header, so crawlers hit a dead end.
+        source: '/vaultshield',
+        destination: '/safedrop',
+        permanent: true,
+      },
     ]
   },
 }
