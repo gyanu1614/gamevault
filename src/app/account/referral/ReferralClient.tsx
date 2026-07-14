@@ -1,5 +1,6 @@
 'use client'
 
+import { SITE_URL } from '@/config/site'
 import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { toast } from 'sonner'
@@ -93,7 +94,7 @@ function EarningRow({ earning }: { earning: ReferralEarning }) {
 export default function ReferralClient({ stats }: ReferralClientProps) {
   const [copied, setCopied] = useState(false)
 
-  const appUrl     = process.env.NEXT_PUBLIC_APP_URL || 'https://dropmarket.gg'
+  const appUrl     = SITE_URL
   const referralUrl = `${appUrl}/signup?ref=${stats.referralCode}`
 
   const copyCode = () => {

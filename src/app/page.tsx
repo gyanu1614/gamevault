@@ -1,3 +1,4 @@
+import { SITE_URL } from '@/config/site'
 import type { Metadata } from 'next'
 import { HomePage } from '@/features/home/pages/HomePage'
 
@@ -30,10 +31,10 @@ const SCHEMAS = [
     '@context': 'https://schema.org',
     '@type': 'WebSite',
     name: 'DropMarket',
-    url: 'https://dropmarket.gg',
+    url: SITE_URL,
     potentialAction: {
       '@type': 'SearchAction',
-      target: 'https://dropmarket.gg/?q={search_term_string}',
+      target: `${SITE_URL}/?q={search_term_string}`,
       'query-input': 'required name=search_term_string',
     },
   },
@@ -41,7 +42,7 @@ const SCHEMAS = [
     '@context': 'https://schema.org',
     '@type': 'Organization',
     name: 'DropMarket',
-    url: 'https://dropmarket.gg',
+    url: SITE_URL,
     description: 'Trusted gaming marketplace with SafeDrop Buyer Protection on every order',
   },
 ]
