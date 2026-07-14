@@ -21,7 +21,9 @@ import { createClient } from '@/lib/supabase/server'
 import { getLandingPage, getAllLandingPageSlugs, LandingPage } from '@/lib/seo/landingPages'
 import type { ListingWithRelations } from '@/types/database'
 
-const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://dropmarket.gg'
+import { SITE_URL } from '@/config/site'
+
+const BASE_URL = SITE_URL
 
 /* ------------------------------------------------------------------ */
 /* Static params                                                        */

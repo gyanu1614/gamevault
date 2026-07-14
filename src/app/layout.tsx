@@ -1,3 +1,4 @@
+import { SITE_URL } from '@/config/site'
 import type { Metadata } from 'next'
 import { Inter, JetBrains_Mono } from 'next/font/google'
 import './globals.css'
@@ -27,6 +28,12 @@ const jetbrainsMono = JetBrains_Mono({
 })
 
 export const metadata: Metadata = {
+  // Canonical domain for every absolute URL Next emits (OG, twitter,
+  // canonical). './' canonical = self-referencing per route — declares
+  // dropmarket.gg as the real domain even while transition domains
+  // serve the same deployment.
+  metadataBase: new URL(SITE_URL),
+  alternates: { canonical: './' },
   title: {
     default: 'DropMarket — Buy & Sell Game Items Safely',
     template: '%s | DropMarket',

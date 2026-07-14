@@ -8,7 +8,9 @@ import { MetadataRoute } from 'next'
 import { createClient } from '@/lib/supabase/server'
 import { getAllLandingPageSlugs } from '@/lib/seo/landingPages'
 
-const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://dropmarket.com'
+import { SITE_URL } from '@/config/site'
+
+const BASE_URL = SITE_URL
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const supabase = await createClient()

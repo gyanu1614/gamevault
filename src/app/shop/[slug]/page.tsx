@@ -9,6 +9,7 @@
  * - About: Seller info, policies, response time
  */
 
+import { SITE_URL } from '@/config/site'
 import React from 'react'
 import { Metadata } from 'next'
 import { notFound } from 'next/navigation'
@@ -97,7 +98,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const businessName = profile.shop_name || profile.business_name || profile.username
   const description = `Shop for gaming accounts, items, and services from ${businessName}. ${totalSales || 0} sales • ${avgRating}/5 rating • Trusted DropMarket seller.`
 
-  const shopUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://dropmarket.com'}/shop/${slug}`
+  const shopUrl = `${SITE_URL}/shop/${slug}`
   const { getAvatarUrl: getAvatar } = await import('@/lib/utils/avatar')
   const avatarUrl = getAvatar(profile.avatar_url, slug)
 

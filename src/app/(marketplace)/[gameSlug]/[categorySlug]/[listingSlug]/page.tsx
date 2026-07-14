@@ -5,6 +5,7 @@
  * SEO-friendly URL: /fortnite/accounts/rare-og-account-abc123 (no /marketplace prefix)
  */
 
+import { SITE_URL } from '@/config/site'
 import React from 'react'
 import { Metadata } from 'next'
 import { notFound } from 'next/navigation'
@@ -300,7 +301,7 @@ export default async function ListingDetailPage({ params }: PageProps) {
     image: listing.images || [],
     offers: {
       '@type': 'Offer',
-      url: `${process.env.NEXT_PUBLIC_APP_URL || 'https://dropmarket.com'}/${gameSlug}/${categorySlug}/${listingSlug}`,
+      url: `${SITE_URL}/${gameSlug}/${categorySlug}/${listingSlug}`,
       priceCurrency: 'USD',
       price: listing.price,
       availability: 'https://schema.org/InStock',
