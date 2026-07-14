@@ -8,6 +8,7 @@
  * uses Combobox (game) and primitives across the board. Mobile-first.
  */
 
+import { SITE_URL } from '@/config/site'
 import React, { useLayoutEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -96,7 +97,7 @@ export default function SellerStorefront({ seller }: SellerStorefrontProps) {
     name: businessName,
     image: getAvatarUrl(seller.profile.avatar_url, seller.profile.username),
     description: `Gaming marketplace seller on DropMarket`,
-    url: `${typeof window !== 'undefined' ? window.location.origin : ''}/shop/${seller.profile.shop_slug || seller.profile.username}`,
+    url: `${SITE_URL}/shop/${seller.profile.shop_slug || seller.profile.username}`,
     aggregateRating:
       seller.stats.totalReviews > 0
         ? {

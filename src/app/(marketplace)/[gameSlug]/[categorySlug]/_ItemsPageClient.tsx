@@ -47,6 +47,9 @@ interface ItemsPageClientProps {
   /** V21/P7.l — Category label for the header (e.g. "Items",
    *  "Accounts", "Boosting"). Defaults to "Items" for back-compat. */
   categoryLabel?: string
+  /** SEO intro sentence (live stats), server-computed so it lands in
+   *  the initial HTML. Rendered under the header count line. */
+  introLine?: string | null
 }
 
 export default function ItemsPageClient({
@@ -57,6 +60,7 @@ export default function ItemsPageClient({
   taxonomy,
   viewerId,
   categoryLabel = 'Items',
+  introLine,
 }: ItemsPageClientProps) {
   // V14v — Scroll to top on mount before paint.
   useLayoutEffect(() => {
@@ -280,6 +284,12 @@ export default function ItemsPageClient({
                 </span>{' '}
                 {sorted.length === 1 ? 'listing' : 'listings'} available
               </div>
+              {/* SEO intro — live stats, same source as metadata + JSON-LD. */}
+              {introLine && (
+                <p className="mt-0.5 text-[12.5px] text-text-tertiary">
+                  {introLine}
+                </p>
+              )}
             </div>
           </div>
 

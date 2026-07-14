@@ -862,7 +862,10 @@ export async function confirmOrderReceipt(orderId: string): Promise<{
     }
 
     // TODO: Send completion emails
-    // TODO: Invite buyer to leave Trustpilot review (after 7 days)
+    // Trustpilot review invitation: handled automatically — the DB trigger
+    // schedule_trustpilot_invitation() (fires on orders.status → 'completed')
+    // creates a trustpilot_invitations row scheduled 7 days out, and the daily
+    // cron /api/cron/send-trustpilot-invitations dispatches it. No call needed here.
 
     // P5.2 — Award cashback to buyer (fire-and-forget, non-blocking)
     // Guest orders don't get loyalty credits (no persistent account)

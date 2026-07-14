@@ -12,7 +12,6 @@ import { sendTrustpilotInvitationEmail } from '@/lib/email'
 
 const TRUSTPILOT_API_KEY = process.env.TRUSTPILOT_API_KEY
 const TRUSTPILOT_BUSINESS_UNIT_ID = process.env.NEXT_PUBLIC_TRUSTPILOT_BUSINESS_UNIT_ID
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
 
 /**
  * Send Trustpilot review invitation
@@ -23,6 +22,17 @@ export async function sendTrustpilotInvitation(orderId: string): Promise<{
   error?: string
 }> {
   try {
+    // Env gate: without a Business Unit ID there is no review page to link to,
+    // so sending anything would be pointless. Returning failure here leaves
+    // sent_at NULL, so the cron retries automatically once envs are configured.
+    if (!TRUSTPILOT_BUSINESS_UNIT_ID) {
+      return {
+        success: false,
+        error:
+          'Trustpilot not configured (NEXT_PUBLIC_TRUSTPILOT_BUSINESS_UNIT_ID missing) — invitation left scheduled',
+      }
+    }
+
     const supabase = await createClient()
 
     // Get order details with buyer info
@@ -48,7 +58,10 @@ export async function sendTrustpilotInvitation(orderId: string): Promise<{
       return { success: false, error: 'Buyer email not found' }
     }
 
-    // Upsert invitation record (trigger may have already created it)
+    // Upsert invitation record (trigger may have already created it).
+    // NOTE: review_submitted deliberately NOT in the payload — the column
+    // defaults to false on insert, and including it here would clobber a
+    // true value written by the webhook on conflicting rows.
     const { data: invitation, error: upsertError } = await (supabase
       .from('trustpilot_invitations')
       .upsert as any)(
@@ -56,7 +69,6 @@ export async function sendTrustpilotInvitation(orderId: string): Promise<{
           order_id: orderId,
           buyer_id: order.buyer_id,
           email: buyerEmail,
-          review_submitted: false,
         },
         { onConflict: 'order_id', ignoreDuplicates: false }
       )
@@ -109,16 +121,18 @@ export async function sendTrustpilotInvitation(orderId: string): Promise<{
 
     // Fallback: send via Resend email if Trustpilot API didn't succeed
     if (!trustpilotApiSuccess) {
-      const reviewUrl = TRUSTPILOT_BUSINESS_UNIT_ID
-        ? `https://www.trustpilot.com/evaluate/${TRUSTPILOT_BUSINESS_UNIT_ID}`
-        : `${APP_URL}/account/orders`
-
-      await sendTrustpilotInvitationEmail({
+      const emailResult = await sendTrustpilotInvitationEmail({
         to: buyerEmail,
         name: buyerName,
         orderId,
-        reviewUrl,
+        reviewUrl: `https://www.trustpilot.com/evaluate/${TRUSTPILOT_BUSINESS_UNIT_ID}`,
       })
+
+      if (!emailResult.success) {
+        // Don't stamp sent_at — leaving it NULL lets the cron retry tomorrow.
+        console.error('Trustpilot fallback email failed:', emailResult.error)
+        return { success: false, error: 'Both Trustpilot API and fallback email failed' }
+      }
     }
 
     // Update sent_at timestamp on the invitation record

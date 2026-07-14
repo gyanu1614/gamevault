@@ -45,7 +45,7 @@ export const LANDING_PAGES: LandingPage[] = [
   /* ---- Roblox ---- */
   {
     slug: 'buy-roblox-accounts',
-    title: 'Buy Roblox Accounts – Safe & Instant Delivery | DropMarket',
+    title: 'Buy Roblox Accounts – Safe & Instant Delivery',
     description:
       'Browse verified Roblox accounts for sale. Every order covered by SafeDrop Buyer Protection. Instant delivery, money-back guarantee.',
     headline: 'Buy Roblox Accounts',
@@ -76,7 +76,7 @@ export const LANDING_PAGES: LandingPage[] = [
   },
   {
     slug: 'buy-roblox-items',
-    title: 'Buy Roblox Items & Limiteds | DropMarket',
+    title: 'Buy Roblox Items & Limiteds',
     description:
       'Shop rare Roblox limiteds, UGC items, and accessories. SafeDrop Buyer Protection, instant delivery, trusted sellers.',
     headline: 'Buy Roblox Items & Limiteds',
@@ -105,7 +105,7 @@ export const LANDING_PAGES: LandingPage[] = [
   /* ---- Valorant ---- */
   {
     slug: 'buy-valorant-accounts',
-    title: 'Buy Valorant Accounts – Radiant, Immortal & More | DropMarket',
+    title: 'Buy Valorant Accounts – Radiant, Immortal & More',
     description:
       'Find Valorant accounts with rare skins, high ranks, and low prices. SafeDrop Buyer Protection on every order.',
     headline: 'Buy Valorant Accounts',
@@ -132,7 +132,7 @@ export const LANDING_PAGES: LandingPage[] = [
   },
   {
     slug: 'buy-valorant-points',
-    title: 'Buy Valorant Points (VP) – Cheapest Rates | DropMarket',
+    title: 'Buy Valorant Points (VP) – Cheapest Rates',
     description:
       'Get Valorant Points for less. Verified sellers, instant delivery, buyer protection on every VP purchase.',
     headline: 'Buy Valorant Points',
@@ -157,7 +157,7 @@ export const LANDING_PAGES: LandingPage[] = [
   /* ---- Fortnite ---- */
   {
     slug: 'buy-fortnite-accounts',
-    title: 'Buy Fortnite Accounts – Rare Skins & OG Accounts | DropMarket',
+    title: 'Buy Fortnite Accounts – Rare Skins & OG Accounts',
     description:
       'Buy OG Fortnite accounts with rare skins like Black Knight, Skull Trooper, and more. SafeDrop Buyer Protection, fast delivery.',
     headline: 'Buy Fortnite Accounts',
@@ -184,7 +184,7 @@ export const LANDING_PAGES: LandingPage[] = [
   },
   {
     slug: 'buy-fortnite-skins',
-    title: 'Buy Fortnite Skins & Cosmetics | DropMarket',
+    title: 'Buy Fortnite Skins & Cosmetics',
     description:
       'Purchase rare Fortnite skins, emotes, pickaxes, and wraps from verified sellers. Instant delivery.',
     headline: 'Buy Fortnite Skins & Cosmetics',
@@ -205,7 +205,7 @@ export const LANDING_PAGES: LandingPage[] = [
   /* ---- League of Legends ---- */
   {
     slug: 'buy-league-of-legends-accounts',
-    title: 'Buy League of Legends Accounts – Smurf & Ranked | DropMarket',
+    title: 'Buy League of Legends Accounts – Smurf & Ranked',
     description:
       'Shop LoL smurf accounts, ranked accounts, and accounts with rare champion/skin collections. Secure, fast, trusted.',
     headline: 'Buy League of Legends Accounts',
@@ -234,12 +234,12 @@ export const LANDING_PAGES: LandingPage[] = [
   /* ---- General / Cross-game ---- */
   {
     slug: 'sell-game-accounts',
-    title: 'Sell Your Game Accounts Safely | DropMarket',
+    title: 'Sell Your Game Accounts Safely',
     description:
-      'List your gaming account or items on DropMarket and earn. 0% listing fee, fast payouts once delivery is confirmed, verified buyers.',
+      'List your gaming account or items on DropMarket and earn. Free to list — pay commission only when it sells. Fast payouts once delivery is confirmed.',
     headline: 'Sell Your Game Accounts',
     subCopy:
-      'Turn your gaming assets into real money. List for free, get paid out fast after delivery is confirmed, keep 100% of your listed price.',
+      'Turn your gaming assets into real money. List for free, pay commission only when it sells (from 5% for most categories), and get paid out fast after delivery is confirmed.',
     gameSlug: null,
     categorySlug: null,
     emoji: '💰',
@@ -247,7 +247,7 @@ export const LANDING_PAGES: LandingPage[] = [
     faqs: [
       {
         q: 'How much does it cost to sell on DropMarket?',
-        a: 'Listing is free. DropMarket takes a small buyer protection fee from the buyer side; sellers keep the full listed price.',
+        a: 'Listing is free — you pay commission only when your item sells: 5% for most currency, 7% for items, and 12–20% for accounts by risk band (see the Fees & Charges page). Buyers separately pay a small marketplace and processing fee.',
       },
       {
         q: 'How do I get paid?',

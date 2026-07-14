@@ -262,6 +262,7 @@ export default function CurrencyPageClient({
   gameImageUrl,
   viewerId,
   gameSlug,
+  introLine,
 }: {
   data: CurrencyPageData
   gameImageUrl?: string | null
@@ -269,6 +270,9 @@ export default function CurrencyPageClient({
   viewerId?: string | null
   /** V43 — Game slug for the blog rail's relevance filter. */
   gameSlug?: string
+  /** SEO intro sentence (live stats), server-computed so it lands in
+   *  the initial HTML. Rendered under the hero header. */
+  introLine?: string | null
 }) {
   const allOffers = useMemo<Offer[]>(() => [data.hero, ...data.sellers], [data])
   const [activeId, setActiveId] = useState<string>(data.hero.id)
@@ -380,6 +384,12 @@ export default function CurrencyPageClient({
           iconFallback={data.currency.name.slice(0, 2).toUpperCase()}
           size="hero"
         />
+        {/* SEO intro — live stats, same source as metadata + JSON-LD. */}
+        {introLine && (
+          <p className="mt-2 px-1 text-[13px] text-text-tertiary sm:text-[13.5px]">
+            {introLine}
+          </p>
+        )}
         <div ref={heroRef} className="mt-3">
           <HeroCard
             offer={activeOffer}

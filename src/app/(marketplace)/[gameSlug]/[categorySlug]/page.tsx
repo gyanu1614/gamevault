@@ -27,6 +27,8 @@ import BundleCurrencyPageClient, {
 } from './_BundleCurrencyPageClient'
 import { fetchCategoryConfigBySlug } from '@/lib/actions/admin-category-configs'
 import { normalizePlatformOptions } from '@/lib/types/category-configs'
+import { JsonLd, breadcrumbList, productAggregate, faqPage } from '@/lib/seo/jsonld'
+import { getCategoryStats, formatStatPrice, type CategoryStats } from '@/lib/seo/page-stats'
 
 // V19/P24/P4 — Inline delivery formatter for bundle offers. The
 // `_currencyData.ts` formatter is wrapped around the flexible-Offer
@@ -70,6 +72,25 @@ interface PageProps {
 
 // ─── SEO ───────────────────────────────────────────────────────────────────────
 
+/**
+ * SEO intro sentence rendered near the top of every money page. One
+ * source for all four branches so copy never drifts. Zero listings →
+ * the sell-side CTA (shared rule: full template + "be the first").
+ */
+function buildIntroLine(
+  stats: CategoryStats,
+  gameName: string,
+  categoryLabel: string,
+): string {
+  if (stats.count > 0 && stats.lowPrice != null) {
+    const avg = stats.avgDeliveryLabel ? ` — average delivery ${stats.avgDeliveryLabel}` : ''
+    return `${stats.count} live ${gameName} ${categoryLabel} ${
+      stats.count === 1 ? 'listing' : 'listings'
+    } from $${formatStatPrice(stats.lowPrice)}${avg}. Every order covered by SafeDrop Buyer Protection.`
+  }
+  return `Be the first to sell ${gameName} ${categoryLabel} on DropMarket — list in minutes at 5–7% fees.`
+}
+
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { gameSlug, categorySlug } = await params
   const supabase = await createClient()
@@ -84,7 +105,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   const { data: category } = await supabase
     .from('categories')
-    .select('name')
+    .select('id, name, metadata')
     .eq('slug', categorySlug)
     .eq('game_id', game.id)
     .single() as any
@@ -118,15 +139,52 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     return { title: 'Not Found' }
   }
 
+  // CATEGORY branch — live stats drive the title/description so the
+  // numbers in search results always match the page (shared source
+  // with the JSON-LD and the on-page intro line).
+  const stats = await getCategoryStats(game.id, category.id)
+
+  const isCurrency = category.metadata?.type === 'currency'
+  const currencyCfg = isCurrency
+    ? await fetchCategoryConfigBySlug(gameSlug, 'currency')
+    : null
+  // Currency shells with admin-curated FAQ/steps count as unique
+  // content — they stay indexable even before the first listing.
+  const hasCuratedContent =
+    !!currencyCfg &&
+    ((currencyCfg.faq?.length ?? 0) > 0 || (currencyCfg.steps?.length ?? 0) > 0)
+
+  // Flexible (non-bundle) currency prices are per-unit, so the low
+  // price reads best with its unit ("$0.0045/Robux"). Bundle-mode
+  // currency prices are per bundle — no unit suffix there.
+  const usesUnitSuffix =
+    isCurrency && !!currencyCfg?.unit_label && (currencyCfg.bundles?.length ?? 0) === 0
+  const priceLabel =
+    stats.lowPrice != null
+      ? `$${formatStatPrice(stats.lowPrice)}${usesUnitSuffix ? `/${currencyCfg!.unit_label}` : ''}`
+      : null
+
+  const hasListings = stats.count > 0 && priceLabel != null
+
   return {
-    title: `${game.name} ${category.name} for Sale`,
-    description: `Browse verified ${game.name} ${category.name.toLowerCase()} listings. Every order covered by SafeDrop Buyer Protection. Instant delivery available.`,
+    title: hasListings
+      ? `Buy ${game.name} ${category.name} from ${priceLabel}`
+      : `Buy ${game.name} ${category.name} — Cheap & Safe`,
+    description: hasListings
+      ? `Buy ${game.name} ${category.name} from verified sellers. ${stats.count} live listings from ${priceLabel}. SafeDrop protection: get what you ordered or your money back.`
+      : `Be the first to sell ${game.name} ${category.name} on DropMarket — list in minutes at 5–7% fees. Every order covered by SafeDrop Buyer Protection.`,
     keywords: [
       `${game.name.toLowerCase()} ${category.name.toLowerCase()}`,
       `buy ${game.name.toLowerCase()} ${category.name.toLowerCase()}`,
       `cheap ${game.name.toLowerCase()} ${category.name.toLowerCase()}`,
       `${game.name.toLowerCase()} marketplace`,
     ],
+    // Zero-listing money pages stay crawlable but unindexed until the
+    // first offer lands — UNLESS the page carries curated unique
+    // content (admin currency config with FAQ/steps).
+    ...(stats.count === 0 && !hasCuratedContent
+      ? { robots: { index: false, follow: true } }
+      : {}),
     openGraph: {
       title: `${game.name} ${category.name} - DropMarket`,
       description: `Buy and sell ${game.name} ${category.name.toLowerCase()} safely`,
@@ -298,6 +356,9 @@ export default async function CategoryBrowsePage({ params, searchParams }: PageP
     // on the client; we just send all active bundle-tagged rows.
     let bundleOffers: BundleOffer[] = []
     let realCategorySlug: string | null = null
+    // Live stats for the SEO intro line + JSON-LD (same helper the
+    // metadata uses, so all three surfaces agree).
+    let stats: CategoryStats = { count: 0, lowPrice: null, highPrice: null, avgDeliveryLabel: null }
     if (game?.id) {
       const catRow = await supabase
         .from('categories')
@@ -310,6 +371,7 @@ export default async function CategoryBrowsePage({ params, searchParams }: PageP
       const categoryId = catRow.data?.id
       realCategorySlug = catRow.data?.slug ?? null
       if (categoryId) {
+        stats = await getCategoryStats(game.id, categoryId)
         let bundleQuery: any = supabase
           .from('listings')
           .select(`
@@ -386,11 +448,36 @@ export default async function CategoryBrowsePage({ params, searchParams }: PageP
       faq: currencyConfig?.faq ?? [],
     }
 
+    const gameName = game?.name ?? gameSlug
+    const categoryLabel = data.unitLabel
+    const introLine = buildIntroLine(stats, gameName, categoryLabel)
+
     return (
       <>
+        <JsonLd
+          data={breadcrumbList([
+            { name: 'Home', path: '/' },
+            { name: gameName, path: `/${gameSlug}` },
+            { name: categoryLabel, path: `/${gameSlug}/${categorySlug}` },
+          ])}
+        />
+        {stats.count > 0 && stats.lowPrice != null && stats.highPrice != null && (
+          <JsonLd
+            data={productAggregate({
+              name: `${gameName} ${categoryLabel}`,
+              description: `Buy ${gameName} ${categoryLabel} from verified sellers — get what you ordered, or your money back with SafeDrop Buyer Protection.`,
+              brand: gameName,
+              lowPrice: stats.lowPrice,
+              highPrice: stats.highPrice,
+              offerCount: stats.count,
+              url: `/${gameSlug}/${categorySlug}`,
+            })}
+          />
+        )}
+        {data.faq.length > 0 && <JsonLd data={faqPage(data.faq)} />}
         <GameSubNav
           gameSlug={gameSlug}
-          gameName={game?.name ?? gameSlug}
+          gameName={gameName}
           gameImageUrl={game?.image_url}
           currentCategorySlug={realCategorySlug ?? 'currency'}
           categories={categories}
@@ -398,7 +485,15 @@ export default async function CategoryBrowsePage({ params, searchParams }: PageP
         <BundleCurrencyPageClient
           data={data}
           viewerId={viewer?.id ?? null}
+          introLine={introLine}
         />
+        {game?.id && (
+          <RelatedGames
+            currentGameId={game.id}
+            categorySlug={categorySlug}
+            categoryName={categoryLabel}
+          />
+        )}
       </>
     )
   }
@@ -424,6 +519,9 @@ export default async function CategoryBrowsePage({ params, searchParams }: PageP
     // V14c — Capture the real category slug so we can highlight the right
     // tab in GameSubNav. For Roblox, this is typically 'robux' not 'currency'.
     let realCategorySlug: string | null = null
+    // Live stats for the SEO intro line + JSON-LD (same helper the
+    // metadata uses, so all three surfaces agree).
+    let stats: CategoryStats = { count: 0, lowPrice: null, highPrice: null, avgDeliveryLabel: null }
     if (game?.id) {
       const catRow = await supabase
         .from('categories')
@@ -436,6 +534,7 @@ export default async function CategoryBrowsePage({ params, searchParams }: PageP
       const categoryId = catRow.data?.id
       realCategorySlug = catRow.data?.slug ?? null
       if (categoryId) {
+        stats = await getCategoryStats(game.id, categoryId)
         let currencyQuery: any = supabase
           .from('listings')
           .select(`
@@ -496,11 +595,36 @@ export default async function CategoryBrowsePage({ params, searchParams }: PageP
     // protection doesn't make sense). Anonymous viewers get null.
     const { data: { user: viewer } } = await supabase.auth.getUser()
 
+    const gameName = game?.name ?? currencyShell.currency.game
+    const categoryLabel = mergedData.currency.name
+    const introLine = buildIntroLine(stats, gameName, categoryLabel)
+
     return (
       <>
+        <JsonLd
+          data={breadcrumbList([
+            { name: 'Home', path: '/' },
+            { name: gameName, path: `/${gameSlug}` },
+            { name: categoryLabel, path: `/${gameSlug}/${categorySlug}` },
+          ])}
+        />
+        {stats.count > 0 && stats.lowPrice != null && stats.highPrice != null && (
+          <JsonLd
+            data={productAggregate({
+              name: `${gameName} ${categoryLabel}`,
+              description: `Buy ${gameName} ${categoryLabel} from verified sellers — get what you ordered, or your money back with SafeDrop Buyer Protection.`,
+              brand: gameName,
+              lowPrice: stats.lowPrice,
+              highPrice: stats.highPrice,
+              offerCount: stats.count,
+              url: `/${gameSlug}/${categorySlug}`,
+            })}
+          />
+        )}
+        {mergedData.faq.length > 0 && <JsonLd data={faqPage(mergedData.faq)} />}
         <GameSubNav
           gameSlug={gameSlug}
-          gameName={game?.name ?? currencyShell.currency.game}
+          gameName={gameName}
           gameImageUrl={game?.image_url}
           // V14c — Highlight whichever category row actually exists for
           // currency. For Roblox that's 'robux'; for V-Bucks it's 'v-bucks'.
@@ -513,7 +637,15 @@ export default async function CategoryBrowsePage({ params, searchParams }: PageP
           gameImageUrl={game?.image_url ?? `/games/${gameSlug}.png`}
           viewerId={viewer?.id ?? null}
           gameSlug={gameSlug}
+          introLine={introLine}
         />
+        {game?.id && (
+          <RelatedGames
+            currentGameId={game.id}
+            categorySlug={categorySlug}
+            categoryName={categoryLabel}
+          />
+        )}
       </>
     )
   }
@@ -574,7 +706,7 @@ export default async function CategoryBrowsePage({ params, searchParams }: PageP
       if (categoryType === 'top_up') return 'top-up'
       return 'items'
     })()
-    const [allCategories, taxonomy, viewerRes, listingsRaw] = await Promise.all([
+    const [allCategories, taxonomy, viewerRes, listingsRaw, stats] = await Promise.all([
       getAllGameCategories(game.id),
       loadItemsTaxonomy(game.id, taxonomySlug),
       (await createClient()).auth.getUser(),
@@ -600,13 +732,35 @@ export default async function CategoryBrowsePage({ params, searchParams }: PageP
         const { data } = await itemsQuery as any
         return (data ?? []) as any[]
       })(),
+      getCategoryStats(game.id, category.id),
     ])
 
     const offers = listingsRaw.map((l) => listingToItemOffer(l, taxonomy))
     const viewer = viewerRes.data?.user
+    const introLine = buildIntroLine(stats, game.name, category.name)
 
     return (
       <>
+        <JsonLd
+          data={breadcrumbList([
+            { name: 'Home', path: '/' },
+            { name: game.name, path: `/${gameSlug}` },
+            { name: category.name, path: `/${gameSlug}/${categorySlug}` },
+          ])}
+        />
+        {stats.count > 0 && stats.lowPrice != null && stats.highPrice != null && (
+          <JsonLd
+            data={productAggregate({
+              name: `${game.name} ${category.name}`,
+              description: `Buy ${game.name} ${category.name} from verified sellers — get what you ordered, or your money back with SafeDrop Buyer Protection.`,
+              brand: game.name,
+              lowPrice: stats.lowPrice,
+              highPrice: stats.highPrice,
+              offerCount: stats.count,
+              url: `/${gameSlug}/${categorySlug}`,
+            })}
+          />
+        )}
         <GameSubNav
           gameSlug={gameSlug}
           gameName={game.name}
@@ -629,18 +783,26 @@ export default async function CategoryBrowsePage({ params, searchParams }: PageP
             offers={offers}
             taxonomy={taxonomy}
             viewerId={viewer?.id ?? null}
+            introLine={introLine}
           />
         </Suspense>
+        <RelatedGames
+          currentGameId={game.id}
+          categorySlug={categorySlug}
+          categoryName={category.name}
+        />
       </>
     )
   }
 
-  const [allCategories, listingsData] = await Promise.all([
+  const [allCategories, listingsData, stats] = await Promise.all([
     getAllGameCategories(game.id),
     getListings(game.id, category.id, resolvedSearchParams, pausedSellerIds),
+    getCategoryStats(game.id, category.id),
   ])
 
   const { listings, hasMore, currentPage, totalListings } = listingsData
+  const introLine = buildIntroLine(stats, game.name, category.name)
 
   const maxPrice = listings.length > 0
     ? Math.max(...listings.map((l: any) => l.price))
@@ -651,6 +813,26 @@ export default async function CategoryBrowsePage({ params, searchParams }: PageP
 
   return (
     <div className="min-h-screen bg-bg-base">
+      <JsonLd
+        data={breadcrumbList([
+          { name: 'Home', path: '/' },
+          { name: game.name, path: `/${gameSlug}` },
+          { name: category.name, path: `/${gameSlug}/${categorySlug}` },
+        ])}
+      />
+      {stats.count > 0 && stats.lowPrice != null && stats.highPrice != null && (
+        <JsonLd
+          data={productAggregate({
+            name: `${game.name} ${category.name}`,
+            description: `Buy ${game.name} ${category.name} from verified sellers — get what you ordered, or your money back with SafeDrop Buyer Protection.`,
+            brand: game.name,
+            lowPrice: stats.lowPrice,
+            highPrice: stats.highPrice,
+            offerCount: stats.count,
+            url: `/${gameSlug}/${categorySlug}`,
+          })}
+        />
+      )}
       {/* ── Game Sub-Nav ─────────────────────────────────────────────── */}
       <GameSubNav
         gameSlug={gameSlug}
@@ -699,6 +881,10 @@ export default async function CategoryBrowsePage({ params, searchParams }: PageP
                 {(category as any).description ||
                   `Browse verified ${category.name.toLowerCase()} listings for ${game.name}.`}
               </p>
+              {/* SEO intro — live stats, same source as metadata + JSON-LD. */}
+              <p className="mt-1.5 max-w-2xl text-[13px] text-text-tertiary">
+                {introLine}
+              </p>
             </div>
           </div>
           {/* Bottom lime hairline */}
@@ -723,7 +909,7 @@ export default async function CategoryBrowsePage({ params, searchParams }: PageP
             currentPage={currentPage}
           >
             {listings.length === 0 ? (
-              <EmptyState gameSlug={gameSlug} gameName={game.name} />
+              <EmptyState gameSlug={gameSlug} gameName={game.name} categoryName={category.name} />
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
                 {listings.map((listing: any) => (
@@ -739,13 +925,81 @@ export default async function CategoryBrowsePage({ params, searchParams }: PageP
           </CategoryPageLayout>
         </div>
       </div>
+
+      {/* ── Related games — same category on other games ─────────────── */}
+      <RelatedGames
+        currentGameId={game.id}
+        categorySlug={categorySlug}
+        categoryName={category.name}
+      />
     </div>
+  )
+}
+
+// ─── Related games ─────────────────────────────────────────────────────────────
+
+/**
+ * Cross-links the same category slug on up to 6 OTHER games that
+ * actually have it active. Real <a> links (next/link) so crawlers can
+ * follow the lateral money-page mesh. Server component — renders
+ * nothing when no sibling game carries the category.
+ */
+async function RelatedGames({
+  currentGameId,
+  categorySlug,
+  categoryName,
+}: {
+  currentGameId: string
+  categorySlug: string
+  categoryName: string
+}) {
+  const supabase = await createClient()
+  const { data } = await supabase
+    .from('categories')
+    .select('game:games!categories_game_id_fkey(id, name, slug, is_active)')
+    .eq('slug', categorySlug)
+    .eq('is_active', true)
+    .neq('game_id', currentGameId)
+    .limit(24) as any
+
+  const games = ((data ?? []) as any[])
+    .map((row) => row.game)
+    .filter((g) => g && g.slug && g.is_active !== false)
+    .slice(0, 6)
+
+  if (games.length === 0) return null
+
+  return (
+    <section className="mx-auto w-full max-w-7xl px-4 pb-14 pt-4 sm:px-6 lg:px-8">
+      <h2 className="text-[15px] font-bold text-text-primary">
+        Buy {categoryName} for:
+      </h2>
+      <div className="mt-3 flex flex-wrap gap-2">
+        {games.map((g: any) => (
+          <Link
+            key={g.id}
+            href={`/${g.slug}/${categorySlug}`}
+            className="inline-flex items-center rounded-full border border-border-default bg-bg-raised px-3.5 py-1.5 text-[13px] font-medium text-text-secondary transition-colors hover:border-lime-tint-border hover:text-text-primary"
+          >
+            {g.name} {categoryName}
+          </Link>
+        ))}
+      </div>
+    </section>
   )
 }
 
 // ─── Empty state ───────────────────────────────────────────────────────────────
 
-function EmptyState({ gameSlug, gameName }: { gameSlug: string; gameName: string }) {
+function EmptyState({
+  gameSlug,
+  gameName,
+  categoryName,
+}: {
+  gameSlug: string
+  gameName: string
+  categoryName: string
+}) {
   return (
     <div className="flex flex-col items-center justify-center py-24 text-center">
       <div className="mb-6 w-16 h-16 rounded-full bg-bg-overlay flex items-center justify-center">
@@ -756,7 +1010,15 @@ function EmptyState({ gameSlug, gameName }: { gameSlug: string; gameName: string
         </svg>
       </div>
       <h3 className="text-lg font-semibold text-text-primary mb-1">No listings found</h3>
-      <p className="text-sm text-text-tertiary mb-6">Try adjusting your filters or check back later</p>
+      <p className="text-sm text-text-tertiary mb-4">
+        Be the first to sell {gameName} {categoryName} on DropMarket — list in minutes at 5–7% fees.
+      </p>
+      <Link
+        href="/sell"
+        className="mb-5 inline-flex items-center rounded-full bg-lime px-5 py-2 text-sm font-semibold text-text-inverse transition-opacity hover:opacity-90"
+      >
+        Start Selling
+      </Link>
       <Link
         href={`/${gameSlug}`}
         className="inline-flex items-center gap-1.5 text-sm text-lime-text hover:text-lime-text transition-colors font-medium"

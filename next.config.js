@@ -44,6 +44,12 @@ const nextConfig = {
         destination: '/:rest*',
         permanent: true,
       },
+      {
+        // Blog slug rebrand: custody-free URL (outcome-language rule).
+        source: '/blog/how-safedrop-escrow-works',
+        destination: '/blog/how-safedrop-buyer-protection-works',
+        permanent: true,
+      },
     ]
   },
 }

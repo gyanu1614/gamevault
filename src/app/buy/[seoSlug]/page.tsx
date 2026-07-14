@@ -76,7 +76,7 @@ async function getListings(page: LandingPage) {
     .from('listings')
     .select(
       `
-      id, title, price, currency, images, delivery_time, is_unlimited, quantity, views, sales,
+      id, slug, title, price, currency, images, delivery_time, is_unlimited, quantity, views, sales,
       seller:profiles!listings_seller_id_fkey(id, username, avatar_url, seller_rating),
       game:games!listings_game_id_fkey(id, name, slug, emoji),
       category:categories!listings_category_id_fkey(id, name, slug, icon)
@@ -140,7 +140,7 @@ function buildStructuredData(page: LandingPage, listings: ListingWithRelations[]
           '@type': 'ListItem',
           position: i + 1,
           name: l.title,
-          url: `${BASE_URL}/listings/${l.id}`,
+          url: `${BASE_URL}/${l.game?.slug}/${l.category?.slug}/${l.slug || l.id}`,
           offers: {
             '@type': 'Offer',
             price: l.price.toFixed(2),
@@ -300,7 +300,7 @@ export default async function SEOLandingPage({
                         </td>
                         <td className="px-5 py-3.5 text-right">
                           <Link
-                            href={`/listings/${listing.id}`}
+                            href={`/${listing.game?.slug}/${listing.category?.slug}/${listing.slug || listing.id}`}
                             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-lime/10 hover:bg-lime/20 border border-lime-tint-border text-lime-text text-xs font-semibold transition-colors"
                           >
                             Buy
@@ -318,7 +318,7 @@ export default async function SEOLandingPage({
                 {listings.slice(0, 6).map((listing) => (
                   <Link
                     key={listing.id}
-                    href={`/listings/${listing.id}`}
+                    href={`/${listing.game?.slug}/${listing.category?.slug}/${listing.slug || listing.id}`}
                     className="flex items-center justify-between gap-4 p-4 rounded-2xl bg-white/[0.04] border border-border-subtle hover:border-lime-tint-border transition-all"
                   >
                     <div className="min-w-0">
