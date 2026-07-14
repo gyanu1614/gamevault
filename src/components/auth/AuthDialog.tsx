@@ -300,10 +300,10 @@ function HeroPanel({ mode }: { mode: AuthMode }) {
         {/* Top — logo */}
         <div className="flex items-center gap-2.5">
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-lime shadow-glow">
-            <span className="text-base font-black text-text-inverse">G</span>
+            <span className="text-base font-black text-text-inverse">D</span>
           </div>
           <span className="text-lg font-bold tracking-tight text-text-primary">
-            Game<span className="text-lime-text">Vault</span>
+            Drop<span className="text-lime-text">Market</span>
           </span>
         </div>
 
