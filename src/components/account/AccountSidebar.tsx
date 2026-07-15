@@ -303,6 +303,18 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
               ) : (
               <Link
                 href={item.href}
+                // Seller-gated routes must NOT be prefetched: a prefetch made
+                // before admin approval caches the middleware's seller-only
+                // redirect, so the first click after approval bounces until a
+                // hard refresh. prefetch={false} makes every click hit the
+                // middleware live.
+                prefetch={
+                  ['/account/dashboard', '/account/analytics', '/account/earnings', '/account/listings'].some(
+                    (r) => item.href.startsWith(r),
+                  )
+                    ? false
+                    : undefined
+                }
                 onClick={() => {
                   setIsMobileOpen(false)
                   setOpenGroup(null)
