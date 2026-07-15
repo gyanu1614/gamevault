@@ -262,7 +262,7 @@ export async function approveWithdrawalRequest(params: {
     const admin = await requireAdmin()
 
     const serviceClient = createServiceRoleClient()
-    const { error } = await (serviceClient as any)
+    const { data: updatedRows, error } = await (serviceClient as any)
       .from('withdrawal_requests')
       .update({
         status: 'approved',
@@ -272,10 +272,55 @@ export async function approveWithdrawalRequest(params: {
       })
       .eq('id', params.requestId)
       .eq('status', 'pending')
+      .select('user_id, amount, method_id, method_name')
 
     if (error) throw error
 
-    // TODO: Create notification for user
+    // Tell the user their withdrawal was approved (in-app + email).
+    // Awaited but isolated: comms failures must never fail the approval.
+    const request = updatedRows?.[0]
+    if (request) {
+      await (async () => {
+        const [{ data: profile }, { data: method }] = await Promise.all([
+          serviceClient
+            .from('profiles')
+            .select('email, username, full_name')
+            .eq('id', request.user_id)
+            .single() as any,
+          (serviceClient as any)
+            .from('withdrawal_methods')
+            .select('display_name')
+            .eq('id', request.method_id)
+            .single(),
+        ])
+        const methodName =
+          method?.display_name || request.method_name || 'your withdrawal method'
+        const amount = Number(request.amount) || 0
+
+        const { error: notifError } = await (serviceClient as any)
+          .from('notifications')
+          .insert({
+            user_id: request.user_id,
+            type: 'withdrawal_approved',
+            title: 'Withdrawal Approved',
+            message: `Your $${amount.toFixed(2)} withdrawal was approved and is being processed to ${methodName}.`,
+            link: '/account/wallet',
+            is_read: false,
+          })
+        if (notifError) throw notifError
+
+        if (profile?.email) {
+          const { sendWithdrawalProcessedEmail } = await import('@/lib/email')
+          await sendWithdrawalProcessedEmail({
+            to: profile.email,
+            name: profile.full_name || profile.username || 'Gamer',
+            amount,
+            method: methodName,
+            status: 'approved',
+          })
+        }
+      })().catch((err) => console.error('[Withdrawals] Approval comms failed:', err))
+    }
 
     return { success: true }
   } catch (error: any) {
@@ -298,7 +343,7 @@ export async function rejectWithdrawalRequest(params: {
     const admin = await requireAdmin()
 
     const serviceClient = createServiceRoleClient()
-    const { error } = await (serviceClient as any)
+    const { data: updatedRows, error } = await (serviceClient as any)
       .from('withdrawal_requests')
       .update({
         status: 'rejected',
@@ -308,10 +353,56 @@ export async function rejectWithdrawalRequest(params: {
       })
       .eq('id', params.requestId)
       .eq('status', 'pending')
+      .select('user_id, amount, method_id, method_name')
 
     if (error) throw error
 
-    // TODO: Create notification for user
+    // Tell the user their withdrawal was declined (in-app + email).
+    // Awaited but isolated: comms failures must never fail the decision.
+    const request = updatedRows?.[0]
+    if (request) {
+      await (async () => {
+        const [{ data: profile }, { data: method }] = await Promise.all([
+          serviceClient
+            .from('profiles')
+            .select('email, username, full_name')
+            .eq('id', request.user_id)
+            .single() as any,
+          (serviceClient as any)
+            .from('withdrawal_methods')
+            .select('display_name')
+            .eq('id', request.method_id)
+            .single(),
+        ])
+        const methodName =
+          method?.display_name || request.method_name || 'your withdrawal method'
+        const amount = Number(request.amount) || 0
+
+        const { error: notifError } = await (serviceClient as any)
+          .from('notifications')
+          .insert({
+            user_id: request.user_id,
+            type: 'withdrawal_rejected',
+            title: 'Withdrawal Declined',
+            message: `Your $${amount.toFixed(2)} withdrawal was declined: ${params.reason}. The funds remain in your wallet balance.`,
+            link: '/account/wallet',
+            is_read: false,
+          })
+        if (notifError) throw notifError
+
+        if (profile?.email) {
+          const { sendWithdrawalProcessedEmail } = await import('@/lib/email')
+          await sendWithdrawalProcessedEmail({
+            to: profile.email,
+            name: profile.full_name || profile.username || 'Gamer',
+            amount,
+            method: methodName,
+            status: 'rejected',
+            reason: params.reason,
+          })
+        }
+      })().catch((err) => console.error('[Withdrawals] Rejection comms failed:', err))
+    }
 
     return { success: true }
   } catch (error: any) {

@@ -313,8 +313,15 @@ export async function createOrder(data: CreateOrderData): Promise<{
 
     // Send welcome email for guest users
     if (data.isGuest && data.guestEmail) {
-      // TODO: Implement sendGuestWelcomeEmail
-      console.log('Send guest welcome email to:', data.guestEmail)
+      const guestEmail = data.guestEmail
+      await (async () => {
+        const { sendGuestWelcomeEmail } = await import('@/lib/email')
+        await sendGuestWelcomeEmail({
+          to: guestEmail,
+          orderNumber: order.order_number || order.id.slice(0, 8).toUpperCase(),
+          orderId: order.id,
+        })
+      })().catch((err) => console.error('[CreateOrder] Guest welcome email failed:', err))
     }
 
     // TODO: Send order confirmation emails
@@ -1342,6 +1349,16 @@ export async function handleGuestCheckout(email: string): Promise<{
       console.error('Error creating guest profile:', profileError)
       // Don't fail here - profile might exist from trigger
     }
+
+    // Send the account-claim link: the account was created with a random
+    // password the guest never sees, so this password-setup email is how
+    // they claim it. Never fail checkout if the email fails.
+    await (async () => {
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/reset-password`,
+      })
+      if (resetError) throw resetError
+    })().catch((err) => console.error('[GuestCheckout] Account-claim email failed:', err))
 
     console.log(`Guest account created for ${email} with ID ${userId}`)
 

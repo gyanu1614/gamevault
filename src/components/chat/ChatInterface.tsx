@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
+import { notifyNewMessage } from '@/lib/actions/message-notify'
 import { toast } from 'sonner'
 import MessageList from './MessageList'
 import MessageInput from './MessageInput'
@@ -295,6 +296,11 @@ export default function ChatInterface({
         .from('conversations')
         .update as any)({ last_message_at: new Date().toISOString() })
         .eq('id', conversationId)
+
+      // Comms (first-unread-only): notify + email the other participant.
+      // The server action never throws and does all awaiting server-side;
+      // client-side we deliberately don't block the optimistic UI on it.
+      notifyNewMessage(conversationId).catch(() => {})
 
       // Refetch to replace optimistic message with real one
       const { data } = await supabase
