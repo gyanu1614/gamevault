@@ -3,6 +3,9 @@ import { Resend } from 'resend'
 const resend = new Resend(process.env.RESEND_API_KEY)
 
 const FROM_EMAIL = 'DropMarket <noreply@dropmarket.gg>'
+// Replies to any transactional email land in the monitored support inbox
+// (Spacemail alias) instead of bouncing off noreply@.
+const REPLY_TO = 'support@dropmarket.gg'
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
 
 /**
@@ -35,6 +38,7 @@ export async function sendApplicationApprovedEmail({
   try {
     const { data, error } = await resend.emails.send({
       from: FROM_EMAIL,
+    replyTo: REPLY_TO,
       to,
       subject: '🎉 Your Seller Application has been Approved!',
       html: `
@@ -123,6 +127,7 @@ export async function sendApplicationRejectedEmail({
   try {
     const { data, error } = await resend.emails.send({
       from: FROM_EMAIL,
+    replyTo: REPLY_TO,
       to,
       subject: 'Update on Your Seller Application - DropMarket',
       html: `
@@ -211,6 +216,7 @@ export async function sendInfoRequestedEmail({
   try {
     const { data, error } = await resend.emails.send({
       from: FROM_EMAIL,
+    replyTo: REPLY_TO,
       to,
       subject: 'Action Required: Additional Information Needed - DropMarket',
       html: `
@@ -305,6 +311,7 @@ export async function sendDisputeOpenedEmail({
 
   const { data, error } = await resend.emails.send({
     from: FROM_EMAIL,
+    replyTo: REPLY_TO,
     to,
     subject,
     html: `
@@ -369,6 +376,7 @@ export async function sendDisputeResolvedEmail({
 }) {
   const { data, error } = await resend.emails.send({
     from: FROM_EMAIL,
+    replyTo: REPLY_TO,
     to,
     subject: 'Your Dispute Has Been Resolved - DropMarket',
     html: `
@@ -447,6 +455,7 @@ export async function sendNewOrderNotificationEmail({
 
   const { data, error } = await resend.emails.send({
     from: FROM_EMAIL,
+    replyTo: REPLY_TO,
     to,
     subject: `New Order Received — ${listingTitle}`,
     html: `
@@ -551,6 +560,7 @@ export async function sendOrderCompletionEmail({
 }) {
   const { data, error } = await resend.emails.send({
     from: FROM_EMAIL,
+    replyTo: REPLY_TO,
     to,
     // Trustpilot Automatic Feedback Service: BCC'ing the unique AFS address
     // makes Trustpilot send this buyer a verified-review invitation ~7 days
@@ -650,6 +660,7 @@ export async function sendOrderPaidEmail({
 }) {
   const { data, error } = await resend.emails.send({
     from: FROM_EMAIL,
+    replyTo: REPLY_TO,
     to,
     subject: `Order Confirmed — ${listingTitle}`,
     html: `
@@ -740,6 +751,7 @@ export async function sendOrderDeliveredEmail({
 
   const { data, error } = await resend.emails.send({
     from: FROM_EMAIL,
+    replyTo: REPLY_TO,
     to,
     subject: `Your Order Was Delivered — Confirm Receipt`,
     html: `
@@ -816,6 +828,7 @@ export async function sendOrderRefundedEmail({
 }) {
   const { data, error } = await resend.emails.send({
     from: FROM_EMAIL,
+    replyTo: REPLY_TO,
     to,
     subject: pending
       ? `Order Cancelled — Refund Being Arranged (#${orderNumber})`
@@ -905,6 +918,7 @@ export async function sendOrderCompletedSellerEmail({
 }) {
   const { data, error } = await resend.emails.send({
     from: FROM_EMAIL,
+    replyTo: REPLY_TO,
     to,
     subject: `Order Complete — $${payout.toFixed(2)} Payout on the Way`,
     html: `
@@ -982,6 +996,7 @@ export async function sendListingApprovedEmail({
 }) {
   const { data, error } = await resend.emails.send({
     from: FROM_EMAIL,
+    replyTo: REPLY_TO,
     to,
     subject: `Your Listing Is Live — ${listingTitle}`,
     html: `
@@ -1047,6 +1062,7 @@ export async function sendListingRejectedEmail({
 }) {
   const { data, error } = await resend.emails.send({
     from: FROM_EMAIL,
+    replyTo: REPLY_TO,
     to,
     subject: changesRequested
       ? `Changes Requested — ${listingTitle}`
@@ -1127,6 +1143,7 @@ export async function sendWithdrawalProcessedEmail({
   const approved = status === 'approved'
   const { data, error } = await resend.emails.send({
     from: FROM_EMAIL,
+    replyTo: REPLY_TO,
     to,
     subject: approved
       ? `Withdrawal Approved — $${amount.toFixed(2)} on the Way`
@@ -1210,6 +1227,7 @@ export async function sendGuestWelcomeEmail({
 }) {
   const { data, error } = await resend.emails.send({
     from: FROM_EMAIL,
+    replyTo: REPLY_TO,
     to,
     subject: `Your DropMarket Account — Track Order #${orderNumber}`,
     html: `
@@ -1280,6 +1298,7 @@ export async function sendNewMessageEmail({
   const truncated = preview.length > 120 ? `${preview.slice(0, 117)}...` : preview
   const { data, error } = await resend.emails.send({
     from: FROM_EMAIL,
+    replyTo: REPLY_TO,
     to,
     subject: `New Message From ${senderName} — Order #${orderNumber}`,
     html: `
@@ -1350,6 +1369,7 @@ export async function sendTrustpilotInvitationEmail({
 
   const { data, error } = await resend.emails.send({
     from: FROM_EMAIL,
+    replyTo: REPLY_TO,
     to,
     subject: `How was your DropMarket experience? Leave us a review`,
     html: `
