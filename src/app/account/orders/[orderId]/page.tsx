@@ -22,9 +22,6 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { parseDeliveryMinutes } from '@/lib/utils/delivery-time'
-import BuyerOrderDetailClient from '@/components/orders/BuyerOrderDetailClientCompact'
-import SellerOrderDetailClient from '@/components/orders/SellerOrderDetailClientCompact'
-import CopyOrderId from '@/components/orders/CopyOrderId'
 import { OrderClient } from './_OrderClient'
 import { PaymentReturnHandler } from './_PaymentReturnHandler'
 
@@ -65,6 +62,7 @@ async function checkOrderAccess(
 // ── Status badge config ───────────────────────────────────────────────────────
 
 const STATUS_CONFIG: Record<string, { label: string; pill: string; dot: string; pulse: boolean; icon: React.ElementType }> = {
+  pending:    { label: 'Awaiting Payment', pill: 'bg-amber-500/10 text-amber-400 border-amber-500/20', dot: 'bg-amber-400', pulse: true, icon: Clock },
   paid:       { label: 'Processing',  pill: 'bg-amber-500/10 text-amber-400 border-amber-500/20',   dot: 'bg-amber-400',  pulse: true,  icon: Clock },
   delivering: { label: 'Delivering',  pill: 'bg-lime-tint-bg text-lime-text border-lime-tint-border', dot: 'bg-lime', pulse: true,  icon: Truck },
   delivered:  { label: 'Delivered',   pill: 'bg-blue-500/10 text-blue-400 border-blue-500/20',       dot: 'bg-blue-400',   pulse: false, icon: Package },
