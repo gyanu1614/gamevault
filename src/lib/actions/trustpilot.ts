@@ -12,6 +12,7 @@ import { sendTrustpilotInvitationEmail } from '@/lib/email'
 
 const TRUSTPILOT_API_KEY = process.env.TRUSTPILOT_API_KEY
 const TRUSTPILOT_BUSINESS_UNIT_ID = process.env.NEXT_PUBLIC_TRUSTPILOT_BUSINESS_UNIT_ID
+const TRUSTPILOT_BCC_EMAIL = process.env.TRUSTPILOT_BCC_EMAIL
 
 /**
  * Send Trustpilot review invitation
@@ -34,6 +35,19 @@ export async function sendTrustpilotInvitation(orderId: string): Promise<{
     }
 
     const supabase = await createClient()
+
+    // BCC mode: the order-completion receipt already BCC'd Trustpilot's
+    // Automatic Feedback Service, which sends its own verified-review
+    // invitation ~7 days after completion. Sending our fallback email too
+    // would double-ask the buyer — stamp the row as handled and stop.
+    if (TRUSTPILOT_BCC_EMAIL) {
+      await (supabase
+        .from('trustpilot_invitations')
+        .update as any)({ sent_at: new Date().toISOString() })
+        .eq('order_id', orderId)
+        .is('sent_at', null)
+      return { success: true }
+    }
 
     // Get order details with buyer info
     const { data: order, error: orderError } = await supabase

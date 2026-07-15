@@ -861,11 +861,36 @@ export async function confirmOrderReceipt(orderId: string): Promise<{
       // Non-fatal - order is still completed, payout can be retried manually
     }
 
-    // TODO: Send completion emails
-    // Trustpilot review invitation: handled automatically — the DB trigger
-    // schedule_trustpilot_invitation() (fires on orders.status → 'completed')
-    // creates a trustpilot_invitations row scheduled 7 days out, and the daily
-    // cron /api/cron/send-trustpilot-invitations dispatches it. No call needed here.
+    // Buyer completion receipt (fire-and-forget, non-blocking). When
+    // TRUSTPILOT_BCC_EMAIL is set the email BCCs Trustpilot's Automatic
+    // Feedback Service, which then sends the buyer a verified-review
+    // invitation ~7 days later — this replaces the cron's fallback review
+    // email (sendTrustpilotInvitation skips itself in BCC mode).
+    ;(async () => {
+      const [{ data: buyer }, { data: completedListing }] = await Promise.all([
+        supabase
+          .from('profiles')
+          .select('email, username, full_name')
+          .eq('id', user.id)
+          .single() as any,
+        supabase
+          .from('listings')
+          .select('title')
+          .eq('id', order.listing_id)
+          .single() as any,
+      ])
+      if (buyer?.email) {
+        const { sendOrderCompletionEmail } = await import('@/lib/email')
+        await sendOrderCompletionEmail({
+          to: buyer.email,
+          name: buyer.full_name || buyer.username || 'Gamer',
+          orderId,
+          orderNumber: order.order_number || orderId.slice(0, 8).toUpperCase(),
+          listingTitle: completedListing?.title || 'your item',
+          totalPaid: order.total_amount ?? 0,
+        })
+      }
+    })().catch((err) => console.error('[Orders] Completion email failed:', err))
 
     // P5.2 — Award cashback to buyer (fire-and-forget, non-blocking)
     // Guest orders don't get loyalty credits (no persistent account)
