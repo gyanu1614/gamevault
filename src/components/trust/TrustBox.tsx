@@ -40,7 +40,14 @@ export const TRUSTBOX_TEMPLATES = {
   carousel: '54ad5defc6454f065c28af8b',
   /** Grid of recent reviews for dedicated trust sections. */
   grid: '539adbd6dec7e10e686debee',
+  /** "Review us" collection CTA — the ONLY widget on the free plan
+   *  (all display widgets above need Plus). Requires the matching
+   *  `token` prop from the Get-code snippet. */
+  reviewCollector: '56278e9abfbbba0bdcd568bc',
 } as const
+
+/** data-token for the free Review Collector widget (from its Get-code snippet). */
+export const REVIEW_COLLECTOR_TOKEN = '96218c86-55f4-4221-b33a-6cfd8f0d1c8b'
 
 const BUSINESS_UNIT_ID = process.env.NEXT_PUBLIC_TRUSTPILOT_BUSINESS_UNIT_ID
 const WIDGET_SCRIPT_SRC =
@@ -84,6 +91,8 @@ function loadTrustpilotScript(): Promise<void> {
 
 interface TrustBoxProps {
   templateId?: string
+  /** data-token — required by the Review Collector template, unused by others. */
+  token?: string
   height?: string
   width?: string
   theme?: 'light' | 'dark'
@@ -93,6 +102,7 @@ interface TrustBoxProps {
 
 export default function TrustBox({
   templateId = TRUSTBOX_TEMPLATES.mini,
+  token,
   height = '150px',
   width = '100%',
   theme = 'dark',
@@ -157,6 +167,7 @@ export default function TrustBox({
         data-locale={locale}
         data-template-id={templateId}
         data-businessunit-id={BUSINESS_UNIT_ID}
+        data-token={token}
         data-style-height={height}
         data-style-width={width}
         data-theme={theme}

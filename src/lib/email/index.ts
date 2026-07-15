@@ -507,6 +507,101 @@ export async function sendNewOrderNotificationEmail({
 }
 
 // ============================================
+// ORDER EMAILS
+// ============================================
+
+export async function sendOrderCompletionEmail({
+  to,
+  name,
+  orderId,
+  orderNumber,
+  listingTitle,
+  totalPaid,
+}: {
+  to: string
+  name: string
+  orderId: string
+  orderNumber: string
+  listingTitle: string
+  totalPaid: number
+}) {
+  const { data, error } = await resend.emails.send({
+    from: FROM_EMAIL,
+    to,
+    // Trustpilot Automatic Feedback Service: BCC'ing the unique AFS address
+    // makes Trustpilot send this buyer a verified-review invitation ~7 days
+    // later (free-plan feature, no API needed). Inactive when env is unset.
+    ...(process.env.TRUSTPILOT_BCC_EMAIL ? { bcc: process.env.TRUSTPILOT_BCC_EMAIL } : {}),
+    subject: `Order Complete — ${listingTitle}`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      </head>
+      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #0a0a0f; color: #ffffff; margin: 0; padding: 40px 20px;">
+        <div style="max-width: 600px; margin: 0 auto; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; padding: 40px;">
+
+          <div style="text-align: center; margin-bottom: 32px;">
+            <h1 style="font-size: 28px; font-weight: bold; margin: 0; color: #ffffff;">
+              Drop<span style="color: #a3e635;">Market</span>
+            </h1>
+          </div>
+
+          <div style="text-align: center; margin-bottom: 24px;">
+            <div style="display: inline-block; width: 56px; height: 56px; line-height: 56px; border-radius: 50%; background: rgba(163, 230, 53, 0.12); border: 1px solid rgba(163, 230, 53, 0.4); font-size: 28px;">&#10003;</div>
+          </div>
+
+          <h2 style="font-size: 24px; font-weight: 600; text-align: center; margin: 0 0 12px 0;">
+            Order Complete
+          </h2>
+
+          <p style="font-size: 15px; line-height: 1.6; color: #a1a1aa; text-align: center; margin: 0 0 28px 0;">
+            Thanks, ${name} — you've confirmed delivery, and your order is all wrapped up.
+          </p>
+
+          <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; padding: 20px; margin-bottom: 24px;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+              <tr>
+                <td style="color: #a1a1aa; padding: 6px 0;">Order</td>
+                <td style="color: #ffffff; text-align: right; font-weight: 600;">#${orderNumber}</td>
+              </tr>
+              <tr>
+                <td style="color: #a1a1aa; padding: 6px 0;">Item</td>
+                <td style="color: #ffffff; text-align: right;">${listingTitle}</td>
+              </tr>
+              <tr>
+                <td style="color: #a1a1aa; padding: 6px 0;">Total Paid</td>
+                <td style="color: #ffffff; text-align: right; font-weight: 600;">$${totalPaid.toFixed(2)}</td>
+              </tr>
+            </table>
+          </div>
+
+          <p style="font-size: 13px; line-height: 1.6; color: #a1a1aa; text-align: center; margin: 0 0 28px 0;">
+            This order was covered by SafeDrop Buyer Protection from checkout until you confirmed delivery — the seller is only paid out now that you have.
+          </p>
+
+          <div style="text-align: center; margin-bottom: 28px;">
+            <a href="${APP_URL}/account/orders/${orderId}" style="display: inline-block; background: #a3e635; color: #0a0a0f; text-decoration: none; padding: 14px 36px; border-radius: 6px; font-weight: 700; font-size: 15px;">
+              View Your Order
+            </a>
+          </div>
+
+          <p style="font-size: 12px; color: #6b7280; text-align: center; margin: 0;">
+            Questions about this order? <a href="${APP_URL}/support" style="color: #a3e635;">Contact support</a>.
+          </p>
+
+        </div>
+      </body>
+      </html>
+    `,
+  })
+
+  return error ? { success: false, error } : { success: true, data }
+}
+
+// ============================================
 // TRUSTPILOT EMAILS
 // ============================================
 
