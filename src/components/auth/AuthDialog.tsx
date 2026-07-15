@@ -493,15 +493,7 @@ function LoginForm({
         </div>
 
         <div className="space-y-1.5">
-          <div className="flex items-center justify-between">
-            <Label htmlFor="auth-password">Password</Label>
-            <a
-              href="/forgot-password"
-              className="text-[12.5px] font-medium text-lime-text transition-colors hover:text-lime"
-            >
-              Forgot?
-            </a>
-          </div>
+          <Label htmlFor="auth-password">Password</Label>
           <div className="relative">
             <Input
               id="auth-password"
@@ -525,6 +517,14 @@ function LoginForm({
           {errors.password && (
             <p className="text-[12px] text-error">{errors.password.message}</p>
           )}
+          <div className="flex justify-end pt-0.5">
+            <a
+              href="/forgot-password"
+              className="text-[12.5px] font-medium text-lime-text transition-colors hover:text-lime"
+            >
+              Forgot Password?
+            </a>
+          </div>
         </div>
 
         {error && (
