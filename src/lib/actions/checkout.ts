@@ -147,6 +147,12 @@ export async function createCheckout(input: CreateCheckoutInput): Promise<Create
         p_event: 'CHARGE_CONFIRMED',
         p_dedupe_key: 'wallet-full',
       })
+      // Paid comms normally ride on the payment webhook (dispatch), which
+      // this wallet-only branch bypasses — send them here. The order was
+      // created moments ago in this same call, so this is always its first
+      // CHARGE_CONFIRMED. Awaited; failure never fails checkout.
+      const { notifyOrderTransition } = await import('@/lib/payments/notify')
+      await notifyOrderTransition('CHARGE_CONFIRMED', orderId).catch(() => {})
       return { success: true, orderId, fullyPaidByWallet: true }
     }
 

@@ -70,5 +70,15 @@ export async function dispatch(
   }
 
   const result = await transition(event.orderId, orderEvent, providerEventId)
+
+  // Comms ride on top of an APPLIED transition only (a replayed/no-op webhook
+  // must not re-email anyone). AWAITED — on serverless the function freezes
+  // once the webhook response is sent, so an unawaited send would be silently
+  // dropped — but errors are swallowed: comms failure never fails the payment.
+  if (result.changed) {
+    const { notifyOrderTransition } = await import('@/lib/payments/notify')
+    await notifyOrderTransition(orderEvent, event.orderId, event).catch(() => {})
+  }
+
   return { applied: result.changed, orderId: result.orderId, status: result.status }
 }
