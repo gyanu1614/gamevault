@@ -88,7 +88,7 @@ export default function OrderProgressBar({ status, order, disputeResolution }: O
 
   if (status === 'disputed') {
     return (
-      <div className="h-full rounded-2xl border border-red-500/25 bg-red-500/[0.06] px-4 py-3 flex items-center">
+      <div className="h-full rounded-lg border border-red-500/25 bg-red-500/[0.06] px-4 py-3 flex items-center">
         <div className="flex items-center gap-3 w-full">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-error/40 bg-error-bg flex-shrink-0">
             <AlertTriangle className="h-4 w-4 text-error" />
@@ -104,7 +104,7 @@ export default function OrderProgressBar({ status, order, disputeResolution }: O
   }
   if (status === 'refunded') {
     return (
-      <div className="h-full rounded-2xl border border-border-subtle bg-bg-overlay px-4 py-3 flex items-center">
+      <div className="h-full rounded-lg border border-border-subtle bg-bg-overlay px-4 py-3 flex items-center">
         <div className="flex items-center gap-3 w-full">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-bg-overlay flex-shrink-0">
             <RefreshCw className="h-4 w-4 text-text-secondary" />
@@ -119,7 +119,7 @@ export default function OrderProgressBar({ status, order, disputeResolution }: O
   }
   if (status === 'cancelled') {
     return (
-      <div className="h-full rounded-2xl border border-blue-500/25 bg-blue-500/[0.06] px-4 py-3 flex items-center">
+      <div className="h-full rounded-lg border border-blue-500/25 bg-blue-500/[0.06] px-4 py-3 flex items-center">
         <div className="flex items-center gap-3 w-full">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-blue-500/30 bg-blue-500/10 flex-shrink-0">
             <XCircle className="h-4 w-4 text-blue-400" />
@@ -137,11 +137,11 @@ export default function OrderProgressBar({ status, order, disputeResolution }: O
   const steps = [
     {
       key: 'delivering',
-      label: 'Preparing',
+      label: status === 'pending' ? 'Awaiting Payment' : 'Preparing',
       icon: Package,
       ts: fmtTs(order?.delivering_at || order?.created_at),
       done: ['delivered', 'completed'].includes(status),
-      active: status === 'paid' || status === 'delivering',
+      active: status === 'pending' || status === 'paid' || status === 'delivering',
     },
     {
       key: 'delivered',
@@ -168,13 +168,13 @@ export default function OrderProgressBar({ status, order, disputeResolution }: O
   const showTimer = status === 'delivered' && order?.escrow_status === 'held' && !!order?.auto_release_at
 
   return (
-    <div className="h-full rounded-2xl border border-border-subtle bg-white/[0.025] px-5 py-3 flex items-center">
+    <div className="h-full rounded-lg border border-border-subtle bg-white/[0.025] px-5 py-3 flex items-center">
       <div className="relative w-full">
         {/* Track bg */}
         <div className="absolute top-[17px] left-[calc(16.67%)] right-[calc(16.67%)] h-px bg-bg-raised-hover" />
         {/* Fill */}
         <div
-          className="absolute top-[17px] left-[calc(16.67%)] h-px bg-gradient-to-r from-lime to-violet-400 transition-all duration-700"
+          className="absolute top-[17px] left-[calc(16.67%)] h-px bg-lime transition-all duration-700"
           style={{ width: `calc(${fillPct}% * 0.667)` }}
         />
 
@@ -188,15 +188,15 @@ export default function OrderProgressBar({ status, order, disputeResolution }: O
                 {/* Node */}
                 <div className={cn(
                   'relative flex h-8 w-8 items-center justify-center rounded-full border-2 transition-all duration-500',
-                  step.done  && 'bg-gradient-to-br from-lime to-lime border-violet-400 shadow-sm shadow-violet-500/30',
-                  step.active && !step.done && 'bg-lime/20 border-violet-400',
+                  step.done  && 'bg-lime border-lime shadow-sm shadow-lime/25',
+                  step.active && !step.done && 'bg-lime/20 border-lime/60',
                   !step.done && !step.active && 'bg-transparent border-white/[0.1]',
                 )}>
                   {step.active && !step.done && (
                     <span className="absolute inset-0 rounded-full bg-lime/20 animate-ping opacity-40" />
                   )}
                   {step.done ? (
-                    <Check className="h-3.5 w-3.5 text-white" strokeWidth={3} />
+                    <Check className="h-3.5 w-3.5 text-text-inverse" strokeWidth={3} />
                   ) : (
                     <Icon className={cn('h-4 w-4', step.active ? 'text-lime-text' : 'text-gray-700')} />
                   )}

@@ -15,6 +15,7 @@
 
 import { OrderHeader } from './_OrderHeader'
 import { DeliveryProgressBar } from './_DeliveryProgressBar'
+import OrderProgressBar from '@/components/orders/OrderProgressBar'
 import { OrderCard } from './_OrderCard'
 import { OrderDetailsCard } from './_OrderDetailsCard'
 import { StatusStrip } from './_StatusStrip'
@@ -270,6 +271,25 @@ export function OrderClient(props: OrderClientProps) {
             chat just fills the remaining left-column height. */}
         <div className="mt-6 grid grid-cols-1 gap-[22px] lg:grid-cols-[1fr_412px]">
           <div className="flex flex-col gap-[18px]">
+            {/* Order-stage stepper (Awaiting Payment/Preparing → Delivered →
+                Complete). Lost in the handoff rebuild — the legacy Compact
+                clients that rendered it are dead code. Step-flow statuses
+                only: the terminal states (disputed/refunded/cancelled and
+                resolved disputes) are already covered by the StatusStrip. */}
+            {!disputeResolution &&
+              ['pending', 'paid', 'delivering', 'delivered', 'completed'].includes(order.status) && (
+                <OrderProgressBar
+                  status={order.status}
+                  order={{
+                    created_at: order.created_at,
+                    delivering_at: order.delivering_at,
+                    delivered_at: order.delivered_at,
+                    completed_at: order.completed_at,
+                    auto_release_at: order.auto_release_at,
+                    escrow_status: order.escrow_status,
+                  }}
+                />
+              )}
             <DeliveryProgressBar
               startedAt={slaStartedAt}
               slaSeconds={slaSeconds}
