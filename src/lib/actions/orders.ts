@@ -905,6 +905,14 @@ export async function confirmOrderReceipt(orderId: string): Promise<{
       return { success: true }
     }
 
+    // An UNPAID order must never be confirmable — without this, a buyer
+    // could walk a pending order straight to 'completed' (found when the
+    // dead PUBLIC_API_URL fallback left every order stuck at 'pending'
+    // yet the test flow still "completed" one).
+    if (order.status === 'pending' || order.status === 'cancelled' || order.status === 'refunded') {
+      return { success: false, error: 'This order has not been paid yet' }
+    }
+
     // If order is not yet delivered, mark as delivered first
     // This allows buyer to confirm receipt even if seller hasn't marked as delivered
     const now = new Date().toISOString()

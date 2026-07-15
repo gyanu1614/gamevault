@@ -29,9 +29,17 @@ export function coinGateCallbackSecret(): string | undefined {
   return process.env.COINGATE_CALLBACK_TOKEN_SECRET
 }
 
-/** Public base URL for building callback/success/cancel URLs. */
+/** Public base URL for building callback/success/cancel URLs.
+ *  PUBLIC_API_URL lets dev point callbacks at an ngrok tunnel; in prod it
+ *  is usually unset, so fall back to the deployment URL BEFORE localhost —
+ *  the old localhost-only fallback silently sent every CoinGate payment
+ *  webhook to http://localhost:3000 (orders stuck 'pending' forever). */
 export function publicApiUrl(): string {
-  return process.env.PUBLIC_API_URL ?? 'http://localhost:3000'
+  return (
+    process.env.PUBLIC_API_URL ??
+    process.env.NEXT_PUBLIC_APP_URL ??
+    'http://localhost:3000'
+  )
 }
 
 /** Settlement currency — EUR, our base/ledger currency. */
