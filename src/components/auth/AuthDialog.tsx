@@ -454,7 +454,7 @@ function LoginForm({
           <div className="flex items-center justify-between">
             <Label htmlFor="auth-password">Password</Label>
             <a
-              href="/auth/reset-password"
+              href="/forgot-password"
               className="text-[12.5px] font-medium text-lime-text transition-colors hover:text-lime"
             >
               Forgot?

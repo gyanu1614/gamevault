@@ -5,6 +5,20 @@ const resend = new Resend(process.env.RESEND_API_KEY)
 const FROM_EMAIL = 'DropMarket <noreply@dropmarket.gg>'
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
 
+/**
+ * Escape user-supplied text before interpolating into email HTML. Listing
+ * titles, usernames and dispute reasons are attacker-controlled — without
+ * this a seller could inject markup into buyers' inboxes.
+ */
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
 // ============================================
 // APPLICATION EMAILS
 // ============================================
@@ -31,11 +45,11 @@ export async function sendApplicationApprovedEmail({
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
         </head>
         <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #0a0a0f; color: #ffffff; margin: 0; padding: 40px 20px;">
-          <div style="max-width: 600px; margin: 0 auto; background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px; padding: 40px;">
+          <div style="max-width: 600px; margin: 0 auto; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; padding: 40px;">
 
             <div style="text-align: center; margin-bottom: 32px;">
-              <h1 style="font-size: 28px; font-weight: bold; margin: 0; background: linear-gradient(90deg, #6366f1, #8b5cf6); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
-                DropMarket
+              <h1 style="font-size: 28px; font-weight: bold; margin: 0; color: #ffffff;">
+                Drop<span style="color: #a3e635;">Market</span>
               </h1>
             </div>
 
@@ -44,15 +58,15 @@ export async function sendApplicationApprovedEmail({
             </div>
 
             <h2 style="font-size: 24px; font-weight: 600; text-align: center; margin: 0 0 16px 0;">
-              Congratulations, ${name}!
+              Congratulations, ${escapeHtml(name)}!
             </h2>
 
             <p style="font-size: 16px; line-height: 1.6; color: #a1a1aa; text-align: center; margin: 0 0 24px 0;">
-              Your seller application for <strong style="color: #ffffff;">"${displayName}"</strong> has been approved! You can now start listing your gaming items on DropMarket.
+              Your seller application for <strong style="color: #ffffff;">"${escapeHtml(displayName)}"</strong> has been approved! You can now start listing your gaming items on DropMarket.
             </p>
 
-            <div style="background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.3); border-radius: 12px; padding: 20px; margin-bottom: 24px;">
-              <h3 style="font-size: 16px; font-weight: 600; color: #22c55e; margin: 0 0 12px 0;">
+            <div style="background: rgba(163, 230, 53, 0.08); border: 1px solid rgba(163, 230, 53, 0.3); border-radius: 8px; padding: 20px; margin-bottom: 24px;">
+              <h3 style="font-size: 16px; font-weight: 600; color: #a3e635; margin: 0 0 12px 0;">
                 ✅ What's Next?
               </h3>
               <ul style="margin: 0; padding-left: 20px; color: #a1a1aa; font-size: 14px; line-height: 1.8;">
@@ -64,7 +78,7 @@ export async function sendApplicationApprovedEmail({
             </div>
 
             <div style="text-align: center; margin-bottom: 24px;">
-              <a href="${APP_URL}/seller/dashboard" style="display: inline-block; background: linear-gradient(90deg, #6366f1, #8b5cf6); color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600; font-size: 16px;">
+              <a href="${APP_URL}/seller/dashboard" style="display: inline-block; background: #a3e635; color: #0a0a0f; text-decoration: none; padding: 14px 36px; border-radius: 6px; font-weight: 700; font-size: 15px;">
                 Go to Seller Dashboard
               </a>
             </div>
@@ -119,33 +133,33 @@ export async function sendApplicationRejectedEmail({
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
         </head>
         <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #0a0a0f; color: #ffffff; margin: 0; padding: 40px 20px;">
-          <div style="max-width: 600px; margin: 0 auto; background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px; padding: 40px;">
+          <div style="max-width: 600px; margin: 0 auto; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; padding: 40px;">
 
             <div style="text-align: center; margin-bottom: 32px;">
-              <h1 style="font-size: 28px; font-weight: bold; margin: 0; background: linear-gradient(90deg, #6366f1, #8b5cf6); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
-                DropMarket
+              <h1 style="font-size: 28px; font-weight: bold; margin: 0; color: #ffffff;">
+                Drop<span style="color: #a3e635;">Market</span>
               </h1>
             </div>
 
             <h2 style="font-size: 24px; font-weight: 600; text-align: center; margin: 0 0 16px 0;">
-              Hi ${name},
+              Hi ${escapeHtml(name)},
             </h2>
 
             <p style="font-size: 16px; line-height: 1.6; color: #a1a1aa; text-align: center; margin: 0 0 24px 0;">
-              We've reviewed your seller application for <strong style="color: #ffffff;">"${displayName}"</strong> and unfortunately, we're unable to approve it at this time.
+              We've reviewed your seller application for <strong style="color: #ffffff;">"${escapeHtml(displayName)}"</strong> and unfortunately, we're unable to approve it at this time.
             </p>
 
-            <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 12px; padding: 20px; margin-bottom: 24px;">
+            <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 8px; padding: 20px; margin-bottom: 24px;">
               <h3 style="font-size: 16px; font-weight: 600; color: #ef4444; margin: 0 0 12px 0;">
                 Reason for Rejection
               </h3>
               <p style="margin: 0; color: #fca5a5; font-size: 14px; line-height: 1.6;">
-                ${reason}
+                ${escapeHtml(reason)}
               </p>
             </div>
 
-            <div style="background: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.3); border-radius: 12px; padding: 20px; margin-bottom: 24px;">
-              <h3 style="font-size: 16px; font-weight: 600; color: #818cf8; margin: 0 0 12px 0;">
+            <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; padding: 20px; margin-bottom: 24px;">
+              <h3 style="font-size: 16px; font-weight: 600; color: #a3e635; margin: 0 0 12px 0;">
                 What Can You Do?
               </h3>
               <ul style="margin: 0; padding-left: 20px; color: #a1a1aa; font-size: 14px; line-height: 1.8;">
@@ -156,7 +170,7 @@ export async function sendApplicationRejectedEmail({
             </div>
 
             <div style="text-align: center; margin-bottom: 24px;">
-              <a href="${APP_URL}/account/become-seller" style="display: inline-block; background: #C6FF3D; color: #0A0A0F; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600; font-size: 16px;">
+              <a href="${APP_URL}/account/become-seller" style="display: inline-block; background: #a3e635; color: #0a0a0f; text-decoration: none; padding: 14px 36px; border-radius: 6px; font-weight: 700; font-size: 15px;">
                 Apply Again
               </a>
             </div>
@@ -207,11 +221,11 @@ export async function sendInfoRequestedEmail({
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
         </head>
         <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #0a0a0f; color: #ffffff; margin: 0; padding: 40px 20px;">
-          <div style="max-width: 600px; margin: 0 auto; background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px; padding: 40px;">
+          <div style="max-width: 600px; margin: 0 auto; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; padding: 40px;">
 
             <div style="text-align: center; margin-bottom: 32px;">
-              <h1 style="font-size: 28px; font-weight: bold; margin: 0; background: linear-gradient(90deg, #6366f1, #8b5cf6); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
-                DropMarket
+              <h1 style="font-size: 28px; font-weight: bold; margin: 0; color: #ffffff;">
+                Drop<span style="color: #a3e635;">Market</span>
               </h1>
             </div>
 
@@ -220,24 +234,24 @@ export async function sendInfoRequestedEmail({
             </div>
 
             <h2 style="font-size: 24px; font-weight: 600; text-align: center; margin: 0 0 16px 0;">
-              Hi ${name}, We Need More Information
+              Hi ${escapeHtml(name)}, We Need More Information
             </h2>
 
             <p style="font-size: 16px; line-height: 1.6; color: #a1a1aa; text-align: center; margin: 0 0 24px 0;">
-              We're reviewing your seller application for <strong style="color: #ffffff;">"${displayName}"</strong> and need some additional information to proceed.
+              We're reviewing your seller application for <strong style="color: #ffffff;">"${escapeHtml(displayName)}"</strong> and need some additional information to proceed.
             </p>
 
-            <div style="background: rgba(251, 191, 36, 0.1); border: 1px solid rgba(251, 191, 36, 0.3); border-radius: 12px; padding: 20px; margin-bottom: 24px;">
+            <div style="background: rgba(251, 191, 36, 0.1); border: 1px solid rgba(251, 191, 36, 0.3); border-radius: 8px; padding: 20px; margin-bottom: 24px;">
               <h3 style="font-size: 16px; font-weight: 600; color: #fbbf24; margin: 0 0 12px 0;">
                 📝 Message from our Review Team
               </h3>
               <p style="margin: 0; color: #fef3c7; font-size: 14px; line-height: 1.6; white-space: pre-wrap;">
-                ${message}
+                ${escapeHtml(message)}
               </p>
             </div>
 
             <div style="text-align: center; margin-bottom: 24px;">
-              <a href="${APP_URL}/seller/application-status" style="display: inline-block; background: linear-gradient(90deg, #6366f1, #8b5cf6); color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600; font-size: 16px;">
+              <a href="${APP_URL}/seller/application-status" style="display: inline-block; background: #a3e635; color: #0a0a0f; text-decoration: none; padding: 14px 36px; border-radius: 6px; font-weight: 700; font-size: 15px;">
                 View Application Status
               </a>
             </div>
@@ -272,12 +286,16 @@ export async function sendDisputeOpenedEmail({
   to,
   name,
   disputeId,
+  orderId,
   role,
   reason,
 }: {
   to: string
   name: string
+  /** Human order reference (e.g. GV-123456) shown in the email. */
   disputeId: string
+  /** Order UUID — the CTA links to the order page (no public /disputes route). */
+  orderId: string
   role: 'buyer' | 'seller'
   reason: string
 }) {
@@ -293,34 +311,34 @@ export async function sendDisputeOpenedEmail({
       <!DOCTYPE html>
       <html>
       <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #0a0a0f; color: #ffffff; margin: 0; padding: 40px 20px;">
-        <div style="max-width: 600px; margin: 0 auto; background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px; padding: 40px;">
+        <div style="max-width: 600px; margin: 0 auto; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; padding: 40px;">
 
           <div style="text-align: center; margin-bottom: 32px;">
-            <h1 style="font-size: 28px; font-weight: bold; margin: 0; background: linear-gradient(90deg, #6366f1, #8b5cf6); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
-              DropMarket
+            <h1 style="font-size: 28px; font-weight: bold; margin: 0; color: #ffffff;">
+              Drop<span style="color: #a3e635;">Market</span>
             </h1>
           </div>
 
           <h2 style="font-size: 20px; font-weight: 600; text-align: center; margin: 0 0 16px 0;">
-            Hi ${name}, ${role === 'buyer' ? 'Your Dispute Has Been Opened' : 'A Dispute Requires Your Attention'}
+            Hi ${escapeHtml(name)}, ${role === 'buyer' ? 'Your Dispute Has Been Opened' : 'A Dispute Requires Your Attention'}
           </h2>
 
-          <div style="background: rgba(251, 191, 36, 0.1); border: 1px solid rgba(251, 191, 36, 0.3); border-radius: 12px; padding: 20px; margin-bottom: 24px;">
+          <div style="background: rgba(251, 191, 36, 0.1); border: 1px solid rgba(251, 191, 36, 0.3); border-radius: 8px; padding: 20px; margin-bottom: 24px;">
             <p style="margin: 0 0 8px 0; color: #a1a1aa; font-size: 14px;">
-              <strong>Dispute ID:</strong> ${disputeId.slice(0, 8)}
+              <strong>Order Reference:</strong> #${escapeHtml(disputeId)}
             </p>
             <p style="margin: 0; color: #a1a1aa; font-size: 14px;">
-              <strong>Reason:</strong> ${reason.replace(/_/g, ' ')}
+              <strong>Reason:</strong> ${escapeHtml(reason)}
             </p>
           </div>
 
           <p style="font-size: 14px; line-height: 1.6; color: #a1a1aa; text-align: center; margin: 0 0 24px 0;">
-            Our team will review this dispute within 24-48 hours. Please provide any additional evidence through the dispute portal.
+            Our team will review this dispute within 24-48 hours. Please share any additional evidence in the order chat.
           </p>
 
           <div style="text-align: center;">
-            <a href="${APP_URL}/disputes/${disputeId}" style="display: inline-block; background: linear-gradient(90deg, #6366f1, #8b5cf6); color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600; font-size: 16px;">
-              View Dispute
+            <a href="${APP_URL}/account/orders/${orderId}" style="display: inline-block; background: #a3e635; color: #0a0a0f; text-decoration: none; padding: 14px 36px; border-radius: 6px; font-weight: 700; font-size: 15px;">
+              View Order &amp; Dispute
             </a>
           </div>
 
@@ -337,12 +355,15 @@ export async function sendDisputeResolvedEmail({
   to,
   name,
   disputeId,
+  orderId,
   resolution,
   amount,
 }: {
   to: string
   name: string
   disputeId: string
+  /** Order UUID — CTA links to the order page (no public /disputes route). */
+  orderId?: string
   resolution: string
   amount?: number
 }) {
@@ -354,16 +375,16 @@ export async function sendDisputeResolvedEmail({
       <!DOCTYPE html>
       <html>
       <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #0a0a0f; color: #ffffff; margin: 0; padding: 40px 20px;">
-        <div style="max-width: 600px; margin: 0 auto; background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px; padding: 40px;">
+        <div style="max-width: 600px; margin: 0 auto; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; padding: 40px;">
 
           <div style="text-align: center; margin-bottom: 32px;">
-            <h1 style="font-size: 28px; font-weight: bold; margin: 0; background: linear-gradient(90deg, #6366f1, #8b5cf6); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
-              DropMarket
+            <h1 style="font-size: 28px; font-weight: bold; margin: 0; color: #ffffff;">
+              Drop<span style="color: #a3e635;">Market</span>
             </h1>
           </div>
 
           <div style="text-align: center; margin-bottom: 24px;">
-            <span style="font-size: 64px;">✅</span>
+            <div style="display: inline-block; width: 56px; height: 56px; line-height: 56px; border-radius: 50%; background: rgba(163, 230, 53, 0.12); border: 1px solid rgba(163, 230, 53, 0.4); font-size: 28px;">&#10003;</div>
           </div>
 
           <h2 style="font-size: 20px; font-weight: 600; text-align: center; margin: 0 0 16px 0;">
@@ -371,18 +392,18 @@ export async function sendDisputeResolvedEmail({
           </h2>
 
           <p style="font-size: 16px; line-height: 1.6; color: #a1a1aa; text-align: center; margin: 0 0 24px 0;">
-            Hi ${name}, your dispute (${disputeId.slice(0, 8)}) has been resolved.
+            Hi ${escapeHtml(name)}, your dispute (${disputeId.slice(0, 8)}) has been resolved.
           </p>
 
-          <div style="background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.3); border-radius: 12px; padding: 20px; margin-bottom: 24px;">
-            <p style="margin: 0 0 8px 0; color: #22c55e; font-size: 16px; font-weight: 600;">
+          <div style="background: rgba(163, 230, 53, 0.08); border: 1px solid rgba(163, 230, 53, 0.3); border-radius: 8px; padding: 20px; margin-bottom: 24px;">
+            <p style="margin: 0 0 8px 0; color: #a3e635; font-size: 16px; font-weight: 600;">
               Resolution: ${resolution.replace(/_/g, ' ')}
             </p>
             ${amount ? `<p style="margin: 0; color: #a1a1aa; font-size: 14px;">Refund Amount: $${amount.toFixed(2)}</p>` : ''}
           </div>
 
           <div style="text-align: center;">
-            <a href="${APP_URL}/disputes/${disputeId}" style="display: inline-block; background: linear-gradient(90deg, #6366f1, #8b5cf6); color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600; font-size: 16px;">
+            <a href="${APP_URL}${orderId ? `/account/orders/${orderId}` : '/account/orders'}" style="display: inline-block; background: #a3e635; color: #0a0a0f; text-decoration: none; padding: 14px 36px; border-radius: 6px; font-weight: 700; font-size: 15px;">
               View Details
             </a>
           </div>
@@ -436,11 +457,11 @@ export async function sendNewOrderNotificationEmail({
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
       </head>
       <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #0a0a0f; color: #ffffff; margin: 0; padding: 40px 20px;">
-        <div style="max-width: 600px; margin: 0 auto; background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px; padding: 40px;">
+        <div style="max-width: 600px; margin: 0 auto; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; padding: 40px;">
 
           <div style="text-align: center; margin-bottom: 32px;">
-            <h1 style="font-size: 28px; font-weight: bold; margin: 0; background: linear-gradient(90deg, #6366f1, #8b5cf6); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
-              DropMarket
+            <h1 style="font-size: 28px; font-weight: bold; margin: 0; color: #ffffff;">
+              Drop<span style="color: #a3e635;">Market</span>
             </h1>
           </div>
 
@@ -452,10 +473,10 @@ export async function sendNewOrderNotificationEmail({
             New Order Received!
           </h2>
           <p style="font-size: 16px; color: #a1a1aa; text-align: center; margin: 0 0 28px 0;">
-            Hi ${sellerName}, <strong style="color: #ffffff;">${buyerName}</strong> just purchased your listing.
+            Hi ${escapeHtml(sellerName)}, <strong style="color: #ffffff;">${escapeHtml(buyerName)}</strong> just purchased your listing.
           </p>
 
-          <div style="background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.3); border-radius: 12px; padding: 20px; margin-bottom: 24px;">
+          <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; padding: 20px; margin-bottom: 24px;">
             <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
               <tr>
                 <td style="color: #a1a1aa; padding: 6px 0;">Order #</td>
@@ -463,7 +484,7 @@ export async function sendNewOrderNotificationEmail({
               </tr>
               <tr>
                 <td style="color: #a1a1aa; padding: 6px 0;">Listing</td>
-                <td style="color: #ffffff; text-align: right;">${listingTitle}</td>
+                <td style="color: #ffffff; text-align: right;">${escapeHtml(listingTitle)}</td>
               </tr>
               <tr>
                 <td style="color: #a1a1aa; padding: 6px 0;">Quantity</td>
@@ -474,27 +495,27 @@ export async function sendNewOrderNotificationEmail({
                 <td style="color: #ffffff; text-align: right;">$${totalAmount.toFixed(2)}</td>
               </tr>
               <tr style="border-top: 1px solid rgba(255,255,255,0.1);">
-                <td style="color: #22c55e; font-weight: 700; padding: 10px 0 4px 0;">Your Payout</td>
-                <td style="color: #22c55e; font-weight: 700; font-size: 18px; text-align: right; padding: 10px 0 4px 0;">$${sellerPayout.toFixed(2)}</td>
+                <td style="color: #a3e635; font-weight: 700; padding: 10px 0 4px 0;">Your Payout</td>
+                <td style="color: #a3e635; font-weight: 700; font-size: 18px; text-align: right; padding: 10px 0 4px 0;">$${sellerPayout.toFixed(2)}</td>
               </tr>
             </table>
           </div>
 
-          <div style="background: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.3); border-radius: 12px; padding: 16px; margin-bottom: 24px;">
+          <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; padding: 16px; margin-bottom: 24px;">
             <p style="margin: 0; color: #a1a1aa; font-size: 14px; line-height: 1.6;">
-              <strong style="color: #818cf8;">Next step:</strong> Head to your order dashboard and deliver the item to the buyer. You'll be paid out once the buyer confirms receipt — or automatically when the order's protection window closes.
+              <strong style="color: #a3e635;">Next step:</strong> Head to your order dashboard and deliver the item to the buyer. You'll be paid out once the buyer confirms receipt — or automatically when the order's protection window closes.
             </p>
           </div>
 
           <div style="text-align: center; margin-bottom: 24px;">
-            <a href="${orderUrl}" style="display: inline-block; background: linear-gradient(90deg, #6366f1, #8b5cf6); color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600; font-size: 16px;">
+            <a href="${orderUrl}" style="display: inline-block; background: #a3e635; color: #0a0a0f; text-decoration: none; padding: 14px 36px; border-radius: 6px; font-weight: 700; font-size: 15px;">
               View Order & Deliver
             </a>
           </div>
 
           <p style="font-size: 12px; color: #6b7280; text-align: center; margin: 0;">
             You are receiving this because you are a seller on DropMarket.<br>
-            Manage your notifications in <a href="${APP_URL}/account/settings" style="color: #6366f1;">account settings</a>.
+            Manage your notifications in <a href="${APP_URL}/account/settings" style="color: #a3e635;">account settings</a>.
           </p>
 
         </div>
@@ -517,6 +538,7 @@ export async function sendOrderCompletionEmail({
   orderNumber,
   listingTitle,
   totalPaid,
+  autoReleased = false,
 }: {
   to: string
   name: string
@@ -524,6 +546,8 @@ export async function sendOrderCompletionEmail({
   orderNumber: string
   listingTitle: string
   totalPaid: number
+  /** True when the protection window expired without buyer confirmation. */
+  autoReleased?: boolean
 }) {
   const { data, error } = await resend.emails.send({
     from: FROM_EMAIL,
@@ -558,7 +582,11 @@ export async function sendOrderCompletionEmail({
           </h2>
 
           <p style="font-size: 15px; line-height: 1.6; color: #a1a1aa; text-align: center; margin: 0 0 28px 0;">
-            Thanks, ${name} — you've confirmed delivery, and your order is all wrapped up.
+            ${
+              autoReleased
+                ? `Hi ${escapeHtml(name)} — your protection window ended with no issues reported, so this order completed automatically.`
+                : `Thanks, ${escapeHtml(name)} — you've confirmed delivery, and your order is all wrapped up.`
+            }
           </p>
 
           <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; padding: 20px; margin-bottom: 24px;">
@@ -569,7 +597,7 @@ export async function sendOrderCompletionEmail({
               </tr>
               <tr>
                 <td style="color: #a1a1aa; padding: 6px 0;">Item</td>
-                <td style="color: #ffffff; text-align: right;">${listingTitle}</td>
+                <td style="color: #ffffff; text-align: right;">${escapeHtml(listingTitle)}</td>
               </tr>
               <tr>
                 <td style="color: #a1a1aa; padding: 6px 0;">Total Paid</td>
@@ -579,7 +607,11 @@ export async function sendOrderCompletionEmail({
           </div>
 
           <p style="font-size: 13px; line-height: 1.6; color: #a1a1aa; text-align: center; margin: 0 0 28px 0;">
-            This order was covered by SafeDrop Buyer Protection from checkout until you confirmed delivery — the seller is only paid out now that you have.
+            ${
+              autoReleased
+                ? 'This order was covered by SafeDrop Buyer Protection for its full protection window — the seller is only paid out now that the window has closed.'
+                : 'This order was covered by SafeDrop Buyer Protection from checkout until you confirmed delivery — the seller is only paid out now that you have.'
+            }
           </p>
 
           <div style="text-align: center; margin-bottom: 28px;">
@@ -590,6 +622,337 @@ export async function sendOrderCompletionEmail({
 
           <p style="font-size: 12px; color: #6b7280; text-align: center; margin: 0;">
             Questions about this order? <a href="${APP_URL}/support" style="color: #a3e635;">Contact support</a>.
+          </p>
+
+        </div>
+      </body>
+      </html>
+    `,
+  })
+
+  return error ? { success: false, error } : { success: true, data }
+}
+
+export async function sendOrderPaidEmail({
+  to,
+  name,
+  orderId,
+  orderNumber,
+  listingTitle,
+  totalPaid,
+}: {
+  to: string
+  name: string
+  orderId: string
+  orderNumber: string
+  listingTitle: string
+  totalPaid: number
+}) {
+  const { data, error } = await resend.emails.send({
+    from: FROM_EMAIL,
+    to,
+    subject: `Order Confirmed — ${listingTitle}`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      </head>
+      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #0a0a0f; color: #ffffff; margin: 0; padding: 40px 20px;">
+        <div style="max-width: 600px; margin: 0 auto; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; padding: 40px;">
+
+          <div style="text-align: center; margin-bottom: 32px;">
+            <h1 style="font-size: 28px; font-weight: bold; margin: 0; color: #ffffff;">
+              Drop<span style="color: #a3e635;">Market</span>
+            </h1>
+          </div>
+
+          <h2 style="font-size: 24px; font-weight: 600; text-align: center; margin: 0 0 12px 0;">
+            Payment Received
+          </h2>
+
+          <p style="font-size: 15px; line-height: 1.6; color: #a1a1aa; text-align: center; margin: 0 0 28px 0;">
+            Thanks, ${escapeHtml(name)} — your payment is confirmed and the seller has been told to start delivery.
+          </p>
+
+          <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; padding: 20px; margin-bottom: 24px;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+              <tr>
+                <td style="color: #a1a1aa; padding: 6px 0;">Order</td>
+                <td style="color: #ffffff; text-align: right; font-weight: 600;">#${orderNumber}</td>
+              </tr>
+              <tr>
+                <td style="color: #a1a1aa; padding: 6px 0;">Item</td>
+                <td style="color: #ffffff; text-align: right;">${escapeHtml(listingTitle)}</td>
+              </tr>
+              <tr>
+                <td style="color: #a1a1aa; padding: 6px 0;">Total Paid</td>
+                <td style="color: #ffffff; text-align: right; font-weight: 600;">$${totalPaid.toFixed(2)}</td>
+              </tr>
+            </table>
+          </div>
+
+          <p style="font-size: 13px; line-height: 1.6; color: #a1a1aa; text-align: center; margin: 0 0 28px 0;">
+            You're covered by SafeDrop Buyer Protection — the seller isn't paid out until your order completes, and you're entitled to a full refund if your order never arrives.
+          </p>
+
+          <div style="text-align: center; margin-bottom: 28px;">
+            <a href="${APP_URL}/account/orders/${orderId}" style="display: inline-block; background: #a3e635; color: #0a0a0f; text-decoration: none; padding: 14px 36px; border-radius: 6px; font-weight: 700; font-size: 15px;">
+              Track Your Order
+            </a>
+          </div>
+
+          <p style="font-size: 12px; color: #6b7280; text-align: center; margin: 0;">
+            Questions about this order? <a href="${APP_URL}/support" style="color: #a3e635;">Contact support</a>.
+          </p>
+
+        </div>
+      </body>
+      </html>
+    `,
+  })
+
+  return error ? { success: false, error } : { success: true, data }
+}
+
+export async function sendOrderDeliveredEmail({
+  to,
+  name,
+  orderId,
+  orderNumber,
+  listingTitle,
+  windowHours,
+  confirmBy,
+}: {
+  to: string
+  name: string
+  orderId: string
+  orderNumber: string
+  listingTitle: string
+  windowHours: number
+  /** ISO timestamp when the protection window auto-releases. */
+  confirmBy: string
+}) {
+  const confirmByText = new Date(confirmBy).toUTCString().replace(' GMT', ' UTC')
+  const windowText =
+    windowHours % 24 === 0 ? `${windowHours / 24} day${windowHours === 24 ? '' : 's'}` : `${windowHours} hours`
+
+  const { data, error } = await resend.emails.send({
+    from: FROM_EMAIL,
+    to,
+    subject: `Your Order Was Delivered — Confirm Receipt`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      </head>
+      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #0a0a0f; color: #ffffff; margin: 0; padding: 40px 20px;">
+        <div style="max-width: 600px; margin: 0 auto; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; padding: 40px;">
+
+          <div style="text-align: center; margin-bottom: 32px;">
+            <h1 style="font-size: 28px; font-weight: bold; margin: 0; color: #ffffff;">
+              Drop<span style="color: #a3e635;">Market</span>
+            </h1>
+          </div>
+
+          <h2 style="font-size: 24px; font-weight: 600; text-align: center; margin: 0 0 12px 0;">
+            Delivery Marked Complete
+          </h2>
+
+          <p style="font-size: 15px; line-height: 1.6; color: #a1a1aa; text-align: center; margin: 0 0 28px 0;">
+            Hi ${escapeHtml(name)} — the seller marked order <strong style="color: #ffffff;">#${orderNumber}</strong> (${escapeHtml(listingTitle)}) as delivered. Please check you received everything as described.
+          </p>
+
+          <div style="background: rgba(163, 230, 53, 0.08); border: 1px solid rgba(163, 230, 53, 0.3); border-radius: 8px; padding: 20px; margin-bottom: 24px; text-align: center;">
+            <p style="margin: 0 0 4px 0; color: #a1a1aa; font-size: 13px;">Your Protection Window</p>
+            <p style="margin: 0; color: #ffffff; font-size: 16px; font-weight: 600;">${windowText} — until ${confirmByText}</p>
+            <p style="margin: 8px 0 0 0; color: #a1a1aa; font-size: 13px; line-height: 1.6;">
+              Confirm receipt once you're happy, or open a dispute if something's wrong. If you do nothing, the order completes automatically when the window ends.
+            </p>
+          </div>
+
+          <div style="text-align: center; margin-bottom: 28px;">
+            <a href="${APP_URL}/account/orders/${orderId}" style="display: inline-block; background: #a3e635; color: #0a0a0f; text-decoration: none; padding: 14px 36px; border-radius: 6px; font-weight: 700; font-size: 15px;">
+              Review &amp; Confirm Delivery
+            </a>
+          </div>
+
+          <p style="font-size: 12px; color: #6b7280; text-align: center; margin: 0;">
+            Something not right? <a href="${APP_URL}/account/orders/${orderId}" style="color: #a3e635;">Open a dispute</a> before the window closes — SafeDrop Buyer Protection has you covered.
+          </p>
+
+        </div>
+      </body>
+      </html>
+    `,
+  })
+
+  return error ? { success: false, error } : { success: true, data }
+}
+
+export async function sendOrderRefundedEmail({
+  to,
+  name,
+  orderNumber,
+  listingTitle,
+  amount,
+  destination,
+  pending = false,
+}: {
+  to: string
+  name: string
+  orderNumber: string
+  listingTitle: string
+  amount: number
+  /** Where the money went, e.g. 'your original payment method'. */
+  destination: string
+  /** True when no automatic refund rail ran (e.g. crypto payment) and
+   *  support will arrange the refund — the email must not claim the
+   *  money already moved. */
+  pending?: boolean
+}) {
+  const { data, error } = await resend.emails.send({
+    from: FROM_EMAIL,
+    to,
+    subject: pending
+      ? `Order Cancelled — Refund Being Arranged (#${orderNumber})`
+      : `Refund Processed — Order #${orderNumber}`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      </head>
+      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #0a0a0f; color: #ffffff; margin: 0; padding: 40px 20px;">
+        <div style="max-width: 600px; margin: 0 auto; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; padding: 40px;">
+
+          <div style="text-align: center; margin-bottom: 32px;">
+            <h1 style="font-size: 28px; font-weight: bold; margin: 0; color: #ffffff;">
+              Drop<span style="color: #a3e635;">Market</span>
+            </h1>
+          </div>
+
+          <h2 style="font-size: 24px; font-weight: 600; text-align: center; margin: 0 0 12px 0;">
+            ${pending ? 'Order Cancelled' : 'Refund Processed'}
+          </h2>
+
+          <p style="font-size: 15px; line-height: 1.6; color: #a1a1aa; text-align: center; margin: 0 0 28px 0;">
+            ${
+              pending
+                ? `Hi ${escapeHtml(name)} — order <strong style="color: #ffffff;">#${orderNumber}</strong> (${escapeHtml(listingTitle)}) has been cancelled, and our team is arranging your refund in line with the Refund &amp; Dispute Policy.`
+                : `Hi ${escapeHtml(name)} — order <strong style="color: #ffffff;">#${orderNumber}</strong> (${escapeHtml(listingTitle)}) has been cancelled and refunded.`
+            }
+          </p>
+
+          <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; padding: 20px; margin-bottom: 24px;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+              <tr>
+                <td style="color: #a1a1aa; padding: 6px 0;">Refund Amount</td>
+                <td style="color: #ffffff; text-align: right; font-weight: 600;">$${amount.toFixed(2)}</td>
+              </tr>
+              ${
+                pending
+                  ? ''
+                  : `<tr>
+                <td style="color: #a1a1aa; padding: 6px 0;">Refunded To</td>
+                <td style="color: #ffffff; text-align: right;">${destination}</td>
+              </tr>`
+              }
+            </table>
+          </div>
+
+          <p style="font-size: 13px; line-height: 1.6; color: #a1a1aa; text-align: center; margin: 0 0 28px 0;">
+            ${
+              pending
+                ? 'You will get a confirmation email as soon as your refund is issued. If you have any questions in the meantime, support is one click away.'
+                : 'Refunds to a payment method typically arrive within 5–10 business days depending on your provider.'
+            }
+          </p>
+
+          <p style="font-size: 12px; color: #6b7280; text-align: center; margin: 0;">
+            Didn't expect this refund? <a href="${APP_URL}/support" style="color: #a3e635;">Contact support</a>.
+          </p>
+
+        </div>
+      </body>
+      </html>
+    `,
+  })
+
+  return error ? { success: false, error } : { success: true, data }
+}
+
+export async function sendOrderCompletedSellerEmail({
+  to,
+  name,
+  orderId,
+  orderNumber,
+  listingTitle,
+  payout,
+  autoReleased = false,
+}: {
+  to: string
+  name: string
+  orderId: string
+  orderNumber: string
+  listingTitle: string
+  payout: number
+  autoReleased?: boolean
+}) {
+  const { data, error } = await resend.emails.send({
+    from: FROM_EMAIL,
+    to,
+    subject: `Order Complete — $${payout.toFixed(2)} Payout on the Way`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      </head>
+      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #0a0a0f; color: #ffffff; margin: 0; padding: 40px 20px;">
+        <div style="max-width: 600px; margin: 0 auto; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; padding: 40px;">
+
+          <div style="text-align: center; margin-bottom: 32px;">
+            <h1 style="font-size: 28px; font-weight: bold; margin: 0; color: #ffffff;">
+              Drop<span style="color: #a3e635;">Market</span>
+            </h1>
+          </div>
+
+          <div style="text-align: center; margin-bottom: 24px;">
+            <div style="display: inline-block; width: 56px; height: 56px; line-height: 56px; border-radius: 50%; background: rgba(163, 230, 53, 0.12); border: 1px solid rgba(163, 230, 53, 0.4); font-size: 28px;">&#10003;</div>
+          </div>
+
+          <h2 style="font-size: 24px; font-weight: 600; text-align: center; margin: 0 0 12px 0;">
+            Sale Complete
+          </h2>
+
+          <p style="font-size: 15px; line-height: 1.6; color: #a1a1aa; text-align: center; margin: 0 0 28px 0;">
+            ${
+              autoReleased
+                ? `Hi ${escapeHtml(name)} — the protection window on order <strong style="color: #ffffff;">#${orderNumber}</strong> closed with no issues, so it completed automatically.`
+                : `Hi ${escapeHtml(name)} — the buyer confirmed delivery on order <strong style="color: #ffffff;">#${orderNumber}</strong>.`
+            }
+          </p>
+
+          <div style="background: rgba(163, 230, 53, 0.08); border: 1px solid rgba(163, 230, 53, 0.3); border-radius: 8px; padding: 20px; margin-bottom: 24px; text-align: center;">
+            <p style="margin: 0 0 4px 0; color: #a1a1aa; font-size: 13px;">${escapeHtml(listingTitle)}</p>
+            <p style="margin: 0; color: #a3e635; font-size: 24px; font-weight: 700;">+$${payout.toFixed(2)}</p>
+            <p style="margin: 6px 0 0 0; color: #a1a1aa; font-size: 13px;">${autoReleased ? 'payout being processed' : 'added to your seller balance'}</p>
+          </div>
+
+          <div style="text-align: center; margin-bottom: 28px;">
+            <a href="${APP_URL}/account/orders/${orderId}" style="display: inline-block; background: #a3e635; color: #0a0a0f; text-decoration: none; padding: 14px 36px; border-radius: 6px; font-weight: 700; font-size: 15px;">
+              View Order
+            </a>
+          </div>
+
+          <p style="font-size: 12px; color: #6b7280; text-align: center; margin: 0;">
+            Withdraw anytime from your <a href="${APP_URL}/account/wallet" style="color: #a3e635;">wallet</a> once you reach the payout minimum.
           </p>
 
         </div>
@@ -630,11 +993,11 @@ export async function sendTrustpilotInvitationEmail({
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
       </head>
       <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #0a0a0f; color: #ffffff; margin: 0; padding: 40px 20px;">
-        <div style="max-width: 600px; margin: 0 auto; background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px; padding: 40px;">
+        <div style="max-width: 600px; margin: 0 auto; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; padding: 40px;">
 
           <div style="text-align: center; margin-bottom: 32px;">
-            <h1 style="font-size: 28px; font-weight: bold; margin: 0; background: linear-gradient(90deg, #6366f1, #8b5cf6); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
-              DropMarket
+            <h1 style="font-size: 28px; font-weight: bold; margin: 0; color: #ffffff;">
+              Drop<span style="color: #a3e635;">Market</span>
             </h1>
           </div>
 
@@ -643,14 +1006,14 @@ export async function sendTrustpilotInvitationEmail({
           </div>
 
           <h2 style="font-size: 24px; font-weight: 600; text-align: center; margin: 0 0 16px 0;">
-            How was your experience, ${name}?
+            How was your experience, ${escapeHtml(name)}?
           </h2>
 
           <p style="font-size: 16px; line-height: 1.6; color: #a1a1aa; text-align: center; margin: 0 0 24px 0;">
             We hope you enjoyed your purchase on DropMarket. Your feedback helps us improve and helps other gamers make informed decisions.
           </p>
 
-          <div style="background: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.3); border-radius: 12px; padding: 16px; margin-bottom: 24px; text-align: center;">
+          <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; padding: 16px; margin-bottom: 24px; text-align: center;">
             <p style="margin: 0; color: #a1a1aa; font-size: 14px;">Order Reference</p>
             <p style="margin: 4px 0 0 0; color: #ffffff; font-size: 18px; font-weight: 700; letter-spacing: 2px;">#${shortOrderId}</p>
           </div>
@@ -660,13 +1023,13 @@ export async function sendTrustpilotInvitationEmail({
           </p>
 
           <div style="text-align: center; margin-bottom: 28px;">
-            <a href="${reviewUrl}" style="display: inline-block; background: linear-gradient(90deg, #00b67a, #00a06c); color: #ffffff; text-decoration: none; padding: 16px 40px; border-radius: 8px; font-weight: 700; font-size: 18px; letter-spacing: 0.5px;">
+            <a href="${reviewUrl}" style="display: inline-block; background: #00b67a; color: #ffffff; text-decoration: none; padding: 16px 40px; border-radius: 6px; font-weight: 700; font-size: 18px; letter-spacing: 0.5px;">
               Write a Review on Trustpilot
             </a>
           </div>
 
-          <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; padding: 20px; margin-bottom: 24px;">
-            <h3 style="font-size: 14px; font-weight: 600; color: #6366f1; margin: 0 0 12px 0; text-transform: uppercase; letter-spacing: 1px;">
+          <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; padding: 20px; margin-bottom: 24px;">
+            <h3 style="font-size: 14px; font-weight: 600; color: #a3e635; margin: 0 0 12px 0; text-transform: uppercase; letter-spacing: 1px;">
               Why Your Review Matters
             </h3>
             <ul style="margin: 0; padding-left: 20px; color: #a1a1aa; font-size: 14px; line-height: 1.8;">
@@ -679,7 +1042,7 @@ export async function sendTrustpilotInvitationEmail({
 
           <p style="font-size: 12px; color: #6b7280; text-align: center; margin: 0;">
             You are receiving this because you recently completed an order on DropMarket.<br>
-            If you did not make a purchase, please <a href="${APP_URL}/support" style="color: #6366f1;">contact support</a>.
+            If you did not make a purchase, please <a href="${APP_URL}/support" style="color: #a3e635;">contact support</a>.
           </p>
 
         </div>
