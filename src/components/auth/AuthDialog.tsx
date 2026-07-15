@@ -26,11 +26,11 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Check, Eye, EyeOff, Loader2, ShieldCheck, X, XCircle } from 'lucide-react'
+import { Check, Eye, EyeOff, Loader2, MailCheck, ShieldCheck, X, XCircle } from 'lucide-react'
 import { toast } from 'sonner'
 import * as Dialog from '@radix-ui/react-dialog'
 
-import { login, signup, checkUsernameAvailability } from '@/lib/actions/auth'
+import { login, signup, checkUsernameAvailability, resendConfirmationEmail } from '@/lib/actions/auth'
 import { AvatarUpload } from '@/components/ui/avatar-upload'
 import { useAuth } from '@/hooks/use-auth'
 import { createClient } from '@/lib/supabase/client'
@@ -109,6 +109,16 @@ interface AuthDialogProps {
 
 function AuthDialog({ open, onOpenChange, mode, onModeChange, redirectRef }: AuthDialogProps) {
   const router = useRouter()
+
+  // V23 — Email-confirmation mode (Supabase "Confirm email" ON). When the
+  // signup action reports requiresEmailConfirmation, we swap the form panel
+  // for a "Check Your Inbox" view holding the address we mailed. Cleared
+  // whenever the dialog closes so a reopen always starts on a form.
+  const [pendingVerifyEmail, setPendingVerifyEmail] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!open) setPendingVerifyEmail(null)
+  }, [open])
 
   // V22 — Auth state is now a single shared context (AuthProvider). The
   // login/signup forms already call supabase.auth.refreshSession() before
@@ -192,12 +202,18 @@ function AuthDialog({ open, onOpenChange, mode, onModeChange, redirectRef }: Aut
                 }}
               >
                 <Dialog.Title className="sr-only">
-                  {mode === 'login' ? 'Sign in to DropMarket' : 'Create your DropMarket account'}
+                  {pendingVerifyEmail
+                    ? 'Confirm your email address'
+                    : mode === 'login'
+                      ? 'Sign in to DropMarket'
+                      : 'Create your DropMarket account'}
                 </Dialog.Title>
                 <Dialog.Description className="sr-only">
-                  {mode === 'login'
-                    ? 'Enter your email and password to access your account.'
-                    : 'Sign up to start buying and selling on DropMarket.'}
+                  {pendingVerifyEmail
+                    ? 'We sent a confirmation link to your email. Click it to activate your account.'
+                    : mode === 'login'
+                      ? 'Enter your email and password to access your account.'
+                      : 'Sign up to start buying and selling on DropMarket.'}
                 </Dialog.Description>
 
                 {/* Close button — wired DIRECTLY to onOpenChange (the same
@@ -216,7 +232,24 @@ function AuthDialog({ open, onOpenChange, mode, onModeChange, redirectRef }: Aut
                 {/* Left — form panel */}
                 <div className="flex w-full flex-col overflow-y-auto md:w-1/2">
                   <AnimatePresence mode="wait">
-                    {mode === 'login' ? (
+                    {pendingVerifyEmail ? (
+                      <motion.div
+                        key="verify-email"
+                        initial={{ opacity: 0, x: 8 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: 8 }}
+                        transition={{ duration: 0.18 }}
+                        className="flex min-h-full flex-col justify-center px-6 py-10 sm:px-10 sm:py-12"
+                      >
+                        <VerifyEmailView
+                          email={pendingVerifyEmail}
+                          onBackToLogin={() => {
+                            setPendingVerifyEmail(null)
+                            onModeChange('login')
+                          }}
+                        />
+                      </motion.div>
+                    ) : mode === 'login' ? (
                       <motion.div
                         key="login"
                         initial={{ opacity: 0, x: -8 }}
@@ -242,6 +275,7 @@ function AuthDialog({ open, onOpenChange, mode, onModeChange, redirectRef }: Aut
                         <SignupForm
                           onSuccess={handleAuthSuccess}
                           onSwitchToLogin={() => onModeChange('login')}
+                          onRequiresConfirmation={setPendingVerifyEmail}
                         />
                       </motion.div>
                     )}
@@ -372,6 +406,10 @@ function LoginForm({
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
+  // V23 — When login fails because the email was never confirmed (Supabase
+  // "Confirm email" mode), we keep the address around so the error box can
+  // offer a one-click resend of the confirmation link.
+  const [unconfirmedEmail, setUnconfirmedEmail] = useState<string | null>(null)
 
   const {
     register,
@@ -383,11 +421,15 @@ function LoginForm({
 
   const onSubmit = async (data: LoginData) => {
     setError(null)
+    setUnconfirmedEmail(null)
     setLoading(true)
     try {
       const result = await login({ email: data.email, password: data.password })
       if (result.error) {
         setError(result.error)
+        if ('needsConfirmation' in result && result.needsConfirmation) {
+          setUnconfirmedEmail(data.email)
+        }
         setLoading(false)
         return
       }
@@ -486,8 +528,9 @@ function LoginForm({
         </div>
 
         {error && (
-          <div className="rounded-lg border border-error/30 bg-error-bg px-3 py-2.5 text-[13px] text-error">
-            {error}
+          <div className="space-y-2.5 rounded-lg border border-error/30 bg-error-bg px-3 py-2.5 text-[13px] text-error">
+            <p>{error}</p>
+            {unconfirmedEmail && <ResendConfirmationButton email={unconfirmedEmail} />}
           </div>
         )}
 
@@ -567,10 +610,12 @@ type SignupData = z.infer<typeof signupSchema>
 type UsernameStatus = 'idle' | 'invalid' | 'checking' | 'available' | 'taken'
 
 function SignupForm({
-  onSuccess, onSwitchToLogin,
+  onSuccess, onSwitchToLogin, onRequiresConfirmation,
 }: {
   onSuccess: () => void
   onSwitchToLogin: () => void
+  /** Email-confirmation mode: swap the dialog to the "Check Your Inbox" view. */
+  onRequiresConfirmation: (email: string) => void
 }) {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -660,6 +705,14 @@ function SignupForm({
       if (result.error) {
         setError(result.error)
         setLoading(false)
+        return
+      }
+      // V23 — Supabase "Confirm email" mode: the account exists but there is
+      // no session until the user clicks the emailed link. No client session
+      // to sync, no success toast — show the "Check Your Inbox" view instead.
+      if ('requiresEmailConfirmation' in result && result.requiresEmailConfirmation) {
+        setLoading(false)
+        onRequiresConfirmation(data.email)
         return
       }
       // V17d — Same client-session sync as the login path. The
@@ -915,6 +968,114 @@ function SignupForm({
         </button>
       </p>
     </div>
+  )
+}
+
+/* ──────────────────────────────────────────────────────────────────
+   Verify-email view + resend button
+   ─────────────────────────────────────────────────────────────────
+   V23 — Shown in place of the forms when Supabase "Confirm email" is
+   ON and a fresh signup has no session yet. The resend button is the
+   shared affordance: it also renders inside the login error box when
+   signInWithPassword bounces with "email not confirmed". Outline
+   (grey-hover) styling on purpose — lime stays reserved for the
+   primary CTA of each view, and here the primary action is clicking
+   the link we already emailed.
+   ────────────────────────────────────────────────────────────────── */
+
+function VerifyEmailView({
+  email, onBackToLogin,
+}: {
+  email: string
+  onBackToLogin: () => void
+}) {
+  return (
+    <div className="mx-auto w-full max-w-sm space-y-5">
+      <div className="flex h-11 w-11 items-center justify-center rounded-md border border-border-subtle bg-bg-base/60">
+        <MailCheck className="h-5 w-5 text-lime-text" />
+      </div>
+
+      <header className="space-y-1">
+        <p className="text-[11.5px] font-bold uppercase tracking-[0.14em] text-lime-text">
+          Verify Email
+        </p>
+        <h2 className="text-[18px] font-semibold leading-snug tracking-tight text-text-primary">
+          Check Your Inbox
+        </h2>
+      </header>
+
+      <p className="text-[13.5px] leading-relaxed text-text-secondary">
+        We sent a confirmation link to{' '}
+        <span className="font-semibold text-text-primary">{email}</span>. Click it to activate
+        your account.
+      </p>
+
+      <ResendConfirmationButton email={email} />
+
+      <p className="text-center text-[13px] text-text-secondary">
+        Already confirmed?{' '}
+        <button
+          type="button"
+          onClick={onBackToLogin}
+          className="font-semibold text-lime-text transition-colors hover:text-lime"
+        >
+          Sign In
+        </button>
+      </p>
+    </div>
+  )
+}
+
+function ResendConfirmationButton({ email }: { email: string }) {
+  const [sending, setSending] = useState(false)
+  // Seconds left on the resend cooldown — 30s after each successful send so
+  // the user can't hammer Supabase's email rate limit from the UI.
+  const [cooldown, setCooldown] = useState(0)
+
+  useEffect(() => {
+    if (cooldown <= 0) return
+    const t = setTimeout(() => setCooldown((c) => c - 1), 1000)
+    return () => clearTimeout(t)
+  }, [cooldown])
+
+  const handleResend = async () => {
+    if (sending || cooldown > 0) return
+    setSending(true)
+    try {
+      const result = await resendConfirmationEmail(email)
+      if (result.error) {
+        toast.error(result.error)
+      } else {
+        setCooldown(30)
+      }
+    } catch {
+      toast.error('We could not resend the email. Please try again shortly.')
+    } finally {
+      setSending(false)
+    }
+  }
+
+  return (
+    <Button
+      type="button"
+      variant="outline"
+      onClick={handleResend}
+      disabled={sending || cooldown > 0}
+      // Explicit text color: the login flow renders this inside the error
+      // box, whose text-error would otherwise cascade into the button.
+      className="h-10 w-full gap-2 text-text-secondary hover:text-text-primary"
+    >
+      {sending ? (
+        <>
+          <Loader2 className="h-4 w-4 animate-spin" />
+          Sending…
+        </>
+      ) : cooldown > 0 ? (
+        `Sent — check spam too (${cooldown}s)`
+      ) : (
+        'Resend Email'
+      )}
+    </Button>
   )
 }
 

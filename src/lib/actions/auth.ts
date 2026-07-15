@@ -68,8 +68,15 @@ export async function signup(formData: {
 
     console.log('✅ User created successfully:', data.user?.id)
 
-    // Upload avatar if provided
-    if (data.user?.id && formData.avatarData) {
+    // Supabase "Confirm email" mode: signUp succeeds but returns no session
+    // until the user clicks the confirmation link. Skip every post-signup
+    // step that needs an authenticated session (RLS would silently null the
+    // writes) and tell the client to show the verify-email view instead.
+    const requiresEmailConfirmation = !data.session && !!data.user
+
+    // Upload avatar if provided — needs the authenticated session (storage
+    // + profiles RLS), so it only runs when Supabase auto-logged us in.
+    if (data.session && data.user?.id && formData.avatarData) {
       try {
         console.log('🔍 Uploading avatar...')
 
@@ -113,15 +120,24 @@ export async function signup(formData: {
       }
     }
 
-    // Apply referral code if provided (fire-and-forget — non-critical)
-    if (data.user?.id && formData.referralCode) {
-      applyReferralAtSignup(data.user.id, formData.referralCode).catch(() => {
+    // Apply referral code if provided (non-critical). It writes to the new
+    // user's profiles row + referral_earnings through the cookie client, so
+    // it also needs the session — skipped in email-confirmation mode.
+    if (data.session && data.user?.id && formData.referralCode) {
+      await applyReferralAtSignup(data.user.id, formData.referralCode).catch((err) => {
         // Non-critical — don't block signup if referral fails
+        console.error('❌ Referral apply failed:', err)
       })
     }
 
+    if (requiresEmailConfirmation) {
+      // No session yet — nothing to revalidate. The client shows the
+      // "Check Your Inbox" view and the /auth/callback route finishes login.
+      return { error: null, success: true, requiresEmailConfirmation: true }
+    }
+
     // The profile will be automatically created by the database trigger
-    // User is now logged in automatically (no email confirmation required for login)
+    // User is logged in automatically (email confirmation disabled)
     revalidatePath('/', 'layout')
     return { data, error: null, success: true }
   } catch (err: any) {
@@ -144,6 +160,14 @@ export async function login(formData: { email: string; password: string }) {
 
     if (error) {
       console.error('❌ Login error:', error)
+      // Email-confirmation mode: the account exists but hasn't clicked the
+      // confirmation link yet. Let the dialog offer a resend.
+      if (error.code === 'email_not_confirmed' || /email not confirmed/i.test(error.message)) {
+        return {
+          error: 'Please verify your email first — we sent you a confirmation link.',
+          needsConfirmation: true,
+        }
+      }
       return { error: `Login failed: ${error.message}` }
     }
 
@@ -154,6 +178,39 @@ export async function login(formData: { email: string; password: string }) {
   } catch (err: any) {
     console.error('❌ Unexpected error in login:', err)
     return { error: `Unexpected error: ${err.message || 'Unknown error'}` }
+  }
+}
+
+// Resend the signup confirmation email (email-confirmation mode)
+export async function resendConfirmationEmail(email: string) {
+  try {
+    const supabase = await createClient()
+
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email,
+      options: {
+        emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback`,
+      },
+    })
+
+    if (error) {
+      console.error('❌ Resend confirmation error:', error)
+      if (
+        error.status === 429 ||
+        error.code === 'over_email_send_rate_limit' ||
+        error.code === 'over_request_rate_limit' ||
+        /rate limit/i.test(error.message)
+      ) {
+        return { success: false, error: 'Please wait a moment before resending.' }
+      }
+      return { success: false, error: 'We could not resend the email. Please try again shortly.' }
+    }
+
+    return { success: true, error: null }
+  } catch (err: any) {
+    console.error('❌ Unexpected error resending confirmation email:', err)
+    return { success: false, error: 'We could not resend the email. Please try again shortly.' }
   }
 }
 

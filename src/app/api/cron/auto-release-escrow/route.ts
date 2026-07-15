@@ -52,12 +52,9 @@ export async function GET(request: NextRequest) {
     const service = createServiceRoleClient()
     for (const order of orders) {
       try {
-        // Gate: release_escrow is a silent no-op UPDATE (WHERE escrow_status
-        // = 'held'), so re-check the order state immediately before acting —
-        // a buyer may have confirmed receipt (comms already sent) or opened
-        // a dispute (frozen) since the ready-list was fetched. Without this,
-        // the cron would email "completed automatically" on orders it never
-        // actually released.
+        // Gate: re-check the order state immediately before acting — a buyer
+        // may have confirmed receipt (comms + payout already sent) or opened
+        // a dispute (frozen) since the ready-list was fetched.
         const { data: full } = await service
           .from('orders')
           .select(
@@ -71,11 +68,27 @@ export async function GET(request: NextRequest) {
           continue
         }
 
-        // Call the release_escrow function
-        const { error: releaseError } = await ((supabase as any).rpc('release_escrow', {
-          order_id: order.id,
-          method: 'auto',
-        }))
+        // Release — the same column writes as the legacy release_escrow RPC
+        // (status/escrow_status/release_method/completed_at, guarded on
+        // escrow_status = 'held'), but as a direct compare-and-swap that
+        // returns the claimed row. The RPC returns void even when its WHERE
+        // matched nothing, so an overlapping cron run or a buyer confirming
+        // receipt between the gate above and the release would have made
+        // this path credit the seller and email "completed automatically" a
+        // second time. With the CAS, exactly one caller wins the
+        // held → released flip, and only the winner pays and sends comms.
+        const { data: released, error: releaseError } = await (service
+          .from('orders')
+          .update as any)({
+            status: 'completed',
+            escrow_status: 'released',
+            release_method: 'auto',
+            completed_at: new Date().toISOString(),
+          })
+          .eq('id', order.id)
+          .eq('escrow_status', 'held')
+          .eq('status', 'delivered')
+          .select('id')
 
         if (releaseError) {
           console.error(`❌ Failed to release escrow for order ${order.id}:`, releaseError)
@@ -84,11 +97,50 @@ export async function GET(request: NextRequest) {
             success: false,
             error: releaseError.message,
           })
+        } else if (!released?.length) {
+          // Lost the race: someone else moved the order off held/delivered
+          // between the gate and the CAS. They own the credit and comms.
+          results.push({ orderId: order.id, success: true, skipped: true })
         } else {
           console.log(`✅ Successfully released escrow for order ${order.id}`)
+
+          // Credit the seller — the same rail the buyer-confirm path uses
+          // (confirmOrderReceipt → transferEscrowToSeller): a Stripe transfer
+          // when the seller's Connect account is ready, otherwise a
+          // seller_balance credit / held payout via
+          // release_escrow_to_seller_balance. The release above only flips
+          // order status; without this call an auto-released order never
+          // pays the seller. NOT the safedrop_transition AUTO_RELEASED
+          // path — that seam is ledger-only (no payout) until Phase 3 wires
+          // the provider rail. Non-fatal: the release already happened, so a
+          // failed credit is surfaced in the results for retry, not rolled
+          // back.
+          let payout: { success: boolean; transferId: string | null; error: string | null }
+          try {
+            const { transferEscrowToSeller } = await import('@/lib/stripe/connect')
+            payout = await transferEscrowToSeller(order.id)
+          } catch (payoutError: any) {
+            payout = {
+              success: false,
+              transferId: null,
+              error: payoutError?.message || 'Payout failed',
+            }
+          }
+          if (!payout.success) {
+            console.error(
+              `[AutoRelease] Seller credit failed for order ${order.id}: ${payout.error}`
+            )
+          }
+
           results.push({
             orderId: order.id,
             success: true,
+            payout: payout.success
+              ? payout.transferId
+                ? 'transferred'
+                : 'credited'
+              : 'failed',
+            ...(payout.error ? { payoutError: payout.error } : {}),
           })
 
           // Completion comms: buyer receipt (autoReleased copy + Trustpilot
@@ -145,9 +197,6 @@ export async function GET(request: NextRequest) {
           } catch (commsError) {
             console.error(`[AutoRelease] Comms failed for order ${order.id} (non-fatal):`, commsError)
           }
-
-          // TODO: Trigger Stripe payout to seller
-          // await createStripePayout(order.seller_id, order.seller_payout)
         }
       } catch (error: any) {
         console.error(`Error processing order ${order.id}:`, error)

@@ -7,6 +7,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { createServiceRoleClient } from '@/lib/supabase/service'
 import { revalidatePath } from 'next/cache'
 
 /**
@@ -152,8 +153,50 @@ export async function approveListing(
         .eq('id', listingId)
     }
 
-    // TODO: Send approval notification email to seller
-    // await sendListingApprovedEmail(listing.seller_id, listingId)
+    // Seller comms (email + in-app, awaited but never fails the approval).
+    // Service client: the admin session's cookie client can't read the
+    // seller's profile or insert notifications for another user under RLS.
+    await (async () => {
+      const service = createServiceRoleClient()
+      const { data: listing } = await service
+        .from('listings')
+        .select(`
+          seller_id,
+          title,
+          slug,
+          seller:profiles!listings_seller_id_fkey(email, username, full_name),
+          game:games!listings_game_id_fkey(slug),
+          category:categories!listings_category_id_fkey(slug)
+        `)
+        .eq('id', listingId)
+        .single() as any
+
+      if (!listing?.seller_id) return
+
+      const listingPath =
+        listing.slug && listing.game?.slug && listing.category?.slug
+          ? `/${listing.game.slug}/${listing.category.slug}/${listing.slug}`
+          : undefined
+
+      await (service.from('notifications').insert as any)({
+        user_id: listing.seller_id,
+        type: 'listing_approved',
+        title: 'Listing Approved',
+        message: `"${listing.title}" passed review and is now live for buyers.`,
+        link: '/account/listings',
+        is_read: false,
+      })
+
+      if (listing.seller?.email) {
+        const { sendListingApprovedEmail } = await import('@/lib/email')
+        await sendListingApprovedEmail({
+          to: listing.seller.email,
+          name: listing.seller.full_name || listing.seller.username || 'Gamer',
+          listingTitle: listing.title,
+          listingPath,
+        })
+      }
+    })().catch((err) => console.error('[Moderation] Approval comms failed:', err))
 
     revalidatePath('/admin/moderation')
     // V21/P7.d — Marketplace tree lives at `/{gameSlug}/...` now;
@@ -226,8 +269,43 @@ export async function rejectListing(
       }
     }
 
-    // TODO: Send rejection notification email to seller
-    // await sendListingRejectedEmail(listing.seller_id, listingId, reason)
+    // Seller comms (email + in-app, awaited but never fails the rejection).
+    // Service client: RLS hides the seller's profile and the now-rejected
+    // listing from the admin's cookie client.
+    await (async () => {
+      const service = createServiceRoleClient()
+      const { data: listing } = await service
+        .from('listings')
+        .select(`
+          seller_id,
+          title,
+          seller:profiles!listings_seller_id_fkey(email, username, full_name)
+        `)
+        .eq('id', listingId)
+        .single() as any
+
+      if (!listing?.seller_id) return
+
+      await (service.from('notifications').insert as any)({
+        user_id: listing.seller_id,
+        type: 'listing_rejected',
+        title: 'Listing Not Approved',
+        message: `"${listing.title}" didn't pass review. Check the reason and update your listing.`,
+        link: '/account/listings',
+        is_read: false,
+      })
+
+      if (listing.seller?.email) {
+        const { sendListingRejectedEmail } = await import('@/lib/email')
+        await sendListingRejectedEmail({
+          to: listing.seller.email,
+          name: listing.seller.full_name || listing.seller.username || 'Gamer',
+          listingTitle: listing.title,
+          reason,
+          changesRequested: false,
+        })
+      }
+    })().catch((err) => console.error('[Moderation] Rejection comms failed:', err))
 
     revalidatePath('/admin/moderation')
 
@@ -297,8 +375,43 @@ export async function requestListingChanges(
       }
     }
 
-    // TODO: Send change request email to seller
-    // await sendListingChangesRequestedEmail(listing.seller_id, listingId, changes)
+    // Seller comms (email + in-app, awaited but never fails the request).
+    // Service client: RLS hides the seller's profile and non-active
+    // listings from the admin's cookie client.
+    await (async () => {
+      const service = createServiceRoleClient()
+      const { data: listing } = await service
+        .from('listings')
+        .select(`
+          seller_id,
+          title,
+          seller:profiles!listings_seller_id_fkey(email, username, full_name)
+        `)
+        .eq('id', listingId)
+        .single() as any
+
+      if (!listing?.seller_id) return
+
+      await (service.from('notifications').insert as any)({
+        user_id: listing.seller_id,
+        type: 'listing_changes_requested',
+        title: 'Changes Requested',
+        message: `Changes requested on "${listing.title}" — review the notes and resubmit.`,
+        link: '/account/listings',
+        is_read: false,
+      })
+
+      if (listing.seller?.email) {
+        const { sendListingRejectedEmail } = await import('@/lib/email')
+        await sendListingRejectedEmail({
+          to: listing.seller.email,
+          name: listing.seller.full_name || listing.seller.username || 'Gamer',
+          listingTitle: listing.title,
+          reason: changes,
+          changesRequested: true,
+        })
+      }
+    })().catch((err) => console.error('[Moderation] Change-request comms failed:', err))
 
     revalidatePath('/admin/moderation')
 
