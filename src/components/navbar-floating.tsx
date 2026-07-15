@@ -1113,6 +1113,7 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                                     white block. */}
                                 <Link
                                   href="/account/dashboard"
+                                  prefetch={false}
                                   className="mb-1 flex items-center gap-3 rounded-md border border-border-subtle bg-white/[0.06] px-4 py-2.5 text-[14px] font-semibold text-text-primary transition-colors hover:bg-white/[0.10]"
                                   onClick={() => setUserMenuOpen(false)}
                                 >
@@ -1237,6 +1238,7 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                               <>
                                 <Link
                                   href="/account/dashboard"
+                                  prefetch={false}
                                   className="mb-1 flex items-center gap-3 rounded-md px-4 py-2 text-[14px] font-medium text-text-secondary transition-colors hover:bg-white/[0.07] hover:text-text-primary"
                                   onClick={() => setUserMenuOpen(false)}
                                 >
