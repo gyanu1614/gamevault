@@ -910,7 +910,10 @@ export async function confirmOrderReceipt(orderId: string): Promise<{
     const now = new Date().toISOString()
 
     if (order.status !== 'delivered') {
-      // First transition to delivered
+      // First transition to delivered. Guarded on escrow_status = 'held' so a
+      // replay racing the CAS below can't drag an already-completed (released)
+      // or disputed (frozen) order's status back to 'delivered'. Zero rows
+      // matched is not an error — the CAS below decides who owns completion.
       const { error: deliveredError } = await (supabase
         .from('orders')
         .update as any)({
@@ -918,6 +921,7 @@ export async function confirmOrderReceipt(orderId: string): Promise<{
           delivered_at: now,
         })
         .eq('id', orderId)
+        .eq('escrow_status', 'held')
 
       if (deliveredError) {
         console.error('Error marking order as delivered:', deliveredError)
@@ -928,15 +932,23 @@ export async function confirmOrderReceipt(orderId: string): Promise<{
       }
     }
 
-    // Now update to completed
-    const { error: updateError } = await (supabase
+    // Complete via compare-and-swap on escrow_status = 'held' — the same
+    // pattern as the auto-release cron. Exactly one caller wins the
+    // held → released flip; without this, the cron winning between our read
+    // above and this update would leave both paths calling
+    // transferEscrowToSeller (which has no per-order idempotency) and credit
+    // the seller twice.
+    const { data: claimed, error: updateError } = await (supabase
       .from('orders')
       .update as any)({
         status: 'completed',
         completed_at: now,
         escrow_status: 'released',
+        release_method: 'buyer_confirmed',
       })
       .eq('id', orderId)
+      .eq('escrow_status', 'held')
+      .select('id')
 
     if (updateError) {
       console.error('Database error completing order:', updateError)
@@ -944,6 +956,13 @@ export async function confirmOrderReceipt(orderId: string): Promise<{
         success: false,
         error: updateError.message || 'Failed to complete order',
       }
+    }
+
+    if (!claimed?.length) {
+      // Lost the race: another path (auto-release cron, concurrent confirm)
+      // moved escrow off 'held' after our read. The winner owns the seller
+      // credit and completion comms — doing them here would double-pay.
+      return { success: true }
     }
 
     // Trigger payout to seller via Stripe Connect

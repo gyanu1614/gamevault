@@ -3,10 +3,22 @@
  *
  * For testing and manual escrow release
  * Only accessible by admins
+ *
+ * Runs the exact same pipeline as the auto-release cron (releaseDueOrder:
+ * gate re-check → CAS release → transferEscrowToSeller → completion comms) —
+ * it previously called the legacy release_escrow RPC, which only flipped
+ * order status: the seller was never credited and no comms went out.
+ *
+ * Comms are intentionally NOT optional here: this route acts on the same
+ * real orders the cron would pick up (get_orders_ready_for_auto_release)
+ * and really moves money, so buyer/seller must be notified exactly as if
+ * the cron had run. Admin-testing against fake orders gets comms to those
+ * fake orders' users, which is the correct dress rehearsal of production.
  */
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { releaseDueOrder } from '@/lib/escrow/auto-release'
 
 export async function POST(request: NextRequest) {
   try {
@@ -54,37 +66,11 @@ export async function POST(request: NextRequest) {
 
     console.log(`📦 Admin triggered auto-release for ${orders.length} orders`)
 
-    // Process each order
+    // Process each order through the shared pipeline (never throws — every
+    // failure mode is folded into the result so the batch keeps going).
     const results = []
     for (const order of orders) {
-      try {
-        const { error: releaseError } = await ((supabase as any).rpc('release_escrow', {
-          order_id: order.id,
-          method: 'auto',
-        }))
-
-        if (releaseError) {
-          console.error(`❌ Failed to release escrow for order ${order.id}:`, releaseError)
-          results.push({
-            orderId: order.id,
-            success: false,
-            error: releaseError.message,
-          })
-        } else {
-          console.log(`✅ Successfully released escrow for order ${order.id}`)
-          results.push({
-            orderId: order.id,
-            success: true,
-          })
-        }
-      } catch (error: any) {
-        console.error(`Error processing order ${order.id}:`, error)
-        results.push({
-          orderId: order.id,
-          success: false,
-          error: error.message,
-        })
-      }
+      results.push(await releaseDueOrder(order.id))
     }
 
     const successCount = results.filter((r) => r.success).length
