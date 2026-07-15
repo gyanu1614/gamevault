@@ -38,7 +38,7 @@ export async function sendApplicationApprovedEmail({
   try {
     const { data, error } = await resend.emails.send({
       from: FROM_EMAIL,
-    replyTo: REPLY_TO,
+      replyTo: REPLY_TO,
       to,
       subject: '🎉 Your Seller Application has been Approved!',
       html: `
@@ -48,54 +48,35 @@ export async function sendApplicationApprovedEmail({
           <meta charset="utf-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
         </head>
-        <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #0a0a0f; color: #ffffff; margin: 0; padding: 40px 20px;">
-          <div style="max-width: 600px; margin: 0 auto; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; padding: 40px;">
-
-            <div style="text-align: center; margin-bottom: 32px;">
-              <h1 style="font-size: 28px; font-weight: bold; margin: 0; color: #ffffff;">
-                Drop<span style="color: #a3e635;">Market</span>
-              </h1>
-            </div>
-
-            <div style="text-align: center; margin-bottom: 24px;">
-              <span style="font-size: 64px;">🎉</span>
-            </div>
-
-            <h2 style="font-size: 24px; font-weight: 600; text-align: center; margin: 0 0 16px 0;">
-              Congratulations, ${escapeHtml(name)}!
-            </h2>
-
-            <p style="font-size: 16px; line-height: 1.6; color: #a1a1aa; text-align: center; margin: 0 0 24px 0;">
-              Your seller application for <strong style="color: #ffffff;">"${escapeHtml(displayName)}"</strong> has been approved! You can now start listing your gaming items on DropMarket.
-            </p>
-
-            <div style="background: rgba(163, 230, 53, 0.08); border: 1px solid rgba(163, 230, 53, 0.3); border-radius: 8px; padding: 20px; margin-bottom: 24px;">
-              <h3 style="font-size: 16px; font-weight: 600; color: #a3e635; margin: 0 0 12px 0;">
-                ✅ What's Next?
-              </h3>
-              <ul style="margin: 0; padding-left: 20px; color: #a1a1aa; font-size: 14px; line-height: 1.8;">
-                <li>Set up your seller profile</li>
-                <li>Create your first listing</li>
-                <li>Connect your payment method</li>
-                <li>Start selling!</li>
-              </ul>
-            </div>
-
-            <div style="text-align: center; margin-bottom: 24px;">
-              <a href="${APP_URL}/seller/dashboard" style="display: inline-block; background: #a3e635; color: #0a0a0f; text-decoration: none; padding: 14px 36px; border-radius: 6px; font-weight: 700; font-size: 15px;">
-                Go to Seller Dashboard
-              </a>
-            </div>
-
-            <p style="font-size: 14px; color: #71717a; text-align: center; margin: 0;">
-              Welcome to the DropMarket seller community!
-            </p>
-
-          </div>
-
-          <p style="font-size: 12px; color: #52525b; text-align: center; margin-top: 24px;">
-            © 2026 DropMarket. All rights reserved.
-          </p>
+        <body style="margin:0;padding:0;background-color:#f4f4f5;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f5;">
+            <tr><td align="center" style="padding:36px 16px;">
+              <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;max-width:480px;">
+                <tr><td style="background-color:#0f1013;border-radius:10px;overflow:hidden;">
+                  <img src="https://dropmarket.gg/section-bg/cta-band.jpg" alt="" width="480" style="display:block;width:100%;height:96px;object-fit:cover;">
+                  <div style="padding:26px 32px 28px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;text-align:center;">
+                    <p style="margin:0 0 16px;font-size:19px;font-weight:800;color:#ffffff;">Drop<span style="color:#a3e635;">Market</span></p>
+                    <h1 style="margin:0 0 8px;font-size:20px;font-weight:700;color:#ffffff;">Congratulations, ${escapeHtml(name)}!</h1>
+                    <p style="margin:0 0 22px;font-size:14px;line-height:1.55;color:#a1a1aa;overflow-wrap:anywhere;">Your seller application for <strong style="color:#ffffff;">"${escapeHtml(displayName)}"</strong> has been approved! You can now start listing your gaming items on DropMarket.</p>
+                    <div style="background:rgba(163, 230, 53, 0.08);border:1px solid rgba(163, 230, 53, 0.3);border-radius:8px;padding:14px 16px;margin:0 0 18px;text-align:left;">
+                      <p style="margin:0 0 6px;font-size:13px;font-weight:600;color:#a3e635;">What's Next?</p>
+                      <ul style="margin:0;padding-left:18px;color:#a1a1aa;font-size:13px;line-height:1.7;">
+                        <li>Set up your seller profile</li>
+                        <li>Create your first listing</li>
+                        <li>Connect your payment method</li>
+                        <li>Start selling!</li>
+                      </ul>
+                    </div>
+                    <a href="${APP_URL}/seller/dashboard" style="display:inline-block;background-color:#a3e635;color:#0a0a0f;text-decoration:none;padding:11px 28px;border-radius:6px;font-weight:700;font-size:14px;">Go to Seller Dashboard</a>
+                  </div>
+                </td></tr>
+                <tr><td align="center" style="padding:14px 8px 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:11px;line-height:1.6;color:#a1a1aa;">
+                  Welcome to the DropMarket seller community!<br>
+                  © 2026 DropMarket · <a href="${APP_URL}/support" style="color:#71717a;">Support</a>
+                </td></tr>
+              </table>
+            </td></tr>
+          </table>
         </body>
         </html>
       `,
@@ -127,7 +108,7 @@ export async function sendApplicationRejectedEmail({
   try {
     const { data, error } = await resend.emails.send({
       from: FROM_EMAIL,
-    replyTo: REPLY_TO,
+      replyTo: REPLY_TO,
       to,
       subject: 'Update on Your Seller Application - DropMarket',
       html: `
@@ -137,54 +118,38 @@ export async function sendApplicationRejectedEmail({
           <meta charset="utf-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
         </head>
-        <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #0a0a0f; color: #ffffff; margin: 0; padding: 40px 20px;">
-          <div style="max-width: 600px; margin: 0 auto; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; padding: 40px;">
-
-            <div style="text-align: center; margin-bottom: 32px;">
-              <h1 style="font-size: 28px; font-weight: bold; margin: 0; color: #ffffff;">
-                Drop<span style="color: #a3e635;">Market</span>
-              </h1>
-            </div>
-
-            <h2 style="font-size: 24px; font-weight: 600; text-align: center; margin: 0 0 16px 0;">
-              Hi ${escapeHtml(name)},
-            </h2>
-
-            <p style="font-size: 16px; line-height: 1.6; color: #a1a1aa; text-align: center; margin: 0 0 24px 0;">
-              We've reviewed your seller application for <strong style="color: #ffffff;">"${escapeHtml(displayName)}"</strong> and unfortunately, we're unable to approve it at this time.
-            </p>
-
-            <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 8px; padding: 20px; margin-bottom: 24px;">
-              <h3 style="font-size: 16px; font-weight: 600; color: #ef4444; margin: 0 0 12px 0;">
-                Reason for Rejection
-              </h3>
-              <p style="margin: 0; color: #fca5a5; font-size: 14px; line-height: 1.6;">
-                ${escapeHtml(reason)}
-              </p>
-            </div>
-
-            <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; padding: 20px; margin-bottom: 24px;">
-              <h3 style="font-size: 16px; font-weight: 600; color: #a3e635; margin: 0 0 12px 0;">
-                What Can You Do?
-              </h3>
-              <ul style="margin: 0; padding-left: 20px; color: #a1a1aa; font-size: 14px; line-height: 1.8;">
-                <li>Review the feedback above</li>
-                <li>Address the issues mentioned</li>
-                <li>Submit a new application</li>
-              </ul>
-            </div>
-
-            <div style="text-align: center; margin-bottom: 24px;">
-              <a href="${APP_URL}/account/become-seller" style="display: inline-block; background: #a3e635; color: #0a0a0f; text-decoration: none; padding: 14px 36px; border-radius: 6px; font-weight: 700; font-size: 15px;">
-                Apply Again
-              </a>
-            </div>
-
-            <p style="font-size: 14px; color: #71717a; text-align: center; margin: 0;">
-              If you have questions, please contact our support team.
-            </p>
-
-          </div>
+        <body style="margin:0;padding:0;background-color:#f4f4f5;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f5;">
+            <tr><td align="center" style="padding:36px 16px;">
+              <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;max-width:480px;">
+                <tr><td style="background-color:#0f1013;border-radius:10px;overflow:hidden;">
+                  <img src="https://dropmarket.gg/section-bg/cta-band.jpg" alt="" width="480" style="display:block;width:100%;height:96px;object-fit:cover;">
+                  <div style="padding:26px 32px 28px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;text-align:center;">
+                    <p style="margin:0 0 16px;font-size:19px;font-weight:800;color:#ffffff;">Drop<span style="color:#a3e635;">Market</span></p>
+                    <h1 style="margin:0 0 8px;font-size:20px;font-weight:700;color:#ffffff;">Hi ${escapeHtml(name)},</h1>
+                    <p style="margin:0 0 22px;font-size:14px;line-height:1.55;color:#a1a1aa;overflow-wrap:anywhere;">We've reviewed your seller application for <strong style="color:#ffffff;">"${escapeHtml(displayName)}"</strong> and unfortunately, we're unable to approve it at this time.</p>
+                    <div style="background:rgba(239, 68, 68, 0.1);border:1px solid rgba(239, 68, 68, 0.3);border-radius:8px;padding:14px 16px;margin:0 0 18px;text-align:left;">
+                      <p style="margin:0 0 6px;font-size:13px;font-weight:600;color:#ef4444;">Reason for Rejection</p>
+                      <p style="margin:0;color:#fca5a5;font-size:13px;line-height:1.6;overflow-wrap:anywhere;">${escapeHtml(reason)}</p>
+                    </div>
+                    <div style="background:rgba(255, 255, 255, 0.03);border:1px solid rgba(255, 255, 255, 0.08);border-radius:8px;padding:14px 16px;margin:0 0 18px;text-align:left;">
+                      <p style="margin:0 0 6px;font-size:13px;font-weight:600;color:#a3e635;">What Can You Do?</p>
+                      <ul style="margin:0;padding-left:18px;color:#a1a1aa;font-size:13px;line-height:1.7;">
+                        <li>Review the feedback above</li>
+                        <li>Address the issues mentioned</li>
+                        <li>Submit a new application</li>
+                      </ul>
+                    </div>
+                    <a href="${APP_URL}/account/become-seller" style="display:inline-block;background-color:#a3e635;color:#0a0a0f;text-decoration:none;padding:11px 28px;border-radius:6px;font-weight:700;font-size:14px;">Apply Again</a>
+                  </div>
+                </td></tr>
+                <tr><td align="center" style="padding:14px 8px 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:11px;line-height:1.6;color:#a1a1aa;">
+                  If you have questions, please contact our support team.<br>
+                  © 2026 DropMarket · <a href="${APP_URL}/support" style="color:#71717a;">Support</a>
+                </td></tr>
+              </table>
+            </td></tr>
+          </table>
         </body>
         </html>
       `,
@@ -216,7 +181,7 @@ export async function sendInfoRequestedEmail({
   try {
     const { data, error } = await resend.emails.send({
       from: FROM_EMAIL,
-    replyTo: REPLY_TO,
+      replyTo: REPLY_TO,
       to,
       subject: 'Action Required: Additional Information Needed - DropMarket',
       html: `
@@ -226,47 +191,30 @@ export async function sendInfoRequestedEmail({
           <meta charset="utf-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
         </head>
-        <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #0a0a0f; color: #ffffff; margin: 0; padding: 40px 20px;">
-          <div style="max-width: 600px; margin: 0 auto; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; padding: 40px;">
-
-            <div style="text-align: center; margin-bottom: 32px;">
-              <h1 style="font-size: 28px; font-weight: bold; margin: 0; color: #ffffff;">
-                Drop<span style="color: #a3e635;">Market</span>
-              </h1>
-            </div>
-
-            <div style="text-align: center; margin-bottom: 24px;">
-              <span style="font-size: 64px;">📋</span>
-            </div>
-
-            <h2 style="font-size: 24px; font-weight: 600; text-align: center; margin: 0 0 16px 0;">
-              Hi ${escapeHtml(name)}, We Need More Information
-            </h2>
-
-            <p style="font-size: 16px; line-height: 1.6; color: #a1a1aa; text-align: center; margin: 0 0 24px 0;">
-              We're reviewing your seller application for <strong style="color: #ffffff;">"${escapeHtml(displayName)}"</strong> and need some additional information to proceed.
-            </p>
-
-            <div style="background: rgba(251, 191, 36, 0.1); border: 1px solid rgba(251, 191, 36, 0.3); border-radius: 8px; padding: 20px; margin-bottom: 24px;">
-              <h3 style="font-size: 16px; font-weight: 600; color: #fbbf24; margin: 0 0 12px 0;">
-                📝 Message from our Review Team
-              </h3>
-              <p style="margin: 0; color: #fef3c7; font-size: 14px; line-height: 1.6; white-space: pre-wrap;">
-                ${escapeHtml(message)}
-              </p>
-            </div>
-
-            <div style="text-align: center; margin-bottom: 24px;">
-              <a href="${APP_URL}/seller/application-status" style="display: inline-block; background: #a3e635; color: #0a0a0f; text-decoration: none; padding: 14px 36px; border-radius: 6px; font-weight: 700; font-size: 15px;">
-                View Application Status
-              </a>
-            </div>
-
-            <p style="font-size: 14px; color: #71717a; text-align: center; margin: 0;">
-              Please respond within 7 days to avoid delays.
-            </p>
-
-          </div>
+        <body style="margin:0;padding:0;background-color:#f4f4f5;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f5;">
+            <tr><td align="center" style="padding:36px 16px;">
+              <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;max-width:480px;">
+                <tr><td style="background-color:#0f1013;border-radius:10px;overflow:hidden;">
+                  <img src="https://dropmarket.gg/section-bg/cta-band.jpg" alt="" width="480" style="display:block;width:100%;height:96px;object-fit:cover;">
+                  <div style="padding:26px 32px 28px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;text-align:center;">
+                    <p style="margin:0 0 16px;font-size:19px;font-weight:800;color:#ffffff;">Drop<span style="color:#a3e635;">Market</span></p>
+                    <h1 style="margin:0 0 8px;font-size:20px;font-weight:700;color:#ffffff;">Hi ${escapeHtml(name)}, We Need More Information</h1>
+                    <p style="margin:0 0 22px;font-size:14px;line-height:1.55;color:#a1a1aa;overflow-wrap:anywhere;">We're reviewing your seller application for <strong style="color:#ffffff;">"${escapeHtml(displayName)}"</strong> and need some additional information to proceed.</p>
+                    <div style="background:rgba(251, 191, 36, 0.1);border:1px solid rgba(251, 191, 36, 0.3);border-radius:8px;padding:14px 16px;margin:0 0 18px;text-align:left;">
+                      <p style="margin:0 0 6px;font-size:13px;font-weight:600;color:#fbbf24;">Message from our Review Team</p>
+                      <p style="margin:0;color:#fef3c7;font-size:13px;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere;">${escapeHtml(message)}</p>
+                    </div>
+                    <a href="${APP_URL}/seller/application-status" style="display:inline-block;background-color:#a3e635;color:#0a0a0f;text-decoration:none;padding:11px 28px;border-radius:6px;font-weight:700;font-size:14px;">View Application Status</a>
+                  </div>
+                </td></tr>
+                <tr><td align="center" style="padding:14px 8px 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:11px;line-height:1.6;color:#a1a1aa;">
+                  Please respond within 7 days to avoid delays.<br>
+                  © 2026 DropMarket · <a href="${APP_URL}/support" style="color:#71717a;">Support</a>
+                </td></tr>
+              </table>
+            </td></tr>
+          </table>
         </body>
         </html>
       `,
@@ -317,39 +265,33 @@ export async function sendDisputeOpenedEmail({
     html: `
       <!DOCTYPE html>
       <html>
-      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #0a0a0f; color: #ffffff; margin: 0; padding: 40px 20px;">
-        <div style="max-width: 600px; margin: 0 auto; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; padding: 40px;">
-
-          <div style="text-align: center; margin-bottom: 32px;">
-            <h1 style="font-size: 28px; font-weight: bold; margin: 0; color: #ffffff;">
-              Drop<span style="color: #a3e635;">Market</span>
-            </h1>
-          </div>
-
-          <h2 style="font-size: 20px; font-weight: 600; text-align: center; margin: 0 0 16px 0;">
-            Hi ${escapeHtml(name)}, ${role === 'buyer' ? 'Your Dispute Has Been Opened' : 'A Dispute Requires Your Attention'}
-          </h2>
-
-          <div style="background: rgba(251, 191, 36, 0.1); border: 1px solid rgba(251, 191, 36, 0.3); border-radius: 8px; padding: 20px; margin-bottom: 24px;">
-            <p style="margin: 0 0 8px 0; color: #a1a1aa; font-size: 14px;">
-              <strong>Order Reference:</strong> #${escapeHtml(disputeId)}
-            </p>
-            <p style="margin: 0; color: #a1a1aa; font-size: 14px;">
-              <strong>Reason:</strong> ${escapeHtml(reason)}
-            </p>
-          </div>
-
-          <p style="font-size: 14px; line-height: 1.6; color: #a1a1aa; text-align: center; margin: 0 0 24px 0;">
-            Our team will review this dispute within 24-48 hours. Please share any additional evidence in the order chat.
-          </p>
-
-          <div style="text-align: center;">
-            <a href="${APP_URL}/account/orders/${orderId}" style="display: inline-block; background: #a3e635; color: #0a0a0f; text-decoration: none; padding: 14px 36px; border-radius: 6px; font-weight: 700; font-size: 15px;">
-              View Order &amp; Dispute
-            </a>
-          </div>
-
-        </div>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      </head>
+      <body style="margin:0;padding:0;background-color:#f4f4f5;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f5;">
+          <tr><td align="center" style="padding:36px 16px;">
+            <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;max-width:480px;">
+              <tr><td style="background-color:#0f1013;border-radius:10px;overflow:hidden;">
+                <img src="https://dropmarket.gg/section-bg/cta-band.jpg" alt="" width="480" style="display:block;width:100%;height:96px;object-fit:cover;">
+                <div style="padding:26px 32px 28px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;text-align:center;">
+                  <p style="margin:0 0 16px;font-size:19px;font-weight:800;color:#ffffff;">Drop<span style="color:#a3e635;">Market</span></p>
+                  <h1 style="margin:0 0 8px;font-size:20px;font-weight:700;color:#ffffff;">Hi ${escapeHtml(name)}, ${role === 'buyer' ? 'Your Dispute Has Been Opened' : 'A Dispute Requires Your Attention'}</h1>
+                  <p style="margin:0 0 22px;font-size:14px;line-height:1.55;color:#a1a1aa;">Our team will review this dispute within 24-48 hours. Please share any additional evidence in the order chat.</p>
+                  <div style="background:rgba(251, 191, 36, 0.1);border:1px solid rgba(251, 191, 36, 0.3);border-radius:8px;padding:14px 16px;margin:0 0 18px;text-align:left;">
+                    <p style="margin:0 0 5px;color:#a1a1aa;font-size:13px;line-height:1.6;overflow-wrap:anywhere;"><strong style="color:#fbbf24;">Order Reference:</strong> #${escapeHtml(disputeId)}</p>
+                    <p style="margin:0;color:#a1a1aa;font-size:13px;line-height:1.6;overflow-wrap:anywhere;"><strong style="color:#fbbf24;">Reason:</strong> ${escapeHtml(reason)}</p>
+                  </div>
+                  <a href="${APP_URL}/account/orders/${orderId}" style="display:inline-block;background-color:#a3e635;color:#0a0a0f;text-decoration:none;padding:11px 28px;border-radius:6px;font-weight:700;font-size:14px;">View Order &amp; Dispute</a>
+                </div>
+              </td></tr>
+              <tr><td align="center" style="padding:14px 8px 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:11px;line-height:1.6;color:#a1a1aa;">
+                © 2026 DropMarket · <a href="${APP_URL}/support" style="color:#71717a;">Support</a>
+              </td></tr>
+            </table>
+          </td></tr>
+        </table>
       </body>
       </html>
     `,
@@ -382,41 +324,33 @@ export async function sendDisputeResolvedEmail({
     html: `
       <!DOCTYPE html>
       <html>
-      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #0a0a0f; color: #ffffff; margin: 0; padding: 40px 20px;">
-        <div style="max-width: 600px; margin: 0 auto; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; padding: 40px;">
-
-          <div style="text-align: center; margin-bottom: 32px;">
-            <h1 style="font-size: 28px; font-weight: bold; margin: 0; color: #ffffff;">
-              Drop<span style="color: #a3e635;">Market</span>
-            </h1>
-          </div>
-
-          <div style="text-align: center; margin-bottom: 24px;">
-            <div style="display: inline-block; width: 56px; height: 56px; line-height: 56px; border-radius: 50%; background: rgba(163, 230, 53, 0.12); border: 1px solid rgba(163, 230, 53, 0.4); font-size: 28px;">&#10003;</div>
-          </div>
-
-          <h2 style="font-size: 20px; font-weight: 600; text-align: center; margin: 0 0 16px 0;">
-            Dispute Resolved
-          </h2>
-
-          <p style="font-size: 16px; line-height: 1.6; color: #a1a1aa; text-align: center; margin: 0 0 24px 0;">
-            Hi ${escapeHtml(name)}, your dispute (${disputeId.slice(0, 8)}) has been resolved.
-          </p>
-
-          <div style="background: rgba(163, 230, 53, 0.08); border: 1px solid rgba(163, 230, 53, 0.3); border-radius: 8px; padding: 20px; margin-bottom: 24px;">
-            <p style="margin: 0 0 8px 0; color: #a3e635; font-size: 16px; font-weight: 600;">
-              Resolution: ${resolution.replace(/_/g, ' ')}
-            </p>
-            ${amount ? `<p style="margin: 0; color: #a1a1aa; font-size: 14px;">Refund Amount: $${amount.toFixed(2)}</p>` : ''}
-          </div>
-
-          <div style="text-align: center;">
-            <a href="${APP_URL}${orderId ? `/account/orders/${orderId}` : '/account/orders'}" style="display: inline-block; background: #a3e635; color: #0a0a0f; text-decoration: none; padding: 14px 36px; border-radius: 6px; font-weight: 700; font-size: 15px;">
-              View Details
-            </a>
-          </div>
-
-        </div>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      </head>
+      <body style="margin:0;padding:0;background-color:#f4f4f5;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f5;">
+          <tr><td align="center" style="padding:36px 16px;">
+            <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;max-width:480px;">
+              <tr><td style="background-color:#0f1013;border-radius:10px;overflow:hidden;">
+                <img src="https://dropmarket.gg/section-bg/cta-band.jpg" alt="" width="480" style="display:block;width:100%;height:96px;object-fit:cover;">
+                <div style="padding:26px 32px 28px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;text-align:center;">
+                  <p style="margin:0 0 16px;font-size:19px;font-weight:800;color:#ffffff;">Drop<span style="color:#a3e635;">Market</span></p>
+                  <h1 style="margin:0 0 8px;font-size:20px;font-weight:700;color:#ffffff;">Dispute Resolved</h1>
+                  <p style="margin:0 0 22px;font-size:14px;line-height:1.55;color:#a1a1aa;overflow-wrap:anywhere;">Hi ${escapeHtml(name)}, your dispute (${disputeId.slice(0, 8)}) has been resolved.</p>
+                  <div style="background:rgba(163, 230, 53, 0.08);border:1px solid rgba(163, 230, 53, 0.3);border-radius:8px;padding:14px 16px;margin:0 0 18px;text-align:left;">
+                    <p style="margin:0${amount ? ' 0 5px' : ''};color:#a3e635;font-size:13px;font-weight:600;">Resolution: ${resolution.replace(/_/g, ' ')}</p>
+                    ${amount ? `<p style="margin:0;color:#a1a1aa;font-size:13px;">Refund Amount: $${amount.toFixed(2)}</p>` : ''}
+                  </div>
+                  <a href="${APP_URL}${orderId ? `/account/orders/${orderId}` : '/account/orders'}" style="display:inline-block;background-color:#a3e635;color:#0a0a0f;text-decoration:none;padding:11px 28px;border-radius:6px;font-weight:700;font-size:14px;">View Details</a>
+                </div>
+              </td></tr>
+              <tr><td align="center" style="padding:14px 8px 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:11px;line-height:1.6;color:#a1a1aa;">
+                © 2026 DropMarket · <a href="${APP_URL}/support" style="color:#71717a;">Support</a>
+              </td></tr>
+            </table>
+          </td></tr>
+        </table>
       </body>
       </html>
     `,
@@ -465,69 +399,53 @@ export async function sendNewOrderNotificationEmail({
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
       </head>
-      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #0a0a0f; color: #ffffff; margin: 0; padding: 40px 20px;">
-        <div style="max-width: 600px; margin: 0 auto; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; padding: 40px;">
-
-          <div style="text-align: center; margin-bottom: 32px;">
-            <h1 style="font-size: 28px; font-weight: bold; margin: 0; color: #ffffff;">
-              Drop<span style="color: #a3e635;">Market</span>
-            </h1>
-          </div>
-
-          <div style="text-align: center; margin-bottom: 24px;">
-            <span style="font-size: 64px;">🛒</span>
-          </div>
-
-          <h2 style="font-size: 24px; font-weight: 600; text-align: center; margin: 0 0 8px 0;">
-            New Order Received!
-          </h2>
-          <p style="font-size: 16px; color: #a1a1aa; text-align: center; margin: 0 0 28px 0;">
-            Hi ${escapeHtml(sellerName)}, <strong style="color: #ffffff;">${escapeHtml(buyerName)}</strong> just purchased your listing.
-          </p>
-
-          <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; padding: 20px; margin-bottom: 24px;">
-            <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
-              <tr>
-                <td style="color: #a1a1aa; padding: 6px 0;">Order #</td>
-                <td style="color: #ffffff; font-weight: 700; text-align: right; letter-spacing: 1px;">${displayOrderId}</td>
-              </tr>
-              <tr>
-                <td style="color: #a1a1aa; padding: 6px 0;">Listing</td>
-                <td style="color: #ffffff; text-align: right;">${escapeHtml(listingTitle)}</td>
-              </tr>
-              <tr>
-                <td style="color: #a1a1aa; padding: 6px 0;">Quantity</td>
-                <td style="color: #ffffff; text-align: right;">${quantity}</td>
-              </tr>
-              <tr>
-                <td style="color: #a1a1aa; padding: 6px 0;">Order Total</td>
-                <td style="color: #ffffff; text-align: right;">$${totalAmount.toFixed(2)}</td>
-              </tr>
-              <tr style="border-top: 1px solid rgba(255,255,255,0.1);">
-                <td style="color: #a3e635; font-weight: 700; padding: 10px 0 4px 0;">Your Payout</td>
-                <td style="color: #a3e635; font-weight: 700; font-size: 18px; text-align: right; padding: 10px 0 4px 0;">$${sellerPayout.toFixed(2)}</td>
-              </tr>
+      <body style="margin:0;padding:0;background-color:#f4f4f5;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f5;">
+          <tr><td align="center" style="padding:36px 16px;">
+            <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;max-width:480px;">
+              <tr><td style="background-color:#0f1013;border-radius:10px;overflow:hidden;">
+                <img src="https://dropmarket.gg/section-bg/cta-band.jpg" alt="" width="480" style="display:block;width:100%;height:96px;object-fit:cover;">
+                <div style="padding:26px 32px 28px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;text-align:center;">
+                  <p style="margin:0 0 16px;font-size:19px;font-weight:800;color:#ffffff;">Drop<span style="color:#a3e635;">Market</span></p>
+                  <h1 style="margin:0 0 8px;font-size:20px;font-weight:700;color:#ffffff;">New Order Received!</h1>
+                  <p style="margin:0 0 22px;font-size:14px;line-height:1.55;color:#a1a1aa;">Hi ${escapeHtml(sellerName)}, <strong style="color:#ffffff;">${escapeHtml(buyerName)}</strong> just purchased your listing.</p>
+                  <div style="background:rgba(255, 255, 255, 0.03);border:1px solid rgba(255, 255, 255, 0.08);border-radius:8px;padding:14px 16px;margin:0 0 18px;text-align:left;">
+                    <table style="width:100%;border-collapse:collapse;font-size:13px;">
+                      <tr>
+                        <td style="color:#a1a1aa;padding:4px 0;">Order #</td>
+                        <td style="color:#ffffff;font-weight:700;text-align:right;letter-spacing:1px;padding:4px 0;">${displayOrderId}</td>
+                      </tr>
+                      <tr>
+                        <td style="color:#a1a1aa;padding:4px 0;">Listing</td>
+                        <td style="color:#ffffff;text-align:right;padding:4px 0;overflow-wrap:anywhere;">${escapeHtml(listingTitle)}</td>
+                      </tr>
+                      <tr>
+                        <td style="color:#a1a1aa;padding:4px 0;">Quantity</td>
+                        <td style="color:#ffffff;text-align:right;padding:4px 0;">${quantity}</td>
+                      </tr>
+                      <tr>
+                        <td style="color:#a1a1aa;padding:4px 0;">Order Total</td>
+                        <td style="color:#ffffff;text-align:right;padding:4px 0;">$${totalAmount.toFixed(2)}</td>
+                      </tr>
+                      <tr style="border-top:1px solid rgba(255,255,255,0.1);">
+                        <td style="color:#a3e635;font-weight:700;padding:8px 0 2px;">Your Payout</td>
+                        <td style="color:#a3e635;font-weight:700;font-size:15px;text-align:right;padding:8px 0 2px;">$${sellerPayout.toFixed(2)}</td>
+                      </tr>
+                    </table>
+                  </div>
+                  <div style="background:rgba(255, 255, 255, 0.03);border:1px solid rgba(255, 255, 255, 0.08);border-radius:8px;padding:14px 16px;margin:0 0 18px;text-align:left;">
+                    <p style="margin:0;color:#a1a1aa;font-size:13px;line-height:1.6;"><strong style="color:#a3e635;">Next step:</strong> Head to your order dashboard and deliver the item to the buyer. You'll be paid out once the buyer confirms receipt — or automatically when the order's protection window closes.</p>
+                  </div>
+                  <a href="${orderUrl}" style="display:inline-block;background-color:#a3e635;color:#0a0a0f;text-decoration:none;padding:11px 28px;border-radius:6px;font-weight:700;font-size:14px;">View Order & Deliver</a>
+                </div>
+              </td></tr>
+              <tr><td align="center" style="padding:14px 8px 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:11px;line-height:1.6;color:#a1a1aa;">
+                You are receiving this because you are a seller on DropMarket. Manage your notifications in <a href="${APP_URL}/account/settings" style="color:#71717a;">account settings</a>.<br>
+                © 2026 DropMarket · <a href="${APP_URL}/support" style="color:#71717a;">Support</a>
+              </td></tr>
             </table>
-          </div>
-
-          <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; padding: 16px; margin-bottom: 24px;">
-            <p style="margin: 0; color: #a1a1aa; font-size: 14px; line-height: 1.6;">
-              <strong style="color: #a3e635;">Next step:</strong> Head to your order dashboard and deliver the item to the buyer. You'll be paid out once the buyer confirms receipt — or automatically when the order's protection window closes.
-            </p>
-          </div>
-
-          <div style="text-align: center; margin-bottom: 24px;">
-            <a href="${orderUrl}" style="display: inline-block; background: #a3e635; color: #0a0a0f; text-decoration: none; padding: 14px 36px; border-radius: 6px; font-weight: 700; font-size: 15px;">
-              View Order & Deliver
-            </a>
-          </div>
-
-          <p style="font-size: 12px; color: #6b7280; text-align: center; margin: 0;">
-            You are receiving this because you are a seller on DropMarket.<br>
-            Manage your notifications in <a href="${APP_URL}/account/settings" style="color: #a3e635;">account settings</a>.
-          </p>
-
-        </div>
+          </td></tr>
+        </table>
       </body>
       </html>
     `,
@@ -574,67 +492,55 @@ export async function sendOrderCompletionEmail({
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
       </head>
-      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #0a0a0f; color: #ffffff; margin: 0; padding: 40px 20px;">
-        <div style="max-width: 600px; margin: 0 auto; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; padding: 40px;">
-
-          <div style="text-align: center; margin-bottom: 32px;">
-            <h1 style="font-size: 28px; font-weight: bold; margin: 0; color: #ffffff;">
-              Drop<span style="color: #a3e635;">Market</span>
-            </h1>
-          </div>
-
-          <div style="text-align: center; margin-bottom: 24px;">
-            <div style="display: inline-block; width: 56px; height: 56px; line-height: 56px; border-radius: 50%; background: rgba(163, 230, 53, 0.12); border: 1px solid rgba(163, 230, 53, 0.4); font-size: 28px;">&#10003;</div>
-          </div>
-
-          <h2 style="font-size: 24px; font-weight: 600; text-align: center; margin: 0 0 12px 0;">
-            Order Complete
-          </h2>
-
-          <p style="font-size: 15px; line-height: 1.6; color: #a1a1aa; text-align: center; margin: 0 0 28px 0;">
-            ${
-              autoReleased
-                ? `Hi ${escapeHtml(name)} — your protection window ended with no issues reported, so this order completed automatically.`
-                : `Thanks, ${escapeHtml(name)} — you've confirmed delivery, and your order is all wrapped up.`
-            }
-          </p>
-
-          <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; padding: 20px; margin-bottom: 24px;">
-            <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
-              <tr>
-                <td style="color: #a1a1aa; padding: 6px 0;">Order</td>
-                <td style="color: #ffffff; text-align: right; font-weight: 600;">#${orderNumber}</td>
-              </tr>
-              <tr>
-                <td style="color: #a1a1aa; padding: 6px 0;">Item</td>
-                <td style="color: #ffffff; text-align: right;">${escapeHtml(listingTitle)}</td>
-              </tr>
-              <tr>
-                <td style="color: #a1a1aa; padding: 6px 0;">Total Paid</td>
-                <td style="color: #ffffff; text-align: right; font-weight: 600;">$${totalPaid.toFixed(2)}</td>
-              </tr>
+      <body style="margin:0;padding:0;background-color:#f4f4f5;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f5;">
+          <tr><td align="center" style="padding:36px 16px;">
+            <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;max-width:480px;">
+              <tr><td style="background-color:#0f1013;border-radius:10px;overflow:hidden;">
+                <img src="https://dropmarket.gg/section-bg/cta-band.jpg" alt="" width="480" style="display:block;width:100%;height:96px;object-fit:cover;">
+                <div style="padding:26px 32px 28px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;text-align:center;">
+                  <p style="margin:0 0 16px;font-size:19px;font-weight:800;color:#ffffff;">Drop<span style="color:#a3e635;">Market</span></p>
+                  <h1 style="margin:0 0 8px;font-size:20px;font-weight:700;color:#ffffff;">Order Complete</h1>
+                  <p style="margin:0 0 22px;font-size:14px;line-height:1.55;color:#a1a1aa;">
+                    ${
+                      autoReleased
+                        ? `Hi ${escapeHtml(name)} — your protection window ended with no issues reported, so this order completed automatically.`
+                        : `Thanks, ${escapeHtml(name)} — you've confirmed delivery, and your order is all wrapped up.`
+                    }
+                  </p>
+                  <div style="background:rgba(255, 255, 255, 0.03);border:1px solid rgba(255, 255, 255, 0.08);border-radius:8px;padding:14px 16px;margin:0 0 18px;text-align:left;">
+                    <table style="width:100%;border-collapse:collapse;font-size:13px;">
+                      <tr>
+                        <td style="color:#a1a1aa;padding:4px 0;">Order</td>
+                        <td style="color:#ffffff;text-align:right;font-weight:600;padding:4px 0;">#${orderNumber}</td>
+                      </tr>
+                      <tr>
+                        <td style="color:#a1a1aa;padding:4px 0;">Item</td>
+                        <td style="color:#ffffff;text-align:right;padding:4px 0;overflow-wrap:anywhere;">${escapeHtml(listingTitle)}</td>
+                      </tr>
+                      <tr>
+                        <td style="color:#a1a1aa;padding:4px 0;">Total Paid</td>
+                        <td style="color:#ffffff;text-align:right;font-weight:600;padding:4px 0;">$${totalPaid.toFixed(2)}</td>
+                      </tr>
+                    </table>
+                  </div>
+                  <p style="margin:0 0 18px;font-size:11px;line-height:1.6;color:#71717a;">
+                    ${
+                      autoReleased
+                        ? 'This order was covered by SafeDrop Buyer Protection for its full protection window — the seller is only paid out now that the window has closed.'
+                        : 'This order was covered by SafeDrop Buyer Protection from checkout until you confirmed delivery — the seller is only paid out now that you have.'
+                    }
+                  </p>
+                  <a href="${APP_URL}/account/orders/${orderId}" style="display:inline-block;background-color:#a3e635;color:#0a0a0f;text-decoration:none;padding:11px 28px;border-radius:6px;font-weight:700;font-size:14px;">View Your Order</a>
+                </div>
+              </td></tr>
+              <tr><td align="center" style="padding:14px 8px 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:11px;line-height:1.6;color:#a1a1aa;">
+                Questions about this order? <a href="${APP_URL}/support" style="color:#71717a;">Contact support</a>.<br>
+                © 2026 DropMarket · <a href="${APP_URL}/support" style="color:#71717a;">Support</a>
+              </td></tr>
             </table>
-          </div>
-
-          <p style="font-size: 13px; line-height: 1.6; color: #a1a1aa; text-align: center; margin: 0 0 28px 0;">
-            ${
-              autoReleased
-                ? 'This order was covered by SafeDrop Buyer Protection for its full protection window — the seller is only paid out now that the window has closed.'
-                : 'This order was covered by SafeDrop Buyer Protection from checkout until you confirmed delivery — the seller is only paid out now that you have.'
-            }
-          </p>
-
-          <div style="text-align: center; margin-bottom: 28px;">
-            <a href="${APP_URL}/account/orders/${orderId}" style="display: inline-block; background: #a3e635; color: #0a0a0f; text-decoration: none; padding: 14px 36px; border-radius: 6px; font-weight: 700; font-size: 15px;">
-              View Your Order
-            </a>
-          </div>
-
-          <p style="font-size: 12px; color: #6b7280; text-align: center; margin: 0;">
-            Questions about this order? <a href="${APP_URL}/support" style="color: #a3e635;">Contact support</a>.
-          </p>
-
-        </div>
+          </td></tr>
+        </table>
       </body>
       </html>
     `,
@@ -670,55 +576,43 @@ export async function sendOrderPaidEmail({
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
       </head>
-      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #0a0a0f; color: #ffffff; margin: 0; padding: 40px 20px;">
-        <div style="max-width: 600px; margin: 0 auto; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; padding: 40px;">
-
-          <div style="text-align: center; margin-bottom: 32px;">
-            <h1 style="font-size: 28px; font-weight: bold; margin: 0; color: #ffffff;">
-              Drop<span style="color: #a3e635;">Market</span>
-            </h1>
-          </div>
-
-          <h2 style="font-size: 24px; font-weight: 600; text-align: center; margin: 0 0 12px 0;">
-            Payment Received
-          </h2>
-
-          <p style="font-size: 15px; line-height: 1.6; color: #a1a1aa; text-align: center; margin: 0 0 28px 0;">
-            Thanks, ${escapeHtml(name)} — your payment is confirmed and the seller has been told to start delivery.
-          </p>
-
-          <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; padding: 20px; margin-bottom: 24px;">
-            <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
-              <tr>
-                <td style="color: #a1a1aa; padding: 6px 0;">Order</td>
-                <td style="color: #ffffff; text-align: right; font-weight: 600;">#${orderNumber}</td>
-              </tr>
-              <tr>
-                <td style="color: #a1a1aa; padding: 6px 0;">Item</td>
-                <td style="color: #ffffff; text-align: right;">${escapeHtml(listingTitle)}</td>
-              </tr>
-              <tr>
-                <td style="color: #a1a1aa; padding: 6px 0;">Total Paid</td>
-                <td style="color: #ffffff; text-align: right; font-weight: 600;">$${totalPaid.toFixed(2)}</td>
-              </tr>
+      <body style="margin:0;padding:0;background-color:#f4f4f5;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f5;">
+          <tr><td align="center" style="padding:36px 16px;">
+            <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;max-width:480px;">
+              <tr><td style="background-color:#0f1013;border-radius:10px;overflow:hidden;">
+                <img src="https://dropmarket.gg/section-bg/cta-band.jpg" alt="" width="480" style="display:block;width:100%;height:96px;object-fit:cover;">
+                <div style="padding:26px 32px 28px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;text-align:center;">
+                  <p style="margin:0 0 16px;font-size:19px;font-weight:800;color:#ffffff;">Drop<span style="color:#a3e635;">Market</span></p>
+                  <h1 style="margin:0 0 8px;font-size:20px;font-weight:700;color:#ffffff;">Payment Received</h1>
+                  <p style="margin:0 0 22px;font-size:14px;line-height:1.55;color:#a1a1aa;">Thanks, ${escapeHtml(name)} — your payment is confirmed and the seller has been told to start delivery.</p>
+                  <div style="background:rgba(255, 255, 255, 0.03);border:1px solid rgba(255, 255, 255, 0.08);border-radius:8px;padding:14px 16px;margin:0 0 18px;text-align:left;">
+                    <table style="width:100%;border-collapse:collapse;font-size:13px;">
+                      <tr>
+                        <td style="color:#a1a1aa;padding:4px 0;">Order</td>
+                        <td style="color:#ffffff;text-align:right;font-weight:600;padding:4px 0;">#${orderNumber}</td>
+                      </tr>
+                      <tr>
+                        <td style="color:#a1a1aa;padding:4px 0;">Item</td>
+                        <td style="color:#ffffff;text-align:right;padding:4px 0;overflow-wrap:anywhere;">${escapeHtml(listingTitle)}</td>
+                      </tr>
+                      <tr>
+                        <td style="color:#a1a1aa;padding:4px 0;">Total Paid</td>
+                        <td style="color:#ffffff;text-align:right;font-weight:600;padding:4px 0;">$${totalPaid.toFixed(2)}</td>
+                      </tr>
+                    </table>
+                  </div>
+                  <p style="margin:0 0 18px;font-size:11px;line-height:1.6;color:#71717a;">You're covered by SafeDrop Buyer Protection — the seller isn't paid out until your order completes, and you're entitled to a full refund if your order never arrives.</p>
+                  <a href="${APP_URL}/account/orders/${orderId}" style="display:inline-block;background-color:#a3e635;color:#0a0a0f;text-decoration:none;padding:11px 28px;border-radius:6px;font-weight:700;font-size:14px;">Track Your Order</a>
+                </div>
+              </td></tr>
+              <tr><td align="center" style="padding:14px 8px 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:11px;line-height:1.6;color:#a1a1aa;">
+                Questions about this order? <a href="${APP_URL}/support" style="color:#71717a;">Contact support</a>.<br>
+                © 2026 DropMarket · <a href="${APP_URL}/support" style="color:#71717a;">Support</a>
+              </td></tr>
             </table>
-          </div>
-
-          <p style="font-size: 13px; line-height: 1.6; color: #a1a1aa; text-align: center; margin: 0 0 28px 0;">
-            You're covered by SafeDrop Buyer Protection — the seller isn't paid out until your order completes, and you're entitled to a full refund if your order never arrives.
-          </p>
-
-          <div style="text-align: center; margin-bottom: 28px;">
-            <a href="${APP_URL}/account/orders/${orderId}" style="display: inline-block; background: #a3e635; color: #0a0a0f; text-decoration: none; padding: 14px 36px; border-radius: 6px; font-weight: 700; font-size: 15px;">
-              Track Your Order
-            </a>
-          </div>
-
-          <p style="font-size: 12px; color: #6b7280; text-align: center; margin: 0;">
-            Questions about this order? <a href="${APP_URL}/support" style="color: #a3e635;">Contact support</a>.
-          </p>
-
-        </div>
+          </td></tr>
+        </table>
       </body>
       </html>
     `,
@@ -761,42 +655,31 @@ export async function sendOrderDeliveredEmail({
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
       </head>
-      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #0a0a0f; color: #ffffff; margin: 0; padding: 40px 20px;">
-        <div style="max-width: 600px; margin: 0 auto; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; padding: 40px;">
-
-          <div style="text-align: center; margin-bottom: 32px;">
-            <h1 style="font-size: 28px; font-weight: bold; margin: 0; color: #ffffff;">
-              Drop<span style="color: #a3e635;">Market</span>
-            </h1>
-          </div>
-
-          <h2 style="font-size: 24px; font-weight: 600; text-align: center; margin: 0 0 12px 0;">
-            Delivery Marked Complete
-          </h2>
-
-          <p style="font-size: 15px; line-height: 1.6; color: #a1a1aa; text-align: center; margin: 0 0 28px 0;">
-            Hi ${escapeHtml(name)} — the seller marked order <strong style="color: #ffffff;">#${orderNumber}</strong> (${escapeHtml(listingTitle)}) as delivered. Please check you received everything as described.
-          </p>
-
-          <div style="background: rgba(163, 230, 53, 0.08); border: 1px solid rgba(163, 230, 53, 0.3); border-radius: 8px; padding: 20px; margin-bottom: 24px; text-align: center;">
-            <p style="margin: 0 0 4px 0; color: #a1a1aa; font-size: 13px;">Your Protection Window</p>
-            <p style="margin: 0; color: #ffffff; font-size: 16px; font-weight: 600;">${windowText} — until ${confirmByText}</p>
-            <p style="margin: 8px 0 0 0; color: #a1a1aa; font-size: 13px; line-height: 1.6;">
-              Confirm receipt once you're happy, or open a dispute if something's wrong. If you do nothing, the order completes automatically when the window ends.
-            </p>
-          </div>
-
-          <div style="text-align: center; margin-bottom: 28px;">
-            <a href="${APP_URL}/account/orders/${orderId}" style="display: inline-block; background: #a3e635; color: #0a0a0f; text-decoration: none; padding: 14px 36px; border-radius: 6px; font-weight: 700; font-size: 15px;">
-              Review &amp; Confirm Delivery
-            </a>
-          </div>
-
-          <p style="font-size: 12px; color: #6b7280; text-align: center; margin: 0;">
-            Something not right? <a href="${APP_URL}/account/orders/${orderId}" style="color: #a3e635;">Open a dispute</a> before the window closes — SafeDrop Buyer Protection has you covered.
-          </p>
-
-        </div>
+      <body style="margin:0;padding:0;background-color:#f4f4f5;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f5;">
+          <tr><td align="center" style="padding:36px 16px;">
+            <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;max-width:480px;">
+              <tr><td style="background-color:#0f1013;border-radius:10px;overflow:hidden;">
+                <img src="https://dropmarket.gg/section-bg/cta-band.jpg" alt="" width="480" style="display:block;width:100%;height:96px;object-fit:cover;">
+                <div style="padding:26px 32px 28px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;text-align:center;">
+                  <p style="margin:0 0 16px;font-size:19px;font-weight:800;color:#ffffff;">Drop<span style="color:#a3e635;">Market</span></p>
+                  <h1 style="margin:0 0 8px;font-size:20px;font-weight:700;color:#ffffff;">Delivery Marked Complete</h1>
+                  <p style="margin:0 0 22px;font-size:14px;line-height:1.55;color:#a1a1aa;overflow-wrap:anywhere;">Hi ${escapeHtml(name)} — the seller marked order <strong style="color:#ffffff;">#${orderNumber}</strong> (${escapeHtml(listingTitle)}) as delivered. Please check you received everything as described.</p>
+                  <div style="background:rgba(163, 230, 53, 0.08);border:1px solid rgba(163, 230, 53, 0.3);border-radius:8px;padding:14px 16px;margin:0 0 18px;text-align:center;">
+                    <p style="margin:0 0 4px;color:#a1a1aa;font-size:11px;">Your Protection Window</p>
+                    <p style="margin:0;color:#ffffff;font-size:14px;font-weight:600;">${windowText} — until ${confirmByText}</p>
+                    <p style="margin:6px 0 0;color:#a1a1aa;font-size:12px;line-height:1.6;">Confirm receipt once you're happy, or open a dispute if something's wrong. If you do nothing, the order completes automatically when the window ends.</p>
+                  </div>
+                  <a href="${APP_URL}/account/orders/${orderId}" style="display:inline-block;background-color:#a3e635;color:#0a0a0f;text-decoration:none;padding:11px 28px;border-radius:6px;font-weight:700;font-size:14px;">Review &amp; Confirm Delivery</a>
+                </div>
+              </td></tr>
+              <tr><td align="center" style="padding:14px 8px 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:11px;line-height:1.6;color:#a1a1aa;">
+                Something not right? <a href="${APP_URL}/account/orders/${orderId}" style="color:#71717a;">Open a dispute</a> before the window closes — SafeDrop Buyer Protection has you covered.<br>
+                © 2026 DropMarket · <a href="${APP_URL}/support" style="color:#71717a;">Support</a>
+              </td></tr>
+            </table>
+          </td></tr>
+        </table>
       </body>
       </html>
     `,
@@ -840,57 +723,54 @@ export async function sendOrderRefundedEmail({
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
       </head>
-      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #0a0a0f; color: #ffffff; margin: 0; padding: 40px 20px;">
-        <div style="max-width: 600px; margin: 0 auto; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; padding: 40px;">
-
-          <div style="text-align: center; margin-bottom: 32px;">
-            <h1 style="font-size: 28px; font-weight: bold; margin: 0; color: #ffffff;">
-              Drop<span style="color: #a3e635;">Market</span>
-            </h1>
-          </div>
-
-          <h2 style="font-size: 24px; font-weight: 600; text-align: center; margin: 0 0 12px 0;">
-            ${pending ? 'Order Cancelled' : 'Refund Processed'}
-          </h2>
-
-          <p style="font-size: 15px; line-height: 1.6; color: #a1a1aa; text-align: center; margin: 0 0 28px 0;">
-            ${
-              pending
-                ? `Hi ${escapeHtml(name)} — order <strong style="color: #ffffff;">#${orderNumber}</strong> (${escapeHtml(listingTitle)}) has been cancelled, and our team is arranging your refund in line with the Refund &amp; Dispute Policy.`
-                : `Hi ${escapeHtml(name)} — order <strong style="color: #ffffff;">#${orderNumber}</strong> (${escapeHtml(listingTitle)}) has been cancelled and refunded.`
-            }
-          </p>
-
-          <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; padding: 20px; margin-bottom: 24px;">
-            <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
-              <tr>
-                <td style="color: #a1a1aa; padding: 6px 0;">Refund Amount</td>
-                <td style="color: #ffffff; text-align: right; font-weight: 600;">$${amount.toFixed(2)}</td>
-              </tr>
-              ${
-                pending
-                  ? ''
-                  : `<tr>
-                <td style="color: #a1a1aa; padding: 6px 0;">Refunded To</td>
-                <td style="color: #ffffff; text-align: right;">${destination}</td>
-              </tr>`
-              }
+      <body style="margin:0;padding:0;background-color:#f4f4f5;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f5;">
+          <tr><td align="center" style="padding:36px 16px;">
+            <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;max-width:480px;">
+              <tr><td style="background-color:#0f1013;border-radius:10px;overflow:hidden;">
+                <img src="https://dropmarket.gg/section-bg/cta-band.jpg" alt="" width="480" style="display:block;width:100%;height:96px;object-fit:cover;">
+                <div style="padding:26px 32px 28px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;text-align:center;">
+                  <p style="margin:0 0 16px;font-size:19px;font-weight:800;color:#ffffff;">Drop<span style="color:#a3e635;">Market</span></p>
+                  <h1 style="margin:0 0 8px;font-size:20px;font-weight:700;color:#ffffff;">${pending ? 'Order Cancelled' : 'Refund Processed'}</h1>
+                  <p style="margin:0 0 22px;font-size:14px;line-height:1.55;color:#a1a1aa;overflow-wrap:anywhere;">
+                    ${
+                      pending
+                        ? `Hi ${escapeHtml(name)} — order <strong style="color:#ffffff;">#${orderNumber}</strong> (${escapeHtml(listingTitle)}) has been cancelled, and our team is arranging your refund in line with the Refund &amp; Dispute Policy.`
+                        : `Hi ${escapeHtml(name)} — order <strong style="color:#ffffff;">#${orderNumber}</strong> (${escapeHtml(listingTitle)}) has been cancelled and refunded.`
+                    }
+                  </p>
+                  <div style="background:rgba(255, 255, 255, 0.03);border:1px solid rgba(255, 255, 255, 0.08);border-radius:8px;padding:14px 16px;margin:0 0 18px;text-align:left;">
+                    <table style="width:100%;border-collapse:collapse;font-size:13px;">
+                      <tr>
+                        <td style="color:#a1a1aa;padding:4px 0;">Refund Amount</td>
+                        <td style="color:#ffffff;text-align:right;font-weight:600;padding:4px 0;">$${amount.toFixed(2)}</td>
+                      </tr>
+                      ${
+                        pending
+                          ? ''
+                          : `<tr>
+                        <td style="color:#a1a1aa;padding:4px 0;">Refunded To</td>
+                        <td style="color:#ffffff;text-align:right;padding:4px 0;">${destination}</td>
+                      </tr>`
+                      }
+                    </table>
+                  </div>
+                  <p style="margin:0;font-size:11px;line-height:1.6;color:#71717a;">
+                    ${
+                      pending
+                        ? 'You will get a confirmation email as soon as your refund is issued. If you have any questions in the meantime, support is one click away.'
+                        : 'Refunds to a payment method typically arrive within 5–10 business days depending on your provider.'
+                    }
+                  </p>
+                </div>
+              </td></tr>
+              <tr><td align="center" style="padding:14px 8px 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:11px;line-height:1.6;color:#a1a1aa;">
+                Didn't expect this refund? <a href="${APP_URL}/support" style="color:#71717a;">Contact support</a>.<br>
+                © 2026 DropMarket · <a href="${APP_URL}/support" style="color:#71717a;">Support</a>
+              </td></tr>
             </table>
-          </div>
-
-          <p style="font-size: 13px; line-height: 1.6; color: #a1a1aa; text-align: center; margin: 0 0 28px 0;">
-            ${
-              pending
-                ? 'You will get a confirmation email as soon as your refund is issued. If you have any questions in the meantime, support is one click away.'
-                : 'Refunds to a payment method typically arrive within 5–10 business days depending on your provider.'
-            }
-          </p>
-
-          <p style="font-size: 12px; color: #6b7280; text-align: center; margin: 0;">
-            Didn't expect this refund? <a href="${APP_URL}/support" style="color: #a3e635;">Contact support</a>.
-          </p>
-
-        </div>
+          </td></tr>
+        </table>
       </body>
       </html>
     `,
@@ -928,48 +808,37 @@ export async function sendOrderCompletedSellerEmail({
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
       </head>
-      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #0a0a0f; color: #ffffff; margin: 0; padding: 40px 20px;">
-        <div style="max-width: 600px; margin: 0 auto; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; padding: 40px;">
-
-          <div style="text-align: center; margin-bottom: 32px;">
-            <h1 style="font-size: 28px; font-weight: bold; margin: 0; color: #ffffff;">
-              Drop<span style="color: #a3e635;">Market</span>
-            </h1>
-          </div>
-
-          <div style="text-align: center; margin-bottom: 24px;">
-            <div style="display: inline-block; width: 56px; height: 56px; line-height: 56px; border-radius: 50%; background: rgba(163, 230, 53, 0.12); border: 1px solid rgba(163, 230, 53, 0.4); font-size: 28px;">&#10003;</div>
-          </div>
-
-          <h2 style="font-size: 24px; font-weight: 600; text-align: center; margin: 0 0 12px 0;">
-            Sale Complete
-          </h2>
-
-          <p style="font-size: 15px; line-height: 1.6; color: #a1a1aa; text-align: center; margin: 0 0 28px 0;">
-            ${
-              autoReleased
-                ? `Hi ${escapeHtml(name)} — the protection window on order <strong style="color: #ffffff;">#${orderNumber}</strong> closed with no issues, so it completed automatically.`
-                : `Hi ${escapeHtml(name)} — the buyer confirmed delivery on order <strong style="color: #ffffff;">#${orderNumber}</strong>.`
-            }
-          </p>
-
-          <div style="background: rgba(163, 230, 53, 0.08); border: 1px solid rgba(163, 230, 53, 0.3); border-radius: 8px; padding: 20px; margin-bottom: 24px; text-align: center;">
-            <p style="margin: 0 0 4px 0; color: #a1a1aa; font-size: 13px;">${escapeHtml(listingTitle)}</p>
-            <p style="margin: 0; color: #a3e635; font-size: 24px; font-weight: 700;">+$${payout.toFixed(2)}</p>
-            <p style="margin: 6px 0 0 0; color: #a1a1aa; font-size: 13px;">${autoReleased ? 'payout being processed' : 'added to your seller balance'}</p>
-          </div>
-
-          <div style="text-align: center; margin-bottom: 28px;">
-            <a href="${APP_URL}/account/orders/${orderId}" style="display: inline-block; background: #a3e635; color: #0a0a0f; text-decoration: none; padding: 14px 36px; border-radius: 6px; font-weight: 700; font-size: 15px;">
-              View Order
-            </a>
-          </div>
-
-          <p style="font-size: 12px; color: #6b7280; text-align: center; margin: 0;">
-            Withdraw anytime from your <a href="${APP_URL}/account/wallet" style="color: #a3e635;">wallet</a> once you reach the payout minimum.
-          </p>
-
-        </div>
+      <body style="margin:0;padding:0;background-color:#f4f4f5;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f5;">
+          <tr><td align="center" style="padding:36px 16px;">
+            <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;max-width:480px;">
+              <tr><td style="background-color:#0f1013;border-radius:10px;overflow:hidden;">
+                <img src="https://dropmarket.gg/section-bg/cta-band.jpg" alt="" width="480" style="display:block;width:100%;height:96px;object-fit:cover;">
+                <div style="padding:26px 32px 28px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;text-align:center;">
+                  <p style="margin:0 0 16px;font-size:19px;font-weight:800;color:#ffffff;">Drop<span style="color:#a3e635;">Market</span></p>
+                  <h1 style="margin:0 0 8px;font-size:20px;font-weight:700;color:#ffffff;">Sale Complete</h1>
+                  <p style="margin:0 0 22px;font-size:14px;line-height:1.55;color:#a1a1aa;">
+                    ${
+                      autoReleased
+                        ? `Hi ${escapeHtml(name)} — the protection window on order <strong style="color:#ffffff;">#${orderNumber}</strong> closed with no issues, so it completed automatically.`
+                        : `Hi ${escapeHtml(name)} — the buyer confirmed delivery on order <strong style="color:#ffffff;">#${orderNumber}</strong>.`
+                    }
+                  </p>
+                  <div style="background:rgba(163, 230, 53, 0.08);border:1px solid rgba(163, 230, 53, 0.3);border-radius:8px;padding:14px 16px;margin:0 0 18px;text-align:center;">
+                    <p style="margin:0 0 4px;color:#a1a1aa;font-size:12px;overflow-wrap:anywhere;">${escapeHtml(listingTitle)}</p>
+                    <p style="margin:0;color:#a3e635;font-size:20px;font-weight:700;">+$${payout.toFixed(2)}</p>
+                    <p style="margin:4px 0 0;color:#a1a1aa;font-size:12px;">${autoReleased ? 'payout being processed' : 'added to your seller balance'}</p>
+                  </div>
+                  <a href="${APP_URL}/account/orders/${orderId}" style="display:inline-block;background-color:#a3e635;color:#0a0a0f;text-decoration:none;padding:11px 28px;border-radius:6px;font-weight:700;font-size:14px;">View Order</a>
+                </div>
+              </td></tr>
+              <tr><td align="center" style="padding:14px 8px 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:11px;line-height:1.6;color:#a1a1aa;">
+                Withdraw anytime from your <a href="${APP_URL}/account/wallet" style="color:#71717a;">wallet</a> once you reach the payout minimum.<br>
+                © 2026 DropMarket · <a href="${APP_URL}/support" style="color:#71717a;">Support</a>
+              </td></tr>
+            </table>
+          </td></tr>
+        </table>
       </body>
       </html>
     `,
@@ -1006,38 +875,26 @@ export async function sendListingApprovedEmail({
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
       </head>
-      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #0a0a0f; color: #ffffff; margin: 0; padding: 40px 20px;">
-        <div style="max-width: 600px; margin: 0 auto; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; padding: 40px;">
-
-          <div style="text-align: center; margin-bottom: 32px;">
-            <h1 style="font-size: 28px; font-weight: bold; margin: 0; color: #ffffff;">
-              Drop<span style="color: #a3e635;">Market</span>
-            </h1>
-          </div>
-
-          <div style="text-align: center; margin-bottom: 24px;">
-            <div style="display: inline-block; width: 56px; height: 56px; line-height: 56px; border-radius: 50%; background: rgba(163, 230, 53, 0.12); border: 1px solid rgba(163, 230, 53, 0.4); font-size: 28px;">&#10003;</div>
-          </div>
-
-          <h2 style="font-size: 24px; font-weight: 600; text-align: center; margin: 0 0 12px 0;">
-            Listing Approved
-          </h2>
-
-          <p style="font-size: 15px; line-height: 1.6; color: #a1a1aa; text-align: center; margin: 0 0 28px 0;">
-            Hi ${escapeHtml(name)} — <strong style="color: #ffffff;">${escapeHtml(listingTitle)}</strong> passed review and is now live for buyers.
-          </p>
-
-          <div style="text-align: center; margin-bottom: 28px;">
-            <a href="${APP_URL}${listingPath || '/account/listings'}" style="display: inline-block; background: #a3e635; color: #0a0a0f; text-decoration: none; padding: 14px 36px; border-radius: 6px; font-weight: 700; font-size: 15px;">
-              View Your Listing
-            </a>
-          </div>
-
-          <p style="font-size: 12px; color: #6b7280; text-align: center; margin: 0;">
-            Manage all your offers from your <a href="${APP_URL}/account/listings" style="color: #a3e635;">seller dashboard</a>.
-          </p>
-
-        </div>
+      <body style="margin:0;padding:0;background-color:#f4f4f5;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f5;">
+          <tr><td align="center" style="padding:36px 16px;">
+            <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;max-width:480px;">
+              <tr><td style="background-color:#0f1013;border-radius:10px;overflow:hidden;">
+                <img src="https://dropmarket.gg/section-bg/cta-band.jpg" alt="" width="480" style="display:block;width:100%;height:96px;object-fit:cover;">
+                <div style="padding:26px 32px 28px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;text-align:center;">
+                  <p style="margin:0 0 16px;font-size:19px;font-weight:800;color:#ffffff;">Drop<span style="color:#a3e635;">Market</span></p>
+                  <h1 style="margin:0 0 8px;font-size:20px;font-weight:700;color:#ffffff;">Listing Approved</h1>
+                  <p style="margin:0 0 22px;font-size:14px;line-height:1.55;color:#a1a1aa;overflow-wrap:anywhere;">Hi ${escapeHtml(name)} — <strong style="color:#ffffff;">${escapeHtml(listingTitle)}</strong> passed review and is now live for buyers.</p>
+                  <a href="${APP_URL}${listingPath || '/account/listings'}" style="display:inline-block;background-color:#a3e635;color:#0a0a0f;text-decoration:none;padding:11px 28px;border-radius:6px;font-weight:700;font-size:14px;">View Your Listing</a>
+                </div>
+              </td></tr>
+              <tr><td align="center" style="padding:14px 8px 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:11px;line-height:1.6;color:#a1a1aa;">
+                Manage all your offers from your <a href="${APP_URL}/account/listings" style="color:#71717a;">seller dashboard</a>.<br>
+                © 2026 DropMarket · <a href="${APP_URL}/support" style="color:#71717a;">Support</a>
+              </td></tr>
+            </table>
+          </td></tr>
+        </table>
       </body>
       </html>
     `,
@@ -1074,43 +931,30 @@ export async function sendListingRejectedEmail({
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
       </head>
-      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #0a0a0f; color: #ffffff; margin: 0; padding: 40px 20px;">
-        <div style="max-width: 600px; margin: 0 auto; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; padding: 40px;">
-
-          <div style="text-align: center; margin-bottom: 32px;">
-            <h1 style="font-size: 28px; font-weight: bold; margin: 0; color: #ffffff;">
-              Drop<span style="color: #a3e635;">Market</span>
-            </h1>
-          </div>
-
-          <h2 style="font-size: 24px; font-weight: 600; text-align: center; margin: 0 0 12px 0;">
-            ${changesRequested ? 'Changes Requested' : 'Listing Not Approved'}
-          </h2>
-
-          <p style="font-size: 15px; line-height: 1.6; color: #a1a1aa; text-align: center; margin: 0 0 24px 0;">
-            Hi ${escapeHtml(name)} — <strong style="color: #ffffff;">${escapeHtml(listingTitle)}</strong> ${changesRequested ? 'needs a few changes before it can go live.' : "didn't pass review this time."}
-          </p>
-
-          <div style="background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 8px; padding: 20px; margin-bottom: 24px;">
-            <h3 style="font-size: 14px; font-weight: 600; color: #ef4444; margin: 0 0 8px 0;">
-              ${changesRequested ? 'What Needs Changing' : 'Reason'}
-            </h3>
-            <p style="margin: 0; color: #fca5a5; font-size: 14px; line-height: 1.6;">
-              ${escapeHtml(reason)}
-            </p>
-          </div>
-
-          <div style="text-align: center; margin-bottom: 28px;">
-            <a href="${APP_URL}/account/listings" style="display: inline-block; background: #a3e635; color: #0a0a0f; text-decoration: none; padding: 14px 36px; border-radius: 6px; font-weight: 700; font-size: 15px;">
-              ${changesRequested ? 'Edit Your Listing' : 'Review Your Listings'}
-            </a>
-          </div>
-
-          <p style="font-size: 12px; color: #6b7280; text-align: center; margin: 0;">
-            Questions about moderation? <a href="${APP_URL}/support" style="color: #a3e635;">Contact support</a>.
-          </p>
-
-        </div>
+      <body style="margin:0;padding:0;background-color:#f4f4f5;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f5;">
+          <tr><td align="center" style="padding:36px 16px;">
+            <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;max-width:480px;">
+              <tr><td style="background-color:#0f1013;border-radius:10px;overflow:hidden;">
+                <img src="https://dropmarket.gg/section-bg/cta-band.jpg" alt="" width="480" style="display:block;width:100%;height:96px;object-fit:cover;">
+                <div style="padding:26px 32px 28px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;text-align:center;">
+                  <p style="margin:0 0 16px;font-size:19px;font-weight:800;color:#ffffff;">Drop<span style="color:#a3e635;">Market</span></p>
+                  <h1 style="margin:0 0 8px;font-size:20px;font-weight:700;color:#ffffff;">${changesRequested ? 'Changes Requested' : 'Listing Not Approved'}</h1>
+                  <p style="margin:0 0 22px;font-size:14px;line-height:1.55;color:#a1a1aa;overflow-wrap:anywhere;">Hi ${escapeHtml(name)} — <strong style="color:#ffffff;">${escapeHtml(listingTitle)}</strong> ${changesRequested ? 'needs a few changes before it can go live.' : "didn't pass review this time."}</p>
+                  <div style="background:rgba(239, 68, 68, 0.08);border:1px solid rgba(239, 68, 68, 0.3);border-radius:8px;padding:14px 16px;margin:0 0 18px;text-align:left;">
+                    <p style="margin:0 0 6px;font-size:13px;font-weight:600;color:#ef4444;">${changesRequested ? 'What Needs Changing' : 'Reason'}</p>
+                    <p style="margin:0;color:#fca5a5;font-size:13px;line-height:1.6;overflow-wrap:anywhere;">${escapeHtml(reason)}</p>
+                  </div>
+                  <a href="${APP_URL}/account/listings" style="display:inline-block;background-color:#a3e635;color:#0a0a0f;text-decoration:none;padding:11px 28px;border-radius:6px;font-weight:700;font-size:14px;">${changesRequested ? 'Edit Your Listing' : 'Review Your Listings'}</a>
+                </div>
+              </td></tr>
+              <tr><td align="center" style="padding:14px 8px 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:11px;line-height:1.6;color:#a1a1aa;">
+                Questions about moderation? <a href="${APP_URL}/support" style="color:#71717a;">Contact support</a>.<br>
+                © 2026 DropMarket · <a href="${APP_URL}/support" style="color:#71717a;">Support</a>
+              </td></tr>
+            </table>
+          </td></tr>
+        </table>
       </body>
       </html>
     `,
@@ -1155,59 +999,51 @@ export async function sendWithdrawalProcessedEmail({
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
       </head>
-      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #0a0a0f; color: #ffffff; margin: 0; padding: 40px 20px;">
-        <div style="max-width: 600px; margin: 0 auto; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; padding: 40px;">
-
-          <div style="text-align: center; margin-bottom: 32px;">
-            <h1 style="font-size: 28px; font-weight: bold; margin: 0; color: #ffffff;">
-              Drop<span style="color: #a3e635;">Market</span>
-            </h1>
-          </div>
-
-          <h2 style="font-size: 24px; font-weight: 600; text-align: center; margin: 0 0 12px 0;">
-            ${approved ? 'Withdrawal Approved' : 'Withdrawal Declined'}
-          </h2>
-
-          <p style="font-size: 15px; line-height: 1.6; color: #a1a1aa; text-align: center; margin: 0 0 24px 0;">
-            ${
-              approved
-                ? `Hi ${escapeHtml(name)} — your withdrawal has been approved and is being processed to your payout method.`
-                : `Hi ${escapeHtml(name)} — we couldn't process your withdrawal request this time. The funds remain in your seller balance.`
-            }
-          </p>
-
-          <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; padding: 20px; margin-bottom: 24px;">
-            <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
-              <tr>
-                <td style="color: #a1a1aa; padding: 6px 0;">Amount</td>
-                <td style="color: #ffffff; text-align: right; font-weight: 600;">$${amount.toFixed(2)}</td>
-              </tr>
-              <tr>
-                <td style="color: #a1a1aa; padding: 6px 0;">Method</td>
-                <td style="color: #ffffff; text-align: right;">${escapeHtml(method)}</td>
-              </tr>
+      <body style="margin:0;padding:0;background-color:#f4f4f5;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f5;">
+          <tr><td align="center" style="padding:36px 16px;">
+            <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;max-width:480px;">
+              <tr><td style="background-color:#0f1013;border-radius:10px;overflow:hidden;">
+                <img src="https://dropmarket.gg/section-bg/cta-band.jpg" alt="" width="480" style="display:block;width:100%;height:96px;object-fit:cover;">
+                <div style="padding:26px 32px 28px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;text-align:center;">
+                  <p style="margin:0 0 16px;font-size:19px;font-weight:800;color:#ffffff;">Drop<span style="color:#a3e635;">Market</span></p>
+                  <h1 style="margin:0 0 8px;font-size:20px;font-weight:700;color:#ffffff;">${approved ? 'Withdrawal Approved' : 'Withdrawal Declined'}</h1>
+                  <p style="margin:0 0 22px;font-size:14px;line-height:1.55;color:#a1a1aa;">
+                    ${
+                      approved
+                        ? `Hi ${escapeHtml(name)} — your withdrawal has been approved and is being processed to your payout method.`
+                        : `Hi ${escapeHtml(name)} — we couldn't process your withdrawal request this time. The funds remain in your seller balance.`
+                    }
+                  </p>
+                  <div style="background:rgba(255, 255, 255, 0.03);border:1px solid rgba(255, 255, 255, 0.08);border-radius:8px;padding:14px 16px;margin:0 0 18px;text-align:left;">
+                    <table style="width:100%;border-collapse:collapse;font-size:13px;">
+                      <tr>
+                        <td style="color:#a1a1aa;padding:4px 0;">Amount</td>
+                        <td style="color:#ffffff;text-align:right;font-weight:600;padding:4px 0;">$${amount.toFixed(2)}</td>
+                      </tr>
+                      <tr>
+                        <td style="color:#a1a1aa;padding:4px 0;">Method</td>
+                        <td style="color:#ffffff;text-align:right;padding:4px 0;overflow-wrap:anywhere;">${escapeHtml(method)}</td>
+                      </tr>
+                    </table>
+                  </div>
+                  ${
+                    !approved && reason
+                      ? `<div style="background:rgba(239, 68, 68, 0.08);border:1px solid rgba(239, 68, 68, 0.3);border-radius:8px;padding:14px 16px;margin:0 0 18px;text-align:left;">
+                    <p style="margin:0;color:#fca5a5;font-size:13px;line-height:1.6;overflow-wrap:anywhere;"><strong style="color:#ef4444;">Reason:</strong> ${escapeHtml(reason)}</p>
+                  </div>`
+                      : ''
+                  }
+                  <a href="${APP_URL}/account/wallet" style="display:inline-block;background-color:#a3e635;color:#0a0a0f;text-decoration:none;padding:11px 28px;border-radius:6px;font-weight:700;font-size:14px;">View Your Wallet</a>
+                </div>
+              </td></tr>
+              <tr><td align="center" style="padding:14px 8px 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:11px;line-height:1.6;color:#a1a1aa;">
+                ${approved ? 'Arrival time depends on your payout method — typically 1–5 business days.' : `Questions? <a href="${APP_URL}/support" style="color:#71717a;">Contact support</a>.`}<br>
+                © 2026 DropMarket · <a href="${APP_URL}/support" style="color:#71717a;">Support</a>
+              </td></tr>
             </table>
-          </div>
-
-          ${
-            !approved && reason
-              ? `<div style="background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 8px; padding: 16px 20px; margin-bottom: 24px;">
-            <p style="margin: 0; color: #fca5a5; font-size: 14px; line-height: 1.6;"><strong style="color: #ef4444;">Reason:</strong> ${escapeHtml(reason)}</p>
-          </div>`
-              : ''
-          }
-
-          <div style="text-align: center; margin-bottom: 28px;">
-            <a href="${APP_URL}/account/wallet" style="display: inline-block; background: #a3e635; color: #0a0a0f; text-decoration: none; padding: 14px 36px; border-radius: 6px; font-weight: 700; font-size: 15px;">
-              View Your Wallet
-            </a>
-          </div>
-
-          <p style="font-size: 12px; color: #6b7280; text-align: center; margin: 0;">
-            ${approved ? 'Arrival time depends on your payout method — typically 1–5 business days.' : `Questions? <a href="${APP_URL}/support" style="color: #a3e635;">Contact support</a>.`}
-          </p>
-
-        </div>
+          </td></tr>
+        </table>
       </body>
       </html>
     `,
@@ -1237,40 +1073,29 @@ export async function sendGuestWelcomeEmail({
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
       </head>
-      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #0a0a0f; color: #ffffff; margin: 0; padding: 40px 20px;">
-        <div style="max-width: 600px; margin: 0 auto; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; padding: 40px;">
-
-          <div style="text-align: center; margin-bottom: 32px;">
-            <h1 style="font-size: 28px; font-weight: bold; margin: 0; color: #ffffff;">
-              Drop<span style="color: #a3e635;">Market</span>
-            </h1>
-          </div>
-
-          <h2 style="font-size: 24px; font-weight: 600; text-align: center; margin: 0 0 12px 0;">
-            Welcome to DropMarket
-          </h2>
-
-          <p style="font-size: 15px; line-height: 1.6; color: #a1a1aa; text-align: center; margin: 0 0 24px 0;">
-            We created an account for this email so you can track order <strong style="color: #ffffff;">#${orderNumber}</strong>, chat with your seller, and get delivery updates.
-          </p>
-
-          <div style="background: rgba(163, 230, 53, 0.08); border: 1px solid rgba(163, 230, 53, 0.3); border-radius: 8px; padding: 16px 20px; margin-bottom: 24px;">
-            <p style="margin: 0; color: #a1a1aa; font-size: 14px; line-height: 1.6;">
-              We've sent you a separate email with a <strong style="color: #ffffff;">password setup link</strong> — click it to claim your account. It expires, so if it lapses just use "Forgot?" on the login page.
-            </p>
-          </div>
-
-          <div style="text-align: center; margin-bottom: 28px;">
-            <a href="${APP_URL}/account/orders/${orderId}" style="display: inline-block; background: #a3e635; color: #0a0a0f; text-decoration: none; padding: 14px 36px; border-radius: 6px; font-weight: 700; font-size: 15px;">
-              Track Your Order
-            </a>
-          </div>
-
-          <p style="font-size: 12px; color: #6b7280; text-align: center; margin: 0;">
-            Didn't buy anything on DropMarket? <a href="${APP_URL}/support" style="color: #a3e635;">Let us know</a>.
-          </p>
-
-        </div>
+      <body style="margin:0;padding:0;background-color:#f4f4f5;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f5;">
+          <tr><td align="center" style="padding:36px 16px;">
+            <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;max-width:480px;">
+              <tr><td style="background-color:#0f1013;border-radius:10px;overflow:hidden;">
+                <img src="https://dropmarket.gg/section-bg/cta-band.jpg" alt="" width="480" style="display:block;width:100%;height:96px;object-fit:cover;">
+                <div style="padding:26px 32px 28px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;text-align:center;">
+                  <p style="margin:0 0 16px;font-size:19px;font-weight:800;color:#ffffff;">Drop<span style="color:#a3e635;">Market</span></p>
+                  <h1 style="margin:0 0 8px;font-size:20px;font-weight:700;color:#ffffff;">Welcome to DropMarket</h1>
+                  <p style="margin:0 0 22px;font-size:14px;line-height:1.55;color:#a1a1aa;">We created an account for this email so you can track order <strong style="color:#ffffff;">#${orderNumber}</strong>, chat with your seller, and get delivery updates.</p>
+                  <div style="background:rgba(163, 230, 53, 0.08);border:1px solid rgba(163, 230, 53, 0.3);border-radius:8px;padding:14px 16px;margin:0 0 18px;text-align:left;">
+                    <p style="margin:0;color:#a1a1aa;font-size:13px;line-height:1.6;">We've sent you a separate email with a <strong style="color:#ffffff;">password setup link</strong> — click it to claim your account. It expires, so if it lapses just use "Forgot?" on the login page.</p>
+                  </div>
+                  <a href="${APP_URL}/account/orders/${orderId}" style="display:inline-block;background-color:#a3e635;color:#0a0a0f;text-decoration:none;padding:11px 28px;border-radius:6px;font-weight:700;font-size:14px;">Track Your Order</a>
+                </div>
+              </td></tr>
+              <tr><td align="center" style="padding:14px 8px 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:11px;line-height:1.6;color:#a1a1aa;">
+                Didn't buy anything on DropMarket? <a href="${APP_URL}/support" style="color:#71717a;">Let us know</a>.<br>
+                © 2026 DropMarket · <a href="${APP_URL}/support" style="color:#71717a;">Support</a>
+              </td></tr>
+            </table>
+          </td></tr>
+        </table>
       </body>
       </html>
     `,
@@ -1308,40 +1133,29 @@ export async function sendNewMessageEmail({
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
       </head>
-      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #0a0a0f; color: #ffffff; margin: 0; padding: 40px 20px;">
-        <div style="max-width: 600px; margin: 0 auto; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; padding: 40px;">
-
-          <div style="text-align: center; margin-bottom: 32px;">
-            <h1 style="font-size: 28px; font-weight: bold; margin: 0; color: #ffffff;">
-              Drop<span style="color: #a3e635;">Market</span>
-            </h1>
-          </div>
-
-          <h2 style="font-size: 24px; font-weight: 600; text-align: center; margin: 0 0 12px 0;">
-            New Message
-          </h2>
-
-          <p style="font-size: 15px; line-height: 1.6; color: #a1a1aa; text-align: center; margin: 0 0 24px 0;">
-            Hi ${escapeHtml(name)} — <strong style="color: #ffffff;">${escapeHtml(senderName)}</strong> sent you a message about order <strong style="color: #ffffff;">#${orderNumber}</strong>:
-          </p>
-
-          <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); border-left: 3px solid #a3e635; border-radius: 8px; padding: 16px 20px; margin-bottom: 24px;">
-            <p style="margin: 0; color: #d4d4d8; font-size: 14px; line-height: 1.6; font-style: italic;">
-              "${escapeHtml(truncated)}"
-            </p>
-          </div>
-
-          <div style="text-align: center; margin-bottom: 28px;">
-            <a href="${APP_URL}/account/orders/${orderId}" style="display: inline-block; background: #a3e635; color: #0a0a0f; text-decoration: none; padding: 14px 36px; border-radius: 6px; font-weight: 700; font-size: 15px;">
-              Reply Now
-            </a>
-          </div>
-
-          <p style="font-size: 12px; color: #6b7280; text-align: center; margin: 0;">
-            You get this email only for the first unread message in a conversation — replies while you're away won't flood your inbox.
-          </p>
-
-        </div>
+      <body style="margin:0;padding:0;background-color:#f4f4f5;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f5;">
+          <tr><td align="center" style="padding:36px 16px;">
+            <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;max-width:480px;">
+              <tr><td style="background-color:#0f1013;border-radius:10px;overflow:hidden;">
+                <img src="https://dropmarket.gg/section-bg/cta-band.jpg" alt="" width="480" style="display:block;width:100%;height:96px;object-fit:cover;">
+                <div style="padding:26px 32px 28px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;text-align:center;">
+                  <p style="margin:0 0 16px;font-size:19px;font-weight:800;color:#ffffff;">Drop<span style="color:#a3e635;">Market</span></p>
+                  <h1 style="margin:0 0 8px;font-size:20px;font-weight:700;color:#ffffff;">New Message</h1>
+                  <p style="margin:0 0 22px;font-size:14px;line-height:1.55;color:#a1a1aa;">Hi ${escapeHtml(name)} — <strong style="color:#ffffff;">${escapeHtml(senderName)}</strong> sent you a message about order <strong style="color:#ffffff;">#${orderNumber}</strong>:</p>
+                  <div style="background:rgba(255, 255, 255, 0.03);border:1px solid rgba(255, 255, 255, 0.08);border-left:3px solid #a3e635;border-radius:8px;padding:14px 16px;margin:0 0 18px;text-align:left;">
+                    <p style="margin:0;color:#d4d4d8;font-size:13px;line-height:1.6;font-style:italic;overflow-wrap:anywhere;">"${escapeHtml(truncated)}"</p>
+                  </div>
+                  <a href="${APP_URL}/account/orders/${orderId}" style="display:inline-block;background-color:#a3e635;color:#0a0a0f;text-decoration:none;padding:11px 28px;border-radius:6px;font-weight:700;font-size:14px;">Reply Now</a>
+                </div>
+              </td></tr>
+              <tr><td align="center" style="padding:14px 8px 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:11px;line-height:1.6;color:#a1a1aa;">
+                You get this email only for the first unread message in a conversation — replies while you're away won't flood your inbox.<br>
+                © 2026 DropMarket · <a href="${APP_URL}/support" style="color:#71717a;">Support</a>
+              </td></tr>
+            </table>
+          </td></tr>
+        </table>
       </body>
       </html>
     `,
@@ -1379,60 +1193,40 @@ export async function sendTrustpilotInvitationEmail({
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
       </head>
-      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #0a0a0f; color: #ffffff; margin: 0; padding: 40px 20px;">
-        <div style="max-width: 600px; margin: 0 auto; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; padding: 40px;">
-
-          <div style="text-align: center; margin-bottom: 32px;">
-            <h1 style="font-size: 28px; font-weight: bold; margin: 0; color: #ffffff;">
-              Drop<span style="color: #a3e635;">Market</span>
-            </h1>
-          </div>
-
-          <div style="text-align: center; margin-bottom: 24px;">
-            <div style="font-size: 48px; line-height: 1;">&#11088;&#11088;&#11088;&#11088;&#11088;</div>
-          </div>
-
-          <h2 style="font-size: 24px; font-weight: 600; text-align: center; margin: 0 0 16px 0;">
-            How was your experience, ${escapeHtml(name)}?
-          </h2>
-
-          <p style="font-size: 16px; line-height: 1.6; color: #a1a1aa; text-align: center; margin: 0 0 24px 0;">
-            We hope you enjoyed your purchase on DropMarket. Your feedback helps us improve and helps other gamers make informed decisions.
-          </p>
-
-          <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; padding: 16px; margin-bottom: 24px; text-align: center;">
-            <p style="margin: 0; color: #a1a1aa; font-size: 14px;">Order Reference</p>
-            <p style="margin: 4px 0 0 0; color: #ffffff; font-size: 18px; font-weight: 700; letter-spacing: 2px;">#${shortOrderId}</p>
-          </div>
-
-          <p style="font-size: 15px; line-height: 1.6; color: #a1a1aa; text-align: center; margin: 0 0 28px 0;">
-            It only takes 60 seconds and means the world to us. Share your honest experience on Trustpilot.
-          </p>
-
-          <div style="text-align: center; margin-bottom: 28px;">
-            <a href="${reviewUrl}" style="display: inline-block; background: #00b67a; color: #ffffff; text-decoration: none; padding: 16px 40px; border-radius: 6px; font-weight: 700; font-size: 18px; letter-spacing: 0.5px;">
-              Write a Review on Trustpilot
-            </a>
-          </div>
-
-          <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; padding: 20px; margin-bottom: 24px;">
-            <h3 style="font-size: 14px; font-weight: 600; color: #a3e635; margin: 0 0 12px 0; text-transform: uppercase; letter-spacing: 1px;">
-              Why Your Review Matters
-            </h3>
-            <ul style="margin: 0; padding-left: 20px; color: #a1a1aa; font-size: 14px; line-height: 1.8;">
-              <li>Helps other gamers shop safely</li>
-              <li>Improves our marketplace for everyone</li>
-              <li>Recognises great sellers for their work</li>
-              <li>Takes less than 60 seconds to write</li>
-            </ul>
-          </div>
-
-          <p style="font-size: 12px; color: #6b7280; text-align: center; margin: 0;">
-            You are receiving this because you recently completed an order on DropMarket.<br>
-            If you did not make a purchase, please <a href="${APP_URL}/support" style="color: #a3e635;">contact support</a>.
-          </p>
-
-        </div>
+      <body style="margin:0;padding:0;background-color:#f4f4f5;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f5;">
+          <tr><td align="center" style="padding:36px 16px;">
+            <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;max-width:480px;">
+              <tr><td style="background-color:#0f1013;border-radius:10px;overflow:hidden;">
+                <img src="https://dropmarket.gg/section-bg/cta-band.jpg" alt="" width="480" style="display:block;width:100%;height:96px;object-fit:cover;">
+                <div style="padding:26px 32px 28px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;text-align:center;">
+                  <p style="margin:0 0 16px;font-size:19px;font-weight:800;color:#ffffff;">Drop<span style="color:#a3e635;">Market</span></p>
+                  <h1 style="margin:0 0 8px;font-size:20px;font-weight:700;color:#ffffff;">How was your experience, ${escapeHtml(name)}?</h1>
+                  <p style="margin:0 0 22px;font-size:14px;line-height:1.55;color:#a1a1aa;">We hope you enjoyed your purchase on DropMarket. Your feedback helps us improve and helps other gamers make informed decisions.</p>
+                  <div style="background:rgba(255, 255, 255, 0.03);border:1px solid rgba(255, 255, 255, 0.08);border-radius:8px;padding:14px 16px;margin:0 0 18px;text-align:center;">
+                    <p style="margin:0;color:#a1a1aa;font-size:11px;">Order Reference</p>
+                    <p style="margin:4px 0 0;color:#ffffff;font-size:15px;font-weight:700;letter-spacing:2px;">#${shortOrderId}</p>
+                  </div>
+                  <div style="background:rgba(255, 255, 255, 0.03);border:1px solid rgba(255, 255, 255, 0.08);border-radius:8px;padding:14px 16px;margin:0 0 18px;text-align:left;">
+                    <p style="margin:0 0 6px;font-size:13px;font-weight:600;color:#a3e635;">Why Your Review Matters</p>
+                    <ul style="margin:0;padding-left:18px;color:#a1a1aa;font-size:13px;line-height:1.7;">
+                      <li>Helps other gamers shop safely</li>
+                      <li>Improves our marketplace for everyone</li>
+                      <li>Recognises great sellers for their work</li>
+                      <li>Takes less than 60 seconds to write</li>
+                    </ul>
+                  </div>
+                  <a href="${reviewUrl}" style="display:inline-block;background-color:#a3e635;color:#0a0a0f;text-decoration:none;padding:11px 28px;border-radius:6px;font-weight:700;font-size:14px;">Write a Review on Trustpilot</a>
+                  <p style="margin:18px 0 0;font-size:11px;line-height:1.6;color:#71717a;">It only takes 60 seconds and means the world to us. Share your honest experience on Trustpilot.</p>
+                </div>
+              </td></tr>
+              <tr><td align="center" style="padding:14px 8px 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:11px;line-height:1.6;color:#a1a1aa;">
+                You are receiving this because you recently completed an order on DropMarket. If you did not make a purchase, please <a href="${APP_URL}/support" style="color:#71717a;">contact support</a>.<br>
+                © 2026 DropMarket · <a href="${APP_URL}/support" style="color:#71717a;">Support</a>
+              </td></tr>
+            </table>
+          </td></tr>
+        </table>
       </body>
       </html>
     `,
