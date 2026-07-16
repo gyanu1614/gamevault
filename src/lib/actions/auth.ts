@@ -334,6 +334,71 @@ export async function updatePassword(newPassword: string) {
   return { error: null }
 }
 
+// Change sign-in email. Supabase sends the branded "Change Email Address"
+// template (supabase/email-templates/change-email.html); with the default
+// "Secure email change" setting ON, a confirmation link goes to BOTH the
+// current and the new inbox and the change only lands once confirmed. The
+// callback returns to /account/settings and syncProfileEmail() then reconciles
+// the duplicated profiles.email column.
+export async function changeEmail(newEmail: string) {
+  const email = (newEmail || '').trim().toLowerCase()
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return { error: 'Enter a valid email address' }
+  }
+
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    return { error: 'Not authenticated' }
+  }
+
+  if (user.email && email === user.email.toLowerCase()) {
+    return { error: 'That is already your current email' }
+  }
+
+  const { error } = await supabase.auth.updateUser(
+    { email },
+    { emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback?next=/account/settings` },
+  )
+
+  if (error) {
+    return { error: error.message }
+  }
+
+  return { error: null, pending: true }
+}
+
+// Reconcile the denormalized profiles.email column with auth.users.email
+// after a confirmed email change. Called from /auth/callback when the user
+// returns from the Change Email Address link. Non-critical: profiles.email is
+// a cached mirror, so a failure here never blocks the auth-side change.
+export async function syncProfileEmail() {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user?.email) return { error: null }
+
+  const { error } = await (supabase
+    .from('profiles')
+    .update as any)({ email: user.email })
+    .eq('id', user.id)
+
+  if (error) {
+    console.error('❌ Failed to sync profiles.email:', error.message)
+    return { error: error.message }
+  }
+
+  return { error: null }
+}
+
 // Check if username is available
 export async function checkUsernameAvailability(username: string) {
   try {

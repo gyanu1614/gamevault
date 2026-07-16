@@ -3,8 +3,10 @@
 import { useState, useEffect } from 'react'
 import { useAuth, invalidateAuthCache } from '@/hooks/use-auth'
 import { useSellerSettings } from '@/hooks/use-seller-settings'
-import { uploadProfileAvatar } from '@/lib/actions/auth'
+import { useSellerEarnings } from '@/hooks/use-seller-earnings'
+import { uploadProfileAvatar, updatePassword, changeEmail } from '@/lib/actions/auth'
 import { createClient } from '@/lib/supabase/client'
+import Link from 'next/link'
 import {
   User,
   Bell,
@@ -76,9 +78,13 @@ function SectionCard({ children, className }: { children: React.ReactNode; class
 // project's lime-tinted ring so focus matches the rest of the site.
 const inputCls = 'w-full rounded-lg border border-border-subtle bg-bg-raised px-4 py-3 text-sm text-text-primary placeholder:text-text-disabled focus:border-lime focus:outline-none focus:ring-2 focus:ring-lime-tint-bg transition-all'
 
+const usd = (n: number) =>
+  (n || 0).toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 })
+
 export default function SettingsPage() {
   const { user, loading: authLoading } = useAuth()
   const { profile, isLoading: profileLoading, updateProfile, isUpdating } = useSellerSettings()
+  const { stats: earnings, payouts, isLoadingStats, isLoadingPayouts } = useSellerEarnings()
   const [activeTab, setActiveTab] = useState<SettingsTab>('profile')
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
   const [avatarError, setAvatarError] = useState<string | null>(null)
@@ -90,19 +96,22 @@ export default function SettingsPage() {
   const [bio, setBio] = useState('')
   const [avatar, setAvatar] = useState('')
 
+  // Email change flow
+  const [pendingEmail, setPendingEmail] = useState<string | null>(null)
+  const [showEmailChange, setShowEmailChange] = useState(false)
+  const [newEmail, setNewEmail] = useState('')
+  const [emailChangeError, setEmailChangeError] = useState<string | null>(null)
+  const [emailChangeSent, setEmailChangeSent] = useState(false)
+  const [changingEmail, setChangingEmail] = useState(false)
+
   // Seller
   const [businessName, setBusinessName] = useState('')
-  const [businessType, setBusinessType] = useState('individual')
-  const [vacationMode, setVacationMode] = useState(false)
-  const [autoReply, setAutoReply] = useState('')
   const [shopName, setShopName] = useState('')
   const [shopNameUpdatedAt, setShopNameUpdatedAt] = useState<string | null>(null)
   const [showShopNameConfirmation, setShowShopNameConfirmation] = useState(false)
 
   // Payouts
   const [paypalEmail, setPaypalEmail] = useState('')
-  const [minPayout, setMinPayout] = useState('50')
-  const [autoWithdraw, setAutoWithdraw] = useState(false)
 
   // Notifications
   const [emailNotifications, setEmailNotifications] = useState({
@@ -114,11 +123,11 @@ export default function SettingsPage() {
   })
 
   // Security
-  const [twoFactorEnabled, setTwoFactorEnabled] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
+  const [passwordSaving, setPasswordSaving] = useState(false)
 
   // Fetch fresh profile data on mount and when user changes
   useEffect(() => {
@@ -183,6 +192,80 @@ export default function SettingsPage() {
   useEffect(() => {
     if (profile?.shop_name_updated_at !== undefined) setShopNameUpdatedAt(profile.shop_name_updated_at)
   }, [profile?.shop_name_updated_at])
+
+  // Surface a pending email change (Supabase stores the unconfirmed address on
+  // the auth user as `new_email` until both inboxes confirm it).
+  useEffect(() => {
+    let active = true
+    const supabase = createClient()
+    supabase.auth.getUser().then(({ data }) => {
+      if (active) setPendingEmail((data.user as any)?.new_email || null)
+    })
+    return () => { active = false }
+  }, [user?.id])
+
+  const handleChangeEmail = async () => {
+    setEmailChangeError(null)
+    setChangingEmail(true)
+    try {
+      const result = await changeEmail(newEmail)
+      if (result.error) {
+        setEmailChangeError(result.error)
+        return
+      }
+      setEmailChangeSent(true)
+      setPendingEmail(newEmail.trim().toLowerCase())
+    } catch (err: any) {
+      setEmailChangeError(err?.message || 'Could not start the email change. Try again.')
+    } finally {
+      setChangingEmail(false)
+    }
+  }
+
+  const handleUpdatePassword = async () => {
+    if (newPassword.length < 6) {
+      toast.error('Password too short', { description: 'Use at least 6 characters.' })
+      return
+    }
+    if (newPassword !== confirmPassword) {
+      toast.error('Passwords don’t match', { description: 'Re-enter your new password.' })
+      return
+    }
+    if (!user?.email) {
+      toast.error('Couldn’t verify your account', { description: 'Please sign in again.' })
+      return
+    }
+
+    setPasswordSaving(true)
+    try {
+      // Verify the current password before changing it — Supabase itself
+      // doesn't require it, so we re-authenticate to confirm identity.
+      const supabase = createClient()
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: user.email,
+        password: currentPassword,
+      })
+      if (signInError) {
+        toast.error('Current password is incorrect')
+        return
+      }
+
+      const result = await updatePassword(newPassword)
+      if (result.error) {
+        toast.error('Couldn’t update password', { description: result.error })
+        return
+      }
+
+      toast.success('Password updated', { description: 'Use your new password next time you sign in.' })
+      setCurrentPassword('')
+      setNewPassword('')
+      setConfirmPassword('')
+    } catch (err: any) {
+      toast.error('Couldn’t update password', { description: err?.message || 'Try again in a moment.' })
+    } finally {
+      setPasswordSaving(false)
+    }
+  }
 
   const handleSave = async () => {
     try {
@@ -444,16 +527,34 @@ export default function SettingsPage() {
                       </SettingInput>
                     </div>
 
-                    <SettingInput label="Email" required>
-                      <div className="relative">
-                        <Mail className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary" />
-                        <input
-                          type="email"
-                          value={email}
-                          onChange={(e) => setEmail(e.target.value)}
-                          className={cn(inputCls, 'pl-10')}
-                        />
+                    <SettingInput label="Email" required hint="Your sign-in email — changing it needs confirmation from both your old and new inbox">
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                        <div className="relative flex-1">
+                          <Mail className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary" />
+                          <input
+                            type="email"
+                            value={email}
+                            readOnly
+                            disabled
+                            className={cn(inputCls, 'pl-10 cursor-not-allowed opacity-70')}
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => { setNewEmail(''); setEmailChangeError(null); setEmailChangeSent(false); setShowEmailChange(true) }}
+                          className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg border border-border-subtle bg-bg-overlay px-4 py-3 text-sm font-medium text-text-primary transition-all hover:bg-bg-raised-hover active:scale-95"
+                        >
+                          Change Email
+                        </button>
                       </div>
+                      {pendingEmail && pendingEmail !== email && (
+                        <div className="mt-2 flex items-center gap-2 rounded-lg border border-warning/20 bg-warning-bg px-4 py-2.5">
+                          <Clock className="h-4 w-4 shrink-0 text-warning" />
+                          <span className="text-sm text-warning">
+                            Pending change to <span className="font-medium">{pendingEmail}</span> — confirm the link sent to both inboxes.
+                          </span>
+                        </div>
+                      )}
                     </SettingInput>
 
                     <SettingInput label="Bio" hint={`${bio.length}/500`}>
@@ -528,51 +629,7 @@ export default function SettingsPage() {
                         className={inputCls}
                       />
                     </SettingInput>
-
-                    <SettingInput label="Business Type">
-                      <select
-                        value={businessType}
-                        onChange={(e) => setBusinessType(e.target.value)}
-                        className={cn(inputCls, 'bg-bg-raised')}
-                      >
-                        <option value="individual" className="bg-bg-overlay">Individual</option>
-                        <option value="company" className="bg-bg-overlay">Company / Business</option>
-                      </select>
-                    </SettingInput>
                   </div>
-                </SectionCard>
-
-                <SectionCard>
-                  <h2 className="text-sm font-semibold text-text-primary mb-4">Store Controls</h2>
-                  <div className="space-y-4">
-                    {/* Vacation mode */}
-                    <div className="flex items-center justify-between rounded-lg border border-border-subtle bg-bg-overlay px-4 py-3.5">
-                      <div>
-                        <div className="text-sm font-medium text-text-primary">Vacation Mode</div>
-                        <div className="text-xs text-text-tertiary mt-0.5">Temporarily hide all your listings</div>
-                      </div>
-                      <Switch checked={vacationMode} onCheckedChange={setVacationMode} />
-                    </div>
-                    {vacationMode && (
-                      <div className="flex items-center gap-2 rounded-lg border border-warning/20 bg-warning-bg px-4 py-2.5">
-                        <AlertCircle className="h-4 w-4 shrink-0 text-warning" />
-                        <span className="text-sm text-warning">Listings are hidden from buyers</span>
-                      </div>
-                    )}
-                  </div>
-                </SectionCard>
-
-                <SectionCard>
-                  <h2 className="text-sm font-semibold text-text-primary mb-4">Auto-Reply</h2>
-                  <SettingInput label="Message" hint="Automatically sent when a buyer starts a conversation">
-                    <textarea
-                      value={autoReply}
-                      onChange={(e) => setAutoReply(e.target.value)}
-                      rows={3}
-                      placeholder="Thanks for reaching out! I'll get back to you shortly…"
-                      className={cn(inputCls, 'resize-none')}
-                    />
-                  </SettingInput>
                 </SectionCard>
               </>
             )}
@@ -580,7 +637,7 @@ export default function SettingsPage() {
             {/* ── PAYOUTS ── */}
             {activeTab === 'payouts' && (
               <>
-                {/* Balance hero */}
+                {/* Balance hero — real figures from the ledger (same source as /account/wallet) */}
                 <motion.div
                   initial={{ opacity: 0, y: 16 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -590,11 +647,19 @@ export default function SettingsPage() {
                     <DollarSign className="h-4 w-4 text-success" />
                     <span className="text-sm font-medium text-success">Available Balance</span>
                   </div>
-                  <div className="text-4xl font-bold text-text-primary tracking-tight mb-4">$1,234.56</div>
-                  <button className="inline-flex items-center gap-2 rounded-lg bg-white px-5 py-2.5 text-sm font-semibold text-black transition-all hover:bg-white/90 active:scale-95">
+                  <div className="text-4xl font-bold text-text-primary tracking-tight mb-1">
+                    {isLoadingStats ? '—' : usd(earnings.available_balance)}
+                  </div>
+                  <div className="text-xs text-text-tertiary mb-4">
+                    {isLoadingStats ? '' : `${usd(earnings.pending_balance)} pending release`}
+                  </div>
+                  <Link
+                    href="/account/wallet/withdraw"
+                    className="inline-flex items-center gap-2 rounded-lg bg-lime px-5 py-2.5 text-sm font-semibold text-text-inverse transition-all hover:bg-lime-hover active:scale-95"
+                  >
                     <DollarSign className="h-4 w-4" />
                     Request Payout
-                  </button>
+                  </Link>
                 </motion.div>
 
                 <SectionCard>
@@ -611,48 +676,54 @@ export default function SettingsPage() {
                         />
                       </div>
                     </SettingInput>
-
-                    <SettingInput label="Minimum Payout Amount" hint="We'll hold your balance until it reaches this threshold">
-                      <select
-                        value={minPayout}
-                        onChange={(e) => setMinPayout(e.target.value)}
-                        className={cn(inputCls, 'bg-bg-raised')}
-                      >
-                        {['10','25','50','100','500'].map(v => (
-                          <option key={v} value={v} className="bg-bg-overlay">${v}</option>
-                        ))}
-                      </select>
-                    </SettingInput>
-
-                    <div className="flex items-center justify-between rounded-lg border border-border-subtle bg-bg-overlay px-4 py-3.5">
-                      <div>
-                        <div className="text-sm font-medium text-text-primary">Auto-Withdraw</div>
-                        <div className="text-xs text-text-tertiary mt-0.5">Automatically request payout when balance hits minimum</div>
-                      </div>
-                      <Switch checked={autoWithdraw} onCheckedChange={setAutoWithdraw} />
-                    </div>
+                    <Link
+                      href="/account/wallet/connect"
+                      className="inline-flex items-center gap-2 text-sm font-medium text-lime-text hover:underline"
+                    >
+                      Manage Payout Connection
+                      <ChevronRight className="h-3.5 w-3.5" />
+                    </Link>
                   </div>
                 </SectionCard>
 
                 <SectionCard>
-                  <h2 className="text-sm font-semibold text-text-primary mb-4">Recent Payouts</h2>
-                  <div className="space-y-2">
-                    {[
-                      { date: 'Jan 15, 2024', amount: 456.78 },
-                      { date: 'Jan 1, 2024', amount: 892.34 },
-                      { date: 'Dec 15, 2023', amount: 234.56 },
-                    ].map((p, i) => (
-                      <div key={i} className="flex items-center justify-between rounded-lg border border-border-subtle bg-bg-overlay px-4 py-3">
-                        <div>
-                          <div className="text-sm font-medium text-text-primary">${p.amount.toFixed(2)}</div>
-                          <div className="text-xs text-text-tertiary">{p.date}</div>
-                        </div>
-                        <div className="flex items-center gap-1.5 rounded-full border border-success/20 bg-success-bg px-3 py-1 text-xs font-medium text-success">
-                          <Check className="h-3 w-3" /> Completed
-                        </div>
-                      </div>
-                    ))}
+                  <div className="mb-4 flex items-center justify-between">
+                    <h2 className="text-sm font-semibold text-text-primary">Recent Payouts</h2>
+                    <Link href="/account/wallet" className="flex items-center gap-1 text-xs font-medium text-lime-text hover:underline">
+                      View Payout History <ChevronRight className="h-3.5 w-3.5" />
+                    </Link>
                   </div>
+                  {isLoadingPayouts ? (
+                    <div className="space-y-2">
+                      {[0, 1, 2].map((i) => (
+                        <div key={i} className="h-14 animate-pulse rounded-lg bg-bg-overlay" />
+                      ))}
+                    </div>
+                  ) : payouts.length === 0 ? (
+                    <p className="py-6 text-center text-sm text-text-secondary">No payouts yet.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {payouts.slice(0, 5).map((p) => (
+                        <div key={p.id} className="flex items-center justify-between rounded-lg border border-border-subtle bg-bg-overlay px-4 py-3">
+                          <div>
+                            <div className="text-sm font-medium text-text-primary">{usd(p.amount)}</div>
+                            <div className="text-xs text-text-tertiary">
+                              {new Date(p.completed_at ?? p.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                            </div>
+                          </div>
+                          {p.status === 'completed' ? (
+                            <div className="flex items-center gap-1.5 rounded-full border border-success/20 bg-success-bg px-3 py-1 text-xs font-medium text-success">
+                              <Check className="h-3 w-3" /> Completed
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-1.5 rounded-full border border-border-subtle bg-bg-overlay px-3 py-1 text-xs font-medium text-text-secondary capitalize">
+                              <Clock className="h-3 w-3" /> {p.status}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </SectionCard>
               </>
             )}
@@ -710,30 +781,6 @@ export default function SettingsPage() {
             {activeTab === 'security' && (
               <>
                 <SectionCard>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className={cn(
-                        'flex h-10 w-10 items-center justify-center rounded-lg border',
-                        twoFactorEnabled ? 'bg-success-bg border-success/25 text-success' : 'bg-bg-raised border-border-subtle text-text-tertiary'
-                      )}>
-                        <Smartphone className="h-5 w-5" />
-                      </div>
-                      <div>
-                        <div className="text-sm font-semibold text-text-primary">Two-Factor Authentication</div>
-                        <div className="text-xs text-text-tertiary mt-0.5">Protect your account with an authenticator app</div>
-                      </div>
-                    </div>
-                    <Switch checked={twoFactorEnabled} onCheckedChange={setTwoFactorEnabled} />
-                  </div>
-                  {twoFactorEnabled && (
-                    <div className="mt-4 flex items-center gap-2 rounded-lg border border-success/20 bg-success-bg px-4 py-2.5">
-                      <ShieldCheck className="h-4 w-4 text-success" />
-                      <span className="text-sm text-green-300">2FA is active — your account is protected</span>
-                    </div>
-                  )}
-                </SectionCard>
-
-                <SectionCard>
                   <h2 className="text-sm font-semibold text-text-primary mb-5">Change Password</h2>
                   <div className="space-y-4">
                     <SettingInput label="Current Password">
@@ -764,9 +811,14 @@ export default function SettingsPage() {
                       </SettingInput>
                     </div>
 
-                    <button className="inline-flex items-center gap-2 rounded-lg border border-border-subtle bg-bg-overlay px-5 py-2.5 text-sm font-medium text-text-primary transition-all hover:bg-bg-raised-hover active:scale-95">
-                      <Lock className="h-4 w-4" />
-                      Update Password
+                    <button
+                      type="button"
+                      onClick={handleUpdatePassword}
+                      disabled={passwordSaving || !currentPassword || !newPassword || !confirmPassword}
+                      className="inline-flex items-center gap-2 rounded-lg border border-border-subtle bg-bg-overlay px-5 py-2.5 text-sm font-medium text-text-primary transition-all hover:bg-bg-raised-hover active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {passwordSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Lock className="h-4 w-4" />}
+                      {passwordSaving ? 'Updating…' : 'Update Password'}
                     </button>
                   </div>
                 </SectionCard>
@@ -776,11 +828,14 @@ export default function SettingsPage() {
                     <AlertTriangle className="h-4 w-4 text-error" />
                     <span className="text-sm font-semibold text-error">Danger Zone</span>
                   </div>
-                  <p className="text-xs text-text-tertiary mb-4">Permanently delete your account and all associated data. This cannot be undone.</p>
-                  <button className="flex items-center gap-2 rounded-lg border border-error/40 bg-error-bg px-5 py-2.5 text-sm font-semibold text-error transition-all hover:bg-error-bg active:scale-95">
+                  <p className="text-xs text-text-tertiary mb-4">Want to permanently delete your account and all associated data? Our support team will verify your identity and process the request.</p>
+                  <Link
+                    href="/support"
+                    className="inline-flex items-center gap-2 rounded-lg border border-error/40 bg-error-bg px-5 py-2.5 text-sm font-semibold text-error transition-all hover:bg-error-bg/80 active:scale-95"
+                  >
                     <Trash2 className="h-4 w-4" />
-                    Delete Account
-                  </button>
+                    Contact Support To Delete
+                  </Link>
                 </div>
               </>
             )}
@@ -804,6 +859,97 @@ export default function SettingsPage() {
           </motion.div>
         </div>
       </div>
+
+      {/* ── Change email dialog ── */}
+      <AnimatePresence>
+        {showEmailChange && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowEmailChange(false)}
+              className="fixed inset-0 z-50 bg-bg-base/70 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 16 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 16 }}
+              className="fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-lg border border-border-subtle bg-[rgba(12,12,16,0.96)] backdrop-blur-2xl p-6 shadow-2xl"
+            >
+              {emailChangeSent ? (
+                <>
+                  <div className="flex items-start gap-4 mb-5">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-success-bg border border-success/25">
+                      <Check className="h-5 w-5 text-success" />
+                    </div>
+                    <div>
+                      <h3 className="text-base font-semibold text-text-primary">Confirmation Sent</h3>
+                      <p className="mt-1 text-sm text-text-secondary">
+                        Check <span className="text-text-primary font-medium">both</span> your current and new inbox
+                        (<span className="text-text-primary font-medium">{newEmail.trim().toLowerCase()}</span>) and click
+                        the confirmation link to finish the change.
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setShowEmailChange(false)}
+                    className="w-full rounded-lg bg-lime px-4 py-2.5 text-sm font-semibold text-text-inverse transition-all hover:bg-lime-hover active:scale-95"
+                  >
+                    Done
+                  </button>
+                </>
+              ) : (
+                <>
+                  <div className="flex items-start gap-4 mb-5">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-lime/15 border border-lime-tint-border">
+                      <Mail className="h-5 w-5 text-lime-text" />
+                    </div>
+                    <div>
+                      <h3 className="text-base font-semibold text-text-primary">Change Email</h3>
+                      <p className="mt-1 text-sm text-text-secondary">
+                        Enter your new email. We&apos;ll send a confirmation link to both your current and new address —
+                        the change lands once confirmed.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="space-y-3">
+                    <input
+                      type="email"
+                      value={newEmail}
+                      onChange={(e) => setNewEmail(e.target.value)}
+                      placeholder="new@email.com"
+                      className={inputCls}
+                    />
+                    {emailChangeError && (
+                      <div className="flex items-center gap-1.5 text-xs text-error">
+                        <AlertCircle className="h-3.5 w-3.5" />
+                        {emailChangeError}
+                      </div>
+                    )}
+                  </div>
+                  <div className="mt-5 flex gap-3">
+                    <button
+                      onClick={() => setShowEmailChange(false)}
+                      className="flex-1 rounded-lg border border-border-subtle bg-bg-raised px-4 py-2.5 text-sm font-medium text-text-primary transition-all hover:bg-bg-raised-hover"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleChangeEmail}
+                      disabled={changingEmail || !newEmail.trim()}
+                      className="flex-1 inline-flex items-center justify-center gap-2 rounded-lg bg-lime px-4 py-2.5 text-sm font-semibold text-text-inverse transition-all hover:bg-lime-hover active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {changingEmail ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                      {changingEmail ? 'Sending…' : 'Send Confirmation'}
+                    </button>
+                  </div>
+                </>
+              )}
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
 
       {/* ── Shop name confirmation dialog ── */}
       <AnimatePresence>

@@ -578,6 +578,7 @@ export function HomePage() {
           LIVE RECENTLY-SOLD TICKER
           DYNAMIC: from /api/recent-sales, WebSocket for real-time updates
           ================================================================ */}
+      {recentSales.length > 0 && (
       <section className="relative py-12 border-t border-border-subtle overflow-hidden">
         {/* V17i — Subtle pulse-glow behind the ticker so the "live"
             beat is felt in the background, not just on the dot. */}
@@ -606,6 +607,7 @@ export function HomePage() {
           <RecentlySoldTicker items={recentSales} />
         </div>
       </section>
+      )}
 
       {/* ================================================================
           CLOSING CTA — V57. Full-bleed: the Fortnite trio stands at
