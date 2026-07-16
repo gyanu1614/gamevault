@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { cn } from '@/lib/utils'
+import { formatFromPrice } from '../lib/popular-listings'
 
 /**
  * V57 — Shop-by-category card, homepage edition.
@@ -87,7 +88,7 @@ export function ShopCard({ href, name, game, iconSrc, fromPrice, chips = [] }: S
       <span className="relative mt-3 flex items-baseline gap-1.5">
         <span className="text-[11px] uppercase tracking-wider text-text-tertiary">from</span>
         <span className="font-display text-[19px] font-extrabold tabular-nums text-text-primary transition-colors duration-200 group-hover:text-lime-text">
-          ${fromPrice.toFixed(2)}
+          ${formatFromPrice(fromPrice)}
         </span>
       </span>
     </Link>

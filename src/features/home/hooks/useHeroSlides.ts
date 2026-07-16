@@ -2,12 +2,16 @@ import { useQuery } from '@tanstack/react-query'
 
 export interface HeroSlide {
   id: string
+  /**
+   * Optional editorial badge (e.g. "New season"). Left unset on all
+   * current slides — must NEVER carry a fabricated live stat (a discount
+   * %, a price, a "best rate" claim). Only set this to real, verifiable
+   * copy.
+   */
   badge?: string
   badgeTone?: 'error' | 'success' | 'info'
   eyebrow: string
   title: string
-  fromPrice: number
-  comparePrice?: number
   ctaLabel: string
   ctaHref: string
   imageSrc: string
@@ -15,7 +19,19 @@ export interface HeroSlide {
 }
 
 /**
- * Hero carousel slides.
+ * Hero carousel slides — CURATED EDITORIAL CONTENT, not live marketplace
+ * data.
+ *
+ * These are hand-authored marketing placements (which games we feature,
+ * the headline copy, the CTA). They are intentionally hardcoded, the same
+ * way a homepage banner is curated by marketing — NOT leftover mock data.
+ *
+ * IMPORTANT: no live stats live here. Earlier revisions carried fabricated
+ * price/discount fields (fromPrice / comparePrice / "−24% this week"
+ * badges) that were never sourced from real listings. Those have been
+ * removed — a hero slide must never assert a price or discount that isn't
+ * backed by real data. If we later want a live "from $X" on a slide, it
+ * has to come from the same aggregation the Shop-by-category tabs use.
  *
  * Images live permanently in /public/hero/ — drop files in with these exact
  * names and they'll show up immediately, no rebuild/reupload step needed.
@@ -23,22 +39,14 @@ export interface HeroSlide {
  * Keep the focal point on the right/upper area — a dark gradient overlay
  * (from-bg-base/92) covers the bottom-left ~40% where the text sits.
  *
- *   /public/hero/valorant.jpg
- *   /public/hero/fortnite.jpg
- *   /public/hero/roblox.jpg
- *
- * To change which games are featured, swap the image filenames below (or add
- * new slide objects) — everything else (rotation, copy, CTA) is just data.
+ * To change which games are featured, swap the image filenames below (or
+ * add new slide objects) — everything is just curated data.
  */
-const MOCK_HERO_SLIDES: HeroSlide[] = [
+const CURATED_HERO_SLIDES: HeroSlide[] = [
   {
     id: 'valorant',
-    badge: '−24% this week',
-    badgeTone: 'error',
     eyebrow: 'VALORANT · ACCOUNTS',
     title: 'Radiant-ranked accounts',
-    fromPrice: 189,
-    comparePrice: 249,
     ctaLabel: 'Shop Valorant',
     ctaHref: '/game/valorant/accounts',
     imageSrc: '/hero/valorant.jpg',
@@ -46,12 +54,8 @@ const MOCK_HERO_SLIDES: HeroSlide[] = [
   },
   {
     id: 'fortnite',
-    badge: 'OG skins back in stock',
-    badgeTone: 'success',
     eyebrow: 'FORTNITE · ITEMS',
     title: 'OG skin bundles',
-    fromPrice: 49,
-    comparePrice: 79,
     ctaLabel: 'Shop Fortnite',
     ctaHref: '/game/fortnite/items',
     imageSrc: '/hero/fortnite.jpg',
@@ -59,11 +63,8 @@ const MOCK_HERO_SLIDES: HeroSlide[] = [
   },
   {
     id: 'roblox',
-    badge: 'Best rate today',
-    badgeTone: 'info',
     eyebrow: 'ROBLOX · CURRENCY',
     title: 'Robux at the best rate',
-    fromPrice: 4.5,
     ctaLabel: 'Shop Roblox',
     ctaHref: '/currency/robux',
     imageSrc: '/hero/roblox.jpg',
@@ -72,19 +73,15 @@ const MOCK_HERO_SLIDES: HeroSlide[] = [
 ]
 
 export function useHeroSlides() {
-  // TODO(supabase): replace mock with real query
-  // select * from hero_slides where is_active = true order by sort_order limit 3
-  // imageSrc would then come from Supabase Storage (public bucket) instead of /public/hero/
-  //
-  // initialData seeds the cache synchronously so the first render already has
-  // slides — eliminates the "headline paints, then carousel pops in"
-  // sequence the homepage had before. Once the query is migrated to real
-  // Supabase data, keep initialData pointing at the mocks (or remove if
-  // SSR-fetched) so first paint stays populated.
+  // Curated editorial slides — served through react-query for a uniform
+  // hook API with the rest of the homepage. initialData seeds the cache
+  // synchronously so the carousel is populated on first paint (no
+  // headline-then-carousel pop-in). This is intentional curated content,
+  // so there is no async fetch to migrate to.
   return useQuery({
     queryKey: ['hero-slides'],
-    queryFn: async (): Promise<HeroSlide[]> => MOCK_HERO_SLIDES,
-    initialData: MOCK_HERO_SLIDES,
+    queryFn: async (): Promise<HeroSlide[]> => CURATED_HERO_SLIDES,
+    initialData: CURATED_HERO_SLIDES,
     staleTime: 5 * 60 * 1000,
   })
 }
