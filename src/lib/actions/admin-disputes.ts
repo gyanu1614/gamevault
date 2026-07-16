@@ -7,6 +7,7 @@ import { ADMIN_ACTIONS } from '@/lib/admin/permissions-constants'
 import { sendDisputeResolvedEmail } from '@/lib/email'
 import { revalidatePath } from 'next/cache'
 import { refundToWallet } from '@/lib/wallet/wallet'
+import { transition } from '@/lib/escrow/transition'
 
 // ============================================
 // TYPES
@@ -410,43 +411,40 @@ export async function resolveDispute(
     // Non-fatal - dispute is already marked as resolved
   }
 
-  // Update order status and escrow based on resolution type
-  let newOrderStatus: string
-  let newEscrowStatus: string
+  // Flip the order + escrow through the atomic ledger transition so the
+  // status change and its money movement post together:
+  //   refund_full            → DISPUTE_RESOLVED_BUYER  (escrow_held → refunds;
+  //                            the wallet credit above completes the chain
+  //                            refunds → user_wallet)
+  //   everything else        → DISPUTE_RESOLVED_SELLER (escrow_held →
+  //                            platform take + seller_available)
+  // NOTE refund_partial: the ledger release credits the seller their FULL
+  // seller_payout while the buyer's partial credit debits refunds — a split
+  // journal (partial to refunds, remainder to seller) needs a dedicated
+  // DISPUTE_PARTIAL event; until then partial resolutions overstate the
+  // seller side in the ledger and reconciliation will surface it.
+  const disputeEvent =
+    resolution.resolutionType === 'refund_full'
+      ? ('DISPUTE_RESOLVED_BUYER' as const)
+      : ('DISPUTE_RESOLVED_SELLER' as const)
 
-  if (resolution.resolutionType === 'refund_full') {
-    newOrderStatus = 'refunded'
-    newEscrowStatus = 'refunded'
-  } else if (resolution.resolutionType === 'refund_partial') {
-    // Partial refund: buyer gets partial, seller gets the rest
-    newOrderStatus = 'completed'
-    newEscrowStatus = 'released'
-  } else {
-    // no_refund, replacement, other: release to seller
-    newOrderStatus = 'completed'
-    newEscrowStatus = 'released'
-  }
-
-  const { error: orderUpdateError } = await (supabase
-    .from('orders')
-    .update as any)({
-      status: newOrderStatus,
-      escrow_status: newEscrowStatus,
-      release_method: 'dispute_resolved',
-      completed_at: new Date().toISOString(),
-    })
-    .eq('id', (dispute as any).transaction_id)
-
-  if (orderUpdateError) {
+  try {
+    await transition(
+      (dispute as any).transaction_id,
+      disputeEvent,
+      disputeId,
+      disputeEvent === 'DISPUTE_RESOLVED_SELLER' ? 'dispute_resolved' : undefined
+    )
+  } catch (orderUpdateError: any) {
     // FATAL: the refund (if any) has already fired and the dispute row is
     // marked resolved, but the order is still in `disputed`. Swallowing this
     // is exactly the bug that left full-refund orders stuck (the transition
     // map lacked `refunded` until 20260628_fix_refunded_transition.sql).
     // Surface it loudly so a future regression can't silently lose state.
-    console.error('[Dispute] CRITICAL: order status update failed after refund/resolution:', orderUpdateError)
+    console.error('[Dispute] CRITICAL: order transition failed after refund/resolution:', orderUpdateError)
     return {
       success: false,
-      error: `Refund/resolution processed but the order status could not be updated (${orderUpdateError.message}). This needs manual reconciliation — contact support.`,
+      error: `Refund/resolution processed but the order status could not be updated (${orderUpdateError?.message ?? 'unknown error'}). This needs manual reconciliation — contact support.`,
     }
   }
 

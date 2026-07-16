@@ -48,6 +48,12 @@ interface StatusStripProps {
    *  of inside the right rail. Larger icon, beefier CTA, more
    *  padding so it reads as the page's primary action. */
   promoted?: boolean
+  /** Funds-flow cutover — true when the order's escrow was refunded, i.e.
+   *  the money landed in the buyer's wallet as store credit. Drives the
+   *  "Your money is in your wallet" strip + Go To Wallet CTA for the
+   *  buyer's refunded/cancelled states (buyers thought they were scammed
+   *  when the refund destination wasn't spelled out). */
+  refundedToWallet?: boolean
 }
 
 function fmtUsd(n: number): string {

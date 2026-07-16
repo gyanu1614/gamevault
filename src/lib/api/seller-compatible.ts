@@ -13,7 +13,9 @@ const supabase = createClient()
 // TYPES (matching your existing schema)
 // =====================================================
 
-export type ListingStatus = 'draft' | 'active' | 'sold' | 'archived' | 'suspended' | 'paused'
+export type ListingStatus =
+  | 'draft' | 'active' | 'sold' | 'archived' | 'suspended' | 'paused'
+  | 'pending_approval' | 'changes_requested' | 'rejected'
 export type OrderStatus = 'pending' | 'paid' | 'processing' | 'completed' | 'disputed' | 'refunded' | 'cancelled'
 export type SellerTier = 'bronze' | 'silver' | 'gold' | 'platinum'
 
@@ -42,6 +44,10 @@ export interface Listing {
   min_quantity?: number | null
   /** Short sequential offer ID (#33404) — null until the migration runs. */
   offer_number?: number | null
+  /** Admin moderation notes — what to change (surfaced to the seller
+   *  ONLY while status === 'changes_requested'; approval notes are
+   *  internal). */
+  moderation_notes?: string | null
   // Joined data
   game?: {
     id: string
@@ -1390,39 +1396,63 @@ export const earningsApi = {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) throw new Error('Not authenticated')
 
-    // Get all completed orders for seller
-    const { data: orders } = await supabase
-      .from('orders')
-      .select('seller_payout, total_amount, platform_fee, created_at')
-      .eq('seller_id', user.id)
-      .eq('status', 'completed') as any
+    // Ledger cutover: available balance comes from the internal ledger
+    // (seller_available entries — already net of withdrawal holds), pending
+    // from in-flight orders, withdrawn from withdrawal_requests. The old
+    // "sum of completed orders" figure ignored withdrawals entirely.
+    const { getMySellerAvailableBalance } = await import('@/lib/actions/wallet-ledger')
 
-    if (!orders) {
-      return {
-        total_earnings: 0,
-        pending_balance: 0,
-        available_balance: 0,
-        total_payouts: 0,
-        this_month_earnings: 0
-      }
-    }
+    const [{ data: orders }, { data: activeOrders }, { data: withdrawals }, availableResult] =
+      await Promise.all([
+        supabase
+          .from('orders')
+          .select('seller_payout, total_amount, platform_fee, created_at')
+          .eq('seller_id', user.id)
+          .eq('status', 'completed') as any,
+        supabase
+          .from('orders')
+          .select('seller_payout')
+          .eq('seller_id', user.id)
+          .in('status', ['paid', 'delivering', 'delivered', 'disputed']) as any,
+        supabase
+          .from('withdrawal_requests' as any)
+          .select('amount, status')
+          .eq('user_id', user.id)
+          .in('status', ['pending', 'approved', 'processing', 'completed']) as any,
+        getMySellerAvailableBalance(),
+      ])
 
-    const total_earnings = orders.reduce((sum: number, order: any) => sum + (order.seller_payout || 0), 0)
+    const total_earnings = (orders || []).reduce(
+      (sum: number, order: any) => sum + (order.seller_payout || 0),
+      0
+    )
 
     // Calculate this month's earnings
     const startOfMonth = new Date()
     startOfMonth.setDate(1)
     startOfMonth.setHours(0, 0, 0, 0)
 
-    const this_month_earnings = orders
+    const this_month_earnings = (orders || [])
       .filter((order: any) => new Date(order.created_at) >= startOfMonth)
       .reduce((sum: number, order: any) => sum + (order.seller_payout || 0), 0)
 
+    const pending_balance = (activeOrders || []).reduce(
+      (sum: number, order: any) => sum + (order.seller_payout || 0),
+      0
+    )
+    const total_payouts = (withdrawals || []).reduce(
+      (sum: number, w: any) => sum + (Number(w.amount) || 0),
+      0
+    )
+
     return {
       total_earnings,
-      pending_balance: 0, // TODO: Implement pending balance logic
-      available_balance: total_earnings, // Simplified for now
-      total_payouts: 0, // TODO: Get from payouts table
+      pending_balance,
+      available_balance:
+        availableResult.success && availableResult.balance != null
+          ? availableResult.balance
+          : 0,
+      total_payouts,
       this_month_earnings
     }
   },

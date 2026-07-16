@@ -142,11 +142,11 @@ export async function createCheckout(input: CreateCheckoutInput): Promise<Create
     // If wallet fully covered it, confirm the order now (no crypto charge needed).
     if (chargeMoney.amountMinor <= 0n) {
       // Wallet already funded escrow_held for the full total; mark paid.
-      await (supabase.rpc as any)('safedrop_transition', {
-        p_order_id: orderId,
-        p_event: 'CHARGE_CONFIRMED',
-        p_dedupe_key: 'wallet-full',
-      })
+      // safedrop_transition dedupes the wallet-paid portion, so this posts
+      // NO provider_float journal for a fully wallet-paid order. Service-role
+      // seam: the RPC is not executable by the user-bound client.
+      const { transition } = await import('@/lib/escrow/transition')
+      await transition(orderId, 'CHARGE_CONFIRMED', 'wallet-full')
       // Paid comms normally ride on the payment webhook (dispatch), which
       // this wallet-only branch bypasses — send them here. The order was
       // created moments ago in this same call, so this is always its first

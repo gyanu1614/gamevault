@@ -179,15 +179,15 @@ export async function notifyOrderTransition(
             orderNumber,
             listingTitle: order.listingTitle,
             amount: refundedAmount,
-            destination: 'your original payment method',
+            destination: 'your DropMarket wallet',
           })
         : Promise.resolve(),
       insertNotification({
         userId: order.buyer_id,
         type: 'order_refunded',
-        title: 'Order Refunded',
-        message: `Order #${orderNumber} has been refunded — $${refundedAmount.toFixed(2)} to your original payment method.`,
-        link: `/account/orders/${order.id}`,
+        title: 'Money In Your Wallet',
+        message: `Order #${orderNumber} was refunded — $${refundedAmount.toFixed(2)} was added to your DropMarket wallet as store credit. Spend it instantly or withdraw it.`,
+        link: '/account/wallet',
       }),
       insertNotification({
         userId: order.seller_id,

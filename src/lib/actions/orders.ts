@@ -6,9 +6,10 @@ import { revalidatePath } from 'next/cache'
 import { logOrderAction, logUnauthorizedAccess, logFailure } from '@/lib/audit'
 import { rateLimitCreateOrder } from '@/lib/utils/rate-limit'
 import { buyerFee, commissionAmount, protectionWindowHours, round2, WARRANTY_ENABLED } from '@/lib/fees'
-import Stripe from 'stripe'
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
+// Funds-flow cutover: order money moves go through the atomic ledger
+// transition; buyer refunds land in their wallet as store credit.
+import { transition } from '@/lib/escrow/transition'
+import { refundToWallet } from '@/lib/wallet/wallet'
 
 // P4.1 — import tier helpers from shared util (not from server action)
 import { getTierFeeRate, TIER_WARRANTY_HOURS } from '@/lib/utils/safedrop-tiers'
@@ -737,8 +738,10 @@ export async function markOrderAsDelivered(
 }
 
 /**
- * Cancel an order (buyer action — only allowed when status is 'paid')
- * Triggers a full Stripe refund and sets escrow to 'refunded'
+ * Cancel an order (buyer action — only allowed when status is 'paid').
+ * Money: the held escrow moves to refunds in the ledger and the FULL amount
+ * is credited to the buyer's wallet as store credit, instantly (Refund &
+ * Dispute Policy: store-credit refunds are 100%). No external refund rail.
  */
 export async function cancelOrder(orderId: string): Promise<{
   success: boolean
@@ -753,7 +756,7 @@ export async function cancelOrder(orderId: string): Promise<{
     // Fetch order — must be buyer and status must be 'paid'
     const { data: orderRaw, error: fetchError } = await supabase
       .from('orders')
-      .select('id, buyer_id, seller_id, listing_id, status, stripe_payment_intent_id, total_amount, order_number')
+      .select('id, buyer_id, seller_id, listing_id, status, escrow_status, currency, total_amount, order_number')
       .eq('id', orderId)
       .single() as any
     const order = orderRaw as any
@@ -767,44 +770,56 @@ export async function cancelOrder(orderId: string): Promise<{
       return { success: false, error: 'Order can only be cancelled before delivery starts' }
     }
 
-    // Issue Stripe refund
-    if (order.stripe_payment_intent_id) {
+    // Cancel atomically: locks the order, validates paid → cancelled, moves
+    // the held escrow to refunds and flips status in one transaction.
+    const escrowWasHeld = order.escrow_status === 'held'
+    let cancelResult
+    try {
+      cancelResult = await transition(orderId, 'CANCELLED')
+    } catch (transitionError: any) {
+      console.error('Failed to cancel order:', transitionError)
+      return { success: false, error: 'Cancellation failed — please contact support' }
+    }
+    if (!cancelResult.changed) {
+      // Already cancelled (double-click / replay) — nothing more to do.
+      return { success: true }
+    }
+
+    // Credit the buyer's wallet with the full amount as store credit.
+    // Idempotent per order ('wallet_refund:<orderId>'), so a replay can't
+    // double-credit. Only when money was actually held for this order.
+    let refundIssued = false
+    if (escrowWasHeld && (order.total_amount ?? 0) > 0) {
       try {
-        await stripe.refunds.create({
-          payment_intent: order.stripe_payment_intent_id,
-          reason: 'requested_by_customer',
+        await refundToWallet({
+          userId: order.buyer_id,
+          amountMinor: BigInt(Math.round((order.total_amount ?? 0) * 100)),
+          currency: (order.currency || 'EUR').toUpperCase(),
+          orderId,
         })
-      } catch (stripeError: any) {
-        console.error('Stripe refund error:', stripeError)
-        return { success: false, error: 'Refund failed — please contact support' }
+        refundIssued = true
+      } catch (walletError: any) {
+        // The order IS cancelled; the wallet credit can be re-run (idempotent
+        // key). Surface loudly but don't undo the cancellation.
+        console.error('[Cancel] CRITICAL: wallet refund credit failed:', walletError?.message)
       }
     }
 
-    // Update order status
-    const { error: updateError } = await (supabase
+    // Best-effort timestamp for the audit trail (status already flipped).
+    await (supabase
       .from('orders')
-      .update as any)({
-        status: 'cancelled',
-        escrow_status: 'refunded',
-        cancelled_at: new Date().toISOString(),
-      })
+      .update as any)({ cancelled_at: new Date().toISOString() })
       .eq('id', orderId)
-
-    if (updateError) {
-      console.error('Failed to update order after refund:', updateError)
-      return { success: false, error: 'Refund issued but order update failed — contact support' }
-    }
 
     await logOrderAction('cancelled', orderId, user.id, {
       reason: 'buyer_cancelled',
-      refund_issued: !!order.stripe_payment_intent_id,
+      refund_issued: refundIssued,
+      refund_destination: 'wallet',
     })
 
-    // Refund comms: buyer email + both parties in-app. HONESTY GATE: the
-    // Stripe refund above only ran when stripe_payment_intent_id exists —
-    // for other rails (crypto/CoinGate) no money has moved yet, so the copy
-    // must say "being arranged", never "processed".
-    const refundIssued = !!order.stripe_payment_intent_id
+    // Refund comms: buyer email + both parties in-app. HONESTY GATE: only
+    // say the money is in the wallet when the wallet credit actually posted;
+    // otherwise the copy must say "being arranged", never "processed".
     await (async () => {
       const orderRef = order.order_number || orderId.slice(0, 8).toUpperCase()
       const service = createServiceRoleClient()
@@ -825,11 +840,11 @@ export async function cancelOrder(orderId: string): Promise<{
         createNotification({
           userId: order.buyer_id,
           type: 'order_refunded',
-          title: refundIssued ? 'Order Cancelled & Refunded' : 'Order Cancelled',
+          title: refundIssued ? 'Money In Your Wallet' : 'Order Cancelled',
           message: refundIssued
-            ? `Order #${orderRef} was cancelled — your refund is on its way back to your payment method.`
+            ? `Order #${orderRef} was cancelled — $${(order.total_amount ?? 0).toFixed(2)} was refunded to your DropMarket wallet as store credit. Spend it instantly or withdraw it.`
             : `Order #${orderRef} was cancelled — our team is arranging your refund and will confirm once it's issued.`,
-          link: `/account/orders/${orderId}`,
+          link: refundIssued ? '/account/wallet' : `/account/orders/${orderId}`,
         }),
         createNotification({
           userId: order.seller_id,
@@ -847,7 +862,7 @@ export async function cancelOrder(orderId: string): Promise<{
           orderNumber: orderRef,
           listingTitle: cancelledListing?.title || 'your item',
           amount: order.total_amount ?? 0,
-          destination: 'your original payment method',
+          destination: 'your DropMarket wallet',
           pending: !refundIssued,
         })
       }
@@ -913,6 +928,13 @@ export async function confirmOrderReceipt(orderId: string): Promise<{
       return { success: false, error: 'This order has not been paid yet' }
     }
 
+    // A disputed order's money is frozen — confirming receipt must not
+    // release it while an admin is reviewing. (The transition map allows
+    // disputed → completed for ADMIN resolutions; guard the buyer path.)
+    if (order.status === 'disputed') {
+      return { success: false, error: 'This order is under dispute review' }
+    }
+
     // If order is not yet delivered, mark as delivered first
     // This allows buyer to confirm receipt even if seller hasn't marked as delivered
     const now = new Date().toISOString()
@@ -940,57 +962,30 @@ export async function confirmOrderReceipt(orderId: string): Promise<{
       }
     }
 
-    // Complete via compare-and-swap on escrow_status = 'held' — the same
-    // pattern as the auto-release cron. Exactly one caller wins the
-    // held → released flip; without this, the cron winning between our read
-    // above and this update would leave both paths calling
-    // transferEscrowToSeller (which has no per-order idempotency) and credit
-    // the seller twice.
-    const { data: claimed, error: updateError } = await (supabase
-      .from('orders')
-      .update as any)({
-        status: 'completed',
-        completed_at: now,
-        escrow_status: 'released',
-        release_method: 'buyer_confirmed',
-      })
-      .eq('id', orderId)
-      .eq('escrow_status', 'held')
-      .select('id')
-
-    if (updateError) {
-      console.error('Database error completing order:', updateError)
+    // Complete atomically through the SafeDrop transition RPC: it locks the
+    // order row, validates delivered → completed, posts the ledger journal
+    // (escrow_held → platform take + seller_available — the seller's payout
+    // is credited to their internal seller balance, NOT a Stripe transfer)
+    // and flips status/escrow_status in ONE DB transaction. The row lock +
+    // idempotent journal replace the old CAS + transferEscrowToSeller pair:
+    // exactly one caller (buyer confirm vs auto-release cron) applies the
+    // move; the loser sees changed=false.
+    let release
+    try {
+      release = await transition(orderId, 'BUYER_CONFIRMED', undefined, 'buyer_confirmed')
+    } catch (transitionError: any) {
+      console.error('Database error completing order:', transitionError)
       return {
         success: false,
-        error: updateError.message || 'Failed to complete order',
+        error: transitionError?.message || 'Failed to complete order',
       }
     }
 
-    if (!claimed?.length) {
+    if (!release.changed) {
       // Lost the race: another path (auto-release cron, concurrent confirm)
-      // moved escrow off 'held' after our read. The winner owns the seller
-      // credit and completion comms — doing them here would double-pay.
+      // already completed the order. The winner owns the seller credit and
+      // completion comms — doing them here would double-send.
       return { success: true }
-    }
-
-    // Trigger payout to seller via Stripe Connect
-    try {
-      const { transferEscrowToSeller } = await import('@/lib/stripe/connect')
-      const payoutResult = await transferEscrowToSeller(orderId)
-
-      if (payoutResult.success) {
-        if (payoutResult.transferId) {
-          console.log(`[Orders] Payout transfer initiated: ${payoutResult.transferId}`)
-        } else {
-          console.log(`[Orders] Payout held or seller not connected yet`)
-        }
-      } else {
-        console.error(`[Orders] Payout transfer failed: ${payoutResult.error}`)
-        // Don't fail the order completion - payout can be retried
-      }
-    } catch (payoutError) {
-      console.error('[Orders] Error initiating payout:', payoutError)
-      // Non-fatal - order is still completed, payout can be retried manually
     }
 
     // Buyer completion receipt (fire-and-forget, non-blocking). When
@@ -1048,7 +1043,7 @@ export async function confirmOrderReceipt(orderId: string): Promise<{
         userId: order.seller_id,
         type: 'order_completed',
         title: 'Order Completed',
-        message: `Buyer confirmed delivery on order #${orderRef} — $${(order.seller_payout ?? 0).toFixed(2)} payout initiated.`,
+        message: `Buyer confirmed delivery on order #${orderRef} — $${(order.seller_payout ?? 0).toFixed(2)} was added to your seller balance. Withdraw any time from your wallet.`,
         link: `/account/orders/${orderId}`,
       })
       if (seller?.email) {

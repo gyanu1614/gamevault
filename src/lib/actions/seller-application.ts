@@ -116,6 +116,11 @@ export async function submitSellerApplication(
         expected_monthly_volume: data.step1?.expectedVolume ?? '',
         referral_code: data.step1?.referralCode || null,
 
+        // Store image / logo uploaded in the wizard (profile-pictures
+        // bucket) — persisted so admin review surfaces can show the
+        // submitted store image instead of a generated avatar.
+        profile_picture_path: data.profilePicturePath?.path ?? null,
+
         // Step 2: Business Information
         full_legal_name: data.step2?.fullLegalName ?? '',
         display_name: data.step2?.displayName ?? '',

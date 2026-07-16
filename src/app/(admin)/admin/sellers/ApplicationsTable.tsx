@@ -12,8 +12,7 @@ import {
   Eye,
   ChevronRight,
   FileText,
-  Calendar,
-  Building
+  Calendar
 } from 'lucide-react'
 
 interface ApplicationsTableProps {
@@ -120,8 +119,8 @@ export default function ApplicationsTable({ applications }: ApplicationsTablePro
       <table className={TABLE.table}>
         <thead>
           <tr>
+            <th className={TABLE.th}>Store</th>
             <th className={TABLE.th}>Applicant</th>
-            <th className={TABLE.th}>Store Details</th>
             <th className={TABLE.th}>Verification</th>
             <th className={TABLE.th}>Status</th>
             <th className={TABLE.th}>Applied</th>
@@ -141,46 +140,48 @@ export default function ApplicationsTable({ applications }: ApplicationsTablePro
               onMouseLeave={() => setHoveredRow(null)}
               onClick={() => router.push(`/admin/sellers/${app.id}`)}
             >
-              {/* Applicant */}
+              {/* Store — submitted store image + store name lead the row */}
               <td className={TABLE.td}>
                 <div className="flex items-center gap-3">
                   <img
-                    src={getAvatarUrl(app.user.avatar_url, app.user.username || app.user.email)}
-                    alt={app.user.full_name || app.user.username || 'Profile'}
-                    className="h-10 w-10 rounded-full border border-border-default bg-bg-overlay object-cover"
+                    src={getAvatarUrl(
+                      app.store_image_url || app.user.avatar_url,
+                      app.display_name || app.user.username || app.user.email
+                    )}
+                    alt={app.display_name || 'Store'}
+                    className="h-10 w-10 rounded-lg border border-border-default bg-bg-overlay object-cover"
                   />
-                  <div>
-                    <p className="text-sm font-semibold text-text-primary">
-                      {app.user.full_name || app.user.username || 'Unknown'}
+                  <div className="space-y-0.5">
+                    <p className="text-sm font-semibold text-text-primary">{app.display_name}</p>
+                    <p className="text-xs capitalize text-text-tertiary">
+                      {app.seller_type?.replace('_', ' ') || 'Not specified'}
                     </p>
-                    <p className="text-xs text-text-tertiary">{app.user.email}</p>
+                    {app.game_names && app.game_names.length > 0 && (
+                      <div className="flex flex-wrap gap-1 pt-0.5">
+                        {app.game_names.slice(0, 2).map((game, idx) => (
+                          <span
+                            key={idx}
+                            className="inline-flex items-center rounded border border-border-default bg-bg-overlay px-2 py-0.5 text-[10px] font-medium text-text-secondary"
+                          >
+                            {game}
+                          </span>
+                        ))}
+                        {app.game_names.length > 2 && (
+                          <span className="text-[10px] text-text-tertiary">+{app.game_names.length - 2} more</span>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               </td>
 
-              {/* Store Details */}
+              {/* Applicant */}
               <td className={TABLE.td}>
-                <div className="space-y-1.5">
-                  <div className="flex items-center gap-2">
-                    <Building className="h-4 w-4 text-text-tertiary" />
-                    <p className="text-sm font-semibold text-text-primary">{app.display_name}</p>
-                  </div>
-                  <p className="ml-6 text-xs capitalize text-text-tertiary">{app.seller_type?.replace('_', ' ') || 'Not specified'}</p>
-                  {app.game_names && app.game_names.length > 0 && (
-                    <div className="ml-6 flex flex-wrap gap-1">
-                      {app.game_names.slice(0, 2).map((game, idx) => (
-                        <span
-                          key={idx}
-                          className="inline-flex items-center rounded border border-border-default bg-bg-overlay px-2 py-0.5 text-[10px] font-medium text-text-secondary"
-                        >
-                          {game}
-                        </span>
-                      ))}
-                      {app.game_names.length > 2 && (
-                        <span className="text-[10px] text-text-tertiary">+{app.game_names.length - 2} more</span>
-                      )}
-                    </div>
-                  )}
+                <div>
+                  <p className="text-sm font-medium text-text-primary">
+                    {app.user.full_name || app.user.username || 'Unknown'}
+                  </p>
+                  <p className="text-xs text-text-tertiary">{app.user.email}</p>
                 </div>
               </td>
 

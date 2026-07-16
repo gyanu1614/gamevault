@@ -84,6 +84,12 @@ export interface DuplicatePrefill {
   /** Carry images over verbatim — same URLs are still valid since they
    *  live in a public storage bucket. Seller can remove + re-add freely. */
   images: string[]
+  /** Current moderation state — edit mode uses it to surface the
+   *  Changes Requested banner + resubmit copy. */
+  status: string
+  /** What the review team asked to change (only meaningful while
+   *  status === 'changes_requested'; internal notes otherwise). */
+  moderation_notes: string | null
 }
 
 export async function fetchListingForDuplicate(
@@ -100,6 +106,7 @@ export async function fetchListingForDuplicate(
         id, seller_id, title, description, price, original_price,
         quantity, min_quantity, delivery_method, delivery_time,
         images, template_data, region, platform, game_id,
+        status, moderation_notes,
         game:games(slug),
         category:categories(metadata)
       `)
@@ -122,6 +129,8 @@ export async function fetchListingForDuplicate(
       region: string | null
       platform: string | null
       game_id: string
+      status: string
+      moderation_notes: string | null
       game: { slug: string } | null
       category: { metadata: { type?: string } } | null
     }
@@ -162,6 +171,8 @@ export async function fetchListingForDuplicate(
         platform: row.platform,
         template_data: row.template_data ?? {},
         images: Array.isArray(row.images) ? row.images : [],
+        status: row.status,
+        moderation_notes: row.moderation_notes ?? null,
       },
     }
   } catch (e: any) {
@@ -826,6 +837,16 @@ export async function updateListingFromWizard(
       }
     }
 
+    // Resubmit loop: a listing the review team bounced back
+    // (changes_requested) or rejected re-enters the review queue when
+    // the seller saves a non-draft edit. Explicit status flip — the
+    // check_listing_moderation trigger only intervenes on transitions
+    // to 'active', so we can't rely on it here.
+    const existingStatus = (existing as { status: string }).status
+    const isResubmit =
+      (existingStatus === 'changes_requested' || existingStatus === 'rejected') &&
+      input.status !== 'draft'
+
     const updatePayload: Record<string, unknown> = {
       title: resolvedTitle || 'Untitled',
       description: input.description?.trim() || '',
@@ -843,8 +864,13 @@ export async function updateListingFromWizard(
       // re-target a different bundle from the wizard.
       bundle_id: input.bundle_id ?? null,
       // Only let the seller flip between draft ↔ active here; don't let an
-      // edit accidentally reset moderation state.
-      ...(input.status === 'draft' ? { status: 'draft' } : {}),
+      // edit accidentally reset moderation state — EXCEPT the resubmit
+      // loop, which moves changes_requested/rejected back into review.
+      ...(input.status === 'draft'
+        ? { status: 'draft' }
+        : isResubmit
+          ? { status: 'pending_approval' }
+          : {}),
     }
 
     const { error } = await (supabase
@@ -853,14 +879,58 @@ export async function updateListingFromWizard(
       .eq('id', listingId)
     if (error) return { success: false, error: error.message }
 
+    // Resubmit comms — tell the moderation team the listing is back in
+    // the queue. AWAITED but wrapped so it can never fail the edit;
+    // service-role client because a seller session can't read admin
+    // role rows or insert notifications for other users under RLS.
+    if (isResubmit) {
+      await (async () => {
+        const { createServiceRoleClient } = await import('@/lib/supabase/service')
+        const service = createServiceRoleClient()
+
+        const { data: rolesWithPermission } = await service
+          .from('role_permissions')
+          .select('role')
+          .eq('permission', 'listings.moderate') as any
+        const roles = (rolesWithPermission || []).map((r: any) => r.role)
+        if (roles.length === 0) return
+
+        const { data: admins } = await service
+          .from('admin_roles')
+          .select('user_id')
+          .in('role', roles)
+          .eq('is_active', true) as any
+        const adminIds: string[] = (admins || []).map((a: any) => a.user_id)
+        if (adminIds.length === 0) return
+
+        await (service.from('notifications').insert as any)(
+          adminIds.map((adminId) => ({
+            user_id: adminId,
+            type: 'listing_resubmitted',
+            title: 'Listing Resubmitted',
+            message: `"${resolvedTitle || 'Untitled'}" was updated and resubmitted for review.`,
+            link: '/admin/moderation',
+            is_read: false,
+          }))
+        )
+      })().catch((err) => console.error('[SellWizard] Resubmit admin comms failed:', err))
+    }
+
     revalidatePath('/account/listings')
+    revalidatePath('/admin/moderation')
     // V19/P11 — Canonical edit URL is /sell/edit/[id]; the old
     // /account/listings/[id]/edit is now a permanent redirect, so we
     // revalidate the new path. Keeping the old revalidate as a
     // belt-and-braces measure costs nothing.
     revalidatePath(`/sell/edit/${listingId}`)
     revalidatePath(`/account/listings/${listingId}/edit`)
-    return { success: true, data: { id: listingId, status: (existing as any).status } }
+    return {
+      success: true,
+      data: {
+        id: listingId,
+        status: input.status === 'draft' ? 'draft' : isResubmit ? 'pending_approval' : existingStatus,
+      },
+    }
   } catch (e: any) {
     return { success: false, error: e?.message ?? 'Unknown error' }
   }

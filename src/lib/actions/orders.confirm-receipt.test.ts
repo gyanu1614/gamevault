@@ -1,14 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-// confirmOrderReceipt races the auto-release cron for the held → released
-// escrow flip. These tests pin the compare-and-swap semantics: exactly one
-// winner credits the seller (transferEscrowToSeller has no per-order
-// idempotency), and the loser returns success without paying or sending comms.
+// confirmOrderReceipt completes an order through the atomic SafeDrop
+// transition RPC (safedrop_transition BUYER_CONFIRMED): the row lock +
+// idempotent ledger journal decide the race against the auto-release cron.
+// These tests pin that seam: exactly one transition call on the win path,
+// and the loser (changed=false) returns success without comms or cashback.
 
 const h = vi.hoisted(() => ({
   createClient: vi.fn(),
   createServiceRoleClient: vi.fn(),
-  transferEscrowToSeller: vi.fn(),
+  transition: vi.fn(),
+  refundToWallet: vi.fn(),
   sendOrderCompletionEmail: vi.fn(),
   sendOrderCompletedSellerEmail: vi.fn(),
   createNotification: vi.fn(),
@@ -19,7 +21,6 @@ const h = vi.hoisted(() => ({
 vi.mock('@/lib/supabase/server', () => ({ createClient: h.createClient }))
 vi.mock('@/lib/supabase/service', () => ({ createServiceRoleClient: h.createServiceRoleClient }))
 vi.mock('next/cache', () => ({ revalidatePath: h.revalidatePath }))
-vi.mock('stripe', () => ({ default: class Stripe {} }))
 vi.mock('@/lib/audit', () => ({
   logOrderAction: vi.fn(),
   logUnauthorizedAccess: vi.fn(),
@@ -28,7 +29,8 @@ vi.mock('@/lib/audit', () => ({
 vi.mock('@/lib/utils/rate-limit', () => ({ rateLimitCreateOrder: vi.fn() }))
 vi.mock('@/lib/actions/loyalty', () => ({ awardCashback: h.awardCashback }))
 vi.mock('@/lib/actions/promo', () => ({ recordPromoUsage: vi.fn() }))
-vi.mock('@/lib/stripe/connect', () => ({ transferEscrowToSeller: h.transferEscrowToSeller }))
+vi.mock('@/lib/escrow/transition', () => ({ transition: h.transition }))
+vi.mock('@/lib/wallet/wallet', () => ({ refundToWallet: h.refundToWallet }))
 vi.mock('@/lib/email', () => ({
   sendOrderCompletionEmail: h.sendOrderCompletionEmail,
   sendOrderCompletedSellerEmail: h.sendOrderCompletedSellerEmail,
@@ -83,7 +85,13 @@ const baseOrder = {
 
 beforeEach(() => {
   vi.clearAllMocks()
-  h.transferEscrowToSeller.mockResolvedValue({ success: true, transferId: 'tr_1', error: null })
+  h.transition.mockResolvedValue({
+    orderId: ORDER_ID,
+    status: 'completed',
+    escrowStatus: 'released',
+    ledgerTxnId: 'txn-1',
+    changed: true,
+  })
   h.awardCashback.mockResolvedValue(undefined)
   h.createNotification.mockResolvedValue(undefined)
   // Comms lookups (profiles/listings) resolve empty — emails skip themselves.
@@ -92,38 +100,38 @@ beforeEach(() => {
   }))
 })
 
-describe('confirmOrderReceipt escrow CAS', () => {
-  it('winner path: claims held escrow, credits seller exactly once', async () => {
+describe('confirmOrderReceipt ledger transition', () => {
+  it('winner path: applies exactly one BUYER_CONFIRMED transition', async () => {
     const readBuilder = createBuilder({ data: { ...baseOrder }, error: null })
-    const casBuilder = createBuilder({ data: [{ id: ORDER_ID }], error: null })
-    h.createClient.mockResolvedValue(createSupabaseMock([readBuilder, casBuilder]))
+    h.createClient.mockResolvedValue(createSupabaseMock([readBuilder]))
 
     const result = await confirmOrderReceipt(ORDER_ID)
 
     expect(result).toEqual({ success: true })
-    expect(casBuilder.update).toHaveBeenCalledWith(
-      expect.objectContaining({
-        status: 'completed',
-        escrow_status: 'released',
-        release_method: 'buyer_confirmed',
-      })
+    expect(h.transition).toHaveBeenCalledTimes(1)
+    expect(h.transition).toHaveBeenCalledWith(
+      ORDER_ID,
+      'BUYER_CONFIRMED',
+      undefined,
+      'buyer_confirmed'
     )
-    expect(casBuilder.eq).toHaveBeenCalledWith('escrow_status', 'held')
-    expect(casBuilder.select).toHaveBeenCalledWith('id')
-    expect(h.transferEscrowToSeller).toHaveBeenCalledTimes(1)
-    expect(h.transferEscrowToSeller).toHaveBeenCalledWith(ORDER_ID)
   })
 
-  it('lost race: zero rows claimed returns success with no payout and no comms', async () => {
+  it('lost race: changed=false returns success with no comms or cashback', async () => {
     const readBuilder = createBuilder({ data: { ...baseOrder }, error: null })
-    // The cron won the held → released flip between our read and the update.
-    const casBuilder = createBuilder({ data: [], error: null })
-    h.createClient.mockResolvedValue(createSupabaseMock([readBuilder, casBuilder]))
+    h.createClient.mockResolvedValue(createSupabaseMock([readBuilder]))
+    // The cron won the release between our read and the transition — the RPC
+    // reports the order already at 'completed'.
+    h.transition.mockResolvedValue({
+      orderId: ORDER_ID,
+      status: 'completed',
+      changed: false,
+    })
 
     const result = await confirmOrderReceipt(ORDER_ID)
 
     expect(result).toEqual({ success: true })
-    expect(h.transferEscrowToSeller).not.toHaveBeenCalled()
+    expect(h.transition).toHaveBeenCalledTimes(1)
     expect(h.sendOrderCompletionEmail).not.toHaveBeenCalled()
     expect(h.sendOrderCompletedSellerEmail).not.toHaveBeenCalled()
     expect(h.createNotification).not.toHaveBeenCalled()
@@ -131,7 +139,19 @@ describe('confirmOrderReceipt escrow CAS', () => {
     expect(h.revalidatePath).not.toHaveBeenCalled()
   })
 
-  it('already completed at read time: returns success without touching the order', async () => {
+  it('transition failure surfaces as an error (order not silently completed)', async () => {
+    const readBuilder = createBuilder({ data: { ...baseOrder }, error: null })
+    h.createClient.mockResolvedValue(createSupabaseMock([readBuilder]))
+    h.transition.mockRejectedValue(new Error('safedrop_transition(BUYER_CONFIRMED) failed: boom'))
+
+    const result = await confirmOrderReceipt(ORDER_ID)
+
+    expect(result.success).toBe(false)
+    expect(h.sendOrderCompletionEmail).not.toHaveBeenCalled()
+    expect(h.awardCashback).not.toHaveBeenCalled()
+  })
+
+  it('already completed at read time: returns success without transitioning', async () => {
     const readBuilder = createBuilder({
       data: { ...baseOrder, status: 'completed', escrow_status: 'released' },
       error: null,
@@ -142,16 +162,26 @@ describe('confirmOrderReceipt escrow CAS', () => {
 
     expect(result).toEqual({ success: true })
     expect(readBuilder.update).not.toHaveBeenCalled()
-    expect(h.transferEscrowToSeller).not.toHaveBeenCalled()
+    expect(h.transition).not.toHaveBeenCalled()
+  })
+
+  it('disputed order: refuses to release frozen funds', async () => {
+    const readBuilder = createBuilder({
+      data: { ...baseOrder, status: 'disputed', escrow_status: 'frozen' },
+      error: null,
+    })
+    h.createClient.mockResolvedValue(createSupabaseMock([readBuilder]))
+
+    const result = await confirmOrderReceipt(ORDER_ID)
+
+    expect(result.success).toBe(false)
+    expect(h.transition).not.toHaveBeenCalled()
   })
 
   it('mark-delivered pre-step is guarded on held escrow', async () => {
-    const readBuilder = createBuilder({ data: { ...baseOrder, status: 'shipped' }, error: null })
+    const readBuilder = createBuilder({ data: { ...baseOrder, status: 'delivering' }, error: null })
     const deliveredBuilder = createBuilder({ data: null, error: null })
-    const casBuilder = createBuilder({ data: [{ id: ORDER_ID }], error: null })
-    h.createClient.mockResolvedValue(
-      createSupabaseMock([readBuilder, deliveredBuilder, casBuilder])
-    )
+    h.createClient.mockResolvedValue(createSupabaseMock([readBuilder, deliveredBuilder]))
 
     const result = await confirmOrderReceipt(ORDER_ID)
 
@@ -161,6 +191,6 @@ describe('confirmOrderReceipt escrow CAS', () => {
     )
     // A replay must not drag a completed/disputed order back to 'delivered'.
     expect(deliveredBuilder.eq).toHaveBeenCalledWith('escrow_status', 'held')
-    expect(h.transferEscrowToSeller).toHaveBeenCalledTimes(1)
+    expect(h.transition).toHaveBeenCalledTimes(1)
   })
 })

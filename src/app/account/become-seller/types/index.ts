@@ -12,22 +12,31 @@ export type {
   Step4FormData,
   Step5FormData,
   Step6FormData,
+  UploadedDoc,
 } from '../schemas'
 
-// Component Props Types
-export interface StepComponentProps {
-  currentStep: number
-  onNext: (stepNumber: number) => void
-  onPrevious: () => void
-}
+import type { UploadedDoc } from '../schemas'
 
-export interface FileUploadBoxProps {
-  label: string
-  description: string
-  fileType: string
-  uploadedFile: File | null
-  onFileUpload: (fileType: string, file: File | null) => void
-  sampleImage?: string
+/** Keys of the KYC documents collected in Step 3. */
+export type KycDocKey =
+  | 'idDocument'
+  | 'selfieWithId'
+  | 'proofOfAddress'
+  | 'certificateOfIncorporation'
+  | 'businessLicense'
+  | 'directorId'
+  | 'bankStatement'
+
+/** Shared state — documents that finished uploading to storage. */
+export type UploadedDocsState = Record<KycDocKey, UploadedDoc | null>
+
+/** Client-safe shape of a games-table row (fetched server-side in page.tsx). */
+export interface WizardGame {
+  id: string
+  name: string
+  slug: string
+  emoji: string | null
+  image_url: string | null
 }
 
 export interface ProgressBarProps {
@@ -37,15 +46,4 @@ export interface ProgressBarProps {
     name: string
     icon: React.ComponentType<{ className?: string }>
   }>
-}
-
-// Shared State Types
-export interface UploadedFilesState {
-  idDocument: File | null
-  selfieWithId: File | null
-  proofOfAddress: File | null
-  certificateOfIncorporation: File | null
-  businessLicense: File | null
-  directorId: File | null
-  bankStatement: File | null
 }

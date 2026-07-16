@@ -6,9 +6,11 @@
  * journal, and flips status — all in ONE DB transaction, idempotently. This is
  * the only way the app should change an order's money-bearing status.
  *
- * Ledger-only: it does NOT trigger an external payout (Stripe/CoinGate); that's
- * the provider seam (Phase 3+). Wiring this into the live order actions also
- * happens in Phase 3, once the provider rail exists.
+ * Since the Phase 7 payout cutover this IS the payout rail: release events
+ * credit the seller's internal ledger balance (seller_available) and refunds
+ * move escrow to the refunds account (the buyer wallet credit rides on top via
+ * lib/wallet refundToWallet). Cash only ever leaves the platform through the
+ * withdrawal_requests flow.
  */
 
 import { createServiceRoleClient } from '@/lib/supabase/service'
@@ -25,10 +27,12 @@ export interface TransitionResult {
 /**
  * transition — apply a SafeDrop order event atomically.
  *
- * @param orderId    the order to transition
- * @param event      a canonical OrderEvent (CHARGE_CONFIRMED, AUTO_RELEASED, …)
- * @param dedupeKey  optional extra idempotency component (e.g. a provider event
- *                   id) so the same provider webhook can't double-apply.
+ * @param orderId       the order to transition
+ * @param event         a canonical OrderEvent (CHARGE_CONFIRMED, AUTO_RELEASED, …)
+ * @param dedupeKey     optional extra idempotency component (e.g. a provider
+ *                      event id) so the same provider webhook can't double-apply.
+ * @param releaseMethod release events only — written to orders.release_method
+ *                      ('buyer_confirmed' | 'auto' | 'dispute_resolved').
  *
  * Throws if the order is missing or the transition is illegal. Idempotent: if
  * the order is already at the target status, returns `{ changed: false }` and
@@ -37,13 +41,15 @@ export interface TransitionResult {
 export async function transition(
   orderId: string,
   event: OrderEvent,
-  dedupeKey?: string
+  dedupeKey?: string,
+  releaseMethod?: string
 ): Promise<TransitionResult> {
   const supabase = createServiceRoleClient()
   const { data, error } = await (supabase.rpc as any)('safedrop_transition', {
     p_order_id: orderId,
     p_event: event,
     p_dedupe_key: dedupeKey ?? null,
+    p_release_method: releaseMethod ?? null,
   })
 
   if (error) {

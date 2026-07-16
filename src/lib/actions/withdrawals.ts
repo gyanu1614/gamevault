@@ -3,6 +3,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service'
 import { requireAdmin } from '@/lib/actions/admin-permissions'
+import { getMyWithdrawableBalance } from '@/lib/actions/wallet-ledger'
+import { PAYOUT_MIN_USD } from '@/lib/fees'
 
 // Types
 export interface WithdrawalMethod {
@@ -106,14 +108,19 @@ export async function createWithdrawalRequest(params: {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) throw new Error('Not authenticated')
 
-    // Get user's wallet balance
-    const { data: wallet } = await supabase
-      .from('wallet_balances')
-      .select('available_balance')
-      .eq('user_id', user.id)
-      .single()
+    // Platform-wide payout minimum (lib/fees — single source of truth; the
+    // per-method min_withdrawal rows mirror it).
+    if (params.amount < PAYOUT_MIN_USD) {
+      return { success: false, error: `Minimum withdrawal is $${PAYOUT_MIN_USD}` }
+    }
 
-    if (!wallet || (wallet as any).available_balance < params.amount) {
+    // Balance check against the LEDGER (seller_available + wallet credit) —
+    // the legacy wallet_balances float table is no longer written to.
+    const balanceResult = await getMyWithdrawableBalance()
+    if (!balanceResult.success || !balanceResult.balance) {
+      return { success: false, error: balanceResult.error || 'Failed to check balance' }
+    }
+    if (balanceResult.balance.total < params.amount) {
       return { success: false, error: 'Insufficient balance' }
     }
 
@@ -150,7 +157,26 @@ export async function createWithdrawalRequest(params: {
 
     if (error) throw error
 
-    return { success: true, requestId: (request as any).id }
+    const requestId = (request as any).id as string
+
+    // HOLD the funds in the ledger (seller_available / user_wallet →
+    // payout_clearing, idempotent on 'withdrawal:<requestId>') so a pending
+    // withdrawal can't also be spent at checkout. If the hold fails (e.g. a
+    // concurrent spend drained the balance), the request must not survive.
+    const { error: debitError } = await (serviceClient.rpc as any)('withdrawal_debit', {
+      p_user_id: user.id,
+      p_amount_minor: Math.round(params.amount * 100),
+      p_idempotency_key: `withdrawal:${requestId}`,
+    })
+    if (debitError) {
+      await (serviceClient as any)
+        .from('withdrawal_requests')
+        .delete()
+        .eq('id', requestId)
+      return { success: false, error: 'Insufficient balance' }
+    }
+
+    return { success: true, requestId }
   } catch (error: any) {
     return { success: false, error: error.message }
   }
@@ -191,14 +217,35 @@ export async function cancelWithdrawalRequest(requestId: string): Promise<{
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) throw new Error('Not authenticated')
 
-    const { error } = await (supabase as any)
+    const { data: cancelled, error } = await (supabase as any)
       .from('withdrawal_requests')
       .update({ status: 'cancelled' })
       .eq('id', requestId)
       .eq('user_id', user.id)
       .eq('status', 'pending')
+      .select('id')
 
     if (error) throw error
+
+    // Release the ledger hold (payout_clearing → original sources) so the
+    // funds are spendable again. Idempotent per request; only when this call
+    // actually flipped pending → cancelled (a replay must not double-post —
+    // the RPC's idempotency key guarantees it regardless).
+    if (cancelled?.length) {
+      const serviceClient = createServiceRoleClient()
+      const { error: reversalError } = await (serviceClient.rpc as any)(
+        'withdrawal_reversal',
+        { p_request_id: requestId }
+      )
+      if (reversalError) {
+        // The request is cancelled but the hold is still standing — surface
+        // loudly; the reversal is idempotent and can be re-run by support.
+        console.error(
+          `[Withdrawals] CRITICAL: hold reversal failed for cancelled request ${requestId}:`,
+          reversalError
+        )
+      }
+    }
 
     return { success: true }
   } catch (error: any) {
@@ -261,6 +308,10 @@ export async function approveWithdrawalRequest(params: {
     // "is logged in", letting any user self-approve their own cash-out.
     const admin = await requireAdmin()
 
+    // Ledger note: the funds were already moved into payout_clearing when
+    // the request was created (withdrawal_debit). Approval flips status only;
+    // the payout_clearing → external journal posts when ops actually sends
+    // the money (marking the request completed — separate flow).
     const serviceClient = createServiceRoleClient()
     const { data: updatedRows, error } = await (serviceClient as any)
       .from('withdrawal_requests')
@@ -356,6 +407,22 @@ export async function rejectWithdrawalRequest(params: {
       .select('user_id, amount, method_id, method_name')
 
     if (error) throw error
+
+    // Release the ledger hold (payout_clearing → original sources) so the
+    // ":funds remain in your wallet" message below is TRUE. Idempotent per
+    // request ('withdrawal_reversal:<requestId>').
+    if (updatedRows?.length) {
+      const { error: reversalError } = await (serviceClient.rpc as any)(
+        'withdrawal_reversal',
+        { p_request_id: params.requestId }
+      )
+      if (reversalError) {
+        console.error(
+          `[Withdrawals] CRITICAL: hold reversal failed for rejected request ${params.requestId}:`,
+          reversalError
+        )
+      }
+    }
 
     // Tell the user their withdrawal was declined (in-app + email).
     // Awaited but isolated: comms failures must never fail the decision.

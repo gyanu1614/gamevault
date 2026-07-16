@@ -71,6 +71,11 @@ export interface SellerApplication {
   crypto_wallet_address: string | null
   tax_residency_country: string | null
 
+  // Store image / logo uploaded in the become-seller wizard
+  profile_picture_path?: string | null
+  /** Public URL of the submitted store image (with storage fallback for legacy rows). */
+  store_image_url?: string | null
+
   // Application Status
   status: 'pending' | 'under_review' | 'approved' | 'rejected'
   created_at: string
@@ -112,6 +117,46 @@ export interface SellerApplication {
     seller_restricted_by?: string | null
     created_at: string
   }
+}
+
+/**
+ * Resolve the public URL of an applicant's store image.
+ *
+ * Prefers the persisted seller_applications.profile_picture_path;
+ * legacy applications (submitted before the column existed) fall back
+ * to the newest object in their profile-pictures folder — the same
+ * lookup approveApplication uses for the avatar backfill.
+ */
+async function resolveStoreImageUrl(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+  profilePicturePath?: string | null
+): Promise<string | null> {
+  try {
+    if (profilePicturePath) {
+      const { data } = supabase.storage
+        .from('profile-pictures')
+        .getPublicUrl(profilePicturePath)
+      return data?.publicUrl || null
+    }
+
+    const { data: profilePics } = await supabase.storage
+      .from('profile-pictures')
+      .list(userId, {
+        limit: 1,
+        sortBy: { column: 'created_at', order: 'desc' },
+      }) as any
+
+    if (profilePics && profilePics.length > 0) {
+      const { data } = supabase.storage
+        .from('profile-pictures')
+        .getPublicUrl(`${userId}/${profilePics[0].name}`)
+      return data?.publicUrl || null
+    }
+  } catch (err) {
+    console.error('Error resolving store image URL:', err)
+  }
+  return null
 }
 
 /**
@@ -269,8 +314,16 @@ export async function getSellerApplication(applicationId: string): Promise<Selle
     }
   }
 
+  // Submitted store image (persisted path, storage fallback for legacy rows)
+  const storeImageUrl = await resolveStoreImageUrl(
+    supabase,
+    data.user_id,
+    data.profile_picture_path
+  )
+
   return {
     ...data,
+    store_image_url: storeImageUrl,
     user: {
       email: email || 'user@example.com',
       username: data.profiles?.username,
@@ -342,32 +395,25 @@ export async function approveApplication(
   // Get application details for logging
   const { data: app } = await supabase
     .from('seller_applications')
-    .select('user_id, display_name')
+    .select('user_id, display_name, profile_picture_path')
     .eq('id', applicationId)
     .single() as any
 
   if (app) {
-    // Update user's avatar_url with their uploaded profile picture
-    const { data: profilePics } = await supabase.storage
-      .from('profile-pictures')
-      .list(app.user_id, {
-        limit: 1,
-        sortBy: { column: 'created_at', order: 'desc' }
-      }) as any
+    // Update user's avatar_url with their submitted store image
+    // (persisted path preferred, storage-folder fallback for legacy rows)
+    const storeImageUrl = await resolveStoreImageUrl(
+      supabase,
+      app.user_id,
+      app.profile_picture_path
+    )
 
-    if (profilePics && profilePics.length > 0) {
-      // Get public URL for the profile picture
-      const { data: publicUrlData } = supabase.storage
-        .from('profile-pictures')
-        .getPublicUrl(`${app.user_id}/${profilePics[0].name}`)
-
-      if (publicUrlData?.publicUrl) {
-        // Update profiles table with the avatar URL
-        await (supabase
-          .from('profiles')
-          .update as any)({ avatar_url: publicUrlData.publicUrl })
-          .eq('id', app.user_id)
-      }
+    if (storeImageUrl) {
+      // Update profiles table with the avatar URL
+      await (supabase
+        .from('profiles')
+        .update as any)({ avatar_url: storeImageUrl })
+        .eq('id', app.user_id)
     }
 
     // TODO: Re-implement activity logging when logAdminActivity is integrated

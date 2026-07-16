@@ -1,11 +1,14 @@
 /**
  * Admin Moderation Queue — client component.
  *
- * Review and approve/reject pending listings. Initial data (pending
- * listings + stats) is fetched by the server wrapper (../page.tsx) and
- * passed in as props, so the page arrives fully rendered — no
- * "Loading moderation queue…" flash. loadData() remains for the
- * approve/reject/request-changes refresh flow.
+ * Review and approve/reject pending listings. Initial data (queue +
+ * stats) is fetched by the server wrapper (../page.tsx) and passed in
+ * as props, so the page arrives fully rendered. loadData() remains for
+ * the approve/reject/request-changes refresh flow.
+ *
+ * Queue now carries TWO states: pending_approval (needs an admin
+ * decision) and changes_requested (bounced back to the seller —
+ * "Awaiting Seller"), surfaced via the status tabs above the list.
  */
 
 'use client'
@@ -27,17 +30,46 @@ import {
   Eye,
   User,
   Tag,
-  DollarSign,
   Calendar,
   Clock,
   ShieldCheck,
   Loader2,
   Search,
+  Package,
 } from 'lucide-react'
 import Image from 'next/image'
 import { toast } from 'sonner'
 import Link from 'next/link'
+import { cn } from '@/lib/utils'
 import { PageHeader, StatCard } from '../../components/kit'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+
+type QueueTab = 'pending' | 'awaiting'
+
+function titleCaseTier(tier: string | null | undefined): string {
+  const t = (tier || 'unverified').replace(/[-_]/g, ' ')
+  return t.replace(/\b\w/g, (c) => c.toUpperCase())
+}
+
+function relativeTime(iso: string | null | undefined): string {
+  if (!iso) return ''
+  const then = new Date(iso).getTime()
+  if (!Number.isFinite(then)) return ''
+  const mins = Math.max(0, Math.round((Date.now() - then) / 60_000))
+  if (mins < 1) return 'just now'
+  if (mins < 60) return `${mins}m ago`
+  const hours = Math.round(mins / 60)
+  if (hours < 24) return `${hours}h ago`
+  const days = Math.round(hours / 24)
+  return `${days}d ago`
+}
 
 export default function ModerationPageClient({
   initialListings,
@@ -51,10 +83,10 @@ export default function ModerationPageClient({
   // V54 — State is seeded from the server wrapper; the initial render
   // shows real data (isLoading starts false, no mount fetch).
   const [listings, setListings] = useState<any[]>(initialListings)
-  const [filteredListings, setFilteredListings] = useState<any[]>(initialListings)
   const [stats, setStats] = useState<any>(initialStats)
   const [isLoading, setIsLoading] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+  const [tab, setTab] = useState<QueueTab>('pending')
   const [selectedListing, setSelectedListing] = useState<any>(null)
   const [actionLoading, setActionLoading] = useState(false)
   const [rejectReason, setRejectReason] = useState('')
@@ -70,20 +102,19 @@ export default function ModerationPageClient({
     }
   }, [user, authLoading, router])
 
-  useEffect(() => {
-    // Filter listings based on search
-    if (searchQuery) {
-      const filtered = listings.filter(
+  const pendingListings = listings.filter((l) => l.status !== 'changes_requested')
+  const awaitingListings = listings.filter((l) => l.status === 'changes_requested')
+  const tabListings = tab === 'pending' ? pendingListings : awaitingListings
+
+  const q = searchQuery.trim().toLowerCase()
+  const filteredListings = q
+    ? tabListings.filter(
         (listing) =>
-          listing.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          listing.seller.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          listing.game.name.toLowerCase().includes(searchQuery.toLowerCase())
+          (listing.title || '').toLowerCase().includes(q) ||
+          (listing.seller?.username || '').toLowerCase().includes(q) ||
+          (listing.game?.name || '').toLowerCase().includes(q)
       )
-      setFilteredListings(filtered)
-    } else {
-      setFilteredListings(listings)
-    }
-  }, [searchQuery, listings])
+    : tabListings
 
   // V54 — No mount-time fetch: the server wrapper already delivered the
   // initial queue + stats. loadData() is kept for post-action refreshes.
@@ -96,7 +127,6 @@ export default function ModerationPageClient({
 
     if (listingsResult.success) {
       setListings(listingsResult.listings || [])
-      setFilteredListings(listingsResult.listings || [])
     }
 
     if (statsResult.success) {
@@ -166,8 +196,6 @@ export default function ModerationPageClient({
 
   // V54 — authLoading no longer gates the render: auth is enforced by
   // the server layout, and the seeded data is valid for this admin.
-  // isLoading starts false, so the initial render can never hit this
-  // branch; it only shows during post-action loadData() refreshes.
   if (isLoading) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
@@ -190,45 +218,80 @@ export default function ModerationPageClient({
 
         {/* Stats */}
         {stats && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+          <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
             <StatCard label="Pending Review" value={stats.pending} icon={Clock} tone="warning" />
+            <StatCard label="Awaiting Seller" value={stats.awaiting_seller ?? 0} icon={MessageSquare} tone="info" />
             <StatCard label="Approved Today" value={stats.approved_today} icon={CheckCircle2} tone="success" />
             <StatCard label="Rejected Today" value={stats.rejected_today} icon={XCircle} tone="error" />
             <StatCard label="Total Approved" value={stats.total_approved} icon={ShieldCheck} tone="lime" />
           </div>
         )}
 
-        {/* Search */}
-        <div className="mb-6">
-          <div className="relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-text-tertiary" />
+        {/* Queue tabs + search */}
+        <div className="mb-5 flex flex-wrap items-center gap-2.5">
+          <div className="flex items-center gap-1.5">
+            {([
+              { key: 'pending' as QueueTab, label: 'Pending Review', count: pendingListings.length },
+              { key: 'awaiting' as QueueTab, label: 'Awaiting Seller', count: awaitingListings.length },
+            ]).map((t) => (
+              <button
+                key={t.key}
+                type="button"
+                onClick={() => setTab(t.key)}
+                className={cn(
+                  'flex h-9 items-center gap-2 rounded-md border px-3.5 text-[13px] font-semibold transition-colors',
+                  tab === t.key
+                    ? 'border-border-strong bg-bg-overlay text-text-primary'
+                    : 'border-border-default bg-transparent text-text-secondary hover:bg-bg-overlay hover:text-text-primary'
+                )}
+              >
+                {t.label}
+                <span
+                  className={cn(
+                    'rounded bg-white/[0.08] px-1.5 py-0.5 text-[11px] font-bold tabular-nums',
+                    tab === t.key ? 'text-text-primary' : 'text-text-tertiary'
+                  )}
+                >
+                  {t.count}
+                </span>
+              </button>
+            ))}
+          </div>
+          <div className="relative min-w-[220px] flex-1 sm:max-w-[320px]">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary" />
             <input
               type="text"
               placeholder="Search listings..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-12 pr-4 py-3 bg-bg-base border border-border-default rounded-lg text-text-primary placeholder:text-text-tertiary focus:border-lime focus:outline-none"
+              className="h-9 w-full rounded-md border border-border-default bg-bg-base pl-9 pr-3 text-[13px] text-text-primary placeholder:text-text-tertiary focus:border-lime focus:outline-none"
             />
           </div>
         </div>
 
         {/* Listings */}
         {filteredListings.length === 0 ? (
-          <div className="text-center py-12 bg-bg-raised border border-border-default rounded-xl">
-            <CheckCircle2 className="w-16 h-16 text-text-disabled mx-auto mb-4" />
-            <h3 className="text-xl font-bold text-text-primary mb-2">All caught up!</h3>
-            <p className="text-text-secondary">No listings pending review</p>
+          <div className="rounded-lg border border-border-default bg-bg-raised py-12 text-center">
+            <CheckCircle2 className="mx-auto mb-4 h-12 w-12 text-text-disabled" />
+            <h3 className="mb-1 text-lg font-bold text-text-primary">
+              {tab === 'pending' ? 'All Caught Up' : 'Nothing Awaiting Sellers'}
+            </h3>
+            <p className="text-sm text-text-secondary">
+              {tab === 'pending'
+                ? 'No listings pending review'
+                : 'No listings are waiting on seller changes'}
+            </p>
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-3">
             {filteredListings.map((listing) => (
               <div
                 key={listing.id}
-                className="bg-bg-raised border border-border-default rounded-xl p-6 hover:border-border-strong transition-colors"
+                className="rounded-lg border border-border-default bg-bg-raised p-4 transition-colors hover:border-border-strong"
               >
-                <div className="flex gap-6">
+                <div className="flex flex-col gap-4 sm:flex-row">
                   {/* Image */}
-                  <div className="relative w-32 h-32 rounded-lg overflow-hidden flex-shrink-0 border border-border-subtle bg-bg-overlay">
+                  <div className="relative h-40 w-full flex-shrink-0 overflow-hidden rounded-md border border-border-subtle bg-bg-overlay sm:h-28 sm:w-28">
                     {listing.images && listing.images[0] ? (
                       <Image
                         src={listing.images[0]}
@@ -237,64 +300,69 @@ export default function ModerationPageClient({
                         className="object-cover"
                       />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center text-4xl">
-                        🎮
+                      <div className="flex h-full w-full items-center justify-center">
+                        <Package className="h-8 w-8 text-text-disabled" />
                       </div>
                     )}
                   </div>
 
                   {/* Content */}
-                  <div className="flex-1">
-                    <div className="flex items-start justify-between mb-3">
-                      <div>
-                        <h3 className="text-xl font-bold text-text-primary mb-2">{listing.title}</h3>
-                        <div className="flex items-center gap-4 text-sm text-text-secondary">
-                          <span className="flex items-center gap-1">
-                            <Tag className="w-4 h-4" />
-                            {listing.game.name} • {listing.category.name}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <DollarSign className="w-4 h-4" />
-                            ${listing.price.toFixed(2)}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <Calendar className="w-4 h-4" />
-                            {new Date(listing.created_at).toLocaleDateString()}
-                          </span>
-                        </div>
-                      </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="mb-2 flex flex-wrap items-center gap-2">
+                      <h3 className="truncate text-[15px] font-bold text-text-primary">{listing.title}</h3>
+                      {listing.status === 'changes_requested' && (
+                        <span className="inline-flex items-center gap-1 rounded-md border border-[rgba(251,191,36,0.25)] bg-warning-bg px-2 py-0.5 text-[11px] font-semibold text-warning">
+                          <MessageSquare className="h-3 w-3" />
+                          Changes Requested {relativeTime(listing.updated_at)}
+                        </span>
+                      )}
                     </div>
-
-                    {/* Seller Info */}
-                    <div className="flex items-center gap-3 mb-4 p-3 bg-bg-overlay border border-border-subtle rounded-lg">
-                      <User className="w-5 h-5 text-lime-text" />
-                      <div>
-                        <div className="text-sm font-medium text-text-primary">
-                          {listing.seller.username}
-                        </div>
-                        <div className="text-xs text-text-tertiary capitalize">
-                          {listing.seller.seller_tier || 'unverified'} seller
-                        </div>
-                      </div>
+                    <div className="mb-2.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-[12.5px] text-text-secondary">
+                      <span className="flex items-center gap-1">
+                        <Tag className="h-3.5 w-3.5" />
+                        {listing.game?.name} • {listing.category?.name}
+                      </span>
+                      <span className="font-semibold tabular-nums text-text-primary">
+                        ${Number(listing.price ?? 0).toFixed(2)}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Calendar className="h-3.5 w-3.5" />
+                        {new Date(listing.created_at).toLocaleDateString()}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <User className="h-3.5 w-3.5" />
+                        {listing.seller?.username || 'Unknown'}
+                        <span className="text-text-tertiary">
+                          · {titleCaseTier(listing.seller?.seller_tier)} Seller
+                        </span>
+                      </span>
                     </div>
 
                     {/* Description */}
                     {listing.description && (
-                      <p className="text-sm text-text-secondary mb-4 line-clamp-2">
+                      <p className="mb-3 line-clamp-2 text-[13px] text-text-secondary">
                         {listing.description}
                       </p>
                     )}
 
+                    {/* Requested changes (awaiting-seller cards) */}
+                    {listing.status === 'changes_requested' && listing.moderation_notes && (
+                      <div className="mb-3 rounded-md border border-[rgba(251,191,36,0.25)] bg-warning-bg px-3 py-2 text-[12.5px] text-text-secondary">
+                        <span className="font-semibold text-warning">Requested: </span>
+                        {listing.moderation_notes}
+                      </div>
+                    )}
+
                     {/* Actions */}
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap gap-2">
                       <button
                         onClick={() => {
                           setSelectedListing(listing)
                           setShowApproveModal(true)
                         }}
-                        className="px-4 py-2 bg-lime-pressed hover:bg-lime text-text-inverse font-bold rounded-lg transition-colors flex items-center gap-2"
+                        className="flex items-center gap-1.5 rounded-md bg-lime px-3.5 py-2 text-[13px] font-bold text-text-inverse transition-colors hover:bg-lime-hover"
                       >
-                        <CheckCircle2 className="w-4 h-4" />
+                        <CheckCircle2 className="h-4 w-4" />
                         Approve
                       </button>
                       <button
@@ -302,26 +370,27 @@ export default function ModerationPageClient({
                           setSelectedListing(listing)
                           setShowRejectModal(true)
                         }}
-                        className="px-4 py-2 border border-red-500/25 bg-red-500/10 hover:bg-red-500/20 text-red-400 font-medium rounded-lg transition-colors flex items-center gap-2"
+                        className="flex items-center gap-1.5 rounded-md border border-[rgba(248,113,113,0.25)] bg-error-bg px-3.5 py-2 text-[13px] font-semibold text-error transition-colors hover:border-[rgba(248,113,113,0.4)]"
                       >
-                        <XCircle className="w-4 h-4" />
+                        <XCircle className="h-4 w-4" />
                         Reject
                       </button>
                       <button
                         onClick={() => {
                           setSelectedListing(listing)
+                          setChangeRequest(listing.status === 'changes_requested' ? (listing.moderation_notes || '') : '')
                           setShowChangesModal(true)
                         }}
-                        className="px-4 py-2 border border-blue-500/25 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 font-medium rounded-lg transition-colors flex items-center gap-2"
+                        className="flex items-center gap-1.5 rounded-md border border-border-default bg-transparent px-3.5 py-2 text-[13px] font-semibold text-text-secondary transition-colors hover:bg-bg-overlay hover:text-text-primary"
                       >
-                        <MessageSquare className="w-4 h-4" />
-                        Request Changes
+                        <MessageSquare className="h-4 w-4" />
+                        {listing.status === 'changes_requested' ? 'Update Request' : 'Request Changes'}
                       </button>
                       <Link
-                        href={`/${listing.game.slug}/${listing.category.slug}/${listing.slug}`}
-                        className="px-4 py-2 border border-border-default bg-bg-overlay hover:bg-bg-overlay-2 text-text-secondary hover:text-text-primary font-medium rounded-lg transition-colors flex items-center gap-2"
+                        href={`/${listing.game?.slug}/${listing.category?.slug}/${listing.slug || listing.id}`}
+                        className="flex items-center gap-1.5 rounded-md border border-border-default bg-transparent px-3.5 py-2 text-[13px] font-semibold text-text-secondary transition-colors hover:bg-bg-overlay hover:text-text-primary"
                       >
-                        <Eye className="w-4 h-4" />
+                        <Eye className="h-4 w-4" />
                         Preview
                       </Link>
                     </div>
@@ -332,190 +401,181 @@ export default function ModerationPageClient({
           </div>
         )}
 
-        {/* Approve Modal */}
-        {showApproveModal && selectedListing && (
-          <Modal
-            title="Approve Listing"
-            onClose={() => {
+        {/* Approve Dialog */}
+        <Dialog
+          open={showApproveModal && !!selectedListing}
+          onOpenChange={(o) => {
+            if (!o) {
               setShowApproveModal(false)
               setApprovalNotes('')
-            }}
-          >
-            <p className="text-text-secondary mb-4">
-              Approve &quot;{selectedListing.title}&quot;?
-            </p>
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-text-secondary mb-2">
+            }
+          }}
+        >
+          <DialogContent className="rounded-lg">
+            <DialogHeader>
+              <DialogTitle>Approve Listing</DialogTitle>
+              <DialogDescription>
+                &quot;{selectedListing?.title}&quot; will go live for buyers immediately.
+              </DialogDescription>
+            </DialogHeader>
+            <div>
+              <label className="mb-2 block text-sm font-medium text-text-secondary">
                 Notes (Optional)
               </label>
               <textarea
                 value={approvalNotes}
                 onChange={(e) => setApprovalNotes(e.target.value)}
                 placeholder="Add any internal notes..."
-                className="w-full px-4 py-3 bg-bg-base border border-border-default rounded-lg text-text-primary placeholder:text-text-tertiary focus:border-lime focus:outline-none resize-none"
+                className="w-full resize-none rounded-md border border-border-default bg-bg-base px-3 py-2.5 text-sm text-text-primary placeholder:text-text-tertiary focus:border-lime focus:outline-none"
                 rows={3}
               />
             </div>
-            <div className="flex gap-3">
+            <DialogFooter>
               <button
                 onClick={() => {
                   setShowApproveModal(false)
                   setApprovalNotes('')
                 }}
-                className="flex-1 py-2 border border-border-default bg-bg-overlay hover:bg-bg-overlay-2 text-text-secondary font-medium rounded-lg transition-colors"
+                className="rounded-md border border-border-default px-4 py-2 text-sm font-medium text-text-secondary transition-colors hover:bg-bg-overlay hover:text-text-primary"
                 disabled={actionLoading}
               >
                 Cancel
               </button>
               <button
-                onClick={() => handleApprove(selectedListing.id)}
+                onClick={() => selectedListing && handleApprove(selectedListing.id)}
                 disabled={actionLoading}
-                className="flex-1 py-2 bg-lime-pressed hover:bg-lime text-text-inverse font-bold rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                className="flex items-center justify-center gap-2 rounded-md bg-lime px-4 py-2 text-sm font-bold text-text-inverse transition-colors hover:bg-lime-hover disabled:opacity-50"
               >
                 {actionLoading ? (
                   <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <Loader2 className="h-4 w-4 animate-spin" />
                     Approving...
                   </>
                 ) : (
                   'Approve Listing'
                 )}
               </button>
-            </div>
-          </Modal>
-        )}
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
-        {/* Reject Modal */}
-        {showRejectModal && selectedListing && (
-          <Modal
-            title="Reject Listing"
-            onClose={() => {
+        {/* Reject Dialog */}
+        <Dialog
+          open={showRejectModal && !!selectedListing}
+          onOpenChange={(o) => {
+            if (!o) {
               setShowRejectModal(false)
               setRejectReason('')
-            }}
-          >
-            <p className="text-text-secondary mb-4">
-              Reject &quot;{selectedListing.title}&quot;?
-            </p>
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-text-secondary mb-2">
+            }
+          }}
+        >
+          <DialogContent className="rounded-lg">
+            <DialogHeader>
+              <DialogTitle>Reject Listing</DialogTitle>
+              <DialogDescription>
+                The seller will be notified with your reason. &quot;{selectedListing?.title}&quot; will
+                not go live.
+              </DialogDescription>
+            </DialogHeader>
+            <div>
+              <label className="mb-2 block text-sm font-medium text-text-secondary">
                 Rejection Reason *
               </label>
               <textarea
                 value={rejectReason}
                 onChange={(e) => setRejectReason(e.target.value)}
                 placeholder="Explain why this listing is being rejected..."
-                className="w-full px-4 py-3 bg-bg-base border border-border-default rounded-lg text-text-primary placeholder:text-text-tertiary focus:border-lime focus:outline-none resize-none"
+                className="w-full resize-none rounded-md border border-border-default bg-bg-base px-3 py-2.5 text-sm text-text-primary placeholder:text-text-tertiary focus:border-lime focus:outline-none"
                 rows={4}
               />
             </div>
-            <div className="flex gap-3">
+            <DialogFooter>
               <button
                 onClick={() => {
                   setShowRejectModal(false)
                   setRejectReason('')
                 }}
-                className="flex-1 py-2 border border-border-default bg-bg-overlay hover:bg-bg-overlay-2 text-text-secondary font-medium rounded-lg transition-colors"
+                className="rounded-md border border-border-default px-4 py-2 text-sm font-medium text-text-secondary transition-colors hover:bg-bg-overlay hover:text-text-primary"
                 disabled={actionLoading}
               >
                 Cancel
               </button>
               <button
-                onClick={() => handleReject(selectedListing.id)}
+                onClick={() => selectedListing && handleReject(selectedListing.id)}
                 disabled={actionLoading || !rejectReason.trim()}
-                className="flex-1 py-2 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                className="flex items-center justify-center gap-2 rounded-md border border-[rgba(248,113,113,0.3)] bg-error-bg px-4 py-2 text-sm font-semibold text-error transition-colors hover:border-[rgba(248,113,113,0.45)] disabled:opacity-50"
               >
                 {actionLoading ? (
                   <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <Loader2 className="h-4 w-4 animate-spin" />
                     Rejecting...
                   </>
                 ) : (
                   'Reject Listing'
                 )}
               </button>
-            </div>
-          </Modal>
-        )}
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
-        {/* Changes Modal */}
-        {showChangesModal && selectedListing && (
-          <Modal
-            title="Request Changes"
-            onClose={() => {
+        {/* Request Changes Dialog */}
+        <Dialog
+          open={showChangesModal && !!selectedListing}
+          onOpenChange={(o) => {
+            if (!o) {
               setShowChangesModal(false)
               setChangeRequest('')
-            }}
-          >
-            <p className="text-text-secondary mb-4">
-              Request changes to &quot;{selectedListing.title}&quot;
-            </p>
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-text-secondary mb-2">
+            }
+          }}
+        >
+          <DialogContent className="rounded-lg">
+            <DialogHeader>
+              <DialogTitle>Request Changes</DialogTitle>
+              <DialogDescription>
+                The listing moves to Awaiting Seller — the seller sees your notes on their offer and
+                resubmits it for review.
+              </DialogDescription>
+            </DialogHeader>
+            <div>
+              <label className="mb-2 block text-sm font-medium text-text-secondary">
                 Required Changes *
               </label>
               <textarea
                 value={changeRequest}
                 onChange={(e) => setChangeRequest(e.target.value)}
                 placeholder="Describe what needs to be changed..."
-                className="w-full px-4 py-3 bg-bg-base border border-border-default rounded-lg text-text-primary placeholder:text-text-tertiary focus:border-lime focus:outline-none resize-none"
+                className="w-full resize-none rounded-md border border-border-default bg-bg-base px-3 py-2.5 text-sm text-text-primary placeholder:text-text-tertiary focus:border-lime focus:outline-none"
                 rows={4}
               />
             </div>
-            <div className="flex gap-3">
+            <DialogFooter>
               <button
                 onClick={() => {
                   setShowChangesModal(false)
                   setChangeRequest('')
                 }}
-                className="flex-1 py-2 border border-border-default bg-bg-overlay hover:bg-bg-overlay-2 text-text-secondary font-medium rounded-lg transition-colors"
+                className="rounded-md border border-border-default px-4 py-2 text-sm font-medium text-text-secondary transition-colors hover:bg-bg-overlay hover:text-text-primary"
                 disabled={actionLoading}
               >
                 Cancel
               </button>
               <button
-                onClick={() => handleRequestChanges(selectedListing.id)}
+                onClick={() => selectedListing && handleRequestChanges(selectedListing.id)}
                 disabled={actionLoading || !changeRequest.trim()}
-                className="flex-1 py-2 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                className="flex items-center justify-center gap-2 rounded-md bg-lime px-4 py-2 text-sm font-bold text-text-inverse transition-colors hover:bg-lime-hover disabled:opacity-50"
               >
                 {actionLoading ? (
                   <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <Loader2 className="h-4 w-4 animate-spin" />
                     Sending...
                   </>
                 ) : (
                   'Send Request'
                 )}
               </button>
-            </div>
-          </Modal>
-        )}
-      </div>
-    </div>
-  )
-}
-
-// Modal Component
-function Modal({
-  title,
-  children,
-  onClose,
-}: {
-  title: string
-  children: React.ReactNode
-  onClose: () => void
-}) {
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
-      onClick={onClose}
-    >
-      <div
-        className="w-full max-w-md bg-bg-raised border border-border-default rounded-xl p-6"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h3 className="text-xl font-bold text-text-primary mb-4">{title}</h3>
-        {children}
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   )

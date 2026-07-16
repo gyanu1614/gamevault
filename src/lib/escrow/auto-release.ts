@@ -1,6 +1,7 @@
 /**
  * Auto-release pipeline for a single due order:
- * gate re-check → compare-and-swap release → seller credit → completion comms.
+ * gate re-check → atomic ledger release (seller balance credited in the same
+ * transaction) → completion comms.
  *
  * Shared by the auto-release cron (src/app/api/cron/auto-release-escrow) and
  * the admin manual trigger (src/app/api/admin/trigger-escrow-release). Both
@@ -11,6 +12,7 @@
  */
 
 import { createServiceRoleClient } from '@/lib/supabase/service'
+import { transition } from '@/lib/escrow/transition'
 
 export interface AutoReleaseResult {
   orderId: string
@@ -18,7 +20,9 @@ export interface AutoReleaseResult {
   /** True when the order was no longer held/delivered — someone else (buyer
    * confirm, dispute, overlapping run) owns the credit and comms. */
   skipped?: boolean
-  payout?: 'transferred' | 'credited' | 'failed'
+  /** 'credited' — the seller's internal ledger balance was credited in the
+   * same transaction as the release (no external transfer exists anymore). */
+  payout?: 'credited' | 'failed'
   payoutError?: string
   error?: string
 }
@@ -45,66 +49,31 @@ export async function releaseDueOrder(orderId: string): Promise<AutoReleaseResul
       return { orderId, success: true, skipped: true }
     }
 
-    // Release — the same column writes as the legacy release_escrow RPC
-    // (status/escrow_status/release_method/completed_at, guarded on
-    // escrow_status = 'held'), but as a direct compare-and-swap that
-    // returns the claimed row. The RPC returns void even when its WHERE
-    // matched nothing, so an overlapping run or a buyer confirming
-    // receipt between the gate above and the release would have made
-    // this path credit the seller and email "completed automatically" a
-    // second time. With the CAS, exactly one caller wins the
-    // held → released flip, and only the winner pays and sends comms.
-    const { data: released, error: releaseError } = await (service
-      .from('orders')
-      .update as any)({
-        status: 'completed',
-        escrow_status: 'released',
-        release_method: 'auto',
-        completed_at: new Date().toISOString(),
-      })
-      .eq('id', orderId)
-      .eq('escrow_status', 'held')
-      .eq('status', 'delivered')
-      .select('id')
-
-    if (releaseError) {
+    // Release + seller credit in ONE atomic transaction via the SafeDrop
+    // transition RPC (safedrop_transition AUTO_RELEASED): it locks the order
+    // row, validates delivered → completed, posts the ledger journal
+    // (escrow_held → platform take + seller_available) and flips
+    // status/escrow_status/release_method together. This replaces the old
+    // CAS + transferEscrowToSeller pair — the seller's payout is credited to
+    // their internal seller balance, never an external Stripe transfer. The
+    // row lock + idempotent journal keep the race semantics: exactly one
+    // caller (this run vs buyer confirm vs an overlapping run) applies the
+    // move and owns the comms; everyone else sees changed=false.
+    let released
+    try {
+      released = await transition(orderId, 'AUTO_RELEASED', undefined, 'auto')
+    } catch (releaseError: any) {
       console.error(`❌ Failed to release escrow for order ${orderId}:`, releaseError)
-      return { orderId, success: false, error: releaseError.message }
+      return { orderId, success: false, error: releaseError?.message || 'Release failed' }
     }
 
-    if (!released?.length) {
+    if (!released.changed) {
       // Lost the race: someone else moved the order off held/delivered
-      // between the gate and the CAS. They own the credit and comms.
+      // between the gate and the transition. They own the credit and comms.
       return { orderId, success: true, skipped: true }
     }
 
     console.log(`✅ Successfully released escrow for order ${orderId}`)
-
-    // Credit the seller — the same rail the buyer-confirm path uses
-    // (confirmOrderReceipt → transferEscrowToSeller): a Stripe transfer
-    // when the seller's Connect account is ready, otherwise a
-    // seller_balance credit / held payout via
-    // release_escrow_to_seller_balance. The release above only flips
-    // order status; without this call an auto-released order never
-    // pays the seller. NOT the safedrop_transition AUTO_RELEASED
-    // path — that seam is ledger-only (no payout) until Phase 3 wires
-    // the provider rail. Non-fatal: the release already happened, so a
-    // failed credit is surfaced in the results for retry, not rolled
-    // back.
-    let payout: { success: boolean; transferId: string | null; error: string | null }
-    try {
-      const { transferEscrowToSeller } = await import('@/lib/stripe/connect')
-      payout = await transferEscrowToSeller(orderId)
-    } catch (payoutError: any) {
-      payout = {
-        success: false,
-        transferId: null,
-        error: payoutError?.message || 'Payout failed',
-      }
-    }
-    if (!payout.success) {
-      console.error(`[AutoRelease] Seller credit failed for order ${orderId}: ${payout.error}`)
-    }
 
     // Completion comms: buyer receipt (autoReleased copy + Trustpilot
     // AFS BCC) + seller email + seller in-app. Callers have no usable
@@ -151,7 +120,7 @@ export async function releaseDueOrder(orderId: string): Promise<AutoReleaseResul
           user_id: full.seller_id,
           type: 'order_completed',
           title: 'Order Auto-Completed',
-          message: `The protection window on order #${orderRef} closed — your $${(full.seller_payout ?? 0).toFixed(2)} payout is being processed.`,
+          message: `The protection window on order #${orderRef} closed — your $${(full.seller_payout ?? 0).toFixed(2)} is now in your seller balance. Withdraw any time from your wallet.`,
           link: `/account/orders/${full.id}`,
           is_read: false,
         }),
@@ -163,12 +132,7 @@ export async function releaseDueOrder(orderId: string): Promise<AutoReleaseResul
     return {
       orderId,
       success: true,
-      payout: payout.success
-        ? payout.transferId
-          ? 'transferred'
-          : 'credited'
-        : 'failed',
-      ...(payout.error ? { payoutError: payout.error } : {}),
+      payout: 'credited',
     }
   } catch (error: any) {
     console.error(`Error processing order ${orderId}:`, error)

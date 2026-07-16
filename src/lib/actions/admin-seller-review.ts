@@ -228,17 +228,24 @@ export async function getSellerApplications(filters: ApplicationFilters = {}) {
         }
       }
 
+      // Submitted store image (public bucket) leads; the profile
+      // avatar is only a fallback so pre-column legacy rows still show
+      // something real instead of a generated avatar.
+      const storeImageUrl = app.profile_picture_path
+        ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/profile-pictures/${app.profile_picture_path}`
+        : null
+
       return {
         ...app,
         game_names: gameNames,
+        store_image_url: storeImageUrl,
         user: {
           email: app.email || 'unknown@example.com',
           username: app.username,
           full_name: app.full_name,
+          avatar_url: storeImageUrl || app.avatar_url || null,
           created_at: app.user_created_at || app.created_at,
-          profile_picture_url: app.profile_picture_path
-            ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/profile-pictures/${app.profile_picture_path}`
-            : null
+          profile_picture_url: storeImageUrl
         }
       }
     }))

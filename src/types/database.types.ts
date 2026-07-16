@@ -3653,12 +3653,14 @@ export type Database = {
           ip_address: unknown
           is_18_or_older: boolean
           languages_spoken: string[] | null
+          other_games: string | null
           payout_method: string | null
           paypal_email: string | null
           phone_number: string
           phone_verified: boolean | null
           primary_games: string[] | null
           profile_bio: string | null
+          profile_picture_path: string | null
           referral_code: string | null
           refund_policy: string | null
           rejected_at: string | null
@@ -3669,6 +3671,7 @@ export type Database = {
           reviewed_at: string | null
           reviewed_by: string | null
           seller_type: string
+          shop_name: string | null
           state_province: string | null
           status: string
           submitted_at: string | null
@@ -3729,12 +3732,14 @@ export type Database = {
           ip_address?: unknown
           is_18_or_older: boolean
           languages_spoken?: string[] | null
+          other_games?: string | null
           payout_method?: string | null
           paypal_email?: string | null
           phone_number: string
           phone_verified?: boolean | null
           primary_games?: string[] | null
           profile_bio?: string | null
+          profile_picture_path?: string | null
           referral_code?: string | null
           refund_policy?: string | null
           rejected_at?: string | null
@@ -3745,6 +3750,7 @@ export type Database = {
           reviewed_at?: string | null
           reviewed_by?: string | null
           seller_type: string
+          shop_name?: string | null
           state_province?: string | null
           status?: string
           submitted_at?: string | null
@@ -3805,12 +3811,14 @@ export type Database = {
           ip_address?: unknown
           is_18_or_older?: boolean
           languages_spoken?: string[] | null
+          other_games?: string | null
           payout_method?: string | null
           paypal_email?: string | null
           phone_number?: string
           phone_verified?: boolean | null
           primary_games?: string[] | null
           profile_bio?: string | null
+          profile_picture_path?: string | null
           referral_code?: string | null
           refund_policy?: string | null
           rejected_at?: string | null
@@ -3821,6 +3829,7 @@ export type Database = {
           reviewed_at?: string | null
           reviewed_by?: string | null
           seller_type?: string
+          shop_name?: string | null
           state_province?: string | null
           status?: string
           submitted_at?: string | null

@@ -67,6 +67,10 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   }
 
   return {
+    // Owner/admin preview of a non-active listing must never be indexed.
+    ...(listing.status !== 'active'
+      ? { robots: { index: false, follow: false } }
+      : {}),
     // Root template appends " | DropMarket"; game/category stay in the
     // description. Long seller titles are truncated to keep ≤60 chars.
     title: listing.title.length > 48 ? `${listing.title.slice(0, 48).trimEnd()}…` : listing.title,
@@ -88,51 +92,54 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 async function getListing(listingSlug: string) {
   const supabase = await createClient()
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
-  let { data: listing, error } = await supabase
-    .from('listings')
-    .select(`
-      *,
-      seller:profiles!listings_seller_id_fkey(*),
-      game:games!listings_game_id_fkey(*),
-      category:categories!listings_category_id_fkey(*)
-    `)
-    .eq('slug', listingSlug)
-    .eq('status', 'active')
-    .single() as any
+  const SELECT = `
+    *,
+    seller:profiles!listings_seller_id_fkey(*),
+    game:games!listings_game_id_fkey(*),
+    category:categories!listings_category_id_fkey(*)
+  `
 
-  if (error || !listing) {
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-    if (uuidRegex.test(listingSlug)) {
-      const result = await supabase
-        .from('listings')
-        .select(`
-          *,
-          seller:profiles!listings_seller_id_fkey(*),
-          game:games!listings_game_id_fkey(*),
-          category:categories!listings_category_id_fkey(*)
-        `)
-        .eq('id', listingSlug)
-        .eq('status', 'active')
-        .single() as any
+  const fetchOne = async (activeOnly: boolean) => {
+    let query = supabase.from('listings').select(SELECT).eq('slug', listingSlug)
+    if (activeOnly) query = query.eq('status', 'active')
+    let { data: row } = await (query.single() as any)
 
-      listing = result.data
-      error = result.error
+    if (!row && uuidRegex.test(listingSlug)) {
+      let byId = supabase.from('listings').select(SELECT).eq('id', listingSlug)
+      if (activeOnly) byId = byId.eq('status', 'active')
+      const result = await (byId.single() as any)
+      row = result.data
     }
+    return row ?? null
   }
 
-  if (error || !listing) {
-    return null
+  // Public path: active listings only.
+  let listing = await fetchOne(true)
+  let isPreview = false
+
+  if (!listing) {
+    // Owner/admin preview: re-query WITHOUT the status filter using the
+    // same cookie client — RLS restricts non-active rows to the listing's
+    // owner (seller SELECT policy) and admins (is_admin FOR ALL policy),
+    // so anonymous/other users still miss and 404 below.
+    listing = await fetchOne(false)
+    if (!listing) return null
+    isPreview = listing.status !== 'active'
   }
 
-  // Increment view count (fire and forget)
-  ((supabase
-    .from('listings') as any)
-    .update({ views: (listing.views || 0) + 1 }))
-    .eq('id', listing.id)
-    .then()
+  // Increment view count (fire and forget) — real traffic only, never
+  // owner/admin previews of unpublished listings.
+  if (!isPreview) {
+    ((supabase
+      .from('listings') as any)
+      .update({ views: (listing.views || 0) + 1 }))
+      .eq('id', listing.id)
+      .then()
+  }
 
-  return listing
+  return { listing, isPreview }
 }
 
 async function getSellerStats(sellerId: string) {
@@ -224,9 +231,10 @@ async function getCarouselListings({
 
 export default async function ListingDetailPage({ params }: PageProps) {
   const { gameSlug, categorySlug, listingSlug } = await params
-  const listing = await getListing(listingSlug)
+  const listingResult = await getListing(listingSlug)
 
-  if (!listing) notFound()
+  if (!listingResult) notFound()
+  const { listing, isPreview } = listingResult
 
   const supabase = await createClient()
   const { data: { user: viewer } } = await supabase.auth.getUser()
@@ -377,7 +385,7 @@ export default async function ListingDetailPage({ params }: PageProps) {
 
   return (
     <>
-      <ViewTracker listingId={listing.id} />
+      {!isPreview && <ViewTracker listingId={listing.id} />}
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(schemaData) }}
@@ -391,6 +399,9 @@ export default async function ListingDetailPage({ params }: PageProps) {
       <ListingDetailClient
         listing={shaped}
         viewerId={viewer?.id ?? null}
+        // Owner/admin preview of a non-active listing: amber banner +
+        // purchase disabled (buying would bypass moderation).
+        previewStatus={isPreview ? (listing.status as string) : null}
         templateFields={templateFields}
         similarOffers={similarOffers.map(shapeMini)}
         // V15p — Re-use the full ItemCard from the items page for the
