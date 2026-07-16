@@ -1428,8 +1428,8 @@ const CATEGORY_THEME: Record<
   },
   boosting: {
     Icon: Trophy,
-    iconBg: 'bg-gradient-to-br from-violet-400/30 via-purple-500/20 to-fuchsia-500/20',
-    ring: 'group-hover:border-violet-400/40',
+    iconBg: 'bg-gradient-to-br from-lime/25 via-lime/15 to-emerald-500/15',
+    ring: 'group-hover:border-lime-tint-border',
     example: 'Rank Pushes, Win Boosts',
   },
 }
