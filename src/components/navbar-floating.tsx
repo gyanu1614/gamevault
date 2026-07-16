@@ -698,9 +698,14 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
           >
             {/* Logo */}
             <Link href="/" className="flex shrink-0 items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-lime">
-                <span className="text-lg font-bold text-text-inverse">D</span>
-              </div>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/brand/logo-mark-lime.png"
+                alt="DropMarket"
+                width={32}
+                height={32}
+                className="h-8 w-8 shrink-0"
+              />
               <span className="hidden font-bold text-white sm:inline-block">DropMarket</span>
             </Link>
 
