@@ -338,9 +338,8 @@ function HeroPanel({ mode }: { mode: AuthMode }) {
       <div className="relative z-10 flex h-full flex-col justify-between p-10">
         {/* Top — logo */}
         <div className="flex items-center gap-2.5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-lime shadow-glow">
-            <span className="text-base font-black text-text-inverse">D</span>
-          </div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/brand/logo-mark-lime.png" alt="DropMarket" width={36} height={36} className="h-9 w-9 shrink-0" />
           <span className="text-lg font-bold tracking-tight text-text-primary">
             Drop<span className="text-lime-text">Market</span>
           </span>
