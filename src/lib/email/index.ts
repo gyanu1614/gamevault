@@ -26,6 +26,79 @@ function escapeHtml(s: string): string {
 // APPLICATION EMAILS
 // ============================================
 
+export async function sendApplicationReceivedEmail({
+  to,
+  name,
+  displayName,
+  applicationId,
+}: {
+  to: string
+  name: string
+  displayName: string
+  applicationId: string
+}) {
+  try {
+    const { data, error } = await resend.emails.send({
+      from: FROM_EMAIL,
+      replyTo: REPLY_TO,
+      to,
+      subject: 'We Received Your Seller Application',
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+        <body style="margin:0;padding:0;background-color:#f4f4f5;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f5;">
+            <tr><td align="center" style="padding:36px 16px;">
+              <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;max-width:480px;">
+                <tr><td style="background-color:#0f1013;border-radius:10px;overflow:hidden;">
+                  <img src="https://dropmarket.gg/section-bg/cta-band.jpg" alt="" width="480" style="display:block;width:100%;height:96px;object-fit:cover;">
+                  <div style="padding:26px 32px 28px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;text-align:center;">
+                    <p style="margin:0 0 16px;font-size:19px;font-weight:800;color:#ffffff;">Drop<span style="color:#a3e635;">Market</span></p>
+                    <h1 style="margin:0 0 8px;font-size:20px;font-weight:700;color:#ffffff;">Thanks, ${escapeHtml(name)} — We Got It</h1>
+                    <p style="margin:0 0 22px;font-size:14px;line-height:1.55;color:#a1a1aa;overflow-wrap:anywhere;">Your seller application for <strong style="color:#ffffff;">"${escapeHtml(displayName)}"</strong> is in. It's now under review — we'll email you the moment there's an update, so there's nothing more you need to do right now.</p>
+                    <div style="background:rgba(163, 230, 53, 0.08);border:1px solid rgba(163, 230, 53, 0.3);border-radius:8px;padding:14px 16px;margin:0 0 18px;text-align:left;">
+                      <p style="margin:0 0 6px;font-size:13px;font-weight:600;color:#a3e635;">What Happens Next?</p>
+                      <ul style="margin:0;padding-left:18px;color:#a1a1aa;font-size:13px;line-height:1.7;">
+                        <li>Our team reviews your application within 2-3 business days</li>
+                        <li>Keep an eye on your inbox for the decision</li>
+                        <li>Check your status any time from your account</li>
+                      </ul>
+                    </div>
+                    <div style="background:rgba(255, 255, 255, 0.03);border:1px solid rgba(255, 255, 255, 0.08);border-radius:8px;padding:12px 16px;margin:0 0 18px;text-align:left;">
+                      <p style="margin:0 0 4px;font-size:11px;color:#71717a;text-transform:uppercase;letter-spacing:0.5px;">Application Reference</p>
+                      <p style="margin:0;font-size:13px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:#ffffff;overflow-wrap:anywhere;">${escapeHtml(applicationId)}</p>
+                    </div>
+                    <a href="${APP_URL}/account/seller-status" style="display:inline-block;background-color:#a3e635;color:#0a0a0f;text-decoration:none;padding:11px 28px;border-radius:6px;font-weight:700;font-size:14px;">View Application Status</a>
+                  </div>
+                </td></tr>
+                <tr><td align="center" style="padding:14px 8px 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:11px;line-height:1.6;color:#a1a1aa;">
+                  Questions in the meantime? Just reply to this email.<br>
+                  © 2026 DropMarket · <a href="${APP_URL}/support" style="color:#71717a;">Support</a>
+                </td></tr>
+              </table>
+            </td></tr>
+          </table>
+        </body>
+        </html>
+      `,
+    })
+
+    if (error) {
+      console.error('Failed to send application received email:', error)
+      return { success: false, error }
+    }
+
+    return { success: true, data }
+  } catch (error) {
+    console.error('Email service error:', error)
+    return { success: false, error }
+  }
+}
+
 export async function sendApplicationApprovedEmail({
   to,
   name,
@@ -57,7 +130,7 @@ export async function sendApplicationApprovedEmail({
                   <div style="padding:26px 32px 28px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;text-align:center;">
                     <p style="margin:0 0 16px;font-size:19px;font-weight:800;color:#ffffff;">Drop<span style="color:#a3e635;">Market</span></p>
                     <h1 style="margin:0 0 8px;font-size:20px;font-weight:700;color:#ffffff;">Congratulations, ${escapeHtml(name)}!</h1>
-                    <p style="margin:0 0 22px;font-size:14px;line-height:1.55;color:#a1a1aa;overflow-wrap:anywhere;">Your seller application for <strong style="color:#ffffff;">"${escapeHtml(displayName)}"</strong> has been approved! You can now start listing your gaming items on DropMarket.</p>
+                    <p style="margin:0 0 22px;font-size:14px;line-height:1.55;color:#a1a1aa;overflow-wrap:anywhere;">Your seller application for <strong style="color:#ffffff;">"${escapeHtml(displayName)}"</strong> has been approved! Your seller access is now live — head to your dashboard to set up your storefront and list your gaming items on DropMarket.</p>
                     <div style="background:rgba(163, 230, 53, 0.08);border:1px solid rgba(163, 230, 53, 0.3);border-radius:8px;padding:14px 16px;margin:0 0 18px;text-align:left;">
                       <p style="margin:0 0 6px;font-size:13px;font-weight:600;color:#a3e635;">What's Next?</p>
                       <ul style="margin:0;padding-left:18px;color:#a1a1aa;font-size:13px;line-height:1.7;">
@@ -67,7 +140,7 @@ export async function sendApplicationApprovedEmail({
                         <li>Start selling!</li>
                       </ul>
                     </div>
-                    <a href="${APP_URL}/seller/dashboard" style="display:inline-block;background-color:#a3e635;color:#0a0a0f;text-decoration:none;padding:11px 28px;border-radius:6px;font-weight:700;font-size:14px;">Go to Seller Dashboard</a>
+                    <a href="${APP_URL}/account/dashboard" style="display:inline-block;background-color:#a3e635;color:#0a0a0f;text-decoration:none;padding:11px 28px;border-radius:6px;font-weight:700;font-size:14px;">Go to Seller Dashboard</a>
                   </div>
                 </td></tr>
                 <tr><td align="center" style="padding:14px 8px 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:11px;line-height:1.6;color:#a1a1aa;">
@@ -205,7 +278,7 @@ export async function sendInfoRequestedEmail({
                       <p style="margin:0 0 6px;font-size:13px;font-weight:600;color:#fbbf24;">Message from our Review Team</p>
                       <p style="margin:0;color:#fef3c7;font-size:13px;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere;">${escapeHtml(message)}</p>
                     </div>
-                    <a href="${APP_URL}/seller/application-status" style="display:inline-block;background-color:#a3e635;color:#0a0a0f;text-decoration:none;padding:11px 28px;border-radius:6px;font-weight:700;font-size:14px;">View Application Status</a>
+                    <a href="${APP_URL}/account/seller-status" style="display:inline-block;background-color:#a3e635;color:#0a0a0f;text-decoration:none;padding:11px 28px;border-radius:6px;font-weight:700;font-size:14px;">View Application Status</a>
                   </div>
                 </td></tr>
                 <tr><td align="center" style="padding:14px 8px 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:11px;line-height:1.6;color:#a1a1aa;">

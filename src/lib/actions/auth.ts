@@ -57,7 +57,7 @@ export async function signup(formData: {
           username: formData.username,
           full_name: formData.fullName || null,
         },
-        emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback`,
+        emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback?type=signup`,
       },
     })
 
@@ -190,7 +190,7 @@ export async function resendConfirmationEmail(email: string) {
       type: 'signup',
       email,
       options: {
-        emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback`,
+        emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback?type=signup`,
       },
     })
 

@@ -329,22 +329,15 @@ export async function createOrder(data: CreateOrderData): Promise<{
     // await sendOrderConfirmationEmail(buyerId, order.id)
     // await sendNewOrderEmail(listing.seller_id, order.id)
 
-    // Create notification for seller
-    try {
-      await (supabase
-        .from('notifications')
-        .insert as any)({
-          user_id: listing.seller_id,
-          type: 'new_order',
-          title: 'New Order Received!',
-          message: `You have a new order for "${listing.title}" - $${totalAmount.toFixed(2)}`,
-          link: `/account/orders/${order.id}`,
-          is_read: false,
-        })
-    } catch (error) {
-      console.error('Error creating notification:', error)
-      // Don't fail the order
-    }
+    // Workstream E — DO NOT re-add a pre-payment seller notification here.
+    // createOrder is legacy/dead (no live callers — the live path is
+    // createCheckout, which mints a 'pending' order confirmed only by the
+    // CoinGate webhook). The seller's 'new_order' bell notification is now
+    // emitted exactly once, on the webhook's APPLIED CHARGE_CONFIRMED
+    // transition (src/lib/payments/notify.ts). Notifying the seller at order
+    // creation — before payment — would surface an order they're gated out of
+    // (pending orders are hidden from sellers) and would double up with the
+    // webhook notification. Kept intentionally silent.
 
     revalidatePath('/orders')
     // V21/P7.d — The previous `/marketplace/{game_id}/{category_id}`

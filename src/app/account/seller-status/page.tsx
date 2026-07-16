@@ -24,6 +24,7 @@ import {
   getCooldownLabel,
 } from '@/lib/utils/seller-application'
 import CountdownTimer from '@/components/seller/CountdownTimer'
+import ApplicationTimeline from '@/components/seller/ApplicationTimeline'
 import {
   CheckCircle2,
   Clock,
@@ -42,6 +43,10 @@ import { toast } from 'sonner'
 export default function ApplicationStatusPage() {
   const router = useRouter()
   const { user, loading: authLoading } = useAuth()
+  // Beta C — use-auth opens a realtime channel that updates
+  // user.sellerApplicationStatus the instant an admin acts. We key the fetch
+  // effect off it so the status card + timeline re-render without a refresh.
+  const liveStatus = user?.sellerApplicationStatus ?? null
   const [applicationStatus, setApplicationStatus] = useState<ApplicationStatusResult | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -75,7 +80,9 @@ export default function ApplicationStatusPage() {
     }
 
     fetchStatus()
-  }, [user, authLoading, router])
+    // liveStatus is included so a realtime status change (approval, info
+    // request, rejection) re-pulls the full record without a manual refresh.
+  }, [user, authLoading, router, liveStatus])
 
   // Handle application withdrawal
   const handleWithdraw = async () => {
@@ -180,6 +187,11 @@ export default function ApplicationStatusPage() {
         icon: Clock,
         text: 'Under Review',
         color: 'text-lime-text bg-lime/10 border-lime-tint-border',
+      },
+      info_requested: {
+        icon: Info,
+        text: 'Information Requested',
+        color: 'text-warning bg-warning-bg border-[rgba(251,191,36,0.25)]',
       },
       approved: {
         icon: CheckCircle2,
@@ -348,6 +360,42 @@ export default function ApplicationStatusPage() {
       )
     }
 
+    // Scenario 4: Information Requested — surface the admin's message + a CTA
+    // back into the application to supply the missing details.
+    if (status === 'info_requested') {
+      return (
+        <div className="rounded-lg border border-[rgba(251,191,36,0.25)] bg-warning-bg p-6">
+          <div className="flex items-start gap-3">
+            <Info className="mt-0.5 h-5 w-5 shrink-0 text-warning" />
+            <div className="flex-1">
+              <h3 className="text-lg font-semibold text-white">We Need More Information</h3>
+              <p className="mt-2 text-sm text-text-secondary">
+                Our review team asked for some additional details before they can
+                continue. Please review their message and update your application.
+              </p>
+              {application?.admin_notes && (
+                <div className="mt-4 rounded-lg border border-border-subtle bg-white/[0.03] p-4">
+                  <p className="text-xs font-medium uppercase tracking-wide text-text-tertiary">
+                    Message From Our Team
+                  </p>
+                  <p className="mt-1 whitespace-pre-wrap text-sm text-text-secondary">
+                    {application.admin_notes}
+                  </p>
+                </div>
+              )}
+              <button
+                onClick={() => router.push('/account/become-seller')}
+                className="mt-4 inline-flex items-center gap-2 rounded-lg border border-primary/20 bg-primary/10 px-6 py-2 text-sm font-medium text-primary transition-colors hover:bg-primary/20"
+              >
+                <RefreshCcw className="h-4 w-4" />
+                Update Application
+              </button>
+            </div>
+          </div>
+        </div>
+      )
+    }
+
     // Default: Pending/Under Review
     const messages: Record<string, { title: string; description: string }> = {
       pending: {
@@ -419,133 +467,16 @@ export default function ApplicationStatusPage() {
           {/* Status Message (Three Scenarios) */}
           <StatusMessage />
 
-          {/* Timeline */}
-          <div className="mt-8 rounded-lg border border-white/5 bg-white/5 p-6">
-            <h3 className="text-lg font-semibold text-white">Timeline</h3>
-            <div className="mt-6 space-y-6">
-              {/* Step 1: Application Started */}
-              <div className="relative flex items-start gap-4">
-                <div className="absolute left-4 top-8 h-full w-px bg-white/10" />
-
-                <div className="relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-success-bg text-success ring-4 ring-black">
-                  <CheckCircle2 className="h-4 w-4" />
-                </div>
-                <div className="flex-1 pb-2">
-                  <p className="text-sm font-medium text-white">Application Started</p>
-                  {application?.created_at && (
-                    <p className="text-xs text-text-secondary">
-                      {new Date(application.created_at).toLocaleString()}
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              {/* Step 2: Application Submitted */}
-              {application?.submitted_at && (
-                <div className="relative flex items-start gap-4">
-                  <div className="absolute left-4 top-8 h-full w-px bg-white/10" />
-
-                  <div className="relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-success-bg text-success ring-4 ring-black">
-                    <CheckCircle2 className="h-4 w-4" />
-                  </div>
-                  <div className="flex-1 pb-2">
-                    <p className="text-sm font-medium text-white">Application Submitted</p>
-                    <p className="text-xs text-text-secondary">
-                      {new Date(application.submitted_at).toLocaleString()}
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {/* Step 3: Review In Progress */}
-              <div className="relative flex items-start gap-4">
-                {(application?.reviewed_at || rejection || status === 'withdrawn') && (
-                  <div className="absolute left-4 top-8 h-full w-px bg-white/10" />
-                )}
-
-                <div
-                  className={`relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full ring-4 ring-black ${
-                    status === 'under_review' || application?.reviewed_at
-                      ? 'bg-lime/10 text-lime-text'
-                      : 'bg-white/5 text-text-tertiary'
-                  }`}
-                >
-                  {status === 'under_review' || application?.reviewed_at ? (
-                    <Clock className="h-4 w-4" />
-                  ) : (
-                    <div className="h-2 w-2 rounded-full bg-text-disabled" />
-                  )}
-                </div>
-                <div className="flex-1 pb-2">
-                  <p className={`text-sm font-medium ${status === 'under_review' || application?.reviewed_at ? 'text-white' : 'text-text-tertiary'}`}>
-                    Review In Progress
-                  </p>
-                  {status === 'under_review' && (
-                    <p className="text-xs text-text-secondary">Our team is reviewing your application</p>
-                  )}
-                  {!application?.reviewed_at && status !== 'under_review' && (
-                    <p className="text-xs text-text-tertiary">Waiting for review</p>
-                  )}
-                </div>
-              </div>
-
-              {/* Step 4: Withdrawal Event (if withdrawn) */}
-              {status === 'withdrawn' && withdrawal && (
-                <div className="relative flex items-start gap-4">
-                  <div className="relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/[0.06] text-text-secondary ring-4 ring-black">
-                    <Ban className="h-4 w-4" />
-                  </div>
-                  <div className="flex-1 pb-2">
-                    <p className="text-sm font-medium text-white">Application Withdrawn</p>
-                    <p className="text-xs text-text-secondary">
-                      {new Date(withdrawal.withdrawnAt).toLocaleString()}
-                    </p>
-                    {withdrawal.withdrawalCount > 1 && (
-                      <p className="text-xs text-warning mt-1">
-                        Withdrawal count: {withdrawal.withdrawalCount}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Step 4: Rejection Event (if rejected) */}
-              {status === 'rejected' && rejection && (
-                <div className="relative flex items-start gap-4">
-                  <div className="relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-error-bg text-error ring-4 ring-black">
-                    <XCircle className="h-4 w-4" />
-                  </div>
-                  <div className="flex-1 pb-2">
-                    <p className="text-sm font-medium text-white">Application Rejected</p>
-                    <p className="text-xs text-text-secondary">
-                      {new Date(rejection.rejectedAt).toLocaleString()}
-                    </p>
-                    {rejection.rejectionCount > 1 && (
-                      <p className="text-xs text-error mt-1">
-                        Rejection #{rejection.rejectionCount}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Step 4: Review Completed (approved) */}
-              {status === 'approved' && (
-                <div className="relative flex items-start gap-4">
-                  <div className="relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-success-bg text-success ring-4 ring-black">
-                    <CheckCircle2 className="h-4 w-4" />
-                  </div>
-                  <div className="flex-1 pb-2">
-                    <p className="text-sm font-medium text-white">Application Approved</p>
-                    {application?.reviewed_at && (
-                      <p className="text-xs text-text-secondary">
-                        {new Date(application.reviewed_at).toLocaleString()}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
+          {/* Timeline — extracted to a design-system component (Beta C). */}
+          <div className="mt-8">
+            <ApplicationTimeline
+              status={status}
+              createdAt={application?.created_at}
+              submittedAt={application?.submitted_at}
+              reviewedAt={application?.reviewed_at}
+              withdrawnAt={withdrawal?.withdrawnAt}
+              rejectedAt={rejection?.rejectedAt}
+            />
           </div>
 
           {/* Application ID */}

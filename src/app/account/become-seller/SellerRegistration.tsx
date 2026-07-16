@@ -126,6 +126,8 @@ export default function SellerRegistration({ games }: SellerRegistrationProps) {
         if (result.success && result.data) {
           const { status, canReapply, withdrawal, application } = result.data
 
+          // info_requested is editable — the seller must be able to return to
+          // the wizard and update, so it is NOT a redirect status.
           const shouldRedirect =
             status === 'pending' ||
             status === 'under_review' ||
@@ -133,11 +135,14 @@ export default function SellerRegistration({ games }: SellerRegistrationProps) {
             (status === 'rejected' && !canReapply)
 
           if (shouldRedirect) {
+            // Beta C — go straight to the status page. This mount check is now
+            // only a safety net: the navbar / BecomeSellerCta already link
+            // pending users directly to /account/seller-status, so the old 2s
+            // modal-and-wait redirect chain is gone. router.replace keeps the
+            // dead become-seller entry out of history.
             setIsCheckingExisting(false)
             setIsRedirecting(true)
-            setTimeout(() => {
-              router.push('/account/seller-status')
-            }, 2000)
+            router.replace('/account/seller-status')
             return
           }
 

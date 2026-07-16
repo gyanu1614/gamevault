@@ -21,7 +21,6 @@ import {
   Clock,
   CheckCircle2,
   Star,
-  Sparkles,
   ArrowRight,
   DollarSign,
   Tag,
@@ -29,6 +28,7 @@ import {
   Zap
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import BecomeSellerCta from '@/components/account/BecomeSellerCta'
 
 interface BuyerDashboardProps {
   user: any // Type this properly based on your user type
@@ -80,7 +80,7 @@ export default function BuyerDashboard({ user }: BuyerDashboardProps) {
             Welcome back, {user?.username || 'Buyer'}!
           </h1>
           <p className="mt-2 text-text-secondary">
-            Here's an overview of your gaming marketplace activity
+            Here&apos;s an overview of your gaming marketplace activity
           </p>
         </div>
 
@@ -136,7 +136,7 @@ export default function BuyerDashboard({ user }: BuyerDashboardProps) {
           </div>
 
           {/* Wishlist Items */}
-          <div className="rounded-xl bg-gradient-to-br from-pink-500/10 to-lime/5 border border-pink-500/20 p-6">
+          <div className="rounded-xl bg-bg-overlay border border-border-subtle p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-text-secondary">Wishlist</p>
@@ -144,8 +144,8 @@ export default function BuyerDashboard({ user }: BuyerDashboardProps) {
                   {buyerStats.wishlistItems}
                 </p>
               </div>
-              <div className="rounded-full bg-pink-500/20 p-3">
-                <Heart className="h-6 w-6 text-pink-400" />
+              <div className="rounded-full bg-lime/15 p-3">
+                <Heart className="h-6 w-6 text-lime-text" />
               </div>
             </div>
           </div>
@@ -248,7 +248,7 @@ export default function BuyerDashboard({ user }: BuyerDashboardProps) {
               <div className="space-y-2">
                 <Link
                   href="/browse"
-                  className="flex items-center gap-3 rounded-lg bg-gradient-to-r from-lime to-purple-600 px-4 py-3 text-sm font-medium text-white transition-all hover:from-violet-700 hover:to-purple-700"
+                  className="flex items-center gap-3 rounded-md bg-lime px-4 py-3 text-sm font-semibold text-text-inverse transition-colors hover:bg-lime-hover"
                 >
                   <ShoppingBag className="h-4 w-4" />
                   Browse Marketplace
@@ -270,23 +270,9 @@ export default function BuyerDashboard({ user }: BuyerDashboardProps) {
               </div>
             </div>
 
-            {/* Seller CTA */}
-            <div className="rounded-xl bg-gradient-to-br from-lime/10 via-purple-500/10 to-pink-500/10 border border-lime-tint-border p-6">
-              <div className="mb-3 flex items-center gap-2">
-                <Sparkles className="h-5 w-5 text-lime-text" />
-                <h3 className="font-bold text-white">Become a Seller</h3>
-              </div>
-              <p className="mb-4 text-sm text-text-secondary">
-                Start selling your gaming accounts and earn money with the lowest fees in the industry.
-              </p>
-              <Link
-                href="/account/become-seller"
-                className="flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-lime to-purple-600 px-4 py-2 text-sm font-medium text-white transition-all hover:from-violet-700 hover:to-purple-700"
-              >
-                Get Started
-                <ArrowRight className="h-4 w-4" />
-              </Link>
-            </div>
+            {/* Seller CTA — reactive, flips to "Application Pending" and
+                disappears on approval without a refresh (Beta C). */}
+            <BecomeSellerCta variant="card" />
 
             {/* Stats Summary */}
             <div className="rounded-xl bg-gray-900/50 border border-white/10 p-6">

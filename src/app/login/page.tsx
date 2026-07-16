@@ -45,15 +45,21 @@ function LoginRedirector() {
   // Guards:
   //   1) `hasOpenedRef` — first paint has isOpen=false BEFORE `open()`
   //      flips it; without this we'd redirect before the modal opens.
-  //   2) `pathname === '/login'` — on a successful sign-in the modal
-  //      handler already called router.replace(redirect), so by the
-  //      time isOpen flips false the pathname is no longer /login.
-  //      Skipping the redirect here avoids racing/overriding it.
+  //   2) `!user` — a successful sign-in closes the modal (isOpen→false)
+  //      AND sets `user` synchronously via the SIGNED_IN broadcast, then
+  //      calls router.replace(redirect). App Router navigation commits
+  //      asynchronously, so on a slow device this effect could still see
+  //      pathname==='/login' and issue a COMPETING router.replace('/') —
+  //      two simultaneous replaces mid-portal-unmount were the Pixel
+  //      client-side exception. Gating on `!user` means an authenticated
+  //      close never fires the bounce.
+  //   3) `pathname === '/login'` — belt-and-suspenders once the redirect
+  //      has committed.
   useEffect(() => {
-    if (hasOpenedRef.current && !isOpen && pathname === '/login') {
+    if (hasOpenedRef.current && !isOpen && !user && pathname === '/login') {
       router.replace('/')
     }
-  }, [isOpen, pathname, router])
+  }, [isOpen, user, pathname, router])
 
   // Occupy the viewport so the global footer is pushed below the fold and the
   // page doesn't scroll/jump to the bottom while the modal mounts. The modal

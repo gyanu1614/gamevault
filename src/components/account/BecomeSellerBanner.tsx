@@ -1,14 +1,21 @@
 'use client'
 
 import Link from 'next/link'
-import { Store, TrendingUp, DollarSign, Users, ArrowRight } from 'lucide-react'
+import { Store, TrendingUp, DollarSign, Users, ArrowRight, Clock } from 'lucide-react'
+import { useAuth } from '@/hooks/use-auth'
 
 export default function BecomeSellerBanner() {
+  const { user } = useAuth()
+  const status = user?.sellerApplicationStatus ?? null
+  const isPending =
+    status === 'pending' || status === 'under_review' || status === 'info_requested'
+  const ctaHref = isPending ? '/account/seller-status' : '/account/become-seller'
+
   return (
     <div className="min-h-[60vh] flex items-center justify-center p-8">
       <div className="max-w-4xl w-full">
         {/* Main Card */}
-        <div className="bg-gradient-to-br from-lime/10 via-purple-500/10 to-pink-500/10 border border-lime-tint-border rounded-2xl p-12 text-center">
+        <div className="bg-white/[0.04] border border-lime-tint-border rounded-2xl p-12 text-center">
           {/* Icon */}
           <div className="w-20 h-20 mx-auto mb-6 bg-lime/20 rounded-full flex items-center justify-center">
             <Store className="w-10 h-10 text-lime-text" />
@@ -49,18 +56,30 @@ export default function BecomeSellerBanner() {
             </div>
           </div>
 
-          {/* CTA */}
+          {/* CTA — reactive: pending applicants get routed to their status
+              page instead of a fresh application. */}
           <Link
-            href="/account/become-seller"
-            className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-lime to-purple-600 hover:from-lime hover:to-purple-500 text-white font-semibold rounded-xl transition-all duration-200 shadow-lg shadow-violet-500/20 hover:shadow-violet-500/40 transform hover:scale-105"
+            href={ctaHref}
+            className="inline-flex items-center gap-2 px-8 py-4 bg-lime hover:bg-lime/90 text-text-inverse font-semibold rounded-xl transition-colors duration-200"
           >
-            Start Selling Now
-            <ArrowRight className="w-5 h-5" />
+            {isPending ? (
+              <>
+                <Clock className="w-5 h-5" />
+                View Application Status
+              </>
+            ) : (
+              <>
+                Start Selling Now
+                <ArrowRight className="w-5 h-5" />
+              </>
+            )}
           </Link>
 
           {/* Fine Print */}
           <p className="text-sm text-text-tertiary mt-6">
-            Application review typically takes 24-48 hours
+            {isPending
+              ? "Your application is under review — we'll email you with the decision."
+              : 'Application review typically takes 2-3 business days'}
           </p>
         </div>
 

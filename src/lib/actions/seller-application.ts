@@ -77,21 +77,32 @@ export async function submitSellerApplication(
       }
     }
 
-    // 2. Check if user already has a pending/approved application (allow resubmission if withdrawn/rejected)
-    const { data: existingApp, error: checkError } = await supabase
+    // 2. Block a duplicate while one is actively in the pipeline. An
+    // info_requested row is EDITABLE — the admin asked for changes, so a
+    // resubmit must UPDATE that same row (preserving its history/thread),
+    // never insert a second application for the user.
+    const { data: activeApp } = await supabase
       .from('seller_applications')
       .select('id, status')
       .eq('user_id', user.id)
       .in('status', ['pending', 'under_review', 'approved'])
       .maybeSingle() as any
 
-    if (existingApp) {
+    if (activeApp) {
       return {
         success: false,
-        error: `You already have ${existingApp.status === 'approved' ? 'an approved' : 'a pending'} application.`,
-        applicationId: existingApp.id,
+        error: `You already have ${activeApp.status === 'approved' ? 'an approved' : 'a pending'} application.`,
+        applicationId: activeApp.id,
       }
     }
+
+    // An editable row to resubmit into (info_requested = admin wants changes).
+    const { data: editableApp } = await supabase
+      .from('seller_applications')
+      .select('id, status')
+      .eq('user_id', user.id)
+      .eq('status', 'info_requested')
+      .maybeSingle() as any
 
     // 3. Insert seller application into database
     console.log('📝 Submitting seller application with data:', {
@@ -103,11 +114,9 @@ export async function submitSellerApplication(
       hasStep6: !!data.step6,
     })
 
-    const { data: application, error: insertError} = await (supabase
-      .from('seller_applications')
-      .insert as any)({
+    const applicationPayload = {
         user_id: user.id,
-        status: 'pending',
+        status: 'pending' as const,
 
         // Step 1: Eligibility
         is_18_or_older: data.step1?.is18OrOlder ?? false,
@@ -187,12 +196,26 @@ export async function submitSellerApplication(
         // Metadata
         submitted_at: new Date().toISOString(),
         fraud_score: 0, // TODO: Implement fraud detection
-      })
-      .select()
-      .single()
+    }
+
+    // Resubmit into the existing info_requested row, else create a fresh one.
+    // The update clears the prior admin_notes so a stale "changes requested"
+    // note doesn't linger after the seller has addressed it.
+    const { data: application, error: insertError } = editableApp
+      ? await (supabase
+          .from('seller_applications')
+          .update as any)({ ...applicationPayload, admin_notes: null, reviewed_at: null, reviewed_by: null })
+          .eq('id', editableApp.id)
+          .select()
+          .single()
+      : await (supabase
+          .from('seller_applications')
+          .insert as any)(applicationPayload)
+          .select()
+          .single()
 
     if (insertError) {
-      console.error('Error inserting application:', insertError)
+      console.error('Error saving application:', insertError)
       return {
         success: false,
         error: 'Failed to submit application. Please try again.',
@@ -247,9 +270,28 @@ export async function submitSellerApplication(
       // Non-fatal - application is already submitted
     }
 
+    // 5b. Confirmation email to the applicant. Fire-and-forget-with-catch:
+    // a Resend outage must never fail an already-committed submission.
+    try {
+      const { sendApplicationReceivedEmail } = await import('@/lib/email')
+      const applicantEmail = user.email || data.step1?.alternateEmail || data.step2?.alternateEmail
+      if (applicantEmail) {
+        await sendApplicationReceivedEmail({
+          to: applicantEmail,
+          name: data.step2?.fullLegalName || data.step2?.displayName || 'there',
+          displayName: data.step2?.displayName || data.step2?.shopName || 'your store',
+          applicationId: application.id,
+        })
+        console.log('[SellerApplication] Confirmation email sent')
+      }
+    } catch (error) {
+      console.error('[SellerApplication] Failed to send confirmation email:', error)
+      // Non-fatal - application is already submitted
+    }
+
     // 6. Revalidate paths
-    revalidatePath('/account/register')
-    revalidatePath('/account/application-status')
+    revalidatePath('/account/become-seller')
+    revalidatePath('/account/seller-status')
 
     return {
       success: true,
@@ -485,8 +527,8 @@ export async function withdrawApplication(): Promise<{
     }
 
     // Revalidate paths
-    revalidatePath('/account/application-status')
-    revalidatePath('/account/register')
+    revalidatePath('/account/seller-status')
+    revalidatePath('/account/become-seller')
 
     return {
       success: true,

@@ -73,6 +73,12 @@ const STRIPS: Record<
   >
 > = {
   buyer: {
+    pending: {
+      Icon: Clock,
+      title: 'Awaiting Payment',
+      caption: 'Complete your crypto payment to start this order.',
+      tone: 'amber',
+    },
     paid: {
       Icon: Clock,
       title: 'Waiting On The Seller',

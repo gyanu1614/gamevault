@@ -93,16 +93,32 @@ export async function notifyNewMessage(conversationId: string): Promise<void> {
       String(convo.order_id).slice(0, 8).toUpperCase()
     const preview = (latestRes.data as any)?.content || ''
 
-    // In-app notification for the recipient (service client — the
-    // sender's session can't insert into another user's notifications).
-    await (service.from('notifications').insert as any)({
-      user_id: recipientId,
-      type: 'new_message',
-      title: 'New Message',
-      message: `${senderName} sent you a message about order #${orderRef}`,
-      link: `/account/orders/${convo.order_id}`,
-      is_read: false,
-    })
+    // NOTIFICATION TAXONOMY (Workstream E) — ordinary chat messages do NOT
+    // create a bell notification; they live under the Messages badge (the
+    // navbar unread-messages count). The ONE exception is the seller's FIRST
+    // message to the buyer on an order: that becomes a single bell
+    // notification ("Seller Replied On Your Order") so the buyer notices the
+    // seller has engaged. Every other message → no notifications row.
+    const isSeller = user.id === convo.seller_id
+    if (isSeller) {
+      const { count: sellerMsgCount } = await service
+        .from('messages')
+        .select('id', { count: 'exact', head: true })
+        .eq('conversation_id', conversationId)
+        .eq('sender_id', user.id)
+      // The triggering message is already inserted, so count === 1 means this
+      // is the seller's first-ever message in the conversation.
+      if ((sellerMsgCount ?? 0) === 1) {
+        await (service.from('notifications').insert as any)({
+          user_id: recipientId,
+          type: 'order_message',
+          title: 'Seller Replied On Your Order',
+          message: `${senderName} sent you a message about order #${orderRef}`,
+          link: `/account/orders/${convo.order_id}`,
+          is_read: false,
+        })
+      }
+    }
 
     if (recipient.email) {
       const { sendNewMessageEmail } = await import('@/lib/email')

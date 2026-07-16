@@ -31,6 +31,7 @@ import { toast } from 'sonner'
 import * as Dialog from '@radix-ui/react-dialog'
 
 import { login, signup, checkUsernameAvailability, resendConfirmationEmail } from '@/lib/actions/auth'
+import { stashPendingSignupAvatar } from '@/lib/auth/pending-avatar'
 import { AvatarUpload } from '@/components/ui/avatar-upload'
 import { useAuth } from '@/hooks/use-auth'
 import { createClient } from '@/lib/supabase/client'
@@ -135,16 +136,20 @@ function AuthDialog({ open, onOpenChange, mode, onModeChange, redirectRef }: Aut
       window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior })
     }
 
-    // Close the modal immediately — the navbar is already updated.
-    onOpenChange(false)
-
-    // Navigate if a redirect was requested; otherwise stay put (public
-    // pages just reflect the new auth state in the navbar — no full reload).
+    // Beta A — Navigate BEFORE closing the modal. If we close first, the
+    // /login bounce effect can observe isOpen=false while pathname is still
+    // '/login' (App Router navigation commits async) and issue a competing
+    // router.replace('/') — two simultaneous replaces mid-portal-unmount were
+    // the Pixel client-side exception. Issuing our navigation first shrinks
+    // that window; the /login effect's `!user` guard closes it entirely.
     if (redirect) {
       router.replace(redirect)
     } else {
       router.refresh()
     }
+
+    // Close the modal — the navbar is already updated via the SIGNED_IN broadcast.
+    onOpenChange(false)
   }, [onOpenChange, redirectRef, router])
 
   return (
@@ -711,6 +716,17 @@ function SignupForm({
       // no session until the user clicks the emailed link. No client session
       // to sync, no success toast — show the "Check Your Inbox" view instead.
       if ('requiresEmailConfirmation' in result && result.requiresEmailConfirmation) {
+        // Beta A — There's no session yet to upload the avatar into, so stash
+        // it locally; use-auth flushes it via uploadProfileAvatar() on the
+        // first authenticated session. A stash failure must never block the
+        // verify-email view, so swallow any error.
+        if (avatarData) {
+          try {
+            await stashPendingSignupAvatar(data.email, avatarData)
+          } catch {
+            // non-critical — user can re-upload from /account/settings
+          }
+        }
         setLoading(false)
         onRequiresConfirmation(data.email)
         return
