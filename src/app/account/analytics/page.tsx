@@ -62,34 +62,44 @@ export default function AnalyticsPage() {
       value: `$${getEarningsForRange().toFixed(2)}`,
       icon: DollarSign,
       gradient: 'bg-lime/10 text-lime-text',
-      trend: '+12.5%',
-      trendUp: true,
     },
     {
       label: 'Total Orders',
       value: stats.orders.completed.toString(),
       icon: ShoppingCart,
       gradient: 'bg-lime/10 text-lime-text',
-      trend: '+8.2%',
-      trendUp: true,
     },
     {
       label: 'Avg Order Value',
       value: `$${(stats.orders.completed > 0 ? getEarningsForRange() / stats.orders.completed : 0).toFixed(2)}`,
       icon: Target,
       gradient: 'bg-lime/10 text-lime-text',
-      trend: '+3.1%',
-      trendUp: true,
     },
     {
       label: 'Conversion Rate',
       value: `${stats.performance.conversionRate.toFixed(1)}%`,
       icon: TrendingUp,
       gradient: 'bg-lime/10 text-lime-text',
-      trend: '+5.4%',
-      trendUp: true,
     },
   ]
+
+  // Rule-based insights derived from real stats (no fabricated percentages).
+  const insights: { tone: 'lime' | 'success' | 'warning'; text: string }[] = []
+  if (stats.performance.totalViews > 0 && stats.performance.totalSales === 0) {
+    insights.push({ tone: 'warning', text: `Your listings have ${stats.performance.totalViews.toLocaleString()} views but no sales yet — try adjusting price or delivery times.` })
+  }
+  if (stats.performance.conversionRate >= 3) {
+    insights.push({ tone: 'success', text: `Your conversion rate is ${stats.performance.conversionRate.toFixed(1)}% — strong buyer intent. Keep your best offers stocked.` })
+  }
+  if (stats.performance.avgRating > 0 && stats.performance.avgRating < 4 && stats.performance.totalSales >= 3) {
+    insights.push({ tone: 'warning', text: `Your average rating is ${stats.performance.avgRating.toFixed(1)} — replying to reviews and faster delivery lift it over time.` })
+  }
+  if (stats.listings.active < 3) {
+    insights.push({ tone: 'lime', text: 'Consider adding more listings to increase your reach and potential earnings.' })
+  }
+  if (insights.length === 0) {
+    insights.push({ tone: 'lime', text: 'No new signals this period — keep your listings active and fulfil orders quickly to grow.' })
+  }
 
   if (authLoading || isLoading || trendLoading) {
     return (
@@ -143,11 +153,6 @@ export default function AnalyticsPage() {
             <div className="mb-3 flex items-center justify-between">
               <div className={cn('rounded-lg p-2', card.gradient)}>
                 <card.icon className="h-5 w-5 text-white" />
-              </div>
-              <div className="flex items-center gap-1 text-xs">
-                <span className={cn('font-medium', card.trendUp ? 'text-success' : 'text-error')}>
-                  {card.trend}
-                </span>
               </div>
             </div>
             <p className="text-xs text-text-secondary mb-1">{card.label}</p>
@@ -349,28 +354,24 @@ export default function AnalyticsPage() {
           </div>
           <div>
             <h2 className="text-base font-semibold text-white">Quick Insights</h2>
-            <p className="text-xs text-text-tertiary">AI-powered recommendations</p>
+            <p className="text-xs text-text-tertiary">Recommendations from your data</p>
           </div>
         </div>
 
         <div className="space-y-3">
-          <div className="rounded-lg border border-lime-tint-border bg-lime/10 p-3">
-            <p className="text-sm text-text-secondary">
-              💡 Your conversion rate is <span className="font-semibold">{stats.performance.conversionRate.toFixed(1)}%</span> higher than average sellers. Keep up the great work!
-            </p>
-          </div>
-          <div className="rounded-lg border border-success/30 bg-success-bg p-3">
-            <p className="text-sm text-success">
-              📈 Revenue increased by <span className="font-semibold">12.5%</span> compared to last period. Your listings are performing well!
-            </p>
-          </div>
-          {stats.listings.active < 3 && (
-            <div className="rounded-lg border border-warning/40 bg-warning-bg p-3">
-              <p className="text-sm text-warning">
-                ⚠️ Consider adding more listings to increase your reach and potential earnings.
-              </p>
+          {insights.map((ins, i) => (
+            <div
+              key={i}
+              className={cn(
+                'rounded-lg border p-3 text-sm',
+                ins.tone === 'success' && 'border-success/30 bg-success-bg text-success',
+                ins.tone === 'warning' && 'border-warning/40 bg-warning-bg text-warning',
+                ins.tone === 'lime' && 'border-lime-tint-border bg-lime/10 text-text-secondary',
+              )}
+            >
+              {ins.text}
             </div>
-          )}
+          ))}
         </div>
       </motion.div>
     </div>

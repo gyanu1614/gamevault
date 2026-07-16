@@ -57,6 +57,14 @@ export interface ReputationSnapshot {
   recent: { id: string; rating: number; comment: string | null; createdAt: string }[]
 }
 
+export interface OnboardingSignals {
+  payoutConnected: boolean
+  hasListing: boolean
+  deliveryTimesSet: boolean
+  shopNamed: boolean
+  shopSlug: string | null
+}
+
 export interface DashboardData {
   kpis: DashboardKpis
   attention: AttentionItem[]
@@ -64,6 +72,7 @@ export interface DashboardData {
   topOffers: TopOffer[]
   reputation: ReputationSnapshot
   nudges: string[]
+  onboarding: OnboardingSignals
   windowDays: number
 }
 
@@ -81,7 +90,7 @@ export async function getSellerDashboard(windowDays = 7): Promise<DashboardData 
   const prevStart = new Date(now - 2 * windowDays * DAY).toISOString()
 
   // Pull everything in parallel.
-  const [ordersRes, listingsRes, reviewsRes, convosRes] = await Promise.all([
+  const [ordersRes, listingsRes, reviewsRes, convosRes, profileRes] = await Promise.all([
     supabase
       .from('orders')
       .select('id, order_number, status, escrow_status, seller_payout, total_amount, created_at, completed_at, auto_release_at, seller_marked_delivered_at, delivered_at, listing:listings!orders_listing_id_fkey(title)')
@@ -89,7 +98,7 @@ export async function getSellerDashboard(windowDays = 7): Promise<DashboardData 
       .order('created_at', { ascending: false }),
     supabase
       .from('listings')
-      .select('id, title, price, views, view_count, sales, status')
+      .select('id, title, price, views, view_count, sales, status, delivery_time')
       .eq('seller_id', user.id),
     supabase
       .from('reviews')
@@ -100,11 +109,17 @@ export async function getSellerDashboard(windowDays = 7): Promise<DashboardData 
       .from('conversations')
       .select('id, order_id, last_message_at')
       .eq('seller_id', user.id),
+    supabase
+      .from('profiles')
+      .select('shop_name, shop_slug, paypal_email, payout_enabled, stripe_connect_payouts_enabled, stripe_connect_status')
+      .eq('id', user.id)
+      .single(),
   ])
 
   const orders = (ordersRes.data ?? []) as any[]
   const listings = (listingsRes.data ?? []) as any[]
   const reviews = (reviewsRes.data ?? []) as any[]
+  const profile = (profileRes.data ?? {}) as any
 
   // ── KPIs ──────────────────────────────────────────────────────────────
   const inWindow = (iso: string | null, start: string) => !!iso && iso >= start
@@ -239,6 +254,21 @@ export async function getSellerDashboard(windowDays = 7): Promise<DashboardData 
     nudges.push(`${undeliveredCount} paid order${undeliveredCount > 1 ? 's are' : ' is'} waiting on delivery — fast delivery boosts your ranking.`)
   }
 
+  // ── Onboarding signals (real completion state) ────────────────────────
+  // Payout accepts legacy sellers: any of the Stripe-connect flag, the legacy
+  // payout_enabled flag, or a saved PayPal email counts as connected.
+  const onboarding: OnboardingSignals = {
+    payoutConnected: !!(
+      profile.stripe_connect_payouts_enabled ||
+      profile.payout_enabled ||
+      profile.paypal_email
+    ),
+    hasListing: listings.length > 0,
+    deliveryTimesSet: listings.some((l) => l.status === 'active' && !!l.delivery_time),
+    shopNamed: !!profile.shop_name,
+    shopSlug: profile.shop_slug ?? null,
+  }
+
   return {
     kpis: {
       netEarnings,
@@ -255,6 +285,7 @@ export async function getSellerDashboard(windowDays = 7): Promise<DashboardData 
     topOffers,
     reputation,
     nudges,
+    onboarding,
     windowDays,
   }
 }

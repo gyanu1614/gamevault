@@ -28,5 +28,5 @@ export default function DashboardPage() {
     return <BuyerDashboard user={user} />
   }
 
-  return <SellerDashboard username={user.profile?.username || 'Seller'} />
+  return <SellerDashboard username={user.profile?.username || 'Seller'} userId={user.id} />
 }

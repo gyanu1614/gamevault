@@ -10,6 +10,7 @@
 
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { syncProfileEmail } from '@/lib/actions/auth'
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
@@ -28,10 +29,15 @@ export async function GET(request: Request) {
     return `${origin}${next}${sep}confirmed=1`
   }
 
+  // Returning from a Change Email Address confirmation link — reconcile the
+  // denormalized profiles.email mirror with the freshly-updated auth email.
+  const isEmailChange = next.startsWith('/account/settings')
+
   if (code) {
     const supabase = await createClient()
     const { error } = await supabase.auth.exchangeCodeForSession(code)
     if (!error) {
+      if (isEmailChange) await syncProfileEmail().catch(() => {})
       return NextResponse.redirect(successUrl())
     }
     console.error('[AuthCallback] Code exchange failed:', error.message)
@@ -44,6 +50,7 @@ export async function GET(request: Request) {
       data: { user },
     } = await supabase.auth.getUser()
     if (user) {
+      if (isEmailChange) await syncProfileEmail().catch(() => {})
       return NextResponse.redirect(successUrl())
     }
     return NextResponse.redirect(`${origin}/?auth_error=confirmation_failed`)

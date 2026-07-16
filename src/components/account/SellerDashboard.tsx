@@ -19,6 +19,7 @@ import {
   Package, MessageSquare, ShieldAlert, Star, Lightbulb, ArrowRight, ChevronRight,
 } from 'lucide-react'
 import AccountPageHeader from '@/components/account/AccountPageHeader'
+import SellerOnboardingChecklist from '@/components/account/SellerOnboardingChecklist'
 import { getSellerDashboard, type DashboardData } from '@/lib/actions/seller-dashboard-v2'
 import { cn } from '@/lib/utils'
 
@@ -30,7 +31,7 @@ const WINDOWS = [
   { days: 30, label: '30 Days' },
 ] as const
 
-export default function SellerDashboard({ username }: { username: string }) {
+export default function SellerDashboard({ username, userId }: { username: string; userId: string }) {
   const [windowDays, setWindowDays] = useState<number>(7)
   const [data, setData] = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState(true)
@@ -83,6 +84,11 @@ export default function SellerDashboard({ username }: { username: string }) {
             </div>
           }
         />
+
+        {/* Get Started checklist — real completion signals, dismissible */}
+        {data?.onboarding && (
+          <SellerOnboardingChecklist onboarding={data.onboarding} userId={userId} />
+        )}
 
         {/* KPI strip */}
         <div className="mt-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
