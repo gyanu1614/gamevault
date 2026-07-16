@@ -7,6 +7,7 @@ import { Suspense, useState } from 'react'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import RouteProgress from '@/components/global/RouteProgress'
 import AccessDeniedToast from '@/components/global/AccessDeniedToast'
+import EmailConfirmedToast from '@/components/global/EmailConfirmedToast'
 import { AuthDialogProvider } from '@/components/auth/AuthDialog'
 import { AuthProvider } from '@/hooks/use-auth'
 
@@ -49,6 +50,12 @@ export function Providers({ children }: { children: React.ReactNode }) {
               fetch + auth subscription ONCE; all useAuth() consumers read it. */}
           <AuthProvider>
             <AuthDialogProvider>
+              {/* Beta A — Post-confirmation success signal. Mounted INSIDE the
+                  auth providers (unlike AccessDeniedToast) so it can open the
+                  sign-in modal for a freshly-confirmed, signed-out user. */}
+              <Suspense fallback={null}>
+                <EmailConfirmedToast />
+              </Suspense>
               {children}
             </AuthDialogProvider>
           </AuthProvider>

@@ -416,23 +416,15 @@ export async function approveApplication(applicationId: string, notes?: string) 
       return { success: false, error: 'Application not found' }
     }
 
-    // Update application status
-    const { error } = await (supabase
-      .from('seller_applications')
-      .update as any)({
-        status: 'approved',
-        reviewed_by: admin.userId,
-        reviewed_at: new Date().toISOString(),
-        admin_notes: notes,
-      })
-      .eq('id', applicationId)
-
-    if (error) throw error
-
-    // Update user role to seller using service client to bypass RLS
+    // WRITE ORDER MATTERS (realtime race): the client's reactive auth effect
+    // resubscribes when isApprovedSeller flips, which happens on the
+    // seller_applications event. If that arrives BEFORE the profiles event,
+    // the resubscribe can drop the profiles update carrying shop_name/role —
+    // leaving the navbar stuck on username. So write profiles (identity)
+    // FIRST and seller_applications (the status the client keys off) LAST,
+    // making the identity update the one guaranteed to have already landed.
     const serviceClient = getServiceClient()
 
-    // First get current badges
     const { data: currentProfile } = await serviceClient
       .from('profiles')
       .select('badges')
@@ -483,6 +475,20 @@ export async function approveApplication(applicationId: string, notes?: string) 
       throw roleError
     }
 
+    // Status update LAST — this is the event the client's reactive effect
+    // keys off; by now the profiles identity update has already been sent.
+    const { error } = await (supabase
+      .from('seller_applications')
+      .update as any)({
+        status: 'approved',
+        reviewed_by: admin.userId,
+        reviewed_at: new Date().toISOString(),
+        admin_notes: notes,
+      })
+      .eq('id', applicationId)
+
+    if (error) throw error
+
     // Send email notification
     const userEmail = (application.profiles as any)?.email || application.alternate_email
     if (userEmail) {
@@ -514,8 +520,26 @@ export async function approveApplication(applicationId: string, notes?: string) 
       details: { notes, admin_role: admin.role },
     })
 
-    // Create notification for user (would need a user notifications table)
-    // For now, just log it
+    // Beta C — nudge the applicant's open session. The realtime channel in
+    // use-auth.tsx flips the CTA on approval, but if that session missed the
+    // realtime window we also drop a notification row (via the service client,
+    // since this is a cross-user insert). The navbar notification channel
+    // surfaces it, giving the user an in-app link to their now-live dashboard.
+    // Shape matches the notifications contract: { user_id, type, title,
+    // message, link, is_read:false }.
+    try {
+      await (serviceClient.from('notifications').insert as any)({
+        user_id: application.user_id,
+        type: 'seller_application_approved',
+        title: 'Seller Application Approved',
+        message: 'Your seller access is now live. Head to your dashboard to set up your storefront.',
+        link: '/account/dashboard',
+        is_read: false,
+      })
+    } catch (notifyErr) {
+      console.error('Failed to create approval notification:', notifyErr)
+      // Non-fatal — approval already committed.
+    }
 
     revalidatePath('/admin/sellers')
     revalidatePath(`/admin/sellers/${applicationId}`)

@@ -393,6 +393,12 @@ export const ordersApi = {
         )
       `)
       .eq('seller_id', user.id)  // CRITICAL: Only show current seller's orders
+      // Workstream E — hide unpaid 'pending' orders from the seller's Sold
+      // Orders. An order the seller can't act on (payment not confirmed) must
+      // not appear in their list; it becomes visible the moment the webhook
+      // flips it to 'paid'. Buyers keep their pending (awaiting-payment) orders
+      // via the separate buyerOrdersApi below.
+      .neq('status', 'pending')
       .order('created_at', { ascending: false })
 
     if (filters?.status) {

@@ -13,7 +13,7 @@ import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 
 export interface ApplicationStatusResult {
-  status: 'pending' | 'under_review' | 'approved' | 'rejected' | 'withdrawn' | 'none'
+  status: 'pending' | 'under_review' | 'info_requested' | 'approved' | 'rejected' | 'withdrawn' | 'none'
   canReapply: boolean
   rejection?: {
     reason: string
@@ -168,8 +168,8 @@ export async function withdrawApplication(): Promise<{
 
     if (error) throw error
 
-    revalidatePath('/account/application-status')
-    revalidatePath('/account/register')
+    revalidatePath('/account/seller-status')
+    revalidatePath('/account/become-seller')
 
     return {
       success: true,

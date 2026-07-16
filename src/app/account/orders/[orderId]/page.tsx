@@ -125,6 +125,13 @@ export default async function OrderDetailPage({ params }: PageProps) {
   const { hasAccess, userRole } = await checkOrderAccess(orderId, user.id)
   if (!hasAccess || !userRole) notFound()
 
+  // Workstream E — pending orders are the buyer's "awaiting payment" surface
+  // only. The seller must not see (or be able to act on) an order that hasn't
+  // been paid for, so a seller hitting a still-pending order 404s (bookmarks /
+  // stale Live-Orders links from the old new_order-at-creation era resolve
+  // here). Admins keep full visibility.
+  if (order.status === 'pending' && userRole === 'seller') notFound()
+
   // Fetch game and category data separately (nested joins not supported without explicit FK)
   let game: { id: string; name: string; slug: string; image_url: string | null } | null = null
   let category: { id: string; name: string; slug: string } | null = null
@@ -247,8 +254,13 @@ export default async function OrderDetailPage({ params }: PageProps) {
     .eq('order_id', orderId)
     .maybeSingle() as any
 
+  // Workstream E — do NOT create the order conversation while the order is
+  // still 'pending' (unpaid). The seller is gated out of pending orders
+  // entirely, so surfacing a chat/welcome thread before payment would create a
+  // seller-facing artifact for an order that may never be paid. The
+  // conversation is created lazily on the first paid render instead.
   let conversationId: string | null = convo?.id ?? null
-  if (!conversationId) {
+  if (!conversationId && order.status !== 'pending') {
     const { data: created } = await (supabase.from('conversations').insert as any)({
       order_id:  orderId,
       buyer_id:  order.buyer_id,
@@ -295,12 +307,11 @@ export default async function OrderDetailPage({ params }: PageProps) {
 
   return (
     <>
-      {/* Post-payment return from CoinGate (?paid=1): collapse history so Back
-          skips the payment page + acknowledge the payment while the webhook
-          confirms. useSearchParams needs a Suspense boundary. */}
-      <React.Suspense fallback={null}>
-        <PaymentReturnHandler />
-      </React.Suspense>
+      {/* Post-payment return from CoinGate (?paid=1): blocking "Confirming
+          Your Payment" overlay that stays up until the webhook flips the order
+          off 'pending' (via the _OrderClient realtime subscription + a poll
+          fallback), then collapses history so Back skips the payment page. */}
+      <PaymentReturnHandler orderId={order.id} orderStatus={order.status} />
       {/* V21/P5.y — Preload the hero backdrop so it's cached by the
           time the .hero-backdrop element mounts. Otherwise the AVIF
           (referenced as a CSS background-image) is invisible to the

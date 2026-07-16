@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useAuth } from '@/hooks/use-auth'
 import { useAuthDialog } from '@/components/auth/AuthDialog'
+import BecomeSellerCta from '@/components/account/BecomeSellerCta'
 import { cn } from '@/lib/utils'
 import { isProtectedPath } from '@/lib/auth/protected-routes'
 import { beginLogout } from '@/lib/auth/logout-signal'
@@ -311,11 +312,17 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
         .select('*', { count: 'exact', head: true })
         .eq('user_id', user.id)
         .eq('is_read', false)
+        // Workstream E — chat messages live under the Messages badge, not the
+        // bell. Exclude legacy 'new_message' rows so they stop polluting the
+        // bell count.
+        .neq('type', 'new_message')
 
       return count || 0
     },
     enabled: !!user,
-    refetchInterval: 10000, // Refetch every 10 seconds
+    // Poll fallback only — the realtime subscription below flips the bell
+    // instantly on INSERT, so the poll can relax to 60s.
+    refetchInterval: 60000,
   })
 
   // Get recent UNREAD notifications for dropdown
@@ -331,6 +338,7 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
         .select('*')
         .eq('user_id', user.id)
         .eq('is_read', false) // Only unread notifications
+        .neq('type', 'new_message') // Workstream E — bell excludes chat rows
         .order('created_at', { ascending: false })
         .limit(5)
 
@@ -338,8 +346,49 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
       return data || []
     },
     enabled: !!user,
-    refetchInterval: 10000, // Refetch every 10 seconds
+    refetchInterval: 60000, // Realtime-backed; poll is a slow fallback
   })
+
+  // Workstream E — Realtime bell. Subscribe to INSERTs on the current user's
+  // notifications so a new order (webhook's new_order insert) or a seller's
+  // first order-message flips the bell WITHOUT waiting on the 60s poll. The
+  // notifications table must be in the supabase_realtime publication
+  // (20260715_notifications_realtime.sql) for these events to arrive; the
+  // per-user SELECT RLS policy gates delivery to the owner.
+  useEffect(() => {
+    if (!user?.id) return
+    const userId = user.id
+    let cleanup: (() => void) | null = null
+    let cancelled = false
+    ;(async () => {
+      const { createClient } = await import('@/lib/supabase/client')
+      const supabase = createClient()
+      if (cancelled) return
+      const channel = supabase
+        .channel(`notif:${userId}`)
+        .on(
+          'postgres_changes' as any,
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'notifications',
+            filter: `user_id=eq.${userId}`,
+          },
+          () => {
+            queryClient.invalidateQueries({ queryKey: ['unread-notifications', userId] })
+            queryClient.invalidateQueries({ queryKey: ['unread-notifications-list', userId] })
+          },
+        )
+        .subscribe()
+      // Capture the same client instance for teardown.
+      cleanup = () => { void supabase.removeChannel(channel) }
+      if (cancelled) cleanup()
+    })()
+    return () => {
+      cancelled = true
+      if (cleanup) cleanup()
+    }
+  }, [user?.id, queryClient])
 
   const unreadNotificationCount = notificationCount || 0
   const recentNotifications = notifications || []
@@ -351,20 +400,25 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
       if (!user?.id) return { buying: [], selling: [] }
       const { createClient } = await import('@/lib/supabase/client')
       const supabase = createClient()
-      const ACTIVE = ['pending', 'paid', 'processing', 'delivering']
+      // Workstream E — buyers still see their unpaid 'pending' (awaiting
+      // payment) orders in Live Orders; sellers do NOT — a seller can't act on
+      // an order until the payment is confirmed, so 'pending' is dropped from
+      // the selling set.
+      const ACTIVE_BUYING = ['pending', 'paid', 'processing', 'delivering']
+      const ACTIVE_SELLING = ['paid', 'processing', 'delivering']
       const [buyResult, sellResult] = await Promise.all([
         supabase
           .from('orders')
           .select('id, order_number, status, total_amount, created_at, listing:listings!orders_listing_id_fkey(title, game:games(slug))')
           .eq('buyer_id', user.id)
-          .in('status', ACTIVE)
+          .in('status', ACTIVE_BUYING)
           .order('created_at', { ascending: false })
           .limit(5),
         supabase
           .from('orders')
           .select('id, order_number, status, total_amount, created_at, listing:listings!orders_listing_id_fkey(title, game:games(slug))')
           .eq('seller_id', user.id)
-          .in('status', ACTIVE)
+          .in('status', ACTIVE_SELLING)
           .order('created_at', { ascending: false })
           .limit(5),
       ])
@@ -1246,25 +1300,10 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                                   Dashboard
                                 </Link>
 
-                                {user.sellerApplicationStatus === 'pending' || user.sellerApplicationStatus === 'under_review' ? (
-                                  <Link
-                                    href="/account/seller-status"
-                                    className="mb-1 flex items-center gap-3 rounded-lg border border-yellow-500/20 px-4 py-2 text-sm text-yellow-400 transition-colors hover:bg-yellow-500/10"
-                                    onClick={() => setUserMenuOpen(false)}
-                                  >
-                                    <Store className="h-4 w-4" />
-                                    Application Pending
-                                  </Link>
-                                ) : (
-                                  <Link
-                                    href="/account/become-seller"
-                                    className="mb-1 flex items-center gap-3 rounded-md px-4 py-2 text-[14px] text-text-secondary transition-colors hover:bg-white/[0.07] hover:text-text-primary"
-                                    onClick={() => setUserMenuOpen(false)}
-                                  >
-                                    <Store className="h-[18px] w-[18px] text-lime-text" />
-                                    Become a Seller
-                                  </Link>
-                                )}
+                                <BecomeSellerCta
+                                  variant="menu"
+                                  onNavigate={() => setUserMenuOpen(false)}
+                                />
 
                                 <div className="my-1.5 h-px bg-border-subtle" />
 

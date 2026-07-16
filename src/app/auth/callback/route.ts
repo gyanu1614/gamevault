@@ -14,18 +14,50 @@ import { createClient } from '@/lib/supabase/server'
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
+  const type = searchParams.get('type')
   // Only allow same-origin relative paths — never redirect off-site.
   const nextParam = searchParams.get('next') ?? '/'
   const next = nextParam.startsWith('/') && !nextParam.startsWith('//') ? nextParam : '/'
+
+  // Append the success signal AFTER the same-origin sanitizer so a crafted
+  // `next` can't smuggle its own query string ahead of ours. Only signup
+  // confirmations get ?confirmed=1 (magic-link/OAuth traffic stays silent).
+  const successUrl = () => {
+    if (type !== 'signup') return `${origin}${next}`
+    const sep = next.includes('?') ? '&' : '?'
+    return `${origin}${next}${sep}confirmed=1`
+  }
 
   if (code) {
     const supabase = await createClient()
     const { error } = await supabase.auth.exchangeCodeForSession(code)
     if (!error) {
-      return NextResponse.redirect(`${origin}${next}`)
+      return NextResponse.redirect(successUrl())
     }
     console.error('[AuthCallback] Code exchange failed:', error.message)
+
+    // The code may already have been consumed — mail clients (Gmail/Outlook)
+    // prefetch links, and users double-click. exchangeCodeForSession then
+    // errors even though the session was already established. If getUser()
+    // finds a user, the confirmation actually succeeded — treat it as such.
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+    if (user) {
+      return NextResponse.redirect(successUrl())
+    }
+    return NextResponse.redirect(`${origin}/?auth_error=confirmation_failed`)
   }
 
-  return NextResponse.redirect(`${origin}/login?error=auth_callback_failed`)
+  // No `code` — Supabase forwards verify failures as ?error/?error_code
+  // (e.g. otp_expired for an expired or already-used link).
+  const errorCode = searchParams.get('error_code')
+  if (errorCode) {
+    console.error('[AuthCallback] Verify error:', errorCode, searchParams.get('error_description'))
+    if (errorCode === 'otp_expired') {
+      return NextResponse.redirect(`${origin}/?auth_error=link_expired`)
+    }
+  }
+
+  return NextResponse.redirect(`${origin}/?auth_error=confirmation_failed`)
 }

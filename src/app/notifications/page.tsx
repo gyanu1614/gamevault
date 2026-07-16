@@ -33,14 +33,18 @@ function timeAgo(dateStr: string) {
 // Icon + color per notification type
 function NotificationIcon({ type }: { type: string }) {
   const map: Record<string, { icon: string; bg: string; text: string }> = {
-    order_placed:    { icon: '🛍️', bg: 'bg-info-bg',   text: 'text-info' },
-    order_delivered: { icon: '📦', bg: 'bg-success-bg',  text: 'text-success' },
-    order_completed: { icon: '✅', bg: 'bg-success-bg',  text: 'text-success' },
-    order_disputed:  { icon: '⚠️', bg: 'bg-error-bg',    text: 'text-error' },
-    message:         { icon: '💬', bg: 'bg-lime-tint-bg', text: 'text-lime-text' },
-    review:          { icon: '⭐', bg: 'bg-warning-bg', text: 'text-warning' },
-    payout:          { icon: '💰', bg: 'bg-success-bg', text: 'text-success' },
-    system:          { icon: '🔔', bg: 'bg-white/10',   text: 'text-text-secondary' },
+    order_placed:      { icon: '🛍️', bg: 'bg-info-bg',   text: 'text-info' },
+    new_order:         { icon: '🛍️', bg: 'bg-info-bg',   text: 'text-info' },
+    order_delivered:   { icon: '📦', bg: 'bg-success-bg',  text: 'text-success' },
+    order_completed:   { icon: '✅', bg: 'bg-success-bg',  text: 'text-success' },
+    order_disputed:    { icon: '⚠️', bg: 'bg-error-bg',    text: 'text-error' },
+    order_message:     { icon: '💬', bg: 'bg-lime-tint-bg', text: 'text-lime-text' },
+    order_refunded:    { icon: '💸', bg: 'bg-cyan-500/10', text: 'text-cyan-400' },
+    chargeback_opened: { icon: '⚠️', bg: 'bg-error-bg',    text: 'text-error' },
+    message:           { icon: '💬', bg: 'bg-lime-tint-bg', text: 'text-lime-text' },
+    review:            { icon: '⭐', bg: 'bg-warning-bg', text: 'text-warning' },
+    payout:            { icon: '💰', bg: 'bg-success-bg', text: 'text-success' },
+    system:            { icon: '🔔', bg: 'bg-white/10',   text: 'text-text-secondary' },
   }
   const style = map[type] || map.system
   return (
@@ -68,6 +72,9 @@ export default function NotificationsPage() {
         .from('notifications')
         .select('*')
         .eq('user_id', user.id)
+        // Workstream E — chat messages live under the Messages badge, not the
+        // notifications inbox. Filter out legacy 'new_message' rows here too.
+        .neq('type', 'new_message')
         .order('created_at', { ascending: false })
         .limit(50)
       if (tab === 'unread') query = query.eq('is_read', false)

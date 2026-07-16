@@ -85,34 +85,73 @@ export async function createCheckout(input: CreateCheckoutInput): Promise<Create
     // set auto_release_at; stored implicitly via markDelivered (lib/fees).
     void protectionWindowHours
 
-    // Create the order at PENDING. Confirmed only by the verified webhook.
-    const { data: orderRaw, error: orderError } = await (supabase
-      .from('orders')
-      .insert as any)({
-        buyer_id: user.id,
-        seller_id: listing.seller_id,
-        listing_id: input.listingId,
-        quantity,
-        unit_price: listing.price,
-        subtotal,
-        platform_fee_rate: fee.marketplacePct,
-        payment_processing_fee_rate: fee.processingPct,
-        platform_fee: fee.marketplaceAmount,
-        payment_processing_fee: fee.processingAmount,
-        total_amount: totalAmount,
-        seller_payout: sellerPayout,
-        currency: ORDER_CURRENCY,
-        status: 'pending',
-        escrow_status: 'pending',
-        promo_discount: promoDiscount,
-      })
-      .select('id')
-      .single()
-    if (orderError || !orderRaw) {
-      const isDev = process.env.NODE_ENV !== 'production'
-      return { success: false, error: isDev ? `Failed to create order: ${orderError?.message}` : 'Failed to create order' }
+    // ── Duplicate-order guard ────────────────────────────────────────────────
+    // Before minting a new pending order, look for one this buyer already has
+    // open against this same listing. Re-submitting checkout (or bouncing back
+    // to the CoinGate page) must NOT create a second order + second live
+    // invoice. A partial unique index (one_pending_order_per_buyer_listing) is
+    // the hard backstop; this lookup is the graceful path.
+    const existingPending = await findReusablePendingOrder(supabase, user.id, input.listingId)
+    if (existingPending) {
+      // Same amount + a still-payable stored invoice → reuse it verbatim. The
+      // buyer lands back on the exact CoinGate charge they already have open.
+      const sameAmount = Math.abs(Number(existingPending.total_amount) - totalAmount) < 0.005
+      const notExpired = existingPending.payment_expires_at
+        ? new Date(existingPending.payment_expires_at).getTime() > Date.now()
+        : false
+      if (sameAmount && notExpired && existingPending.checkout_url) {
+        return { success: true, orderId: existingPending.id, checkoutUrl: existingPending.checkout_url }
+      }
+      // Amounts drifted (quantity/promo/wallet changed) OR the invoice expired.
+      // Supersede the stale order via CANCELLED — this is also what returns any
+      // wallet-held escrow that was moved for it, so skipping it would strand
+      // wallet funds in escrow_held. Tolerate an already-terminal order (a race
+      // where the webhook confirmed/cancelled it first): treat any transition
+      // failure as "already gone" and fall through to a fresh insert.
+      try {
+        const { transition } = await import('@/lib/escrow/transition')
+        await transition(existingPending.id, 'CANCELLED', `superseded-by-recheckout:${existingPending.id}`)
+      } catch (superErr) {
+        console.error('[createCheckout] supersede pending order failed (continuing):', superErr)
+      }
     }
-    const orderId = orderRaw.id as string
+
+    // Create the order at PENDING. Confirmed only by the verified webhook.
+    let orderId: string
+    {
+      const insertRes = await insertPendingOrder(supabase, {
+        buyerId: user.id,
+        sellerId: listing.seller_id,
+        listingId: input.listingId,
+        quantity,
+        unitPrice: listing.price,
+        subtotal,
+        fee,
+        totalAmount,
+        sellerPayout,
+        promoDiscount,
+      })
+      if (insertRes.orderId) {
+        orderId = insertRes.orderId
+      } else if (insertRes.duplicate) {
+        // 23505 on the partial unique index — a concurrent double-submit won the
+        // race and created the pending order between our lookup and insert.
+        // Re-run the reuse lookup and hand the buyer that order instead of a
+        // "failed to create order".
+        const raced = await findReusablePendingOrder(supabase, user.id, input.listingId)
+        if (raced?.checkout_url) {
+          return { success: true, orderId: raced.id, checkoutUrl: raced.checkout_url }
+        }
+        if (raced) {
+          orderId = raced.id
+        } else {
+          return { success: false, error: 'Could not open checkout — please try again' }
+        }
+      } else {
+        const isDev = process.env.NODE_ENV !== 'production'
+        return { success: false, error: isDev ? `Failed to create order: ${insertRes.error}` : 'Failed to create order' }
+      }
+    }
 
     // Total as Money (minor units, EUR).
     const totalMoney = fromDecimal(totalAmount.toFixed(2), ORDER_CURRENCY)
@@ -170,6 +209,19 @@ export async function createCheckout(input: CreateCheckoutInput): Promise<Create
       metadata: { listing_id: input.listingId },
     })
 
+    // Persist the charge on the order so a re-checkout can REUSE this exact
+    // invoice instead of minting a second one. Expiry mirrors CoinGate's ~2h
+    // invoice lifetime (status-map). Best-effort: a failed UPDATE only costs
+    // the reuse optimisation on a subsequent attempt (the unique index still
+    // prevents a genuine duplicate), so it never fails the checkout.
+    const expiresAt = new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString()
+    await (supabase.from('orders').update as any)({
+      payment_provider: 'coingate',
+      provider_charge_id: charge.providerChargeId,
+      checkout_url: charge.checkoutUrl,
+      payment_expires_at: expiresAt,
+    }).eq('id', orderId)
+
     return { success: true, orderId, checkoutUrl: charge.checkoutUrl }
   } catch (e: any) {
     return { success: false, error: e?.message ?? 'Checkout failed' }
@@ -178,6 +230,83 @@ export async function createCheckout(input: CreateCheckoutInput): Promise<Create
 
 function bigintMin(a: bigint, b: bigint): bigint {
   return a < b ? a : b
+}
+
+interface ReusablePendingOrder {
+  id: string
+  total_amount: number
+  checkout_url: string | null
+  payment_expires_at: string | null
+}
+
+/**
+ * Find an existing PENDING order for this buyer + listing that we can either
+ * reuse (same amount, unexpired invoice) or supersede (drifted/expired).
+ * Returns null when there is none. Newest first so a legacy pre-index dupe
+ * resolves to the most recent attempt.
+ */
+async function findReusablePendingOrder(
+  supabase: any,
+  buyerId: string,
+  listingId: string,
+): Promise<ReusablePendingOrder | null> {
+  const { data } = await supabase
+    .from('orders')
+    .select('id, total_amount, checkout_url, payment_expires_at')
+    .eq('buyer_id', buyerId)
+    .eq('listing_id', listingId)
+    .eq('status', 'pending')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  return (data as ReusablePendingOrder | null) ?? null
+}
+
+interface InsertPendingArgs {
+  buyerId: string
+  sellerId: string
+  listingId: string
+  quantity: number
+  unitPrice: number
+  subtotal: number
+  fee: { marketplacePct: number; processingPct: number; marketplaceAmount: number; processingAmount: number }
+  totalAmount: number
+  sellerPayout: number
+  promoDiscount: number
+}
+
+/**
+ * Insert the pending order. Distinguishes a unique-index collision (23505 on
+ * one_pending_order_per_buyer_listing — a concurrent double-submit) from a real
+ * failure so the caller can recover by reusing the racing order.
+ */
+async function insertPendingOrder(
+  supabase: any,
+  a: InsertPendingArgs,
+): Promise<{ orderId?: string; duplicate?: boolean; error?: string }> {
+  const { data, error } = await (supabase.from('orders').insert as any)({
+    buyer_id: a.buyerId,
+    seller_id: a.sellerId,
+    listing_id: a.listingId,
+    quantity: a.quantity,
+    unit_price: a.unitPrice,
+    subtotal: a.subtotal,
+    platform_fee_rate: a.fee.marketplacePct,
+    payment_processing_fee_rate: a.fee.processingPct,
+    platform_fee: a.fee.marketplaceAmount,
+    payment_processing_fee: a.fee.processingAmount,
+    total_amount: a.totalAmount,
+    seller_payout: a.sellerPayout,
+    currency: ORDER_CURRENCY,
+    status: 'pending',
+    escrow_status: 'pending',
+    promo_discount: a.promoDiscount,
+  })
+    .select('id')
+    .single()
+  if (data?.id) return { orderId: data.id as string }
+  if (error?.code === '23505') return { duplicate: true }
+  return { error: error?.message ?? 'insert failed' }
 }
 
 function publicAppUrl(): string {

@@ -1,15 +1,34 @@
 'use client'
 
-import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useContext, useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { uploadProfileAvatar } from '@/lib/actions/auth'
+import { readPendingSignupAvatar, clearPendingSignupAvatar } from '@/lib/auth/pending-avatar'
 import type { User } from '@supabase/supabase-js'
 import type { Profile } from '@/types/database'
 
 export interface AuthUser extends User {
   profile: Profile | null
   isApprovedSeller?: boolean
-  sellerApplicationStatus?: 'pending' | 'under_review' | 'approved' | 'rejected' | null
+  sellerApplicationStatus?: 'pending' | 'under_review' | 'info_requested' | 'approved' | 'rejected' | null
 }
+
+// Columns we accept from a realtime `profiles` UPDATE payload. Realtime
+// delivers every column of the changed row; blindly spreading it into the
+// cached Profile could clobber join-derived fields or leak columns the client
+// type doesn't expect (plan Risk 2). We merge only the identity-bearing keys
+// the navbar/sidebar actually read.
+const REALTIME_PROFILE_KEYS: (keyof Profile)[] = [
+  'role',
+  'shop_name',
+  'shop_slug',
+  'username',
+  'avatar_url',
+  'badges',
+  'seller_tier',
+  'seller_status',
+  'full_name',
+] as unknown as (keyof Profile)[]
 
 // LocalStorage keys for caching
 const CACHE_KEYS = {
@@ -132,6 +151,9 @@ function useAuthState(): AuthContextValue {
   const [user, setUser] = useState<AuthUser | null>(null)
   const [loading, setLoading] = useState(true)
   const supabase = createClient()
+  // Beta A — flush the signup avatar stash exactly once per authenticated
+  // session (strict mode double-invokes effects in dev).
+  const avatarFlushRef = useRef(false)
 
   useEffect(() => {
     let mounted = true
@@ -244,7 +266,7 @@ function useAuthState(): AuthContextValue {
                 ...session.user,
                 profile: profile || cachedProfile || null,
                 isApprovedSeller,
-                sellerApplicationStatus: sellerApplicationStatus as "under_review" | "pending" | "approved" | "rejected" | null | undefined
+                sellerApplicationStatus: sellerApplicationStatus as "under_review" | "pending" | "info_requested" | "approved" | "rejected" | null | undefined
               })
             }
           } catch (profileErr) {
@@ -377,7 +399,7 @@ function useAuthState(): AuthContextValue {
               ...session.user,
               profile: profile || cachedProfile || null,
               isApprovedSeller,
-              sellerApplicationStatus: sellerApplicationStatus as "under_review" | "pending" | "approved" | "rejected" | null | undefined
+              sellerApplicationStatus: sellerApplicationStatus as "under_review" | "pending" | "info_requested" | "approved" | "rejected" | null | undefined
             })
           }
         } catch (error) {
@@ -407,6 +429,181 @@ function useAuthState(): AuthContextValue {
       subscription.unsubscribe()
     }
   }, [])
+
+  // Beta A — flush a pending signup avatar on the first authenticated session.
+  //
+  // When Supabase "Confirm email" is ON, signup returns no session, so the
+  // avatar the user picked is stashed in localStorage (see
+  // src/lib/auth/pending-avatar.ts). Once the confirmed user signs in, upload
+  // it via the existing authenticated action and update state+cache in place
+  // so the navbar flips without waiting for a refetch. Bounded by the stash's
+  // 7-day TTL; email-scoped so a shared device never applies one user's avatar
+  // to another.
+  useEffect(() => {
+    if (!user || avatarFlushRef.current) return
+    avatarFlushRef.current = true
+
+    const userId = user.id
+    const userEmail = user.email
+
+    ;(async () => {
+      const stash = readPendingSignupAvatar()
+      if (!stash) return
+
+      // Shared-device safety: only apply if the stash was created for THIS user.
+      if (stash.email.toLowerCase() !== userEmail?.toLowerCase()) {
+        clearPendingSignupAvatar()
+        return
+      }
+
+      try {
+        const res = await uploadProfileAvatar(stash.dataUrl)
+        if (res && 'success' in res && res.success && res.avatarUrl) {
+          clearPendingSignupAvatar()
+          const newUrl = res.avatarUrl
+          setUser((prev) =>
+            prev && prev.id === userId
+              ? {
+                  ...prev,
+                  profile: prev.profile
+                    ? { ...prev.profile, avatar_url: newUrl }
+                    : prev.profile,
+                }
+              : prev
+          )
+          const cached = getCachedProfile(userId)
+          if (cached) {
+            setCachedProfile(userId, { ...cached, avatar_url: newUrl } as Profile)
+          }
+        } else {
+          // Upload failed — leave the stash for the next session (TTL-bounded)
+          // and allow a retry.
+          avatarFlushRef.current = false
+        }
+      } catch (err) {
+        console.warn('⚠️ Pending avatar flush failed, will retry next session:', err)
+        avatarFlushRef.current = false
+      }
+    })()
+  }, [user?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Beta C — Reactive approval without a refresh.
+  //
+  // The gamevault_* localStorage cache is only ever trusted for paint-before-
+  // fetch, NEVER as final state. This effect keeps a live, authoritative view
+  // for NON-APPROVED sessions so the "Become a Seller" CTA flips to a seller
+  // menu and the identity card swaps username→shop_name the instant an admin
+  // approves — no page reload, no redirect loop.
+  //
+  // Primary path: a realtime channel with two postgres_changes listeners
+  //   (a) seller_applications UPDATE  → new sellerApplicationStatus (pending/
+  //       under_review/info_requested/approved/…)
+  //   (b) profiles UPDATE             → delivers role='seller' AND the fresh
+  //       shop_name/shop_slug together, so approval propagates atomically.
+  // Requires those tables in the supabase_realtime publication (see
+  // supabase/migrations/*_realtime_seller_lifecycle.sql). If the publication
+  // change is skipped the channel silently receives nothing, so a
+  // visibilitychange + 60s poll fallback re-fetches the profile as a safety net.
+  //
+  // Scope: only authenticated, not-yet-approved users, and it tears down the
+  // moment approval lands — no permanent extra websocket per anonymous visitor.
+  const userId = user?.id
+  const isApprovedSeller = user?.isApprovedSeller || false
+  useEffect(() => {
+    if (!userId || isApprovedSeller) return
+
+    let active = true
+
+    const mergeProfilePayload = (raw: Record<string, unknown>) => {
+      if (!active) return
+      const patch: Partial<Profile> = {}
+      for (const key of REALTIME_PROFILE_KEYS) {
+        if (key in raw) {
+          ;(patch as Record<string, unknown>)[key as string] = raw[key as string]
+        }
+      }
+      const nowApproved = (raw as any).role === 'seller'
+      setUser((prev) => {
+        if (!prev || prev.id !== userId) return prev
+        const nextProfile = { ...(prev.profile || {}), ...patch } as Profile
+        setCachedProfile(userId, nextProfile)
+        if (nowApproved) setCachedSellerStatus(userId, true, 'approved')
+        return {
+          ...prev,
+          profile: nextProfile,
+          isApprovedSeller: nowApproved || prev.isApprovedSeller,
+          sellerApplicationStatus: nowApproved
+            ? 'approved'
+            : prev.sellerApplicationStatus,
+        }
+      })
+    }
+
+    const applyAppStatus = (status: string | null) => {
+      if (!active || !status) return
+      const approved = status === 'approved'
+      setCachedSellerStatus(userId, approved, status)
+      setUser((prev) => {
+        if (!prev || prev.id !== userId) return prev
+        return {
+          ...prev,
+          isApprovedSeller: approved || prev.isApprovedSeller,
+          sellerApplicationStatus: status as AuthUser['sellerApplicationStatus'],
+        }
+      })
+    }
+
+    const channel = supabase
+      .channel(`seller-app:${userId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'seller_applications',
+          filter: `user_id=eq.${userId}`,
+        },
+        (payload) => applyAppStatus((payload.new as any)?.status ?? null)
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'profiles',
+          filter: `id=eq.${userId}`,
+        },
+        (payload) => mergeProfilePayload(payload.new as Record<string, unknown>)
+      )
+      .subscribe()
+
+    // Fallback: re-fetch the profile on tab focus + a slow poll, so a missed
+    // realtime window (publication not enabled / websocket dropped) still
+    // resolves approval without a hard reload.
+    const refetch = async () => {
+      if (!active) return
+      const profile = await fetchProfileWithRetry(supabase, userId, 1)
+      if (profile) mergeProfilePayload(profile as unknown as Record<string, unknown>)
+    }
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') refetch()
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    const pollId = setInterval(refetch, 60000)
+
+    return () => {
+      active = false
+      document.removeEventListener('visibilitychange', onVisible)
+      clearInterval(pollId)
+      channel.unsubscribe()
+    }
+    // Deliberately NOT keyed on isApprovedSeller: the channel updates it via
+    // the setUser callback, so re-subscribing on its change would tear the
+    // channel down at the exact moment the approval events arrive and could
+    // drop the profiles(shop_name) update — the stale-navbar race. The channel
+    // lives for the whole authenticated session and self-updates.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId, supabase])
 
   return {
     user,
