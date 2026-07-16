@@ -7,14 +7,12 @@ export interface CurrencyCardProps {
   iconSrc: string
   fromPrice: number
   badges?: ('instant' | string)[]
-  /** Override the default `/currency/[slug]` link — used by Top-Ups & Gift Cards row. */
-  hrefBase?: string
 }
 
 /**
  * Popular Currencies card — V57: thin wrapper over the shared ShopCard
  * homepage primitive ('instant' renders as a success chip).
- * CLICK: navigates to /currency/[slug] (or hrefBase/[slug] if provided)
+ * CLICK: navigates to /{slug} (the real {game}/{category} marketplace path)
  */
 export function CurrencyCard({
   slug,
@@ -23,11 +21,13 @@ export function CurrencyCard({
   iconSrc,
   fromPrice,
   badges = [],
-  hrefBase = '/currency',
 }: CurrencyCardProps) {
+  // `slug` is the real marketplace path segment "{gameSlug}/{categorySlug}"
+  // (e.g. "fortnite/buy-vbucks"). Link straight to it — the old /currency and
+  // /topup prefixes pointed at routes that don't exist (dead 404 links).
   return (
     <ShopCard
-      href={`${hrefBase}/${slug}`}
+      href={`/${slug}`}
       name={name}
       game={game}
       iconSrc={iconSrc}

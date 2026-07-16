@@ -1504,10 +1504,29 @@ export const earningsApi = {
   },
 
   /**
-   * Get payout history (placeholder - requires payouts table)
+   * Get the seller's withdrawal history (the real payout rail — every
+   * cash-out goes through withdrawal_requests; RLS scopes to the user).
    */
   async getPayouts(): Promise<Payout[]> {
-    // TODO: Implement when payouts table is created
-    return []
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return []
+
+    const { data, error } = await (supabase
+      .from('withdrawal_requests' as any)
+      .select('id, amount, status, method_name, created_at, processed_at, completed_at')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(50) as any)
+
+    if (error || !data) return []
+
+    return (data as any[]).map((w) => ({
+      id: w.id,
+      amount: Number(w.amount) || 0,
+      status: w.status,
+      method: w.method_name || 'Withdrawal',
+      created_at: w.created_at,
+      completed_at: w.completed_at ?? w.processed_at ?? null,
+    }))
   },
 }

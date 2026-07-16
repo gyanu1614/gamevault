@@ -508,7 +508,7 @@ export function HomePage() {
           />
           <HorizontalScroller>
             {popularTopups.map((topup) => (
-              <CurrencyCard key={topup.slug} {...topup} hrefBase="/topup" />
+              <CurrencyCard key={topup.slug} {...topup} />
             ))}
           </HorizontalScroller>
         </div>
