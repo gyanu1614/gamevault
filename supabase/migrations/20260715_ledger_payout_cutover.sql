@@ -499,3 +499,32 @@ GRANT EXECUTE ON FUNCTION withdrawal_reversal(UUID) TO service_role;
 
 COMMENT ON FUNCTION withdrawal_reversal(UUID) IS
   'Money layer: exact mirror of a withdrawal hold journal (payout_clearing → original sources) on reject/cancel. Idempotent per request.';
+
+-- ─── 7. checkout_wallet_hold_minor: how much wallet credit an order holds ──
+-- Returns the wallet portion moved to escrow_held for an order at checkout
+-- (idempotency key 'checkout_wallet:<order_id>'). createCheckout reads this
+-- when it supersedes a stale pending order, to return exactly that credit to
+-- the buyer's wallet (the CANCELLED transition only moves it to 'refunds').
+-- SECURITY DEFINER + granted to authenticated so the buyer's session can read
+-- it without exposing the ledger tables via RLS.
+CREATE OR REPLACE FUNCTION checkout_wallet_hold_minor(p_order_id UUID)
+RETURNS BIGINT
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public, extensions
+AS $$
+  SELECT COALESCE(SUM(le.amount_minor), 0)::BIGINT
+  FROM ledger_transactions lt
+  JOIN ledger_entries le ON le.transaction_id = lt.id
+  JOIN ledger_accounts la ON la.id = le.account_id
+  WHERE lt.idempotency_key = 'checkout_wallet:' || p_order_id::text
+    AND la.kind = 'escrow_held'
+    AND le.direction = 'credit';
+$$;
+
+REVOKE ALL ON FUNCTION checkout_wallet_hold_minor(UUID) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION checkout_wallet_hold_minor(UUID) TO authenticated, service_role;
+
+COMMENT ON FUNCTION checkout_wallet_hold_minor(UUID) IS
+  'Money layer: wallet credit (minor units) held in escrow_held for an order at checkout. Read by createCheckout to refund a superseded pending order.';
