@@ -8,6 +8,7 @@ import type { SellerApplication } from '@/lib/actions/admin-sellers'
 import { calculateVerificationStatus } from '@/lib/utils/seller-verification'
 import { getAvatarUrl } from '@/lib/utils/avatar'
 import { StatusBadge, TABLE } from '../components/kit'
+import { SELLER_TYPE_LABELS } from '@/lib/seller-application/labels'
 import {
   Eye,
   ChevronRight,
@@ -148,13 +149,13 @@ export default function ApplicationsTable({ applications }: ApplicationsTablePro
                       app.store_image_url || app.user.avatar_url,
                       app.display_name || app.user.username || app.user.email
                     )}
-                    alt={app.display_name || 'Store'}
+                    alt={app.shop_name || app.display_name || 'Store'}
                     className="h-10 w-10 rounded-lg border border-border-default bg-bg-overlay object-cover"
                   />
                   <div className="space-y-0.5">
-                    <p className="text-sm font-semibold text-text-primary">{app.display_name}</p>
-                    <p className="text-xs capitalize text-text-tertiary">
-                      {app.seller_type?.replace('_', ' ') || 'Not specified'}
+                    <p className="text-sm font-semibold text-text-primary">{app.shop_name || app.display_name || 'Unnamed Store'}</p>
+                    <p className="text-xs text-text-tertiary">
+                      {(app.display_name || app.user.username || '')}{app.display_name || app.user.username ? ' · ' : ''}{SELLER_TYPE_LABELS[app.seller_type ?? ''] ?? app.seller_type ?? 'Not specified'}
                     </p>
                     {app.game_names && app.game_names.length > 0 && (
                       <div className="flex flex-wrap gap-1 pt-0.5">

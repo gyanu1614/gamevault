@@ -107,16 +107,16 @@ const STRIPS: Record<
       tone: 'amber',
     },
     refunded: {
-      Icon: RefreshCw,
-      title: 'Refund Issued',
-      caption: 'Your refund has been issued.',
-      tone: 'blue',
+      Icon: Wallet,
+      title: 'Money In Your Wallet',
+      caption: 'Your refund landed in your DropMarket wallet as store credit — spend it instantly or withdraw it anytime.',
+      tone: 'lime',
     },
     cancelled: {
-      Icon: XCircle,
-      title: 'Order Cancelled',
-      caption: 'Check the audit log for cancellation reason.',
-      tone: 'orange',
+      Icon: Wallet,
+      title: 'Money In Your Wallet',
+      caption: 'This order was cancelled and refunded to your DropMarket wallet as store credit — spend it instantly or withdraw it anytime.',
+      tone: 'lime',
     },
   },
   seller: {
@@ -418,6 +418,14 @@ export function StatusStrip({
           <CheckCircle2 className={sCtaGlyph} />
           {ctaLabel}
         </button>
+      )}
+      {/* Buyer's money returned to the wallet → give them a direct route
+          there so a cancel/refund never reads as "I lost my money". */}
+      {role === 'buyer' && (status === 'refunded' || status === 'cancelled') && (
+        <Link href="/account/wallet" className={cn('ml-1', sCtaCls)}>
+          <Wallet className={sCtaGlyph} />
+          Go To Wallet
+        </Link>
       )}
     </OrderCard>
   )

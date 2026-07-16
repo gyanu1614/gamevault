@@ -3640,6 +3640,7 @@ export type Database = {
           country: string
           created_at: string
           crypto_wallet_address: string | null
+          crypto_type: string | null
           delivery_timeframe: string | null
           device_fingerprint: string | null
           discord_username: string | null
@@ -3719,6 +3720,7 @@ export type Database = {
           country: string
           created_at?: string
           crypto_wallet_address?: string | null
+          crypto_type?: string | null
           delivery_timeframe?: string | null
           device_fingerprint?: string | null
           discord_username?: string | null
@@ -3798,6 +3800,7 @@ export type Database = {
           country?: string
           created_at?: string
           crypto_wallet_address?: string | null
+          crypto_type?: string | null
           delivery_timeframe?: string | null
           device_fingerprint?: string | null
           discord_username?: string | null
@@ -5596,6 +5599,7 @@ export type Database = {
           country: string | null
           created_at: string | null
           crypto_wallet_address: string | null
+          crypto_type: string | null
           delivery_timeframe: string | null
           device_fingerprint: string | null
           discord_username: string | null

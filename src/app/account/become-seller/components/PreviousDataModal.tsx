@@ -60,7 +60,7 @@ export default function PreviousDataModal({
               className="relative w-full max-w-md rounded-2xl border border-white/10 bg-black/95 backdrop-blur-xl p-6 shadow-2xl"
             >
               {/* Icon */}
-              <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-lime/20 to-purple-500/20 border border-lime-tint-border">
+              <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-lime/15 border border-lime-tint-border">
                 <FileText className="h-7 w-7 text-lime-text" />
               </div>
 
@@ -96,15 +96,15 @@ export default function PreviousDataModal({
                 </p>
                 <ul className="space-y-1.5 text-sm text-text-secondary">
                   <li className="flex items-center gap-2">
-                    <div className="h-1 w-1 rounded-full bg-violet-400" />
+                    <div className="h-1 w-1 rounded-full bg-lime" />
                     Basic information (name, email, phone)
                   </li>
                   <li className="flex items-center gap-2">
-                    <div className="h-1 w-1 rounded-full bg-violet-400" />
+                    <div className="h-1 w-1 rounded-full bg-lime" />
                     Business details (if applicable)
                   </li>
                   <li className="flex items-center gap-2">
-                    <div className="h-1 w-1 rounded-full bg-violet-400" />
+                    <div className="h-1 w-1 rounded-full bg-lime" />
                     Profile, policies, and payment info
                   </li>
                 </ul>
@@ -118,7 +118,7 @@ export default function PreviousDataModal({
                 {/* Use Previous Data Button */}
                 <button
                   onClick={onUseData}
-                  className="w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-lime to-purple-500 px-4 py-3 text-sm font-medium text-white hover:from-lime hover:to-purple-600 transition-all duration-200 shadow-lg shadow-violet-500/25"
+                  className="w-full flex items-center justify-center gap-2 rounded-md bg-lime px-4 py-3 text-sm font-semibold text-text-inverse hover:bg-lime-hover transition-colors"
                 >
                   <Sparkles className="h-4 w-4" />
                   Use Previous Data

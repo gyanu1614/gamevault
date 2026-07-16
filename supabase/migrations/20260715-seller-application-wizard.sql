@@ -6,10 +6,12 @@
 --    - profile_picture_path:   storage path of the Store Image in `profile-pictures`
 --                              (admin-seller-review.ts already reads this column)
 --    - shop_name:              shop name collected at application time
+--    - crypto_type:            chosen coin for crypto payouts (BTC/ETH/USDT)
 ALTER TABLE seller_applications
   ADD COLUMN IF NOT EXISTS other_games text,
   ADD COLUMN IF NOT EXISTS profile_picture_path text,
-  ADD COLUMN IF NOT EXISTS shop_name text;
+  ADD COLUMN IF NOT EXISTS shop_name text,
+  ADD COLUMN IF NOT EXISTS crypto_type text;
 
 -- 2. KYC documents now upload IMMEDIATELY on pick. Users need to be able to
 --    replace/remove their own files before submitting, so allow owner-folder
