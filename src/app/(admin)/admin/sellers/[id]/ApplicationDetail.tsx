@@ -292,23 +292,26 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
         <div className="space-y-4">
           {/* Merged Profile Card */}
           <div className="bg-bg-raised border border-border-default rounded-xl p-6">
-            {/* Header with Avatar */}
+            {/* Header — submitted store image + store name lead */}
             <div className="flex items-start justify-between mb-6">
               <div className="flex items-center gap-4">
                 <img
-                  src={getAvatarUrl(application.user.avatar_url, application.user.username || application.user.email)}
-                  alt={application.user.full_name || application.user.username || 'Profile'}
-                  className="h-16 w-16 rounded-full object-cover border border-border-default bg-bg-overlay"
+                  src={getAvatarUrl(
+                    application.store_image_url,
+                    application.display_name || application.user.username || application.user.email
+                  )}
+                  alt={application.display_name || 'Store'}
+                  className="h-16 w-16 rounded-xl object-cover border border-border-default bg-bg-overlay"
                 />
                 <div>
                   <div className="flex items-center gap-3 mb-2">
                     <h1 className="text-2xl font-bold text-text-primary">{application.display_name}</h1>
                     {getStatusBadge(application.status)}
                   </div>
-                  <h2 className="text-sm text-text-secondary mb-1">
-                    {application.user.full_name || application.user.username || 'Unknown User'}
-                  </h2>
                   <div className="flex flex-wrap items-center gap-3 text-xs text-text-secondary">
+                    <span className="capitalize">
+                      {application.seller_type?.replace('_', ' ') || 'Seller'}
+                    </span>
                     <span className="flex items-center gap-1.5">
                       <Mail className="h-3.5 w-3.5" />
                       {application.user.email}
@@ -349,6 +352,20 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
 
           {/* Collapsible Sections */}
           <CollapsibleSection title="Applicant Information" icon={User} defaultOpen={true}>
+            {/* Personal identity lives here — the page header leads with the store. */}
+            <div className="mb-4 flex items-center gap-3">
+              <img
+                src={getAvatarUrl(application.user.avatar_url, application.user.username || application.user.email)}
+                alt={application.user.full_name || application.user.username || 'Profile'}
+                className="h-10 w-10 rounded-full object-cover border border-border-default bg-bg-overlay"
+              />
+              <div>
+                <p className="text-sm font-semibold text-text-primary">
+                  {application.user.full_name || application.user.username || 'Unknown User'}
+                </p>
+                <p className="text-xs text-text-tertiary">{application.user.email}</p>
+              </div>
+            </div>
             <div className="grid grid-cols-2 gap-4">
               <InfoField label="Full Name" value={application.user.full_name || 'Not provided'} />
               <InfoField label="Username" value={application.user.username || 'Not set'} />

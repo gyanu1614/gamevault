@@ -2,33 +2,43 @@
  * Seller Registration - Steps 1 & 2
  *
  * Step 1: Eligibility & Intent
- * - Age verification (18+)
- * - Seller type selection (Individual/Business)
- * - Primary games selection
- * - Expected monthly volume
- * - Referral code (optional)
- * - Commission tiers display
+ * - Age verification (18+), seller type
+ * - Games (searchable multi-select from the DB catalog + Other free text)
+ * - Expected monthly volume, referral code
+ * - Read-only per-category fee summary (from @/lib/fees)
  *
- * Step 2: Business Information
- * - Personal/Company details
- * - Contact information
- * - Conditional business fields
+ * Step 2: Identity & Contact
+ * - Personal/company details
+ * - Country/region from the full dataset (+ Other), international phone input
  */
 
 'use client'
 
 import { useState } from 'react'
-import Image from 'next/image'
 import { motion } from 'framer-motion'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Check, ChevronRight, ChevronLeft, User, Building2 } from 'lucide-react'
 
 import { step1Schema, step2Schema, type Step1FormData, type Step2FormData } from '../schemas'
-import { GAMES, COMMISSION_TIERS } from '../constants'
+import type { WizardGame } from '../types'
+import { COUNTRIES, OTHER_COUNTRY, findCountryByName } from '../data/countries'
+import { Combobox } from '@/components/ui/combobox'
+import GameMultiSelect from './shared/GameMultiSelect'
+import PhoneInput from './shared/PhoneInput'
+import FeeSummaryCard from './shared/FeeSummaryCard'
+
+const COUNTRY_OPTIONS = [
+  ...COUNTRIES.map((c) => ({ value: c.name, label: c.name, keywords: [c.iso2] })),
+  { value: OTHER_COUNTRY, label: 'Other (Not Listed)', keywords: ['other'] },
+]
+
+const inputClass =
+  'w-full rounded-lg border border-white/10 bg-bg-overlay px-3 py-2.5 text-xs text-white placeholder:text-text-tertiary focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-2.5 sm:text-sm'
 
 interface SellerSteps12Props {
   currentStep: number
+  games: WizardGame[]
   onStepComplete: (step: number, data: Step1FormData | Step2FormData) => void
   onStepBack?: () => void
   initialData?: {
@@ -39,6 +49,7 @@ interface SellerSteps12Props {
 
 export default function SellerSteps12({
   currentStep,
+  games,
   onStepComplete,
   onStepBack,
   initialData,
@@ -54,6 +65,7 @@ export default function SellerSteps12({
     resolver: zodResolver(step1Schema),
     defaultValues: {
       primaryGames: initialData?.step1?.primaryGames || [],
+      otherGames: initialData?.step1?.otherGames || '',
       is18OrOlder: initialData?.step1?.is18OrOlder || false,
       sellerType: initialData?.step1?.sellerType,
       expectedVolume: initialData?.step1?.expectedVolume,
@@ -71,18 +83,8 @@ export default function SellerSteps12({
   )
 
   const onSubmitStep1 = (data: Step1FormData) => {
-    console.log('Step 1 data:', data)
     setStep1SellerType(data.sellerType)
     onStepComplete(1, data)
-  }
-
-  const toggleGame = (gameId: string) => {
-    const current = selectedGames
-    if (current.includes(gameId)) {
-      setValue1('primaryGames', current.filter((id) => id !== gameId))
-    } else {
-      setValue1('primaryGames', [...current, gameId])
-    }
   }
 
   // Step 2 Form
@@ -90,13 +92,23 @@ export default function SellerSteps12({
     register: register2,
     handleSubmit: handleSubmit2,
     formState: { errors: errors2 },
+    watch: watch2,
+    setValue: setValue2,
   } = useForm<Step2FormData>({
     resolver: zodResolver(step2Schema),
-    defaultValues: initialData?.step2 || {},
+    defaultValues: {
+      country: '',
+      countryOther: '',
+      stateProvince: '',
+      phoneNumber: '',
+      ...(initialData?.step2 || {}),
+    },
   })
 
+  const country = watch2('country')
+  const regions = findCountryByName(country)?.regions ?? []
+
   const onSubmitStep2 = (data: Step2FormData) => {
-    console.log('Step 2 data:', data)
     onStepComplete(2, data)
   }
 
@@ -114,36 +126,34 @@ export default function SellerSteps12({
           exit={{ opacity: 0, x: -20 }}
           transition={{ duration: 0.3 }}
         >
-          <form onSubmit={handleSubmit1(onSubmitStep1)} className="space-y-5 sm:space-y-6">
+          <form onSubmit={handleSubmit1(onSubmitStep1)} className="space-y-4 sm:space-y-5">
             {/* Glassmorphic Card */}
-            <div className="overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.08] via-white/[0.05] to-white/[0.02] p-5 shadow-2xl backdrop-blur-3xl sm:p-6 md:p-8">
-              <div className="mb-5 text-center sm:mb-6">
-                <h2 className="text-lg font-semibold text-white sm:text-xl md:text-2xl">
-                  Eligibility & Intent
-                </h2>
-                <p className="mt-1.5 text-xs text-text-secondary sm:text-sm">
-                  Let's start with some basic information about you and your selling plans
+            <div className="overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.08] via-white/[0.05] to-white/[0.02] p-4 shadow-2xl backdrop-blur-3xl sm:p-5">
+              <div className="mb-4 text-center sm:mb-5">
+                <h2 className="text-lg font-semibold text-white sm:text-xl">Eligibility & Intent</h2>
+                <p className="mt-1 text-xs text-text-secondary sm:text-sm">
+                  Let&apos;s start with some basic information about you and your selling plans
                 </p>
               </div>
 
-              <div className="space-y-4 sm:space-y-5">
+              <div className="space-y-4">
                 {/* Seller Type */}
                 <div>
                   <label className="mb-2 block text-xs font-medium text-white sm:text-sm">
-                    Seller Type
+                    Seller Type <span className="text-error">*</span>
                   </label>
                   <div className="grid grid-cols-2 gap-2 sm:gap-3">
                     <button
                       type="button"
-                      onClick={() => setValue1('sellerType', 'individual')}
-                      className={`group relative overflow-hidden rounded-xl border p-3 text-left transition-all sm:p-4 ${
+                      onClick={() => setValue1('sellerType', 'individual', { shouldValidate: true })}
+                      className={`group relative overflow-hidden rounded-lg border p-3 text-left transition-all ${
                         sellerType === 'individual'
                           ? 'border-primary bg-primary/10'
-                          : 'border-white/10 bg-bg-overlay hover:border-white/20 hover:bg-bg-overlay'
+                          : 'border-white/10 bg-bg-overlay hover:border-white/20'
                       }`}
                     >
                       <User
-                        className={`mb-1.5 h-5 w-5 sm:mb-2 sm:h-6 sm:w-6 ${
+                        className={`mb-1.5 h-5 w-5 ${
                           sellerType === 'individual' ? 'text-primary' : 'text-text-secondary'
                         }`}
                       />
@@ -155,15 +165,15 @@ export default function SellerSteps12({
 
                     <button
                       type="button"
-                      onClick={() => setValue1('sellerType', 'business')}
-                      className={`group relative overflow-hidden rounded-xl border p-3 text-left transition-all sm:p-4 ${
+                      onClick={() => setValue1('sellerType', 'business', { shouldValidate: true })}
+                      className={`group relative overflow-hidden rounded-lg border p-3 text-left transition-all ${
                         sellerType === 'business'
                           ? 'border-primary bg-primary/10'
-                          : 'border-white/10 bg-bg-overlay hover:border-white/20 hover:bg-bg-overlay'
+                          : 'border-white/10 bg-bg-overlay hover:border-white/20'
                       }`}
                     >
                       <Building2
-                        className={`mb-1.5 h-5 w-5 sm:mb-2 sm:h-6 sm:w-6 ${
+                        className={`mb-1.5 h-5 w-5 ${
                           sellerType === 'business' ? 'text-primary' : 'text-text-secondary'
                         }`}
                       />
@@ -181,94 +191,76 @@ export default function SellerSteps12({
                 {/* Age Verification */}
                 <div>
                   <input type="hidden" {...register1('is18OrOlder')} />
-                  <div className="flex items-start gap-3 sm:gap-3.5">
+                  <div className="flex items-start gap-3">
                     <button
                       type="button"
-                      onClick={() => setValue1('is18OrOlder', !is18OrOlder)}
-                      className={`mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-md border-2 transition-all duration-200 sm:h-6 sm:w-6 ${
+                      onClick={() => setValue1('is18OrOlder', !is18OrOlder, { shouldValidate: true })}
+                      className={`mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-md border-2 transition-all duration-200 ${
                         is18OrOlder
                           ? 'border-primary bg-primary shadow-lg shadow-primary/20'
                           : 'border-white/30 bg-white/5 hover:border-white/50 hover:bg-white/10'
                       }`}
                     >
-                      {is18OrOlder && (
-                        <Check className="h-3.5 w-3.5 text-white sm:h-4 sm:w-4" strokeWidth={3} />
-                      )}
+                      {is18OrOlder && <Check className="h-3.5 w-3.5 text-white" strokeWidth={3} />}
                     </button>
-                    <div className="flex-1">
-                      <button
-                        type="button"
-                        className="cursor-pointer select-none text-left"
-                        onClick={() => setValue1('is18OrOlder', !is18OrOlder)}
-                      >
-                        <span className="text-sm font-medium text-white sm:text-base">
-                          I am 18 years or older
-                        </span>
-                        <p className="mt-1 text-xs text-text-secondary sm:text-sm">
-                          You must be at least 18 years old to sell on DropMarket
-                        </p>
-                      </button>
-                    </div>
+                    <button
+                      type="button"
+                      className="flex-1 cursor-pointer select-none text-left"
+                      onClick={() => setValue1('is18OrOlder', !is18OrOlder, { shouldValidate: true })}
+                    >
+                      <span className="text-xs font-medium text-white sm:text-sm">
+                        I am 18 years or older <span className="text-error">*</span>
+                      </span>
+                      <p className="mt-0.5 text-[10px] text-text-secondary sm:text-xs">
+                        You must be at least 18 years old to sell on DropMarket
+                      </p>
+                    </button>
                   </div>
                   {errors1.is18OrOlder && (
-                    <p className="mt-2 text-xs text-error sm:text-sm">
-                      {errors1.is18OrOlder.message}
-                    </p>
+                    <p className="mt-1.5 text-xs text-error">{errors1.is18OrOlder.message}</p>
                   )}
                 </div>
 
-                {/* Primary Games */}
+                {/* Primary Games — searchable multi-select from DB */}
                 <div>
-                  <label className="mb-2 block text-xs font-medium text-white sm:text-sm">
-                    Which games will you sell?
-                    <span className="ml-1.5 text-[10px] font-normal text-text-secondary sm:text-xs">
-                      (Select at least one)
-                    </span>
+                  <label className="mb-1.5 block text-xs font-medium text-white sm:text-sm">
+                    Which Games Will You Sell? <span className="text-error">*</span>
                   </label>
-                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                    {GAMES.map((game) => {
-                      const isSelected = selectedGames.includes(game.id)
-                      return (
-                        <button
-                          key={game.id}
-                          type="button"
-                          onClick={() => toggleGame(game.id)}
-                          className={`flex items-center gap-1.5 rounded-lg border p-2 text-left transition-all sm:gap-2 sm:p-2.5 ${
-                            isSelected
-                              ? 'border-primary border-2 bg-bg-overlay'
-                              : 'border-white/10 bg-bg-overlay hover:border-white/20 hover:bg-bg-overlay'
-                          }`}
-                        >
-                          <div className="relative h-5 w-5 flex-shrink-0 sm:h-6 sm:w-6">
-                            <Image
-                              src={game.image}
-                              alt={game.name}
-                              fill
-                              className="object-contain"
-                            />
-                          </div>
-                          <span
-                            className={`text-[10px] font-medium sm:text-xs ${
-                              isSelected ? 'text-white' : 'text-text-secondary'
-                            }`}
-                          >
-                            {game.name}
-                          </span>
-                        </button>
-                      )
-                    })}
-                  </div>
+                  <GameMultiSelect
+                    games={games}
+                    selected={selectedGames}
+                    onChange={(ids) => setValue1('primaryGames', ids, { shouldValidate: true })}
+                    invalid={!!errors1.primaryGames}
+                  />
                   {errors1.primaryGames && (
                     <p className="mt-1.5 text-xs text-error">{errors1.primaryGames.message}</p>
                   )}
+
+                  {/* Other games — free text */}
+                  <div className="mt-2">
+                    <label htmlFor="otherGames" className="mb-1 block text-[10px] font-medium text-text-secondary sm:text-xs">
+                      Other Games Not Listed{' '}
+                      <span className="font-normal text-text-tertiary">(Optional, comma separated)</span>
+                    </label>
+                    <input
+                      {...register1('otherGames')}
+                      id="otherGames"
+                      type="text"
+                      placeholder="e.g. Palworld, Escape From Tarkov"
+                      className={inputClass}
+                    />
+                    {errors1.otherGames && (
+                      <p className="mt-1 text-xs text-error">{errors1.otherGames.message}</p>
+                    )}
+                  </div>
                 </div>
 
                 {/* Expected Volume */}
                 <div>
                   <label className="mb-2 block text-xs font-medium text-white sm:text-sm">
-                    Expected Monthly Sales Volume
+                    Expected Monthly Sales Volume <span className="text-error">*</span>
                   </label>
-                  <div className="grid grid-cols-2 gap-2 sm:gap-3">
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                     {[
                       { value: 'under_500', label: 'Under $500', desc: 'Just starting out' },
                       { value: '500_2000', label: '$500 - $2,000', desc: 'Growing seller' },
@@ -278,19 +270,19 @@ export default function SellerSteps12({
                       <button
                         key={option.value}
                         type="button"
-                        onClick={() => setValue1('expectedVolume', option.value as any)}
-                        className={`rounded-lg border p-2.5 text-left transition-all sm:p-3 ${
+                        onClick={() =>
+                          setValue1('expectedVolume', option.value as Step1FormData['expectedVolume'], {
+                            shouldValidate: true,
+                          })
+                        }
+                        className={`rounded-lg border p-2.5 text-left transition-all ${
                           watch1('expectedVolume') === option.value
                             ? 'border-primary bg-primary/10'
-                            : 'border-white/10 bg-bg-overlay hover:border-white/20 hover:bg-bg-overlay'
+                            : 'border-white/10 bg-bg-overlay hover:border-white/20'
                         }`}
                       >
-                        <h4 className="text-xs font-semibold text-white sm:text-sm">
-                          {option.label}
-                        </h4>
-                        <p className="mt-0.5 text-[9px] text-text-secondary sm:text-[10px]">
-                          {option.desc}
-                        </p>
+                        <h4 className="text-xs font-semibold text-white">{option.label}</h4>
+                        <p className="mt-0.5 text-[9px] text-text-secondary sm:text-[10px]">{option.desc}</p>
                       </button>
                     ))}
                   </div>
@@ -301,51 +293,23 @@ export default function SellerSteps12({
 
                 {/* Referral Code */}
                 <div>
-                  <label
-                    htmlFor="referralCode"
-                    className="mb-1.5 block text-xs font-medium text-white sm:text-sm"
-                  >
+                  <label htmlFor="referralCode" className="mb-1.5 block text-xs font-medium text-white sm:text-sm">
                     Referral Code{' '}
-                    <span className="text-[10px] font-normal text-text-secondary sm:text-xs">
-                      (Optional)
-                    </span>
+                    <span className="text-[10px] font-normal text-text-secondary sm:text-xs">(Optional)</span>
                   </label>
                   <input
                     {...register1('referralCode')}
                     id="referralCode"
                     type="text"
                     placeholder="Enter referral code if you have one"
-                    className="w-full rounded-lg border border-white/10 bg-bg-overlay px-3 py-2 text-sm text-white placeholder-gray-500 transition-all focus:border-primary focus:bg-bg-overlay focus:outline-none sm:px-4 sm:py-2.5"
+                    className={inputClass}
                   />
                 </div>
               </div>
             </div>
 
-            {/* Commission Tiers */}
-            <div className="overflow-hidden rounded-xl border border-white/10 bg-gradient-to-br from-white/[0.08] via-white/[0.05] to-white/[0.02] p-4 shadow-2xl backdrop-blur-3xl sm:p-5">
-              <h3 className="mb-3 text-center text-xs font-semibold text-white sm:text-sm">
-                Commission Tiers
-              </h3>
-              <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4 sm:gap-2">
-                {COMMISSION_TIERS.map((tier) => (
-                  <div
-                    key={tier.tier}
-                    className={`group relative overflow-hidden rounded-lg border border-white/5 bg-gradient-to-br ${tier.gradient} to-transparent p-2 transition-all hover:${tier.borderHover} sm:p-2.5`}
-                  >
-                    <div className={`absolute inset-0 bg-gradient-to-br ${tier.bgHover} opacity-0 transition-opacity group-hover:opacity-100`} />
-                    <div className="relative">
-                      <div className={`mb-0.5 text-[8px] font-medium uppercase tracking-wider ${tier.textColor} sm:text-[9px]`}>
-                        {tier.tier}
-                      </div>
-                      <div className="text-base font-bold text-white sm:text-lg">{tier.rate}</div>
-                      <div className="mt-0.5 text-[8px] text-text-tertiary sm:text-[9px]">
-                        {tier.description}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+            {/* Per-category fee summary (replaces commission tiers) */}
+            <FeeSummaryCard compact />
 
             {/* Navigation */}
             <div className="flex justify-end">
@@ -361,7 +325,7 @@ export default function SellerSteps12({
         </motion.div>
       )}
 
-      {/* Step 2: Business Information */}
+      {/* Step 2: Identity & Contact */}
       {currentStep === 2 && (
         <motion.div
           key="seller-step2"
@@ -370,118 +334,147 @@ export default function SellerSteps12({
           exit={{ opacity: 0, x: -20 }}
           transition={{ duration: 0.3 }}
         >
-          <form onSubmit={handleSubmit2(onSubmitStep2)} className="space-y-5 sm:space-y-6">
+          <form onSubmit={handleSubmit2(onSubmitStep2)} className="space-y-4 sm:space-y-5">
             {/* Glassmorphic Card */}
-            <div className="overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.08] via-white/[0.05] to-white/[0.02] p-5 shadow-2xl backdrop-blur-3xl sm:p-6 md:p-8">
-              <div className="mb-5 text-center sm:mb-6">
-                <h2 className="text-lg font-semibold text-white sm:text-xl md:text-2xl">
-                  Business Information
+            <div className="overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.08] via-white/[0.05] to-white/[0.02] p-4 shadow-2xl backdrop-blur-3xl sm:p-5">
+              <div className="mb-4 text-center sm:mb-5">
+                <h2 className="text-lg font-semibold text-white sm:text-xl">
+                  {step2SellerType === 'business' ? 'Business Information' : 'Your Information'}
                 </h2>
-                <p className="mt-1.5 text-xs text-text-secondary sm:text-sm">
+                <p className="mt-1 text-xs text-text-secondary sm:text-sm">
                   {step2SellerType === 'business'
                     ? 'Tell us about your company and how we can reach you'
                     : 'Tell us about yourself and how we can reach you'}
                 </p>
               </div>
 
-              <div className="space-y-4 sm:space-y-5">
-                {/* Full Legal Name */}
-                <div>
-                  <label className="mb-1.5 block text-xs font-medium text-white sm:text-sm">
-                    Full Legal Name <span className="text-error">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    {...register2('fullLegalName')}
-                    placeholder="Enter your full legal name"
-                    className="w-full rounded-lg border border-white/10 bg-bg-overlay px-3 py-2.5 text-xs text-white placeholder:text-text-tertiary focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-3 sm:text-sm"
-                  />
-                  {errors2.fullLegalName && (
-                    <p className="mt-1.5 text-xs text-error sm:text-sm">
-                      {errors2.fullLegalName.message}
-                    </p>
-                  )}
-                </div>
+              <div className="space-y-4">
+                {/* Identity */}
+                <div className="grid gap-4 sm:grid-cols-2">
+                  {/* Full Legal Name */}
+                  <div className="sm:col-span-2">
+                    <label className="mb-1.5 block text-xs font-medium text-white sm:text-sm">
+                      Full Legal Name <span className="text-error">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      {...register2('fullLegalName')}
+                      placeholder="Enter your full legal name"
+                      className={inputClass}
+                    />
+                    {errors2.fullLegalName && (
+                      <p className="mt-1.5 text-xs text-error">{errors2.fullLegalName.message}</p>
+                    )}
+                  </div>
 
-                {/* Display Name */}
-                <div>
-                  <label className="mb-1.5 block text-xs font-medium text-white sm:text-sm">
-                    Display Name <span className="text-error">*</span>
-                  </label>
-                  <p className="mb-2 text-[10px] text-text-secondary sm:text-xs">
-                    This is how your seller profile will appear to buyers
-                  </p>
-                  <input
-                    type="text"
-                    {...register2('displayName')}
-                    placeholder="Choose a display name"
-                    className="w-full rounded-lg border border-white/10 bg-bg-overlay px-3 py-2.5 text-xs text-white placeholder:text-text-tertiary focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-3 sm:text-sm"
-                  />
-                  {errors2.displayName && (
-                    <p className="mt-1.5 text-xs text-error sm:text-sm">
-                      {errors2.displayName.message}
+                  {/* Display Name */}
+                  <div>
+                    <label className="mb-1.5 block text-xs font-medium text-white sm:text-sm">
+                      Display Name <span className="text-error">*</span>
+                    </label>
+                    <p className="mb-1.5 text-[10px] text-text-secondary sm:text-xs">
+                      How your seller profile appears to buyers
                     </p>
-                  )}
-                </div>
+                    <input
+                      type="text"
+                      {...register2('displayName')}
+                      placeholder="Choose a display name"
+                      className={inputClass}
+                    />
+                    {errors2.displayName && (
+                      <p className="mt-1.5 text-xs text-error">{errors2.displayName.message}</p>
+                    )}
+                  </div>
 
-                {/* Shop Name */}
-                <div>
-                  <label className="mb-1.5 block text-xs font-medium text-white sm:text-sm">
-                    Shop Name <span className="text-error">*</span>
-                  </label>
-                  <p className="mb-2 text-[10px] text-text-secondary sm:text-xs">
-                    This will be used for your shop URL (e.g., /shop/your-shop-name)
-                  </p>
-                  <input
-                    type="text"
-                    {...register2('shopName')}
-                    placeholder="Choose your shop name"
-                    className="w-full rounded-lg border border-white/10 bg-bg-overlay px-3 py-2.5 text-xs text-white placeholder:text-text-tertiary focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-3 sm:text-sm"
-                  />
-                  {errors2.shopName && (
-                    <p className="mt-1.5 text-xs text-error sm:text-sm">
-                      {errors2.shopName.message}
+                  {/* Shop Name */}
+                  <div>
+                    <label className="mb-1.5 block text-xs font-medium text-white sm:text-sm">
+                      Shop Name <span className="text-error">*</span>
+                    </label>
+                    <p className="mb-1.5 text-[10px] text-text-secondary sm:text-xs">
+                      Used for your shop URL (e.g. /shop/your-shop-name)
                     </p>
-                  )}
+                    <input
+                      type="text"
+                      {...register2('shopName')}
+                      placeholder="Choose your shop name"
+                      className={inputClass}
+                    />
+                    {errors2.shopName && (
+                      <p className="mt-1.5 text-xs text-error">{errors2.shopName.message}</p>
+                    )}
+                  </div>
                 </div>
 
                 {/* Location Section */}
-                <div className="space-y-4 sm:space-y-5">
+                <div className="space-y-3">
                   <div className="flex items-center gap-2 border-b border-white/5 pb-2">
                     <div className="h-1 w-1 rounded-full bg-primary" />
                     <h3 className="text-xs font-semibold text-white sm:text-sm">Location</h3>
                   </div>
 
-                  <div className="grid gap-4 sm:grid-cols-2 sm:gap-5">
+                  <div className="grid gap-4 sm:grid-cols-2">
                     {/* Country */}
                     <div>
                       <label className="mb-1.5 block text-xs font-medium text-white sm:text-sm">
                         Country <span className="text-error">*</span>
                       </label>
-                      <input
-                        type="text"
-                        {...register2('country')}
-                        placeholder="e.g. United States"
-                        className="w-full rounded-lg border border-white/10 bg-bg-overlay px-3 py-2.5 text-xs text-white placeholder:text-text-tertiary focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-3 sm:text-sm"
+                      <Combobox
+                        value={country || ''}
+                        onChange={(v) => {
+                          setValue2('country', v, { shouldValidate: true })
+                          setValue2('stateProvince', '')
+                          if (v !== OTHER_COUNTRY) setValue2('countryOther', '')
+                        }}
+                        options={COUNTRY_OPTIONS}
+                        placeholder="Select your country"
+                        ariaLabel="Country"
+                        invalid={!!errors2.country}
                       />
                       {errors2.country && (
-                        <p className="mt-1.5 text-xs text-error sm:text-sm">
-                          {errors2.country.message}
-                        </p>
+                        <p className="mt-1.5 text-xs text-error">{errors2.country.message}</p>
                       )}
                     </div>
+
+                    {/* Other country free text */}
+                    {country === OTHER_COUNTRY && (
+                      <div>
+                        <label className="mb-1.5 block text-xs font-medium text-white sm:text-sm">
+                          Country Name <span className="text-error">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          {...register2('countryOther')}
+                          placeholder="Enter your country"
+                          className={inputClass}
+                        />
+                        {errors2.countryOther && (
+                          <p className="mt-1.5 text-xs text-error">{errors2.countryOther.message}</p>
+                        )}
+                      </div>
+                    )}
 
                     {/* State/Province */}
                     <div>
                       <label className="mb-1.5 block text-xs font-medium text-white sm:text-sm">
-                        State/Province <span className="text-text-secondary">(Optional)</span>
+                        State/Province <span className="font-normal text-text-secondary">(Optional)</span>
                       </label>
-                      <input
-                        type="text"
-                        {...register2('stateProvince')}
-                        placeholder="e.g. California"
-                        className="w-full rounded-lg border border-white/10 bg-bg-overlay px-3 py-2.5 text-xs text-white placeholder:text-text-tertiary focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-3 sm:text-sm"
-                      />
+                      {regions.length > 0 ? (
+                        <Combobox
+                          value={watch2('stateProvince') || ''}
+                          onChange={(v) => setValue2('stateProvince', v)}
+                          options={regions.map((r) => ({ value: r, label: r }))}
+                          placeholder="Select state or province"
+                          ariaLabel="State or province"
+                        />
+                      ) : (
+                        <input
+                          type="text"
+                          {...register2('stateProvince')}
+                          placeholder="e.g. Bavaria"
+                          className={inputClass}
+                        />
+                      )}
                     </div>
 
                     {/* City */}
@@ -493,58 +486,52 @@ export default function SellerSteps12({
                         type="text"
                         {...register2('city')}
                         placeholder="e.g. Los Angeles"
-                        className="w-full rounded-lg border border-white/10 bg-bg-overlay px-3 py-2.5 text-xs text-white placeholder:text-text-tertiary focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-3 sm:text-sm"
+                        className={inputClass}
                       />
                       {errors2.city && (
-                        <p className="mt-1.5 text-xs text-error sm:text-sm">
-                          {errors2.city.message}
-                        </p>
+                        <p className="mt-1.5 text-xs text-error">{errors2.city.message}</p>
                       )}
                     </div>
                   </div>
                 </div>
 
                 {/* Contact Section */}
-                <div className="space-y-4 sm:space-y-5">
+                <div className="space-y-3">
                   <div className="flex items-center gap-2 border-b border-white/5 pb-2">
                     <div className="h-1 w-1 rounded-full bg-primary" />
                     <h3 className="text-xs font-semibold text-white sm:text-sm">Contact Information</h3>
                   </div>
 
-                  <div className="grid gap-4 sm:grid-cols-2 sm:gap-5">
+                  <div className="grid gap-4 sm:grid-cols-2">
                     {/* Phone Number */}
                     <div>
                       <label className="mb-1.5 block text-xs font-medium text-white sm:text-sm">
                         Phone Number <span className="text-error">*</span>
                       </label>
-                      <input
-                        type="tel"
-                        {...register2('phoneNumber')}
-                        placeholder="+1 (555) 000-0000"
-                        className="w-full rounded-lg border border-white/10 bg-bg-overlay px-3 py-2.5 text-xs text-white placeholder:text-text-tertiary focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-3 sm:text-sm"
+                      <PhoneInput
+                        value={watch2('phoneNumber') || ''}
+                        onChange={(v) => setValue2('phoneNumber', v, { shouldValidate: !!errors2.phoneNumber })}
+                        defaultCountryName={country !== OTHER_COUNTRY ? country : undefined}
+                        invalid={!!errors2.phoneNumber}
                       />
                       {errors2.phoneNumber && (
-                        <p className="mt-1.5 text-xs text-error sm:text-sm">
-                          {errors2.phoneNumber.message}
-                        </p>
+                        <p className="mt-1.5 text-xs text-error">{errors2.phoneNumber.message}</p>
                       )}
                     </div>
 
                     {/* Alternate Email */}
                     <div>
                       <label className="mb-1.5 block text-xs font-medium text-white sm:text-sm">
-                        Alternate Email <span className="text-text-secondary">(Optional)</span>
+                        Alternate Email <span className="font-normal text-text-secondary">(Optional)</span>
                       </label>
                       <input
                         type="email"
                         {...register2('alternateEmail')}
                         placeholder="backup@example.com"
-                        className="w-full rounded-lg border border-white/10 bg-bg-overlay px-3 py-2.5 text-xs text-white placeholder:text-text-tertiary focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-3 sm:text-sm"
+                        className={inputClass}
                       />
                       {errors2.alternateEmail && (
-                        <p className="mt-1.5 text-xs text-error sm:text-sm">
-                          {errors2.alternateEmail.message}
-                        </p>
+                        <p className="mt-1.5 text-xs text-error">{errors2.alternateEmail.message}</p>
                       )}
                     </div>
                   </div>
@@ -552,31 +539,26 @@ export default function SellerSteps12({
 
                 {/* Business-Specific Section */}
                 {step2SellerType === 'business' && (
-                  <div className="space-y-4 sm:space-y-5">
+                  <div className="space-y-3">
                     <div className="flex items-center gap-2 border-b border-white/5 pb-2">
                       <div className="h-1 w-1 rounded-full bg-primary" />
                       <h3 className="text-xs font-semibold text-white sm:text-sm">Business Details</h3>
                     </div>
 
-                    {/* Company Legal Name */}
-                    <div>
-                      <label className="mb-1.5 block text-xs font-medium text-white sm:text-sm">
-                        Company Legal Name <span className="text-error">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        {...register2('companyLegalName')}
-                        placeholder="Enter registered company name"
-                        className="w-full rounded-lg border border-white/10 bg-bg-overlay px-3 py-2.5 text-xs text-white placeholder:text-text-tertiary focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-3 sm:text-sm"
-                      />
-                      {errors2.companyLegalName && (
-                        <p className="mt-1.5 text-xs text-error sm:text-sm">
-                          {errors2.companyLegalName.message}
-                        </p>
-                      )}
-                    </div>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      {/* Company Legal Name */}
+                      <div className="sm:col-span-2">
+                        <label className="mb-1.5 block text-xs font-medium text-white sm:text-sm">
+                          Company Legal Name <span className="font-normal text-text-secondary">(Optional)</span>
+                        </label>
+                        <input
+                          type="text"
+                          {...register2('companyLegalName')}
+                          placeholder="Enter registered company name"
+                          className={inputClass}
+                        />
+                      </div>
 
-                    <div className="grid gap-4 sm:grid-cols-2 sm:gap-5">
                       {/* Business Registration Number */}
                       <div>
                         <label className="mb-1.5 block text-xs font-medium text-white sm:text-sm">
@@ -586,7 +568,7 @@ export default function SellerSteps12({
                           type="text"
                           {...register2('businessRegistrationNumber')}
                           placeholder="123456789"
-                          className="w-full rounded-lg border border-white/10 bg-bg-overlay px-3 py-2.5 text-xs text-white placeholder:text-text-tertiary focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-3 sm:text-sm"
+                          className={inputClass}
                         />
                       </div>
 
@@ -599,34 +581,29 @@ export default function SellerSteps12({
                           type="text"
                           {...register2('taxIdVat')}
                           placeholder="XX-XXXXXXX"
-                          className="w-full rounded-lg border border-white/10 bg-bg-overlay px-3 py-2.5 text-xs text-white placeholder:text-text-tertiary focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-3 sm:text-sm"
+                          className={inputClass}
                         />
                       </div>
-                    </div>
 
-                    {/* Company Address */}
-                    <div>
-                      <label className="mb-1.5 block text-xs font-medium text-white sm:text-sm">
-                        Company Address
-                      </label>
-                      <input
-                        type="text"
-                        {...register2('companyAddress')}
-                        placeholder="123 Business St, Suite 100"
-                        className="w-full rounded-lg border border-white/10 bg-bg-overlay px-3 py-2.5 text-xs text-white placeholder:text-text-tertiary focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-3 sm:text-sm"
-                      />
-                    </div>
+                      {/* Company Address */}
+                      <div className="sm:col-span-2">
+                        <label className="mb-1.5 block text-xs font-medium text-white sm:text-sm">
+                          Company Address
+                        </label>
+                        <input
+                          type="text"
+                          {...register2('companyAddress')}
+                          placeholder="123 Business St, Suite 100"
+                          className={inputClass}
+                        />
+                      </div>
 
-                    <div className="grid gap-4 sm:grid-cols-2 sm:gap-5">
                       {/* Business Type */}
                       <div>
                         <label className="mb-1.5 block text-xs font-medium text-white sm:text-sm">
                           Business Type
                         </label>
-                        <select
-                          {...register2('businessType')}
-                          className="w-full rounded-lg border border-white/10 bg-bg-overlay px-3 py-2.5 text-xs text-white focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-3 sm:text-sm"
-                        >
+                        <select {...register2('businessType')} className={inputClass}>
                           <option value="" className="bg-black">Select type</option>
                           <option value="llc" className="bg-black">LLC</option>
                           <option value="corporation" className="bg-black">Corporation</option>
@@ -646,12 +623,10 @@ export default function SellerSteps12({
                           {...register2('yearEstablished')}
                           placeholder="2020"
                           maxLength={4}
-                          className="w-full rounded-lg border border-white/10 bg-bg-overlay px-3 py-2.5 text-xs text-white placeholder:text-text-tertiary focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-3 sm:text-sm"
+                          className={inputClass}
                         />
                       </div>
-                    </div>
 
-                    <div className="grid gap-4 sm:grid-cols-2 sm:gap-5">
                       {/* Business Email */}
                       <div>
                         <label className="mb-1.5 block text-xs font-medium text-white sm:text-sm">
@@ -661,12 +636,10 @@ export default function SellerSteps12({
                           type="email"
                           {...register2('businessEmail')}
                           placeholder="contact@company.com"
-                          className="w-full rounded-lg border border-white/10 bg-bg-overlay px-3 py-2.5 text-xs text-white placeholder:text-text-tertiary focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-3 sm:text-sm"
+                          className={inputClass}
                         />
                         {errors2.businessEmail && (
-                          <p className="mt-1.5 text-xs text-error sm:text-sm">
-                            {errors2.businessEmail.message}
-                          </p>
+                          <p className="mt-1.5 text-xs text-error">{errors2.businessEmail.message}</p>
                         )}
                       </div>
 
@@ -678,8 +651,8 @@ export default function SellerSteps12({
                         <input
                           type="tel"
                           {...register2('businessPhone')}
-                          placeholder="+1 (555) 000-0000"
-                          className="w-full rounded-lg border border-white/10 bg-bg-overlay px-3 py-2.5 text-xs text-white placeholder:text-text-tertiary focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:px-4 sm:py-3 sm:text-sm"
+                          placeholder="+1 555 000 0000"
+                          className={inputClass}
                         />
                       </div>
                     </div>
@@ -693,7 +666,7 @@ export default function SellerSteps12({
               <button
                 type="button"
                 onClick={onStepBack}
-                className="flex items-center gap-1 rounded-lg border border-white/10 bg-bg-overlay px-3 py-2 text-xs font-medium text-white transition-all hover:bg-bg-overlay sm:gap-1.5 sm:px-4 sm:text-sm"
+                className="flex items-center gap-1 rounded-lg border border-white/10 bg-bg-overlay px-3 py-2 text-xs font-medium text-white transition-all hover:bg-white/10 sm:gap-1.5 sm:px-4 sm:text-sm"
               >
                 <ChevronLeft className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                 <span className="hidden sm:inline">Previous</span>

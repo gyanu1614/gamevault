@@ -47,9 +47,9 @@ export async function getPendingListings(): Promise<{
       }
     }
 
-    // Get pending listings
-    console.log('🔍 Fetching pending listings as admin:', user.id)
-
+    // Queue = listings awaiting an admin decision (pending_approval)
+    // plus listings bounced back to the seller (changes_requested), so
+    // the admin can track what's still out for rework.
     const { data: listings, error } = await supabase
       .from('listings')
       .select(`
@@ -58,17 +58,11 @@ export async function getPendingListings(): Promise<{
         game:games!listings_game_id_fkey(name, slug),
         category:categories!listings_category_id_fkey(name, slug)
       `)
-      .eq('status', 'pending_approval')
+      .in('status', ['pending_approval', 'changes_requested'])
       .order('created_at', { ascending: false })
 
-    console.log('📊 Query result:', {
-      count: listings?.length || 0,
-      error: error?.message,
-      listings: listings?.map((l: any) => ({ id: l.id, title: l.title, status: l.status }))
-    })
-
     if (error) {
-      console.error('❌ Error fetching listings:', error)
+      console.error('Error fetching listings:', error)
       return {
         success: false,
         error: error.message,
@@ -128,17 +122,13 @@ export async function approveListing(
     }
 
     // Use the database function to approve listing (bypasses the moderation trigger)
-    console.log('🎯 Approving listing:', listingId, 'by admin:', user.id)
-
     const { error: approveError } = await (supabase.rpc as any)('approve_listing', {
       listing_id: listingId,
       admin_id: user.id,
     })
 
-    console.log('✅ Approval result - error:', approveError)
-
     if (approveError) {
-      console.error('❌ Error approving listing:', approveError)
+      console.error('Error approving listing:', approveError)
       return {
         success: false,
         error: approveError.message,
@@ -360,15 +350,18 @@ export async function requestListingChanges(
       }
     }
 
-    // Update listing with change request
-    const { error: updateError } = await (supabase
-      .from('listings')
-      .update as any)({
-        moderation_notes: changes,
-      })
-      .eq('id', listingId)
+    // Flip the listing to changes_requested + store what to change.
+    // SECURITY DEFINER RPC (sibling of approve_listing/reject_listing);
+    // sets status='changes_requested', moderation_notes=changes and
+    // clears approved_by/approved_at.
+    const { error: updateError } = await (supabase.rpc as any)('request_listing_changes', {
+      listing_id: listingId,
+      admin_id: user.id,
+      changes,
+    })
 
     if (updateError) {
+      console.error('Error requesting listing changes:', updateError)
       return {
         success: false,
         error: updateError.message,
@@ -414,6 +407,7 @@ export async function requestListingChanges(
     })().catch((err) => console.error('[Moderation] Change-request comms failed:', err))
 
     revalidatePath('/admin/moderation')
+    revalidatePath('/account/listings')
 
     return {
       success: true,
@@ -434,6 +428,7 @@ export async function getModerationStats(): Promise<{
   success: boolean
   stats?: {
     pending: number
+    awaiting_seller: number
     approved_today: number
     rejected_today: number
     total_approved: number
@@ -443,11 +438,32 @@ export async function getModerationStats(): Promise<{
   try {
     const supabase = await createClient()
 
+    // Verify admin access (same gate as the other moderation actions)
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) {
+      return { success: false, error: 'Unauthorized' }
+    }
+
+    const { data: adminRole } = await supabase
+      .from('admin_roles')
+      .select('role, is_active')
+      .eq('user_id', user.id)
+      .eq('is_active', true)
+      .single() as any
+
+    if (!adminRole || ((adminRole as any).role !== 'admin' && (adminRole as any).role !== 'super_admin' && (adminRole as any).role !== 'moderator')) {
+      return { success: false, error: 'Forbidden - Admin access required' }
+    }
+
     const today = new Date()
     today.setHours(0, 0, 0, 0)
 
     const [
       { count: pending },
+      { count: awaiting_seller },
       { count: approved_today },
       { count: rejected_today },
       { count: total_approved },
@@ -459,13 +475,19 @@ export async function getModerationStats(): Promise<{
       supabase
         .from('listings')
         .select('*', { count: 'exact', head: true })
+        .eq('status', 'changes_requested'),
+      supabase
+        .from('listings')
+        .select('*', { count: 'exact', head: true })
         .eq('status', 'active')
         .gte('approved_at', today.toISOString()),
+      // reject_listing nulls approved_at and stamps rejected_at, so the
+      // "today" filter must use rejected_at (approved_at was always 0).
       supabase
         .from('listings')
         .select('*', { count: 'exact', head: true })
         .eq('status', 'rejected')
-        .gte('approved_at', today.toISOString()),
+        .gte('rejected_at', today.toISOString()),
       supabase
         .from('listings')
         .select('*', { count: 'exact', head: true })
@@ -477,6 +499,7 @@ export async function getModerationStats(): Promise<{
       success: true,
       stats: {
         pending: pending || 0,
+        awaiting_seller: awaiting_seller || 0,
         approved_today: approved_today || 0,
         rejected_today: rejected_today || 0,
         total_approved: total_approved || 0,

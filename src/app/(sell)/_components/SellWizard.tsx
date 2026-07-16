@@ -320,6 +320,10 @@ export default function SellWizard({
   // Step 1 → Step 2 → Step 3 in rapid succession as data arrives, which
   // looks glitchy. Hidden surface, animated lime spinner, faded copy.
   const [editLoading, setEditLoading] = useState<boolean>(isEditMode)
+  // Moderation state of the listing being edited. Drives the Changes
+  // Requested banner above the wizard and the "Resubmitted" toast copy.
+  const [editStatus, setEditStatus] = useState<string | null>(null)
+  const [editModerationNotes, setEditModerationNotes] = useState<string | null>(null)
 
   const [step, setStep] = useState(1)
   // V67 — Step-slide direction: forward steps enter from the right,
@@ -619,6 +623,10 @@ export default function SellWizard({
       setBundleId((d as any).bundle_id ?? '')
       setFieldValues(d.template_data ?? {})
       setImages(d.images)
+      if (isEditMode) {
+        setEditStatus(d.status ?? null)
+        setEditModerationNotes(d.moderation_notes ?? null)
+      }
       toast.success(isEditMode ? 'Loaded your listing for editing' : 'Pre-filled from your existing listing')
     })
     return () => { cancelled = true }
@@ -942,7 +950,14 @@ export default function SellWizard({
       if (!res.success) { toast.error(res.error); return }
       const landed = res.data.status
       if (isEditMode) {
-        toast.success('Listing updated')
+        // Resubmit loop: an offer the review team bounced back re-enters
+        // the queue — make the toast say so instead of a generic "updated".
+        const wasBounced = editStatus === 'changes_requested' || editStatus === 'rejected'
+        toast.success(
+          wasBounced && landed === 'pending_approval'
+            ? 'Resubmitted for review'
+            : 'Listing updated',
+        )
       } else if (asDraft) {
         toast.success('Saved as draft')
       } else if (landed === 'pending_approval') {
@@ -1202,6 +1217,24 @@ export default function SellWizard({
                 visual restructure lands. */}
             {step === 3 && selectedCategory && selectedGame && (
               <div className="space-y-5">
+                {/* Changes Requested — what the review team asked for.
+                    Saving a non-draft edit resubmits into the queue. */}
+                {isEditMode && editStatus === 'changes_requested' && (
+                  <div className="flex items-start gap-2.5 rounded-xl border border-warning/40 bg-warning-bg px-3 py-2.5">
+                    <Clock className="mt-0.5 h-4 w-4 shrink-0 text-warning" strokeWidth={2.5} />
+                    <div className="min-w-0 flex-1 text-[13px]">
+                      <span className="font-semibold text-warning">
+                        Changes Requested.
+                      </span>{' '}
+                      <span className="text-text-secondary">
+                        {editModerationNotes
+                          ? editModerationNotes
+                          : 'Our review team asked for changes to this offer.'}{' '}
+                        Saving your update resubmits it for review.
+                      </span>
+                    </div>
+                  </div>
+                )}
                 <PolicyBanner policy={policy} />
                 <Step3Details
                   templateLoading={templateLoading}

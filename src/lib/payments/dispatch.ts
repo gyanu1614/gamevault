@@ -71,11 +71,43 @@ export async function dispatch(
 
   const result = await transition(event.orderId, orderEvent, providerEventId)
 
-  // Comms ride on top of an APPLIED transition only (a replayed/no-op webhook
-  // must not re-email anyone). AWAITED — on serverless the function freezes
-  // once the webhook response is sent, so an unawaited send would be silently
-  // dropped — but errors are swallowed: comms failure never fails the payment.
   if (result.changed) {
+    // Provider-completed refunds land in the buyer's WALLET as store credit
+    // (Refund & Dispute Policy: store-credit refunds are 100%): the REFUNDED
+    // transition moved escrow_held → refunds; this credit completes the chain
+    // refunds → user_wallet. Idempotent on 'wallet_refund:<orderId>', so a
+    // replayed webhook can't double-credit. NOT for CHARGEBACK_OPENED — a
+    // chargeback claws the cash back through the provider, no wallet credit.
+    // AWAITED but wrapped: a credit failure must never fail the webhook (the
+    // idempotent key makes it safely retryable).
+    if (event.type === 'REFUND_COMPLETED') {
+      await (async () => {
+        const { createServiceRoleClient } = await import('@/lib/supabase/service')
+        const service = createServiceRoleClient()
+        const { data: order } = await service
+          .from('orders')
+          .select('buyer_id, total_amount, currency')
+          .eq('id', event.orderId)
+          .single() as any
+        if (order?.buyer_id && (order.total_amount ?? 0) > 0) {
+          const { refundToWallet } = await import('@/lib/wallet/wallet')
+          await refundToWallet({
+            userId: order.buyer_id,
+            amountMinor: BigInt(Math.round(Number(order.total_amount) * 100)),
+            currency: (order.currency || 'EUR').toUpperCase(),
+            orderId: event.orderId,
+          })
+        }
+      })().catch((err) =>
+        console.error('[Dispatch] Wallet refund credit failed (retryable):', err)
+      )
+    }
+
+    // Comms ride on top of an APPLIED transition only (a replayed/no-op
+    // webhook must not re-email anyone). AWAITED — on serverless the function
+    // freezes once the webhook response is sent, so an unawaited send would
+    // be silently dropped — but errors are swallowed: comms failure never
+    // fails the payment.
     const { notifyOrderTransition } = await import('@/lib/payments/notify')
     await notifyOrderTransition(orderEvent, event.orderId, event).catch(() => {})
   }

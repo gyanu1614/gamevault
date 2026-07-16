@@ -79,7 +79,7 @@ const OFFER_META: Record<OfferType, { title: string }> = {
 
 // ─── Status chips ────────────────────────────────────────────────────────────
 
-type ChipKey = 'active' | 'paused' | 'draft' | 'closed' | 'suspended' | 'pending' | 'offline'
+type ChipKey = 'active' | 'paused' | 'draft' | 'closed' | 'suspended' | 'pending' | 'offline' | 'changes'
 
 const STATUS_CHIP: Record<ChipKey, { label: string; cls: string }> = {
   active: { label: 'Active', cls: 'border-[rgba(198,255,61,0.22)] bg-[rgba(198,255,61,0.10)] text-lime-text' },
@@ -87,6 +87,7 @@ const STATUS_CHIP: Record<ChipKey, { label: string; cls: string }> = {
   paused: { label: 'Paused', cls: 'border-amber-400/25 bg-amber-400/10 text-amber-300' },
   draft: { label: 'Draft', cls: 'border-white/[0.12] bg-white/[0.05] text-text-secondary' },
   pending: { label: 'Under Review', cls: 'border-sky-400/25 bg-sky-400/10 text-sky-300' },
+  changes: { label: 'Changes Requested', cls: 'border-amber-400/25 bg-amber-400/10 text-amber-300' },
   closed: { label: 'Closed', cls: 'border-white/[0.08] bg-white/[0.03] text-text-tertiary' },
   suspended: { label: 'Suspended', cls: 'border-red-500/25 bg-red-500/10 text-red-300' },
 }
@@ -98,8 +99,9 @@ function chipKeyFor(status: string, storePaused: boolean): ChipKey {
   if (status === 'paused') return 'paused'
   if (status === 'draft') return 'draft'
   if (status === 'pending_approval') return 'pending'
+  if (status === 'changes_requested') return 'changes'
   if (status === 'suspended') return 'suspended'
-  return 'closed' // archived, sold, anything legacy
+  return 'closed' // archived, sold, rejected, anything legacy
 }
 
 function StatusChip({ k }: { k: ChipKey }) {
@@ -111,7 +113,7 @@ function StatusChip({ k }: { k: ChipKey }) {
   )
 }
 
-type FilterStatus = 'all' | 'active' | 'paused' | 'draft' | 'closed' | 'pending_approval'
+type FilterStatus = 'all' | 'active' | 'paused' | 'draft' | 'closed' | 'pending_approval' | 'changes_requested'
 
 const FILTER_STATUSES: { value: FilterStatus; label: string }[] = [
   { value: 'all', label: 'All' },
@@ -120,6 +122,7 @@ const FILTER_STATUSES: { value: FilterStatus; label: string }[] = [
   { value: 'draft', label: 'Draft' },
   { value: 'closed', label: 'Closed' },
   { value: 'pending_approval', label: 'Under Review' },
+  { value: 'changes_requested', label: 'Changes Requested' },
 ]
 
 function matchesStatusFilter(status: string, f: FilterStatus): boolean {
@@ -705,6 +708,17 @@ function OffersContent() {
                             {displayTitle(l, type)}
                           </span>
                           <span className="mt-0.5 block text-[12px] text-text-tertiary">{l.game?.name ?? '—'}</span>
+                          {/* What the review team asked to change — shown ONLY
+                              while the offer is in Changes Requested (the same
+                              column is internal notes after approval). */}
+                          {l.status === 'changes_requested' && l.moderation_notes && (
+                            <span
+                              title={l.moderation_notes}
+                              className="mt-1 block max-w-[240px] truncate text-[11.5px] font-medium text-amber-300"
+                            >
+                              Requested: {l.moderation_notes}
+                            </span>
+                          )}
                         </span>
                       </span>
                     </td>
@@ -743,8 +757,12 @@ function OffersContent() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className={cn('w-60', MENU_CLS)}>
                           <DropdownMenuLabel className={LABEL_CLS}>Offer Actions</DropdownMenuLabel>
-                          <DropdownMenuItem className={ITEM_CLS} onClick={() => router.push(`/sell/edit/${l.id}`)}>
-                            <Pencil className="h-4 w-4" /> Edit Offer
+                          <DropdownMenuItem
+                            className={cn(ITEM_CLS, l.status === 'changes_requested' && 'text-amber-300 focus:text-amber-200')}
+                            onClick={() => router.push(`/sell/edit/${l.id}`)}
+                          >
+                            <Pencil className="h-4 w-4" />
+                            {l.status === 'changes_requested' ? 'Edit & Resubmit' : 'Edit Offer'}
                           </DropdownMenuItem>
                           {l.status === 'active' && (
                             <DropdownMenuItem className={ITEM_CLS} onClick={() => void setStatus(l, 'paused')}>

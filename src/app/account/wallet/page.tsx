@@ -6,7 +6,10 @@ import { useAuth } from '@/hooks/use-auth'
 import AccountPageHeader from '@/components/account/AccountPageHeader'
 import { useSellerEarnings } from '@/hooks/use-seller-earnings'
 import { createClient } from '@/lib/supabase/client'
-import { getWalletBalance, getWalletTransactions, createTopUpCheckout } from '@/lib/actions/wallet'
+import { createTopUpCheckout } from '@/lib/actions/wallet'
+// Ledger-backed balance (funds-flow cutover): refund credits post to the
+// ledger wallet, which the legacy wallet_balances float table never sees.
+import { getMyWalletBalance } from '@/lib/actions/wallet-ledger'
 import { getLoyaltyStats } from '@/lib/actions/loyalty'
 import { getMyWithdrawalRequests } from '@/lib/actions/withdrawals'
 import Link from 'next/link'
@@ -345,11 +348,11 @@ export default function WalletPage() {
     retry: 1,
   })
 
-  // Fetch wallet balance
+  // Fetch wallet balance (ledger-derived — the source refund credits post to)
   const { data: walletData, isLoading: walletLoading, error: walletError } = useQuery({
     queryKey: ['wallet-balance', user?.id],
     queryFn: async () => {
-      const result = await getWalletBalance()
+      const result = await getMyWalletBalance()
       if (!result.success) {
         console.error('[Wallet] Balance fetch failed:', result.error)
         throw new Error(result.error || 'Failed to fetch wallet balance')

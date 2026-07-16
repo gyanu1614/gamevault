@@ -8,8 +8,15 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { createServiceRoleClient } from '@/lib/supabase/service'
 import { revalidatePath } from 'next/cache'
-import { refundToWallet } from './wallet'
+// Ledger-backed money paths (funds-flow cutover): the order transition moves
+// held escrow to refunds atomically, then the wallet credit (refunds →
+// user_wallet) makes the buyer whole as store credit. The legacy
+// ./wallet refundToWallet wrote the RLS-locked wallet_balances float table
+// and silently stopped working after the ledger cutover.
+import { transition } from '@/lib/escrow/transition'
+import { refundToWallet } from '@/lib/wallet/wallet'
 
 export interface CancellationRequest {
   id: string
@@ -400,38 +407,63 @@ export async function processCancellationRequest(
       return { error: { message: 'Failed to process request' } }
     }
 
-    // If approved, cancel the order and process refund
+    // If approved, cancel the order through the atomic ledger transition,
+    // THEN credit the buyer's wallet. Order matters for the ledger chain:
+    // the transition moves escrow_held → refunds, and the wallet credit
+    // moves refunds → user_wallet, keeping every account balanced.
     if (action === 'approve') {
-      // Process refund to wallet first
-      const refundResult = await refundToWallet(
-        request.order.buyer_id,
-        request.order.total_amount,
-        request.order_id
-      )
+      const order = request.order
 
-      if (!refundResult.success) {
-        console.error('Error refunding to wallet:', refundResult.error)
+      try {
+        // A delivered order cancels as a refund in the state machine
+        // (delivered → cancelled is not a legal move; delivered → refunded is).
+        const event = order.status === 'delivered' ? 'REFUNDED' : 'CANCELLED'
+        await transition(request.order_id, event)
+      } catch (transitionError: any) {
+        console.error('Error cancelling order:', transitionError)
         return {
           error: {
-            message: `Failed to process refund: ${refundResult.error}. Please try again or contact support.`
-          }
+            message: `Failed to cancel the order: ${transitionError?.message ?? 'unknown error'}. Please try again or contact support.`,
+          },
         }
       }
 
-      // Update order status
-      const { error: cancelError } = await (supabase
-        .from('orders')
-        .update as any)({
-          status: 'cancelled',
-          escrow_status: 'refunded',
-          updated_at: new Date().toISOString(),
+      // Store-credit refund — 100% of what the buyer paid, instantly
+      // (Refund & Dispute Policy). Idempotent on 'wallet_refund:<orderId>'.
+      try {
+        await refundToWallet({
+          userId: order.buyer_id,
+          amountMinor: BigInt(Math.round(Number(order.total_amount ?? 0) * 100)),
+          currency: (order.currency || 'EUR').toUpperCase(),
+          orderId: request.order_id,
         })
-        .eq('id', request.order_id)
-
-      if (cancelError) {
-        console.error('Error cancelling order:', cancelError)
-        // Don't return error here as the request and refund were already processed
+      } catch (refundError: any) {
+        console.error('Error refunding to wallet:', refundError)
+        return {
+          error: {
+            message: `Order cancelled but the wallet refund failed: ${refundError?.message ?? 'unknown error'}. Re-approve to retry the credit (it is idempotent) or contact support.`,
+          },
+        }
       }
+
+      // Tell the buyer their money is in their wallet (in-app, wrapped —
+      // a comms failure must never fail the approval).
+      await (async () => {
+        const service = createServiceRoleClient()
+        const orderRef =
+          order.order_number || String(request.order_id).slice(0, 8).toUpperCase()
+        const { error: notifError } = await (service.from('notifications').insert as any)({
+          user_id: order.buyer_id,
+          type: 'order_refunded',
+          title: 'Money In Your Wallet',
+          message: `Your cancellation for order #${orderRef} was approved — $${Number(order.total_amount ?? 0).toFixed(2)} was refunded to your DropMarket wallet as store credit. Spend it instantly or withdraw it.`,
+          link: '/account/wallet',
+          is_read: false,
+        })
+        if (notifError) throw notifError
+      })().catch((err) =>
+        console.error('[Cancellation] Buyer refund notification failed:', err)
+      )
     }
 
     // Revalidate paths

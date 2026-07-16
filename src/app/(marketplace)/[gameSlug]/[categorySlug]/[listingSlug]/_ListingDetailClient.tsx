@@ -113,6 +113,11 @@ export interface MiniListing {
 interface Props {
   listing: ListingForDetail
   viewerId: string | null
+  /** Set when this is an owner/admin preview of a NON-ACTIVE listing
+   *  (the raw status, e.g. 'pending_approval'). Renders the preview
+   *  banner and disables purchase — buying an unreviewed listing would
+   *  bypass moderation. */
+  previewStatus?: string | null
   templateFields: TemplateField[] | null
   similarOffers: MiniListing[]
   /** V15p — When the current listing is in the items category, the
@@ -135,8 +140,19 @@ const TIER_BADGES: Record<string, { label: string; color: string }> = {
   diamond: { label: 'Diamond', color: 'text-lime-text' },
 }
 
+const PREVIEW_STATUS_LABELS: Record<string, string> = {
+  pending_approval: 'Under Review',
+  changes_requested: 'Changes Requested',
+  draft: 'Draft',
+  rejected: 'Not Approved',
+  paused: 'Paused',
+  suspended: 'Suspended',
+  archived: 'Archived',
+  sold: 'Sold',
+}
+
 export default function ListingDetailClient({
-  listing, viewerId, templateFields, similarOffers, similarOffersAsItems, otherSellerOffers,
+  listing, viewerId, previewStatus, templateFields, similarOffers, similarOffersAsItems, otherSellerOffers,
 }: Props) {
   const router = useRouter()
   const { open: openAuth } = useAuthDialog()
@@ -190,6 +206,9 @@ export default function ListingDetailClient({
   }, [])
 
   const onBuy = () => {
+    // Preview of a non-active listing — purchase is disabled (buying an
+    // unreviewed listing would bypass moderation).
+    if (previewStatus) return
     if (isOwn) { router.push(`/sell/edit/${listing.id}`); return }
     // Logged out: open the sign-in modal IN PLACE (no bounce to home) with the
     // checkout as the post-auth redirect. After sign-in the modal sends the
@@ -280,6 +299,21 @@ export default function ListingDetailClient({
 
   return (
     <main className="min-h-screen pb-16 sm:pb-12">
+      {/* PREVIEW BANNER — owner/admin view of a non-active listing. */}
+      {previewStatus && (
+        <div className="mx-auto w-full max-w-7xl px-3 pt-6 sm:px-6 lg:px-8">
+          <div className="flex items-start gap-2.5 rounded-lg border border-amber-500/35 bg-amber-500/10 px-4 py-3">
+            <Clock className="mt-0.5 h-4 w-4 shrink-0 text-amber-300" strokeWidth={2.5} />
+            <p className="min-w-0 flex-1 text-[13.5px] text-text-secondary">
+              <span className="font-semibold text-amber-300">
+                Preview — {PREVIEW_STATUS_LABELS[previewStatus] ?? previewStatus.replace(/_/g, ' ')}.
+              </span>{' '}
+              This listing isn&apos;t live yet — only you and admins can see this page. Purchasing is
+              disabled until it goes live.
+            </p>
+          </div>
+        </div>
+      )}
       {/* PAGE WRAPPER — V29: the sub-navbar is gone on detail pages, so
           the wrapper owns its clearance under the fixed navbar and the
           context row (Game › Category) is the breadcrumb/back
@@ -615,10 +649,12 @@ export default function ListingDetailClient({
                 ) : (
                   <Button
                     onClick={onBuy}
-                    disabled={navigating || (!listing.isUnlimited && (listing.quantity ?? 0) <= 0)}
+                    disabled={!!previewStatus || navigating || (!listing.isUnlimited && (listing.quantity ?? 0) <= 0)}
                     className="mt-4 h-12 w-full gap-2 bg-lime text-[15px] font-bold tracking-wide text-text-inverse hover:bg-lime-hover"
                   >
-                    {navigating ? (
+                    {previewStatus ? (
+                      'Purchasing Disabled — Preview'
+                    ) : navigating ? (
                       <>
                         <Loader2 className="h-4 w-4 animate-spin" />
                         Loading checkout…
@@ -681,7 +717,7 @@ export default function ListingDetailClient({
 
       {/* Mobile sticky Buy bar */}
       <AnimatePresence>
-        {showMobileBar && !isOwn && (
+        {showMobileBar && !isOwn && !previewStatus && (
           <motion.div
             initial={{ y: 60, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}

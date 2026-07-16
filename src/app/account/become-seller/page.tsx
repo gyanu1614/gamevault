@@ -1,18 +1,22 @@
 /**
  * Seller Registration Page
  *
- * This is the main entry point for the seller registration flow.
+ * Main entry point for the seller registration flow.
+ * Server component: fetches the full active games list from the DB and
+ * hands it to the client wizard (games step is DB-driven, not hardcoded).
  * Protected by AuthGate to require authentication.
- * The actual implementation is in SellerRegistration.tsx for better modularity.
  */
 
 import SellerRegistration from './SellerRegistration'
 import AuthGate from './components/AuthGate'
+import { getAllGames } from '@/lib/utils/games'
 
-export default function SellerRegisterPage() {
+export default async function SellerRegisterPage() {
+  const games = await getAllGames()
+
   return (
     <AuthGate>
-      <SellerRegistration />
+      <SellerRegistration games={games} />
     </AuthGate>
   )
 }

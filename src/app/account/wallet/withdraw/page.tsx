@@ -21,7 +21,11 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/hooks/use-auth'
-import { useSellerEarnings } from '@/hooks/use-seller-earnings'
+// Ledger-backed withdrawable balance (funds-flow cutover): seller_available
+// (released sale proceeds) + user_wallet (store credit) — the exact pool the
+// withdrawal hold draws against. Replaces the old sum-of-completed-orders
+// figure that ignored prior withdrawals.
+import { getMyWithdrawableBalance } from '@/lib/actions/wallet-ledger'
 import {
   getWithdrawalMethods,
   calculateWithdrawalFee,
@@ -43,7 +47,8 @@ const PAYMENT_ICONS: Record<string, string> = {
 export default function WithdrawPage() {
   const router = useRouter()
   const { user } = useAuth()
-  const { stats: earningsStats, isLoading: isLoadingEarnings } = useSellerEarnings()
+  // null = still loading; number = ledger-derived withdrawable total.
+  const [availableBalance, setAvailableBalance] = useState<number | null>(null)
 
   const [methods, setMethods] = useState<WithdrawalMethod[]>([])
   const [selectedMethod, setSelectedMethod] = useState<WithdrawalMethod | null>(null)
@@ -56,6 +61,20 @@ export default function WithdrawPage() {
 
   useEffect(() => {
     loadMethods()
+  }, [])
+
+  // Load the withdrawable balance from the ledger.
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      const result = await getMyWithdrawableBalance()
+      if (!cancelled) {
+        setAvailableBalance(result.success && result.balance ? result.balance.total : 0)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   // Calculate fee when amount changes
@@ -115,7 +134,7 @@ export default function WithdrawPage() {
       return
     }
 
-    if (amountNum > earningsStats.available_balance) {
+    if (amountNum > (availableBalance ?? 0)) {
       toast.error('Insufficient balance')
       return
     }
@@ -175,7 +194,7 @@ export default function WithdrawPage() {
     return PAYMENT_ICONS[methodName] || '/payment-methods/default.png'
   }
 
-  if (isLoadingEarnings) {
+  if (availableBalance === null) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-lime-text" />
@@ -213,7 +232,7 @@ export default function WithdrawPage() {
             <Wallet className="h-4 w-4 text-success" />
             <span className="text-[11px] font-semibold uppercase tracking-wider text-text-secondary">Available</span>
           </div>
-          <span className="text-xl font-bold text-text-primary">${earningsStats.available_balance.toFixed(2)}</span>
+          <span className="text-xl font-bold text-text-primary">${(availableBalance ?? 0).toFixed(2)}</span>
         </div>
 
         <AnimatePresence mode="wait">
@@ -283,13 +302,13 @@ export default function WithdrawPage() {
                     onChange={(e) => setAmount(e.target.value)}
                     placeholder="0.00"
                     min={selectedMethod.min_withdrawal}
-                    max={Math.min(selectedMethod.max_withdrawal || Infinity, earningsStats.available_balance)}
+                    max={Math.min(selectedMethod.max_withdrawal || Infinity, availableBalance ?? 0)}
                     step="0.01"
                     className="w-full rounded-lg border border-border-default bg-bg-base/60 py-2.5 pl-7 pr-16 text-lg font-semibold text-text-primary placeholder:text-text-disabled focus:border-lime focus:outline-none focus:ring-2 focus:ring-lime/20 transition-colors"
                   />
                   <button
                     type="button"
-                    onClick={() => setAmount(earningsStats.available_balance.toFixed(2))}
+                    onClick={() => setAmount((availableBalance ?? 0).toFixed(2))}
                     className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md border border-border-subtle px-2 py-1 text-[11px] font-semibold text-lime-text transition-colors hover:bg-lime/10"
                   >
                     Max
@@ -297,7 +316,7 @@ export default function WithdrawPage() {
                 </div>
                 <div className="mt-1.5 flex items-center justify-between text-[12px] text-text-secondary">
                   <span>Min ${selectedMethod.min_withdrawal.toFixed(2)}</span>
-                  <span>Available ${earningsStats.available_balance.toFixed(2)}</span>
+                  <span>Available ${(availableBalance ?? 0).toFixed(2)}</span>
                 </div>
               </div>
 

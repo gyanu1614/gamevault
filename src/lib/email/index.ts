@@ -709,6 +709,9 @@ export async function sendOrderRefundedEmail({
    *  money already moved. */
   pending?: boolean
 }) {
+  // Store-credit refunds land instantly; only external rails have the
+  // 5–10 business day caveat.
+  const toWallet = destination.toLowerCase().includes('wallet')
   const { data, error } = await resend.emails.send({
     from: FROM_EMAIL,
     replyTo: REPLY_TO,
@@ -755,10 +758,17 @@ export async function sendOrderRefundedEmail({
                       }
                     </table>
                   </div>
+                  ${
+                    !pending && toWallet
+                      ? `<a href="${APP_URL}/account/wallet" style="display:inline-block;background-color:#a3e635;color:#0a0a0f;text-decoration:none;padding:11px 28px;border-radius:6px;font-weight:700;font-size:14px;margin:0 0 16px;">Go To Wallet</a>`
+                      : ''
+                  }
                   <p style="margin:0;font-size:11px;line-height:1.6;color:#71717a;">
                     ${
                       pending
                         ? 'You will get a confirmation email as soon as your refund is issued. If you have any questions in the meantime, support is one click away.'
+                        : toWallet
+                        ? 'Your store credit is available instantly — spend it on your next order or withdraw it from your wallet.'
                         : 'Refunds to a payment method typically arrive within 5–10 business days depending on your provider.'
                     }
                   </p>
@@ -800,7 +810,7 @@ export async function sendOrderCompletedSellerEmail({
     from: FROM_EMAIL,
     replyTo: REPLY_TO,
     to,
-    subject: `Order Complete — $${payout.toFixed(2)} Payout on the Way`,
+    subject: `Order Complete — $${payout.toFixed(2)} Added To Your Seller Balance`,
     html: `
       <!DOCTYPE html>
       <html>
@@ -827,7 +837,7 @@ export async function sendOrderCompletedSellerEmail({
                   <div style="background:rgba(163, 230, 53, 0.08);border:1px solid rgba(163, 230, 53, 0.3);border-radius:8px;padding:14px 16px;margin:0 0 18px;text-align:center;">
                     <p style="margin:0 0 4px;color:#a1a1aa;font-size:12px;overflow-wrap:anywhere;">${escapeHtml(listingTitle)}</p>
                     <p style="margin:0;color:#a3e635;font-size:20px;font-weight:700;">+$${payout.toFixed(2)}</p>
-                    <p style="margin:4px 0 0;color:#a1a1aa;font-size:12px;">${autoReleased ? 'payout being processed' : 'added to your seller balance'}</p>
+                    <p style="margin:4px 0 0;color:#a1a1aa;font-size:12px;">added to your seller balance — withdraw any time</p>
                   </div>
                   <a href="${APP_URL}/account/orders/${orderId}" style="display:inline-block;background-color:#a3e635;color:#0a0a0f;text-decoration:none;padding:11px 28px;border-radius:6px;font-weight:700;font-size:14px;">View Order</a>
                 </div>
