@@ -10,6 +10,7 @@ import { getDocumentsSignedUrls } from '@/lib/actions/kyc-documents'
 import { calculateVerificationStatus } from '@/lib/utils/seller-verification'
 import { restrictSeller, unrestrictSeller } from '@/lib/actions/admin-seller-restrictions'
 import { getAvatarUrl } from '@/lib/utils/avatar'
+import { VOLUME_LABELS, PAYOUT_METHOD_LABELS, SELLER_TYPE_LABELS } from '@/lib/seller-application/labels'
 import { toast } from 'sonner'
 import {
   CheckCircle,
@@ -310,7 +311,7 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
                   </div>
                   <div className="flex flex-wrap items-center gap-3 text-xs text-text-secondary">
                     <span className="capitalize">
-                      {application.seller_type?.replace('_', ' ') || 'Seller'}
+                      {SELLER_TYPE_LABELS[application.seller_type ?? ''] ?? application.seller_type ?? 'Seller'}
                     </span>
                     <span className="flex items-center gap-1.5">
                       <Mail className="h-3.5 w-3.5" />
@@ -370,7 +371,7 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
               <InfoField label="Full Name" value={application.user.full_name || 'Not provided'} />
               <InfoField label="Username" value={application.user.username || 'Not set'} />
               <InfoField label="Legal Name" value={application.full_legal_name} />
-              <InfoField label="Seller Type" value={application.seller_type?.replace('_', ' ') || 'Not specified'} />
+              <InfoField label="Seller Type" value={SELLER_TYPE_LABELS[application.seller_type ?? ''] ?? application.seller_type ?? 'Not specified'} />
               <InfoField label="Alternate Email" value={application.alternate_email || 'Not provided'} icon={Mail} />
               <InfoField
                 label="Account Created"
@@ -462,7 +463,7 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
 
               {application.expected_monthly_volume && (
                 <div className="pt-4 border-t border-border-subtle">
-                  <InfoField label="Expected Monthly Volume" value={application.expected_monthly_volume} icon={Receipt} />
+                  <InfoField label="Expected Monthly Volume" value={VOLUME_LABELS[application.expected_monthly_volume] ?? application.expected_monthly_volume} icon={Receipt} />
                 </div>
               )}
 
@@ -513,7 +514,7 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
           <CollapsibleSection title="Payment Information" icon={Receipt}>
             <div className="grid grid-cols-2 gap-4">
               {application.payout_method && (
-                <InfoField label="Payout Method" value={application.payout_method.replace('_', ' ')} />
+                <InfoField label="Payout Method" value={PAYOUT_METHOD_LABELS[application.payout_method] ?? application.payout_method} />
               )}
               {application.bank_account_holder_name && (
                 <InfoField label="Account Holder" value={application.bank_account_holder_name} />
@@ -521,8 +522,8 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
               {application.bank_name && (
                 <InfoField label="Bank Name" value={application.bank_name} />
               )}
-              {application.paypal_email && (
-                <InfoField label="PayPal Email" value={application.paypal_email} icon={Mail} />
+              {application.bank_iban && (
+                <InfoField label="IBAN" value={application.bank_iban} />
               )}
               {application.tax_residency_country && (
                 <InfoField label="Tax Residency" value={application.tax_residency_country} icon={Globe} />
@@ -530,7 +531,9 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
             </div>
             {application.crypto_wallet_address && (
               <div className="mt-4 pt-4 border-t border-border-subtle">
-                <p className="text-xs font-medium text-text-tertiary uppercase tracking-wide mb-2">Crypto Wallet</p>
+                <p className="text-xs font-medium text-text-tertiary uppercase tracking-wide mb-2">
+                  Crypto Wallet{application.crypto_type ? ` (${application.crypto_type})` : ''}
+                </p>
                 <p className="text-xs font-mono text-text-secondary break-all bg-bg-overlay px-3 py-2 rounded-lg border border-border-subtle">
                   {application.crypto_wallet_address}
                 </p>

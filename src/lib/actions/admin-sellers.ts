@@ -67,9 +67,12 @@ export interface SellerApplication {
   payout_method: string | null
   bank_account_holder_name: string | null
   bank_name: string | null
-  paypal_email: string | null
+  bank_iban: string | null
   crypto_wallet_address: string | null
+  crypto_type: string | null
   tax_residency_country: string | null
+  shop_name: string | null
+  other_games: string | null
 
   // Store image / logo uploaded in the become-seller wizard
   profile_picture_path?: string | null

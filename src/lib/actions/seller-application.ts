@@ -113,6 +113,7 @@ export async function submitSellerApplication(
         is_18_or_older: data.step1?.is18OrOlder ?? false,
         seller_type: data.step1?.sellerType ?? '',
         primary_games: data.step1?.primaryGames || [],
+        other_games: data.step1?.otherGames?.trim() || null,
         expected_monthly_volume: data.step1?.expectedVolume ?? '',
         referral_code: data.step1?.referralCode || null,
 
@@ -124,7 +125,14 @@ export async function submitSellerApplication(
         // Step 2: Business Information
         full_legal_name: data.step2?.fullLegalName ?? '',
         display_name: data.step2?.displayName ?? '',
-        country: data.step2?.country ?? '',
+        // Public storefront name the seller chose — load-bearing: the shop
+        // slug is built from this at approval (admin-seller-review). Falls
+        // back to the OTHER free-text country when the country is "Other".
+        shop_name: data.step2?.shopName ?? null,
+        country:
+          data.step2?.country === 'OTHER'
+            ? (data.step2?.countryOther?.trim() || 'Other')
+            : (data.step2?.country ?? ''),
         state_province: data.step2?.stateProvince || null,
         city: data.step2?.city || null,
         phone_number: data.step2?.phoneNumber ?? '',
@@ -161,16 +169,18 @@ export async function submitSellerApplication(
         bank_account_number_encrypted: data.step5?.accountNumber || null, // TODO: Encrypt in production
         bank_routing_code: data.step5?.routingCode || null,
         bank_swift_code: data.step5?.swiftCode || null,
-        bank_iban: null, // Not in schema
-        paypal_email: data.step5?.paypalEmail || null,
+        bank_iban: data.step5?.iban || null,
         crypto_wallet_address: data.step5?.cryptoWalletAddress || null,
+        crypto_type: data.step5?.cryptoType || null,
         tax_residency_country: data.step5?.taxResidencyCountry || null,
 
-        // Step 6: Agreements
+        // Step 6: Agreements. accepted_commission_structure is the legacy
+        // column name for the fee-schedule consent the wizard now collects
+        // (acceptedFeeSchedule) — same legal meaning, existing column reused.
         accepted_seller_agreement: data.step6?.acceptedSellerAgreement || false,
         accepted_privacy_policy: data.step6?.acceptedPrivacyPolicy || false,
         accepted_anti_fraud_policy: data.step6?.acceptedAntiFraudPolicy || false,
-        accepted_commission_structure: data.step6?.acceptedCommissionStructure || false,
+        accepted_commission_structure: data.step6?.acceptedFeeSchedule || false,
         accepted_data_processing: data.step6?.acceptedDataProcessing || false,
         information_accurate_confirmed: data.step6?.informationAccurate || false,
 
