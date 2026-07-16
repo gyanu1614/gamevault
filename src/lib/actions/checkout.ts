@@ -103,14 +103,34 @@ export async function createCheckout(input: CreateCheckoutInput): Promise<Create
         return { success: true, orderId: existingPending.id, checkoutUrl: existingPending.checkout_url }
       }
       // Amounts drifted (quantity/promo/wallet changed) OR the invoice expired.
-      // Supersede the stale order via CANCELLED — this is also what returns any
-      // wallet-held escrow that was moved for it, so skipping it would strand
-      // wallet funds in escrow_held. Tolerate an already-terminal order (a race
-      // where the webhook confirmed/cancelled it first): treat any transition
-      // failure as "already gone" and fall through to a fresh insert.
+      // Supersede the stale order via CANCELLED, then RETURN any wallet credit
+      // the buyer applied to it. CANCELLED only moves escrow_held → the
+      // platform 'refunds' account; the refunds → buyer-wallet leg is a
+      // separate wallet_credit every other cancel path performs. Without it,
+      // a buyer who wallet-funded a pending order and re-checks-out loses that
+      // credit into 'refunds'. Tolerate an already-terminal order (webhook
+      // raced us): treat any failure as "already gone" and fall through.
       try {
         const { transition } = await import('@/lib/escrow/transition')
         await transition(existingPending.id, 'CANCELLED', `superseded-by-recheckout:${existingPending.id}`)
+
+        // How much wallet credit did that order hold? (checkout_wallet:<id>
+        // credited escrow_held.) Return exactly that to the buyer's wallet,
+        // idempotent on wallet_refund:<id> so a retry can't double-credit.
+        const { data: heldMinorRaw } = await (supabase.rpc as any)(
+          'checkout_wallet_hold_minor',
+          { p_order_id: existingPending.id },
+        )
+        const heldMinor = BigInt(heldMinorRaw ?? 0)
+        if (heldMinor > 0n) {
+          const { refundToWallet } = await import('@/lib/wallet/wallet')
+          await refundToWallet({
+            userId: user.id,
+            amountMinor: heldMinor,
+            currency: ORDER_CURRENCY,
+            orderId: existingPending.id,
+          })
+        }
       } catch (superErr) {
         console.error('[createCheckout] supersede pending order failed (continuing):', superErr)
       }
