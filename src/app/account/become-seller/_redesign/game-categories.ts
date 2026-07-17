@@ -7,42 +7,28 @@
  * slug-regex fallback) classifies it into an offer section via classifyOfferType.
  * We de-dupe to the section level (Items / Accounts / Currency / Top-Up /
  * Boosting) so the seller picks sections, not every individual sub-category.
+ *
+ * Client-safe types + labels live in ./game-categories-shared so client
+ * components can import them without pulling in this server-only module.
  */
 
 import 'server-only'
 import { createClient } from '@/lib/supabase/server'
-import { classifyOfferType, type OfferType } from '@/lib/utils/offer-type'
+import { classifyOfferType } from '@/lib/utils/offer-type'
+import {
+  type SellerCategorySection,
+  type GameCategoryOptions,
+  SECTION_ORDER,
+} from './game-categories-shared'
 
-/**
- * The category SECTIONS the seller chooses between. Note: classifyOfferType
- * returns four buckets; boosting/services aren't one of them, so we detect
- * services separately from metadata.type === 'service'.
- */
-export type SellerCategorySection = OfferType | 'boosting'
-
-export const SECTION_LABELS: Record<SellerCategorySection, string> = {
-  items: 'Items',
-  accounts: 'Accounts',
-  currency: 'Currency',
-  'top-up': 'Top-Up',
-  boosting: 'Boosting',
-}
-
-export interface GameCategoryOptions {
-  gameId: string
-  gameSlug: string
-  gameName: string
-  /** The distinct sections this game supports, in a stable display order. */
-  sections: SellerCategorySection[]
-}
-
-const SECTION_ORDER: SellerCategorySection[] = [
-  'items',
-  'accounts',
-  'currency',
-  'top-up',
-  'boosting',
-]
+// Re-export the shared pieces so existing `from './game-categories'` server
+// imports keep working; client components import from -shared directly.
+export {
+  SECTION_LABELS,
+  SECTION_ORDER,
+  type SellerCategorySection,
+  type GameCategoryOptions,
+} from './game-categories-shared'
 
 function sectionFor(metaType: string | undefined, slug: string | undefined): SellerCategorySection {
   const t = (metaType || '').toLowerCase()
