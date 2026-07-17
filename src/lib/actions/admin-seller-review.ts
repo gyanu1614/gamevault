@@ -215,7 +215,26 @@ export async function getSellerApplications(filters: ApplicationFilters = {}) {
     }
 
     // Resolve game names for all applications
-    const { getGameNames } = await import('@/lib/utils/games')
+    const { getGameNames, getAllGames } = await import('@/lib/utils/games')
+    const { buildApplicationGamesEnrichment } = await import('@/lib/admin/seller-application-enrichment')
+
+    // Batched KYC documents for this page of applications — the redesigned
+    // list renders a real verification meter (applicable checks) + Didit
+    // detection per row, both of which need the documents.
+    const appIds: string[] = (data || []).map((app: any) => app.id)
+    const docsByApp: Record<string, any[]> = {}
+    if (appIds.length > 0) {
+      const { data: docRows } = await supabase
+        .from('seller_kyc_documents')
+        .select('id, application_id, document_type, file_path, file_name, verified, verified_by, verified_at, uploaded_at')
+        .in('application_id', appIds) as any
+      for (const doc of docRows || []) {
+        (docsByApp[doc.application_id] ||= []).push(doc)
+      }
+    }
+
+    // Shared games catalog (cached) for per-row logo lookups
+    const allGames = await getAllGames().catch(() => [])
 
     // Transform data to match expected format with nested user object
     const transformedData = await Promise.all((data || []).map(async (app: any) => {
@@ -235,10 +254,20 @@ export async function getSellerApplications(filters: ApplicationFilters = {}) {
         ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/profile-pictures/${app.profile_picture_path}`
         : null
 
+      const documents = docsByApp[app.id] || []
+      const enrichment = buildApplicationGamesEnrichment({
+        allGames,
+        rawGamesCategories: app.games_categories,
+        primaryGames: app.primary_games,
+        documents,
+      })
+
       return {
         ...app,
         game_names: gameNames,
         store_image_url: storeImageUrl,
+        documents,
+        ...enrichment,
         user: {
           email: app.email || 'unknown@example.com',
           username: app.username,

@@ -99,9 +99,9 @@ const RESULT_ICON: Record<EntityResult['type'], typeof UserIcon> = {
  *  animate classes are pure CSS and always complete. */
 const PANEL_IN = 'animate-in fade-in-0 zoom-in-95 slide-in-from-top-1 duration-150'
 
-/** Solid kit surface for every header dropdown. */
+/** Solid forest surface for every header dropdown. */
 const PANEL =
-  'absolute right-0 mt-2 rounded-xl border border-border-default bg-[#131318] shadow-[0_16px_40px_-12px_rgba(0,0,0,0.7)] overflow-hidden z-50'
+  'absolute right-0 mt-2 rounded-xl border border-white/[0.09] bg-[#0F2419] shadow-[0_16px_40px_-12px_rgba(0,0,0,0.7)] overflow-hidden z-50'
 
 export default function EnhancedAdminHeader({
   role,
@@ -373,7 +373,10 @@ export default function EnhancedAdminHeader({
         collapsed ? 'lg:left-[4.5rem]' : 'lg:left-[14.3rem]',
       )}
     >
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-xl border-b border-white/[0.06]" />
+      <div
+        className="absolute inset-0 backdrop-blur-xl border-b border-white/[0.09]"
+        style={{ background: 'rgba(12,29,20,0.78)' }}
+      />
 
       <div className="relative flex h-full items-center justify-between gap-3 px-4 lg:px-6">
         {/* ── Search ─────────────────────────────────────────────── */}
@@ -394,7 +397,7 @@ export default function EnhancedAdminHeader({
                 'focus:border-lime focus:outline-none',
               )}
             />
-            <kbd className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 rounded border border-border-subtle bg-bg-overlay px-1.5 py-0.5 text-[10px] font-semibold text-text-tertiary">
+            <kbd className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 rounded border border-white/[0.08] bg-white/[0.06] px-1.5 py-0.5 text-[10px] font-semibold text-text-tertiary">
               ⌘K
             </kbd>
           </div>
@@ -402,7 +405,7 @@ export default function EnhancedAdminHeader({
           {searchOpen && hasSearchContent && (
               <div
                 className={cn(
-                  'absolute left-0 right-0 top-full z-50 mt-2 overflow-hidden rounded-xl border border-border-default bg-[#131318] shadow-[0_16px_40px_-12px_rgba(0,0,0,0.7)]',
+                  'absolute left-0 right-0 top-full z-50 mt-2 overflow-hidden rounded-xl border border-white/[0.09] bg-[#0F2419] shadow-[0_16px_40px_-12px_rgba(0,0,0,0.7)]',
                   PANEL_IN,
                 )}
               >
@@ -421,7 +424,7 @@ export default function EnhancedAdminHeader({
                             router.push(p.href)
                             closeSearch()
                           }}
-                          className="flex w-full items-center justify-between gap-3 rounded-lg px-2.5 py-2 text-left transition-colors hover:bg-bg-overlay"
+                          className="flex w-full items-center justify-between gap-3 rounded-lg px-2.5 py-2 text-left transition-colors hover:bg-white/[0.06]"
                         >
                           <span className="text-[13px] font-medium text-text-primary">{p.label}</span>
                           <CornerDownLeft className="h-3.5 w-3.5 text-text-disabled" />
@@ -443,9 +446,9 @@ export default function EnhancedAdminHeader({
                             key={`${result.type}-${result.id}`}
                             type="button"
                             onClick={() => onResultClick(result)}
-                            className="flex w-full items-center gap-3 rounded-lg px-2.5 py-2 text-left transition-colors hover:bg-bg-overlay"
+                            className="flex w-full items-center gap-3 rounded-lg px-2.5 py-2 text-left transition-colors hover:bg-white/[0.06]"
                           >
-                            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border-subtle bg-bg-overlay">
+                            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.06]">
                               <Icon className="h-4 w-4 text-text-secondary" />
                             </span>
                             <span className="min-w-0 flex-1">
@@ -533,7 +536,7 @@ export default function EnhancedAdminHeader({
             >
               <Bell className="h-[18px] w-[18px]" />
               {unread > 0 && (
-                <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-lime px-1 text-[10px] font-bold text-text-inverse ring-2 ring-[#0c0c11]">
+                <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-lime px-1 text-[10px] font-bold text-text-inverse ring-2 ring-[#0C1D14]">
                   {unread > 9 ? '9+' : unread}
                 </span>
               )}
@@ -541,7 +544,7 @@ export default function EnhancedAdminHeader({
 
               {showNotifications && (
                 <div className={cn(PANEL, PANEL_IN, 'w-96')}>
-                  <div className="flex items-center justify-between border-b border-border-subtle px-4 py-3">
+                  <div className="flex items-center justify-between border-b border-white/[0.08] px-4 py-3">
                     <h3 className="text-[13.5px] font-semibold text-text-primary">Notifications</h3>
                     {unread > 0 && (
                       <button
@@ -560,7 +563,7 @@ export default function EnhancedAdminHeader({
                         <p className="text-[13px] text-text-tertiary">All caught up</p>
                       </div>
                     ) : (
-                      <div className="divide-y divide-border-subtle">
+                      <div className="divide-y divide-white/[0.08]">
                         {recent.map((n: any) => (
                           <Link
                             key={n.id}
@@ -569,7 +572,7 @@ export default function EnhancedAdminHeader({
                               markAsRead(n.id)
                               setShowNotifications(false)
                             }}
-                            className="block px-4 py-3 transition-colors hover:bg-bg-overlay"
+                            className="block px-4 py-3 transition-colors hover:bg-white/[0.06]"
                           >
                             <p className="text-[13px] font-medium text-text-primary">{n.title}</p>
                             <p className="mt-0.5 line-clamp-2 text-[12px] text-text-secondary">
@@ -588,11 +591,11 @@ export default function EnhancedAdminHeader({
                       </div>
                     )}
                   </div>
-                  <div className="border-t border-border-subtle p-2">
+                  <div className="border-t border-white/[0.08] p-2">
                     <Link
                       href="/admin/notifications"
                       onClick={() => setShowNotifications(false)}
-                      className="block rounded-lg py-2 text-center text-[12.5px] font-semibold text-lime-text transition-colors hover:bg-bg-overlay"
+                      className="block rounded-lg py-2 text-center text-[12.5px] font-semibold text-lime-text transition-colors hover:bg-white/[0.06]"
                     >
                       View all notifications
                     </Link>
@@ -634,7 +637,7 @@ export default function EnhancedAdminHeader({
 
               {showUserMenu && (
                 <div className={cn(PANEL, PANEL_IN, 'w-64')}>
-                  <div className="flex items-center gap-3 border-b border-border-subtle px-4 py-3.5">
+                  <div className="flex items-center gap-3 border-b border-white/[0.08] px-4 py-3.5">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={avatarSrc}
@@ -675,7 +678,7 @@ export default function EnhancedAdminHeader({
                         window.open('/', '_blank', 'noopener,noreferrer')
                       }}
                     />
-                    <div className="mx-2 my-1.5 h-px bg-border-subtle" />
+                    <div className="mx-2 my-1.5 h-px bg-white/[0.08]" />
                     <button
                       onClick={handleSignOut}
                       className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium text-error transition-colors hover:bg-error-bg"
@@ -744,7 +747,7 @@ function MenuItem({
   return (
     <button
       onClick={onClick}
-      className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium text-text-secondary transition-colors hover:bg-bg-overlay hover:text-text-primary"
+      className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium text-text-secondary transition-colors hover:bg-white/[0.06] hover:text-text-primary"
     >
       <Icon className="h-4 w-4" />
       {label}

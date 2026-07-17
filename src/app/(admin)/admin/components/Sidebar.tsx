@@ -37,6 +37,7 @@ import {
 } from '@tabler/icons-react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
+import { FOREST_BG } from '../_theme/forest'
 
 interface SidebarProps {
   role: string
@@ -94,7 +95,7 @@ export function Sidebar({ role, user, collapsed = false, onToggle }: SidebarProp
       {/* Mobile menu toggle */}
       <button
         onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-        className="lg:hidden fixed top-4 left-4 z-50 p-2 rounded-lg bg-black/50 backdrop-blur-xl border border-white/[0.1]"
+        className="lg:hidden fixed top-4 left-4 z-50 p-2 rounded-lg bg-[#0A1810]/80 backdrop-blur-xl border border-white/[0.1]"
       >
         {isMobileMenuOpen ? (
           <IconX className="h-5 w-5 text-white" />
@@ -107,10 +108,11 @@ export function Sidebar({ role, user, collapsed = false, onToggle }: SidebarProp
       <div
         className={cn(
           'hidden lg:flex lg:flex-col lg:fixed lg:inset-y-0 lg:z-40',
-          'bg-black/40 backdrop-blur-xl border-r border-white/[0.06]',
+          'border-r border-white/[0.09]',
           'transition-[width] duration-300 ease-out',
           collapsed ? 'lg:w-[4.5rem]' : 'lg:w-[14.3rem]',
         )}
+        style={{ background: FOREST_BG.sidebar }}
       >
         <div className="flex flex-col h-full overflow-hidden">
           {/* Logo row + collapse toggle */}
@@ -144,7 +146,7 @@ export function Sidebar({ role, user, collapsed = false, onToggle }: SidebarProp
               aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
               title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
               whileTap={{ scale: 0.92 }}
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-white/[0.06] hover:text-white"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-white/45 transition-colors hover:bg-white/[0.06] hover:text-white"
             >
               {collapsed ? (
                 <IconLayoutSidebarLeftExpand className="h-5 w-5" />
@@ -169,8 +171,8 @@ export function Sidebar({ role, user, collapsed = false, onToggle }: SidebarProp
                     'text-[14.5px] font-medium transition-all duration-150',
                     collapsed ? 'justify-center px-0' : 'px-3',
                     isActive
-                      ? 'bg-lime-tint-bg text-white'
-                      : 'text-gray-400 hover:text-white hover:bg-white/[0.04]',
+                      ? 'bg-[#A3E635]/[0.12] text-white'
+                      : 'text-white/60 hover:text-white hover:bg-white/[0.05]',
                   )}
                 >
                   {isActive && (
@@ -179,7 +181,7 @@ export function Sidebar({ role, user, collapsed = false, onToggle }: SidebarProp
                   <Icon
                     className={cn(
                       'h-[22px] w-[22px] transition-colors flex-shrink-0',
-                      isActive ? 'text-lime-text' : 'text-gray-500',
+                      isActive ? 'text-[#A3E635]' : 'text-white/40',
                     )}
                   />
                   <AnimatePresence initial={false}>
@@ -202,7 +204,7 @@ export function Sidebar({ role, user, collapsed = false, onToggle }: SidebarProp
               className={cn(
                 'w-full flex items-center justify-center gap-2 rounded-lg py-2.5',
                 'text-[13px] font-medium transition-all duration-150',
-                'text-gray-500 hover:text-red-400 hover:bg-red-500/10 border border-transparent hover:border-red-500/20',
+                'text-white/45 hover:text-red-400 hover:bg-red-500/10 border border-transparent hover:border-red-500/20',
               )}
             >
               <IconLogout className="h-[18px] w-[18px] flex-shrink-0" />
@@ -234,7 +236,8 @@ export function Sidebar({ role, user, collapsed = false, onToggle }: SidebarProp
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
               transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-              className="lg:hidden fixed inset-y-0 left-0 z-50 w-72 bg-black/90 backdrop-blur-xl border-r border-white/[0.06]"
+              className="lg:hidden fixed inset-y-0 left-0 z-50 w-72 border-r border-white/[0.09]"
+              style={{ background: FOREST_BG.sidebar }}
             >
               <div className="flex flex-col h-full">
                 <div className="h-[3.85rem] flex items-center px-3 border-b border-white/[0.06]">
@@ -266,8 +269,8 @@ export function Sidebar({ role, user, collapsed = false, onToggle }: SidebarProp
                           'relative flex items-center gap-3 px-3 py-3 rounded-lg',
                           'text-[14.5px] font-medium transition-all duration-150',
                           isActive
-                            ? 'bg-lime-tint-bg text-white'
-                            : 'text-gray-400 hover:text-white hover:bg-white/[0.04]',
+                            ? 'bg-[#A3E635]/[0.12] text-white'
+                            : 'text-white/60 hover:text-white hover:bg-white/[0.05]',
                         )}
                       >
                         {isActive && (
@@ -276,7 +279,7 @@ export function Sidebar({ role, user, collapsed = false, onToggle }: SidebarProp
                         <Icon
                           className={cn(
                             'h-[22px] w-[22px]',
-                            isActive ? 'text-lime-text' : 'text-gray-500',
+                            isActive ? 'text-[#A3E635]' : 'text-white/40',
                           )}
                         />
                         <span>{link.label}</span>
@@ -288,7 +291,7 @@ export function Sidebar({ role, user, collapsed = false, onToggle }: SidebarProp
                 <div className="border-t border-white/[0.06] px-3 py-2.5">
                   <button
                     onClick={handleLogout}
-                    className="w-full flex items-center justify-center gap-2 px-2 py-2.5 rounded-lg text-[13px] font-medium text-gray-500 hover:text-red-400 hover:bg-red-500/10 border border-transparent hover:border-red-500/20 transition-all duration-150"
+                    className="w-full flex items-center justify-center gap-2 px-2 py-2.5 rounded-lg text-[13px] font-medium text-white/45 hover:text-red-400 hover:bg-red-500/10 border border-transparent hover:border-red-500/20 transition-all duration-150"
                   >
                     <IconLogout className="h-[18px] w-[18px]" />
                     <span>Logout</span>

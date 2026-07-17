@@ -1,238 +1,256 @@
 'use client'
 
-import { useState } from 'react'
+/**
+ * Forest Ledger — /admin/sellers applications list rows (approved mockup ②).
+ *
+ * Store-first white rows on the forest canvas: store image tile leads,
+ * shop name bold with the applicant sub-line (display name · type ·
+ * country · applied relative time), stacked REAL game logos (max 3 +
+ * overflow +N), an honest verification mini-bar (applicable checks
+ * only), and the status chip. Row click → detail page.
+ *
+ * Motion: CSS-only staggered fade-up (no framer-motion).
+ */
+
 import { useRouter } from 'next/navigation'
-import { motion } from 'framer-motion'
+import { FileText } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { SellerApplication } from '@/lib/actions/admin-sellers'
+import type { GameLookupEntry } from '@/lib/admin/seller-application-enrichment'
 import { calculateVerificationStatus } from '@/lib/utils/seller-verification'
-import { getAvatarUrl } from '@/lib/utils/avatar'
-import { StatusBadge, TABLE } from '../components/kit'
 import { SELLER_TYPE_LABELS } from '@/lib/seller-application/labels'
 import {
-  Eye,
-  ChevronRight,
-  FileText,
-  Calendar
-} from 'lucide-react'
+  FOREST_BG,
+  FOREST_MOTION,
+  forestStagger,
+  forestStatusChip,
+  gameTileGradient,
+} from '../_theme/forest'
 
 interface ApplicationsTableProps {
   applications: SellerApplication[]
 }
 
+/** "applied 2 hours ago" / "applied Jul 15" style relative label. */
+function appliedLabel(date: string): string {
+  const d = new Date(date)
+  const now = new Date()
+  const minutes = Math.floor((now.getTime() - d.getTime()) / 60000)
+  const hours = Math.floor(minutes / 60)
+  const days = Math.floor(hours / 24)
+
+  if (days === 0) {
+    if (hours === 0) {
+      if (minutes <= 0) return 'applied just now'
+      return `applied ${minutes}m ago`
+    }
+    return `applied ${hours}h ago`
+  }
+  if (days < 7) return `applied ${days}d ago`
+
+  return `applied ${d.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: d.getFullYear() !== now.getFullYear() ? 'numeric' : undefined,
+  })}`
+}
+
+interface GameTile {
+  key: string
+  name: string
+  image: string | null
+}
+
+/**
+ * Ordered, de-duplicated game tiles for a row: games_categories entries
+ * resolved through the real-games lookup first; legacy rows fall back to
+ * primary_games (+ resolved game_names for the initial/gradient).
+ */
+function rowGameTiles(app: SellerApplication): GameTile[] {
+  const lookup = app.games_lookup || {}
+  const seen = new Set<string>()
+  const tiles: GameTile[] = []
+
+  const push = (entry: GameLookupEntry | undefined, fallbackName: string) => {
+    const key = entry?.id ?? fallbackName
+    if (!key || seen.has(key)) return
+    seen.add(key)
+    tiles.push({
+      key,
+      name: entry?.name ?? fallbackName,
+      image: entry?.image_url ?? null,
+    })
+  }
+
+  if (app.games_categories && app.games_categories.length > 0) {
+    for (const gc of app.games_categories) {
+      push(lookup[gc.gameId] ?? lookup[gc.gameSlug], gc.gameSlug)
+    }
+  } else {
+    ;(app.primary_games || []).forEach((id, index) => {
+      push(lookup[String(id)], app.game_names?.[index] ?? String(id))
+    })
+  }
+
+  return tiles
+}
+
+const ROW_CHIP =
+  'inline-flex shrink-0 items-center rounded-full px-[11px] py-1 text-[11.5px] font-bold'
+
+function RowStatusChip({ app }: { app: SellerApplication }) {
+  // Approved sellers who were later restricted/banned surface that state
+  // instead of the stale application status (view flattens seller_status).
+  const sellerStatus = app.seller_status || app.user?.seller_status
+  if (app.status === 'approved' && sellerStatus === 'restricted') {
+    return <span className={cn(ROW_CHIP, 'bg-[#FEF3C7] text-[#92400E]')}>Restricted</span>
+  }
+  if (app.status === 'approved' && sellerStatus === 'banned') {
+    return <span className={cn(ROW_CHIP, 'bg-[#FEF2F1] text-[#B42318]')}>Banned</span>
+  }
+
+  const chip = forestStatusChip(app.status)
+  return <span className={chip.onLight}>{chip.label}</span>
+}
+
 export default function ApplicationsTable({ applications }: ApplicationsTableProps) {
   const router = useRouter()
-  const [hoveredRow, setHoveredRow] = useState<string | null>(null)
-
-  const getStatusBadge = (app: SellerApplication) => {
-    // Check seller_status first for approved sellers
-    // The view flattens the data, so seller_status is at root level
-    const sellerStatus = (app as any).seller_status || (app.user as any)?.seller_status
-    if (app.status === 'approved' && sellerStatus) {
-      if (sellerStatus === 'restricted') {
-        return <StatusBadge status="restricted" tone="warning" />
-      }
-      if (sellerStatus === 'banned') {
-        return <StatusBadge status="banned" />
-      }
-    }
-
-    // Otherwise show application status
-    switch (app.status) {
-      case 'pending':
-      case 'approved':
-      case 'rejected':
-        return <StatusBadge status={app.status} />
-      default:
-        return null
-    }
-  }
-
-  const getVerificationStatus = (app: SellerApplication) => {
-    // Calculate verification status using documents
-    const status = calculateVerificationStatus(app.documents, {
-      identity_verified: app.identity_verified,
-      address_verified: app.address_verified,
-      business_verified: app.business_verified,
-      tax_verified: app.tax_verified
-    })
-
-    return (
-      <div className="flex items-center gap-2">
-        <div className="h-2 flex-1 overflow-hidden rounded-full bg-bg-overlay">
-          <motion.div
-            className={cn(
-              "h-full rounded-full",
-              status.percentage === 100 ? "bg-success" : status.percentage >= 50 ? "bg-warning" : "bg-error"
-            )}
-            initial={{ width: 0 }}
-            animate={{ width: `${status.percentage}%` }}
-            transition={{ duration: 0.5, ease: "easeOut" }}
-          />
-        </div>
-        <span className="whitespace-nowrap text-xs tabular-nums text-text-tertiary">
-          {status.verified}/{status.total}
-        </span>
-      </div>
-    )
-  }
-
-  const formatDate = (date: string) => {
-    const d = new Date(date)
-    const now = new Date()
-    const diff = now.getTime() - d.getTime()
-    const seconds = Math.floor(diff / 1000)
-    const minutes = Math.floor(seconds / 60)
-    const hours = Math.floor(minutes / 60)
-    const days = Math.floor(hours / 24)
-
-    // Relative time for recent submissions
-    if (days === 0) {
-      if (hours === 0) {
-        if (minutes === 0) return 'Just now'
-        return `${minutes} ${minutes === 1 ? 'minute' : 'minutes'} ago`
-      }
-      return `${hours} ${hours === 1 ? 'hour' : 'hours'} ago`
-    } else if (days < 7) {
-      return `${days} ${days === 1 ? 'day' : 'days'} ago`
-    }
-
-    // Absolute date for older submissions
-    return d.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: d.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
-    })
-  }
 
   if (applications.length === 0) {
     return (
-      <div className="p-12 text-center">
-        <FileText className="mx-auto mb-4 h-12 w-12 text-text-tertiary" />
-        <p className="text-lg font-semibold text-text-primary">No applications found</p>
-        <p className="mt-1 text-sm text-text-secondary">New seller applications will appear here</p>
+      <div className="px-6 py-14 text-center">
+        <FileText className="mx-auto mb-3 h-10 w-10 text-white/25" />
+        <p className="text-[15px] font-bold text-white/90">No Applications Found</p>
+        <p className="mt-1 text-[12.5px] text-white/50">
+          New seller applications will appear here
+        </p>
       </div>
     )
   }
 
   return (
-    <div className={TABLE.wrap}>
-      <table className={TABLE.table}>
-        <thead>
-          <tr>
-            <th className={TABLE.th}>Store</th>
-            <th className={TABLE.th}>Applicant</th>
-            <th className={TABLE.th}>Verification</th>
-            <th className={TABLE.th}>Status</th>
-            <th className={TABLE.th}>Applied</th>
-            <th className={cn(TABLE.th, 'text-right')}>Action</th>
-          </tr>
-        </thead>
-        <tbody>
-          {applications.map((app) => (
-            <motion.tr
-              key={app.id}
-              className={cn(
-                'cursor-pointer',
-                TABLE.row,
-                hoveredRow === app.id && 'bg-bg-overlay'
-              )}
-              onMouseEnter={() => setHoveredRow(app.id)}
-              onMouseLeave={() => setHoveredRow(null)}
-              onClick={() => router.push(`/admin/sellers/${app.id}`)}
-            >
-              {/* Store — submitted store image + store name lead the row */}
-              <td className={TABLE.td}>
-                <div className="flex items-center gap-3">
-                  <img
-                    src={getAvatarUrl(
-                      app.store_image_url || app.user.avatar_url,
-                      app.display_name || app.user.username || app.user.email
-                    )}
-                    alt={app.shop_name || app.display_name || 'Store'}
-                    className="h-10 w-10 rounded-lg border border-border-default bg-bg-overlay object-cover"
-                  />
-                  <div className="space-y-0.5">
-                    <p className="text-sm font-semibold text-text-primary">{app.shop_name || app.display_name || 'Unnamed Store'}</p>
-                    <p className="text-xs text-text-tertiary">
-                      {(app.display_name || app.user.username || '')}{app.display_name || app.user.username ? ' · ' : ''}{SELLER_TYPE_LABELS[app.seller_type ?? ''] ?? app.seller_type ?? 'Not specified'}
-                    </p>
-                    {app.game_names && app.game_names.length > 0 && (
-                      <div className="flex flex-wrap gap-1 pt-0.5">
-                        {app.game_names.slice(0, 2).map((game, idx) => (
-                          <span
-                            key={idx}
-                            className="inline-flex items-center rounded border border-border-default bg-bg-overlay px-2 py-0.5 text-[10px] font-medium text-text-secondary"
-                          >
-                            {game}
-                          </span>
-                        ))}
-                        {app.game_names.length > 2 && (
-                          <span className="text-[10px] text-text-tertiary">+{app.game_names.length - 2} more</span>
-                        )}
-                      </div>
-                    )}
+    <div className="flex flex-col gap-2">
+      {applications.map((app, index) => {
+        const storeName = app.shop_name || app.display_name || 'Unnamed Store'
+        const storeInitial = (storeName.trim()[0] || 'S').toUpperCase()
+        const storeImage = app.store_image_url || app.user?.avatar_url || null
+
+        const subParts = [
+          app.display_name || app.user?.username,
+          SELLER_TYPE_LABELS[app.seller_type ?? ''] ?? app.seller_type,
+          app.country,
+          appliedLabel(app.created_at),
+        ].filter(Boolean)
+
+        const tiles = rowGameTiles(app)
+        const verification = calculateVerificationStatus(app.documents, app)
+
+        return (
+          <div
+            key={app.id}
+            role="button"
+            tabIndex={0}
+            onClick={() => router.push(`/admin/sellers/${app.id}`)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault()
+                router.push(`/admin/sellers/${app.id}`)
+              }
+            }}
+            className={cn(
+              'flex cursor-pointer items-center gap-3.5 rounded-xl bg-white px-4 py-3 text-[#1A1D19]',
+              'transition-[transform,box-shadow] duration-150 hover:-translate-y-[1px]',
+              'hover:shadow-[0_12px_30px_-18px_rgba(0,0,0,0.65)]',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#A3E635]',
+              FOREST_MOTION.fadeUp,
+            )}
+            style={forestStagger(Math.min(index, 10), 45)}
+          >
+            {/* Store image tile (submitted store image; initial tile fallback) */}
+            {storeImage ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={storeImage}
+                alt={storeName}
+                className="h-[42px] w-[42px] shrink-0 rounded-[10px] object-cover"
+              />
+            ) : (
+              <div
+                className="grid h-[42px] w-[42px] shrink-0 place-items-center rounded-[10px] text-[15px] font-black text-[#A3E635]"
+                style={{ background: FOREST_BG.storeTile }}
+              >
+                {storeInitial}
+              </div>
+            )}
+
+            {/* Store name + applicant sub-line */}
+            <div className="min-w-0">
+              <p className="truncate text-[13.5px] font-extrabold">{storeName}</p>
+              <p className="mt-px truncate text-[11px] text-[#8A9083]">
+                {subParts.join(' · ')}
+              </p>
+            </div>
+
+            {/* Stacked game logos (max 3 + overflow) */}
+            {tiles.length > 0 && (
+              <div className="ml-2 hidden shrink-0 items-center sm:flex">
+                {tiles.slice(0, 3).map((tile, i) =>
+                  tile.image ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      key={tile.key}
+                      src={tile.image}
+                      alt={tile.name}
+                      title={tile.name}
+                      className="h-6 w-6 rounded-[7px] object-cover ring-2 ring-white"
+                      style={{ marginLeft: i === 0 ? 0 : -6 }}
+                    />
+                  ) : (
+                    <div
+                      key={tile.key}
+                      title={tile.name}
+                      className="grid h-6 w-6 place-items-center rounded-[7px] text-[9px] font-black text-white ring-2 ring-white"
+                      style={{
+                        background: gameTileGradient(tile.name),
+                        marginLeft: i === 0 ? 0 : -6,
+                      }}
+                    >
+                      {(tile.name.trim()[0] || '?').toUpperCase()}
+                    </div>
+                  ),
+                )}
+                {tiles.length > 3 && (
+                  <div
+                    className="grid h-6 min-w-6 place-items-center rounded-[7px] bg-[#FAFAF7] px-1 text-[9px] font-black text-[#5B6157] ring-2 ring-white"
+                    style={{ marginLeft: -6 }}
+                  >
+                    +{tiles.length - 3}
                   </div>
-                </div>
-              </td>
+                )}
+              </div>
+            )}
 
-              {/* Applicant */}
-              <td className={TABLE.td}>
-                <div>
-                  <p className="text-sm font-medium text-text-primary">
-                    {app.user.full_name || app.user.username || 'Unknown'}
-                  </p>
-                  <p className="text-xs text-text-tertiary">{app.user.email}</p>
-                </div>
-              </td>
+            {/* Verification mini-bar — applicable checks only */}
+            <div className="ml-auto hidden shrink-0 items-center gap-2 md:flex">
+              <span className="h-[5px] w-[74px] overflow-hidden rounded-full bg-[#ECEDE4]">
+                <span
+                  className="block h-full rounded-full bg-[#65A30D]"
+                  style={{ width: `${verification.percentage}%` }}
+                />
+              </span>
+              <span className="text-[11px] font-semibold tabular-nums text-[#5B6157]">
+                {verification.verified}/{verification.total}
+              </span>
+            </div>
 
-              {/* Verification Status */}
-              <td className={TABLE.td}>
-                <div className="w-32">
-                  {getVerificationStatus(app)}
-                </div>
-              </td>
-
-              {/* Status */}
-              <td className={TABLE.td}>
-                {getStatusBadge(app)}
-              </td>
-
-              {/* Applied Date */}
-              <td className={TABLE.td}>
-                <div className="flex items-center gap-2 text-sm text-text-secondary">
-                  <Calendar className="h-3 w-3" />
-                  {formatDate(app.created_at)}
-                </div>
-              </td>
-
-              {/* Action */}
-              <td className={cn(TABLE.td, 'text-right')}>
-                <button
-                  className={cn(
-                    "inline-flex items-center gap-1 rounded-lg px-3 py-1.5",
-                    "text-sm font-semibold transition-colors duration-200",
-                    hoveredRow === app.id
-                      ? "border border-lime-tint-border bg-lime-tint-bg text-lime-text"
-                      : "border border-transparent text-text-tertiary"
-                  )}
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    router.push(`/admin/sellers/${app.id}`)
-                  }}
-                >
-                  <Eye className="h-3.5 w-3.5" />
-                  Review
-                  <ChevronRight className={cn(
-                    "h-3 w-3 transition-transform",
-                    hoveredRow === app.id && "translate-x-0.5"
-                  )} />
-                </button>
-              </td>
-            </motion.tr>
-          ))}
-        </tbody>
-      </table>
+            {/* ml-auto only matters below md, where the meter (the usual
+                spacer) is hidden. */}
+            <div className="ml-auto shrink-0 md:ml-0">
+              <RowStatusChip app={app} />
+            </div>
+          </div>
+        )
+      })}
     </div>
   )
 }

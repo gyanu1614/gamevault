@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import AdminChrome from './admin/components/AdminChrome'
+import { ADMIN_FOREST, FOREST_BG } from './admin/_theme/forest'
 
 export const metadata: Metadata = {
   title: {
@@ -64,12 +65,13 @@ export default async function AdminLayout({
   }
 
   return (
-    <div className="min-h-screen bg-bg-base relative text-text-primary">
-      {/* V19/P22 — Replaced violet+indigo radial gradients with a
-          neutral bg-bg-base canvas. Admin chrome is now on-brand with
-          the rest of the site (lime accent on dark) rather than a
-          standalone purple theme. */}
-      <div className="fixed inset-0 bg-bg-base" />
+    <div
+      className="relative min-h-screen text-text-primary"
+      style={{ backgroundColor: ADMIN_FOREST.canvas }}
+    >
+      {/* Forest Ledger — deep-forest canvas gradient (never flat black).
+          Fixed, so the gradient stays put while ledger content scrolls. */}
+      <div className="fixed inset-0" style={{ background: FOREST_BG.canvas }} />
 
       {/* V55 — Client chrome owns the sidebar-collapse state and keeps
           sidebar width, header offset, and content margin in lockstep. */}
