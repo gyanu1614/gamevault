@@ -23,7 +23,21 @@ export const uploadedDocSchema = z.object({
 
 export type UploadedDoc = z.infer<typeof uploadedDocSchema>
 
-// Step 1: Eligibility & Intent Schema
+/**
+ * Per-game category selection captured in Step 1 (Account & Games). For each
+ * game the seller picks, they choose which category sections they'll sell in
+ * (Items / Accounts / Currency / Top-Up / Boosting) — derived from that game's
+ * real categories. Stored into the new `games_categories` JSONB column.
+ */
+export const gameCategorySelectionSchema = z.object({
+  gameId: z.string().min(1),
+  gameSlug: z.string().min(1),
+  categorySlugs: z.array(z.string()),
+})
+
+export type GameCategorySelection = z.infer<typeof gameCategorySelectionSchema>
+
+// Step 1: Account & Games Schema
 export const step1Schema = z
   .object({
     is18OrOlder: z.boolean().refine((val) => val === true, {
@@ -34,6 +48,12 @@ export const step1Schema = z
     }),
     /** Real game UUIDs from the games table. */
     primaryGames: z.array(z.string()),
+    /**
+     * Per-game category selection, parallel to primaryGames. Each entry maps a
+     * selected game to the category sections the seller will trade in. Optional
+     * per game — a seller can pick a game without narrowing categories yet.
+     */
+    gamesCategories: z.array(gameCategorySelectionSchema).optional().default([]),
     /** Free-text games not in the catalog ("Other"). */
     otherGames: z.string().max(200, 'Keep it under 200 characters').optional(),
     expectedVolume: z.enum(['under_500', '500_2000', '2000_10000', 'over_10000'], {
@@ -66,6 +86,13 @@ export const step2Schema = z
     country: z.string().min(1, 'Country is required'),
     countryOther: z.string().optional(),
     stateProvince: z.string().optional(),
+    /**
+     * ZIP / postal code. No dedicated legacy column exists, so the Personal Info
+     * screen folds this into `stateProvince` (the persisted `state_province`
+     * column) on submit — this key stays optional and UI-side only, and never
+     * changes the submitSellerApplication payload contract.
+     */
+    zipPostal: z.string().max(20, 'Postal code is too long').optional(),
     city: z.string().min(2, 'City is required'),
     /** E.164 phone number emitted by the phone input. */
     phoneNumber: z
@@ -205,3 +232,63 @@ export const step6Schema = z.object({
 })
 
 export type Step6FormData = z.infer<typeof step6Schema>
+
+/**
+ * Payout currency preference (optional) — offered on the Payout Setup step and
+ * stored into the new `payout_currency` column. Kept as a plain enum so the
+ * adapter can pass it straight through.
+ */
+export const PAYOUT_CURRENCIES = ['USD', 'EUR', 'GBP', 'USDT'] as const
+export type PayoutCurrency = (typeof PAYOUT_CURRENCIES)[number]
+
+// ── Redesign: Review & Sign step slice ────────────────────────────────────────
+//
+// The "Forest Ledger" redesign collapses the old 5-checkbox agreements step
+// into ONE consolidated consent + an e-signature. This slice is the source of
+// truth for that step; the adapter fans `consolidatedConsent` out to the six
+// legacy accepted_* booleans the server action still writes.
+
+/** Optional "have you sold elsewhere?" block on Review & Sign. */
+export const sellingExperienceSchema = z.object({
+  /** Did the seller indicate prior marketplace experience? */
+  hasSoldElsewhere: z.boolean().optional().default(false),
+  /** Free text: marketplace name / store link. Only meaningful when the above is true. */
+  marketplaceDetails: z.string().max(300, 'Keep it under 300 characters').optional(),
+})
+
+export type SellingExperience = z.infer<typeof sellingExperienceSchema>
+
+export const reviewSignSchema = z
+  .object({
+    ...sellingExperienceSchema.shape,
+    /**
+     * The single consolidated consent that replaces the old five checkboxes:
+     * Terms of Service + Privacy Policy + Fee Schedule (+ data processing +
+     * anti-fraud + accuracy — all one consent now). MUST be true.
+     */
+    consolidatedConsent: z.literal(true, {
+      errorMap: () => ({
+        message: 'You must agree to the Terms of Service, Privacy Policy & Fee Schedule',
+      }),
+    }),
+    /**
+     * Seller Agency Agreement e-signature. When DocuSeal isn't configured the
+     * fallback is a typed-name click-accept — this holds the typed name and the
+     * moment it was recorded. Required before submit.
+     */
+    signatureName: z.string().min(2, 'Type your full legal name to sign'),
+    signedAt: z.string().min(1, 'Signature timestamp is required'),
+    /** Optional, separate, unchecked-by-default marketing consent. */
+    marketingConsent: z.boolean().optional().default(false),
+  })
+  .superRefine((data, ctx) => {
+    if (data.hasSoldElsewhere && !data.marketplaceDetails?.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['marketplaceDetails'],
+        message: 'Add the marketplace name or a link to your store',
+      })
+    }
+  })
+
+export type ReviewSignFormData = z.infer<typeof reviewSignSchema>
