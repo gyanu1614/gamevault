@@ -30,6 +30,8 @@ export function LayoutWrapper({ children }: { children: React.ReactNode }) {
   // rationale as checkout: the applicant shouldn't leak out mid-form.
   const isSellerApplication =
     pathname?.startsWith('/account/become-seller') ||
+    pathname?.startsWith('/account/seller-status') ||
+    pathname?.startsWith('/dev/seller-status-preview') ||
     pathname?.startsWith('/dev/seller-intro-preview') ||
     pathname?.startsWith('/kyc/complete')
 
