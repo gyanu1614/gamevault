@@ -345,9 +345,13 @@ export default function StatusView({
                 </PrimaryButton>
               )}
               {status === 'rejected' && rejection?.isPermanentBan && (
-                <PrimaryButton onClick={() => onNavigate('/support')}>
+                <a
+                  href="mailto:support@dropmarket.gg"
+                  className="inline-flex items-center justify-center gap-2 rounded-xl px-6 py-2.5 text-sm font-semibold text-white"
+                  style={{ backgroundColor: P.forest }}
+                >
                   Contact Support
-                </PrimaryButton>
+                </a>
               )}
               {(status === 'pending' || status === 'under_review') && (
                 <button

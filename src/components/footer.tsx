@@ -13,31 +13,51 @@ import Link from 'next/link'
 
 const NAV_LINKS: Array<{ name: string; href: string }> = [
   { name: 'Browse Listings', href: '/browse' },
-  { name: 'Sell Items', href: '/sell/create' },
-  { name: 'How It Works', href: '/how-it-works' },
-  { name: 'Pricing', href: '/pricing' },
-  { name: 'About', href: '/about' },
+  { name: 'Become A Seller', href: '/account/become-seller' },
+  { name: 'SafeDrop', href: '/safedrop' },
+  { name: 'Fees', href: '/fees' },
   { name: 'Blog', href: '/blog' },
-  { name: 'Contact', href: '/contact' },
+  { name: 'Company', href: '/company' },
+  { name: 'Contact', href: 'mailto:support@dropmarket.gg' },
 ]
 
-/** Full legal pack strip (compliance — every published document stays linked). */
-const LEGAL_STRIP: Array<{ name: string; href: string }> = [
-  { name: 'Terms', href: '/terms' },
-  { name: 'Buyer Terms', href: '/buyer-terms' },
-  { name: 'Seller Agreement', href: '/seller-agreement' },
-  { name: 'SafeDrop', href: '/safedrop' },
-  { name: 'Refunds & Disputes', href: '/refunds' },
-  { name: 'Prohibited Items', href: '/prohibited' },
-  { name: 'Acceptable Use', href: '/acceptable-use' },
-  { name: 'Privacy', href: '/privacy' },
-  { name: 'Cookies', href: '/cookies' },
-  { name: 'Risk Disclosure', href: '/risk' },
-  { name: 'Chargebacks', href: '/chargebacks' },
-  { name: 'Complaints', href: '/complaints' },
-  { name: 'IP/Takedown', href: '/ip' },
-  { name: 'Trust & Safety', href: '/trust-safety' },
-  { name: 'Company', href: '/company' },
+/**
+ * Full legal pack (compliance — every published document stays linked),
+ * grouped into three centered mini-columns instead of one flat strip.
+ */
+const DOC_GROUPS: Array<{ title: string; links: Array<{ name: string; href: string }> }> = [
+  {
+    title: 'Legal',
+    links: [
+      { name: 'Terms Of Use', href: '/terms' },
+      { name: 'Buyer Terms', href: '/buyer-terms' },
+      { name: 'Seller Agreement', href: '/seller-agreement' },
+      { name: 'Privacy Policy', href: '/privacy' },
+      { name: 'Cookie Policy', href: '/cookies' },
+      { name: 'Company Details', href: '/company' },
+    ],
+  },
+  {
+    title: 'Policies',
+    links: [
+      { name: 'SafeDrop Protection', href: '/safedrop-policy' },
+      { name: 'Refunds & Disputes', href: '/refunds' },
+      { name: 'Prohibited Items', href: '/prohibited' },
+      { name: 'Acceptable Use', href: '/acceptable-use' },
+      { name: 'Risk Disclosure', href: '/risk' },
+      { name: 'AML Policy', href: '/aml' },
+    ],
+  },
+  {
+    title: 'Support',
+    links: [
+      { name: 'Trust & Safety', href: '/trust-safety' },
+      { name: 'Chargebacks', href: '/chargebacks' },
+      { name: 'Complaints', href: '/complaints' },
+      { name: 'IP & Takedowns', href: '/ip' },
+      { name: 'Email Support', href: 'mailto:support@dropmarket.gg' },
+    ],
+  },
 ]
 
 const SOCIALS: Array<{ name: string; href: string; path: string }> = [
@@ -111,19 +131,28 @@ export function Footer() {
           ))}
         </div>
 
-        {/* Legal strip — compact but complete (compliance pack) */}
-        <ul className="flex max-w-3xl flex-wrap items-center justify-center gap-x-4 gap-y-1.5 border-t border-white/[0.06] pt-6">
-          {LEGAL_STRIP.map((doc) => (
-            <li key={doc.href}>
-              <Link
-                href={doc.href}
-                className="text-[11px] text-text-tertiary transition-colors hover:text-text-secondary"
-              >
-                {doc.name}
-              </Link>
-            </li>
+        {/* Docs — the full compliance pack in three centered mini-columns */}
+        <div className="grid w-full max-w-2xl grid-cols-1 gap-8 border-t border-white/[0.06] pt-7 sm:grid-cols-3">
+          {DOC_GROUPS.map((group) => (
+            <div key={group.title}>
+              <h3 className="text-[10px] font-semibold uppercase tracking-[0.14em] text-text-tertiary">
+                {group.title}
+              </h3>
+              <ul className="mt-3 space-y-1.5">
+                {group.links.map((doc) => (
+                  <li key={doc.href}>
+                    <Link
+                      href={doc.href}
+                      className="text-xs text-text-secondary transition-colors hover:text-white"
+                    >
+                      {doc.name}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
           ))}
-        </ul>
+        </div>
 
         {/* Copyright */}
         <p className="text-xs text-text-tertiary">
