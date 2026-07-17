@@ -12,7 +12,8 @@
 --    they are trusted; let them through the guard.
 -- ════════════════════════════════════════════════════════════════════════
 
--- 1. Audit trigger writes the column that actually exists (user_id).
+-- 1. Audit trigger writes the columns as they actually exist: user_id (not
+--    performed_by) and record_id is UUID (no ::TEXT cast).
 CREATE OR REPLACE FUNCTION log_profile_privilege_changes()
 RETURNS TRIGGER
 LANGUAGE plpgsql
@@ -22,7 +23,7 @@ AS $$
 BEGIN
   IF OLD.role IS DISTINCT FROM NEW.role THEN
     INSERT INTO audit_logs (action, table_name, record_id, old_data, new_data, user_id, created_at)
-    VALUES ('ROLE_CHANGE', 'profiles', NEW.id::TEXT,
+    VALUES ('ROLE_CHANGE', 'profiles', NEW.id,
       jsonb_build_object('role', OLD.role),
       jsonb_build_object('role', NEW.role),
       auth.uid(), NOW());
@@ -30,7 +31,7 @@ BEGIN
 
   IF OLD.seller_tier IS DISTINCT FROM NEW.seller_tier THEN
     INSERT INTO audit_logs (action, table_name, record_id, old_data, new_data, user_id, created_at)
-    VALUES ('TIER_CHANGE', 'profiles', NEW.id::TEXT,
+    VALUES ('TIER_CHANGE', 'profiles', NEW.id,
       jsonb_build_object('seller_tier', OLD.seller_tier),
       jsonb_build_object('seller_tier', NEW.seller_tier),
       auth.uid(), NOW());
@@ -38,7 +39,7 @@ BEGIN
 
   IF OLD.is_verified IS DISTINCT FROM NEW.is_verified THEN
     INSERT INTO audit_logs (action, table_name, record_id, old_data, new_data, user_id, created_at)
-    VALUES ('VERIFICATION_CHANGE', 'profiles', NEW.id::TEXT,
+    VALUES ('VERIFICATION_CHANGE', 'profiles', NEW.id,
       jsonb_build_object('is_verified', OLD.is_verified),
       jsonb_build_object('is_verified', NEW.is_verified),
       auth.uid(), NOW());
