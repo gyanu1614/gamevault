@@ -475,6 +475,18 @@ export async function approveApplication(applicationId: string, notes?: string) 
       throw roleError
     }
 
+    // Which verifications are complete, from the actually-uploaded KYC docs
+    // (parity with the legacy admin-sellers copy this action replaced).
+    const { data: kycDocs } = await supabase
+      .from('seller_kyc_documents')
+      .select('document_type')
+      .eq('application_id', applicationId) as any
+    const docTypes: string[] = kycDocs?.map((d: any) => d.document_type) || []
+    const identity_verified = docTypes.some((t) => ['id_front', 'id_back', 'selfie_with_id'].includes(t))
+    const address_verified = docTypes.includes('proof_of_address')
+    const business_verified = docTypes.some((t) => ['certificate_of_incorporation', 'business_license', 'director_id'].includes(t))
+    const tax_verified = docTypes.some((t) => ['w9_form', 'w8ben_form', 'bank_statement'].includes(t))
+
     // Status update LAST — this is the event the client's reactive effect
     // keys off; by now the profiles identity update has already been sent.
     const { error } = await (supabase
@@ -484,6 +496,10 @@ export async function approveApplication(applicationId: string, notes?: string) 
         reviewed_by: admin.userId,
         reviewed_at: new Date().toISOString(),
         admin_notes: notes,
+        identity_verified,
+        address_verified,
+        business_verified,
+        tax_verified,
       })
       .eq('id', applicationId)
 
