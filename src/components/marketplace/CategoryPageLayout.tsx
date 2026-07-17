@@ -35,26 +35,34 @@ export default function CategoryPageLayout({
 
   const roundedMax = Math.ceil(maxPrice / 100) * 100
 
+  // Mobile-audit — the toggle is built once and rendered in two spots:
+  // inline (sm+, original single-row layout) and inside SearchAndSort's
+  // mobile second row, where it shares the line with the sort select so
+  // the search input can take a full-width line of its own at 360px.
+  const filtersButton = (
+    <button
+      onClick={() => setFilterOpen((v) => !v)}
+      className={cn(
+        'inline-flex h-10 shrink-0 items-center gap-1.5 rounded-md border px-3 text-sm font-medium transition-colors',
+        filterOpen
+          ? 'border-lime-tint-border bg-lime-tint-bg text-lime-text'
+          : 'border-border-default bg-bg-raised text-text-primary hover:border-lime-tint-border hover:bg-bg-raised-hover',
+      )}
+      aria-pressed={filterOpen}
+    >
+      {filterOpen ? <X className="h-4 w-4" /> : <SlidersHorizontal className="h-4 w-4" />}
+      <span>Filters</span>
+    </button>
+  )
+
   return (
     <div>
       {/* ── Top bar: filter toggle + search/sort ─────────────────────── */}
       <div className="flex items-center gap-3 mb-5">
-        <button
-          onClick={() => setFilterOpen((v) => !v)}
-          className={cn(
-            'inline-flex h-10 shrink-0 items-center gap-1.5 rounded-md border px-3 text-sm font-medium transition-colors',
-            filterOpen
-              ? 'border-lime-tint-border bg-lime-tint-bg text-lime-text'
-              : 'border-border-default bg-bg-raised text-text-primary hover:border-lime-tint-border hover:bg-bg-raised-hover',
-          )}
-          aria-pressed={filterOpen}
-        >
-          {filterOpen ? <X className="h-4 w-4" /> : <SlidersHorizontal className="h-4 w-4" />}
-          <span>Filters</span>
-        </button>
+        <div className="hidden shrink-0 sm:block">{filtersButton}</div>
 
-        <div className="flex-1">
-          <SearchAndSort />
+        <div className="flex-1 min-w-0">
+          <SearchAndSort filtersSlot={filtersButton} />
         </div>
       </div>
 

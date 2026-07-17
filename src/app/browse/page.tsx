@@ -321,7 +321,9 @@ function BrowseContent() {
 
       {/* Mobile filter dialog */}
       <Dialog open={filtersOpen} onOpenChange={setFiltersOpen}>
-        <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-md">
+        {/* Mobile-audit — max-h/overflow now live on the base DialogContent
+            (dvh-based); no per-call override needed. */}
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Filters</DialogTitle>
             <DialogDescription>

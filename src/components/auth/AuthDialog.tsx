@@ -188,7 +188,12 @@ function AuthDialog({ open, onOpenChange, mode, onModeChange, redirectRef }: Aut
                   // from the deep-black left edge through to the lime
                   // wash on the right.
                   'pointer-events-auto relative flex w-full overflow-hidden rounded-lg border border-border-default shadow-[0_24px_60px_-12px_rgba(0,0,0,0.7)]',
-                  'h-[min(92vh,720px)] max-w-[1080px]',
+                  // Mobile: content-driven height capped to the DYNAMIC
+                  // viewport (dvh) so iOS Safari's URL bar never clips the
+                  // dialog edges; the fixed two-panel height only applies
+                  // at md+ where the hero panel needs it. The form panel
+                  // has overflow-y-auto, so tall forms scroll internally.
+                  'max-h-[min(92dvh,720px)] md:h-[min(92dvh,720px)] max-w-[1080px]',
                 )}
                 style={{
                   // Two layered gradients on the modal itself:

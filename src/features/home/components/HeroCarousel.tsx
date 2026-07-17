@@ -118,16 +118,16 @@ export function HeroCarousel({ slides, intervalMs = 6000 }: HeroCarouselProps) {
                       enter from the autoplay plugin so the user has
                       time to click it without the slide changing. */}
                   <button
-                    className="absolute top-[14px] right-[14px] z-10 w-8 h-8 rounded-sm bg-bg-base/[0.55] backdrop-blur-md border border-border-default grid place-items-center text-text-secondary hover:text-lime hover:border-lime-tint-border transition-all"
+                    className="absolute top-[14px] right-[14px] z-10 w-10 h-10 lg:w-8 lg:h-8 rounded-sm bg-bg-base/[0.55] backdrop-blur-md border border-border-default grid place-items-center text-text-secondary hover:text-lime hover:border-lime-tint-border transition-all"
                     aria-label="Add to favorites"
                   >
                     <Heart aria-hidden="true" className="w-[18px] h-[18px]" />
                   </button>
 
-                  <div className="absolute left-0 right-0 bottom-0 z-10 p-10 flex items-end justify-end gap-8">
+                  <div className="absolute left-0 right-0 bottom-0 z-10 p-5 sm:p-10 flex items-end justify-end gap-8">
                     <Link
                       href={slide.ctaHref}
-                      className="flex-none inline-flex items-center justify-center gap-2 h-[54px] px-8 bg-lime text-text-inverse font-semibold text-[17px] rounded-lg hover:bg-lime-hover hover:shadow-glow active:bg-lime-pressed transition-all duration-fast ease-gv"
+                      className="flex-none inline-flex items-center justify-center gap-2 h-11 px-5 text-[15px] sm:h-[54px] sm:px-8 sm:text-[17px] bg-lime text-text-inverse font-semibold rounded-lg hover:bg-lime-hover hover:shadow-glow active:bg-lime-pressed transition-all duration-fast ease-gv"
                     >
                       <ArrowRight aria-hidden="true" className="w-5 h-5" />
                       {slide.ctaLabel}
@@ -168,10 +168,13 @@ export function HeroCarousel({ slides, intervalMs = 6000 }: HeroCarouselProps) {
             one self-contained block rather than image + chrome below. */}
         {slides.length > 1 && (
           <div
-            className="absolute left-1/2 -translate-x-1/2 bottom-5 z-20 flex gap-2"
+            className="absolute left-4 sm:left-1/2 sm:-translate-x-1/2 bottom-[5px] z-20 flex items-center"
             role="tablist"
             aria-label="Carousel slides"
           >
+            {/* Each dot is a >=36px hit-area button wrapping the small
+                visual pill — tappable on phones without changing the
+                8px pill spacing on sm+ (px-1 = old gap-2). */}
             {slides.map((slide, index) => (
               <button
                 key={slide.id}
@@ -180,12 +183,17 @@ export function HeroCarousel({ slides, intervalMs = 6000 }: HeroCarouselProps) {
                 role="tab"
                 aria-selected={index === selectedIndex}
                 aria-label={`Go to slide ${index + 1}`}
-                className={`h-[6px] rounded-full transition-all duration-300 ${
-                  index === selectedIndex
-                    ? 'w-8 bg-lime'
-                    : 'w-2 bg-white/40 hover:bg-white/60'
-                }`}
-              />
+                className="group grid h-9 w-9 place-items-center sm:w-auto sm:px-1"
+              >
+                <span
+                  aria-hidden="true"
+                  className={`h-[6px] rounded-full transition-all duration-300 ${
+                    index === selectedIndex
+                      ? 'w-8 bg-lime'
+                      : 'w-2 bg-white/40 group-hover:bg-white/60'
+                  }`}
+                />
+              </button>
             ))}
           </div>
         )}

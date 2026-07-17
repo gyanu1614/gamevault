@@ -131,7 +131,7 @@ export default function ResolveDisputeModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[480px] max-h-[85vh] overflow-y-auto rounded-xl border-border-default bg-bg-raised">
+      <DialogContent className="sm:max-w-[480px] max-h-[85dvh] rounded-xl border-border-default bg-bg-raised">
         <DialogHeader>
           <DialogTitle className="text-lg font-semibold text-text-primary">
             Resolve Dispute

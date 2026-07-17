@@ -1008,7 +1008,10 @@ function FilterChips({
   filter, setFilter,
 }: { filter: 'recommended' | 'cheapest' | 'fastest'; setFilter: (f: any) => void }) {
   return (
-    <div className="flex items-center gap-1.5">
+    // Mobile-audit — flex-wrap so the chip group can never force the page
+    // wider than 360px viewports (the parent header wraps the group as a
+    // unit, but the group itself must also be allowed to break).
+    <div className="flex flex-wrap items-center gap-1.5">
       <FilterChip active={filter === 'recommended'} onClick={() => setFilter('recommended')} iconSrc="/icons/sort/recommended.webp" label="Recommended" shortLabel="Recommended" />
       <FilterChip active={filter === 'cheapest'} onClick={() => setFilter('cheapest')} iconSrc="/icons/sort/cheapest.webp" label="Cheapest First" shortLabel="Cheapest" />
       <FilterChip active={filter === 'fastest'} onClick={() => setFilter('fastest')} iconSrc="/icons/sort/fastest.webp" label="Fastest Delivery" shortLabel="Fastest" />
@@ -1033,7 +1036,8 @@ function FilterChip({
     >
       {/* V60 — 3D icon set (public/icons/sort), dimmed slightly until
           the chip is active so the full-color art doesn't outshout the
-          inactive label. */}
+          inactive label. Mobile-audit — hidden below sm so all three
+          chips fit a single 360px line without wrapping. */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={iconSrc}
@@ -1041,7 +1045,7 @@ function FilterChip({
         aria-hidden
         draggable={false}
         className={cn(
-          'h-5 w-5 select-none object-contain drop-shadow-[0_2px_3px_rgba(0,0,0,0.45)] transition-all',
+          'hidden h-5 w-5 select-none object-contain drop-shadow-[0_2px_3px_rgba(0,0,0,0.45)] transition-all sm:block',
           active ? 'opacity-100 saturate-100' : 'opacity-80 saturate-[0.9]',
         )}
       />
@@ -1202,8 +1206,11 @@ function SellerRow({
           </div>
 
           {/* Mobile metric strip — second row below; click-through so the
-              full-row trigger handles taps here too */}
-          <div className="pointer-events-none relative z-10 flex items-center justify-between gap-3 border-t border-border-subtle px-4 py-2.5 sm:hidden">
+              full-row trigger handles taps here too. Mobile-audit —
+              flex-wrap so long delivery windows ("1-24 Hours") wrap to a
+              second line instead of getting clipped by the card's
+              overflow-hidden at 360px. */}
+          <div className="pointer-events-none relative z-10 flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5 border-t border-border-subtle px-4 py-2.5 sm:hidden">
             <span className="inline-flex items-center gap-1.5 text-[12px] text-text-secondary">
               <span className="font-bold tabular-nums text-text-primary">{unitPrice(offer.pricePerUnit)}</span>
               <span className="text-text-tertiary">per {unitGlyph}</span>
