@@ -181,7 +181,7 @@ interface ForestStatusChip {
 }
 
 const chipBase =
-  'inline-flex items-center gap-1.5 rounded-full px-[11px] py-1 text-[11.5px] font-bold'
+  'inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-[11px] py-1 text-[11.5px] font-bold'
 
 const CHIP_PENDING = `${chipBase} bg-[#F59E0B]/[0.16] text-[#FCD34D]`
 const CHIP_APPROVED = `${chipBase} bg-[#A3E635]/[0.16] text-[#BEF264]`

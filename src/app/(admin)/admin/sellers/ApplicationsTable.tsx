@@ -170,7 +170,7 @@ export default function ApplicationsTable({ applications }: ApplicationsTablePro
         <span className="w-[150px] shrink-0 text-[10px] font-bold uppercase tracking-[0.12em] text-white/30">
           Games
         </span>
-        <span className="w-[118px] shrink-0 text-right text-[10px] font-bold uppercase tracking-[0.12em] text-white/30">
+        <span className="w-[148px] shrink-0 text-right text-[10px] font-bold uppercase tracking-[0.12em] text-white/30">
           Status
         </span>
       </div>
@@ -304,7 +304,7 @@ export default function ApplicationsTable({ applications }: ApplicationsTablePro
             </button>
 
             {/* Status + applied */}
-            <div className="ml-auto flex w-auto shrink-0 flex-col items-end gap-1 md:ml-0 md:w-[118px]">
+            <div className="ml-auto flex w-auto shrink-0 flex-col items-end gap-1 md:ml-0 md:w-[148px]">
               <RowStatusChip app={app} />
               <span className="text-[10px] text-white/35">{appliedLabel(app.created_at)}</span>
             </div>
