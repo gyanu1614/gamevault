@@ -159,13 +159,9 @@ function AuthDialog({ open, onOpenChange, mode, onModeChange, redirectRef }: Aut
         {open && (
           <Dialog.Portal forceMount>
             <Dialog.Overlay asChild>
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.2, ease: 'easeOut' }}
-                className="fixed inset-0 z-[80] bg-bg-base/70 backdrop-blur-md"
-              />
+              {/* CSS entrance, not framer: rAF can stall in throttled
+                  contexts and freeze the overlay+panel mid-fade. */}
+              <div className="animate-fade-in fixed inset-0 z-[80] bg-bg-base/70 backdrop-blur-md" />
             </Dialog.Overlay>
 
             {/* Centering wrapper is a PLAIN div (pointer-events-none so clicks
@@ -175,12 +171,9 @@ function AuthDialog({ open, onOpenChange, mode, onModeChange, redirectRef }: Aut
                 button all dismiss properly. */}
             <div className="fixed inset-0 z-[81] flex items-center justify-center p-3 sm:p-4 pointer-events-none">
               <Dialog.Content asChild>
-              <motion.div
-                initial={{ opacity: 0, scale: 0.97, y: 16 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.97, y: 16 }}
-                transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+              <div
                 className={cn(
+                  'animate-fade-up',
                   // V17d — Container is the single gradient surface.
                   // The form panel + hero panel both sit on top of it
                   // transparently, so the previously-visible seam at
@@ -243,13 +236,9 @@ function AuthDialog({ open, onOpenChange, mode, onModeChange, redirectRef }: Aut
                 <div className="flex w-full flex-col overflow-y-auto md:w-1/2">
                   <AnimatePresence mode="wait">
                     {pendingVerifyEmail ? (
-                      <motion.div
+                      <div
                         key="verify-email"
-                        initial={{ opacity: 0, x: 8 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, x: 8 }}
-                        transition={{ duration: 0.18 }}
-                        className="flex min-h-full flex-col justify-center px-6 py-10 sm:px-10 sm:py-12"
+                        className="animate-fade-in flex min-h-full flex-col justify-center px-6 py-10 sm:px-10 sm:py-12"
                       >
                         <VerifyEmailView
                           email={pendingVerifyEmail}
@@ -258,43 +247,35 @@ function AuthDialog({ open, onOpenChange, mode, onModeChange, redirectRef }: Aut
                             onModeChange('login')
                           }}
                         />
-                      </motion.div>
+                      </div>
                     ) : mode === 'login' ? (
-                      <motion.div
+                      <div
                         key="login"
-                        initial={{ opacity: 0, x: -8 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, x: -8 }}
-                        transition={{ duration: 0.18 }}
-                        className="flex min-h-full flex-col justify-center px-6 py-10 sm:px-10 sm:py-12"
+                        className="animate-fade-in flex min-h-full flex-col justify-center px-6 py-10 sm:px-10 sm:py-12"
                       >
                         <LoginForm
                           onSuccess={handleAuthSuccess}
                           onSwitchToSignup={() => onModeChange('signup')}
                         />
-                      </motion.div>
+                      </div>
                     ) : (
-                      <motion.div
+                      <div
                         key="signup"
-                        initial={{ opacity: 0, x: 8 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, x: 8 }}
-                        transition={{ duration: 0.18 }}
-                        className="flex min-h-full flex-col justify-center px-6 py-10 sm:px-10 sm:py-12"
+                        className="animate-fade-in flex min-h-full flex-col justify-center px-6 py-10 sm:px-10 sm:py-12"
                       >
                         <SignupForm
                           onSuccess={handleAuthSuccess}
                           onSwitchToLogin={() => onModeChange('login')}
                           onRequiresConfirmation={setPendingVerifyEmail}
                         />
-                      </motion.div>
+                      </div>
                     )}
                   </AnimatePresence>
                 </div>
 
                 {/* Right — hero image panel (desktop only) */}
                 <HeroPanel mode={mode} />
-              </motion.div>
+              </div>
               </Dialog.Content>
             </div>
           </Dialog.Portal>
