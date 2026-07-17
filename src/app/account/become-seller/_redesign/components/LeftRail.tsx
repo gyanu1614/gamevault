@@ -62,13 +62,18 @@ export default function LeftRail({ currentStep, onStepClick }: LeftRailProps) {
       <div className="relative z-10 flex h-full flex-col justify-between p-10 xl:p-12">
         {/* Top: logo + heading */}
         <div>
-          <Image
-            src="/brand/logo-mark-lime.png"
-            alt="DropMarket"
-            width={44}
-            height={44}
-            className="mb-8 h-11 w-11 object-contain"
-          />
+          <div className="mb-8 flex items-center gap-2.5">
+            <Image
+              src="/brand/logo-mark-white.png"
+              alt="DropMarket"
+              width={40}
+              height={40}
+              className="h-10 w-10 object-contain"
+            />
+            <span className="text-xl font-bold tracking-tight text-white">
+              Drop<span className="text-white/70">Market</span>
+            </span>
+          </div>
           <h1 className="text-3xl font-semibold tracking-tight text-white xl:text-[2rem]">
             Seller Application
           </h1>

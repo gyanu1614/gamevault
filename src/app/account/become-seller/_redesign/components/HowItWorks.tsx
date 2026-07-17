@@ -35,7 +35,7 @@ export default function HowItWorks() {
               {!isLast && (
                 <span
                   aria-hidden
-                  className="absolute left-[calc(50%+44px)] right-[calc(-50%+44px)] top-9 hidden h-px sm:block"
+                  className="absolute left-[calc(50%+40px)] right-[calc(-50%+40px)] top-8 hidden h-px sm:block"
                   style={{
                     background: `linear-gradient(to right, ${PALETTE.line} 0%, ${PALETTE.line} 55%, ${PALETTE.lime} 100%)`,
                   }}
@@ -44,14 +44,14 @@ export default function HowItWorks() {
 
               {/* Big icon tile */}
               <span
-                className="flex h-[72px] w-[72px] items-center justify-center rounded-2xl"
+                className="flex h-16 w-16 items-center justify-center rounded-2xl"
                 style={{
                   background:
                     'linear-gradient(160deg, rgba(20,67,42,0.07) 0%, rgba(20,67,42,0.035) 100%)',
                   boxShadow: `inset 0 0 0 1px ${PALETTE.line}`,
                 }}
               >
-                <Icon size={44} />
+                <Icon size={40} />
               </span>
 
               <h3

@@ -1,15 +1,18 @@
 /**
- * SubmissionLoader Component
+ * SubmissionLoader — full-screen loader shown while the application record is
+ * submitted. Documents are already uploaded at pick time, so there are only two
+ * stages: submitting → complete.
  *
- * Full-screen loader shown while the application record is submitted.
- * Documents are already uploaded at pick time, so there are only two
- * stages: submitting → complete. Lime-on-dark per the design system.
+ * Styled for the Forest Ledger light world (white card on a forest scrim) and
+ * animated with CSS ONLY — framer-motion's rAF can stall in throttled contexts
+ * and freeze the overlay mid-fade, which on a blocking full-screen loader would
+ * strand the user.
  */
 
 'use client'
 
-import { motion } from 'framer-motion'
 import { Loader2, CheckCircle2 } from 'lucide-react'
+import { PALETTE } from '../_redesign/theme'
 
 interface SubmissionLoaderProps {
   stage: 'submitting' | 'complete'
@@ -24,76 +27,58 @@ export default function SubmissionLoader({ stage, message }: SubmissionLoaderPro
       : 'Sending your application for review…')
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center">
-      {/* Backdrop Blur */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        className="absolute inset-0 bg-black/80 backdrop-blur-lg"
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+      {/* Forest scrim */}
+      <div
+        className="animate-fade-in absolute inset-0"
+        style={{ backgroundColor: 'rgba(15,51,32,0.55)', backdropFilter: 'blur(6px)' }}
       />
 
-      {/* Loader Card */}
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95, y: 16 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        transition={{ duration: 0.25, ease: 'easeOut' }}
-        className="relative z-10 mx-4 w-full max-w-sm"
+      {/* Card */}
+      <div
+        className="animate-fade-up relative z-10 w-full max-w-sm overflow-hidden rounded-2xl shadow-2xl"
+        style={{ backgroundColor: PALETTE.paper }}
       >
-        <div className="relative overflow-hidden rounded-lg border border-white/10 bg-black/90 shadow-2xl backdrop-blur-xl">
-          <div className="relative p-7 sm:p-8">
-            {/* Icon */}
-            <div className="mb-5 flex justify-center">
-              <div className="relative">
-                <motion.div
-                  className="absolute inset-0 rounded-full bg-lime/20 blur-xl"
-                  animate={{ scale: [1, 1.15, 1], opacity: [0.4, 0.7, 0.4] }}
-                  transition={{ duration: 2, repeat: Infinity }}
-                />
-                <div className="relative flex h-14 w-14 items-center justify-center rounded-full bg-lime">
-                  {stage === 'submitting' ? (
-                    <Loader2 className="h-7 w-7 animate-spin text-black" />
-                  ) : (
-                    <motion.div
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      transition={{ type: 'spring', duration: 0.5 }}
-                    >
-                      <CheckCircle2 className="h-7 w-7 text-black" />
-                    </motion.div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Title */}
-            <h2 className="mb-2 text-center text-lg font-bold text-white sm:text-xl">
-              {stage === 'submitting' ? 'Submitting Application' : 'Application Received'}
-            </h2>
-
-            {/* Message */}
-            <p className="mb-5 text-center text-sm text-text-secondary">{text}</p>
-
-            {/* Loading Dots */}
-            <div className="flex items-center justify-center gap-2">
-              {[0, 1, 2].map((i) => (
-                <motion.div
-                  key={i}
-                  className="h-1.5 w-1.5 rounded-full bg-lime"
-                  animate={{
-                    scale: [1, 1.3, 1],
-                    opacity: [0.4, 1, 0.4],
-                  }}
-                  transition={{
-                    duration: 1,
-                    repeat: Infinity,
-                    delay: i * 0.2,
-                  }}
-                />
-              ))}
+        <div className="p-7 sm:p-8">
+          {/* Icon */}
+          <div className="mb-5 flex justify-center">
+            <div
+              className="flex h-14 w-14 items-center justify-center rounded-full"
+              style={{ backgroundColor: stage === 'complete' ? PALETTE.lime : PALETTE.forest }}
+            >
+              {stage === 'submitting' ? (
+                <Loader2 className="h-7 w-7 animate-spin text-white" />
+              ) : (
+                <CheckCircle2 className="h-7 w-7" style={{ color: PALETTE.forest3 }} />
+              )}
             </div>
           </div>
+
+          {/* Title */}
+          <h2
+            className="mb-2 text-center text-lg font-bold sm:text-xl"
+            style={{ color: PALETTE.forest }}
+          >
+            {stage === 'submitting' ? 'Submitting Application' : 'Application Received'}
+          </h2>
+
+          {/* Message */}
+          <p className="mb-5 text-center text-sm" style={{ color: PALETTE.ink2 }}>
+            {text}
+          </p>
+
+          {/* Loading dots — CSS pulse with staggered delays */}
+          <div className="flex items-center justify-center gap-2">
+            {[0, 1, 2].map((i) => (
+              <span
+                key={i}
+                className="h-1.5 w-1.5 animate-pulse rounded-full"
+                style={{ backgroundColor: PALETTE.forest2, animationDelay: `${i * 0.2}s` }}
+              />
+            ))}
+          </div>
         </div>
-      </motion.div>
+      </div>
     </div>
   )
 }
