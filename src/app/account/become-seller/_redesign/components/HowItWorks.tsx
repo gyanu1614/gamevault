@@ -28,7 +28,7 @@ const STEPS: Step[] = [
   {
     icon: ShoppingCart,
     title: 'Buyer Purchases',
-    body: 'A buyer pays upfront. Their funds are held safe until delivery.',
+    body: 'A buyer pays upfront — the order is covered by SafeDrop until delivery.',
   },
   {
     icon: Truck,

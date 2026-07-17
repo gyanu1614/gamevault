@@ -35,7 +35,7 @@ interface IntroScreenProps {
 
 /** Small reassurance chips under the headline — outcome language, no jargon. */
 const ASSURANCES: { icon: typeof ShieldCheck; label: string }[] = [
-  { icon: ShieldCheck, label: 'Buyer Funds Held Safe' },
+  { icon: ShieldCheck, label: 'SafeDrop Protected' },
   { icon: Clock, label: 'Live In Minutes' },
   { icon: Wallet, label: 'Paid On Confirmation' },
 ]
@@ -165,8 +165,8 @@ export default function IntroScreen({ onStart }: IntroScreenProps) {
             </h2>
             <p className="mt-4 text-base leading-relaxed" style={{ color: PALETTE.ink2 }}>
               List what you sell, deliver to the buyer, and get paid the moment
-              they confirm. We hold the buyer&apos;s funds safe in between — so
-              every sale is protected on both sides.
+              they confirm. Buyers pay upfront and every order is covered by
+              SafeDrop Protection — so every sale is protected on both sides.
             </p>
           </div>
 
