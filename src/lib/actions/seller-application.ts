@@ -123,6 +123,9 @@ export async function submitSellerApplication(
         seller_type: data.step1?.sellerType ?? '',
         primary_games: data.step1?.primaryGames || [],
         other_games: data.step1?.otherGames?.trim() || null,
+        // Redesign: per-game category selections (jsonb). Absent from the
+        // legacy wizard payload → null, so old submissions are unaffected.
+        games_categories: (data.step1 as any)?.gamesCategories ?? null,
         expected_monthly_volume: data.step1?.expectedVolume ?? '',
         referral_code: data.step1?.referralCode || null,
 
@@ -181,6 +184,8 @@ export async function submitSellerApplication(
         bank_iban: data.step5?.iban || null,
         crypto_wallet_address: data.step5?.cryptoWalletAddress || null,
         crypto_type: data.step5?.cryptoType || null,
+        // Redesign: preferred payout currency (nullable; legacy = null).
+        payout_currency: (data.step5 as any)?.payoutCurrency || null,
         tax_residency_country: data.step5?.taxResidencyCountry || null,
 
         // Step 6: Agreements. accepted_commission_structure is the legacy
@@ -192,6 +197,13 @@ export async function submitSellerApplication(
         accepted_commission_structure: data.step6?.acceptedFeeSchedule || false,
         accepted_data_processing: data.step6?.acceptedDataProcessing || false,
         information_accurate_confirmed: data.step6?.informationAccurate || false,
+
+        // Redesign: the e-signature record (typed legal name + signed time)
+        // and the optional selling-experience note. Legacy payload lacks
+        // these keys → null, so nothing changes for old submissions.
+        seller_signature: (data.step6 as any)?.sellerSignature || null,
+        seller_signed_at: (data.step6 as any)?.sellerSignedAt || null,
+        selling_experience: (data.step6 as any)?.sellingExperience || null,
 
         // Metadata
         submitted_at: new Date().toISOString(),

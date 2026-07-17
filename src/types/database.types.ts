@@ -3648,6 +3648,7 @@ export type Database = {
           expected_monthly_volume: string | null
           fraud_score: number | null
           full_legal_name: string
+          games_categories: Json | null
           id: string
           identity_verified: boolean | null
           information_accurate_confirmed: boolean | null
@@ -3655,6 +3656,7 @@ export type Database = {
           is_18_or_older: boolean
           languages_spoken: string[] | null
           other_games: string | null
+          payout_currency: string | null
           payout_method: string | null
           paypal_email: string | null
           phone_number: string
@@ -3671,7 +3673,10 @@ export type Database = {
           rejection_reason: string | null
           reviewed_at: string | null
           reviewed_by: string | null
+          seller_signature: string | null
+          seller_signed_at: string | null
           seller_type: string
+          selling_experience: string | null
           shop_name: string | null
           state_province: string | null
           status: string
@@ -3728,6 +3733,7 @@ export type Database = {
           expected_monthly_volume?: string | null
           fraud_score?: number | null
           full_legal_name: string
+          games_categories?: Json | null
           id?: string
           identity_verified?: boolean | null
           information_accurate_confirmed?: boolean | null
@@ -3735,6 +3741,7 @@ export type Database = {
           is_18_or_older: boolean
           languages_spoken?: string[] | null
           other_games?: string | null
+          payout_currency?: string | null
           payout_method?: string | null
           paypal_email?: string | null
           phone_number: string
@@ -3751,7 +3758,10 @@ export type Database = {
           rejection_reason?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
+          seller_signature?: string | null
+          seller_signed_at?: string | null
           seller_type: string
+          selling_experience?: string | null
           shop_name?: string | null
           state_province?: string | null
           status?: string
@@ -3808,6 +3818,7 @@ export type Database = {
           expected_monthly_volume?: string | null
           fraud_score?: number | null
           full_legal_name?: string
+          games_categories?: Json | null
           id?: string
           identity_verified?: boolean | null
           information_accurate_confirmed?: boolean | null
@@ -3815,6 +3826,7 @@ export type Database = {
           is_18_or_older?: boolean
           languages_spoken?: string[] | null
           other_games?: string | null
+          payout_currency?: string | null
           payout_method?: string | null
           paypal_email?: string | null
           phone_number?: string
@@ -3831,7 +3843,10 @@ export type Database = {
           rejection_reason?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
+          seller_signature?: string | null
+          seller_signed_at?: string | null
           seller_type?: string
+          selling_experience?: string | null
           shop_name?: string | null
           state_province?: string | null
           status?: string

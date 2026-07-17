@@ -1,29 +1,37 @@
 /**
- * SellerRegistration - Main Orchestrator Component
+ * SellerRegistration — orchestrator for the "Forest Ledger" seller-application
+ * redesign.
  *
- * Manages the entire seller registration flow across 6 steps.
- * Handles state management, navigation, and data collection.
+ * Flow:
+ *   1. On mount, check the seller's application status (getApplicationStatus).
+ *      Terminal states (pending / under_review / approved / hard-rejected)
+ *      redirect to /account/seller-status. A withdrawn application (<90d, <5
+ *      withdrawals) offers a "use previous data" prefill modal. An
+ *      info_requested row is EDITABLE, so the seller drops straight into the
+ *      stepper with their prior answers prefilled.
+ *   2. Otherwise show the INTRO screen first; "Start Application" enters the
+ *      5-step split-screen stepper.
+ *   3. Each step owns its own react-hook-form slice and validates BEFORE it
+ *      advances (validate-before-advance). Steps animate with Framer Motion
+ *      (AnimatePresence mode="wait" + directional slide/fade).
+ *   4. The final Review & Sign step hands its validated slice up; this component
+ *      assembles the full redesign state, runs it through the phase-1 adapter,
+ *      and calls the UNCHANGED submitSellerApplication server action.
  *
- * Architecture:
- * - Renders SellerProgressBar for visual progress
- * - Conditionally renders step group components (Steps12, Steps34, Steps56)
- * - Owns shared state: form data, immediately-uploaded KYC docs, store image
- * - Documents upload the moment they are picked (see useImmediateUpload);
- *   final submit only persists metadata — no upload loops here.
+ * CONTRACT: this component never reshapes the server payload itself — the single
+ * seam is toSubmitApplicationData() in _redesign/adapter.ts. The submit payload
+ * to submitSellerApplication is byte-for-byte what the legacy wizard produced,
+ * plus additive keys the action safely ignores.
  */
 
 'use client'
 
-import { useState, useEffect } from 'react'
-import Link from 'next/link'
+import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { AnimatePresence, motion } from 'framer-motion'
-import { Rocket, Loader2, CheckCircle, ArrowRight, DollarSign, Zap, Clock, Headphones, Percent, ArrowUpRight } from 'lucide-react'
+import { CheckCircle, Loader2, ArrowRight } from 'lucide-react'
 import { toast } from 'sonner'
-import SellerProgressBar from './components/SellerProgressBar'
-import SellerSteps12 from './components/SellerSteps12'
-import SellerSteps34 from './components/SellerSteps34'
-import SellerSteps56 from './components/SellerSteps56'
+
 import SubmissionLoader from './components/SubmissionLoader'
 import PreviousDataModal from './components/PreviousDataModal'
 import { submitSellerApplication } from '@/lib/actions/seller-application'
@@ -31,28 +39,37 @@ import { getApplicationStatus } from '@/lib/actions/seller-application-status'
 import { verifyTurnstileToken } from '@/lib/actions/verify-turnstile'
 import { TurnstileWidget } from '@/components/ui/TurnstileWidget'
 import { COUNTRIES, OTHER_COUNTRY } from './data/countries'
+
+import {
+  SellerAppLayout,
+  StepTransition,
+  StepAccountGames,
+  IntroScreen,
+  VideoModal,
+  type SectionsByGameId,
+  type StepDirection,
+} from './_redesign/components'
+import { Step2PersonalInfo } from './_redesign/components/steps'
+import { StepIdentity } from './_redesign/steps'
+import PayoutSetupStep, {
+  type PayoutSetupValue,
+} from './_redesign/steps/PayoutSetupStep'
+import { ReviewSignStep } from './_redesign/screens'
+import {
+  toSubmitApplicationData,
+  type RedesignedSellerState,
+} from './_redesign/adapter'
+import { TOTAL_REDESIGN_STEPS } from './_redesign/theme'
+
 import type {
   Step1FormData,
   Step2FormData,
   Step3FormData,
-  Step4FormData,
   Step5FormData,
-  Step6FormData,
-  UploadedDoc,
-  UploadedDocsState,
-  WizardGame,
-} from './types'
-
-const TOTAL_STEPS = 6
-
-interface SellerFormData {
-  step1?: Step1FormData
-  step2?: Step2FormData
-  step3?: Step3FormData
-  step4?: Step4FormData
-  step5?: Step5FormData
-  step6?: Step6FormData
-}
+  ReviewSignFormData,
+  PayoutCurrency,
+} from './schemas'
+import type { UploadedDoc, UploadedDocsState, WizardGame } from './types'
 
 const EMPTY_DOCS: UploadedDocsState = {
   idDocument: null,
@@ -67,67 +84,71 @@ const EMPTY_DOCS: UploadedDocsState = {
 interface SellerRegistrationProps {
   /** Full active games list from the DB (fetched server-side in page.tsx). */
   games: WizardGame[]
+  /** Per-game supported category sections, precomputed server-side. */
+  sectionsByGameId: SectionsByGameId
 }
 
-export default function SellerRegistration({ games }: SellerRegistrationProps) {
+export default function SellerRegistration({
+  games,
+  sectionsByGameId,
+}: SellerRegistrationProps) {
   const router = useRouter()
 
-  // Core navigation state
+  // ── Flow phase ──────────────────────────────────────────────────────────────
+  // 'intro' shows the landing; 'stepper' runs the 5-step application.
+  const [phase, setPhase] = useState<'intro' | 'stepper'>('intro')
+
+  // ── Navigation ────────────────────────────────────────────────────────────
   const [currentStep, setCurrentStep] = useState(1)
-  const [formData, setFormData] = useState<SellerFormData>({})
+  const [direction, setDirection] = useState<StepDirection>('forward')
+
+  // ── Wizard state (redesign shapes) ──────────────────────────────────────────
+  const [step1, setStep1] = useState<Step1FormData>()
+  const [step2, setStep2] = useState<Step2FormData>()
+  const [step3, setStep3] = useState<Step3FormData>()
+  const [payout, setPayout] = useState<Step5FormData>()
+  const [payoutCurrency, setPayoutCurrency] = useState<PayoutCurrency | null>(null)
+  const [review, setReview] = useState<Partial<ReviewSignFormData>>()
+
+  // KYC documents upload IMMEDIATELY on pick (owned here so the required-doc
+  // enforcement checks the ACTUAL uploaded path, not a local pick).
+  const [uploadedDocs, setUploadedDocs] = useState<UploadedDocsState>(EMPTY_DOCS)
+  const [selectedLanguages] = useState<string[]>([])
+
+  // ── Submission ──────────────────────────────────────────────────────────────
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [loaderStage, setLoaderStage] = useState<'submitting' | 'complete'>('submitting')
+
+  // ── Status gating ─────────────────────────────────────────────────────────
   const [isCheckingExisting, setIsCheckingExisting] = useState(true)
   const [isRedirecting, setIsRedirecting] = useState(false)
 
-  // Previous data auto-fill state
+  // ── Previous-data prefill (withdrawn applications) ──────────────────────────
   const [showPreviousDataModal, setShowPreviousDataModal] = useState(false)
   const [previousApplication, setPreviousApplication] = useState<any>(null)
   const [previousWithdrawal, setPreviousWithdrawal] = useState<any>(null)
 
-  // P2.7 — Turnstile CAPTCHA state
-  const [turnstileToken, setTurnstileToken] = useState<string>('')
+  // ── Video modal (reachable from inside the shell) ───────────────────────────
+  const [videoOpen, setVideoOpen] = useState(false)
+
+  // ── Turnstile CAPTCHA ─────────────────────────────────────────────────────
+  const [turnstileToken, setTurnstileToken] = useState('')
   const turnstileEnabled = !!process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY
 
-  // Submission loader state (files already uploaded — only submit + done)
-  const [loaderStage, setLoaderStage] = useState<'submitting' | 'complete'>('submitting')
-
-  // Shared state — documents upload IMMEDIATELY on pick (Step 3)
-  const [uploadedDocs, setUploadedDocs] = useState<UploadedDocsState>(EMPTY_DOCS)
-
-  // Shared state for profile setup (Step 4)
-  const [storeImage, setStoreImage] = useState<UploadedDoc | null>(null)
-  const [selectedLanguages, setSelectedLanguages] = useState<string[]>([])
-
   /**
-   * Smooth scroll to progress bar when step changes
+   * Check status on mount: redirect terminal states, prefill withdrawn ones,
+   * and drop info_requested rows straight into an editable stepper.
    */
   useEffect(() => {
-    const progressBar = document.querySelector('[data-progress-bar]')
-    if (progressBar) {
-      const elementPosition = progressBar.getBoundingClientRect().top + window.pageYOffset
-      const offsetPosition = elementPosition - 120
-
-      window.scrollTo({
-        top: offsetPosition,
-        behavior: 'smooth',
-      })
-    }
-  }, [currentStep])
-
-  /**
-   * Check for existing application on mount
-   * Redirect to status page only if application cannot be reapplied
-   */
-  useEffect(() => {
+    let cancelled = false
     async function checkExistingApplication() {
       try {
         const result = await getApplicationStatus()
+        if (cancelled) return
 
         if (result.success && result.data) {
           const { status, canReapply, withdrawal, application } = result.data
 
-          // info_requested is editable — the seller must be able to return to
-          // the wizard and update, so it is NOT a redirect status.
           const shouldRedirect =
             status === 'pending' ||
             status === 'under_review' ||
@@ -135,22 +156,27 @@ export default function SellerRegistration({ games }: SellerRegistrationProps) {
             (status === 'rejected' && !canReapply)
 
           if (shouldRedirect) {
-            // Beta C — go straight to the status page. This mount check is now
-            // only a safety net: the navbar / BecomeSellerCta already link
-            // pending users directly to /account/seller-status, so the old 2s
-            // modal-and-wait redirect chain is gone. router.replace keeps the
-            // dead become-seller entry out of history.
             setIsCheckingExisting(false)
             setIsRedirecting(true)
             router.replace('/account/seller-status')
             return
           }
 
-          // Auto-fill modal for withdrawn applications (<90d, <5 withdrawals)
+          // info_requested is editable — prefill and go straight into the
+          // stepper (skip the intro; the seller is returning to edit).
+          if (status === 'info_requested' && application) {
+            applyPrefill(application)
+            setPhase('stepper')
+            setCurrentStep(1)
+            setIsCheckingExisting(false)
+            return
+          }
+
+          // Withdrawn (<90d, <5 withdrawals) → offer the prefill modal.
           if (status === 'withdrawn' && withdrawal && application) {
             const withdrawnDate = new Date(withdrawal.withdrawnAt)
             const daysSinceWithdrawal = Math.floor(
-              (Date.now() - withdrawnDate.getTime()) / (1000 * 60 * 60 * 24)
+              (Date.now() - withdrawnDate.getTime()) / (1000 * 60 * 60 * 24),
             )
             const withdrawalCount = withdrawal.withdrawalCount || 0
             if (daysSinceWithdrawal <= 90 && withdrawalCount < 5) {
@@ -166,23 +192,24 @@ export default function SellerRegistration({ games }: SellerRegistrationProps) {
         }
       } catch (error) {
         console.error('Error checking existing application:', error)
-        setIsCheckingExisting(false)
+        if (!cancelled) setIsCheckingExisting(false)
       }
     }
 
     checkExistingApplication()
+    return () => {
+      cancelled = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router])
 
   /**
-   * Handler for "Use Previous Data" button — maps the withdrawn application
-   * row back onto the CURRENT step shapes (documents are never prefilled).
+   * Map a stored seller_applications row onto the redesign step shapes.
+   * Documents and agreements are never prefilled (must be re-supplied).
    */
-  const handleUsePreviousData = () => {
-    if (!previousApplication) return
-    const prev = previousApplication
-
-    // Legacy rows stored 1-based game indexes ('1'-'6'); map both those and
-    // real UUIDs onto current game ids, dropping anything unknown.
+  const applyPrefill = (prev: any) => {
+    // Legacy rows stored 1-based game indexes ('1'-'6') OR real UUIDs — map both
+    // onto current game ids, dropping anything unknown.
     const prevGames: string[] = Array.isArray(prev.primary_games) ? prev.primary_games : []
     const primaryGames = prevGames
       .map((id) => {
@@ -193,13 +220,22 @@ export default function SellerRegistration({ games }: SellerRegistrationProps) {
       })
       .filter((id): id is string => !!id)
 
-    // Country was stored as free text / full name — keep it when it matches
-    // the dataset, otherwise route it through the Other option.
+    // Rebuild per-game category selections from the stored games_categories
+    // JSON when present, keeping only games still selected.
+    const storedGC: any[] = Array.isArray(prev.games_categories) ? prev.games_categories : []
+    const gamesCategories = primaryGames.map((id) => {
+      const g = games.find((x) => x.id === id)
+      const match = storedGC.find((gc) => String(gc?.gameId) === id)
+      return {
+        gameId: id,
+        gameSlug: g?.slug ?? String(match?.gameSlug ?? ''),
+        categorySlugs: Array.isArray(match?.categorySlugs) ? match.categorySlugs : [],
+      }
+    })
+
     const storedCountry: string = prev.country || ''
     const countryKnown = COUNTRIES.some((c) => c.name === storedCountry)
 
-    // Legacy payout methods: 'cryptocurrency' → 'crypto'; 'paypal' is no
-    // longer offered → default to bank transfer and tell the seller.
     const storedPayout: string = prev.payout_method || ''
     const payoutMethod: Step5FormData['payoutMethod'] =
       storedPayout === 'cryptocurrency' || storedPayout === 'crypto' ? 'crypto' : 'bank_transfer'
@@ -207,131 +243,154 @@ export default function SellerRegistration({ games }: SellerRegistrationProps) {
       toast.info('PayPal payouts are no longer offered — we preselected Bank Transfer instead.')
     }
 
-    const prefilledData: SellerFormData = {
-      step1: {
-        is18OrOlder: prev.is_18_or_older ?? false,
-        sellerType: prev.seller_type === 'business' ? 'business' : 'individual',
-        primaryGames,
-        otherGames: prev.other_games || '',
-        expectedVolume: prev.expected_monthly_volume || undefined,
-        referralCode: prev.referral_code || '',
-      } as Step1FormData,
-      step2: {
-        fullLegalName: prev.full_legal_name || '',
-        displayName: prev.display_name || '',
-        shopName: prev.shop_name || '',
-        country: storedCountry ? (countryKnown ? storedCountry : OTHER_COUNTRY) : '',
-        countryOther: storedCountry && !countryKnown ? storedCountry : '',
-        stateProvince: prev.state_province || '',
-        city: prev.city || '',
-        phoneNumber: prev.phone_number || '',
-        alternateEmail: prev.alternate_email || '',
-        companyLegalName: prev.company_legal_name || '',
-        businessRegistrationNumber: prev.business_registration_number || '',
-        taxIdVat: prev.tax_id_vat || '',
-        companyAddress: prev.company_address || '',
-        businessType: prev.business_type || undefined,
-        yearEstablished: prev.year_established ? String(prev.year_established) : '',
-        businessEmail: prev.business_email || '',
-        businessPhone: prev.business_phone || '',
-      } as Step2FormData,
-      step3: undefined, // Documents must be re-uploaded for security
-      step4: {
-        bio: prev.profile_bio || '',
-        businessHours: prev.business_hours || '',
-        timezone: prev.timezone || '',
-        languagesSpoken: prev.languages_spoken || [],
-        discordUsername: prev.discord_username || '',
-        twitterHandle: prev.twitter_handle || '',
-        twitchChannel: prev.twitch_channel || '',
-        youtubeChannel: prev.youtube_channel || '',
-        refundPolicy: prev.refund_policy || '',
-        deliveryTimeframe: prev.delivery_timeframe || '',
-        termsOfService: prev.terms_of_service || '',
-      } as Step4FormData,
-      step5: {
-        payoutMethod,
-        accountHolderName: prev.bank_account_holder_name || '',
-        bankName: prev.bank_name || '',
-        iban: prev.bank_iban || '',
-        cryptoWalletAddress: prev.crypto_wallet_address || '',
-        taxResidencyCountry: prev.tax_residency_country || '',
-        taxForm: 'none',
-      } as Step5FormData,
-      step6: undefined, // Agreements must be re-accepted
-    }
+    setStep1({
+      is18OrOlder: prev.is_18_or_older ?? false,
+      sellerType: prev.seller_type === 'business' ? 'business' : 'individual',
+      primaryGames,
+      gamesCategories,
+      otherGames: prev.other_games || '',
+      expectedVolume: prev.expected_monthly_volume || undefined,
+      referralCode: prev.referral_code || '',
+    } as Step1FormData)
 
-    if (prev.languages_spoken) {
-      setSelectedLanguages(prev.languages_spoken)
-    }
+    setStep2({
+      fullLegalName: prev.full_legal_name || '',
+      displayName: prev.display_name || '',
+      shopName: prev.shop_name || '',
+      country: storedCountry ? (countryKnown ? storedCountry : OTHER_COUNTRY) : '',
+      countryOther: storedCountry && !countryKnown ? storedCountry : '',
+      stateProvince: prev.state_province || '',
+      city: prev.city || '',
+      phoneNumber: prev.phone_number || '',
+      alternateEmail: prev.alternate_email || '',
+      companyLegalName: prev.company_legal_name || '',
+      businessRegistrationNumber: prev.business_registration_number || '',
+      taxIdVat: prev.tax_id_vat || '',
+      companyAddress: prev.company_address || '',
+      businessType: prev.business_type || undefined,
+      yearEstablished: prev.year_established ? String(prev.year_established) : '',
+      businessEmail: prev.business_email || '',
+      businessPhone: prev.business_phone || '',
+    } as Step2FormData)
 
-    setFormData(prefilledData)
+    setPayout({
+      payoutMethod,
+      accountHolderName: prev.bank_account_holder_name || '',
+      bankName: prev.bank_name || '',
+      iban: prev.bank_iban || '',
+      accountNumber: prev.bank_account_number_encrypted || '',
+      cryptoWalletAddress: prev.crypto_wallet_address || '',
+      cryptoType: prev.crypto_type || undefined,
+      taxResidencyCountry: prev.tax_residency_country || '',
+      taxForm: 'none',
+    } as Step5FormData)
+
+    const storedCurrency: string = prev.payout_currency || ''
+    if (['USD', 'EUR', 'GBP', 'USDT'].includes(storedCurrency)) {
+      setPayoutCurrency(storedCurrency as PayoutCurrency)
+    }
+  }
+
+  const handleUsePreviousData = () => {
+    if (!previousApplication) return
+    applyPrefill(previousApplication)
     setShowPreviousDataModal(false)
+    setPhase('stepper')
+    setCurrentStep(1)
     toast.success('Previous application data loaded! You can edit any field.')
   }
 
-  /**
-   * Handler for "Start Fresh" button
-   */
   const handleStartFresh = () => {
     setShowPreviousDataModal(false)
     setPreviousApplication(null)
   }
 
-  /**
-   * Handles completion of any step
-   */
-  const handleStepComplete = (
-    step: number,
-    data: Step1FormData | Step2FormData | Step3FormData | Step4FormData | Step5FormData | Step6FormData
-  ) => {
-    setFormData((prev) => ({
-      ...prev,
-      [`step${step}`]: data,
-    }))
-    if (step < TOTAL_STEPS) {
-      setCurrentStep(step + 1)
-    }
+  // ── Step navigation ───────────────────────────────────────────────────────
+
+  const goForward = (next: number) => {
+    setDirection('forward')
+    setCurrentStep(next)
+    scrollTop()
   }
 
-  /**
-   * Jump straight to a step (Edit buttons in the final review).
-   */
+  const goBack = () => {
+    if (currentStep <= 1) return
+    setDirection('back')
+    setCurrentStep((s) => s - 1)
+    scrollTop()
+  }
+
+  /** Jump to a completed step (the stepper + review "Edit" affordances). */
   const goToStep = (step: number) => {
-    if (step >= 1 && step <= TOTAL_STEPS) setCurrentStep(step)
+    if (step < 1 || step > TOTAL_REDESIGN_STEPS) return
+    setDirection(step < currentStep ? 'back' : 'forward')
+    setCurrentStep(step)
+    scrollTop()
   }
 
-  /**
-   * A document finished uploading (or was removed) in Step 3.
-   */
+  const scrollTop = () => {
+    if (typeof document === 'undefined') return
+    const pane = document.querySelector('[data-seller-scroll]')
+    if (pane) pane.scrollTo({ top: 0, behavior: 'smooth' })
+    else window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
   const handleDocChange = (fileType: string, doc: UploadedDoc | null) => {
-    setUploadedDocs((prev) => ({
-      ...prev,
-      [fileType]: doc,
-    }))
+    setUploadedDocs((prev) => ({ ...prev, [fileType]: doc }))
   }
 
-  /**
-   * Handles final submission (Step 6).
-   * Files are already in storage — this only verifies + persists metadata.
-   */
-  const handleFinalSubmit = async (step6Data: Step6FormData) => {
-    if (!formData.step1 || !formData.step2) {
+  // ── Step completion handlers (each step validated its own slice) ────────────
+
+  const handleStep1 = (data: Step1FormData) => {
+    setStep1(data)
+    goForward(2)
+  }
+
+  const handleStep2 = (data: Step2FormData) => {
+    setStep2(data)
+    goForward(3)
+  }
+
+  const handleStep3 = (data: Step3FormData) => {
+    setStep3(data)
+    goForward(4)
+  }
+
+  const handleStep4 = (value: PayoutSetupValue) => {
+    setPayout(value.payout)
+    setPayoutCurrency(value.payoutCurrency)
+    goForward(5)
+  }
+
+  /** Final Review & Sign submit → assemble state, adapt, submit. */
+  const handleFinalSubmit = async (reviewData: ReviewSignFormData) => {
+    setReview(reviewData)
+
+    if (!step1 || !step2) {
       toast.error('Missing required information. Please complete all steps.')
+      goToStep(1)
       return
     }
 
-    // Required documents must have ACTUALLY uploaded (storage path present)
+    // Payout step must be completed — without it the adapter would spread
+    // undefined and persist a null payout method.
+    if (!payout) {
+      toast.error('Please complete your payout setup before submitting.')
+      goToStep(4)
+      return
+    }
+
+    // Required documents must have ACTUALLY uploaded (storage path present).
     const missingDocs = (['idDocument', 'selfieWithId', 'proofOfAddress'] as const).filter(
-      (key) => !uploadedDocs[key]?.path
+      (key) => !uploadedDocs[key]?.path,
     )
     if (missingDocs.length > 0) {
-      toast.error('Required verification documents are missing. Please upload them in Step 3.')
-      setCurrentStep(3)
+      toast.error('Required verification documents are missing. Please upload them in the Identity step.')
+      goToStep(3)
       return
     }
 
-    // P2.7 — Verify Turnstile CAPTCHA before submitting application
+    // Verify Turnstile CAPTCHA before submitting.
     if (turnstileEnabled) {
       const captcha = await verifyTurnstileToken(turnstileToken)
       if (!captcha.success) {
@@ -345,23 +404,25 @@ export default function SellerRegistration({ games }: SellerRegistrationProps) {
     setLoaderStage('submitting')
 
     try {
-      const result = await submitSellerApplication({
-        step1: formData.step1,
-        step2: formData.step2,
-        step3: formData.step3,
-        step4: formData.step4,
-        step5: formData.step5,
-        step6: step6Data, // Use directly passed data
-        uploadedFilePaths: uploadedDocs,
-        profilePicturePath: storeImage,
+      const state: RedesignedSellerState = {
+        step1,
+        step2,
+        step3,
+        payout,
+        payoutCurrency,
+        review: reviewData,
+        uploadedDocs,
+        storeImage: null,
         selectedLanguages,
-      })
+      }
+      const payload = toSubmitApplicationData(state)
+      const result = await submitSellerApplication(payload)
 
       if (result.success) {
         setLoaderStage('complete')
         toast.success(
           result.message ||
-            'Application submitted successfully! You will receive an email confirmation shortly.'
+            'Application submitted successfully! You will receive an email confirmation shortly.',
         )
         setTimeout(() => {
           router.push('/account/seller-status')
@@ -377,266 +438,177 @@ export default function SellerRegistration({ games }: SellerRegistrationProps) {
     }
   }
 
-  /**
-   * Handles navigation back to previous step
-   */
-  const handleStepBack = () => {
-    if (currentStep > 1) {
-      setCurrentStep(currentStep - 1)
-    }
-  }
+  // Full redesign state for the review summary (read-only).
+  const reviewState: RedesignedSellerState = useMemo(
+    () => ({
+      step1,
+      step2,
+      step3,
+      payout,
+      payoutCurrency,
+      review: undefined,
+      uploadedDocs,
+      storeImage: null,
+      selectedLanguages,
+    }),
+    [step1, step2, step3, payout, payoutCurrency, uploadedDocs, selectedLanguages],
+  )
 
-  // Show loading state while checking for existing application
+  // ── Loading / redirect gates ────────────────────────────────────────────────
+
   if (isCheckingExisting) {
     return (
-      <div className="min-h-screen bg-black">
-        <div className="fixed inset-0 z-0">
-          <div className="absolute inset-0 bg-gradient-to-br from-black via-black/95 to-black/90" />
-        </div>
-        <div className="relative z-10 flex min-h-screen items-center justify-center">
-          <div className="flex flex-col items-center gap-4">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <p className="text-sm text-text-secondary">Checking your application status...</p>
-          </div>
+      <div className="flex min-h-screen items-center justify-center bg-[#FAFAF7]">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-8 w-8 animate-spin" style={{ color: '#1B5E3A' }} />
+          <p className="text-sm" style={{ color: '#5B6157' }}>
+            Checking your application status…
+          </p>
         </div>
       </div>
     )
   }
 
-  // Show redirect modal if user already has an application
   if (isRedirecting) {
     return (
-      <div className="min-h-screen bg-black">
-        {/* Background */}
-        <div className="fixed inset-0 z-0">
-          <div className="absolute inset-0 bg-gradient-to-br from-black via-black/95 to-black/90" />
-        </div>
-
-        {/* Blur Overlay */}
-        <div className="fixed inset-0 z-40 backdrop-blur-md bg-black/60" />
-
-        {/* Centered Modal */}
-        <div className="relative z-50 flex min-h-screen items-center justify-center p-4">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            transition={{ duration: 0.3, ease: 'easeOut' }}
-            className="w-full max-w-md"
-          >
-            {/* Modal Card */}
-            <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-black/90 backdrop-blur-xl shadow-2xl">
-              {/* Content */}
-              <div className="relative p-8">
-                {/* Icon */}
-                <div className="flex justify-center mb-6">
-                  <div className="relative">
-                    <div className="absolute inset-0 animate-pulse rounded-full bg-lime/20 blur-xl" />
-                    <div className="relative flex h-16 w-16 items-center justify-center rounded-full bg-lime">
-                      <CheckCircle className="h-8 w-8 text-black" />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Title */}
-                <h2 className="text-center text-2xl font-bold text-white mb-3">Application Found</h2>
-
-                {/* Message */}
-                <p className="text-center text-text-secondary mb-6">
-                  You already have an application in progress. Redirecting you to your application status page...
-                </p>
-
-                {/* Loading Animation */}
-                <div className="flex items-center justify-center gap-3">
-                  <Loader2 className="h-5 w-5 animate-spin text-lime-text" />
-                  <span className="text-sm font-medium text-lime-text">Redirecting</span>
-                  <ArrowRight className="h-4 w-4 text-lime-text animate-pulse" />
-                </div>
-              </div>
+      <div className="flex min-h-screen items-center justify-center bg-[#FAFAF7] p-4">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.96, y: 16 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          transition={{ duration: 0.3, ease: 'easeOut' }}
+          className="w-full max-w-md rounded-2xl border p-8 text-center"
+          style={{ borderColor: '#E4E5DE', backgroundColor: '#FFFFFF' }}
+        >
+          <div className="mb-5 flex justify-center">
+            <div
+              className="flex h-14 w-14 items-center justify-center rounded-full"
+              style={{ backgroundColor: '#14432A' }}
+            >
+              <CheckCircle className="h-7 w-7" style={{ color: '#A3E635' }} />
             </div>
-          </motion.div>
-        </div>
+          </div>
+          <h2 className="mb-2 text-xl font-semibold" style={{ color: '#14432A' }}>
+            Application Found
+          </h2>
+          <p className="mb-5 text-sm" style={{ color: '#5B6157' }}>
+            You already have an application in progress. Taking you to your status page…
+          </p>
+          <div className="flex items-center justify-center gap-2" style={{ color: '#1B5E3A' }}>
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <span className="text-sm font-medium">Redirecting</span>
+            <ArrowRight className="h-4 w-4" />
+          </div>
+        </motion.div>
       </div>
     )
   }
 
+  // ── Intro landing (before the stepper) ──────────────────────────────────────
+  if (phase === 'intro') {
+    return (
+      <>
+        <IntroScreen onStart={() => { setDirection('forward'); setCurrentStep(1); setPhase('stepper') }} />
+
+        {previousApplication && previousWithdrawal && (
+          <PreviousDataModal
+            isOpen={showPreviousDataModal}
+            withdrawnAt={previousWithdrawal.withdrawnAt}
+            withdrawalCount={previousWithdrawal.withdrawalCount}
+            onUseData={handleUsePreviousData}
+            onStartFresh={handleStartFresh}
+          />
+        )}
+      </>
+    )
+  }
+
+  // ── Stepper ─────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-[#0a0a0f]">
-      {/* Main Content - Compact */}
-      <div className="mx-auto max-w-5xl px-4 py-4 sm:py-6 sm:px-6 lg:px-8">
-        {/* Compact Header - Horizontal Layout */}
-        <div className="mb-6">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
-            <div className="flex-1">
-              {/* Fees Badge */}
-              <motion.div
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.3 }}
-              >
-                <Link
-                  href="/fees"
-                  target="_blank"
-                  className="mb-3 inline-flex items-center gap-2 rounded-full border border-border-subtle bg-bg-overlay px-3 py-1.5 transition-colors hover:border-border-strong"
-                >
-                  <Percent className="h-3.5 w-3.5 text-lime-text" />
-                  <span className="text-xs font-semibold text-text-secondary">
-                    Transparent Per-Category Fees
-                  </span>
-                  <ArrowUpRight className="h-3 w-3 text-text-tertiary" />
-                </Link>
-              </motion.div>
-
-              {/* Main Heading */}
-              <motion.h1
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.1, duration: 0.3 }}
-                className="text-2xl sm:text-3xl font-bold text-white mb-2 tracking-tight"
-              >
-                Become a Seller
-              </motion.h1>
-
-              {/* Subtitle */}
-              <motion.p
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.2, duration: 0.3 }}
-                className="text-sm text-text-secondary max-w-xl"
-              >
-                Join thousands of sellers with fast payouts and clear per-category fees.
-              </motion.p>
-            </div>
-
-            {/* Benefits - Horizontal on desktop */}
-            <motion.div
-              initial={{ opacity: 0, x: 10 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.3, duration: 0.3 }}
-              className="flex flex-wrap gap-2 lg:gap-3"
-            >
-              {[
-                { label: 'Transparent Fees', icon: DollarSign },
-                { label: 'Instant Listings', icon: Zap },
-                { label: 'Fast Payouts', icon: Clock },
-                { label: '24/7 Support', icon: Headphones },
-              ].map((benefit) => (
-                <div
-                  key={benefit.label}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-bg-overlay border border-border-subtle"
-                >
-                  <benefit.icon className="h-3.5 w-3.5 text-text-secondary" />
-                  <span className="text-xs font-medium text-text-secondary">{benefit.label}</span>
-                </div>
-              ))}
-            </motion.div>
-          </div>
-
-          {/* Progress Bar and Step Indicator - Combined Row */}
-          <div className="flex items-center gap-4">
-            <div data-progress-bar className="flex-1">
-              <SellerProgressBar currentStep={currentStep} />
-            </div>
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.4, duration: 0.3 }}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-bg-overlay border border-border-subtle whitespace-nowrap"
-            >
-              <Rocket className="h-3.5 w-3.5 text-lime-text" />
-              <span className="text-xs font-medium text-text-secondary">
-                Step <span className="text-lime-text font-semibold">{currentStep}</span>/{TOTAL_STEPS}
-              </span>
-            </motion.div>
-          </div>
-        </div>
-
-        {/* Form Content */}
-        <AnimatePresence mode="wait">
-          {/* Steps 1 & 2: Eligibility and Information */}
-          {(currentStep === 1 || currentStep === 2) && (
-            <SellerSteps12
-              currentStep={currentStep}
-              games={games}
-              onStepComplete={handleStepComplete}
-              onStepBack={handleStepBack}
-              initialData={{
-                step1: formData.step1,
-                step2: formData.step2,
-              }}
-            />
+    <>
+      <SellerAppLayout
+        currentStep={currentStep}
+        onStepClick={goToStep}
+        onWatchVideo={() => setVideoOpen(true)}
+      >
+        <AnimatePresence mode="wait" initial={false}>
+          {currentStep === 1 && (
+            <StepTransition key={1} stepKey={1} direction={direction}>
+              <StepAccountGames
+                games={games}
+                sectionsByGameId={sectionsByGameId}
+                initialData={step1}
+                onComplete={handleStep1}
+              />
+            </StepTransition>
           )}
 
-          {/* Steps 3 & 4: Verification and Profile */}
-          {(currentStep === 3 || currentStep === 4) && (
-            <SellerSteps34
-              currentStep={currentStep}
-              onStepComplete={handleStepComplete}
-              onStepBack={handleStepBack}
-              sellerType={formData.step1?.sellerType}
-              uploadedDocs={uploadedDocs}
-              onDocChange={handleDocChange}
-              storeImage={storeImage}
-              onStoreImageChange={setStoreImage}
-              selectedLanguages={selectedLanguages}
-              onLanguagesChange={setSelectedLanguages}
-              initialData={{
-                step3: formData.step3,
-                step4: formData.step4,
-              }}
-            />
+          {currentStep === 2 && (
+            <StepTransition key={2} stepKey={2} direction={direction}>
+              <Step2PersonalInfo
+                sellerType={step1?.sellerType}
+                initialData={step2}
+                onSubmit={handleStep2}
+                onBack={goBack}
+              />
+            </StepTransition>
           )}
 
-          {/* Steps 5 & 6: Payout and Review */}
-          {(currentStep === 5 || currentStep === 6) && (
-            <SellerSteps56
-              currentStep={currentStep}
-              onStepComplete={handleStepComplete}
-              onStepBack={handleStepBack}
-              onSubmitApplication={handleFinalSubmit}
-              isSubmitting={isSubmitting}
-              goToStep={goToStep}
-              games={games}
-              uploadedDocs={uploadedDocs}
-              storeImage={storeImage}
-              reviewData={{
-                step1: formData.step1,
-                step2: formData.step2,
-                step4: formData.step4,
-                step5: formData.step5,
-              }}
-              initialData={{
-                step5: formData.step5,
-                step6: formData.step6,
-              }}
-            />
+          {currentStep === 3 && (
+            <StepTransition key={3} stepKey={3} direction={direction}>
+              <StepIdentity
+                uploadedDocs={uploadedDocs}
+                onDocChange={handleDocChange}
+                onContinue={handleStep3}
+                onBack={goBack}
+                sellerType={step1?.sellerType}
+              />
+            </StepTransition>
+          )}
+
+          {currentStep === 4 && (
+            <StepTransition key={4} stepKey={4} direction={direction}>
+              <PayoutSetupStep
+                defaultPayout={payout}
+                defaultPayoutCurrency={payoutCurrency}
+                onValidSubmit={handleStep4}
+                onBack={goBack}
+              />
+            </StepTransition>
+          )}
+
+          {currentStep === 5 && (
+            <StepTransition key={5} stepKey={5} direction={direction}>
+              <div>
+                <ReviewSignStep
+                  state={reviewState}
+                  games={games}
+                  initialData={review}
+                  goToStep={goToStep}
+                  onBack={goBack}
+                  onSubmit={handleFinalSubmit}
+                  isSubmitting={isSubmitting}
+                />
+
+                {turnstileEnabled && (
+                  <div className="mt-6">
+                    <TurnstileWidget
+                      onToken={setTurnstileToken}
+                      onExpire={() => setTurnstileToken('')}
+                      className="flex justify-center"
+                    />
+                  </div>
+                )}
+              </div>
+            </StepTransition>
           )}
         </AnimatePresence>
+      </SellerAppLayout>
 
-        {/* P2.7 — Turnstile CAPTCHA on final step */}
-        {currentStep === 6 && turnstileEnabled && (
-          <div className="mt-6">
-            <TurnstileWidget
-              onToken={setTurnstileToken}
-              onExpire={() => setTurnstileToken('')}
-              className="flex justify-center"
-            />
-          </div>
-        )}
-      </div>
+      {/* Video modal — reachable from the shell's "Watch How It Works" button. */}
+      <VideoModal open={videoOpen} onClose={() => setVideoOpen(false)} />
 
-      {/* Submission Loader */}
+      {/* Submission loader overlay. */}
       {isSubmitting && <SubmissionLoader stage={loaderStage} />}
-
-      {/* Previous Data Modal */}
-      {previousApplication && previousWithdrawal && (
-        <PreviousDataModal
-          isOpen={showPreviousDataModal}
-          withdrawnAt={previousWithdrawal.withdrawnAt}
-          withdrawalCount={previousWithdrawal.withdrawalCount}
-          onUseData={handleUsePreviousData}
-          onStartFresh={handleStartFresh}
-        />
-      )}
-    </div>
+    </>
   )
 }
