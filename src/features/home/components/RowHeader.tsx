@@ -42,7 +42,7 @@ export function RowHeader({ title, viewAllHref, eyebrow, subtitle }: RowHeaderPr
       </div>
       <Link
         href={viewAllHref}
-        className="inline-flex items-center gap-1.5 text-body-sm font-semibold text-lime-text flex-none group self-end pb-1"
+        className="inline-flex min-h-[44px] items-end gap-1.5 text-body-sm font-semibold text-lime-text flex-none group self-end pb-1"
       >
         View all
         <ArrowRight

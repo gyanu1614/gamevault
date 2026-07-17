@@ -487,7 +487,13 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
         setUserMenuOpen(false)
         setNotificationsOpen(false)
         setActivityOpen(false)
-        // setActiveDropdown(null) — removed: Radix handles it.
+        // Category mega-menu: restored (V17w removed it because the
+        // PORTALLED popover content wasn't matched by [data-dropdown] and
+        // inside-clicks closed the menu before links could navigate). The
+        // content card now carries data-dropdown itself, so inside clicks
+        // are exempt and this is the deterministic outside-TAP dismiss for
+        // touch devices, where the mouseleave debounce never fires.
+        setActiveDropdown(null)
       }
     }
 
@@ -828,14 +834,19 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                         under heavy trees and strands the panel half-visible;
                         same fix as the admin header). */}
                     {notificationsOpen && (
-                      <div className="absolute right-0 top-full mt-[27px] w-[480px] max-w-[92vw] animate-in fade-in-0 zoom-in-95 slide-in-from-top-2 duration-200">
+                      /* Mobile (<sm): the 480px panel anchored to the bell
+                         would clip past the LEFT viewport edge, so it becomes
+                         a viewport-pinned sheet under the navbar. sm+ keeps
+                         the anchored desktop popover unchanged. */
+                      <div className="fixed inset-x-3 top-20 sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-[27px] sm:w-[480px] sm:max-w-[92vw] animate-in fade-in-0 zoom-in-95 slide-in-from-top-2 duration-200">
                           {/* V61 — Marketplace glass panel (was flat black):
                               near-opaque dark surface + top sheen, roomier
-                              type and spacing. */}
-                          <div className="relative overflow-hidden rounded-lg border border-border-default bg-[#17171F] shadow-[0_24px_48px_-12px_rgba(0,0,0,0.85)] p-5">
+                              type and spacing. Capped to the dynamic viewport
+                              so short phones scroll the list internally. */}
+                          <div className="relative flex max-h-[calc(100dvh-7rem)] flex-col overflow-hidden rounded-lg border border-border-default bg-[#17171F] shadow-[0_24px_48px_-12px_rgba(0,0,0,0.85)] p-5">
                             <span aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-16 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.05),transparent)]" />
                             {/* Header - hairline separator spans the full panel width */}
-                            <div className="relative -mx-5 mb-4 flex items-center justify-between border-b border-border-subtle px-5 pb-3.5">
+                            <div className="relative -mx-5 mb-4 flex shrink-0 items-center justify-between border-b border-border-subtle px-5 pb-3.5">
                               <h3 className="text-[16px] font-bold text-text-primary">Notifications</h3>
                               {unreadNotificationCount > 0 && (
                                 <span className="inline-flex h-6 items-center rounded-md border border-lime-tint-border bg-lime-tint-bg px-2 text-[11.5px] font-bold text-lime-text">
@@ -858,7 +869,7 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                                 <p className="mt-1 text-[12.5px] text-text-tertiary">No new notifications</p>
                               </div>
                             ) : (
-                              <div className="relative max-h-[420px] space-y-2 overflow-y-auto pr-1">
+                              <div className="relative min-h-0 max-h-[420px] space-y-2 overflow-y-auto overscroll-contain pr-1">
                                 {recentNotifications.map((notification: any) => (
                                   <Link
                                     key={notification.id}
@@ -915,7 +926,7 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                             {/* View All Button */}
                             <Link
                               href="/notifications"
-                              className="relative mt-3 flex h-10 items-center justify-center rounded-md border border-border-default bg-bg-overlay text-[13px] font-semibold text-text-primary transition-colors hover:border-border-strong hover:bg-bg-overlay-2"
+                              className="relative mt-3 flex h-10 shrink-0 items-center justify-center rounded-md border border-border-default bg-bg-overlay text-[13px] font-semibold text-text-primary transition-colors hover:border-border-strong hover:bg-bg-overlay-2"
                               onClick={() => setNotificationsOpen(false)}
                             >
                               View All Notifications
@@ -962,12 +973,14 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                     </Button>
 
                     {activityOpen && (
-                      <div className="absolute right-0 top-full mt-[27px] w-[480px] max-w-[92vw] animate-in fade-in-0 zoom-in-95 slide-in-from-top-2 duration-200">
+                      /* Mobile (<sm): viewport-pinned sheet (see Notifications
+                         above); sm+ keeps the anchored desktop popover. */
+                      <div className="fixed inset-x-3 top-20 sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-[27px] sm:w-[480px] sm:max-w-[92vw] animate-in fade-in-0 zoom-in-95 slide-in-from-top-2 duration-200">
                           {/* V61 — Same glass panel as Notifications. */}
-                          <div className="relative overflow-hidden rounded-lg border border-border-default bg-[#17171F] shadow-[0_24px_48px_-12px_rgba(0,0,0,0.85)] p-5">
+                          <div className="relative flex max-h-[calc(100dvh-7rem)] flex-col overflow-hidden rounded-lg border border-border-default bg-[#17171F] shadow-[0_24px_48px_-12px_rgba(0,0,0,0.85)] p-5">
                             <span aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-16 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.05),transparent)]" />
                             {/* Header - hairline separator spans the full panel width */}
-                            <div className="relative -mx-5 mb-4 flex items-center justify-between border-b border-border-subtle px-5 pb-3.5">
+                            <div className="relative -mx-5 mb-4 flex shrink-0 items-center justify-between border-b border-border-subtle px-5 pb-3.5">
                               <h3 className="text-[16px] font-bold text-text-primary">Live Orders</h3>
                               <Link
                                 href="/account/orders"
@@ -995,7 +1008,7 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                                 <p className="mt-1 text-[12.5px] text-text-tertiary">Orders in progress will appear here</p>
                               </div>
                             ) : (
-                              <div className="relative max-h-[440px] space-y-4 overflow-y-auto pr-1">
+                              <div className="relative min-h-0 max-h-[440px] space-y-4 overflow-y-auto overscroll-contain pr-1">
                                 {activeOrders.buying.length > 0 && (
                                   <div>
                                     <div className="mb-2 flex items-center gap-2">
@@ -1064,12 +1077,18 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                   </Button>
 
                   {userMenuOpen && (
-                    <div className="absolute -right-3 top-full mt-[25px] w-[360px] max-w-[92vw] sm:-right-6 animate-in fade-in-0 zoom-in-95 slide-in-from-top-2 duration-200">
+                    /* Mobile (<sm): the 92vw panel anchored to the avatar
+                       spilled past the LEFT viewport edge, so it becomes a
+                       viewport-pinned sheet under the navbar. sm+ keeps the
+                       anchored desktop popover unchanged. */
+                    <div className="fixed inset-x-3 top-20 sm:absolute sm:inset-x-auto sm:-right-6 sm:top-full sm:mt-[25px] sm:w-[360px] sm:max-w-[92vw] animate-in fade-in-0 zoom-in-95 slide-in-from-top-2 duration-200">
                         {/* V61 — Marketplace glass panel: near-opaque dark
                             surface + top sheen, wider (360px) with roomier
                             rows so the menu reads as a proper panel, not a
-                            cramped context menu. */}
-                        <div className="relative overflow-hidden rounded-lg border border-border-default bg-[#17171F] p-2 shadow-[0_24px_48px_-12px_rgba(0,0,0,0.85)] max-h-[calc(100vh-110px)] overflow-y-auto">
+                            cramped context menu. dvh (not vh) cap so the
+                            bottom rows never hide behind iOS Safari's
+                            toolbar. */}
+                        <div className="relative overflow-hidden rounded-lg border border-border-default bg-[#17171F] p-2 shadow-[0_24px_48px_-12px_rgba(0,0,0,0.85)] max-h-[calc(100dvh-110px)] overflow-y-auto overscroll-contain">
                           <span aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-16 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.05),transparent)]" />
                           {/* User Info card */}
                           <div className="relative border-b border-border-subtle p-2 pb-2">
@@ -1522,11 +1541,14 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                 </div>
               )}
 
-              {/* Mobile Menu Button */}
+              {/* Mobile Menu Button — 44px touch target (primary nav control
+                  on phones). Visible through lg (not md) so 768-1023px
+                  tablets keep the in-menu search: GlobalSearch is lg-only,
+                  and without this the md range had NO search control at all. */}
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-9 w-9 rounded-full text-gray-300 hover:bg-white/10 hover:text-white md:hidden"
+                className="h-11 w-11 rounded-full text-gray-300 hover:bg-white/10 hover:text-white lg:hidden"
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               >
                 {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -1543,7 +1565,11 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className="fixed left-[2.5vw] right-[2.5vw] top-20 z-40 rounded-2xl border border-white/10 bg-black p-4 shadow-2xl backdrop-blur-xl sm:left-[5vw] sm:right-[5vw] sm:p-6 md:hidden"
+            // max-h + internal scroll: the menu is FIXED so it never scrolls
+            // with the page — without this cap the later categories and the
+            // auth buttons were unreachable on phones. lg:hidden matches the
+            // hamburger so 768-1023px tablets keep the in-menu search.
+            className="fixed left-[2.5vw] right-[2.5vw] top-20 z-40 max-h-[calc(100dvh-6rem)] overflow-y-auto overscroll-contain rounded-2xl border border-white/10 bg-black p-4 shadow-2xl backdrop-blur-xl sm:left-[5vw] sm:right-[5vw] sm:p-6 lg:hidden"
           >
             {/* Mobile Search */}
             <form onSubmit={handleSearch} className="mb-6">
@@ -1619,8 +1645,11 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
         )}
       </AnimatePresence>
 
-      {/* Spacer */}
-      <div className="h-16 md:h-18 lg:h-20" />
+      {/* Spacer — sized to the navbar's real extent (top 12px + ~66px bar =
+          ~78px at rest). The old `h-16 md:h-18` under-measured (and `h-18`
+          isn't a real Tailwind utility), letting the fixed bar overlap the
+          first ~14px of page content. */}
+      <div className="h-20 lg:h-[84px]" />
     </>
   )
 }
@@ -1688,8 +1717,14 @@ function CategoryDropdown({
       <Popover.Trigger asChild>
         <button
           data-dropdown
-          onMouseEnter={onHoverStart}
-          onMouseLeave={onHoverEnd}
+          // Touch-tablet support: hover open/close only runs for REAL mouse
+          // pointers (pointerType guard filters the synthesized hover a tap
+          // produces), and tap/click toggles the popover deterministically.
+          // Desktop hover behavior is unchanged; click-to-close on desktop
+          // is standard toggle behavior.
+          onPointerEnter={(e) => { if (e.pointerType === 'mouse') onHoverStart() }}
+          onPointerLeave={(e) => { if (e.pointerType === 'mouse') onHoverEnd() }}
+          onClick={() => (isActive ? onSelect() : onHoverStart())}
           className={cn(
             'flex items-center gap-1 rounded-full px-4 py-2 text-sm font-medium transition-colors hover:bg-white/10 hover:text-white whitespace-nowrap',
             isCurrent ? 'bg-white/[0.08] text-white' : 'text-gray-300',
@@ -1763,6 +1798,11 @@ function CategoryDropdown({
                 dropdown reads as glass over the page (same token as the
                 search panel). */}
             <div
+              // data-dropdown marks the portalled content as "inside" for the
+              // document-level outside-tap handler in Navbar — taps/clicks
+              // inside the mega-menu stay open, anywhere else dismisses it
+              // (the touch counterpart of the mouseleave debounce).
+              data-dropdown
               className="w-[min(960px,92vw)] overflow-hidden rounded-2xl border border-white/10 shadow-2xl backdrop-blur-2xl backdrop-saturate-150"
               style={{ backgroundColor: 'rgba(10, 10, 15, 0.92)' }}
             >
@@ -1773,7 +1813,9 @@ function CategoryDropdown({
                   height, leaving a lighter-bg gap below the short column —
                   read as a stray horizontal divider on Currency/Top
                   Up/Boosting. */}
-              <div className="grid min-h-[520px] grid-cols-1 items-stretch md:grid-cols-[260px_1fr]">
+              {/* min-h capped by 62dvh so tablet-landscape viewports
+                  (~620-650px usable) don't force the card past the fold. */}
+              <div className="grid min-h-[min(520px,62dvh)] grid-cols-1 items-stretch md:grid-cols-[260px_1fr]">
                 {/* LEFT — Popular */}
                 <div className="border-b border-white/10 bg-white/[0.02] p-4 md:border-b-0 md:border-r">
                   <div className="mb-3 px-1.5 text-[11.5px] font-bold uppercase tracking-[0.14em] text-lime-text">
@@ -1811,7 +1853,7 @@ function CategoryDropdown({
                 </div>
 
                 {/* RIGHT — Searchable */}
-                <div className="flex max-h-[520px] flex-col p-4">
+                <div className="flex max-h-[min(520px,62dvh)] flex-col p-4">
                   <div className="relative mb-3">
                     <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
                     <input

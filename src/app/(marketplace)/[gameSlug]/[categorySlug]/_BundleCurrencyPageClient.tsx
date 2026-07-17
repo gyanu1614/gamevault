@@ -1141,7 +1141,9 @@ function FilterChips({
   setFilter: (f: 'recommended' | 'cheapest' | 'fastest') => void
 }) {
   return (
-    <div className="flex items-center gap-1.5">
+    // Mobile-audit — flex-wrap so the chip group never forces horizontal
+    // page scroll at 360px (mirrors the fix in _CurrencyPageClient).
+    <div className="flex flex-wrap items-center gap-1.5">
       <FilterChip
         active={filter === 'recommended'}
         onClick={() => setFilter('recommended')}
@@ -1181,7 +1183,9 @@ function FilterChip({
       onClick={onClick}
       aria-pressed={active}
       className={cn(
-        'inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[12.5px] font-semibold transition-colors sm:text-[13px]',
+        // Mobile-audit — min-h-9 (36px) keeps the tap target at the dense
+        // control floor on phones without changing the visual pill shape.
+        'inline-flex min-h-9 items-center gap-1.5 rounded-full border px-3 py-1.5 text-[12.5px] font-semibold transition-colors sm:text-[13px]',
         active
           ? 'border-lime-tint-border bg-lime-tint-bg text-lime-text'
           : 'border-border-subtle bg-transparent text-text-secondary hover:border-border-default hover:text-text-primary',

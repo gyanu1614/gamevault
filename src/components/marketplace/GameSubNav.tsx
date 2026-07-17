@@ -94,14 +94,17 @@ export default function GameSubNav({
           // instead of a flat black pill. Inline rgba because our
           // tokens are raw hex (Tailwind /opacity doesn't apply).
           'rounded-full border border-white/[0.1] shadow-2xl backdrop-blur-2xl backdrop-saturate-150',
-          'px-2 py-1.5 sm:px-2.5 sm:py-2',
+          // Mobile-audit — wrapper py trimmed (1.5 -> 1) to offset the
+          // taller tab buttons below (py-1 -> py-2.5 for >=36px targets)
+          // so the pill's overall height barely grows.
+          'px-2 py-1 sm:px-2.5 sm:py-2',
         )}
         style={{ backgroundColor: 'rgba(28, 28, 37, 0.30)' }}
       >
         {/* ── Game name / logo ───────────────────────────────────────── */}
         <Link
           href={`/${gameSlug}`}
-          className="group flex items-center gap-2 flex-shrink-0 rounded-full px-2.5 py-1 sm:px-3.5 sm:py-1.5 transition-colors hover:bg-bg-raised-hover"
+          className="group flex items-center gap-2 flex-shrink-0 rounded-full px-2.5 py-2 sm:px-3.5 sm:py-1.5 transition-colors hover:bg-bg-raised-hover"
         >
           {gameImageUrl ? (
             <img
@@ -122,16 +125,20 @@ export default function GameSubNav({
         {categories.length === 0 ? (
           <Link
             href="/"
-            className="flex items-center gap-1 rounded-full px-2.5 py-1 sm:px-3 sm:py-1.5 text-xs sm:text-sm text-text-secondary hover:text-text-primary hover:bg-bg-raised-hover transition-colors"
+            className="flex items-center gap-1 rounded-full px-2.5 py-2.5 sm:px-3 sm:py-1.5 text-xs sm:text-sm text-text-secondary hover:text-text-primary hover:bg-bg-raised-hover transition-colors"
           >
             <ChevronLeft className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
             Marketplace
           </Link>
         ) : (
-          <div
-            className="flex items-center gap-0.5 overflow-x-auto"
-            style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}
-          >
+          /* Mobile-audit — relative wrapper so a right-edge fade can sit
+             over the scrollable tab strip, signalling more tabs off-screen
+             on phones (the scrollbar is hidden). */
+          <div className="relative min-w-0">
+            <div
+              className="flex items-center gap-0.5 overflow-x-auto"
+              style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}
+            >
             {categories.map((cat) => {
               const isActive = cat.slug === currentCategorySlug
               // V17g — Slug is the slug; no alias indirection anymore.
@@ -148,7 +155,9 @@ export default function GameSubNav({
                   onClick={() => goToCategory(cat.slug)}
                   disabled={isPending}
                   className={cn(
-                    'relative flex-shrink-0 flex items-center gap-1.5 px-2.5 py-1 sm:px-3.5 sm:py-1.5 text-xs sm:text-[13.5px] font-medium whitespace-nowrap rounded-full transition-colors',
+                    // Mobile-audit — py-2.5 below sm lifts the tap target to
+                    // ~36px (dense-control floor); desktop padding unchanged.
+                    'relative flex-shrink-0 flex items-center gap-1.5 px-2.5 py-2.5 sm:px-3.5 sm:py-1.5 text-xs sm:text-[13.5px] font-medium whitespace-nowrap rounded-full transition-colors',
                     isActive
                       ? 'text-text-primary'
                       : 'text-text-secondary hover:text-gray-100 hover:bg-bg-overlay',
@@ -190,6 +199,12 @@ export default function GameSubNav({
                 </button>
               )
             })}
+            </div>
+            {/* Right-edge fade — overflow affordance, phones only */}
+            <span
+              aria-hidden
+              className="pointer-events-none absolute inset-y-0 right-0 w-5 rounded-r-full bg-gradient-to-l from-black/35 to-transparent sm:hidden"
+            />
           </div>
         )}
       </div>

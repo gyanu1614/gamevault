@@ -133,6 +133,16 @@ export function TopUpsBanner() {
           width: 2400px;
           height: 600px;
         }
+        /* Mobile — the width-scaled 2400×600 canvas collapses to a
+           ~90-150px strip pinned to the top of the section on phones
+           (raptor shrinks to ~30px). Below md we drop the scaled art
+           layer entirely and keep only the full-bleed .tu-banner
+           gradient + text shield, which still reads as a styled band. */
+        @media (max-width: 767px) {
+          .tu-scale {
+            display: none;
+          }
+        }
         .tu-mirror {
           display: contents;
         }

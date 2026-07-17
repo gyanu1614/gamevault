@@ -126,7 +126,7 @@ export function HowItWorks() {
           </span>
           <span className="h-px w-10 bg-gradient-to-r from-lime/50 to-transparent" aria-hidden />
         </div>
-        <h2 className="text-[44px] font-black leading-[1.02] tracking-tight lg:text-[56px]">
+        <h2 className="text-[32px] font-black leading-[1.02] tracking-tight sm:text-[44px] lg:text-[56px]">
           Safe drops, <span className="text-lime-text">every time</span>.
         </h2>
         <p className="mx-auto mt-4 max-w-2xl text-[17px] leading-relaxed text-text-secondary">
@@ -168,7 +168,7 @@ function StageCopy({ stage, index }: { stage: Stage; index: number }) {
   const isLast = index === 3
   return (
     <div
-      className={`flex min-h-screen flex-col justify-center py-12 ${isLast ? 'pb-[40vh]' : ''}`}
+      className={`flex flex-col justify-center py-10 lg:min-h-screen lg:py-12 ${isLast ? 'lg:pb-[40vh]' : ''}`}
     >
       <div className="max-w-[460px]">
         <div className="mb-4 inline-flex items-center gap-2">
@@ -177,7 +177,7 @@ function StageCopy({ stage, index }: { stage: Stage; index: number }) {
           </span>
           <span className="h-px w-6 bg-lime/40" aria-hidden />
         </div>
-        <h3 className="text-[36px] font-black leading-[1.05] tracking-tight text-text-primary lg:text-[44px]">
+        <h3 className="text-[28px] font-black leading-[1.05] tracking-tight text-text-primary sm:text-[36px] lg:text-[44px]">
           {stage.label}
         </h3>
         <p className="mt-6 text-[18px] leading-[1.55] text-text-secondary">

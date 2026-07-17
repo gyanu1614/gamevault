@@ -182,6 +182,21 @@ export default function ListingDetailClient({
     return () => obs.disconnect()
   }, [])
 
+  // Mobile-audit — Second observer on a sentinel at the very end of
+  // <main>: once the page bottom (footer) scrolls into view the fixed
+  // Buy bar slides away so it never covers the footer's last links.
+  const pageEndRef = useRef<HTMLDivElement | null>(null)
+  const [atPageEnd, setAtPageEnd] = useState(false)
+  useEffect(() => {
+    const el = pageEndRef.current
+    if (!el) return
+    const obs = new IntersectionObserver(([entry]) =>
+      setAtPageEnd(entry.isIntersecting),
+    )
+    obs.observe(el)
+    return () => obs.disconnect()
+  }, [])
+
   // V30 — Centered sticky rail. Instead of a fixed top offset, the
   // pinned position is computed so the buy panel floats vertically
   // centered in the viewport while the left column scrolls past.
@@ -298,7 +313,10 @@ export default function ListingDetailClient({
   }, [listing, templateFields])
 
   return (
-    <main className="min-h-screen pb-16 sm:pb-12">
+    // Mobile-audit — pb-24 below sm clears the ~80px fixed Buy bar
+    // (incl. safe-area) so it never covers the PaymentsMarquee tail or
+    // the footer links at the page bottom; sm+ keeps pb-12 (no bar).
+    <main className="min-h-screen pb-24 sm:pb-12">
       {/* PREVIEW BANNER — owner/admin view of a non-active listing. */}
       {previewStatus && (
         <div className="mx-auto w-full max-w-7xl px-3 pt-6 sm:px-6 lg:px-8">
@@ -715,9 +733,12 @@ export default function ListingDetailClient({
           the max-w-7xl wrapper so it spans the whole viewport. */}
       <PaymentsMarquee />
 
+      {/* Mobile-audit — page-end sentinel for the Buy-bar footer guard */}
+      <div ref={pageEndRef} aria-hidden className="h-px" />
+
       {/* Mobile sticky Buy bar */}
       <AnimatePresence>
-        {showMobileBar && !isOwn && !previewStatus && (
+        {showMobileBar && !atPageEnd && !isOwn && !previewStatus && (
           <motion.div
             initial={{ y: 60, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}

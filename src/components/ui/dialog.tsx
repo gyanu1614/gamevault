@@ -43,8 +43,27 @@ const DialogContent = React.forwardRef<
         // up automatically so MarkReceivedModal, DisputeModal,
         // MarkDeliveredModal, signup, etc. all match the OrderCard
         // family without per-call className overrides.
-        "fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border border-border-default bg-bg-raised p-6 text-text-primary shadow-elevated duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%]",
-        className
+        //
+        // Mobile-audit — Below sm every dialog renders as a BOTTOM SHEET
+        // (inset-x-0 bottom-0, slide-in-from-bottom, top corners rounded)
+        // instead of a centered modal; at sm+ the classic centered panel
+        // returns untouched. The base also carries max-h (dvh, so the
+        // soft-keyboard/URL-bar viewport is respected) + overflow-y-auto
+        // so tall content scrolls internally instead of running off the
+        // 360x640 viewport — callers no longer need to remember it.
+        "fixed inset-x-0 bottom-0 z-50 mx-auto grid w-full max-w-lg gap-4 overflow-y-auto rounded-t-lg border border-border-default bg-bg-raised p-6 text-text-primary shadow-elevated duration-200",
+        "max-h-[calc(100dvh-2rem)]",
+        "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+        // <sm: slide up from the bottom edge (sheet behaviour)
+        "data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom",
+        // sm+: restore the centered modal + zoom/slide-from-center motion
+        "sm:inset-x-auto sm:bottom-auto sm:left-[50%] sm:top-[50%] sm:translate-x-[-50%] sm:translate-y-[-50%] sm:rounded-lg",
+        "sm:data-[state=closed]:slide-out-to-bottom-0 sm:data-[state=open]:slide-in-from-bottom-0",
+        "sm:data-[state=closed]:zoom-out-95 sm:data-[state=open]:zoom-in-95 sm:data-[state=closed]:slide-out-to-left-1/2 sm:data-[state=closed]:slide-out-to-top-[48%] sm:data-[state=open]:slide-in-from-left-1/2 sm:data-[state=open]:slide-in-from-top-[48%]",
+        className,
+        // After className so callers passing rounded-lg/rounded-xl can't
+        // re-round the sheet's bottom corners against the screen edge.
+        "max-sm:rounded-b-none"
       )}
       {...props}
     >

@@ -372,11 +372,11 @@ export function HomePage() {
         }}
       />
 
-      <section className="relative flex flex-col h-[calc(100vh-160px)] py-5 px-6 overflow-hidden">
+      <section className="relative flex flex-col h-[calc(100svh-160px)] min-h-[480px] py-5 px-6 overflow-hidden">
 
         {/* Headline — vertically centered in the space above the carousel */}
         <div className="mx-auto text-center flex flex-col items-center justify-center relative z-10 flex-[1.5_1_0%] min-h-0">
-          <h1 className="font-display text-heading md:text-display lg:text-display-lg whitespace-nowrap">
+          <h1 className="font-display text-[clamp(22px,7vw,28px)] md:text-display lg:text-display-lg md:whitespace-nowrap">
             <span
               className="block bg-clip-text text-transparent bg-[length:400%_auto] animate-gradient-x"
               style={{
@@ -411,7 +411,7 @@ export function HomePage() {
               </span>
               <span className="h-px w-10 bg-gradient-to-r from-[#C6FF3D80] to-transparent" aria-hidden />
             </div>
-            <h2 className="font-display text-[44px] font-extrabold leading-[1.04] tracking-tight lg:text-[56px]">
+            <h2 className="font-display text-[32px] font-extrabold leading-[1.04] tracking-tight sm:text-[44px] lg:text-[56px]">
               Popular Games
             </h2>
             <p className="mt-4 max-w-2xl text-body-lg text-text-secondary">
@@ -591,7 +591,7 @@ export function HomePage() {
             animationDuration: '3.5s',
           }}
         />
-        <div className="relative z-10 max-w-container mx-auto px-6 flex items-center justify-between mb-5 gap-3">
+        <div className="relative z-10 max-w-container mx-auto px-6 mb-5 flex flex-col items-start gap-1.5 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
           <div className="flex items-center gap-3">
             <span className="inline-flex items-center gap-[9px] font-body font-semibold text-body-sm">
               <span className="relative flex h-2 w-2">
