@@ -201,14 +201,14 @@ function GameLogo({
         alt={name}
         width={size}
         height={size}
-        className="shrink-0 rounded-[10px] object-cover shadow-[inset_0_0_0_1px_rgba(0,0,0,0.06)]"
+        className="shrink-0 rounded-[10px] object-cover shadow-[0_2px_10px_-3px_rgba(0,0,0,0.6)] ring-1 ring-white/10"
         style={{ width: size, height: size }}
       />
     )
   }
   return (
     <div
-      className="grid shrink-0 place-items-center rounded-[10px] text-[15px] font-black text-white shadow-[inset_0_0_0_1px_rgba(0,0,0,0.06)]"
+      className="grid shrink-0 place-items-center rounded-[10px] text-[15px] font-black text-white shadow-[0_2px_10px_-3px_rgba(0,0,0,0.6)] ring-1 ring-white/10"
       style={{ width: size, height: size, background: gameTileGradient(name) }}
     >
       {(name || '?').charAt(0).toUpperCase()}

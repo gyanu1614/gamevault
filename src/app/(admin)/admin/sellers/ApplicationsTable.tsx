@@ -212,29 +212,31 @@ export default function ApplicationsTable({ applications }: ApplicationsTablePro
             {/* Stacked game logos (max 3 + overflow) */}
             {tiles.length > 0 && (
               <div className="ml-2 hidden shrink-0 items-center gap-1.5 sm:flex">
-                {tiles.slice(0, 4).map((tile) =>
-                  tile.image ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      key={tile.key}
-                      src={tile.image}
-                      alt={tile.name}
-                      title={tile.name}
-                      className="h-8 w-8 rounded-[9px] object-cover ring-1 ring-white/15"
-                    />
-                  ) : (
-                    <div
-                      key={tile.key}
-                      title={tile.name}
-                      className="grid h-8 w-8 place-items-center rounded-[9px] text-[11px] font-black text-white ring-1 ring-white/15"
-                      style={{ background: gameTileGradient(tile.name) }}
-                    >
-                      {(tile.name.trim()[0] || '?').toUpperCase()}
-                    </div>
-                  ),
-                )}
+                {tiles.slice(0, 4).map((tile) => (
+                  <div key={tile.key} className="group relative">
+                    {/* Instant tooltip — native title takes ~1s to appear */}
+                    <span className="pointer-events-none absolute -top-8 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded-md bg-[#0A1810] px-2 py-1 text-[10px] font-semibold text-white opacity-0 shadow-xl ring-1 ring-white/15 transition-opacity duration-75 group-hover:opacity-100">
+                      {tile.name}
+                    </span>
+                    {tile.image ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={tile.image}
+                        alt={tile.name}
+                        className="h-9 w-9 rounded-[10px] object-cover shadow-[0_2px_8px_-2px_rgba(0,0,0,0.5)] ring-1 ring-white/10 transition-all duration-150 group-hover:scale-110 group-hover:ring-[#A3E635]/50"
+                      />
+                    ) : (
+                      <div
+                        className="grid h-9 w-9 place-items-center rounded-[10px] text-[12px] font-black text-white shadow-[0_2px_8px_-2px_rgba(0,0,0,0.5)] ring-1 ring-white/10 transition-all duration-150 group-hover:scale-110 group-hover:ring-[#A3E635]/50"
+                        style={{ background: gameTileGradient(tile.name) }}
+                      >
+                        {(tile.name.trim()[0] || '?').toUpperCase()}
+                      </div>
+                    )}
+                  </div>
+                ))}
                 {tiles.length > 4 && (
-                  <div className="grid h-8 min-w-8 place-items-center rounded-[9px] bg-white/[0.12] px-1.5 text-[10px] font-black text-white/70 ring-1 ring-white/15">
+                  <div className="grid h-9 min-w-9 place-items-center rounded-[10px] bg-white/[0.12] px-1.5 text-[10px] font-black text-white/70 ring-1 ring-white/10">
                     +{tiles.length - 4}
                   </div>
                 )}
