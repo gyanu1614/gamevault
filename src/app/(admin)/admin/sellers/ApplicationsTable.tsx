@@ -3,7 +3,7 @@
 /**
  * Forest Ledger — /admin/sellers applications list rows (approved mockup ②).
  *
- * Store-first white rows on the forest canvas: store image tile leads,
+ * Store-first forest-glass rows on the canvas: store image tile leads,
  * shop name bold with the applicant sub-line (display name · type ·
  * country · applied relative time), stacked REAL game logos (max 3 +
  * overflow +N), an honest verification mini-bar (applicable checks
@@ -17,6 +17,7 @@ import { FileText } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { SellerApplication } from '@/lib/actions/admin-sellers'
 import type { GameLookupEntry } from '@/lib/admin/seller-application-enrichment'
+import { countryFlag } from '../_theme/flags'
 import { calculateVerificationStatus } from '@/lib/utils/seller-verification'
 import { SELLER_TYPE_LABELS } from '@/lib/seller-application/labels'
 import {
@@ -103,14 +104,16 @@ function RowStatusChip({ app }: { app: SellerApplication }) {
   // instead of the stale application status (view flattens seller_status).
   const sellerStatus = app.seller_status || app.user?.seller_status
   if (app.status === 'approved' && sellerStatus === 'restricted') {
-    return <span className={cn(ROW_CHIP, 'bg-[#FEF3C7] text-[#92400E]')}>Restricted</span>
+    return (
+      <span className={cn(ROW_CHIP, 'bg-[#F59E0B]/[0.16] text-[#FCD34D]')}>Restricted</span>
+    )
   }
   if (app.status === 'approved' && sellerStatus === 'banned') {
-    return <span className={cn(ROW_CHIP, 'bg-[#FEF2F1] text-[#B42318]')}>Banned</span>
+    return <span className={cn(ROW_CHIP, 'bg-[#B42318]/20 text-[#FCA5A5]')}>Banned</span>
   }
 
   const chip = forestStatusChip(app.status)
-  return <span className={chip.onLight}>{chip.label}</span>
+  return <span className={chip.onDark}>{chip.label}</span>
 }
 
 export default function ApplicationsTable({ applications }: ApplicationsTableProps) {
@@ -138,9 +141,9 @@ export default function ApplicationsTable({ applications }: ApplicationsTablePro
         const subParts = [
           app.display_name || app.user?.username,
           SELLER_TYPE_LABELS[app.seller_type ?? ''] ?? app.seller_type,
-          app.country,
           appliedLabel(app.created_at),
         ].filter(Boolean)
+        const flag = countryFlag(app.country)
 
         const tiles = rowGameTiles(app)
         const verification = calculateVerificationStatus(app.documents, app)
@@ -158,8 +161,9 @@ export default function ApplicationsTable({ applications }: ApplicationsTablePro
               }
             }}
             className={cn(
-              'flex cursor-pointer items-center gap-3.5 rounded-xl bg-white px-4 py-3 text-[#1A1D19]',
-              'transition-[transform,box-shadow] duration-150 hover:-translate-y-[1px]',
+              'flex cursor-pointer items-center gap-3.5 rounded-[14px] border border-white/[0.09] bg-white/[0.05] px-4 py-3 backdrop-blur-sm',
+              'transition-[transform,box-shadow,background-color,border-color] duration-150 hover:-translate-y-[1px]',
+              'hover:border-white/[0.14] hover:bg-white/[0.08]',
               'hover:shadow-[0_12px_30px_-18px_rgba(0,0,0,0.65)]',
               'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#A3E635]',
               FOREST_MOTION.fadeUp,
@@ -183,18 +187,32 @@ export default function ApplicationsTable({ applications }: ApplicationsTablePro
               </div>
             )}
 
-            {/* Store name + applicant sub-line */}
+            {/* Store name + applicant + contact lines */}
             <div className="min-w-0">
-              <p className="truncate text-[13.5px] font-extrabold">{storeName}</p>
-              <p className="mt-px truncate text-[11px] text-[#8A9083]">
+              <p className="truncate text-[15px] font-extrabold text-white/95">{storeName}</p>
+              <p className="mt-0.5 truncate text-[11.5px] text-white/45">
                 {subParts.join(' · ')}
+              </p>
+              <p className="mt-0.5 truncate text-[11.5px] text-white/60">
+                {app.user?.email && (
+                  <>
+                    <span className="text-white/35">Email:</span> {app.user.email}
+                  </>
+                )}
+                {app.country && (
+                  <>
+                    {app.user?.email && <span className="text-white/25"> · </span>}
+                    <span className="text-white/35">Country:</span> {flag ? `${flag} ` : ''}
+                    {app.country}
+                  </>
+                )}
               </p>
             </div>
 
             {/* Stacked game logos (max 3 + overflow) */}
             {tiles.length > 0 && (
-              <div className="ml-2 hidden shrink-0 items-center sm:flex">
-                {tiles.slice(0, 3).map((tile, i) =>
+              <div className="ml-2 hidden shrink-0 items-center gap-1.5 sm:flex">
+                {tiles.slice(0, 4).map((tile) =>
                   tile.image ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
@@ -202,29 +220,22 @@ export default function ApplicationsTable({ applications }: ApplicationsTablePro
                       src={tile.image}
                       alt={tile.name}
                       title={tile.name}
-                      className="h-6 w-6 rounded-[7px] object-cover ring-2 ring-white"
-                      style={{ marginLeft: i === 0 ? 0 : -6 }}
+                      className="h-8 w-8 rounded-[9px] object-cover ring-1 ring-white/15"
                     />
                   ) : (
                     <div
                       key={tile.key}
                       title={tile.name}
-                      className="grid h-6 w-6 place-items-center rounded-[7px] text-[9px] font-black text-white ring-2 ring-white"
-                      style={{
-                        background: gameTileGradient(tile.name),
-                        marginLeft: i === 0 ? 0 : -6,
-                      }}
+                      className="grid h-8 w-8 place-items-center rounded-[9px] text-[11px] font-black text-white ring-1 ring-white/15"
+                      style={{ background: gameTileGradient(tile.name) }}
                     >
                       {(tile.name.trim()[0] || '?').toUpperCase()}
                     </div>
                   ),
                 )}
-                {tiles.length > 3 && (
-                  <div
-                    className="grid h-6 min-w-6 place-items-center rounded-[7px] bg-[#FAFAF7] px-1 text-[9px] font-black text-[#5B6157] ring-2 ring-white"
-                    style={{ marginLeft: -6 }}
-                  >
-                    +{tiles.length - 3}
+                {tiles.length > 4 && (
+                  <div className="grid h-8 min-w-8 place-items-center rounded-[9px] bg-white/[0.12] px-1.5 text-[10px] font-black text-white/70 ring-1 ring-white/15">
+                    +{tiles.length - 4}
                   </div>
                 )}
               </div>
@@ -232,13 +243,13 @@ export default function ApplicationsTable({ applications }: ApplicationsTablePro
 
             {/* Verification mini-bar — applicable checks only */}
             <div className="ml-auto hidden shrink-0 items-center gap-2 md:flex">
-              <span className="h-[5px] w-[74px] overflow-hidden rounded-full bg-[#ECEDE4]">
+              <span className="h-[5px] w-[74px] overflow-hidden rounded-full bg-white/[0.12]">
                 <span
-                  className="block h-full rounded-full bg-[#65A30D]"
+                  className="block h-full rounded-full bg-gradient-to-r from-[#65A30D] to-[#A3E635]"
                   style={{ width: `${verification.percentage}%` }}
                 />
               </span>
-              <span className="text-[11px] font-semibold tabular-nums text-[#5B6157]">
+              <span className="text-[11px] font-semibold tabular-nums text-white/60">
                 {verification.verified}/{verification.total}
               </span>
             </div>

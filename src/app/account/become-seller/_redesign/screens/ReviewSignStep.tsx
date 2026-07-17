@@ -323,10 +323,24 @@ export default function ReviewSignStep({
           >
             Selling Experience <span style={{ color: '#B42318' }}>*</span>
           </label>
-          <p className="mt-0.5 text-xs" style={{ color: PALETTE.ink2 }}>
-            Where have you sold before? Marketplaces, store links, or a short
-            summary — a few lines.
-          </p>
+          <div className="mt-0.5 flex flex-wrap items-center justify-between gap-2">
+            <p className="text-xs" style={{ color: PALETTE.ink2 }}>
+              Where have you sold before? Marketplaces, store links — a few
+              words is enough.
+            </p>
+            <button
+              type="button"
+              onClick={() =>
+                setValue('sellingExperience', 'No prior selling experience.', {
+                  shouldValidate: true,
+                })
+              }
+              className="rounded-full border px-3 py-1 text-[11px] font-semibold transition-colors hover:bg-black/[0.04]"
+              style={{ borderColor: PALETTE.line, color: PALETTE.forest2 }}
+            >
+              No Experience
+            </button>
+          </div>
           <textarea
             id="sellingExperience"
             rows={3}

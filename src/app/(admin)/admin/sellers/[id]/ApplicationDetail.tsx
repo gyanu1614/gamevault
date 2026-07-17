@@ -4,12 +4,12 @@
  * Forest Ledger — /admin/sellers/[id] application detail (approved mockup ①).
  *
  * Photo-scrim forest hero led by the store identity (image tile + shop
- * name + status/Didit chips + quick actions), a white verification meter
- * card bridging into the ledger body (only APPLICABLE checks count), then
- * ivory ledger cards on the forest canvas: Games & Categories with real
- * logos, Identity & Documents with the Didit banner + doc previews,
- * Payout, the Business branch, Experience & the signed Agreement, and the
- * Applicant / Timeline / Admin Notes right rail.
+ * name + status/Didit chips + quick actions), a full-width forest-glass
+ * verification meter strip between hero and body (only APPLICABLE checks
+ * count), then forest-glass ledger cards on the canvas: Games &
+ * Categories with real logos, Identity & Documents with the Didit banner
+ * + doc previews, Payout, the Business branch, Experience & the signed
+ * Agreement, and the Applicant / Timeline / Admin Notes right rail.
  *
  * Action wiring is UNCHANGED: approve stays admin-seller-review's
  * approveApplication (profile promotion first), reject stays
@@ -56,6 +56,18 @@ import {
   forestStatusChip,
   gameTileGradient,
 } from '../../_theme/forest'
+import {
+  IconGamepad,
+  IconIdCard,
+  IconBank,
+  IconSignaturePen,
+  IconPerson,
+  IconTimeline,
+  IconNotes,
+  IconBriefcase,
+  IconContract,
+  IconShield,
+} from '../../_theme/SectionIcons'
 import { toast } from 'sonner'
 import {
   CheckCircle,
@@ -131,7 +143,7 @@ function Card({
   children,
   className,
 }: {
-  icon: string
+  icon: React.ReactNode
   title: string
   sub?: string
   index: number
@@ -144,7 +156,7 @@ function Card({
       style={forestStagger(index)}
     >
       <h3 className={FOREST_CLASSES.cardTitle}>
-        <span className="grid h-[22px] w-[22px] place-items-center rounded-[7px] bg-[#14432A]/[0.09] text-[11px]">
+        <span className="grid h-[30px] w-[30px] shrink-0 place-items-center rounded-[9px] bg-white/10">
           {icon}
         </span>
         {title}
@@ -159,7 +171,13 @@ function KV({ k, v, mono }: { k: string; v: React.ReactNode; mono?: boolean }) {
   return (
     <div>
       <div className={FOREST_CLASSES.kvKey}>{k}</div>
-      <div className={cn(FOREST_CLASSES.kvValue, mono && FOREST_CLASSES.mono)}>
+      <div
+        className={
+          mono
+            ? 'mt-0.5 font-mono text-[12px] font-semibold text-white/85'
+            : FOREST_CLASSES.kvValue
+        }
+      >
         {v || '—'}
       </div>
     </div>
@@ -198,7 +216,7 @@ function GameLogo({
   )
 }
 
-/** CSS-only modal shell on the forest canvas — white paper panel. */
+/** CSS-only modal shell on the forest canvas — forest-glass panel. */
 function ModalShell({
   onClose,
   children,
@@ -216,7 +234,7 @@ function ModalShell({
       />
       <div
         className={cn(
-          'relative w-full rounded-2xl bg-white p-6 text-[#1A1D19] shadow-[0_30px_80px_-30px_rgba(0,0,0,0.8)]',
+          'relative w-full rounded-2xl border border-white/10 bg-[#0F2419]/95 p-6 text-white/90 shadow-[0_30px_80px_-30px_rgba(0,0,0,0.8)] backdrop-blur-md',
           wide ? 'max-w-lg' : 'max-w-md',
           'max-h-[90vh] overflow-y-auto',
           FOREST_MOTION.fadeUp
@@ -230,11 +248,11 @@ function ModalShell({
 }
 
 const MODAL_LABEL =
-  'mb-2 block text-[10.5px] font-bold uppercase tracking-[0.07em] text-[#8A9083]'
+  'mb-2 block text-[10.5px] font-bold uppercase tracking-[0.07em] text-white/40'
 const MODAL_INPUT =
-  'w-full rounded-[10px] border border-[#E4E5DE] bg-[#FAFAF7] px-3 py-2.5 text-[13px] text-[#1A1D19] placeholder:text-[#8A9083] focus:border-[#65A30D] focus:outline-none'
+  'w-full rounded-[10px] border border-white/15 bg-white/[0.05] px-3 py-2.5 text-[13px] text-white placeholder:text-white/30 focus:border-[#A3E635] focus:outline-none'
 const MODAL_CANCEL =
-  'flex-1 rounded-[10px] border border-[#E4E5DE] px-3 py-2.5 text-[13px] font-semibold text-[#5B6157] transition-colors hover:bg-[#FAFAF7] disabled:opacity-50'
+  'flex-1 rounded-[10px] border border-white/15 px-3 py-2.5 text-[13px] font-semibold text-white/60 transition-colors hover:bg-white/[0.06] disabled:opacity-50'
 const MODAL_CONFIRM_LIME =
   'flex flex-1 items-center justify-center gap-1.5 rounded-[10px] bg-[#A3E635] px-3 py-2.5 text-[13px] font-bold text-[#0F3320] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50'
 const MODAL_CONFIRM_RED =
@@ -528,7 +546,7 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
     <>
       {/* ══ HERO — forest scrim band, store identity leads ══ */}
       <section
-        className={cn('relative overflow-hidden rounded-2xl px-6 pb-16 pt-6 sm:px-7', FOREST_MOTION.fadeIn)}
+        className={cn('relative overflow-hidden rounded-2xl px-6 pb-6 pt-6 sm:px-7', FOREST_MOTION.fadeIn)}
         style={{ background: FOREST_BG.hero }}
       >
         <div
@@ -653,10 +671,10 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
         </div>
       </section>
 
-      {/* ══ VERIFICATION METER — white card bridging out of the hero ══ */}
+      {/* ══ VERIFICATION METER — full-width glass strip between hero and body ══ */}
       <div
         className={cn(
-          'relative z-[2] mx-3 -mt-10 flex flex-wrap items-center gap-x-[22px] gap-y-3 rounded-[14px] bg-white px-5 py-4 shadow-[0_18px_44px_-20px_rgba(0,0,0,0.55)] sm:mx-6',
+          'mt-4 flex flex-wrap items-center gap-x-[22px] gap-y-3 rounded-[14px] border border-white/[0.09] bg-white/[0.05] px-5 py-4 backdrop-blur-sm',
           FOREST_MOTION.fadeUp
         )}
         style={forestStagger(cardIndex++)}
@@ -664,18 +682,18 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
         <div
           className="grid h-[52px] w-[52px] shrink-0 place-items-center rounded-full"
           style={{
-            background: `conic-gradient(#65A30D 0 ${verification.percentage}%, #E7E8E1 ${verification.percentage}% 100%)`,
+            background: `conic-gradient(#A3E635 0 ${verification.percentage}%, rgba(255,255,255,0.12) ${verification.percentage}% 100%)`,
           }}
         >
-          <span className="grid h-10 w-10 place-items-center rounded-full bg-white text-[12px] font-extrabold text-[#14432A]">
+          <span className="grid h-10 w-10 place-items-center rounded-full bg-[#0F3320] text-[12px] font-extrabold text-white">
             {verification.verified}/{verification.total}
           </span>
         </div>
         <div>
-          <div className="text-[13px] font-bold text-[#1A1D19]">
+          <div className="text-[13px] font-bold text-white/95">
             Verification {verification.verified} of {verification.total} applicable checks
           </div>
-          <div className="mt-0.5 text-[11.5px] text-[#5B6157]">
+          <div className="mt-0.5 text-[11.5px] text-white/60">
             {application.seller_type === 'business'
               ? 'Business seller — identity, address and business checks all apply.'
               : 'Individual seller — the business check doesn’t apply and is not counted.'}
@@ -693,7 +711,7 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
             if (check.ok) {
               return (
                 <span key={check.key} className={FOREST_CLASSES.checkOk}>
-                  <span className="font-black text-[#65A30D]">✓</span>
+                  <span className="font-black text-[#A3E635]">✓</span>
                   {check.label}
                   {check.viaDidit && ' · Didit Video'}
                 </span>
@@ -712,15 +730,15 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
       {application.status === 'rejected' && application.rejection_reason && (
         <div
           className={cn(
-            'mt-5 rounded-[14px] bg-[#FEF2F1] px-5 py-4',
+            'mt-5 rounded-[14px] border border-white/[0.08] bg-[#B42318]/20 px-5 py-4 backdrop-blur-sm',
             FOREST_MOTION.fadeUp
           )}
           style={forestStagger(cardIndex++)}
         >
-          <div className="flex items-center gap-2 text-[12px] font-extrabold uppercase tracking-[0.07em] text-[#B42318]">
+          <div className="flex items-center gap-2 text-[12px] font-extrabold uppercase tracking-[0.07em] text-[#FCA5A5]">
             <XCircle className="h-4 w-4" /> Rejection Reason
           </div>
-          <p className="mt-1.5 text-[13px] leading-relaxed text-[#5B6157]">
+          <p className="mt-1.5 text-[13px] leading-relaxed text-white/60">
             {application.rejection_reason}
           </p>
         </div>
@@ -728,15 +746,15 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
       {application.status === 'info_requested' && application.admin_notes && (
         <div
           className={cn(
-            'mt-5 rounded-[14px] bg-[#FEF3C7] px-5 py-4',
+            'mt-5 rounded-[14px] border border-white/[0.08] bg-[#F59E0B]/[0.16] px-5 py-4 backdrop-blur-sm',
             FOREST_MOTION.fadeUp
           )}
           style={forestStagger(cardIndex++)}
         >
-          <div className="flex items-center gap-2 text-[12px] font-extrabold uppercase tracking-[0.07em] text-[#92400E]">
+          <div className="flex items-center gap-2 text-[12px] font-extrabold uppercase tracking-[0.07em] text-[#FCD34D]">
             <MessageSquareWarning className="h-4 w-4" /> Changes Requested From The Applicant
           </div>
-          <p className="mt-1.5 text-[13px] leading-relaxed text-[#5B6157]">
+          <p className="mt-1.5 text-[13px] leading-relaxed text-white/60">
             {application.admin_notes}
           </p>
         </div>
@@ -748,13 +766,13 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
         <div className="flex min-w-0 flex-col gap-3.5">
           {/* Games & Categories */}
           <Card
-            icon="🎮"
+            icon={<IconGamepad size={20} />}
             title="Games & Categories"
             sub="What they applied to sell — per game, from the live category map"
             index={cardIndex++}
           >
             {gameRows.length === 0 && !application.other_games ? (
-              <p className="py-3 text-[12.5px] text-[#8A9083]">No games selected.</p>
+              <p className="py-3 text-[12.5px] text-white/40">No games selected.</p>
             ) : (
               <div>
                 {gameRows.map((row, i) => (
@@ -762,12 +780,12 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
                     key={row.key}
                     className={cn(
                       'flex items-center gap-3 py-[11px]',
-                      i > 0 && 'border-t border-[#F0F1EA]'
+                      i > 0 && 'border-t border-white/[0.08]'
                     )}
                   >
                     <GameLogo name={row.name} imageUrl={row.image} />
                     <div className="min-w-0">
-                      <div className="text-[13.5px] font-bold text-[#1A1D19]">{row.name}</div>
+                      <div className="text-[13.5px] font-bold text-white/90">{row.name}</div>
                       {row.cats.length > 0 && (
                         <div className="mt-1 flex flex-wrap gap-1.5">
                           {row.cats.map((cat) => (
@@ -779,7 +797,7 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
                       )}
                     </div>
                     {row.cats.length > 0 && (
-                      <div className="ml-auto text-right text-[11px] text-[#8A9083]">
+                      <div className="ml-auto text-right text-[11px] text-white/40">
                         {row.cats.length} {row.cats.length === 1 ? 'Category' : 'Categories'}
                       </div>
                     )}
@@ -790,7 +808,7 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
                   <div
                     className={cn(
                       'flex items-center gap-3 py-[11px]',
-                      gameRows.length > 0 && 'border-t border-[#F0F1EA]'
+                      gameRows.length > 0 && 'border-t border-white/[0.08]'
                     )}
                   >
                     <div
@@ -800,7 +818,7 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
                       +
                     </div>
                     <div className="min-w-0">
-                      <div className="text-[13.5px] font-bold text-[#1A1D19]">Other Games</div>
+                      <div className="text-[13.5px] font-bold text-white/90">Other Games</div>
                       <div className="mt-1 flex flex-wrap gap-1.5">
                         <span className={FOREST_CLASSES.gameCatOther}>
                           “{application.other_games}”
@@ -815,18 +833,18 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
 
           {/* Identity & Documents */}
           <Card
-            icon="🪪"
+            icon={<IconIdCard size={20} />}
             title="Identity & Documents"
             sub="Didit decision + uploaded evidence (signed URLs, click to open)"
             index={cardIndex++}
           >
             {diditSessionId && (
-              <div className="mb-3.5 flex flex-wrap items-start gap-3 rounded-[11px] bg-[#A3E635]/[0.16] px-3.5 py-3">
+              <div className="mb-3.5 flex flex-wrap items-start gap-3 rounded-[11px] bg-[#A3E635]/[0.15] px-3.5 py-3">
                 <div className="min-w-0">
-                  <div className="text-[13px] font-extrabold text-[#14432A]">
+                  <div className="text-[13px] font-extrabold text-[#D9F99D]">
                     Didit Video Verification — Approved
                   </div>
-                  <div className="mt-0.5 text-[11.5px] text-[#5B6157]">
+                  <div className="mt-0.5 text-[11.5px] text-white/60">
                     Govt ID + liveness + face match passed · Session{' '}
                     <span className={FOREST_CLASSES.mono}>{diditSessionId.slice(0, 8)}…</span>
                     {diditDoc?.uploaded_at && <> · {fmtDateTime(diditDoc.uploaded_at)}</>}
@@ -836,7 +854,7 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
                   href={diditSessionUrl(diditSessionId)}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="ml-auto text-[10.5px] font-extrabold uppercase tracking-[0.05em] text-[#65A30D] transition hover:brightness-90"
+                  className="ml-auto text-[10.5px] font-extrabold uppercase tracking-[0.05em] text-[#A3E635] transition hover:brightness-110"
                 >
                   View Session ↗
                 </a>
@@ -850,7 +868,7 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
                   const caption = docCaption(doc)
                   const thumb = loadingUrls ? (
                     <div
-                      className="grid h-[74px] animate-pulse place-items-center text-[11px] font-semibold text-[#8A9083]"
+                      className="grid h-[74px] animate-pulse place-items-center text-[11px] font-semibold text-white/50"
                       style={{ background: FOREST_BG.docThumb }}
                     />
                   ) : url && isImageFile(doc.file_name) ? (
@@ -858,11 +876,11 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
                     <img
                       src={url}
                       alt={caption.title}
-                      className="h-[74px] w-full object-cover"
+                      className="h-[74px] w-full object-cover ring-1 ring-inset ring-white/10"
                     />
                   ) : (
                     <div
-                      className="grid h-[74px] place-items-center text-[11px] font-semibold text-[#8A9083]"
+                      className="grid h-[74px] place-items-center text-[11px] font-semibold text-white/50"
                       style={{ background: FOREST_BG.docThumb }}
                     >
                       {url
@@ -876,9 +894,9 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
                   const body = (
                     <>
                       <div className="overflow-hidden">{thumb}</div>
-                      <div className="px-2.5 py-2 text-[11px] font-bold text-[#1A1D19]">
+                      <div className="px-2.5 py-2 text-[11px] font-bold text-white/90">
                         {caption.title}
-                        <span className="mt-[1px] block text-[10px] font-medium text-[#8A9083]">
+                        <span className="mt-[1px] block text-[10px] font-medium text-white/40">
                           {caption.sub}
                         </span>
                       </div>
@@ -891,14 +909,14 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
                       href={url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="block overflow-hidden rounded-[11px] border border-[#E4E5DE] transition hover:border-[#65A30D]/50 hover:shadow-[0_8px_20px_-12px_rgba(0,0,0,0.35)]"
+                      className="block overflow-hidden rounded-[11px] border border-white/[0.08] bg-white/[0.06] transition hover:border-[#A3E635]/40 hover:shadow-[0_8px_20px_-12px_rgba(0,0,0,0.55)]"
                     >
                       {body}
                     </a>
                   ) : (
                     <div
                       key={doc.id}
-                      className="overflow-hidden rounded-[11px] border border-[#E4E5DE]"
+                      className="overflow-hidden rounded-[11px] border border-white/[0.08] bg-white/[0.06]"
                     >
                       {body}
                     </div>
@@ -907,14 +925,14 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
               </div>
             ) : (
               !diditSessionId && (
-                <p className="py-3 text-[12.5px] text-[#8A9083]">No documents uploaded yet.</p>
+                <p className="py-3 text-[12.5px] text-white/40">No documents uploaded yet.</p>
               )
             )}
           </Card>
 
           {/* Payout */}
           <Card
-            icon="🏦"
+            icon={<IconBank size={20} />}
             title="Payout"
             sub="Where their earnings go once orders complete"
             index={cardIndex++}
@@ -960,7 +978,7 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
           {/* Business branch */}
           {application.seller_type === 'business' && (
             <Card
-              icon="🏢"
+              icon={<IconBriefcase size={20} />}
               title="Business"
               sub="Registered company behind the application"
               index={cardIndex++}
@@ -992,24 +1010,24 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
 
           {/* Experience & Agreement */}
           <Card
-            icon="✍️"
+            icon={<IconSignaturePen size={20} />}
             title="Experience & Agreement"
             sub="Track record + the signed Seller Agency Agreement"
             index={cardIndex++}
           >
             {application.selling_experience ? (
-              <blockquote className="rounded-r-[10px] border-l-[3px] border-[#A3E635] bg-[#FAFAF7] px-3.5 py-[11px] text-[12.5px] italic leading-relaxed text-[#5B6157]">
+              <blockquote className="rounded-r-[10px] border-l-[3px] border-[#A3E635] bg-white/[0.04] px-3.5 py-[11px] text-[12.5px] italic leading-relaxed text-white/60">
                 “{application.selling_experience}”
               </blockquote>
             ) : (
-              <p className="text-[12.5px] text-[#8A9083]">No selling experience provided.</p>
+              <p className="text-[12.5px] text-white/40">No selling experience provided.</p>
             )}
 
             {application.seller_signature && (
-              <div className="mt-3 flex items-center gap-3.5 rounded-[11px] border border-dashed border-[#D6D9CB] bg-[#FAFAF7] px-4 py-3">
+              <div className="mt-3 flex items-center gap-3.5 rounded-[11px] border border-dashed border-white/15 bg-white/[0.04] px-4 py-3">
                 <div>
                   <div
-                    className="text-[22px] leading-tight text-[#14432A]"
+                    className="text-[22px] leading-tight text-[#D9F99D]"
                     style={{
                       fontFamily:
                         "'Snell Roundhand', 'Segoe Script', 'Brush Script MT', cursive",
@@ -1017,12 +1035,20 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
                   >
                     {application.seller_signature}
                   </div>
-                  <div className="mt-0.5 text-[11px] text-[#8A9083]">
+                  <div className="mt-0.5 text-[11px] text-white/40">
                     Signed {fmtDateTime(application.seller_signed_at)} · Seller Agency Agreement
                   </div>
                 </div>
               </div>
             )}
+
+            <a
+              href={`/api/admin/seller-agreement/${application.id}`}
+              className="mt-3 inline-flex items-center gap-2 rounded-[10px] border border-white/15 bg-white/[0.05] px-4 py-2.5 text-[12px] font-bold text-white/85 transition-colors hover:bg-white/[0.09]"
+            >
+              <IconContract size={16} />
+              Download Signed Agreement (PDF)
+            </a>
 
             <div className="mt-3 flex flex-wrap gap-[7px]">
               {consents.map((c) => (
@@ -1031,7 +1057,7 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
                   className={
                     c.ok
                       ? FOREST_CLASSES.consent
-                      : 'rounded-md border border-[#E4E5DE] px-2.5 py-[3px] text-[10.5px] font-bold text-[#8A9083] opacity-60'
+                      : 'rounded-md border border-white/20 px-2.5 py-[3px] text-[10.5px] font-bold text-white/35'
                   }
                 >
                   {c.ok ? '✓ ' : '○ '}
@@ -1045,7 +1071,7 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
         {/* ── RIGHT rail ── */}
         <div className="flex min-w-0 flex-col gap-3.5">
           {/* Applicant */}
-          <Card icon="👤" title="Applicant" sub="Account behind the store" index={cardIndex++}>
+          <Card icon={<IconPerson size={20} />} title="Applicant" sub="Account behind the store" index={cardIndex++}>
             <div className="flex items-center gap-3">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
@@ -1054,17 +1080,17 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
                   application.user.username || application.user.email
                 )}
                 alt={application.user.username || 'Applicant'}
-                className="h-11 w-11 shrink-0 rounded-full border border-[#E4E5DE] object-cover"
+                className="h-11 w-11 shrink-0 rounded-full border border-white/15 object-cover"
               />
               <div className="min-w-0">
-                <div className="truncate text-[14px] font-extrabold text-[#1A1D19]">
+                <div className="truncate text-[14px] font-extrabold text-white/95">
                   {application.user.username || application.user.full_name || 'Unknown User'}
                 </div>
-                <div className="truncate text-[11.5px] text-[#5B6157]">
+                <div className="truncate text-[11.5px] text-white/60">
                   {application.user.email}
                 </div>
                 {application.user.created_at && (
-                  <div className="text-[11.5px] text-[#5B6157]">
+                  <div className="text-[11.5px] text-white/60">
                     Member Since{' '}
                     {new Date(application.user.created_at).toLocaleDateString('en-US', {
                       month: 'short',
@@ -1090,26 +1116,28 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
           </Card>
 
           {/* Timeline */}
-          <Card icon="🕘" title="Timeline" sub="Application activity" index={cardIndex++}>
+          <Card icon={<IconTimeline size={20} />} title="Timeline" sub="Application activity" index={cardIndex++}>
             <ul>
               {timeline.map((item, i) => (
                 <li
                   key={`${item.title}-${i}`}
                   className={cn(
-                    'relative pl-[22px] text-[12px] text-[#5B6157]',
+                    'relative pl-[22px] text-[12px] text-white/60',
                     i < timeline.length - 1 && 'pb-4'
                   )}
                 >
                   <span
                     className={cn(
                       'absolute left-[5px] top-[4px] h-2 w-2 rounded-full',
-                      item.open ? 'bg-[#F59E0B]' : 'bg-[#65A30D]'
+                      item.open
+                        ? 'bg-[#F59E0B]'
+                        : 'bg-gradient-to-br from-[#65A30D] to-[#A3E635]'
                     )}
                   />
                   {i < timeline.length - 1 && (
-                    <span className="absolute bottom-0 left-[8.5px] top-[14px] w-px bg-[#E4E5DE]" />
+                    <span className="absolute bottom-0 left-[8.5px] top-[14px] w-px bg-white/[0.1]" />
                   )}
-                  <b className="block text-[12.5px] font-bold text-[#1A1D19]">{item.title}</b>
+                  <b className="block text-[12.5px] font-bold text-white/90">{item.title}</b>
                   {item.when}
                 </li>
               ))}
@@ -1118,7 +1146,7 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
 
           {/* Admin Notes */}
           <Card
-            icon="📝"
+            icon={<IconNotes size={20} />}
             title="Admin Notes"
             sub="Internal — attached to the decision when you approve or reject"
             index={cardIndex++}
@@ -1127,14 +1155,14 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
               value={adminNotes}
               onChange={(e) => setAdminNotes(e.target.value)}
               placeholder="e.g. Selfie is blurry — ask for a re-upload…"
-              className="min-h-[64px] w-full resize-none rounded-[10px] border border-[#E4E5DE] bg-[#FAFAF7] px-[11px] py-[9px] font-[inherit] text-[12.5px] text-[#1A1D19] placeholder:text-[#8A9083] focus:border-[#65A30D] focus:outline-none"
+              className="min-h-[64px] w-full resize-none rounded-[10px] border border-white/15 bg-white/[0.05] px-[11px] py-[9px] font-[inherit] text-[12.5px] text-white placeholder:text-white/30 focus:border-[#A3E635] focus:outline-none"
             />
           </Card>
 
           {/* Seller Management (approved sellers) */}
           {application.status === 'approved' && (
             <Card
-              icon="🛡️"
+              icon={<IconShield size={20} />}
               title="Seller Management"
               sub="Restrict or ban this seller's account"
               index={cardIndex++}
@@ -1143,15 +1171,17 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
                 <div
                   className={cn(
                     'mb-3 rounded-[11px] px-3.5 py-3',
-                    application.user.seller_status === 'banned' ? 'bg-[#FEF2F1]' : 'bg-[#FEF3C7]'
+                    application.user.seller_status === 'banned'
+                      ? 'bg-[#B42318]/20'
+                      : 'bg-[#F59E0B]/[0.16]'
                   )}
                 >
                   <div
                     className={cn(
                       'flex items-center gap-2 text-[12.5px] font-bold',
                       application.user.seller_status === 'banned'
-                        ? 'text-[#B42318]'
-                        : 'text-[#92400E]'
+                        ? 'text-[#FCA5A5]'
+                        : 'text-[#FCD34D]'
                     )}
                   >
                     {application.user.seller_status === 'banned' ? (
@@ -1162,12 +1192,12 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
                     Currently {application.user.seller_status === 'banned' ? 'Banned' : 'Restricted'}
                   </div>
                   {application.user.seller_restriction_reason && (
-                    <p className="mt-1.5 text-[11.5px] text-[#5B6157]">
+                    <p className="mt-1.5 text-[11.5px] text-white/60">
                       Reason: {application.user.seller_restriction_reason}
                     </p>
                   )}
                   {application.user.seller_restricted_at && (
-                    <p className="mt-1 text-[11px] text-[#8A9083]">
+                    <p className="mt-1 text-[11px] text-white/40">
                       Since {fmtDate(application.user.seller_restricted_at)}
                     </p>
                   )}
@@ -1196,7 +1226,7 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
                         setShowRestrictModal(true)
                       }}
                       disabled={isProcessing}
-                      className="flex w-full items-center justify-center gap-1.5 rounded-[10px] bg-[#FEF3C7] px-3 py-2 text-[13px] font-bold text-[#92400E] transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-50"
+                      className="flex w-full items-center justify-center gap-1.5 rounded-[10px] bg-[#F59E0B]/[0.16] px-3 py-2 text-[13px] font-bold text-[#FCD34D] transition hover:bg-[#F59E0B]/[0.24] disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       <ShieldAlert className="h-3.5 w-3.5" />
                       Restrict
@@ -1207,7 +1237,7 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
                         setShowRestrictModal(true)
                       }}
                       disabled={isProcessing}
-                      className="flex w-full items-center justify-center gap-1.5 rounded-[10px] bg-[#FEF2F1] px-3 py-2 text-[13px] font-bold text-[#B42318] transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-50"
+                      className="flex w-full items-center justify-center gap-1.5 rounded-[10px] bg-[#B42318]/20 px-3 py-2 text-[13px] font-bold text-[#FCA5A5] transition hover:bg-[#B42318]/30 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       <Ban className="h-3.5 w-3.5" />
                       Ban
@@ -1217,16 +1247,16 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
 
                 <button
                   onClick={handleViewHistory}
-                  className="flex w-full items-center justify-center gap-1.5 rounded-[10px] border border-[#E4E5DE] px-3 py-2 text-[13px] font-semibold text-[#5B6157] transition-colors hover:bg-[#FAFAF7]"
+                  className="flex w-full items-center justify-center gap-1.5 rounded-[10px] border border-white/15 px-3 py-2 text-[13px] font-semibold text-white/60 transition-colors hover:bg-white/[0.06]"
                 >
                   <History className="h-3.5 w-3.5" />
                   View Restriction History
                 </button>
               </div>
 
-              <p className="mt-3 rounded-[10px] bg-[#FAFAF7] px-3 py-2 text-[11px] leading-relaxed text-[#8A9083]">
-                <b className="text-[#5B6157]">Restrict:</b> prevents new listings ·{' '}
-                <b className="text-[#5B6157]">Ban:</b> full restriction
+              <p className="mt-3 rounded-[10px] bg-white/[0.04] px-3 py-2 text-[11px] leading-relaxed text-white/40">
+                <b className="text-white/60">Restrict:</b> prevents new listings ·{' '}
+                <b className="text-white/60">Ban:</b> full restriction
               </p>
             </Card>
           )}
@@ -1239,12 +1269,12 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
       {showApproveModal && (
         <ModalShell onClose={() => !isProcessing && setShowApproveModal(false)}>
           <div className="mb-6 text-center">
-            <div className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-2xl bg-[#A3E635]/[0.18]">
-              <CheckCircle className="h-7 w-7 text-[#65A30D]" />
+            <div className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-2xl bg-[#A3E635]/[0.15]">
+              <CheckCircle className="h-7 w-7 text-[#A3E635]" />
             </div>
-            <h3 className="mb-2 text-xl font-extrabold text-[#14432A]">Approve Seller?</h3>
-            <p className="text-sm leading-relaxed text-[#5B6157]">
-              This will grant <b className="font-semibold text-[#1A1D19]">{shopName}</b> access
+            <h3 className="mb-2 text-xl font-extrabold text-white">Approve Seller?</h3>
+            <p className="text-sm leading-relaxed text-white/60">
+              This will grant <b className="font-semibold text-white">{shopName}</b> access
               to the seller dashboard and allow them to start listing products.
             </p>
           </div>
@@ -1277,11 +1307,11 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
       {showRejectModal && (
         <ModalShell onClose={() => !isProcessing && setShowRejectModal(false)}>
           <div className="mb-6 text-center">
-            <div className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-2xl bg-[#FEF2F1]">
-              <XCircle className="h-7 w-7 text-[#B42318]" />
+            <div className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-2xl bg-[#B42318]/20">
+              <XCircle className="h-7 w-7 text-[#FCA5A5]" />
             </div>
-            <h3 className="mb-2 text-xl font-extrabold text-[#14432A]">Reject Application</h3>
-            <p className="text-sm text-[#5B6157]">
+            <h3 className="mb-2 text-xl font-extrabold text-white">Reject Application</h3>
+            <p className="text-sm text-white/60">
               Please provide a clear reason for rejecting this application.
             </p>
           </div>
@@ -1343,13 +1373,13 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
       {showChangesModal && (
         <ModalShell onClose={() => !isProcessing && setShowChangesModal(false)}>
           <div className="mb-6 text-center">
-            <div className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-2xl bg-[#FEF3C7]">
-              <MessageSquareWarning className="h-7 w-7 text-[#92400E]" />
+            <div className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-2xl bg-[#F59E0B]/[0.16]">
+              <MessageSquareWarning className="h-7 w-7 text-[#FCD34D]" />
             </div>
-            <h3 className="mb-2 text-xl font-extrabold text-[#14432A]">Request Changes</h3>
-            <p className="text-sm leading-relaxed text-[#5B6157]">
+            <h3 className="mb-2 text-xl font-extrabold text-white">Request Changes</h3>
+            <p className="text-sm leading-relaxed text-white/60">
               The applicant gets your note by email and the application moves to{' '}
-              <b className="font-semibold text-[#1A1D19]">Changes Requested</b> until they respond.
+              <b className="font-semibold text-white">Changes Requested</b> until they respond.
             </p>
           </div>
 
@@ -1406,33 +1436,33 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
             <div
               className={cn(
                 'mx-auto mb-4 grid h-14 w-14 place-items-center rounded-2xl',
-                restrictionType === 'banned' ? 'bg-[#FEF2F1]' : 'bg-[#FEF3C7]'
+                restrictionType === 'banned' ? 'bg-[#B42318]/20' : 'bg-[#F59E0B]/[0.16]'
               )}
             >
               {restrictionType === 'banned' ? (
-                <Ban className="h-7 w-7 text-[#B42318]" />
+                <Ban className="h-7 w-7 text-[#FCA5A5]" />
               ) : (
-                <ShieldAlert className="h-7 w-7 text-[#92400E]" />
+                <ShieldAlert className="h-7 w-7 text-[#FCD34D]" />
               )}
             </div>
-            <h3 className="mb-2 text-xl font-extrabold text-[#14432A]">
+            <h3 className="mb-2 text-xl font-extrabold text-white">
               {restrictionType === 'banned' ? 'Ban Seller' : 'Restrict Seller'}
             </h3>
-            <p className="text-sm text-[#5B6157]">
+            <p className="text-sm text-white/60">
               {restrictionType === 'banned'
                 ? 'This will completely ban the seller from accessing seller features.'
                 : 'This will prevent the seller from creating new listings or making existing listings live.'}
             </p>
           </div>
 
-          <div className="mb-4 rounded-[11px] bg-[#FEF3C7] px-3.5 py-3">
-            <p className="text-xs text-[#92400E]">
+          <div className="mb-4 rounded-[11px] bg-[#F59E0B]/[0.16] px-3.5 py-3">
+            <p className="text-xs text-[#FCD34D]">
               When {restrictionType === 'banned' ? 'banned' : 'restricted'}, the seller will see
               an error message when attempting to upload or publish listings:
             </p>
             <p
               className={cn(
-                'mt-2 rounded-lg bg-white/70 p-2 text-xs text-[#1A1D19]',
+                'mt-2 rounded-lg bg-white/[0.08] p-2 text-xs text-white/80',
                 FOREST_CLASSES.mono
               )}
             >
@@ -1493,58 +1523,58 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
       {/* Restriction History */}
       {showHistoryModal && (
         <ModalShell onClose={() => setShowHistoryModal(false)} wide>
-          <div className="mb-4 flex items-center justify-between border-b border-[#F0F1EA] pb-3">
+          <div className="mb-4 flex items-center justify-between border-b border-white/[0.08] pb-3">
             <div className="flex items-center gap-2">
-              <History className="h-4 w-4 text-[#65A30D]" />
-              <h3 className="text-base font-extrabold text-[#14432A]">Restriction History</h3>
+              <History className="h-4 w-4 text-[#A3E635]" />
+              <h3 className="text-base font-extrabold text-white">Restriction History</h3>
             </div>
             <button
               onClick={() => setShowHistoryModal(false)}
-              className="rounded-lg p-1.5 transition-colors hover:bg-[#FAFAF7]"
+              className="rounded-lg p-1.5 transition-colors hover:bg-white/[0.06]"
             >
-              <X className="h-4 w-4 text-[#5B6157]" />
+              <X className="h-4 w-4 text-white/60" />
             </button>
           </div>
 
           {loadingHistory ? (
             <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin text-[#65A30D]" />
+              <Loader2 className="h-6 w-6 animate-spin text-[#A3E635]" />
             </div>
           ) : restrictionHistory.length === 0 ? (
             <div className="py-8 text-center">
-              <p className="text-sm text-[#5B6157]">No restriction history found</p>
+              <p className="text-sm text-white/60">No restriction history found</p>
             </div>
           ) : (
             <div className="space-y-2">
               {restrictionHistory.map((restriction: any) => (
                 <div
                   key={restriction.id}
-                  className="rounded-[11px] border border-[#E4E5DE] bg-[#FAFAF7] p-3"
+                  className="rounded-[11px] border border-white/[0.08] bg-white/[0.04] p-3"
                 >
                   <div className="mb-2 flex items-start justify-between">
                     <div className="flex items-center gap-2">
                       {restriction.restriction_type === 'restricted' && (
-                        <ShieldAlert className="h-3.5 w-3.5 text-[#92400E]" />
+                        <ShieldAlert className="h-3.5 w-3.5 text-[#FCD34D]" />
                       )}
                       {restriction.restriction_type === 'banned' && (
-                        <Ban className="h-3.5 w-3.5 text-[#B42318]" />
+                        <Ban className="h-3.5 w-3.5 text-[#FCA5A5]" />
                       )}
                       {restriction.restriction_type === 'unrestricted' && (
-                        <CheckCircle className="h-3.5 w-3.5 text-[#65A30D]" />
+                        <CheckCircle className="h-3.5 w-3.5 text-[#A3E635]" />
                       )}
-                      <span className="text-sm font-bold capitalize text-[#1A1D19]">
+                      <span className="text-sm font-bold capitalize text-white/90">
                         {restriction.restriction_type}
                       </span>
                     </div>
-                    <span className="text-xs text-[#8A9083]">
+                    <span className="text-xs text-white/40">
                       {fmtDateTime(restriction.created_at)}
                     </span>
                   </div>
                   {restriction.reason && (
-                    <p className="mb-2 text-xs text-[#5B6157]">{restriction.reason}</p>
+                    <p className="mb-2 text-xs text-white/60">{restriction.reason}</p>
                   )}
                   {restriction.admin && (
-                    <p className="text-xs text-[#8A9083]">
+                    <p className="text-xs text-white/40">
                       By: {restriction.admin.username || restriction.admin.email}
                     </p>
                   )}
