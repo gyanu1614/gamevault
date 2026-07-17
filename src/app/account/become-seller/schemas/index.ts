@@ -250,10 +250,17 @@ export type PayoutCurrency = (typeof PAYOUT_CURRENCIES)[number]
 
 /** Optional "have you sold elsewhere?" block on Review & Sign. */
 export const sellingExperienceSchema = z.object({
-  /** Did the seller indicate prior marketplace experience? */
-  hasSoldElsewhere: z.boolean().optional().default(false),
-  /** Free text: marketplace name / store link. Only meaningful when the above is true. */
-  marketplaceDetails: z.string().max(300, 'Keep it under 300 characters').optional(),
+  /**
+   * REQUIRED free text: prior selling experience — marketplaces they've sold
+   * on, store links, or a short summary. A few lines minimum so review has
+   * something real to work with.
+   */
+  sellingExperience: z
+    .string()
+    .trim()
+    .min(1, 'Tell us about your selling experience')
+    .min(60, 'A few lines, please — marketplaces, store links, or a short summary')
+    .max(600, 'Keep it under 600 characters'),
 })
 
 export type SellingExperience = z.infer<typeof sellingExperienceSchema>
@@ -281,14 +288,6 @@ export const reviewSignSchema = z
     /** Optional, separate, unchecked-by-default marketing consent. */
     marketingConsent: z.boolean().optional().default(false),
   })
-  .superRefine((data, ctx) => {
-    if (data.hasSoldElsewhere && !data.marketplaceDetails?.trim()) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ['marketplaceDetails'],
-        message: 'Add the marketplace name or a link to your store',
-      })
-    }
-  })
+
 
 export type ReviewSignFormData = z.infer<typeof reviewSignSchema>

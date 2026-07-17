@@ -4,7 +4,7 @@
  * A single light-world screen that:
  *   1. Shows a human-readable SUMMARY of everything the seller entered
  *      (games + categories, name, payout) built from the wizard state.
- *   2. Offers an OPTIONAL "Have you sold on other marketplaces?" box.
+ *   2. Requires a short SELLING EXPERIENCE note (a few lines minimum).
  *   3. Collects CONSOLIDATED CONSENT — one required checkbox covering the Terms
  *      of Service, Privacy Policy & Fee Schedule (each an inline link), validated
  *      by zod .literal(true) — plus the Seller Agency Agreement e-signature via
@@ -164,8 +164,7 @@ export default function ReviewSignStep({
   } = useForm<ReviewSignFormData>({
     resolver: zodResolver(reviewSignSchema),
     defaultValues: {
-      hasSoldElsewhere: false,
-      marketplaceDetails: '',
+      sellingExperience: '',
       consolidatedConsent: undefined as unknown as true,
       signatureName: '',
       signedAt: '',
@@ -178,7 +177,6 @@ export default function ReviewSignStep({
   const step2 = state.step2
   const payout = state.payout
 
-  const hasSoldElsewhere = watch('hasSoldElsewhere')
   const consolidatedConsent = watch('consolidatedConsent')
   const marketingConsent = watch('marketingConsent')
   const signatureName = watch('signatureName')
@@ -313,69 +311,46 @@ export default function ReviewSignStep({
           </SummaryCard>
         </section>
 
-        {/* ── Selling experience (optional) ─────────────────────────────────── */}
+        {/* ── Selling experience (REQUIRED, compact) ────────────────────────── */}
         <section
           className="rounded-xl p-4"
           style={{ backgroundColor: PALETTE.paper, border: `1px solid ${PALETTE.line}` }}
         >
-          <button
-            type="button"
-            onClick={() =>
-              setValue('hasSoldElsewhere', !hasSoldElsewhere, { shouldValidate: true })
-            }
-            className="flex w-full items-start gap-3 text-left"
+          <label
+            htmlFor="sellingExperience"
+            className="block text-sm font-medium"
+            style={{ color: PALETTE.ink }}
           >
-            <span
-              className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md transition-colors"
-              style={{
-                border: `2px solid ${hasSoldElsewhere ? PALETTE.forest2 : PALETTE.line}`,
-                backgroundColor: hasSoldElsewhere ? PALETTE.forest2 : PALETTE.paper,
-              }}
-            >
-              {hasSoldElsewhere && (
-                <Check className="h-3 w-3" strokeWidth={3} style={{ color: PALETTE.lime }} />
-              )}
-            </span>
-            <span>
-              <span className="text-sm font-medium" style={{ color: PALETTE.ink }}>
-                Have you sold on other marketplaces?
-              </span>
-              <span className="mt-0.5 block text-xs" style={{ color: PALETTE.ink2 }}>
-                Optional — a track record helps us review your application faster.
-              </span>
-            </span>
-          </button>
-
-          {hasSoldElsewhere && (
-            <div className="mt-3 pl-8">
-              <label className="mb-1.5 block text-xs font-medium" style={{ color: PALETTE.ink }}>
-                Marketplace Name Or Store Link
-              </label>
-              <input
-                type="text"
-                {...register('marketplaceDetails')}
-                placeholder="e.g. PlayerAuctions — link to your store"
-                className="w-full rounded-lg px-3.5 py-2.5 text-sm outline-none transition-shadow"
-                style={{
-                  backgroundColor: PALETTE.paper,
-                  border: `1px solid ${PALETTE.line}`,
-                  color: PALETTE.ink,
-                }}
-                onFocus={(e) => {
-                  e.currentTarget.style.boxShadow = '0 0 0 3px rgba(27,94,58,0.18)'
-                  e.currentTarget.style.borderColor = PALETTE.forest2
-                }}
-                onBlur={(e) => {
-                  e.currentTarget.style.boxShadow = 'none'
-                  e.currentTarget.style.borderColor = PALETTE.line
-                }}
-              />
-              {errors.marketplaceDetails && (
-                <p className="mt-1.5 text-xs" style={{ color: '#B42318' }}>
-                  {errors.marketplaceDetails.message}
-                </p>
-              )}
-            </div>
+            Selling Experience <span style={{ color: '#B42318' }}>*</span>
+          </label>
+          <p className="mt-0.5 text-xs" style={{ color: PALETTE.ink2 }}>
+            Where have you sold before? Marketplaces, store links, or a short
+            summary — a few lines.
+          </p>
+          <textarea
+            id="sellingExperience"
+            rows={3}
+            {...register('sellingExperience')}
+            placeholder="e.g. 2 years on PlayerAuctions (300+ orders) — playerauctions.com/store/…"
+            className="mt-2.5 w-full resize-none rounded-lg px-3.5 py-2.5 text-sm outline-none transition-shadow"
+            style={{
+              backgroundColor: PALETTE.paper,
+              border: `1px solid ${PALETTE.line}`,
+              color: PALETTE.ink,
+            }}
+            onFocus={(e) => {
+              e.currentTarget.style.boxShadow = '0 0 0 3px rgba(27,94,58,0.18)'
+              e.currentTarget.style.borderColor = PALETTE.forest2
+            }}
+            onBlur={(e) => {
+              e.currentTarget.style.boxShadow = 'none'
+              e.currentTarget.style.borderColor = PALETTE.line
+            }}
+          />
+          {errors.sellingExperience && (
+            <p className="mt-1.5 text-xs" style={{ color: '#B42318' }}>
+              {errors.sellingExperience.message}
+            </p>
           )}
         </section>
 
