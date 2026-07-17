@@ -63,7 +63,7 @@ async function checkOrderAccess(
 
 const STATUS_CONFIG: Record<string, { label: string; pill: string; dot: string; pulse: boolean; icon: React.ElementType }> = {
   pending:    { label: 'Awaiting Payment', pill: 'bg-amber-500/10 text-amber-400 border-amber-500/20', dot: 'bg-amber-400', pulse: true, icon: Clock },
-  paid:       { label: 'Processing',  pill: 'bg-amber-500/10 text-amber-400 border-amber-500/20',   dot: 'bg-amber-400',  pulse: true,  icon: Clock },
+  paid:       { label: 'Payment Confirmed',  pill: 'bg-amber-500/10 text-amber-400 border-amber-500/20',   dot: 'bg-amber-400',  pulse: true,  icon: Clock },
   delivering: { label: 'Delivering',  pill: 'bg-lime-tint-bg text-lime-text border-lime-tint-border', dot: 'bg-lime', pulse: true,  icon: Truck },
   delivered:  { label: 'Delivered',   pill: 'bg-blue-500/10 text-blue-400 border-blue-500/20',       dot: 'bg-blue-400',   pulse: false, icon: Package },
   completed:  { label: 'Completed',   pill: 'bg-success-bg text-success border-green-500/20',    dot: 'bg-green-400',  pulse: false, icon: CheckCircle2 },
@@ -237,7 +237,10 @@ export default async function OrderDetailPage({ params }: PageProps) {
   // order.delivering_at if set; otherwise created_at acts as the clock.
   const slaMinutes = parseDeliveryMinutes(order.listing?.delivery_time)
   const slaSeconds = slaMinutes * 60
-  const slaStartedAt: string = (order as any).delivering_at ?? order.created_at
+  // SLA clock starts when the SELLER is on the hook: delivery start, else
+  // payment confirmation — never order creation (unpaid time doesn't count).
+  const slaStartedAt: string =
+    (order as any).delivering_at ?? (order as any).paid_at ?? order.created_at
 
   const placedAtDate = new Date(order.created_at)
   const placedAtLabel = placedAtDate.toLocaleTimeString('en-US', {

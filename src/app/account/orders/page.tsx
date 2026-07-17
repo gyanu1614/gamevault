@@ -43,7 +43,7 @@ type ViewTab = 'purchases' | 'sales'
 // V22 — Status options for the Status filter dropdown (replaces the chip row).
 const STATUS_OPTIONS: { value: FilterStatus; label: string }[] = [
   { value: 'all', label: 'All Status' },
-  { value: 'pending', label: 'Pending' },
+  { value: 'pending', label: 'In Progress' },
   { value: 'completed', label: 'Completed' },
   { value: 'disputed', label: 'Disputed' },
   { value: 'cancelled', label: 'Cancelled' },
@@ -273,8 +273,15 @@ function OrdersContent() {
     return Array.from(categoryMap.values())
   }, [dbOrders])
 
+  // Human labels for raw DB statuses (chips render these, not the enum).
+  const STATUS_TEXT: Record<string, string> = {
+    pending: 'Awaiting Payment',
+    paid: 'Payment Confirmed',
+  }
+
   const getStatusColor = (status: string) => {
     const colors = {
+      pending: 'bg-warning-bg text-warning border-warning/40',
       paid: 'bg-warning-bg text-warning border-warning/40',
       delivering: 'bg-blue-500/10 text-blue-400 border-blue-500/30',
       delivered: 'bg-success-bg text-success border-success/30',
@@ -786,7 +793,7 @@ function OrdersContent() {
                           return (
                             <span className={cn('inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide', getStatusColor(displayStatus))}>
                               {getStatusIcon(displayStatus)}
-                              {displayStatus}
+                              {STATUS_TEXT[displayStatus] ?? displayStatus}
                             </span>
                           )
                         })()}

@@ -57,6 +57,20 @@ export async function transition(
   }
 
   const r = data as any
+
+  // Stamp the payment moment: the delivery SLA timer starts at PAYMENT, not
+  // at order creation (buyers can pay long after Buy Now). First stamp wins;
+  // best-effort — never fails the transition.
+  if (event === 'CHARGE_CONFIRMED' && r.changed === true) {
+    try {
+      await (supabase.from('orders').update as any)({ paid_at: new Date().toISOString() })
+        .eq('id', orderId)
+        .is('paid_at', null)
+    } catch (e) {
+      console.error('[transition] paid_at stamp failed (non-fatal):', e)
+    }
+  }
+
   return {
     orderId: r.order_id,
     status: r.status,

@@ -51,8 +51,10 @@ export function LayoutWrapper({ children }: { children: React.ReactNode }) {
         <Navbar forceScrolled={isSellWizard} />
       )}
       <main className="flex-1">{children}</main>
-      {!isAdminPage && !isSellWizard && !isCheckout && !isSellerApplication && (
-        <Footer hasSellerSidebar={hasSidebar} />
+      {/* Sidebar'd account/seller pages have no marketing footer — it
+          scrolled awkwardly over the sidebar and adds nothing there. */}
+      {!isAdminPage && !isSellWizard && !isCheckout && !isSellerApplication && !hasSidebar && (
+        <Footer />
       )}
     </div>
   )

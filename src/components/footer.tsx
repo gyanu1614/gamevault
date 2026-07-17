@@ -1,59 +1,27 @@
-'use client'
-
 /**
- * V29 — Site footer, Flock-Ramp layout in DropMarket clothes.
- *
- * Two-part top area:
- *   LEFT  — brand block: logo + tagline, newsletter subscribe (input +
- *           lime button) and a privacy-consent checkbox line.
- *   RIGHT — four link columns (Product / Company / Legal / Support)
- *           with the social icons row underneath.
- * Bottom — hairline-separated, centered one-line copyright.
- *
- * A soft violet radial glow sits at the very bottom edge (matches the
- * site's violet-dusk backdrop, where Flock uses purple).
- *
- * The subscribe form is a local stub — it flips to a "you're on the
- * list" state client-side. TODO: wire to a newsletter endpoint when
- * marketing has one.
+ * Footer — compact "centered with logo" layout (aceternity-style):
+ * everything stacks center-aligned — brand row, one primary nav row,
+ * social icons, the compliance legal strip, and a one-line copyright.
+ * Replaces the old 4-column + newsletter footer (too tall, dated, and it
+ * still carried a violet glow + "G" logo tile from the GameVault era).
+ * Hidden entirely on sidebar'd account/seller pages (see layout-wrapper).
  */
 
-import { useState } from 'react'
+'use client'
+
 import Link from 'next/link'
-import { Check } from 'lucide-react'
-import { Input } from '@/components/ui/input'
-import { Button } from '@/components/ui/button'
-import { Checkbox } from '@/components/ui/checkbox'
 
-const footerLinks = {
-  Product: [
-    { name: 'Browse Listings', href: '/browse' },
-    { name: 'Sell Items', href: '/sell/create' },
-    { name: 'How It Works', href: '/how-it-works' },
-    { name: 'Pricing', href: '/pricing' },
-  ],
-  Company: [
-    { name: 'About Us', href: '/about' },
-    { name: 'Blog', href: '/blog' },
-    { name: 'Careers', href: '/careers' },
-    { name: 'Contact', href: '/contact' },
-  ],
-  Legal: [
-    { name: 'Terms of Use', href: '/terms' },
-    { name: 'Privacy Policy', href: '/privacy' },
-    { name: 'Refunds & Disputes', href: '/refunds' },
-    { name: 'Cookie Policy', href: '/cookies' },
-  ],
-  Support: [
-    { name: 'SafeDrop Protection Terms', href: '/safedrop-policy' },
-    { name: 'Trust & Safety', href: '/trust-safety' },
-    { name: 'Complaints', href: '/complaints' },
-    { name: 'Risk Disclosure', href: '/risk' },
-  ],
-} as const
+const NAV_LINKS: Array<{ name: string; href: string }> = [
+  { name: 'Browse Listings', href: '/browse' },
+  { name: 'Sell Items', href: '/sell/create' },
+  { name: 'How It Works', href: '/how-it-works' },
+  { name: 'Pricing', href: '/pricing' },
+  { name: 'About', href: '/about' },
+  { name: 'Blog', href: '/blog' },
+  { name: 'Contact', href: '/contact' },
+]
 
-/** V46 — Full legal pack strip (all 17 documents) above the copyright
- *  bar. The four-column grid keeps the headline links only. */
+/** Full legal pack strip (compliance — every published document stays linked). */
 const LEGAL_STRIP: Array<{ name: string; href: string }> = [
   { name: 'Terms', href: '/terms' },
   { name: 'Buyer Terms', href: '/buyer-terms' },
@@ -64,9 +32,7 @@ const LEGAL_STRIP: Array<{ name: string; href: string }> = [
   { name: 'Acceptable Use', href: '/acceptable-use' },
   { name: 'Privacy', href: '/privacy' },
   { name: 'Cookies', href: '/cookies' },
-  { name: 'AML/KYC', href: '/aml' },
-  { name: 'Risk', href: '/risk' },
-  { name: 'Fees', href: '/fees' },
+  { name: 'Risk Disclosure', href: '/risk' },
   { name: 'Chargebacks', href: '/chargebacks' },
   { name: 'Complaints', href: '/complaints' },
   { name: 'IP/Takedown', href: '/ip' },
@@ -92,165 +58,76 @@ const SOCIALS: Array<{ name: string; href: string; path: string }> = [
   },
 ]
 
-interface FooterProps {
-  hasSellerSidebar?: boolean
-}
-
-export function Footer({ hasSellerSidebar = false }: FooterProps) {
-  const [email, setEmail] = useState('')
-  const [agreed, setAgreed] = useState(false)
-  const [subscribed, setSubscribed] = useState(false)
-
-  const onSubscribe = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!email.trim() || !agreed) return
-    // TODO: POST to the newsletter endpoint once marketing has one.
-    setSubscribed(true)
-  }
-
+export function Footer() {
   return (
-    <footer
-      className={`relative overflow-hidden border-t border-white/10 bg-black ${hasSellerSidebar ? 'lg:pl-64' : ''}`}
-    >
-      {/* Violet dusk glow along the bottom edge (Flock's purple, ours). */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-x-0 bottom-0 h-48 bg-[radial-gradient(60%_120%_at_50%_100%,rgba(124,58,237,0.16),transparent_70%)]"
-      />
+    <footer className="border-t border-white/[0.08] bg-[#0a0a0f]">
+      <div className="mx-auto flex max-w-4xl flex-col items-center gap-7 px-6 py-12 text-center">
+        {/* Brand */}
+        <Link href="/" className="flex items-center gap-2.5">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/brand/logo-mark-lime.png"
+            alt="DropMarket"
+            width={32}
+            height={32}
+            className="h-8 w-8 object-contain"
+          />
+          <span className="text-lg font-bold tracking-tight text-white">
+            Drop<span className="text-lime-text">Market</span>
+          </span>
+        </Link>
 
-      <div className="relative mx-auto w-full max-w-7xl px-4 py-16 sm:px-6 md:py-24 lg:px-8">
-        <div className="grid gap-12 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-20">
-          {/* ── Brand + newsletter ─────────────────────────────────── */}
-          <div>
-            <Link href="/" className="inline-flex items-center gap-2.5">
-              <span className="flex h-11 w-11 items-center justify-center rounded-lg bg-lime text-[23px] font-black text-text-inverse">
-                G
-              </span>
-              <span className="text-[24px] font-bold tracking-tight text-text-primary">
-                DropMarket
-              </span>
-            </Link>
-
-            <p className="mt-5 max-w-md text-[15.5px] leading-relaxed text-text-secondary">
-              The player-to-player marketplace for game items, currency, and
-              accounts — every order covered by SafeDrop Buyer Protection.
-            </p>
-
-            {/* Newsletter */}
-            {subscribed ? (
-              <div className="mt-7 inline-flex items-center gap-2.5 rounded-lg border border-lime/30 bg-lime/10 px-4 py-3 text-[14.5px] font-semibold text-lime-text">
-                <Check className="h-4 w-4" />
-                You&apos;re on the list — see you in your inbox.
-              </div>
-            ) : (
-              <>
-                <form onSubmit={onSubscribe} className="mt-7 flex max-w-md gap-2.5">
-                  <Input
-                    type="email"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="Enter your email"
-                    aria-label="Email address"
-                    className="h-12 flex-1 rounded-lg border-border-default bg-bg-overlay/60 text-[14.5px]"
-                  />
-                  <Button
-                    type="submit"
-                    disabled={!email.trim() || !agreed}
-                    className="h-12 shrink-0 rounded-lg bg-lime px-6 text-[14.5px] font-bold text-text-inverse hover:bg-lime-hover"
-                  >
-                    Subscribe
-                  </Button>
-                </form>
-                <label className="mt-3.5 flex w-fit cursor-pointer items-center gap-2.5 text-[14px] text-text-secondary">
-                  <Checkbox
-                    checked={agreed}
-                    onCheckedChange={(v) => setAgreed(v === true)}
-                    aria-label="Agree to the Privacy Policy"
-                  />
-                  <span>
-                    I agree to the{' '}
-                    <Link
-                      href="/privacy"
-                      className="font-semibold text-text-primary underline-offset-2 transition-colors hover:text-lime-text hover:underline"
-                    >
-                      Privacy Policy
-                    </Link>
-                  </span>
-                </label>
-              </>
-            )}
-          </div>
-
-          {/* ── Link columns + socials ─────────────────────────────── */}
-          <div>
-            <div className="grid grid-cols-2 gap-x-8 gap-y-10 sm:grid-cols-4">
-              {Object.entries(footerLinks).map(([heading, links]) => (
-                <div key={heading}>
-                  <h3 className="text-[15.5px] font-semibold text-text-primary">
-                    {heading}
-                  </h3>
-                  <ul className="mt-4 space-y-3">
-                    {links.map((link) => (
-                      <li key={link.name}>
-                        <Link
-                          href={link.href}
-                          className="text-[15px] text-text-tertiary transition-colors hover:text-text-primary"
-                        >
-                          {link.name}
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
-            </div>
-
-            {/* Socials */}
-            <div className="mt-12 flex items-center gap-5">
-              {SOCIALS.map((s) => (
-                <a
-                  key={s.name}
-                  href={s.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-text-tertiary transition-colors hover:text-text-primary"
+        {/* Primary nav */}
+        <nav aria-label="Footer">
+          <ul className="flex flex-wrap items-center justify-center gap-x-7 gap-y-2.5">
+            {NAV_LINKS.map((link) => (
+              <li key={link.href}>
+                <Link
+                  href={link.href}
+                  className="text-sm text-text-secondary transition-colors hover:text-white"
                 >
-                  <svg className="h-6 w-6" fill="currentColor" viewBox="0 0 24 24">
-                    <path d={s.path} />
-                  </svg>
-                  <span className="sr-only">{s.name}</span>
-                </a>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* ── Legal strip — all 17 policy documents ────────────────── */}
-      <div className="relative border-t border-white/5">
-        <nav
-          aria-label="Legal"
-          className="mx-auto flex max-w-7xl flex-wrap justify-center gap-x-5 gap-y-2 px-4 py-5 sm:px-6 lg:px-8"
-        >
-          {LEGAL_STRIP.map((l) => (
-            <Link
-              key={l.href}
-              href={l.href}
-              className="text-[12.5px] text-text-tertiary transition-colors hover:text-text-primary"
-            >
-              {l.name}
-            </Link>
-          ))}
+                  {link.name}
+                </Link>
+              </li>
+            ))}
+          </ul>
         </nav>
-      </div>
 
-      {/* ── Bottom bar — statutory disclosures ───────────────────── */}
-      <div className="relative border-t border-white/5">
-        <p className="mx-auto max-w-7xl px-4 py-7 text-center text-[13.5px] leading-relaxed text-text-tertiary sm:px-6 lg:px-8">
-          © {new Date().getFullYear()} DropMarket Ltd. All rights
-          reserved. · Company No. 17309867 · Registered in England &amp; Wales ·
-          82a James Carter Road, Mildenhall, Bury St. Edmunds, IP28 7DE
+        {/* Socials */}
+        <div className="flex items-center gap-2">
+          {SOCIALS.map((social) => (
+            <a
+              key={social.name}
+              href={social.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={social.name}
+              className="grid h-9 w-9 place-items-center rounded-full border border-white/10 text-text-secondary transition-colors hover:border-white/25 hover:text-white"
+            >
+              <svg viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4" aria-hidden>
+                <path d={social.path} />
+              </svg>
+            </a>
+          ))}
+        </div>
+
+        {/* Legal strip — compact but complete (compliance pack) */}
+        <ul className="flex max-w-3xl flex-wrap items-center justify-center gap-x-4 gap-y-1.5 border-t border-white/[0.06] pt-6">
+          {LEGAL_STRIP.map((doc) => (
+            <li key={doc.href}>
+              <Link
+                href={doc.href}
+                className="text-[11px] text-text-tertiary transition-colors hover:text-text-secondary"
+              >
+                {doc.name}
+              </Link>
+            </li>
+          ))}
+        </ul>
+
+        {/* Copyright */}
+        <p className="text-xs text-text-tertiary">
+          © {new Date().getFullYear()} DropMarket Ltd. All rights reserved.
         </p>
       </div>
     </footer>
