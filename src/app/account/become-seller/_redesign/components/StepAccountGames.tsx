@@ -49,7 +49,7 @@ import type { WizardGame } from '../../types'
 import {
   SECTION_LABELS,
   type SellerCategorySection,
-} from '../game-categories'
+} from '../game-categories-shared'
 import { PALETTE } from '../theme'
 import StepHeader from './StepHeader'
 

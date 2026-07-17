@@ -44,7 +44,7 @@ import { PALETTE } from '../theme'
 import SignAgreementModal from './SignAgreementModal'
 import { reviewSignSchema, type ReviewSignFormData } from '../../schemas'
 import type { RedesignedSellerState } from '../adapter'
-import { SECTION_LABELS, type SellerCategorySection } from '../game-categories'
+import { SECTION_LABELS, type SellerCategorySection } from '../game-categories-shared'
 import type { WizardGame } from '../../types'
 import { OTHER_COUNTRY } from '../../data/countries'
 import {

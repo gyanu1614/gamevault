@@ -5,32 +5,21 @@
  *
  * Neither performs a real external call yet. Both are safe no-ops that return a
  * typed result the UI already knows how to render (unconfigured → graceful
- * fallback). The env flags are the switch: set them + fill in the TODO bodies
- * and the wired UI lights up unchanged.
+ * fallback). The env flags (in ./integrations) are the switch: set them + fill
+ * in the TODO bodies and the wired UI lights up unchanged.
+ *
+ * A 'use server' file may ONLY export async functions, so the sync env-gate
+ * helpers and the result types live in ./integrations (a plain module).
  */
 
 'use server'
 
-/** True once Didit KYC is configured. Until then the UI uses the upload path. */
-export function isKycVideoEnabled(): boolean {
-  return !!process.env.DIDIT_API_KEY && !!process.env.NEXT_PUBLIC_DIDIT_ENABLED
-}
-
-/** True once DocuSeal is configured. Until then the UI uses typed-name accept. */
-export function isDocuSealEnabled(): boolean {
-  return (
-    !!process.env.DOCUSEAL_API_KEY &&
-    !!process.env.NEXT_PUBLIC_DOCUSEAL_TEMPLATE_ID
-  )
-}
-
-export interface StartKycResult {
-  /** True when a live session URL was created. */
-  enabled: boolean
-  /** The hosted Didit session URL to open, or null when unconfigured. */
-  url: string | null
-  message?: string
-}
+import {
+  isKycVideoEnabled,
+  isDocuSealEnabled,
+  type StartKycResult,
+  type SignAgreementResult,
+} from './integrations'
 
 /**
  * startKycSession — STUB. When Didit is configured this creates a verification
@@ -54,14 +43,6 @@ export async function startKycSession(): Promise<StartKycResult> {
     url: null,
     message: 'Video verification is not yet available.',
   }
-}
-
-export interface SignAgreementResult {
-  /** True when a DocuSeal embed session is available. */
-  enabled: boolean
-  /** The DocuSeal embed slug/URL, or null when unconfigured. */
-  embedSrc: string | null
-  message?: string
 }
 
 /**

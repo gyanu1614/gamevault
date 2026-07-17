@@ -22,7 +22,8 @@ import { useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { X, PenLine, ShieldCheck, ExternalLink, Loader2 } from 'lucide-react'
 import { PALETTE } from '../theme'
-import { signSellerAgreement, type SignAgreementResult } from '../actions'
+import { signSellerAgreement } from '../actions'
+import { type SignAgreementResult } from '../integrations'
 
 interface SignAgreementModalProps {
   open: boolean
@@ -266,9 +267,13 @@ function DocuSealEmbed({
 
   useEffect(() => {
     let cancelled = false
-    // @ts-expect-error — optional dependency, present only once DocuSeal is enabled.
-    import('@docuseal/react')
-      .then((mod: { DocusealForm?: React.ComponentType<Record<string, unknown>> }) => {
+    // @docuseal/react is an OPTIONAL dependency — only installed once DocuSeal
+    // is wired. Build the specifier at runtime + webpackIgnore so the bundler
+    // never tries to resolve it at build time (it isn't in package.json yet).
+    // Until then this catch() path shows the typed-name fallback.
+    const pkg = ['@docuseal', 'react'].join('/')
+    ;(new Function('p', 'return import(/* webpackIgnore: true */ p)') as (p: string) => Promise<{ DocusealForm?: React.ComponentType<Record<string, unknown>> }>)(pkg)
+      .then((mod) => {
         if (!cancelled) {
           if (mod.DocusealForm) setForm(() => mod.DocusealForm!)
           else setFailed(true)
