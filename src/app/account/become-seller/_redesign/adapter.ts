@@ -134,7 +134,7 @@ export function toStep1(step1: Step1FormData | undefined): Step1FormData & {
  * Fold selling experience + payout currency + signature into a step objects so
  * the server action can persist the new columns without a signature change.
  *
- *   selling_experience  ← review.marketplaceDetails (when hasSoldElsewhere)
+ *   selling_experience  ← review.sellingExperience (required, a few lines)
  *   payout_currency     ← payoutCurrency
  *   seller_signature    ← review.signatureName
  *   seller_signed_at    ← review.signedAt
@@ -168,10 +168,7 @@ export function toSubmitApplicationData(
   const step6 = toStep6(state.review)
 
   // Selling experience + signature travel on the objects the action reads.
-  const sellingExperience =
-    state.review?.hasSoldElsewhere && state.review?.marketplaceDetails?.trim()
-      ? state.review.marketplaceDetails.trim()
-      : null
+  const sellingExperience = state.review?.sellingExperience?.trim() || null
 
   const step6WithSignature = {
     ...step6,
