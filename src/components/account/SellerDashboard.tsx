@@ -195,7 +195,7 @@ export default function SellerDashboard({ username, userId }: { username: string
                           <p className="truncate text-[12px] text-text-secondary">{a.detail}</p>
                         </div>
                         {a.overdue && (
-                          <span className="shrink-0 rounded-full bg-error-bg px-2 py-0.5 text-[10px] font-bold uppercase text-error">
+                          <span className="shrink-0 rounded-full bg-error-bg px-2 py-0.5 text-[12px] font-bold uppercase text-error">
                             Overdue
                           </span>
                         )}
@@ -242,12 +242,12 @@ function KpiCard({
         <div className="mt-0.5 text-2xl font-bold leading-tight text-text-primary">{value}</div>
       )}
       {!loading && deltaPct !== undefined && (
-        <div className={cn('mt-0.5 flex items-center gap-1 text-[11px] font-medium', up ? 'text-success' : 'text-error')}>
+        <div className={cn('mt-0.5 flex items-center gap-1 text-[12px] font-medium', up ? 'text-success' : 'text-error')}>
           {up ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
           {Math.abs(deltaPct).toFixed(0)}% vs prev
         </div>
       )}
-      {!loading && hint && <div className="mt-0.5 text-[11px] text-text-tertiary">{hint}</div>}
+      {!loading && hint && <div className="mt-0.5 text-[12px] text-text-tertiary">{hint}</div>}
     </div>
   )
 }
@@ -285,13 +285,13 @@ function EarningsTrend({ trend }: { trend: { date: string; amount: number }[] })
             <XAxis
               dataKey="date"
               tickFormatter={(d) => new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-              tick={{ fontSize: 11, fill: 'var(--color-text-tertiary, #8a8a92)' }}
+              tick={{ fontSize: 12, fill: 'var(--color-text-tertiary, #8a8a92)' }}
               axisLine={false}
               tickLine={false}
               minTickGap={24}
             />
             <YAxis
-              tick={{ fontSize: 11, fill: 'var(--color-text-tertiary, #8a8a92)' }}
+              tick={{ fontSize: 12, fill: 'var(--color-text-tertiary, #8a8a92)' }}
               axisLine={false}
               tickLine={false}
               width={48}

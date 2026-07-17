@@ -55,6 +55,7 @@ import { SellerOnlyGate } from '@/components/seller/SellerOnlyGate'
 
 import { Checkbox } from '@/components/ui/checkbox'
 import { PriceField } from '@/components/ui/price-field'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
   DropdownMenuSeparator, DropdownMenuTrigger,
@@ -107,7 +108,7 @@ function chipKeyFor(status: string, storePaused: boolean): ChipKey {
 function StatusChip({ k }: { k: ChipKey }) {
   const c = STATUS_CHIP[k]
   return (
-    <span className={cn('inline-flex items-center whitespace-nowrap rounded-md border px-2 py-[3px] text-[11.5px] font-bold', c.cls)}>
+    <span className={cn('inline-flex items-center whitespace-nowrap rounded-md border px-2 py-[3px] text-[12px] font-bold', c.cls)}>
       {c.label}
     </span>
   )
@@ -215,7 +216,7 @@ const MENU_CLS =
 const ITEM_CLS =
   'h-9 cursor-pointer gap-2.5 rounded-[5px] px-2.5 text-[13px] font-semibold text-text-secondary focus:text-text-primary'
 const LABEL_CLS =
-  'px-2.5 pb-1 pt-1.5 text-[11px] font-extrabold uppercase tracking-[0.08em] text-text-tertiary'
+  'px-2.5 pb-1 pt-1.5 text-[12px] font-extrabold uppercase tracking-[0.08em] text-text-tertiary'
 
 // ─── Small building blocks ───────────────────────────────────────────────────
 
@@ -253,19 +254,23 @@ const FilterTrigger = React.forwardRef<
       aria-hidden
       className="pointer-events-none absolute inset-x-0 top-0 h-1/2 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.06),transparent)]"
     />
-    {children}
+    {/* Children clip inside their own box so the ✕/chevron never gets
+        pushed out of the trigger at narrow widths. */}
+    <span className="flex min-w-0 flex-1 items-center gap-2.5 overflow-hidden">{children}</span>
     {clearable ? (
       <span
         role="button"
         tabIndex={-1}
         aria-label="Clear filter"
         onPointerDown={() => onClear?.()}
-        className="-mr-1 flex h-5 w-5 items-center justify-center rounded text-text-tertiary transition-colors hover:bg-white/[0.10] hover:text-text-primary"
+        // ≥36px touch target — negative margins keep the trigger's visual
+        // size; the 14px X stays centered.
+        className="-my-2 -mr-2.5 flex h-9 w-9 flex-none items-center justify-center rounded text-text-tertiary transition-colors hover:bg-white/[0.10] hover:text-text-primary"
       >
         <X className="h-3.5 w-3.5" />
       </span>
     ) : (
-      <ChevronDown className="h-3.5 w-3.5 text-text-tertiary" />
+      <ChevronDown className="h-3.5 w-3.5 flex-none text-text-tertiary" />
     )}
   </button>
 ))
@@ -282,7 +287,7 @@ function OfferIdChip({ listing }: { listing: Listing }) {
     setTimeout(() => setCopied(false), 1200)
   }
   return (
-    <span className="inline-flex h-8 items-stretch overflow-hidden rounded-md border border-white/[0.08] bg-white/[0.03]">
+    <span className="inline-flex h-9 items-stretch overflow-hidden rounded-md border border-white/[0.08] bg-white/[0.03]">
       <span className="flex items-center px-2.5 text-[12.5px] font-semibold tabular-nums text-text-secondary">
         {display}
       </span>
@@ -290,7 +295,7 @@ function OfferIdChip({ listing }: { listing: Listing }) {
         type="button"
         onClick={copy}
         aria-label={`Copy offer ID ${display}`}
-        className="flex w-8 items-center justify-center border-l border-white/[0.08] text-text-tertiary transition-colors hover:bg-white/[0.05] hover:text-text-primary"
+        className="flex w-9 items-center justify-center border-l border-white/[0.08] text-text-tertiary transition-colors hover:bg-white/[0.05] hover:text-text-primary"
       >
         {copied ? <Check className="h-3.5 w-3.5 text-lime-text" /> : <Copy className="h-3.5 w-3.5" />}
       </button>
@@ -487,6 +492,58 @@ function OffersContent() {
   const rangeStart = visible.length === 0 ? 0 : (safePage - 1) * perPage + 1
   const rangeEnd = Math.min(safePage * perPage, visible.length)
 
+  /** Row ⋮ actions — one menu shared by the md+ table and the below-md
+   *  card list (only the trigger sizing differs). */
+  const renderActionsMenu = (l: Listing, triggerClassName: string) => (
+    <DropdownMenu modal={false}>
+      <DropdownMenuTrigger asChild>
+        <button type="button" aria-label={`Actions for ${l.title}`} className={triggerClassName}>
+          <MoreVertical className="h-4 w-4" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className={cn('w-60', MENU_CLS)}>
+        <DropdownMenuLabel className={LABEL_CLS}>Offer Actions</DropdownMenuLabel>
+        <DropdownMenuItem
+          className={cn(ITEM_CLS, l.status === 'changes_requested' && 'text-amber-300 focus:text-amber-200')}
+          onClick={() => router.push(`/sell/edit/${l.id}`)}
+        >
+          <Pencil className="h-4 w-4" />
+          {l.status === 'changes_requested' ? 'Edit & Resubmit' : 'Edit Offer'}
+        </DropdownMenuItem>
+        {l.status === 'active' && (
+          <DropdownMenuItem className={ITEM_CLS} onClick={() => void setStatus(l, 'paused')}>
+            <Pause className="h-4 w-4" /> Pause Offer
+          </DropdownMenuItem>
+        )}
+        {l.status === 'paused' && (
+          <DropdownMenuItem className={ITEM_CLS} onClick={() => void setStatus(l, 'active')}>
+            <Play className="h-4 w-4" /> Activate Offer
+          </DropdownMenuItem>
+        )}
+        <DropdownMenuSeparator />
+        <DropdownMenuItem className={ITEM_CLS} onClick={() => window.open(publicPath(l), '_blank')}>
+          <ExternalLink className="h-4 w-4" /> View Public Offer
+        </DropdownMenuItem>
+        <DropdownMenuItem className={ITEM_CLS} onClick={() => copyUrl(l)}>
+          <Link2 className="h-4 w-4" /> Copy Public URL
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          className={cn(ITEM_CLS, 'text-red-400 focus:text-red-300')}
+          onClick={() => setArchiveTarget(l)}
+        >
+          <Archive className="h-4 w-4" /> Archive Offer
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          className={cn(ITEM_CLS, 'text-red-400 focus:text-red-300')}
+          onClick={() => setDeleteTarget(l)}
+        >
+          <Trash2 className="h-4 w-4" /> Delete Offer
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+
   return (
     // Navbar clearance comes from the account layout (pt-14 — V21/P7.ak);
     // this wrapper only adds internal rhythm.
@@ -514,9 +571,17 @@ function OffersContent() {
 
       {/* ── Filter row ── */}
       <div className="mt-5 flex flex-wrap items-center gap-2.5">
+        {/* Below sm the three triggers share one row (grid); at sm+ the
+            wrapper dissolves (contents) into the original flex-wrap row. */}
+        <div className="grid w-full grid-cols-3 gap-2.5 sm:contents">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <FilterTrigger active={gameId !== 'all'} clearable={gameId !== 'all'} onClear={() => setGameId('all')}>
+            <FilterTrigger
+              active={gameId !== 'all'}
+              clearable={gameId !== 'all'}
+              onClear={() => setGameId('all')}
+              className="min-w-0 px-3 sm:min-w-[132px] sm:px-4"
+            >
               {gameName ? (
                 <>
                   {gameName.image ? (
@@ -553,7 +618,7 @@ function OffersContent() {
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <FilterTrigger active={statusFilter !== 'all'}>
+            <FilterTrigger active={statusFilter !== 'all'} className="min-w-0 px-3 sm:min-w-[132px] sm:px-4">
               {statusFilter === 'all' ? 'Status' : FILTER_STATUSES.find((s) => s.value === statusFilter)?.label}
             </FilterTrigger>
           </DropdownMenuTrigger>
@@ -569,10 +634,15 @@ function OffersContent() {
 
         <DropdownMenu modal={false}>
           <DropdownMenuTrigger asChild>
-            <FilterTrigger disabled={selected.size === 0} active={selected.size > 0}>
-              Bulk Actions
+            <FilterTrigger
+              disabled={selected.size === 0}
+              active={selected.size > 0}
+              className="min-w-0 px-3 sm:min-w-[132px] sm:px-4"
+            >
+              <span className="sm:hidden">Bulk</span>
+              <span className="hidden sm:inline">Bulk Actions</span>
               {selected.size > 0 && (
-                <span className="rounded bg-white/[0.08] px-1.5 py-0.5 text-[11px] font-bold tabular-nums text-text-primary">
+                <span className="rounded bg-white/[0.08] px-1.5 py-0.5 text-[12px] font-bold tabular-nums text-text-primary">
                   {selected.size}
                 </span>
               )}
@@ -598,8 +668,9 @@ function OffersContent() {
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+        </div>
 
-        <div className="relative min-w-[220px] flex-1 sm:max-w-[320px]">
+        <div className="relative min-w-0 flex-1 sm:min-w-[220px] sm:max-w-[320px]">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary" />
           <input
             value={search}
@@ -609,7 +680,7 @@ function OffersContent() {
           />
         </div>
 
-        <div className="ml-auto">
+        <div className="sm:ml-auto">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button
@@ -638,10 +709,11 @@ function OffersContent() {
         {/* Top sheen — the bundle-card light-from-above, on the card itself. */}
         <span aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.05),transparent)]" />
 
-        <div className="overflow-x-auto">
+        {/* md+ keeps the full table; below md the stacked card list renders instead. */}
+        <div className="hidden overflow-x-auto md:block">
           <table className="w-full min-w-[1160px] border-collapse text-left">
             <thead>
-              <tr className="text-[11px] font-extrabold uppercase tracking-[0.08em] text-[#6d7488]">
+              <tr className="text-[12px] font-extrabold uppercase tracking-[0.08em] text-[#6d7488]">
                 <th className="w-12 py-3 pl-5 pr-2">
                   <Checkbox checked={allSelected} onCheckedChange={toggleAll} aria-label="Select all offers" />
                 </th>
@@ -710,14 +782,23 @@ function OffersContent() {
                           <span className="mt-0.5 block text-[12px] text-text-tertiary">{l.game?.name ?? '—'}</span>
                           {/* What the review team asked to change — shown ONLY
                               while the offer is in Changes Requested (the same
-                              column is internal notes after approval). */}
+                              column is internal notes after approval). Tap/click
+                              opens the full note (hover-only title doesn't work
+                              on touch). */}
                           {l.status === 'changes_requested' && l.moderation_notes && (
-                            <span
-                              title={l.moderation_notes}
-                              className="mt-1 block max-w-[240px] truncate text-[11.5px] font-medium text-amber-300"
-                            >
-                              Requested: {l.moderation_notes}
-                            </span>
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <button
+                                  type="button"
+                                  className="mt-1 block max-w-[240px] truncate text-left text-[12px] font-medium text-amber-300 underline decoration-amber-300/40 decoration-dotted underline-offset-2"
+                                >
+                                  Requested: {l.moderation_notes}
+                                </button>
+                              </PopoverTrigger>
+                              <PopoverContent align="start" className="text-amber-200">
+                                {l.moderation_notes}
+                              </PopoverContent>
+                            </Popover>
                           )}
                         </span>
                       </span>
@@ -736,7 +817,7 @@ function OffersContent() {
                       {(l.min_quantity ?? 1).toLocaleString()} Unit
                     </td>
                     <td className="px-3 py-4">
-                      <span className="whitespace-nowrap rounded-md border border-white/[0.08] bg-white/[0.04] px-2 py-[3px] text-[11px] font-semibold text-text-secondary">
+                      <span className="whitespace-nowrap rounded-md border border-white/[0.08] bg-white/[0.04] px-2 py-[3px] text-[12px] font-semibold text-text-secondary">
                         {methodLabel(l.delivery_method)}
                       </span>
                     </td>
@@ -745,57 +826,10 @@ function OffersContent() {
                       {fmtRelative(l.updated_at)}
                     </td>
                     <td className="sticky right-0 z-10 bg-[linear-gradient(to_right,rgba(16,17,23,0)_0%,rgba(16,17,23,0.92)_42%,rgba(16,17,23,0.99)_68%)] py-4 pl-10 pr-5">
-                      <DropdownMenu modal={false}>
-                        <DropdownMenuTrigger asChild>
-                          <button
-                            type="button"
-                            aria-label={`Actions for ${l.title}`}
-                            className="flex h-8 w-8 items-center justify-center rounded-md border border-transparent text-text-tertiary transition-colors hover:border-white/[0.12] hover:bg-white/[0.05] hover:text-text-primary"
-                          >
-                            <MoreVertical className="h-4 w-4" />
-                          </button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className={cn('w-60', MENU_CLS)}>
-                          <DropdownMenuLabel className={LABEL_CLS}>Offer Actions</DropdownMenuLabel>
-                          <DropdownMenuItem
-                            className={cn(ITEM_CLS, l.status === 'changes_requested' && 'text-amber-300 focus:text-amber-200')}
-                            onClick={() => router.push(`/sell/edit/${l.id}`)}
-                          >
-                            <Pencil className="h-4 w-4" />
-                            {l.status === 'changes_requested' ? 'Edit & Resubmit' : 'Edit Offer'}
-                          </DropdownMenuItem>
-                          {l.status === 'active' && (
-                            <DropdownMenuItem className={ITEM_CLS} onClick={() => void setStatus(l, 'paused')}>
-                              <Pause className="h-4 w-4" /> Pause Offer
-                            </DropdownMenuItem>
-                          )}
-                          {l.status === 'paused' && (
-                            <DropdownMenuItem className={ITEM_CLS} onClick={() => void setStatus(l, 'active')}>
-                              <Play className="h-4 w-4" /> Activate Offer
-                            </DropdownMenuItem>
-                          )}
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem className={ITEM_CLS} onClick={() => window.open(publicPath(l), '_blank')}>
-                            <ExternalLink className="h-4 w-4" /> View Public Offer
-                          </DropdownMenuItem>
-                          <DropdownMenuItem className={ITEM_CLS} onClick={() => copyUrl(l)}>
-                            <Link2 className="h-4 w-4" /> Copy Public URL
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            className={cn(ITEM_CLS, 'text-red-400 focus:text-red-300')}
-                            onClick={() => setArchiveTarget(l)}
-                          >
-                            <Archive className="h-4 w-4" /> Archive Offer
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            className={cn(ITEM_CLS, 'text-red-400 focus:text-red-300')}
-                            onClick={() => setDeleteTarget(l)}
-                          >
-                            <Trash2 className="h-4 w-4" /> Delete Offer
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                      {renderActionsMenu(
+                        l,
+                        'flex h-9 w-9 items-center justify-center rounded-md border border-transparent text-text-tertiary transition-colors hover:border-white/[0.12] hover:bg-white/[0.05] hover:text-text-primary',
+                      )}
                     </td>
                   </tr>
                 )
@@ -823,6 +857,134 @@ function OffersContent() {
           </table>
         </div>
 
+        {/* ── Card list (below md) — same rows, data and actions as the
+            table, stacked so nothing hides off-screen on phones. ── */}
+        <div className="md:hidden">
+          <div className="flex items-center justify-between gap-3 px-4 py-1">
+            <label className="-ml-2 flex min-h-11 cursor-pointer items-center gap-2.5 px-2 text-[12px] font-extrabold uppercase tracking-[0.08em] text-[#6d7488]">
+              <Checkbox checked={allSelected} onCheckedChange={toggleAll} aria-label="Select all offers" />
+              Select All
+            </label>
+            <span className="text-[12px] font-semibold text-text-tertiary">
+              {visible.length} {visible.length === 1 ? 'Offer' : 'Offers'}
+            </span>
+          </div>
+
+          {isLoading &&
+            Array.from({ length: 4 }).map((_, i) => (
+              <div key={`cs${i}`} className="border-t border-white/[0.06] px-4 py-3">
+                <div className="h-28 animate-pulse rounded-md bg-white/[0.04]" />
+              </div>
+            ))}
+
+          {!isLoading && error != null && (
+            <p className="border-t border-white/[0.06] px-4 py-10 text-center text-[13px] text-red-300">
+              Couldn’t load your offers. Refresh to try again.
+            </p>
+          )}
+
+          {!isLoading && !error && paged.map((l) => {
+            const chip = chipKeyFor(l.status, storePaused)
+            const logo = (type === 'items' || type === 'accounts' ? l.images?.[0] : null) || l.game?.image_url
+            return (
+              <div
+                key={l.id}
+                className={cn('border-t border-white/[0.06] px-4 py-4', selected.has(l.id) && 'bg-white/[0.03]')}
+              >
+                {/* Identity row: checkbox (44px hit area) · logo · title/game · status */}
+                <div className="flex items-start gap-2">
+                  <label className="-ml-3 flex h-11 w-11 flex-none cursor-pointer items-center justify-center">
+                    <Checkbox
+                      checked={selected.has(l.id)}
+                      onCheckedChange={() => toggleOne(l.id)}
+                      aria-label={`Select ${l.title}`}
+                    />
+                  </label>
+                  {logo ? (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img src={logo} alt="" className="h-10 w-10 flex-none rounded-md object-cover ring-1 ring-white/10" />
+                  ) : (
+                    <span className="flex h-10 w-10 flex-none items-center justify-center rounded-md bg-white/[0.05] ring-1 ring-white/10">
+                      <Package className="h-4 w-4 text-text-tertiary" />
+                    </span>
+                  )}
+                  <span className="min-w-0 flex-1 pl-1">
+                    <span className="block truncate text-[13.5px] font-bold text-text-primary">
+                      {displayTitle(l, type)}
+                    </span>
+                    <span className="mt-0.5 block truncate text-[12px] text-text-tertiary">{l.game?.name ?? '—'}</span>
+                  </span>
+                  <StatusChip k={chip} />
+                </div>
+
+                {/* Moderation ask — wraps fully on cards (no hover needed). */}
+                {l.status === 'changes_requested' && l.moderation_notes && (
+                  <p className="mt-3 rounded-md border border-amber-400/25 bg-amber-400/10 px-3 py-2 text-[12px] font-medium leading-snug text-amber-300">
+                    Requested: {l.moderation_notes}
+                  </p>
+                )}
+
+                {/* Primary controls: inline price editor + 44px actions kebab. */}
+                <div className="mt-3 flex items-center gap-2">
+                  <PriceField
+                    value={l.price}
+                    unit="Unit"
+                    onSave={(next) => savePrice(l, next)}
+                    className="w-auto min-w-0 flex-1"
+                  />
+                  {renderActionsMenu(
+                    l,
+                    'flex h-11 w-11 flex-none items-center justify-center rounded-md border border-white/[0.08] bg-white/[0.03] text-text-tertiary transition-colors hover:border-white/[0.16] hover:bg-white/[0.05] hover:text-text-primary',
+                  )}
+                </div>
+
+                {/* Compact meta. */}
+                <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-2">
+                  <OfferIdChip listing={l} />
+                  <span className="whitespace-nowrap rounded-md border border-white/[0.08] bg-white/[0.04] px-2 py-[3px] text-[12px] font-semibold text-text-secondary">
+                    {methodLabel(l.delivery_method)}
+                  </span>
+                </div>
+                <div className="mt-2.5 flex flex-wrap gap-x-4 gap-y-1 text-[12px] text-text-tertiary">
+                  <span className="whitespace-nowrap">
+                    Stock{' '}
+                    <span className="font-bold tabular-nums text-text-primary">
+                      {l.is_unlimited ? '∞' : fmtCompact(l.quantity ?? 0)}
+                    </span>
+                  </span>
+                  <span className="whitespace-nowrap">
+                    Min{' '}
+                    <span className="tabular-nums text-text-secondary">
+                      {(l.min_quantity ?? 1).toLocaleString()} Unit
+                    </span>
+                  </span>
+                  <span className="whitespace-nowrap">
+                    Delivery <span className="text-text-secondary">{formatDeliveryLabel(l.delivery_time)}</span>
+                  </span>
+                  <span className="whitespace-nowrap">Updated {fmtRelative(l.updated_at)}</span>
+                </div>
+              </div>
+            )
+          })}
+
+          {!isLoading && !error && paged.length === 0 && (
+            <div className="border-t border-white/[0.06] px-4 py-12 text-center">
+              <p className="text-[13.5px] font-semibold text-text-secondary">
+                {typed.length === 0 ? `No ${OFFER_META[type].title.toLowerCase()} yet.` : 'No offers match these filters.'}
+              </p>
+              {typed.length === 0 && (
+                <Link
+                  href="/sell/new"
+                  className="mt-3 inline-flex h-10 items-center gap-2 rounded-md bg-lime px-4 text-[13px] font-bold text-text-inverse transition-colors hover:bg-lime-hover"
+                >
+                  <Plus className="h-4 w-4" strokeWidth={2.75} />
+                  Add New Offer
+                </Link>
+              )}
+            </div>
+          )}
+        </div>
+
         {/* ── Pagination footer ── */}
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/[0.06] px-5 py-3.5">
           <div className="flex items-center gap-5 text-[12.5px] text-text-tertiary">
@@ -836,7 +998,7 @@ function OffersContent() {
                 <DropdownMenuTrigger asChild>
                   <button
                     type="button"
-                    className="flex h-8 items-center gap-1.5 rounded-md border border-white/[0.08] bg-[#12151e] px-2.5 text-[12.5px] font-semibold text-text-secondary transition-colors hover:border-white/[0.16] hover:text-text-primary"
+                    className="flex h-9 items-center gap-1.5 rounded-md border border-white/[0.08] bg-[#12151e] px-2.5 text-[12.5px] font-semibold text-text-secondary transition-colors max-md:h-10 hover:border-white/[0.16] hover:text-text-primary"
                   >
                     {perPage} <ChevronDown className="h-3 w-3 text-text-tertiary" />
                   </button>
@@ -855,7 +1017,7 @@ function OffersContent() {
           <div className="flex items-center gap-1">
             <PagerButton disabled={safePage <= 1} onClick={() => setPage(1)}><ChevronsLeft className="h-4 w-4" /></PagerButton>
             <PagerButton disabled={safePage <= 1} onClick={() => setPage(safePage - 1)}><ChevronLeft className="h-4 w-4" /></PagerButton>
-            <span className="flex h-8 min-w-8 items-center justify-center rounded-md bg-white/[0.08] px-2 text-[12.5px] font-bold tabular-nums text-text-primary">
+            <span className="flex h-9 min-w-9 items-center justify-center rounded-md bg-white/[0.08] px-2 text-[12.5px] font-bold tabular-nums text-text-primary max-md:h-10 max-md:min-w-10">
               {safePage}
             </span>
             <PagerButton disabled={safePage >= pageCount} onClick={() => setPage(safePage + 1)}><ChevronRight className="h-4 w-4" /></PagerButton>
@@ -983,7 +1145,7 @@ function PagerButton({
       disabled={disabled}
       onClick={onClick}
       className={cn(
-        'flex h-8 w-8 items-center justify-center rounded-md border border-white/[0.08] text-text-tertiary transition-colors',
+        'flex h-9 w-9 items-center justify-center rounded-md border border-white/[0.08] text-text-tertiary transition-colors max-md:h-10 max-md:w-10',
         disabled ? 'opacity-40' : 'hover:border-white/[0.16] hover:text-text-primary',
       )}
     >

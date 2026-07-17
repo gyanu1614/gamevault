@@ -111,7 +111,9 @@ export default function SellerOnboardingChecklist({
           </div>
           <button
             onClick={handleDismiss}
-            className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-text-tertiary transition-colors hover:bg-bg-raised hover:text-text-secondary"
+            // ≥36px tap target — dismissal is sticky (localStorage), so no
+            // sub-floor mis-tap magnets here.
+            className="flex min-h-9 items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-medium text-text-tertiary transition-colors hover:bg-bg-raised hover:text-text-secondary"
           >
             <X className="h-3.5 w-3.5" />
             Dismiss
