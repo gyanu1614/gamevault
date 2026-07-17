@@ -25,6 +25,11 @@ export function LayoutWrapper({ children }: { children: React.ReactNode }) {
   const isCheckout =
     pathname?.startsWith('/checkout') || pathname?.startsWith('/dev/checkout-preview')
 
+  // Seller application (Forest Ledger redesign) is a full-screen formal
+  // flow with its own light shell — no global navbar/footer, same
+  // rationale as checkout: the applicant shouldn't leak out mid-form.
+  const isSellerApplication = pathname?.startsWith('/account/become-seller')
+
   // Check if we're on a seller page with sidebar (not /new or /edit)
   const isSellerPageWithSidebar = pathname?.startsWith('/seller') &&
     !pathname?.includes('/new') &&
@@ -40,9 +45,13 @@ export function LayoutWrapper({ children }: { children: React.ReactNode }) {
     <div className="flex min-h-screen flex-col">
       {/* P5 — Checkout strips the global navbar: the page carries its
           own slim header (brand left · secure badge right). */}
-      {!isAdminPage && !isCheckout && <Navbar forceScrolled={isSellWizard} />}
+      {!isAdminPage && !isCheckout && !isSellerApplication && (
+        <Navbar forceScrolled={isSellWizard} />
+      )}
       <main className="flex-1">{children}</main>
-      {!isAdminPage && !isSellWizard && !isCheckout && <Footer hasSellerSidebar={hasSidebar} />}
+      {!isAdminPage && !isSellWizard && !isCheckout && !isSellerApplication && (
+        <Footer hasSellerSidebar={hasSidebar} />
+      )}
     </div>
   )
 }
