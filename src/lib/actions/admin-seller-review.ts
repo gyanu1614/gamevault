@@ -418,6 +418,43 @@ export async function startReview(applicationId: string) {
 /**
  * Approve seller application
  */
+/**
+ * messageApplicant — quick admin → applicant outreach: drops an in-app
+ * notification (bell) so the seller sees it immediately. For issues that
+ * don't warrant a formal Request Changes round-trip.
+ */
+export async function messageApplicant(applicationId: string, message: string) {
+  try {
+    await requireRole(['admin', 'super_admin'])
+    const trimmed = message.trim()
+    if (!trimmed) return { success: false, error: 'Message is empty' }
+    if (trimmed.length > 500) return { success: false, error: 'Keep it under 500 characters' }
+
+    const supabase = await createClient()
+    const { data: app } = (await supabase
+      .from('seller_applications')
+      .select('user_id, display_name')
+      .eq('id', applicationId)
+      .single()) as any
+    if (!app) return { success: false, error: 'Application not found' }
+
+    const serviceClient = getServiceClient()
+    const { error } = await (serviceClient.from('notifications').insert as any)({
+      user_id: app.user_id,
+      type: 'admin_message',
+      title: 'Message From The DropMarket Team',
+      message: trimmed,
+      link: '/account/seller-status',
+      is_read: false,
+    })
+    if (error) throw error
+    return { success: true }
+  } catch (e: any) {
+    console.error('[messageApplicant] failed:', e?.message)
+    return { success: false, error: 'Could not send the message' }
+  }
+}
+
 export async function approveApplication(applicationId: string, notes?: string) {
   try {
     const admin = await requireRole(['admin', 'super_admin'])

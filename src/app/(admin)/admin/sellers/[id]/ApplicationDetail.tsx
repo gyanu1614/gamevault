@@ -28,7 +28,7 @@ import { rejectApplication } from '@/lib/actions/admin-sellers'
 // (role/shop_name/shop_slug/badges) FIRST, then flips the application status,
 // sends the approval email + notification. The admin-sellers.ts copy only
 // flipped the application row, leaving the seller without access.
-import { approveApplication, requestMoreInfo } from '@/lib/actions/admin-seller-review'
+import { approveApplication, requestMoreInfo, messageApplicant } from '@/lib/actions/admin-seller-review'
 import { getDocumentsSignedUrls } from '@/lib/actions/kyc-documents'
 import {
   calculateVerificationStatus,
@@ -79,6 +79,9 @@ import {
   History,
   MessageSquareWarning,
   X,
+  Mail,
+  MessageSquare,
+  Send,
 } from 'lucide-react'
 
 interface ApplicationDetailProps {
@@ -264,6 +267,9 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
   const router = useRouter()
   const [isProcessing, setIsProcessing] = useState(false)
   const [showRejectModal, setShowRejectModal] = useState(false)
+  const [showMessageModal, setShowMessageModal] = useState(false)
+  const [outreachText, setOutreachText] = useState('')
+  const [isSendingMessage, setIsSendingMessage] = useState(false)
   const [showApproveModal, setShowApproveModal] = useState(false)
   const [showChangesModal, setShowChangesModal] = useState(false)
   const [showRestrictModal, setShowRestrictModal] = useState(false)
@@ -542,13 +548,41 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
 
   let cardIndex = 0
 
+  const handleSendMessage = async () => {
+    setIsSendingMessage(true)
+    const result = await messageApplicant(application.id, outreachText)
+    setIsSendingMessage(false)
+    if (result.success) {
+      toast.success('Message sent to the seller')
+      setShowMessageModal(false)
+      setOutreachText('')
+    } else {
+      toast.error(result.error || 'Could not send the message')
+    }
+  }
+
   return (
     <>
       {/* ══ HERO — forest scrim band, store identity leads ══ */}
       <section
         className={cn('relative overflow-hidden rounded-2xl px-6 pb-6 pt-6 sm:px-7', FOREST_MOTION.fadeIn)}
-        style={{ background: FOREST_BG.hero }}
+        style={{ backgroundColor: '#0F3320' }}
       >
+        {/* Wide photo backdrop under a forest scrim — fades like the wizard rail. */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/assets/heroes/sell.avif"
+          alt=""
+          aria-hidden
+          className="pointer-events-none absolute inset-0 h-full w-full object-cover"
+        />
+        <div
+          className="pointer-events-none absolute inset-0"
+          style={{
+            background:
+              'linear-gradient(105deg, rgba(15,51,32,0.96) 0%, rgba(20,67,42,0.9) 45%, rgba(20,67,42,0.72) 75%, rgba(15,51,32,0.6) 100%)',
+          }}
+        />
         <div
           className="pointer-events-none absolute inset-0"
           style={{ background: FOREST_BG.heroNoise }}
@@ -627,6 +661,29 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
 
           {/* Contextual actions */}
           <div className="flex flex-wrap items-center gap-[9px] lg:ml-auto">
+            {/* Quick outreach — email + in-app message */}
+            {application.user?.email && (
+              <a
+                href={`mailto:${application.user.email}?subject=${encodeURIComponent('Your DropMarket Seller Application')}`}
+                className="group relative grid h-10 w-10 place-items-center rounded-[10px] bg-white/[0.12] transition-colors hover:bg-white/[0.2]"
+                aria-label="Email the applicant"
+              >
+                <span className="pointer-events-none absolute -top-8 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded-md bg-[#0A1810] px-2 py-1 text-[10px] font-semibold text-white opacity-0 shadow-xl ring-1 ring-white/15 transition-opacity duration-75 group-hover:opacity-100">
+                  Email Seller
+                </span>
+                <Mail className="h-4 w-4 text-white/85" />
+              </a>
+            )}
+            <button
+              onClick={() => setShowMessageModal(true)}
+              className="group relative grid h-10 w-10 place-items-center rounded-[10px] bg-white/[0.12] transition-colors hover:bg-white/[0.2]"
+              aria-label="Send an in-app message"
+            >
+              <span className="pointer-events-none absolute -top-8 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded-md bg-[#0A1810] px-2 py-1 text-[10px] font-semibold text-white opacity-0 shadow-xl ring-1 ring-white/15 transition-opacity duration-75 group-hover:opacity-100">
+                Message Seller
+              </span>
+              <MessageSquare className="h-4 w-4 text-white/85" />
+            </button>
             {isActionable && (
               <>
                 <button
@@ -1025,6 +1082,14 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
 
             {application.seller_signature && (
               <div className="mt-3 flex items-center gap-3.5 rounded-[11px] border border-dashed border-white/15 bg-white/[0.04] px-4 py-3">
+                {application.seller_signature_image && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={application.seller_signature_image}
+                    alt="Drawn signature"
+                    className="h-14 max-w-[180px] shrink-0 rounded-md bg-white object-contain px-2 py-1"
+                  />
+                )}
                 <div>
                   <div
                     className="text-[22px] leading-tight text-[#D9F99D]"
@@ -1364,6 +1429,43 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
                 <XCircle className="h-3.5 w-3.5" />
               )}
               {isProcessing ? 'Rejecting…' : 'Reject'}
+            </button>
+          </div>
+        </ModalShell>
+      )}
+
+      {/* Message the applicant */}
+      {showMessageModal && (
+        <ModalShell onClose={() => !isSendingMessage && setShowMessageModal(false)}>
+          <div className="mb-4">
+            <h3 className="text-[16px] font-extrabold text-white/95">Message Seller</h3>
+            <p className="mt-1 text-[12px] text-white/50">
+              Lands in their notifications instantly, linked to their application status.
+            </p>
+          </div>
+          <textarea
+            value={outreachText}
+            onChange={(e) => setOutreachText(e.target.value)}
+            rows={4}
+            maxLength={500}
+            placeholder="e.g. Quick question about your payout details…"
+            className="w-full rounded-[10px] border border-white/15 bg-white/[0.05] px-3.5 py-2.5 text-[13px] text-white outline-none placeholder:text-white/30 focus:border-[#A3E635]/60"
+          />
+          <div className="mt-4 flex gap-2.5">
+            <button
+              onClick={() => setShowMessageModal(false)}
+              disabled={isSendingMessage}
+              className="flex-1 rounded-[10px] border border-white/15 px-4 py-2.5 text-[12.5px] font-semibold text-white/80 transition-colors hover:bg-white/[0.06] disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSendMessage}
+              disabled={isSendingMessage || !outreachText.trim()}
+              className="flex flex-1 items-center justify-center gap-2 rounded-[10px] bg-[#A3E635] px-4 py-2.5 text-[12.5px] font-bold text-[#0F3320] disabled:opacity-50"
+            >
+              {isSendingMessage ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+              Send Message
             </button>
           </div>
         </ModalShell>

@@ -208,6 +208,7 @@ export async function submitSellerApplication(
         // and the optional selling-experience note. Legacy payload lacks
         // these keys → null, so nothing changes for old submissions.
         seller_signature: (data.step6 as any)?.sellerSignature || null,
+        seller_signature_image: (data.step6 as any)?.sellerSignatureImage || null,
         seller_signed_at: (data.step6 as any)?.sellerSignedAt || null,
         selling_experience: (data.step6 as any)?.sellingExperience || null,
 

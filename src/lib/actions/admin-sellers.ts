@@ -101,6 +101,7 @@ export interface SellerApplication {
   selling_experience?: string | null
   /** Typed legal-name e-signature on the Seller Agency Agreement. */
   seller_signature?: string | null
+  seller_signature_image?: string | null
   seller_signed_at?: string | null
 
   // Consent booleans (accepted_commission_structure = fee schedule)

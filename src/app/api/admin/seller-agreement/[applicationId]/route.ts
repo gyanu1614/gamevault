@@ -25,7 +25,7 @@ export async function GET(
     .from('seller_applications')
     .select(
       `id, full_legal_name, shop_name, country, seller_type, seller_signature,
-       seller_signed_at, submitted_at, alternate_email,
+       seller_signed_at, seller_signature_image, submitted_at, alternate_email,
        accepted_seller_agreement, accepted_privacy_policy, accepted_anti_fraud_policy,
        accepted_commission_structure, accepted_data_processing, information_accurate_confirmed,
        profiles!user_id ( email )`,
@@ -45,6 +45,7 @@ export async function GET(
     country: app.country ?? null,
     sellerType: app.seller_type ?? null,
     signatureName: app.seller_signature ?? null,
+    signatureImage: app.seller_signature_image ?? null,
     signedAt: app.seller_signed_at ?? app.submitted_at ?? null,
     submittedAt: app.submitted_at ?? null,
     consents: [

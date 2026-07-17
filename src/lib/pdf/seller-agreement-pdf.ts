@@ -13,11 +13,11 @@
 import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from 'pdf-lib'
 import { getLegalDoc, type LegalBlock } from '@/lib/legal/documents'
 
-const FOREST = rgb(0.078, 0.263, 0.165) // #14432A
-const INK = rgb(0.102, 0.114, 0.098)
-const INK2 = rgb(0.357, 0.38, 0.341)
-const LINE = rgb(0.855, 0.859, 0.827)
-const LIME = rgb(0.396, 0.639, 0.051) // lime-deep for print legibility
+// Monochrome, formal-contract palette (no brand colors — prints clean).
+const BLACK = rgb(0.08, 0.08, 0.08)
+const INK = rgb(0.13, 0.13, 0.13)
+const INK2 = rgb(0.42, 0.42, 0.42)
+const LINE = rgb(0.82, 0.82, 0.82)
 
 const A4 = { w: 595.28, h: 841.89 }
 const MARGIN = 56
@@ -31,7 +31,11 @@ export interface AgreementPdfInput {
   country: string | null
   sellerType: string | null
   signatureName: string | null
+  /** Drawn signature-pad PNG (data URL) — embedded in the execution block. */
+  signatureImage?: string | null
   signedAt: string | null
+  /** Draft preview for the applicant — unsigned, watermarked. */
+  draft?: boolean
   submittedAt: string | null
   consents: Array<{ label: string; accepted: boolean }>
 }
@@ -101,15 +105,20 @@ export async function buildSellerAgreementPdf(input: AgreementPdfInput): Promise
   }
 
   // ── Letterhead ──────────────────────────────────────────────────────────
-  page.drawRectangle({ x: 0, y: A4.h - 8, width: A4.w, height: 8, color: FOREST })
-  page.drawText('DropMarket', { x: MARGIN, y: A4.h - 46, size: 17, font: helvBold, color: FOREST })
+  page.drawLine({ start: { x: MARGIN, y: A4.h - 34 }, end: { x: A4.w - MARGIN, y: A4.h - 34 }, thickness: 1.2, color: BLACK })
+  page.drawText('DROPMARKET LTD', { x: MARGIN, y: A4.h - 28, size: 13, font: helvBold, color: BLACK })
   page.drawText('dropmarket.gg  ·  support@dropmarket.gg', {
-    x: MARGIN, y: A4.h - 60, size: 8.5, font: helv, color: INK2,
+    x: MARGIN, y: A4.h - 48, size: 8.5, font: helv, color: INK2,
   })
-  y = A4.h - 96
+  y = A4.h - 84
 
-  drawText('SELLER AGENCY AGREEMENT', { font: helvBold, size: 16, color: FOREST, gap: 2 })
-  drawText('Executed electronic counterpart', { size: 9, color: INK2, gap: 12 })
+  drawText('SELLER AGENCY AGREEMENT', { font: helvBold, size: 16, color: BLACK, gap: 2 })
+  drawText(
+    input.draft
+      ? 'DRAFT FOR REVIEW — this document is not executed until you sign in your application'
+      : 'Executed electronic counterpart',
+    { size: 9, color: INK2, gap: 12 },
+  )
 
   // ── Parties ─────────────────────────────────────────────────────────────
   const signedDate = input.signedAt
@@ -141,7 +150,7 @@ export async function buildSellerAgreementPdf(input: AgreementPdfInput): Promise
     for (const section of doc.sections) {
       if (section.h) {
         ensure(26)
-        drawText(section.h, { font: helvBold, size: 11, color: FOREST, gap: 4 })
+        drawText(section.h, { font: helvBold, size: 11, color: BLACK, gap: 4 })
       }
       for (const block of section.blocks as LegalBlock[]) {
         if (block.t === 'p') drawText(stripMd(block.md), { gap: 5 })
@@ -166,22 +175,46 @@ export async function buildSellerAgreementPdf(input: AgreementPdfInput): Promise
 
   // ── Execution page ──────────────────────────────────────────────────────
   newPage()
-  drawText('EXECUTION', { font: helvBold, size: 13, color: FOREST, gap: 10 })
+  drawText('EXECUTION', { font: helvBold, size: 13, color: BLACK, gap: 10 })
   drawText(
     'Executed electronically by the Principal through the DropMarket seller onboarding flow. The typed signature below was entered by the Principal and recorded together with the timestamp and the consents listed.',
     { size: 9, color: INK2, gap: 14 },
   )
 
   drawText('SIGNED for and on behalf of the PRINCIPAL:', { font: helvBold, size: 9.5, gap: 10 })
-  // Signature script
-  const sig = input.signatureName || input.legalName
-  ensure(60)
-  page.drawText(sig, { x: MARGIN, y: y - 24, size: 24, font: timesItalic, color: FOREST })
-  y -= 34
+  if (input.draft) {
+    // Unsigned draft — blank signature area.
+    ensure(60)
+    y -= 44
+  } else if (input.signatureImage?.startsWith('data:image/png;base64,')) {
+    // Drawn signature (signature pad PNG).
+    try {
+      const pngBytes = Uint8Array.from(
+        Buffer.from(input.signatureImage.split(',')[1] ?? '', 'base64'),
+      )
+      const png = await pdf.embedPng(pngBytes)
+      const dims = png.scaleToFit(220, 66)
+      ensure(dims.height + 16)
+      page.drawImage(png, { x: MARGIN, y: y - dims.height, width: dims.width, height: dims.height })
+      y -= dims.height + 8
+    } catch {
+      const sig = input.signatureName || input.legalName
+      ensure(60)
+      page.drawText(sig, { x: MARGIN, y: y - 24, size: 24, font: timesItalic, color: BLACK })
+      y -= 34
+    }
+  } else {
+    const sig = input.signatureName || input.legalName
+    ensure(60)
+    page.drawText(sig, { x: MARGIN, y: y - 24, size: 24, font: timesItalic, color: BLACK })
+    y -= 34
+  }
   page.drawLine({ start: { x: MARGIN, y }, end: { x: MARGIN + 240, y }, thickness: 0.8, color: INK })
   y -= 12
   drawText(`${input.legalName} — Principal`, { size: 9, gap: 2 })
-  drawText(`Signed: ${signedDate}`, { size: 8.5, color: INK2, gap: 2 })
+  drawText(input.draft ? 'Signed: ________________________' : `Signed: ${signedDate}`, {
+    size: 8.5, color: INK2, gap: 2,
+  })
   if (input.email) drawText(`Account email: ${input.email}`, { size: 8.5, color: INK2, gap: 14 })
 
   drawText('ACCEPTED for and on behalf of the AGENT:', { font: helvBold, size: 9.5, gap: 8 })
@@ -191,7 +224,7 @@ export async function buildSellerAgreementPdf(input: AgreementPdfInput): Promise
   for (const consent of input.consents) {
     ensure(12)
     page.drawText(consent.accepted ? '[X]' : '[  ]', {
-      x: MARGIN, y: y - 9, size: 8.5, font: helvBold, color: consent.accepted ? LIME : INK2,
+      x: MARGIN, y: y - 9, size: 8.5, font: helvBold, color: consent.accepted ? BLACK : INK2,
     })
     page.drawText(consent.label, { x: MARGIN + 22, y: y - 9, size: 9, font: helv, color: INK })
     y -= 14
