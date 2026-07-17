@@ -45,10 +45,18 @@ export default function SellerAppLayout({
         <LeftRail currentStep={currentStep} onStepClick={onStepClick} />
       </div>
 
-      {/* Right pane — ivory, scrolls. */}
+      {/* Right pane — ivory with soft forest washes, scrolls. */}
       <div
         data-seller-scroll
         className="relative flex min-h-screen flex-col lg:h-screen lg:min-h-0 lg:overflow-y-auto"
+        style={{
+          background: [
+            'radial-gradient(56% 42% at 96% -8%, rgba(27,94,58,0.08), transparent 62%)',
+            'radial-gradient(48% 38% at -10% 106%, rgba(163,230,53,0.07), transparent 60%)',
+            'radial-gradient(30% 24% at 82% 88%, rgba(20,67,42,0.04), transparent 65%)',
+            'linear-gradient(180deg, #FBFBF8 0%, #FAFAF7 30%, #F6F7F0 100%)',
+          ].join(', '),
+        }}
       >
         <MobileProgress currentStep={currentStep} />
 
@@ -58,7 +66,7 @@ export default function SellerAppLayout({
             <button
               type="button"
               onClick={onWatchVideo}
-              className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors"
+              className="inline-flex min-h-[40px] items-center gap-1.5 rounded-full border px-3.5 py-2.5 text-xs font-medium transition-colors"
               style={{ borderColor: PALETTE.line, color: PALETTE.forest }}
             >
               <PlayCircle className="h-3.5 w-3.5" />

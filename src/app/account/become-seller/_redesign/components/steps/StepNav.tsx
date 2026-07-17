@@ -28,7 +28,7 @@ export default function StepNav({ onBack, continueLabel = 'Continue', submitting
         <button
           type="button"
           onClick={onBack}
-          className="inline-flex items-center gap-1.5 rounded-lg border px-4 py-2.5 text-sm font-medium transition-colors"
+          className="inline-flex min-h-[44px] items-center gap-1.5 rounded-lg border px-4 py-3 text-sm font-medium transition-colors"
           style={{ borderColor: PALETTE.line, color: PALETTE.ink2 }}
         >
           <ChevronLeft className="h-4 w-4" />
@@ -43,7 +43,7 @@ export default function StepNav({ onBack, continueLabel = 'Continue', submitting
         disabled={submitting}
         onMouseEnter={() => setHover(true)}
         onMouseLeave={() => setHover(false)}
-        className="inline-flex items-center gap-1.5 rounded-lg px-6 py-2.5 text-sm font-semibold text-white transition-all disabled:opacity-60"
+        className="inline-flex min-h-[44px] items-center gap-1.5 rounded-lg px-6 py-3 text-sm font-semibold text-white transition-all disabled:opacity-60"
         style={{
           backgroundColor: PALETTE.forest,
           boxShadow: hover ? `0 0 0 2px ${PALETTE.lime}` : 'none',

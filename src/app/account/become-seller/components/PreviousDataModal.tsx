@@ -55,7 +55,7 @@ export default function PreviousDataModal({
       {/* Modal */}
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div
-          className="animate-fade-up relative w-full max-w-md rounded-2xl p-6"
+          className="animate-fade-up relative max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto rounded-2xl p-6"
           style={{
             background: 'linear-gradient(180deg, #FFFFFF 0%, #FFFFFF 55%, #FCFCFA 100%)',
             border: `1px solid ${PALETTE.line}`,

@@ -56,7 +56,7 @@ export default function VideoModal({ open, onClose }: VideoModalProps) {
       />
 
       <div
-        className="animate-fade-up relative w-full max-w-2xl overflow-hidden rounded-2xl shadow-2xl"
+        className="animate-fade-up relative max-h-[calc(100dvh-2rem)] w-full max-w-[min(42rem,calc((100dvh-7rem)*16/9))] overflow-hidden rounded-2xl shadow-2xl"
         style={{ backgroundColor: PALETTE.paper }}
       >
         <div className="flex items-center justify-between px-5 py-4">
@@ -67,7 +67,7 @@ export default function VideoModal({ open, onClose }: VideoModalProps) {
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="rounded-md p-1 transition-colors hover:bg-black/5"
+            className="-m-1 rounded-md p-2.5 transition-colors hover:bg-black/5"
             style={{ color: PALETTE.ink2 }}
           >
             <X className="h-4 w-4" />

@@ -335,7 +335,7 @@ export default function PayoutSetupStep({
                           type="button"
                           onClick={() => field.onChange(coin.value)}
                           aria-pressed={selected}
-                          className="rounded-xl border px-3 py-2.5 text-sm font-medium transition-all"
+                          className="min-h-[44px] rounded-xl border px-3 py-2.5 text-sm font-medium transition-all"
                           style={{
                             borderColor: selected ? PALETTE.forest : PALETTE.line,
                             backgroundColor: selected ? 'rgba(20,67,42,0.04)' : PALETTE.paper,
@@ -441,7 +441,7 @@ export default function PayoutSetupStep({
             <button
               type="button"
               onClick={onBack}
-              className="rounded-xl border px-5 py-2.5 text-sm font-medium transition-colors"
+              className="min-h-[44px] rounded-xl border px-5 py-3 text-sm font-medium transition-colors"
               style={{ borderColor: PALETTE.line, color: PALETTE.forest }}
             >
               Back
@@ -451,7 +451,7 @@ export default function PayoutSetupStep({
           )}
           <button
             type="submit"
-            className="group rounded-xl px-6 py-2.5 text-sm font-semibold text-white transition-all"
+            className="group min-h-[44px] rounded-xl px-6 py-3 text-sm font-semibold text-white transition-all"
             style={{ backgroundColor: PALETTE.forest }}
             onMouseEnter={(e) => {
               e.currentTarget.style.boxShadow = `0 0 0 2px ${PALETTE.lime}`

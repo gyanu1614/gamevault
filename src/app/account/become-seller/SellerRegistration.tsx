@@ -125,6 +125,15 @@ export default function SellerRegistration({
   const [isCheckingExisting, setIsCheckingExisting] = useState(true)
   const [isRedirecting, setIsRedirecting] = useState(false)
 
+  // Each step starts at the TOP: mobile scrolls the window, desktop scrolls
+  // the right pane (lg:overflow-y-auto) — reset both on any step/phase move.
+  useEffect(() => {
+    window.scrollTo({ top: 0 })
+    document
+      .querySelector('[data-seller-scroll]')
+      ?.scrollTo({ top: 0 })
+  }, [currentStep, phase])
+
   // ── Previous-data prefill (withdrawn applications) ──────────────────────────
   const [showPreviousDataModal, setShowPreviousDataModal] = useState(false)
   const [previousApplication, setPreviousApplication] = useState<any>(null)

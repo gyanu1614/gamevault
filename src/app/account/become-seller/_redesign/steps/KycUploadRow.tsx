@@ -178,7 +178,7 @@ export default function KycUploadRow({
             type="button"
             onClick={() => void remove(doc)}
             aria-label={`Remove ${label}`}
-            className="shrink-0 rounded-lg p-1.5 transition-colors hover:bg-black/5"
+            className="-m-2 shrink-0 rounded-lg p-3.5 transition-colors hover:bg-black/5"
             style={{ color: PALETTE.ink2 }}
           >
             <X className="h-4 w-4" />

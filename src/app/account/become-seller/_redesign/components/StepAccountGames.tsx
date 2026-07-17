@@ -269,7 +269,7 @@ export default function StepAccountGames({
                               type="button"
                               onClick={() => toggleSection(game.id, section)}
                               aria-pressed={active}
-                              className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors"
+                              className="inline-flex min-h-[40px] items-center gap-1.5 rounded-full border px-3.5 py-2.5 text-xs font-medium transition-colors"
                               style={
                                 active
                                   ? {
@@ -374,6 +374,12 @@ export default function StepAccountGames({
         <label
           className="flex cursor-pointer items-start gap-3 rounded-xl border p-3.5"
           style={{ borderColor: PALETTE.line, backgroundColor: PALETTE.paper }}
+          // The visual checkbox is a 20px span — toggling from the label makes
+          // the whole card the touch target (the span isn't a real form
+          // control, so label forwarding alone wouldn't fire it).
+          onClick={() =>
+            setValue('is18OrOlder', !is18OrOlder, { shouldValidate: true })
+          }
         >
           <span
             role="checkbox"
@@ -385,9 +391,6 @@ export default function StepAccountGames({
                 setValue('is18OrOlder', !is18OrOlder, { shouldValidate: true })
               }
             }}
-            onClick={() =>
-              setValue('is18OrOlder', !is18OrOlder, { shouldValidate: true })
-            }
             className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition-colors"
             style={{
               borderColor: is18OrOlder ? PALETTE.forest : PALETTE.line,
@@ -662,7 +665,7 @@ function GamePicker({
                         value={game.name}
                         keywords={[game.slug]}
                         onSelect={() => onToggle(game.id)}
-                        className="flex w-full cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm outline-none data-[selected=true]:bg-[rgba(20,67,42,0.06)]"
+                        className="flex min-h-[44px] w-full cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm outline-none data-[selected=true]:bg-[rgba(20,67,42,0.06)]"
                         style={{ color: PALETTE.ink }}
                       >
                         <span
@@ -713,10 +716,10 @@ function GamePicker({
                 type="button"
                 onClick={() => onToggle(game.id)}
                 aria-label={`Remove ${game.name}`}
-                className="rounded-full p-0.5 transition-colors hover:bg-[rgba(20,67,42,0.08)]"
+                className="-m-1 rounded-full p-2 transition-colors hover:bg-[rgba(20,67,42,0.08)]"
                 style={{ color: PALETTE.ink2 }}
               >
-                <X className="h-3 w-3" />
+                <X className="h-3.5 w-3.5" />
               </button>
             </span>
           ))}
