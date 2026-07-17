@@ -108,6 +108,17 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
   const router = useRouter()
   const [searchQuery, setSearchQuery] = useState('')
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+
+  // Lock body scroll while the mobile menu is open — otherwise the page
+  // scrolls behind the fixed panel and the user loses their place.
+  useEffect(() => {
+    if (!mobileMenuOpen) return
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = prev
+    }
+  }, [mobileMenuOpen])
   // V21/P7.r — Expanding search. When true, the category links + right
   // icons collapse and GlobalSearch grows to fill the freed space.
   const [searchExpanded, setSearchExpanded] = useState(false)
@@ -645,14 +656,10 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
           close on direct click for snappiness. */}
       <AnimatePresence>
         {searchExpanded && (
-          <motion.div
+          <div
             key="search-scrim"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.18 }}
             onMouseDown={() => setSearchExpanded(false)}
-            className="fixed inset-0 z-40 bg-black/50 backdrop-blur-md"
+            className="animate-fade-in fixed inset-0 z-40 bg-black/50 backdrop-blur-md"
             aria-hidden
           />
         )}
@@ -1561,15 +1568,14 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
       {/* Mobile Menu */}
       <AnimatePresence>
         {mobileMenuOpen && (
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
+          <div
+            // CSS entrance, not framer: rAF can stall in throttled contexts
+            // and freeze the panel mid-fade (translucent over the page).
             // max-h + internal scroll: the menu is FIXED so it never scrolls
             // with the page — without this cap the later categories and the
             // auth buttons were unreachable on phones. lg:hidden matches the
             // hamburger so 768-1023px tablets keep the in-menu search.
-            className="fixed left-[2.5vw] right-[2.5vw] top-20 z-40 max-h-[calc(100dvh-6rem)] overflow-y-auto overscroll-contain rounded-2xl border border-white/10 bg-black p-4 shadow-2xl backdrop-blur-xl sm:left-[5vw] sm:right-[5vw] sm:p-6 lg:hidden"
+            className="animate-fade-in fixed left-[2.5vw] right-[2.5vw] top-20 z-40 max-h-[calc(100dvh-6rem)] overflow-y-auto overscroll-contain rounded-2xl border border-white/10 bg-black p-4 shadow-2xl backdrop-blur-xl sm:left-[5vw] sm:right-[5vw] sm:p-6 lg:hidden"
           >
             {/* Mobile Search */}
             <form onSubmit={handleSearch} className="mb-6">
@@ -1641,7 +1647,7 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                 </Button>
               </div>
             )}
-          </motion.div>
+          </div>
         )}
       </AnimatePresence>
 
@@ -1772,17 +1778,15 @@ function CategoryDropdown({
           className="z-50 outline-none"
           asChild
         >
-          <motion.div
-            initial={{ opacity: 0, y: 10, scale: 0.97 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            transition={{ duration: 0.18 }}
+          <div
+            // CSS entrance, not framer (rAF-stall class).
             // V17w — Invisible hover bridge. pt-3 (12px) of transparent
             // padding on top makes the popover's pointer-event area
             // include the visual gap above the dropdown card. Cursor
             // moving from navbar button → dropdown card crosses this
             // bridge and counts as "inside popover," so the close
             // debounce never fires mid-traverse.
-            className="pt-2"
+            className="animate-fade-in pt-2"
           >
             {/* V17p — Dropdown scaled up to match the navbar's own
                 width and breathing room. ~960px wide (capped at 92vw),
@@ -1913,7 +1917,7 @@ function CategoryDropdown({
                 </div>
               </div>
             </div>
-          </motion.div>
+          </div>
         </Popover.Content>
       </Popover.Portal>
     </Popover.Root>
@@ -2325,16 +2329,13 @@ function GlobalSearch({
       {/* Result panel */}
       <AnimatePresence>
         {open && (
-          <motion.div
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 6 }}
-            transition={{ duration: 0.15 }}
+          <div
+            // CSS entrance, not framer (rAF-stall class).
             // V21/P7.t — Translucent navbar-matched surface (not flat
             // black). Width tracks the bar: full when expanded, fixed
             // when collapsed.
             className={cn(
-              'absolute top-full mt-2 overflow-hidden rounded-xl border border-white/[0.12] shadow-[0_16px_50px_rgba(0,0,0,0.6)] backdrop-blur-2xl backdrop-saturate-150',
+              'animate-fade-in absolute top-full mt-2 overflow-hidden rounded-xl border border-white/[0.12] shadow-[0_16px_50px_rgba(0,0,0,0.6)] backdrop-blur-2xl backdrop-saturate-150',
               expanded ? 'inset-x-0' : 'right-0 w-[440px]',
             )}
             style={{ backgroundColor: 'rgba(10, 10, 15, 0.94)' }}
@@ -2498,7 +2499,7 @@ function GlobalSearch({
                 })()
               )}
             </div>
-          </motion.div>
+          </div>
         )}
       </AnimatePresence>
     </motion.div>
