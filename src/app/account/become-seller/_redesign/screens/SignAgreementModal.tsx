@@ -184,7 +184,7 @@ export default function SignAgreementModal({
           >
             {/* Header */}
             <div
-              className="flex items-center justify-between px-6 py-4"
+              className="flex shrink-0 items-center justify-between px-6 py-4"
               style={{
                 background: 'linear-gradient(180deg, #1B5E3A 0%, #14432A 55%, #103A22 100%)',
                 boxShadow:
@@ -207,7 +207,7 @@ export default function SignAgreementModal({
               </button>
             </div>
 
-            <div className="px-6 py-5">
+            <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
               {loading ? (
                 <div
                   className="flex items-center justify-center gap-2 py-10 text-sm"
@@ -336,7 +336,7 @@ export default function SignAgreementModal({
                         onBegin={() => setPadError(false)}
                         canvasProps={{
                           width: padWidth,
-                          height: 260,
+                          height: 220,
                           style: { display: 'block', touchAction: 'none' },
                           'aria-label': 'Signature pad',
                         }}
