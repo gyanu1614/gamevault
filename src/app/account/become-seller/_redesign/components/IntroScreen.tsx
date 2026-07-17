@@ -1,29 +1,20 @@
 /**
  * IntroScreen — the branded landing shown at /account/become-seller BEFORE the
- * stepper, for sellers with no in-progress application. It shares the shell's
- * split-screen "Forest Ledger" world: a fixed left brand panel (the sell hero
- * photo under a forest scrim, DropMarket lime mark + heading + value line) and a
- * scrolling ivory right pane with the headline, the fintech "How It Works" row,
- * a "Watch How It Works" trigger, and the primary "Start Application" CTA that
- * enters the stepper.
+ * stepper, for sellers with no in-progress application. Shares the shell's
+ * split-screen "Forest Ledger" world: fixed left brand panel (sell hero photo
+ * under a forest scrim + logo + heading), and a MINIMAL centered ivory right
+ * pane: "Become a Seller." title, one quiet line, the four-step How It Works
+ * (big custom pictograms, no body text), a large Start Application CTA, and a
+ * video THUMBNAIL card (not a bare button) that opens the VideoModal.
  *
- * The intro deliberately does NOT render the vertical step rail — there is no
- * active step yet. It composes the same photo+scrim treatment as LeftRail so the
- * two screens read as one product. The VideoModal + its trigger are owned here;
- * the same modal stays reachable from inside the stepper shell (SellerAppLayout
- * exposes onWatchVideo), so the trigger is shared UX, not intro-only.
- *
- * Contract: this screen collects nothing and touches no server action. It only
- * calls back `onStart` to hand control to the stepper. The submit payload is
- * untouched.
+ * Contract: collects nothing, touches no server action — only calls `onStart`.
  */
 
 'use client'
 
 import { useState } from 'react'
 import Image from 'next/image'
-import { motion } from 'framer-motion'
-import { ArrowRight, PlayCircle, ShieldCheck, Clock, Wallet } from 'lucide-react'
+import { ArrowRight, Play } from 'lucide-react'
 import { PALETTE, PALETTE_VARS } from '../theme'
 import HowItWorks from './HowItWorks'
 import VideoModal from './VideoModal'
@@ -32,13 +23,6 @@ interface IntroScreenProps {
   /** Hands control to the stepper — the "Start Application" CTA. */
   onStart: () => void
 }
-
-/** Small reassurance chips under the headline — outcome language, no jargon. */
-const ASSURANCES: { icon: typeof ShieldCheck; label: string }[] = [
-  { icon: ShieldCheck, label: 'SafeDrop Protected' },
-  { icon: Clock, label: 'Live In Minutes' },
-  { icon: Wallet, label: 'Paid On Confirmation' },
-]
 
 export default function IntroScreen({ onStart }: IntroScreenProps) {
   const [videoOpen, setVideoOpen] = useState(false)
@@ -90,8 +74,7 @@ export default function IntroScreen({ onStart }: IntroScreenProps) {
               Seller Application
             </h1>
             <p className="mt-2 max-w-xs text-sm leading-relaxed text-white/70">
-              Join the marketplace where buyers trust every seller. A short,
-              formal application — everything you enter stays encrypted.
+              A short, formal application. Everything you enter stays encrypted.
             </p>
           </div>
 
@@ -120,7 +103,7 @@ export default function IntroScreen({ onStart }: IntroScreenProps) {
         </div>
       </aside>
 
-      {/* RIGHT pane — ivory, scrolls. */}
+      {/* RIGHT pane — ivory, scrolls, MINIMAL + CENTERED. */}
       <div className="relative flex min-h-screen flex-col lg:h-screen lg:min-h-0 lg:overflow-y-auto">
         {/* Mobile brand strip (left panel is hidden on small screens). */}
         <div
@@ -133,90 +116,90 @@ export default function IntroScreen({ onStart }: IntroScreenProps) {
             width={28}
             height={28}
             className="h-7 w-7 object-contain"
-            style={{ filter: 'none' }}
           />
           <span className="text-sm font-semibold" style={{ color: PALETTE.forest }}>
             Seller Application
           </span>
         </div>
 
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.35, ease: [0.4, 0, 0.2, 1] }}
-          className="mx-auto w-full max-w-xl flex-1 px-6 py-10 sm:px-10 sm:py-14 lg:px-14"
-        >
-          {/* Headline + value line */}
-          <div>
-            <span
-              className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium"
-              style={{
-                backgroundColor: 'rgba(20,67,42,0.06)',
-                color: PALETTE.forest2,
-              }}
-            >
-              Become A Seller
-            </span>
-            <h2
-              className="mt-4 text-3xl font-semibold leading-[1.15] tracking-tight sm:text-[2.4rem]"
-              style={{ color: PALETTE.forest }}
-            >
-              Sell your games, items and top-ups with buyers who already trust you.
-            </h2>
-            <p className="mt-4 text-base leading-relaxed" style={{ color: PALETTE.ink2 }}>
-              List what you sell, deliver to the buyer, and get paid the moment
-              they confirm. Buyers pay upfront and every order is covered by
-              SafeDrop Protection — so every sale is protected on both sides.
-            </p>
-          </div>
+        {/* CSS entrance (animate-fade-up) — deliberately NOT framer-motion: rAF
+            can stall in embedded/throttled contexts and freeze the pane at
+            opacity 0 (same failure the navbar dropdowns hit). CSS always runs. */}
+        <div className="animate-fade-up mx-auto flex w-full max-w-2xl flex-1 flex-col justify-center px-6 py-12 text-center sm:px-10 lg:px-14">
+          {/* Title */}
+          <h2
+            className="text-4xl font-bold leading-tight tracking-tight sm:text-5xl"
+            style={{ color: PALETTE.forest, textWrap: 'balance' }}
+          >
+            Become a Seller<span style={{ color: PALETTE.lime }}>.</span>
+          </h2>
+          <p className="mx-auto mt-3 text-base" style={{ color: PALETTE.ink2 }}>
+            Five quick steps. Live in minutes.
+          </p>
 
-          {/* Assurance chips */}
-          <div className="mt-6 flex flex-wrap gap-2">
-            {ASSURANCES.map(({ icon: Icon, label }) => (
-              <span
-                key={label}
-                className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium"
-                style={{
-                  borderColor: PALETTE.line,
-                  color: PALETTE.forest,
-                  backgroundColor: PALETTE.paper,
-                }}
-              >
-                <Icon className="h-3.5 w-3.5" style={{ color: PALETTE.forest2 }} strokeWidth={2} />
-                {label}
-              </span>
-            ))}
-          </div>
-
-          {/* How It Works */}
-          <div className="mt-12">
-            <h3
-              className="mb-6 text-sm font-semibold uppercase tracking-wide"
-              style={{ color: PALETTE.ink2 }}
-            >
-              How It Works
-            </h3>
+          {/* How It Works — centered, big custom icons, no body text */}
+          <div className="mt-14">
             <HowItWorks />
           </div>
 
-          {/* CTAs */}
-          <div className="mt-12 flex flex-col gap-3 sm:flex-row sm:items-center">
+          {/* Big primary CTA */}
+          <div className="mt-14 flex flex-col items-center gap-6">
             <StartButton onClick={onStart} />
+
+            {/* Video thumbnail card — a real media preview, not a bare button */}
             <button
               type="button"
               onClick={() => setVideoOpen(true)}
-              className="inline-flex items-center justify-center gap-2 rounded-xl border px-5 py-3 text-sm font-semibold transition-colors"
-              style={{ borderColor: PALETTE.line, color: PALETTE.forest, backgroundColor: PALETTE.paper }}
+              aria-label="Watch how selling works"
+              className="group relative mx-auto block w-full max-w-md overflow-hidden rounded-2xl text-left transition-transform hover:-translate-y-0.5 focus-visible:outline-none"
+              style={{ boxShadow: `0 1px 2px rgba(15,51,32,0.12), inset 0 0 0 1px ${PALETTE.line}` }}
             >
-              <PlayCircle className="h-4 w-4" />
-              Watch How It Works
+              <div className="relative aspect-video w-full">
+                <Image
+                  src="/assets/heroes/sell.avif"
+                  alt=""
+                  fill
+                  sizes="(max-width: 640px) 100vw, 448px"
+                  className="object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+                />
+                {/* Forest wash so the play affordance reads */}
+                <div
+                  aria-hidden
+                  className="absolute inset-0"
+                  style={{
+                    background:
+                      'linear-gradient(to top, rgba(15,51,32,0.82) 0%, rgba(15,51,32,0.35) 45%, rgba(15,51,32,0.25) 100%)',
+                  }}
+                />
+                {/* Play button */}
+                <span className="absolute inset-0 flex items-center justify-center">
+                  <span
+                    className="flex h-14 w-14 items-center justify-center rounded-full bg-white shadow-lg transition-transform group-hover:scale-105"
+                    style={{ color: PALETTE.forest }}
+                  >
+                    <Play className="ml-0.5 h-6 w-6" fill="currentColor" strokeWidth={0} />
+                  </span>
+                </span>
+                {/* Caption */}
+                <span className="absolute inset-x-0 bottom-0 flex items-center justify-between px-4 py-3">
+                  <span className="text-sm font-semibold text-white">
+                    Watch How It Works
+                  </span>
+                  <span
+                    className="rounded-full px-2 py-0.5 text-[11px] font-semibold"
+                    style={{ backgroundColor: PALETTE.lime, color: PALETTE.forest3 }}
+                  >
+                    90 sec
+                  </span>
+                </span>
+              </div>
             </button>
-          </div>
 
-          <p className="mt-4 text-xs" style={{ color: PALETTE.ink2 }}>
-            Takes about 5 minutes. You can save and finish later.
-          </p>
-        </motion.div>
+            <p className="text-xs" style={{ color: PALETTE.ink2 }}>
+              Takes about 5 minutes. You can save and finish later.
+            </p>
+          </div>
+        </div>
       </div>
 
       <VideoModal open={videoOpen} onClose={() => setVideoOpen(false)} />
@@ -225,8 +208,8 @@ export default function IntroScreen({ onStart }: IntroScreenProps) {
 }
 
 /**
- * StartButton — the primary forest CTA with a lime lift on hover (the shell's
- * reserved lime accent). Kept local so the hover state can be self-contained.
+ * StartButton — the primary forest CTA, LARGE, with the shell's reserved lime
+ * accent on hover. Kept local so the hover state stays self-contained.
  */
 function StartButton({ onClick }: { onClick: () => void }) {
   const [hover, setHover] = useState(false)
@@ -236,14 +219,14 @@ function StartButton({ onClick }: { onClick: () => void }) {
       onClick={onClick}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
-      className="group inline-flex items-center justify-center gap-2 rounded-xl px-6 py-3 text-sm font-semibold text-white transition-all"
+      className="group inline-flex w-full max-w-md items-center justify-center gap-2.5 rounded-2xl px-10 py-4 text-base font-semibold text-white transition-all"
       style={{
         backgroundColor: hover ? PALETTE.forest2 : PALETTE.forest,
         boxShadow: hover ? `0 0 0 2px ${PALETTE.lime}` : '0 1px 2px rgba(15,51,32,0.15)',
       }}
     >
       Start Application
-      <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+      <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-0.5" />
     </button>
   )
 }
