@@ -26,7 +26,7 @@
 
 'use client'
 
-import { useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { ShieldCheck, Video, Sparkles, Lock, ArrowRight, ArrowLeft, Loader2, CheckCircle2, RefreshCcw } from 'lucide-react'
 
 import { step3Schema, type Step3FormData } from '../../schemas'
@@ -86,20 +86,25 @@ export default function StepIdentity({
 
   const handleVerifyWithVideo = async () => {
     setVideo((v) => ({ ...v, status: 'starting', message: null }))
+    // Claim the popup SYNCHRONOUSLY (inside the click gesture) — calling
+    // window.open after the await trips popup blockers, which silently
+    // hijacked the flow into the same tab. NOTE: no 'noopener' — the popup
+    // must keep window.opener so /kyc/complete can post the result back.
+    const popup = window.open('', '_blank')
     try {
       const result = await startKycSession()
       if (result.enabled && result.url) {
-        // Didit is live — hand off to the hosted session (new tab keeps the
-        // wizard state alive here).
         setVideo({
           status: 'ready',
           kycSessionUrl: result.url,
           sessionId: result.sessionId ?? null,
           message: result.message ?? null,
         })
-        window.open(result.url, '_blank', 'noopener,noreferrer')
+        if (popup) popup.location.href = result.url
+        else window.open(result.url, '_blank')
         return
       }
+      popup?.close()
       // Unconfigured / errored → graceful fallback to manual uploads below.
       setVideo({
         status: 'unavailable',
@@ -110,6 +115,7 @@ export default function StepIdentity({
           'Video verification is coming soon — please upload your ID and selfie for now.',
       })
     } catch {
+      popup?.close()
       setVideo({
         status: 'unavailable',
         kycSessionUrl: null,
@@ -119,16 +125,15 @@ export default function StepIdentity({
     }
   }
 
-  /** Poll the Didit decision after they return from the hosted tab. */
-  const handleCheckStatus = async () => {
-    if (!video.sessionId) return
+  /** Verify a session's decision server-side and update the step state. */
+  const runDecisionCheck = useCallback(async (sessionId: string) => {
     setVideo((v) => ({ ...v, status: 'checking', message: null }))
     try {
-      const result = await checkKycSession(video.sessionId)
+      const result = await checkKycSession(sessionId)
       if (result.status === 'approved') {
         setErrors((prev) => ({ ...prev, idDocument: undefined, selfieWithId: undefined }))
-        setVideo((v) => ({ ...v, status: 'verified', message: null }))
-        onKycVerified?.(video.sessionId)
+        setVideo((v) => ({ ...v, status: 'verified', sessionId, message: null }))
+        onKycVerified?.(sessionId)
         return
       }
       const messages: Record<string, string> = {
@@ -152,7 +157,29 @@ export default function StepIdentity({
         message: 'Could not check the verification right now — try again in a moment.',
       }))
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [onKycVerified])
+
+  const handleCheckStatus = () => {
+    if (video.sessionId) void runDecisionCheck(video.sessionId)
   }
+
+  // The /kyc/complete popup posts { type:'didit:complete', sessionId } back
+  // to this tab when Didit finishes — auto-verify so the seller lands on an
+  // already-updated step with zero manual clicks.
+  const sessionIdRef = useRef<string | null>(null)
+  sessionIdRef.current = video.sessionId
+  useEffect(() => {
+    const onMessage = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin) return
+      const data = event.data as { type?: string; sessionId?: string }
+      if (data?.type !== 'didit:complete') return
+      const sessionId = data.sessionId || sessionIdRef.current
+      if (sessionId) void runDecisionCheck(sessionId)
+    }
+    window.addEventListener('message', onMessage)
+    return () => window.removeEventListener('message', onMessage)
+  }, [runDecisionCheck])
 
   const handleContinue = (e: React.FormEvent) => {
     e.preventDefault()

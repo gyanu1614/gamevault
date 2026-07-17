@@ -1,15 +1,46 @@
 /**
- * /kyc/complete — landing for the Didit hosted-verification NEW TAB. The
- * seller application (with all its wizard state) lives in the ORIGINAL tab,
- * so this page only confirms the hand-off and sends them back. Didit appends
- * ?verificationSessionId=…&status=… — cosmetic here; the wizard verifies the
- * decision server-side via checkKycSession.
+ * /kyc/complete — landing for the Didit hosted-verification popup/tab. Didit
+ * appends ?verificationSessionId=…&status=… here when the user finishes.
+ *
+ * This page's job is to get the user BACK INTO THE WIZARD with zero effort:
+ * it posts the session result to the opener (the application tab, which
+ * auto-verifies and flips the Identity step) and then closes itself. The
+ * visible card is only a fallback for when the window can't self-close
+ * (opened manually / no opener) — it offers a Return To Application link.
+ * The decision itself is always re-verified SERVER-side (checkKycSession);
+ * the status in the URL is never trusted.
  */
 
+'use client'
+
+import { useEffect, useState } from 'react'
 import Image from 'next/image'
-import { CheckCircle2 } from 'lucide-react'
+import { CheckCircle2, Loader2 } from 'lucide-react'
 
 export default function KycCompletePage() {
+  const [selfClosing, setSelfClosing] = useState(false)
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const sessionId = params.get('verificationSessionId')
+    const status = params.get('status')
+
+    if (window.opener && sessionId) {
+      // Hand the result back to the wizard tab (same-origin only).
+      try {
+        window.opener.postMessage(
+          { type: 'didit:complete', sessionId, status },
+          window.location.origin,
+        )
+        setSelfClosing(true)
+        // Give the message a beat to land, then close this tab.
+        setTimeout(() => window.close(), 900)
+      } catch {
+        /* opener gone — the fallback card below handles it */
+      }
+    }
+  }, [])
+
   return (
     <div
       className="flex min-h-screen items-center justify-center p-4"
@@ -32,15 +63,29 @@ export default function KycCompletePage() {
           className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full"
           style={{ backgroundColor: 'rgba(163,230,53,0.3)' }}
         >
-          <CheckCircle2 className="h-6 w-6" style={{ color: '#1B5E3A' }} />
+          {selfClosing ? (
+            <Loader2 className="h-6 w-6 animate-spin" style={{ color: '#1B5E3A' }} />
+          ) : (
+            <CheckCircle2 className="h-6 w-6" style={{ color: '#1B5E3A' }} />
+          )}
         </div>
         <h1 className="text-xl font-semibold" style={{ color: '#14432A' }}>
-          Verification Submitted
+          {selfClosing ? 'Returning You To Your Application…' : 'Verification Complete'}
         </h1>
         <p className="mt-2 text-sm leading-relaxed" style={{ color: '#5B6157' }}>
-          You can close this tab now. Head back to your application tab and
-          press <span className="font-semibold">Check Status</span> to continue.
+          {selfClosing
+            ? 'This tab will close itself — your application picks up right where you left off.'
+            : 'Head back to your application to continue.'}
         </p>
+        {!selfClosing && (
+          <a
+            href="/account/become-seller"
+            className="mt-6 inline-flex items-center justify-center rounded-xl px-6 py-2.5 text-sm font-semibold text-white"
+            style={{ backgroundColor: '#14432A' }}
+          >
+            Return To Application
+          </a>
+        )}
       </div>
     </div>
   )
