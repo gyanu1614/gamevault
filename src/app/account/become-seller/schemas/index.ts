@@ -258,8 +258,7 @@ export const sellingExperienceSchema = z.object({
   sellingExperience: z
     .string()
     .trim()
-    .min(1, 'Tell us about your selling experience')
-    .min(60, 'A few lines, please — marketplaces, store links, or a short summary')
+    .min(1, 'Tell us about your selling experience — or tap No Experience')
     .max(600, 'Keep it under 600 characters'),
 })
 

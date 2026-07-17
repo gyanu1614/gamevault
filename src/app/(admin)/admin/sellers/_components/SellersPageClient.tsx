@@ -4,12 +4,12 @@
  * Forest Ledger — /admin/sellers page client (approved mockup ②).
  *
  * The list lives in a single forest frame: a forest-gradient header band
- * (title + segmented status tabs with live counts) over white ledger
+ * (title + segmented status tabs with live counts) over forest-glass
  * rows on the deep-forest canvas. Filtering, react-query caching and
  * pagination are unchanged from V54 — this is a restyle:
  *   - stat cards → segmented tabs (All / Pending / Changes / Approved /
  *     Rejected / Restricted), counts from the same stats query
- *   - table → store-first white rows (ApplicationsTable)
+ *   - table → store-first forest-glass rows (ApplicationsTable)
  */
 
 import { useState } from 'react'

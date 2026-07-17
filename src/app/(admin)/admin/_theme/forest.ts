@@ -1,10 +1,10 @@
 /**
  * ADMIN_FOREST — the Forest Ledger theme for the admin redesign.
  *
- * Single source of truth for the deep-forest admin world (approved mockup:
- * admin-forest-mockup.html). Deep-forest canvas (never flat black), white
- * "paper" ledger cards with ivory insets, lime accents (lime-deep on white
- * surfaces), amber/red status tints.
+ * Single source of truth for the deep-forest admin world. Deep-forest
+ * canvas (never flat black), FOREST GLASS ledger cards (translucent white
+ * glass on the canvas — no solid white surfaces), lime accents, amber/red
+ * status tints tuned for dark surfaces.
  *
  * Plain TS — safe to import from server components, client components and
  * server actions alike. Inter only; Title Case labels.
@@ -29,22 +29,21 @@ export const ADMIN_FOREST = {
   /** Bright end of the hero gradient (105deg forest3 → forest → forestHi). */
   forestHi: '#1A5434',
 
-  /** Light card surfaces. */
-  paper: '#FFFFFF',
-  ivory: '#FAFAF7',
-  /** Hairline between light surfaces. */
-  line: '#E4E5DE',
-  /** Inner hairline on light rows (games list separators). */
-  lineSoft: '#F0F1EA',
+  /** Forest-glass card surface (translucent white on the canvas). */
+  glass: 'rgba(255,255,255,0.05)',
+  /** Glass card border. */
+  glassLine: 'rgba(255,255,255,0.09)',
+  /** Glass inset surface (quotes, signature box, kv tiles). */
+  glassInset: 'rgba(255,255,255,0.04)',
+  /** Hairline between glass surfaces / list separators. */
+  line: 'rgba(255,255,255,0.08)',
+  lineSoft: 'rgba(255,255,255,0.08)',
 
-  /** Ink scale — text ON white/ivory cards. */
-  ink: '#1A1D19',
-  ink2: '#5B6157',
-  ink3: '#8A9083',
-
-  /** Lime accents. On dark surfaces use lime; meters/ticks on white use limeDeep. */
+  /** Lime accents. Lime on dark; limeDeep anchors gradient meters. */
   lime: '#A3E635',
   limeDeep: '#65A30D',
+  /** Pale lime — lime-tinted text on dark (signature script, consent chips). */
+  limePale: '#D9F99D',
 
   /** White text scale — ON forest/dark surfaces. */
   white1: 'rgba(255,255,255,0.92)',
@@ -53,12 +52,12 @@ export const ADMIN_FOREST = {
   /** Hairline on dark surfaces. */
   hair: 'rgba(255,255,255,0.09)',
 
-  /** Status tints. */
+  /** Status tints (dark-surface variants). */
   amber: '#F59E0B',
-  amberInk: '#92400E',
-  amberBg: '#FEF3C7',
+  amberInk: '#FCD34D',
+  amberBg: 'rgba(245,158,11,0.16)',
   red: '#B42318',
-  redBg: '#FEF2F1',
+  redBg: 'rgba(180,35,24,0.2)',
   /** Soft red for ghost-destructive text/borders on dark surfaces. */
   redSoft: '#FCA5A5',
   /** Amber chip text on dark surfaces. */
@@ -97,8 +96,8 @@ export const FOREST_BG = {
   /** Fallback store-image tile (initial on forest gradient). */
   storeTile: 'linear-gradient(140deg, #2C7A4B, #14432A)',
 
-  /** Doc thumb placeholder (PDF / no preview). */
-  docThumb: 'linear-gradient(140deg, #E9EBE2, #D8DCCE)',
+  /** Doc thumb placeholder (PDF / no preview) — dark glass tile. */
+  docThumb: 'rgba(255,255,255,0.06)',
 } as const
 
 // ─── Tailwind-compatible class snippets ──────────────────────────────────────
@@ -108,18 +107,20 @@ export const FOREST_BG = {
 // class can't express layered backgrounds.
 
 export const FOREST_CLASSES = {
-  /** White ledger card on the forest canvas. */
-  card: 'rounded-[14px] bg-white p-5 text-[#1A1D19]',
-  /** Card heading (forest ink, 14px extrabold). */
-  cardTitle: 'flex items-center gap-2 text-[14px] font-extrabold text-[#14432A]',
+  /** Forest-glass ledger card on the canvas. */
+  card: 'rounded-[14px] border border-white/[0.09] bg-white/[0.05] p-5 text-white/90 backdrop-blur-sm',
+  /** Hover state for interactive glass surfaces (list rows). */
+  cardHover: 'hover:border-white/[0.14] hover:bg-white/[0.08]',
+  /** Card heading (white on glass, 14px extrabold). */
+  cardTitle: 'flex items-center gap-2 text-[14px] font-extrabold text-white',
   /** Card sub-line under the heading. */
-  cardSub: 'text-[11.5px] text-[#8A9083]',
-  /** Ivory inset (quotes, signature block, notes textarea). */
-  inset: 'rounded-[11px] bg-[#FAFAF7]',
+  cardSub: 'text-[11.5px] text-white/40',
+  /** Glass inset (quotes, signature block, reference rows, kv tiles). */
+  inset: 'rounded-[11px] border border-white/[0.08] bg-white/[0.04]',
 
   /** KV grid key / value (payout + applicant cards). */
-  kvKey: 'text-[10.5px] font-bold uppercase tracking-[0.07em] text-[#8A9083]',
-  kvValue: 'mt-0.5 text-[13px] font-semibold text-[#1A1D19]',
+  kvKey: 'text-[10.5px] font-bold uppercase tracking-[0.07em] text-white/40',
+  kvValue: 'mt-0.5 text-[13px] font-semibold text-white/90',
   /** Masked account numbers / refs. */
   mono: 'font-mono text-[12px]',
 
@@ -131,24 +132,24 @@ export const FOREST_CLASSES = {
   btnReject:
     'rounded-[10px] border border-[#FCA5A5]/35 bg-transparent px-[18px] py-2.5 text-[13px] font-bold text-[#FCA5A5] hover:bg-[#FCA5A5]/10 transition',
 
-  /** Verification check chips (meter card). */
+  /** Verification check chips (meter strip, on glass). */
   checkOk:
-    'inline-flex items-center gap-1.5 rounded-full bg-[#A3E635]/[0.16] px-3 py-1.5 text-[12px] font-semibold text-[#14432A]',
+    'inline-flex items-center gap-1.5 rounded-full bg-[#A3E635]/[0.15] px-3 py-1.5 text-[12px] font-semibold text-[#D9F99D]',
   checkOpen:
-    'inline-flex items-center gap-1.5 rounded-full border border-[#E4E5DE] px-3 py-1.5 text-[12px] font-semibold text-[#5B6157]',
+    'inline-flex items-center gap-1.5 rounded-full border border-white/20 px-3 py-1.5 text-[12px] font-semibold text-white/60',
   checkNa:
-    'inline-flex items-center gap-1.5 rounded-full border border-[#E4E5DE] px-3 py-1.5 text-[12px] font-semibold text-[#5B6157] opacity-45',
+    'inline-flex items-center gap-1.5 rounded-full border border-white/20 px-3 py-1.5 text-[12px] font-semibold text-white/35',
 
   /** Per-game category chip. */
   gameCat:
-    'rounded-md bg-[#14432A]/[0.08] px-2 py-[2.5px] text-[10.5px] font-bold text-[#14432A]',
-  /** Amber "Other Games" free-text chip. */
+    'rounded-md bg-white/[0.08] px-2 py-[2.5px] text-[10.5px] font-bold text-white/80',
+  /** Amber "Other Games" free-text chip (amber-on-dark). */
   gameCatOther:
-    'rounded-md bg-[#FEF3C7] px-2 py-[2.5px] text-[10.5px] font-bold text-[#92400E]',
+    'rounded-md bg-[#F59E0B]/[0.16] px-2 py-[2.5px] text-[10.5px] font-bold text-[#FCD34D]',
 
   /** Consent tick chip (agreement card). */
   consent:
-    'rounded-md bg-[#A3E635]/[0.18] px-2.5 py-[3px] text-[10.5px] font-bold text-[#14432A]',
+    'rounded-md bg-[#A3E635]/[0.15] px-2.5 py-[3px] text-[10.5px] font-bold text-[#D9F99D]',
 
   /** Sidebar nav item + active state (lime inset rail). */
   navItem:
@@ -169,40 +170,47 @@ export type ForestChipStatus =
 interface ForestStatusChip {
   /** Title Case label. */
   label: string
-  /** Chip classes on DARK (hero/forest) surfaces. */
+  /** Chip classes on DARK (hero/forest/glass) surfaces. */
   onDark: string
-  /** Chip classes on LIGHT (white row) surfaces. */
+  /**
+   * Legacy alias — every admin surface is forest glass now, so the
+   * "light" variant is the same dark-tuned chip. Prefer onDark.
+   */
   onLight: string
 }
 
 const chipBase =
   'inline-flex items-center gap-1.5 rounded-full px-[11px] py-1 text-[11.5px] font-bold'
 
+const CHIP_PENDING = `${chipBase} bg-[#F59E0B]/[0.16] text-[#FCD34D]`
+const CHIP_APPROVED = `${chipBase} bg-[#A3E635]/[0.16] text-[#BEF264]`
+const CHIP_REJECTED = `${chipBase} bg-[#B42318]/20 text-[#FCA5A5]`
+
 export const FOREST_STATUS_CHIPS: Record<ForestChipStatus, ForestStatusChip> = {
   pending: {
     label: 'Pending Review',
-    onDark: `${chipBase} bg-[#F59E0B]/[0.18] text-[#FCD34D]`,
-    onLight: `${chipBase} bg-[#FEF3C7] text-[#92400E]`,
+    onDark: CHIP_PENDING,
+    onLight: CHIP_PENDING,
   },
   under_review: {
     label: 'Under Review',
-    onDark: `${chipBase} bg-[#F59E0B]/[0.18] text-[#FCD34D]`,
-    onLight: `${chipBase} bg-[#FEF3C7] text-[#92400E]`,
+    onDark: CHIP_PENDING,
+    onLight: CHIP_PENDING,
   },
   info_requested: {
     label: 'Changes Requested',
-    onDark: `${chipBase} bg-white/[0.14] text-white/85`,
-    onLight: `${chipBase} bg-[#E4E5DE]/60 text-[#5B6157]`,
+    onDark: CHIP_PENDING,
+    onLight: CHIP_PENDING,
   },
   approved: {
     label: 'Approved',
-    onDark: `${chipBase} bg-[#A3E635]/[0.16] text-[#A3E635]`,
-    onLight: `${chipBase} bg-[#A3E635]/25 text-[#14432A]`,
+    onDark: CHIP_APPROVED,
+    onLight: CHIP_APPROVED,
   },
   rejected: {
     label: 'Rejected',
-    onDark: `${chipBase} bg-[#B42318]/25 text-[#FCA5A5]`,
-    onLight: `${chipBase} bg-[#FEF2F1] text-[#B42318]`,
+    onDark: CHIP_REJECTED,
+    onLight: CHIP_REJECTED,
   },
 }
 
