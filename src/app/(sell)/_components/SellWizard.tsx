@@ -81,23 +81,25 @@ const STEPS = [
   { id: 3, label: 'Details',  hint: 'Tell us about the offer' },
 ] as const
 
+// `short` is the compact mobile label — grid-cols-3 at 360px leaves ~85px
+// per tile, so "30 Minutes" clips; sm+ keeps the full label.
 const DELIVERY_TIMES = [
-  { value: '20min', label: '20 Minutes' },
-  { value: '1hr',   label: '1 Hour' },
-  { value: '3hr',   label: '3 Hours' },
-  { value: '6hr',   label: '6 Hours' },
-  { value: '12hr',  label: '12 Hours' },
-  { value: '24hr',  label: '1 Day' },
+  { value: '20min', label: '20 Minutes', short: '20 Min' },
+  { value: '1hr',   label: '1 Hour',     short: '1 Hr' },
+  { value: '3hr',   label: '3 Hours',    short: '3 Hrs' },
+  { value: '6hr',   label: '6 Hours',    short: '6 Hrs' },
+  { value: '12hr',  label: '12 Hours',   short: '12 Hrs' },
+  { value: '24hr',  label: '1 Day',      short: '1 Day' },
 ]
 
 // V13 — Currency sellers think in minutes. Tighter preset grid.
 const DELIVERY_TIMES_CURRENCY = [
-  { value: 'instant', label: 'Instant' },
-  { value: '5min',    label: '5 Minutes' },
-  { value: '15min',   label: '15 Minutes' },
-  { value: '30min',   label: '30 Minutes' },
-  { value: '1hr',     label: '1 Hour' },
-  { value: 'custom',  label: 'Custom' },
+  { value: 'instant', label: 'Instant',    short: 'Instant' },
+  { value: '5min',    label: '5 Minutes',  short: '5 Min' },
+  { value: '15min',   label: '15 Minutes', short: '15 Min' },
+  { value: '30min',   label: '30 Minutes', short: '30 Min' },
+  { value: '1hr',     label: '1 Hour',     short: '1 Hr' },
+  { value: 'custom',  label: 'Custom',     short: 'Custom' },
 ]
 
 const RECENT_GAMES_KEY = 'gv_sell_recent_games'
@@ -244,8 +246,10 @@ function StepBar({ step, onJumpToStep }: { step: number; onJumpToStep: (target: 
                 disabled={!clickable && !active}
                 onClick={() => clickable && onJumpToStep(s.id)}
                 className={cn(
-                  // Layout — no border, no background fill by default
-                  'group flex w-full items-center justify-center gap-1.5 rounded-md px-1.5 py-1.5 text-[10px] font-semibold uppercase tracking-wider transition-colors sm:gap-2 sm:px-3 sm:text-xs',
+                  // Layout — no border, no background fill by default.
+                  // min-h-[36px] + text-xs keep the completed-step jump
+                  // readable and reliably tappable on phones.
+                  'group flex min-h-[36px] w-full items-center justify-center gap-1.5 rounded-md px-1.5 py-2 text-xs font-semibold uppercase tracking-wider transition-colors sm:gap-2 sm:px-3',
                   // State — color only, no enclosing pill
                   active && 'text-lime-text',
                   done && 'cursor-pointer text-text-secondary hover:bg-bg-raised-hover hover:text-text-primary',
@@ -255,13 +259,13 @@ function StepBar({ step, onJumpToStep }: { step: number; onJumpToStep: (target: 
               >
                 <span
                   className={cn(
-                    'flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[9px] font-bold sm:h-5 sm:w-5 sm:text-[10px]',
+                    'flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold',
                     active && 'bg-lime text-text-inverse',
                     done && 'bg-success text-text-inverse',
                     !active && !done && 'border border-border-default text-text-tertiary',
                   )}
                 >
-                  {done ? <Check className="h-2.5 w-2.5 sm:h-3 sm:w-3" strokeWidth={3} /> : s.id}
+                  {done ? <Check className="h-3 w-3" strokeWidth={3} /> : s.id}
                 </span>
                 <span className="truncate">{s.label}</span>
               </button>
@@ -1035,7 +1039,7 @@ export default function SellWizard({
   // gone (V19/P13), that empty band was reachable as the user could
   // scroll up into nothing. pt-20 = navbar height + 16px breath.
   return (
-    <main className="mx-auto w-full max-w-4xl px-3 pb-24 pt-20 sm:px-6 sm:pt-20 lg:max-w-5xl lg:pt-20">
+    <main className="mx-auto w-full max-w-4xl px-3 pb-[calc(6rem+env(safe-area-inset-bottom))] pt-20 sm:px-6 sm:pb-24 sm:pt-20 lg:max-w-5xl lg:pt-20">
       {/* Wizard card — elevated grey surface on bg-bg-base. Per spec §2,
           no lime tint on the wrapper; sub-cards inside go one shade deeper
           (bg-bg-overlay) for visual hierarchy.
@@ -1315,7 +1319,9 @@ export default function SellWizard({
       <div className={cn(
         // Mobile sticky bar
         'fixed inset-x-0 bottom-0 z-40 flex items-center justify-between gap-2',
-        'border-t border-border-subtle bg-bg-raised/95 px-3 py-3 backdrop-blur',
+        // pb includes the iPhone home-indicator inset so the CTAs never sit
+        // under the gesture bar; sm:pb-0 below restores the desktop inline row.
+        'border-t border-border-subtle bg-bg-raised/95 px-3 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur',
         // Desktop inline
         'sm:relative sm:mt-3 sm:bg-transparent sm:px-0 sm:pt-3 sm:pb-0 sm:backdrop-blur-none',
       )}>
@@ -1324,7 +1330,7 @@ export default function SellWizard({
             type="button"
             onClick={() => setStep((s) => Math.max(1, s - 1))}
             disabled={submitting}
-            className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-border-default bg-bg-raised px-3 text-sm font-medium text-text-primary transition-colors hover:bg-bg-raised-hover disabled:opacity-40 sm:px-4"
+            className="inline-flex h-11 items-center gap-1.5 rounded-xl border border-border-default bg-bg-raised px-3 text-sm font-medium text-text-primary transition-colors hover:bg-bg-raised-hover disabled:opacity-40 sm:h-10 sm:px-4"
           >
             <ChevronLeft className="h-4 w-4" />
             Back
@@ -1336,7 +1342,7 @@ export default function SellWizard({
           // hover so it doesn't compete with Continue.
           <Link
             href="/sell/bulk"
-            className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-border-default bg-bg-raised px-3 text-sm font-medium text-text-secondary transition-colors hover:border-lime-tint-border hover:text-lime-text sm:px-4"
+            className="inline-flex h-11 items-center gap-1.5 rounded-xl border border-border-default bg-bg-raised px-3 text-sm font-medium text-text-secondary transition-colors hover:border-lime-tint-border hover:text-lime-text sm:h-10 sm:px-4"
           >
             <FileSpreadsheet className="h-4 w-4" />
             Bulk upload
@@ -1349,7 +1355,7 @@ export default function SellWizard({
             onClick={() => setStep((s) => Math.min(3, s + 1))}
             disabled={!canGoNext}
             className={cn(
-              'inline-flex h-10 items-center gap-1.5 rounded-xl px-4 text-sm font-semibold transition-all sm:px-5',
+              'inline-flex h-11 items-center gap-1.5 rounded-xl px-4 text-sm font-semibold transition-all sm:h-10 sm:px-5',
               canGoNext
                 ? 'bg-lime text-text-inverse shadow-lg shadow-elevated hover:bg-lime-hover hover:shadow-glow'
                 : 'cursor-not-allowed bg-bg-raised text-text-disabled'
@@ -1490,7 +1496,7 @@ function Step1Category({
               <div className="flex items-center gap-1.5">
                 <span className="truncate text-sm font-semibold text-text-primary sm:text-base">{c.name}</span>
                 {disabled && (
-                  <span className="inline-flex shrink-0 items-center rounded-full border border-warning bg-warning-bg px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wider text-warning">
+                  <span className="inline-flex shrink-0 items-center rounded-full border border-warning bg-warning-bg px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wider text-warning">
                     Soon
                   </span>
                 )}
@@ -1576,20 +1582,21 @@ function Step2Game({
           value={filter}
           onChange={(e) => onFilter(e.target.value)}
           placeholder={`Search games that sell ${category.name.toLowerCase()}…`}
-          className="h-11 w-full rounded-md border border-border-default bg-transparent pl-9 pr-3 text-sm text-text-primary placeholder:text-text-tertiary transition-colors focus:border-lime focus:outline-none focus:ring-2 focus:ring-lime-tint-bg"
+          className="h-11 w-full rounded-md border border-border-default bg-transparent pl-9 pr-3 text-base sm:text-sm text-text-primary placeholder:text-text-tertiary transition-colors focus:border-lime focus:outline-none focus:ring-2 focus:ring-lime-tint-bg"
         />
       </div>
 
       {/* Popular / Recent tabs */}
       <div className="flex items-center gap-1 rounded-xl border border-border-default bg-bg-base p-1">
         <SortTab active={sortMode === 'popular'} onClick={() => onSortMode('popular')} icon={Flame} label="Popular" />
+        {/* Recent stays enabled even when empty — a native title tooltip
+            never shows on touch, so the empty state below explains it
+            inline instead of a dead greyed-out tab. */}
         <SortTab
           active={sortMode === 'recent'}
           onClick={() => onSortMode('recent')}
           icon={History}
           label="Recent"
-          disabled={!hasRecent}
-          hint={!hasRecent ? 'Use the wizard once to see recent games here' : undefined}
         />
       </div>
 
@@ -1597,6 +1604,11 @@ function Step2Game({
         <div className="rounded-2xl border border-border-subtle bg-bg-base p-10 text-center text-sm text-text-tertiary">
           <Loader2 className="mx-auto mb-2 h-5 w-5 animate-spin text-lime-text" />
           Loading games…
+        </div>
+      ) : sortMode === 'recent' && !hasRecent ? (
+        <div className="rounded-2xl border border-border-subtle bg-bg-base p-10 text-center text-sm text-text-tertiary">
+          <History className="mx-auto mb-2 h-5 w-5 text-text-disabled" />
+          No recent games yet — games you pick in the wizard will show up here.
         </div>
       ) : ordered.length === 0 ? (
         <div className="rounded-2xl border border-border-subtle bg-bg-base p-10 text-center text-sm text-text-tertiary">
@@ -1672,27 +1684,22 @@ function Step2Game({
 }
 
 function SortTab({
-  active, onClick, icon: Icon, label, disabled, hint,
+  active, onClick, icon: Icon, label,
 }: {
   active: boolean
   onClick: () => void
   icon: React.ComponentType<{ className?: string }>
   label: string
-  disabled?: boolean
-  hint?: string
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      disabled={disabled}
-      title={hint}
       className={cn(
-        'inline-flex h-8 items-center gap-1.5 rounded-lg px-3 text-xs font-semibold transition-colors',
+        'inline-flex h-9 items-center gap-1.5 rounded-lg px-3 text-xs font-semibold transition-colors sm:h-8',
         active
           ? 'bg-lime-tint-bg text-lime-text'
           : 'text-text-secondary hover:text-text-primary',
-        disabled && 'cursor-not-allowed opacity-40 hover:text-text-secondary'
       )}
     >
       <Icon className="h-3.5 w-3.5" />
@@ -1718,7 +1725,7 @@ function PillRow<T extends { value: string; label: string }>({
             type="button"
             onClick={() => onChange(o.value)}
             className={cn(
-              'h-8 rounded-full border px-3 text-xs font-medium transition-colors',
+              'h-9 rounded-full border px-3 text-xs font-medium transition-colors sm:h-8',
               on
                 ? 'border-lime-tint-border bg-lime-tint-bg text-lime-text'
                 : 'border-border-default bg-bg-raised text-text-secondary hover:text-text-primary'
@@ -1804,9 +1811,11 @@ function FieldCard({
   // read as a black hole sitting inside the lime rail. Switching to a
   // slightly raised tone (bg-bg-overlay/30) keeps the hierarchy cue
   // without the heavy contrast.
+  // Mobile trims the nested shell padding (~18px saved per level) so
+  // depth-2 inputs keep a usable width inside a 360px viewport.
   const shell = depth === 0
     ? ''
-    : 'rounded-xl border border-border-subtle bg-bg-overlay/30 p-4'
+    : 'rounded-xl border border-border-subtle bg-bg-overlay/30 p-3 sm:p-4'
 
   return (
     <motion.div
@@ -1856,8 +1865,8 @@ function FieldCard({
                 eyebrow signal "this group depends on the parent". The
                 eyebrow now sits on its own line above the cards with
                 a clear breath, not crammed against them. */}
-            <div className="mt-4 border-l-2 border-lime-tint-border pl-4">
-              <div className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-text-tertiary">
+            <div className="mt-4 border-l-2 border-lime-tint-border pl-3 sm:pl-4">
+              <div className="mb-3 text-xs font-semibold uppercase tracking-wider text-text-tertiary">
                 <span className="text-text-secondary">{attribute.name}:</span>{' '}
                 <span className="text-lime-text">{labelFor(attribute, currentValue as string)}</span>
               </div>
@@ -1927,7 +1936,7 @@ function FieldInput({
   return (
     <div>
       <label className="mb-1.5 block">
-        <span className="text-[11px] font-semibold uppercase tracking-wider text-text-secondary">
+        <span className="text-xs font-semibold uppercase tracking-wider text-text-secondary">
           {attribute.name}
           {attribute.is_required && <span className="ml-1 text-error">*</span>}
         </span>
@@ -2052,7 +2061,7 @@ function FieldInput({
                     <ImageIcon className="h-5 w-5 text-text-disabled" />
                   )}
                 </div>
-                <span className="line-clamp-1 text-[11px] text-text-primary">{o.label}</span>
+                <span className="line-clamp-1 text-xs text-text-primary">{o.label}</span>
               </button>
             )
           })}
@@ -2299,7 +2308,7 @@ function Step4Publish(p: Step4Props) {
               </p>
               <Link
                 href={`/sell/edit/${p.existingBundleListingId}`}
-                className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-lime-tint-border bg-lime-tint-bg px-3 py-1.5 text-[12.5px] font-semibold text-lime-text transition-colors hover:bg-lime-tint-bg/80"
+                className="inline-flex min-h-[36px] shrink-0 items-center gap-1.5 rounded-lg border border-lime-tint-border bg-lime-tint-bg px-3 py-1.5 text-[12.5px] font-semibold text-lime-text transition-colors hover:bg-lime-tint-bg/80 sm:min-h-0"
               >
                 Update it
                 <ArrowRight className="h-3.5 w-3.5" />
@@ -2388,22 +2397,27 @@ function Step4Publish(p: Step4Props) {
       {!isCurrency && (
       <SubCard
         title="Photos"
-        right={<span className="text-[10px] text-text-tertiary">{p.images.length}/5</span>}
+        right={<span className="text-xs text-text-tertiary">{p.images.length}/5</span>}
       >
         <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
           {p.images.map((src, i) => (
             <div key={i} className="group relative aspect-square overflow-hidden rounded-xl border border-border-default">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={src} alt="" className="h-full w-full object-cover" />
+              {/* Remove — always visible on touch (hover-reveal only at sm+),
+                  36px hitbox around the 24px visual circle. */}
               <button
                 type="button"
                 onClick={() => p.onRemoveImage(i)}
-                className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-error text-text-primary opacity-0 transition-opacity group-hover:opacity-100"
+                aria-label="Remove photo"
+                className="absolute right-0 top-0 flex h-9 w-9 items-center justify-center opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
               >
-                <IconX className="h-3 w-3" />
+                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-error text-text-primary">
+                  <IconX className="h-3 w-3" />
+                </span>
               </button>
               {i === 0 && (
-                <span className="absolute bottom-1.5 left-1.5 rounded-full bg-lime px-1.5 py-0.5 text-[9px] font-bold text-text-inverse">
+                <span className="absolute bottom-1.5 left-1.5 rounded-full bg-lime px-1.5 py-0.5 text-[10px] font-bold text-text-inverse">
                   Main
                 </span>
               )}
@@ -2416,7 +2430,7 @@ function Step4Publish(p: Step4Props) {
               ) : (
                 <>
                   <Upload className="h-5 w-5 text-text-tertiary" />
-                  <span className="text-[10px] text-text-tertiary">Upload</span>
+                  <span className="text-xs text-text-tertiary">Upload</span>
                 </>
               )}
               <input
@@ -2465,7 +2479,7 @@ function Step4Publish(p: Step4Props) {
               <div className="grid gap-4 sm:grid-cols-2">
                 {/* Price */}
                 <div className="space-y-1.5">
-                  <label className="block text-[11px] font-semibold uppercase tracking-wider text-text-secondary">
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-text-secondary">
                     Price <span className="text-error">*</span>
                   </label>
                   {/* V19/P24/P7.c — NumberField-style trailing
@@ -2489,7 +2503,7 @@ function Step4Publish(p: Step4Props) {
                       min="0"
                       aria-invalid={priceInvalid || undefined}
                       aria-required
-                      className="flex-1 bg-transparent px-3 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none"
+                      className="flex-1 bg-transparent px-3 text-base sm:text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none"
                     />
                     <span className="flex items-center gap-1 border-l border-border-default bg-bg-inset px-3 text-sm font-semibold text-text-secondary">
                       <DollarSign className="h-3.5 w-3.5" /> USD
@@ -2513,7 +2527,7 @@ function Step4Publish(p: Step4Props) {
                 </div>
                 {/* Stock */}
                 <div className="space-y-1.5">
-                  <label className="block text-[11px] font-semibold uppercase tracking-wider text-text-secondary">
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-text-secondary">
                     <Package className="mr-1 inline h-3.5 w-3.5" /> Stock
                   </label>
                   <NumberField
@@ -2531,7 +2545,7 @@ function Step4Publish(p: Step4Props) {
                   on it. Renders as a single-column row below. */}
               {p.categorySlug === 'top-up' && (
                 <div className="mt-4 space-y-1.5">
-                  <label className="block text-[11px] font-semibold uppercase tracking-wider text-text-secondary">
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-text-secondary">
                     Original price{' '}
                     <span className="font-normal normal-case tracking-normal text-text-disabled">
                       (optional)
@@ -2583,7 +2597,7 @@ function Step4Publish(p: Step4Props) {
             for free. The visual treatment (icon + title + subtitle in
             a lime-tinted card on select) is preserved. */}
         <div className="space-y-1.5">
-          <label className="block text-[11px] font-semibold uppercase tracking-wider text-text-secondary">
+          <label className="block text-xs font-semibold uppercase tracking-wider text-text-secondary">
             Delivery method
           </label>
           <RadioGroup
@@ -2640,7 +2654,7 @@ function Step4Publish(p: Step4Props) {
           const customActive = hasCustomOption && !presets.some((t) => t.value === p.deliveryTime)
           return (
             <div className="mt-5 space-y-2">
-              <label className="block text-[11px] font-semibold uppercase tracking-wider text-text-secondary">
+              <label className="block text-xs font-semibold uppercase tracking-wider text-text-secondary">
                 Delivery window
               </label>
               <RadioGroup
@@ -2654,14 +2668,16 @@ function Step4Publish(p: Step4Props) {
                     <label
                       key={t.value}
                       className={cn(
-                        'flex h-10 cursor-pointer items-center justify-center rounded-xl border text-sm font-medium transition-colors',
+                        'flex h-10 cursor-pointer items-center justify-center rounded-xl border px-1 text-[13px] font-medium transition-colors sm:text-sm',
                         on
                           ? 'border-lime bg-lime-tint-bg text-lime-text'
                           : 'border-border-default bg-bg-inset text-text-secondary hover:border-border-strong hover:text-text-primary',
                       )}
                     >
                       <RadioGroupItem value={t.value} className="sr-only" />
-                      {t.label}
+                      {/* Compact label on phones; full label at sm+. */}
+                      <span className="sm:hidden">{t.short}</span>
+                      <span className="hidden sm:inline">{t.label}</span>
                     </label>
                   )
                 })}
@@ -2702,7 +2718,15 @@ function Step4Publish(p: Step4Props) {
       {/* V19/P24/P7.b — Custom delivery dialog. Replaces window.prompt().
           Submits `<n>min` into deliveryTime (matches preset format). */}
       <Dialog open={customOpen} onOpenChange={setCustomOpen}>
-        <DialogContent className="sm:max-w-sm">
+        <DialogContent
+          className="sm:max-w-sm"
+          // Below sm the dialog is a bottom sheet — auto-focusing the input
+          // would pop the soft keyboard and shove/scroll-jump the sheet, so
+          // only let Radix run its default autofocus at sm+.
+          onOpenAutoFocus={(e) => {
+            if (!window.matchMedia('(min-width: 640px)').matches) e.preventDefault()
+          }}
+        >
           <DialogHeader>
             <DialogTitle>Custom delivery window</DialogTitle>
             <DialogDescription>
@@ -2710,12 +2734,11 @@ function Step4Publish(p: Step4Props) {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-1.5">
-            <label className="block text-[11px] font-semibold uppercase tracking-wider text-text-secondary">
+            <label className="block text-xs font-semibold uppercase tracking-wider text-text-secondary">
               Minutes
             </label>
             <input
               type="number"
-              autoFocus
               min={1}
               max={1440}
               step={1}
@@ -2787,7 +2810,7 @@ function FieldHint({ children, className }: { children: React.ReactNode; classNa
   return (
     <p
       className={cn(
-        'rounded-md border border-border-subtle bg-bg-inset px-2.5 py-1.5 text-[11px] leading-snug text-text-tertiary',
+        'rounded-md border border-border-subtle bg-bg-inset px-2.5 py-1.5 text-xs leading-snug text-text-tertiary',
         className,
       )}
     >
@@ -2805,7 +2828,7 @@ function FieldError({ children, className }: { children: React.ReactNode; classN
     <p
       role="alert"
       className={cn(
-        'rounded-md border border-error/40 bg-error-bg px-2.5 py-1.5 text-[11px] leading-snug text-error',
+        'rounded-md border border-error/40 bg-error-bg px-2.5 py-1.5 text-xs leading-snug text-error',
         className,
       )}
     >
@@ -2889,7 +2912,7 @@ function PolicyStatusFooter({ policy }: { policy: SellerPublishPolicy | null }) 
     : `${policy.active_count} active`
 
   return (
-    <div className="inline-flex items-center gap-1.5 text-[11px] text-text-tertiary">
+    <div className="inline-flex items-center gap-1.5 text-xs text-text-tertiary">
       <span className="h-1.5 w-1.5 rounded-full bg-success" />
       <span>
         Auto-publishing as <span className="font-medium text-text-secondary">{tierLabel}</span>
@@ -2942,10 +2965,10 @@ function BuyerCardPreview({
   return (
     <div className="rounded-2xl border border-border-subtle bg-bg-inset p-3 sm:p-4">
       <div className="mb-2 flex items-center justify-between">
-        <div className="text-[11px] font-semibold uppercase tracking-wider text-text-tertiary">
+        <div className="text-xs font-semibold uppercase tracking-wider text-text-tertiary">
           Buyer preview
         </div>
-        <div className="text-[10px] text-text-tertiary">Updates live</div>
+        <div className="text-xs text-text-tertiary">Updates live</div>
       </div>
 
       {/* The card itself — pointer-events-none on the whole thing so nothing
@@ -3080,7 +3103,7 @@ function PriceGuidanceCard({
 
   return (
     <div className="mt-3 rounded-xl border border-border-subtle bg-bg-inset p-3">
-      <div className="mb-2 flex items-center justify-between text-[11px] font-semibold uppercase tracking-wider text-text-tertiary">
+      <div className="mb-2 flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-text-tertiary">
         <span>Recent sales</span>
         <span>{sample_size} sold · last 60 days</span>
       </div>
@@ -3111,13 +3134,13 @@ function PriceGuidanceCard({
       </div>
 
       {/* Labels */}
-      <div className="mt-1.5 flex justify-between text-[10px] tabular-nums text-text-tertiary">
+      <div className="mt-1.5 flex justify-between text-xs tabular-nums text-text-tertiary">
         <span>${p25.toFixed(2)}</span>
         <span>median ${median.toFixed(2)}</span>
         <span>${p75.toFixed(2)}</span>
       </div>
 
-      <p className={cn('mt-2 text-[11px] leading-snug', toneClass)}>{toneCopy}</p>
+      <p className={cn('mt-2 text-xs leading-snug', toneClass)}>{toneCopy}</p>
     </div>
   )
 }
@@ -3258,7 +3281,7 @@ function PlatformTileRows({
         const value = values[kind]
         return (
           <div key={kind} className="space-y-2">
-            <label className="block text-[11px] font-semibold uppercase tracking-wider text-text-secondary">
+            <label className="block text-xs font-semibold uppercase tracking-wider text-text-secondary">
               {TILE_KIND_LABELS[kind]} <span className="text-error">*</span>
             </label>
             <RadioGroup
@@ -3307,5 +3330,7 @@ function PlatformTileRows({
 // R14 — reverted to rounded-md from R12's rounded-none after seller feedback
 // that the sharp corners felt severe. Still transparent over the sub-card
 // surface; border defines the field. Focused border turns lime.
+// Mobile uses text-base (16px) so iOS Safari doesn't auto-zoom the page on
+// focus (14px inputs trigger the zoom + horizontal panning); sm+ keeps text-sm.
 const inputCls =
-  'h-10 w-full rounded-md border border-border-default bg-transparent px-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-lime focus:outline-none focus:ring-2 focus:ring-lime-tint-bg transition-colors aria-[invalid=true]:border-error aria-[invalid=true]:focus:ring-error-bg'
+  'h-10 w-full rounded-md border border-border-default bg-transparent px-3 text-base sm:text-sm text-text-primary placeholder:text-text-tertiary focus:border-lime focus:outline-none focus:ring-2 focus:ring-lime-tint-bg transition-colors aria-[invalid=true]:border-error aria-[invalid=true]:focus:ring-error-bg'

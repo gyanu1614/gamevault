@@ -32,7 +32,7 @@ import {
   ShieldCheck,
   AlertTriangle,
 } from 'lucide-react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { getAvatarUrl } from '@/lib/utils/avatar'
@@ -42,8 +42,10 @@ import { getAvatarUrl } from '@/lib/utils/avatar'
 import { Switch } from '@/components/ui/switch'
 import { Card } from '@/components/ui/card'
 import AccountPageHeader from '@/components/account/AccountPageHeader'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Label } from '@/components/ui/label'
+// Mobile-audit — hand-rolled fixed-center modals replaced with the shared
+// dialog base (bottom sheet below sm, centered at sm+, dvh-capped scroll).
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 
 type SettingsTab = 'profile' | 'seller' | 'payouts' | 'notifications' | 'security'
 
@@ -76,7 +78,9 @@ function SectionCard({ children, className }: { children: React.ReactNode; class
 
 // V19/P21 — Input style. Replaced the violet-500 ring with the
 // project's lime-tinted ring so focus matches the rest of the site.
-const inputCls = 'w-full rounded-lg border border-border-subtle bg-bg-raised px-4 py-3 text-sm text-text-primary placeholder:text-text-disabled focus:border-lime focus:outline-none focus:ring-2 focus:ring-lime-tint-bg transition-all'
+// Mobile-audit — text-base (16px) below sm so iOS Safari doesn't auto-zoom
+// + pan on input focus (worst inside the email-change bottom sheet).
+const inputCls = 'w-full rounded-lg border border-border-subtle bg-bg-raised px-4 py-3 text-base sm:text-sm text-text-primary placeholder:text-text-disabled focus:border-lime focus:outline-none focus:ring-2 focus:ring-lime-tint-bg transition-all'
 
 const usd = (n: number) =>
   (n || 0).toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 })
@@ -403,13 +407,18 @@ export default function SettingsPage() {
         <div className="mt-6 grid gap-6 lg:grid-cols-[220px_1fr]">
 
           {/* ── Sidebar nav ── */}
+          {/* Mobile-audit — below lg the vertical tab card became a 300px+
+              wall above the content; it's now a horizontal scrollable pill
+              strip (44px targets, descriptions hidden). The vertical card
+              returns untouched at lg+, sticky at top-24 so it clears the
+              fixed navbar instead of sliding under it. */}
           <motion.div
             initial={{ opacity: 0, x: -16 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.05 }}
-            className="lg:sticky lg:top-8 h-fit"
+            className="lg:sticky lg:top-24 h-fit min-w-0"
           >
-            <div className="rounded-lg border border-border-subtle card-frost p-2 space-y-0.5">
+            <div className="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:mx-0 lg:block lg:space-y-0.5 lg:overflow-visible lg:rounded-lg lg:border lg:border-border-subtle lg:card-frost lg:p-2 lg:pb-2">
               {tabs.map((tab) => {
                 const Icon = tab.icon
                 const active = activeTab === tab.id
@@ -418,25 +427,26 @@ export default function SettingsPage() {
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
                     className={cn(
-                      'group flex w-full items-center gap-3 rounded-lg px-3.5 py-3 text-left transition-all duration-150',
+                      'group flex min-h-[44px] shrink-0 items-center gap-2.5 rounded-lg px-3.5 py-2 text-left transition-all duration-150 lg:w-full lg:gap-3 lg:py-3',
                       active
                         ? 'bg-lime/15 border border-lime-tint-border text-text-inverse'
-                        : 'text-text-secondary hover:bg-bg-raised hover:text-text-primary border border-transparent'
+                        : 'border border-border-subtle bg-bg-overlay text-text-secondary hover:text-text-primary lg:border-transparent lg:bg-transparent lg:hover:bg-bg-raised'
                     )}
                   >
                     <div className={cn(
-                      'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border transition-all',
+                      'hidden lg:flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border transition-all',
                       active
                         ? 'bg-lime/20 border-lime-tint-border text-lime-text'
                         : 'bg-bg-raised border-border-subtle text-text-tertiary group-hover:text-text-secondary'
                     )}>
                       <Icon className="h-4 w-4" />
                     </div>
+                    <Icon className={cn('h-4 w-4 shrink-0 lg:hidden', active ? 'text-lime-text' : 'text-text-tertiary')} />
                     <div className="min-w-0">
-                      <div className={cn('text-sm font-medium leading-tight', active ? 'text-text-primary' : '')}>{tab.label}</div>
-                      <div className="text-[11px] text-text-disabled mt-0.5 truncate">{tab.desc}</div>
+                      <div className={cn('text-sm font-medium leading-tight whitespace-nowrap lg:whitespace-normal', active ? 'text-text-primary' : '')}>{tab.label}</div>
+                      <div className="hidden lg:block text-[11px] text-text-disabled mt-0.5 truncate">{tab.desc}</div>
                     </div>
-                    {active && <ChevronRight className="ml-auto h-3.5 w-3.5 text-lime-text shrink-0" />}
+                    {active && <ChevronRight className="ml-auto hidden h-3.5 w-3.5 text-lime-text shrink-0 lg:block" />}
                   </button>
                 )
               })}
@@ -449,7 +459,7 @@ export default function SettingsPage() {
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.2 }}
-            className="space-y-5"
+            className="min-w-0 space-y-5"
           >
 
             {/* ── PROFILE ── */}
@@ -458,7 +468,12 @@ export default function SettingsPage() {
                 {/* Hero avatar card */}
                 <SectionCard>
                   <div className="flex items-start gap-5">
-                    <div className="relative shrink-0">
+                    {/* Mobile-audit — whole avatar is the file-picker label
+                        (80px tap target) and the corner badge grew 28→36px. */}
+                    <label className={cn(
+                      "relative block shrink-0",
+                      uploadingAvatar ? "cursor-not-allowed" : "cursor-pointer"
+                    )}>
                       <img
                         src={avatar}
                         alt="Avatar"
@@ -467,27 +482,28 @@ export default function SettingsPage() {
                           uploadingAvatar && "opacity-50"
                         )}
                       />
-                      <label className={cn(
-                        "absolute -bottom-1.5 -right-1.5 flex h-7 w-7 cursor-pointer items-center justify-center rounded-full border border-border-subtle bg-bg-overlay text-text-primary shadow-lg transition hover:bg-bg-raised-hover",
-                        uploadingAvatar && "cursor-not-allowed opacity-50"
+                      <span className={cn(
+                        "absolute -bottom-1.5 -right-1.5 flex h-9 w-9 items-center justify-center rounded-full border border-border-subtle bg-bg-overlay text-text-primary shadow-lg transition hover:bg-bg-raised-hover",
+                        uploadingAvatar && "opacity-50"
                       )}>
                         {uploadingAvatar ? (
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          <Loader2 className="h-4 w-4 animate-spin" />
                         ) : (
-                          <Upload className="h-3.5 w-3.5" />
+                          <Upload className="h-4 w-4" />
                         )}
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={handleAvatarUpload}
-                          className="hidden"
-                          disabled={uploadingAvatar}
-                        />
-                      </label>
-                    </div>
-                    <div>
-                      <div className="text-base font-semibold text-text-primary">{username || 'Your Name'}</div>
-                      <div className="text-sm text-text-tertiary mt-0.5">{email}</div>
+                      </span>
+                      <span className="sr-only">Change avatar</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleAvatarUpload}
+                        className="hidden"
+                        disabled={uploadingAvatar}
+                      />
+                    </label>
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-base font-semibold text-text-primary">{username || 'Your Name'}</div>
+                      <div className="break-all text-sm text-text-tertiary mt-0.5">{email}</div>
                       <div className="mt-2 text-xs text-text-disabled">JPG, PNG or GIF · Max 5 MB</div>
                       {avatarError && (
                         <div className="mt-2 flex items-center gap-1.5 text-xs text-error">
@@ -550,8 +566,8 @@ export default function SettingsPage() {
                       {pendingEmail && pendingEmail !== email && (
                         <div className="mt-2 flex items-center gap-2 rounded-lg border border-warning/20 bg-warning-bg px-4 py-2.5">
                           <Clock className="h-4 w-4 shrink-0 text-warning" />
-                          <span className="text-sm text-warning">
-                            Pending change to <span className="font-medium">{pendingEmail}</span> — confirm the link sent to both inboxes.
+                          <span className="min-w-0 text-sm text-warning">
+                            Pending change to <span className="font-medium break-all">{pendingEmail}</span> — confirm the link sent to both inboxes.
                           </span>
                         </div>
                       )}
@@ -609,8 +625,8 @@ export default function SettingsPage() {
                         </div>
                       ) : shopName ? (
                         <div className="mt-2 flex items-center gap-2 text-xs text-text-tertiary">
-                          <Globe className="h-3.5 w-3.5" />
-                          <span>
+                          <Globe className="h-3.5 w-3.5 shrink-0" />
+                          <span className="min-w-0 break-all">
                             dropmarket.gg/shop/
                             <span className="text-lime-text">
                               {shopName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')}
@@ -655,7 +671,7 @@ export default function SettingsPage() {
                   </div>
                   <Link
                     href="/account/wallet/withdraw"
-                    className="inline-flex items-center gap-2 rounded-lg bg-lime px-5 py-2.5 text-sm font-semibold text-text-inverse transition-all hover:bg-lime-hover active:scale-95"
+                    className="inline-flex items-center gap-2 rounded-lg bg-lime px-5 py-3 text-sm font-semibold text-text-inverse transition-all hover:bg-lime-hover active:scale-95"
                   >
                     <DollarSign className="h-4 w-4" />
                     Request Payout
@@ -747,10 +763,15 @@ export default function SettingsPage() {
                     const Icon = n.icon
                     const enabled = emailNotifications[n.key as keyof typeof emailNotifications]
                     return (
+                      // Mobile-audit — the entire 56px row toggles (the
+                      // Switch alone was a fiddly ~24px thumb target); the
+                      // Switch stops propagation so its own tap doesn't
+                      // double-toggle.
                       <div
                         key={n.key}
+                        onClick={() => setEmailNotifications({ ...emailNotifications, [n.key]: !enabled })}
                         className={cn(
-                          'flex items-center justify-between rounded-lg px-4 py-3.5 transition-all',
+                          'flex cursor-pointer items-center justify-between gap-3 rounded-lg px-4 py-3.5 transition-all',
                           enabled ? 'bg-bg-overlay border border-border-subtle' : 'border border-transparent'
                         )}
                       >
@@ -768,6 +789,7 @@ export default function SettingsPage() {
                         </div>
                         <Switch
                           checked={enabled}
+                          onClick={(e) => e.stopPropagation()}
                           onCheckedChange={(v) => setEmailNotifications({ ...emailNotifications, [n.key]: v })}
                         />
                       </div>
@@ -795,7 +817,8 @@ export default function SettingsPage() {
                         <button
                           type="button"
                           onClick={() => setShowPassword(!showPassword)}
-                          className="absolute right-3.5 top-1/2 -translate-y-1/2 text-text-tertiary hover:text-text-primary transition-colors"
+                          aria-label={showPassword ? 'Hide password' : 'Show password'}
+                          className="absolute right-1.5 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-lg text-text-tertiary hover:text-text-primary transition-colors"
                         >
                           {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                         </button>
@@ -815,7 +838,7 @@ export default function SettingsPage() {
                       type="button"
                       onClick={handleUpdatePassword}
                       disabled={passwordSaving || !currentPassword || !newPassword || !confirmPassword}
-                      className="inline-flex items-center gap-2 rounded-lg border border-border-subtle bg-bg-overlay px-5 py-2.5 text-sm font-medium text-text-primary transition-all hover:bg-bg-raised-hover active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="inline-flex items-center gap-2 rounded-lg border border-border-subtle bg-bg-overlay px-5 py-3 text-sm font-medium text-text-primary transition-all hover:bg-bg-raised-hover active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {passwordSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Lock className="h-4 w-4" />}
                       {passwordSaving ? 'Updating…' : 'Update Password'}
@@ -831,7 +854,7 @@ export default function SettingsPage() {
                   <p className="text-xs text-text-tertiary mb-4">Want to permanently delete your account and all associated data? Our support team will verify your identity and process the request.</p>
                   <Link
                     href="/support"
-                    className="inline-flex items-center gap-2 rounded-lg border border-error/40 bg-error-bg px-5 py-2.5 text-sm font-semibold text-error transition-all hover:bg-error-bg/80 active:scale-95"
+                    className="inline-flex items-center gap-2 rounded-lg border border-error/40 bg-error-bg px-5 py-3 text-sm font-semibold text-error transition-all hover:bg-error-bg/80 active:scale-95"
                   >
                     <Trash2 className="h-4 w-4" />
                     Contact Support To Delete
@@ -846,7 +869,7 @@ export default function SettingsPage() {
                 <button
                   onClick={handleSave}
                   disabled={isUpdating}
-                  className="inline-flex items-center gap-2 rounded-lg bg-lime px-6 py-2.5 text-sm font-semibold text-text-inverse transition-all hover:bg-lime-hover active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="inline-flex items-center gap-2 rounded-lg bg-lime px-6 py-3 text-sm font-semibold text-text-inverse transition-all hover:bg-lime-hover active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isUpdating ? (
                     <><Loader2 className="h-4 w-4 animate-spin" /> Saving…</>
@@ -860,145 +883,115 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {/* ── Change email dialog ── */}
-      <AnimatePresence>
-        {showEmailChange && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setShowEmailChange(false)}
-              className="fixed inset-0 z-50 bg-bg-base/70 backdrop-blur-sm"
-            />
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 16 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 16 }}
-              className="fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-lg border border-border-subtle bg-[rgba(12,12,16,0.96)] backdrop-blur-2xl p-6 shadow-2xl"
-            >
-              {emailChangeSent ? (
-                <>
-                  <div className="flex items-start gap-4 mb-5">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-success-bg border border-success/25">
-                      <Check className="h-5 w-5 text-success" />
-                    </div>
-                    <div>
-                      <h3 className="text-base font-semibold text-text-primary">Confirmation Sent</h3>
-                      <p className="mt-1 text-sm text-text-secondary">
-                        Check <span className="text-text-primary font-medium">both</span> your current and new inbox
-                        (<span className="text-text-primary font-medium">{newEmail.trim().toLowerCase()}</span>) and click
-                        the confirmation link to finish the change.
-                      </p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => setShowEmailChange(false)}
-                    className="w-full rounded-lg bg-lime px-4 py-2.5 text-sm font-semibold text-text-inverse transition-all hover:bg-lime-hover active:scale-95"
-                  >
-                    Done
-                  </button>
-                </>
-              ) : (
-                <>
-                  <div className="flex items-start gap-4 mb-5">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-lime/15 border border-lime-tint-border">
-                      <Mail className="h-5 w-5 text-lime-text" />
-                    </div>
-                    <div>
-                      <h3 className="text-base font-semibold text-text-primary">Change Email</h3>
-                      <p className="mt-1 text-sm text-text-secondary">
-                        Enter your new email. We&apos;ll send a confirmation link to both your current and new address —
-                        the change lands once confirmed.
-                      </p>
-                    </div>
-                  </div>
-                  <div className="space-y-3">
-                    <input
-                      type="email"
-                      value={newEmail}
-                      onChange={(e) => setNewEmail(e.target.value)}
-                      placeholder="new@email.com"
-                      className={inputCls}
-                    />
-                    {emailChangeError && (
-                      <div className="flex items-center gap-1.5 text-xs text-error">
-                        <AlertCircle className="h-3.5 w-3.5" />
-                        {emailChangeError}
-                      </div>
-                    )}
-                  </div>
-                  <div className="mt-5 flex gap-3">
-                    <button
-                      onClick={() => setShowEmailChange(false)}
-                      className="flex-1 rounded-lg border border-border-subtle bg-bg-raised px-4 py-2.5 text-sm font-medium text-text-primary transition-all hover:bg-bg-raised-hover"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      onClick={handleChangeEmail}
-                      disabled={changingEmail || !newEmail.trim()}
-                      className="flex-1 inline-flex items-center justify-center gap-2 rounded-lg bg-lime px-4 py-2.5 text-sm font-semibold text-text-inverse transition-all hover:bg-lime-hover active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {changingEmail ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                      {changingEmail ? 'Sending…' : 'Send Confirmation'}
-                    </button>
-                  </div>
-                </>
-              )}
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
-
-      {/* ── Shop name confirmation dialog ── */}
-      <AnimatePresence>
-        {showShopNameConfirmation && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setShowShopNameConfirmation(false)}
-              className="fixed inset-0 z-50 bg-bg-base/70 backdrop-blur-sm"
-            />
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 16 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 16 }}
-              className="fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-lg border border-border-subtle bg-[rgba(12,12,16,0.96)] backdrop-blur-2xl p-6 shadow-2xl"
-            >
-              <div className="flex items-start gap-4 mb-5">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-warning-bg border border-warning/25">
-                  <AlertCircle className="h-5 w-5 text-warning" />
+      {/* ── Change email dialog ──
+          Mobile-audit — shared DialogContent: bottom sheet below sm,
+          centered modal at sm+, dvh-capped with internal scroll. */}
+      <Dialog open={showEmailChange} onOpenChange={setShowEmailChange}>
+        <DialogContent className="max-w-md gap-0">
+          {emailChangeSent ? (
+            <>
+              <div className="mb-5 flex items-start gap-4 pr-8">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-success-bg border border-success/25">
+                  <Check className="h-5 w-5 text-success" />
                 </div>
-                <div>
-                  <h3 className="text-base font-semibold text-text-primary">Confirm shop name change</h3>
-                  <p className="mt-1 text-sm text-text-secondary">
-                    You&apos;re changing your shop name to <span className="text-text-primary font-medium">&ldquo;{shopName}&rdquo;</span>.
-                    You won&apos;t be able to change it again for 30 days.
-                  </p>
+                <div className="min-w-0">
+                  <DialogTitle className="text-base leading-tight text-text-primary">Confirmation Sent</DialogTitle>
+                  <DialogDescription className="mt-1">
+                    Check <span className="text-text-primary font-medium">both</span> your current and new inbox
+                    (<span className="text-text-primary font-medium break-all">{newEmail.trim().toLowerCase()}</span>) and click
+                    the confirmation link to finish the change.
+                  </DialogDescription>
                 </div>
               </div>
-              <div className="flex gap-3">
+              <button
+                onClick={() => setShowEmailChange(false)}
+                className="w-full rounded-lg bg-lime px-4 py-3 text-sm font-semibold text-text-inverse transition-all hover:bg-lime-hover active:scale-95"
+              >
+                Done
+              </button>
+            </>
+          ) : (
+            <>
+              <div className="mb-5 flex items-start gap-4 pr-8">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-lime/15 border border-lime-tint-border">
+                  <Mail className="h-5 w-5 text-lime-text" />
+                </div>
+                <div className="min-w-0">
+                  <DialogTitle className="text-base leading-tight text-text-primary">Change Email</DialogTitle>
+                  <DialogDescription className="mt-1">
+                    Enter your new email. We&apos;ll send a confirmation link to both your current and new address —
+                    the change lands once confirmed.
+                  </DialogDescription>
+                </div>
+              </div>
+              <div className="space-y-3">
+                <input
+                  type="email"
+                  value={newEmail}
+                  onChange={(e) => setNewEmail(e.target.value)}
+                  placeholder="new@email.com"
+                  className={inputCls}
+                />
+                {emailChangeError && (
+                  <div className="flex items-center gap-1.5 text-xs text-error">
+                    <AlertCircle className="h-3.5 w-3.5" />
+                    {emailChangeError}
+                  </div>
+                )}
+              </div>
+              <div className="mt-5 flex gap-3">
                 <button
-                  onClick={() => setShowShopNameConfirmation(false)}
-                  className="flex-1 rounded-lg border border-border-subtle bg-bg-raised px-4 py-2.5 text-sm font-medium text-text-primary transition-all hover:bg-bg-raised-hover"
+                  onClick={() => setShowEmailChange(false)}
+                  className="flex-1 rounded-lg border border-border-subtle bg-bg-raised px-4 py-3 text-sm font-medium text-text-primary transition-all hover:bg-bg-raised-hover"
                 >
                   Cancel
                 </button>
                 <button
-                  onClick={saveSettings}
-                  disabled={isUpdating}
-                  className="flex-1 rounded-lg bg-lime px-4 py-2.5 text-sm font-semibold text-text-inverse transition-all hover:bg-lime-hover active:scale-95 disabled:opacity-50"
+                  onClick={handleChangeEmail}
+                  disabled={changingEmail || !newEmail.trim()}
+                  className="flex-1 inline-flex items-center justify-center gap-2 rounded-lg bg-lime px-4 py-3 text-sm font-semibold text-text-inverse transition-all hover:bg-lime-hover active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {isUpdating ? 'Saving…' : 'Confirm Change'}
+                  {changingEmail ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                  {changingEmail ? 'Sending…' : 'Send Confirmation'}
                 </button>
               </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Shop name confirmation dialog ── */}
+      <Dialog open={showShopNameConfirmation} onOpenChange={setShowShopNameConfirmation}>
+        <DialogContent className="max-w-md gap-0">
+          <div className="mb-5 flex items-start gap-4 pr-8">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-warning-bg border border-warning/25">
+              <AlertCircle className="h-5 w-5 text-warning" />
+            </div>
+            <div className="min-w-0">
+              <DialogTitle className="text-base leading-tight text-text-primary">Confirm shop name change</DialogTitle>
+              <DialogDescription className="mt-1">
+                You&apos;re changing your shop name to <span className="text-text-primary font-medium break-words">&ldquo;{shopName}&rdquo;</span>.
+                You won&apos;t be able to change it again for 30 days.
+              </DialogDescription>
+            </div>
+          </div>
+          <div className="flex gap-3">
+            <button
+              onClick={() => setShowShopNameConfirmation(false)}
+              className="flex-1 rounded-lg border border-border-subtle bg-bg-raised px-4 py-3 text-sm font-medium text-text-primary transition-all hover:bg-bg-raised-hover"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={saveSettings}
+              disabled={isUpdating}
+              className="flex-1 rounded-lg bg-lime px-4 py-3 text-sm font-semibold text-text-inverse transition-all hover:bg-lime-hover active:scale-95 disabled:opacity-50"
+            >
+              {isUpdating ? 'Saving…' : 'Confirm Change'}
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

@@ -20,7 +20,9 @@ import {
   ThumbsUp, Package, TrendingUp, MessageCircle, UserPlus, Check,
   Shield, Crown, Gem, Sparkles, Award, ShieldCheck, type LucideIcon,
 } from 'lucide-react'
-import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip'
+// Mobile-audit — Popover (tap-to-open) replaces the hover-only Tooltip so
+// the verified explanation is reachable on touch devices.
+import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover'
 import { cn } from '@/lib/utils'
 
 interface BannerConfig {
@@ -200,17 +202,22 @@ export default function SellerProfileBanner({
               {shopName || username}
             </h1>
             {isVerified && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span
+              <Popover>
+                <PopoverTrigger asChild>
+                  {/* 36px hit area (-m-2 cancels the visual footprint) around
+                      the 20px badge so the info opens on tap. */}
+                  <button
+                    type="button"
                     aria-label="Verified seller"
-                    className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-lime text-text-inverse shadow-elevated"
+                    className="-m-2 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
                   >
-                    <Check className="h-3 w-3" strokeWidth={3} />
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent>Verified by DropMarket</TooltipContent>
-              </Tooltip>
+                    <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-lime text-text-inverse shadow-elevated">
+                      <Check className="h-3 w-3" strokeWidth={3} />
+                    </span>
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent>Verified by DropMarket</PopoverContent>
+              </Popover>
             )}
             <span
               className={cn(
@@ -247,19 +254,22 @@ export default function SellerProfileBanner({
         {/* Actions */}
         {!isOwnShop ? (
           <div className="flex shrink-0 items-center gap-2 self-center sm:self-auto">
+            {/* Mobile-audit — labels stay visible below sm (the action row is
+                its own centered line in the stacked layout, so both fit at
+                360px) and h-11 hits the 44px target on phones. */}
             <button
               type="button"
               onClick={onMessageClick}
-              className="inline-flex h-10 items-center gap-1.5 rounded-xl bg-lime px-4 text-sm font-bold uppercase tracking-wider text-text-inverse shadow-elevated transition-all hover:bg-lime-hover hover:shadow-glow"
+              className="inline-flex h-11 items-center gap-1.5 rounded-xl bg-lime px-4 text-sm font-bold uppercase tracking-wider text-text-inverse shadow-elevated transition-all hover:bg-lime-hover hover:shadow-glow sm:h-10"
             >
               <MessageCircle className="h-4 w-4" />
-              <span className="hidden sm:inline">Message</span>
+              <span>Message</span>
             </button>
             <button
               type="button"
               onClick={onFollowClick}
               className={cn(
-                'inline-flex h-10 items-center gap-1.5 rounded-xl border px-4 text-sm font-medium transition-colors',
+                'inline-flex h-11 items-center gap-1.5 rounded-xl border px-4 text-sm font-medium transition-colors sm:h-10',
                 isFollowing
                   ? 'border-border-default bg-bg-raised text-text-primary hover:bg-bg-raised-hover'
                   : 'border-border-default bg-bg-raised text-text-primary hover:border-lime-tint-border hover:bg-bg-raised-hover',
@@ -268,12 +278,12 @@ export default function SellerProfileBanner({
               {isFollowing ? (
                 <>
                   <Check className="h-4 w-4" />
-                  <span className="hidden sm:inline">Following</span>
+                  <span>Following</span>
                 </>
               ) : (
                 <>
                   <UserPlus className="h-4 w-4" />
-                  <span className="hidden sm:inline">Follow</span>
+                  <span>Follow</span>
                 </>
               )}
             </button>
@@ -282,7 +292,7 @@ export default function SellerProfileBanner({
           <Link
             href="/account/dashboard"
             prefetch={false}
-            className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-xl bg-lime px-4 text-sm font-bold uppercase tracking-wider text-text-inverse shadow-elevated transition-all hover:bg-lime-hover hover:shadow-glow"
+            className="inline-flex h-11 shrink-0 items-center gap-1.5 self-center rounded-xl bg-lime px-4 text-sm font-bold uppercase tracking-wider text-text-inverse shadow-elevated transition-all hover:bg-lime-hover hover:shadow-glow sm:h-10 sm:self-auto"
           >
             <Package className="h-4 w-4" />
             Dashboard

@@ -133,7 +133,7 @@ export default async function BlogPostPage({ params }: PageProps) {
       <article className="mx-auto w-full max-w-3xl px-4 pt-10 sm:px-6 sm:pt-14">
         <Link
           href="/blog"
-          className="inline-flex items-center gap-1.5 text-[13.5px] font-medium text-text-tertiary transition-colors hover:text-text-primary"
+          className="-my-3 inline-flex min-h-[44px] items-center gap-1.5 py-3 pr-3 text-[13.5px] font-medium text-text-tertiary transition-colors hover:text-text-primary"
         >
           <ChevronLeft className="h-4 w-4" />
           All posts

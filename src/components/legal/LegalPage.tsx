@@ -63,9 +63,20 @@ function Block({ block }: { block: LegalBlock }) {
           ))}
         </ul>
       )
-    case 'table':
-      return (
-        <div className="overflow-x-auto rounded-xl border border-border-default">
+    case 'table': {
+      // 3+ column tables crush to unreadably narrow columns on phones, so
+      // below md they render as stacked definition cards (first cell = card
+      // title, remaining head/cell pairs = label/value rows). The true
+      // <table> stays for md+ and for 2-column tables, which fit fine.
+      const isWide = block.head.length >= 3
+      const table = (
+        <div
+          className={
+            isWide
+              ? 'hidden overflow-x-auto rounded-xl border border-border-default md:block'
+              : 'overflow-x-auto rounded-xl border border-border-default'
+          }
+        >
           <table className="w-full border-collapse text-left">
             <thead>
               <tr className="bg-bg-overlay">
@@ -100,6 +111,37 @@ function Block({ block }: { block: LegalBlock }) {
           </table>
         </div>
       )
+      if (!isWide) return table
+      return (
+        <div>
+          <div className="space-y-3 md:hidden">
+            {block.rows.map((row, i) => (
+              <div
+                key={i}
+                className="rounded-xl border border-border-default bg-white/[0.02] p-4"
+              >
+                <div className="text-[14px] font-semibold leading-snug text-text-primary">
+                  {row[0]}
+                </div>
+                <dl className="mt-3 space-y-2.5">
+                  {row.slice(1).map((cell, j) => (
+                    <div key={j}>
+                      <dt className="text-[11px] font-bold uppercase tracking-wider text-text-tertiary">
+                        {block.head[j + 1]}
+                      </dt>
+                      <dd className="mt-0.5 text-[14px] leading-relaxed text-text-secondary">
+                        {cell}
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
+              </div>
+            ))}
+          </div>
+          {table}
+        </div>
+      )
+    }
     case 'note':
       return (
         <div className="rounded-xl border border-warning/30 bg-warning-bg/30 px-4 py-3 text-[14px] leading-relaxed text-warning">
@@ -157,15 +199,15 @@ export function LegalPage({ doc }: { doc: LegalDoc }) {
           <div className="text-[11px] font-bold uppercase tracking-wider text-text-tertiary">
             All legal documents
           </div>
-          <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2.5">
+          <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1">
             {LEGAL_DOCS.map((d) => (
               <Link
                 key={d.slug}
                 href={`/${d.slug}`}
                 className={
                   d.slug === doc.slug
-                    ? 'text-[13px] font-semibold text-lime-text'
-                    : 'text-[13px] text-text-tertiary transition-colors hover:text-text-primary'
+                    ? 'inline-block py-1.5 text-[13px] font-semibold text-lime-text'
+                    : 'inline-block py-1.5 text-[13px] text-text-tertiary transition-colors hover:text-text-primary'
                 }
               >
                 {d.title}

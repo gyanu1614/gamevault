@@ -116,7 +116,7 @@ export default function SafeDropPage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
       />
       {/* Hero Section */}
-      <section className="relative pt-32 pb-20 px-4 sm:px-6 lg:px-8">
+      <section className="relative pt-10 pb-14 sm:pt-16 sm:pb-20 lg:pt-24 px-4 sm:px-6 lg:px-8">
         <div className="absolute inset-0 bg-gradient-to-b from-lime/10 via-transparent to-transparent" />
 
         <div className="max-w-7xl mx-auto relative">
@@ -127,11 +127,11 @@ export default function SafeDropPage() {
               </div>
             </div>
 
-            <h1 className="text-5xl md:text-6xl font-bold text-white mb-6">
+            <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-white mb-6">
               SafeDrop Buyer Protection
             </h1>
 
-            <p className="text-xl text-gray-300 max-w-3xl mx-auto mb-8">
+            <p className="text-lg sm:text-xl text-gray-300 max-w-3xl mx-auto mb-8">
               Not delivered or not as described? You get your money back.
               SafeDrop is DropMarket&apos;s buyer-protection programme, included
               on every order.
@@ -305,7 +305,7 @@ export default function SafeDropPage() {
             </p>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-6">
             <ProtectionWindowCard icon={Coins} category="Currency" window="48 Hours" />
             <ProtectionWindowCard icon={Package} category="Items" window="72 Hours" />
             <ProtectionWindowCard icon={Zap} category="Top-Ups" window="48 Hours" />
@@ -315,6 +315,7 @@ export default function SafeDropPage() {
               category="Accounts"
               window="5–14 Days"
               note="5, 7, or 14 days by risk band"
+              className="col-span-2 md:col-span-1"
             />
           </div>
         </div>
@@ -471,7 +472,7 @@ export default function SafeDropPage() {
       {/* CTA Section */}
       <section className="py-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-4xl mx-auto text-center">
-          <div className="bg-gradient-to-r from-lime/10 to-lime/10 border border-lime/20 rounded-2xl p-12">
+          <div className="bg-gradient-to-r from-lime/10 to-lime/10 border border-lime/20 rounded-2xl p-6 sm:p-10 lg:p-12">
             <Shield className="w-16 h-16 text-lime-text mx-auto mb-6" />
 
             <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
@@ -520,19 +521,21 @@ interface ProtectionWindowCardProps {
   category: string
   window: string
   note?: string
+  className?: string
 }
 
 function ProtectionWindowCard({
   icon: Icon,
   category,
   window: windowLabel,
-  note
+  note,
+  className = ''
 }: ProtectionWindowCardProps) {
   return (
-    <div className="bg-white/[0.03] border border-white/[0.05] rounded-xl p-6 text-center">
+    <div className={`bg-white/[0.03] border border-white/[0.05] rounded-xl p-4 sm:p-6 text-center ${className}`}>
       <Icon className="w-8 h-8 text-lime-text mx-auto mb-3" />
       <div className="text-sm text-gray-400 mb-1">{category}</div>
-      <div className="text-2xl font-bold text-white">{windowLabel}</div>
+      <div className="text-xl sm:text-2xl font-bold text-white">{windowLabel}</div>
       {note && <div className="text-xs text-gray-500 mt-2">{note}</div>}
     </div>
   )

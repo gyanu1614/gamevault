@@ -468,9 +468,18 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
   return (
     <>
       {/* Mobile Menu Button */}
+      {/* Mobile-audit — while the drawer is open the toggle lifts to z-[80]
+          so its X state stays above the drawer (z-[70]) + backdrop (z-[60]);
+          closed it sits at z-50 so shared dialogs/sheets (z-50, portaled
+          later in the DOM) still paint over it. h-11 w-11 = 44px target. */}
       <button
         onClick={() => setIsMobileOpen(!isMobileOpen)}
-        className="fixed top-[4.5rem] left-3 z-50 lg:hidden p-2.5 rounded-lg bg-black/50 backdrop-blur-xl border border-border-subtle text-white shadow-lg hover:bg-black/70 transition-all"
+        aria-label={isMobileOpen ? 'Close account menu' : 'Open account menu'}
+        aria-expanded={isMobileOpen}
+        className={cn(
+          'fixed top-[4.5rem] left-3 lg:hidden flex h-11 w-11 items-center justify-center rounded-lg bg-black/50 backdrop-blur-xl border border-border-subtle text-white shadow-lg hover:bg-black/70 transition-all',
+          isMobileOpen ? 'z-[80]' : 'z-50',
+        )}
       >
         {isMobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
       </button>
@@ -483,7 +492,7 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={() => setIsMobileOpen(false)}
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden"
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] lg:hidden"
           />
         )}
       </AnimatePresence>
@@ -505,7 +514,7 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
             animate={{ x: 0 }}
             exit={{ x: '-100%' }}
             transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-            className="fixed top-4 bottom-4 left-4 w-64 card-frost border border-border-subtle rounded-lg z-40 lg:hidden flex flex-col shadow-2xl"
+            className="fixed top-4 bottom-4 left-4 w-64 card-frost border border-border-subtle rounded-lg z-[70] lg:hidden flex flex-col shadow-2xl"
           >
             {NavItems()}
           </motion.aside>

@@ -86,7 +86,8 @@ export const NumberField = React.forwardRef<HTMLDivElement, NumberFieldProps>(
               // way native steppers feel in spreadsheets / Stripe.
               onFocus={(e) => e.currentTarget.select()}
               className={cn(
-                'min-w-0 bg-transparent text-sm font-medium text-text-primary',
+                // 16px below sm so iOS Safari doesn't auto-zoom on focus.
+                'min-w-0 bg-transparent text-base font-medium text-text-primary sm:text-sm',
                 'tabular-nums placeholder:text-text-tertiary',
                 'focus:outline-none focus-visible:shadow-none',
                 suffix ? 'w-auto text-right' : 'w-full text-center',
