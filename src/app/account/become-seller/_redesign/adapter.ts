@@ -174,6 +174,7 @@ export function toSubmitApplicationData(
     ...step6,
     // New columns the action persists (contract keys — do not rename):
     sellerSignature: state.review?.signatureName ?? null,
+    sellerSignatureImage: state.review?.signatureImage ?? null,
     sellerSignedAt: state.review?.signedAt ?? null,
     marketingConsent: state.review?.marketingConsent ?? false,
     sellingExperience,

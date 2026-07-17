@@ -3674,6 +3674,7 @@ export type Database = {
           reviewed_at: string | null
           reviewed_by: string | null
           seller_signature: string | null
+          seller_signature_image: string | null
           seller_signed_at: string | null
           seller_type: string
           selling_experience: string | null
@@ -3759,6 +3760,7 @@ export type Database = {
           reviewed_at?: string | null
           reviewed_by?: string | null
           seller_signature?: string | null
+          seller_signature_image?: string | null
           seller_signed_at?: string | null
           seller_type: string
           selling_experience?: string | null
@@ -3844,6 +3846,7 @@ export type Database = {
           reviewed_at?: string | null
           reviewed_by?: string | null
           seller_signature?: string | null
+          seller_signature_image?: string | null
           seller_signed_at?: string | null
           seller_type?: string
           selling_experience?: string | null

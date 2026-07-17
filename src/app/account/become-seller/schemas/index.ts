@@ -282,6 +282,8 @@ export const reviewSignSchema = z
      * fallback is a typed-name click-accept — this holds the typed name and the
      * moment it was recorded. Required before submit.
      */
+    /** Drawn signature PNG (data URL) from the signature pad. */
+    signatureImage: z.string().optional(),
     signatureName: z.string().min(2, 'Type your full legal name to sign'),
     signedAt: z.string().min(1, 'Signature timestamp is required'),
     /** Optional, separate, unchecked-by-default marketing consent. */

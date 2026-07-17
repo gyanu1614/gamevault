@@ -19,8 +19,9 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import SignatureCanvas from 'react-signature-canvas'
 import { AnimatePresence, motion } from 'framer-motion'
-import { X, PenLine, ShieldCheck, ExternalLink, Loader2 } from 'lucide-react'
+import { X, PenLine, ShieldCheck, ExternalLink, Loader2, Eraser } from 'lucide-react'
 import { PALETTE } from '../theme'
 import { signSellerAgreement } from '../actions'
 import { type SignAgreementResult } from '../integrations'
@@ -30,21 +31,38 @@ interface SignAgreementModalProps {
   onClose: () => void
   /** Pre-fill the typed-name field with the seller's legal name from Step 2. */
   defaultName: string
-  /** Called when the agreement is signed: name + ISO timestamp of the signature. */
-  onSigned: (signature: { name: string; signedAt: string }) => void
+  /** Shop name + country from Step 2 — used for the personalized PDF preview. */
+  shopName?: string
+  country?: string
+  /** Called when signed: name + ISO timestamp + drawn signature (PNG data URL). */
+  onSigned: (signature: { name: string; signedAt: string; signatureImage: string | null }) => void
 }
 
 export default function SignAgreementModal({
   open,
   onClose,
   defaultName,
+  shopName,
+  country,
   onSigned,
 }: SignAgreementModalProps) {
   const [session, setSession] = useState<SignAgreementResult | null>(null)
   const [loading, setLoading] = useState(false)
   const [typedName, setTypedName] = useState(defaultName)
   const [touched, setTouched] = useState(false)
+  const [padError, setPadError] = useState(false)
+  const [padWidth, setPadWidth] = useState(440)
   const inputRef = useRef<HTMLInputElement>(null)
+  const padRef = useRef<SignatureCanvas>(null)
+  const padBoxRef = useRef<HTMLDivElement>(null)
+
+  // Size the signature canvas to its container (fixed attrs avoid the
+  // classic CSS-scaled-canvas stroke-offset bug).
+  useEffect(() => {
+    if (!open) return
+    const el = padBoxRef.current
+    if (el) setPadWidth(Math.max(260, el.clientWidth - 2))
+  }, [open, loading])
 
   // Fetch the (stubbed) e-sign session each time the modal opens so the env flag
   // is always respected — DocuSeal drops in later without touching this UI.
@@ -77,9 +95,21 @@ export default function SignAgreementModal({
       inputRef.current?.focus()
       return
     }
-    onSigned({ name: typedName.trim(), signedAt: new Date().toISOString() })
+    if (!padRef.current || padRef.current.isEmpty()) {
+      setPadError(true)
+      return
+    }
+    onSigned({
+      name: typedName.trim(),
+      signedAt: new Date().toISOString(),
+      signatureImage: padRef.current.getTrimmedCanvas().toDataURL('image/png'),
+    })
     onClose()
   }
+
+  const previewHref = `/api/seller-agreement/preview?name=${encodeURIComponent(
+    typedName.trim() || defaultName,
+  )}&shop=${encodeURIComponent(shopName ?? '')}&country=${encodeURIComponent(country ?? '')}`
 
   return (
     <AnimatePresence>
@@ -142,6 +172,7 @@ export default function SignAgreementModal({
                     onSigned({
                       name: (defaultName || 'Seller').trim(),
                       signedAt: new Date().toISOString(),
+                      signatureImage: null,
                     })
                     onClose()
                   }}
@@ -164,19 +195,18 @@ export default function SignAgreementModal({
 
                   <p className="text-sm leading-relaxed" style={{ color: PALETTE.ink2 }}>
                     You appoint DropMarket as your disclosed commercial agent to conclude sales on
-                    your behalf. Typing your full legal name and clicking{' '}
-                    <span style={{ color: PALETTE.ink, fontWeight: 600 }}>Sign &amp; Accept</span>{' '}
-                    constitutes your electronic signature, recorded with the date and time.
+                    your behalf. Your typed legal name and drawn signature below, together with the
+                    date and time, are recorded as your electronic signature.
                   </p>
 
                   <a
-                    href="/seller-agreement"
+                    href={previewHref}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-xs font-medium underline underline-offset-2"
-                    style={{ color: PALETTE.forest2 }}
+                    className="inline-flex items-center gap-1.5 rounded-lg border px-3.5 py-2 text-xs font-semibold transition-colors hover:bg-black/[0.03]"
+                    style={{ borderColor: PALETTE.line, color: PALETTE.forest2 }}
                   >
-                    Read the full Seller Agency Agreement
+                    View The Full Agreement (PDF)
                     <ExternalLink className="h-3 w-3" />
                   </a>
 
@@ -218,6 +248,56 @@ export default function SignAgreementModal({
                     {touched && !nameValid && (
                       <p className="mt-1.5 text-xs" style={{ color: '#B42318' }}>
                         Type your full legal name to sign.
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Drawn signature — signature_pad canvas */}
+                  <div>
+                    <div className="mb-1.5 flex items-center justify-between">
+                      <label className="block text-xs font-medium" style={{ color: PALETTE.ink }}>
+                        Draw Your Signature
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          padRef.current?.clear()
+                          setPadError(false)
+                        }}
+                        className="inline-flex items-center gap-1 text-[11px] font-semibold"
+                        style={{ color: PALETTE.ink2 }}
+                      >
+                        <Eraser className="h-3 w-3" />
+                        Clear
+                      </button>
+                    </div>
+                    <div
+                      ref={padBoxRef}
+                      className="overflow-hidden rounded-lg"
+                      style={{
+                        border: `1.5px dashed ${padError ? '#B42318' : PALETTE.line}`,
+                        backgroundColor: PALETTE.ivory,
+                      }}
+                    >
+                      <SignatureCanvas
+                        ref={padRef}
+                        penColor={PALETTE.forest3}
+                        onBegin={() => setPadError(false)}
+                        canvasProps={{
+                          width: padWidth,
+                          height: 130,
+                          style: { display: 'block', touchAction: 'none' },
+                          'aria-label': 'Signature pad',
+                        }}
+                      />
+                    </div>
+                    {padError ? (
+                      <p className="mt-1.5 text-xs" style={{ color: '#B42318' }}>
+                        Draw your signature in the box to sign.
+                      </p>
+                    ) : (
+                      <p className="mt-1.5 text-[11px]" style={{ color: PALETTE.ink2 }}>
+                        Use your mouse or finger — it&rsquo;s embedded in your signed agreement PDF.
                       </p>
                     )}
                   </div>

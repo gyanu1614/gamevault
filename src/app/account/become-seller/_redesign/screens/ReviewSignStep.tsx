@@ -563,9 +563,12 @@ export default function ReviewSignStep({
         open={signOpen}
         onClose={() => setSignOpen(false)}
         defaultName={step2?.fullLegalName ?? ''}
-        onSigned={({ name, signedAt: at }) => {
+        shopName={step2?.shopName ?? ''}
+        country={step2?.country === 'OTHER' ? step2?.countryOther ?? '' : step2?.country ?? ''}
+        onSigned={({ name, signedAt: at, signatureImage }) => {
           setValue('signatureName', name, { shouldValidate: true })
           setValue('signedAt', at, { shouldValidate: true })
+          setValue('signatureImage', signatureImage ?? undefined)
         }}
       />
     </div>
