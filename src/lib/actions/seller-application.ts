@@ -174,8 +174,14 @@ export async function submitSellerApplication(
         delivery_timeframe: data.step4?.deliveryTimeframe || null,
         terms_of_service: data.step4?.termsOfService || null,
 
-        // Step 5: Payment (if provided)
-        payout_method: data.step5?.payoutMethod || null,
+        // Step 5: Payment (if provided). The wizard's 'crypto' value maps to
+        // the DB's legacy 'cryptocurrency' — the payout_method CHECK
+        // constraint only allows ('bank_transfer','paypal','cryptocurrency'),
+        // so writing 'crypto' rejects the whole application.
+        payout_method:
+          data.step5?.payoutMethod === 'crypto'
+            ? 'cryptocurrency'
+            : data.step5?.payoutMethod || null,
         bank_account_holder_name: data.step5?.accountHolderName || null,
         bank_name: data.step5?.bankName || null,
         bank_account_number_encrypted: data.step5?.accountNumber || null, // TODO: Encrypt in production

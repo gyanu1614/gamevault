@@ -63,13 +63,18 @@ export default function IntroScreen({ onStart }: IntroScreenProps) {
 
         <div className="relative z-10 flex h-full flex-col justify-between p-10 xl:p-12">
           <div>
-            <Image
-              src="/brand/logo-mark-lime.png"
-              alt="DropMarket"
-              width={44}
-              height={44}
-              className="mb-8 h-11 w-11 object-contain"
-            />
+            <div className="mb-8 flex items-center gap-2.5">
+              <Image
+                src="/brand/logo-mark-white.png"
+                alt="DropMarket"
+                width={40}
+                height={40}
+                className="h-10 w-10 object-contain"
+              />
+              <span className="text-xl font-bold tracking-tight text-white">
+                Drop<span className="text-white/70">Market</span>
+              </span>
+            </div>
             <h1 className="text-3xl font-semibold tracking-tight text-white xl:text-[2rem]">
               Seller Application
             </h1>
@@ -111,7 +116,7 @@ export default function IntroScreen({ onStart }: IntroScreenProps) {
           style={{ borderColor: PALETTE.line, backgroundColor: PALETTE.ivory }}
         >
           <Image
-            src="/brand/logo-mark-lime.png"
+            src="/brand/logo-mark-ink.png"
             alt="DropMarket"
             width={28}
             height={28}
@@ -122,13 +127,13 @@ export default function IntroScreen({ onStart }: IntroScreenProps) {
           </span>
         </div>
 
-        {/* CSS entrance (animate-fade-up) — deliberately NOT framer-motion: rAF
-            can stall in embedded/throttled contexts and freeze the pane at
-            opacity 0 (same failure the navbar dropdowns hit). CSS always runs. */}
-        <div className="animate-fade-up mx-auto flex w-full max-w-2xl flex-1 flex-col justify-center px-6 py-12 text-center sm:px-10 lg:px-14">
+        {/* CSS entrance (animate-fade-in, opacity-only) — NOT framer (rAF stalls) and
+            NOT fade-up: its translateY offset bleeds into the scroll pane and
+            causes a phantom 16px scroll on the no-scroll intro. */}
+        <div className="animate-fade-in mx-auto flex w-full max-w-2xl flex-1 flex-col justify-center px-6 py-4 text-center sm:px-10 lg:px-14">
           {/* Title */}
           <h2
-            className="text-4xl font-bold leading-tight tracking-tight sm:text-5xl"
+            className="text-4xl font-bold leading-tight tracking-tight sm:text-[2.6rem]"
             style={{ color: PALETTE.forest, textWrap: 'balance' }}
           >
             Become a Seller<span style={{ color: PALETTE.lime }}>.</span>
@@ -138,12 +143,12 @@ export default function IntroScreen({ onStart }: IntroScreenProps) {
           </p>
 
           {/* How It Works — centered, big custom icons, no body text */}
-          <div className="mt-14">
+          <div className="mt-8">
             <HowItWorks />
           </div>
 
           {/* Big primary CTA */}
-          <div className="mt-14 flex flex-col items-center gap-6">
+          <div className="mt-8 flex flex-col items-center gap-3.5">
             <StartButton onClick={onStart} />
 
             {/* Video thumbnail card — a real media preview, not a bare button */}
@@ -151,7 +156,7 @@ export default function IntroScreen({ onStart }: IntroScreenProps) {
               type="button"
               onClick={() => setVideoOpen(true)}
               aria-label="Watch how selling works"
-              className="group relative mx-auto block w-full max-w-md overflow-hidden rounded-2xl text-left transition-transform hover:-translate-y-0.5 focus-visible:outline-none"
+              className="group relative mx-auto block w-full max-w-xs overflow-hidden rounded-2xl text-left transition-transform hover:-translate-y-0.5 focus-visible:outline-none"
               style={{ boxShadow: `0 1px 2px rgba(15,51,32,0.12), inset 0 0 0 1px ${PALETTE.line}` }}
             >
               <div className="relative aspect-video w-full">
@@ -159,7 +164,7 @@ export default function IntroScreen({ onStart }: IntroScreenProps) {
                   src="/assets/heroes/sell.avif"
                   alt=""
                   fill
-                  sizes="(max-width: 640px) 100vw, 448px"
+                  sizes="(max-width: 640px) 100vw, 320px"
                   className="object-cover transition-transform duration-500 group-hover:scale-[1.03]"
                 />
                 {/* Forest wash so the play affordance reads */}
@@ -219,7 +224,7 @@ function StartButton({ onClick }: { onClick: () => void }) {
       onClick={onClick}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
-      className="group inline-flex w-full max-w-md items-center justify-center gap-2.5 rounded-2xl px-10 py-4 text-base font-semibold text-white transition-all"
+      className="group inline-flex w-full max-w-sm items-center justify-center gap-2.5 rounded-2xl px-10 py-4 text-base font-semibold text-white transition-all"
       style={{
         backgroundColor: hover ? PALETTE.forest2 : PALETTE.forest,
         boxShadow: hover ? `0 0 0 2px ${PALETTE.lime}` : '0 1px 2px rgba(15,51,32,0.15)',
