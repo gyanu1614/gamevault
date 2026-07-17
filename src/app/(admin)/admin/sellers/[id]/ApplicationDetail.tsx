@@ -5,7 +5,12 @@ import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '@/lib/utils'
 import type { SellerApplication } from '@/lib/actions/admin-sellers'
-import { approveApplication, rejectApplication } from '@/lib/actions/admin-sellers'
+import { rejectApplication } from '@/lib/actions/admin-sellers'
+// approve comes from the CANONICAL review module — it promotes the profile
+// (role/shop_name/shop_slug/badges) FIRST, then flips the application status,
+// sends the approval email + notification. The admin-sellers.ts copy only
+// flipped the application row, leaving the seller without access.
+import { approveApplication } from '@/lib/actions/admin-seller-review'
 import { getDocumentsSignedUrls } from '@/lib/actions/kyc-documents'
 import { calculateVerificationStatus } from '@/lib/utils/seller-verification'
 import { restrictSeller, unrestrictSeller } from '@/lib/actions/admin-seller-restrictions'
