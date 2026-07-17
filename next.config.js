@@ -1,5 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Verification builds (agent/CI) set NEXT_DIST_DIR to keep their output OUT
+  // of .next — a `next build` racing the running `next dev` corrupts the dev
+  // chunk cache (ChunkLoadError / "missing required error components").
+  distDir: process.env.NEXT_DIST_DIR || '.next',
   typescript: {
     ignoreBuildErrors: false,
   },
