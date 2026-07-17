@@ -74,14 +74,26 @@ interface ReviewSignStepProps {
 }
 
 /** One label/value row in a summary card. */
-function SummaryRow({ label: rowLabel, value }: { label: string; value: React.ReactNode }) {
+function SummaryRow({
+  label: rowLabel,
+  value,
+  breakAll = false,
+}: {
+  label: string
+  value: React.ReactNode
+  /** Use break-all for values with no natural break points (emails, URLs). */
+  breakAll?: boolean
+}) {
   if (value === null || value === undefined || value === '') return null
   return (
     <div className="flex items-start justify-between gap-3 py-1.5 text-sm">
       <span className="shrink-0" style={{ color: PALETTE.ink2 }}>
         {rowLabel}
       </span>
-      <span className="text-right" style={{ color: PALETTE.ink }}>
+      <span
+        className={`min-w-0 text-right ${breakAll ? 'break-all' : 'break-words'}`}
+        style={{ color: PALETTE.ink }}
+      >
         {value}
       </span>
     </div>
@@ -118,7 +130,7 @@ function SummaryCard({
           <button
             type="button"
             onClick={() => goToStep(step)}
-            className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition-colors"
+            className="-my-1.5 inline-flex min-h-[36px] items-center gap-1 rounded-md px-2.5 py-2 text-xs font-medium transition-colors"
             style={{ color: PALETTE.ink2 }}
             onMouseEnter={(e) => {
               e.currentTarget.style.backgroundColor = 'rgba(20,67,42,0.06)'
@@ -273,7 +285,7 @@ export default function ReviewSignStep({
             />
             <SummaryRow label="Phone" value={reviewPhone} />
             {step2?.alternateEmail && (
-              <SummaryRow label="Alternate Email" value={step2.alternateEmail} />
+              <SummaryRow label="Alternate Email" value={step2.alternateEmail} breakAll />
             )}
           </SummaryCard>
 
@@ -335,7 +347,7 @@ export default function ReviewSignStep({
                   shouldValidate: true,
                 })
               }
-              className="rounded-full border px-3 py-1 text-[11px] font-semibold transition-colors hover:bg-black/[0.04]"
+              className="min-h-[36px] rounded-full border px-3.5 py-2 text-xs font-semibold transition-colors hover:bg-black/[0.04]"
               style={{ borderColor: PALETTE.line, color: PALETTE.forest2 }}
             >
               No Experience
@@ -381,7 +393,7 @@ export default function ReviewSignStep({
                   shouldValidate: true,
                 })
               }
-              className="flex w-full items-start gap-3 text-left"
+              className="-my-2 flex min-h-[44px] w-full items-start gap-3 py-2 text-left"
             >
               <span
                 className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md transition-colors"
@@ -459,7 +471,7 @@ export default function ReviewSignStep({
             <button
               type="button"
               onClick={() => setSignOpen(true)}
-              className="mt-3 inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-colors"
+              className="mt-3 inline-flex min-h-[44px] items-center gap-2 rounded-lg px-4 py-3 text-sm font-semibold transition-colors"
               style={
                 isSigned
                   ? { border: `1px solid ${PALETTE.line}`, color: PALETTE.forest }
@@ -494,7 +506,7 @@ export default function ReviewSignStep({
           <button
             type="button"
             onClick={() => setValue('marketingConsent', !marketingConsent)}
-            className="flex w-full items-start gap-3 px-1 text-left"
+            className="-my-2 flex min-h-[44px] w-full items-start gap-3 px-1 py-2 text-left"
           >
             <span
               className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md transition-colors"
@@ -519,7 +531,7 @@ export default function ReviewSignStep({
           <button
             type="button"
             onClick={onBack}
-            className="inline-flex items-center gap-1.5 rounded-lg px-4 py-2.5 text-sm font-medium transition-colors"
+            className="inline-flex min-h-[44px] items-center gap-1.5 rounded-lg px-4 py-3 text-sm font-medium transition-colors"
             style={{ border: `1px solid ${PALETTE.line}`, color: PALETTE.ink }}
             onMouseEnter={(e) => {
               e.currentTarget.style.backgroundColor = 'rgba(20,67,42,0.04)'
@@ -535,7 +547,7 @@ export default function ReviewSignStep({
           <button
             type="submit"
             disabled={isSubmitting}
-            className="group inline-flex items-center gap-2 rounded-lg px-6 py-2.5 text-sm font-semibold text-white transition-colors disabled:cursor-not-allowed disabled:opacity-60"
+            className="group inline-flex min-h-[44px] items-center gap-2 rounded-lg px-6 py-3 text-sm font-semibold text-white transition-colors disabled:cursor-not-allowed disabled:opacity-60"
             style={{ backgroundColor: PALETTE.forest }}
             onMouseEnter={(e) => {
               if (!isSubmitting) e.currentTarget.style.backgroundColor = PALETTE.forest2

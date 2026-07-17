@@ -340,7 +340,7 @@ export default function StepIdentity({
                 type="button"
                 onClick={handleCheckStatus}
                 disabled={video.status === 'checking'}
-                className="inline-flex items-center gap-2 rounded-lg px-3.5 py-2 text-xs font-semibold disabled:opacity-70"
+                className="inline-flex min-h-[44px] items-center gap-2 rounded-lg px-4 py-2.5 text-xs font-semibold disabled:opacity-70"
                 style={{
                   backgroundColor: PALETTE.lime,
                   color: PALETTE.forest3,
@@ -361,7 +361,7 @@ export default function StepIdentity({
                   // window.open WITHOUT noopener — the verification tab needs
                   // window.opener to post the result back and self-close.
                   onClick={() => video.kycSessionUrl && window.open(video.kycSessionUrl, '_blank')}
-                  className="text-xs font-medium underline underline-offset-2"
+                  className="inline-flex min-h-[44px] items-center px-2 text-xs font-medium underline underline-offset-2"
                   style={{ color: 'rgba(255,255,255,0.75)' }}
                 >
                   Reopen Verification
@@ -380,7 +380,7 @@ export default function StepIdentity({
           <button
             type="button"
             onClick={() => setManualMode(true)}
-            className="rounded-lg border px-3.5 py-2 text-xs font-medium transition-colors hover:bg-black/[0.03]"
+            className="inline-flex min-h-[44px] items-center rounded-lg border px-4 py-2 text-xs font-medium transition-colors hover:bg-black/[0.03]"
             style={{ borderColor: PALETTE.line, color: PALETTE.forest2 }}
           >
             Can&rsquo;t Use Video? Upload Documents Instead
@@ -501,7 +501,7 @@ export default function StepIdentity({
         <button
           type="button"
           onClick={onBack}
-          className="inline-flex items-center gap-1.5 rounded-xl border px-4 py-2.5 text-sm font-medium transition-colors hover:bg-black/[0.03]"
+          className="inline-flex min-h-[44px] items-center gap-1.5 rounded-xl border px-4 py-3 text-sm font-medium transition-colors hover:bg-black/[0.03]"
           style={{ borderColor: PALETTE.line, color: PALETTE.forest }}
         >
           <ArrowLeft className="h-4 w-4" />
@@ -510,7 +510,7 @@ export default function StepIdentity({
 
         <button
           type="submit"
-          className="group inline-flex items-center gap-1.5 rounded-xl px-6 py-2.5 text-sm font-semibold text-white transition-colors"
+          className="group inline-flex min-h-[44px] items-center gap-1.5 rounded-xl px-6 py-3 text-sm font-semibold text-white transition-colors"
           style={{ backgroundColor: PALETTE.forest }}
           onMouseEnter={(e) => {
             e.currentTarget.style.boxShadow = `inset 0 0 0 2px ${PALETTE.lime}`

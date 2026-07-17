@@ -94,17 +94,54 @@ export default function SignAgreementModal({
   const [touched, setTouched] = useState(false)
   const [padError, setPadError] = useState(false)
   const [padWidth, setPadWidth] = useState(440)
+  const [padHeight, setPadHeight] = useState(220)
   const inputRef = useRef<HTMLInputElement>(null)
   const padRef = useRef<SignatureCanvas>(null)
   const padBoxRef = useRef<HTMLDivElement>(null)
+  const pendingSignature = useRef<string | null>(null)
 
   // Size the signature canvas to its container (fixed attrs avoid the
-  // classic CSS-scaled-canvas stroke-offset bug).
+  // classic CSS-scaled-canvas stroke-offset bug). Re-measure on container
+  // resize / window resize / orientation change so rotating a phone never
+  // leaves a stale-width (clipped or shrunken) canvas.
   useEffect(() => {
     if (!open) return
     const el = padBoxRef.current
-    if (el) setPadWidth(Math.max(260, el.clientWidth - 2))
+    if (!el) return
+
+    const measure = () => {
+      setPadWidth(Math.max(260, el.clientWidth - 2))
+      // Shorter pad on short viewports so the modal rarely needs scrolling.
+      setPadHeight(window.innerHeight < 700 ? 160 : 220)
+    }
+    // Changing the canvas width/height attributes clears the drawing, so
+    // snapshot any strokes first and restore them after React re-renders.
+    const snapshotAndMeasure = () => {
+      const pad = padRef.current
+      // Always overwrite (null when empty) so a stale snapshot can never
+      // resurrect a signature the user has since cleared.
+      pendingSignature.current = pad && !pad.isEmpty() ? pad.toDataURL() : null
+      measure()
+    }
+
+    measure()
+    const ro = new ResizeObserver(snapshotAndMeasure)
+    ro.observe(el)
+    window.addEventListener('resize', snapshotAndMeasure)
+    window.addEventListener('orientationchange', snapshotAndMeasure)
+    return () => {
+      ro.disconnect()
+      window.removeEventListener('resize', snapshotAndMeasure)
+      window.removeEventListener('orientationchange', snapshotAndMeasure)
+    }
   }, [open, loading])
+
+  // Restore the snapshotted signature once the resized canvas has rendered.
+  useEffect(() => {
+    if (!pendingSignature.current) return
+    padRef.current?.fromDataURL(pendingSignature.current)
+    pendingSignature.current = null
+  }, [padWidth, padHeight])
 
   // Fetch the (stubbed) e-sign session each time the modal opens so the env flag
   // is always respected — DocuSeal drops in later without touching this UI.
@@ -171,7 +208,7 @@ export default function SignAgreementModal({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.96, y: 12 }}
             transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
-            className="relative z-10 w-full max-w-lg overflow-hidden rounded-2xl"
+            className="relative z-10 flex max-h-[calc(100dvh-2rem)] w-full max-w-lg flex-col overflow-hidden rounded-2xl"
             style={{
               background: 'linear-gradient(180deg, #FFFFFF 0%, #FFFFFF 55%, #FCFCFA 100%)',
               border: `1px solid ${PALETTE.line}`,
@@ -201,7 +238,7 @@ export default function SignAgreementModal({
                 type="button"
                 onClick={onClose}
                 aria-label="Close"
-                className="flex h-8 w-8 items-center justify-center rounded-full transition-colors hover:bg-white/10"
+                className="-my-1.5 -mr-1.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-white/10"
               >
                 <X className="h-4 w-4 text-white" />
               </button>
@@ -254,7 +291,7 @@ export default function SignAgreementModal({
                     href={previewHref}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 rounded-lg border px-3.5 py-2 text-xs font-semibold transition-colors hover:bg-black/[0.03]"
+                    className="inline-flex min-h-[36px] items-center gap-1.5 rounded-lg border px-3.5 py-2 text-xs font-semibold transition-colors hover:bg-black/[0.03]"
                     style={{ borderColor: PALETTE.line, color: PALETTE.forest2 }}
                   >
                     View The Full Agreement (PDF)
@@ -315,7 +352,7 @@ export default function SignAgreementModal({
                           padRef.current?.clear()
                           setPadError(false)
                         }}
-                        className="inline-flex items-center gap-1 text-[11px] font-semibold"
+                        className="-m-2 inline-flex min-h-[36px] items-center gap-1 rounded-md p-2 text-xs font-semibold"
                         style={{ color: PALETTE.ink2 }}
                       >
                         <Eraser className="h-3 w-3" />
@@ -336,7 +373,7 @@ export default function SignAgreementModal({
                         onBegin={() => setPadError(false)}
                         canvasProps={{
                           width: padWidth,
-                          height: 220,
+                          height: padHeight,
                           style: { display: 'block', touchAction: 'none' },
                           'aria-label': 'Signature pad',
                         }}
@@ -347,7 +384,7 @@ export default function SignAgreementModal({
                         Draw your signature in the box to sign.
                       </p>
                     ) : (
-                      <p className="mt-1.5 text-[11px]" style={{ color: PALETTE.ink2 }}>
+                      <p className="mt-1.5 text-xs" style={{ color: PALETTE.ink2 }}>
                         Use your mouse or finger — it&rsquo;s embedded in your signed agreement PDF.
                       </p>
                     )}
