@@ -32,6 +32,7 @@ import {
 } from '@/lib/utils/seller-application'
 import type { ApplicationStatusResult } from '@/lib/actions/seller-application-status'
 import { IconSubmitted, IconReview, IconDecision } from './StatusIcons'
+import TeamMessages from './TeamMessages'
 
 /* Forest Ledger palette (kept local — this page is deliberately light). */
 const P = {
@@ -124,6 +125,7 @@ export default function StatusView({
 
   return (
     <div className="relative min-h-screen">
+      <TeamMessages />
       {/* Backdrop photo + scrim (subtle, fades toward the bottom) */}
       <div className="fixed inset-0 z-0">
         <Image
@@ -149,7 +151,7 @@ export default function StatusView({
         <div className="flex items-center justify-between gap-3">
           <button
             onClick={() => onNavigate('/')}
-            className="flex items-center gap-2.5"
+            className="-my-2 flex min-h-[44px] items-center gap-2.5 py-2"
             aria-label="DropMarket home"
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -166,7 +168,7 @@ export default function StatusView({
           </button>
           <button
             onClick={() => onNavigate('/')}
-            className="flex items-center gap-2 text-sm text-white/60 transition-colors hover:text-white"
+            className="-m-3 flex min-h-[44px] items-center gap-2 rounded-lg p-3 text-sm text-white/60 transition-colors hover:text-white"
           >
             <ArrowLeft className="h-4 w-4" />
             Back To Home
@@ -328,7 +330,7 @@ export default function StatusView({
                 <button
                   onClick={copyReference}
                   aria-label="Copy reference"
-                  className="rounded-lg p-2 transition-colors hover:bg-black/5"
+                  className="-m-1.5 shrink-0 rounded-lg p-3.5 transition-colors hover:bg-black/5"
                   style={{ color: P.forest2 }}
                 >
                   <Copy className="h-4 w-4" />
@@ -366,7 +368,7 @@ export default function StatusView({
               {status === 'rejected' && rejection?.isPermanentBan && (
                 <a
                   href="mailto:support@dropmarket.gg"
-                  className="inline-flex items-center justify-center gap-2 rounded-xl px-6 py-2.5 text-sm font-semibold text-white"
+                  className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl px-6 py-3 text-sm font-semibold text-white"
                   style={{ backgroundColor: P.forest }}
                 >
                   Contact Support
@@ -375,7 +377,7 @@ export default function StatusView({
               {(status === 'pending' || status === 'under_review') && (
                 <button
                   onClick={() => onShowWithdraw(true)}
-                  className="inline-flex items-center justify-center gap-2 rounded-xl border px-5 py-2.5 text-sm font-medium transition-colors hover:bg-red-50"
+                  className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl border px-5 py-3 text-sm font-medium transition-colors hover:bg-red-50"
                   style={{ borderColor: '#F4CDC7', color: P.red }}
                 >
                   <Trash2 className="h-4 w-4" />
@@ -416,7 +418,7 @@ export default function StatusView({
               <button
                 onClick={() => onShowWithdraw(false)}
                 disabled={isWithdrawing}
-                className="flex-1 rounded-xl border px-4 py-2.5 text-sm font-medium transition-colors hover:bg-black/[0.03] disabled:opacity-50"
+                className="min-h-[44px] flex-1 rounded-xl border px-4 py-3 text-sm font-medium transition-colors hover:bg-black/[0.03] disabled:opacity-50"
                 style={{ borderColor: P.line, color: P.ink }}
               >
                 Keep Application
@@ -424,7 +426,7 @@ export default function StatusView({
               <button
                 onClick={onWithdraw}
                 disabled={isWithdrawing}
-                className="flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white transition-colors disabled:opacity-60"
+                className="flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold text-white transition-colors disabled:opacity-60"
                 style={{ backgroundColor: P.red }}
               >
                 {isWithdrawing ? (
@@ -554,7 +556,7 @@ function PrimaryButton({
     <button
       onClick={onClick}
       disabled={disabled}
-      className="inline-flex items-center justify-center gap-2 rounded-xl px-6 py-2.5 text-sm font-semibold text-white transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+      className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl px-6 py-3 text-sm font-semibold text-white transition-colors disabled:cursor-not-allowed disabled:opacity-50"
       style={{ backgroundColor: P.forest }}
     >
       {children}

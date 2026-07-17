@@ -540,7 +540,8 @@ export async function messageApplicant(applicationId: string, message: string) {
       type: 'admin_message',
       title: 'Message From The DropMarket Team',
       message: trimmed,
-      link: '/account/seller-status',
+      // Deep link: the status page auto-opens the team chat on arrival.
+      link: '/account/seller-status?openMessages=1',
       is_read: false,
     })
     if (error) throw error
