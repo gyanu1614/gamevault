@@ -161,7 +161,7 @@ export default function ApplicationsTable({ applications }: ApplicationsTablePro
         <span className="min-w-0 flex-1 text-[10px] font-bold uppercase tracking-[0.12em] text-white/30">
           Store
         </span>
-        <span className="w-36 shrink-0 text-[10px] font-bold uppercase tracking-[0.12em] text-white/30">
+        <span className="w-40 shrink-0 text-[10px] font-bold uppercase tracking-[0.12em] text-white/30">
           Country
         </span>
         <span className="hidden w-[84px] shrink-0 text-[10px] font-bold uppercase tracking-[0.12em] text-white/30 lg:block">
@@ -231,9 +231,11 @@ export default function ApplicationsTable({ applications }: ApplicationsTablePro
             </div>
 
             {/* Country */}
-            <div className="hidden w-36 shrink-0 items-center gap-1.5 md:flex">
-              {flag && <span className="text-[15px] leading-none">{flag}</span>}
-              <span className="truncate text-[12px] text-white/70">{app.country || '—'}</span>
+            <div className="hidden w-40 shrink-0 items-center gap-2 md:flex">
+              {flag && <span className="text-[19px] leading-none">{flag}</span>}
+              <span className="truncate text-[13px] font-semibold text-white/85">
+                {app.country || '—'}
+              </span>
             </div>
 
             {/* ID Checks — Didit video + proof of address */}

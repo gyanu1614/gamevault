@@ -12,8 +12,12 @@
  *      slot (`kycSessionUrl`) is already wired, so it drops in without a
  *      redesign.
  *
- *   2. MANUAL UPLOAD — the working fallback: government ID + selfie (+ proof of
- *      address, and business docs when applicable). Files upload immediately via
+ *   2. MANUAL UPLOAD — the working fallback: government ID + selfie, hidden
+ *      behind a quiet "Can't Use Video?" toggle (`manualMode`) so the video
+ *      path stays front and center. Proof of address (and business docs when
+ *      applicable) is always visible — it's required on BOTH paths. If Continue
+ *      fails validation on the hidden ID/selfie rows, `manualMode` flips on so
+ *      the errors are visible. Files upload immediately via
  *      `useImmediateUpload`; the parent owns the uploaded-docs state. Continue is
  *      gated by `step3Schema.safeParse(uploadedDocs)`, so a required document
  *      passes ONLY when its storage `path` exists (an actual completed upload,
@@ -70,6 +74,10 @@ export default function StepIdentity({
   // uploaded documents (each carries a storage path), so a required doc can
   // never pass on a local pick.
   const [errors, setErrors] = useState<Partial<Record<KycDocKey, string>>>({})
+
+  // Didit-first: the manual ID + selfie rows stay hidden until the seller
+  // explicitly opts out of the video path (or validation needs to show them).
+  const [manualMode, setManualMode] = useState(false)
 
   const [video, setVideo] = useState<KycVideoState>({
     status: 'idle',
@@ -202,6 +210,11 @@ export default function StepIdentity({
         if (key && !errs[key]) errs[key] = issue.message
       }
       setErrors(errs)
+      // The failing ID/selfie rows are hidden while the video path is front and
+      // center — reveal them so the seller can actually see (and fix) the errors.
+      if (!manualMode && !kycVerified && (errs.idDocument || errs.selfieWithId)) {
+        setManualMode(true)
+      }
       return
     }
     setErrors({})
@@ -247,8 +260,9 @@ export default function StepIdentity({
       <section
         className="relative overflow-hidden rounded-2xl p-5 sm:p-6"
         style={{
-          backgroundColor: PALETTE.forest,
-          boxShadow: '0 1px 2px rgba(20,67,42,0.12)',
+          background: 'linear-gradient(180deg, #1B5E3A 0%, #14432A 55%, #103A22 100%)',
+          boxShadow:
+            'inset 0 1px 0 rgba(255,255,255,0.14), inset 0 -1px 0 rgba(0,0,0,0.28), 0 10px 24px -12px rgba(0,0,0,0.5)',
         }}
       >
         {/* Recommended pill */}
@@ -283,7 +297,12 @@ export default function StepIdentity({
           onClick={handleVerifyWithVideo}
           disabled={starting}
           className="group mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold transition-transform disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto"
-          style={{ backgroundColor: PALETTE.paper, color: PALETTE.forest }}
+          style={{
+            backgroundColor: PALETTE.paper,
+            color: PALETTE.forest,
+            boxShadow:
+              'inset 0 1px 0 rgba(255,255,255,0.45), inset 0 -2px 0 rgba(0,0,0,0.12), 0 6px 14px -6px rgba(0,0,0,0.45)',
+          }}
         >
           {starting ? (
             <>
@@ -322,7 +341,12 @@ export default function StepIdentity({
                 onClick={handleCheckStatus}
                 disabled={video.status === 'checking'}
                 className="inline-flex items-center gap-2 rounded-lg px-3.5 py-2 text-xs font-semibold disabled:opacity-70"
-                style={{ backgroundColor: PALETTE.lime, color: PALETTE.forest3 }}
+                style={{
+                  backgroundColor: PALETTE.lime,
+                  color: PALETTE.forest3,
+                  boxShadow:
+                    'inset 0 1px 0 rgba(255,255,255,0.45), inset 0 -2px 0 rgba(0,0,0,0.12), 0 6px 14px -6px rgba(163,230,53,0.4)',
+                }}
               >
                 {video.status === 'checking' ? (
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -350,47 +374,65 @@ export default function StepIdentity({
       </section>
       )}
 
-      {/* Divider — "or upload manually" */}
+      {/* Quiet escape hatch — reveals the manual ID + selfie rows */}
+      {!kycVerified && !manualMode && (
+        <div className="mt-4 flex justify-center">
+          <button
+            type="button"
+            onClick={() => setManualMode(true)}
+            className="rounded-lg border px-3.5 py-2 text-xs font-medium transition-colors hover:bg-black/[0.03]"
+            style={{ borderColor: PALETTE.line, color: PALETTE.forest2 }}
+          >
+            Can&rsquo;t Use Video? Upload Documents Instead
+          </button>
+        </div>
+      )}
+
+      {/* ── Manual upload path (revealed fallback) ─────────────────────────── */}
+      {!kycVerified && manualMode && (
+        <div className="animate-fade-in">
+          <div className="my-6 flex items-center gap-3" aria-hidden>
+            <span className="h-px flex-1" style={{ backgroundColor: PALETTE.line }} />
+            <span className="text-xs font-medium" style={{ color: PALETTE.ink2 }}>
+              Or Upload Your Documents
+            </span>
+            <span className="h-px flex-1" style={{ backgroundColor: PALETTE.line }} />
+          </div>
+
+          <div className="space-y-4">
+            <KycUploadRow
+              label="Government-Issued ID"
+              description="Passport, national ID, or driver's license — the photo page, in full."
+              fileType="idDocument"
+              doc={uploadedDocs.idDocument}
+              onDocChange={handleDocChange}
+              required
+              error={errors.idDocument}
+            />
+
+            <KycUploadRow
+              label="Selfie With ID"
+              description="A selfie holding your ID next to your face, with today's date on a note."
+              fileType="selfieWithId"
+              doc={uploadedDocs.selfieWithId}
+              onDocChange={handleDocChange}
+              required
+              error={errors.selfieWithId}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Divider — proof of address is required on BOTH paths */}
       <div className="my-6 flex items-center gap-3" aria-hidden>
         <span className="h-px flex-1" style={{ backgroundColor: PALETTE.line }} />
         <span className="text-xs font-medium" style={{ color: PALETTE.ink2 }}>
-          {kycVerified ? 'Remaining Document' : 'Or Upload Your Documents'}
+          Proof Of Address — Required For Everyone
         </span>
         <span className="h-px flex-1" style={{ backgroundColor: PALETTE.line }} />
       </div>
 
-      {/* ── Manual upload path (working fallback) ──────────────────────────── */}
       <div className="space-y-4">
-        <KycUploadRow
-          label="Government-Issued ID"
-          description={
-            kycVerified
-              ? 'Covered by your video verification — no upload needed.'
-              : "Passport, national ID, or driver's license — the photo page, in full."
-          }
-          fileType="idDocument"
-          doc={uploadedDocs.idDocument}
-          onDocChange={handleDocChange}
-          required={!kycVerified}
-          disabled={kycVerified}
-          error={errors.idDocument}
-        />
-
-        <KycUploadRow
-          label="Selfie With ID"
-          description={
-            kycVerified
-              ? 'Covered by your video verification — no upload needed.'
-              : "A selfie holding your ID next to your face, with today's date on a note."
-          }
-          fileType="selfieWithId"
-          doc={uploadedDocs.selfieWithId}
-          onDocChange={handleDocChange}
-          required={!kycVerified}
-          disabled={kycVerified}
-          error={errors.selfieWithId}
-        />
-
         <KycUploadRow
           label="Proof Of Address"
           description="Utility bill, bank statement, or government letter — under three months old."

@@ -26,6 +26,48 @@ import { PALETTE } from '../theme'
 import { signSellerAgreement } from '../actions'
 import { type SignAgreementResult } from '../integrations'
 
+
+/**
+ * Crop a signature canvas to the bounding box of its non-transparent pixels.
+ * Replaces react-signature-canvas's getTrimmedCanvas(), whose trim-canvas
+ * dependency fails at runtime under webpack ("trim_canvas__ is not a
+ * function"). Falls back to the untrimmed canvas on any error.
+ */
+function trimSignatureCanvas(source: HTMLCanvasElement): HTMLCanvasElement {
+  try {
+    const ctx = source.getContext('2d')
+    if (!ctx) return source
+    const { width, height } = source
+    const data = ctx.getImageData(0, 0, width, height).data
+    let top = height, left = width, right = 0, bottom = 0
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        if (data[(y * width + x) * 4 + 3] > 0) {
+          if (x < left) left = x
+          if (x > right) right = x
+          if (y < top) top = y
+          if (y > bottom) bottom = y
+        }
+      }
+    }
+    if (right <= left || bottom <= top) return source
+    const pad = 6
+    left = Math.max(0, left - pad)
+    top = Math.max(0, top - pad)
+    right = Math.min(width - 1, right + pad)
+    bottom = Math.min(height - 1, bottom + pad)
+    const out = document.createElement('canvas')
+    out.width = right - left + 1
+    out.height = bottom - top + 1
+    out.getContext('2d')?.drawImage(
+      source, left, top, out.width, out.height, 0, 0, out.width, out.height,
+    )
+    return out
+  } catch {
+    return source
+  }
+}
+
 interface SignAgreementModalProps {
   open: boolean
   onClose: () => void
@@ -102,7 +144,7 @@ export default function SignAgreementModal({
     onSigned({
       name: typedName.trim(),
       signedAt: new Date().toISOString(),
-      signatureImage: padRef.current.getTrimmedCanvas().toDataURL('image/png'),
+      signatureImage: trimSignatureCanvas(padRef.current.getCanvas()).toDataURL('image/png'),
     })
     onClose()
   }
@@ -129,8 +171,13 @@ export default function SignAgreementModal({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.96, y: 12 }}
             transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
-            className="relative z-10 w-full max-w-lg overflow-hidden rounded-2xl shadow-2xl"
-            style={{ backgroundColor: PALETTE.paper, border: `1px solid ${PALETTE.line}` }}
+            className="relative z-10 w-full max-w-lg overflow-hidden rounded-2xl"
+            style={{
+              background: 'linear-gradient(180deg, #FFFFFF 0%, #FFFFFF 55%, #FCFCFA 100%)',
+              border: `1px solid ${PALETTE.line}`,
+              boxShadow:
+                'inset 0 1px 0 rgba(255,255,255,0.14), inset 0 -1px 0 rgba(0,0,0,0.04), 0 10px 24px -12px rgba(0,0,0,0.5)',
+            }}
             role="dialog"
             aria-modal="true"
             aria-label="Sign the Seller Agency Agreement"
@@ -138,7 +185,11 @@ export default function SignAgreementModal({
             {/* Header */}
             <div
               className="flex items-center justify-between px-6 py-4"
-              style={{ backgroundColor: PALETTE.forest }}
+              style={{
+                background: 'linear-gradient(180deg, #1B5E3A 0%, #14432A 55%, #103A22 100%)',
+                boxShadow:
+                  'inset 0 1px 0 rgba(255,255,255,0.14), inset 0 -1px 0 rgba(0,0,0,0.28)',
+              }}
             >
               <div className="flex items-center gap-2.5">
                 <PenLine className="h-5 w-5" style={{ color: PALETTE.lime }} />
@@ -305,13 +356,18 @@ export default function SignAgreementModal({
                   <button
                     type="button"
                     onClick={handleAccept}
-                    className="group flex w-full items-center justify-center gap-2 rounded-lg px-4 py-3 text-sm font-semibold text-white transition-colors"
-                    style={{ backgroundColor: PALETTE.forest }}
+                    className="group flex w-full items-center justify-center gap-2 rounded-lg px-4 py-3 text-sm font-semibold text-white transition-[filter]"
+                    style={{
+                      background:
+                        'linear-gradient(180deg, #1B5E3A 0%, #14432A 55%, #103A22 100%)',
+                      boxShadow:
+                        'inset 0 1px 0 rgba(255,255,255,0.18), inset 0 -2px 0 rgba(0,0,0,0.25), 0 6px 14px -6px rgba(20,67,42,0.5)',
+                    }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = PALETTE.forest2
+                      e.currentTarget.style.filter = 'brightness(1.12)'
                     }}
                     onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = PALETTE.forest
+                      e.currentTarget.style.filter = 'none'
                     }}
                   >
                     <PenLine className="h-4 w-4" style={{ color: PALETTE.lime }} />

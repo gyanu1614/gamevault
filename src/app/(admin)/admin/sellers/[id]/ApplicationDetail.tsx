@@ -34,8 +34,11 @@ import {
   calculateVerificationStatus,
   findDiditEvidence,
   isDiditEvidence,
-  diditSessionUrl,
 } from '@/lib/utils/seller-verification'
+import {
+  getDiditSessionDetails,
+  type DiditSessionDetailsResult,
+} from '@/lib/actions/admin-didit'
 import { restrictSeller, unrestrictSeller } from '@/lib/actions/admin-seller-restrictions'
 import { getAvatarUrl } from '@/lib/utils/avatar'
 import {
@@ -82,6 +85,7 @@ import {
   Mail,
   MessageSquare,
   Send,
+  Copy,
 } from 'lucide-react'
 
 interface ApplicationDetailProps {
@@ -224,10 +228,12 @@ function ModalShell({
   onClose,
   children,
   wide,
+  panelStyle,
 }: {
   onClose: () => void
   children: React.ReactNode
   wide?: boolean
+  panelStyle?: React.CSSProperties
 }) {
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
@@ -242,11 +248,179 @@ function ModalShell({
           'max-h-[90vh] overflow-y-auto',
           FOREST_MOTION.fadeUp
         )}
+        style={panelStyle}
         onClick={(e) => e.stopPropagation()}
       >
         {children}
       </div>
     </div>
+  )
+}
+
+// ─── Didit session details modal ─────────────────────────────────────────────
+
+/** Top-lit 3D depth treatment for the Didit modal panel (forest base). */
+const DIDIT_PANEL_DEPTH: React.CSSProperties = {
+  background: 'linear-gradient(180deg, #16321F 0%, #0F2419 55%, #0C1D13 100%)',
+  boxShadow:
+    'inset 0 1px 0 rgba(255,255,255,0.14), inset 0 -1px 0 rgba(0,0,0,0.28), 0 30px 80px -30px rgba(0,0,0,0.8)',
+}
+
+/** Approved → lime tint, Declined/rejected/failed → red, anything else → amber. */
+function diditStatusTone(status: string): string {
+  const s = status.toLowerCase()
+  if (s.includes('approved')) return 'bg-[#A3E635]/[0.16] text-[#D9F99D]'
+  if (s.includes('declined') || s.includes('rejected') || s.includes('failed'))
+    return 'bg-[#B42318]/25 text-[#FCA5A5]'
+  return 'bg-[#F59E0B]/[0.16] text-[#FCD34D]'
+}
+
+const DIDIT_CONSOLE_LINK =
+  'inline-flex items-center gap-1 text-[10.5px] font-extrabold uppercase tracking-[0.05em] text-[#A3E635] transition hover:brightness-110'
+
+function DiditSessionModal({
+  sessionId,
+  onClose,
+}: {
+  sessionId: string
+  onClose: () => void
+}) {
+  const [loading, setLoading] = useState(true)
+  const [details, setDetails] = useState<Extract<
+    DiditSessionDetailsResult,
+    { success: true }
+  > | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    getDiditSessionDetails(sessionId)
+      .then((res) => {
+        if (cancelled) return
+        if (res.success) setDetails(res)
+        else setError(res.error)
+      })
+      .catch(() => {
+        if (!cancelled) setError('Could not load the session details.')
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [sessionId])
+
+  const copySessionId = async () => {
+    try {
+      await navigator.clipboard.writeText(sessionId)
+      toast.success('Session ID copied')
+    } catch {
+      toast.error('Could not copy the session ID')
+    }
+  }
+
+  return (
+    <ModalShell onClose={onClose} panelStyle={DIDIT_PANEL_DEPTH}>
+      <div className="mb-4 flex items-center justify-between border-b border-white/[0.08] pb-3">
+        <div className="flex items-center gap-2">
+          <ShieldCheck className="h-4 w-4 text-[#A3E635]" />
+          <h3 className="text-base font-extrabold text-white">Didit Verification Session</h3>
+        </div>
+        <button
+          onClick={onClose}
+          className="rounded-lg p-1.5 transition-colors hover:bg-white/[0.06]"
+          aria-label="Close"
+        >
+          <X className="h-4 w-4 text-white/60" />
+        </button>
+      </div>
+
+      {loading ? (
+        <div className="flex items-center justify-center py-10">
+          <Loader2 className="h-6 w-6 animate-spin text-[#A3E635]" />
+        </div>
+      ) : error ? (
+        <div className="rounded-[11px] bg-[#B42318]/20 px-3.5 py-3 text-[12.5px] leading-relaxed text-[#FCA5A5]">
+          {error}
+        </div>
+      ) : details ? (
+        <>
+          {/* Decision status */}
+          <div className="flex flex-col items-center gap-1.5 py-2">
+            <span
+              className={cn(
+                'inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-[14px] font-extrabold',
+                diditStatusTone(details.status)
+              )}
+            >
+              <span className="h-2 w-2 rounded-full bg-current" />
+              {details.status}
+            </span>
+            {details.sessionNumber != null && (
+              <span className="text-[11px] font-semibold text-white/40">
+                Session #{details.sessionNumber}
+              </span>
+            )}
+          </div>
+
+          {/* Session ID + copy */}
+          <div className="mt-3 flex items-center gap-2 rounded-[10px] border border-white/10 bg-white/[0.05] px-3 py-2.5">
+            <span className={cn('min-w-0 flex-1 truncate text-[12px] text-white/80', FOREST_CLASSES.mono)}>
+              {sessionId}
+            </span>
+            <button
+              onClick={copySessionId}
+              className="shrink-0 rounded-lg p-1.5 text-white/60 transition-colors hover:bg-white/[0.08] hover:text-white"
+              aria-label="Copy Session ID"
+            >
+              <Copy className="h-3.5 w-3.5" />
+            </button>
+          </div>
+
+          {/* Verification checks */}
+          {details.features.length > 0 && (
+            <div className="mt-4">
+              <div className={MODAL_LABEL}>Verification Checks</div>
+              <div className="rounded-[11px] border border-white/[0.08] bg-white/[0.03] px-3.5">
+                {details.features.map((feature, i) => (
+                  <div
+                    key={`${feature.name}-${i}`}
+                    className={cn(
+                      'flex items-center justify-between gap-3 py-2.5',
+                      i > 0 && 'border-t border-white/[0.08]'
+                    )}
+                  >
+                    <span className="text-[12.5px] font-semibold text-white/80">
+                      {feature.name}
+                    </span>
+                    <span
+                      className={cn(
+                        'rounded-full px-2.5 py-0.5 text-[10.5px] font-extrabold uppercase tracking-[0.05em]',
+                        diditStatusTone(feature.status)
+                      )}
+                    >
+                      {feature.status}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </>
+      ) : null}
+
+      <div className="mt-5 flex justify-end border-t border-white/[0.08] pt-4">
+        <a
+          href="https://business.didit.me"
+          target="_blank"
+          rel="noopener noreferrer"
+          className={DIDIT_CONSOLE_LINK}
+        >
+          Open Didit Console ↗
+        </a>
+      </div>
+    </ModalShell>
   )
 }
 
@@ -284,6 +458,7 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
   const [showHistoryModal, setShowHistoryModal] = useState(false)
   const [restrictionHistory, setRestrictionHistory] = useState<any[]>([])
   const [loadingHistory, setLoadingHistory] = useState(false)
+  const [showDiditModal, setShowDiditModal] = useState(false)
 
   // Real uploads only — the synthetic 'didit:<id>' evidence row is not a
   // storage object, so it never goes through the signed-URL action.
@@ -907,14 +1082,12 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
                     {diditDoc?.uploaded_at && <> · {fmtDateTime(diditDoc.uploaded_at)}</>}
                   </div>
                 </div>
-                <a
-                  href={diditSessionUrl(diditSessionId)}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                <button
+                  onClick={() => setShowDiditModal(true)}
                   className="ml-auto text-[10.5px] font-extrabold uppercase tracking-[0.05em] text-[#A3E635] transition hover:brightness-110"
                 >
                   View Session ↗
-                </a>
+                </button>
               </div>
             )}
 
@@ -1685,6 +1858,11 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
             </div>
           )}
         </ModalShell>
+      )}
+
+      {/* Didit Session Details */}
+      {showDiditModal && diditSessionId && (
+        <DiditSessionModal sessionId={diditSessionId} onClose={() => setShowDiditModal(false)} />
       )}
     </>
   )

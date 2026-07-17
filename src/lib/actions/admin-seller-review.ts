@@ -6,6 +6,7 @@ import { requireAdmin, requireRole } from './admin-permissions'
 import { revalidatePath } from 'next/cache'
 import {
   sendApplicationApprovedEmail,
+  sendApplicationInReviewEmail,
   sendApplicationRejectedEmail,
   sendInfoRequestedEmail,
 } from '@/lib/email'
@@ -412,6 +413,101 @@ export async function startReview(applicationId: string) {
   } catch (error: any) {
     console.error('Error starting review:', error)
     return { success: false, error: error.message }
+  }
+}
+
+/**
+ * markApplicationUnderReview — "review has begun" signal. Fired when an
+ * admin opens a PENDING application: flips it to under_review (race-guarded
+ * by the status predicate on the UPDATE) and, best-effort, tells the
+ * applicant via an in-app notification + email. Notification/email failures
+ * never fail the flip — the status change is the source of truth.
+ */
+export async function markApplicationUnderReview(
+  applicationId: string
+): Promise<{ success: boolean; changed: boolean; error?: string }> {
+  try {
+    await requireRole(['admin', 'super_admin'])
+    const supabase = await createClient()
+
+    // Fetch the application with the applicant's profile email
+    const { data: application } = await supabase
+      .from('seller_applications')
+      .select(`
+        user_id,
+        status,
+        display_name,
+        full_legal_name,
+        alternate_email,
+        profiles!user_id (
+          email,
+          full_name
+        )
+      `)
+      .eq('id', applicationId)
+      .single() as any
+
+    if (!application) {
+      return { success: false, changed: false, error: 'Application not found' }
+    }
+
+    // Only a pending application transitions — anything else is a no-op
+    if (application.status !== 'pending') {
+      return { success: true, changed: false }
+    }
+
+    // Race guard: the status predicate makes concurrent calls (two admins
+    // opening the page at once) collapse to a single winning UPDATE.
+    const { data: updated, error: updateError } = await (supabase
+      .from('seller_applications')
+      .update as any)({
+        status: 'under_review',
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', applicationId)
+      .eq('status', 'pending')
+      .select('id')
+
+    if (updateError) throw updateError
+    if (!updated || updated.length === 0) {
+      // Another admin's open beat us to the flip
+      return { success: true, changed: false }
+    }
+
+    const name =
+      application.full_legal_name ||
+      (application.profiles as any)?.full_name ||
+      'Seller'
+
+    // Best-effort in-app notification (cross-user insert → service client)
+    try {
+      const serviceClient = getServiceClient()
+      await (serviceClient.from('notifications').insert as any)({
+        user_id: application.user_id,
+        type: 'application_in_review',
+        title: 'Your Application Is Being Reviewed',
+        message: 'Good news — our team has started reviewing your seller application.',
+        link: '/account/seller-status',
+        is_read: false,
+      })
+    } catch (notifyErr) {
+      console.error('[markApplicationUnderReview] notification failed:', notifyErr)
+    }
+
+    // Best-effort email
+    try {
+      const userEmail = (application.profiles as any)?.email || application.alternate_email
+      if (userEmail) {
+        await sendApplicationInReviewEmail({ to: userEmail, name })
+      }
+    } catch (emailErr) {
+      console.error('[markApplicationUnderReview] email failed:', emailErr)
+    }
+
+    return { success: true, changed: true }
+  } catch (error: any) {
+    console.error('Error marking application under review:', error)
+    return { success: false, changed: false, error: error.message }
   }
 }
 
