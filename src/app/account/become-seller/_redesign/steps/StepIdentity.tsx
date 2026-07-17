@@ -218,7 +218,32 @@ export default function StepIdentity({
         icon={ShieldCheck}
       />
 
+      {/* ── Verified — quiet completed card replaces the whole CTA section ──── */}
+      {kycVerified && (
+        <section
+          className="flex items-start gap-3.5 rounded-2xl border p-5"
+          style={{ borderColor: 'rgba(101,163,13,0.35)', backgroundColor: 'rgba(163,230,53,0.14)' }}
+        >
+          <span
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
+            style={{ backgroundColor: PALETTE.forest }}
+          >
+            <CheckCircle2 className="h-5 w-5" style={{ color: PALETTE.lime }} />
+          </span>
+          <div className="min-w-0">
+            <h3 className="text-base font-semibold" style={{ color: PALETTE.forest }}>
+              Identity Verified
+            </h3>
+            <p className="mt-1 text-sm leading-relaxed" style={{ color: PALETTE.ink2 }}>
+              Your video check is approved — government ID and selfie are covered.
+              Just add your proof of address below and continue.
+            </p>
+          </div>
+        </section>
+      )}
+
       {/* ── Verify With Video (Recommended) — the prominent affordance ──────── */}
+      {!kycVerified && (
       <section
         className="relative overflow-hidden rounded-2xl p-5 sm:p-6"
         style={{
@@ -307,39 +332,29 @@ export default function StepIdentity({
                 Check Status
               </button>
               {video.kycSessionUrl && (
-                <a
-                  href={video.kycSessionUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                <button
+                  type="button"
+                  // window.open WITHOUT noopener — the verification tab needs
+                  // window.opener to post the result back and self-close.
+                  onClick={() => video.kycSessionUrl && window.open(video.kycSessionUrl, '_blank')}
                   className="text-xs font-medium underline underline-offset-2"
                   style={{ color: 'rgba(255,255,255,0.75)' }}
                 >
                   Reopen Verification
-                </a>
+                </button>
               )}
             </div>
           </div>
         )}
-        {kycVerified && (
-          <div
-            className="mt-3 flex items-start gap-2.5 rounded-lg px-3 py-2.5"
-            style={{ backgroundColor: 'rgba(163,230,53,0.18)' }}
-          >
-            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" style={{ color: PALETTE.lime }} />
-            <p className="text-xs leading-relaxed" style={{ color: '#FFFFFF' }}>
-              <span className="font-semibold">Identity Verified.</span> Your video
-              check is approved — the ID and selfie uploads below are no longer
-              required. Just add your proof of address.
-            </p>
-          </div>
-        )}
+
       </section>
+      )}
 
       {/* Divider — "or upload manually" */}
       <div className="my-6 flex items-center gap-3" aria-hidden>
         <span className="h-px flex-1" style={{ backgroundColor: PALETTE.line }} />
         <span className="text-xs font-medium" style={{ color: PALETTE.ink2 }}>
-          Or Upload Your Documents
+          {kycVerified ? 'Remaining Document' : 'Or Upload Your Documents'}
         </span>
         <span className="h-px flex-1" style={{ backgroundColor: PALETTE.line }} />
       </div>
@@ -357,6 +372,7 @@ export default function StepIdentity({
           doc={uploadedDocs.idDocument}
           onDocChange={handleDocChange}
           required={!kycVerified}
+          disabled={kycVerified}
           error={errors.idDocument}
         />
 
@@ -371,6 +387,7 @@ export default function StepIdentity({
           doc={uploadedDocs.selfieWithId}
           onDocChange={handleDocChange}
           required={!kycVerified}
+          disabled={kycVerified}
           error={errors.selfieWithId}
         />
 

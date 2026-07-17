@@ -27,6 +27,8 @@ interface KycUploadRowProps {
   onDocChange: (fileType: string, doc: UploadedDoc | null) => void
   bucket?: string
   required?: boolean
+  /** Greyed-out completed state — e.g. covered by Didit video verification. */
+  disabled?: boolean
   /** External validation error (e.g. required doc missing on Continue). */
   error?: string
 }
@@ -45,6 +47,7 @@ export default function KycUploadRow({
   onDocChange,
   bucket = 'kyc-documents',
   required = false,
+  disabled = false,
   error,
 }: KycUploadRowProps) {
   const [isDragging, setIsDragging] = useState(false)
@@ -76,7 +79,10 @@ export default function KycUploadRow({
   const showError = error || (status === 'error' ? uploadError : null)
 
   return (
-    <div>
+    <div
+      className={disabled ? 'pointer-events-none select-none opacity-45 grayscale' : undefined}
+      aria-disabled={disabled || undefined}
+    >
       <div className="mb-1 flex items-baseline justify-between gap-2">
         <label className="block text-sm font-medium" style={{ color: PALETTE.ink }}>
           {label}{' '}

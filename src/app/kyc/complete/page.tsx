@@ -78,13 +78,34 @@ export default function KycCompletePage() {
             : 'Head back to your application to continue.'}
         </p>
         {!selfClosing && (
-          <a
-            href="/account/become-seller"
+          <button
+            type="button"
+            onClick={() => {
+              // Your application lives in the ORIGINAL tab — closing this one
+              // lands you right back on it. Re-notify the opener first, then
+              // close; only navigate if the browser refuses to close us.
+              const params = new URLSearchParams(window.location.search)
+              const sessionId = params.get('verificationSessionId')
+              try {
+                if (window.opener && sessionId) {
+                  window.opener.postMessage(
+                    { type: 'didit:complete', sessionId, status: params.get('status') },
+                    window.location.origin,
+                  )
+                }
+              } catch {
+                /* opener gone */
+              }
+              window.close()
+              setTimeout(() => {
+                if (!window.closed) window.location.href = '/account/become-seller'
+              }, 400)
+            }}
             className="mt-6 inline-flex items-center justify-center rounded-xl px-6 py-2.5 text-sm font-semibold text-white"
             style={{ backgroundColor: '#14432A' }}
           >
             Return To Application
-          </a>
+          </button>
         )}
       </div>
     </div>

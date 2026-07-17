@@ -144,15 +144,34 @@ export default function StatusView({
         />
       </div>
 
-      <div className="relative z-10 mx-auto w-full max-w-2xl px-4 pb-16 pt-8 sm:px-6">
-        {/* Floating header — no box */}
-        <button
-          onClick={() => onNavigate('/')}
-          className="flex items-center gap-2 text-sm text-white/60 transition-colors hover:text-white"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back To Home
-        </button>
+      <div className="relative z-10 mx-auto w-full max-w-2xl px-4 pb-16 pt-7 sm:px-6">
+        {/* Floating brand + back — no navbar on this page */}
+        <div className="flex items-center justify-between gap-3">
+          <button
+            onClick={() => onNavigate('/')}
+            className="flex items-center gap-2.5"
+            aria-label="DropMarket home"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/brand/logo-mark-white.png"
+              alt=""
+              width={32}
+              height={32}
+              className="h-8 w-8 object-contain"
+            />
+            <span className="text-base font-bold tracking-tight text-white">
+              Drop<span className="text-white/70">Market</span>
+            </span>
+          </button>
+          <button
+            onClick={() => onNavigate('/')}
+            className="flex items-center gap-2 text-sm text-white/60 transition-colors hover:text-white"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back To Home
+          </button>
+        </div>
         <div className="animate-fade-in mt-6 text-center">
           <h1 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
             Application Status<span style={{ color: P.lime }}>.</span>
