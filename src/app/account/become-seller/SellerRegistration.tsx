@@ -114,6 +114,8 @@ export default function SellerRegistration({
   // KYC documents upload IMMEDIATELY on pick (owned here so the required-doc
   // enforcement checks the ACTUAL uploaded path, not a local pick).
   const [uploadedDocs, setUploadedDocs] = useState<UploadedDocsState>(EMPTY_DOCS)
+  // Approved Didit video-verification session (waives manual ID + selfie).
+  const [kycSessionId, setKycSessionId] = useState<string | null>(null)
   const [selectedLanguages] = useState<string[]>([])
 
   // ── Submission ──────────────────────────────────────────────────────────────
@@ -381,7 +383,10 @@ export default function SellerRegistration({
     }
 
     // Required documents must have ACTUALLY uploaded (storage path present).
-    const missingDocs = (['idDocument', 'selfieWithId', 'proofOfAddress'] as const).filter(
+    const requiredDocs = kycSessionId
+      ? (['proofOfAddress'] as const)
+      : (['idDocument', 'selfieWithId', 'proofOfAddress'] as const)
+    const missingDocs = requiredDocs.filter(
       (key) => !uploadedDocs[key]?.path,
     )
     if (missingDocs.length > 0) {
@@ -410,7 +415,21 @@ export default function SellerRegistration({
         payout,
         payoutCurrency,
         review: reviewData,
-        uploadedDocs,
+        uploadedDocs: {
+          ...uploadedDocs,
+          // Approved Didit session rides with the KYC documents so admin
+          // review sees the video verification (document_type 'other').
+          ...(kycSessionId
+            ? {
+                diditSession: {
+                  path: `didit:${kycSessionId}`,
+                  name: 'Didit Video Verification (Approved)',
+                  size: 0,
+                  type: 'application/didit-session',
+                } as UploadedDoc,
+              }
+            : {}),
+        } as UploadedDocsState,
         storeImage: null,
         selectedLanguages,
       }
@@ -516,6 +535,7 @@ export default function SellerRegistration({
                 onContinue={handleStep3}
                 onBack={goBack}
                 sellerType={step1?.sellerType}
+                onKycVerified={setKycSessionId}
               />
             </StepTransition>
           )}

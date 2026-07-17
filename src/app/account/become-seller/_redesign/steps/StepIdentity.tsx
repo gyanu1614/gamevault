@@ -27,11 +27,11 @@
 'use client'
 
 import { useState } from 'react'
-import { ShieldCheck, Video, Sparkles, Lock, ArrowRight, ArrowLeft, Loader2 } from 'lucide-react'
+import { ShieldCheck, Video, Sparkles, Lock, ArrowRight, ArrowLeft, Loader2, CheckCircle2, RefreshCcw } from 'lucide-react'
 
 import { step3Schema, type Step3FormData } from '../../schemas'
 import type { KycDocKey, UploadedDocsState, UploadedDoc } from '../../types'
-import { startKycSession } from '../actions'
+import { startKycSession, checkKycSession } from '../actions'
 import { PALETTE } from '../theme'
 import { StepHeader } from '../components'
 import KycUploadRow from './KycUploadRow'
@@ -44,13 +44,17 @@ interface StepIdentityProps {
   onContinue: (data: Step3FormData) => void
   onBack?: () => void
   sellerType?: 'individual' | 'business'
+  /** Fired once the Didit decision comes back Approved — the orchestrator
+   *  waives the manual ID/selfie requirement and records the session. */
+  onKycVerified?: (sessionId: string) => void
 }
 
-/** Video-verification affordance state — the wired data slot for Didit. */
+/** Video-verification affordance state — wired to Didit. */
 interface KycVideoState {
-  status: 'idle' | 'starting' | 'ready' | 'unavailable'
+  status: 'idle' | 'starting' | 'ready' | 'checking' | 'verified' | 'unavailable'
   /** The hosted verification session URL, once a session exists. */
   kycSessionUrl: string | null
+  sessionId: string | null
   message: string | null
 }
 
@@ -60,6 +64,7 @@ export default function StepIdentity({
   onContinue,
   onBack,
   sellerType,
+  onKycVerified,
 }: StepIdentityProps) {
   // Step 3 has no free-form inputs — validation runs against the ACTUALLY
   // uploaded documents (each carries a storage path), so a required doc can
@@ -69,8 +74,10 @@ export default function StepIdentity({
   const [video, setVideo] = useState<KycVideoState>({
     status: 'idle',
     kycSessionUrl: null,
+    sessionId: null,
     message: null,
   })
+  const kycVerified = video.status === 'verified'
 
   const handleDocChange = (fileType: string, doc: UploadedDoc | null) => {
     setErrors((prev) => ({ ...prev, [fileType]: undefined }))
@@ -82,15 +89,22 @@ export default function StepIdentity({
     try {
       const result = await startKycSession()
       if (result.enabled && result.url) {
-        // Didit is live — hand off to the hosted session.
-        setVideo({ status: 'ready', kycSessionUrl: result.url, message: result.message ?? null })
+        // Didit is live — hand off to the hosted session (new tab keeps the
+        // wizard state alive here).
+        setVideo({
+          status: 'ready',
+          kycSessionUrl: result.url,
+          sessionId: result.sessionId ?? null,
+          message: result.message ?? null,
+        })
         window.open(result.url, '_blank', 'noopener,noreferrer')
         return
       }
-      // Unconfigured stub → graceful fallback to the manual upload path below.
+      // Unconfigured / errored → graceful fallback to manual uploads below.
       setVideo({
         status: 'unavailable',
         kycSessionUrl: null,
+        sessionId: null,
         message:
           result.message ??
           'Video verification is coming soon — please upload your ID and selfie for now.',
@@ -99,13 +113,60 @@ export default function StepIdentity({
       setVideo({
         status: 'unavailable',
         kycSessionUrl: null,
+        sessionId: null,
         message: 'Could not start video verification. Please upload your ID and selfie for now.',
       })
     }
   }
 
+  /** Poll the Didit decision after they return from the hosted tab. */
+  const handleCheckStatus = async () => {
+    if (!video.sessionId) return
+    setVideo((v) => ({ ...v, status: 'checking', message: null }))
+    try {
+      const result = await checkKycSession(video.sessionId)
+      if (result.status === 'approved') {
+        setErrors((prev) => ({ ...prev, idDocument: undefined, selfieWithId: undefined }))
+        setVideo((v) => ({ ...v, status: 'verified', message: null }))
+        onKycVerified?.(video.sessionId)
+        return
+      }
+      const messages: Record<string, string> = {
+        declined:
+          'The video verification was declined — please upload your ID and selfie below instead.',
+        in_review:
+          'Your verification is being reviewed by Didit. You can wait and re-check, or upload your documents below to keep moving.',
+        pending:
+          'Verification not finished yet — complete it in the other tab, then check again.',
+        error: 'Could not check the verification right now — try again in a moment.',
+      }
+      setVideo((v) => ({
+        ...v,
+        status: 'ready',
+        message: messages[result.status] ?? messages.error,
+      }))
+    } catch {
+      setVideo((v) => ({
+        ...v,
+        status: 'ready',
+        message: 'Could not check the verification right now — try again in a moment.',
+      }))
+    }
+  }
+
   const handleContinue = (e: React.FormEvent) => {
     e.preventDefault()
+    if (kycVerified) {
+      // Didit covered govt ID + liveness/face match; only proof of address
+      // still comes from the manual path.
+      if (!uploadedDocs.proofOfAddress?.path) {
+        setErrors({ proofOfAddress: 'Proof of address upload is required' })
+        return
+      }
+      setErrors({})
+      onContinue(uploadedDocs as unknown as Step3FormData)
+      return
+    }
     const parsed = step3Schema.safeParse(uploadedDocs)
     if (!parsed.success) {
       const errs: Partial<Record<KycDocKey, string>> = {}
@@ -194,14 +255,56 @@ export default function StepIdentity({
             {video.message}
           </p>
         )}
-        {video.status === 'ready' && (
-          <p
-            className="mt-3 rounded-lg px-3 py-2 text-xs"
-            style={{ backgroundColor: 'rgba(255,255,255,0.10)', color: 'rgba(255,255,255,0.85)' }}
+        {(video.status === 'ready' || video.status === 'checking') && (
+          <div className="mt-3 space-y-2.5">
+            <p
+              className="rounded-lg px-3 py-2 text-xs"
+              style={{ backgroundColor: 'rgba(255,255,255,0.10)', color: 'rgba(255,255,255,0.85)' }}
+            >
+              {video.message ??
+                'Verification opened in a new tab. Finish there, then come back and check your status.'}
+            </p>
+            <div className="flex flex-wrap items-center gap-2.5">
+              <button
+                type="button"
+                onClick={handleCheckStatus}
+                disabled={video.status === 'checking'}
+                className="inline-flex items-center gap-2 rounded-lg px-3.5 py-2 text-xs font-semibold disabled:opacity-70"
+                style={{ backgroundColor: PALETTE.lime, color: PALETTE.forest3 }}
+              >
+                {video.status === 'checking' ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <RefreshCcw className="h-3.5 w-3.5" />
+                )}
+                Check Status
+              </button>
+              {video.kycSessionUrl && (
+                <a
+                  href={video.kycSessionUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs font-medium underline underline-offset-2"
+                  style={{ color: 'rgba(255,255,255,0.75)' }}
+                >
+                  Reopen Verification
+                </a>
+              )}
+            </div>
+          </div>
+        )}
+        {kycVerified && (
+          <div
+            className="mt-3 flex items-start gap-2.5 rounded-lg px-3 py-2.5"
+            style={{ backgroundColor: 'rgba(163,230,53,0.18)' }}
           >
-            Verification opened in a new tab. Finish there, then return here to
-            continue.
-          </p>
+            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" style={{ color: PALETTE.lime }} />
+            <p className="text-xs leading-relaxed" style={{ color: '#FFFFFF' }}>
+              <span className="font-semibold">Identity Verified.</span> Your video
+              check is approved — the ID and selfie uploads below are no longer
+              required. Just add your proof of address.
+            </p>
+          </div>
         )}
       </section>
 
@@ -218,21 +321,29 @@ export default function StepIdentity({
       <div className="space-y-4">
         <KycUploadRow
           label="Government-Issued ID"
-          description="Passport, national ID, or driver's license — the photo page, in full."
+          description={
+            kycVerified
+              ? 'Covered by your video verification — no upload needed.'
+              : "Passport, national ID, or driver's license — the photo page, in full."
+          }
           fileType="idDocument"
           doc={uploadedDocs.idDocument}
           onDocChange={handleDocChange}
-          required
+          required={!kycVerified}
           error={errors.idDocument}
         />
 
         <KycUploadRow
           label="Selfie With ID"
-          description="A selfie holding your ID next to your face, with today's date on a note."
+          description={
+            kycVerified
+              ? 'Covered by your video verification — no upload needed.'
+              : "A selfie holding your ID next to your face, with today's date on a note."
+          }
           fileType="selfieWithId"
           doc={uploadedDocs.selfieWithId}
           onDocChange={handleDocChange}
-          required
+          required={!kycVerified}
           error={errors.selfieWithId}
         />
 

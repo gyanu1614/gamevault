@@ -413,6 +413,9 @@ function mapFileTypeToDocumentType(fileType: string): string {
     businessLicense: 'business_license',
     directorId: 'director_id',
     bankStatement: 'bank_statement',
+    // Didit video-verification session — stored as evidence alongside the
+    // uploads ('other' is the only fitting value in the CHECK constraint).
+    diditSession: 'other',
   }
 
   return mapping[fileType] || 'other'

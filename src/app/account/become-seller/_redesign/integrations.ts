@@ -8,9 +8,17 @@
  * up unchanged (Didit KYC video / DocuSeal e-signature).
  */
 
-/** True once Didit KYC is configured. Until then the UI uses the upload path. */
+/**
+ * True once Didit KYC is configured: both the API key AND a workflow id are
+ * required (sessions cannot be created without a workflow). NEXT_PUBLIC flag
+ * doubles as a kill switch.
+ */
 export function isKycVideoEnabled(): boolean {
-  return !!process.env.DIDIT_API_KEY && !!process.env.NEXT_PUBLIC_DIDIT_ENABLED
+  return (
+    !!process.env.DIDIT_API_KEY &&
+    !!process.env.DIDIT_WORKFLOW_ID &&
+    process.env.NEXT_PUBLIC_DIDIT_ENABLED !== 'false'
+  )
 }
 
 /** True once DocuSeal is configured. Until then the UI uses typed-name accept. */
@@ -26,7 +34,16 @@ export interface StartKycResult {
   enabled: boolean
   /** The hosted Didit session URL to open, or null when unconfigured. */
   url: string | null
+  /** Didit session id — the client keeps it to poll the decision. */
+  sessionId?: string | null
   message?: string
+}
+
+export interface KycCheckResult {
+  /** Normalised decision for the wizard. */
+  status: 'approved' | 'declined' | 'in_review' | 'pending' | 'error'
+  /** Didit's raw status string, for messages/logging. */
+  raw?: string
 }
 
 export interface SignAgreementResult {
