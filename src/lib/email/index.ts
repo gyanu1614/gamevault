@@ -99,6 +99,71 @@ export async function sendApplicationReceivedEmail({
   }
 }
 
+export async function sendApplicationInReviewEmail({
+  to,
+  name,
+}: {
+  to: string
+  name: string
+}) {
+  try {
+    const { data, error } = await resend.emails.send({
+      from: FROM_EMAIL,
+      replyTo: REPLY_TO,
+      to,
+      subject: 'Your Seller Application Is In Review',
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+        <body style="margin:0;padding:0;background-color:#f4f4f5;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f5;">
+            <tr><td align="center" style="padding:36px 16px;">
+              <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;max-width:480px;">
+                <tr><td style="background-color:#0f1013;border-radius:10px;overflow:hidden;">
+                  <img src="https://dropmarket.gg/section-bg/cta-band.jpg" alt="" width="480" style="display:block;width:100%;height:96px;object-fit:cover;">
+                  <div style="padding:26px 32px 28px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;text-align:center;">
+                    <p style="margin:0 0 16px;font-size:19px;font-weight:800;color:#ffffff;">Drop<span style="color:#a3e635;">Market</span></p>
+                    <h1 style="margin:0 0 8px;font-size:20px;font-weight:700;color:#ffffff;">Good News, ${escapeHtml(name)} — Review Has Started</h1>
+                    <p style="margin:0 0 22px;font-size:14px;line-height:1.55;color:#a1a1aa;">Our team has started reviewing your seller application. There's nothing you need to do right now — we'll email you as soon as there's a decision.</p>
+                    <div style="background:rgba(163, 230, 53, 0.08);border:1px solid rgba(163, 230, 53, 0.3);border-radius:8px;padding:14px 16px;margin:0 0 18px;text-align:left;">
+                      <p style="margin:0 0 6px;font-size:13px;font-weight:600;color:#a3e635;">What To Expect</p>
+                      <ul style="margin:0;padding-left:18px;color:#a1a1aa;font-size:13px;line-height:1.7;">
+                        <li>Most decisions land within 24-48 hours</li>
+                        <li>We may reach out if anything needs clarifying</li>
+                        <li>Track progress any time from your account</li>
+                      </ul>
+                    </div>
+                    <a href="${APP_URL}/account/seller-status" style="display:inline-block;background-color:#a3e635;color:#0a0a0f;text-decoration:none;padding:11px 28px;border-radius:6px;font-weight:700;font-size:14px;">View Application Status</a>
+                  </div>
+                </td></tr>
+                <tr><td align="center" style="padding:14px 8px 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:11px;line-height:1.6;color:#a1a1aa;">
+                  Questions in the meantime? Just reply to this email.<br>
+                  © 2026 DropMarket · <a href="${APP_URL}/support" style="color:#71717a;">Support</a>
+                </td></tr>
+              </table>
+            </td></tr>
+          </table>
+        </body>
+        </html>
+      `,
+    })
+
+    if (error) {
+      console.error('Failed to send application in-review email:', error)
+      return { success: false, error }
+    }
+
+    return { success: true, data }
+  } catch (error) {
+    console.error('Email service error:', error)
+    return { success: false, error }
+  }
+}
+
 export async function sendApplicationApprovedEmail({
   to,
   name,

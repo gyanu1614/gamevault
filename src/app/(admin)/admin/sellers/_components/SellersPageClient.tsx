@@ -158,22 +158,26 @@ export default function SellersPageClient({
       className="overflow-hidden rounded-2xl border border-white/[0.09]"
       style={{ background: FOREST_BG.canvas }}
     >
-      {/* Forest header band — title + segmented status tabs */}
+      {/* Forest header band — top-lit gradient + pill filter tabs */}
       <div
-        className="flex flex-wrap items-center gap-x-4 gap-y-3 px-5 py-[18px]"
-        style={{ background: FOREST_BG.listHeader }}
+        className="flex flex-wrap items-end gap-x-4 gap-y-4 px-6 pb-4 pt-5"
+        style={{
+          background:
+            'linear-gradient(180deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0) 42%), linear-gradient(105deg, #0F3320 0%, #14432A 60%, #17492E 100%)',
+          boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.12), inset 0 -1px 0 rgba(0,0,0,0.3)',
+        }}
       >
         <div className="min-w-0">
-          <h2 className="text-[16px] font-extrabold tracking-[-0.01em] text-white">
+          <h2 className="text-[18px] font-extrabold tracking-[-0.01em] text-white">
             Seller Applications
           </h2>
-          <p className="mt-0.5 text-[11.5px] text-white/50">
+          <p className="mt-1 text-[11.5px] text-white/50">
             Click a row to review the application and decide
           </p>
         </div>
 
-        <div className="ml-auto max-w-full overflow-x-auto">
-          <div className="inline-flex gap-0.5 rounded-[9px] bg-white/10 p-[3px]">
+        <div className="ml-auto max-w-full overflow-x-auto pb-0.5">
+          <div className="flex items-center gap-1.5">
             {tabs.map((tab) => {
               const active =
                 statusFilter === tab.key || (!statusFilter && tab.key === null)
@@ -183,16 +187,21 @@ export default function SellersPageClient({
                   type="button"
                   onClick={() => handleStatusFilter(tab.key)}
                   className={cn(
-                    'whitespace-nowrap rounded-[7px] px-3 py-[5px] text-[11.5px] font-bold transition-colors',
+                    'group flex items-center gap-1.5 whitespace-nowrap rounded-full px-3.5 py-[7px] text-[11.5px] font-bold transition-all',
                     active
-                      ? 'bg-[#A3E635] text-[#0F3320]'
-                      : 'text-white/60 hover:text-white',
+                      ? 'bg-[#A3E635] text-[#0F3320] shadow-[inset_0_1px_0_rgba(255,255,255,0.45),inset_0_-2px_0_rgba(0,0,0,0.12),0_6px_14px_-6px_rgba(163,230,53,0.45)]'
+                      : 'border border-white/[0.12] text-white/60 shadow-[inset_0_1px_0_rgba(255,255,255,0.07)] hover:border-white/25 hover:text-white',
                   )}
                 >
                   {tab.label}
                   {tab.count !== undefined && (
-                    <span className={cn('ml-1', active ? 'opacity-70' : 'opacity-60')}>
-                      · {tab.count}
+                    <span
+                      className={cn(
+                        'grid min-w-[20px] place-items-center rounded-full px-1.5 py-px text-[10px] font-black tabular-nums',
+                        active ? 'bg-[#0F3320]/15 text-[#0F3320]' : 'bg-white/[0.1] text-white/55',
+                      )}
+                    >
+                      {tab.count}
                     </span>
                   )}
                 </button>
