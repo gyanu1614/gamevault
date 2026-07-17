@@ -47,7 +47,7 @@ const STATUS_CFG: Record<
   // Unpaid orders must NOT read as "Processing" — buyers assumed payment
   // had gone through and waited on delivery that could never start.
   pending:    { label: 'Awaiting Payment', color: 'text-amber', bg: 'bg-amber/[0.08]', border: 'border-amber/30',     pulse: true,  Icon: Clock },
-  paid:       { label: 'Processing',  color: 'text-amber',    bg: 'bg-amber/[0.08]',   border: 'border-amber/30',     pulse: true,  Icon: Clock },
+  paid:       { label: 'Payment Confirmed',  color: 'text-amber',    bg: 'bg-amber/[0.08]',   border: 'border-amber/30',     pulse: true,  Icon: Clock },
   delivering: { label: 'Delivering',  color: 'text-amber',    bg: 'bg-amber/[0.08]',   border: 'border-amber/30',     pulse: true,  Icon: Truck },
   delivered:  { label: 'Delivered',   color: 'text-green-400',bg: 'bg-green-400/[0.08]',border: 'border-green-400/30',pulse: false, Icon: Package },
   completed:  { label: 'Completed',   color: 'text-green-400',bg: 'bg-green-400/[0.08]',border: 'border-green-400/30',pulse: false, Icon: CheckCircle2 },

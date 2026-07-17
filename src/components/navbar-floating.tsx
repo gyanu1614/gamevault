@@ -59,6 +59,11 @@ function LiveOrderRow({ order, onNavigate }: { order: any; onNavigate: () => voi
     processing: 'bg-info-bg text-info',
     delivering: 'bg-lime-tint-bg text-lime-text',
   }
+  const statusText: Record<string, string> = {
+    pending: 'Awaiting Payment',
+    paid: 'Payment Confirmed',
+    processing: 'Payment Confirmed',
+  }
   return (
     <Link
       href={`/account/orders/${order.id}`}
@@ -84,7 +89,7 @@ function LiveOrderRow({ order, onNavigate }: { order: any; onNavigate: () => voi
         </p>
         <div className="mt-1 flex items-center gap-2">
           <span className={cn('rounded-md px-2 py-0.5 text-[10px] font-semibold capitalize', statusColors[order.status] || 'bg-white/10 text-text-secondary')}>
-            {order.status}
+            {statusText[order.status] ?? order.status}
           </span>
           <span className="text-xs tabular-nums text-text-tertiary">
             ${Number(order.total_amount).toFixed(2)}
