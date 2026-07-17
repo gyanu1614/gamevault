@@ -1,16 +1,16 @@
 'use client'
 
 /**
- * V17 — Auth modal.
+ * V24 — Auth modal, "Forest Ledger" edition.
  *
  * Full-screen Radix Dialog that hosts a Login / Signup split-screen
- * layout. Modeled on the Untitled UI "split-image" pattern but built
- * from shadcn/ui primitives so we don't depend on a paid component pack.
+ * layout restyled into the LIGHT world used by the seller application
+ * (src/app/account/become-seller/_redesign): ivory canvas, paper
+ * inputs, forest-green primary, lime reserved for tiny accents only.
  *
- * Left column: themed form (Login or Sign up, with a Framer Motion
- *   crossfade between them).
- * Right column (desktop only): branded hero image with a lime-tinted
- *   overlay and tagline.
+ * Left column: light form (Login or Sign up, CSS-staggered reveal).
+ * Right column (desktop only): hero photo under a forest scrim with a
+ *   white tagline and a SafeDrop glass chip.
  *
  * Controlled via the AuthDialogProvider context so any button anywhere
  * in the app can open it with `useAuthDialog().open('login' | 'signup')`.
@@ -26,19 +26,56 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Check, Eye, EyeOff, Loader2, MailCheck, ShieldCheck, X, XCircle } from 'lucide-react'
+import { Check, Eye, EyeOff, Loader2, MailCheck, ShieldCheck, X, XCircle , Dices } from 'lucide-react'
 import { toast } from 'sonner'
 import * as Dialog from '@radix-ui/react-dialog'
 
-import { login, signup, checkUsernameAvailability, resendConfirmationEmail } from '@/lib/actions/auth'
+import { login, signup, checkUsernameAvailability, checkEmailAvailability, generateUniqueGamerTag, resendConfirmationEmail } from '@/lib/actions/auth'
+import { generateGamerTag } from '@/lib/username/gamer-names'
 import { stashPendingSignupAvatar } from '@/lib/auth/pending-avatar'
 import { AvatarUpload } from '@/components/ui/avatar-upload'
 import { useAuth } from '@/hooks/use-auth'
 import { createClient } from '@/lib/supabase/client'
-import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'
+
+/* ──────────────────────────────────────────────────────────────────
+   "Forest Ledger" palette — hardcoded locally, same values as the
+   seller application (become-seller/_redesign/theme.ts). The Tailwind
+   arbitrary classes below repeat these hexes as literals because the
+   JIT compiler can't see interpolated strings; keep both in sync.
+   Lime is RESERVED: tiny accents only — never fills or text blocks.
+   ────────────────────────────────────────────────────────────────── */
+
+const PALETTE = {
+  ivory: '#FAFAF7', // canvas
+  paper: '#FFFFFF', // cards / inputs
+  forest: '#14432A', // primary
+  forest2: '#1B5E3A', // hover / focus
+  forest3: '#0F3320', // deepest shade
+  lime: '#A3E635', // tiny accents ONLY
+  ink: '#1A1D19', // primary text
+  ink2: '#5B6157', // secondary text
+  line: '#E4E5DE', // hairline borders
+} as const
+
+/* Shared light-world class recipes (all literal for Tailwind JIT). */
+const inputCls =
+  // text-base below sm keeps iOS from zooming the page on focus (16px rule).
+  'h-12 rounded-xl border-[#E4E5DE] bg-white px-4 text-base text-[#1A1D19] placeholder:text-[#5B6157]/55 transition-[border-color,box-shadow] duration-150 focus-visible:border-[#1B5E3A] focus-visible:ring-2 focus-visible:ring-[#1B5E3A]/[0.18] focus-visible:ring-offset-0 sm:text-sm'
+const labelCls = 'text-[13px] font-medium text-[#1A1D19]'
+const eyebrowCls = 'text-[11.5px] font-semibold uppercase tracking-[0.14em] text-[#1B5E3A]'
+const headingCls = 'text-[26px] font-bold leading-tight tracking-tight text-[#1A1D19]'
+const fieldErrorCls = 'text-[12px] text-[#B91C1C]'
+const errorBoxCls =
+  'rounded-xl border border-[#FCA5A5] bg-[#FEF2F2] px-3 py-2.5 text-[13px] text-[#B91C1C]'
+const linkCls = 'font-semibold text-[#1B5E3A] transition-colors hover:text-[#14432A]'
+const switchLineCls = 'text-center text-[13px] text-[#5B6157]'
+const eyeBtnCls =
+  'absolute right-1.5 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-lg text-[#5B6157] transition-colors hover:text-[#1A1D19]'
+const ctaCls =
+  'auth-cta flex h-12 w-full items-center justify-center gap-2 rounded-xl text-[15px] font-semibold text-white'
 
 /* ──────────────────────────────────────────────────────────────────
    Context
@@ -154,6 +191,122 @@ function AuthDialog({ open, onOpenChange, mode, onModeChange, redirectRef }: Aut
 
   return (
     <>
+    {/* V24 — Bespoke CSS motion (Apple-calm). All entrances are CSS, not
+        framer: rAF can stall in throttled contexts and freeze a JS-driven
+        overlay/panel mid-fade. Everything is gated behind
+        prefers-reduced-motion so reduced-motion users get instant paints. */}
+    <style jsx global>{`
+      @media (prefers-reduced-motion: no-preference) {
+        .auth-overlay-in {
+          animation: authFadeIn 200ms ease-out both;
+        }
+        .auth-panel-in {
+          animation: authPanelIn 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
+        }
+        .auth-reveal {
+          animation: authReveal 360ms cubic-bezier(0.22, 1, 0.36, 1) both;
+        }
+        .auth-reveal-1 {
+          animation-delay: 60ms;
+        }
+        .auth-reveal-2 {
+          animation-delay: 120ms;
+        }
+        .auth-reveal-3 {
+          animation-delay: 180ms;
+        }
+        .auth-photo-settle {
+          animation: authPhotoSettle 1100ms ease-out both;
+        }
+      }
+      @keyframes authFadeIn {
+        from {
+          opacity: 0;
+        }
+        to {
+          opacity: 1;
+        }
+      }
+      @keyframes authPanelIn {
+        from {
+          opacity: 0;
+          transform: translateY(12px) scale(0.985);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0) scale(1);
+        }
+      }
+      @keyframes authReveal {
+        from {
+          opacity: 0;
+          transform: translateY(8px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      @keyframes authPhotoSettle {
+        from {
+          opacity: 0;
+          transform: scale(1.1);
+        }
+        to {
+          /* Deliberately dimmed: the photo is texture behind the forest
+             scrim, not a picture. Overscale hides the blur's soft edges. */
+          opacity: 0.55;
+          transform: scale(1.04);
+        }
+      }
+      /* Primary CTA — forest with a subtle 3D press; lime appears only as a
+         1px inner top light on hover (reserved-accent rule). */
+      .auth-cta {
+        background-color: #14432a;
+        box-shadow:
+          inset 0 1px 0 rgba(255, 255, 255, 0.16),
+          inset 0 -2px 0 rgba(0, 0, 0, 0.28),
+          0 12px 24px -12px rgba(15, 51, 32, 0.5);
+        transition:
+          background-color 150ms ease,
+          box-shadow 150ms ease,
+          transform 150ms ease,
+          opacity 150ms ease;
+      }
+      .auth-cta:hover:not(:disabled) {
+        background-color: #1b5e3a;
+        box-shadow:
+          inset 0 1px 0 rgba(163, 230, 53, 0.35),
+          inset 0 -2px 0 rgba(0, 0, 0, 0.28),
+          0 12px 24px -12px rgba(15, 51, 32, 0.5);
+      }
+      .auth-cta:active:not(:disabled) {
+        transform: translateY(1px);
+      }
+      .auth-cta:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+      /* Light-world overrides for the shared AvatarUpload (its own styling
+         is dark-world). Scoped to the auth modal wrapper only. */
+      .auth-avatar-light div.cursor-pointer.rounded-full {
+        border-color: #e4e5de !important;
+        background-color: #ffffff !important;
+      }
+      .auth-avatar-light div.cursor-pointer.rounded-full:hover {
+        border-color: #c9ccc0 !important;
+      }
+      .auth-avatar-light > div > button[type='button'] {
+        background-color: #ffffff !important;
+        color: #1a1d19 !important;
+        border: 1px solid #e4e5de !important;
+        box-shadow: none !important;
+        text-transform: capitalize; /* "Upload picture" → "Upload Picture" */
+      }
+      .auth-avatar-light > div > button[type='button']:hover {
+        background-color: #fafaf7 !important;
+      }
+    `}</style>
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <AnimatePresence>
         {open && (
@@ -161,55 +314,37 @@ function AuthDialog({ open, onOpenChange, mode, onModeChange, redirectRef }: Aut
             <Dialog.Overlay asChild>
               {/* CSS entrance, not framer: rAF can stall in throttled
                   contexts and freeze the overlay+panel mid-fade. */}
-              <div className="animate-fade-in fixed inset-0 z-[80] bg-bg-base/70 backdrop-blur-md" />
+              <div className="auth-overlay-in fixed inset-0 z-[80] bg-[rgba(15,51,32,0.5)] backdrop-blur-md" />
             </Dialog.Overlay>
 
             {/* Centering wrapper is a PLAIN div (pointer-events-none so clicks
                 pass through to the overlay). Dialog.Content is the modal box
-                ITSELF (the inner motion.div) so Radix correctly distinguishes
+                ITSELF (the inner div) so Radix correctly distinguishes
                 inside vs. outside — making overlay-click, Escape, and the close
                 button all dismiss properly. */}
             <div className="fixed inset-0 z-[81] flex items-center justify-center p-3 sm:p-4 pointer-events-none">
               <Dialog.Content asChild>
               <div
                 className={cn(
-                  'animate-fade-up',
-                  // V17d — Container is the single gradient surface.
-                  // The form panel + hero panel both sit on top of it
-                  // transparently, so the previously-visible seam at
-                  // the 50% split is gone — color flows continuously
-                  // from the deep-black left edge through to the lime
-                  // wash on the right.
-                  'pointer-events-auto relative flex w-full overflow-hidden rounded-lg border border-border-default shadow-[0_24px_60px_-12px_rgba(0,0,0,0.7)]',
+                  'auth-panel-in',
+                  // V24 — Forest Ledger panel: ivory surface, deep forest
+                  // drop shadow, no visible border. The hero photo pane
+                  // supplies the dark half; the ivory canvas carries the form.
+                  'pointer-events-auto relative flex w-full overflow-hidden rounded-2xl bg-[#FAFAF7] shadow-[0_32px_80px_-20px_rgba(15,51,32,0.55)]',
                   // Mobile: content-driven height capped to the DYNAMIC
                   // viewport (dvh) so iOS Safari's URL bar never clips the
                   // dialog edges; the fixed two-panel height only applies
                   // at md+ where the hero panel needs it. The form panel
                   // has overflow-y-auto, so tall forms scroll internally.
-                  'max-h-[min(92dvh,720px)] md:h-[min(92dvh,720px)] max-w-[1080px]',
+                  'max-h-[min(92dvh,720px)] md:h-[min(92dvh,680px)] max-w-[1000px]',
                 )}
-                style={{
-                  // Two layered gradients on the modal itself:
-                  //   1. A wide radial lime wash anchored at the
-                  //      bottom-right corner — bleeds left into the
-                  //      form area so the right panel doesn't read as
-                  //      a separate slab.
-                  //   2. A subtle diagonal lift from top-left so the
-                  //      form panel isn't pure flat black.
-                  // Both sit on top of the modal's bg-bg-base color so
-                  // the gradient never washes out the form contrast.
-                  backgroundColor: 'rgb(10 10 13)',
-                  backgroundImage:
-                    'radial-gradient(900px 600px at 100% 100%, rgba(198,255,61,0.13), transparent 65%),' +
-                    'radial-gradient(700px 500px at 0% 0%, rgba(255,255,255,0.025), transparent 60%)',
-                }}
               >
                 <Dialog.Title className="sr-only">
                   {pendingVerifyEmail
-                    ? 'Confirm your email address'
+                    ? 'Confirm Your Email'
                     : mode === 'login'
-                      ? 'Sign in to DropMarket'
-                      : 'Create your DropMarket account'}
+                      ? 'Sign In To DropMarket'
+                      : 'Create Your DropMarket Account'}
                 </Dialog.Title>
                 <Dialog.Description className="sr-only">
                   {pendingVerifyEmail
@@ -222,14 +357,16 @@ function AuthDialog({ open, onOpenChange, mode, onModeChange, redirectRef }: Aut
                 {/* Close button — wired DIRECTLY to onOpenChange (the same
                     dismiss path outside-click uses) rather than Dialog.Close
                     asChild, which didn't fire reliably when nested inside the
-                    asChild motion.div Content. Deterministic. */}
+                    asChild Content. Deterministic. One responsive button:
+                    ink ghost over the ivory pane below md, white ghost over
+                    the photo at md+. */}
                 <button
                   type="button"
                   aria-label="Close"
                   onClick={() => onOpenChange(false)}
-                  className="absolute right-4 top-4 z-30 flex h-9 w-9 items-center justify-center rounded-md border border-border-subtle bg-bg-base/60 text-text-secondary backdrop-blur-md transition-colors hover:border-border-default hover:text-text-primary"
+                  className="absolute right-4 top-4 z-30 flex h-10 w-10 items-center justify-center rounded-full text-[#5B6157] transition-colors hover:bg-black/5 hover:text-[#1A1D19] md:bg-white/[0.12] md:text-white md:backdrop-blur-md md:hover:bg-white/[0.22] md:hover:text-white"
                 >
-                  <X className="h-4 w-4" />
+                  <X className="h-5 w-5" />
                 </button>
 
                 {/* Left — form panel */}
@@ -238,7 +375,7 @@ function AuthDialog({ open, onOpenChange, mode, onModeChange, redirectRef }: Aut
                     {pendingVerifyEmail ? (
                       <div
                         key="verify-email"
-                        className="animate-fade-in flex min-h-full flex-col justify-center px-6 py-10 sm:px-10 sm:py-12"
+                        className="flex min-h-full flex-col px-6 py-10 sm:px-8 sm:py-12 md:px-10"
                       >
                         <VerifyEmailView
                           email={pendingVerifyEmail}
@@ -251,7 +388,7 @@ function AuthDialog({ open, onOpenChange, mode, onModeChange, redirectRef }: Aut
                     ) : mode === 'login' ? (
                       <div
                         key="login"
-                        className="animate-fade-in flex min-h-full flex-col justify-center px-6 py-10 sm:px-10 sm:py-12"
+                        className="flex min-h-full flex-col px-6 py-10 sm:px-8 sm:py-12 md:px-10"
                       >
                         <LoginForm
                           onSuccess={handleAuthSuccess}
@@ -261,7 +398,7 @@ function AuthDialog({ open, onOpenChange, mode, onModeChange, redirectRef }: Aut
                     ) : (
                       <div
                         key="signup"
-                        className="animate-fade-in flex min-h-full flex-col justify-center px-6 py-10 sm:px-10 sm:py-12"
+                        className="flex min-h-full flex-col px-6 py-10 sm:px-8 sm:py-12 md:px-10"
                       >
                         <SignupForm
                           onSuccess={handleAuthSuccess}
@@ -294,41 +431,48 @@ function HeroPanel({ mode }: { mode: AuthMode }) {
   return (
     <div
       aria-hidden
-      className="relative hidden w-1/2 overflow-hidden md:block"
+      className="relative hidden overflow-hidden md:block md:w-1/2"
+      style={{ backgroundColor: PALETTE.forest3 }}
     >
-      {/* V17d — Hero is now transparent over the container's shared
-          gradient. The background image is dialed way down (opacity
-          0.18 + heavy darkening) so it reads as a faint texture, not
-          a separate panel surface. Without this, the panel's own
-          dark fill would re-introduce the vertical seam we just got
-          rid of. */}
-      <div
-        className="absolute inset-0 bg-cover bg-center opacity-[0.18] mix-blend-luminosity"
-        style={{
-          backgroundImage: 'url(/section-bg/popular-games.jpg)',
-        }}
+      {/* Hero photo — slow settle (scale 1.06→1) on mount, CSS only.
+          Swap public/auth/hero.avif to change this photo. */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src="/auth/hero.avif"
+        alt=""
+        className="auth-photo-settle absolute inset-0 h-full w-full object-cover blur-[2.5px]"
       />
-      {/* Soft edge wash — fades the LEFT edge of the hero into
-          transparency so there's no boundary line where the panel
-          starts. The rest of the lime tint is supplied by the
-          container's bottom-right radial gradient. */}
+      {/* Forest scrim — strong at the base (where the tagline sits),
+          thinning toward the top so the photo stays half visible. */}
       <div
         className="absolute inset-0"
         style={{
           background:
-            'linear-gradient(to right, rgba(10,10,13,0.65) 0%, transparent 22%)',
+            'linear-gradient(to top, rgba(15,51,32,0.94) 0%, rgba(15,51,32,0.5) 48%, rgba(20,67,42,0.28) 100%)',
+        }}
+      />
+      {/* Soft vignette to seat the content against the photo edges. */}
+      <div
+        className="absolute inset-0"
+        style={{
+          background:
+            'radial-gradient(120% 90% at 50% 40%, transparent 55%, rgba(15,51,32,0.55) 100%)',
         }}
       />
 
       {/* Content */}
       <div className="relative z-10 flex h-full flex-col justify-between p-10">
-        {/* Top — logo */}
+        {/* Top — white logo lockup */}
         <div className="flex items-center gap-2.5">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/brand/logo-mark-lime.png" alt="DropMarket" width={36} height={36} className="h-9 w-9 shrink-0" />
-          <span className="text-lg font-bold tracking-tight text-text-primary">
-            Drop<span className="text-lime-text">Market</span>
-          </span>
+          <img
+            src="/brand/logo-mark-white.png"
+            alt="DropMarket"
+            width={24}
+            height={24}
+            className="h-6 w-6 shrink-0 object-contain"
+          />
+          <span className="text-[17px] font-bold tracking-tight text-white">DropMarket</span>
         </div>
 
         {/* Middle — tagline */}
@@ -341,20 +485,19 @@ function HeroPanel({ mode }: { mode: AuthMode }) {
               exit={{ opacity: 0, y: -8 }}
               transition={{ duration: 0.2 }}
             >
-              <h2 className="text-[36px] font-black leading-[1.05] tracking-tight text-text-primary">
+              <h2 className="text-[30px] font-black leading-[1.08] tracking-tight text-white">
                 {mode === 'login' ? (
                   <>
-                    Welcome back.<br />
-                    <span className="text-lime-text">Game more. Grind less.</span>
+                    Welcome Back.<br />
+                    Game More.{' '}
+                    {/* The ONE permitted lime accent — a single short phrase. */}
+                    <span style={{ color: 'rgba(163,230,53,0.9)' }}>Grind Less.</span>
                   </>
                 ) : (
-                  <>
-                    Buy & sell game assets safely.<br />
-                    <span className="text-lime-text">Safe, fast, fair trades.</span>
-                  </>
+                  <>Buy &amp; Sell Game Assets Safely.</>
                 )}
               </h2>
-              <p className="mt-3 max-w-sm text-[14px] leading-relaxed text-text-secondary">
+              <p className="mt-3 max-w-sm text-[14px] leading-relaxed text-white/70">
                 {mode === 'login'
                   ? 'Pick up where you left off — your orders, wishlist, and seller tools are right where you left them.'
                   : 'Every order is covered by SafeDrop Buyer Protection. Buy in 60 seconds, sell with peace of mind.'}
@@ -363,12 +506,11 @@ function HeroPanel({ mode }: { mode: AuthMode }) {
           </AnimatePresence>
         </div>
 
-        {/* Bottom — trust strip */}
-        <div className="flex items-center gap-2 rounded-md border border-border-subtle bg-bg-base/40 px-4 py-2.5 backdrop-blur-md">
-          <ShieldCheck className="h-4 w-4 shrink-0 text-lime-text" />
-          <span className="text-[12.5px] text-text-secondary">
-            Covered by{' '}
-            <span className="font-semibold text-text-primary">SafeDrop</span> Buyer Protection
+        {/* Bottom — SafeDrop glass chip */}
+        <div className="flex items-center gap-2 self-start rounded-full border border-white/20 bg-white/10 px-4 py-2.5 backdrop-blur-md">
+          <ShieldCheck className="h-4 w-4 shrink-0" style={{ color: PALETTE.lime }} />
+          <span className="text-[13px] text-white/90">
+            Covered by <span className="font-semibold text-white">SafeDrop</span> Buyer Protection
           </span>
         </div>
       </div>
@@ -451,24 +593,15 @@ function LoginForm({
   }
 
   return (
-    <div className="mx-auto w-full max-w-sm space-y-5">
-      {/* V17d — Form heading is now a quiet subhead. The right hero
-          panel carries the visual "title" (Welcome back. Game more.
-          Grind less.), so this side just labels the form. Smaller
-          weight + uppercase tracking reads as an eyebrow rather than
-          a competing title. */}
-      <header className="space-y-1">
-        <p className="text-[11.5px] font-bold uppercase tracking-[0.14em] text-lime-text">
-          Sign in
-        </p>
-        <h2 className="text-[18px] font-semibold leading-snug tracking-tight text-text-primary">
-          Continue to your account
-        </h2>
+    <div className="mx-auto my-auto w-full max-w-[400px] space-y-5">
+      <header className="auth-reveal space-y-1.5">
+        <p className={eyebrowCls}>Sign In</p>
+        <h2 className={headingCls}>Continue To Your Account</h2>
       </header>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-        <div className="space-y-1.5">
-          <Label htmlFor="auth-email">Email</Label>
+        <div className="auth-reveal auth-reveal-1 space-y-1.5">
+          <Label htmlFor="auth-email" className={labelCls}>Email</Label>
           <Input
             id="auth-email"
             type="email"
@@ -476,14 +609,15 @@ function LoginForm({
             placeholder="you@example.com"
             disabled={loading}
             {...register('email')}
+            className={inputCls}
           />
           {errors.email && (
-            <p className="text-[12px] text-error">{errors.email.message}</p>
+            <p className={fieldErrorCls}>{errors.email.message}</p>
           )}
         </div>
 
-        <div className="space-y-1.5">
-          <Label htmlFor="auth-password">Password</Label>
+        <div className="auth-reveal auth-reveal-2 space-y-1.5">
+          <Label htmlFor="auth-password" className={labelCls}>Password</Label>
           <div className="relative">
             <Input
               id="auth-password"
@@ -492,62 +626,51 @@ function LoginForm({
               placeholder="••••••••"
               disabled={loading}
               {...register('password')}
-              className="pr-10"
+              className={cn(inputCls, 'pr-12')}
             />
             <button
               type="button"
               onClick={() => setShowPassword((v) => !v)}
               tabIndex={-1}
               aria-label={showPassword ? 'Hide password' : 'Show password'}
-              className="absolute right-2.5 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded text-text-tertiary transition-colors hover:text-text-primary"
+              className={eyeBtnCls}
             >
               {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
             </button>
           </div>
           {errors.password && (
-            <p className="text-[12px] text-error">{errors.password.message}</p>
+            <p className={fieldErrorCls}>{errors.password.message}</p>
           )}
           <div className="flex justify-end pt-0.5">
-            <a
-              href="/forgot-password"
-              className="text-[12.5px] font-medium text-lime-text transition-colors hover:text-lime"
-            >
+            <a href="/forgot-password" className={cn('text-[13px]', linkCls)}>
               Forgot Password?
             </a>
           </div>
         </div>
 
         {error && (
-          <div className="space-y-2.5 rounded-lg border border-error/30 bg-error-bg px-3 py-2.5 text-[13px] text-error">
+          <div className={cn(errorBoxCls, 'space-y-2.5')}>
             <p>{error}</p>
             {unconfirmedEmail && <ResendConfirmationButton email={unconfirmedEmail} />}
           </div>
         )}
 
-        <Button
-          type="submit"
-          disabled={loading}
-          className="h-11 w-full gap-2 bg-lime text-text-inverse hover:bg-lime-hover disabled:opacity-80"
-        >
+        <button type="submit" disabled={loading} className={cn(ctaCls, 'auth-reveal auth-reveal-3')}>
           {loading ? (
             <>
               <Loader2 className="h-4 w-4 animate-spin" />
-              Signing in…
+              Signing In…
             </>
           ) : (
-            'Sign in'
+            'Sign In'
           )}
-        </Button>
+        </button>
       </form>
 
-      <p className="text-center text-[13px] text-text-secondary">
+      <p className={cn(switchLineCls, 'auth-reveal auth-reveal-3')}>
         Don&apos;t have an account?{' '}
-        <button
-          type="button"
-          onClick={onSwitchToSignup}
-          className="font-semibold text-lime-text transition-colors hover:text-lime"
-        >
-          Sign up
+        <button type="button" onClick={onSwitchToSignup} className={linkCls}>
+          Sign Up
         </button>
       </p>
     </div>
@@ -565,7 +688,9 @@ function LoginForm({
        on the profile row.
      • Live username availability check — debounced 600ms after the
        last keystroke, with checking / available / taken pill states.
-     • fullName (optional), confirmPassword, referralCode fields —
+     • firstName/lastName (required, joined into full_name),
+       optional Display Username (empty → random free gamer tag),
+       confirmPassword, referralCode fields —
        all flow into the signup() server action so they're persisted
        to the profile (avatar/full_name) or the referral system at
        account creation. Settings reads these later.
@@ -575,12 +700,15 @@ function LoginForm({
 
 const signupSchema = z
   .object({
+    firstName: z.string().trim().min(1, 'Required').max(40, 'Too long'),
+    lastName: z.string().trim().min(1, 'Required').max(40, 'Too long'),
+    // Optional: empty = we assign a random gamer tag server-side.
     username: z
       .string()
-      .min(3, 'At least 3 characters')
       .max(24, 'Max 24 characters')
-      .regex(/^[a-zA-Z0-9_-]+$/, 'Letters, numbers, underscores, hyphens'),
-    fullName: z.string().max(80, 'Too long').optional().or(z.literal('')),
+      .regex(/^$|^[a-zA-Z0-9_-]{3,}$/, 'At least 3 characters — letters, numbers, underscores, hyphens')
+      .optional()
+      .or(z.literal('')),
     email: z.string().email('Enter a valid email'),
     password: z
       .string()
@@ -623,6 +751,7 @@ function SignupForm({
     register,
     handleSubmit,
     watch,
+    setValue,
     formState: { errors },
   } = useForm<SignupData>({
     resolver: zodResolver(signupSchema),
@@ -662,13 +791,31 @@ function SignupForm({
   }, [usernameValue])
 
   const onSubmit = async (data: SignupData) => {
-    if (usernameStatus === 'taken') {
+    if (data.username && usernameStatus === 'taken') {
       setError('That username is already taken. Pick another.')
       return
     }
     setError(null)
     setLoading(true)
     try {
+      // Honest duplicate check — Supabase signUp fakes success for emails
+      // that already exist (anti-enumeration), which read as a silent
+      // no-op to the user. Surface it as a real error with a sign-in path.
+      const emailCheck = await checkEmailAvailability(data.email)
+      if (!emailCheck.available) {
+        setError('EMAIL_TAKEN')
+        setLoading(false)
+        return
+      }
+
+      // Username is optional: an empty field gets a random free gamer tag
+      // (SilentRaptor42-style) which becomes the display name everywhere.
+      let username = data.username?.trim() || ''
+      if (!username) {
+        const generated = await generateUniqueGamerTag()
+        username = generated.username
+      }
+
       // Convert any uploaded avatar to base64 — the server action
       // splits the data-uri, uploads the binary half to storage, and
       // writes the resulting public URL onto the profile row. If no
@@ -687,8 +834,8 @@ function SignupForm({
       const result = await signup({
         email: data.email,
         password: data.password,
-        username: data.username,
-        fullName: data.fullName || undefined,
+        username,
+        fullName: `${data.firstName.trim()} ${data.lastName.trim()}`,
         avatarData,
         referralCode: data.referralCode || undefined,
       })
@@ -733,87 +880,108 @@ function SignupForm({
   }
 
   return (
-    <div className="mx-auto w-full max-w-sm space-y-5">
-      {/* V17d — Eyebrow + quiet subhead. The hero on the right is the
-          loud title ("Join 50,000+ gamers"); this side just labels
-          the form so the two halves balance instead of competing. */}
-      <header className="space-y-1">
-        <p className="text-[11.5px] font-bold uppercase tracking-[0.14em] text-lime-text">
-          Sign up
-        </p>
-        <h2 className="text-[18px] font-semibold leading-snug tracking-tight text-text-primary">
-          Create your account
-        </h2>
+    <div className="mx-auto my-auto w-full max-w-[400px] space-y-5">
+      <header className="auth-reveal space-y-1.5">
+        <p className={eyebrowCls}>Create Account</p>
+        <h2 className={headingCls}>Create Your Account</h2>
       </header>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-        {/* Avatar — sits at the top, optional. Falls back to a
-            dicebear avataaars character seeded by the username so the
-            preview updates as the user types their name. */}
-        <div className="flex justify-center pb-1">
-          <AvatarUpload
-            onChange={setAvatarFile}
-            username={usernameValue || 'gamervault'}
-            size="sm"
-          />
+        {/* Industry-standard order: name → username → email → password.
+            First/Last are required; the avatar moved to a compact
+            optional row above the CTA. */}
+        <div className="auth-reveal auth-reveal-1 grid gap-3 sm:grid-cols-2">
+          <div className="space-y-1.5">
+            <Label htmlFor="auth-firstname" className={labelCls}>First Name</Label>
+            <Input
+              id="auth-firstname"
+              type="text"
+              autoComplete="given-name"
+              placeholder="Jane"
+              disabled={loading}
+              {...register('firstName')}
+              className={inputCls}
+            />
+            {errors.firstName && (
+              <p className={fieldErrorCls}>{errors.firstName.message}</p>
+            )}
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="auth-lastname" className={labelCls}>Last Name</Label>
+            <Input
+              id="auth-lastname"
+              type="text"
+              autoComplete="family-name"
+              placeholder="Doe"
+              disabled={loading}
+              {...register('lastName')}
+              className={inputCls}
+            />
+            {errors.lastName && (
+              <p className={fieldErrorCls}>{errors.lastName.message}</p>
+            )}
+          </div>
         </div>
 
-        {/* Username + Full name — side by side on sm+ */}
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className="space-y-1.5">
-            <Label htmlFor="auth-username">Username</Label>
-            <div className="relative">
-              <Input
-                id="auth-username"
-                type="text"
-                autoComplete="username"
-                placeholder="gamervault"
-                disabled={loading}
-                {...register('username')}
-                className="pr-9"
-              />
-              {/* Availability indicator — render only when we have a
-                  resolved status so we don't flash icons on first paint. */}
+        {/* Display Username — optional. Empty = we assign a random free
+            gamer tag at signup (Eldorado-style) and it becomes the name
+            shown on orders, reviews and the shop. The dice button rolls
+            a suggestion client-side; the availability check still runs. */}
+        <div className="auth-reveal auth-reveal-1 space-y-1.5">
+          <Label htmlFor="auth-username" className={labelCls}>
+            Display Username <span className="font-normal text-[#5B6157]">(optional)</span>
+          </Label>
+          <div className="relative">
+            <Input
+              id="auth-username"
+              type="text"
+              autoComplete="username"
+              placeholder="Pick a handle — or leave it to us"
+              disabled={loading}
+              {...register('username')}
+              className={cn(inputCls, 'pr-20')}
+            />
+            <div className="absolute right-2 top-1/2 flex -translate-y-1/2 items-center gap-1">
               {usernameValue.length >= 3 && (
-                <div className="absolute right-2.5 top-1/2 -translate-y-1/2">
+                <span className="grid h-9 w-6 place-items-center">
                   {usernameStatus === 'checking' && (
-                    <Loader2 className="h-4 w-4 animate-spin text-text-tertiary" />
+                    <Loader2 className="h-4 w-4 animate-spin text-[#5B6157]" />
                   )}
                   {usernameStatus === 'available' && (
-                    <Check className="h-4 w-4 text-lime-text" />
+                    <Check className="h-4 w-4 text-[#1B5E3A]" />
                   )}
                   {usernameStatus === 'taken' && (
-                    <XCircle className="h-4 w-4 text-error" />
+                    <XCircle className="h-4 w-4 text-[#B91C1C]" />
                   )}
-                </div>
+                </span>
               )}
+              <button
+                type="button"
+                onClick={() => setValue('username', generateGamerTag(), { shouldValidate: true, shouldDirty: true })}
+                disabled={loading}
+                aria-label="Roll a random gamer tag"
+                title="Roll a random gamer tag"
+                className="grid h-9 w-9 place-items-center rounded-lg text-[#5B6157] transition-colors hover:bg-[#F4F5EE] hover:text-[#14432A]"
+              >
+                <Dices className="h-[18px] w-[18px]" />
+              </button>
             </div>
-            {errors.username ? (
-              <p className="text-[12px] text-error">{errors.username.message}</p>
-            ) : usernameStatus === 'taken' ? (
-              <p className="text-[12px] text-error">Already taken</p>
-            ) : usernameStatus === 'available' ? (
-              <p className="text-[12px] text-lime-text">Available</p>
-            ) : null}
           </div>
-
-          <div className="space-y-1.5">
-            <Label htmlFor="auth-fullname">
-              Full name <span className="text-text-tertiary">(optional)</span>
-            </Label>
-            <Input
-              id="auth-fullname"
-              type="text"
-              autoComplete="name"
-              placeholder="Jane Doe"
-              disabled={loading}
-              {...register('fullName')}
-            />
-          </div>
+          {errors.username ? (
+            <p className={fieldErrorCls}>{errors.username.message}</p>
+          ) : usernameStatus === 'taken' ? (
+            <p className={fieldErrorCls}>Already taken</p>
+          ) : usernameStatus === 'available' ? (
+            <p className="text-[12px] text-[#1B5E3A]">Available</p>
+          ) : (
+            <p className="text-[12px] leading-relaxed text-[#5B6157]">
+              Leave empty and we&apos;ll pick a gamer tag for you — it&apos;s the name buyers and sellers see.
+            </p>
+          )}
         </div>
 
-        <div className="space-y-1.5">
-          <Label htmlFor="auth-signup-email">Email</Label>
+        <div className="auth-reveal auth-reveal-2 space-y-1.5">
+          <Label htmlFor="auth-signup-email" className={labelCls}>Email</Label>
           <Input
             id="auth-signup-email"
             type="email"
@@ -821,15 +989,16 @@ function SignupForm({
             placeholder="you@example.com"
             disabled={loading}
             {...register('email')}
+            className={inputCls}
           />
           {errors.email && (
-            <p className="text-[12px] text-error">{errors.email.message}</p>
+            <p className={fieldErrorCls}>{errors.email.message}</p>
           )}
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="auth-reveal auth-reveal-2 grid gap-3 sm:grid-cols-2">
           <div className="space-y-1.5">
-            <Label htmlFor="auth-signup-password">Password</Label>
+            <Label htmlFor="auth-signup-password" className={labelCls}>Password</Label>
             <div className="relative">
               <Input
                 id="auth-signup-password"
@@ -838,25 +1007,25 @@ function SignupForm({
                 placeholder="At least 8 characters"
                 disabled={loading}
                 {...register('password')}
-                className="pr-10"
+                className={cn(inputCls, 'pr-12')}
               />
               <button
                 type="button"
                 onClick={() => setShowPassword((v) => !v)}
                 tabIndex={-1}
                 aria-label={showPassword ? 'Hide password' : 'Show password'}
-                className="absolute right-2.5 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded text-text-tertiary transition-colors hover:text-text-primary"
+                className={eyeBtnCls}
               >
                 {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
             </div>
             {errors.password && (
-              <p className="text-[12px] text-error">{errors.password.message}</p>
+              <p className={fieldErrorCls}>{errors.password.message}</p>
             )}
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="auth-confirm-password">Confirm</Label>
+            <Label htmlFor="auth-confirm-password" className={labelCls}>Confirm</Label>
             <div className="relative">
               <Input
                 id="auth-confirm-password"
@@ -865,31 +1034,42 @@ function SignupForm({
                 placeholder="Repeat password"
                 disabled={loading}
                 {...register('confirmPassword')}
-                className="pr-10"
+                className={cn(inputCls, 'pr-12')}
               />
               <button
                 type="button"
                 onClick={() => setShowConfirm((v) => !v)}
                 tabIndex={-1}
                 aria-label={showConfirm ? 'Hide password' : 'Show password'}
-                className="absolute right-2.5 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded text-text-tertiary transition-colors hover:text-text-primary"
+                className={eyeBtnCls}
               >
                 {showConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
             </div>
             {errors.confirmPassword && (
-              <p className="text-[12px] text-error">{errors.confirmPassword.message}</p>
+              <p className={fieldErrorCls}>{errors.confirmPassword.message}</p>
             )}
           </div>
+        </div>
+
+        {/* Profile picture — compact optional row, moved down from the
+            top of the form. The dicebear preview seeds from the typed
+            username; a skipped upload can always be added in Settings. */}
+        <div className="auth-avatar-light auth-reveal auth-reveal-3 flex items-center gap-3 rounded-xl border border-[#E4E5DE] bg-white px-3.5 py-2.5">
+          <AvatarUpload
+            onChange={setAvatarFile}
+            username={usernameValue || 'gamervault'}
+            size="sm"
+          />
         </div>
 
         {/* Referral — hidden behind a toggle. Mirrors how Shopify /
             Stripe-style checkouts hide promo codes: low-key link by
             default, expands to a real input on click. */}
         {showReferral ? (
-          <div className="space-y-1.5">
-            <Label htmlFor="auth-referral">
-              Referral code <span className="text-text-tertiary">(optional)</span>
+          <div className="auth-reveal auth-reveal-3 space-y-1.5">
+            <Label htmlFor="auth-referral" className={labelCls}>
+              Referral Code <span className="font-normal text-[#5B6157]">(optional)</span>
             </Label>
             <div className="flex gap-2">
               <Input
@@ -899,7 +1079,7 @@ function SignupForm({
                 placeholder="JOH4F2A1"
                 disabled={loading}
                 {...register('referralCode')}
-                className="uppercase tracking-widest"
+                className={cn(inputCls, 'uppercase tracking-widest')}
                 onChange={(e) => {
                   e.target.value = e.target.value.toUpperCase()
                 }}
@@ -908,7 +1088,7 @@ function SignupForm({
               <button
                 type="button"
                 onClick={() => setShowReferral(false)}
-                className="text-[12px] text-text-tertiary transition-colors hover:text-text-secondary"
+                className="text-[12px] text-[#5B6157] transition-colors hover:text-[#1A1D19]"
               >
                 Hide
               </button>
@@ -918,54 +1098,63 @@ function SignupForm({
           <button
             type="button"
             onClick={() => setShowReferral(true)}
-            className="text-[12.5px] text-text-tertiary underline-offset-2 transition-colors hover:text-text-secondary hover:underline"
+            className="auth-reveal auth-reveal-3 text-[12.5px] font-medium text-[#1B5E3A] underline-offset-2 transition-colors hover:text-[#14432A] hover:underline"
           >
-            Have a referral code?
+            Have a Referral Code?
           </button>
         )}
 
         {error && (
-          <div className="rounded-lg border border-error/30 bg-error-bg px-3 py-2.5 text-[13px] text-error">
-            {error}
+          <div className={errorBoxCls}>
+            {error === 'EMAIL_TAKEN' ? (
+              <>
+                This email is already registered.{' '}
+                <button
+                  type="button"
+                  onClick={onSwitchToLogin}
+                  className="font-semibold underline underline-offset-2"
+                >
+                  Sign In Instead
+                </button>
+              </>
+            ) : (
+              error
+            )}
           </div>
         )}
 
-        <Button
+        <button
           type="submit"
-          disabled={loading || usernameStatus === 'taken' || usernameStatus === 'checking'}
-          className="h-11 w-full gap-2 bg-lime text-text-inverse hover:bg-lime-hover disabled:opacity-80"
+          disabled={loading || (usernameValue.length >= 3 && (usernameStatus === 'taken' || usernameStatus === 'checking'))}
+          className={cn(ctaCls, 'auth-reveal auth-reveal-3')}
         >
           {loading ? (
             <>
               <Loader2 className="h-4 w-4 animate-spin" />
-              Creating account…
+              Creating Account…
             </>
           ) : (
-            'Create account'
+            'Create Account'
           )}
-        </Button>
+        </button>
 
-        <p className="text-center text-[11.5px] leading-relaxed text-text-tertiary">
+        <p className="auth-reveal auth-reveal-3 text-center text-[12px] leading-relaxed text-[#5B6157]">
           By creating an account you agree to our{' '}
-          <a href="/legal/terms" className="underline hover:text-text-secondary">
+          <a href="/legal/terms" className="text-[#1B5E3A] underline transition-colors hover:text-[#14432A]">
             Terms
           </a>{' '}
           and{' '}
-          <a href="/legal/privacy" className="underline hover:text-text-secondary">
+          <a href="/legal/privacy" className="text-[#1B5E3A] underline transition-colors hover:text-[#14432A]">
             Privacy Policy
           </a>
           .
         </p>
       </form>
 
-      <p className="text-center text-[13px] text-text-secondary">
+      <p className={cn(switchLineCls, 'auth-reveal auth-reveal-3')}>
         Already have an account?{' '}
-        <button
-          type="button"
-          onClick={onSwitchToLogin}
-          className="font-semibold text-lime-text transition-colors hover:text-lime"
-        >
-          Sign in
+        <button type="button" onClick={onSwitchToLogin} className={linkCls}>
+          Sign In
         </button>
       </p>
     </div>
@@ -978,10 +1167,10 @@ function SignupForm({
    V23 — Shown in place of the forms when Supabase "Confirm email" is
    ON and a fresh signup has no session yet. The resend button is the
    shared affordance: it also renders inside the login error box when
-   signInWithPassword bounces with "email not confirmed". Outline
-   (grey-hover) styling on purpose — lime stays reserved for the
-   primary CTA of each view, and here the primary action is clicking
-   the link we already emailed.
+   signInWithPassword bounces with "email not confirmed". Quiet paper
+   chip on purpose — forest stays reserved for the primary CTA of each
+   view, and here the primary action is clicking the link we already
+   emailed.
    ────────────────────────────────────────────────────────────────── */
 
 function VerifyEmailView({
@@ -991,35 +1180,32 @@ function VerifyEmailView({
   onBackToLogin: () => void
 }) {
   return (
-    <div className="mx-auto w-full max-w-sm space-y-5">
-      <div className="flex h-11 w-11 items-center justify-center rounded-md border border-border-subtle bg-bg-base/60">
-        <MailCheck className="h-5 w-5 text-lime-text" />
+    <div className="mx-auto my-auto w-full max-w-[400px] space-y-5">
+      <div
+        className="auth-reveal flex h-12 w-12 items-center justify-center rounded-full"
+        style={{ backgroundColor: 'rgba(27,94,58,0.08)' }}
+      >
+        <MailCheck className="h-5 w-5 text-[#1B5E3A]" />
       </div>
 
-      <header className="space-y-1">
-        <p className="text-[11.5px] font-bold uppercase tracking-[0.14em] text-lime-text">
-          Verify Email
-        </p>
-        <h2 className="text-[18px] font-semibold leading-snug tracking-tight text-text-primary">
-          Check Your Inbox
-        </h2>
+      <header className="auth-reveal auth-reveal-1 space-y-1.5">
+        <p className={eyebrowCls}>Confirm Your Email</p>
+        <h2 className={headingCls}>Check Your Inbox</h2>
       </header>
 
-      <p className="text-[13.5px] leading-relaxed text-text-secondary">
+      <p className="auth-reveal auth-reveal-2 text-[13.5px] leading-relaxed text-[#5B6157]">
         We sent a confirmation link to{' '}
-        <span className="font-semibold text-text-primary">{email}</span>. Click it to activate
+        <span className="font-semibold text-[#1A1D19]">{email}</span>. Click it to activate
         your account.
       </p>
 
-      <ResendConfirmationButton email={email} />
+      <div className="auth-reveal auth-reveal-3">
+        <ResendConfirmationButton email={email} />
+      </div>
 
-      <p className="text-center text-[13px] text-text-secondary">
+      <p className={cn(switchLineCls, 'auth-reveal auth-reveal-3')}>
         Already confirmed?{' '}
-        <button
-          type="button"
-          onClick={onBackToLogin}
-          className="font-semibold text-lime-text transition-colors hover:text-lime"
-        >
+        <button type="button" onClick={onBackToLogin} className={linkCls}>
           Sign In
         </button>
       </p>
@@ -1057,14 +1243,13 @@ function ResendConfirmationButton({ email }: { email: string }) {
   }
 
   return (
-    <Button
+    <button
       type="button"
-      variant="outline"
       onClick={handleResend}
       disabled={sending || cooldown > 0}
-      // Explicit text color: the login flow renders this inside the error
-      // box, whose text-error would otherwise cascade into the button.
-      className="h-10 w-full gap-2 text-text-secondary hover:text-text-primary"
+      // Explicit paper-chip styling: the login flow renders this inside the
+      // light error box, whose red text would otherwise cascade in.
+      className="flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-[#E4E5DE] bg-white text-[13px] font-medium text-[#1A1D19] transition-colors hover:bg-[#FAFAF7] disabled:pointer-events-none disabled:opacity-60"
     >
       {sending ? (
         <>
@@ -1076,7 +1261,7 @@ function ResendConfirmationButton({ email }: { email: string }) {
       ) : (
         'Resend Email'
       )}
-    </Button>
+    </button>
   )
 }
 
