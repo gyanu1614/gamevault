@@ -18,6 +18,7 @@ import { DeliveryProgressBar } from './_DeliveryProgressBar'
 import { OrderCard } from './_OrderCard'
 import { OrderDetailsCard } from './_OrderDetailsCard'
 import { StatusStrip } from './_StatusStrip'
+import { AwaitingPaymentPanel } from './_AwaitingPaymentPanel'
 import { MarkDeliveredModal } from './_MarkDeliveredModal'
 import { MarkReceivedModal } from './_MarkReceivedModal'
 import { DisputeModal } from './_DisputeModal'
@@ -270,6 +271,20 @@ export function OrderClient(props: OrderClientProps) {
             chat just fills the remaining left-column height. */}
         <div className="mt-6 grid grid-cols-1 gap-[22px] lg:grid-cols-[1fr_412px]">
           <div className="flex flex-col gap-[18px]">
+            {/* Unpaid orders have no chat/delivery surface — just the payment
+                actions (resume/retry + cancel) beside the order details. */}
+            {order.status === 'pending' && (
+              <AwaitingPaymentPanel
+                orderId={order.id}
+                role={userRole}
+                hasValidInvoice={Boolean(
+                  (order as any).checkout_url &&
+                    (order as any).payment_expires_at &&
+                    new Date((order as any).payment_expires_at).getTime() >
+                      Date.now() + 5 * 60 * 1000,
+                )}
+              />
+            )}
             <DeliveryProgressBar
               startedAt={slaStartedAt}
               slaSeconds={slaSeconds}
@@ -281,6 +296,7 @@ export function OrderClient(props: OrderClientProps) {
                 the primary control instead of getting lost in the
                 rail. Progress bar above + strip + chat stack as
                 one continuous activity column. */}
+            {order.status !== 'pending' && (
             <StatusStrip
               role={userRole}
               status={order.status}
@@ -306,7 +322,8 @@ export function OrderClient(props: OrderClientProps) {
               existingReview={existingReview}
               promoted
             />
-            {conversationId && (
+            )}
+            {order.status !== 'pending' && conversationId && (
               <OrderChat
                 conversationId={conversationId}
                 currentUserId={currentUserId}

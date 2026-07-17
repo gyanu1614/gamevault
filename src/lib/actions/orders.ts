@@ -759,9 +759,10 @@ export async function cancelOrder(orderId: string): Promise<{
       await logUnauthorizedAccess(user.id, 'cancel_order', orderId)
       return { success: false, error: 'Unauthorized' }
     }
-    if (order.status !== 'paid') {
+    if (order.status !== 'paid' && order.status !== 'pending') {
       return { success: false, error: 'Order can only be cancelled before delivery starts' }
     }
+    const wasUnpaid = order.status === 'pending'
 
     // Cancel atomically: locks the order, validates paid → cancelled, moves
     // the held escrow to refunds and flips status in one transaction.
@@ -778,11 +779,35 @@ export async function cancelOrder(orderId: string): Promise<{
       return { success: true }
     }
 
+    // Unpaid (pending) cancel: no provider charge ever settled, but wallet
+    // credit may have been applied at checkout (held for this order). Return
+    // exactly that held amount — the same cross-stream refund the
+    // re-checkout supersede path performs. Idempotent per order.
+    let refundIssued = false
+    if (wasUnpaid) {
+      try {
+        const { data: heldRaw } = await (supabase.rpc as any)('checkout_wallet_hold_minor', {
+          p_order_id: orderId,
+        })
+        const heldMinor = BigInt(heldRaw ?? 0)
+        if (heldMinor > 0n) {
+          await refundToWallet({
+            userId: order.buyer_id,
+            amountMinor: heldMinor,
+            currency: (order.currency || 'EUR').toUpperCase(),
+            orderId,
+          })
+          refundIssued = true
+        }
+      } catch (walletError: any) {
+        console.error('[Cancel] CRITICAL: unpaid wallet-hold refund failed:', walletError?.message)
+      }
+    }
+
     // Credit the buyer's wallet with the full amount as store credit.
     // Idempotent per order ('wallet_refund:<orderId>'), so a replay can't
     // double-credit. Only when money was actually held for this order.
-    let refundIssued = false
-    if (escrowWasHeld && (order.total_amount ?? 0) > 0) {
+    if (!wasUnpaid && escrowWasHeld && (order.total_amount ?? 0) > 0) {
       try {
         await refundToWallet({
           userId: order.buyer_id,

@@ -329,6 +329,85 @@ async function insertPendingOrder(
   return { error: error?.message ?? 'insert failed' }
 }
 
+/**
+ * retryOrderPayment — get the buyer back into a payable state for an order
+ * stuck at Awaiting Payment. Reuses the existing CoinGate invoice when it is
+ * still valid; otherwise mints a fresh charge for the REMAINING amount
+ * (total minus any wallet credit already held for this order) and stores it
+ * on the order. If wallet credit already covers the full total (edge case),
+ * confirms the order directly instead of charging.
+ */
+export async function retryOrderPayment(orderId: string): Promise<{
+  success: boolean
+  checkoutUrl?: string
+  fullyPaidByWallet?: boolean
+  error?: string
+}> {
+  try {
+    const supabase = await createClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+    if (!user) return { success: false, error: 'Not authenticated' }
+
+    const { data: order } = (await supabase
+      .from('orders')
+      .select('id, buyer_id, listing_id, status, total_amount, checkout_url, payment_expires_at')
+      .eq('id', orderId)
+      .single()) as any
+    if (!order) return { success: false, error: 'Order not found' }
+    if (order.buyer_id !== user.id) return { success: false, error: 'Unauthorized' }
+    if (order.status !== 'pending') {
+      return { success: false, error: 'This order is not awaiting payment' }
+    }
+
+    // Reuse the existing invoice while it has a comfortable validity buffer.
+    const validUntil = order.payment_expires_at ? new Date(order.payment_expires_at).getTime() : 0
+    if (order.checkout_url && validUntil > Date.now() + 5 * 60 * 1000) {
+      return { success: true, checkoutUrl: order.checkout_url }
+    }
+
+    // Remaining charge = total − wallet credit already held for this order.
+    const totalMoney = fromDecimal(Number(order.total_amount ?? 0).toFixed(2), ORDER_CURRENCY)
+    const { data: heldRaw } = await (supabase.rpc as any)('checkout_wallet_hold_minor', {
+      p_order_id: orderId,
+    })
+    const heldMinor = BigInt(heldRaw ?? 0)
+    const remainingMinor = totalMoney.amountMinor - heldMinor
+
+    if (remainingMinor <= 0n) {
+      // Wallet already funds the full total — confirm instead of charging.
+      const { transition } = await import('@/lib/escrow/transition')
+      await transition(orderId, 'CHARGE_CONFIRMED', 'wallet-full-retry')
+      const { notifyOrderTransition } = await import('@/lib/payments/notify')
+      await notifyOrderTransition('CHARGE_CONFIRMED', orderId).catch(() => {})
+      return { success: true, fullyPaidByWallet: true }
+    }
+
+    const base = publicAppUrl()
+    const provider = getProvider('coingate')
+    const charge = await provider.createCharge({
+      orderId,
+      amount: money(remainingMinor, ORDER_CURRENCY),
+      returnUrl: `${base}/account/orders/${orderId}?paid=1`,
+      cancelUrl: `${base}/account/orders/${orderId}`,
+      metadata: { listing_id: order.listing_id, retry: 'true' },
+    })
+
+    const expiresAt = new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString()
+    await (supabase.from('orders').update as any)({
+      payment_provider: 'coingate',
+      provider_charge_id: charge.providerChargeId,
+      checkout_url: charge.checkoutUrl,
+      payment_expires_at: expiresAt,
+    }).eq('id', orderId)
+
+    return { success: true, checkoutUrl: charge.checkoutUrl }
+  } catch (e: any) {
+    return { success: false, error: e?.message ?? 'Could not restart payment' }
+  }
+}
+
 function publicAppUrl(): string {
   return process.env.NEXT_PUBLIC_APP_URL ?? process.env.PUBLIC_API_URL ?? 'http://localhost:3000'
 }
