@@ -323,7 +323,14 @@ export function OrderClient(props: OrderClientProps) {
               promoted
             />
             )}
+            {/* Mobile stacking: delivery instructions (small, actionable)
+                jump ABOVE the tall chat card on max-lg via CSS order so
+                neither party scrolls past ~700px of chat to reach them.
+                Wrappers use empty:hidden so a null-rendering child never
+                leaves a ghost gap slot in the flex column. DOM (= lg
+                visual) order is unchanged: chat → instructions → evidence. */}
             {order.status !== 'pending' && conversationId && (
+              <div className="min-w-0 empty:hidden max-lg:order-2">
               <OrderChat
                 conversationId={conversationId}
                 currentUserId={currentUserId}
@@ -377,16 +384,21 @@ export function OrderClient(props: OrderClientProps) {
                 }
                 disputeResolution={disputeResolution}
               />
+              </div>
             )}
-            <DeliveryInstructions
-              role={userRole}
-              instructions={order.listing?.delivery_instructions ?? null}
-              listingId={order.listing?.id ?? null}
-            />
-            <DeliveryEvidence
-              role={userRole}
-              urls={order.delivery_evidence_urls}
-            />
+            <div className="min-w-0 empty:hidden max-lg:order-1">
+              <DeliveryInstructions
+                role={userRole}
+                instructions={order.listing?.delivery_instructions ?? null}
+                listingId={order.listing?.id ?? null}
+              />
+            </div>
+            <div className="min-w-0 empty:hidden max-lg:order-3">
+              <DeliveryEvidence
+                role={userRole}
+                urls={order.delivery_evidence_urls}
+              />
+            </div>
           </div>
           <aside className="flex flex-col gap-[18px] lg:sticky lg:top-[18px]">
             <OrderDetailsCard

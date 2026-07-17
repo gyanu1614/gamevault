@@ -269,7 +269,7 @@ function StatusBadge({ status }: { status: string }) {
   const Icon = cfg.icon
   return (
     <span className={cn(
-      'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-semibold whitespace-nowrap',
+      'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold whitespace-nowrap',
       cfg.pill
     )}>
       {/* animated pulse dot */}
@@ -304,7 +304,7 @@ function StatCard({ icon: Icon, label, value, sub, color = 'violet' }: {
       <div className="min-w-0">
         <div className="text-base font-bold text-white leading-tight">{value}</div>
         <div className="text-[11px] text-text-tertiary truncate">{label}</div>
-        {sub && <div className="text-[10px] text-text-tertiary truncate">{sub}</div>}
+        {sub && <div className="text-[11px] text-text-tertiary truncate">{sub}</div>}
       </div>
     </div>
   )
@@ -511,8 +511,8 @@ export default function WalletPage() {
                 {/* Available — value left, Withdraw CTA right (like the ref) */}
                 <div className="flex items-start justify-between gap-4 rounded-lg border border-border-subtle card-frost p-5">
                   <div className="min-w-0">
-                    <div className="flex items-center gap-2 text-text-secondary">
-                      <DollarSign className="h-4 w-4 text-success" />
+                    <div className="flex flex-wrap items-center gap-2 text-text-secondary">
+                      <DollarSign className="h-4 w-4 flex-shrink-0 text-success" />
                       <span className="text-[12px] font-semibold uppercase tracking-wider">Available Balance</span>
                     </div>
                     <p className="mt-1.5 text-3xl font-bold leading-tight text-text-primary">
@@ -523,7 +523,7 @@ export default function WalletPage() {
                   <Link
                     href="/account/wallet/withdraw"
                     className={cn(
-                      'inline-flex shrink-0 items-center gap-2 rounded-lg bg-lime px-4 py-2.5 text-sm font-semibold text-text-inverse transition-colors hover:bg-lime-hover',
+                      'inline-flex min-h-[44px] shrink-0 items-center gap-2 rounded-lg bg-lime px-4 py-2.5 text-sm font-semibold text-text-inverse transition-colors hover:bg-lime-hover',
                       earningsStats.available_balance <= 0 && 'pointer-events-none opacity-50',
                     )}
                   >
@@ -555,10 +555,10 @@ export default function WalletPage() {
                   { label: 'Lifetime Earned', value: earningsStats.total_earnings, icon: DollarSign },
                   { label: 'Withdrawn', value: earningsStats.total_payouts, icon: ArrowDownToLine },
                 ].map((s) => (
-                  <div key={s.label} className="rounded-lg border border-border-subtle card-frost py-3">
-                    <div className="flex items-center gap-2 text-text-tertiary">
-                      <s.icon className="h-3.5 w-3.5" />
-                      <span className="text-[11px] font-medium uppercase tracking-wide">{s.label}</span>
+                  <div key={s.label} className="rounded-lg border border-border-subtle card-frost px-3 py-3">
+                    <div className="flex min-w-0 items-center gap-2 text-text-tertiary">
+                      <s.icon className="h-3.5 w-3.5 flex-shrink-0" />
+                      <span className="min-w-0 truncate text-[11px] font-medium uppercase tracking-wide">{s.label}</span>
                     </div>
                     <p className="mt-1 text-lg font-bold text-text-primary">${(s.value ?? 0).toFixed(2)}</p>
                   </div>
@@ -571,11 +571,11 @@ export default function WalletPage() {
           {!isSeller && (
             <div className="rounded-lg border border-border-subtle bg-gradient-to-br from-lime/10 to-transparent p-1 shadow-xl">
               <div className="rounded-lg bg-black/40 backdrop-blur-sm p-6">
-                <div className="flex items-start justify-between mb-6">
-                  <div>
+                <div className="flex flex-wrap items-start justify-between gap-4 mb-6">
+                  <div className="min-w-0">
                     <div className="flex items-center gap-2 mb-1.5">
                       <Wallet className="h-4 w-4 text-lime-text" />
-                      <p className="text-[10px] text-white/50 font-semibold uppercase tracking-wider">Balance</p>
+                      <p className="text-[11px] text-white/50 font-semibold uppercase tracking-wider">Balance</p>
                     </div>
                     <p className="text-4xl font-bold text-white tracking-tight">${walletBalance.available_balance.toFixed(2)}</p>
                     {walletBalance.pending_balance > 0 && (
@@ -584,11 +584,11 @@ export default function WalletPage() {
                       </p>
                     )}
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex w-full gap-2 sm:w-auto">
                     <button
                       onClick={() => handleTopUp(25)}
                       disabled={isTopUpLoading}
-                      className="group relative flex items-center justify-center gap-1.5 rounded-lg bg-lime text-text-inverse hover:bg-lime-hover px-4 py-2 text-sm font-semibold transition-all disabled:cursor-not-allowed"
+                      className="group relative flex flex-1 sm:flex-none min-h-[44px] items-center justify-center gap-1.5 rounded-lg bg-lime text-text-inverse hover:bg-lime-hover px-4 py-2 text-sm font-semibold transition-all disabled:cursor-not-allowed"
                     >
                       {isTopUpLoading ? (
                         <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -602,7 +602,7 @@ export default function WalletPage() {
                     <button
                       onClick={() => handleTopUp(50)}
                       disabled={isTopUpLoading}
-                      className="group relative flex items-center justify-center gap-1.5 rounded-lg border border-border-default bg-bg-raised hover:bg-bg-raised-hover hover:border-lime-tint-border px-4 py-2 text-sm font-semibold text-white transition-all disabled:cursor-not-allowed"
+                      className="group relative flex flex-1 sm:flex-none min-h-[44px] items-center justify-center gap-1.5 rounded-lg border border-border-default bg-bg-raised hover:bg-bg-raised-hover hover:border-lime-tint-border px-4 py-2 text-sm font-semibold text-white transition-all disabled:cursor-not-allowed"
                     >
                       {isTopUpLoading ? (
                         <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -623,7 +623,7 @@ export default function WalletPage() {
                       <Gift className="h-3.5 w-3.5 text-success" />
                     </div>
                     <div>
-                      <p className="text-[9px] text-success/70 font-medium uppercase tracking-wide">Cashback</p>
+                      <p className="text-[11px] text-success/70 font-medium uppercase tracking-wide">Cashback</p>
                       <p className="text-base font-bold text-success">${walletBalance.total_cashback.toFixed(2)}</p>
                     </div>
                   </div>
@@ -632,7 +632,7 @@ export default function WalletPage() {
                       <Sparkles className="h-3.5 w-3.5 text-amber-400" />
                     </div>
                     <div>
-                      <p className="text-[9px] text-amber-400/70 font-medium uppercase tracking-wide">Referrals</p>
+                      <p className="text-[11px] text-amber-400/70 font-medium uppercase tracking-wide">Referrals</p>
                       <p className="text-base font-bold text-amber-400">${walletBalance.referral_earnings.toFixed(2)}</p>
                     </div>
                   </div>
@@ -673,7 +673,7 @@ export default function WalletPage() {
         )}
 
       {/* ── Tabs ── */}
-      <div className="flex gap-3 mb-4">
+      <div className="flex gap-2 sm:gap-3 mb-4">
         {tabs.map(tab => {
           const Icon = tab.icon
           const isActive = activeTab === tab.id
@@ -682,13 +682,14 @@ export default function WalletPage() {
               key={tab.id}
               onClick={() => { setActiveTab(tab.id); setSearchQuery(''); setFilterStatus('all') }}
               className={cn(
+                'flex flex-1 sm:flex-none min-w-0 items-center justify-center gap-2 px-2 sm:px-4 py-3 text-sm rounded-lg transition-all',
                 isActive
-                  ? 'flex items-center gap-2 px-4 py-3 text-sm font-semibold rounded-lg border-2 border-lime bg-gradient-to-br from-lime/20 to-lime/5 text-white shadow-elevated transition-all'
-                  : 'flex items-center gap-2 px-4 py-3 text-sm font-medium rounded-lg border border-border-subtle card-frost text-text-secondary hover:border-lime-tint-border hover:bg-bg-overlay hover:text-text-secondary transition-all'
+                  ? 'font-semibold border-2 border-lime bg-gradient-to-br from-lime/20 to-lime/5 text-white shadow-elevated'
+                  : 'font-medium border border-border-subtle card-frost text-text-secondary hover:border-lime-tint-border hover:bg-bg-overlay hover:text-text-secondary'
               )}
             >
               <Icon className="h-4 w-4 flex-shrink-0" />
-              <span>{tab.label}</span>
+              <span className="truncate">{tab.label}</span>
             </button>
           )
         })}
@@ -715,7 +716,7 @@ export default function WalletPage() {
           <select
             value={filterStatus}
             onChange={e => setFilterStatus(e.target.value)}
-            className="rounded-lg border border-border-subtle card-frost px-3 py-2 text-xs text-white focus:border-lime focus:outline-none transition-all"
+            className="min-h-[36px] rounded-lg border border-border-subtle card-frost px-3 py-2.5 text-xs text-white focus:border-lime focus:outline-none transition-all"
           >
             <option value="all">All Status</option>
             <option value="completed">Completed</option>
@@ -756,28 +757,28 @@ export default function WalletPage() {
                 >
                   <Link
                     href={`/account/orders/${txn.orderId}`}
-                    className="flex items-center gap-4 px-5 py-4 hover:bg-bg-overlay transition-colors group"
+                    className="flex items-center gap-3 sm:gap-4 px-4 sm:px-5 py-4 hover:bg-bg-overlay transition-colors group"
                   >
                     {/* Listing image (fallback to game icon) */}
                     <GameIcon emoji={txn.gameEmoji} imageUrl={txn.listingImageUrl || txn.gameImageUrl} size={10} />
 
                     {/* Item details */}
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-0.5">
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mb-0.5">
                         {txn.gameName && (
-                          <span className="text-[11.5px] font-bold text-lime-text uppercase tracking-[0.14em]">{txn.gameName}</span>
+                          <span className="truncate max-w-[16ch] text-[11.5px] font-bold text-lime-text uppercase tracking-[0.14em]">{txn.gameName}</span>
                         )}
                         {txn.categoryName && (
                           <>
                             <span className="text-text-tertiary">·</span>
-                            <span className="text-[10px] text-text-tertiary">{txn.categoryName}</span>
+                            <span className="text-[11px] text-text-tertiary">{txn.categoryName}</span>
                           </>
                         )}
                       </div>
                       <p className="text-sm font-medium text-white truncate leading-snug">{txn.title}</p>
-                      <div className="flex items-center gap-2 mt-0.5">
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-0.5">
                         {txn.orderNumber && (
-                          <span className="text-[11px] text-lime-text">#{txn.orderNumber}</span>
+                          <span className="truncate max-w-[14ch] text-[11px] text-lime-text">#{txn.orderNumber}</span>
                         )}
                         <span className="text-[11px] text-text-tertiary">{timeAgo(txn.createdAt)}</span>
                       </div>
@@ -789,7 +790,7 @@ export default function WalletPage() {
                       <div className="text-right">
                         <div className="text-base font-bold text-white">${txn.amount.toFixed(2)}</div>
                         {txn.platformFee > 0 && (
-                          <div className="text-[10px] text-text-disabled">
+                          <div className="text-xs text-text-disabled">
                             fee <span className="text-error/70">-${txn.platformFee.toFixed(2)}</span>
                           </div>
                         )}
@@ -842,32 +843,32 @@ export default function WalletPage() {
                 >
                   <Link
                     href={`/account/orders/${txn.orderId}`}
-                    className="flex items-center gap-4 px-5 py-4 hover:bg-bg-overlay transition-colors group"
+                    className="flex items-center gap-3 sm:gap-4 px-4 sm:px-5 py-4 hover:bg-bg-overlay transition-colors group"
                   >
                     {/* Listing image (fallback to game icon) */}
                     <GameIcon emoji={txn.gameEmoji} imageUrl={txn.listingImageUrl || txn.gameImageUrl} size={10} />
 
                     {/* Item details */}
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-0.5">
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mb-0.5">
                         {txn.gameName && (
-                          <span className="text-[11.5px] font-bold text-lime-text uppercase tracking-[0.14em]">{txn.gameName}</span>
+                          <span className="truncate max-w-[16ch] text-[11.5px] font-bold text-lime-text uppercase tracking-[0.14em]">{txn.gameName}</span>
                         )}
                         {txn.categoryName && (
                           <>
                             <span className="text-text-tertiary">·</span>
-                            <span className="text-[10px] text-text-tertiary">{txn.categoryName}</span>
+                            <span className="text-[11px] text-text-tertiary">{txn.categoryName}</span>
                           </>
                         )}
                       </div>
                       <p className="text-sm font-medium text-white truncate leading-snug">{txn.listingTitle}</p>
-                      <div className="flex items-center gap-2 mt-0.5">
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-0.5">
                         <User className="h-3 w-3 text-text-disabled flex-shrink-0" />
-                        <span className="text-[11px] text-text-secondary font-medium">{txn.buyerUsername}</span>
+                        <span className="truncate max-w-[12ch] text-[11px] text-text-secondary font-medium">{txn.buyerUsername}</span>
                         <span className="text-text-tertiary">·</span>
-                        <span className="text-[11px] text-lime-text">#{txn.orderNumber}</span>
-                        <span className="text-text-tertiary">·</span>
-                        <span className="text-[11px] text-text-tertiary">{timeAgo(txn.createdAt)}</span>
+                        <span className="truncate max-w-[14ch] text-[11px] text-lime-text">#{txn.orderNumber}</span>
+                        <span className="text-text-tertiary max-sm:hidden">·</span>
+                        <span className="text-[11px] text-text-tertiary max-sm:hidden">{timeAgo(txn.createdAt)}</span>
                       </div>
                     </div>
 
@@ -877,7 +878,7 @@ export default function WalletPage() {
                       <div className="text-right">
                         <div className="text-base font-bold text-success">+${txn.netAmount.toFixed(2)}</div>
                         {txn.platformFee > 0 && (
-                          <div className="text-[10px] text-text-disabled">
+                          <div className="text-xs text-text-disabled">
                             sale <span className="text-text-secondary">${txn.amount.toFixed(2)}</span>
                             {' '}· fee <span className="text-error/70">-${txn.platformFee.toFixed(2)}</span>
                           </div>
@@ -923,7 +924,7 @@ export default function WalletPage() {
             <>
               <div className="flex items-center justify-between px-5 py-3 border-b border-border-subtle">
                 <span className="text-xs text-text-tertiary">{payouts.length} payout{payouts.length !== 1 ? 's' : ''}</span>
-                <button className="flex items-center gap-1.5 rounded-lg border border-border-subtle bg-bg-raised hover:bg-bg-raised-hover px-3 py-1 text-xs font-medium text-text-secondary hover:text-white transition-all">
+                <button className="flex min-h-[36px] items-center gap-1.5 rounded-lg border border-border-subtle bg-bg-raised hover:bg-bg-raised-hover px-3 py-1.5 text-xs font-medium text-text-secondary hover:text-white transition-all">
                   <Download className="h-3.5 w-3.5" />
                   Export
                 </button>
@@ -936,7 +937,7 @@ export default function WalletPage() {
                     initial={{ opacity: 0, y: 6 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: i * 0.03 }}
-                    className="flex items-center gap-4 px-5 py-4 hover:bg-bg-overlay transition-colors"
+                    className="flex items-center gap-3 sm:gap-4 px-4 sm:px-5 py-4 hover:bg-bg-overlay transition-colors"
                   >
                     <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-lime/10 border border-lime-tint-border">
                       <CreditCard className="h-5 w-5 text-lime-text" />
@@ -949,7 +950,7 @@ export default function WalletPage() {
 
                     <div className="flex-shrink-0 flex flex-col items-end gap-1">
                       <span className={cn(
-                        'inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold capitalize',
+                        'inline-flex rounded-full border px-2 py-0.5 text-xs font-semibold capitalize',
                         payout.status === 'completed' ? 'bg-success-bg text-success border-green-500/20'
                           : payout.status === 'pending' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20'
                           : 'bg-error-bg text-error border-error/40'

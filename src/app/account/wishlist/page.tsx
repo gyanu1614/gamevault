@@ -186,7 +186,7 @@ export default function WishlistPage() {
             <select
               value={filterGame}
               onChange={(e) => setFilterGame(e.target.value)}
-              className="rounded-lg border border-border-subtle bg-bg-raised px-3 py-2.5 text-sm text-white focus:border-lime focus:outline-none focus:ring-2 focus:ring-lime-tint-bg transition-all"
+              className="min-w-0 flex-1 sm:flex-none rounded-lg border border-border-subtle bg-bg-raised px-3 py-2.5 text-sm text-white focus:border-lime focus:outline-none focus:ring-2 focus:ring-lime-tint-bg transition-all"
             >
               <option value="">All Games</option>
               {games.map(game => (
@@ -199,22 +199,24 @@ export default function WishlistPage() {
           <div className="flex gap-1 rounded-lg border border-border-subtle bg-bg-raised p-1">
             <button
               onClick={() => setViewMode('grid')}
+              aria-label="Grid view"
               className={cn(
-                'rounded-lg p-2 transition-all',
+                'rounded-lg p-2.5 transition-all',
                 viewMode === 'grid'
                   ? 'bg-lime text-text-inverse'
-                  : 'text-text-secondary hover:text-white hover:bg-white/[0.06]-hover'
+                  : 'text-text-secondary hover:text-white hover:bg-white/[0.06]'
               )}
             >
               <Grid3x3 className="h-4 w-4" />
             </button>
             <button
               onClick={() => setViewMode('list')}
+              aria-label="List view"
               className={cn(
-                'rounded-lg p-2 transition-all',
+                'rounded-lg p-2.5 transition-all',
                 viewMode === 'list'
                   ? 'bg-lime text-text-inverse'
-                  : 'text-text-secondary hover:text-white hover:bg-white/[0.06]-hover'
+                  : 'text-text-secondary hover:text-white hover:bg-white/[0.06]'
               )}
             >
               <List className="h-4 w-4" />
@@ -260,7 +262,7 @@ export default function WishlistPage() {
                     e.stopPropagation()
                     handleRemoveFromWishlist(item.listing_id)
                   }}
-                  className="absolute right-2.5 top-2.5 z-10 rounded-full bg-black/70 backdrop-blur-md p-2 text-white transition-all hover:bg-red-500 border border-white/10"
+                  className="absolute right-2.5 top-2.5 z-10 rounded-full bg-black/70 backdrop-blur-md p-2.5 text-white transition-all hover:bg-red-500 border border-white/10"
                 >
                   <X className="h-3.5 w-3.5" />
                 </button>
@@ -311,7 +313,7 @@ export default function WishlistPage() {
                       }}
                       disabled={!inStock}
                       className={cn(
-                        'flex-1 rounded-lg py-2.5 text-sm font-semibold transition-all',
+                        'flex-1 min-h-[44px] rounded-lg py-2.5 text-sm font-semibold transition-all',
                         inStock
                           ? 'bg-lime text-text-inverse hover:bg-lime-hover'
                           : 'bg-gray-700/50 text-text-tertiary cursor-not-allowed'
@@ -347,7 +349,7 @@ export default function WishlistPage() {
                 onClick={() => router.push(`/${listing.game?.slug}/${listing.category?.slug}/${listing.slug}`)}
               >
                 {/* Image */}
-                <div className="h-24 w-32 flex-shrink-0 rounded-lg bg-gradient-to-br from-lime/10 to-lime/5 flex items-center justify-center overflow-hidden">
+                <div className="h-20 w-24 sm:h-24 sm:w-32 flex-shrink-0 rounded-lg bg-gradient-to-br from-lime/10 to-lime/5 flex items-center justify-center overflow-hidden">
                   {listing.images && listing.images.length > 0 ? (
                     <img
                       src={listing.images[0]}
@@ -366,7 +368,7 @@ export default function WishlistPage() {
                   <div className="mb-1.5 flex items-start justify-between gap-2">
                     <div className="min-w-0">
                       <h3 className="text-sm font-semibold text-white truncate">{listing.title}</h3>
-                      <div className="mt-1.5 flex items-center gap-2 text-[11px] text-text-tertiary">
+                      <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-text-tertiary">
                         <span className="font-medium">{listing.game?.name || 'Unknown'}</span>
                         {listing.category?.name && (
                           <>
@@ -383,13 +385,14 @@ export default function WishlistPage() {
                         e.stopPropagation()
                         handleRemoveFromWishlist(item.listing_id)
                       }}
-                      className="rounded-full p-1.5 text-text-tertiary transition-colors hover:text-error hover:bg-error-bg flex-shrink-0"
+                      aria-label="Remove from wishlist"
+                      className="-mr-1.5 -mt-1.5 rounded-full p-2.5 text-text-tertiary transition-colors hover:text-error hover:bg-error-bg flex-shrink-0"
                     >
                       <X className="h-4 w-4" />
                     </button>
                   </div>
 
-                  <div className="flex items-center justify-between gap-4 mt-3">
+                  <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 mt-3">
                     <span className="text-xl font-bold text-white">${listing.price.toFixed(2)}</span>
 
                     <button
@@ -399,7 +402,7 @@ export default function WishlistPage() {
                       }}
                       disabled={!inStock}
                       className={cn(
-                        'rounded-lg px-5 py-2.5 text-sm font-semibold transition-all',
+                        'min-h-[44px] rounded-lg px-4 sm:px-5 py-2.5 text-sm font-semibold transition-all',
                         inStock
                           ? 'bg-lime text-text-inverse hover:bg-lime-hover'
                           : 'bg-gray-700/50 text-text-tertiary cursor-not-allowed'

@@ -64,10 +64,14 @@ export function OrderChat({
 }: OrderChatProps) {
   return (
     // V21/P7.af — Fixed chat height; the message list scrolls inside so
-    // the card never grows per message. 620px is a touch taller than the
-    // old 560px so its bottom sits level with the Payout card. Mobile
-    // keeps its own 720px.
-    <OrderCard className="flex h-[720px] flex-col overflow-hidden p-0 lg:h-[580px]" padded={false}>
+    // the card never grows per message. On mobile the 720px target is
+    // capped to the visual viewport (dvh) so the thread + composer always
+    // fit on screen — including when the soft keyboard shrinks the
+    // viewport — and the internal MessageList scroll does the work.
+    <OrderCard
+      className="flex h-[clamp(360px,100dvh_-_180px,720px)] flex-col overflow-hidden p-0 lg:h-[580px]"
+      padded={false}
+    >
       <ChatInterface
         conversationId={conversationId}
         currentUserId={currentUserId}

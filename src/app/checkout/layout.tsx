@@ -46,10 +46,14 @@ export default function CheckoutLayout({
       <Link
         href="/support"
         aria-label="Need help?"
-        className="fixed bottom-5 right-5 z-50 inline-flex h-12 items-center gap-2 rounded-full border border-border-default bg-bg-raised px-4 text-[13px] font-semibold text-text-primary shadow-elevated transition-all hover:border-lime-tint-border hover:bg-bg-raised-hover hover:shadow-glow sm:bottom-6 sm:right-6"
+        // Mobile-audit — below sm the chip collapses to a 48px icon-only
+        // circle so it covers less of the footer band; the footer also
+        // carries pb clearance (see CheckoutFooter) so the chip never
+        // sits on top of the legal links.
+        className="fixed bottom-5 right-5 z-50 inline-flex h-12 w-12 items-center justify-center gap-2 rounded-full border border-border-default bg-bg-raised px-0 text-[13px] font-semibold text-text-primary shadow-elevated transition-all hover:border-lime-tint-border hover:bg-bg-raised-hover hover:shadow-glow sm:bottom-6 sm:right-6 sm:w-auto sm:px-4"
       >
         <HelpCircle className="h-4 w-4 text-lime-text" />
-        Need help?
+        <span className="hidden sm:inline">Need help?</span>
       </Link>
     </div>
   )
@@ -58,13 +62,15 @@ export default function CheckoutLayout({
 function CheckoutFooter() {
   return (
     <footer className="border-t border-white/[0.06] bg-[#0c0e14]">
-      <div className="mx-auto flex w-full max-w-7xl flex-col gap-4 px-4 py-6 sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-8 lg:px-8">
+      {/* pb-24 below sm clears the fixed Need-help chip (bottom-5 h-12)
+          so it never covers the legal links. */}
+      <div className="mx-auto flex w-full max-w-7xl flex-col gap-4 px-4 pb-24 pt-6 sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-8 lg:px-8">
         <div className="flex flex-col gap-1.5 text-[12.5px] text-text-tertiary sm:flex-row sm:items-center sm:gap-4">
           <span className="inline-flex items-center gap-2">
             <ShieldCheck className="h-4 w-4 text-lime-text" />
             All transactions are SSL secured and covered by SafeDrop Buyer Protection.
           </span>
-          <span className="hidden text-[11.5px] sm:inline">© {new Date().getFullYear()} DropMarket Ltd</span>
+          <span className="hidden text-[12px] sm:inline">© {new Date().getFullYear()} DropMarket Ltd</span>
         </div>
         <nav
           aria-label="Checkout legal"

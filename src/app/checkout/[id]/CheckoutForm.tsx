@@ -45,6 +45,7 @@ import { SilverIcon } from '@/components/ui/silver-icon'
 import { cn } from '@/lib/utils'
 import { buyerFee, MARKETPLACE_FEE_LABEL, PROCESSING_FEE_LABEL, WARRANTY_ENABLED } from '@/lib/fees'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 
 // V14l — Smart price formatter. For currency listings ($0.0045/unit) the
 // per-unit price would round to "$0.00" at 2 decimals — confusing the
@@ -152,6 +153,40 @@ function BrandTile({ id, mini }: { id: PayMethod; mini?: boolean }) {
 
 // ─── Fee row + ⓘ badge ──────────────────────────────────────────────────────
 
+// Mobile-audit — Info dot that works on touch. Hover still shows the
+// Radix Tooltip (desktop unchanged); tap/click toggles a Popover with
+// the same text so phones + tablets can reach fee/method explanations.
+// The 15px dot keeps its visual size but gets a ~37px hit area via
+// padding + negative margin.
+function InfoDot({ text }: { text: string }) {
+  return (
+    <Popover>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <PopoverTrigger asChild>
+            <button
+              type="button"
+              aria-label={text}
+              onClick={(e) => e.stopPropagation()}
+              className="relative -m-[11px] inline-flex flex-none cursor-help items-center justify-center p-[11px]"
+            >
+              <span aria-hidden className="inline-flex h-[15px] w-[15px] items-center justify-center rounded-full bg-[#232838] text-[9px] text-[#7b8398]">
+                ?
+              </span>
+            </button>
+          </PopoverTrigger>
+        </TooltipTrigger>
+        <TooltipContent side="top" className="max-w-[240px] text-[12px] leading-snug">
+          {text}
+        </TooltipContent>
+      </Tooltip>
+      <PopoverContent side="top" onOpenAutoFocus={(e) => e.preventDefault()} className="max-w-[240px]">
+        {text}
+      </PopoverContent>
+    </Popover>
+  )
+}
+
 function FeeRow({
   label,
   value,
@@ -172,22 +207,7 @@ function FeeRow({
       <span className="inline-flex min-w-0 items-center gap-2">
         {icon}
         <span className="truncate">{label}</span>
-        {tooltip && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span
-                tabIndex={0}
-                aria-label={tooltip}
-                className="inline-flex h-[15px] w-[15px] flex-none cursor-help items-center justify-center rounded-full bg-[#232838] text-[9px] text-[#7b8398]"
-              >
-                ?
-              </span>
-            </TooltipTrigger>
-            <TooltipContent side="top" className="max-w-[240px] text-[12px] leading-snug">
-              {tooltip}
-            </TooltipContent>
-          </Tooltip>
-        )}
+        {tooltip && <InfoDot text={tooltip} />}
         {extra}
       </span>
       <span className={cn('flex-none tabular-nums text-[#eef1f6]', valueClass)}>{value}</span>
@@ -206,7 +226,9 @@ function MiniSwitch({ on, disabled, onToggle, label }: { on: boolean; disabled?:
       disabled={disabled}
       onClick={onToggle}
       className={cn(
-        'relative h-[18px] w-[32px] flex-none rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-50',
+        // before:-inset-2.5 — invisible halo extends the 18x32 visual to a
+        // ~38x52 touch target (>=36px floor) without changing the layout.
+        'relative h-[18px] w-[32px] flex-none rounded-full transition-colors before:absolute before:-inset-2.5 disabled:cursor-not-allowed disabled:opacity-50',
         on ? 'bg-lime' : 'bg-[#333950]',
       )}
     >
@@ -437,12 +459,12 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
                             <div className="truncate text-[14px] font-extrabold text-white">
                               {buyerProfile?.username || 'Your Account'}
                             </div>
-                            <div className="mt-0.5 text-[11.5px] text-[#7b8398]">
+                            <div className="mt-0.5 text-[12px] text-[#7b8398]">
                               Member since{' '}
                               {new Date(user.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
                             </div>
                           </div>
-                          <span className="inline-flex flex-none items-center gap-1 text-[11px] font-extrabold text-success">
+                          <span className="inline-flex flex-none items-center gap-1 text-[12px] font-extrabold text-success">
                             <Check className="h-3.5 w-3.5" />
                             Signed In
                           </span>
@@ -450,10 +472,10 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
                       </div>
                       <div className="flex flex-col gap-2.5 p-4">
                         <div className="flex items-center justify-between gap-3 rounded-md border border-white/[0.07] bg-[#0d1017] px-3 py-2.5">
-                          <span className="text-[11px] font-bold uppercase tracking-wider text-[#7b8398]">Email</span>
+                          <span className="text-[12px] font-bold uppercase tracking-wider text-[#7b8398]">Email</span>
                           <span className="truncate text-[12.5px] font-bold text-white">{user.email}</span>
                         </div>
-                        <p className="text-center text-[11.5px] leading-relaxed text-[#7b8398]">
+                        <p className="text-center text-[12px] leading-relaxed text-[#7b8398]">
                           Order confirmation and delivery updates go to this profile and email.
                         </p>
                       </div>
@@ -484,7 +506,7 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
           <div className="order-2 min-w-0 lg:order-1">
             {/* Mobile: eyebrow + horizontal chip scroller (2b) */}
             <div className="sm:hidden">
-              <div className="mx-0.5 mb-2 text-[11px] font-bold tracking-[1px] text-[#7b8398]">PAY WITH</div>
+              <div className="mx-0.5 mb-2 text-[12px] font-bold tracking-[1px] text-[#7b8398]">PAY WITH</div>
               <div className="mb-1 flex gap-2 overflow-x-auto pb-2">
                 {/* Live methods lead the scroller so the selected chip is
                     visible without scrolling (2b leads with the selection). */}
@@ -497,7 +519,9 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
                       disabled={m.soon}
                       onClick={() => setMethod(m.id)}
                       className={cn(
-                        'flex flex-none items-center gap-[7px] rounded-md border px-[13px] py-2 transition-all',
+                        // min-h-[44px] — primary payment selector on <sm,
+                        // so the chips meet the 44px touch-target floor.
+                        'flex min-h-[44px] flex-none items-center gap-[7px] rounded-md border px-[13px] py-2 transition-all',
                         on
                           ? 'border-white/[0.16] bg-[#1a2030] shadow-[0_8px_18px_-10px_rgba(0,0,0,0.6)]'
                           : 'border-white/[0.07] bg-[#12151e]',
@@ -506,7 +530,7 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
                     >
                       <BrandTile id={m.id} mini />
                       <span className={cn('text-[12px] font-bold', on ? 'text-white' : 'text-[#a5adbe]')}>{m.chip}</span>
-                      {m.soon && <span className="text-[8.5px] font-extrabold uppercase tracking-wider text-[#7b8398]">Soon</span>}
+                      {m.soon && <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#7b8398]">Soon</span>}
                     </button>
                   )
                 })}
@@ -518,33 +542,38 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
               {METHODS.map((m) => {
                 const on = method === m.id
                 return (
-                  <button
+                  // div[role=button] (not <button>) so the InfoDot popover
+                  // trigger inside stays valid, reachable markup — a nested
+                  // real <button> inside a disabled <button> never receives
+                  // taps, which made the method sub-info unreachable on
+                  // touch (768/1024 tablets see these rows).
+                  <div
                     key={m.id}
-                    type="button"
-                    disabled={m.soon}
-                    onClick={() => setMethod(m.id)}
+                    role="button"
+                    tabIndex={m.soon ? -1 : 0}
+                    aria-disabled={m.soon || undefined}
                     aria-pressed={on}
+                    onClick={() => { if (!m.soon) setMethod(m.id) }}
+                    onKeyDown={(e) => {
+                      if (e.target !== e.currentTarget) return
+                      if (!m.soon && (e.key === 'Enter' || e.key === ' ')) {
+                        e.preventDefault()
+                        setMethod(m.id)
+                      }
+                    }}
                     className={cn(
                       'flex items-center gap-3 rounded-md border border-white/[0.06] bg-[#12151e] px-3.5 py-2.5 text-left transition-colors duration-150',
                       m.soon
                         ? 'cursor-not-allowed opacity-55'
-                        : 'hover:border-white/[0.12] hover:bg-[#1a1f2b]',
+                        : 'cursor-pointer hover:border-white/[0.12] hover:bg-[#1a1f2b]',
                     )}
                   >
                     <BrandTile id={m.id} />
                     <span className="flex min-w-0 flex-1 items-center gap-2">
                       <span className="truncate text-[14px] font-bold text-white">{m.title}</span>
-                      {m.sub && (
-                        <span
-                          title={m.sub}
-                          aria-label={m.sub}
-                          className="inline-flex h-[15px] w-[15px] flex-none cursor-help items-center justify-center rounded-full bg-[#232838] text-[9px] text-[#7b8398]"
-                        >
-                          ?
-                        </span>
-                      )}
+                      {m.sub && <InfoDot text={m.sub} />}
                       {m.soon && (
-                        <span className="rounded border border-[rgba(251,191,36,0.3)] bg-[rgba(251,191,36,0.08)] px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-[0.08em] text-warning">
+                        <span className="rounded border border-[rgba(251,191,36,0.3)] bg-[rgba(251,191,36,0.08)] px-1.5 py-0.5 text-[10px] font-extrabold uppercase tracking-[0.08em] text-warning">
                           Soon
                         </span>
                       )}
@@ -556,7 +585,7 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
                     ) : (
                       <span className="h-[22px] w-[22px] flex-none rounded-full border-2 border-[#363c4c]" />
                     )}
-                  </button>
+                  </div>
                 )
               })}
             </div>
@@ -592,7 +621,7 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
                   <span className="block text-[15px] font-bold text-white">SafeDrop Additional Warranty</span>
                   <span className="mt-0.5 block text-[12px] text-[#a5adbe]">Extend buyer protection up to 30 days</span>
                 </span>
-                <span className="hidden flex-none items-center rounded-md border border-[rgba(198,255,61,0.3)] bg-[#1d2610] px-2.5 py-1 text-[11.5px] font-bold tabular-nums text-lime-text sm:flex">
+                <span className="hidden flex-none items-center rounded-md border border-[rgba(198,255,61,0.3)] bg-[#1d2610] px-2.5 py-1 text-[12px] font-bold tabular-nums text-lime-text sm:flex">
                   {selectedTier.name} · {selectedTier.feeRate === 0 ? 'Free' : `+$${tierFeeAmount.toFixed(2)}`}
                 </span>
                 <ChevronDown className={cn('h-4 w-4 flex-none text-[#9aa3b6] transition-transform duration-300', warrantyOpen && 'rotate-180')} />
@@ -616,12 +645,12 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
                     <span className="flex items-center gap-2 text-[13.5px] font-extrabold text-white">
                       {selectedTier.name}
                       {selectedTier.badge && (
-                        <span className="rounded bg-lime px-1.5 py-px text-[8.5px] font-black uppercase tracking-[0.08em] text-[#12200a]">
+                        <span className="rounded bg-lime px-1.5 py-px text-[10px] font-black uppercase tracking-[0.08em] text-[#12200a]">
                           Popular
                         </span>
                       )}
                     </span>
-                    <span className="mt-0.5 block truncate text-[11.5px] text-[#9aa3b6]">
+                    <span className="mt-0.5 block truncate text-[12px] text-[#9aa3b6]">
                       {selectedTier.warranty} · {selectedTier.features[2]}
                     </span>
                   </span>
@@ -665,12 +694,12 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
                                 <span className="flex items-center gap-2 text-[13.5px] font-extrabold text-white">
                                   {tier.name}
                                   {tier.badge && (
-                                    <span className="rounded bg-lime px-1.5 py-px text-[8.5px] font-black uppercase tracking-[0.08em] text-[#12200a]">
+                                    <span className="rounded bg-lime px-1.5 py-px text-[10px] font-black uppercase tracking-[0.08em] text-[#12200a]">
                                       Popular
                                     </span>
                                   )}
                                 </span>
-                                <span className="mt-0.5 block truncate text-[11.5px] text-[#9aa3b6]">
+                                <span className="mt-0.5 block truncate text-[12px] text-[#9aa3b6]">
                                   {tier.warranty} · {tier.features[2]}
                                 </span>
                               </span>
@@ -746,7 +775,7 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
                           {' '}Buyer Protection &amp; our{' '}
                           <Link href="/refund-policy" onClick={(e) => e.stopPropagation()} className="text-[#88bbff] transition-colors hover:text-white">Refund Policy</Link>
                         </div>
-                        <div className="text-[11.5px] leading-[1.4] text-[#a5adbe] sm:hidden">
+                        <div className="text-[12px] leading-[1.4] text-[#a5adbe] sm:hidden">
                           <span className="font-bold text-white">Safe &amp; Secure.</span> Covered by{' '}
                           <Link href="/safedrop" onClick={(e) => e.stopPropagation()} className="text-[#88bbff]">SafeDrop</Link> — get what you ordered, or your money back.
                         </div>
@@ -783,7 +812,7 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
                       ['You confirm delivery', 'Check everything is right, then confirm delivery in your account.'],
                     ].map(([t, d], i) => (
                       <div key={t} className="flex items-start gap-3">
-                        <span className="flex h-6 w-6 flex-none items-center justify-center rounded-full border border-white/[0.16] bg-white/[0.05] text-[11px] font-bold text-[#9aa3b6]">
+                        <span className="flex h-6 w-6 flex-none items-center justify-center rounded-full border border-white/[0.16] bg-white/[0.05] text-[12px] font-bold text-[#9aa3b6]">
                           {i + 1}
                         </span>
                         <span className="min-w-0">
@@ -899,9 +928,13 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
                     <div
                       className={cn(
                         'overflow-hidden transition-[max-height] duration-300 ease-out',
-                        descOpen ? 'max-h-[600px]' : 'max-h-[64px]',
                         !descOpen && descOverflow && '[mask-image:linear-gradient(to_bottom,black_42%,rgba(0,0,0,0.3)_78%,transparent_100%)]',
                       )}
+                      // Open cap comes from the measured scrollHeight (not a
+                      // fixed 600px) so long descriptions are never silently
+                      // clipped at 360px width; the px value keeps the 300ms
+                      // max-height transition animating both ways.
+                      style={{ maxHeight: descOpen ? `${(descRef.current?.scrollHeight ?? 9999) + 12}px` : '64px' }}
                     >
                       <p ref={descRef} className="mt-1 whitespace-pre-line text-[12.5px] leading-relaxed text-[#8d95a8]">
                         {listing.description}
@@ -973,7 +1006,7 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
                   label="Subtotal"
                   extra={
                     quantity > 1 ? (
-                      <span className="tabular-nums text-[11px] text-[#6d7488]">
+                      <span className="tabular-nums text-[12px] text-[#6d7488]">
                         {fmtUnitPrice(listing.price)} × {quantity}
                       </span>
                     ) : undefined
@@ -1006,7 +1039,9 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
                         type="button"
                         onClick={handleRemovePromo}
                         aria-label="Remove discount code"
-                        className="rounded p-0.5 text-[#7b8398] transition-colors hover:bg-white/10 hover:text-white"
+                        // p-3/-m-2.5 — same 16px layout footprint, ~36px hit
+                        // area so the X isn't fat-fingered next to the value.
+                        className="-m-2.5 rounded p-3 text-[#7b8398] transition-colors hover:bg-white/10 hover:text-white"
                       >
                         <X className="h-3 w-3" />
                       </button>
@@ -1047,7 +1082,7 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
                 <span>
                   <span className="block text-[18px] font-extrabold text-white">Total</span>
                   {dcEarned > 0 && (
-                    <span className="mt-[3px] flex items-center gap-1.5 text-[11px] font-medium text-lime-text">
+                    <span className="mt-[3px] flex items-center gap-1.5 text-[12px] font-medium text-lime-text">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src="/assets/checkout/dm-coin.png" alt="" aria-hidden className="h-[18px] w-[18px] select-none object-contain" />
                       +{dcEarned} DC earned
@@ -1101,7 +1136,7 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
                   Covered by <span className="font-bold text-[#dbe2ee]">SafeDrop</span> — full refund if not delivered or not as described.
                 </span>
               </p>
-              <p className="mt-1.5 text-center text-[11.5px] leading-relaxed text-[#7b8398]">
+              <p className="mt-1.5 text-center text-[12px] leading-relaxed text-[#7b8398]">
                 By clicking Pay Now you agree to our{' '}
                 <a href="/terms" target="_blank" className="text-[#88bbff] transition-colors hover:text-white">Terms</a> and{' '}
                 <a href="/refund-policy" target="_blank" className="text-[#88bbff] transition-colors hover:text-white">Refund Policy</a>.
@@ -1130,7 +1165,10 @@ function SellerPeek({ seller, reviews }: { seller: any; reviews: any[] }) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="group inline-flex min-w-0 items-center gap-2 text-left"
+        // min-h + py/-my — the seller row is the only path to reviews
+        // pre-payment; pad it to a 44px tap target while keeping the
+        // visual rhythm of the Order Details rows.
+        className="group -my-2 inline-flex min-h-[44px] min-w-0 items-center gap-2 py-2 text-left"
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
@@ -1150,7 +1188,10 @@ function SellerPeek({ seller, reviews }: { seller: any; reviews: any[] }) {
       </button>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-[440px] gap-0 overflow-hidden rounded-lg border-white/[0.08] bg-[#12151e] p-0">
+        {/* No overflow-hidden here — the dialog base's dvh cap +
+            overflow-y-auto must stay in charge so short viewports can
+            scroll the sheet instead of clipping the reviews list. */}
+        <DialogContent className="max-w-[440px] gap-0 rounded-lg border-white/[0.08] bg-[#12151e] p-0">
           <DialogHeader className="relative border-b border-white/[0.07] bg-[linear-gradient(to_bottom,rgba(255,255,255,0.04),transparent)] p-5 pb-4 text-left">
             <div className="flex items-center gap-3">
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -1181,7 +1222,9 @@ function SellerPeek({ seller, reviews }: { seller: any; reviews: any[] }) {
               </div>
             </div>
           </DialogHeader>
-          <div className="max-h-[380px] overflow-y-auto p-5 pt-4">
+          {/* Viewport-aware cap: on short screens the list yields to the
+              header inside the dvh-capped sheet instead of fighting it. */}
+          <div className="max-h-[min(380px,55dvh)] overflow-y-auto p-5 pt-4">
             <h4 className="mb-3 text-[12px] font-extrabold uppercase tracking-wider text-[#a5adbe]">
               Recent Reviews
             </h4>
@@ -1213,7 +1256,7 @@ function SellerPeek({ seller, reviews }: { seller: any; reviews: any[] }) {
                     {r.comment && (
                       <p className="mt-1.5 line-clamp-2 text-[12.5px] leading-relaxed text-[#a5adbe]">{r.comment}</p>
                     )}
-                    <p className="mt-1.5 text-[10.5px] text-[#7b8398]">
+                    <p className="mt-1.5 text-[12px] text-[#7b8398]">
                       {r.created_at ? new Date(r.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : ''}
                     </p>
                   </div>

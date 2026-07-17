@@ -86,7 +86,7 @@ export default function MessageInput({
           maxLength={maxLength}
           rows={1}
           className={cn(
-            'min-h-[40px] max-h-[120px] flex-1 resize-none rounded-lg border-border-default bg-bg-overlay px-3.5 py-2.5 text-[13.5px] leading-[1.45] text-text-primary placeholder:text-text-tertiary',
+            'min-h-[44px] max-h-[120px] flex-1 resize-none rounded-lg border-border-default bg-bg-overlay px-3.5 py-2.5 text-[13.5px] leading-[1.45] text-text-primary placeholder:text-text-tertiary sm:min-h-[40px]',
             'focus-visible:border-lime focus-visible:ring-2 focus-visible:ring-lime/30 focus-visible:ring-offset-0',
           )}
         />
@@ -96,7 +96,7 @@ export default function MessageInput({
           disabled={!canSend}
           size="icon"
           className={cn(
-            'h-10 w-10 flex-shrink-0 rounded-lg',
+            'h-11 w-11 flex-shrink-0 rounded-lg sm:h-10 sm:w-10',
             canSend
               ? 'bg-lime text-text-inverse hover:bg-lime-hover'
               : 'bg-bg-overlay text-text-tertiary hover:bg-bg-overlay',
@@ -111,15 +111,23 @@ export default function MessageInput({
         </Button>
       </div>
 
-      <div className="mt-2 flex items-center justify-between text-[11px] text-text-tertiary">
-        <span>
+      {/* Helper row — the physical-keyboard hint is meaningless on touch
+          keyboards, so it (and the whole row, unless the counter is
+          showing) hides below sm. */}
+      <div
+        className={cn(
+          'mt-2 hidden items-center justify-between text-[11px] text-text-tertiary sm:flex',
+          showCounter && 'flex',
+        )}
+      >
+        <span className="hidden sm:inline">
           <kbd className="rounded bg-white/[0.06] px-1.5 py-0.5 font-mono text-[10px] text-text-secondary">Enter</kbd>{' '}
           to send ·{' '}
           <kbd className="rounded bg-white/[0.06] px-1.5 py-0.5 font-mono text-[10px] text-text-secondary">Shift+Enter</kbd>{' '}
           for new line
         </span>
         {showCounter && (
-          <span className={cn(remaining < 50 ? 'text-error' : 'text-text-tertiary')}>
+          <span className={cn('ml-auto', remaining < 50 ? 'text-error' : 'text-text-tertiary')}>
             {remaining} left
           </span>
         )}

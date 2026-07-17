@@ -111,6 +111,31 @@ function CopyableId({ value }: { value: string }) {
   )
 }
 
+/** Delivery-info value the seller must copy exactly (in-game email/username):
+    tap-to-copy like CopyableId, wraps with break-all instead of truncating. */
+function CopyableValue({ value }: { value: string }) {
+  const [copied, setCopied] = useState(false)
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        navigator.clipboard.writeText(value)
+        setCopied(true)
+        setTimeout(() => setCopied(false), 1400)
+      }}
+      aria-label={`Copy ${value}`}
+      className="inline-flex max-w-[240px] items-start justify-end gap-1.5 text-right font-mono text-[12.5px] font-semibold text-text-primary transition-colors hover:text-lime-text"
+    >
+      <span className="min-w-0 break-all">{value}</span>
+      {copied ? (
+        <Check className="mt-0.5 h-3 w-3 shrink-0 text-lime-text" />
+      ) : (
+        <Copy className="mt-0.5 h-3 w-3 shrink-0 text-text-tertiary" />
+      )}
+    </button>
+  )
+}
+
 function Row({
   label,
   children,
@@ -536,9 +561,7 @@ export function OrderDetailsCard(props: OrderDetailsCardProps) {
         {deliveryEntries.length > 0 ? (
           deliveryEntries.map(([k, v]) => (
             <Row key={k} label={k}>
-              <span className="block max-w-[220px] truncate text-right font-mono text-[12.5px] font-semibold text-text-primary">
-                {v}
-              </span>
+              <CopyableValue value={v} />
             </Row>
           ))
         ) : (

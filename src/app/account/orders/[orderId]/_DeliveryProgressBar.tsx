@@ -118,7 +118,7 @@ export function DeliveryProgressBar({
 
   return (
     <OrderCard className={cn('p-4', v.borderTint)} padded={false}>
-      <div className="mb-2.5 flex items-center justify-between gap-4">
+      <div className="mb-2.5 flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
         <span className="inline-flex items-center gap-1.5 text-[11.5px] font-semibold text-text-secondary">
           <Flag className="h-3 w-3 text-text-tertiary" aria-hidden />
           Placed · {placedAtLabel}
@@ -130,7 +130,10 @@ export function DeliveryProgressBar({
           {tier === 'overdue' && <AlertTriangle className="h-3 w-3" aria-hidden />}
           {v.label}
         </span>
-        <span className="inline-flex items-center gap-1.5 text-[11.5px] text-text-tertiary">
+        {/* Trailing label hidden below sm — the three labels total ~315px
+            and can't share one row at 360px; the live remaining-time label
+            in the middle is the one that matters. */}
+        <span className="hidden items-center gap-1.5 text-[11.5px] text-text-tertiary sm:inline-flex">
           Delivered
           <CheckCircle2 className="h-3 w-3" aria-hidden />
         </span>

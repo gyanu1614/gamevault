@@ -227,7 +227,7 @@ export default function WithdrawPage() {
         </div>
 
         {/* Available balance strip */}
-        <div className="mb-5 flex items-center justify-between rounded-lg border border-border-subtle card-frost py-3">
+        <div className="mb-5 flex items-center justify-between gap-3 rounded-lg border border-border-subtle card-frost px-4 py-3">
           <div className="flex items-center gap-2">
             <Wallet className="h-4 w-4 text-success" />
             <span className="text-[11px] font-semibold uppercase tracking-wider text-text-secondary">Available</span>
@@ -258,7 +258,7 @@ export default function WithdrawPage() {
                       <button
                         key={method.id}
                         onClick={() => handleMethodSelect(method)}
-                        className="group flex items-center gap-3 rounded-lg border border-border-subtle card-frost text-left transition-colors hover:border-lime-tint-border hover:bg-white/[0.07]"
+                        className="group flex items-center gap-3 rounded-lg border border-border-subtle card-frost p-3 text-left transition-colors hover:border-lime-tint-border hover:bg-white/[0.07]"
                       >
                         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-lime-tint-border bg-lime/10">
                           {isCustomIcon ? (
@@ -309,7 +309,7 @@ export default function WithdrawPage() {
                   <button
                     type="button"
                     onClick={() => setAmount((availableBalance ?? 0).toFixed(2))}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md border border-border-subtle px-2 py-1 text-[11px] font-semibold text-lime-text transition-colors hover:bg-lime/10"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md border border-border-subtle px-2.5 py-1.5 min-h-[36px] text-[11px] font-semibold text-lime-text transition-colors hover:bg-lime/10"
                   >
                     Max
                   </button>
@@ -375,14 +375,14 @@ export default function WithdrawPage() {
                 <button
                   onClick={() => { setSelectedMethod(null); setAmount(''); setPaymentDetails({}) }}
                   disabled={isSubmitting}
-                  className="rounded-lg border border-border-default bg-bg-raised px-4 py-2.5 text-sm font-medium text-text-primary transition-colors hover:bg-bg-raised-hover disabled:opacity-50"
+                  className="min-h-[44px] rounded-lg border border-border-default bg-bg-raised px-4 py-2.5 text-sm font-medium text-text-primary transition-colors hover:bg-bg-raised-hover disabled:opacity-50"
                 >
                   Back
                 </button>
                 <button
                   onClick={handleSubmit}
                   disabled={isSubmitting || !amount || parseFloat(amount) <= 0}
-                  className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-lime px-6 py-2.5 text-sm font-semibold text-text-inverse transition-colors hover:bg-lime-hover disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-lg bg-lime px-6 py-2.5 text-sm font-semibold text-text-inverse transition-colors hover:bg-lime-hover disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isSubmitting ? (
                     <><Loader2 className="h-4 w-4 animate-spin" /> Submitting…</>

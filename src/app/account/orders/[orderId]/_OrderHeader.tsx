@@ -167,12 +167,14 @@ export function OrderHeader({
         {presence && <PresenceChip presence={presence} />}
       </div>
 
-      {/* Header row — large framed item image + title block + status pills */}
-      <div className="flex items-start gap-5">
+      {/* Header row — large framed item image + title block + status pills.
+          Below sm the row wraps: pills drop to their own full-width row and
+          the image shrinks so the truncated title keeps usable width. */}
+      <div className="flex flex-wrap items-start gap-x-4 gap-y-3 sm:flex-nowrap sm:gap-5">
         {/* Item image — bigger, framed, with subtle inner border */}
         <div className="relative flex-shrink-0">
           {itemImageUrl ? (
-            <div className="relative h-[88px] w-[88px] overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.02] p-1.5">
+            <div className="relative h-16 w-16 overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.02] p-1.5 sm:h-[88px] sm:w-[88px]">
               <div className="h-full w-full overflow-hidden rounded-[12px]">
                 <Image
                   src={itemImageUrl}
@@ -184,12 +186,12 @@ export function OrderHeader({
               </div>
             </div>
           ) : (
-            <div className="h-[88px] w-[88px] rounded-2xl border border-white/[0.08] card-frost" />
+            <div className="h-16 w-16 rounded-2xl border border-white/[0.08] card-frost sm:h-[88px] sm:w-[88px]" />
           )}
         </div>
 
         <div className="min-w-0 flex-1 pt-1">
-          <h1 className="truncate text-[28px] font-extrabold leading-[1.08] tracking-[-0.025em] text-text-primary">
+          <h1 className="truncate text-[22px] font-extrabold leading-[1.08] tracking-[-0.025em] text-text-primary sm:text-[28px]">
             {itemTitle}
           </h1>
           {/* Game + category chips + inline order ID — all on one row */}
@@ -234,7 +236,7 @@ export function OrderHeader({
           </div>
         </div>
 
-        <div className="flex flex-shrink-0 flex-col items-end gap-2 pt-1">
+        <div className="flex w-full flex-shrink-0 flex-row flex-wrap items-center gap-2 sm:w-auto sm:flex-col sm:items-end sm:pt-1">
           <StatusPill status={orderStatus} disputeResolved={disputeResolved} />
           <EscrowPill escrowStatus={escrowStatus} disputeResolved={disputeResolved} />
         </div>
@@ -276,11 +278,11 @@ function PresenceChip({ presence }: { presence: PartyPresence }) {
           )}
         />
       </span>
-      <span className="flex flex-col leading-tight">
+      <span className="flex min-w-0 flex-col leading-tight">
         <span className="text-[11px] font-bold uppercase tracking-wider text-text-tertiary">
           {presence.roleLabel}
         </span>
-        <span className="text-[13px] font-semibold text-text-primary">
+        <span className="max-w-[40vw] truncate text-[13px] font-semibold text-text-primary sm:max-w-none">
           {presence.name}
         </span>
       </span>
