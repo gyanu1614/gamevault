@@ -15,15 +15,16 @@ import SellersPageClient from './_components/SellersPageClient'
 export const metadata = { title: 'Seller Applications' }
 
 export default async function AdminSellersPage() {
-  const [allResult, pendingResult, approvedResult, rejectedResult, restrictedResult] = await Promise.all([
+  const [allResult, pendingResult, changesResult, approvedResult, rejectedResult, restrictedResult] = await Promise.all([
     getSellerApplications({ page: 1, limit: 20 }),
     getSellerApplications({ page: 1, limit: 1, status: ['pending'] }),
+    getSellerApplications({ page: 1, limit: 1, status: ['info_requested'] }),
     getSellerApplications({ page: 1, limit: 1, status: ['approved'] }),
     getSellerApplications({ page: 1, limit: 1, status: ['rejected'] }),
     getSellerApplications({ page: 1, limit: 1, status: ['restricted'] }),
   ])
 
-  const statsReady = [allResult, pendingResult, approvedResult, rejectedResult, restrictedResult]
+  const statsReady = [allResult, pendingResult, changesResult, approvedResult, rejectedResult, restrictedResult]
     .every((r) => r.success)
 
   return (
@@ -37,6 +38,7 @@ export default async function AdminSellersPage() {
           ? {
               total: allResult.pagination?.total || 0,
               pending: pendingResult.pagination?.total || 0,
+              changes: changesResult.pagination?.total || 0,
               approved: approvedResult.pagination?.total || 0,
               rejected: rejectedResult.pagination?.total || 0,
               restricted: restrictedResult.pagination?.total || 0,

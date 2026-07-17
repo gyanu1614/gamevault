@@ -2,7 +2,18 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { requireAdmin } from './admin-permissions'
+import { getAllGames, type Game } from '@/lib/utils/games'
+import {
+  buildApplicationGamesEnrichment,
+  type GameCategorySelection,
+  type GamesLookup,
+} from '@/lib/admin/seller-application-enrichment'
 // import { logAdminActivity } from '@/lib/admin/activity-log'
+
+// Shared enrichment types (GameCategorySelection / GameLookupEntry /
+// GamesLookup) live in '@/lib/admin/seller-application-enrichment' —
+// import them from there ('use server' files may only export async
+// functions, so no type re-exports here).
 
 export interface KYCDocument {
   id: string
@@ -44,6 +55,13 @@ export interface SellerApplication {
   // Games & Volume
   primary_games: string[]
   game_names?: string[] // Resolved game names from IDs
+  /** Per-game category selections (jsonb) — null for legacy applications. */
+  games_categories?: GameCategorySelection[] | null
+  /**
+   * Real game records (logos) for everything named in primary_games +
+   * games_categories, keyed by uuid AND slug AND legacy index.
+   */
+  games_lookup?: GamesLookup
   expected_monthly_volume: string
 
   // Profile
@@ -65,14 +83,33 @@ export interface SellerApplication {
 
   // Payment
   payout_method: string | null
+  /** Preferred payout currency (e.g. 'USD') — null for legacy applications. */
+  payout_currency?: string | null
   bank_account_holder_name: string | null
   bank_name: string | null
   bank_iban: string | null
+  bank_account_number_encrypted?: string | null
+  bank_routing_code?: string | null
+  bank_swift_code?: string | null
   crypto_wallet_address: string | null
   crypto_type: string | null
   tax_residency_country: string | null
   shop_name: string | null
   other_games: string | null
+
+  // Experience & Agreement (become-seller redesign; null on legacy rows)
+  selling_experience?: string | null
+  /** Typed legal-name e-signature on the Seller Agency Agreement. */
+  seller_signature?: string | null
+  seller_signed_at?: string | null
+
+  // Consent booleans (accepted_commission_structure = fee schedule)
+  accepted_seller_agreement?: boolean | null
+  accepted_privacy_policy?: boolean | null
+  accepted_anti_fraud_policy?: boolean | null
+  accepted_commission_structure?: boolean | null
+  accepted_data_processing?: boolean | null
+  information_accurate_confirmed?: boolean | null
 
   // Store image / logo uploaded in the become-seller wizard
   profile_picture_path?: string | null
@@ -80,7 +117,7 @@ export interface SellerApplication {
   store_image_url?: string | null
 
   // Application Status
-  status: 'pending' | 'under_review' | 'approved' | 'rejected'
+  status: 'pending' | 'under_review' | 'info_requested' | 'approved' | 'rejected'
   created_at: string
   submitted_at: string
   updated_at: string
@@ -97,6 +134,15 @@ export interface SellerApplication {
 
   // Documents
   documents: KYCDocument[]
+  /**
+   * Didit video-verification session id, derived from the synthetic
+   * evidence row in seller_kyc_documents (document_type 'other',
+   * file_path 'didit:<sessionId>', file_name
+   * 'Didit Video Verification (Approved)'). Null when the applicant
+   * verified via manual uploads instead. Deep link:
+   * https://business.didit.me/sessions/<id>
+   */
+  didit_session_id?: string | null
 
   // User info from view (flattened)
   username?: string | null
@@ -209,6 +255,9 @@ export async function getSellerApplications(
     throw new Error('Failed to fetch seller applications')
   }
 
+  // Shared games catalog (cached) for the per-application logo lookups
+  const allGames = await getAllGames().catch(() => [] as Game[])
+
   // Get emails from auth.users for each application using admin API
   const applicationsWithUserInfo = await Promise.all(
     (data || []).map(async (app: any) => {
@@ -227,6 +276,8 @@ export async function getSellerApplications(
         }
       }
 
+      const documents = app.seller_kyc_documents || []
+
       return {
         ...app,
         user: {
@@ -236,7 +287,13 @@ export async function getSellerApplications(
           avatar_url: app.profiles?.avatar_url,
           created_at: app.profiles?.created_at
         },
-        documents: app.seller_kyc_documents || []
+        documents,
+        ...buildApplicationGamesEnrichment({
+          allGames,
+          rawGamesCategories: app.games_categories,
+          primaryGames: app.primary_games,
+          documents,
+        })
       }
     })
   )
@@ -324,6 +381,11 @@ export async function getSellerApplication(applicationId: string): Promise<Selle
     data.profile_picture_path
   )
 
+  // Real game records (logos) for primary_games + games_categories, plus
+  // the Didit evidence row → session id (hero chip + banner deep link).
+  const allGames = await getAllGames().catch(() => [] as Game[])
+  const documents = data.seller_kyc_documents || []
+
   return {
     ...data,
     store_image_url: storeImageUrl,
@@ -338,8 +400,14 @@ export async function getSellerApplication(applicationId: string): Promise<Selle
       seller_restricted_at: data.profiles?.seller_restricted_at,
       seller_restricted_by: data.profiles?.seller_restricted_by
     },
-    documents: data.seller_kyc_documents || [],
-    game_names: gameNames // Add resolved game names
+    documents,
+    game_names: gameNames, // Add resolved game names
+    ...buildApplicationGamesEnrichment({
+      allGames,
+      rawGamesCategories: data.games_categories,
+      primaryGames: data.primary_games,
+      documents,
+    })
   }
 }
 
