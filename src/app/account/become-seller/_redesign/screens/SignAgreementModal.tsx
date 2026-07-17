@@ -336,7 +336,7 @@ export default function SignAgreementModal({
                         onBegin={() => setPadError(false)}
                         canvasProps={{
                           width: padWidth,
-                          height: 130,
+                          height: 260,
                           style: { display: 'block', touchAction: 'none' },
                           'aria-label': 'Signature pad',
                         }}
