@@ -28,7 +28,9 @@ export function LayoutWrapper({ children }: { children: React.ReactNode }) {
   // Seller application (Forest Ledger redesign) is a full-screen formal
   // flow with its own light shell — no global navbar/footer, same
   // rationale as checkout: the applicant shouldn't leak out mid-form.
-  const isSellerApplication = pathname?.startsWith('/account/become-seller')
+  const isSellerApplication =
+    pathname?.startsWith('/account/become-seller') ||
+    pathname?.startsWith('/dev/seller-intro-preview')
 
   // Check if we're on a seller page with sidebar (not /new or /edit)
   const isSellerPageWithSidebar = pathname?.startsWith('/seller') &&
