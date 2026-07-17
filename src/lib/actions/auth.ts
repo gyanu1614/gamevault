@@ -1,6 +1,8 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { createServiceRoleClient } from '@/lib/supabase/service-role'
+import { generateGamerTagCandidates } from '@/lib/username/gamer-names'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import type { z } from 'zod'
@@ -556,4 +558,58 @@ export async function registerAsSeller(formData: {
     console.error('❌ Unexpected error in seller registration:', err)
     return { error: `Unexpected error: ${err.message || 'Unknown error'}` }
   }
+}
+
+/**
+ * Is this email already registered? Supabase signUp deliberately returns a
+ * fake success for existing emails (anti-enumeration), so the signup form
+ * asks here first and shows an honest "already registered — sign in" error.
+ * Service role: profiles.email is not readable through RLS for anon users.
+ */
+export async function checkEmailAvailability(email: string): Promise<{
+  available: boolean
+  error?: string
+}> {
+  const trimmed = email.trim().toLowerCase()
+  if (!trimmed || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+    return { available: false, error: 'Enter a valid email address' }
+  }
+  try {
+    const service = createServiceRoleClient()
+    const { data } = await service
+      .from('profiles')
+      .select('id')
+      .ilike('email', trimmed)
+      .limit(1)
+      .maybeSingle()
+    return { available: !data }
+  } catch (err: any) {
+    console.error('[checkEmailAvailability] failed:', err?.message)
+    // Fail open — signup itself still behaves safely for duplicates.
+    return { available: true }
+  }
+}
+
+/**
+ * Pick a random gamer tag that is actually free — the fallback identity when
+ * the user leaves Display Username empty at signup. Walks a candidate batch
+ * against profiles.username; the last candidate carries a 4-digit suffix so
+ * exhaustion is practically impossible (and a final timestamped fallback
+ * guarantees a return value regardless).
+ */
+export async function generateUniqueGamerTag(): Promise<{ username: string }> {
+  const candidates = generateGamerTagCandidates(10)
+  try {
+    const service = createServiceRoleClient()
+    const { data } = await service
+      .from('profiles')
+      .select('username')
+      .in('username', candidates)
+    const taken = new Set((data ?? []).map((r: any) => String(r.username).toLowerCase()))
+    const free = candidates.find((c) => !taken.has(c.toLowerCase()))
+    if (free) return { username: free }
+  } catch (err: any) {
+    console.error('[generateUniqueGamerTag] check failed:', err?.message)
+  }
+  return { username: `${candidates[0]}${Date.now() % 10000}` }
 }
