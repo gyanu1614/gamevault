@@ -203,10 +203,13 @@ export function StatusStrip({
   const sCaption = promoted ? 'text-[13.5px]' : 'text-[12.5px]'
   const sPad = promoted ? 'px-5 py-4' : 'p-4'
   const sCtaCls = cn(
-    'inline-flex flex-shrink-0 items-center gap-1.5 rounded-[10px] font-bold transition-all',
+    'inline-flex flex-shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-[10px] font-bold transition-all',
     'bg-lime text-text-inverse hover:-translate-y-[1px] hover:bg-lime-hover',
     'shadow-[0_6px_18px_rgba(198,255,61,0.18)]',
     promoted ? 'px-5 py-2.5 text-[13.5px]' : 'px-3 py-1.5 text-[12px]',
+    // Below sm the CTA drops to its own full-width row (parent rows are
+    // flex-wrap) and grows to a comfortable >=44px touch target.
+    'max-sm:ml-0 max-sm:min-h-[44px] max-sm:basis-full max-sm:py-3',
   )
   const sCtaGlyph = promoted ? 'h-4 w-4' : 'h-3.5 w-3.5'
   // V21/P3.e — Overdue escalation for the buyer. When the delivery
@@ -216,7 +219,7 @@ export function StatusStrip({
   // accent tile + Open Dispute CTA at the right.
   if (overdue && role === 'buyer' && (status === 'paid' || status === 'delivering')) {
     return (
-      <OrderCard className="flex items-center gap-3 p-4" padded={false}>
+      <OrderCard className="flex flex-wrap items-center gap-3 p-4 max-sm:gap-y-2.5" padded={false}>
         <span className="grid h-9 w-9 flex-shrink-0 place-items-center rounded-[9px] bg-amber/[0.12] text-amber">
           <AlertTriangle className="h-4 w-4" />
         </span>
@@ -233,6 +236,7 @@ export function StatusStrip({
           fallbackHref={disputeHref}
           tone="amber"
           showChevron
+          className="max-sm:ml-0 max-sm:min-h-[44px] max-sm:basis-full max-sm:justify-center"
         />
       </OrderCard>
     )
@@ -291,7 +295,7 @@ export function StatusStrip({
   if (role === 'buyer' && status === 'delivered' && (onMarkReceived || disputeHref)) {
     return (
       <OrderCard className={sPad} padded={false}>
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-3 max-sm:gap-y-2.5">
           <div className="flex items-center gap-3.5 min-w-0">
             <span className={cn('grid flex-shrink-0 place-items-center bg-lime/[0.12] text-lime-text', sIcon)}>
               <CheckCircle2 className={sIconGlyph} />
@@ -312,13 +316,16 @@ export function StatusStrip({
             </button>
           )}
         </div>
-        <div className={cn('flex items-center justify-between gap-3 border-t border-border-subtle', promoted ? 'mt-4 pt-4' : 'mt-3 pt-3')}>
+        <div className={cn('flex flex-wrap items-center justify-between gap-3 border-t border-border-subtle max-sm:gap-y-2.5', promoted ? 'mt-4 pt-4' : 'mt-3 pt-3')}>
           <span className={cn('text-text-secondary', sCaption)}>Didn&apos;t receive your order?</span>
           <DisputeCTA
             onOpenDispute={onOpenDispute}
             fallbackHref={disputeHref}
             tone="neutral"
-            className={cn(promoted ? 'px-4 py-2 text-[13px]' : 'px-3 py-1.5 text-[12px]')}
+            className={cn(
+              promoted ? 'px-4 py-2 text-[13px]' : 'px-3 py-1.5 text-[12px]',
+              'max-sm:ml-0 max-sm:min-h-[44px] max-sm:basis-full max-sm:justify-center',
+            )}
           />
         </div>
       </OrderCard>
@@ -385,7 +392,7 @@ export function StatusStrip({
   }
 
   return (
-    <OrderCard className={cn('flex items-center gap-3.5', sPad)} padded={false}>
+    <OrderCard className={cn('flex flex-wrap items-center gap-3.5 max-sm:gap-y-2.5', sPad)} padded={false}>
       <span className={`grid flex-shrink-0 place-items-center ${sIcon} ${TONE_BG[tone]}`}>
         <Icon className={sIconGlyph} />
       </span>
@@ -454,7 +461,7 @@ function DisputeCTA({
   className?: string
 }) {
   const base = cn(
-    'inline-flex flex-shrink-0 items-center gap-1.5 rounded-[8px] font-bold transition-colors',
+    'inline-flex flex-shrink-0 items-center gap-1.5 whitespace-nowrap rounded-[8px] font-bold transition-colors',
     tone === 'amber'
       ? 'border border-amber/30 bg-amber/[0.08] px-3 py-1.5 text-[12px] text-amber hover:bg-amber/[0.14]'
       : 'border border-border-default bg-white/[0.02] px-3 py-1.5 text-[12px] font-semibold text-text-primary hover:border-amber/40 hover:text-amber',

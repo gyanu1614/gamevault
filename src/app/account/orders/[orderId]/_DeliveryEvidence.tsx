@@ -112,7 +112,7 @@ export function DeliveryEvidence({ role, urls }: DeliveryEvidenceProps) {
                   e.stopPropagation()
                   prev()
                 }}
-                className="absolute left-6 top-1/2 grid h-12 w-12 -translate-y-1/2 place-items-center rounded-full bg-white/[0.08] text-text-primary transition-colors hover:bg-white/[0.16]"
+                className="absolute bottom-6 left-6 grid h-12 w-12 place-items-center rounded-full bg-white/[0.08] text-text-primary transition-colors hover:bg-white/[0.16] sm:bottom-auto sm:top-1/2 sm:-translate-y-1/2"
                 aria-label="Previous image"
               >
                 <ChevronLeft className="h-5 w-5" />
@@ -123,7 +123,7 @@ export function DeliveryEvidence({ role, urls }: DeliveryEvidenceProps) {
                   e.stopPropagation()
                   next()
                 }}
-                className="absolute right-6 top-1/2 grid h-12 w-12 -translate-y-1/2 place-items-center rounded-full bg-white/[0.08] text-text-primary transition-colors hover:bg-white/[0.16]"
+                className="absolute bottom-6 right-6 grid h-12 w-12 place-items-center rounded-full bg-white/[0.08] text-text-primary transition-colors hover:bg-white/[0.16] sm:bottom-auto sm:top-1/2 sm:-translate-y-1/2"
                 aria-label="Next image"
               >
                 <ChevronRight className="h-5 w-5" />
@@ -131,14 +131,14 @@ export function DeliveryEvidence({ role, urls }: DeliveryEvidenceProps) {
             </>
           )}
           <div
-            className="relative max-h-[88vh] max-w-[88vw]"
+            className="relative max-h-[76dvh] max-w-[92vw] sm:max-h-[88dvh] sm:max-w-[88vw]"
             onClick={(e) => e.stopPropagation()}
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={list[index]}
               alt=""
-              className="max-h-[88vh] max-w-[88vw] rounded-[10px] object-contain shadow-2xl"
+              className="max-h-[76dvh] max-w-[92vw] rounded-[10px] object-contain shadow-2xl sm:max-h-[88dvh] sm:max-w-[88vw]"
             />
           </div>
         </div>

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useEffect, Suspense } from 'react'
+import { useState, useMemo, useEffect, useRef, Suspense } from 'react'
 import { useAuth } from '@/hooks/use-auth'
 import AccountPageHeader from '@/components/account/AccountPageHeader'
 import { useBuyerOrders } from '@/hooks/use-buyer-orders'
@@ -90,10 +90,15 @@ function OrdersContent() {
 
   // Dropdown open state
   const [openDropdown, setOpenDropdown] = useState<'status' | 'game' | 'category' | 'date' | null>(null)
+  const filterBarRef = useRef<HTMLDivElement>(null)
 
-  // Close dropdown when clicking outside
+  // Close dropdown when clicking outside the filter bar. Scoped via ref so
+  // taps INSIDE an open panel (e.g. multi-selecting games) don't bubble to
+  // document and slam the dropdown shut on every selection.
   useEffect(() => {
-    const handleClickOutside = () => setOpenDropdown(null)
+    const handleClickOutside = (e: MouseEvent) => {
+      if (!filterBarRef.current?.contains(e.target as Node)) setOpenDropdown(null)
+    }
     if (openDropdown) {
       document.addEventListener('click', handleClickOutside)
       return () => document.removeEventListener('click', handleClickOutside)
@@ -365,7 +370,7 @@ function OrdersContent() {
             status also surfaces as an active-filter chip below. */}
 
         {/* Advanced Filter Bar */}
-        <div className="mb-6 space-y-4">
+        <div ref={filterBarRef} className="mb-6 space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
             {/* Status Filter */}
             <div className="relative">
@@ -614,7 +619,8 @@ function OrdersContent() {
               {filters.searchQuery && (
                 <button
                   onClick={() => setFilters({ ...filters, searchQuery: '' })}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-text-secondary hover:text-text-primary"
+                  className="absolute right-1 top-1/2 -translate-y-1/2 p-2 text-text-secondary hover:text-text-primary"
+                  aria-label="Clear search"
                 >
                   <X className="h-4 w-4" />
                 </button>
@@ -631,7 +637,8 @@ function OrdersContent() {
                   <span>{STATUS_OPTIONS.find(s => s.value === filters.status)?.label}</span>
                   <button
                     onClick={() => setFilters({ ...filters, status: 'all' })}
-                    className="hover:text-lime"
+                    className="-m-2 p-2 hover:text-lime"
+                    aria-label="Remove status filter"
                   >
                     <X className="h-3 w-3" />
                   </button>
@@ -646,7 +653,8 @@ function OrdersContent() {
                     <span>{game.name}</span>
                     <button
                       onClick={() => setFilters({ ...filters, games: filters.games.filter(id => id !== gameId) })}
-                      className="hover:text-lime"
+                      className="-m-2 p-2 hover:text-lime"
+                      aria-label={`Remove ${game.name} filter`}
                     >
                       <X className="h-3 w-3" />
                     </button>
@@ -660,7 +668,8 @@ function OrdersContent() {
                   <span>{availableCategories.find(c => c.id === filters.category)?.name}</span>
                   <button
                     onClick={() => setFilters({ ...filters, category: null })}
-                    className="hover:text-lime"
+                    className="-m-2 p-2 hover:text-lime"
+                    aria-label="Remove category filter"
                   >
                     <X className="h-3 w-3" />
                   </button>
@@ -679,7 +688,8 @@ function OrdersContent() {
                   </span>
                   <button
                     onClick={() => setFilters({ ...filters, dateRange: 'all' })}
-                    className="hover:text-lime"
+                    className="-m-2 p-2 hover:text-lime"
+                    aria-label="Remove date filter"
                   >
                     <X className="h-3 w-3" />
                   </button>
@@ -692,7 +702,8 @@ function OrdersContent() {
                   <span className="max-w-[120px] truncate">{filters.searchQuery}</span>
                   <button
                     onClick={() => setFilters({ ...filters, searchQuery: '' })}
-                    className="hover:text-lime"
+                    className="-m-2 p-2 hover:text-lime"
+                    aria-label="Clear search filter"
                   >
                     <X className="h-3 w-3" />
                   </button>
@@ -781,8 +792,10 @@ function OrdersContent() {
 
                     {/* Main Content */}
                     <div className="flex-1 min-w-0">
-                      {/* Order # + status */}
-                      <div className="flex items-center gap-2">
+                      {/* Order # + status — wraps on narrow screens so chips
+                          drop below the order number instead of overflowing
+                          into the price column. */}
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                         <span className="font-mono text-[11px] font-semibold uppercase tracking-wider text-text-tertiary">
                           {(order.order_number || order.id.slice(0, 8).toUpperCase()).replace(/^GV-/, 'DM-')}
                         </span>
@@ -791,7 +804,7 @@ function OrdersContent() {
                             ? 'resolved'
                             : order.status
                           return (
-                            <span className={cn('inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide', getStatusColor(displayStatus))}>
+                            <span className={cn('inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide', getStatusColor(displayStatus))}>
                               {getStatusIcon(displayStatus)}
                               {STATUS_TEXT[displayStatus] ?? displayStatus}
                             </span>
@@ -799,7 +812,7 @@ function OrdersContent() {
                         })()}
                         {hasDisputeResolution && (
                           <span className={cn(
-                            'inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider',
+                            'inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-bold uppercase',
                             userWonDispute
                               ? 'border border-success/30 bg-green-500/15 text-success'
                               : 'border border-error/40 bg-red-500/15 text-error',
@@ -867,12 +880,12 @@ function OrdersContent() {
                         <div onClick={(e) => e.stopPropagation()}>
                           {activeTab === 'sales' ? (
                             hasReview ? (
-                              <span className="inline-flex items-center gap-1 rounded-md border border-success/25 bg-green-500/10 px-2 py-0.5 text-[10px] font-medium text-success">
+                              <span className="inline-flex items-center gap-1 rounded-md border border-success/25 bg-green-500/10 px-2 py-0.5 text-[11px] font-medium text-success">
                                 <Star className="h-3 w-3 fill-current" />
                                 Reviewed
                               </span>
                             ) : (
-                              <span className="inline-flex items-center gap-1 rounded-md border border-border-subtle px-2 py-0.5 text-[10px] font-medium text-text-tertiary">
+                              <span className="inline-flex items-center gap-1 rounded-md border border-border-subtle px-2 py-0.5 text-[11px] font-medium text-text-tertiary">
                                 <Star className="h-3 w-3" />
                                 No review
                               </span>
@@ -884,7 +897,7 @@ function OrdersContent() {
                                 orderNumber={(order.order_number || order.id.slice(0, 8).toUpperCase()).replace(/^GV-/, 'DM-')}
                                 sellerName={otherParty?.shop_name || otherParty?.username || 'Seller'}
                                 compact={true}
-                                className="inline-flex items-center gap-1 rounded-md border border-lime-tint-border bg-lime-tint-bg px-2 py-0.5 text-[10px] font-medium text-lime-text transition-all hover:bg-lime-tint-bg/80"
+                                className="inline-flex items-center gap-1 rounded-md border border-lime-tint-border bg-lime-tint-bg px-2 py-1 text-[11px] font-medium text-lime-text transition-all hover:bg-lime-tint-bg/80"
                               />
                             )
                           )}

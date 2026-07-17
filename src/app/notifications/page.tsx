@@ -141,7 +141,7 @@ export default function NotificationsPage() {
     <div className="min-h-screen">
       <div className="mx-auto max-w-3xl px-4 py-24 sm:px-6">
         {/* Back + Header */}
-        <div className="mb-8 flex items-center gap-4">
+        <div className="mb-8 flex flex-wrap items-center gap-4">
           <button
             type="button"
             aria-label="Go back"
@@ -150,14 +150,14 @@ export default function NotificationsPage() {
           >
             <ArrowLeft className="h-[18px] w-[18px]" />
           </button>
-          <div className="flex-1">
+          <div className="min-w-0 flex-1">
             <h1 className="font-display text-[28px] font-extrabold leading-tight text-text-primary">Notifications</h1>
             <p className="mt-0.5 text-[13.5px] text-text-secondary">{unreadCount > 0 ? `${unreadCount} unread` : 'All caught up'}</p>
           </div>
           {unreadCount > 0 && (
             <button
               type="button"
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border-default bg-bg-overlay px-3.5 text-[13px] font-semibold text-text-primary transition-colors hover:border-border-strong hover:bg-bg-overlay-2 disabled:opacity-60"
+              className="inline-flex h-9 items-center gap-1.5 whitespace-nowrap rounded-lg border border-border-default bg-bg-overlay px-3.5 text-[13px] font-semibold text-text-primary transition-colors hover:border-border-strong hover:bg-bg-overlay-2 disabled:opacity-60"
               onClick={markAllRead}
               disabled={marking}
             >
@@ -243,7 +243,7 @@ export default function NotificationsPage() {
                             <button
                               type="button"
                               aria-label="Mark as read"
-                              className="grid h-6 w-6 place-items-center rounded-md text-text-tertiary transition-colors hover:bg-white/10 hover:text-text-primary"
+                              className="-my-1.5 -mr-1.5 grid h-9 w-9 place-items-center rounded-md text-text-tertiary transition-colors hover:bg-white/10 hover:text-text-primary"
                               onClick={(e) => {
                                 e.preventDefault()
                                 e.stopPropagation()
