@@ -140,3 +140,29 @@ export function IconShield({ size = 22 }: IconProps) {
     </svg>
   )
 }
+
+/** Didit video verification — a camera with a lime record dot. */
+export function IconDiditVideo({ size = 22 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 48 48" fill="none" aria-hidden>
+      <rect x="5" y="13" width="26" height="22" rx="6" stroke={STROKE} strokeWidth="2.75" />
+      <path d="M31 21l12-6v18l-12-6" stroke={STROKE} strokeWidth="2.75" strokeLinejoin="round" />
+      <circle cx="14" cy="21" r="3" fill={LIME} />
+    </svg>
+  )
+}
+
+/** Proof of address — a document with a lime location pin. */
+export function IconAddressProof({ size = 22 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 48 48" fill="none" aria-hidden>
+      <path d="M11 6h20l7 7v29H11V6z" stroke={STROKE} strokeWidth="2.75" strokeLinejoin="round" />
+      <line x1="17" y1="32" x2="31" y2="32" stroke={STROKE} strokeWidth="2.25" strokeLinecap="round" />
+      <path
+        d="M24 13c3.6 0 6.5 2.8 6.5 6.2 0 4.6-6.5 9.3-6.5 9.3s-6.5-4.7-6.5-9.3c0-3.4 2.9-6.2 6.5-6.2z"
+        stroke={STROKE} strokeWidth="2.25" strokeLinejoin="round"
+      />
+      <circle cx="24" cy="19.5" r="2.4" fill={LIME} />
+    </svg>
+  )
+}
