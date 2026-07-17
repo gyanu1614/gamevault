@@ -166,6 +166,7 @@ export type ForestChipStatus =
   | 'info_requested'
   | 'approved'
   | 'rejected'
+  | 'withdrawn'
 
 interface ForestStatusChip {
   /** Title Case label. */
@@ -185,6 +186,7 @@ const chipBase =
 const CHIP_PENDING = `${chipBase} bg-[#F59E0B]/[0.16] text-[#FCD34D]`
 const CHIP_APPROVED = `${chipBase} bg-[#A3E635]/[0.16] text-[#BEF264]`
 const CHIP_REJECTED = `${chipBase} bg-[#B42318]/20 text-[#FCA5A5]`
+const CHIP_NEUTRAL = `${chipBase} bg-white/[0.1] text-white/55`
 
 export const FOREST_STATUS_CHIPS: Record<ForestChipStatus, ForestStatusChip> = {
   pending: {
@@ -212,16 +214,27 @@ export const FOREST_STATUS_CHIPS: Record<ForestChipStatus, ForestStatusChip> = {
     onDark: CHIP_REJECTED,
     onLight: CHIP_REJECTED,
   },
+  withdrawn: {
+    label: 'Withdrawn',
+    onDark: CHIP_NEUTRAL,
+    onLight: CHIP_NEUTRAL,
+  },
 }
 
 /** Didit chip (hero): lime tint on dark. */
 export const FOREST_DIDIT_CHIP = `${chipBase} bg-[#A3E635]/[0.16] text-[#A3E635]`
 
 export function forestStatusChip(status: string | null | undefined): ForestStatusChip {
-  return (
-    FOREST_STATUS_CHIPS[(status ?? 'pending') as ForestChipStatus] ??
-    FOREST_STATUS_CHIPS.pending
-  )
+  const known = FOREST_STATUS_CHIPS[(status ?? 'pending') as ForestChipStatus]
+  if (known) return known
+  // Unknown status: render it honestly (Title Case, neutral tint) instead of
+  // mislabeling it as Pending Review (that's how withdrawn rows showed as
+  // pending before this map had a withdrawn entry).
+  const label = (status ?? 'Unknown')
+    .split('_')
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(' ')
+  return { label, onDark: CHIP_NEUTRAL, onLight: CHIP_NEUTRAL }
 }
 
 // ─── Fallback game-tile gradients ────────────────────────────────────────────
