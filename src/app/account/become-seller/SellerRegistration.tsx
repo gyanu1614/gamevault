@@ -33,6 +33,7 @@ import { CheckCircle, Loader2, ArrowRight } from 'lucide-react'
 import { toast } from 'sonner'
 
 import SubmissionLoader from './components/SubmissionLoader'
+import SellerFlowLoader from './_redesign/components/SellerFlowLoader'
 import PreviousDataModal from './components/PreviousDataModal'
 import { submitSellerApplication } from '@/lib/actions/seller-application'
 import { getApplicationStatus } from '@/lib/actions/seller-application-status'
@@ -117,7 +118,6 @@ export default function SellerRegistration({
 
   // ── Submission ──────────────────────────────────────────────────────────────
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [loaderStage, setLoaderStage] = useState<'submitting' | 'complete'>('submitting')
 
   // ── Status gating ─────────────────────────────────────────────────────────
   const [isCheckingExisting, setIsCheckingExisting] = useState(true)
@@ -401,7 +401,6 @@ export default function SellerRegistration({
     }
 
     setIsSubmitting(true)
-    setLoaderStage('submitting')
 
     try {
       const state: RedesignedSellerState = {
@@ -419,14 +418,9 @@ export default function SellerRegistration({
       const result = await submitSellerApplication(payload)
 
       if (result.success) {
-        setLoaderStage('complete')
-        toast.success(
-          result.message ||
-            'Application submitted successfully! You will receive an email confirmation shortly.',
-        )
-        setTimeout(() => {
-          router.push('/account/seller-status')
-        }, 2000)
+        // The received/confirmation state lives ON the status page (banner
+        // via ?submitted=1) — no second loader stage, no toast+timeout hop.
+        router.push('/account/seller-status?submitted=1')
       } else {
         toast.error(result.error || 'Failed to submit application. Please try again.')
         setIsSubmitting(false)
@@ -457,50 +451,11 @@ export default function SellerRegistration({
   // ── Loading / redirect gates ────────────────────────────────────────────────
 
   if (isCheckingExisting) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-[#FAFAF7]">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="h-8 w-8 animate-spin" style={{ color: '#1B5E3A' }} />
-          <p className="text-sm" style={{ color: '#5B6157' }}>
-            Checking your application status…
-          </p>
-        </div>
-      </div>
-    )
+    return <SellerFlowLoader label="Checking your application…" />
   }
 
   if (isRedirecting) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-[#FAFAF7] p-4">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.96, y: 16 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          transition={{ duration: 0.3, ease: 'easeOut' }}
-          className="w-full max-w-md rounded-2xl border p-8 text-center"
-          style={{ borderColor: '#E4E5DE', backgroundColor: '#FFFFFF' }}
-        >
-          <div className="mb-5 flex justify-center">
-            <div
-              className="flex h-14 w-14 items-center justify-center rounded-full"
-              style={{ backgroundColor: '#14432A' }}
-            >
-              <CheckCircle className="h-7 w-7" style={{ color: '#A3E635' }} />
-            </div>
-          </div>
-          <h2 className="mb-2 text-xl font-semibold" style={{ color: '#14432A' }}>
-            Application Found
-          </h2>
-          <p className="mb-5 text-sm" style={{ color: '#5B6157' }}>
-            You already have an application in progress. Taking you to your status page…
-          </p>
-          <div className="flex items-center justify-center gap-2" style={{ color: '#1B5E3A' }}>
-            <Loader2 className="h-4 w-4 animate-spin" />
-            <span className="text-sm font-medium">Redirecting</span>
-            <ArrowRight className="h-4 w-4" />
-          </div>
-        </motion.div>
-      </div>
-    )
+    return <SellerFlowLoader label="Taking you to your application status…" />
   }
 
   // ── Intro landing (before the stepper) ──────────────────────────────────────
@@ -608,7 +563,7 @@ export default function SellerRegistration({
       <VideoModal open={videoOpen} onClose={() => setVideoOpen(false)} />
 
       {/* Submission loader overlay. */}
-      {isSubmitting && <SubmissionLoader stage={loaderStage} />}
+      {isSubmitting && <SubmissionLoader />}
     </>
   )
 }
