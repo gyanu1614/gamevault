@@ -32,12 +32,12 @@ import { StatsMarquee } from '../components/StatsMarquee'
 import { HowItWorks } from '../components/HowItWorks'
 import { WhyCard } from '../components/WhyCard'
 import { RecentlySoldTicker } from '../components/RecentlySoldTicker'
+import { PaymentsMarquee } from '@/components/marketplace/PaymentsMarquee'
 import {
   MobileHero,
   MobilePopularGames,
   MobileProtectionStrip,
   MobileTrustRows,
-  MobileRecentlySold,
 } from '../components/MobileHome'
 
 import { useHeroSlides } from '../hooks/useHeroSlides'
@@ -413,7 +413,7 @@ export function HomePage() {
           SHOP BY CATEGORY — tabbed: Currencies / Items / Accounts
           Replaces three separate sections with one consolidated shelf.
           ================================================================ */}
-      <section className="max-lg:hidden relative py-20 overflow-hidden">
+      <section className="relative py-20 max-lg:py-10 overflow-hidden">
         {/* V17i — Subtle backdrop wash matching the other backdrop'd
             sections. Faint lime+steel radial pair so this section isn't
             visually flat next to Popular Games. No image asset needed. */}
@@ -567,9 +567,14 @@ export function HomePage() {
             animationDuration: '3.5s',
           }}
         />
-        {/* Mobile — compact live list rows instead of the marquee. */}
-        <div className="lg:hidden relative z-10">
-          <MobileRecentlySold items={recentSales} />
+        {/* Mobile — compact heading; the infinite marquee below runs at
+            every width (user preferred the ticker over list rows). */}
+        <div className="lg:hidden relative z-10 mb-4 flex items-center gap-2 px-5">
+          <h2 className="t-section text-text-primary">Recently Sold</h2>
+          <span aria-hidden className="relative flex h-2 w-2">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success opacity-75" />
+            <span className="relative inline-flex h-2 w-2 rounded-full bg-success" />
+          </span>
         </div>
         <div className="max-lg:hidden relative z-10 max-w-container mx-auto px-6 mb-5 flex flex-col items-start gap-1.5 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
           <div className="flex items-center gap-3">
@@ -583,7 +588,7 @@ export function HomePage() {
           </div>
           <span className="text-body-sm text-text-tertiary">Updated in real time across every game</span>
         </div>
-        <div className="max-lg:hidden relative z-10">
+        <div className="relative z-10">
           <RecentlySoldTicker items={recentSales} />
         </div>
       </section>
@@ -595,7 +600,13 @@ export function HomePage() {
           mask) so the art melts into the page. One lime CTA, then the
           category strip — the whole marketplace, one tap away.
           ================================================================ */}
-      <section className="max-lg:hidden relative overflow-hidden py-24 lg:py-28">
+      {/* Payment methods marquee — mobile only (desktop has it in the
+          checkout/detail surfaces; here it closes the phone homepage). */}
+      <section className="lg:hidden border-t border-border-subtle py-6">
+        <PaymentsMarquee />
+      </section>
+
+      <section className="relative overflow-hidden py-16 max-lg:pb-20 lg:py-28">
         {/* Ambient glow behind the composition */}
         <div
           aria-hidden="true"
@@ -612,11 +623,11 @@ export function HomePage() {
           src="/characters/fortnite-trio.webp"
           alt=""
           aria-hidden
-          className="pointer-events-none absolute left-1/2 top-2 z-0 h-[560px] w-auto -translate-x-1/2 select-none object-contain opacity-[0.22] [mask-image:radial-gradient(ellipse_55%_58%_at_50%_42%,black_30%,transparent_80%)] sm:h-[700px] lg:h-[780px]"
+          className="pointer-events-none absolute left-1/2 top-2 z-0 h-[430px] w-auto -translate-x-1/2 select-none object-contain opacity-[0.22] [mask-image:radial-gradient(ellipse_55%_58%_at_50%_42%,black_30%,transparent_80%)] sm:h-[700px] lg:h-[780px]"
         />
 
         <div className="relative z-10 mx-auto max-w-4xl px-6 text-center">
-          <h2 className="font-display text-[40px] font-extrabold leading-[1.05] tracking-tight [text-shadow:0_4px_28px_rgba(0,0,0,0.85)] sm:text-[48px] lg:text-[58px]">
+          <h2 className="font-display text-[30px] font-extrabold leading-[1.05] tracking-tight [text-shadow:0_4px_28px_rgba(0,0,0,0.85)] sm:text-[48px] lg:text-[58px]">
             What are you waiting for?
           </h2>
           <p className="mx-auto mt-5 max-w-xl text-body-lg text-text-secondary [text-shadow:0_2px_16px_rgba(0,0,0,0.9)]">

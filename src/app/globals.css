@@ -719,3 +719,15 @@
   background-size: 200% 200%;
   animation: gradient-shift 8s ease infinite;
 }
+
+/* Traveling border light (Magic UI border-beam equivalent, pure CSS):
+   a spinning conic highlight behind a 1px-padded card wrapper. */
+@keyframes dm-beam {
+  to { transform: rotate(360deg); }
+}
+.dm-beam {
+  animation: dm-beam 8s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .dm-beam { animation: none; opacity: 0.35; }
+}
