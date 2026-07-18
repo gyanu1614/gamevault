@@ -519,8 +519,8 @@ function HeroPanel({ mode }: { mode: AuthMode }) {
           </AnimatePresence>
         </div>
 
-        {/* Bottom — SafeDrop line, floating (no chip) */}
-        <div className="flex items-center gap-2 self-start">
+        {/* Bottom — SafeDrop line, floating, centered */}
+        <div className="flex items-center justify-center gap-2 self-center">
           <ShieldCheck className="h-4 w-4 shrink-0" style={{ color: PALETTE.lime }} />
           <span className="text-[13px] text-white/90">
             Covered by <span className="font-semibold text-white">SafeDrop</span> Buyer Protection
