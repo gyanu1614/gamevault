@@ -1213,7 +1213,7 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                             cramped context menu. dvh (not vh) cap so the
                             bottom rows never hide behind iOS Safari's
                             toolbar. */}
-                        <div className="relative overflow-hidden rounded-lg border border-[#A3E635]/[0.12] bg-[linear-gradient(180deg,#14241A_0%,#0E1611_100%)] p-2 shadow-[0_24px_48px_-12px_rgba(0,0,0,0.85)] max-h-[calc(100dvh-110px)] overflow-y-auto overscroll-contain max-sm:rounded-none max-sm:rounded-b-2xl max-sm:border-x-0 max-sm:border-t-0 max-sm:max-h-[calc(100dvh-60px-var(--mobile-tab-bar-h,64px)-env(safe-area-inset-bottom)-16px)]">
+                        <div className="relative overflow-hidden rounded-lg border border-border-default bg-[#17171F] p-2 shadow-[0_24px_48px_-12px_rgba(0,0,0,0.85)] max-h-[calc(100dvh-110px)] overflow-y-auto overscroll-contain max-sm:rounded-none max-sm:rounded-b-2xl max-sm:border-x-0 max-sm:border-t-0 max-sm:max-h-[calc(100dvh-60px-var(--mobile-tab-bar-h,64px)-env(safe-area-inset-bottom)-16px)]">
                           <span aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-16 bg-[linear-gradient(to_bottom,rgba(163,230,53,0.06),transparent)]" />
                           {/* User Info card */}
                           <div className="relative border-b border-border-subtle p-2 pb-2">
