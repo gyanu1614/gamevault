@@ -31,6 +31,12 @@ import {
 } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
+import {
+  Step1ChooseItem,
+  Step2SecurePayment,
+  Step3Delivery,
+  Step4Confirm,
+} from '@/components/icons/how-it-works'
 import { SmartLink } from '@/components/global/SmartLink'
 import type { PopularGame } from '../hooks/usePopularGames'
 import type { SoldItem } from '../hooks/useRecentSales'
@@ -308,9 +314,15 @@ export function MobileHero() {
 
 const MAX_PILLS = 3
 
+/* Per user direction: only the core buying categories under a game —
+   currency/items/accounts. Boosting, top-ups, coaching, gift cards etc.
+   stay reachable from the game hub, not the homepage pills. */
+const PILL_EXCLUDE = /boost|top.?up|coach|gift|server|key/i
+
 function GamePills({ game }: { game: PopularGame }) {
-  const shown = game.categoryLinks.slice(0, MAX_PILLS)
-  const overflow = game.categoryLinks.length - shown.length
+  const shown = game.categoryLinks
+    .filter((c) => !PILL_EXCLUDE.test(c.slug) && !PILL_EXCLUDE.test(c.label))
+    .slice(0, MAX_PILLS)
   if (shown.length === 0) return null
   return (
     <div className="mt-2 flex flex-wrap gap-1">
@@ -318,22 +330,13 @@ function GamePills({ game }: { game: PopularGame }) {
         <Link
           key={c.slug}
           href={`/${game.slug}/${c.slug}`}
-          className={`relative inline-flex h-7 max-w-full items-center overflow-hidden rounded-md px-2.5 ${RAISED} ${PRESSED}`}
+          className={`relative inline-flex h-6 max-w-full items-center overflow-hidden rounded px-2 ${RAISED} ${PRESSED}`}
         >
-          <span className="truncate text-[11px] font-semibold text-text-secondary">
-            {c.label}
+          <span className="truncate text-[10.5px] font-semibold text-text-secondary">
+            {c.label.replace(/\s*\(.*?\)\s*/g, '')}
           </span>
         </Link>
       ))}
-      {overflow > 0 && (
-        <Link
-          href={`/${game.slug}`}
-          aria-label={`All ${game.name} categories`}
-          className={`relative inline-flex h-7 items-center overflow-hidden rounded-md px-2.5 ${RAISED} ${PRESSED}`}
-        >
-          <span className="text-[11px] font-semibold text-lime-text">+{overflow}</span>
-        </Link>
-      )}
     </div>
   )
 }
@@ -383,24 +386,10 @@ export function MobilePopularGames({ games }: { games: PopularGame[] }) {
    ──────────────────────────────────────────────────────────── */
 
 const PROTECTION_STEPS = [
-  {
-    step: '01',
-    title: 'You Pay',
-    copy: 'Covered by SafeDrop from the first second.',
-    lit: true,
-  },
-  {
-    step: '02',
-    title: 'Seller Delivers',
-    copy: 'Most orders complete in minutes.',
-    lit: false,
-  },
-  {
-    step: '03',
-    title: 'You Confirm',
-    copy: 'Seller is paid only after you confirm — or your money back.',
-    lit: false,
-  },
+  { num: '01', title: 'Choose Your Item', copy: 'Compare offers, buy with confidence.', Icon: Step1ChooseItem, lit: true },
+  { num: '02', title: 'Pay Securely', copy: 'Covered by SafeDrop from the first second.', Icon: Step2SecurePayment, lit: false },
+  { num: '03', title: 'Get Your Delivery', copy: 'Fast in-game delivery, tracked live.', Icon: Step3Delivery, lit: false },
+  { num: '04', title: 'Confirm Delivery', copy: 'Seller is paid after you confirm — or your money back.', Icon: Step4Confirm, lit: false },
 ] as const
 
 export function MobileProtectionStrip() {
@@ -408,23 +397,27 @@ export function MobileProtectionStrip() {
     <section className="relative z-10 pt-8">
       <MobileSectionHeader title="How You're Protected" href="/safedrop" linkLabel="SafeDrop" />
       <div className="-mb-1 flex snap-x gap-3 overflow-x-auto px-5 pb-2 scrollbar-hide">
-        {PROTECTION_STEPS.map(({ step, title, copy, lit }) => (
+        {PROTECTION_STEPS.map(({ num, title, copy, Icon, lit }) => (
           <Link
-            key={step}
+            key={num}
             href="/safedrop"
-            className={`relative min-w-[218px] shrink-0 snap-start overflow-hidden rounded-2xl p-4 ${PRESSED} ${
+            className={`relative min-w-[200px] shrink-0 snap-start overflow-hidden rounded-xl p-4 ${PRESSED} ${
               lit
                 ? 'border border-[rgba(163,230,53,0.28)] bg-[linear-gradient(180deg,#16291D,#0E1611)] shadow-[0_10px_28px_rgba(0,0,0,0.35)]'
                 : FOREST_GLASS
             }`}
           >
             <Sheen />
-            <span
-              className={`t-eyebrow block tabular-nums ${lit ? 'text-lime-text' : 'text-text-tertiary'}`}
-            >
-              Step {step}
-            </span>
-            <span className="t-card mt-1.5 block text-text-primary">{title}</span>
+            <div className="flex items-start justify-between">
+              {/* The shared 3D step icon — same art as the marketplace band */}
+              <Icon className="h-11 w-11" />
+              <span
+                className={`t-eyebrow tabular-nums ${lit ? 'text-lime-text' : 'text-text-tertiary'}`}
+              >
+                Step {num}
+              </span>
+            </div>
+            <span className="t-card mt-2.5 block text-text-primary">{title}</span>
             <span className="t-cap mt-1 block leading-snug text-text-secondary">{copy}</span>
           </Link>
         ))}
