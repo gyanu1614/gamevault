@@ -78,6 +78,15 @@ export async function dispatch(
     // refunds → user_wallet. Idempotent on 'wallet_refund:<orderId>', so a
     // replayed webhook can't double-credit. NOT for CHARGEBACK_OPENED — a
     // chargeback claws the cash back through the provider, no wallet credit.
+    //
+    // SUPPORT RUNBOOK — manual external refunds: no code path calls the
+    // provider's refund() (CoinGate's throws 'not yet implemented'), so a
+    // REFUND_COMPLETED event only arrives after someone refunds manually in
+    // the provider dashboard. If the buyer was ALREADY given store credit
+    // (ledger txn keyed 'wallet_refund:<orderId>' — or
+    // 'wallet_refund:<orderId>:partial:<disputeId>' from a partial dispute),
+    // a manual external refund on top is DOUBLE compensation. Always check
+    // ledger_transactions for those keys before refunding at the provider.
     // AWAITED but wrapped: a credit failure must never fail the webhook (the
     // idempotent key makes it safely retryable).
     if (event.type === 'REFUND_COMPLETED') {

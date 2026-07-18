@@ -21,7 +21,7 @@
  * + our existing components"): qty stepper, SafeDrop tier selector,
  * promo code flow, wallet/credit application, SellerPeek dialog +
  * header account dropdown. Assets live at public/assets/checkout/ (drop-in
- * replaceable: shield-3d.png, lock.png, llama.png, dm-coin.png).
+ * replaceable: shield-3d.png, llama.png, dm-coin.png).
  */
 
 import { useEffect, useRef, useState } from 'react'
@@ -781,8 +781,7 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
                         </div>
                       </div>
                       <span className="hidden flex-none items-center gap-2 sm:flex">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src="/assets/checkout/lock.png" alt="" aria-hidden className="h-7 w-7 select-none object-contain drop-shadow-[0_4px_8px_rgba(0,0,0,0.35)]" />
+                        <CheckCircle2 aria-hidden className="h-6 w-6 flex-none text-lime-text drop-shadow-[0_4px_8px_rgba(0,0,0,0.35)]" />
                         <span className="text-[13px] font-extrabold text-[#f1d98d]">Money-Back</span>
                       </span>
                     </div>

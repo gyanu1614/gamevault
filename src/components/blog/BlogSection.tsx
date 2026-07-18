@@ -29,7 +29,7 @@ export function BlogSection({
       <SectionHeading
         kicker="Blog"
         title="Guides From The"
-        accent="Vault"
+        accent="Pros"
         sub={`Trading guides, safety tips, and ${gameName} know-how from the team.`}
       />
 

@@ -414,6 +414,7 @@ export function OrderClient(props: OrderClientProps) {
               feePercent={feePercent}
               netPayout={netPayout}
               orderStatus={order.status}
+              escrowStatus={order.escrow_status}
               otherParty={otherPartyButton}
               buyerReview={existingReview}
               gameName={gameName}
