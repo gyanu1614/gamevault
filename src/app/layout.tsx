@@ -90,9 +90,9 @@ export default function RootLayout({
               `richColors` because that flips on sonner's saturated
               defaults, which fight our globals.css custom palette. */}
           <Toaster
-            position="top-right"
+            position="bottom-right"
             theme="dark"
-            duration={2200}
+            duration={3200}
             closeButton
             toastOptions={{
               className: 'toast-reduced-glow',

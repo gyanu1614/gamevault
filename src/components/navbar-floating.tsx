@@ -850,8 +850,8 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                               near-opaque dark surface + top sheen, roomier
                               type and spacing. Capped to the dynamic viewport
                               so short phones scroll the list internally. */}
-                          <div className="relative flex max-h-[calc(100dvh-7rem)] flex-col overflow-hidden rounded-lg border border-border-default bg-[#17171F] shadow-[0_24px_48px_-12px_rgba(0,0,0,0.85)] p-5">
-                            <span aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-16 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.05),transparent)]" />
+                          <div className="relative flex max-h-[calc(100dvh-7rem)] flex-col overflow-hidden rounded-lg border border-[#A3E635]/[0.12] bg-[linear-gradient(180deg,#14241A_0%,#0E1611_100%)] shadow-[0_24px_48px_-12px_rgba(0,0,0,0.85)] p-5">
+                            <span aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-16 bg-[linear-gradient(to_bottom,rgba(163,230,53,0.06),transparent)]" />
                             {/* Header - hairline separator spans the full panel width */}
                             <div className="relative -mx-5 mb-4 flex shrink-0 items-center justify-between border-b border-border-subtle px-5 pb-3.5">
                               <h3 className="text-[16px] font-bold text-text-primary">Notifications</h3>
@@ -885,11 +885,11 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                                       markAsRead(notification.id)
                                       setNotificationsOpen(false)
                                     }}
-                                    className="block rounded-md border border-border-subtle bg-white/[0.03] p-3.5 transition-colors hover:border-border-default hover:bg-white/[0.06]"
+                                    className="block rounded-md border border-white/[0.06] bg-white/[0.03] p-3.5 transition-colors hover:border-[#A3E635]/[0.2] hover:bg-[#1B5E3A]/[0.12]"
                                   >
                                     <div className="flex items-start gap-3">
                                       <div className="flex-shrink-0">
-                                        <div className="grid h-9 w-9 place-items-center rounded-md border border-border-subtle bg-bg-overlay">
+                                        <div className="grid h-9 w-9 place-items-center rounded-md border border-[#A3E635]/[0.14] bg-[#1B5E3A]/[0.16]">
                                           <Bell className="h-4 w-4 text-lime-text" />
                                         </div>
                                       </div>
@@ -913,14 +913,15 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                                         <button
                                           type="button"
                                           aria-label="Dismiss notification"
-                                          className="grid h-6 w-6 place-items-center rounded-md text-text-tertiary transition-colors hover:bg-white/10 hover:text-text-primary"
+                                          className="-my-1 -mr-1 grid h-8 w-8 place-items-center rounded-md text-text-tertiary transition-colors hover:bg-white/10 hover:text-text-primary"
+                                          onPointerDown={(e) => e.stopPropagation()}
                                           onClick={(e) => {
                                             e.preventDefault()
                                             e.stopPropagation()
                                             markAsRead(notification.id)
                                           }}
                                         >
-                                          <X className="h-3.5 w-3.5" />
+                                          <X className="h-4 w-4" />
                                         </button>
                                         <span aria-hidden className="mr-2 h-2 w-2 rounded-full bg-lime shadow-[0_0_8px_rgba(198,255,61,0.8)]" />
                                       </div>
@@ -984,8 +985,8 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                          above); sm+ keeps the anchored desktop popover. */
                       <div className="fixed inset-x-3 top-20 sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-[27px] sm:w-[480px] sm:max-w-[92vw] animate-in fade-in-0 zoom-in-95 slide-in-from-top-2 duration-200">
                           {/* V61 — Same glass panel as Notifications. */}
-                          <div className="relative flex max-h-[calc(100dvh-7rem)] flex-col overflow-hidden rounded-lg border border-border-default bg-[#17171F] shadow-[0_24px_48px_-12px_rgba(0,0,0,0.85)] p-5">
-                            <span aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-16 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.05),transparent)]" />
+                          <div className="relative flex max-h-[calc(100dvh-7rem)] flex-col overflow-hidden rounded-lg border border-[#A3E635]/[0.12] bg-[linear-gradient(180deg,#14241A_0%,#0E1611_100%)] shadow-[0_24px_48px_-12px_rgba(0,0,0,0.85)] p-5">
+                            <span aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-16 bg-[linear-gradient(to_bottom,rgba(163,230,53,0.06),transparent)]" />
                             {/* Header - hairline separator spans the full panel width */}
                             <div className="relative -mx-5 mb-4 flex shrink-0 items-center justify-between border-b border-border-subtle px-5 pb-3.5">
                               <h3 className="text-[16px] font-bold text-text-primary">Live Orders</h3>
@@ -1095,8 +1096,8 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                             cramped context menu. dvh (not vh) cap so the
                             bottom rows never hide behind iOS Safari's
                             toolbar. */}
-                        <div className="relative overflow-hidden rounded-lg border border-border-default bg-[#17171F] p-2 shadow-[0_24px_48px_-12px_rgba(0,0,0,0.85)] max-h-[calc(100dvh-110px)] overflow-y-auto overscroll-contain">
-                          <span aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-16 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.05),transparent)]" />
+                        <div className="relative overflow-hidden rounded-lg border border-[#A3E635]/[0.12] bg-[linear-gradient(180deg,#14241A_0%,#0E1611_100%)] p-2 shadow-[0_24px_48px_-12px_rgba(0,0,0,0.85)] max-h-[calc(100dvh-110px)] overflow-y-auto overscroll-contain">
+                          <span aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-16 bg-[linear-gradient(to_bottom,rgba(163,230,53,0.06),transparent)]" />
                           {/* User Info card */}
                           <div className="relative border-b border-border-subtle p-2 pb-2">
                             {user.isApprovedSeller ? (
