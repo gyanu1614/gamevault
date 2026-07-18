@@ -205,7 +205,26 @@ export async function sendApplicationApprovedEmail({
                         <li>Start selling!</li>
                       </ul>
                     </div>
+                    <div style="background:rgba(163, 230, 53, 0.08);border:1px solid rgba(163, 230, 53, 0.3);border-radius:8px;padding:14px 16px;margin:0 0 12px;text-align:left;">
+                      <p style="margin:0 0 8px;font-size:13px;font-weight:600;color:#a3e635;">Seller Do's</p>
+                      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:13px;line-height:1.6;color:#a1a1aa;">
+                        <tr><td valign="top" style="width:20px;color:#a3e635;font-weight:700;">✓</td><td style="padding-bottom:6px;"><strong style="color:#e4e4e7;">Deliver Exactly What You Listed</strong> — in-game or in-platform, within your delivery time</td></tr>
+                        <tr><td valign="top" style="width:20px;color:#a3e635;font-weight:700;">✓</td><td style="padding-bottom:6px;"><strong style="color:#e4e4e7;">Keep All Chat On DropMarket</strong> — it protects you in disputes</td></tr>
+                        <tr><td valign="top" style="width:20px;color:#a3e635;font-weight:700;">✓</td><td style="padding-bottom:6px;"><strong style="color:#e4e4e7;">Mark Orders Delivered Honestly</strong> — buyers confirm receipt before you're paid</td></tr>
+                        <tr><td valign="top" style="width:20px;color:#a3e635;font-weight:700;">✓</td><td><strong style="color:#e4e4e7;">Keep Your Stock Numbers Real</strong></td></tr>
+                      </table>
+                    </div>
+                    <div style="background:rgba(255, 255, 255, 0.03);border:1px solid rgba(255, 255, 255, 0.12);border-radius:8px;padding:14px 16px;margin:0 0 18px;text-align:left;">
+                      <p style="margin:0 0 8px;font-size:13px;font-weight:600;color:#f4f4f5;">Seller Don'ts</p>
+                      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:13px;line-height:1.6;color:#a1a1aa;">
+                        <tr><td valign="top" style="width:20px;color:#71717a;font-weight:700;">✗</td><td style="padding-bottom:6px;"><strong style="color:#e4e4e7;">Never Take Payment Outside DropMarket</strong> — instant ban</td></tr>
+                        <tr><td valign="top" style="width:20px;color:#71717a;font-weight:700;">✗</td><td style="padding-bottom:6px;"><strong style="color:#e4e4e7;">Never Ask Buyers For Personal Contact Details</strong></td></tr>
+                        <tr><td valign="top" style="width:20px;color:#71717a;font-weight:700;">✗</td><td style="padding-bottom:6px;"><strong style="color:#e4e4e7;">Never Share Login Credentials Except Through The Account-Sale Flow</strong></td></tr>
+                        <tr><td valign="top" style="width:20px;color:#71717a;font-weight:700;">✗</td><td><strong style="color:#e4e4e7;">Never Deliver Before Payment Is Confirmed</strong></td></tr>
+                      </table>
+                    </div>
                     <a href="${APP_URL}/account/dashboard" style="display:inline-block;background-color:#a3e635;color:#0a0a0f;text-decoration:none;padding:11px 28px;border-radius:6px;font-weight:700;font-size:14px;">Go to Seller Dashboard</a>
+                    <p style="margin:14px 0 0;font-size:13px;color:#a1a1aa;">Ready to sell? <a href="${APP_URL}/account/listings" style="color:#a3e635;text-decoration:none;font-weight:600;">Create Your First Listing</a></p>
                   </div>
                 </td></tr>
                 <tr><td align="center" style="padding:14px 8px 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:11px;line-height:1.6;color:#a1a1aa;">

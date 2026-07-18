@@ -6,6 +6,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { createServiceRoleClient } from '@/lib/supabase/service-role'
 
 export interface AuditLogData {
   action: string
@@ -49,8 +50,12 @@ export async function logAudit(data: AuditLogData): Promise<void> {
       }
     }
 
-    // Insert audit log
-    await (supabase.from('audit_logs').insert as any)({
+    // Insert via service role: audit_logs has hardened RLS in some
+    // environments (authenticated INSERT blocked), which made these
+    // writes silently no-op through the cookie client. The acting user
+    // is still captured from the session above.
+    const service = createServiceRoleClient()
+    await (service.from('audit_logs').insert as any)({
       user_id: user?.id || null,
       user_email: userEmail,
       user_role: userRole,
