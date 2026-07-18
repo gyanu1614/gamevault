@@ -186,6 +186,8 @@ type ShopTab = 'currencies' | 'items' | 'accounts'
 const ROWS_COLLAPSED = 2
 const ROWS_EXPANDED = 4
 const COLUMNS = 5
+/** Phones show 3 rows of 3 before the fade + arrow expander. */
+const MOBILE_VISIBLE = 9
 
 function ShopByCategoryShelf({
   currencies,
@@ -258,14 +260,42 @@ function ShopByCategoryShelf({
         })}
       </div>
 
-      {/* Grid — 5 columns × 2 or 4 rows */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-5">
-        {renderCards()}
+      {/* Grid — phones: 3-up compact with a 9-card cap + fade/arrow
+          expander; lg+: the original 5×2/5×4 shelf, untouched. */}
+      <div className="relative">
+        <div className="grid grid-cols-3 gap-2.5 sm:gap-4 lg:grid-cols-5 lg:gap-5">
+          {renderCards().map((card, i) => (
+            <div key={card.key ?? i} className={!expanded && i >= MOBILE_VISIBLE ? 'max-lg:hidden' : undefined}>
+              {card}
+            </div>
+          ))}
+        </div>
+        {/* Grey-out fade over the last visible mobile row */}
+        {!expanded && hasMore && (
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-[#0a0a0f] to-transparent lg:hidden"
+          />
+        )}
       </div>
 
-      {/* Show more / less toggle */}
+      {/* Mobile expander — circular arrow under the fade */}
       {hasMore && (
-        <div className="mt-6 flex justify-center">
+        <div className="mt-3 flex justify-center lg:hidden">
+          <button
+            type="button"
+            onClick={() => setExpanded((e) => !e)}
+            aria-label={expanded ? 'Show fewer categories' : 'Show all categories'}
+            className="grid h-11 w-11 place-items-center rounded-full border border-white/[0.10] bg-white/[0.05] text-text-secondary transition-transform active:scale-95"
+          >
+            {expanded ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+          </button>
+        </div>
+      )}
+
+      {/* Show more / less toggle — desktop only */}
+      {hasMore && (
+        <div className="mt-6 hidden justify-center lg:flex">
           <button
             type="button"
             onClick={() => setExpanded((e) => !e)}
