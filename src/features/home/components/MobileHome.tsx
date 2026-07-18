@@ -40,7 +40,14 @@ import type { SoldItem } from '../hooks/useRecentSales'
    ──────────────────────────────────────────────────────────── */
 
 const FOREST_GLASS =
-  'border border-[rgba(163,230,53,0.12)] bg-[linear-gradient(180deg,#14241A,#0E1611)]'
+  'border border-[rgba(163,230,53,0.10)] bg-[linear-gradient(180deg,#14241A,#0E1611)]'
+
+/* Neutral "floating" surface for interactive chrome (chips, search,
+   list rows): hairline + barely-there fill — the forest gradient is
+   reserved for brand moments (protection strip, trust rows), per
+   user feedback that green-filled buttons read heavy. */
+const RAISED =
+  'border border-white/[0.08] bg-white/[0.045]'
 
 const PRESSED =
   'transition-all duration-[120ms] ease-out active:scale-[0.98] active:brightness-95'
@@ -167,7 +174,7 @@ function MobileHeroSearch() {
     <div className="relative">
       <form onSubmit={submit} role="search">
         <div
-          className={`relative flex h-[52px] items-center overflow-hidden rounded-2xl ${FOREST_GLASS} transition-colors focus-within:border-[rgba(163,230,53,0.30)] focus-within:ring-1 focus-within:ring-[rgba(163,230,53,0.22)]`}
+          className={`relative flex h-[52px] items-center overflow-hidden rounded-xl ${RAISED} transition-colors focus-within:border-white/[0.18] focus-within:ring-1 focus-within:ring-white/[0.12]`}
         >
           <Sheen />
           <Search
@@ -193,7 +200,7 @@ function MobileHeroSearch() {
           the tap before the Link click lands. */}
       {open && (
         <div
-          className={`absolute inset-x-0 top-[60px] z-30 overflow-hidden rounded-2xl ${FOREST_GLASS} shadow-[0_16px_40px_rgba(0,0,0,0.5)]`}
+          className={`absolute inset-x-0 top-[60px] z-30 overflow-hidden rounded-xl border border-white/[0.10] bg-[#121512] shadow-[0_16px_40px_rgba(0,0,0,0.55)]`}
           onPointerDown={(e) => e.preventDefault()}
         >
           <Sheen />
@@ -281,7 +288,7 @@ export function MobileHero() {
                 new CustomEvent('dm:open-category', { detail: tabId }),
               )
             }
-            className={`relative flex h-16 min-w-[84px] shrink-0 snap-start flex-col items-center justify-center gap-1.5 overflow-hidden rounded-2xl ${FOREST_GLASS} ${PRESSED}`}
+            className={`relative flex h-[60px] min-w-[86px] shrink-0 snap-start flex-col items-center justify-center gap-1.5 overflow-hidden rounded-[10px] ${RAISED} transition-colors active:bg-white/[0.07] ${PRESSED}`}
           >
             <Sheen />
             <Icon aria-hidden className="h-[18px] w-[18px] text-text-secondary" />
@@ -311,7 +318,7 @@ function GamePills({ game }: { game: PopularGame }) {
         <Link
           key={c.slug}
           href={`/${game.slug}/${c.slug}`}
-          className={`relative inline-flex h-7 max-w-full items-center overflow-hidden rounded-full px-2.5 ${FOREST_GLASS} ${PRESSED}`}
+          className={`relative inline-flex h-7 max-w-full items-center overflow-hidden rounded-md px-2.5 ${RAISED} ${PRESSED}`}
         >
           <span className="truncate text-[11px] font-semibold text-text-secondary">
             {c.label}
@@ -322,7 +329,7 @@ function GamePills({ game }: { game: PopularGame }) {
         <Link
           href={`/${game.slug}`}
           aria-label={`All ${game.name} categories`}
-          className={`relative inline-flex h-7 items-center overflow-hidden rounded-full px-2.5 ${FOREST_GLASS} ${PRESSED}`}
+          className={`relative inline-flex h-7 items-center overflow-hidden rounded-md px-2.5 ${RAISED} ${PRESSED}`}
         >
           <span className="text-[11px] font-semibold text-lime-text">+{overflow}</span>
         </Link>
@@ -339,14 +346,14 @@ export function MobilePopularGames({ games }: { games: PopularGame[] }) {
         {games.length === 0
           ? Array.from({ length: 4 }).map((_, i) => (
               <div key={i} className="w-[124px] shrink-0 snap-start">
-                <div className={`aspect-[3/4] w-full animate-pulse rounded-xl ${FOREST_GLASS}`} />
+                <div className={`aspect-[3/4] w-full animate-pulse rounded-xl ${RAISED}`} />
                 <div className="mt-2 h-4 w-20 animate-pulse rounded bg-[rgba(20,36,26,0.8)]" />
               </div>
             ))
           : games.map((game) => (
               <div key={game.slug} className="w-[124px] shrink-0 snap-start">
                 <SmartLink href={game.href} className={`block ${PRESSED}`}>
-                  <div className={`relative aspect-[3/4] w-full overflow-hidden rounded-xl ${FOREST_GLASS}`}>
+                  <div className={`relative aspect-[3/4] w-full overflow-hidden rounded-xl ${RAISED}`}>
                     <Image
                       src={game.coverSrc}
                       alt={game.name}
@@ -455,7 +462,7 @@ export function MobileTrustRows() {
       {TRUST_ROWS.map(({ claim, proof }) => (
         <div
           key={claim}
-          className={`relative flex items-center gap-3 overflow-hidden rounded-2xl p-3 ${FOREST_GLASS}`}
+          className={`relative flex items-center gap-3 overflow-hidden rounded-xl p-3 ${FOREST_GLASS}`}
         >
           <Sheen />
           <span
@@ -498,7 +505,7 @@ export function MobileRecentlySold({ items }: { items: SoldItem[] }) {
         {rows.map((item) => (
           <div
             key={item.id}
-            className={`relative flex items-center gap-3 overflow-hidden rounded-2xl p-3 ${FOREST_GLASS}`}
+            className={`relative flex items-center gap-3 overflow-hidden rounded-xl p-3 ${FOREST_GLASS}`}
           >
             <Sheen />
             {/* Game monogram chip w/ live dot */}
