@@ -32,8 +32,11 @@ export function RowHeader({ title, viewAllHref, eyebrow, subtitle }: RowHeaderPr
         )}
         {/* V17p — Standardized at text-display so every section title
             reads at the same scale; was a mix of text-heading and
-            text-display before. */}
-        <h2 className="font-display text-display">{title}</h2>
+            text-display before.
+            App-shell — `t-section` shrinks phones to the mobile type
+            token; `md:text-display` restores today's 38px at md+ so
+            desktop is untouched (utilities layer beats .t-section). */}
+        <h2 className="t-section font-display md:text-display">{title}</h2>
         {subtitle && (
           <p className="mt-2 text-body-sm text-text-secondary max-w-2xl">
             {subtitle}

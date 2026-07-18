@@ -102,12 +102,14 @@ export default function TeamMessages() {
 
   return (
     <>
-      {/* Floating bubble — bottom-right, thumb reachable on mobile */}
+      {/* Floating bubble — bottom-right, thumb reachable on mobile.
+          App-shell: below lg it floats ABOVE the fixed bottom tab bar
+          (64px row + iOS safe area + 20px gap); lg+ keeps bottom-5. */}
       <button
         type="button"
         onClick={() => setOpen(true)}
         aria-label="Messages from the DropMarket team"
-        className="fixed bottom-5 right-5 z-40 grid h-14 w-14 place-items-center rounded-full transition-transform hover:scale-105"
+        className="fixed bottom-[calc(var(--mobile-tab-bar-h,64px)+env(safe-area-inset-bottom)+20px)] right-5 z-40 grid h-14 w-14 place-items-center rounded-full transition-transform hover:scale-105 lg:bottom-5"
         style={{
           backgroundColor: P.forest,
           boxShadow:

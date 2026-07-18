@@ -4,12 +4,11 @@ import Link from 'next/link'
 import { SmartLink } from '@/components/global/SmartLink'
 import { usePathname, useRouter } from 'next/navigation'
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
-import { Search, User, LogOut, Menu, X, ChevronDown, Settings, Store, Package, MessageSquare, MessagesSquare, PlusCircle, Heart, Wallet, Star, List, Bell, BellDot, LayoutDashboard, Activity, Gauge, Award, Crown, Gem, Sparkles, Shield, ShieldCheck } from 'lucide-react'
+import { Search, User, LogOut, Menu, X, ChevronDown, ChevronLeft, ChevronRight, Settings, Store, Package, MessageSquare, MessagesSquare, PlusCircle, Heart, Wallet, Star, List, Bell, BellDot, LayoutDashboard, Activity, Gauge, Award, Crown, Gem, Sparkles, Shield, ShieldCheck, Coins, UserCircle2, Swords, Zap, Rocket, LifeBuoy } from 'lucide-react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence, useMotionValue, useSpring } from 'framer-motion'
 import * as Popover from '@radix-ui/react-popover'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { useAuth } from '@/hooks/use-auth'
 import { useAuthDialog } from '@/components/auth/AuthDialog'
 import BecomeSellerCta from '@/components/account/BecomeSellerCta'
@@ -31,6 +30,15 @@ const NAV_TABS = [
   { id: 'top-up',  label: 'Top Up',   type: 'top_up' },
   { id: 'boosting', label: 'Boosting', type: 'service' },
 ]
+
+// App-shell — icon per nav tab for the attached mobile menu rows.
+const NAV_TAB_ICONS: Record<string, React.ElementType> = {
+  currency: Coins,
+  accounts: UserCircle2,
+  items: Swords,
+  'top-up': Zap,
+  boosting: Rocket,
+}
 
 // ── Tier visual config ────────────────────────────────────────────────────────
 const TIER_CONFIG: Record<string, { icon: React.ElementType; color: string; bg: string; border: string }> = {
@@ -108,6 +116,25 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
   const router = useRouter()
   const [searchQuery, setSearchQuery] = useState('')
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  // App-shell — which category sub-screen the attached mobile menu is
+  // showing (null = root screen). Drives the two-pane translateX
+  // carousel inside the panel (Eldorado pattern: tap a category → the
+  // content slides left to the full game list, back arrow slides right).
+  const [mobileMenuTab, setMobileMenuTab] = useState<string | null>(null)
+
+  // Homepage hero chips (and future surfaces) deep-open the menu at a
+  // category sub-screen via this event — app-like, no route hop.
+  useEffect(() => {
+    const onOpenCategory = (e: Event) => {
+      const tabId = (e as CustomEvent<string>).detail
+      if (NAV_TABS.some((t) => t.id === tabId)) {
+        setMobileMenuTab(tabId)
+        setMobileMenuOpen(true)
+      }
+    }
+    window.addEventListener('dm:open-category', onOpenCategory)
+    return () => window.removeEventListener('dm:open-category', onOpenCategory)
+  }, [])
 
   // Lock body scroll while the mobile menu is open — otherwise the page
   // scrolls behind the fixed panel and the user loses their place.
@@ -160,6 +187,19 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
   const [notificationsOpen, setNotificationsOpen] = useState(false)
   const [activityOpen, setActivityOpen] = useState(false)
 
+  // The <sm attached sheets dim the page — lock its scroll too (the
+  // desktop popovers at sm+ must NOT lock, hence the media check).
+  useEffect(() => {
+    const anyOpen = notificationsOpen || activityOpen || userMenuOpen
+    if (!anyOpen) return
+    if (!window.matchMedia('(max-width: 639px)').matches) return
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = prev
+    }
+  }, [notificationsOpen, activityOpen, userMenuOpen])
+
   // V18.b — Scroll-snap navbar. At rest the navbar floats as a pill
   // centered in the page. Once the user scrolls past `SNAP_PX` the
   // pill morphs into a solid full-width bar pinned at top-0. Stripe
@@ -193,6 +233,7 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
     setNotificationsOpen(false)
     setActivityOpen(false)
     setMobileMenuOpen(false)
+    setMobileMenuTab(null)
   }, [pathname])
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   // V23 — When a protected-path logout redirects home, we hold the opaque
@@ -583,6 +624,18 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
     return groups
   }, [navCatsData])
 
+  // App-shell — per-game market count (how many active categories a game
+  // has across all types). Shown as the muted sub-count on the mobile
+  // menu's category sub-screen rows.
+  const gameCatCounts = useMemo(() => {
+    const m = new Map<string, number>()
+    navCatsData?.forEach((cat: any) => {
+      const slug = cat.game?.slug
+      if (slug) m.set(slug, (m.get(slug) ?? 0) + 1)
+    })
+    return m
+  }, [navCatsData])
+
   // V50 — Which nav tab owns the CURRENT page? Matched against the
   // same category data that powers the dropdowns: a page at
   // /{gameSlug}/{categorySlug} lights up the tab whose entries include
@@ -673,10 +726,16 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
           values and runs a single spring through every property in
           lockstep, which makes the whole bar morph feel like one
           motion instead of three properties glitching out of sync. */}
+      {/* App-shell — MOBILE BAR (below lg): the floating pill collapses
+          into a full-width, solid, forest-tinted bar pinned at top-0
+          (no margins, no capsule radius). Framer writes the pill morph
+          as inline styles, so the mobile overrides use `max-lg:!…`
+          (!important) utilities to beat them; at lg+ none of these
+          classes apply and the desktop pill/bar morph is untouched. */}
       <motion.nav
         initial={false}
         animate={{ top: scrolled ? 0 : 12 }}
-        className="fixed left-0 right-0 z-50 flex justify-center"
+        className="fixed left-0 right-0 z-50 flex justify-center max-lg:!top-0"
       >
         <motion.div
           initial={false}
@@ -685,7 +744,7 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
             paddingLeft: scrolled ? 0 : 16,
             paddingRight: scrolled ? 0 : 16,
           }}
-          className="w-full"
+          className="w-full max-lg:!max-w-none max-lg:!px-0"
         >
           <motion.div
             ref={navBarRef}
@@ -709,13 +768,46 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
             }}
             className={cn(
               'flex items-center justify-between gap-2 px-3 py-3 backdrop-blur-2xl backdrop-saturate-150 sm:gap-3 sm:px-6',
+              // App-shell mobile bar: 60px tall, square, edge-to-edge,
+              // forest-tinted near-opaque surface + lime-warmed bottom
+              // hairline. !important beats framer's inline pill styles.
+              'max-lg:h-[60px] max-lg:!py-0 max-lg:!rounded-none max-lg:!border-x-0 max-lg:!border-t-0',
+              'max-lg:!border-b max-lg:!border-b-[rgba(163,230,53,0.10)] max-lg:!bg-[rgba(14,22,17,0.96)]',
               scrolled
                 ? 'shadow-[0_1px_0_0_rgba(255,255,255,0.04),0_8px_24px_-12px_rgba(0,0,0,0.7)]'
                 : 'shadow-[0_4px_24px_-12px_rgba(0,0,0,0.5)]',
             )}
           >
-            {/* Logo */}
-            <Link href="/" className="flex shrink-0 items-center gap-2">
+            {/* App-shell — Mobile Menu Button now sits LEFT of the logo
+                below lg ([hamburger][logo+wordmark]…). lg:hidden means the
+                desktop DOM renders nothing here, exactly as before (the
+                hamburger previously lived at the end of the right cluster,
+                also lg:hidden). 44px touch target; visible through lg (not
+                md) so 760-1023px tablets keep the in-menu search. */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-11 w-11 shrink-0 rounded-full text-gray-300 transition-transform duration-[120ms] hover:bg-white/10 hover:text-white active:scale-[0.96] active:brightness-95 lg:hidden"
+              onClick={() => {
+                // Always reopen on the root screen; close the other
+                // attached sheets so only one panel hangs off the bar.
+                setMobileMenuTab(null)
+                setMobileMenuOpen(!mobileMenuOpen)
+                setNotificationsOpen(false)
+                setUserMenuOpen(false)
+                setActivityOpen(false)
+              }}
+            >
+              {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </Button>
+
+            {/* Logo — max-lg:mr-auto packs [hamburger][logo] to the left
+                edge on phones (auto margin absorbs the free space that
+                justify-between would otherwise split). At md-lg the
+                flex-1 category strip absorbs all free space first, and at
+                lg+ the class doesn't apply — desktop layout unchanged.
+                Wordmark now shows at every width (was hidden < sm). */}
+            <Link href="/" className="flex shrink-0 items-center gap-2 max-lg:mr-auto">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src="/brand/logo-mark-lime.png"
@@ -724,7 +816,7 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                 height={32}
                 className="h-8 w-8 shrink-0"
               />
-              <span className="hidden font-bold text-white sm:inline-block">DropMarket</span>
+              <span className="inline-block font-bold text-white">DropMarket</span>
             </Link>
 
             {/* V21/P7.r — Divider hides while search is expanded. */}
@@ -823,6 +915,7 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                         setNotificationsOpen(!notificationsOpen)
                         setActivityOpen(false)
                         setUserMenuOpen(false)
+                        setMobileMenuOpen(false)
                       }}
                     >
                       {unreadNotificationCount > 0 ? (
@@ -841,16 +934,23 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                         under heavy trees and strands the panel half-visible;
                         same fix as the admin header). */}
                     {notificationsOpen && (
-                      /* Mobile (<sm): the 480px panel anchored to the bell
-                         would clip past the LEFT viewport edge, so it becomes
-                         a viewport-pinned sheet under the navbar. sm+ keeps
-                         the anchored desktop popover unchanged. */
-                      <div className="fixed inset-x-3 top-20 sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-[27px] sm:w-[480px] sm:max-w-[92vw] animate-in fade-in-0 zoom-in-95 slide-in-from-top-2 duration-200">
+                      /* App-shell (<sm): ATTACHED sheet — full-width flush
+                         under the 60px bar, square top so the bar's hairline
+                         reads as the seam, rounded bottom, page dimmed by the
+                         scrim below. sm+ keeps the anchored desktop popover
+                         unchanged. */
+                      <>
+                        <div
+                          aria-hidden
+                          onClick={() => setNotificationsOpen(false)}
+                          className="animate-fade-in fixed inset-0 top-[60px] bg-black/60 sm:hidden"
+                        />
+                        <div className="fixed inset-x-0 top-[60px] sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-[27px] sm:w-[480px] sm:max-w-[92vw] animate-in fade-in-0 sm:zoom-in-95 slide-in-from-top-2 duration-200 max-sm:duration-[250ms]">
                           {/* V61 — Marketplace glass panel (was flat black):
                               near-opaque dark surface + top sheen, roomier
                               type and spacing. Capped to the dynamic viewport
                               so short phones scroll the list internally. */}
-                          <div className="relative flex max-h-[calc(100dvh-7rem)] flex-col overflow-hidden rounded-lg border border-[#A3E635]/[0.12] bg-[linear-gradient(180deg,#14241A_0%,#0E1611_100%)] shadow-[0_24px_48px_-12px_rgba(0,0,0,0.85)] p-5">
+                          <div className="relative flex max-h-[calc(100dvh-7rem)] flex-col overflow-hidden rounded-lg border border-[#A3E635]/[0.12] bg-[linear-gradient(180deg,#14241A_0%,#0E1611_100%)] shadow-[0_24px_48px_-12px_rgba(0,0,0,0.85)] p-5 max-sm:rounded-none max-sm:rounded-b-2xl max-sm:border-x-0 max-sm:border-t-0 max-sm:max-h-[calc(100dvh-60px-var(--mobile-tab-bar-h,64px)-env(safe-area-inset-bottom)-16px)]">
                             <span aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-16 bg-[linear-gradient(to_bottom,rgba(163,230,53,0.06),transparent)]" />
                             {/* Header - hairline separator spans the full panel width */}
                             <div className="relative -mx-5 mb-4 flex shrink-0 items-center justify-between border-b border-border-subtle px-5 pb-3.5">
@@ -940,12 +1040,14 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                               View All Notifications
                             </Link>
                           </div>
-                      </div>
+                        </div>
+                      </>
                     )}
                   </div>
 
-                  {/* Messages */}
-                  <Link href="/account/messages">
+                  {/* Messages — desktop only; on phones the mobile bar keeps
+                      just [bell][avatar] (messages live in the menu/tab bar). */}
+                  <Link href="/account/messages" className="hidden lg:block">
                     <Button
                       variant="ghost"
                       size="icon"
@@ -960,8 +1062,8 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                     </Button>
                   </Link>
 
-                  {/* Activity Dropdown */}
-                  <div className="relative" data-dropdown>
+                  {/* Activity Dropdown — desktop only (see Messages note). */}
+                  <div className="relative max-lg:hidden" data-dropdown>
                     <Button
                       variant="ghost"
                       size="icon"
@@ -970,6 +1072,7 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                         setActivityOpen(!activityOpen)
                         setNotificationsOpen(false)
                         setUserMenuOpen(false)
+                        setMobileMenuOpen(false)
                       }}
                     >
                       <Package className="h-[21px] w-[21px]" />
@@ -981,11 +1084,17 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                     </Button>
 
                     {activityOpen && (
-                      /* Mobile (<sm): viewport-pinned sheet (see Notifications
+                      /* App-shell (<sm): ATTACHED sheet (see Notifications
                          above); sm+ keeps the anchored desktop popover. */
-                      <div className="fixed inset-x-3 top-20 sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-[27px] sm:w-[480px] sm:max-w-[92vw] animate-in fade-in-0 zoom-in-95 slide-in-from-top-2 duration-200">
+                      <>
+                        <div
+                          aria-hidden
+                          onClick={() => setActivityOpen(false)}
+                          className="animate-fade-in fixed inset-0 top-[60px] bg-black/60 sm:hidden"
+                        />
+                        <div className="fixed inset-x-0 top-[60px] sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-[27px] sm:w-[480px] sm:max-w-[92vw] animate-in fade-in-0 sm:zoom-in-95 slide-in-from-top-2 duration-200 max-sm:duration-[250ms]">
                           {/* V61 — Same glass panel as Notifications. */}
-                          <div className="relative flex max-h-[calc(100dvh-7rem)] flex-col overflow-hidden rounded-lg border border-[#A3E635]/[0.12] bg-[linear-gradient(180deg,#14241A_0%,#0E1611_100%)] shadow-[0_24px_48px_-12px_rgba(0,0,0,0.85)] p-5">
+                          <div className="relative flex max-h-[calc(100dvh-7rem)] flex-col overflow-hidden rounded-lg border border-[#A3E635]/[0.12] bg-[linear-gradient(180deg,#14241A_0%,#0E1611_100%)] shadow-[0_24px_48px_-12px_rgba(0,0,0,0.85)] p-5 max-sm:rounded-none max-sm:rounded-b-2xl max-sm:border-x-0 max-sm:border-t-0 max-sm:max-h-[calc(100dvh-60px-var(--mobile-tab-bar-h,64px)-env(safe-area-inset-bottom)-16px)]">
                             <span aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-16 bg-[linear-gradient(to_bottom,rgba(163,230,53,0.06),transparent)]" />
                             {/* Header - hairline separator spans the full panel width */}
                             <div className="relative -mx-5 mb-4 flex shrink-0 items-center justify-between border-b border-border-subtle px-5 pb-3.5">
@@ -1046,7 +1155,8 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                               </div>
                             )}
                           </div>
-                      </div>
+                        </div>
+                      </>
                     )}
                   </div>
                 </>
@@ -1055,7 +1165,7 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
               {/* V21/P7.ac — Divider + spacing sets the avatar apart from
                   the icon cluster so it doesn't crowd the activity icon. */}
               {user && (
-                <div className="ml-1 hidden h-6 w-px bg-white/15 sm:block" />
+                <div className="ml-1 hidden h-6 w-px bg-white/15 lg:block" />
               )}
 
               {/* User/Auth */}
@@ -1075,6 +1185,7 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                       setUserMenuOpen(!userMenuOpen)
                       setNotificationsOpen(false)
                       setActivityOpen(false)
+                      setMobileMenuOpen(false)
                     }}
                   >
                     <img
@@ -1085,18 +1196,24 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                   </Button>
 
                   {userMenuOpen && (
-                    /* Mobile (<sm): the 92vw panel anchored to the avatar
-                       spilled past the LEFT viewport edge, so it becomes a
-                       viewport-pinned sheet under the navbar. sm+ keeps the
-                       anchored desktop popover unchanged. */
-                    <div className="fixed inset-x-3 top-20 sm:absolute sm:inset-x-auto sm:-right-6 sm:top-full sm:mt-[25px] sm:w-[360px] sm:max-w-[92vw] animate-in fade-in-0 zoom-in-95 slide-in-from-top-2 duration-200">
+                    /* App-shell (<sm): ATTACHED sheet — full-width flush under
+                       the 60px bar on the shared forest surface, page dimmed
+                       behind. sm+ keeps the anchored desktop popover
+                       unchanged. */
+                    <>
+                      <div
+                        aria-hidden
+                        onClick={() => setUserMenuOpen(false)}
+                        className="animate-fade-in fixed inset-0 top-[60px] bg-black/60 sm:hidden"
+                      />
+                      <div className="fixed inset-x-0 top-[60px] sm:absolute sm:inset-x-auto sm:-right-6 sm:top-full sm:mt-[25px] sm:w-[360px] sm:max-w-[92vw] animate-in fade-in-0 sm:zoom-in-95 slide-in-from-top-2 duration-200 max-sm:duration-[250ms]">
                         {/* V61 — Marketplace glass panel: near-opaque dark
                             surface + top sheen, wider (360px) with roomier
                             rows so the menu reads as a proper panel, not a
                             cramped context menu. dvh (not vh) cap so the
                             bottom rows never hide behind iOS Safari's
                             toolbar. */}
-                        <div className="relative overflow-hidden rounded-lg border border-[#A3E635]/[0.12] bg-[linear-gradient(180deg,#14241A_0%,#0E1611_100%)] p-2 shadow-[0_24px_48px_-12px_rgba(0,0,0,0.85)] max-h-[calc(100dvh-110px)] overflow-y-auto overscroll-contain">
+                        <div className="relative overflow-hidden rounded-lg border border-[#A3E635]/[0.12] bg-[linear-gradient(180deg,#14241A_0%,#0E1611_100%)] p-2 shadow-[0_24px_48px_-12px_rgba(0,0,0,0.85)] max-h-[calc(100dvh-110px)] overflow-y-auto overscroll-contain max-sm:rounded-none max-sm:rounded-b-2xl max-sm:border-x-0 max-sm:border-t-0 max-sm:max-h-[calc(100dvh-60px-var(--mobile-tab-bar-h,64px)-env(safe-area-inset-bottom)-16px)]">
                           <span aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-16 bg-[linear-gradient(to_bottom,rgba(163,230,53,0.06),transparent)]" />
                           {/* User Info card */}
                           <div className="relative border-b border-border-subtle p-2 pb-2">
@@ -1520,7 +1637,8 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                             </button>
                           </div>
                         </div>
-                    </div>
+                      </div>
+                    </>
                   )}
                 </div>
               ) : (
@@ -1529,12 +1647,15 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                 // smooth in/out transition; URL stays at the current
                 // page so the user never loses their browsing context.
                 <div className="flex items-center gap-2">
+                  {/* App-shell — "Log in" is desktop-only; phones keep a
+                      single Sign up CTA next to the bell per the mobile
+                      bar spec (login reachable from the auth dialog). */}
                   <Button
                     type="button"
                     variant="ghost"
                     size="sm"
                     onClick={() => authDialog.open('login')}
-                    className="h-9 rounded-full text-gray-300 hover:bg-white/10 hover:text-white"
+                    className="hidden h-9 rounded-full text-gray-300 hover:bg-white/10 hover:text-white lg:inline-flex"
                   >
                     Log in
                   </Button>
@@ -1549,114 +1670,227 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                 </div>
               )}
 
-              {/* Mobile Menu Button — 44px touch target (primary nav control
-                  on phones). Visible through lg (not md) so 768-1023px
-                  tablets keep the in-menu search: GlobalSearch is lg-only,
-                  and without this the md range had NO search control at all. */}
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-11 w-11 rounded-full text-gray-300 hover:bg-white/10 hover:text-white lg:hidden"
-                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              >
-                {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-              </Button>
+              {/* App-shell — Mobile Menu Button moved to the far LEFT of
+                  the bar (before the logo, above) for the
+                  [hamburger][logo]……[bell][avatar] mobile order. */}
             </div>
           </motion.div>
         </motion.div>
       </motion.nav>
 
-      {/* Mobile Menu */}
-      <AnimatePresence>
-        {mobileMenuOpen && (
+      {/* App-shell — ATTACHED mobile menu (below lg). Full-width forest
+          panel hanging flush off the 60px bar (the bar's lime hairline is
+          the seam), CSS slide-down entrance (framer entrances are banned —
+          rAF stalls freeze them). Inside, a two-pane translateX carousel:
+          root screen (search + category rows + links) slides LEFT to a
+          per-category game list (Eldorado pattern); back slides right.
+          Page behind dims via the scrim; body scroll is locked by the
+          mobileMenuOpen effect above. */}
+      {mobileMenuOpen && (
+        <>
+          {/* Scrim — dims the page under the panel; tap closes. */}
           <div
-            // CSS entrance, not framer: rAF can stall in throttled contexts
-            // and freeze the panel mid-fade (translucent over the page).
-            // max-h + internal scroll: the menu is FIXED so it never scrolls
-            // with the page — without this cap the later categories and the
-            // auth buttons were unreachable on phones. lg:hidden matches the
-            // hamburger so 768-1023px tablets keep the in-menu search.
-            className="animate-fade-in fixed left-[2.5vw] right-[2.5vw] top-20 z-40 max-h-[calc(100dvh-6rem)] overflow-y-auto overscroll-contain rounded-2xl border border-white/10 bg-black p-4 shadow-2xl backdrop-blur-xl sm:left-[5vw] sm:right-[5vw] sm:p-6 lg:hidden"
-          >
-            {/* Mobile Search */}
-            <form onSubmit={handleSearch} className="mb-6">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-                <Input
-                  type="text"
-                  placeholder="Search DropMarket"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="rounded-full border-white/10 bg-white/5 pl-10 text-white placeholder:text-gray-500"
-                />
-              </div>
-            </form>
+            aria-hidden
+            onClick={() => setMobileMenuOpen(false)}
+            className="animate-fade-in fixed inset-0 top-[60px] z-30 bg-black/60 lg:hidden"
+          />
+          <div className="animate-menu-down fixed inset-x-0 top-[60px] z-40 lg:hidden">
+            <div className="relative overflow-hidden rounded-b-2xl border-b border-[rgba(163,230,53,0.14)] bg-[linear-gradient(180deg,#14241A_0%,#0E1611_100%)] shadow-[0_24px_48px_-12px_rgba(0,0,0,0.85)]">
+              {/* Faint lime-warmed top sheen — same recipe as the bell/
+                  account panels so every attached surface reads as one
+                  family. */}
+              <span
+                aria-hidden
+                className="pointer-events-none absolute inset-x-0 top-0 z-10 h-12 bg-[linear-gradient(to_bottom,rgba(163,230,53,0.06),transparent)]"
+              />
 
-            {/* Categories */}
-            <div className="space-y-2">
-              <h3 className="mb-3 text-xs font-semibold uppercase text-gray-400">Browse</h3>
-              {NAV_TABS.map((tab) => {
-                const entries = gamesByType[tab.type] || []
-                return (
-                  <div key={tab.id}>
-                    <p className="px-4 pt-2 text-xs font-semibold text-gray-500 uppercase">
-                      {tab.label}
-                    </p>
-                    {entries.slice(0, 4).map(({ game, categorySlug }) => (
-                      <Link
-                        key={game.slug}
-                        href={`/${game.slug}/${categorySlug}`}
-                        className="flex items-center gap-2.5 rounded-lg px-4 py-2 text-sm text-gray-300 transition-colors hover:bg-white/10 hover:text-white"
-                        onClick={() => setMobileMenuOpen(false)}
+              {/* SCREEN 1 — root. In-flow, so it sets the panel height;
+                  slides fully off to the left when a category is open. */}
+              <div
+                aria-hidden={mobileMenuTab !== null}
+                className={cn(
+                  'max-h-[calc(100dvh-60px-var(--mobile-tab-bar-h,64px)-env(safe-area-inset-bottom)-16px)] overflow-y-auto overscroll-contain p-4 pb-5 transition-transform duration-[250ms] ease-gv [-webkit-overflow-scrolling:touch]',
+                  mobileMenuTab !== null && 'pointer-events-none -translate-x-full',
+                )}
+              >
+                {/* Search */}
+                <form onSubmit={handleSearch} className="mb-4">
+                  <div className="relative">
+                    <Search className="pointer-events-none absolute left-3.5 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-gray-500" />
+                    {/* text-base — 16px stops iOS Safari's focus zoom. */}
+                    <input
+                      type="text"
+                      placeholder="Search DropMarket"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="h-12 w-full rounded-xl border border-white/10 bg-white/[0.05] pl-11 pr-4 text-base text-white outline-none transition-colors placeholder:text-gray-500 focus:border-lime-tint-border focus:bg-white/[0.07]"
+                    />
+                  </div>
+                </form>
+
+                {/* Category rows → sub-screen */}
+                <div className="mb-2 px-1 text-[11px] font-bold uppercase tracking-[0.14em] text-gray-400">
+                  Browse Marketplace
+                </div>
+                <div className="space-y-1.5">
+                  {NAV_TABS.map((tab) => {
+                    const entries = gamesByType[tab.type] || []
+                    const TabIcon = NAV_TAB_ICONS[tab.id] ?? Coins
+                    return (
+                      <button
+                        key={tab.id}
+                        type="button"
+                        onClick={() => setMobileMenuTab(tab.id)}
+                        className="flex h-[52px] w-full items-center gap-3 rounded-xl border border-white/[0.06] bg-white/[0.03] px-3 text-left transition-all duration-[120ms] hover:bg-white/[0.06] active:scale-[0.98] active:brightness-95"
                       >
-                        {game.image_url && game.image_url !== '' ? (
-                          <img src={game.image_url} alt={game.name} className="h-5 w-5 rounded object-contain" />
-                        ) : (
-                          <div className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded bg-white/10 text-[9px] font-bold text-gray-400">
-                            {game.name.slice(0, 2).toUpperCase()}
-                          </div>
+                        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-[#A3E635]/[0.14] bg-[#1B5E3A]/[0.16]">
+                          <TabIcon className="h-[18px] w-[18px] text-lime-text" />
+                        </span>
+                        <span className="flex-1 truncate text-[14.5px] font-semibold text-text-primary">
+                          {tab.label}
+                        </span>
+                        {entries.length > 0 && (
+                          <span className="text-[12px] tabular-nums text-text-tertiary">
+                            {entries.length}
+                          </span>
                         )}
-                        {game.name}
-                      </Link>
-                    ))}
+                        <ChevronRight className="h-4 w-4 shrink-0 text-gray-500" />
+                      </button>
+                    )
+                  })}
+                </div>
+
+                {/* Wallet / Support */}
+                <div className="mt-4 space-y-0.5 border-t border-border-subtle pt-3">
+                  <Link
+                    href="/account/wallet"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex h-11 items-center gap-3 rounded-xl px-3 text-[14px] font-medium text-text-secondary transition-all duration-[120ms] hover:bg-white/[0.06] hover:text-text-primary active:scale-[0.98] active:brightness-95"
+                  >
+                    <Wallet className="h-[18px] w-[18px] shrink-0 text-gray-400" />
+                    Wallet
+                  </Link>
+                  <Link
+                    href="/support"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex h-11 items-center gap-3 rounded-xl px-3 text-[14px] font-medium text-text-secondary transition-all duration-[120ms] hover:bg-white/[0.06] hover:text-text-primary active:scale-[0.98] active:brightness-95"
+                  >
+                    <LifeBuoy className="h-[18px] w-[18px] shrink-0 text-gray-400" />
+                    Support
+                  </Link>
+                </div>
+
+                {/* Auth — deep-forest primary per the house recipe. */}
+                {!loading && !user && (
+                  <div className="mt-4 space-y-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMobileMenuOpen(false)
+                        authDialog.open('signup')
+                      }}
+                      className="flex h-12 w-full items-center justify-center rounded-xl bg-[#14432A] text-[15px] font-bold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.16),inset_0_-2px_0_rgba(0,0,0,0.28),0_10px_20px_-12px_rgba(0,0,0,0.6)] transition-all duration-[120ms] hover:bg-[#1B5E3A] active:scale-[0.98] active:brightness-95"
+                    >
+                      Sign Up
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMobileMenuOpen(false)
+                        authDialog.open('login')
+                      }}
+                      className="flex h-12 w-full items-center justify-center rounded-xl border border-white/[0.12] bg-white/[0.04] text-[15px] font-semibold text-text-primary transition-all duration-[120ms] hover:bg-white/[0.08] active:scale-[0.98] active:brightness-95"
+                    >
+                      Log In
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* SCREEN 2 — category game list. Absolute overlay sized by
+                  the root screen; waits offscreen right and slides in. */}
+              {(() => {
+                const tab = NAV_TABS.find((t) => t.id === mobileMenuTab)
+                const entries = tab ? gamesByType[tab.type] || [] : []
+                return (
+                  <div
+                    aria-hidden={mobileMenuTab === null}
+                    className={cn(
+                      'absolute inset-0 flex flex-col transition-transform duration-[250ms] ease-gv',
+                      mobileMenuTab === null && 'pointer-events-none translate-x-full',
+                    )}
+                  >
+                    {/* Sticky header — back chevron + title + count */}
+                    <div className="flex shrink-0 items-center gap-1.5 border-b border-border-subtle px-2 py-2">
+                      <button
+                        type="button"
+                        onClick={() => setMobileMenuTab(null)}
+                        aria-label="Back To Menu"
+                        className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-gray-300 transition-all duration-[120ms] hover:bg-white/10 hover:text-white active:scale-[0.96] active:brightness-95"
+                      >
+                        <ChevronLeft className="h-5 w-5" />
+                      </button>
+                      <span className="truncate text-[15px] font-bold text-text-primary">
+                        {tab?.label ?? ''}
+                      </span>
+                      <span className="text-[12.5px] tabular-nums text-text-tertiary">
+                        {entries.length} {entries.length === 1 ? 'Game' : 'Games'}
+                      </span>
+                    </div>
+
+                    {/* All games — 48px rows, momentum scroll */}
+                    <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-2 [-webkit-overflow-scrolling:touch]">
+                      {entries.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-10 text-center">
+                          <Search className="mb-2 h-5 w-5 text-gray-600" />
+                          <p className="text-[13px] text-gray-500">No games here yet</p>
+                        </div>
+                      ) : (
+                        entries.map(({ game, categorySlug }) => (
+                          <Link
+                            key={game.slug}
+                            href={`/${game.slug}/${categorySlug}`}
+                            onClick={() => setMobileMenuOpen(false)}
+                            className="flex h-12 items-center gap-3 rounded-lg px-2.5 transition-all duration-[120ms] hover:bg-white/[0.06] active:scale-[0.98] active:brightness-95"
+                          >
+                            {game.image_url && game.image_url !== '' ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img
+                                src={game.image_url}
+                                alt=""
+                                className="h-[26px] w-[26px] shrink-0 rounded-md object-contain"
+                              />
+                            ) : (
+                              <span className="grid h-[26px] w-[26px] shrink-0 place-items-center rounded-md bg-white/10 text-[9px] font-bold text-gray-400">
+                                {game.name.slice(0, 2).toUpperCase()}
+                              </span>
+                            )}
+                            <span className="flex-1 truncate text-[14px] font-semibold text-gray-200">
+                              {game.name}
+                            </span>
+                            {(gameCatCounts.get(game.slug) ?? 0) > 1 && (
+                              <span className="text-[12px] tabular-nums text-text-tertiary">
+                                {gameCatCounts.get(game.slug)}
+                              </span>
+                            )}
+                            <ChevronRight className="h-4 w-4 shrink-0 text-gray-600" />
+                          </Link>
+                        ))
+                      )}
+                    </div>
                   </div>
                 )
-              })}
+              })()}
             </div>
-
-            {/* Mobile Auth Buttons — V17: open AuthDialog modal */}
-            {!loading && !user && (
-              <div className="mt-6 space-y-2">
-                <Button
-                  variant="outline"
-                  className="w-full rounded-full border-white/20 text-white hover:bg-white/10"
-                  onClick={() => {
-                    setMobileMenuOpen(false)
-                    authDialog.open('login')
-                  }}
-                >
-                  Log in
-                </Button>
-                <Button
-                  className="w-full rounded-full bg-white text-black hover:bg-white/90"
-                  onClick={() => {
-                    setMobileMenuOpen(false)
-                    authDialog.open('signup')
-                  }}
-                >
-                  Sign up
-                </Button>
-              </div>
-            )}
           </div>
-        )}
-      </AnimatePresence>
+        </>
+      )}
 
-      {/* Spacer — sized to the navbar's real extent (top 12px + ~66px bar =
-          ~78px at rest). The old `h-16 md:h-18` under-measured (and `h-18`
-          isn't a real Tailwind utility), letting the fixed bar overlap the
-          first ~14px of page content. */}
-      <div className="h-20 lg:h-[84px]" />
+      {/* Spacer — sized to the navbar's real extent. Below lg the app-shell
+          mobile bar is a solid 60px strip at top-0, so the spacer matches
+          (h-[60px]). lg+ keeps the pill math (top 12px + ~66px bar ≈ 78px
+          at rest → 84px spacer), byte-identical to before. */}
+      <div className="h-[60px] lg:h-[84px]" />
     </>
   )
 }

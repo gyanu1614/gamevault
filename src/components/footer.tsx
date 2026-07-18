@@ -78,10 +78,107 @@ const SOCIALS: Array<{ name: string; href: string; path: string }> = [
   },
 ]
 
+/**
+ * Mobile footer (below lg) — 2-column link grid, then centered brand,
+ * then a monochrome payment wordmark row. Desktop layout untouched at
+ * lg+ (the original centered stack gets `hidden lg:flex`).
+ */
+const MOBILE_LINK_GROUPS: Array<{ title: string; links: Array<{ name: string; href: string }> }> = [
+  { title: 'Marketplace', links: NAV_LINKS },
+  ...DOC_GROUPS,
+]
+
+const PAYMENT_ROW: Array<{ key: string; node: React.ReactNode }> = [
+  { key: 'visa', node: <span className="text-[13px] font-black italic tracking-wider">VISA</span> },
+  { key: 'mastercard', node: <span className="text-[12px] font-medium lowercase tracking-tight">mastercard</span> },
+  { key: 'applepay', node: <span className="text-[12.5px] font-semibold tracking-tight">&#63743; Pay</span> },
+  { key: 'gpay', node: <span className="text-[12.5px] font-semibold tracking-tight"><span className="font-bold">G</span> Pay</span> },
+  { key: 'btc', node: <span className="inline-flex items-baseline gap-0.5 text-[12.5px] font-bold lowercase"><span aria-hidden>₿</span>bitcoin</span> },
+  { key: 'klarna', node: <span className="text-[12.5px] font-black tracking-tight">Klarna.</span> },
+]
+
+function MobileFooter() {
+  return (
+    <div className="lg:hidden px-5 py-10">
+      {/* 2-column link grid — full compliance pack stays linked. */}
+      <div className="grid grid-cols-2 gap-x-6 gap-y-8">
+        {MOBILE_LINK_GROUPS.map((group) => (
+          <div key={group.title}>
+            <h3 className="t-eyebrow text-text-tertiary">{group.title}</h3>
+            <ul className="mt-2.5">
+              {group.links.map((link) => (
+                <li key={link.href}>
+                  <Link
+                    href={link.href}
+                    className="inline-flex min-h-[36px] items-center text-[13px] text-text-secondary transition-colors active:brightness-95 hover:text-white"
+                  >
+                    {link.name}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
+
+      {/* Centered brand */}
+      <div className="mt-10 flex flex-col items-center gap-4 border-t border-white/[0.06] pt-8 text-center">
+        <Link href="/" className="flex items-center gap-2.5">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/brand/logo-mark-lime.png"
+            alt="DropMarket"
+            width={32}
+            height={32}
+            className="h-8 w-8 object-contain"
+          />
+          <span className="text-lg font-bold tracking-tight text-white">
+            Drop<span className="text-lime-text">Market</span>
+          </span>
+        </Link>
+
+        <div className="flex items-center gap-2">
+          {SOCIALS.map((social) => (
+            <a
+              key={social.name}
+              href={social.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={social.name}
+              className="grid h-9 w-9 place-items-center rounded-full border border-white/10 text-text-secondary transition-colors hover:border-white/25 hover:text-white"
+            >
+              <svg viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4" aria-hidden>
+                <path d={social.path} />
+              </svg>
+            </a>
+          ))}
+        </div>
+
+        {/* Payment row — monochrome wordmarks, no licensed art. */}
+        <div
+          aria-label="Accepted payment methods"
+          className="mt-1 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-text-tertiary"
+        >
+          {PAYMENT_ROW.map((m) => (
+            <span key={m.key} className="select-none whitespace-nowrap opacity-80">
+              {m.node}
+            </span>
+          ))}
+        </div>
+
+        <p className="text-xs text-text-tertiary">
+          © {new Date().getFullYear()} DropMarket Ltd. All rights reserved.
+        </p>
+      </div>
+    </div>
+  )
+}
+
 export function Footer() {
   return (
     <footer className="border-t border-white/[0.08] bg-[#0a0a0f]">
-      <div className="mx-auto flex max-w-4xl flex-col items-center gap-7 px-6 py-12 text-center">
+      <MobileFooter />
+      <div className="mx-auto hidden max-w-4xl flex-col items-center gap-7 px-6 py-12 text-center lg:flex">
         {/* Brand */}
         <Link href="/" className="flex items-center gap-2.5">
           {/* eslint-disable-next-line @next/next/no-img-element */}
