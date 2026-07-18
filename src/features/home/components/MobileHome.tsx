@@ -28,6 +28,8 @@ import {
   Zap,
   Check,
   ChevronRight,
+  ShieldCheck,
+  Headset,
 } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
@@ -452,28 +454,45 @@ const TRUST_ROWS = [
   },
 ] as const
 
+/* Compact ports of the desktop WhyCards: grey glass, giant ghost icon
+   watermark, the 3D trust art with its tone glow — the look the user
+   asked to keep, at 2-up phone size. */
+const TRUST_CARDS = [
+  { claim: 'SafeDrop On Every Order', proof: 'Sellers are paid only after you confirm delivery.', img: '/icons/trust/money-back.png', Ghost: ShieldCheck, glow: 'rgba(198,255,61,0.28)' },
+  { claim: 'Sellers Earn Their Spot', proof: 'ID checks, payment verification and live ratings.', img: '/icons/safedrop-emblem.png', Ghost: ShieldCheck, glow: 'rgba(74,222,128,0.30)' },
+  { claim: "Fees That Don't Sting", proof: 'Sellers pay 5\u201310%, not the 17\u201326% others skim.', img: '/how-it-works/step-2.png', Ghost: Coins, glow: 'rgba(251,191,36,0.28)' },
+  { claim: 'Humans, Around The Clock', proof: 'Support and dispute resolution never close.', img: '/icons/trust/support.png', Ghost: Headset, glow: 'rgba(96,165,250,0.32)' },
+] as const
+
 export function MobileTrustRows() {
   return (
     <div className="grid grid-cols-2 gap-2.5">
-      {TRUST_ROWS.map(({ claim, proof }, i) => (
-        /* Compact card with a traveling border light — the 1px-padded
-           wrapper clips a spinning conic highlight (CSS only). */
-        <div key={claim} className="relative overflow-hidden rounded-xl p-px">
+      {TRUST_CARDS.map(({ claim, proof, img, Ghost, glow }) => (
+        <div
+          key={claim}
+          className="relative overflow-hidden rounded-xl border border-border-default bg-[rgba(20,20,27,0.56)] p-3.5 backdrop-blur-md"
+        >
+          {/* Top sheen */}
           <span
             aria-hidden
-            className="dm-beam absolute inset-[-150%] bg-[conic-gradient(from_0deg,transparent_0deg,rgba(163,230,53,0.5)_26deg,transparent_70deg)]"
-            style={{ animationDelay: `${i * 2}s` }}
+            className="pointer-events-none absolute inset-x-0 top-0 h-1/2 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.05),transparent)]"
           />
-          <div className="relative flex h-full flex-col rounded-[11px] bg-[linear-gradient(180deg,#131A14,#0C110D)] p-3.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
-            <span
-              aria-hidden
-              className="grid h-8 w-8 place-items-center rounded-lg border border-[rgba(163,230,53,0.16)] bg-[rgba(163,230,53,0.08)]"
-            >
-              <Check className="h-4 w-4 text-lime-text" strokeWidth={3} />
-            </span>
-            <span className="t-card mt-2.5 block text-text-primary">{claim}</span>
-            <span className="t-cap mt-1 block leading-snug text-text-tertiary">{proof}</span>
-          </div>
+          {/* Ghost icon watermark, corner-anchored like desktop */}
+          <Ghost
+            aria-hidden
+            className="pointer-events-none absolute -bottom-4 -right-3 h-20 w-20 rotate-12 text-white opacity-[0.05]"
+          />
+          {/* 3D trust art with its tone glow */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={img}
+            alt=""
+            aria-hidden
+            style={{ ['--icon-glow' as string]: glow } as React.CSSProperties}
+            className="relative h-10 w-10 object-contain [filter:drop-shadow(0_6px_8px_rgba(0,0,0,0.55))_drop-shadow(0_0_12px_var(--icon-glow))]"
+          />
+          <span className="t-card relative mt-2.5 block text-text-primary">{claim}</span>
+          <span className="t-cap relative mt-1 block leading-snug text-text-secondary">{proof}</span>
         </div>
       ))}
     </div>
