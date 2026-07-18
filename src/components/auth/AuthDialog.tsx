@@ -421,43 +421,6 @@ function AuthDialog({ open, onOpenChange, mode, onModeChange, redirectRef }: Aut
                 {/* Right — hero image panel (desktop only) */}
                 <HeroPanel mode={mode} />
 
-                {/* Brand lockup riding the ivory/photo seam (md+): each
-                    half colored for the pane behind it — ink over paper,
-                    white over the photo. Centered elements put the 50%
-                    split exactly on the seam. */}
-                <div
-                  aria-hidden
-                  className="pointer-events-none absolute left-1/2 top-9 z-30 hidden -translate-x-1/2 flex-col items-center gap-2 md:flex"
-                >
-                  {/* Forest chip reads on BOTH grounds; the split-color
-                      treatment lives on the wordmark below. */}
-                  <div
-                    className="grid h-12 w-12 place-items-center rounded-2xl"
-                    style={{
-                      backgroundColor: PALETTE.forest,
-                      boxShadow:
-                        'inset 0 1px 0 rgba(255,255,255,0.18), inset 0 -2px 0 rgba(0,0,0,0.25), 0 10px 24px -10px rgba(15,51,32,0.6)',
-                    }}
-                  >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src="/brand/logo-mark-white.png"
-                      alt=""
-                      className="h-7 w-7 object-contain"
-                    />
-                  </div>
-                  <span
-                    className="text-[20px] font-bold tracking-tight"
-                    style={{
-                      backgroundImage: 'linear-gradient(to right, #14432A 50%, #FFFFFF 50%)',
-                      WebkitBackgroundClip: 'text',
-                      backgroundClip: 'text',
-                      color: 'transparent',
-                    }}
-                  >
-                    DropMarket
-                  </span>
-                </div>
               </div>
               </Dialog.Content>
             </div>
@@ -509,8 +472,19 @@ function HeroPanel({ mode }: { mode: AuthMode }) {
 
       {/* Content */}
       <div className="relative z-10 flex h-full flex-col justify-between p-10">
-        {/* Top spacer — branding moved to the split-color seam lockup. */}
-        <div aria-hidden className="h-6" />
+        {/* Top — white brand lockup, centered. Plain mark + wordmark
+            (no chip); the thin top scrim keeps it readable on any art. */}
+        <div className="flex items-center justify-center gap-2.5">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/brand/logo-mark-white.png"
+            alt="DropMarket"
+            width={32}
+            height={32}
+            className="h-8 w-8 shrink-0 object-contain"
+          />
+          <span className="text-[22px] font-bold tracking-tight text-white">DropMarket</span>
+        </div>
 
         {/* Middle — tagline */}
         <div className="space-y-4">
