@@ -267,16 +267,19 @@ const HERO_CHIPS = [
 
 export function MobileHero() {
   return (
-    <section className="relative z-10 px-5 pb-2 pt-7">
-      <h1 className="t-hero text-text-primary">
+    <section className="relative z-10 px-5 pb-2 pt-8 text-center">
+      {/* Hero title — centered, with a restrained 3D edge: a crisp 2px
+          under-shadow (emboss) + soft depth falloff. The gradient line
+          gets the same lift via drop-shadow (text-shadow would bleed
+          through transparent gradient glyphs). */}
+      <h1 className="t-hero text-text-primary [text-shadow:0_2px_0_rgba(0,0,0,0.5),0_8px_24px_rgba(0,0,0,0.6)]">
         Game More.
         <br />
-        {/* Forest → lime-whisper sweep on the second line only. */}
-        <span className="bg-[linear-gradient(90deg,#3E9B63,#A3E635)] bg-clip-text text-transparent">
+        <span className="bg-[linear-gradient(90deg,#3E9B63,#A3E635)] bg-clip-text text-transparent drop-shadow-[0_2px_0_rgba(0,0,0,0.45)] [filter:drop-shadow(0_2px_0_rgba(0,0,0,0.45))_drop-shadow(0_8px_20px_rgba(0,0,0,0.5))]">
           Grind Less.
         </span>
       </h1>
-      <p className="t-body mt-2.5 max-w-[34ch] text-text-secondary">
+      <p className="t-body mx-auto mt-3 max-w-[32ch] text-text-secondary [text-shadow:0_2px_10px_rgba(0,0,0,0.7)]">
         Accounts, currency, items and boosts — every order covered by SafeDrop
         Buyer Protection.
       </p>
