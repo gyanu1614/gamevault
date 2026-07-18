@@ -63,7 +63,7 @@ const PALETTE = {
 /* Shared light-world class recipes (all literal for Tailwind JIT). */
 const inputCls =
   // text-base below sm keeps iOS from zooming the page on focus (16px rule).
-  'h-12 rounded-xl border-[#E4E5DE] bg-white px-4 text-base text-[#1A1D19] placeholder:text-[#5B6157]/55 transition-[border-color,box-shadow] duration-150 focus-visible:border-[#1B5E3A] focus-visible:ring-2 focus-visible:ring-[#1B5E3A]/[0.18] focus-visible:ring-offset-0 sm:text-sm'
+  'h-11 rounded-xl border-[#E4E5DE] bg-white px-4 text-base text-[#1A1D19] placeholder:text-[#5B6157]/55 transition-[border-color,box-shadow] duration-150 focus-visible:border-[#1B5E3A] focus-visible:ring-2 focus-visible:ring-[#1B5E3A]/[0.18] focus-visible:ring-offset-0 sm:text-sm'
 const labelCls = 'text-[13px] font-medium text-[#1A1D19]'
 const eyebrowCls = 'text-[11.5px] font-semibold uppercase tracking-[0.14em] text-[#1B5E3A]'
 const headingCls = 'text-[26px] font-bold leading-tight tracking-tight text-[#1A1D19]'
@@ -383,7 +383,7 @@ function AuthDialog({ open, onOpenChange, mode, onModeChange, redirectRef }: Aut
                     {pendingVerifyEmail ? (
                       <div
                         key="verify-email"
-                        className="flex min-h-full flex-col px-6 py-10 sm:px-8 sm:py-12 md:px-10"
+                        className="flex min-h-full flex-col px-6 py-8 sm:px-8 sm:py-9 md:px-10"
                       >
                         <VerifyEmailView
                           email={pendingVerifyEmail}
@@ -396,7 +396,7 @@ function AuthDialog({ open, onOpenChange, mode, onModeChange, redirectRef }: Aut
                     ) : mode === 'login' ? (
                       <div
                         key="login"
-                        className="flex min-h-full flex-col px-6 py-10 sm:px-8 sm:py-12 md:px-10"
+                        className="flex min-h-full flex-col px-6 py-8 sm:px-8 sm:py-9 md:px-10"
                       >
                         <LoginForm
                           onSuccess={handleAuthSuccess}
@@ -406,7 +406,7 @@ function AuthDialog({ open, onOpenChange, mode, onModeChange, redirectRef }: Aut
                     ) : (
                       <div
                         key="signup"
-                        className="flex min-h-full flex-col px-6 py-10 sm:px-8 sm:py-12 md:px-10"
+                        className="flex min-h-full flex-col px-6 py-8 sm:px-8 sm:py-9 md:px-10"
                       >
                         <SignupForm
                           onSuccess={handleAuthSuccess}
@@ -496,7 +496,7 @@ function HeroPanel({ mode }: { mode: AuthMode }) {
               exit={{ opacity: 0, y: -8 }}
               transition={{ duration: 0.2 }}
             >
-              <h2 className="text-[30px] font-black leading-[1.08] tracking-tight text-white">
+              <h2 className="text-[35px] font-black leading-[1.08] tracking-tight text-white">
                 {mode === 'login' ? (
                   <>
                     Welcome Back.<br />
@@ -606,13 +606,13 @@ function LoginForm({
   }
 
   return (
-    <div className="mx-auto my-auto w-full max-w-[400px] space-y-5">
+    <div className="mx-auto my-auto w-full max-w-[400px] space-y-4">
       <header className="auth-reveal space-y-1.5">
         <p className={eyebrowCls}>Sign In</p>
         <h2 className={headingCls}>Continue To Your Account</h2>
       </header>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-3.5">
         <div className="auth-reveal auth-reveal-1 space-y-1.5">
           <Label htmlFor="auth-email" className={labelCls}>Email</Label>
           <Input
@@ -893,13 +893,13 @@ function SignupForm({
   }
 
   return (
-    <div className="mx-auto my-auto w-full max-w-[400px] space-y-5">
+    <div className="mx-auto my-auto w-full max-w-[400px] space-y-4">
       <header className="auth-reveal space-y-1.5">
-        <p className={eyebrowCls}>Create Account</p>
+        <p className={eyebrowCls}>Sign Up</p>
         <h2 className={headingCls}>Create Your Account</h2>
       </header>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-3.5">
         {/* Industry-standard order: name → username → email → password.
             First/Last are required; the avatar moved to a compact
             optional row above the CTA. */}
@@ -940,7 +940,8 @@ function SignupForm({
             gamer tag at signup (Eldorado-style) and it becomes the name
             shown on orders, reviews and the shop. The dice button rolls
             a suggestion client-side; the availability check still runs. */}
-        <div className="auth-reveal auth-reveal-1 space-y-1.5">
+        <div className="auth-reveal auth-reveal-1 grid gap-3 sm:grid-cols-2">
+          <div className="space-y-1.5">
           <Label htmlFor="auth-username" className={labelCls}>
             Display Username <span className="font-normal text-[#5B6157]">(optional)</span>
           </Label>
@@ -949,7 +950,7 @@ function SignupForm({
               id="auth-username"
               type="text"
               autoComplete="username"
-              placeholder="Pick a handle — or leave it to us"
+              placeholder="Optional"
               disabled={loading}
               {...register('username')}
               className={cn(inputCls, 'pr-20')}
@@ -986,14 +987,10 @@ function SignupForm({
             <p className={fieldErrorCls}>Already taken</p>
           ) : usernameStatus === 'available' ? (
             <p className="text-[12px] text-[#1B5E3A]">Available</p>
-          ) : (
-            <p className="text-[12px] leading-relaxed text-[#5B6157]">
-              Leave empty and we&apos;ll pick a gamer tag for you — it&apos;s the name buyers and sellers see.
-            </p>
-          )}
-        </div>
+          ) : null}
+          </div>
 
-        <div className="auth-reveal auth-reveal-2 space-y-1.5">
+          <div className="space-y-1.5">
           <Label htmlFor="auth-signup-email" className={labelCls}>Email</Label>
           <Input
             id="auth-signup-email"
@@ -1007,6 +1004,7 @@ function SignupForm({
           {errors.email && (
             <p className={fieldErrorCls}>{errors.email.message}</p>
           )}
+          </div>
         </div>
 
         <div className="auth-reveal auth-reveal-2 grid gap-3 sm:grid-cols-2">
@@ -1068,7 +1066,7 @@ function SignupForm({
         {/* Profile picture — compact optional row, moved down from the
             top of the form. The dicebear preview seeds from the typed
             username; a skipped upload can always be added in Settings. */}
-        <div className="auth-avatar-light auth-reveal auth-reveal-3 flex items-center gap-3 rounded-xl border border-[#E4E5DE] bg-white px-3.5 py-2.5">
+        <div className="auth-avatar-light auth-reveal auth-reveal-3 flex items-center gap-3 rounded-xl border border-[#E4E5DE] bg-white px-3.5 py-2">
           <AvatarUpload
             onChange={setAvatarFile}
             username={usernameValue || 'gamervault'}
@@ -1193,7 +1191,7 @@ function VerifyEmailView({
   onBackToLogin: () => void
 }) {
   return (
-    <div className="mx-auto my-auto w-full max-w-[400px] space-y-5">
+    <div className="mx-auto my-auto w-full max-w-[400px] space-y-4">
       <div
         className="auth-reveal flex h-12 w-12 items-center justify-center rounded-full"
         style={{ backgroundColor: 'rgba(27,94,58,0.08)' }}
