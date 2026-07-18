@@ -385,11 +385,13 @@ export function MobilePopularGames({ games }: { games: PopularGame[] }) {
    (3) PROTECTION STRIP — 3 outcome steps → /safedrop
    ──────────────────────────────────────────────────────────── */
 
+/* Each card is lit by its OWN icon's ambient color (steel / red /
+   amber / lime) over a neutral deep surface — no green wash. */
 const PROTECTION_STEPS = [
-  { num: '01', title: 'Choose Your Item', copy: 'Compare offers, buy with confidence.', Icon: Step1ChooseItem, lit: true },
-  { num: '02', title: 'Pay Securely', copy: 'Covered by SafeDrop from the first second.', Icon: Step2SecurePayment, lit: false },
-  { num: '03', title: 'Get Your Delivery', copy: 'Fast in-game delivery, tracked live.', Icon: Step3Delivery, lit: false },
-  { num: '04', title: 'Confirm Delivery', copy: 'Seller is paid after you confirm — or your money back.', Icon: Step4Confirm, lit: false },
+  { num: '01', title: 'Choose Your Item', copy: 'Compare offers, buy with confidence.', Icon: Step1ChooseItem, glow: 'rgba(148,178,255,0.14)' },
+  { num: '02', title: 'Pay Securely', copy: 'Covered by SafeDrop from the first second.', Icon: Step2SecurePayment, glow: 'rgba(255,120,120,0.13)' },
+  { num: '03', title: 'Get Your Delivery', copy: 'Fast in-game delivery, tracked live.', Icon: Step3Delivery, glow: 'rgba(255,190,90,0.13)' },
+  { num: '04', title: 'Confirm Delivery', copy: 'Seller is paid after you confirm — or your money back.', Icon: Step4Confirm, glow: 'rgba(163,230,53,0.14)' },
 ] as const
 
 export function MobileProtectionStrip() {
@@ -397,28 +399,29 @@ export function MobileProtectionStrip() {
     <section className="relative z-10 pt-8">
       <MobileSectionHeader title="How You're Protected" href="/safedrop" linkLabel="SafeDrop" />
       <div className="-mb-1 flex snap-x gap-3 overflow-x-auto px-5 pb-2 scrollbar-hide">
-        {PROTECTION_STEPS.map(({ num, title, copy, Icon, lit }) => (
+        {PROTECTION_STEPS.map(({ num, title, copy, Icon, glow }) => (
           <Link
             key={num}
             href="/safedrop"
-            className={`relative min-w-[200px] shrink-0 snap-start overflow-hidden rounded-xl p-4 ${PRESSED} ${
-              lit
-                ? 'border border-[rgba(163,230,53,0.28)] bg-[linear-gradient(180deg,#16291D,#0E1611)] shadow-[0_10px_28px_rgba(0,0,0,0.35)]'
-                : FOREST_GLASS
-            }`}
+            className={`relative min-w-[204px] shrink-0 snap-start overflow-hidden rounded-xl border border-white/[0.07] bg-[linear-gradient(180deg,#111311,#0A0C0A)] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_12px_28px_-14px_rgba(0,0,0,0.6)] ${PRESSED}`}
           >
-            <Sheen />
-            <div className="flex items-start justify-between">
-              {/* The shared 3D step icon — same art as the marketplace band */}
-              <Icon className="h-11 w-11" />
-              <span
-                className={`t-eyebrow tabular-nums ${lit ? 'text-lime-text' : 'text-text-tertiary'}`}
-              >
-                Step {num}
-              </span>
-            </div>
-            <span className="t-card mt-2.5 block text-text-primary">{title}</span>
-            <span className="t-cap mt-1 block leading-snug text-text-secondary">{copy}</span>
+            {/* Ambient halo in the icon's own color */}
+            <span
+              aria-hidden
+              className="pointer-events-none absolute -left-6 -top-8 h-32 w-32 rounded-full blur-2xl"
+              style={{ background: `radial-gradient(circle, ${glow}, transparent 70%)` }}
+            />
+            {/* Ghost step numeral watermark */}
+            <span
+              aria-hidden
+              className="pointer-events-none absolute -top-2 right-2 select-none text-[58px] font-black leading-none tracking-tight text-white/[0.05]"
+            >
+              {num}
+            </span>
+            {/* The shared 3D step icon floats over the halo */}
+            <Icon className="relative h-12 w-12 drop-shadow-[0_8px_14px_rgba(0,0,0,0.45)]" />
+            <span className="t-card relative mt-3 block text-text-primary">{title}</span>
+            <span className="t-cap relative mt-1 block leading-snug text-text-secondary">{copy}</span>
           </Link>
         ))}
       </div>
