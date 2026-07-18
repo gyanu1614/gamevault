@@ -81,6 +81,12 @@
   --decor-image:   url("/assets/backdrop-decor.png");
   --decor-opacity: 0.5;
   --decor-blend:   screen;
+
+  /* App-shell — mobile bottom tab bar height (content row, EXCLUDING the
+     env(safe-area-inset-bottom) padding the bar adds below it). Anything
+     fixed to the viewport bottom on tab-bar routes below lg should offset
+     by calc(var(--mobile-tab-bar-h) + env(safe-area-inset-bottom)). */
+  --mobile-tab-bar-h: 64px;
 }
 
 /* ─── GV Base Styles (from design tokens) ──────────────────── */
@@ -310,6 +316,79 @@
 }
 @media (prefers-reduced-data: reduce) {
   .ambient::after { display: none; }
+}
+
+/* ─── Mobile Type Scale Tokens (app-shell revamp) ─────────────
+   Semantic heading/body classes, MOBILE-FIRST: each class carries its
+   phone size at the base and restores today's desktop size at the
+   md (760px) / lg (1024px) steps — so sweeping a page onto these
+   classes shrinks phones without touching lg+.
+
+   Defined in @layer components ON PURPOSE: page-level Tailwind
+   utilities (e.g. `lg:text-[56px]`, `font-extrabold`) live in the
+   utilities layer, which cascades AFTER components — so any existing
+   per-page size/weight override keeps winning and desktop stays
+   byte-identical. Pair like: `t-section lg:text-[56px]`.
+
+   NOTE (Tailwind 3 on-demand): these classes are only emitted into
+   the build once they appear in a .tsx file — safe to define ahead
+   of the page sweeps.
+
+   Scale:
+   .t-hero     24px/800/-0.02em  → md 34px → lg 40px   (page heroes)
+   .t-section  20px/700/-0.01em  → md 32px → lg 44px   (section h2s)
+   .t-card     14px/600                                  (card titles)
+   .t-body     13.5px            → md 14px               (body copy)
+   .t-cap      12px                                      (captions/meta)
+   .t-eyebrow  11px/700/0.14em uppercase → md 11.5px     (kickers)
+   ─────────────────────────────────────────────────────────────── */
+@layer components {
+  .t-hero {
+    font-size: 24px;
+    line-height: 1.12;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+  }
+  .t-section {
+    font-size: 20px;
+    line-height: 1.2;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+  .t-card {
+    font-size: 14px;
+    line-height: 1.35;
+    font-weight: 600;
+  }
+  .t-body {
+    font-size: 13.5px;
+    line-height: 1.55;
+  }
+  .t-cap {
+    font-size: 12px;
+    line-height: 1.45;
+  }
+  .t-eyebrow {
+    font-size: 11px;
+    line-height: 1.3;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+
+  /* md (760px) — restore tablet/desktop sizes */
+  @media (min-width: 760px) {
+    .t-hero    { font-size: 34px; line-height: 1.1; }
+    .t-section { font-size: 32px; line-height: 1.15; letter-spacing: -0.02em; }
+    .t-body    { font-size: 14px; }
+    .t-eyebrow { font-size: 11.5px; }
+  }
+
+  /* lg (1024px) — full desktop scale */
+  @media (min-width: 1024px) {
+    .t-hero    { font-size: 40px; }
+    .t-section { font-size: 44px; line-height: 1.1; }
+  }
 }
 
 /* ─── GV Design System Utilities ────────────────────────────── */

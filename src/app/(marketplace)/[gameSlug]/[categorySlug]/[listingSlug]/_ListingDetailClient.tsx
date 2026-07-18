@@ -744,8 +744,11 @@ export default function ListingDetailClient({
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 60, opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="fixed inset-x-0 bottom-0 z-40 border-t border-border-default bg-bg-raised/95 px-3 py-3 backdrop-blur-md shadow-[0_-12px_30px_rgba(0,0,0,0.4)] sm:hidden"
-            style={{ paddingBottom: 'env(safe-area-inset-bottom, 12px)' }}
+            // App-shell — sits ABOVE the fixed bottom tab bar (64px row +
+            // safe area), stacked like a native context bar. The tab bar
+            // now owns the safe-area inset, so the old inline
+            // paddingBottom: env() is gone (py-3 keeps the 12px pad).
+            className="fixed inset-x-0 bottom-[calc(var(--mobile-tab-bar-h,64px)+env(safe-area-inset-bottom))] z-40 border-t border-border-default bg-bg-raised/95 px-3 py-3 backdrop-blur-md shadow-[0_-12px_30px_rgba(0,0,0,0.4)] sm:hidden"
           >
             <div className="flex items-center gap-3">
               <div className="min-w-0 flex-1">

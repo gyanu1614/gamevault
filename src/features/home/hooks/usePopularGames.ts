@@ -24,6 +24,12 @@ export interface PopularGame {
   /** Per-game category tags shown as chips below the cover. */
   categories: GameCategory[]
   /**
+   * Mobile homepage — full list of the game's active categories
+   * (display_order asc) so the compact card can render tappable
+   * category pills linking to /{game}/{categorySlug}.
+   */
+  categoryLinks: { slug: string; label: string }[]
+  /**
    * V17u — Canonical landing URL for the card. Resolved from the
    * game's first active category (lowest display_order). Falls back
    * to /{slug}/buy-currency if nothing's enabled so the click never
@@ -114,18 +120,39 @@ export function usePopularGames() {
       const gameIds = popularFirst.map((g) => g.id)
       const { data: cats } = (await supabase
         .from('categories')
-        .select('game_id, slug, display_order')
+        .select('game_id, slug, name, metadata, display_order')
         .in('game_id', gameIds)
         .eq('is_active', true)
         .order('display_order', { ascending: true })) as unknown as {
-          data: { game_id: string; slug: string; display_order: number | null }[] | null
+          data: {
+            game_id: string
+            slug: string
+            name: string | null
+            metadata: { label?: string; name?: string } | null
+            display_order: number | null
+          }[] | null
         }
 
       const firstCategoryByGame = new Map<string, string>()
+      // Mobile pills — every active category per game, ordered by
+      // display_order (query order preserved). Label resolution mirrors
+      // GlobalSearch: name → metadata label → Title-Cased slug.
+      const categoriesByGame = new Map<string, { slug: string; label: string }[]>()
       for (const c of cats ?? []) {
         if (!firstCategoryByGame.has(c.game_id)) {
           firstCategoryByGame.set(c.game_id, c.slug)
         }
+        const label =
+          c.name ||
+          c.metadata?.label ||
+          c.metadata?.name ||
+          c.slug
+            .replace(/^buy-/, '')
+            .replace(/[-_]+/g, ' ')
+            .replace(/\b\w/g, (ch) => ch.toUpperCase())
+        const list = categoriesByGame.get(c.game_id)
+        if (list) list.push({ slug: c.slug, label })
+        else categoriesByGame.set(c.game_id, [{ slug: c.slug, label }])
       }
 
       return popularFirst.map((g): PopularGame => {
@@ -138,6 +165,7 @@ export function usePopularGames() {
           slug: g.slug,
           name: g.name,
           categories: [],
+          categoryLinks: categoriesByGame.get(g.id) ?? [],
           iconSrc: g.image_url ?? getGameIcon(g.slug),
           coverSrc: g.cover_url ?? fallbackCover(g.slug),
           href,

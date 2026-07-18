@@ -32,6 +32,13 @@ import { StatsMarquee } from '../components/StatsMarquee'
 import { HowItWorks } from '../components/HowItWorks'
 import { WhyCard } from '../components/WhyCard'
 import { RecentlySoldTicker } from '../components/RecentlySoldTicker'
+import {
+  MobileHero,
+  MobilePopularGames,
+  MobileProtectionStrip,
+  MobileTrustRows,
+  MobileRecentlySold,
+} from '../components/MobileHome'
 
 import { useHeroSlides } from '../hooks/useHeroSlides'
 import { usePopularGames } from '../hooks/usePopularGames'
@@ -320,7 +327,17 @@ export function HomePage() {
         }}
       />
 
-      <section className="relative flex flex-col h-[calc(100svh-160px)] min-h-[480px] py-5 px-6 overflow-hidden">
+      {/* MOBILE (below lg) — Direction-A composition: hero copy + search
+          + category chips, then the compact Popular Games slider and the
+          3-step protection strip. Desktop sections below carry
+          max-lg:hidden so lg+ stays byte-identical. */}
+      <div className="lg:hidden">
+        <MobileHero />
+        <MobilePopularGames games={popularGames} />
+        <MobileProtectionStrip />
+      </div>
+
+      <section className="max-lg:hidden relative flex flex-col h-[calc(100svh-160px)] min-h-[480px] py-5 px-6 overflow-hidden">
 
         {/* Headline — vertically centered in the space above the carousel */}
         <div className="mx-auto text-center flex flex-col items-center justify-center relative z-10 flex-[1.5_1_0%] min-h-0">
@@ -347,7 +364,7 @@ export function HomePage() {
           POPULAR GAMES — portrait cover-art cards on backdrop
           DYNAMIC: popular games row — from /api/popular/games
           ================================================================ */}
-      <section className="relative py-20">
+      <section className="max-lg:hidden relative py-20">
         <div className="max-w-container mx-auto px-6">
           {/* V20/P13 — Centered, floating heading. Section bg + overlays
               removed so the body's ambient glows continue through. */}
@@ -359,7 +376,10 @@ export function HomePage() {
               </span>
               <span className="h-px w-10 bg-gradient-to-r from-[#C6FF3D80] to-transparent" aria-hidden />
             </div>
-            <h2 className="font-display text-[32px] font-extrabold leading-[1.04] tracking-tight sm:text-[44px] lg:text-[56px]">
+            {/* App-shell — `t-section` supplies the 20px phone size; the
+                existing sm/lg utilities restore 44/56px so md+ desktop is
+                byte-identical (utilities layer beats .t-section). */}
+            <h2 className="t-section font-display font-extrabold leading-[1.04] tracking-tight sm:text-[44px] lg:text-[56px]">
               Popular Games
             </h2>
             <p className="mt-4 max-w-2xl text-body-lg text-text-secondary">
@@ -374,7 +394,7 @@ export function HomePage() {
           TRUST STATS — V20/P15 horizontal scrolling marquee of stat chips
           No bg, edge-fades, pauses on hover. Hero art continues through.
           ================================================================ */}
-      <section className="relative py-10">
+      <section className="max-lg:hidden relative py-10">
         <StatsMarquee />
       </section>
 
@@ -383,14 +403,17 @@ export function HomePage() {
           ================================================================ */}
       {/* V20/P16 — Apple-style scroll-pinned How It Works. Sticky stage
           on the right cross-fades through 4 hero illustrations as the
-          copy column on the left scrolls past 4 stages. */}
-      <HowItWorks />
+          copy column on the left scrolls past 4 stages.
+          Mobile — replaced by the 3-step protection strip up top. */}
+      <div className="max-lg:hidden">
+        <HowItWorks />
+      </div>
 
       {/* ================================================================
           SHOP BY CATEGORY — tabbed: Currencies / Items / Accounts
           Replaces three separate sections with one consolidated shelf.
           ================================================================ */}
-      <section className="relative py-20 overflow-hidden">
+      <section className="max-lg:hidden relative py-20 overflow-hidden">
         {/* V17i — Subtle backdrop wash matching the other backdrop'd
             sections. Faint lime+steel radial pair so this section isn't
             visually flat next to Popular Games. No image asset needed. */}
@@ -422,7 +445,8 @@ export function HomePage() {
               </span>
               <span className="h-px w-8 bg-gradient-to-r from-[#C6FF3D66] to-transparent" aria-hidden />
             </div>
-            <h2 className="font-display text-display">Shop by category.</h2>
+            {/* App-shell — t-section on phones, md:text-display restores 38px. */}
+            <h2 className="t-section font-display md:text-display">Shop by category.</h2>
             <p className="mt-1.5 text-body-sm text-text-secondary max-w-2xl">
               Currencies, items, accounts — pick how you want to play and we&apos;ll show you the matching deals.
             </p>
@@ -443,7 +467,7 @@ export function HomePage() {
           design handoff. Image is layered behind via TopUpsBanner; the
           content stack lives at z-10 and uses the center ~60% of the
           width so it sits on the dark negative-space strip. */}
-      <section id="top-ups" className="relative py-20 border-y border-border-subtle overflow-hidden">
+      <section id="top-ups" className="max-lg:hidden relative py-20 border-y border-border-subtle overflow-hidden">
         <TopUpsBanner />
         <div className="max-w-container mx-auto px-6 relative z-10">
           <RowHeader
@@ -463,7 +487,7 @@ export function HomePage() {
       {/* ================================================================
           WHY CHOOSE DROPMARKET — 4 trust/safety cards
           ================================================================ */}
-      <section className="relative py-20 overflow-hidden">
+      <section className="relative py-20 max-lg:py-10 overflow-hidden">
         {/* Aurora blobs — slow drifting lime + cool-blue wash */}
         <div
           aria-hidden="true"
@@ -496,7 +520,7 @@ export function HomePage() {
           className="pointer-events-none absolute -right-16 top-1/2 z-0 hidden w-[560px] -translate-y-1/2 select-none object-contain opacity-[0.22] [mask-image:radial-gradient(ellipse_62%_62%_at_center,black_28%,transparent_78%)] lg:block"
         />
         <div className="mx-auto max-w-[1200px] px-6 relative z-10">
-          <div className="mx-auto max-w-2xl text-center mb-12">
+          <div className="mx-auto max-w-2xl text-center mb-12 max-lg:mb-6">
             <div className="mb-2 flex items-center justify-center gap-2">
               <span className="h-px w-8 bg-gradient-to-l from-[#C6FF3D66] to-transparent" aria-hidden />
               <span className="text-[11.5px] font-bold uppercase tracking-[0.14em] text-lime-text">
@@ -504,7 +528,8 @@ export function HomePage() {
               </span>
               <span className="h-px w-8 bg-gradient-to-r from-[#C6FF3D66] to-transparent" aria-hidden />
             </div>
-            <h2 className="font-display text-display">
+            {/* App-shell — t-section on phones, md:text-display restores 38px. */}
+            <h2 className="t-section font-display md:text-display">
               Built so you can&apos;t get <span className="text-lime-text">burned</span>.
             </h2>
             <p className="mt-3 text-body-lg text-text-secondary">
@@ -512,10 +537,15 @@ export function HomePage() {
               sellers, honest fees, and support that actually answers.
             </p>
           </div>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+          {/* Desktop — the 4 illustrated WhyCards, untouched at lg+. */}
+          <div className="max-lg:hidden grid grid-cols-1 lg:grid-cols-2 gap-5">
             {WHY_CARDS.map((card, i) => (
               <WhyCard key={card.title} {...card} index={i} />
             ))}
+          </div>
+          {/* Mobile — 4 slim check rows (same claims, condensed proof). */}
+          <div className="lg:hidden">
+            <MobileTrustRows />
           </div>
         </div>
       </section>
@@ -525,7 +555,7 @@ export function HomePage() {
           DYNAMIC: from /api/recent-sales, WebSocket for real-time updates
           ================================================================ */}
       {recentSales.length > 0 && (
-      <section className="relative py-12 border-t border-border-subtle overflow-hidden">
+      <section className="relative py-12 max-lg:py-8 border-t border-border-subtle overflow-hidden">
         {/* V17i — Subtle pulse-glow behind the ticker so the "live"
             beat is felt in the background, not just on the dot. */}
         <div
@@ -537,7 +567,11 @@ export function HomePage() {
             animationDuration: '3.5s',
           }}
         />
-        <div className="relative z-10 max-w-container mx-auto px-6 mb-5 flex flex-col items-start gap-1.5 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+        {/* Mobile — compact live list rows instead of the marquee. */}
+        <div className="lg:hidden relative z-10">
+          <MobileRecentlySold items={recentSales} />
+        </div>
+        <div className="max-lg:hidden relative z-10 max-w-container mx-auto px-6 mb-5 flex flex-col items-start gap-1.5 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
           <div className="flex items-center gap-3">
             <span className="inline-flex items-center gap-[9px] font-body font-semibold text-body-sm">
               <span className="relative flex h-2 w-2">
@@ -549,7 +583,7 @@ export function HomePage() {
           </div>
           <span className="text-body-sm text-text-tertiary">Updated in real time across every game</span>
         </div>
-        <div className="relative z-10">
+        <div className="max-lg:hidden relative z-10">
           <RecentlySoldTicker items={recentSales} />
         </div>
       </section>
@@ -561,7 +595,7 @@ export function HomePage() {
           mask) so the art melts into the page. One lime CTA, then the
           category strip — the whole marketplace, one tap away.
           ================================================================ */}
-      <section className="relative overflow-hidden py-24 lg:py-28">
+      <section className="max-lg:hidden relative overflow-hidden py-24 lg:py-28">
         {/* Ambient glow behind the composition */}
         <div
           aria-hidden="true"

@@ -239,6 +239,11 @@ const config: Config = {
           '0%':   { opacity: '0' },
           '100%': { opacity: '1' },
         },
+        // App-shell — attached mobile menu/sheets sliding down from the bar.
+        'menu-down': {
+          '0%':   { opacity: '0', transform: 'translateY(-10px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
         'scale-in': {
           '0%':   { opacity: '0', transform: 'scale(0.95)' },
           '100%': { opacity: '1', transform: 'scale(1)' },
@@ -277,6 +282,7 @@ const config: Config = {
         float:             'float 3s ease-in-out infinite',
         'fade-up':         'fade-up 0.4s cubic-bezier(0.25, 0.1, 0.25, 1) forwards',
         'fade-in':         'fade-in 0.3s ease forwards',
+        'menu-down':       'menu-down 250ms cubic-bezier(0.22, 1, 0.36, 1) both',
         'scale-in':        'scale-in 0.2s cubic-bezier(0.25, 0.1, 0.25, 1) forwards',
         'slide-right':     'slide-right 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
         'gradient-x':      'gradient-x 36s linear infinite',

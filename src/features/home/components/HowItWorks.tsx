@@ -126,7 +126,9 @@ export function HowItWorks() {
           </span>
           <span className="h-px w-10 bg-gradient-to-r from-lime/50 to-transparent" aria-hidden />
         </div>
-        <h2 className="text-[32px] font-black leading-[1.02] tracking-tight sm:text-[44px] lg:text-[56px]">
+        {/* App-shell — `t-section` supplies the 20px phone size; the
+            existing sm/lg utilities restore 44/56px unchanged. */}
+        <h2 className="t-section font-black leading-[1.02] tracking-tight sm:text-[44px] lg:text-[56px]">
           Safe drops, <span className="text-lime-text">every time</span>.
         </h2>
         <p className="mx-auto mt-4 max-w-2xl text-[17px] leading-relaxed text-text-secondary">
