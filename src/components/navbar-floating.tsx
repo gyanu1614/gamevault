@@ -1718,14 +1718,14 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
             onClick={() => setMobileMenuOpen(false)}
             className="animate-fade-in fixed inset-0 top-[60px] z-30 bg-black/60 lg:hidden"
           />
-          <div className="animate-menu-down fixed inset-x-0 top-[60px] z-40 lg:hidden">
-            <div className="relative overflow-hidden rounded-b-2xl border-b border-[rgba(163,230,53,0.14)] bg-[linear-gradient(180deg,#14241A_0%,#0E1611_100%)] shadow-[0_24px_48px_-12px_rgba(0,0,0,0.85)]">
+          <div className="animate-menu-left fixed inset-x-0 top-[60px] z-40 lg:hidden">
+            <div className="relative overflow-hidden rounded-b-2xl border-b border-white/[0.08] bg-[#17171F] shadow-[0_24px_48px_-12px_rgba(0,0,0,0.85)]">
               {/* Faint lime-warmed top sheen — same recipe as the bell/
                   account panels so every attached surface reads as one
                   family. */}
               <span
                 aria-hidden
-                className="pointer-events-none absolute inset-x-0 top-0 z-10 h-12 bg-[linear-gradient(to_bottom,rgba(163,230,53,0.06),transparent)]"
+                className="pointer-events-none absolute inset-x-0 top-0 z-10 h-12 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.05),transparent)]"
               />
 
               {/* SCREEN 1 — root. In-flow, so it sets the panel height;
@@ -1781,10 +1781,10 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                       <button
                         type="button"
                         onClick={() => setMenuRoot('browse')}
-                        className="flex h-[48px] w-full items-center gap-3 rounded-xl border border-[#A3E635]/[0.14] bg-[#1B5E3A]/[0.10] px-3 text-left transition-all duration-[120ms] hover:bg-[#1B5E3A]/[0.16] active:scale-[0.98] active:brightness-95"
+                        className="flex h-[48px] w-full items-center gap-3 rounded-xl border border-white/[0.06] bg-white/[0.03] px-3 text-left transition-all duration-[120ms] hover:bg-white/[0.06] active:scale-[0.98] active:brightness-95"
                       >
-                        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-[#A3E635]/[0.14] bg-[#1B5E3A]/[0.16]">
-                          <LayoutGrid className="h-[18px] w-[18px] text-lime-text" />
+                        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-white/[0.10] bg-white/[0.05]">
+                          <LayoutGrid className="h-[18px] w-[18px] text-text-secondary" />
                         </span>
                         <span className="flex-1 truncate text-[14.5px] font-semibold text-text-primary">
                           Browse Marketplace
@@ -1812,8 +1812,8 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                         onClick={() => setMobileMenuTab(tab.id)}
                         className="flex h-[52px] w-full items-center gap-3 rounded-xl border border-white/[0.06] bg-white/[0.03] px-3 text-left transition-all duration-[120ms] hover:bg-white/[0.06] active:scale-[0.98] active:brightness-95"
                       >
-                        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-[#A3E635]/[0.14] bg-[#1B5E3A]/[0.16]">
-                          <TabIcon className="h-[18px] w-[18px] text-lime-text" />
+                        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-white/[0.10] bg-white/[0.05]">
+                          <TabIcon className="h-[18px] w-[18px] text-text-secondary" />
                         </span>
                         <span className="flex-1 truncate text-[14.5px] font-semibold text-text-primary">
                           {tab.label}

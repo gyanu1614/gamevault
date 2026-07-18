@@ -476,7 +476,7 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
           via the w-screen trick so parent gutters can't pinch it. */}
       <nav
         aria-label="Account sections"
-        className="sticky top-[60px] z-30 lg:hidden relative left-1/2 right-1/2 -mx-[50vw] w-screen border-b border-white/[0.06] bg-[rgba(14,22,17,0.97)] backdrop-blur-md"
+        className="sticky top-[60px] z-30 lg:hidden relative left-1/2 right-1/2 -mx-[50vw] w-screen border-b border-white/[0.06] bg-[rgba(19,19,24,0.97)] backdrop-blur-md"
       >
         <div className="relative">
           <div className="flex gap-1 overflow-x-auto px-3 py-2 scrollbar-hide">
@@ -509,7 +509,7 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
           {/* Right-edge overflow affordance */}
           <span
             aria-hidden
-            className="pointer-events-none absolute inset-y-0 right-0 w-6 bg-gradient-to-l from-[rgba(14,22,17,0.97)] to-transparent"
+            className="pointer-events-none absolute inset-y-0 right-0 w-6 bg-gradient-to-l from-[rgba(19,19,24,0.97)] to-transparent"
           />
         </div>
       </nav>
