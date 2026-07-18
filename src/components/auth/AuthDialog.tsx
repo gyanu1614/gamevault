@@ -250,13 +250,13 @@ function AuthDialog({ open, onOpenChange, mode, onModeChange, redirectRef }: Aut
       @keyframes authPhotoSettle {
         from {
           opacity: 0;
-          transform: scale(1.1);
+          transform: scale(1.08);
         }
         to {
-          /* Deliberately dimmed: the photo is texture behind the forest
-             scrim, not a picture. Overscale hides the blur's soft edges. */
-          opacity: 0.55;
-          transform: scale(1.04);
+          /* Bright where the art lives — the DIRECTIONAL scrims (not a
+             uniform dim) darken only the text/edge zones, hero-style. */
+          opacity: 0.9;
+          transform: scale(1.02);
         }
       }
       /* Primary CTA — forest with a subtle 3D press; lime appears only as a
@@ -371,6 +371,14 @@ function AuthDialog({ open, onOpenChange, mode, onModeChange, redirectRef }: Aut
 
                 {/* Left — form panel */}
                 <div className="flex w-full flex-col overflow-y-auto md:w-1/2">
+                  {/* Mobile brand — the hero pane (and its lockup) is md+. */}
+                  <div className="flex items-center justify-center gap-2 pt-7 md:hidden">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src="/brand/logo-mark-ink.png" alt="" className="h-7 w-7 object-contain" />
+                    <span className="text-[18px] font-bold tracking-tight" style={{ color: PALETTE.forest }}>
+                      DropMarket
+                    </span>
+                  </div>
                   <AnimatePresence mode="wait">
                     {pendingVerifyEmail ? (
                       <div
@@ -412,6 +420,44 @@ function AuthDialog({ open, onOpenChange, mode, onModeChange, redirectRef }: Aut
 
                 {/* Right — hero image panel (desktop only) */}
                 <HeroPanel mode={mode} />
+
+                {/* Brand lockup riding the ivory/photo seam (md+): each
+                    half colored for the pane behind it — ink over paper,
+                    white over the photo. Centered elements put the 50%
+                    split exactly on the seam. */}
+                <div
+                  aria-hidden
+                  className="pointer-events-none absolute left-1/2 top-9 z-30 hidden -translate-x-1/2 flex-col items-center gap-2 md:flex"
+                >
+                  {/* Forest chip reads on BOTH grounds; the split-color
+                      treatment lives on the wordmark below. */}
+                  <div
+                    className="grid h-12 w-12 place-items-center rounded-2xl"
+                    style={{
+                      backgroundColor: PALETTE.forest,
+                      boxShadow:
+                        'inset 0 1px 0 rgba(255,255,255,0.18), inset 0 -2px 0 rgba(0,0,0,0.25), 0 10px 24px -10px rgba(15,51,32,0.6)',
+                    }}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src="/brand/logo-mark-white.png"
+                      alt=""
+                      className="h-7 w-7 object-contain"
+                    />
+                  </div>
+                  <span
+                    className="text-[20px] font-bold tracking-tight"
+                    style={{
+                      backgroundImage: 'linear-gradient(to right, #14432A 50%, #FFFFFF 50%)',
+                      WebkitBackgroundClip: 'text',
+                      backgroundClip: 'text',
+                      color: 'transparent',
+                    }}
+                  >
+                    DropMarket
+                  </span>
+                </div>
               </div>
               </Dialog.Content>
             </div>
@@ -434,46 +480,37 @@ function HeroPanel({ mode }: { mode: AuthMode }) {
       className="relative hidden overflow-hidden md:block md:w-1/2"
       style={{ backgroundColor: PALETTE.forest3 }}
     >
-      {/* Hero photo — slow settle (scale 1.06→1) on mount, CSS only.
-          Swap public/auth/hero.avif to change this photo. */}
+      {/* Hero photo — slow settle on mount, CSS only.
+          Swap public/auth/hero.png to change this artwork (any PNG/JPG
+          renamed to hero.png works; transparent cutouts float over the
+          deep-forest base). */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
-        src="/auth/hero.avif"
+        src="/auth/hero.png"
         alt=""
-        className="auth-photo-settle absolute inset-0 h-full w-full object-cover blur-[2.5px]"
+        className="auth-photo-settle absolute inset-0 h-full w-full object-cover"
       />
-      {/* Forest scrim — strong at the base (where the tagline sits),
-          thinning toward the top so the photo stays half visible. */}
+      {/* Directional scrims, hero-style: dark at the seam edge + the
+          bottom text zone + a thin top strip (logo/close contrast), a
+          corner vignette, and a light flat brand tint — the upper-right,
+          where the art lives, stays bright. */}
       <div
         className="absolute inset-0"
         style={{
-          background:
-            'linear-gradient(to top, rgba(15,51,32,0.94) 0%, rgba(15,51,32,0.5) 48%, rgba(20,67,42,0.28) 100%)',
-        }}
-      />
-      {/* Soft vignette to seat the content against the photo edges. */}
-      <div
-        className="absolute inset-0"
-        style={{
-          background:
-            'radial-gradient(120% 90% at 50% 40%, transparent 55%, rgba(15,51,32,0.55) 100%)',
+          background: [
+            'linear-gradient(to right, rgba(15,51,32,0.85) 0%, rgba(15,51,32,0.35) 30%, rgba(15,51,32,0.06) 58%, transparent 75%)',
+            'linear-gradient(to top, rgba(15,51,32,0.92) 0%, rgba(15,51,32,0.45) 28%, transparent 58%)',
+            'linear-gradient(to bottom, rgba(15,51,32,0.5) 0%, transparent 20%)',
+            'radial-gradient(135% 105% at 72% 30%, transparent 58%, rgba(15,51,32,0.45) 100%)',
+            'linear-gradient(rgba(15,51,32,0.14), rgba(15,51,32,0.14))',
+          ].join(', '),
         }}
       />
 
       {/* Content */}
       <div className="relative z-10 flex h-full flex-col justify-between p-10">
-        {/* Top — white logo lockup */}
-        <div className="flex items-center gap-2.5">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/brand/logo-mark-white.png"
-            alt="DropMarket"
-            width={24}
-            height={24}
-            className="h-6 w-6 shrink-0 object-contain"
-          />
-          <span className="text-[17px] font-bold tracking-tight text-white">DropMarket</span>
-        </div>
+        {/* Top spacer — branding moved to the split-color seam lockup. */}
+        <div aria-hidden className="h-6" />
 
         {/* Middle — tagline */}
         <div className="space-y-4">
@@ -489,18 +526,20 @@ function HeroPanel({ mode }: { mode: AuthMode }) {
                 {mode === 'login' ? (
                   <>
                     Welcome Back.<br />
-                    Game More.{' '}
                     {/* The ONE permitted lime accent — a single short phrase. */}
-                    <span style={{ color: 'rgba(163,230,53,0.9)' }}>Grind Less.</span>
+                    <span style={{ color: 'rgba(163,230,53,0.9)' }}>The Grind Ends Here.</span>
                   </>
                 ) : (
-                  <>Buy &amp; Sell Game Assets Safely.</>
+                  <>
+                    Join DropMarket.<br />
+                    <span style={{ color: 'rgba(163,230,53,0.9)' }}>Buy. Sell. Level Up.</span>
+                  </>
                 )}
               </h2>
               <p className="mt-3 max-w-sm text-[14px] leading-relaxed text-white/70">
                 {mode === 'login'
-                  ? 'Pick up where you left off — your orders, wishlist, and seller tools are right where you left them.'
-                  : 'Every order is covered by SafeDrop Buyer Protection. Buy in 60 seconds, sell with peace of mind.'}
+                  ? 'Everything’s right where you left it.'
+                  : 'Every order covered by SafeDrop Buyer Protection.'}
               </p>
             </motion.div>
           </AnimatePresence>
