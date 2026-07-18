@@ -83,9 +83,29 @@ const SOCIALS: Array<{ name: string; href: string; path: string }> = [
  * then a monochrome payment wordmark row. Desktop layout untouched at
  * lg+ (the original centered stack gets `hidden lg:flex`).
  */
+/* Phones get the SHORT footer — the essentials only. The full
+   compliance pack stays linked from the desktop footer and the legal
+   hub pages. */
 const MOBILE_LINK_GROUPS: Array<{ title: string; links: Array<{ name: string; href: string }> }> = [
-  { title: 'Marketplace', links: NAV_LINKS },
-  ...DOC_GROUPS,
+  {
+    title: 'Marketplace',
+    links: [
+      { name: 'Browse Listings', href: '/browse' },
+      { name: 'Become A Seller', href: '/account/become-seller' },
+      { name: 'SafeDrop', href: '/safedrop' },
+      { name: 'Fees', href: '/fees' },
+      { name: 'Support', href: '/support' },
+    ],
+  },
+  {
+    title: 'Legal',
+    links: [
+      { name: 'Terms Of Use', href: '/legal/terms' },
+      { name: 'Privacy Policy', href: '/legal/privacy' },
+      { name: 'Refunds & Disputes', href: '/legal/refunds' },
+      { name: 'Company Details', href: '/legal/company' },
+    ],
+  },
 ]
 
 const PAYMENT_ROW: Array<{ key: string; node: React.ReactNode }> = [

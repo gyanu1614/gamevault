@@ -451,23 +451,26 @@ const TRUST_ROWS = [
 
 export function MobileTrustRows() {
   return (
-    <div className="flex flex-col gap-2.5">
-      {TRUST_ROWS.map(({ claim, proof }) => (
-        <div
-          key={claim}
-          className={`relative flex items-center gap-3 overflow-hidden rounded-xl p-3 ${FOREST_GLASS}`}
-        >
-          <Sheen />
+    <div className="grid grid-cols-2 gap-2.5">
+      {TRUST_ROWS.map(({ claim, proof }, i) => (
+        /* Compact card with a traveling border light — the 1px-padded
+           wrapper clips a spinning conic highlight (CSS only). */
+        <div key={claim} className="relative overflow-hidden rounded-xl p-px">
           <span
             aria-hidden
-            className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-[rgba(163,230,53,0.16)] bg-[rgba(163,230,53,0.08)]"
-          >
-            <Check className="h-4 w-4 text-lime-text" strokeWidth={3} />
-          </span>
-          <span className="min-w-0 text-left">
-            <span className="t-card block text-text-primary">{claim}</span>
-            <span className="t-cap line-clamp-2 block text-text-tertiary">{proof}</span>
-          </span>
+            className="dm-beam absolute inset-[-150%] bg-[conic-gradient(from_0deg,transparent_0deg,rgba(163,230,53,0.5)_26deg,transparent_70deg)]"
+            style={{ animationDelay: `${i * 2}s` }}
+          />
+          <div className="relative flex h-full flex-col rounded-[11px] bg-[linear-gradient(180deg,#131A14,#0C110D)] p-3.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
+            <span
+              aria-hidden
+              className="grid h-8 w-8 place-items-center rounded-lg border border-[rgba(163,230,53,0.16)] bg-[rgba(163,230,53,0.08)]"
+            >
+              <Check className="h-4 w-4 text-lime-text" strokeWidth={3} />
+            </span>
+            <span className="t-card mt-2.5 block text-text-primary">{claim}</span>
+            <span className="t-cap mt-1 block leading-snug text-text-tertiary">{proof}</span>
+          </div>
         </div>
       ))}
     </div>
