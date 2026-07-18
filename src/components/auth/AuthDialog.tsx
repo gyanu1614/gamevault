@@ -383,7 +383,7 @@ function AuthDialog({ open, onOpenChange, mode, onModeChange, redirectRef }: Aut
                     {pendingVerifyEmail ? (
                       <div
                         key="verify-email"
-                        className="flex min-h-full flex-col px-6 py-8 sm:px-8 sm:py-9 md:px-10"
+                        className="flex min-h-full flex-col px-6 pb-12 pt-8 sm:px-8 sm:py-9 md:px-10"
                       >
                         <VerifyEmailView
                           email={pendingVerifyEmail}
@@ -396,7 +396,7 @@ function AuthDialog({ open, onOpenChange, mode, onModeChange, redirectRef }: Aut
                     ) : mode === 'login' ? (
                       <div
                         key="login"
-                        className="flex min-h-full flex-col px-6 py-8 sm:px-8 sm:py-9 md:px-10"
+                        className="flex min-h-full flex-col px-6 pb-12 pt-8 sm:px-8 sm:py-9 md:px-10"
                       >
                         <LoginForm
                           onSuccess={handleAuthSuccess}
@@ -406,7 +406,7 @@ function AuthDialog({ open, onOpenChange, mode, onModeChange, redirectRef }: Aut
                     ) : (
                       <div
                         key="signup"
-                        className="flex min-h-full flex-col px-6 py-8 sm:px-8 sm:py-9 md:px-10"
+                        className="flex min-h-full flex-col px-6 pb-12 pt-8 sm:px-8 sm:py-9 md:px-10"
                       >
                         <SignupForm
                           onSuccess={handleAuthSuccess}
