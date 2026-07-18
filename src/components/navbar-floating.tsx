@@ -4,7 +4,10 @@ import Link from 'next/link'
 import { SmartLink } from '@/components/global/SmartLink'
 import { usePathname, useRouter } from 'next/navigation'
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
-import { Search, User, LogOut, Menu, X, ChevronDown, ChevronLeft, ChevronRight, Settings, Store, Package, MessageSquare, MessagesSquare, PlusCircle, Heart, Wallet, Star, List, Bell, BellDot, LayoutDashboard, Activity, Gauge, Award, Crown, Gem, Sparkles, Shield, ShieldCheck, Coins, UserCircle2, Swords, Zap, Rocket, LifeBuoy } from 'lucide-react'
+import { Search, User, LogOut, Menu, X, ChevronDown, ChevronLeft, ChevronRight, Settings, Store, Package, MessageSquare, MessagesSquare, PlusCircle, Heart, Wallet, Star, List, Bell, BellDot, LayoutDashboard, Activity, Gauge, Award, Crown, Gem, Sparkles, Shield, ShieldCheck, Coins, UserCircle2, Swords, Zap, Rocket, LifeBuoy ,
+  ShoppingCart,
+  LayoutGrid,
+} from 'lucide-react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence, useMotionValue, useSpring } from 'framer-motion'
 import * as Popover from '@radix-ui/react-popover'
@@ -23,6 +26,19 @@ import { setStorePaused, getMyStorePaused } from '@/lib/actions/seller-presence'
 import { toast } from 'sonner'
 
 // 5 fixed nav tabs with their DB type keys
+/* Hamburger root on /account/* — the sidebar's destinations, flat.
+   sellerOnly rows hide for buyers; page-level tabs carry sub-views. */
+const ACCOUNT_MENU_ITEMS = [
+  { label: 'Dashboard', href: '/account/dashboard', Icon: LayoutDashboard, sellerOnly: false },
+  { label: 'Orders', href: '/account/orders', Icon: ShoppingCart, sellerOnly: false },
+  { label: 'Offers', href: '/account/listings', Icon: Package, sellerOnly: true },
+  { label: 'Messages', href: '/account/messages', Icon: MessageSquare, sellerOnly: false },
+  { label: 'Wallet', href: '/account/wallet', Icon: Wallet, sellerOnly: false },
+  { label: 'Wishlist', href: '/account/wishlist', Icon: Heart, sellerOnly: false },
+  { label: 'Rewards', href: '/account/loyalty', Icon: Sparkles, sellerOnly: false },
+  { label: 'Settings', href: '/account/settings', Icon: Settings, sellerOnly: false },
+] as const
+
 const NAV_TABS = [
   { id: 'currency', label: 'Currency', type: 'currency' },
   { id: 'accounts', label: 'Accounts', type: 'account' },
@@ -121,6 +137,14 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
   // carousel inside the panel (Eldorado pattern: tap a category → the
   // content slides left to the full game list, back arrow slides right).
   const [mobileMenuTab, setMobileMenuTab] = useState<string | null>(null)
+  // On /account/* the menu roots in ACCOUNT navigation (per user
+  // direction: 'sidebar mode' pages shouldn't open into marketplace
+  // categories). menuRoot 'browse' is reachable via an in-menu row.
+  const inAccountArea = pathname?.startsWith('/account') ?? false
+  const [menuRoot, setMenuRoot] = useState<'account' | 'browse'>('browse')
+  useEffect(() => {
+    if (mobileMenuOpen) setMenuRoot(inAccountArea && user ? 'account' : 'browse')
+  }, [mobileMenuOpen, inAccountArea, user])
 
   // Homepage hero chips (and future surfaces) deep-open the menu at a
   // category sub-screen via this event — app-like, no route hop.
@@ -1728,7 +1752,52 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                   </div>
                 </form>
 
+                {/* ACCOUNT ROOT — the old sidebar's destinations, attached. */}
+                {menuRoot === 'account' && (
+                  <>
+                    <div className="mb-2 px-1 text-[11px] font-bold uppercase tracking-[0.14em] text-gray-400">
+                      My Account
+                    </div>
+                    <div className="space-y-1.5">
+                      {ACCOUNT_MENU_ITEMS.filter((i) => !i.sellerOnly || user?.isApprovedSeller).map(
+                        ({ label, href, Icon }) => (
+                          <Link
+                            key={href}
+                            href={href}
+                            onClick={() => setMobileMenuOpen(false)}
+                            className="flex h-[48px] w-full items-center gap-3 rounded-xl border border-white/[0.06] bg-white/[0.03] px-3 text-left transition-all duration-[120ms] hover:bg-white/[0.06] active:scale-[0.98] active:brightness-95"
+                          >
+                            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-white/[0.10] bg-white/[0.05]">
+                              <Icon className="h-[18px] w-[18px] text-text-secondary" />
+                            </span>
+                            <span className="flex-1 truncate text-[14.5px] font-semibold text-text-primary">
+                              {label}
+                            </span>
+                            <ChevronRight className="h-4 w-4 shrink-0 text-gray-500" />
+                          </Link>
+                        ),
+                      )}
+                      {/* Flip to marketplace categories */}
+                      <button
+                        type="button"
+                        onClick={() => setMenuRoot('browse')}
+                        className="flex h-[48px] w-full items-center gap-3 rounded-xl border border-[#A3E635]/[0.14] bg-[#1B5E3A]/[0.10] px-3 text-left transition-all duration-[120ms] hover:bg-[#1B5E3A]/[0.16] active:scale-[0.98] active:brightness-95"
+                      >
+                        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-[#A3E635]/[0.14] bg-[#1B5E3A]/[0.16]">
+                          <LayoutGrid className="h-[18px] w-[18px] text-lime-text" />
+                        </span>
+                        <span className="flex-1 truncate text-[14.5px] font-semibold text-text-primary">
+                          Browse Marketplace
+                        </span>
+                        <ChevronRight className="h-4 w-4 shrink-0 text-gray-500" />
+                      </button>
+                    </div>
+                  </>
+                )}
+
                 {/* Category rows → sub-screen */}
+                {menuRoot === 'browse' && (
+                <>
                 <div className="mb-2 px-1 text-[11px] font-bold uppercase tracking-[0.14em] text-gray-400">
                   Browse Marketplace
                 </div>
@@ -1759,6 +1828,8 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                     )
                   })}
                 </div>
+                </>
+                )}
 
                 {/* Wallet / Support */}
                 <div className="mt-4 space-y-0.5 border-t border-border-subtle pt-3">
