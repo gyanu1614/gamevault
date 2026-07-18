@@ -18,6 +18,8 @@ import { createClient } from '@/lib/supabase/server'
 import {
   isKycVideoEnabled,
   isDocuSealEnabled,
+  isValidDiditSessionId,
+  normalizeDiditStatus,
   type StartKycResult,
   type KycCheckResult,
   type SignAgreementResult,
@@ -104,7 +106,7 @@ export async function startKycSession(): Promise<StartKycResult> {
  */
 export async function checkKycSession(sessionId: string): Promise<KycCheckResult> {
   if (!isKycVideoEnabled()) return { status: 'error' }
-  if (!/^[0-9a-f-]{16,64}$/i.test(sessionId)) return { status: 'error' }
+  if (!isValidDiditSessionId(sessionId)) return { status: 'error' }
 
   const supabase = await createClient()
   const {
@@ -130,10 +132,7 @@ export async function checkKycSession(sessionId: string): Promise<KycCheckResult
     }
 
     const raw = decision.status ?? 'Unknown'
-    if (raw === 'Approved') return { status: 'approved', raw }
-    if (raw === 'Declined') return { status: 'declined', raw }
-    if (raw === 'In Review' || raw === 'Resubmitted') return { status: 'in_review', raw }
-    return { status: 'pending', raw }
+    return { status: normalizeDiditStatus(raw), raw }
   } catch (e) {
     console.error('[Didit] decision error:', e)
     return { status: 'error' }

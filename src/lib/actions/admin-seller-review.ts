@@ -11,6 +11,7 @@ import {
   sendInfoRequestedEmail,
 } from '@/lib/email'
 import { logAdminActivity } from '@/lib/admin/activity-log'
+import { logAudit } from '@/lib/audit'
 import { ADMIN_ACTIONS } from '@/lib/admin/permissions-constants'
 import { slugify } from '@/lib/utils'
 
@@ -474,6 +475,20 @@ export async function markApplicationUnderReview(
       return { success: true, changed: false }
     }
 
+    // Best-effort audit trail — logAudit swallows its own errors, but the
+    // extra guard makes sure a failed audit write can never fail the flip.
+    try {
+      await logAudit({
+        action: 'seller_application_under_review',
+        table_name: 'seller_applications',
+        record_id: applicationId,
+        old_data: { status: 'pending' },
+        new_data: { status: 'under_review' },
+      })
+    } catch (auditErr) {
+      console.error('[markApplicationUnderReview] audit log failed:', auditErr)
+    }
+
     const name =
       application.full_legal_name ||
       (application.profiles as any)?.full_name ||
@@ -678,6 +693,18 @@ export async function approveApplication(applicationId: string, notes?: string) 
       })
     }
 
+    // Best-effort audit trail
+    try {
+      await logAudit({
+        action: 'seller_application_approved',
+        table_name: 'seller_applications',
+        record_id: applicationId,
+        new_data: { status: 'approved', notes: notes || null },
+      })
+    } catch (auditErr) {
+      console.error('[approveApplication] audit log failed:', auditErr)
+    }
+
     // Log activity
     await logAdminActivity({
       action: ADMIN_ACTIONS.APPLICATION_APPROVED,
@@ -782,6 +809,18 @@ export async function rejectApplication(applicationId: string, reason: string, n
           reason: reason,
         })
       }
+    }
+
+    // Best-effort audit trail
+    try {
+      await logAudit({
+        action: 'seller_application_rejected',
+        table_name: 'seller_applications',
+        record_id: applicationId,
+        new_data: { status: 'rejected', rejection_reason: reason, notes: notes || null },
+      })
+    } catch (auditErr) {
+      console.error('[rejectApplication] audit log failed:', auditErr)
     }
 
     // Log activity

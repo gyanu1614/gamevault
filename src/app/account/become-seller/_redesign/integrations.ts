@@ -46,6 +46,26 @@ export interface KycCheckResult {
   raw?: string
 }
 
+/**
+ * normalizeDiditStatus — maps Didit's lifecycle status strings down to the
+ * app's normalised decision statuses. Single source of truth shared by the
+ * poll path (checkKycSession) and the Didit webhook route, so the two intake
+ * paths can never disagree on what a raw status means.
+ */
+export function normalizeDiditStatus(
+  raw: string | null | undefined
+): Exclude<KycCheckResult['status'], 'error'> {
+  if (raw === 'Approved') return 'approved'
+  if (raw === 'Declined') return 'declined'
+  if (raw === 'In Review' || raw === 'Resubmitted') return 'in_review'
+  return 'pending'
+}
+
+/** Loose Didit session-id shape check (shared by poll + webhook paths). */
+export function isValidDiditSessionId(sessionId: string | null | undefined): boolean {
+  return !!sessionId && /^[0-9a-f-]{16,64}$/i.test(sessionId)
+}
+
 export interface SignAgreementResult {
   /** True when a DocuSeal embed session is available. */
   enabled: boolean
