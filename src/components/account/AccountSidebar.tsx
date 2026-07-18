@@ -58,8 +58,10 @@ interface AccountSidebarProps {
 
 export default function AccountSidebar({ user }: AccountSidebarProps) {
   const pathname = usePathname()
+  // Drawer is gone; NavItems (shared with desktop) still calls the setter
+  // on link taps — kept as a no-op state.
+  const [, setIsMobileOpen] = useState(false)
   const searchParams = useSearchParams()
-  const [isMobileOpen, setIsMobileOpen] = useState(false)
   // V22 — Accordion: at most one grouped item (Offers / Orders) is open at a
   // time. `null` = none open. Clicking a parent navigates AND opens its group,
   // closing any other. Initialized lazily from the active route below.
@@ -467,35 +469,50 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
 
   return (
     <>
-      {/* Mobile Menu Button */}
-      {/* Mobile-audit — while the drawer is open the toggle lifts to z-[80]
-          so its X state stays above the drawer (z-[70]) + backdrop (z-[60]);
-          closed it sits at z-50 so shared dialogs/sheets (z-50, portaled
-          later in the DOM) still paint over it. h-11 w-11 = 44px target. */}
-      <button
-        onClick={() => setIsMobileOpen(!isMobileOpen)}
-        aria-label={isMobileOpen ? 'Close account menu' : 'Open account menu'}
-        aria-expanded={isMobileOpen}
-        className={cn(
-          'fixed top-[4.5rem] left-3 lg:hidden flex h-11 w-11 items-center justify-center rounded-lg bg-black/50 backdrop-blur-xl border border-border-subtle text-white shadow-lg hover:bg-black/70 transition-all',
-          isMobileOpen ? 'z-[80]' : 'z-50',
-        )}
+      {/* Mobile — the drawer + floating hamburger are gone. Account
+          sections ride a full-width tab strip ATTACHED under the 60px
+          app navbar (same pattern as the game sub-nav): horizontal
+          scroll, lime active, badge counts, right-edge fade. Full-bleed
+          via the w-screen trick so parent gutters can't pinch it. */}
+      <nav
+        aria-label="Account sections"
+        className="sticky top-[60px] z-30 lg:hidden relative left-1/2 right-1/2 -mx-[50vw] w-screen border-b border-white/[0.06] bg-[rgba(14,22,17,0.97)] backdrop-blur-md"
       >
-        {isMobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-      </button>
-
-      {/* Mobile Backdrop */}
-      <AnimatePresence>
-        {isMobileOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={() => setIsMobileOpen(false)}
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] lg:hidden"
+        <div className="relative">
+          <div className="flex gap-1 overflow-x-auto px-3 py-2 scrollbar-hide">
+            {[...sellerItems, ...accountItems.filter((a) => !sellerItems.some((si) => si.href === a.href))].map(
+              ({ label, href, icon: Icon, badge }) => {
+                const active = isActive(href)
+                return (
+                  <Link
+                    key={href}
+                    href={href}
+                    className={cn(
+                      'inline-flex h-10 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg px-3 text-[12.5px] font-semibold transition-all active:scale-[0.97]',
+                      active
+                        ? 'bg-white/[0.09] text-lime-text shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]'
+                        : 'text-text-secondary',
+                    )}
+                  >
+                    <Icon className="h-4 w-4 shrink-0" />
+                    {label}
+                    {badge && (
+                      <span className="grid min-w-[18px] place-items-center rounded-full bg-lime px-1 text-[10px] font-black text-text-inverse">
+                        {badge}
+                      </span>
+                    )}
+                  </Link>
+                )
+              },
+            )}
+          </div>
+          {/* Right-edge overflow affordance */}
+          <span
+            aria-hidden
+            className="pointer-events-none absolute inset-y-0 right-0 w-6 bg-gradient-to-l from-[rgba(14,22,17,0.97)] to-transparent"
           />
-        )}
-      </AnimatePresence>
+        </div>
+      </nav>
 
       {/* Desktop Sidebar - Modern Floating Card */}
       <aside className="hidden lg:flex lg:flex-col lg:fixed lg:left-4 lg:top-24 lg:bottom-4 lg:w-64 card-frost border border-border-subtle rounded-lg shadow-2xl overflow-hidden">
@@ -505,21 +522,6 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
             killing AnimatePresence (collapse snapped instead of animating). */}
         {NavItems()}
       </aside>
-
-      {/* Mobile Sidebar */}
-      <AnimatePresence>
-        {isMobileOpen && (
-          <motion.aside
-            initial={{ x: '-100%' }}
-            animate={{ x: 0 }}
-            exit={{ x: '-100%' }}
-            transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-            className="fixed top-4 bottom-4 left-4 w-64 card-frost border border-border-subtle rounded-lg z-[70] lg:hidden flex flex-col shadow-2xl"
-          >
-            {NavItems()}
-          </motion.aside>
-        )}
-      </AnimatePresence>
     </>
   )
 }
