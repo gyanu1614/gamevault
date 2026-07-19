@@ -42,6 +42,7 @@ import {
 import { SmartLink } from '@/components/global/SmartLink'
 import type { PopularGame } from '../hooks/usePopularGames'
 import type { SoldItem } from '../hooks/useRecentSales'
+import { getGameIcon } from '../lib/game-icons'
 
 /* ────────────────────────────────────────────────────────────
    Shared forest-glass recipe (house style)
@@ -65,6 +66,10 @@ const PRESSED =
 // inset. Six pixels of extra breathing room keeps the first card away from
 // the viewport edge on narrow phones.
 const MOBILE_GUTTER = 'px-6 sm:px-8'
+// The cover rail follows its own card rhythm: 12px from the viewport edge,
+// matching the 12px gap between the first and second card. Protection keeps
+// the roomier shared gutter below.
+const POPULAR_GAMES_GUTTER = 'px-3 sm:px-8'
 
 /** Faint lime-warmed top sheen. Parent needs `relative overflow-hidden`. */
 function Sheen() {
@@ -81,13 +86,15 @@ function MobileSectionHeader({
   title,
   href,
   linkLabel = 'View All',
+  gutterClass = MOBILE_GUTTER,
 }: {
   title: React.ReactNode
   href?: string
   linkLabel?: string
+  gutterClass?: string
 }) {
   return (
-    <div className={`mb-4 flex items-end justify-between gap-3 ${MOBILE_GUTTER}`}>
+    <div className={`mb-4 flex items-end justify-between gap-3 ${gutterClass}`}>
       <h2 className="t-section font-display">{title}</h2>
       {href && (
         <Link
@@ -110,7 +117,23 @@ interface NavCatRow {
   slug: string
   name: string | null
   metadata: { label?: string; name?: string; type?: string } | null
-  game: { name: string; slug: string; sort_order?: number | null } | null
+  game: {
+    name: string
+    slug: string
+    emoji?: string | null
+    image_url?: string | null
+    sort_order?: number | null
+  } | null
+}
+
+interface MobileSearchCategory {
+  slug: string
+  label: string
+}
+
+interface MobileSearchGame {
+  game: NonNullable<NavCatRow['game']>
+  categories: MobileSearchCategory[]
 }
 
 /**
@@ -143,6 +166,11 @@ const catLabel = (row: NavCatRow) =>
     .replace(/[-_]+/g, ' ')
     .replace(/\b\w/g, (c) => c.toUpperCase())
 
+const compactSearchCategoryLabel = (label: string) => {
+  const parenthetical = label.match(/^\s*[^()]+\(([^()]+)\)\s*$/)
+  return parenthetical?.[1] ?? label
+}
+
 function MobileHeroSearch() {
   const router = useRouter()
   const { data: navCats } = useNavCategories()
@@ -151,28 +179,48 @@ function MobileHeroSearch() {
 
   const trimmed = q.trim()
 
-  // Client-side matches against game + category names — the same index
-  // GlobalSearch builds. Rows navigate to /{game}/{category}.
-  const matches = useMemo(() => {
-    if (!trimmed) return []
-    const needle = trimmed.toLowerCase()
-    const out: { gameName: string; gameSlug: string; catLabel: string; catSlug: string }[] = []
+  // Build one game row with its categories underneath, matching the grouped
+  // desktop search index instead of rendering one flat row per category.
+  const gameGroups = useMemo(() => {
+    const grouped = new Map<string, MobileSearchGame>()
     for (const raw of (navCats ?? []) as unknown as NavCatRow[]) {
       const game = raw.game
       if (!game?.slug) continue
-      const label = catLabel(raw)
-      const hit =
-        game.name.toLowerCase().includes(needle) ||
-        game.slug.toLowerCase().includes(needle) ||
-        label.toLowerCase().includes(needle) ||
-        raw.slug.toLowerCase().includes(needle)
-      if (hit) {
-        out.push({ gameName: game.name, gameSlug: game.slug, catLabel: label, catSlug: raw.slug })
+      const category = { slug: raw.slug, label: catLabel(raw) }
+      const existing = grouped.get(game.slug)
+      if (existing) {
+        if (!existing.categories.some((item) => item.slug === category.slug)) {
+          existing.categories.push(category)
+        }
+      } else {
+        grouped.set(game.slug, { game, categories: [category] })
       }
-      if (out.length >= 6) break
     }
-    return out
-  }, [navCats, trimmed])
+    return Array.from(grouped.values()).sort(
+      (a, b) => (a.game.sort_order ?? 99) - (b.game.sort_order ?? 99),
+    )
+  }, [navCats])
+
+  // Clicking into the empty field opens a useful game index immediately;
+  // typing narrows it by game or category while retaining grouped rows.
+  const matches = useMemo(() => {
+    const needle = trimmed.toLowerCase()
+    if (!needle) return gameGroups.slice(0, 10)
+    return gameGroups
+      .flatMap((entry) => {
+        const gameHit =
+          entry.game.name.toLowerCase().includes(needle) ||
+          entry.game.slug.toLowerCase().includes(needle)
+        const categoryHits = entry.categories.filter(
+          (category) =>
+            category.label.toLowerCase().includes(needle) ||
+            category.slug.toLowerCase().includes(needle),
+        )
+        if (!gameHit && categoryHits.length === 0) return []
+        return [{ ...entry, categories: gameHit ? entry.categories : categoryHits }]
+      })
+      .slice(0, 10)
+  }, [gameGroups, trimmed])
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -182,13 +230,13 @@ function MobileHeroSearch() {
     router.push(`/browse?search=${encodeURIComponent(trimmed)}`)
   }
 
-  const open = focused && trimmed.length > 0
+  const open = focused
 
   return (
-    <div className="relative">
+    <div className="relative -mx-3 sm:mx-0">
       <form onSubmit={submit} role="search">
         <div
-          className={`relative flex h-[52px] items-center overflow-hidden rounded-[16px] ${RAISED} transition-colors focus-within:border-white/[0.18] focus-within:ring-1 focus-within:ring-white/[0.12]`}
+          className="relative flex h-[52px] items-center overflow-hidden rounded-lg border border-border-subtle bg-card text-card-foreground shadow-sm backdrop-blur-md transition-colors focus-within:border-white/[0.18] focus-within:ring-1 focus-within:ring-white/[0.12]"
         >
           <Sheen />
           <Search
@@ -204,55 +252,109 @@ function MobileHeroSearch() {
             onBlur={() => setFocused(false)}
             placeholder="Search games, currencies, items…"
             aria-label="Search the marketplace"
+            aria-autocomplete="list"
             className="h-full w-full bg-transparent pl-12 pr-4 text-base text-text-primary outline-none placeholder:text-text-tertiary [&::-webkit-search-cancel-button]:hidden"
           />
         </div>
       </form>
 
-      {/* Suggestions — forest-glass panel under the bar. Rows use
-          onPointerDown preventDefault so the input blur doesn't kill
-          the tap before the Link click lands. */}
+      {/* Grouped game picker — rows use onPointerDown preventDefault so the
+          input blur doesn't kill a category tap on touch devices. */}
       {open && (
         <div
-          className={`absolute inset-x-0 top-[60px] z-30 overflow-hidden rounded-[16px] border border-white/[0.10] bg-[#121512] shadow-[0_16px_40px_rgba(0,0,0,0.55)]`}
+          role="listbox"
+          aria-label="Game search results"
+          className="absolute inset-x-0 top-[60px] z-50 overflow-hidden rounded-lg border border-border-subtle bg-card text-card-foreground shadow-elevated"
           onPointerDown={(e) => e.preventDefault()}
         >
-          <Sheen />
-          {matches.length > 0 ? (
-            <ul className="relative py-1.5">
-              {matches.map((m) => (
-                <li key={`${m.gameSlug}/${m.catSlug}`}>
-                  <Link
-                    href={`/${m.gameSlug}/${m.catSlug}`}
-                    onClick={() => { setQ(''); setFocused(false) }}
-                    className={`flex min-h-[44px] items-center gap-3 px-4 ${PRESSED}`}
-                  >
-                    <Search aria-hidden className="h-4 w-4 shrink-0 text-text-tertiary" />
-                    <span className="min-w-0 flex-1 truncate text-[14px]">
-                      <span className="font-semibold text-text-primary">{m.gameName}</span>
-                      <span className="mx-1.5 text-text-disabled" aria-hidden>·</span>
-                      <span className="text-text-secondary">{m.catLabel}</span>
-                    </span>
-                    <ChevronRight aria-hidden className="h-4 w-4 shrink-0 text-text-tertiary" />
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <button
-              type="button"
-              onClick={submit}
-              className={`relative flex min-h-[48px] w-full items-center gap-3 px-4 text-left ${PRESSED}`}
+          <div className="flex max-h-[min(520px,calc(100dvh-190px))] flex-col overflow-hidden">
+            <div className="flex shrink-0 items-center justify-between px-5 pb-2 pt-4">
+              <span className="font-mono text-[11px] font-bold tracking-[0.18em] text-white/65">GAMES</span>
+              <span className="text-[14px] font-medium tabular-nums text-white/55">{gameGroups.length || '—'}</span>
+            </div>
+            <div
+              className="overflow-y-auto px-2 pb-3 [scrollbar-width:thin]"
+              style={{ scrollbarColor: 'rgba(255,255,255,0.24) transparent' }}
             >
-              <Search aria-hidden className="h-4 w-4 shrink-0 text-text-tertiary" />
-              <span className="truncate text-[14px] text-text-secondary">
-                Search for “<span className="font-semibold text-text-primary">{trimmed}</span>”
-              </span>
-            </button>
-          )}
+              {navCats === undefined ? (
+                <div className="space-y-3 px-2 py-4">
+                  {Array.from({ length: 4 }).map((_, index) => (
+                    <div key={index} className="h-[68px] animate-pulse rounded-[14px] bg-white/[0.045]" />
+                  ))}
+                </div>
+              ) : matches.length > 0 ? (
+                <ul className="space-y-0.5">
+                  {matches.map((entry) => (
+                    <li key={entry.game.slug}>
+                      <div className="rounded-lg px-2.5 py-2 transition-colors hover:bg-white/[0.045]">
+                        <div className="flex min-w-0 items-start gap-3">
+                          <MobileSearchGameLogo game={entry.game} />
+                          <div className="min-w-0 flex-1 pt-0.5 text-left">
+                            <span className="block min-w-0 truncate text-[16px] font-semibold leading-tight tracking-[-0.01em] text-white">
+                              {entry.game.name}
+                            </span>
+                            {entry.categories.length > 0 && (
+                              <div className="mt-2 flex min-w-0 flex-nowrap gap-1.5 overflow-x-auto pr-1 scrollbar-hide touch-pan-x">
+                                {entry.categories.slice(0, 3).map((category) => (
+                                  <Link
+                                    key={category.slug}
+                                    href={`/${entry.game.slug}/${category.slug}`}
+                                    onClick={() => { setQ(''); setFocused(false) }}
+                                    className={`inline-flex min-h-6 shrink-0 items-center whitespace-nowrap rounded-[9px] border border-white/[0.09] bg-white/[0.115] px-1.5 py-1 text-[10.5px] font-medium leading-none text-white/85 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] ${PRESSED}`}
+                                  >
+                                    <span className="truncate">{compactSearchCategoryLabel(category.label)}</span>
+                                  </Link>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <button
+                  type="button"
+                  onClick={submit}
+                  className={`flex min-h-[72px] w-full items-center gap-3 rounded-[14px] px-3 text-left ${PRESSED}`}
+                >
+                  <Search aria-hidden className="h-5 w-5 shrink-0 text-white/45" />
+                  <span className="truncate text-[14px] text-white/65">
+                    Search the marketplace for “<span className="font-semibold text-white">{trimmed}</span>”
+                  </span>
+                </button>
+              )}
+            </div>
+          </div>
         </div>
       )}
     </div>
+  )
+}
+
+function MobileSearchGameLogo({ game }: { game: NonNullable<NavCatRow['game']> }) {
+  const fallback = getGameIcon(game.slug.toLowerCase())
+  const usableFallback = fallback.includes('game-fallback') ? null : fallback
+  const [src, setSrc] = useState<string | null>(game.image_url || usableFallback)
+
+  if (!src) {
+    return (
+      <span className="grid h-12 w-12 shrink-0 place-items-center rounded-[11px] bg-white/[0.10] text-sm font-bold text-white/60 ring-1 ring-white/[0.08]">
+        {(game.emoji || game.name.slice(0, 2)).toUpperCase()}
+      </span>
+    )
+  }
+
+  return (
+    /* eslint-disable-next-line @next/next/no-img-element */
+    <img
+      src={src}
+      alt=""
+      loading="lazy"
+      onError={() => setSrc((current) => (current !== usableFallback ? usableFallback : null))}
+      className="h-12 w-12 shrink-0 rounded-[11px] object-cover shadow-[0_7px_16px_rgba(0,0,0,0.35)] ring-1 ring-white/[0.10]"
+    />
   )
 }
 
@@ -273,7 +375,7 @@ const HERO_CHIPS = [
 
 export function MobileHero() {
   return (
-    <section className={`relative z-10 ${MOBILE_GUTTER} pb-2 pt-8 text-center`}>
+    <section className={`relative z-30 ${MOBILE_GUTTER} pb-2 pt-8 text-center`}>
       {/* Hero title — centered, with a restrained 3D edge: a crisp 2px
           under-shadow (emboss) + soft depth falloff. The gradient line
           gets the same lift via drop-shadow (text-shadow would bleed
@@ -305,11 +407,13 @@ export function MobileHero() {
                 new CustomEvent('dm:open-category', { detail: tabId }),
               )
             }
-            className={`relative flex h-[60px] min-w-[86px] shrink-0 snap-start flex-col items-center justify-center gap-1.5 overflow-hidden rounded-[10px] ${RAISED} transition-colors active:bg-white/[0.07] ${PRESSED}`}
+            className={`group relative flex h-[64px] min-w-[90px] shrink-0 snap-start flex-col items-center justify-center gap-1.5 overflow-hidden rounded-[14px] border border-white/[0.12] bg-[linear-gradient(180deg,rgba(255,255,255,0.105),rgba(255,255,255,0.045))] shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_8px_20px_rgba(0,0,0,0.18)] backdrop-blur-md transition-all hover:border-white/[0.2] hover:bg-white/[0.12] active:bg-white/[0.15] ${PRESSED}`}
           >
             <Sheen />
-            <Icon aria-hidden className="h-[18px] w-[18px] text-text-secondary" />
-            <span className="text-[11px] font-semibold leading-none text-text-secondary">
+            <span className="relative grid h-8 w-8 place-items-center rounded-[10px] bg-white/[0.08] text-white/75 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] transition-colors group-hover:bg-white/[0.14] group-hover:text-white">
+              <Icon aria-hidden className="h-[17px] w-[17px]" />
+            </span>
+            <span className="relative text-[11px] font-semibold leading-none tracking-[-0.01em] text-white/75 group-hover:text-white">
               {label}
             </span>
           </button>
@@ -355,8 +459,8 @@ function GamePills({ game }: { game: PopularGame }) {
 export function MobilePopularGames({ games }: { games: PopularGame[] }) {
   return (
     <section className="relative z-10 pt-8">
-      <MobileSectionHeader title="Popular Games" href="/browse" />
-      <div className={`flex snap-x gap-3 overflow-x-auto ${MOBILE_GUTTER} pb-1 scrollbar-hide`}>
+      <MobileSectionHeader title="Popular Games" href="/browse" gutterClass={POPULAR_GAMES_GUTTER} />
+      <div className={`flex snap-x gap-3 overflow-x-auto ${POPULAR_GAMES_GUTTER} [scroll-padding-inline:0.75rem] pb-1 scrollbar-hide sm:[scroll-padding-inline:2rem]`}>
         {games.length === 0
           ? Array.from({ length: 4 }).map((_, i) => (
               <div key={i} className="w-[132px] shrink-0 snap-start sm:w-[144px]">
@@ -409,7 +513,7 @@ export function MobileProtectionStrip() {
   return (
     <section className="relative z-10 pt-8">
       <MobileSectionHeader title="How You're Protected" href="/safedrop" linkLabel="SafeDrop" />
-      <div className={`-mb-1 flex snap-x gap-3 overflow-x-auto ${MOBILE_GUTTER} pb-2 scrollbar-hide`}>
+      <div className={`-mb-1 flex snap-x gap-3 overflow-x-auto ${MOBILE_GUTTER} [scroll-padding-inline:1.5rem] pb-2 scrollbar-hide sm:[scroll-padding-inline:2rem]`}>
         {PROTECTION_STEPS.map(({ num, title, copy, Icon, glow }) => (
           <Link
             key={num}

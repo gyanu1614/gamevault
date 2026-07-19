@@ -44,6 +44,8 @@ import { usePopularGames } from '../hooks/usePopularGames'
 import { usePopularCurrencies } from '../hooks/usePopularCurrencies'
 import { usePopularItems, usePopularAccounts, usePopularTopups } from '../hooks/usePopularCategories'
 import { useRecentSales } from '../hooks/useRecentSales'
+import { formatFromPrice } from '../lib/popular-listings'
+import { getGameIcon } from '../lib/game-icons'
 
 
 /** V57 — Pre-footer category strip (reference: category pills under the
@@ -56,6 +58,90 @@ const CTA_CATEGORIES = [
   { label: 'Boosting', icon: Rocket, href: '/browse' },
   { label: 'Gift Cards', icon: Gift, href: '/#top-ups' },
 ] as const
+
+type MarketplaceRailItem = {
+  href: string
+  name: string
+  game: string
+  iconSrc?: string | null
+  fromPrice: number
+  listingCount?: number
+}
+
+type MarketplaceRailSlide = {
+  id: 'currencies' | 'items' | 'accounts'
+  title: string
+  items: MarketplaceRailItem[]
+}
+
+/**
+ * Visual fill for a young marketplace: live rows always lead, then these
+ * existing game assets complete a five-cover editorial list while a category
+ * is still building inventory. Each link lands on the matching browse route.
+ */
+const MARKETPLACE_RAIL_FILLERS: Record<MarketplaceRailSlide['id'], MarketplaceRailItem[]> = {
+  currencies: [
+    { href: '/roblox/buy-robux', name: 'Robux', game: 'Roblox', iconSrc: '/games/roblox.png', fromPrice: 0.0044 },
+    { href: '/fortnite/buy-vbucks', name: 'V-Bucks', game: 'Fortnite', iconSrc: '/games/fortnite.png', fromPrice: 4.99 },
+    { href: '/genshin-impact/genesis-crystals', name: 'Genesis Crystals', game: 'Genshin Impact', iconSrc: '/games/genshin.png', fromPrice: 3.99 },
+    { href: '/fc25/fc-points', name: 'FC Points', game: 'EA Sports FC 25', iconSrc: '/games/fc25.png', fromPrice: 5.99 },
+    { href: '/call-of-duty/cod-points', name: 'COD Points', game: 'Call of Duty', iconSrc: '/games/cod.png', fromPrice: 7.99 },
+  ],
+  items: [
+    { href: '/roblox/buy-items', name: 'Items', game: 'Roblox', iconSrc: '/games/roblox.png', fromPrice: 1.99 },
+    { href: '/fortnite/buy-items', name: 'Skins', game: 'Fortnite', iconSrc: '/games/fortnite.png', fromPrice: 2.99 },
+    { href: '/cs2/buy-items', name: 'Skins', game: 'Counter-Strike 2', iconSrc: '/games/cs2.png', fromPrice: 0.99 },
+    { href: '/valorant/buy-items', name: 'Weapon Skins', game: 'Valorant', iconSrc: '/games/valorant.png', fromPrice: 4.99 },
+    { href: '/minecraft/items', name: 'Items', game: 'Minecraft', iconSrc: '/games/minecraft.png', fromPrice: 1.49 },
+  ],
+  accounts: [
+    { href: '/fortnite/buy-accounts', name: 'Accounts', game: 'Fortnite', iconSrc: '/games/fortnite.png', fromPrice: 7.99 },
+    { href: '/valorant/accounts', name: 'Accounts', game: 'Valorant', iconSrc: '/games/valorant.png', fromPrice: 8.99 },
+    { href: '/gta-v/buy-accounts', name: 'Accounts', game: 'Grand Theft Auto V', iconSrc: '/games/gta-v.png', fromPrice: 9.99 },
+    { href: '/cs2/buy-accounts', name: 'Accounts', game: 'Counter-Strike 2', iconSrc: '/games/cs2.png', fromPrice: 4.99 },
+    { href: '/genshin-impact/accounts', name: 'Accounts', game: 'Genshin Impact', iconSrc: '/games/genshin.png', fromPrice: 6.99 },
+    { href: '/league-of-legends/accounts', name: 'Accounts', game: 'League of Legends', iconSrc: '/games/lol.png', fromPrice: 5.99 },
+  ],
+}
+
+function completeMarketplaceRail(
+  items: MarketplaceRailItem[],
+  category: MarketplaceRailSlide['id'],
+): MarketplaceRailItem[] {
+  const hasArtwork = (item: MarketplaceRailItem) =>
+    Boolean(item.iconSrc && !item.iconSrc.includes('game-fallback'))
+  const completeLiveRows = items
+    .map((item) => {
+      if (hasArtwork(item)) return item
+      const gameSlug = item.href.split('/').filter(Boolean)[0] ?? ''
+      const registeredIcon = getGameIcon(gameSlug)
+      return {
+        ...item,
+        iconSrc: registeredIcon.includes('game-fallback') ? item.iconSrc : registeredIcon,
+      }
+    })
+    .filter(hasArtwork)
+  const seen = new Set<string>()
+  const completed: MarketplaceRailItem[] = []
+
+  for (const liveItem of completeLiveRows) {
+    const key = liveItem.game.toLowerCase()
+    if (seen.has(key)) continue
+    seen.add(key)
+    completed.push(liveItem)
+    if (completed.length >= 5) return completed
+  }
+
+  for (const filler of MARKETPLACE_RAIL_FILLERS[category]) {
+    const key = filler.game.toLowerCase()
+    if (seen.has(key)) continue
+    seen.add(key)
+    completed.push(filler)
+    if (completed.length >= 5) break
+  }
+
+  return completed.slice(0, 5)
+}
 
 const WHY_CARDS = [
   {
@@ -186,71 +272,211 @@ function ShopByCategoryShelf({
   items: ReturnType<typeof usePopularItems>['data']
   accounts: ReturnType<typeof usePopularAccounts>['data']
 }) {
-  const [slide, setSlide] = useState(0)
-  type RailItem = { href: string; name: string; game: string; iconSrc?: string | null; fromPrice: number; listingCount?: number }
-  const slides: { id: string; eyebrow: string; title: string; items: RailItem[] }[] = [
-    { id: 'items', eyebrow: 'Marketplace edit', title: 'Top Item Drops', items: items ?? [] },
-    { id: 'currencies', eyebrow: 'Most traded', title: 'Top Currency Picks', items: (currencies ?? []).map((currency) => ({ ...currency, href: `/${currency.slug}` })) },
-    { id: 'accounts', eyebrow: 'Player favorites', title: 'Top Selling Accounts', items: accounts ?? [] },
+  // Keep the order intentional: Currency → Items → Accounts. This is a
+  // finite editorial rail, so the last panel only moves back toward Items.
+  const slides: MarketplaceRailSlide[] = [
+    {
+      id: 'currencies',
+      title: 'Top Currency',
+      items: completeMarketplaceRail(
+        (currencies ?? []).map((currency) => ({
+          ...currency,
+          href: `/${currency.slug}`,
+        })),
+        'currencies',
+      ),
+    },
+    { id: 'items', title: 'Top Items', items: completeMarketplaceRail(items ?? [], 'items') },
+    { id: 'accounts', title: 'Top Accounts', items: completeMarketplaceRail(accounts ?? [], 'accounts') },
   ]
-  const active = slides[slide]
-  const peek = slides[(slide + 1) % slides.length]
-  const visible = active.items.slice(0, 10)
-  const peekVisible = peek.items.slice(0, 5)
-  const move = (direction: 1 | -1) => setSlide((current) => (current + direction + slides.length) % slides.length)
+  const [trackIndex, setTrackIndex] = useState(0)
+  const [panelWidth, setPanelWidth] = useState(0)
+  const [viewportWidth, setViewportWidth] = useState(0)
+  const viewportRef = useRef<HTMLDivElement | null>(null)
   const touchStartX = useRef<number | null>(null)
+
+  // The reference uses a ~74/26 split on phones so the next sibling is
+  // unmistakably visible. At wider widths two panels can sit comfortably
+  // side-by-side, while each panel still owns its heading and divider.
+  useEffect(() => {
+    const node = viewportRef.current
+    if (!node) return
+
+    const measure = () => {
+      const width = node.getBoundingClientRect().width
+      const ratio = window.matchMedia('(min-width: 768px)').matches ? 0.5 : 0.74
+      setViewportWidth(width)
+      setPanelWidth(width * ratio)
+    }
+
+    measure()
+    if (typeof ResizeObserver === 'undefined') return
+    const observer = new ResizeObserver(measure)
+    observer.observe(node)
+    return () => observer.disconnect()
+  }, [])
+
+  const move = (direction: 1 | -1) => {
+    setTrackIndex((current) => Math.max(0, Math.min(slides.length - 1, current + direction)))
+  }
+  const goTo = (index: number) => setTrackIndex(index)
+  // Keep the final mobile panel flush to the right edge so the preceding
+  // panel remains visible as a deliberate reverse-swipe affordance. The
+  // desktop two-up layout keeps its normal indexed offset.
+  const trackOffset = panelWidth && viewportWidth && trackIndex === slides.length - 1 && panelWidth > viewportWidth / 2
+    ? Math.max(0, panelWidth * slides.length - viewportWidth)
+    : trackIndex * panelWidth
   const onTouchStart = (event: React.TouchEvent<HTMLDivElement>) => {
     touchStartX.current = event.touches[0]?.clientX ?? null
   }
   const onTouchEnd = (event: React.TouchEvent<HTMLDivElement>) => {
     if (touchStartX.current === null) return
-    const delta = (event.changedTouches[0]?.clientX ?? touchStartX.current) - touchStartX.current
+    const endX = event.changedTouches[0]?.clientX ?? touchStartX.current
+    const delta = endX - touchStartX.current
     touchStartX.current = null
     if (Math.abs(delta) < 48) return
     move(delta < 0 ? 1 : -1)
   }
-
-  useEffect(() => {
-    const timer = window.setInterval(() => setSlide((current) => (current + 1) % slides.length), 9000)
-    return () => window.clearInterval(timer)
-  }, [slides.length])
-
   return (
     <div className="relative">
-      <div className="pointer-events-none absolute -inset-x-10 -top-10 h-48 bg-[radial-gradient(ellipse_at_18%_0%,rgba(198,255,61,0.06),transparent_64%)]" />
-      <div className="relative flex items-start justify-between px-1 pb-5 pt-1 sm:px-2 sm:pt-2">
-        <div>
-          <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.16em] text-lime-text"><span className="h-px w-6 bg-lime/60" />{active.eyebrow}</div>
-          <div className="mt-2 flex items-center gap-2">
-            <h3 className="font-display text-[26px] font-extrabold tracking-tight text-white sm:text-[32px]">{active.title}</h3>
-            <button type="button" onClick={() => move(1)} aria-label="Next category" className="grid h-7 w-7 place-items-center text-white/80 transition-transform hover:translate-x-0.5 hover:text-white active:scale-90">
-              <ChevronRight aria-hidden="true" className="h-6 w-6" strokeWidth={2.2} />
-            </button>
-          </div>
-        </div>
+      <div
+        ref={viewportRef}
+        onTouchStart={onTouchStart}
+        onTouchEnd={onTouchEnd}
+        className="relative overflow-hidden touch-pan-y"
+        aria-label="Browse popular marketplace categories"
+      >
+        <motion.div
+          className="flex w-full will-change-transform"
+          animate={{ x: trackOffset ? -trackOffset : 0 }}
+          transition={{ type: 'tween', duration: 0.58, ease: [0.22, 1, 0.36, 1] }}
+        >
+          {slides.map((slide, index) => (
+            <CategoryRailPanel
+              key={slide.id}
+              slide={slide}
+              panelWidth={panelWidth}
+              onNext={() => move(1)}
+              canAdvance={index < slides.length - 1}
+              isPeekPanel={index > 0}
+            />
+          ))}
+        </motion.div>
       </div>
-      <motion.div key={active.id} initial={{ opacity: 0, x: 18 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.28, ease: 'easeOut' }} onTouchStart={onTouchStart} onTouchEnd={onTouchEnd} className="relative mx-auto grid max-w-5xl grid-cols-1 overflow-hidden touch-pan-y px-2 md:grid-cols-2 md:px-5">
-        {[0, 1].map((column) => <div key={column} className={column === 1 ? 'border-t border-white/[0.10] md:border-l md:border-t-0' : ''}>{visible.slice(column * 5, column * 5 + 5).map((item) => <CategoryRailItem key={item.href ?? item.name} item={item} />)}</div>)}
-        {/* Mobile affordance: a clipped portion of the next category peeks
-            in from the right, with the same quiet divider as the reference. */}
-        <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 right-0 z-10 w-[28%] overflow-hidden border-l border-white/[0.28] bg-[#101014] md:hidden">
-          <div className="w-[285px] px-4 pt-2">
-            <h4 className="mb-3 truncate font-display text-[20px] font-extrabold tracking-tight text-white/85">{peek.title}</h4>
-            {peekVisible.map((item) => <CategoryRailItem key={item.href ?? item.name} item={item} />)}
-          </div>
-        </div>
-      </motion.div>
-      <div className="relative flex items-center justify-center gap-3 px-5 pb-2 pt-6">{slides.map((item, index) => <button key={item.id} type="button" aria-label={`Go to ${item.title}`} onClick={() => setSlide(index)} className={`h-2.5 w-2.5 rounded-full transition-all ${index === slide ? 'bg-white shadow-[0_0_12px_rgba(255,255,255,0.7)]' : 'bg-white/25 hover:bg-white/45'}`} />)}</div>
+
+      <div className="flex items-center justify-center gap-3 pt-7" role="tablist" aria-label="Marketplace categories">
+        {slides.map((slide, index) => (
+          <button
+            key={slide.id}
+            type="button"
+            role="tab"
+            aria-selected={index === trackIndex}
+            aria-label={`Show ${slide.title}`}
+            onClick={() => goTo(index)}
+            className={`h-2.5 w-2.5 rounded-full transition-all duration-300 ${index === trackIndex ? 'bg-white shadow-[0_0_12px_rgba(255,255,255,0.7)]' : 'bg-white/25 hover:bg-white/45'}`}
+          />
+        ))}
+      </div>
     </div>
   )
 }
 
-function CategoryRailItem({ item }: { item: { href: string; name: string; game: string; iconSrc?: string | null; fromPrice: number; listingCount?: number } }) {
-  return <Link href={item.href?.startsWith('/') ? item.href : `/${item.href}`} className="group flex min-h-[84px] items-center gap-4 rounded-xl px-4 py-3 transition-colors hover:bg-white/[0.045] sm:px-6">
-    {item.iconSrc ? <Image src={item.iconSrc} alt="" width={44} height={56} className="h-14 w-11 shrink-0 rounded-md object-cover shadow-[0_8px_16px_rgba(0,0,0,0.4)]" /> : <span className="grid h-14 w-11 shrink-0 place-items-center rounded-md bg-white/[0.08] text-lg font-bold text-white/45">{item.game?.charAt(0) ?? '?'}</span>}
-    <span className="min-w-0 flex-1"><span className="block truncate text-[16px] font-bold text-white group-hover:text-lime-text sm:text-[18px]">{item.name}</span><span className="mt-1 block truncate text-[12px] text-white/45">{item.game}{item.listingCount ? ` · ${item.listingCount.toLocaleString()} listings` : ''}</span></span>
-    <span className="shrink-0 text-right"><span className="block text-[10px] uppercase tracking-wider text-white/35">from</span><span className="text-[15px] font-bold tabular-nums text-white/85">${Number(item.fromPrice ?? 0).toFixed(2)}</span></span>
-  </Link>
+function CategoryRailPanel({
+  slide,
+  panelWidth,
+  onNext,
+  canAdvance,
+  isPeekPanel,
+}: {
+  slide: MarketplaceRailSlide
+  panelWidth: number
+  onNext: () => void
+  canAdvance: boolean
+  isPeekPanel: boolean
+}) {
+  return (
+    <section
+      aria-label={slide.title}
+      className={`relative w-[74%] shrink-0 pb-2 pr-6 sm:pl-4 sm:pr-8 md:w-1/2 ${isPeekPanel ? 'pl-4' : 'pl-0'}`}
+      style={{ width: panelWidth ? `${panelWidth}px` : undefined }}
+    >
+      <div className="mb-5 flex items-center gap-1.5 sm:mb-6">
+        <h3 className="font-display text-[21px] font-extrabold leading-none tracking-tight text-white sm:text-[27px]">
+          {slide.title}
+        </h3>
+        {canAdvance ? (
+          <button
+            type="button"
+            onClick={onNext}
+            aria-label={`Next category after ${slide.title}`}
+            className="inline-flex shrink-0 items-center justify-center p-0.5 text-white/85 transition-transform hover:translate-x-1 hover:text-white active:scale-90"
+          >
+            <ChevronRight aria-hidden="true" className="h-5 w-5" strokeWidth={2.1} />
+          </button>
+        ) : null}
+      </div>
+
+      <div className="relative space-y-1 after:absolute after:inset-y-0 after:-right-6 after:w-px after:bg-white/[0.24] after:content-[''] sm:after:-right-8">
+        {slide.items.slice(0, 5).map((item) => (
+          <CategoryRailItem key={item.href ?? `${item.game}-${item.name}`} item={item} />
+        ))}
+      </div>
+    </section>
+  )
+}
+
+function CategoryRailItem({ item }: { item: MarketplaceRailItem }) {
+  return (
+    <Link
+      href={item.href?.startsWith('/') ? item.href : `/${item.href}`}
+      className="group flex min-h-[74px] items-center gap-3 rounded-xl px-2 py-2 transition-colors hover:bg-white/[0.045] sm:min-h-[104px] sm:gap-4 sm:px-4 sm:py-2.5"
+    >
+      <CategoryRailArtwork item={item} />
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-[14px] font-bold leading-[1.15] text-white group-hover:text-lime-text sm:text-[19px]">
+          {item.game}
+        </span>
+        <span className="mt-0.5 block truncate text-[11px] leading-tight text-white/48 sm:text-[13px]">
+          {item.name}{item.listingCount ? ` · ${item.listingCount.toLocaleString()} listings` : ''}
+        </span>
+        <span className="mt-1.5 block text-[12px] font-semibold leading-none tabular-nums text-white/85 sm:mt-2 sm:text-[15px]">
+          <span className="mr-1 text-[9px] font-medium uppercase tracking-[0.1em] text-white/38 sm:text-[10px]">from</span>
+          ${formatFromPrice(Number(item.fromPrice ?? 0))}
+        </span>
+      </span>
+    </Link>
+  )
+}
+
+function CategoryRailArtwork({ item }: { item: MarketplaceRailItem }) {
+  const gameSlug = item.href.split('/').filter(Boolean)[0] ?? ''
+  const registeredIcon = getGameIcon(gameSlug)
+  const fallbackIcon = registeredIcon.includes('game-fallback') ? null : registeredIcon
+  const suppliedIcon = item.iconSrc && !item.iconSrc.includes('game-fallback') ? item.iconSrc : null
+  const [art, setArt] = useState<string | null>(suppliedIcon ?? fallbackIcon)
+
+  useEffect(() => {
+    setArt(suppliedIcon ?? fallbackIcon)
+  }, [fallbackIcon, suppliedIcon])
+
+  if (!art) {
+    return (
+      <span className="grid h-[58px] w-11 shrink-0 place-items-center rounded-md bg-white/[0.08] text-base font-bold text-white/45 sm:h-[88px] sm:w-[68px]">
+        {item.game?.charAt(0) ?? '?'}
+      </span>
+    )
+  }
+
+  return (
+    <Image
+      src={art}
+      alt=""
+      width={68}
+      height={88}
+      onError={() => setArt((current) => (current !== fallbackIcon ? fallbackIcon : null))}
+      className="h-[58px] w-11 shrink-0 rounded-md object-cover shadow-[0_7px_14px_rgba(0,0,0,0.38)] sm:h-[88px] sm:w-[68px]"
+    />
+  )
 }
 
 export function HomePage() {
@@ -377,7 +603,7 @@ export function HomePage() {
           FLOATING MARKETPLACE RAIL — three editorial slides:
           item drops, currency picks and selling accounts.
           ================================================================ */}
-      <section className="relative py-20 max-lg:py-10 overflow-hidden">
+      <section id="marketplace-rail" className="relative py-20 max-lg:py-10 overflow-hidden">
         {/* V17i — Subtle backdrop wash matching the other backdrop'd
             sections. Faint lime+steel radial pair so this section isn't
             visually flat next to Popular Games. No image asset needed. */}
