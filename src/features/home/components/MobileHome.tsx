@@ -60,6 +60,12 @@ const RAISED =
 const PRESSED =
   'transition-all duration-[120ms] ease-out active:scale-[0.98] active:brightness-95'
 
+// One mobile content gutter keeps section headers, sliders, cards and lists
+// aligned to the same vertical rails instead of each block choosing its own
+// inset. Six pixels of extra breathing room keeps the first card away from
+// the viewport edge on narrow phones.
+const MOBILE_GUTTER = 'px-6 sm:px-8'
+
 /** Faint lime-warmed top sheen. Parent needs `relative overflow-hidden`. */
 function Sheen() {
   return (
@@ -81,7 +87,7 @@ function MobileSectionHeader({
   linkLabel?: string
 }) {
   return (
-    <div className="mb-4 flex items-end justify-between gap-3 px-5">
+    <div className={`mb-4 flex items-end justify-between gap-3 ${MOBILE_GUTTER}`}>
       <h2 className="t-section font-display">{title}</h2>
       {href && (
         <Link
@@ -182,7 +188,7 @@ function MobileHeroSearch() {
     <div className="relative">
       <form onSubmit={submit} role="search">
         <div
-          className={`relative flex h-[52px] items-center overflow-hidden rounded-xl ${RAISED} transition-colors focus-within:border-white/[0.18] focus-within:ring-1 focus-within:ring-white/[0.12]`}
+          className={`relative flex h-[52px] items-center overflow-hidden rounded-[16px] ${RAISED} transition-colors focus-within:border-white/[0.18] focus-within:ring-1 focus-within:ring-white/[0.12]`}
         >
           <Sheen />
           <Search
@@ -208,7 +214,7 @@ function MobileHeroSearch() {
           the tap before the Link click lands. */}
       {open && (
         <div
-          className={`absolute inset-x-0 top-[60px] z-30 overflow-hidden rounded-xl border border-white/[0.10] bg-[#121512] shadow-[0_16px_40px_rgba(0,0,0,0.55)]`}
+          className={`absolute inset-x-0 top-[60px] z-30 overflow-hidden rounded-[16px] border border-white/[0.10] bg-[#121512] shadow-[0_16px_40px_rgba(0,0,0,0.55)]`}
           onPointerDown={(e) => e.preventDefault()}
         >
           <Sheen />
@@ -267,7 +273,7 @@ const HERO_CHIPS = [
 
 export function MobileHero() {
   return (
-    <section className="relative z-10 px-5 pb-2 pt-8 text-center">
+    <section className={`relative z-10 ${MOBILE_GUTTER} pb-2 pt-8 text-center`}>
       {/* Hero title — centered, with a restrained 3D edge: a crisp 2px
           under-shadow (emboss) + soft depth falloff. The gradient line
           gets the same lift via drop-shadow (text-shadow would bleed
@@ -289,7 +295,7 @@ export function MobileHero() {
       </div>
 
       {/* Category chip slider — 5 tiles, scroll-snap, last one peeks. */}
-      <div className="-mx-5 mt-4 flex snap-x snap-mandatory gap-2.5 overflow-x-auto px-5 pb-1 scrollbar-hide">
+      <div className="-mx-6 mt-4 flex snap-x snap-mandatory gap-2.5 overflow-x-auto px-6 pb-1 scrollbar-hide sm:-mx-8 sm:px-8">
         {HERO_CHIPS.map(({ label, Icon, tabId }) => (
           <button
             key={label}
@@ -330,12 +336,12 @@ function GamePills({ game }: { game: PopularGame }) {
     .slice(0, MAX_PILLS)
   if (shown.length === 0) return null
   return (
-    <div className="mt-2 flex flex-wrap gap-1">
+    <div className="mt-2 flex flex-wrap justify-center gap-1">
       {shown.map((c) => (
         <Link
           key={c.slug}
           href={`/${game.slug}/${c.slug}`}
-          className={`relative inline-flex h-6 max-w-full items-center overflow-hidden rounded px-2 ${RAISED} ${PRESSED}`}
+          className={`relative inline-flex min-h-7 max-w-full items-center overflow-hidden rounded-md border border-white/[0.08] bg-white/[0.12] px-2 ${PRESSED}`}
         >
           <span className="truncate text-[10.5px] font-semibold text-text-secondary">
             {c.label.replace(/\s*\(.*?\)\s*/g, '')}
@@ -350,18 +356,18 @@ export function MobilePopularGames({ games }: { games: PopularGame[] }) {
   return (
     <section className="relative z-10 pt-8">
       <MobileSectionHeader title="Popular Games" href="/browse" />
-      <div className="flex snap-x gap-3 overflow-x-auto px-5 pb-1 scrollbar-hide">
+      <div className={`flex snap-x gap-3 overflow-x-auto ${MOBILE_GUTTER} pb-1 scrollbar-hide`}>
         {games.length === 0
           ? Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="w-[124px] shrink-0 snap-start">
+              <div key={i} className="w-[132px] shrink-0 snap-start sm:w-[144px]">
                 <div className={`aspect-[3/4] w-full animate-pulse rounded-xl ${RAISED}`} />
                 <div className="mt-2 h-4 w-20 animate-pulse rounded bg-[rgba(20,36,26,0.8)]" />
               </div>
             ))
           : games.map((game) => (
-              <div key={game.slug} className="w-[124px] shrink-0 snap-start">
+              <div key={game.slug} className="w-[132px] shrink-0 snap-start sm:w-[144px]">
                 <SmartLink href={game.href} className={`block ${PRESSED}`}>
-                  <div className={`relative aspect-[3/4] w-full overflow-hidden rounded-xl ${RAISED}`}>
+                  <div className="relative aspect-[4/5] w-full overflow-hidden rounded-xl border border-border-subtle bg-bg-raised shadow-elevated">
                     <Image
                       src={game.coverSrc}
                       alt={game.name}
@@ -374,7 +380,7 @@ export function MobilePopularGames({ games }: { games: PopularGame[] }) {
                       className="pointer-events-none absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/40 to-transparent"
                     />
                   </div>
-                  <span className="t-card mt-2 block truncate px-0.5 text-text-primary">
+                  <span className="t-card mt-2 block truncate px-0.5 text-center text-text-primary">
                     {game.name}
                   </span>
                 </SmartLink>
@@ -403,7 +409,7 @@ export function MobileProtectionStrip() {
   return (
     <section className="relative z-10 pt-8">
       <MobileSectionHeader title="How You're Protected" href="/safedrop" linkLabel="SafeDrop" />
-      <div className="-mb-1 flex snap-x gap-3 overflow-x-auto px-5 pb-2 scrollbar-hide">
+      <div className={`-mb-1 flex snap-x gap-3 overflow-x-auto ${MOBILE_GUTTER} pb-2 scrollbar-hide`}>
         {PROTECTION_STEPS.map(({ num, title, copy, Icon, glow }) => (
           <Link
             key={num}
@@ -522,7 +528,7 @@ export function MobileRecentlySold({ items }: { items: SoldItem[] }) {
           </span>
         }
       />
-      <div className="flex flex-col gap-2 px-5">
+      <div className={`flex flex-col gap-2 ${MOBILE_GUTTER}`}>
         {rows.map((item) => (
           <div
             key={item.id}

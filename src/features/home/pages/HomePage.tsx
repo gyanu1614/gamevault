@@ -1,12 +1,12 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { motion } from 'framer-motion'
+import Image from 'next/image'
 import Link from 'next/link'
 import {
   ChevronLeft,
   ChevronRight,
-  ChevronDown,
-  ChevronUp,
   Tag,
   Package,
   CheckCircle2,
@@ -27,7 +27,6 @@ import { TopUpsBanner } from '../components/TopUpsBanner'
 import { HorizontalScroller } from '../components/HorizontalScroller'
 import { GameCard } from '../components/GameCard'
 import { CurrencyCard } from '../components/CurrencyCard'
-import { CategoryCard } from '../components/CategoryCard'
 import { StatsMarquee } from '../components/StatsMarquee'
 import { HowItWorks } from '../components/HowItWorks'
 import { WhyCard } from '../components/WhyCard'
@@ -147,6 +146,7 @@ function PopularGamesShelf({ games }: { games: ReturnType<typeof usePopularGames
               name={game.name}
               coverSrc={game.coverSrc}
               href={game.href}
+              categoryLinks={game.categoryLinks}
             />
           </div>
         ))}
@@ -177,18 +177,6 @@ function PopularGamesShelf({ games }: { games: ReturnType<typeof usePopularGames
   )
 }
 
-/**
- * Shop-by-category tabbed shelf — Currencies | Items | Accounts in one panel.
- * 5-column grid; default shows 2 rows (10 cards); "Show more" expands to 4 rows (20 cards).
- */
-type ShopTab = 'currencies' | 'items' | 'accounts'
-
-const ROWS_COLLAPSED = 2
-const ROWS_EXPANDED = 4
-const COLUMNS = 5
-/** Phones show 3 rows of 3 before the fade + arrow expander. */
-const MOBILE_VISIBLE = 9
-
 function ShopByCategoryShelf({
   currencies,
   items,
@@ -198,125 +186,71 @@ function ShopByCategoryShelf({
   items: ReturnType<typeof usePopularItems>['data']
   accounts: ReturnType<typeof usePopularAccounts>['data']
 }) {
-  const [tab, setTab] = useState<ShopTab>('currencies')
-  const [expanded, setExpanded] = useState(false)
-
-  const onTabChange = (next: ShopTab) => {
-    setTab(next)
-    setExpanded(false) // collapse when switching tabs so users see the top picks first
-  }
-
-  const TABS: { id: ShopTab; label: string }[] = [
-    { id: 'currencies', label: 'Currencies' },
-    { id: 'items',      label: 'Items' },
-    { id: 'accounts',   label: 'Accounts' },
+  const [slide, setSlide] = useState(0)
+  type RailItem = { href: string; name: string; game: string; iconSrc?: string | null; fromPrice: number; listingCount?: number }
+  const slides: { id: string; eyebrow: string; title: string; items: RailItem[] }[] = [
+    { id: 'items', eyebrow: 'Marketplace edit', title: 'Top Item Drops', items: items ?? [] },
+    { id: 'currencies', eyebrow: 'Most traded', title: 'Top Currency Picks', items: (currencies ?? []).map((currency) => ({ ...currency, href: `/${currency.slug}` })) },
+    { id: 'accounts', eyebrow: 'Player favorites', title: 'Top Selling Accounts', items: accounts ?? [] },
   ]
-
-  const visibleCount = (expanded ? ROWS_EXPANDED : ROWS_COLLAPSED) * COLUMNS
-
-  const renderCards = () => {
-    if (tab === 'currencies') {
-      return (currencies ?? []).slice(0, visibleCount).map((c) => (
-        <CurrencyCard key={c.slug} {...c} />
-      ))
-    }
-    if (tab === 'items') {
-      return (items ?? []).slice(0, visibleCount).map((i) => (
-        <CategoryCard key={i.href} {...i} />
-      ))
-    }
-    return (accounts ?? []).slice(0, visibleCount).map((a) => (
-      <CategoryCard key={a.href} {...a} />
-    ))
+  const active = slides[slide]
+  const peek = slides[(slide + 1) % slides.length]
+  const visible = active.items.slice(0, 10)
+  const peekVisible = peek.items.slice(0, 5)
+  const move = (direction: 1 | -1) => setSlide((current) => (current + direction + slides.length) % slides.length)
+  const touchStartX = useRef<number | null>(null)
+  const onTouchStart = (event: React.TouchEvent<HTMLDivElement>) => {
+    touchStartX.current = event.touches[0]?.clientX ?? null
+  }
+  const onTouchEnd = (event: React.TouchEvent<HTMLDivElement>) => {
+    if (touchStartX.current === null) return
+    const delta = (event.changedTouches[0]?.clientX ?? touchStartX.current) - touchStartX.current
+    touchStartX.current = null
+    if (Math.abs(delta) < 48) return
+    move(delta < 0 ? 1 : -1)
   }
 
-  // Decide if "Show more" button should appear (only when there's more to reveal)
-  const totalForTab = tab === 'currencies' ? (currencies?.length ?? 0)
-    : tab === 'items'      ? (items?.length ?? 0)
-    :                        (accounts?.length ?? 0)
-  const hasMore = totalForTab > ROWS_COLLAPSED * COLUMNS
+  useEffect(() => {
+    const timer = window.setInterval(() => setSlide((current) => (current + 1) % slides.length), 9000)
+    return () => window.clearInterval(timer)
+  }, [slides.length])
 
   return (
-    <div>
-      {/* Tab bar */}
-      <div className="flex items-center gap-2 mb-6 flex-wrap">
-        {TABS.map((t) => {
-          const active = t.id === tab
-          return (
-            <button
-              key={t.id}
-              type="button"
-              onClick={() => onTabChange(t.id)}
-              className={
-                active
-                  ? 'inline-flex items-center h-10 px-5 rounded-full bg-lime text-text-inverse font-semibold text-body-sm transition-all duration-fast ease-gv'
-                  : 'inline-flex items-center h-10 px-5 rounded-full bg-bg-raised border border-border-default text-text-secondary font-semibold text-body-sm hover:border-border-strong hover:text-text-primary transition-all duration-fast ease-gv'
-              }
-              aria-pressed={active}
-            >
-              {t.label}
+    <div className="relative">
+      <div className="pointer-events-none absolute -inset-x-10 -top-10 h-48 bg-[radial-gradient(ellipse_at_18%_0%,rgba(198,255,61,0.06),transparent_64%)]" />
+      <div className="relative flex items-start justify-between px-1 pb-5 pt-1 sm:px-2 sm:pt-2">
+        <div>
+          <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.16em] text-lime-text"><span className="h-px w-6 bg-lime/60" />{active.eyebrow}</div>
+          <div className="mt-2 flex items-center gap-2">
+            <h3 className="font-display text-[26px] font-extrabold tracking-tight text-white sm:text-[32px]">{active.title}</h3>
+            <button type="button" onClick={() => move(1)} aria-label="Next category" className="grid h-7 w-7 place-items-center text-white/80 transition-transform hover:translate-x-0.5 hover:text-white active:scale-90">
+              <ChevronRight aria-hidden="true" className="h-6 w-6" strokeWidth={2.2} />
             </button>
-          )
-        })}
+          </div>
+        </div>
       </div>
-
-      {/* Grid — phones: 3-up compact with a 9-card cap + fade/arrow
-          expander; lg+: the original 5×2/5×4 shelf, untouched. */}
-      <div className="relative">
-        <div className="grid grid-cols-3 gap-2.5 sm:gap-4 lg:grid-cols-5 lg:gap-5">
-          {renderCards().map((card, i) => (
-            <div key={card.key ?? i} className={!expanded && i >= MOBILE_VISIBLE ? 'max-lg:hidden' : undefined}>
-              {card}
-            </div>
-          ))}
+      <motion.div key={active.id} initial={{ opacity: 0, x: 18 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.28, ease: 'easeOut' }} onTouchStart={onTouchStart} onTouchEnd={onTouchEnd} className="relative mx-auto grid max-w-5xl grid-cols-1 overflow-hidden touch-pan-y px-2 md:grid-cols-2 md:px-5">
+        {[0, 1].map((column) => <div key={column} className={column === 1 ? 'border-t border-white/[0.10] md:border-l md:border-t-0' : ''}>{visible.slice(column * 5, column * 5 + 5).map((item) => <CategoryRailItem key={item.href ?? item.name} item={item} />)}</div>)}
+        {/* Mobile affordance: a clipped portion of the next category peeks
+            in from the right, with the same quiet divider as the reference. */}
+        <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 right-0 z-10 w-[28%] overflow-hidden border-l border-white/[0.28] bg-[#101014] md:hidden">
+          <div className="w-[285px] px-4 pt-2">
+            <h4 className="mb-3 truncate font-display text-[20px] font-extrabold tracking-tight text-white/85">{peek.title}</h4>
+            {peekVisible.map((item) => <CategoryRailItem key={item.href ?? item.name} item={item} />)}
+          </div>
         </div>
-        {/* Grey-out fade over the last visible mobile row */}
-        {!expanded && hasMore && (
-          <div
-            aria-hidden
-            className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-[#0a0a0f] to-transparent lg:hidden"
-          />
-        )}
-      </div>
-
-      {/* Mobile expander — circular arrow under the fade */}
-      {hasMore && (
-        <div className="mt-3 flex justify-center lg:hidden">
-          <button
-            type="button"
-            onClick={() => setExpanded((e) => !e)}
-            aria-label={expanded ? 'Show fewer categories' : 'Show all categories'}
-            className="grid h-11 w-11 place-items-center rounded-full border border-white/[0.10] bg-white/[0.05] text-text-secondary transition-transform active:scale-95"
-          >
-            {expanded ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
-          </button>
-        </div>
-      )}
-
-      {/* Show more / less toggle — desktop only */}
-      {hasMore && (
-        <div className="mt-6 hidden justify-center lg:flex">
-          <button
-            type="button"
-            onClick={() => setExpanded((e) => !e)}
-            className="inline-flex items-center gap-2 h-10 px-5 rounded-full bg-bg-raised border border-border-default text-text-secondary font-semibold text-body-sm hover:border-border-strong hover:text-text-primary transition-all duration-fast ease-gv"
-          >
-            {expanded ? (
-              <>
-                Show less
-                <ChevronUp aria-hidden="true" className="w-4 h-4" />
-              </>
-            ) : (
-              <>
-                Show more
-                <ChevronDown aria-hidden="true" className="w-4 h-4" />
-              </>
-            )}
-          </button>
-        </div>
-      )}
+      </motion.div>
+      <div className="relative flex items-center justify-center gap-3 px-5 pb-2 pt-6">{slides.map((item, index) => <button key={item.id} type="button" aria-label={`Go to ${item.title}`} onClick={() => setSlide(index)} className={`h-2.5 w-2.5 rounded-full transition-all ${index === slide ? 'bg-white shadow-[0_0_12px_rgba(255,255,255,0.7)]' : 'bg-white/25 hover:bg-white/45'}`} />)}</div>
     </div>
   )
+}
+
+function CategoryRailItem({ item }: { item: { href: string; name: string; game: string; iconSrc?: string | null; fromPrice: number; listingCount?: number } }) {
+  return <Link href={item.href?.startsWith('/') ? item.href : `/${item.href}`} className="group flex min-h-[84px] items-center gap-4 rounded-xl px-4 py-3 transition-colors hover:bg-white/[0.045] sm:px-6">
+    {item.iconSrc ? <Image src={item.iconSrc} alt="" width={44} height={56} className="h-14 w-11 shrink-0 rounded-md object-cover shadow-[0_8px_16px_rgba(0,0,0,0.4)]" /> : <span className="grid h-14 w-11 shrink-0 place-items-center rounded-md bg-white/[0.08] text-lg font-bold text-white/45">{item.game?.charAt(0) ?? '?'}</span>}
+    <span className="min-w-0 flex-1"><span className="block truncate text-[16px] font-bold text-white group-hover:text-lime-text sm:text-[18px]">{item.name}</span><span className="mt-1 block truncate text-[12px] text-white/45">{item.game}{item.listingCount ? ` · ${item.listingCount.toLocaleString()} listings` : ''}</span></span>
+    <span className="shrink-0 text-right"><span className="block text-[10px] uppercase tracking-wider text-white/35">from</span><span className="text-[15px] font-bold tabular-nums text-white/85">${Number(item.fromPrice ?? 0).toFixed(2)}</span></span>
+  </Link>
 }
 
 export function HomePage() {
@@ -440,8 +374,8 @@ export function HomePage() {
       </div>
 
       {/* ================================================================
-          SHOP BY CATEGORY — tabbed: Currencies / Items / Accounts
-          Replaces three separate sections with one consolidated shelf.
+          FLOATING MARKETPLACE RAIL — three editorial slides:
+          item drops, currency picks and selling accounts.
           ================================================================ */}
       <section className="relative py-20 max-lg:py-10 overflow-hidden">
         {/* V17i — Subtle backdrop wash matching the other backdrop'd
@@ -468,19 +402,6 @@ export function HomePage() {
           className="pointer-events-none absolute left-1/2 top-0 z-0 hidden w-[1240px] max-w-none -translate-x-1/2 select-none object-contain opacity-[0.26] [mask-image:linear-gradient(to_bottom,transparent,black_14%,black_38%,transparent_88%)] md:block"
         />
         <div className="max-w-container mx-auto px-6 relative z-10">
-          <div className="mb-6">
-            <div className="mb-1.5 flex items-center gap-2">
-              <span className="text-[11.5px] font-bold uppercase tracking-[0.14em] text-lime-text">
-                Marketplace
-              </span>
-              <span className="h-px w-8 bg-gradient-to-r from-[#C6FF3D66] to-transparent" aria-hidden />
-            </div>
-            {/* App-shell — t-section on phones, md:text-display restores 38px. */}
-            <h2 className="t-section font-display md:text-display">Shop by category.</h2>
-            <p className="mt-1.5 text-body-sm text-text-secondary max-w-2xl">
-              Currencies, items, accounts — pick how you want to play and we&apos;ll show you the matching deals.
-            </p>
-          </div>
           <ShopByCategoryShelf
             currencies={popularCurrencies}
             items={popularItems}
@@ -599,7 +520,7 @@ export function HomePage() {
         />
         {/* Mobile — compact heading; the infinite marquee below runs at
             every width (user preferred the ticker over list rows). */}
-        <div className="lg:hidden relative z-10 mb-4 flex items-center gap-2 px-5">
+        <div className="lg:hidden relative z-10 mb-4 flex items-center gap-2 px-6 sm:px-8">
           <h2 className="t-section text-text-primary">Recently Sold</h2>
           <span aria-hidden className="relative flex h-2 w-2">
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success opacity-75" />
