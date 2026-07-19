@@ -58,14 +58,34 @@ interface AccountSidebarProps {
 
 export default function AccountSidebar({ user }: AccountSidebarProps) {
   const pathname = usePathname()
-  // Drawer is gone; NavItems (shared with desktop) still calls the setter
-  // on link taps — kept as a no-op state.
-  const [, setIsMobileOpen] = useState(false)
+  const [isMobileOpen, setIsMobileOpen] = useState(false)
   const searchParams = useSearchParams()
   // V22 — Accordion: at most one grouped item (Offers / Orders) is open at a
   // time. `null` = none open. Clicking a parent navigates AND opens its group,
   // closing any other. Initialized lazily from the active route below.
   const [openGroup, setOpenGroup] = useState<string | null>(null)
+
+  // The global navbar owns the hamburger trigger. Keeping the drawer state
+  // here means mobile uses the exact same navigation tree as desktop.
+  useEffect(() => {
+    const toggle = () => setIsMobileOpen((previous) => !previous)
+    window.addEventListener('dm:toggle-account-sidebar', toggle)
+    return () => window.removeEventListener('dm:toggle-account-sidebar', toggle)
+  }, [])
+
+  useEffect(() => {
+    if (!isMobileOpen) return
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setIsMobileOpen(false)
+    }
+    document.addEventListener('keydown', onKeyDown)
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.removeEventListener('keydown', onKeyDown)
+      document.body.style.overflow = previousOverflow
+    }
+  }, [isMobileOpen])
 
   // Get unread message count
   const { data: unreadCount } = useQuery({
@@ -469,50 +489,44 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
 
   return (
     <>
-      {/* Mobile — the drawer + floating hamburger are gone. Account
-          sections ride a full-width tab strip ATTACHED under the 60px
-          app navbar (same pattern as the game sub-nav): horizontal
-          scroll, lime active, badge counts, right-edge fade. Full-bleed
-          via the w-screen trick so parent gutters can't pinch it. */}
-      <nav
-        aria-label="Account sections"
-        className="sticky top-[60px] z-30 lg:hidden relative left-1/2 right-1/2 -mx-[50vw] w-screen border-b border-white/[0.06] bg-[rgba(19,19,24,0.97)] backdrop-blur-md"
-      >
-        <div className="relative">
-          <div className="flex gap-1 overflow-x-auto px-3 py-2 scrollbar-hide">
-            {[...sellerItems, ...accountItems.filter((a) => !sellerItems.some((si) => si.href === a.href))].map(
-              ({ label, href, icon: Icon, badge }) => {
-                const active = isActive(href)
-                return (
-                  <Link
-                    key={href}
-                    href={href}
-                    className={cn(
-                      'inline-flex h-10 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg px-3 text-[12.5px] font-semibold transition-all active:scale-[0.97]',
-                      active
-                        ? 'bg-white/[0.09] text-lime-text shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]'
-                        : 'text-text-secondary',
-                    )}
-                  >
-                    <Icon className="h-4 w-4 shrink-0" />
-                    {label}
-                    {badge && (
-                      <span className="grid min-w-[18px] place-items-center rounded-full bg-lime px-1 text-[10px] font-black text-text-inverse">
-                        {badge}
-                      </span>
-                    )}
-                  </Link>
-                )
-              },
-            )}
-          </div>
-          {/* Right-edge overflow affordance */}
-          <span
-            aria-hidden
-            className="pointer-events-none absolute inset-y-0 right-0 w-6 bg-gradient-to-l from-[rgba(19,19,24,0.97)] to-transparent"
-          />
-        </div>
-      </nav>
+      {/* Mobile account navigation — the same sidebar tree as desktop, opened
+          by the account-area hamburger in the global navbar. */}
+      <AnimatePresence>
+        {isMobileOpen && (
+          <>
+            <motion.button
+              type="button"
+              aria-label="Close account navigation"
+              className="fixed inset-0 top-[60px] z-[55] cursor-default bg-black/60 backdrop-blur-[2px] lg:hidden"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsMobileOpen(false)}
+            />
+            <motion.aside
+              aria-label="Account navigation"
+              className="fixed bottom-0 left-0 top-[60px] z-[60] flex w-[min(88vw,360px)] flex-col overflow-hidden border-r border-white/[0.10] bg-[rgba(19,19,24,0.98)] shadow-[16px_0_40px_rgba(0,0,0,0.45)] backdrop-blur-2xl lg:hidden"
+              initial={{ x: '-100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '-100%' }}
+              transition={{ type: 'spring', stiffness: 420, damping: 38 }}
+            >
+              <div className="flex h-12 shrink-0 items-center justify-between border-b border-border-subtle px-4">
+                <span className="text-sm font-semibold text-text-primary">My Account</span>
+                <button
+                  type="button"
+                  aria-label="Close account navigation"
+                  onClick={() => setIsMobileOpen(false)}
+                  className="grid h-9 w-9 place-items-center rounded-full text-text-tertiary transition-colors hover:bg-white/[0.06] hover:text-white"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              {NavItems()}
+            </motion.aside>
+          </>
+        )}
+      </AnimatePresence>
 
       {/* Desktop Sidebar - Modern Floating Card */}
       <aside className="hidden lg:flex lg:flex-col lg:fixed lg:left-4 lg:top-24 lg:bottom-4 lg:w-64 card-frost border border-border-subtle rounded-lg shadow-2xl overflow-hidden">

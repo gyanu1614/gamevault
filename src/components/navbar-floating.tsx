@@ -141,6 +141,7 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
   // direction: 'sidebar mode' pages shouldn't open into marketplace
   // categories). menuRoot 'browse' is reachable via an in-menu row.
   const inAccountArea = pathname?.startsWith('/account') ?? false
+  const accountSidebarAvailable = inAccountArea && !/^\/account\/orders\/[^/]+$/.test(pathname || '')
   const [menuRoot, setMenuRoot] = useState<'account' | 'browse'>('browse')
   useEffect(() => {
     if (mobileMenuOpen) setMenuRoot(inAccountArea && user ? 'account' : 'browse')
@@ -813,6 +814,17 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
               size="icon"
               className="h-11 w-11 shrink-0 rounded-full text-gray-300 transition-transform duration-[120ms] hover:bg-white/10 hover:text-white active:scale-[0.96] active:brightness-95 lg:hidden"
               onClick={() => {
+                // Account pages use the full desktop-parity sidebar on mobile.
+                // Marketplace pages keep the two-pane category menu.
+                if (accountSidebarAvailable && user) {
+                  window.dispatchEvent(new Event('dm:toggle-account-sidebar'))
+                  setMobileMenuOpen(false)
+                  setMobileMenuTab(null)
+                  setNotificationsOpen(false)
+                  setUserMenuOpen(false)
+                  setActivityOpen(false)
+                  return
+                }
                 // Always reopen on the root screen; close the other
                 // attached sheets so only one panel hangs off the bar.
                 setMobileMenuTab(null)
