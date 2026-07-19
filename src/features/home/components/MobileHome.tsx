@@ -16,16 +16,13 @@
  *   MobileRecentlySold    — compact live list rows from the ticker data
  */
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
+import { motion } from 'framer-motion'
 import {
   Search,
   Coins,
-  Swords,
-  User,
-  Rocket,
-  Zap,
   Check,
   ChevronRight,
   ShieldCheck,
@@ -175,7 +172,28 @@ function MobileHeroSearch() {
   const router = useRouter()
   const { data: navCats } = useNavCategories()
   const [q, setQ] = useState('')
+  // `focused` is intentionally the visibility state, rather than a literal
+  // focus state. On mobile Safari/Chrome dismissing the software keyboard can
+  // blur the input even though the user still wants to browse the results.
+  // Keep the panel mounted until an actual outside pointer is detected.
   const [focused, setFocused] = useState(false)
+  const searchRootRef = useRef<HTMLDivElement | null>(null)
+
+  useEffect(() => {
+    if (!focused) return
+
+    const closeOnOutsidePointer = (event: PointerEvent) => {
+      const target = event.target
+      if (target instanceof Node && searchRootRef.current?.contains(target)) return
+      setFocused(false)
+    }
+
+    // Capture before a link/button click, but only dismiss when the pointer is
+    // outside the complete search surface. This replaces the old blur-driven
+    // close and keeps the dropdown visible after the keyboard is hidden.
+    document.addEventListener('pointerdown', closeOnOutsidePointer, true)
+    return () => document.removeEventListener('pointerdown', closeOnOutsidePointer, true)
+  }, [focused])
 
   const trimmed = q.trim()
 
@@ -233,7 +251,7 @@ function MobileHeroSearch() {
   const open = focused
 
   return (
-    <div className="relative -mx-3 sm:mx-0">
+    <div ref={searchRootRef} className="relative -mx-3 sm:mx-0">
       <form onSubmit={submit} role="search">
         <div
           className="relative flex h-[52px] items-center overflow-hidden rounded-lg border border-border-subtle bg-card text-card-foreground shadow-sm backdrop-blur-md transition-colors focus-within:border-white/[0.18] focus-within:ring-1 focus-within:ring-white/[0.12]"
@@ -249,7 +267,6 @@ function MobileHeroSearch() {
             value={q}
             onChange={(e) => setQ(e.target.value)}
             onFocus={() => setFocused(true)}
-            onBlur={() => setFocused(false)}
             placeholder="Search games, currencies, items…"
             aria-label="Search the marketplace"
             aria-autocomplete="list"
@@ -258,14 +275,14 @@ function MobileHeroSearch() {
         </div>
       </form>
 
-      {/* Grouped game picker — rows use onPointerDown preventDefault so the
-          input blur doesn't kill a category tap on touch devices. */}
+      {/* Grouped game picker — visibility is controlled by outside-pointer
+          detection above. Do not prevent pointer defaults here: doing so on
+          the parent suppresses the synthetic click on mobile links/buttons. */}
       {open && (
         <div
           role="listbox"
           aria-label="Game search results"
           className="absolute inset-x-0 top-[60px] z-50 overflow-hidden rounded-lg border border-border-subtle bg-card text-card-foreground shadow-elevated"
-          onPointerDown={(e) => e.preventDefault()}
         >
           <div className="flex max-h-[min(520px,calc(100dvh-190px))] flex-col overflow-hidden">
             <div className="flex shrink-0 items-center justify-between px-5 pb-2 pt-4">
@@ -366,39 +383,41 @@ function MobileSearchGameLogo({ game }: { game: NonNullable<NavCatRow['game']> }
    dumping everyone on the same /browse page — tabId matches NAV_TABS
    in navbar-floating.tsx, which listens for dm:open-category. */
 const HERO_CHIPS = [
-  { label: 'Currencies', Icon: Coins, tabId: 'currency' },
-  { label: 'Items', Icon: Swords, tabId: 'items' },
-  { label: 'Accounts', Icon: User, tabId: 'accounts' },
-  { label: 'Boosting', Icon: Rocket, tabId: 'boosting' },
-  { label: 'Top Ups', Icon: Zap, tabId: 'top-up' },
+  { label: 'Currencies', iconSrc: '/assets/category-icons/currencies.svg', tabId: 'currency' },
+  { label: 'Items', iconSrc: '/assets/category-icons/items.svg', tabId: 'items' },
+  { label: 'Accounts', iconSrc: '/assets/category-icons/accounts.svg', tabId: 'accounts' },
+  { label: 'Boosting', iconSrc: '/assets/category-icons/boosting.svg', tabId: 'boosting' },
+  { label: 'Top Ups', iconSrc: '/assets/category-icons/top-up.svg', tabId: 'top-up' },
 ] as const
 
 export function MobileHero() {
   return (
-    <section className={`relative z-30 ${MOBILE_GUTTER} pb-2 pt-8 text-center`}>
-      {/* Hero title — centered, with a restrained 3D edge: a crisp 2px
-          under-shadow (emboss) + soft depth falloff. The gradient line
-          gets the same lift via drop-shadow (text-shadow would bleed
-          through transparent gradient glyphs). */}
-      <h1 className="t-hero text-text-primary [text-shadow:0_2px_0_rgba(0,0,0,0.5),0_8px_24px_rgba(0,0,0,0.6)]">
-        Game More.
-        <br />
-        <span className="bg-[linear-gradient(90deg,#3E9B63,#A3E635)] bg-clip-text text-transparent drop-shadow-[0_2px_0_rgba(0,0,0,0.45)] [filter:drop-shadow(0_2px_0_rgba(0,0,0,0.45))_drop-shadow(0_8px_20px_rgba(0,0,0,0.5))]">
+    <section className={`relative z-30 ${MOBILE_GUTTER} pb-1 pt-6 text-center`}>
+      {/* Hero title — the Beam direction from the preview: oversized,
+          tightly tracked and animated with a slow premium gradient sweep. */}
+      <motion.h1
+        initial={{ opacity: 0, y: 14 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+        className="text-center font-display text-[clamp(42px,13vw,64px)] font-black leading-[0.92] tracking-[-0.06em] text-white [text-shadow:0_3px_0_rgba(0,0,0,0.45),0_12px_28px_rgba(0,0,0,0.62)]"
+      >
+        <span className="block">Game More.</span>
+        <span className="relative block bg-[linear-gradient(100deg,#4ade80,#c6ff3d,#fff,#c6ff3d)] bg-[length:240%_100%] bg-clip-text text-transparent animate-gradient-x [filter:drop-shadow(0_2px_0_rgba(0,0,0,0.45))_drop-shadow(0_10px_22px_rgba(0,0,0,0.52))]">
           Grind Less.
         </span>
-      </h1>
-      <p className="t-body mx-auto mt-3 max-w-[32ch] text-text-secondary [text-shadow:0_2px_10px_rgba(0,0,0,0.7)]">
+      </motion.h1>
+      <p className="t-body mx-auto mt-2 max-w-[32ch] text-text-secondary [text-shadow:0_2px_10px_rgba(0,0,0,0.7)]">
         Accounts, currency, items and boosts — every order covered by SafeDrop
         Buyer Protection.
       </p>
 
-      <div className="mt-5">
+      <div className="mt-4">
         <MobileHeroSearch />
       </div>
 
       {/* Category chip slider — 5 tiles, scroll-snap, last one peeks. */}
-      <div className="-mx-6 mt-4 flex snap-x snap-mandatory gap-2.5 overflow-x-auto px-6 pb-1 scrollbar-hide sm:-mx-8 sm:px-8">
-        {HERO_CHIPS.map(({ label, Icon, tabId }) => (
+      <div className="-mx-6 mt-3 flex snap-x snap-mandatory gap-2.5 overflow-x-auto px-3 pb-1 [scroll-padding-inline:0.75rem] scrollbar-hide sm:-mx-8 sm:px-8 sm:[scroll-padding-inline:2rem]">
+        {HERO_CHIPS.map(({ label, iconSrc, tabId }) => (
           <button
             key={label}
             type="button"
@@ -407,13 +426,19 @@ export function MobileHero() {
                 new CustomEvent('dm:open-category', { detail: tabId }),
               )
             }
-            className={`group relative flex h-[64px] min-w-[90px] shrink-0 snap-start flex-col items-center justify-center gap-1.5 overflow-hidden rounded-[14px] border border-white/[0.12] bg-[linear-gradient(180deg,rgba(255,255,255,0.105),rgba(255,255,255,0.045))] shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_8px_20px_rgba(0,0,0,0.18)] backdrop-blur-md transition-all hover:border-white/[0.2] hover:bg-white/[0.12] active:bg-white/[0.15] ${PRESSED}`}
+            className={`group relative flex h-[76px] min-w-[88px] shrink-0 snap-start flex-col items-center justify-center gap-0.5 overflow-hidden rounded-xl border border-white/[0.13] bg-[linear-gradient(155deg,rgba(255,255,255,0.13),rgba(255,255,255,0.045)_58%,rgba(163,230,53,0.05))] px-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.10),0_10px_24px_-12px_rgba(0,0,0,0.75)] backdrop-blur-md transition-all hover:-translate-y-0.5 hover:border-white/[0.24] hover:bg-white/[0.14] active:bg-white/[0.17] ${PRESSED}`}
           >
             <Sheen />
-            <span className="relative grid h-8 w-8 place-items-center rounded-[10px] bg-white/[0.08] text-white/75 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] transition-colors group-hover:bg-white/[0.14] group-hover:text-white">
-              <Icon aria-hidden className="h-[17px] w-[17px]" />
-            </span>
-            <span className="relative text-[11px] font-semibold leading-none tracking-[-0.01em] text-white/75 group-hover:text-white">
+            {/* These are local SVGs. Keep them as plain images so Next's
+                image optimizer does not reject SVG responses on mobile. */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={iconSrc}
+              alt=""
+              aria-hidden="true"
+              className="relative h-8 w-8 object-contain drop-shadow-[0_4px_8px_rgba(0,0,0,0.38)] transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:scale-105"
+            />
+            <span className="relative text-[11px] font-semibold leading-none tracking-[-0.01em] text-white/85 group-hover:text-white">
               {label}
             </span>
           </button>
@@ -484,7 +509,7 @@ export function MobilePopularGames({ games }: { games: PopularGame[] }) {
                       className="pointer-events-none absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/40 to-transparent"
                     />
                   </div>
-                  <span className="t-card mt-2 block truncate px-0.5 text-center text-text-primary">
+                  <span className="t-card mt-2 block truncate px-0.5 text-center !text-white [text-shadow:0_1px_10px_rgba(255,255,255,0.14)]">
                     {game.name}
                   </span>
                 </SmartLink>

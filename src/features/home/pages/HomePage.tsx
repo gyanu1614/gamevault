@@ -779,11 +779,11 @@ export function HomePage() {
           ================================================================ */}
       {/* Payment methods marquee — mobile only (desktop has it in the
           checkout/detail surfaces; here it closes the phone homepage). */}
-      <section className="lg:hidden border-t border-border-subtle py-6">
+      <section className="lg:hidden border-t border-border-subtle py-4">
         <PaymentsMarquee />
       </section>
 
-      <section className="relative overflow-hidden py-16 max-lg:pb-20 lg:py-28">
+      <section className="relative overflow-hidden py-10 max-lg:pb-12 lg:py-28">
         {/* Ambient glow behind the composition */}
         <div
           aria-hidden="true"
@@ -803,25 +803,25 @@ export function HomePage() {
           className="pointer-events-none absolute left-1/2 top-2 z-0 h-[430px] w-auto -translate-x-1/2 select-none object-contain opacity-[0.22] [mask-image:radial-gradient(ellipse_55%_58%_at_50%_42%,black_30%,transparent_80%)] sm:h-[700px] lg:h-[780px]"
         />
 
-        <div className="relative z-10 mx-auto max-w-4xl px-6 text-center">
-          <h2 className="font-display text-[30px] font-extrabold leading-[1.05] tracking-tight [text-shadow:0_4px_28px_rgba(0,0,0,0.85)] sm:text-[48px] lg:text-[58px]">
+        <div className="relative z-10 mx-auto max-w-4xl px-4 text-center sm:px-6">
+          <h2 className="font-display text-[28px] font-extrabold leading-[1.05] tracking-tight [text-shadow:0_4px_28px_rgba(0,0,0,0.85)] sm:text-[44px] lg:text-[58px]">
             What are you waiting for?
           </h2>
-          <p className="mx-auto mt-5 max-w-xl text-body-lg text-text-secondary [text-shadow:0_2px_16px_rgba(0,0,0,0.9)]">
+          <p className="mx-auto mt-3 max-w-[34ch] text-[15px] leading-[1.5] text-text-secondary [text-shadow:0_2px_16px_rgba(0,0,0,0.9)] sm:max-w-xl sm:text-body-lg">
             Trade currency, items, and accounts with confidence — every order is
             covered by SafeDrop Buyer Protection. Get what you ordered, or your money back.
           </p>
-          <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
+          <div className="mt-5 flex flex-wrap items-center justify-center gap-2 lg:mt-9 lg:gap-3">
             <Link
               href="/browse"
-              className="inline-flex h-[54px] items-center justify-center gap-2 rounded-lg bg-lime px-9 text-[17px] font-bold text-text-inverse transition-all duration-fast ease-gv hover:bg-lime-hover hover:shadow-glow active:bg-lime-pressed"
+              className="inline-flex h-12 items-center justify-center gap-2 rounded-lg bg-lime px-6 text-[15px] font-bold text-text-inverse transition-all duration-fast ease-gv hover:bg-lime-hover hover:shadow-glow active:bg-lime-pressed lg:h-[54px] lg:px-9 lg:text-[17px]"
             >
-              <LayoutGrid aria-hidden="true" className="h-5 w-5" />
+              <LayoutGrid aria-hidden="true" className="h-[18px] w-[18px] lg:h-5 lg:w-5" />
               Browse Marketplace
             </Link>
             <Link
               href="/signup"
-              className="inline-flex h-[54px] items-center justify-center gap-2 rounded-lg border border-border-strong bg-[rgba(20,20,27,0.56)] px-8 text-[16px] font-semibold text-text-primary backdrop-blur-md transition-all duration-fast ease-gv hover:border-text-tertiary hover:bg-state-hover"
+              className="inline-flex h-12 items-center justify-center gap-2 rounded-lg border border-border-strong bg-[rgba(20,20,27,0.56)] px-6 text-[15px] font-semibold text-text-primary backdrop-blur-md transition-all duration-fast ease-gv hover:border-text-tertiary hover:bg-state-hover lg:h-[54px] lg:px-8 lg:text-[16px]"
             >
               Create free account
             </Link>
@@ -829,12 +829,12 @@ export function HomePage() {
         </div>
 
         {/* Category strip — glass pills, the whole catalog one tap away. */}
-        <div className="relative z-10 mx-auto mt-16 flex max-w-5xl flex-wrap items-center justify-center gap-3 px-6">
+        <div className="relative z-10 mx-auto mt-8 flex max-w-[380px] flex-wrap items-center justify-center gap-2 px-4 lg:mt-16 lg:max-w-5xl lg:gap-3 lg:px-6">
           {CTA_CATEGORIES.map(({ label, icon: Icon, href }) => (
             <Link
               key={label}
               href={href}
-              className="group relative inline-flex h-12 items-center gap-2.5 overflow-hidden rounded-full border border-border-default bg-[rgba(20,20,27,0.56)] px-5 backdrop-blur-md transition-all duration-200 hover:-translate-y-0.5 hover:border-lime-tint-border hover:bg-[rgba(26,26,35,0.75)]"
+              className="group relative inline-flex h-10 items-center gap-2 overflow-hidden rounded-full border border-border-default bg-[rgba(20,20,27,0.56)] px-4 backdrop-blur-md transition-all duration-200 hover:-translate-y-0.5 hover:border-lime-tint-border hover:bg-[rgba(26,26,35,0.75)] lg:h-12 lg:gap-2.5 lg:px-5"
             >
               <span
                 aria-hidden
@@ -842,9 +842,9 @@ export function HomePage() {
               />
               <Icon
                 aria-hidden="true"
-                className="relative h-[17px] w-[17px] text-text-tertiary transition-colors group-hover:text-lime-text"
+                className="relative h-4 w-4 text-text-tertiary transition-colors group-hover:text-lime-text lg:h-[17px] lg:w-[17px]"
               />
-              <span className="relative text-[14.5px] font-semibold text-text-secondary transition-colors group-hover:text-text-primary">
+              <span className="relative text-[13px] font-semibold text-text-secondary transition-colors group-hover:text-text-primary lg:text-[14.5px]">
                 {label}
               </span>
             </Link>

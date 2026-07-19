@@ -56,6 +56,74 @@ const NAV_TAB_ICONS: Record<string, React.ElementType> = {
   boosting: Rocket,
 }
 
+// Mobile marketplace sheet — rows intentionally carry a short promise, not
+// just a category label. This gives the full-screen menu the editorial rhythm
+// of the reference sheet while keeping each destination one tap away.
+const MOBILE_SERVICE_ITEMS = [
+  { id: 'accounts', label: 'Accounts', description: 'Get game accounts instantly', icon: 'account-card', tabId: 'accounts' },
+  { id: 'game-keys', label: 'Game Keys', description: 'Game deals for every platform', icon: 'key', href: '/browse' },
+  { id: 'items', label: 'Items', description: 'Unlock in-game items fast', icon: 'package', tabId: 'items' },
+  { id: 'currency', label: 'Currencies', description: 'Cheapest game currency deals', icon: 'coins', tabId: 'currency' },
+  { id: 'top-up', label: 'Top Ups', description: 'Top-up in-game balance instantly', icon: 'topup', tabId: 'top-up' },
+  { id: 'cs2-skins', label: 'CS2 Skins', description: 'Trade skins with verified sellers', icon: 'gamepad', href: '/cs2/buy-items' },
+  { id: 'boosting', label: 'Boosting', description: 'Rank up fast with pro boosting', icon: 'rocket', tabId: 'boosting' },
+  { id: 'gift-cards', label: 'Gift Cards', description: 'Codes for all games and platforms', icon: 'gift', href: '/topups' },
+] as const
+
+type MobileServiceItem = (typeof MOBILE_SERVICE_ITEMS)[number]
+
+function MobileServiceRow({
+  item,
+  onSelect,
+  onClose,
+}: {
+  item: MobileServiceItem
+  onSelect: (tabId: string) => void
+  onClose: () => void
+}) {
+  const content = (
+    <>
+      <span className="grid h-11 w-11 shrink-0 place-items-center rounded-[10px] border border-white/[0.07] bg-[linear-gradient(145deg,rgba(40,45,58,0.78),rgba(24,27,36,0.82))] shadow-[inset_0_1px_0_rgba(255,255,255,0.07),0_7px_16px_-12px_rgba(0,0,0,0.8)]">
+        {/* The icon set is a transparent, shaded SVG family — no flat
+            glyph tile and no opaque background behind the artwork. */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={`/icons/set/${item.icon}.svg`} alt="" className="h-7 w-7 object-contain drop-shadow-[0_3px_6px_rgba(61,155,255,0.2)]" />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-[15px] font-semibold leading-tight tracking-[-0.01em] text-white transition-colors group-hover:text-white">
+          {item.label}
+        </span>
+        <span className="mt-0.5 block truncate text-[12px] leading-tight text-white/55">
+          {item.description}
+        </span>
+      </span>
+      <ChevronRight aria-hidden className="h-5 w-5 shrink-0 text-white/65 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:text-white" />
+    </>
+  )
+
+  if ('tabId' in item) {
+    return (
+      <button
+        type="button"
+        onClick={() => onSelect(item.tabId)}
+        className="group flex min-h-[68px] w-full items-center gap-3 border-b border-white/[0.06] py-2.5 text-left transition-colors hover:bg-white/[0.035] active:bg-white/[0.06]"
+      >
+        {content}
+      </button>
+    )
+  }
+
+  return (
+    <Link
+      href={item.href}
+      onClick={onClose}
+      className="group flex min-h-[68px] w-full items-center gap-3 border-b border-white/[0.06] py-2.5 text-left transition-colors hover:bg-white/[0.035] active:bg-white/[0.06]"
+    >
+      {content}
+    </Link>
+  )
+}
+
 // ── Tier visual config ────────────────────────────────────────────────────────
 const TIER_CONFIG: Record<string, { icon: React.ElementType; color: string; bg: string; border: string }> = {
   unverified: { icon: Shield,       color: 'text-zinc-400',   bg: 'bg-zinc-500/10',   border: 'border-zinc-500/20' },
@@ -130,7 +198,6 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
   const queryClient = useQueryClient()
   const pathname = usePathname()
   const router = useRouter()
-  const [searchQuery, setSearchQuery] = useState('')
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   // App-shell — which category sub-screen the attached mobile menu is
   // showing (null = root screen). Drives the two-pane translateX
@@ -678,13 +745,6 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
     }
     return null
   }, [pathname, gamesByType])
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (searchQuery.trim()) {
-      window.location.href = `/browse?search=${encodeURIComponent(searchQuery)}`
-    }
-  }
 
   return (
     <>
@@ -1714,260 +1774,252 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
         </motion.div>
       </motion.nav>
 
-      {/* App-shell — ATTACHED mobile menu (below lg). Full-width forest
-          panel hanging flush off the 60px bar (the bar's lime hairline is
-          the seam), CSS slide-down entrance (framer entrances are banned —
-          rAF stalls freeze them). Inside, a two-pane translateX carousel:
-          root screen (search + category rows + links) slides LEFT to a
-          per-category game list (Eldorado pattern); back slides right.
-          Page behind dims via the scrim; body scroll is locked by the
-          mobileMenuOpen effect above. */}
-      {mobileMenuOpen && (
-        <>
-          {/* Scrim — dims the page under the panel; tap closes. */}
-          <div
-            aria-hidden
-            onClick={() => setMobileMenuOpen(false)}
-            className="animate-fade-in fixed inset-0 top-[60px] z-30 bg-black/60 lg:hidden"
-          />
-          <div className="animate-menu-left fixed inset-x-0 top-[60px] z-40 lg:hidden">
-            <div className="relative overflow-hidden rounded-b-2xl border-b border-white/[0.08] bg-[#17171F] shadow-[0_24px_48px_-12px_rgba(0,0,0,0.85)]">
-              {/* Faint lime-warmed top sheen — same recipe as the bell/
-                  account panels so every attached surface reads as one
-                  family. */}
-              <span
-                aria-hidden
-                className="pointer-events-none absolute inset-x-0 top-0 z-10 h-12 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.05),transparent)]"
-              />
+      {/* Mobile marketplace sheet — a full-screen editorial menu on phones.
+          The panel owns the whole viewport so the hamburger never leaves a
+          half-height sheet behind. AnimatePresence keeps the closing motion
+          mounted long enough for the X action to slide it out cleanly. */}
+      <AnimatePresence>
+        {mobileMenuOpen && (
+          <>
+            <motion.div
+              key="mobile-menu-scrim"
+              aria-hidden
+              onClick={() => {
+                setMobileMenuOpen(false)
+                setMobileMenuTab(null)
+              }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.28, ease: 'easeOut' }}
+              className="fixed inset-0 z-[60] bg-black/70 backdrop-blur-[2px] lg:hidden"
+            />
+            <motion.div
+              key="mobile-menu-panel"
+              role="dialog"
+              aria-modal="true"
+              aria-label="Browse marketplace"
+              initial={{ x: '-100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '-100%' }}
+              transition={{ duration: 0.36, ease: [0.22, 1, 0.36, 1] }}
+              className="fixed inset-0 z-[70] lg:hidden"
+            >
+              <div className="relative flex h-full flex-col overflow-hidden bg-[linear-gradient(180deg,#161922_0%,#10131a_44%,#090b10_100%)] shadow-[0_28px_80px_-24px_rgba(0,0,0,0.9)]">
+                <span
+                  aria-hidden
+                  className="pointer-events-none absolute inset-x-0 top-0 h-36 bg-[radial-gradient(ellipse_at_18%_-20%,rgba(78,143,255,0.13),transparent_68%),linear-gradient(to_bottom,rgba(255,255,255,0.035),transparent)]"
+                />
 
-              {/* SCREEN 1 — root. In-flow, so it sets the panel height;
-                  slides fully off to the left when a category is open. */}
-              <div
-                aria-hidden={mobileMenuTab !== null}
-                className={cn(
-                  'max-h-[calc(100dvh-60px-var(--mobile-tab-bar-h,64px)-env(safe-area-inset-bottom)-16px)] overflow-y-auto overscroll-contain p-4 pb-5 transition-transform duration-[250ms] ease-gv [-webkit-overflow-scrolling:touch]',
-                  mobileMenuTab !== null && 'pointer-events-none -translate-x-full',
-                )}
-              >
-                {/* Search */}
-                <form onSubmit={handleSearch} className="mb-4">
-                  <div className="relative">
-                    <Search className="pointer-events-none absolute left-3.5 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-gray-500" />
-                    {/* text-base — 16px stops iOS Safari's focus zoom. */}
-                    <input
-                      type="text"
-                      placeholder="Search DropMarket"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="h-12 w-full rounded-xl border border-white/10 bg-white/[0.05] pl-11 pr-4 text-base text-white outline-none transition-colors placeholder:text-gray-500 focus:border-lime-tint-border focus:bg-white/[0.07]"
-                    />
-                  </div>
-                </form>
-
-                {/* ACCOUNT ROOT — the old sidebar's destinations, attached. */}
-                {menuRoot === 'account' && (
-                  <>
-                    <div className="mb-2 px-1 text-[11px] font-bold uppercase tracking-[0.14em] text-gray-400">
-                      My Account
-                    </div>
-                    <div className="space-y-1.5">
-                      {ACCOUNT_MENU_ITEMS.filter((i) => !i.sellerOnly || user?.isApprovedSeller).map(
-                        ({ label, href, Icon }) => (
-                          <Link
-                            key={href}
-                            href={href}
-                            onClick={() => setMobileMenuOpen(false)}
-                            className="flex h-[48px] w-full items-center gap-3 rounded-xl border border-white/[0.06] bg-white/[0.03] px-3 text-left transition-all duration-[120ms] hover:bg-white/[0.06] active:scale-[0.98] active:brightness-95"
-                          >
-                            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-white/[0.10] bg-white/[0.05]">
-                              <Icon className="h-[18px] w-[18px] text-text-secondary" />
-                            </span>
-                            <span className="flex-1 truncate text-[14.5px] font-semibold text-text-primary">
-                              {label}
-                            </span>
-                            <ChevronRight className="h-4 w-4 shrink-0 text-gray-500" />
-                          </Link>
-                        ),
-                      )}
-                      {/* Flip to marketplace categories */}
-                      <button
-                        type="button"
-                        onClick={() => setMenuRoot('browse')}
-                        className="flex h-[48px] w-full items-center gap-3 rounded-xl border border-white/[0.06] bg-white/[0.03] px-3 text-left transition-all duration-[120ms] hover:bg-white/[0.06] active:scale-[0.98] active:brightness-95"
-                      >
-                        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-white/[0.10] bg-white/[0.05]">
-                          <LayoutGrid className="h-[18px] w-[18px] text-text-secondary" />
-                        </span>
-                        <span className="flex-1 truncate text-[14.5px] font-semibold text-text-primary">
-                          Browse Marketplace
-                        </span>
-                        <ChevronRight className="h-4 w-4 shrink-0 text-gray-500" />
-                      </button>
-                    </div>
-                  </>
-                )}
-
-                {/* Category rows → sub-screen */}
-                {menuRoot === 'browse' && (
-                <>
-                <div className="mb-2 px-1 text-[11px] font-bold uppercase tracking-[0.14em] text-gray-400">
-                  Browse Marketplace
-                </div>
-                <div className="space-y-1.5">
-                  {NAV_TABS.map((tab) => {
-                    const entries = gamesByType[tab.type] || []
-                    const TabIcon = NAV_TAB_ICONS[tab.id] ?? Coins
-                    return (
-                      <button
-                        key={tab.id}
-                        type="button"
-                        onClick={() => setMobileMenuTab(tab.id)}
-                        className="flex h-[52px] w-full items-center gap-3 rounded-xl border border-white/[0.06] bg-white/[0.03] px-3 text-left transition-all duration-[120ms] hover:bg-white/[0.06] active:scale-[0.98] active:brightness-95"
-                      >
-                        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-white/[0.10] bg-white/[0.05]">
-                          <TabIcon className="h-[18px] w-[18px] text-text-secondary" />
-                        </span>
-                        <span className="flex-1 truncate text-[14.5px] font-semibold text-text-primary">
-                          {tab.label}
-                        </span>
-                        {entries.length > 0 && (
-                          <span className="text-[12px] tabular-nums text-text-tertiary">
-                            {entries.length}
-                          </span>
-                        )}
-                        <ChevronRight className="h-4 w-4 shrink-0 text-gray-500" />
-                      </button>
-                    )
-                  })}
-                </div>
-                </>
-                )}
-
-                {/* Wallet / Support */}
-                <div className="mt-4 space-y-0.5 border-t border-border-subtle pt-3">
+                {/* Full-modal header — brand at left, unboxed X at right. */}
+                <div className="relative z-10 flex shrink-0 items-center justify-between border-b border-white/[0.08] px-4 pb-4 pt-4">
                   <Link
-                    href="/account/wallet"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="flex h-11 items-center gap-3 rounded-xl px-3 text-[14px] font-medium text-text-secondary transition-all duration-[120ms] hover:bg-white/[0.06] hover:text-text-primary active:scale-[0.98] active:brightness-95"
+                    href="/"
+                    onClick={() => {
+                      setMobileMenuOpen(false)
+                      setMobileMenuTab(null)
+                    }}
+                    className="flex items-center gap-2.5"
                   >
-                    <Wallet className="h-[18px] w-[18px] shrink-0 text-gray-400" />
-                    Wallet
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src="/brand/logo-mark-lime.png" alt="DropMarket" className="h-9 w-9" />
+                    <span className="font-display text-[20px] font-extrabold tracking-[-0.03em] text-white">
+                      Drop<span className="text-lime-text">Market</span>
+                    </span>
                   </Link>
-                  <Link
-                    href="/support"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="flex h-11 items-center gap-3 rounded-xl px-3 text-[14px] font-medium text-text-secondary transition-all duration-[120ms] hover:bg-white/[0.06] hover:text-text-primary active:scale-[0.98] active:brightness-95"
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMobileMenuOpen(false)
+                      setMobileMenuTab(null)
+                    }}
+                    aria-label="Close menu"
+                    className="grid h-10 w-10 place-items-center text-white/55 transition-colors hover:text-white active:scale-95"
                   >
-                    <LifeBuoy className="h-[18px] w-[18px] shrink-0 text-gray-400" />
-                    Support
-                  </Link>
+                    <X aria-hidden className="h-7 w-7" strokeWidth={1.8} />
+                  </button>
                 </div>
 
-                {/* Auth — deep-forest primary per the house recipe. */}
-                {!loading && !user && (
-                  <div className="mt-4 space-y-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setMobileMenuOpen(false)
-                        authDialog.open('signup')
-                      }}
-                      className="flex h-12 w-full items-center justify-center rounded-xl bg-[#14432A] text-[15px] font-bold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.16),inset_0_-2px_0_rgba(0,0,0,0.28),0_10px_20px_-12px_rgba(0,0,0,0.6)] transition-all duration-[120ms] hover:bg-[#1B5E3A] active:scale-[0.98] active:brightness-95"
-                    >
-                      Sign Up
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setMobileMenuOpen(false)
-                        authDialog.open('login')
-                      }}
-                      className="flex h-12 w-full items-center justify-center rounded-xl border border-white/[0.12] bg-white/[0.04] text-[15px] font-semibold text-text-primary transition-all duration-[120ms] hover:bg-white/[0.08] active:scale-[0.98] active:brightness-95"
-                    >
-                      Log In
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              {/* SCREEN 2 — category game list. Absolute overlay sized by
-                  the root screen; waits offscreen right and slides in. */}
-              {(() => {
-                const tab = NAV_TABS.find((t) => t.id === mobileMenuTab)
-                const entries = tab ? gamesByType[tab.type] || [] : []
-                return (
+                <div className="relative min-h-0 flex-1 overflow-hidden">
+                  {/* SCREEN 1 — service index. */}
                   <div
-                    aria-hidden={mobileMenuTab === null}
+                    aria-hidden={mobileMenuTab !== null}
                     className={cn(
-                      'absolute inset-0 flex flex-col transition-transform duration-[250ms] ease-gv',
-                      mobileMenuTab === null && 'pointer-events-none translate-x-full',
+                      'absolute inset-0 overflow-y-auto overscroll-contain px-4 pb-8 pt-6 transition-transform duration-[320ms] ease-gv [-webkit-overflow-scrolling:touch]',
+                      mobileMenuTab !== null && 'pointer-events-none -translate-x-full',
                     )}
                   >
-                    {/* Sticky header — back chevron + title + count */}
-                    <div className="flex shrink-0 items-center gap-1.5 border-b border-border-subtle px-2 py-2">
-                      <button
-                        type="button"
-                        onClick={() => setMobileMenuTab(null)}
-                        aria-label="Back To Menu"
-                        className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-gray-300 transition-all duration-[120ms] hover:bg-white/10 hover:text-white active:scale-[0.96] active:brightness-95"
+                    {/* ACCOUNT ROOT — retained for the account-aware menu path. */}
+                    {menuRoot === 'account' && (
+                      <>
+                        <div className="mb-4">
+                          <h2 className="font-display text-[22px] font-extrabold tracking-[-0.03em] text-white">My Account</h2>
+                          <p className="mt-0.5 text-[12px] text-white/50">Manage your DropMarket account</p>
+                        </div>
+                        <div className="divide-y divide-white/[0.06]">
+                          {ACCOUNT_MENU_ITEMS.filter((i) => !i.sellerOnly || user?.isApprovedSeller).map(
+                            ({ label, href, Icon }) => (
+                              <Link
+                                key={href}
+                                href={href}
+                                onClick={() => setMobileMenuOpen(false)}
+                                className="group flex min-h-[58px] w-full items-center gap-3 text-left transition-colors hover:bg-white/[0.035]"
+                              >
+                                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-[9px] border border-white/[0.07] bg-white/[0.05]">
+                                  <Icon className="h-[18px] w-[18px] text-[#3d9bff]" />
+                                </span>
+                                <span className="flex-1 truncate text-[14px] font-semibold text-white">{label}</span>
+                                <ChevronRight className="h-4 w-4 text-white/60" />
+                              </Link>
+                            ),
+                          )}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setMenuRoot('browse')}
+                          className="group mt-5 flex min-h-[58px] w-full items-center gap-3 border-t border-white/[0.08] pt-4 text-left"
+                        >
+                          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-[9px] border border-white/[0.07] bg-white/[0.05]">
+                            <LayoutGrid className="h-[18px] w-[18px] text-[#3d9bff]" />
+                          </span>
+                          <span className="flex-1 text-[14px] font-semibold text-white">Browse Marketplace</span>
+                          <ChevronRight className="h-4 w-4 text-white/60" />
+                        </button>
+                      </>
+                    )}
+
+                    {menuRoot === 'browse' && (
+                      <>
+                        <div className="mb-4">
+                          <h2 className="font-display text-[22px] font-extrabold tracking-[-0.03em] text-white">Services</h2>
+                          <p className="mt-0.5 text-[12px] text-white/50">Everything you need to play more</p>
+                        </div>
+                        <div>
+                          {MOBILE_SERVICE_ITEMS.map((item) => (
+                            <MobileServiceRow
+                              key={item.id}
+                              item={item}
+                              onSelect={(tabId) => setMobileMenuTab(tabId)}
+                              onClose={() => {
+                                setMobileMenuOpen(false)
+                                setMobileMenuTab(null)
+                              }}
+                            />
+                          ))}
+                        </div>
+                      </>
+                    )}
+
+                    <div className="mt-5 grid grid-cols-2 gap-2 border-t border-white/[0.08] pt-4">
+                      <Link
+                        href="/account/wallet"
+                        onClick={() => setMobileMenuOpen(false)}
+                        className="flex h-10 items-center justify-center gap-2 rounded-lg border border-white/[0.08] bg-white/[0.035] text-[12px] font-semibold text-white/70 transition-colors hover:bg-white/[0.07] hover:text-white"
                       >
-                        <ChevronLeft className="h-5 w-5" />
-                      </button>
-                      <span className="truncate text-[15px] font-bold text-text-primary">
-                        {tab?.label ?? ''}
-                      </span>
-                      <span className="text-[12.5px] tabular-nums text-text-tertiary">
-                        {entries.length} {entries.length === 1 ? 'Game' : 'Games'}
-                      </span>
+                        <Wallet className="h-4 w-4" /> Wallet
+                      </Link>
+                      <Link
+                        href="/support"
+                        onClick={() => setMobileMenuOpen(false)}
+                        className="flex h-10 items-center justify-center gap-2 rounded-lg border border-white/[0.08] bg-white/[0.035] text-[12px] font-semibold text-white/70 transition-colors hover:bg-white/[0.07] hover:text-white"
+                      >
+                        <LifeBuoy className="h-4 w-4" /> Support
+                      </Link>
                     </div>
 
-                    {/* All games — 48px rows, momentum scroll */}
-                    <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-2 [-webkit-overflow-scrolling:touch]">
-                      {entries.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center py-10 text-center">
-                          <Search className="mb-2 h-5 w-5 text-gray-600" />
-                          <p className="text-[13px] text-gray-500">No games here yet</p>
-                        </div>
-                      ) : (
-                        entries.map(({ game, categorySlug }) => (
-                          <Link
-                            key={game.slug}
-                            href={`/${game.slug}/${categorySlug}`}
-                            onClick={() => setMobileMenuOpen(false)}
-                            className="flex h-12 items-center gap-3 rounded-lg px-2.5 transition-all duration-[120ms] hover:bg-white/[0.06] active:scale-[0.98] active:brightness-95"
-                          >
-                            {game.image_url && game.image_url !== '' ? (
-                              // eslint-disable-next-line @next/next/no-img-element
-                              <img
-                                src={game.image_url}
-                                alt=""
-                                className="h-[26px] w-[26px] shrink-0 rounded-md object-contain"
-                              />
-                            ) : (
-                              <span className="grid h-[26px] w-[26px] shrink-0 place-items-center rounded-md bg-white/10 text-[9px] font-bold text-gray-400">
-                                {game.name.slice(0, 2).toUpperCase()}
-                              </span>
-                            )}
-                            <span className="flex-1 truncate text-[14px] font-semibold text-gray-200">
-                              {game.name}
-                            </span>
-                            {(gameCatCounts.get(game.slug) ?? 0) > 1 && (
-                              <span className="text-[12px] tabular-nums text-text-tertiary">
-                                {gameCatCounts.get(game.slug)}
-                              </span>
-                            )}
-                            <ChevronRight className="h-4 w-4 shrink-0 text-gray-600" />
-                          </Link>
-                        ))
-                      )}
-                    </div>
+                    {!loading && !user && (
+                      <div className="mt-4 grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setMobileMenuOpen(false)
+                            authDialog.open('signup')
+                          }}
+                          className="h-10 rounded-lg bg-[#174d31] text-[13px] font-bold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.14),0_10px_24px_-14px_rgba(0,0,0,0.8)] transition-colors hover:bg-[#1e6540]"
+                        >
+                          Sign Up
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setMobileMenuOpen(false)
+                            authDialog.open('login')
+                          }}
+                          className="h-10 rounded-lg border border-white/[0.12] bg-white/[0.04] text-[13px] font-semibold text-white transition-colors hover:bg-white/[0.08]"
+                        >
+                          Log In
+                        </button>
+                      </div>
+                    )}
                   </div>
-                )
-              })()}
-            </div>
-          </div>
-        </>
-      )}
+
+                  {/* SCREEN 2 — game list. */}
+                  {(() => {
+                    const tab = NAV_TABS.find((t) => t.id === mobileMenuTab)
+                    const entries = tab ? gamesByType[tab.type] || [] : []
+                    return (
+                      <div
+                        aria-hidden={mobileMenuTab === null}
+                        className={cn(
+                          'absolute inset-0 flex flex-col bg-[linear-gradient(180deg,#161922_0%,#10131a_44%,#090b10_100%)] transition-transform duration-[320ms] ease-gv',
+                          mobileMenuTab === null && 'pointer-events-none translate-x-full',
+                        )}
+                      >
+                        <div className="flex shrink-0 items-center gap-2 border-b border-white/[0.08] px-4 py-3">
+                          <button
+                            type="button"
+                            onClick={() => setMobileMenuTab(null)}
+                            aria-label="Back To Menu"
+                            className="grid h-9 w-9 shrink-0 place-items-center text-white/65 transition-colors hover:text-white active:scale-95"
+                          >
+                            <ChevronLeft className="h-6 w-6" />
+                          </button>
+                          <span className="truncate text-[16px] font-bold text-white">{tab?.label ?? ''}</span>
+                          <span className="text-[12px] tabular-nums text-white/45">{entries.length} {entries.length === 1 ? 'Game' : 'Games'}</span>
+                        </div>
+                        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-2 [-webkit-overflow-scrolling:touch]">
+                          {entries.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center py-10 text-center">
+                              <Search className="mb-2 h-5 w-5 text-white/30" />
+                              <p className="text-[13px] text-white/45">No games here yet</p>
+                            </div>
+                          ) : (
+                            entries.map(({ game, categorySlug }) => (
+                              <Link
+                                key={game.slug}
+                                href={`/${game.slug}/${categorySlug}`}
+                                onClick={() => {
+                                  setMobileMenuOpen(false)
+                                  setMobileMenuTab(null)
+                                }}
+                                className="group flex h-12 items-center gap-2.5 border-b border-white/[0.06] transition-colors hover:bg-white/[0.035]"
+                              >
+                                {game.image_url && game.image_url !== '' ? (
+                                  // eslint-disable-next-line @next/next/no-img-element
+                                  <img src={game.image_url} alt="" className="h-8 w-8 shrink-0 rounded-[7px] object-cover ring-1 ring-white/[0.10]" />
+                                ) : (
+                                  <span className="grid h-8 w-8 shrink-0 place-items-center rounded-[7px] bg-white/[0.08] text-[9px] font-bold text-white/45">
+                                    {game.name.slice(0, 2).toUpperCase()}
+                                  </span>
+                                )}
+                                <span className="flex-1 truncate text-[14px] font-semibold text-white/85">{game.name}</span>
+                                {(gameCatCounts.get(game.slug) ?? 0) > 1 && (
+                                  <span className="text-[11px] tabular-nums text-white/40">{gameCatCounts.get(game.slug)}</span>
+                                )}
+                                <ChevronRight className="h-4 w-4 shrink-0 text-white/45 group-hover:text-white/80" />
+                              </Link>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })()}
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
 
       {/* Spacer — sized to the navbar's real extent. Below lg the app-shell
           mobile bar is a solid 60px strip at top-0, so the spacer matches
@@ -2289,7 +2341,7 @@ function categoryFallbackIcon(
     .toLowerCase()
     .replace(/^buy-/, '')
   const map: Record<string, string> = {
-    currency: '/assets/category-icons/items.svg', // currency uses admin icon; rarely hits this
+    currency: '/assets/category-icons/currencies.svg',
     items: '/assets/category-icons/items.svg',
     item: '/assets/category-icons/items.svg',
     account: '/assets/category-icons/accounts.svg',
