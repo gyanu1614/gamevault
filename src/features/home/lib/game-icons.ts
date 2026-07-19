@@ -19,12 +19,17 @@ export const GAME_ICONS: Record<string, string> = {
   'genshin-impact': '/games/genshin.png',
   'call-of-duty': '/games/cod.png',
   'gta-v': '/games/gta-v.png',
+  'gta-vi': '/games/gtavi.png',
   minecraft: '/games/minecraft.png',
   'apex-legends': '/games/apexlegends.png',
   pubg: '/games/pubg.png',
   'free-fire': '/games/freefire.png',
   'escape-from-tarkov': '/games/escapefromtarkov.png',
   'rainbow-six-siege': '/games/r6.png',
+  'r6-siege': '/games/r6.png',
+  'steal-a-brainrot': '/games/sab.png',
+  'grow-a-garden': '/games/gag.png',
+  'grow-a-garden-2': '/games/gag.png',
   fc25: '/games/fc25.png',
 }
 
