@@ -80,19 +80,27 @@ export async function spendWallet(args: {
   return data as string
 }
 
-/** Refund an order amount back to the buyer's wallet (refunds → user_wallet). */
+/**
+ * Refund an order amount back to the buyer's wallet (refunds → user_wallet).
+ * @param keySuffix optional extra idempotency component for refunds that must
+ *        not collide with the order's full-refund key — e.g. a PARTIAL dispute
+ *        refund uses `partial:<disputeId>` so it posts even if some other
+ *        refund already used `wallet_refund:<orderId>` (and vice versa).
+ */
 export async function refundToWallet(args: {
   userId: string
   amountMinor: bigint
   currency: string
   orderId: string
+  keySuffix?: string
 }): Promise<string> {
   return creditWallet({
     userId: args.userId,
     amountMinor: args.amountMinor,
     currency: args.currency,
     counterparty: 'refunds',
-    idempotencyKey: `wallet_refund:${args.orderId}`,
+    idempotencyKey:
+      `wallet_refund:${args.orderId}` + (args.keySuffix ? `:${args.keySuffix}` : ''),
     eventRef: 'REFUND_TO_WALLET',
     orderId: args.orderId,
   })

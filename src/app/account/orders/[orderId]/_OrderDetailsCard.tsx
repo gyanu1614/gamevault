@@ -52,6 +52,10 @@ interface OrderDetailsCardProps {
   netPayout?: number
   /** Drives the payout status row (held / queued / released). */
   orderStatus: string
+  /** orders.escrow_status — distinguishes a refunded cancel from an
+   *  unpaid cancel so the SafeDrop caption doesn't claim a credit that
+   *  never happened. */
+  escrowStatus?: string | null
   /** The "other party" — seller for buyer view, buyer for seller view. */
   otherParty: PartyInfo
   /** Opens the controlled DisputeModal. When provided, the SafeDrop
@@ -180,13 +184,23 @@ function SafeDropBody({
   amount,
   orderStatus,
   orderId,
+  orderNumber,
+  role,
+  escrowStatus,
   onOpenDispute,
 }: {
   amount: number
   orderStatus: string
   orderId: string
+  orderNumber: string
+  role: 'buyer' | 'seller' | 'admin'
+  escrowStatus?: string | null
   onOpenDispute?: () => void
 }) {
+  // A cancelled order only carries a refund when money was actually covered
+  // and returned (escrow refunded). An unpaid order cancelled before payment
+  // never charged the buyer — no store credit landed, so don't claim one.
+  const cancelledWithRefund = escrowStatus === 'refunded'
   // Row + caption depend on order state.
   let amountLabel = 'Amount Covered'
   let caption: React.ReactNode =
@@ -211,16 +225,28 @@ function SafeDropBody({
   } else if (orderStatus === 'refunded') {
     amountLabel = 'Amount Refunded'
     caption =
-      'Your refund has been issued. The order is closed.'
+      'Your refund was added to your DropMarket wallet as store credit instantly — spend it right away or withdraw it.'
   } else if (orderStatus === 'disputed') {
     amountLabel = 'Amount In Dispute'
     caption =
       'A DropMarket admin is reviewing your dispute. The seller payout is paused until it resolves.'
   } else if (orderStatus === 'cancelled') {
-    amountLabel = 'Amount Refunded'
-    caption =
-      'Order cancelled — refund issued.'
+    if (cancelledWithRefund) {
+      amountLabel = 'Amount Refunded'
+      caption =
+        'Order cancelled — your refund was added to your DropMarket wallet as store credit instantly.'
+    } else {
+      amountLabel = 'Order Total'
+      caption = 'Order cancelled — you were not charged.'
+    }
   }
+
+  // Escape hatch (Refund & Dispute Policy §9.4): store credit is the default
+  // outcome, but the buyer can ask support for a refund to their original
+  // payment method instead. Only shown when a refund actually landed.
+  const showSupportEscapeHatch =
+    role === 'buyer' &&
+    (orderStatus === 'refunded' || (orderStatus === 'cancelled' && cancelledWithRefund))
 
   return (
     <>
@@ -231,6 +257,19 @@ function SafeDropBody({
       <p className="mt-3 text-center text-[13px] leading-[1.55] text-text-secondary">
         {caption}
       </p>
+      {showSupportEscapeHatch && (
+        <p className="mt-2 text-center text-[12px] leading-[1.55] text-text-tertiary">
+          Prefer a refund to your original payment method?{' '}
+          <a
+            href={`mailto:support@dropmarket.gg?subject=${encodeURIComponent(
+              `Refund To Original Payment Method — Order #${orderNumber}`,
+            )}`}
+            className="font-semibold text-text-secondary underline underline-offset-2 transition-colors hover:text-lime-text"
+          >
+            Contact Support
+          </a>
+        </p>
+      )}
       {showDisputeCta && (
         onOpenDispute ? (
           <button
@@ -592,6 +631,9 @@ export function OrderDetailsCard(props: OrderDetailsCardProps) {
             amount={escrowAmount}
             orderStatus={orderStatus}
             orderId={orderId}
+            orderNumber={orderNumber}
+            role={role}
+            escrowStatus={props.escrowStatus}
             onOpenDispute={onOpenDispute}
           />
         </OrderCard>

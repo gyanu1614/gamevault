@@ -83,6 +83,7 @@ export type OrderEvent =
   | 'BUYER_DISPUTED' // -> disputed
   | 'DISPUTE_RESOLVED_SELLER' // -> completed
   | 'DISPUTE_RESOLVED_BUYER' // -> refunded
+  | 'DISPUTE_PARTIAL' // -> completed (split journal: partial refund + reduced payout)
   | 'REFUNDED' // -> refunded
   | 'CANCELLED' // -> cancelled
 
@@ -95,6 +96,7 @@ export const EVENT_TARGET: Readonly<Record<OrderEvent, OrderStatus>> = {
   BUYER_DISPUTED: 'disputed',
   DISPUTE_RESOLVED_SELLER: 'completed',
   DISPUTE_RESOLVED_BUYER: 'refunded',
+  DISPUTE_PARTIAL: 'completed',
   REFUNDED: 'refunded',
   CANCELLED: 'cancelled',
 }

@@ -446,8 +446,8 @@ export async function processCancellationRequest(
         }
       }
 
-      // Tell the buyer their money is in their wallet (in-app, wrapped —
-      // a comms failure must never fail the approval).
+      // Tell the buyer their money is in their wallet (in-app + email,
+      // wrapped — a comms failure must never fail the approval).
       await (async () => {
         const service = createServiceRoleClient()
         const orderRef =
@@ -463,6 +463,40 @@ export async function processCancellationRequest(
         if (notifError) throw notifError
       })().catch((err) =>
         console.error('[Cancellation] Buyer refund notification failed:', err)
+      )
+
+      // Buyer refund email — mirrors cancelOrder's comms (wallet-aware copy;
+      // the credit above already posted, so pending: false).
+      await (async () => {
+        const service = createServiceRoleClient()
+        const orderRef =
+          order.order_number || String(request.order_id).slice(0, 8).toUpperCase()
+        const [{ data: buyer }, { data: cancelledListing }] = await Promise.all([
+          service
+            .from('profiles')
+            .select('email, username, full_name')
+            .eq('id', order.buyer_id)
+            .single() as any,
+          service
+            .from('listings')
+            .select('title')
+            .eq('id', order.listing_id)
+            .single() as any,
+        ])
+        if (buyer?.email) {
+          const { sendOrderRefundedEmail } = await import('@/lib/email')
+          await sendOrderRefundedEmail({
+            to: buyer.email,
+            name: buyer.full_name || buyer.username || 'Gamer',
+            orderNumber: orderRef,
+            listingTitle: cancelledListing?.title || 'your item',
+            amount: Number(order.total_amount ?? 0),
+            destination: 'your DropMarket wallet',
+            pending: false,
+          })
+        }
+      })().catch((err) =>
+        console.error('[Cancellation] Buyer refund email failed:', err)
       )
     }
 

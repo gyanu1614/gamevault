@@ -8,7 +8,6 @@ import {
   ChevronDown,
   ChevronUp,
   Tag,
-  Lock,
   Package,
   CheckCircle2,
   ShieldCheck,
@@ -25,7 +24,6 @@ import {
 import { HeroCarousel } from '../components/HeroCarousel'
 import { RowHeader } from '../components/RowHeader'
 import { TopUpsBanner } from '../components/TopUpsBanner'
-import DropMarketExplainer from '../components/DropMarketExplainer'
 import { HorizontalScroller } from '../components/HorizontalScroller'
 import { GameCard } from '../components/GameCard'
 import { CurrencyCard } from '../components/CurrencyCard'
@@ -55,7 +53,7 @@ const CTA_CATEGORIES = [
 
 const WHY_CARDS = [
   {
-    icon: Lock,
+    icon: ShieldCheck,
     title: 'SafeDrop on Every Order',
     body: 'The seller is only paid after you confirm delivery. Not delivered or not as described? You get your money back — and real humans review anything off.',
     tone: 'lime',
@@ -83,56 +81,6 @@ const WHY_CARDS = [
     img: '/icons/trust/support.png',
   },
 ] as const
-
-/**
- * V17u — Scroll-triggered explainer wrapper. IntersectionObserver
- * flips `inView` once the animation enters the viewport (with a 25%
- * intersection threshold for a nice early-start) and back to false
- * when it leaves. The explainer's Stage subscribes via externalPlay
- * and pauses its rAF loop when off-screen — saves CPU and matches
- * the Apple/Linear "play in view" pattern users expect.
- *
- * `once` semantics could be nice (start once, keep playing) but
- * pausing off-screen is the more polished default — the user comes
- * back to a fresh scene when they scroll back.
- */
-function ScrollTriggeredExplainer() {
-  const ref = useRef<HTMLDivElement | null>(null)
-  const [inView, setInView] = useState(false)
-  // V18.a — Client-only mount gate. The explainer reads useTime()
-  // throughout and renders different numbers of children at t=0 vs
-  // t>0 (coins/box only render in their time windows). That makes
-  // SSR produce a different DOM tree than client-render, which
-  // React surfaces as "Expected server HTML to contain a matching
-  // <div> in <div>". Gating the whole tree to post-mount means SSR
-  // emits an empty container and the hydration tree matches it.
-  // Same visual result; just no SSR snapshot of the animation
-  // (which was a useless snapshot anyway — t=0 is never what the
-  // user sees by the time their browser paints).
-  const [mounted, setMounted] = useState(false)
-  useEffect(() => { setMounted(true) }, [])
-
-  useEffect(() => {
-    const el = ref.current
-    if (!el || typeof IntersectionObserver === 'undefined') {
-      setInView(true)
-      return
-    }
-    const io = new IntersectionObserver(
-      ([entry]) => setInView(entry.isIntersecting),
-      { threshold: 0.2 },
-    )
-    io.observe(el)
-    return () => io.disconnect()
-  }, [])
-
-  const Explainer = DropMarketExplainer as any
-  return (
-    <div ref={ref} className="h-full w-full">
-      {mounted && <Explainer autoplay={false} externalPlay={inView} />}
-    </div>
-  )
-}
 
 /**
  * Popular Games shelf — 10 games in a horizontal scroller, 6 visible per page,
@@ -431,9 +379,7 @@ export function HomePage() {
       </section>
 
       {/* ================================================================
-          HOW IT WORKS — Animated escrow explainer (V17o)
-          Replaces the static 4-card grid with a 32s looping animation
-          built from the design handoff (DropMarketExplainer.jsx).
+          HOW IT WORKS
           ================================================================ */}
       {/* V20/P16 — Apple-style scroll-pinned How It Works. Sticky stage
           on the right cross-fades through 4 hero illustrations as the

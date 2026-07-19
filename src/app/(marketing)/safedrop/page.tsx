@@ -25,11 +25,11 @@ import {
   UserCheck,
   MessageSquare,
   Scale,
-  Wallet,
-  CreditCard
+  Wallet
 } from 'lucide-react'
 import Link from 'next/link'
 import { TrustpilotCarousel } from '@/components/trustpilot/TrustpilotWidget'
+import { SafeDropExplainer } from './_SafeDropExplainer'
 
 export const metadata: Metadata = {
   title: 'SafeDrop Buyer Protection',
@@ -182,35 +182,14 @@ export default function SafeDropPage() {
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-              How SafeDrop Works
+              How SafeDrop Protects You
             </h2>
             <p className="text-gray-400 text-lg">
               Simple, transparent, and automatic on every order
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <HowItWorksStep
-              number={1}
-              icon={CreditCard}
-              title="Buyer Pays at Checkout"
-              description="Place your order and pay as normal — SafeDrop coverage applies automatically"
-            />
-
-            <HowItWorksStep
-              number={2}
-              icon={Zap}
-              title="Seller Delivers"
-              description="Most orders complete in minutes"
-            />
-
-            <HowItWorksStep
-              number={3}
-              icon={CheckCircle2}
-              title="Buyer Confirms, Seller Gets Paid"
-              description="Confirm delivery and the seller is paid out. Not delivered or not as described? Full refund."
-            />
-          </div>
+          <SafeDropExplainer />
         </div>
       </section>
 

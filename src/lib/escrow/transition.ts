@@ -33,6 +33,12 @@ export interface TransitionResult {
  *                      event id) so the same provider webhook can't double-apply.
  * @param releaseMethod release events only — written to orders.release_method
  *                      ('buyer_confirmed' | 'auto' | 'dispute_resolved').
+ * @param refundMinor   DISPUTE_PARTIAL only — the buyer's partial refund in
+ *                      minor units; the RPC splits the held gross into
+ *                      refunds + platform take + reduced seller payout
+ *                      (20260720_dispute_partial.sql). Only sent when
+ *                      provided so pre-migration deploys keep every other
+ *                      event working against the 4-arg function.
  *
  * Throws if the order is missing or the transition is illegal. Idempotent: if
  * the order is already at the target status, returns `{ changed: false }` and
@@ -42,15 +48,20 @@ export async function transition(
   orderId: string,
   event: OrderEvent,
   dedupeKey?: string,
-  releaseMethod?: string
+  releaseMethod?: string,
+  refundMinor?: bigint
 ): Promise<TransitionResult> {
   const supabase = createServiceRoleClient()
-  const { data, error } = await (supabase.rpc as any)('safedrop_transition', {
+  const params: Record<string, unknown> = {
     p_order_id: orderId,
     p_event: event,
     p_dedupe_key: dedupeKey ?? null,
     p_release_method: releaseMethod ?? null,
-  })
+  }
+  if (refundMinor !== undefined) {
+    params.p_refund_minor = refundMinor.toString()
+  }
+  const { data, error } = await (supabase.rpc as any)('safedrop_transition', params)
 
   if (error) {
     throw new Error(`safedrop_transition(${event}) failed: ${error.message}`)
