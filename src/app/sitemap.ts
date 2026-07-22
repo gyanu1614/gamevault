@@ -41,6 +41,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     },
     // /marketplace redirects to / — no separate sitemap entry needed
     {
+      url: `${BASE_URL}/browse`,
+      changeFrequency: 'daily',
+      priority: 0.9,
+    },
+    {
       url: `${BASE_URL}/safedrop`,
       changeFrequency: 'weekly',
       priority: 0.8,

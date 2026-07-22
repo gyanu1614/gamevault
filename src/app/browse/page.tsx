@@ -1,424 +1,221 @@
-'use client'
-
 /**
- * /browse — universal marketplace browse.
+ * /browse — universal marketplace browse (SEO shell + interactive client).
  *
- * V3 reskin: GV tokens, Combobox for game/category/sort, NumberField for
- * price range, Tabs for category quick-switch, ListingCard reused. Mobile
- * filters slide in from the side via Dialog. Filter chip row shows active
- * filters with one-click clear.
+ * Server component: renders indexable content (H1, intro, a game directory
+ * with internal links, category shortcuts, popular searches, FAQ) plus
+ * breadcrumb + FAQ JSON-LD, then mounts the client filter/listings UI
+ * (_BrowseClient) below the fold. Previously this route was a bare
+ * 'use client' shell — crawlers saw nothing, so it never ranked and the
+ * game/category graph wasn't linked from a hub.
  */
 
-import { useState, useEffect, useMemo, Suspense } from 'react'
-import { useSearchParams, useRouter } from 'next/navigation'
-import { useQuery } from '@tanstack/react-query'
-import { Search, SlidersHorizontal, X, Loader2, Package } from 'lucide-react'
+import type { Metadata } from 'next'
+import Link from 'next/link'
+import { createClient } from '@/lib/supabase/server'
+import { getGameIcon } from '@/features/home/lib/game-icons'
+import { JsonLd, breadcrumbList, faqPage } from '@/lib/seo/jsonld'
+import { SITE_URL } from '@/config/site'
+import BrowseClient from './_BrowseClient'
 
-import { getListings, getGames, getCategories } from '@/lib/api/listings'
-import { ListingCard, ListingCardSkeleton } from '@/components/listing-card'
-import { Button } from '@/components/ui/button'
-import { Combobox, type ComboboxOption } from '@/components/ui/combobox'
-import { NumberField } from '@/components/ui/number-field'
-import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
-} from '@/components/ui/dialog'
-import { cn } from '@/lib/utils'
+export const metadata: Metadata = {
+  title: 'Browse the Marketplace — Accounts, Currency, Items & Boosts',
+  description:
+    'Browse every game on DropMarket — buy and sell accounts, in-game currency, items, top-ups and boosting. Every order is covered by SafeDrop Buyer Protection: sellers are paid only after you confirm delivery.',
+  keywords: [
+    'buy game accounts',
+    'sell game accounts',
+    'in-game currency marketplace',
+    'buy game items',
+    'game boosting marketplace',
+    'cheap game top-ups',
+  ],
+  alternates: { canonical: `${SITE_URL}/browse` },
+  openGraph: {
+    title: 'Browse the DropMarket Marketplace',
+    description:
+      'Accounts, currency, items, top-ups and boosting across every game — protected by SafeDrop.',
+    type: 'website',
+    url: `${SITE_URL}/browse`,
+  },
+}
 
-export const dynamic = 'force-dynamic'
+/* The five core buying categories, keyed by the DB metadata.type each
+   game's categories carry. Used to build per-game deep links + the
+   "Browse by category" shortcut row. */
+const CATEGORY_SHORTCUTS = [
+  { label: 'Currency', type: 'currency', blurb: 'Coins, gold, V-Bucks and more' },
+  { label: 'Items', type: 'items', blurb: 'Skins, gear and rare drops' },
+  { label: 'Accounts', type: 'account', blurb: 'Ready-to-play game accounts' },
+  { label: 'Top-Ups', type: 'top_up', blurb: 'Direct balance top-ups' },
+  { label: 'Boosting', type: 'service', blurb: 'Rank-ups from pro players' },
+] as const
 
-type SortBy = 'created_at' | 'price' | 'sales'
-
-const SORT_OPTIONS: ComboboxOption[] = [
-  { value: 'created_at', label: 'Newest first' },
-  { value: 'price', label: 'Price: low to high' },
-  { value: 'sales', label: 'Most popular' },
+const FAQS = [
+  {
+    q: 'Is it safe to buy game accounts and items on DropMarket?',
+    a: 'Yes. Every order is held by SafeDrop Buyer Protection — the seller is paid only after you confirm you received exactly what was described. If something is wrong, you get your money back.',
+  },
+  {
+    q: 'What can I buy on the marketplace?',
+    a: 'Game accounts, in-game currency, items and skins, direct top-ups, and boosting services across every game we support. Use the search and filters below, or jump straight to a game from the directory.',
+  },
+  {
+    q: 'How fast is delivery?',
+    a: 'Most currency, item and top-up orders are delivered within minutes by verified sellers. Delivery time is shown on each listing before you buy.',
+  },
+  {
+    q: 'How much does it cost to sell?',
+    a: 'Sellers pay a 5–10% fee — far below the 17–26% the big marketplaces charge — so listings start cheaper here and stay cheaper.',
+  },
 ]
 
-function BrowseContent() {
-  const router = useRouter()
-  const searchParams = useSearchParams()
+interface GameRow {
+  id: string
+  slug: string
+  name: string
+  image_url: string | null
+  sort_order: number | null
+}
 
-  const [search, setSearch] = useState(searchParams.get('search') ?? '')
-  const [gameId, setGameId] = useState(searchParams.get('game') ?? '')
-  const [categoryId, setCategoryId] = useState(searchParams.get('category') ?? '')
-  const [minPrice, setMinPrice] = useState<number>(
-    searchParams.get('minPrice') ? parseFloat(searchParams.get('minPrice')!) : 0,
-  )
-  const [maxPrice, setMaxPrice] = useState<number>(
-    searchParams.get('maxPrice') ? parseFloat(searchParams.get('maxPrice')!) : 0,
-  )
-  const [sortBy, setSortBy] = useState<SortBy>(
-    (searchParams.get('sortBy') as SortBy) ?? 'created_at',
-  )
-  const [filtersOpen, setFiltersOpen] = useState(false)
+async function getBrowseDirectory() {
+  const supabase = await createClient()
 
-  const { data: gamesData } = useQuery({ queryKey: ['games'], queryFn: getGames })
-  const { data: categoriesData } = useQuery({ queryKey: ['categories'], queryFn: getCategories })
-  const { data: listingsData, isLoading } = useQuery({
-    queryKey: ['listings', { search, gameId, categoryId, minPrice, maxPrice, sortBy }],
-    queryFn: () =>
-      getListings({
-        search: search || undefined,
-        gameId: gameId || undefined,
-        categoryId: categoryId || undefined,
-        minPrice: minPrice > 0 ? minPrice : undefined,
-        maxPrice: maxPrice > 0 ? maxPrice : undefined,
-        sortBy,
-        sortOrder: 'desc',
-      }),
-  })
+  const { data: games } = (await supabase
+    .from('games')
+    .select('id, slug, name, image_url, sort_order')
+    .eq('is_active', true)
+    .order('sort_order', { ascending: true })
+    .order('name', { ascending: true })) as { data: GameRow[] | null }
 
-  const games = gamesData?.data ?? []
-  const categories = categoriesData?.data ?? []
-  const listings = listingsData?.data ?? []
+  const list = games ?? []
+  if (list.length === 0) return { games: [] as (GameRow & { href: string })[] }
 
-  // URL sync
-  useEffect(() => {
-    const params = new URLSearchParams()
-    if (search) params.set('search', search)
-    if (gameId) params.set('game', gameId)
-    if (categoryId) params.set('category', categoryId)
-    if (minPrice > 0) params.set('minPrice', String(minPrice))
-    if (maxPrice > 0) params.set('maxPrice', String(maxPrice))
-    if (sortBy !== 'created_at') params.set('sortBy', sortBy)
-    const next = params.toString() ? `/browse?${params.toString()}` : '/browse'
-    router.replace(next, { scroll: false })
-  }, [search, gameId, categoryId, minPrice, maxPrice, sortBy, router])
+  // First active category per game → the card links to a real page.
+  const { data: cats } = (await supabase
+    .from('categories')
+    .select('game_id, slug, display_order')
+    .in('game_id', list.map((g) => g.id))
+    .eq('is_active', true)
+    .order('display_order', { ascending: true })) as unknown as {
+      data: { game_id: string; slug: string }[] | null
+    }
 
-  const gameOptions: ComboboxOption[] = useMemo(
-    () => [
-      { value: '', label: 'All games' },
-      ...games.map((g: any) => ({
-        value: g.id,
-        label: g.emoji ? `${g.emoji}  ${g.name}` : g.name,
-      })),
-    ],
-    [games],
-  )
-
-  const categoryOptions: ComboboxOption[] = useMemo(
-    () => [
-      { value: '', label: 'All categories' },
-      ...categories.map((c: any) => ({
-        value: c.id,
-        label: c.icon ? `${c.icon}  ${c.name}` : c.name,
-      })),
-    ],
-    [categories],
-  )
-
-  const activeFilterCount = [gameId, categoryId, minPrice > 0, maxPrice > 0].filter(Boolean).length
-  const hasActiveFilters = activeFilterCount > 0 || !!search
-
-  const clearAll = () => {
-    setSearch('')
-    setGameId('')
-    setCategoryId('')
-    setMinPrice(0)
-    setMaxPrice(0)
-    setSortBy('created_at')
+  const firstCat = new Map<string, string>()
+  for (const c of cats ?? []) {
+    if (!firstCat.has(c.game_id)) firstCat.set(c.game_id, c.slug)
   }
 
-  // Looked-up labels for filter chips
-  const gameLabel = games.find((g: any) => g.id === gameId)?.name
-  const categoryLabel = categories.find((c: any) => c.id === categoryId)?.name
+  return {
+    games: list.map((g) => ({
+      ...g,
+      href: firstCat.has(g.id) ? `/${g.slug}/${firstCat.get(g.id)}` : `/${g.slug}/buy-currency`,
+    })),
+  }
+}
 
-  // ── Filter panel content (used inline lg+ and inside dialog on mobile) ──
-  const FilterPanel = (
-    <div className="space-y-5">
-      <div className="space-y-1.5">
-        <label className="block text-[11px] font-semibold uppercase tracking-wider text-text-secondary">
-          Game
-        </label>
-        <Combobox value={gameId} onChange={setGameId} options={gameOptions} unsorted ariaLabel="Game" />
-      </div>
+export default async function BrowsePage() {
+  const { games } = await getBrowseDirectory()
 
-      <div className="space-y-1.5">
-        <label className="block text-[11px] font-semibold uppercase tracking-wider text-text-secondary">
-          Category
-        </label>
-        <Combobox value={categoryId} onChange={setCategoryId} options={categoryOptions} unsorted ariaLabel="Category" />
-      </div>
-
-      <div className="space-y-1.5">
-        <label className="block text-[11px] font-semibold uppercase tracking-wider text-text-secondary">
-          Price range
-        </label>
-        <div className="grid grid-cols-2 gap-2">
-          <div className="space-y-1">
-            <span className="text-[11px] uppercase tracking-wider text-text-tertiary">Min</span>
-            <NumberField
-              value={minPrice}
-              onChange={(v) => setMinPrice(v ?? 0)}
-              minValue={0}
-              maxValue={99_999}
-              step={1}
-              ariaLabel="Minimum price"
-              formatOptions={{ style: 'currency', currency: 'USD', maximumFractionDigits: 0 }}
-            />
-          </div>
-          <div className="space-y-1">
-            <span className="text-[11px] uppercase tracking-wider text-text-tertiary">Max</span>
-            <NumberField
-              value={maxPrice}
-              onChange={(v) => setMaxPrice(v ?? 0)}
-              minValue={0}
-              maxValue={99_999}
-              step={1}
-              ariaLabel="Maximum price"
-              formatOptions={{ style: 'currency', currency: 'USD', maximumFractionDigits: 0 }}
-            />
-          </div>
-        </div>
-      </div>
-
-      {hasActiveFilters && (
-        <Button
-          variant="ghost"
-          onClick={clearAll}
-          className="w-full justify-center text-text-secondary hover:bg-bg-raised-hover hover:text-text-primary"
-        >
-          Clear all filters
-        </Button>
-      )}
-    </div>
-  )
+  const breadcrumb = breadcrumbList([
+    { name: 'Home', path: '/' },
+    { name: 'Browse', path: '/browse' },
+  ])
 
   return (
-    <main className="mx-auto w-full max-w-7xl px-4 pb-16 pt-24 sm:px-6 sm:pt-28 lg:pt-32">
-      {/* Header */}
-      <header className="mb-6">
-        <h1 className="text-2xl font-bold text-text-primary sm:text-3xl">Browse listings</h1>
-        <p className="mt-1 text-sm text-text-secondary">
-          Find verified gaming items, currency, and accounts.
+    <main className="mx-auto w-full max-w-7xl px-4 pb-20 pt-24 sm:px-6 sm:pt-28 lg:pt-32">
+      <JsonLd data={breadcrumb} />
+      <JsonLd data={faqPage(FAQS.map((f) => ({ q: f.q, a: f.a })))} />
+
+      {/* SEO hero — real H1 + intro, server-rendered. */}
+      <header className="mb-8 max-w-3xl">
+        <h1 className="font-display text-3xl font-extrabold tracking-tight text-text-primary sm:text-4xl lg:text-5xl">
+          Browse the Marketplace
+        </h1>
+        <p className="mt-3 text-body-lg text-text-secondary">
+          Buy and sell game <strong className="font-semibold text-text-primary">accounts</strong>,{' '}
+          <strong className="font-semibold text-text-primary">currency</strong>,{' '}
+          <strong className="font-semibold text-text-primary">items</strong>, top-ups and boosting
+          across every game — every order covered by{' '}
+          <Link href="/safedrop" className="font-semibold text-lime-text hover:underline">
+            SafeDrop Buyer Protection
+          </Link>
+          . Sellers are paid only after you confirm delivery.
         </p>
       </header>
 
-      {/* Search + sort + mobile filters */}
-      <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center">
-        <div className="relative flex-1">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary" />
-          <input
-            type="text"
-            placeholder="Search listings…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="h-11 w-full rounded-md border border-border-default bg-bg-raised pl-9 pr-9 text-sm text-text-primary placeholder:text-text-tertiary transition-colors focus:border-lime focus:outline-none focus:ring-2 focus:ring-lime-tint-bg"
-          />
-          {search && (
-            <button
-              type="button"
-              onClick={() => setSearch('')}
-              className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-text-tertiary hover:bg-bg-raised-hover hover:text-text-primary"
-              aria-label="Clear search"
+      {/* Category shortcuts — internal link row. */}
+      <section aria-labelledby="browse-categories" className="mb-10">
+        <h2 id="browse-categories" className="mb-3 text-sm font-bold uppercase tracking-wider text-text-secondary">
+          Browse by Category
+        </h2>
+        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-5">
+          {CATEGORY_SHORTCUTS.map((c) => (
+            <Link
+              key={c.type}
+              href={`/browse?category=${c.type}`}
+              className="group rounded-xl border border-border-subtle bg-bg-overlay p-3.5 transition-colors hover:border-lime-tint-border hover:bg-bg-raised-hover"
             >
-              <X className="h-3.5 w-3.5" />
-            </button>
-          )}
-        </div>
-
-        <div className="flex items-center gap-2 sm:w-auto">
-          {/* Sort — visible at all sizes (key control) */}
-          <div className="flex-1 sm:w-52 sm:flex-none">
-            <Combobox
-              value={sortBy}
-              onChange={(v) => setSortBy(v as SortBy)}
-              options={SORT_OPTIONS}
-              unsorted
-              ariaLabel="Sort by"
-            />
-          </div>
-
-          {/* Mobile filter trigger */}
-          <Button
-            variant="outline"
-            onClick={() => setFiltersOpen(true)}
-            className="h-10 gap-1.5 rounded-md border-border-default bg-bg-raised text-text-primary hover:bg-bg-raised-hover hover:border-lime-tint-border lg:hidden"
-          >
-            <SlidersHorizontal className="h-4 w-4" />
-            Filters
-            {activeFilterCount > 0 && (
-              <span className="rounded-full bg-lime px-1.5 text-[10px] font-bold text-text-inverse">
-                {activeFilterCount}
+              <span className="block text-[15px] font-bold text-text-primary group-hover:text-lime-text">
+                {c.label}
               </span>
-            )}
-          </Button>
+              <span className="mt-0.5 block text-[12px] leading-snug text-text-tertiary">{c.blurb}</span>
+            </Link>
+          ))}
         </div>
-      </div>
+      </section>
 
-      {/* Active filter chips */}
-      {hasActiveFilters && (
-        <div className="mb-4 flex flex-wrap items-center gap-1.5">
-          {gameLabel && (
-            <FilterChip label={`Game: ${gameLabel}`} onClear={() => setGameId('')} />
-          )}
-          {categoryLabel && (
-            <FilterChip label={`Category: ${categoryLabel}`} onClear={() => setCategoryId('')} />
-          )}
-          {minPrice > 0 && (
-            <FilterChip label={`Min $${minPrice}`} onClear={() => setMinPrice(0)} />
-          )}
-          {maxPrice > 0 && (
-            <FilterChip label={`Max $${maxPrice}`} onClear={() => setMaxPrice(0)} />
-          )}
-          {search && (
-            <FilterChip label={`"${search}"`} onClear={() => setSearch('')} />
-          )}
-          <button
-            type="button"
-            onClick={clearAll}
-            className="text-[11px] font-semibold uppercase tracking-wider text-text-tertiary transition-colors hover:text-error"
-          >
-            Clear all
-          </button>
-        </div>
-      )}
-
-      {/* Main grid: sidebar filters lg+, listings */}
-      <div className="grid gap-6 lg:grid-cols-[220px_1fr]">
-        {/* Sidebar */}
-        <aside className="hidden lg:block">
-          <div className="sticky top-32 rounded-2xl border border-border-subtle bg-bg-overlay p-4">
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-sm font-bold text-text-primary">Filters</h2>
-              {activeFilterCount > 0 && (
-                <span className="rounded-full bg-lime-tint-bg px-2 py-0.5 text-[10px] font-bold text-lime-text">
-                  {activeFilterCount}
-                </span>
-              )}
-            </div>
-            {FilterPanel}
-          </div>
-        </aside>
-
-        {/* Listings */}
-        <section>
-          <div className="mb-3 flex items-center justify-between text-xs text-text-tertiary">
-            <span>
-              {isLoading
-                ? 'Loading…'
-                : `${listings.length} ${listings.length === 1 ? 'listing' : 'listings'}`}
-            </span>
-          </div>
-
-          {isLoading ? (
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-              {Array.from({ length: 8 }).map((_, i) => (
-                <ListingCardSkeleton key={i} />
-              ))}
-            </div>
-          ) : listings.length === 0 ? (
-            <EmptyState onClear={clearAll} hasActiveFilters={hasActiveFilters} />
-          ) : (
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-              {listings.map((listing) => (
-                <ListingCard key={listing.id} listing={listing} />
-              ))}
-            </div>
-          )}
-        </section>
-      </div>
-
-      {/* Mobile filter dialog */}
-      <Dialog open={filtersOpen} onOpenChange={setFiltersOpen}>
-        {/* Mobile-audit — max-h/overflow now live on the base DialogContent
-            (dvh-based); no per-call override needed. */}
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Filters</DialogTitle>
-            <DialogDescription>
-              Narrow your search by game, category, and price.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="mt-2">{FilterPanel}</div>
-          <div className="mt-4 flex justify-end gap-2">
-            {hasActiveFilters && (
-              <Button
-                variant="ghost"
-                onClick={clearAll}
-                className="text-text-secondary hover:text-text-primary"
+      {/* Game directory — the SEO payload: an internal link to every
+          active game's marketplace page. */}
+      {games.length > 0 && (
+        <section aria-labelledby="browse-games" className="mb-12">
+          <h2 id="browse-games" className="mb-3 text-sm font-bold uppercase tracking-wider text-text-secondary">
+            Browse by Game
+          </h2>
+          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
+            {games.map((g) => (
+              <Link
+                key={g.slug}
+                href={g.href}
+                className="group flex items-center gap-2.5 rounded-xl border border-border-subtle bg-bg-overlay p-2.5 transition-colors hover:border-lime-tint-border hover:bg-bg-raised-hover"
               >
-                Clear all
-              </Button>
-            )}
-            <Button
-              onClick={() => setFiltersOpen(false)}
-              className="bg-lime text-text-inverse hover:bg-lime-hover"
-            >
-              Done
-            </Button>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={g.image_url || getGameIcon(g.slug)}
+                  alt=""
+                  loading="lazy"
+                  className="h-9 w-9 shrink-0 rounded-lg object-cover ring-1 ring-white/[0.08]"
+                />
+                <span className="min-w-0 flex-1 truncate text-[13.5px] font-semibold text-text-primary group-hover:text-lime-text">
+                  {g.name}
+                </span>
+              </Link>
+            ))}
           </div>
-        </DialogContent>
-      </Dialog>
-    </main>
-  )
-}
-
-function FilterChip({ label, onClear }: { label: string; onClear: () => void }) {
-  return (
-    <span className="inline-flex items-center gap-1 rounded-full border border-border-default bg-bg-raised px-2.5 py-1 text-[11px] font-medium text-text-secondary">
-      {label}
-      <button
-        type="button"
-        onClick={onClear}
-        className="rounded p-0.5 text-text-tertiary transition-colors hover:bg-bg-raised-hover hover:text-text-primary"
-        aria-label={`Remove filter ${label}`}
-      >
-        <X className="h-3 w-3" />
-      </button>
-    </span>
-  )
-}
-
-function EmptyState({ onClear, hasActiveFilters }: { onClear: () => void; hasActiveFilters: boolean }) {
-  return (
-    <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-border-subtle bg-bg-overlay p-10 text-center">
-      <div className="flex h-12 w-12 items-center justify-center rounded-full border border-border-default bg-bg-raised">
-        <Package className="h-5 w-5 text-text-tertiary" />
-      </div>
-      <div>
-        <h3 className="text-base font-semibold text-text-primary">No listings found</h3>
-        <p className="mt-1 text-sm text-text-secondary">
-          Try adjusting your filters or search.
-        </p>
-      </div>
-      {hasActiveFilters && (
-        <Button
-          variant="outline"
-          onClick={onClear}
-          className="rounded-md border-border-default bg-bg-raised text-text-primary hover:bg-bg-raised-hover hover:border-lime-tint-border"
-        >
-          Clear all filters
-        </Button>
+        </section>
       )}
-    </div>
-  )
-}
 
-function BrowseLoadingFallback() {
-  return (
-    <main className="mx-auto w-full max-w-7xl px-4 pb-16 pt-24 sm:px-6 sm:pt-28 lg:pt-32">
-      <div className="mb-6 space-y-2">
-        <div className="h-8 w-48 animate-pulse rounded-md bg-bg-raised" />
-        <div className="h-4 w-72 animate-pulse rounded-md bg-bg-raised" />
-      </div>
-      <div className="mb-4 flex flex-col gap-2 sm:flex-row">
-        <div className="h-11 flex-1 animate-pulse rounded-md bg-bg-raised" />
-        <div className="h-11 w-52 animate-pulse rounded-md bg-bg-raised" />
-      </div>
-      <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
-        {Array.from({ length: 6 }).map((_, i) => (
-          <ListingCardSkeleton key={i} />
-        ))}
-      </div>
+      {/* Interactive filter + listings (client). */}
+      <section aria-labelledby="browse-listings" className="mb-14 scroll-mt-28" id="listings">
+        <h2 id="browse-listings" className="mb-4 text-xl font-bold text-text-primary sm:text-2xl">
+          All Listings
+        </h2>
+        <BrowseClient />
+      </section>
+
+      {/* FAQ — indexable content + matching JSON-LD above. */}
+      <section aria-labelledby="browse-faq" className="max-w-3xl">
+        <h2 id="browse-faq" className="mb-5 text-xl font-bold text-text-primary sm:text-2xl">
+          Frequently Asked Questions
+        </h2>
+        <dl className="space-y-5">
+          {FAQS.map((f) => (
+            <div key={f.q} className="rounded-xl border border-border-subtle bg-bg-overlay p-4">
+              <dt className="text-[15px] font-semibold text-text-primary">{f.q}</dt>
+              <dd className="mt-1.5 text-[14px] leading-relaxed text-text-secondary">{f.a}</dd>
+            </div>
+          ))}
+        </dl>
+      </section>
     </main>
-  )
-}
-
-export default function BrowsePage() {
-  return (
-    <Suspense fallback={<BrowseLoadingFallback />}>
-      <BrowseContent />
-    </Suspense>
   )
 }
