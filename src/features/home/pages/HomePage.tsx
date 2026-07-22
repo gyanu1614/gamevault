@@ -7,18 +7,11 @@ import Link from 'next/link'
 import {
   ChevronLeft,
   ChevronRight,
-  Tag,
-  Package,
-  CheckCircle2,
   ShieldCheck,
   Coins,
   Headset,
   LayoutGrid,
-  User,
-  Zap,
-  Rocket,
   Gift,
-  Swords,
 } from 'lucide-react'
 
 import { HeroCarousel } from '../components/HeroCarousel'
@@ -48,16 +41,6 @@ import { formatFromPrice } from '../lib/popular-listings'
 import { getGameIcon } from '../lib/game-icons'
 
 
-/** V57 — Pre-footer category strip (reference: category pills under the
- *  closing CTA). Icons stay lucide so the strip inherits theme colors. */
-const CTA_CATEGORIES = [
-  { label: 'Accounts', icon: User, href: '/browse' },
-  { label: 'Currencies', icon: Coins, href: '/browse' },
-  { label: 'Top Ups', icon: Zap, href: '/#top-ups' },
-  { label: 'Items', icon: Swords, href: '/browse' },
-  { label: 'Boosting', icon: Rocket, href: '/browse' },
-  { label: 'Gift Cards', icon: Gift, href: '/#top-ups' },
-] as const
 
 type MarketplaceRailItem = {
   href: string
@@ -826,29 +809,6 @@ export function HomePage() {
               Create free account
             </Link>
           </div>
-        </div>
-
-        {/* Category strip — glass pills, the whole catalog one tap away. */}
-        <div className="relative z-10 mx-auto mt-8 flex max-w-[380px] flex-wrap items-center justify-center gap-2 px-4 lg:mt-16 lg:max-w-5xl lg:gap-3 lg:px-6">
-          {CTA_CATEGORIES.map(({ label, icon: Icon, href }) => (
-            <Link
-              key={label}
-              href={href}
-              className="group relative inline-flex h-10 items-center gap-2 overflow-hidden rounded-full border border-border-default bg-[rgba(20,20,27,0.56)] px-4 backdrop-blur-md transition-all duration-200 hover:-translate-y-0.5 hover:border-lime-tint-border hover:bg-[rgba(26,26,35,0.75)] lg:h-12 lg:gap-2.5 lg:px-5"
-            >
-              <span
-                aria-hidden
-                className="pointer-events-none absolute inset-x-0 top-0 h-1/2 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.05),transparent)]"
-              />
-              <Icon
-                aria-hidden="true"
-                className="relative h-4 w-4 text-text-tertiary transition-colors group-hover:text-lime-text lg:h-[17px] lg:w-[17px]"
-              />
-              <span className="relative text-[13px] font-semibold text-text-secondary transition-colors group-hover:text-text-primary lg:text-[14.5px]">
-                {label}
-              </span>
-            </Link>
-          ))}
         </div>
       </section>
     </div>
