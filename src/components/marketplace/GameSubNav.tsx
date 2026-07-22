@@ -14,6 +14,7 @@ import { motion } from 'framer-motion'
 import Link from 'next/link'
 import { ChevronLeft, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { getGameIcon } from '@/features/home/lib/game-icons'
 
 export interface GameCategory {
   id: string
@@ -78,13 +79,20 @@ export default function GameSubNav({
     })
   }
 
+  // Keep the game lockup present even when a database row has no artwork yet.
+  // The shared registry mirrors the homepage fallback icons and avoids a
+  // broken/empty left edge in the compact mobile subnavbar.
+  const resolvedGameImage = gameImageUrl || getGameIcon(gameSlug)
+
   return (
-    /* V14f — Non-sticky. Scrolls away with the rest of the page so the
-       viewport opens up as the user moves down.
-       V19/P24/P7.o — Outer wrapper bg removed so the body's violet
-       gradient bleeds through. The inner pill keeps its own opaque
-       bg + blur so it stays readable on top of the gradient. */
-    <div className="relative z-40 flex justify-center py-3 sm:py-4 md:py-5 pointer-events-none px-3">
+    /* Desktop keeps the original floating pill. On phones this same
+       component becomes the page-local subnavbar: the outer 42px slot keeps
+       page flow intact while the inner row stays attached directly beneath
+       the fixed 60px primary header. */
+    <nav
+      aria-label={`${gameName} categories`}
+      className="relative z-40 flex justify-center px-3 py-3 pointer-events-none sm:py-4 md:py-5 max-md:h-[42px] max-md:px-0 max-md:py-0"
+    >
       <div
         className={cn(
           'pointer-events-auto w-full max-w-fit',
@@ -98,28 +106,27 @@ export default function GameSubNav({
           // taller tab buttons below (py-1 -> py-2.5 for >=36px targets)
           // so the pill's overall height barely grows.
           'px-2 py-1 sm:px-2.5 sm:py-2',
+          'max-md:fixed max-md:inset-x-0 max-md:top-[60px] max-md:z-40 max-md:max-w-none max-md:!rounded-none max-md:!border-x-0 max-md:!border-t-0 max-md:border-b max-md:border-white/[0.08] max-md:px-2 max-md:py-1.5 max-md:!bg-[rgba(14,22,17,0.94)]',
         )}
         style={{ backgroundColor: 'rgba(28, 28, 37, 0.30)' }}
       >
         {/* ── Game name / logo ───────────────────────────────────────── */}
         <Link
           href={`/${gameSlug}`}
-          className="group flex items-center gap-2 flex-shrink-0 rounded-full px-2.5 py-2 sm:px-3.5 sm:py-1.5 transition-colors hover:bg-bg-raised-hover"
+          className="group flex flex-shrink-0 items-center gap-2 rounded-full px-2.5 py-2 transition-colors hover:bg-bg-raised-hover sm:px-3.5 sm:py-1.5 max-md:max-w-[42%] max-md:gap-1.5 max-md:px-1.5 max-md:py-1"
         >
-          {gameImageUrl ? (
-            <img
-              src={gameImageUrl}
-              alt={gameName}
-              className="w-5 h-5 sm:w-[26px] sm:h-[26px] rounded-md object-contain opacity-95"
-            />
-          ) : null}
-          <span className="text-[13px] sm:text-[14.5px] font-bold text-gray-200 group-hover:text-text-primary transition-colors whitespace-nowrap tracking-tight">
+          <img
+            src={resolvedGameImage}
+            alt={gameName}
+            className="h-5 w-5 rounded-md object-contain opacity-95 sm:h-[26px] sm:w-[26px]"
+          />
+          <span className="truncate text-[13px] font-bold tracking-tight text-gray-200 transition-colors group-hover:text-text-primary sm:text-[14.5px]">
             {gameName}
           </span>
         </Link>
 
         {/* ── Divider ────────────────────────────────────────────────── */}
-        <div className="w-px h-4 sm:h-5 bg-white/[0.12] flex-shrink-0 mx-1 sm:mx-1.5" />
+        <div className="h-4 w-px shrink-0 bg-white/[0.12] sm:mx-1.5 sm:h-5 max-md:mx-1" />
 
         {/* ── Category tabs ──────────────────────────────────────────── */}
         {categories.length === 0 ? (
@@ -134,9 +141,9 @@ export default function GameSubNav({
           /* Mobile-audit — relative wrapper so a right-edge fade can sit
              over the scrollable tab strip, signalling more tabs off-screen
              on phones (the scrollbar is hidden). */
-          <div className="relative min-w-0">
+          <div className="relative min-w-0 max-md:flex-1">
             <div
-              className="flex items-center gap-0.5 overflow-x-auto"
+              className="flex items-center gap-0.5 overflow-x-auto max-md:gap-1"
               style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}
             >
             {categories.map((cat) => {
@@ -154,12 +161,13 @@ export default function GameSubNav({
                   key={cat.id}
                   onClick={() => goToCategory(cat.slug)}
                   disabled={isPending}
+                  aria-current={isActive ? 'page' : undefined}
                   className={cn(
                     // Mobile-audit — py-2.5 below sm lifts the tap target to
                     // ~36px (dense-control floor); desktop padding unchanged.
-                    'relative flex-shrink-0 flex items-center gap-1.5 px-2.5 py-2.5 sm:px-3.5 sm:py-1.5 text-xs sm:text-[13.5px] font-medium whitespace-nowrap rounded-full transition-colors',
+                    'relative flex-shrink-0 flex items-center gap-1.5 rounded-full px-2.5 py-2.5 text-xs font-medium whitespace-nowrap transition-colors sm:px-3.5 sm:py-1.5 sm:text-[13.5px] max-md:px-2.5 max-md:py-1.5 max-md:text-[12px]',
                     isActive
-                      ? 'text-text-primary'
+                      ? 'text-text-primary max-md:text-white'
                       : 'text-text-secondary hover:text-gray-100 hover:bg-bg-overlay',
                     isPending && 'cursor-wait'
                   )}
@@ -169,7 +177,9 @@ export default function GameSubNav({
                       layoutId="activeCategory"
                       className={cn(
                         'absolute inset-0 rounded-full',
-                        showLoading ? 'bg-lime-tint-bg/40' : 'bg-white/[0.1]'
+                        showLoading
+                          ? 'bg-lime-tint-bg/40 max-md:bg-[#174d31]'
+                          : 'bg-white/[0.1] max-md:bg-[#174d31] max-md:ring-1 max-md:ring-[#2f7a4c]/70'
                       )}
                       transition={{ type: 'spring', stiffness: 400, damping: 35 }}
                     />
@@ -208,6 +218,6 @@ export default function GameSubNav({
           </div>
         )}
       </div>
-    </div>
+    </nav>
   )
 }

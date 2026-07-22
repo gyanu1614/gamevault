@@ -19,8 +19,8 @@ function Block({ className = '' }: { className?: string }) {
 
 function GameSubNavSkeleton() {
   return (
-    <div className="relative z-40 flex justify-center py-3 sm:py-4 md:py-5 pointer-events-none px-3">
-      <div className="pointer-events-auto w-full max-w-fit flex items-center gap-0.5 rounded-full border border-white/[0.1] shadow-2xl backdrop-blur-2xl backdrop-saturate-150 px-2 py-1.5 sm:px-2.5 sm:py-2" style={{ backgroundColor: 'rgba(28, 28, 37, 0.30)' }}>
+    <div className="relative z-40 flex justify-center px-3 py-3 pointer-events-none sm:py-4 md:py-5 max-md:h-[42px] max-md:px-0 max-md:py-0">
+      <div className="pointer-events-auto w-full max-w-fit flex items-center gap-0.5 rounded-full border border-white/[0.1] shadow-2xl backdrop-blur-2xl backdrop-saturate-150 px-2 py-1.5 sm:px-2.5 sm:py-2 max-md:fixed max-md:inset-x-0 max-md:top-[60px] max-md:z-40 max-md:h-[42px] max-md:max-w-none max-md:overflow-hidden max-md:!rounded-none max-md:!border-x-0 max-md:!border-t-0 max-md:border-b max-md:border-white/[0.08] max-md:!bg-[rgba(14,22,17,0.94)]" style={{ backgroundColor: 'rgba(28, 28, 37, 0.30)' }}>
         {/* V21/P7.q — One block per slot (game + each category). */}
         <div className="flex flex-shrink-0 items-center px-2.5 py-1 sm:px-3.5 sm:py-1.5">
           <Block className="h-3.5 w-20 sm:w-24" />

@@ -488,15 +488,15 @@ export function MobilePopularGames({ games }: { games: PopularGame[] }) {
       <div className={`flex snap-x gap-3 overflow-x-auto ${POPULAR_GAMES_GUTTER} [scroll-padding-inline:0.75rem] pb-1 scrollbar-hide sm:[scroll-padding-inline:2rem]`}>
         {games.length === 0
           ? Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="w-[132px] shrink-0 snap-start sm:w-[144px]">
-                <div className={`aspect-[3/4] w-full animate-pulse rounded-xl ${RAISED}`} />
+              <div key={i} className="w-[124px] shrink-0 snap-start sm:w-[136px]">
+                <div className={`aspect-[5/6] w-full animate-pulse rounded-xl ${RAISED}`} />
                 <div className="mt-2 h-4 w-20 animate-pulse rounded bg-[rgba(20,36,26,0.8)]" />
               </div>
             ))
           : games.map((game) => (
-              <div key={game.slug} className="w-[132px] shrink-0 snap-start sm:w-[144px]">
+              <div key={game.slug} className="w-[124px] shrink-0 snap-start sm:w-[136px]">
                 <SmartLink href={game.href} className={`block ${PRESSED}`}>
-                  <div className="relative aspect-[4/5] w-full overflow-hidden rounded-xl border border-border-subtle bg-bg-raised shadow-elevated">
+                  <div className="relative aspect-[5/6] w-full overflow-hidden rounded-xl border border-border-subtle bg-bg-raised shadow-elevated">
                     <Image
                       src={game.coverSrc}
                       alt={game.name}

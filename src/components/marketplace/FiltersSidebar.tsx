@@ -283,7 +283,7 @@ export default function FiltersSidebar({ minPrice = 0, maxPrice = 1000, classNam
           desktop is untouched. */}
       <button
         onClick={() => setShowMobile(true)}
-        className="lg:hidden fixed bottom-[calc(var(--mobile-tab-bar-h,64px)+env(safe-area-inset-bottom)+20px)] right-6 z-40 px-6 py-3 bg-lime hover:bg-lime-hover-hover text-text-primary font-semibold rounded-full shadow-lg flex items-center gap-2 transition-all active:scale-[0.98] active:brightness-95"
+        className="lg:hidden fixed bottom-[calc(env(safe-area-inset-bottom)+20px)] right-6 z-40 px-6 py-3 bg-lime hover:bg-lime-hover-hover text-text-primary font-semibold rounded-full shadow-lg flex items-center gap-2 transition-all active:scale-[0.98] active:brightness-95"
       >
         <SlidersHorizontal className="w-5 h-5" />
         Filters
