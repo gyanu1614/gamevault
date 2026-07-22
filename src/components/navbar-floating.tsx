@@ -21,6 +21,7 @@ import { beginLogout } from '@/lib/auth/logout-signal'
 import { getAvatarUrl } from '@/lib/utils/avatar'
 import { getGameIcon } from '@/features/home/lib/game-icons'
 import { useSpotlightGames } from '@/features/home/hooks/useSpotlightGames'
+import { useScrollDirection } from '@/hooks/useScrollDirection'
 import { getWalletBalance } from '@/lib/actions/wallet'
 import { searchAttributeOptions, type AttrOptionHit } from '@/lib/actions/search'
 import { setStorePaused, getMyStorePaused } from '@/lib/actions/seller-presence'
@@ -235,6 +236,12 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
   // categories). menuRoot 'browse' is reachable via an in-menu row.
   const inAccountArea = pathname?.startsWith('/account') ?? false
   const accountSidebarAvailable = inAccountArea && !/^\/account\/orders\/[^/]+$/.test(pathname || '')
+  // Mobile: the bar floats transparent over the hero at the very top ONLY
+  // on pages that actually have hero art behind it — the homepage and
+  // marketplace category pages (/{game}/{category}). Everywhere else the
+  // bar stays solid so it never floats over plain content.
+  const overHero =
+    pathname === '/' || /^\/[^/]+\/[^/]+$/.test(pathname || '')
   const [menuRoot, setMenuRoot] = useState<'account' | 'browse'>('browse')
   useEffect(() => {
     if (mobileMenuOpen) setMenuRoot(inAccountArea && user ? 'account' : 'browse')
@@ -331,23 +338,12 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
   }, [notificationsOpen, activityOpen, userMenuOpen])
 
   // V18.b — Scroll-snap navbar. At rest the navbar floats as a pill
-  // centered in the page. Once the user scrolls past `SNAP_PX` the
-  // pill morphs into a solid full-width bar pinned at top-0. Stripe
-  // / Cron pattern — keeps the premium floating feel at the top of
-  // the page and turns into honest product chrome once the user is
-  // reading content (which is where content-bleeding-behind-pill
-  // becomes a problem).
-  const [scrolledNative, setScrolledNative] = useState(false)
-  useEffect(() => {
-    // 40px feels like the right threshold — far enough that casual
-    // mouse-wheel jiggle doesn't trip it, close enough that any
-    // intentional scroll commits the morph immediately.
-    const SNAP_PX = 40
-    const onScroll = () => setScrolledNative(window.scrollY > SNAP_PX)
-    onScroll()
-    window.addEventListener('scroll', onScroll, { passive: true })
-    return () => window.removeEventListener('scroll', onScroll)
-  }, [])
+  // centered in the page. Once the user scrolls past the reveal
+  // threshold the pill morphs into a solid full-width bar pinned at
+  // top-0. Hide-on-scroll: the whole bar slides up on scroll-down and
+  // back on scroll-up (good-mobile-site behaviour), via the shared
+  // useScrollDirection signal.
+  const { hidden: scrollHidden, scrolled: scrolledNative } = useScrollDirection({ revealAt: 40 })
   // V19/P15.b — `forceScrolled` short-circuits the scroll listener so
   // pages like /sell/* can lock the navbar in its full-width bar mode
   // even at scrollY=0. Everywhere else falls through to live scroll.
@@ -857,7 +853,22 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
           classes apply and the desktop pill/bar morph is untouched. */}
       <motion.nav
         initial={false}
-        animate={{ top: scrolled ? 0 : 12 }}
+        animate={{
+          top: scrolled ? 0 : 12,
+          // Hide-on-scroll: slide the whole bar up when scrolling down.
+          // Never hide while a menu/dropdown/search is open, or at the top.
+          y:
+            scrollHidden &&
+            !mobileMenuOpen &&
+            !notificationsOpen &&
+            !activityOpen &&
+            !userMenuOpen &&
+            !searchExpanded &&
+            !activeDropdown
+              ? '-120%'
+              : '0%',
+        }}
+        transition={{ type: 'spring', stiffness: 420, damping: 40, mass: 0.8 }}
         className="fixed left-0 right-0 z-50 flex justify-center max-lg:!top-0"
       >
         <motion.div
@@ -891,16 +902,30 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
             }}
             className={cn(
               'flex items-center justify-between gap-2 px-3 py-3 backdrop-blur-2xl backdrop-saturate-150 sm:gap-3 sm:px-6',
-              // App-shell mobile bar: 60px tall, square, edge-to-edge,
-              // forest-tinted near-opaque surface + lime-warmed bottom
-              // hairline. !important beats framer's inline pill styles.
+              // App-shell mobile bar: 60px tall, square, edge-to-edge.
+              // !important beats framer's inline pill styles.
               'max-lg:h-[60px] max-lg:!py-0 max-lg:!rounded-none max-lg:!border-x-0 max-lg:!border-t-0',
-              'max-lg:!border-b max-lg:!border-b-[rgba(163,230,53,0.10)] max-lg:!bg-[rgba(14,22,17,0.96)]',
+              // Over a hero at the very top: float transparent (no fill,
+              // no blur, no hairline) so the chrome sits on the art. Once
+              // scrolled — or on any non-hero page — snap to the solid
+              // forest-tinted bar with the lime-warmed bottom hairline.
+              overHero && !scrolled
+                ? 'max-lg:!border-b-transparent max-lg:!bg-transparent max-lg:!backdrop-blur-none'
+                : 'max-lg:!border-b max-lg:!border-b-[rgba(163,230,53,0.10)] max-lg:!bg-[rgba(14,22,17,0.96)]',
               scrolled
                 ? 'shadow-[0_1px_0_0_rgba(255,255,255,0.04),0_8px_24px_-12px_rgba(0,0,0,0.7)]'
                 : 'shadow-[0_4px_24px_-12px_rgba(0,0,0,0.5)]',
             )}
           >
+            {/* Legibility scrim — only when the mobile bar is transparent
+                over the hero. Keeps the icons/logo readable on bright art. */}
+            {overHero && !scrolled && (
+              <span
+                aria-hidden
+                className="pointer-events-none absolute inset-x-0 top-0 h-[110%] bg-[linear-gradient(to_bottom,rgba(0,0,0,0.42),transparent)] lg:hidden"
+              />
+            )}
+
             {/* App-shell — Mobile Menu Button now sits LEFT of the logo
                 below lg ([hamburger][logo+wordmark]…). lg:hidden means the
                 desktop DOM renders nothing here, exactly as before (the
@@ -1196,8 +1221,9 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                     </Button>
                   </Link>
 
-                  {/* Activity Dropdown — desktop only (see Messages note). */}
-                  <div className="relative max-lg:hidden" data-dropdown>
+                  {/* Activity Dropdown — now shown on mobile too (floating
+                      chrome: notifications + activity + avatar). */}
+                  <div className="relative" data-dropdown>
                     <Button
                       variant="ghost"
                       size="icon"

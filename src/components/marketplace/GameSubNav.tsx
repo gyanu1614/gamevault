@@ -15,6 +15,7 @@ import Link from 'next/link'
 import { ChevronLeft, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { getGameIcon } from '@/features/home/lib/game-icons'
+import { useScrollDirection } from '@/hooks/useScrollDirection'
 
 export interface GameCategory {
   id: string
@@ -41,6 +42,8 @@ export default function GameSubNav({
   categories,
 }: GameSubNavProps) {
   const router = useRouter()
+  // Hide-on-scroll: slides up with the primary navbar (shared signal).
+  const { hidden: scrollHidden } = useScrollDirection({ revealAt: 40 })
   // V14m — Track which tab is mid-navigation so we can show a small spinner
   // on it (instead of the whole UI sitting silent until the new page paints).
   const [isPendingNav, startNavTransition] = useTransition()
@@ -86,14 +89,21 @@ export default function GameSubNav({
 
   return (
     /* Desktop keeps the original floating pill. On phones this same
-       component becomes the page-local subnavbar: the outer 42px slot keeps
-       page flow intact while the inner row stays attached directly beneath
-       the fixed 60px primary header. */
+       component becomes the page-local subnavbar: the outer slot reserves
+       the fixed bar's real height (58px measured) so content below never
+       overlaps, while the inner row stays attached directly beneath the
+       fixed 60px primary header. */
     <nav
       aria-label={`${gameName} categories`}
-      className="relative z-40 flex justify-center px-3 py-3 pointer-events-none sm:py-4 md:py-5 max-md:h-[42px] max-md:px-0 max-md:py-0"
+      className="relative z-40 flex justify-center px-3 py-3 pointer-events-none sm:py-4 md:py-5 max-md:h-[58px] max-md:px-0 max-md:py-0"
     >
-      <div
+      <motion.div
+        initial={false}
+        /* Slide up in lockstep with the primary navbar on scroll-down
+           (mobile only — the y transform is harmless on desktop where the
+           bar isn't fixed). */
+        animate={{ y: scrollHidden ? '-120%' : '0%' }}
+        transition={{ type: 'spring', stiffness: 420, damping: 40, mass: 0.8 }}
         className={cn(
           'pointer-events-auto w-full max-w-fit',
           'flex items-center gap-0.5',
@@ -213,7 +223,7 @@ export default function GameSubNav({
             />
           </div>
         )}
-      </div>
+      </motion.div>
     </nav>
   )
 }
