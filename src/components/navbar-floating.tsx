@@ -20,6 +20,7 @@ import { isProtectedPath } from '@/lib/auth/protected-routes'
 import { beginLogout } from '@/lib/auth/logout-signal'
 import { getAvatarUrl } from '@/lib/utils/avatar'
 import { getGameIcon } from '@/features/home/lib/game-icons'
+import { useSpotlightGames } from '@/features/home/hooks/useSpotlightGames'
 import { getWalletBalance } from '@/lib/actions/wallet'
 import { searchAttributeOptions, type AttrOptionHit } from '@/lib/actions/search'
 import { setStorePaused, getMyStorePaused } from '@/lib/actions/seller-presence'
@@ -59,18 +60,28 @@ const NAV_TAB_ICONS: Record<string, React.ElementType> = {
 // Mobile marketplace sheet — rows intentionally carry a short promise, not
 // just a category label. This gives the full-screen menu the editorial rhythm
 // of the reference sheet while keeping each destination one tap away.
+// icon → the drop-in-replaceable house category set under
+// /public/icons/categories/. currentColor-tinted (lime) via CSS mask so
+// the family reads as one theme regardless of the source SVG's own fill.
 const MOBILE_SERVICE_ITEMS = [
-  { id: 'accounts', label: 'Accounts', description: 'Get game accounts instantly', icon: 'account-card', tabId: 'accounts' },
-  { id: 'game-keys', label: 'Game Keys', description: 'Game deals for every platform', icon: 'key', href: '/browse' },
-  { id: 'items', label: 'Items', description: 'Unlock in-game items fast', icon: 'package', tabId: 'items' },
-  { id: 'currency', label: 'Currencies', description: 'Cheapest game currency deals', icon: 'coins', tabId: 'currency' },
-  { id: 'top-up', label: 'Top Ups', description: 'Top-up in-game balance instantly', icon: 'topup', tabId: 'top-up' },
-  { id: 'cs2-skins', label: 'CS2 Skins', description: 'Trade skins with verified sellers', icon: 'gamepad', href: '/cs2/buy-items' },
-  { id: 'boosting', label: 'Boosting', description: 'Rank up fast with pro boosting', icon: 'rocket', tabId: 'boosting' },
-  { id: 'gift-cards', label: 'Gift Cards', description: 'Codes for all games and platforms', icon: 'gift', href: '/topups' },
+  { id: 'currency', label: 'Currencies', description: 'Cheapest game currency deals', icon: 'currency', tabId: 'currency' },
+  { id: 'items', label: 'Items', description: 'Unlock in-game items fast', icon: 'items', tabId: 'items' },
+  { id: 'accounts', label: 'Accounts', description: 'Get game accounts instantly', icon: 'accounts', tabId: 'accounts' },
+  { id: 'top-up', label: 'Top Ups', description: 'Top-up in-game balance instantly', icon: 'top-up', tabId: 'top-up' },
+  { id: 'boosting', label: 'Boosting', description: 'Rank up fast with pro boosting', icon: 'boosting', tabId: 'boosting' },
 ] as const
 
-type MobileServiceItem = (typeof MOBILE_SERVICE_ITEMS)[number]
+// Widened from the const so the row component stays reusable for both
+// slide-to-game-list rows (tabId) and direct-link rows (href) even when
+// the current list only uses one variant.
+type MobileServiceItem = {
+  id: string
+  label: string
+  description: string
+  icon: string
+  tabId?: string
+  href?: string
+}
 
 function MobileServiceRow({
   item,
@@ -83,11 +94,26 @@ function MobileServiceRow({
 }) {
   const content = (
     <>
-      <span className="grid h-11 w-11 shrink-0 place-items-center rounded-[10px] border border-white/[0.07] bg-[linear-gradient(145deg,rgba(40,45,58,0.78),rgba(24,27,36,0.82))] shadow-[inset_0_1px_0_rgba(255,255,255,0.07),0_7px_16px_-12px_rgba(0,0,0,0.8)]">
-        {/* The icon set is a transparent, shaded SVG family — no flat
-            glyph tile and no opaque background behind the artwork. */}
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={`/icons/set/${item.icon}.svg`} alt="" className="h-7 w-7 object-contain drop-shadow-[0_3px_6px_rgba(61,155,255,0.2)]" />
+      {/* Dark recessed tile + quiet platinum glyph — the premium engraved
+          treatment (F). Material lives in the tile; the icon stays a
+          restrained near-white. Drop-in-replaceable house category SVG
+          (public/icons/categories) tinted via CSS mask. */}
+      <span className="relative grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded-[12px] border border-white/[0.07] bg-[radial-gradient(circle_at_50%_18%,rgba(38,40,46,0.9),rgba(12,13,16,0.96))] shadow-[inset_0_1px_0_rgba(255,255,255,0.1),inset_0_-8px_14px_-8px_rgba(0,0,0,0.85)]">
+        <span aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-1/3 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.07),transparent)]" />
+        <span
+          aria-hidden
+          className="relative h-[22px] w-[22px] bg-[linear-gradient(180deg,#ffffff,#d8dde1)] drop-shadow-[0_1px_1px_rgba(0,0,0,0.35)]"
+          style={{
+            maskImage: `url(/icons/categories/${item.icon}.svg)`,
+            WebkitMaskImage: `url(/icons/categories/${item.icon}.svg)`,
+            maskSize: 'contain',
+            WebkitMaskSize: 'contain',
+            maskRepeat: 'no-repeat',
+            WebkitMaskRepeat: 'no-repeat',
+            maskPosition: 'center',
+            WebkitMaskPosition: 'center',
+          }}
+        />
       </span>
       <span className="min-w-0 flex-1">
         <span className="block truncate text-[15px] font-semibold leading-tight tracking-[-0.01em] text-white transition-colors group-hover:text-white">
@@ -101,11 +127,11 @@ function MobileServiceRow({
     </>
   )
 
-  if ('tabId' in item) {
+  if (item.tabId) {
     return (
       <button
         type="button"
-        onClick={() => onSelect(item.tabId)}
+        onClick={() => onSelect(item.tabId!)}
         className="group flex min-h-[68px] w-full items-center gap-3 border-b border-white/[0.06] py-2.5 text-left transition-colors hover:bg-white/[0.035] active:bg-white/[0.06]"
       >
         {content}
@@ -115,7 +141,7 @@ function MobileServiceRow({
 
   return (
     <Link
-      href={item.href}
+      href={item.href ?? '/browse'}
       onClick={onClose}
       className="group flex min-h-[68px] w-full items-center gap-3 border-b border-white/[0.06] py-2.5 text-left transition-colors hover:bg-white/[0.035] active:bg-white/[0.06]"
     >
@@ -213,6 +239,18 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
   useEffect(() => {
     if (mobileMenuOpen) setMenuRoot(inAccountArea && user ? 'account' : 'browse')
   }, [mobileMenuOpen, inAccountArea, user])
+
+  // Admin-curated spotlight games for the mobile menu grid. Only fetched
+  // once the menu opens so it costs nothing for users who never open it.
+  const { data: spotlightGames = [] } = useSpotlightGames()
+
+  // Live filter for the category sub-screen's game list. Cleared whenever
+  // the sub-screen changes (or the whole menu closes) so each category
+  // opens on a fresh, unfiltered list.
+  const [mobileGameSearch, setMobileGameSearch] = useState('')
+  useEffect(() => {
+    setMobileGameSearch('')
+  }, [mobileMenuTab])
 
   // Homepage hero chips (and future surfaces) deep-open the menu at a
   // category sub-screen via this event — app-like, no route hop.
@@ -1805,10 +1843,10 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
               transition={{ duration: 0.36, ease: [0.22, 1, 0.36, 1] }}
               className="fixed inset-0 z-[70] lg:hidden"
             >
-              <div className="relative flex h-full flex-col overflow-hidden bg-[linear-gradient(180deg,#161922_0%,#10131a_44%,#090b10_100%)] shadow-[0_28px_80px_-24px_rgba(0,0,0,0.9)]">
+              <div className="relative flex h-full flex-col overflow-hidden bg-[linear-gradient(180deg,#100C18_0%,#0A0A0F_46%,#08080C_100%)] shadow-[0_28px_80px_-24px_rgba(0,0,0,0.9)]">
                 <span
                   aria-hidden
-                  className="pointer-events-none absolute inset-x-0 top-0 h-36 bg-[radial-gradient(ellipse_at_18%_-20%,rgba(78,143,255,0.13),transparent_68%),linear-gradient(to_bottom,rgba(255,255,255,0.035),transparent)]"
+                  className="pointer-events-none absolute inset-x-0 top-0 h-36 bg-[radial-gradient(ellipse_at_18%_-20%,rgba(198,255,61,0.10),transparent_68%),linear-gradient(to_bottom,rgba(255,255,255,0.03),transparent)]"
                 />
 
                 {/* Full-modal header — brand at left, unboxed X at right. */}
@@ -1890,6 +1928,95 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
 
                     {menuRoot === 'browse' && (
                       <>
+                        {/* Popular Games — admin-curated (games.is_spotlight)
+                            single-column rows. Frameless: squared game icon +
+                            name + category pills, divided by hairlines like the
+                            Services list. Hidden when nothing is spotlit. */}
+                        {spotlightGames.length > 0 && (
+                          <div className="mb-6">
+                            <h2 className="mb-1 font-display text-[13px] font-bold uppercase tracking-[0.14em] text-white/55">
+                              Popular Games
+                            </h2>
+                            <div>
+                              {spotlightGames.slice(0, 4).map((game) => (
+                                <div
+                                  key={game.slug}
+                                  className="group flex items-center gap-3 border-b border-white/[0.06] py-3"
+                                >
+                                  {/* Game tap → the game's currency/items
+                                      section. Squared icon tile, no round frame.
+                                      Pills sit OUTSIDE this Link (anchors can't
+                                      nest) but visually inside the row. */}
+                                  <Link
+                                    href={game.href}
+                                    onClick={() => {
+                                      setMobileMenuOpen(false)
+                                      setMobileMenuTab(null)
+                                    }}
+                                    className="flex shrink-0 items-center"
+                                    aria-label={game.name}
+                                  >
+                                    <span className="relative h-12 w-12 shrink-0 overflow-hidden rounded-[12px] bg-white/[0.05] shadow-[0_6px_14px_-6px_rgba(0,0,0,0.7)]">
+                                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                                      <img
+                                        src={game.iconSrc}
+                                        alt=""
+                                        loading="lazy"
+                                        className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                                      />
+                                    </span>
+                                  </Link>
+                                  <div className="min-w-0 flex-1">
+                                    <Link
+                                      href={game.href}
+                                      onClick={() => {
+                                        setMobileMenuOpen(false)
+                                        setMobileMenuTab(null)
+                                      }}
+                                      className="block truncate text-[15px] font-bold leading-tight tracking-[-0.01em] text-white transition-colors hover:text-white/90"
+                                    >
+                                      {game.name}
+                                    </Link>
+                                    {/* Category pills — rectangular, home-search
+                                        style. Each links straight to its section. */}
+                                    {game.categoryLinks.length > 0 && (
+                                      <div className="mt-1.5 flex flex-nowrap gap-1.5 overflow-hidden">
+                                        {game.categoryLinks.slice(0, 3).map((cat) => (
+                                          <Link
+                                            key={cat.slug}
+                                            href={`/${game.slug}/${cat.slug}`}
+                                            onClick={() => {
+                                              setMobileMenuOpen(false)
+                                              setMobileMenuTab(null)
+                                            }}
+                                            className="inline-flex min-h-[24px] shrink-0 items-center rounded-[7px] border border-white/[0.09] bg-white/[0.06] px-2 text-[11px] font-semibold leading-none text-white/80 transition-colors hover:border-white/[0.18] hover:bg-white/[0.12] hover:text-white active:scale-[0.97]"
+                                          >
+                                            <span className="truncate max-w-[84px]">
+                                              {cat.label.replace(/\s*\(.*?\)\s*/g, '')}
+                                            </span>
+                                          </Link>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </div>
+                                  <Link
+                                    href={game.href}
+                                    onClick={() => {
+                                      setMobileMenuOpen(false)
+                                      setMobileMenuTab(null)
+                                    }}
+                                    aria-hidden
+                                    tabIndex={-1}
+                                    className="shrink-0"
+                                  >
+                                    <ChevronRight aria-hidden className="h-5 w-5 text-white/45 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:text-white/80" />
+                                  </Link>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
                         <div className="mb-4">
                           <h2 className="font-display text-[22px] font-extrabold tracking-[-0.03em] text-white">Services</h2>
                           <p className="mt-0.5 text-[12px] text-white/50">Everything you need to play more</p>
@@ -1956,32 +2083,50 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                   {/* SCREEN 2 — game list. */}
                   {(() => {
                     const tab = NAV_TABS.find((t) => t.id === mobileMenuTab)
-                    const entries = tab ? gamesByType[tab.type] || [] : []
+                    const allEntries = tab ? gamesByType[tab.type] || [] : []
+                    const needle = mobileGameSearch.trim().toLowerCase()
+                    const entries = needle
+                      ? allEntries.filter(({ game }) =>
+                          game.name.toLowerCase().includes(needle) ||
+                          game.slug.toLowerCase().includes(needle),
+                        )
+                      : allEntries
                     return (
                       <div
                         aria-hidden={mobileMenuTab === null}
                         className={cn(
-                          'absolute inset-0 flex flex-col bg-[linear-gradient(180deg,#161922_0%,#10131a_44%,#090b10_100%)] transition-transform duration-[320ms] ease-gv',
+                          'absolute inset-0 flex flex-col bg-[linear-gradient(180deg,#100C18_0%,#0A0A0F_46%,#08080C_100%)] transition-transform duration-[320ms] ease-gv',
                           mobileMenuTab === null && 'pointer-events-none translate-x-full',
                         )}
                       >
-                        <div className="flex shrink-0 items-center gap-2 border-b border-white/[0.08] px-4 py-3">
+                        {/* Header: back arrow + live search over this category's
+                            games (replaces the static "N Games" count). */}
+                        <div className="flex shrink-0 items-center gap-2 border-b border-white/[0.08] px-3 py-3">
                           <button
                             type="button"
                             onClick={() => setMobileMenuTab(null)}
                             aria-label="Back To Menu"
-                            className="grid h-9 w-9 shrink-0 place-items-center text-white/65 transition-colors hover:text-white active:scale-95"
+                            className="grid h-10 w-9 shrink-0 place-items-center text-white/65 transition-colors hover:text-white active:scale-95"
                           >
                             <ChevronLeft className="h-6 w-6" />
                           </button>
-                          <span className="truncate text-[16px] font-bold text-white">{tab?.label ?? ''}</span>
-                          <span className="text-[12px] tabular-nums text-white/45">{entries.length} {entries.length === 1 ? 'Game' : 'Games'}</span>
+                          <div className="relative flex h-10 flex-1 items-center overflow-hidden rounded-xl border border-white/[0.09] bg-white/[0.05] focus-within:border-white/[0.20] focus-within:bg-white/[0.08]">
+                            <Search aria-hidden className="pointer-events-none absolute left-3 h-[17px] w-[17px] text-white/40" />
+                            <input
+                              type="search"
+                              value={mobileGameSearch}
+                              onChange={(e) => setMobileGameSearch(e.target.value)}
+                              placeholder={`Search ${tab?.label ?? 'games'}…`}
+                              aria-label={`Search ${tab?.label ?? 'games'}`}
+                              className="h-full w-full bg-transparent pl-10 pr-3 text-[14px] text-white outline-none placeholder:text-white/40 [&::-webkit-search-cancel-button]:hidden"
+                            />
+                          </div>
                         </div>
                         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-2 [-webkit-overflow-scrolling:touch]">
                           {entries.length === 0 ? (
                             <div className="flex flex-col items-center justify-center py-10 text-center">
                               <Search className="mb-2 h-5 w-5 text-white/30" />
-                              <p className="text-[13px] text-white/45">No games here yet</p>
+                              <p className="text-[13px] text-white/45">{needle ? 'No matches' : 'No games here yet'}</p>
                             </div>
                           ) : (
                             entries.map(({ game, categorySlug }) => (
@@ -2339,18 +2484,21 @@ function categoryFallbackIcon(
   const key = (type || slug || '')
     .toLowerCase()
     .replace(/^buy-/, '')
+  // New house set lives in /public/icons/categories/ (single-color glyphs,
+  // rendered platinum via CSS mask below). gift-cards/limiteds have no new
+  // art yet, so they fall back to the legacy colored set.
   const map: Record<string, string> = {
-    currency: '/assets/category-icons/currencies.svg',
-    items: '/assets/category-icons/items.svg',
-    item: '/assets/category-icons/items.svg',
-    account: '/assets/category-icons/accounts.svg',
-    accounts: '/assets/category-icons/accounts.svg',
-    service: '/assets/category-icons/boosting.svg',
-    boosting: '/assets/category-icons/boosting.svg',
-    boost: '/assets/category-icons/boosting.svg',
-    top_up: '/assets/category-icons/top-up.svg',
-    'top-up': '/assets/category-icons/top-up.svg',
-    topup: '/assets/category-icons/top-up.svg',
+    currency: '/icons/categories/currency.svg',
+    items: '/icons/categories/items.svg',
+    item: '/icons/categories/items.svg',
+    account: '/icons/categories/accounts.svg',
+    accounts: '/icons/categories/accounts.svg',
+    service: '/icons/categories/boosting.svg',
+    boosting: '/icons/categories/boosting.svg',
+    boost: '/icons/categories/boosting.svg',
+    top_up: '/icons/categories/top-up.svg',
+    'top-up': '/icons/categories/top-up.svg',
+    topup: '/icons/categories/top-up.svg',
     gift_card: '/assets/category-icons/gift-cards.svg',
     'gift-cards': '/assets/category-icons/gift-cards.svg',
     giftcards: '/assets/category-icons/gift-cards.svg',
@@ -2781,15 +2929,35 @@ function GlobalSearch({
                                     )}
                                   >
                                     <span className="flex min-w-0 items-center gap-3">
-                                      {/* Category icon, indented under the game. */}
+                                      {/* Category icon, indented under the game.
+                                          New house-set glyphs (single-color) render
+                                          platinum via CSS mask; admin/legacy art
+                                          stays a colored image. */}
                                       <span className="ml-8 flex h-7 w-7 shrink-0 items-center justify-center">
                                         {c.iconUrl ? (
-                                          /* eslint-disable-next-line @next/next/no-img-element */
-                                          <img
-                                            src={c.iconUrl}
-                                            alt=""
-                                            className="h-7 w-7 rounded-md object-contain"
-                                          />
+                                          c.iconUrl.startsWith('/icons/categories/') ? (
+                                            <span
+                                              aria-hidden
+                                              className="h-[18px] w-[18px] bg-[linear-gradient(180deg,#ffffff,#d8dde1)] drop-shadow-[0_1px_1px_rgba(0,0,0,0.35)]"
+                                              style={{
+                                                maskImage: `url(${c.iconUrl})`,
+                                                WebkitMaskImage: `url(${c.iconUrl})`,
+                                                maskSize: 'contain',
+                                                WebkitMaskSize: 'contain',
+                                                maskRepeat: 'no-repeat',
+                                                WebkitMaskRepeat: 'no-repeat',
+                                                maskPosition: 'center',
+                                                WebkitMaskPosition: 'center',
+                                              }}
+                                            />
+                                          ) : (
+                                            /* eslint-disable-next-line @next/next/no-img-element */
+                                            <img
+                                              src={c.iconUrl}
+                                              alt=""
+                                              className="h-7 w-7 rounded-md object-contain"
+                                            />
+                                          )
                                         ) : (
                                           <span className="h-1.5 w-1.5 rounded-full bg-white/25" />
                                         )}
