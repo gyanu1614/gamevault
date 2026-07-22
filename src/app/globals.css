@@ -82,11 +82,6 @@
   --decor-opacity: 0.5;
   --decor-blend:   screen;
 
-  /* App-shell — mobile bottom tab bar height (content row, EXCLUDING the
-     env(safe-area-inset-bottom) padding the bar adds below it). Anything
-     fixed to the viewport bottom on tab-bar routes below lg should offset
-     by calc(var(--mobile-tab-bar-h) + env(safe-area-inset-bottom)). */
-  --mobile-tab-bar-h: 64px;
 }
 
 /* ─── GV Base Styles (from design tokens) ──────────────────── */

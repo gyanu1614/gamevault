@@ -3,7 +3,6 @@
 import { usePathname } from 'next/navigation'
 import { Navbar } from '@/components/navbar-floating'
 import { Footer } from '@/components/footer'
-import { BottomTabBar } from '@/components/mobile/BottomTabBar'
 
 export function LayoutWrapper({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
@@ -47,14 +46,6 @@ export function LayoutWrapper({ children }: { children: React.ReactNode }) {
 
   const hasSidebar = isSellerPageWithSidebar || isAccountPage
 
-  // App-shell — Mobile bottom tab bar (below lg). Shown on every route
-  // that keeps the normal chrome: same exclusions as the navbar (admin,
-  // checkout, seller application) PLUS the sell wizard, which owns its
-  // own fixed bottom step bar on phones (SellWizard.tsx) — native
-  // pattern: entering the composer flow hides the tab bar.
-  const showBottomTabBar =
-    !isAdminPage && !isCheckout && !isSellerApplication && !isSellWizard
-
   return (
     <div className="flex min-h-screen flex-col">
       {/* P5 — Checkout strips the global navbar: the page carries its
@@ -62,23 +53,12 @@ export function LayoutWrapper({ children }: { children: React.ReactNode }) {
       {!isAdminPage && !isCheckout && !isSellerApplication && (
         <Navbar forceScrolled={isSellWizard} />
       )}
-      {/* Tab-bar routes pad the content bottom below lg so pages never
-          hide behind the fixed bar (64px row + iOS safe area). */}
-      <main
-        className={
-          showBottomTabBar
-            ? 'flex-1 pb-[calc(64px+env(safe-area-inset-bottom))] lg:pb-0'
-            : 'flex-1'
-        }
-      >
-        {children}
-      </main>
+      <main className="flex-1">{children}</main>
       {/* Sidebar'd account/seller pages have no marketing footer — it
           scrolled awkwardly over the sidebar and adds nothing there. */}
       {!isAdminPage && !isSellWizard && !isCheckout && !isSellerApplication && !hasSidebar && (
         <Footer />
       )}
-      {showBottomTabBar && <BottomTabBar />}
     </div>
   )
 }
