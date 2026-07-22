@@ -16,6 +16,7 @@ import SafeDropBadge from '@/components/safedrop/SafeDropBadge'
 import PresenceIndicator from '@/components/presence/PresenceIndicator'
 import CategoryPills from '@/components/marketplace/CategoryPills'
 import GameSubNav, { type GameCategory } from '@/components/marketplace/GameSubNav'
+import GameDirectory from '@/components/marketplace/GameDirectory'
 import CategoryPageLayout from '@/components/marketplace/CategoryPageLayout'
 import { buildSynonymSearchQuery } from '@/lib/utils/gaming-synonyms'
 import { ChevronLeft } from 'lucide-react'
@@ -784,6 +785,7 @@ export default async function CategoryBrowsePage({ params, searchParams }: PageP
             taxonomy={taxonomy}
             viewerId={viewer?.id ?? null}
             introLine={introLine}
+            stats={stats}
           />
         </Suspense>
         <RelatedGames
@@ -944,9 +946,13 @@ export default async function CategoryBrowsePage({ params, searchParams }: PageP
  * follow the lateral money-page mesh. Server component — renders
  * nothing when no sibling game carries the category.
  */
+/**
+ * RelatedGames — kept name + call signature for back-compat, but now
+ * renders the full game directory (every active game + its subcategories)
+ * above the footer. Big SEO win: internal-links every game×category page
+ * from every marketplace page. Collapsed with "Show All" (GameDirectory).
+ */
 async function RelatedGames({
-  currentGameId,
-  categorySlug,
   categoryName,
 }: {
   currentGameId: string
@@ -954,39 +960,58 @@ async function RelatedGames({
   categoryName: string
 }) {
   const supabase = await createClient()
-  const { data } = await supabase
-    .from('categories')
-    .select('game:games!categories_game_id_fkey(id, name, slug, is_active)')
-    .eq('slug', categorySlug)
+
+  const { data: games } = (await supabase
+    .from('games')
+    .select('id, slug, name, image_url, sort_order')
     .eq('is_active', true)
-    .neq('game_id', currentGameId)
-    .limit(24) as any
+    .order('sort_order', { ascending: true })
+    .order('name', { ascending: true })) as {
+      data: { id: string; slug: string; name: string; image_url: string | null }[] | null
+    }
 
-  const games = ((data ?? []) as any[])
-    .map((row) => row.game)
-    .filter((g) => g && g.slug && g.is_active !== false)
-    .slice(0, 6)
+  const list = games ?? []
+  if (list.length === 0) return null
 
-  if (games.length === 0) return null
+  const { data: cats } = (await supabase
+    .from('categories')
+    .select('game_id, slug, name, metadata, display_order')
+    .in('game_id', list.map((g) => g.id))
+    .eq('is_active', true)
+    .order('display_order', { ascending: true })) as unknown as {
+      data: {
+        game_id: string
+        slug: string
+        name: string | null
+        metadata: { label?: string; name?: string } | null
+        display_order: number | null
+      }[] | null
+    }
 
-  return (
-    <section className="mx-auto w-full max-w-7xl px-4 pb-14 pt-4 sm:px-6 lg:px-8">
-      <h2 className="text-[15px] font-bold text-text-primary">
-        Buy {categoryName} for:
-      </h2>
-      <div className="mt-3 flex flex-wrap gap-2">
-        {games.map((g: any) => (
-          <Link
-            key={g.id}
-            href={`/${g.slug}/${categorySlug}`}
-            className="inline-flex items-center rounded-full border border-border-default bg-bg-raised px-3.5 py-1.5 text-[13px] font-medium text-text-secondary transition-colors hover:border-lime-tint-border hover:text-text-primary"
-          >
-            {g.name} {categoryName}
-          </Link>
-        ))}
-      </div>
-    </section>
-  )
+  const catsByGame = new Map<string, { slug: string; label: string }[]>()
+  for (const c of cats ?? []) {
+    const label =
+      c.name ||
+      c.metadata?.label ||
+      c.metadata?.name ||
+      c.slug.replace(/^buy-/, '').replace(/[-_]+/g, ' ').replace(/\b\w/g, (ch) => ch.toUpperCase())
+    const arr = catsByGame.get(c.game_id)
+    if (arr) arr.push({ slug: c.slug, label })
+    else catsByGame.set(c.game_id, [{ slug: c.slug, label }])
+  }
+
+  const directoryGames = list
+    .map((g) => ({
+      slug: g.slug,
+      name: g.name,
+      imageUrl: g.image_url,
+      categories: catsByGame.get(g.id) ?? [],
+    }))
+    .filter((g) => g.categories.length > 0)
+
+  if (directoryGames.length === 0) return null
+
+  return <GameDirectory games={directoryGames} heading={`Buy ${categoryName} for Every Game`} />
 }
 
 // ─── Empty state ───────────────────────────────────────────────────────────────

@@ -106,7 +106,7 @@ export default function GameSubNav({
           // taller tab buttons below (py-1 -> py-2.5 for >=36px targets)
           // so the pill's overall height barely grows.
           'px-2 py-1 sm:px-2.5 sm:py-2',
-          'max-md:fixed max-md:inset-x-0 max-md:top-[60px] max-md:z-40 max-md:max-w-none max-md:!rounded-none max-md:!border-x-0 max-md:!border-t-0 max-md:border-b max-md:border-white/[0.08] max-md:px-2 max-md:py-1.5 max-md:!bg-[rgba(14,22,17,0.94)]',
+          'max-md:fixed max-md:inset-x-0 max-md:top-[60px] max-md:z-40 max-md:max-w-none max-md:!rounded-none max-md:!border-x-0 max-md:!border-t-0 max-md:border-b max-md:border-white/[0.08] max-md:px-2 max-md:py-2 max-md:!bg-[rgba(14,22,17,0.94)]',
         )}
         style={{ backgroundColor: 'rgba(28, 28, 37, 0.30)' }}
       >
@@ -163,24 +163,20 @@ export default function GameSubNav({
                   disabled={isPending}
                   aria-current={isActive ? 'page' : undefined}
                   className={cn(
-                    // Mobile-audit — py-2.5 below sm lifts the tap target to
-                    // ~36px (dense-control floor); desktop padding unchanged.
-                    'relative flex-shrink-0 flex items-center gap-1.5 rounded-full px-2.5 py-2.5 text-xs font-medium whitespace-nowrap transition-colors sm:px-3.5 sm:py-1.5 sm:text-[13.5px] max-md:px-2.5 max-md:py-1.5 max-md:text-[12px]',
+                    // Underline style — no pill. Chunkier on mobile (py-2.5,
+                    // 13px) so the strip doesn't read thin; desktop keeps its
+                    // tighter rhythm.
+                    'relative flex-shrink-0 flex items-center gap-1.5 rounded-md px-3 py-2.5 text-[13px] font-semibold whitespace-nowrap transition-colors sm:px-3.5 sm:py-2 sm:text-[13.5px] max-md:px-3 max-md:py-2.5',
                     isActive
-                      ? 'text-text-primary max-md:text-white'
-                      : 'text-text-secondary hover:text-gray-100 hover:bg-bg-overlay',
+                      ? 'text-white'
+                      : 'text-text-secondary hover:text-gray-100',
                     isPending && 'cursor-wait'
                   )}
                 >
                   {(isActive || showLoading) && (
                     <motion.span
                       layoutId="activeCategory"
-                      className={cn(
-                        'absolute inset-0 rounded-full',
-                        showLoading
-                          ? 'bg-lime-tint-bg/40 max-md:bg-[#174d31]'
-                          : 'bg-white/[0.1] max-md:bg-[#174d31] max-md:ring-1 max-md:ring-[#2f7a4c]/70'
-                      )}
+                      className="absolute inset-x-1.5 bottom-0 h-[2.5px] rounded-full bg-[#3f9d5a] shadow-[0_0_10px_rgba(63,157,90,0.55)]"
                       transition={{ type: 'spring', stiffness: 400, damping: 35 }}
                     />
                   )}

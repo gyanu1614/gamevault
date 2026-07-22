@@ -18,11 +18,6 @@ import {
   AlertCircle,
   Users,
   Award,
-  Coins,
-  Package,
-  Zap,
-  Rocket,
-  UserCheck,
   MessageSquare,
   Scale,
   Wallet
@@ -285,12 +280,12 @@ export default function SafeDropPage() {
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-6">
-            <ProtectionWindowCard icon={Coins} category="Currency" window="48 Hours" />
-            <ProtectionWindowCard icon={Package} category="Items" window="72 Hours" />
-            <ProtectionWindowCard icon={Zap} category="Top-Ups" window="48 Hours" />
-            <ProtectionWindowCard icon={Rocket} category="Boosting" window="72 Hours" />
+            <ProtectionWindowCard iconSlug="currency" category="Currency" window="48 Hours" />
+            <ProtectionWindowCard iconSlug="items" category="Items" window="72 Hours" />
+            <ProtectionWindowCard iconSlug="top-up" category="Top-Ups" window="48 Hours" />
+            <ProtectionWindowCard iconSlug="boosting" category="Boosting" window="72 Hours" />
             <ProtectionWindowCard
-              icon={UserCheck}
+              iconSlug="accounts"
               category="Accounts"
               window="5–14 Days"
               note="5, 7, or 14 days by risk band"
@@ -496,7 +491,8 @@ function StatCard({ icon: Icon, value, label, color }: StatCardProps) {
 
 // Component: Protection Window Card
 interface ProtectionWindowCardProps {
-  icon: React.ElementType
+  /** Slug of the house category SVG under /public/icons/categories. */
+  iconSlug: string
   category: string
   window: string
   note?: string
@@ -504,7 +500,7 @@ interface ProtectionWindowCardProps {
 }
 
 function ProtectionWindowCard({
-  icon: Icon,
+  iconSlug,
   category,
   window: windowLabel,
   note,
@@ -512,7 +508,25 @@ function ProtectionWindowCard({
 }: ProtectionWindowCardProps) {
   return (
     <div className={`bg-white/[0.03] border border-white/[0.05] rounded-xl p-4 sm:p-6 text-center ${className}`}>
-      <Icon className="w-8 h-8 text-lime-text mx-auto mb-3" />
+      {/* Frosted recessed tile + platinum glyph — the house category-icon
+          treatment (matches the homepage hero rail + hamburger). */}
+      <span className="relative mx-auto mb-3 grid h-12 w-12 place-items-center overflow-hidden rounded-[13px] border border-white/[0.07] bg-[radial-gradient(circle_at_50%_18%,rgba(38,40,46,0.9),rgba(12,13,16,0.96))] shadow-[inset_0_1px_0_rgba(255,255,255,0.1),inset_0_-8px_14px_-8px_rgba(0,0,0,0.85)]">
+        <span aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-1/3 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.07),transparent)]" />
+        <span
+          aria-hidden
+          className="relative h-6 w-6 bg-[linear-gradient(180deg,#ffffff,#d8dde1)] drop-shadow-[0_1px_1px_rgba(0,0,0,0.35)]"
+          style={{
+            maskImage: `url(/icons/categories/${iconSlug}.svg)`,
+            WebkitMaskImage: `url(/icons/categories/${iconSlug}.svg)`,
+            maskSize: 'contain',
+            WebkitMaskSize: 'contain',
+            maskRepeat: 'no-repeat',
+            WebkitMaskRepeat: 'no-repeat',
+            maskPosition: 'center',
+            WebkitMaskPosition: 'center',
+          }}
+        />
+      </span>
       <div className="text-sm text-gray-400 mb-1">{category}</div>
       <div className="text-xl sm:text-2xl font-bold text-white">{windowLabel}</div>
       {note && <div className="text-xs text-gray-500 mt-2">{note}</div>}
