@@ -237,11 +237,13 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
   const inAccountArea = pathname?.startsWith('/account') ?? false
   const accountSidebarAvailable = inAccountArea && !/^\/account\/orders\/[^/]+$/.test(pathname || '')
   // Mobile: the bar floats transparent over the hero at the very top ONLY
-  // on pages that actually have hero art behind it — the homepage and
-  // marketplace category pages (/{game}/{category}). Everywhere else the
-  // bar stays solid so it never floats over plain content.
-  const overHero =
-    pathname === '/' || /^\/[^/]+\/[^/]+$/.test(pathname || '')
+  // on the homepage. Marketplace/category pages (which have a sub-navbar)
+  // keep the solid bar so the two-bar unit reads as one solid block.
+  const overHero = pathname === '/'
+  // Marketplace category pages (/{game}/{category}) render GameSubNav right
+  // below the navbar. On those, the navbar drops its bottom hairline so the
+  // navbar + sub-nav merge into one seamless solid block on mobile.
+  const hasSubNav = /^\/[^/]+\/[^/]+$/.test(pathname || '')
   const [menuRoot, setMenuRoot] = useState<'account' | 'browse'>('browse')
   useEffect(() => {
     if (mobileMenuOpen) setMenuRoot(inAccountArea && user ? 'account' : 'browse')
@@ -905,13 +907,16 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
               // App-shell mobile bar: 60px tall, square, edge-to-edge.
               // !important beats framer's inline pill styles.
               'max-lg:h-[60px] max-lg:!py-0 max-lg:!rounded-none max-lg:!border-x-0 max-lg:!border-t-0',
-              // Over a hero at the very top: float transparent (no fill,
-              // no blur, no hairline) so the chrome sits on the art. Once
-              // scrolled — or on any non-hero page — snap to the solid
-              // forest-tinted bar with the lime-warmed bottom hairline.
+              // Homepage top: float transparent (no fill/blur/hairline) so the
+              // chrome sits on the hero art. Otherwise: solid bar. On pages
+              // with a sub-navbar (marketplace/category) we DROP the navbar's
+              // bottom hairline so the navbar + sub-nav read as one solid
+              // block with a single bottom edge (the sub-nav's).
               overHero && !scrolled
                 ? 'max-lg:!border-b-transparent max-lg:!bg-transparent max-lg:!backdrop-blur-none'
-                : 'max-lg:!border-b max-lg:!border-b-[rgba(163,230,53,0.10)] max-lg:!bg-[#0b0f0c]',
+                : hasSubNav
+                  ? 'max-lg:!border-b-0 max-lg:!bg-[#0b0f0c]'
+                  : 'max-lg:!border-b max-lg:!border-b-[rgba(163,230,53,0.10)] max-lg:!bg-[#0b0f0c]',
               scrolled
                 ? 'shadow-[0_1px_0_0_rgba(255,255,255,0.04),0_8px_24px_-12px_rgba(0,0,0,0.7)]'
                 : 'shadow-[0_4px_24px_-12px_rgba(0,0,0,0.5)]',

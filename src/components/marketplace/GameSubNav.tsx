@@ -99,10 +99,11 @@ export default function GameSubNav({
     >
       <motion.div
         initial={false}
-        /* Slide up in lockstep with the primary navbar on scroll-down
-           (mobile only — the y transform is harmless on desktop where the
-           bar isn't fixed). */
-        animate={{ y: scrollHidden ? '-120%' : '0%' }}
+        /* Slide up in lockstep with the primary navbar so the two bars read
+           as ONE unit: travel the sub-nav's own height PLUS the 60px navbar
+           above it, so it fully clears the top on scroll-down (mobile only —
+           the transform is harmless on desktop where the bar isn't fixed). */
+        animate={{ y: scrollHidden ? 'calc(-100% - 60px)' : '0%' }}
         transition={{ type: 'spring', stiffness: 420, damping: 40, mass: 0.8 }}
         className={cn(
           'pointer-events-auto w-full max-w-fit',
