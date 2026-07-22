@@ -116,7 +116,7 @@ export default function GameSubNav({
           // taller tab buttons below (py-1 -> py-2.5 for >=36px targets)
           // so the pill's overall height barely grows.
           'px-2 py-1 sm:px-2.5 sm:py-2',
-          'max-md:fixed max-md:inset-x-0 max-md:top-[60px] max-md:z-40 max-md:max-w-none max-md:!rounded-none max-md:!border-x-0 max-md:!border-t-0 max-md:border-b max-md:border-white/[0.08] max-md:px-2 max-md:py-2 max-md:!bg-[rgba(14,22,17,0.94)]',
+          'max-md:fixed max-md:inset-x-0 max-md:top-[60px] max-md:z-[45] max-md:max-w-none max-md:!rounded-none max-md:!border-x-0 max-md:!border-t-0 max-md:border-b max-md:border-white/[0.08] max-md:px-2 max-md:py-2 max-md:!bg-[#0b0f0c]',
         )}
         style={{ backgroundColor: 'rgba(28, 28, 37, 0.30)' }}
       >

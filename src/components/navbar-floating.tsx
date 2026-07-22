@@ -911,7 +911,7 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
               // forest-tinted bar with the lime-warmed bottom hairline.
               overHero && !scrolled
                 ? 'max-lg:!border-b-transparent max-lg:!bg-transparent max-lg:!backdrop-blur-none'
-                : 'max-lg:!border-b max-lg:!border-b-[rgba(163,230,53,0.10)] max-lg:!bg-[rgba(14,22,17,0.96)]',
+                : 'max-lg:!border-b max-lg:!border-b-[rgba(163,230,53,0.10)] max-lg:!bg-[#0b0f0c]',
               scrolled
                 ? 'shadow-[0_1px_0_0_rgba(255,255,255,0.04),0_8px_24px_-12px_rgba(0,0,0,0.7)]'
                 : 'shadow-[0_4px_24px_-12px_rgba(0,0,0,0.5)]',

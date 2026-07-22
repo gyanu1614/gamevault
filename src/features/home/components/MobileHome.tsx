@@ -262,7 +262,7 @@ function MobileHeroSearch() {
         {/* Recessed dark field to match the engraved category tiles (F):
             deep inner shadow, hairline, quiet lime focus ring. */}
         <div
-          className="relative flex h-[58px] items-center overflow-hidden rounded-[22px] border border-white/[0.09] bg-[radial-gradient(circle_at_50%_0%,rgba(30,32,38,0.92),rgba(11,12,15,0.96))] shadow-[inset_0_1px_0_rgba(255,255,255,0.08),inset_0_-10px_18px_-10px_rgba(0,0,0,0.85),0_12px_28px_-16px_rgba(0,0,0,0.9)] transition-colors focus-within:border-[rgba(198,255,61,0.35)] focus-within:shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_0_0_3px_rgba(198,255,61,0.10),0_12px_28px_-16px_rgba(0,0,0,0.9)]"
+          className="relative flex h-[50px] items-center overflow-hidden rounded-[14px] border border-white/[0.09] bg-[radial-gradient(circle_at_50%_0%,rgba(30,32,38,0.92),rgba(11,12,15,0.96))] shadow-[inset_0_1px_0_rgba(255,255,255,0.08),inset_0_-8px_16px_-10px_rgba(0,0,0,0.8),0_10px_24px_-16px_rgba(0,0,0,0.9)] transition-colors focus-within:border-[rgba(198,255,61,0.35)] focus-within:shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_0_0_3px_rgba(198,255,61,0.10),0_10px_24px_-16px_rgba(0,0,0,0.9)]"
         >
           <span
             aria-hidden
@@ -480,13 +480,14 @@ export function MobileHero() {
         </span>
       </motion.div>
 
-      {/* Hero title — oversized, confident, single accent line. Clean:
+      {/* Hero title — restrained, standard size (≈30px on phones, matching
+          GameBoost/Eldorado) so it doesn't dwarf the category icons. Clean:
           one soft shadow for legibility over the hero image, no 3D stack. */}
       <motion.h1
         initial={{ opacity: 0, y: 14 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-        className="text-center font-display text-[clamp(40px,12.5vw,60px)] font-black leading-[0.9] tracking-[-0.06em] text-white [text-shadow:0_2px_20px_rgba(0,0,0,0.55)]"
+        className="text-center font-display text-[clamp(30px,8vw,44px)] font-extrabold leading-[1.02] tracking-[-0.03em] text-white [text-shadow:0_2px_16px_rgba(0,0,0,0.5)]"
       >
         <span className="block">The Safest Way</span>
         <span className="relative block bg-[linear-gradient(100deg,#4ade80,#c6ff3d,#fff,#c6ff3d)] bg-[length:240%_100%] bg-clip-text text-transparent animate-gradient-x">
