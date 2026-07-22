@@ -15,7 +15,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import * as Popover from '@radix-ui/react-popover'
-import { Check, ChevronDown, Search, SlidersHorizontal, Gamepad2, X, ShieldCheck, Clock, Tag } from 'lucide-react'
+import { Check, ChevronDown, Search, SlidersHorizontal, Gamepad2, X, ShieldCheck } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import ItemCard from './_ItemCard'
 import type {
@@ -268,57 +268,60 @@ export default function ItemsPageClient({
               the sub-nav and the filter row so the page has a proper
               entry point instead of dumping filters under the sub-nav. */}
           {/* Header — centered on mobile/tablet, left-aligned from md up.
-              Responsive across all phone/tablet widths. */}
-          <div className="mb-4 flex flex-col items-center gap-3 text-center sm:mb-5 md:flex-row md:items-center md:gap-5 md:text-left">
+              Roomier spacing so the logo, title and stats breathe. */}
+          <div className="mb-5 flex flex-col items-center gap-4 text-center sm:mb-6 md:flex-row md:items-center md:gap-6 md:text-left">
             {gameImageUrl ? (
               /* eslint-disable-next-line @next/next/no-img-element */
               <img
                 src={gameImageUrl}
                 alt=""
-                className="h-16 w-16 shrink-0 rounded-2xl border border-border-default object-cover shadow-elevated"
+                className="h-16 w-16 shrink-0 rounded-2xl border border-border-default object-cover shadow-elevated sm:h-[72px] sm:w-[72px]"
               />
             ) : (
               <span
                 aria-hidden
-                className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-border-default bg-bg-overlay text-lime-text shadow-elevated"
+                className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-border-default bg-bg-overlay text-lime-text shadow-elevated sm:h-[72px] sm:w-[72px]"
               >
                 <Gamepad2 className="h-6 w-6" />
               </span>
             )}
             <div className="min-w-0 flex-1">
-              <div className="text-[11.5px] font-bold uppercase tracking-[0.14em] text-lime-text">
-                Marketplace
-              </div>
-              <h1 className="mt-0.5 text-[24px] font-black leading-tight tracking-tight text-text-primary sm:text-[28px] lg:text-[32px]">
+              <h1 className="text-[26px] font-black leading-tight tracking-tight text-text-primary sm:text-[30px] lg:text-[34px]">
                 {gameName} {categoryLabel}
               </h1>
 
-              {/* Stat chips — scannable + keyword-rich (replaces the small
-                  grey SEO sentence). The full introLine still ships in the
-                  page HTML for the crawler (visually hidden). */}
-              <div className="mt-2.5 flex flex-wrap items-center justify-center gap-1.5 md:justify-start">
-                <StatChip icon={Tag}>
-                  <span className="font-bold tabular-nums text-white">
+              {/* Stats — floating text with dot separators (no cards).
+                  Scannable + keyword-rich; full introLine stays in the HTML
+                  (sr-only) for the crawler. */}
+              <div className="mt-3 flex flex-wrap items-center justify-center gap-x-2.5 gap-y-1.5 text-[13.5px] text-text-tertiary md:justify-start">
+                <span>
+                  <span className="font-bold tabular-nums text-text-primary">
                     {sorted.length.toLocaleString('en-US')}
                   </span>{' '}
                   {sorted.length === 1 ? 'listing' : 'listings'}
-                </StatChip>
+                </span>
                 {stats?.lowPrice != null && (
-                  <StatChip>
-                    <span className="text-white/60">from</span>{' '}
-                    <span className="font-bold tabular-nums text-white">
-                      ${formatStatPrice(stats.lowPrice)}
+                  <>
+                    <Dot />
+                    <span>
+                      from{' '}
+                      <span className="font-bold tabular-nums text-text-primary">
+                        ${formatStatPrice(stats.lowPrice)}
+                      </span>
                     </span>
-                  </StatChip>
+                  </>
                 )}
                 {stats?.avgDeliveryLabel && (
-                  <StatChip icon={Clock}>
-                    <span className="text-white/85">~{stats.avgDeliveryLabel} delivery</span>
-                  </StatChip>
+                  <>
+                    <Dot />
+                    <span>~{stats.avgDeliveryLabel} delivery</span>
+                  </>
                 )}
-                <StatChip icon={ShieldCheck} accent>
-                  <span className="font-semibold text-[#7ec98f]">SafeDrop Protected</span>
-                </StatChip>
+                <Dot />
+                <span className="inline-flex items-center gap-1 font-semibold text-[#7ec98f]">
+                  <ShieldCheck aria-hidden className="h-3.5 w-3.5" />
+                  SafeDrop Protected
+                </span>
               </div>
               {introLine && <p className="sr-only">{introLine}</p>}
             </div>
@@ -359,11 +362,9 @@ export default function ItemsPageClient({
             </button>
           </div>
 
-          {/* Sort + Search on one line — sort pill left, search fills the rest. */}
+          {/* Search + Filter on one line — search fills the left, compact
+              Filter pill pinned right. */}
           <div className="flex items-center gap-2">
-            <div className="shrink-0">
-              <SortSelect value={sort} onChange={setSort} />
-            </div>
             <div className="relative min-w-0 flex-1">
               <Search
                 className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary"
@@ -377,6 +378,9 @@ export default function ItemsPageClient({
                 aria-label="Search items"
                 className="h-11 w-full rounded-lg border border-border-default bg-bg-overlay px-4 pl-11 text-[14.5px] text-text-primary outline-none transition-colors placeholder:text-text-tertiary focus:border-lime focus:ring-2 focus:ring-lime-tint-bg sm:h-12 sm:text-[15px]"
               />
+            </div>
+            <div className="shrink-0">
+              <SortSelect value={sort} onChange={setSort} />
             </div>
           </div>
         </div>
@@ -658,29 +662,9 @@ function SearchableFilterChip({
   )
 }
 
-/** Compact stat chip for the header — scannable, keyword-rich SEO line. */
-function StatChip({
-  icon: Icon,
-  accent,
-  children,
-}: {
-  icon?: React.ElementType
-  accent?: boolean
-  children: React.ReactNode
-}) {
-  return (
-    <span
-      className={cn(
-        'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[12.5px] leading-none text-white/80',
-        accent
-          ? 'border-[#2f7a4c]/50 bg-[#174d31]/30'
-          : 'border-white/[0.08] bg-white/[0.04]',
-      )}
-    >
-      {Icon && <Icon aria-hidden className={cn('h-3.5 w-3.5', accent ? 'text-[#7ec98f]' : 'text-white/45')} />}
-      {children}
-    </span>
-  )
+/** Small dot separator for the floating header stat line. */
+function Dot() {
+  return <span aria-hidden className="text-text-disabled">·</span>
 }
 
 function SortSelect({
@@ -690,16 +674,18 @@ function SortSelect({
   value: ItemSort
   onChange: (s: ItemSort) => void
 }) {
-  const label = SORT_OPTIONS.find((s) => s.slug === value)?.label ?? 'Sort'
+  // Compact "Filter" pill — the active sort is shown as a checkmark inside.
+  const isDefault = value === SORT_OPTIONS[0]?.slug
   return (
     <Popover.Root>
       <Popover.Trigger asChild>
         <button
           type="button"
-          className="inline-flex h-10 items-center gap-2 rounded-lg border border-border-subtle bg-transparent px-3.5 text-[13.5px] font-semibold text-text-primary transition-colors hover:border-border-default"
+          aria-label="Sort and filter"
+          className="inline-flex h-11 shrink-0 items-center gap-1.5 rounded-lg border border-border-default bg-bg-overlay px-3 text-[13.5px] font-semibold text-text-primary transition-colors hover:border-border-strong sm:h-12"
         >
-          <SlidersHorizontal className="h-3.5 w-3.5 text-text-tertiary" aria-hidden />
-          {label}
+          <SlidersHorizontal className={cn('h-4 w-4', isDefault ? 'text-text-tertiary' : 'text-lime-text')} aria-hidden />
+          <span className="max-sm:sr-only">Filter</span>
           <ChevronDown className="h-3.5 w-3.5 text-text-tertiary" aria-hidden />
         </button>
       </Popover.Trigger>
