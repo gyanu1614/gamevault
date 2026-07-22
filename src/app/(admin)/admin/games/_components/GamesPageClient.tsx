@@ -20,11 +20,11 @@ import Link from 'next/link'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import {
-  Search, Pencil, Eye, EyeOff, ChevronRight, Pause, Play, Trash2, Star,
+  Search, Pencil, Eye, EyeOff, ChevronRight, Pause, Play, Trash2, Star, Sparkles,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { GlassCard } from '@/components/ui/glass-card'
-import { fetchAdminGames, toggleGameActive, deleteGame, toggleGamePopular } from '@/lib/actions/admin-games'
+import { fetchAdminGames, toggleGameActive, deleteGame, toggleGamePopular, toggleGameSpotlight } from '@/lib/actions/admin-games'
 import {
   fetchAdminGameCategoryBadges,
   type AdminGameCategoryBadge,
@@ -44,6 +44,7 @@ interface Game {
   sort_order: number
   is_active: boolean
   is_popular?: boolean | null
+  is_spotlight?: boolean | null
   listing_count?: number
 }
 
@@ -135,6 +136,22 @@ export default function GamesPageClient({
       }
     },
     onError: (err: any) => toast.error(err?.message ?? 'Failed to update popular flag'),
+  })
+
+  // Toggle the "spotlight" flag — features the game in the mobile
+  // hamburger Spotlight grid. Same optimistic-flip pattern.
+  const spotlightMutation = useMutation({
+    mutationFn: ({ id, isSpotlight }: { id: string; isSpotlight: boolean }) =>
+      toggleGameSpotlight(id, isSpotlight),
+    onSuccess: (res, vars) => {
+      if (res.success) {
+        toast.success(vars.isSpotlight ? 'Removed from spotlight' : 'Added to spotlight')
+        qc.invalidateQueries({ queryKey: ['admin-games'] })
+      } else {
+        toast.error(res.error ?? 'Failed to update spotlight flag')
+      }
+    },
+    onError: (err: any) => toast.error(err?.message ?? 'Failed to update spotlight flag'),
   })
 
   const badgesQuery = useQuery<AdminGameCategoryBadge[]>({
@@ -304,6 +321,25 @@ export default function GamesPageClient({
                         className={cn(
                           'h-3.5 w-3.5',
                           game.is_popular && 'fill-current',
+                        )}
+                      />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => spotlightMutation.mutate({ id: game.id, isSpotlight: !!game.is_spotlight })}
+                      disabled={spotlightMutation.isPending}
+                      title={game.is_spotlight ? 'Remove from mobile Spotlight grid' : 'Feature in mobile Spotlight grid'}
+                      className={cn(
+                        'inline-flex h-8 w-8 items-center justify-center rounded-lg transition-colors disabled:opacity-50',
+                        game.is_spotlight
+                          ? 'text-lime hover:bg-lime-tint-bg'
+                          : 'text-text-secondary hover:bg-bg-raised-hover hover:text-text-primary',
+                      )}
+                    >
+                      <Sparkles
+                        className={cn(
+                          'h-3.5 w-3.5',
+                          game.is_spotlight && 'fill-current',
                         )}
                       />
                     </button>

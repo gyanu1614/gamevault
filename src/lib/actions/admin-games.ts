@@ -137,6 +137,27 @@ export async function toggleGamePopular(id: string, isPopular: boolean) {
   return { success: true }
 }
 
+/**
+ * Flip games.is_spotlight so the mobile hamburger "Spotlight" games grid
+ * features / drops the game. Independent of is_popular. Same
+ * current-flag-in, action-flips pattern as toggleGamePopular.
+ */
+export async function toggleGameSpotlight(id: string, isSpotlight: boolean) {
+  await requireAdmin()
+  const supabase = getAdminSupabase()
+
+  const { error } = await (supabase
+    .from('games') as any)
+    .update({ is_spotlight: !isSpotlight })
+    .eq('id', id)
+
+  if (error) return { success: false, error: error.message }
+  revalidatePath('/admin/games')
+  // Bust the marketplace-menu spotlight query on the client side too.
+  revalidatePath('/')
+  return { success: true }
+}
+
 // ─── Game Icon Upload ─────────────────────────────────────────────────────────
 
 export async function uploadGameIcon(
