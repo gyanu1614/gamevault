@@ -23,7 +23,7 @@ import {
   Wallet
 } from 'lucide-react'
 import Link from 'next/link'
-import { TrustpilotCarousel } from '@/components/trustpilot/TrustpilotWidget'
+import TrustBox, { TRUSTBOX_TEMPLATES } from '@/components/trust/TrustBox'
 import { SafeDropExplainer } from './_SafeDropExplainer'
 
 export const metadata: Metadata = {
@@ -439,7 +439,14 @@ export default function SafeDropPage() {
               See what buyers and sellers say about shopping with SafeDrop
             </p>
           </div>
-          <TrustpilotCarousel />
+          <div className="flex justify-center">
+            <TrustBox
+              templateId={TRUSTBOX_TEMPLATES.microCombo}
+              height="28px"
+              width="300px"
+              theme="dark"
+            />
+          </div>
         </div>
       </section>
 

@@ -10,6 +10,7 @@
 'use client'
 
 import Link from 'next/link'
+import TrustBox, { TRUSTBOX_TEMPLATES } from '@/components/trust/TrustBox'
 
 const NAV_LINKS: Array<{ name: string; href: string }> = [
   { name: 'Browse Listings', href: '/browse' },
@@ -174,6 +175,16 @@ function MobileFooter() {
           ))}
         </div>
 
+        {/* Trustpilot micro rating — compact, site-wide. Lazy-loaded; renders
+            nothing until the business-unit env var is set. */}
+        <TrustBox
+          templateId={TRUSTBOX_TEMPLATES.microCombo}
+          height="24px"
+          width="200px"
+          theme="dark"
+          className="mt-1"
+        />
+
         {/* Payment row — monochrome wordmarks, no licensed art. */}
         <div
           aria-label="Accepted payment methods"
@@ -247,6 +258,14 @@ export function Footer() {
             </a>
           ))}
         </div>
+
+        {/* Trustpilot micro rating — compact, site-wide (desktop footer). */}
+        <TrustBox
+          templateId={TRUSTBOX_TEMPLATES.microCombo}
+          height="24px"
+          width="240px"
+          theme="dark"
+        />
 
         {/* Docs — the full compliance pack in three centered mini-columns */}
         <div className="grid w-full max-w-2xl grid-cols-1 gap-8 border-t border-white/[0.06] pt-7 sm:grid-cols-3">
