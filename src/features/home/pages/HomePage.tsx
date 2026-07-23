@@ -25,7 +25,8 @@ import { HowItWorks } from '../components/HowItWorks'
 import { WhyCard } from '../components/WhyCard'
 import { RecentlySoldTicker } from '../components/RecentlySoldTicker'
 import { PaymentsMarquee } from '@/components/marketplace/PaymentsMarquee'
-import TrustBox, { TRUSTBOX_TEMPLATES } from '@/components/trust/TrustBox'
+import TrustBox from '@/components/trust/TrustBox'
+import { TRUSTBOX_TEMPLATES } from '@/components/trust/trustbox-templates'
 import {
   MobileHero,
   MobilePopularGames,

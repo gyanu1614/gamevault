@@ -23,7 +23,8 @@ import {
   Wallet
 } from 'lucide-react'
 import Link from 'next/link'
-import TrustBox, { TRUSTBOX_TEMPLATES } from '@/components/trust/TrustBox'
+import TrustBox from '@/components/trust/TrustBox'
+import { TRUSTBOX_TEMPLATES } from '@/components/trust/trustbox-templates'
 import { SafeDropExplainer } from './_SafeDropExplainer'
 
 export const metadata: Metadata = {

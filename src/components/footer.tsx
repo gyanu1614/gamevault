@@ -10,7 +10,8 @@
 'use client'
 
 import Link from 'next/link'
-import TrustBox, { TRUSTBOX_TEMPLATES } from '@/components/trust/TrustBox'
+import TrustBox from '@/components/trust/TrustBox'
+import { TRUSTBOX_TEMPLATES } from '@/components/trust/trustbox-templates'
 
 const NAV_LINKS: Array<{ name: string; href: string }> = [
   { name: 'Browse Listings', href: '/browse' },
