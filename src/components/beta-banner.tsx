@@ -15,7 +15,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { ArrowRight, Sparkles } from 'lucide-react'
+import { IconRocket, IconArrowRight } from '@tabler/icons-react'
 import { useEffect, useRef } from 'react'
 
 const AMBER = '#F5C451'
@@ -71,44 +71,50 @@ export function BetaBanner() {
       ref={ref}
       role="region"
       aria-label="Beta announcement"
-      className="relative z-[60] w-full border-b border-[#F5C451]/20 bg-[#1a160b]/80 backdrop-blur-xl backdrop-saturate-150"
+      className="relative z-[60] w-full border-b border-white/[0.07] bg-[#12100a]/90 backdrop-blur-xl backdrop-saturate-150"
     >
-      {/* Warm top sheen so the glass reads as amber, not just dark. */}
+      {/* Thin amber accent rail along the top edge — the "chosen" detail
+          instead of a full amber wash. */}
       <span
         aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 h-full bg-[linear-gradient(to_bottom,rgba(245,196,81,0.10),rgba(245,196,81,0.02))]"
+        className="pointer-events-none absolute inset-x-0 top-0 h-px"
+        style={{ background: `linear-gradient(to right, transparent, ${AMBER}66, transparent)` }}
       />
 
-      <div className="relative mx-auto flex min-h-[40px] max-w-[1400px] items-center justify-between gap-3 px-4 py-1.5 sm:px-6">
-        {/* Left — status */}
-        <div className="flex min-w-0 items-center gap-2.5">
+      <div className="relative mx-auto flex min-h-[42px] max-w-[1400px] items-center justify-between gap-4 px-4 py-2 sm:px-6">
+        {/* Left — status. Squared glyph badge (not a pill) + label + copy. */}
+        <div className="flex min-w-0 items-center gap-2.5 sm:gap-3">
           <span
-            className="inline-flex shrink-0 items-center gap-1 rounded-full border border-[#F5C451]/30 bg-[#F5C451]/10 px-2 py-[3px] text-[10px] font-bold uppercase tracking-wider"
+            className="inline-flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-[7px] border border-[#F5C451]/25 bg-[#F5C451]/10"
             style={{ color: AMBER }}
           >
-            <Sparkles className="h-3 w-3" />
-            Beta
+            <IconRocket className="h-[15px] w-[15px]" stroke={2} />
           </span>
-          <p className="truncate text-[12.5px] leading-tight text-white/85 sm:text-[13px]">
-            <span className="font-semibold text-white">
-              DropMarket is in early beta
+          <p className="truncate text-[12.5px] leading-tight text-text-secondary sm:text-[13px]">
+            <span
+              className="font-bold uppercase tracking-[0.08em]"
+              style={{ color: AMBER }}
+            >
+              Beta
             </span>
-            <span className="hidden text-white/60 sm:inline">
-              {' '}— launching fully soon. Trades run in test mode for now.
+            <span aria-hidden className="mx-2 text-white/20">·</span>
+            <span className="font-semibold text-white">
+              We&apos;re now live in early access
+            </span>
+            <span className="hidden text-text-tertiary md:inline">
+              {' '}— full launch coming soon.
             </span>
           </p>
         </div>
 
-        {/* Right — CTA */}
+        {/* Right — CTA. Rectangular soft-corner button, not a pill. */}
         <Link
           href="/early-seller"
-          className="group inline-flex shrink-0 items-center gap-1.5 rounded-full border border-[#F5C451]/40 bg-[#F5C451]/12 px-3 py-[6px] text-[12px] font-semibold text-[#F5C451] transition-colors hover:bg-[#F5C451]/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F5C451]/50 sm:text-[12.5px]"
+          className="group inline-flex shrink-0 items-center gap-1.5 rounded-[8px] border border-[#F5C451]/35 bg-[#F5C451]/[0.08] px-3 py-[7px] text-[12px] font-semibold text-[#F5C451] transition-colors hover:border-[#F5C451]/55 hover:bg-[#F5C451]/[0.16] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F5C451]/50 sm:text-[12.5px]"
         >
-          <span className="hidden sm:inline">
-            Be one of the first 100 sellers — lower fees
-          </span>
-          <span className="sm:hidden">First 100 sellers</span>
-          <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
+          <span className="hidden sm:inline">Become a Founding Seller</span>
+          <span className="sm:hidden">Founding Seller</span>
+          <IconArrowRight className="h-[15px] w-[15px] transition-transform group-hover:translate-x-0.5" stroke={2.2} />
         </Link>
       </div>
     </div>

@@ -7,7 +7,7 @@
  */
 
 import type { Metadata } from 'next'
-import { Percent, Rocket, BadgeCheck, Sparkles } from 'lucide-react'
+import { IconPercentage, IconRocket, IconRosetteDiscountCheck } from '@tabler/icons-react'
 import { EarlySellerForm } from './_EarlySellerForm'
 
 const AMBER = '#F5C451'
@@ -28,19 +28,19 @@ export const metadata: Metadata = {
 
 const PERKS = [
   {
-    icon: Percent,
-    title: 'Lower Fees, Locked In',
-    body: 'Founding sellers keep a reduced commission rate that stays with your account after launch.',
+    icon: IconPercentage,
+    title: 'Reduced Seller Fees',
+    body: 'Lock in a lower commission rate that stays with your account permanently — even after full launch.',
   },
   {
-    icon: Rocket,
+    icon: IconRocket,
     title: 'Early Access',
-    body: 'List and start building your reputation before the marketplace opens to everyone.',
+    body: 'Start listing and building your reputation before the marketplace opens to the public.',
   },
   {
-    icon: BadgeCheck,
+    icon: IconRosetteDiscountCheck,
     title: 'Founding-Seller Badge',
-    body: 'A permanent badge on your shop that tells buyers you were here from day one.',
+    body: 'A permanent badge on your storefront that shows buyers you were one of the first.',
   },
 ]
 
@@ -58,52 +58,50 @@ export default function EarlySellerPage() {
       />
 
       <div className="relative mx-auto max-w-3xl px-5 pb-24 pt-14 sm:pt-20">
-        {/* Eyebrow */}
-        <div className="flex justify-center">
+        {/* Eyebrow — rectangular glyph badge + label, no pill. */}
+        <div className="flex items-center justify-center gap-2.5">
           <span
-            className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[11px] font-bold uppercase tracking-wider"
-            style={{
-              color: AMBER,
-              borderColor: 'rgba(245,196,81,0.30)',
-              background: 'rgba(245,196,81,0.10)',
-            }}
+            className="inline-flex h-7 w-7 items-center justify-center rounded-[8px] border border-[#F5C451]/25 bg-[#F5C451]/10"
+            style={{ color: AMBER }}
           >
-            <Sparkles className="h-3.5 w-3.5" />
+            <IconRocket className="h-4 w-4" stroke={2} />
+          </span>
+          <span
+            className="text-[11px] font-bold uppercase tracking-[0.14em]"
+            style={{ color: AMBER }}
+          >
             Beta · First 100 Sellers
           </span>
         </div>
 
-        <h1 className="mt-5 text-center text-[clamp(28px,6vw,40px)] font-extrabold leading-[1.1] tracking-tight text-white text-balance">
+        <h1 className="mt-6 text-center text-[clamp(28px,6vw,40px)] font-extrabold leading-[1.1] tracking-tight text-white text-balance">
           Become a Founding Seller
           <br />
           <span style={{ color: AMBER }}>on DropMarket</span>
         </h1>
 
-        <p className="mx-auto mt-4 max-w-xl text-center text-[15px] leading-relaxed text-text-secondary">
-          We&apos;re opening the marketplace to a first group of sellers. Claim a
-          spot in the first 100 to lock in lower fees, get early access, and earn
-          a permanent founding-seller badge.
+        <p className="mx-auto mt-4 max-w-xl text-center text-[15px] leading-relaxed text-text-secondary text-balance">
+          We&apos;re opening the marketplace to our first sellers. Join the first
+          100 to lock in reduced fees, get early access, and earn a permanent
+          founding-seller badge on your storefront.
         </p>
 
-        {/* Perks */}
-        <div className="mt-10 grid grid-cols-1 gap-3 sm:grid-cols-3">
+        {/* Perks — floating rows separated by hairlines, no boxed cards. */}
+        <div className="mx-auto mt-12 max-w-2xl divide-y divide-white/[0.07] border-y border-white/[0.07]">
           {PERKS.map((p) => (
-            <div
-              key={p.title}
-              className="rounded-xl border border-white/10 bg-bg-overlay/40 p-4 backdrop-blur-sm"
-            >
-              <div
-                className="flex h-9 w-9 items-center justify-center rounded-lg"
-                style={{ background: 'rgba(245,196,81,0.12)', color: AMBER }}
+            <div key={p.title} className="flex items-start gap-4 py-5">
+              <span
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] border border-[#F5C451]/20 bg-[#F5C451]/[0.08]"
+                style={{ color: AMBER }}
               >
-                <p.icon className="h-[18px] w-[18px]" />
+                <p.icon className="h-5 w-5" stroke={1.9} />
+              </span>
+              <div>
+                <h3 className="text-[14.5px] font-bold text-white">{p.title}</h3>
+                <p className="mt-1 text-[13px] leading-relaxed text-text-tertiary">
+                  {p.body}
+                </p>
               </div>
-              <h3 className="mt-3 text-[13.5px] font-bold text-white">
-                {p.title}
-              </h3>
-              <p className="mt-1 text-[12.5px] leading-relaxed text-text-tertiary">
-                {p.body}
-              </p>
             </div>
           ))}
         </div>
