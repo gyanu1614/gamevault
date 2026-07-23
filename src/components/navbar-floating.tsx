@@ -913,7 +913,10 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
               // bottom hairline so the navbar + sub-nav read as one solid
               // block with a single bottom edge (the sub-nav's).
               overHero && !scrolled
-                ? 'max-lg:!border-b-transparent max-lg:!bg-transparent max-lg:!backdrop-blur-none'
+                ? // Transparent over hero: kill fill/blur/border AND the
+                  // drop-shadow — the shadow was drawing a visible line/edge
+                  // under the "floating" navbar. max-lg:!shadow-none removes it.
+                  'max-lg:!border-b-transparent max-lg:!bg-transparent max-lg:!backdrop-blur-none max-lg:!shadow-none'
                 : hasSubNav
                   ? 'max-lg:!border-b-0 max-lg:!bg-[#0b0f0c]'
                   : 'max-lg:!border-b max-lg:!border-b-[rgba(163,230,53,0.10)] max-lg:!bg-[#0b0f0c]',

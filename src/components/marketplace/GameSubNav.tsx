@@ -95,7 +95,12 @@ export default function GameSubNav({
        fixed 60px primary header. */
     <nav
       aria-label={`${gameName} categories`}
-      className="relative z-40 flex justify-center px-3 py-3 pointer-events-none sm:py-4 md:py-5 max-md:h-[58px] max-md:px-0 max-md:py-0"
+      /* IMPORTANT: `.has-backdrop > *` in globals.css forces every direct
+         child (this <nav> AND the page <main>) to `z-index: 1`. With equal
+         z, DOM order wins and page content paints over the fixed sub-nav.
+         `!z-40` (z-index !important) beats that global rule so the sub-nav
+         always sits above page content. */
+      className="relative !z-40 flex justify-center px-3 py-3 pointer-events-none sm:py-4 md:py-5 max-md:h-[58px] max-md:px-0 max-md:py-0"
     >
       <motion.div
         initial={false}
@@ -188,7 +193,10 @@ export default function GameSubNav({
                     <motion.span
                       layoutId="activeCategory"
                       className="absolute inset-x-1.5 bottom-0 h-[2.5px] rounded-full bg-[#3f9d5a] shadow-[0_0_10px_rgba(63,157,90,0.55)]"
-                      transition={{ type: 'spring', stiffness: 400, damping: 35 }}
+                      /* Snappy tween instead of a springy slide — the old
+                         spring read as a slow/wacky swipe when the sub-nav
+                         re-mounts on each category navigation. */
+                      transition={{ type: 'tween', duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
                     />
                   )}
                   {/* V14m — Swap the leading icon for a spinner while the
