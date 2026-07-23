@@ -45,6 +45,7 @@ interface Game {
   is_active: boolean
   is_popular?: boolean | null
   is_spotlight?: boolean | null
+  seo_indexable?: boolean | null
   listing_count?: number
 }
 
@@ -250,9 +251,26 @@ export default function GamesPageClient({
                     )}
                   </div>
 
-                  {/* Name + slug */}
+                  {/* Name + slug + SEO index state */}
                   <div className={cn(!game.is_active && 'opacity-60')}>
-                    <div className="text-[14px] font-semibold text-text-primary">{game.name}</div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[14px] font-semibold text-text-primary">{game.name}</span>
+                      {game.seo_indexable === false ? (
+                        <span
+                          title="Forced noindex (SEO tab)"
+                          className="inline-flex items-center gap-1 rounded-full border border-warning bg-warning-bg px-1.5 py-0.5 text-[10px] font-bold text-warning"
+                        >
+                          <span className="h-1 w-1 rounded-full bg-warning" /> Noindex
+                        </span>
+                      ) : game.seo_indexable === true ? (
+                        <span
+                          title="Forced index (SEO tab)"
+                          className="inline-flex items-center gap-1 rounded-full border border-lime-tint-border bg-lime-tint-bg px-1.5 py-0.5 text-[10px] font-bold text-lime-text"
+                        >
+                          <span className="h-1 w-1 rounded-full bg-lime" /> Index
+                        </span>
+                      ) : null}
+                    </div>
                     <div className="mt-0.5 font-mono text-[12px] text-text-tertiary">{game.slug}</div>
                   </div>
 
