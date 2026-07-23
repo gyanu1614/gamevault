@@ -42,9 +42,12 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const [{ count: listingCount }, { data: curatedCfg }] = await Promise.all([
     supabase
       .from('listings')
-      .select('id', { count: 'exact', head: true })
+      // SEO hygiene: only REAL (non-test) active listings count toward
+      // indexability, so a game with only test listings stays noindex.
+      .select('id, seller:profiles!listings_seller_id_fkey!inner(is_test)', { count: 'exact', head: true })
       .eq('game_id', game.id)
-      .eq('status', 'active'),
+      .eq('status', 'active')
+      .eq('seller.is_test', false),
     supabase
       .from('category_configs')
       .select('game_id')
@@ -115,9 +118,10 @@ async function getCategoryListingCounts(gameId: string) {
 
   const { data: counts, error } = await supabase
     .from('listings')
-    .select('category_id')
+    .select('category_id, seller:profiles!listings_seller_id_fkey!inner(is_test)')
     .eq('game_id', gameId)
-    .eq('status', 'active') as any
+    .eq('status', 'active')
+    .eq('seller.is_test', false) as any
 
   if (error) {
     console.error('Error fetching listing counts:', error)
@@ -139,11 +143,12 @@ async function getFeaturedListings(gameId: string, limit: number = 6) {
     .from('listings')
     .select(`
       *,
-      seller:profiles!listings_seller_id_fkey(username, seller_tier),
+      seller:profiles!listings_seller_id_fkey!inner(username, seller_tier, is_test),
       category:categories!listings_category_id_fkey(name, slug)
     `)
     .eq('game_id', gameId)
     .eq('status', 'active')
+    .eq('seller.is_test', false)
     .order('created_at', { ascending: false })
     .limit(limit) as any
 

@@ -258,8 +258,8 @@ async function getListings(
     .from('listings')
     .select(`
       *,
-      seller:profiles!listings_seller_id_fkey(
-        id, username, seller_tier, avatar_url,
+      seller:profiles!listings_seller_id_fkey!inner(
+        id, username, seller_tier, avatar_url, is_test,
         presence:seller_presence(is_online, last_seen_at)
       ),
       game:games!listings_game_id_fkey(name, slug),
@@ -268,6 +268,8 @@ async function getListings(
     .eq('game_id', gameId)
     .eq('category_id', categoryId)
     .eq('status', 'active')
+    // SEO hygiene: hide test/demo accounts from public category pages.
+    .eq('seller.is_test', false)
 
   query = excludePausedSellers(query, pausedSellerIds)
 

@@ -14,15 +14,19 @@ export interface ListingsFilters {
 export async function getListings(filters: ListingsFilters = {}) {
   const supabase = createClient()
 
+  // SEO hygiene: `!inner` + eq on the joined seller excludes listings from
+  // test/demo accounts (profiles.is_test) from all public results — filters
+  // parent rows via the inner join, works client- and server-side.
   let query = supabase
     .from('listings')
     .select(`
       *,
-      seller:profiles!listings_seller_id_fkey(*),
+      seller:profiles!listings_seller_id_fkey!inner(*),
       game:games!listings_game_id_fkey(*),
       category:categories!listings_category_id_fkey(*)
     `)
     .eq('status', 'active')
+    .eq('seller.is_test', false)
 
   // Apply filters
   if (filters.gameId) {

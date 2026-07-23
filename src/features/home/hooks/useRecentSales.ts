@@ -33,8 +33,11 @@ export function useRecentSales() {
       const supabase = createClient()
       const { data, error } = await supabase
         .from('orders')
-        .select('id, total_amount, completed_at, created_at, listing:listings!orders_listing_id_fkey(title, game:game_id(name, display_name))')
+        // SEO hygiene: exclude sales from test/demo sellers so the public
+        // "just sold" ticker only reflects real transactions.
+        .select('id, total_amount, completed_at, created_at, seller:profiles!orders_seller_id_fkey!inner(is_test), listing:listings!orders_listing_id_fkey(title, game:game_id(name, display_name))')
         .eq('status', 'completed')
+        .eq('seller.is_test', false)
         .order('completed_at', { ascending: false, nullsFirst: false })
         .limit(20)
 
