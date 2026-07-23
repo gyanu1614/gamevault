@@ -856,7 +856,12 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
       <motion.nav
         initial={false}
         animate={{
-          top: scrolled ? 0 : 12,
+          // Framer drives the resting/scrolled offset via a CSS var so the
+          // static `top` below can add the beta banner's remaining height
+          // (--beta-banner-offset) — the navbar rides under the banner while
+          // it's visible, then slides to the true top as the banner scrolls
+          // away. Falls back to 0px when no banner is mounted.
+          ['--nav-top' as string]: scrolled ? '0px' : '12px',
           // Hide-on-scroll: slide the whole bar up when scrolling down.
           // Never hide while a menu/dropdown/search is open, or at the top.
           y:
@@ -871,7 +876,10 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
               : '0%',
         }}
         transition={{ type: 'spring', stiffness: 420, damping: 40, mass: 0.8 }}
-        className="fixed left-0 right-0 z-50 flex justify-center max-lg:!top-0"
+        style={{
+          top: 'calc(var(--nav-top, 12px) + var(--beta-banner-offset, 0px))',
+        }}
+        className="fixed left-0 right-0 z-50 flex justify-center max-lg:!top-[var(--beta-banner-offset,0px)]"
       >
         <motion.div
           initial={false}

@@ -3,6 +3,7 @@
 import { usePathname } from 'next/navigation'
 import { Navbar } from '@/components/navbar-floating'
 import { Footer } from '@/components/footer'
+import { BetaBanner } from '@/components/beta-banner'
 
 export function LayoutWrapper({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
@@ -48,6 +49,11 @@ export function LayoutWrapper({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex min-h-screen flex-col">
+      {/* Beta announcement bar — normal-flow so it scrolls away with the
+          page; the fixed navbar reads its remaining height and rides just
+          below it. Self-hides on chrome-less shells (admin/checkout/seller
+          application) to match the navbar rules below. */}
+      {!isAdminPage && !isCheckout && !isSellerApplication && <BetaBanner />}
       {/* P5 — Checkout strips the global navbar: the page carries its
           own slim header (brand left · secure badge right). */}
       {!isAdminPage && !isCheckout && !isSellerApplication && (
