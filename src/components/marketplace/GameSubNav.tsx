@@ -15,6 +15,7 @@ import Link from 'next/link'
 import { ChevronLeft, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { getGameIcon } from '@/features/home/lib/game-icons'
+import { useScrollDirection } from '@/hooks/useScrollDirection'
 
 export interface GameCategory {
   id: string
@@ -41,6 +42,8 @@ export default function GameSubNav({
   categories,
 }: GameSubNavProps) {
   const router = useRouter()
+  // Hide-on-scroll: slides up with the primary navbar (shared signal).
+  const { hidden: scrollHidden } = useScrollDirection({ revealAt: 40 })
   // V14m — Track which tab is mid-navigation so we can show a small spinner
   // on it (instead of the whole UI sitting silent until the new page paints).
   const [isPendingNav, startNavTransition] = useTransition()
@@ -86,14 +89,27 @@ export default function GameSubNav({
 
   return (
     /* Desktop keeps the original floating pill. On phones this same
-       component becomes the page-local subnavbar: the outer 42px slot keeps
-       page flow intact while the inner row stays attached directly beneath
-       the fixed 60px primary header. */
+       component becomes the page-local subnavbar: the outer slot reserves
+       the fixed bar's real height (58px measured) so content below never
+       overlaps, while the inner row stays attached directly beneath the
+       fixed 60px primary header. */
     <nav
       aria-label={`${gameName} categories`}
-      className="relative z-40 flex justify-center px-3 py-3 pointer-events-none sm:py-4 md:py-5 max-md:h-[42px] max-md:px-0 max-md:py-0"
+      /* IMPORTANT: `.has-backdrop > *` in globals.css forces every direct
+         child (this <nav> AND the page <main>) to `z-index: 1`. With equal
+         z, DOM order wins and page content paints over the fixed sub-nav.
+         `!z-40` (z-index !important) beats that global rule so the sub-nav
+         always sits above page content. */
+      className="relative !z-40 flex justify-center px-3 py-3 pointer-events-none sm:py-4 md:py-5 max-md:h-[58px] max-md:px-0 max-md:py-0"
     >
-      <div
+      <motion.div
+        initial={false}
+        /* Slide up in lockstep with the primary navbar so the two bars read
+           as ONE unit: travel the sub-nav's own height PLUS the 60px navbar
+           above it, so it fully clears the top on scroll-down (mobile only —
+           the transform is harmless on desktop where the bar isn't fixed). */
+        animate={{ y: scrollHidden ? 'calc(-100% - 60px)' : '0%' }}
+        transition={{ type: 'spring', stiffness: 420, damping: 40, mass: 0.8 }}
         className={cn(
           'pointer-events-auto w-full max-w-fit',
           'flex items-center gap-0.5',
@@ -106,7 +122,7 @@ export default function GameSubNav({
           // taller tab buttons below (py-1 -> py-2.5 for >=36px targets)
           // so the pill's overall height barely grows.
           'px-2 py-1 sm:px-2.5 sm:py-2',
-          'max-md:fixed max-md:inset-x-0 max-md:top-[60px] max-md:z-40 max-md:max-w-none max-md:!rounded-none max-md:!border-x-0 max-md:!border-t-0 max-md:border-b max-md:border-white/[0.08] max-md:px-2 max-md:py-1.5 max-md:!bg-[rgba(14,22,17,0.94)]',
+          'max-md:fixed max-md:inset-x-0 max-md:top-[60px] max-md:z-[45] max-md:max-w-none max-md:!rounded-none max-md:!border-x-0 max-md:!border-t-0 max-md:border-b max-md:border-white/[0.08] max-md:px-2 max-md:py-2 max-md:!bg-[#0b0f0c]',
         )}
         style={{ backgroundColor: 'rgba(28, 28, 37, 0.30)' }}
       >
@@ -163,25 +179,24 @@ export default function GameSubNav({
                   disabled={isPending}
                   aria-current={isActive ? 'page' : undefined}
                   className={cn(
-                    // Mobile-audit — py-2.5 below sm lifts the tap target to
-                    // ~36px (dense-control floor); desktop padding unchanged.
-                    'relative flex-shrink-0 flex items-center gap-1.5 rounded-full px-2.5 py-2.5 text-xs font-medium whitespace-nowrap transition-colors sm:px-3.5 sm:py-1.5 sm:text-[13.5px] max-md:px-2.5 max-md:py-1.5 max-md:text-[12px]',
+                    // Underline style — no pill. Chunkier on mobile (py-2.5,
+                    // 13px) so the strip doesn't read thin; desktop keeps its
+                    // tighter rhythm.
+                    'relative flex-shrink-0 flex items-center gap-1.5 rounded-md px-3 py-2.5 text-[13px] font-semibold whitespace-nowrap transition-colors sm:px-3.5 sm:py-2 sm:text-[13.5px] max-md:px-3 max-md:py-2.5',
                     isActive
-                      ? 'text-text-primary max-md:text-white'
-                      : 'text-text-secondary hover:text-gray-100 hover:bg-bg-overlay',
+                      ? 'text-white'
+                      : 'text-text-secondary hover:text-gray-100',
                     isPending && 'cursor-wait'
                   )}
                 >
                   {(isActive || showLoading) && (
                     <motion.span
                       layoutId="activeCategory"
-                      className={cn(
-                        'absolute inset-0 rounded-full',
-                        showLoading
-                          ? 'bg-lime-tint-bg/40 max-md:bg-[#174d31]'
-                          : 'bg-white/[0.1] max-md:bg-[#174d31] max-md:ring-1 max-md:ring-[#2f7a4c]/70'
-                      )}
-                      transition={{ type: 'spring', stiffness: 400, damping: 35 }}
+                      className="absolute inset-x-1.5 bottom-0 h-[2.5px] rounded-full bg-[#3f9d5a] shadow-[0_0_10px_rgba(63,157,90,0.55)]"
+                      /* Snappy tween instead of a springy slide — the old
+                         spring read as a slow/wacky swipe when the sub-nav
+                         re-mounts on each category navigation. */
+                      transition={{ type: 'tween', duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
                     />
                   )}
                   {/* V14m — Swap the leading icon for a spinner while the
@@ -217,7 +232,7 @@ export default function GameSubNav({
             />
           </div>
         )}
-      </div>
+      </motion.div>
     </nav>
   )
 }

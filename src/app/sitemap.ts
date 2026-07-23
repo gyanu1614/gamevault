@@ -41,6 +41,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     },
     // /marketplace redirects to / — no separate sitemap entry needed
     {
+      url: `${BASE_URL}/browse`,
+      changeFrequency: 'daily',
+      priority: 0.9,
+    },
+    {
       url: `${BASE_URL}/safedrop`,
       changeFrequency: 'weekly',
       priority: 0.8,
@@ -97,11 +102,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
           `
           slug,
           updated_at,
+          seller:profiles!listings_seller_id_fkey!inner(is_test),
           game:games!listings_game_id_fkey(slug),
           category:categories!listings_category_id_fkey(slug)
         `
         )
-        .eq('status', 'active'),
+        .eq('status', 'active')
+        // SEO hygiene: never list test/demo sellers' listings in the sitemap.
+        .eq('seller.is_test', false),
       // Mirrors the nav index bar: a category_configs row with curated
       // currency content (unit label / FAQ / steps) makes a game hub a
       // real destination even before its first listing.

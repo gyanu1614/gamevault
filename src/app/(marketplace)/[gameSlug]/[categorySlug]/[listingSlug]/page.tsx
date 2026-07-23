@@ -40,6 +40,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     .from('listings')
     .select(`
       *,
+      seller:profiles!listings_seller_id_fkey(is_test),
       game:games!listings_game_id_fkey(name),
       category:categories!listings_category_id_fkey(name)
     `)
@@ -67,8 +68,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   }
 
   return {
-    // Owner/admin preview of a non-active listing must never be indexed.
-    ...(listing.status !== 'active'
+    // Never index a non-active listing (owner/admin preview) or a test/demo
+    // seller's listing (SEO hygiene).
+    ...(listing.status !== 'active' || listing.seller?.is_test
       ? { robots: { index: false, follow: false } }
       : {}),
     // Root template appends " | DropMarket"; game/category stay in the

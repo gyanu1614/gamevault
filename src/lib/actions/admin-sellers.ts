@@ -210,6 +210,35 @@ async function resolveStoreImageUrl(
 }
 
 /**
+ * SEO hygiene — flag/unflag an account as test/demo. Test accounts' listings,
+ * ratings and sales are excluded from every public/indexable surface (browse,
+ * category, game hub, listing detail, sitemap, schema, recent-sold ticker) via
+ * getTestSellerIds() / the `seller.is_test` filters. Pass the CURRENT flag; the
+ * action flips it (same shape as the game popular/spotlight toggles). Uses the
+ * service-role client because RLS blocks writing to another user's profile.
+ */
+export async function toggleSellerTest(profileId: string, isTest: boolean) {
+  await requireAdmin()
+  const { createClient: createServiceClient } = await import('@supabase/supabase-js')
+  const admin = createServiceClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  )
+
+  const { error } = await (admin.from('profiles') as any)
+    .update({ is_test: !isTest })
+    .eq('id', profileId)
+
+  if (error) return { success: false, error: error.message }
+
+  const { revalidatePath } = await import('next/cache')
+  revalidatePath('/admin/sellers')
+  revalidatePath('/admin/active-sellers')
+  revalidatePath('/') // public pages read the test-seller set
+  return { success: true }
+}
+
+/**
  * Get all seller applications with filters
  */
 export async function getSellerApplications(

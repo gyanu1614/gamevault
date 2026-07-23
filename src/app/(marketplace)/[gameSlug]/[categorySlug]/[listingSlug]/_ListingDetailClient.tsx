@@ -42,6 +42,8 @@ import HowItWorksBand from '@/components/marketplace/HowItWorksBand'
 import { BlogSection } from '@/components/blog/BlogSection'
 import { SectionHeading } from '@/components/marketplace/SectionHeading'
 import { TrustBand } from '@/components/marketplace/TrustBand'
+import TrustBox from '@/components/trust/TrustBox'
+import { TRUSTBOX_TEMPLATES } from '@/components/trust/trustbox-templates'
 import { PaymentsMarquee } from '@/components/marketplace/PaymentsMarquee'
 import { FaqCards } from '@/components/marketplace/FaqCards'
 import type { TemplateField } from '@/lib/templates/types'
@@ -697,6 +699,16 @@ export default function ListingDetailClient({
               <Card className="relative mt-3 flex flex-col overflow-hidden border-border-default bg-[rgba(20,20,27,0.56)] p-4 shadow-elevated backdrop-blur-md rounded-lg">
                 <TrustBand />
               </Card>
+
+              {/* Trustpilot rating — compact micro line, reassurance at the
+                  buy decision point. Lazy-loaded; renders nothing until the
+                  env var is set. */}
+              <TrustBox
+                templateId={TRUSTBOX_TEMPLATES.microCombo}
+                height="24px"
+                theme="dark"
+                className="mt-3 flex justify-center"
+              />
           </div>
         </div>
 

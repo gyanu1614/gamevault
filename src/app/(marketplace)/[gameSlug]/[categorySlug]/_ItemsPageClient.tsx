@@ -15,7 +15,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import * as Popover from '@radix-ui/react-popover'
-import { Check, ChevronDown, Search, SlidersHorizontal, Gamepad2, X } from 'lucide-react'
+import { Check, ChevronDown, Search, SlidersHorizontal, Gamepad2, X, ShieldCheck } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import ItemCard from './_ItemCard'
 import type {
@@ -25,6 +25,14 @@ import type {
   TaxonomyOption,
 } from './_itemsTypes'
 import { PRICE_BANDS } from './_itemsTypes'
+
+/** Local price formatter for stat chips (mirrors seo/page-stats without
+ *  pulling that server-only module into this client component). */
+function formatStatPrice(price: number): string {
+  if (!Number.isFinite(price) || price <= 0) return '0'
+  if (price >= 1) return Number.isInteger(price) ? price.toFixed(0) : price.toFixed(2)
+  return price.toFixed(4).replace(/0+$/, '').replace(/\.$/, '')
+}
 
 const PAGE_SIZE = 24
 const SORT_OPTIONS: { slug: ItemSort; label: string }[] = [
@@ -48,8 +56,14 @@ interface ItemsPageClientProps {
    *  "Accounts", "Boosting"). Defaults to "Items" for back-compat. */
   categoryLabel?: string
   /** SEO intro sentence (live stats), server-computed so it lands in
-   *  the initial HTML. Rendered under the header count line. */
+   *  the initial HTML. Kept for the crawler even when we render chips. */
   introLine?: string | null
+  /** Live category stats — rendered as scannable stat chips in the header. */
+  stats?: {
+    count: number
+    lowPrice: number | null
+    avgDeliveryLabel: string | null
+  } | null
 }
 
 export default function ItemsPageClient({
@@ -61,6 +75,7 @@ export default function ItemsPageClient({
   viewerId,
   categoryLabel = 'Items',
   introLine,
+  stats,
 }: ItemsPageClientProps) {
   // V14v — Scroll to top on mount before paint.
   useLayoutEffect(() => {
@@ -252,53 +267,72 @@ export default function ItemsPageClient({
               single-line "{Game} Items" title beside it. Sits between
               the sub-nav and the filter row so the page has a proper
               entry point instead of dumping filters under the sub-nav. */}
-          <div className="mb-4 flex items-center gap-4 sm:mb-5 sm:gap-5">
+          {/* Header — centered on mobile/tablet, left-aligned from md up.
+              Roomier spacing so the logo, title and stats breathe. */}
+          <div className="mb-5 flex flex-col items-center gap-4 text-center sm:mb-6 md:flex-row md:items-center md:gap-6 md:text-left">
             {gameImageUrl ? (
               /* eslint-disable-next-line @next/next/no-img-element */
               <img
                 src={gameImageUrl}
                 alt=""
-                className="h-14 w-14 shrink-0 rounded-2xl border border-border-default object-cover shadow-elevated sm:h-16 sm:w-16"
+                className="h-16 w-16 shrink-0 rounded-2xl border border-border-default object-cover shadow-elevated sm:h-[72px] sm:w-[72px]"
               />
             ) : (
               <span
                 aria-hidden
-                className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-border-default bg-bg-overlay text-lime-text shadow-elevated sm:h-16 sm:w-16"
+                className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-border-default bg-bg-overlay text-lime-text shadow-elevated sm:h-[72px] sm:w-[72px]"
               >
                 <Gamepad2 className="h-6 w-6" />
               </span>
             )}
             <div className="min-w-0 flex-1">
-              <div className="text-[11.5px] font-bold uppercase tracking-[0.14em] text-lime-text">
-                Marketplace
-              </div>
-              <h1 className="mt-0.5 truncate text-[22px] font-black leading-tight tracking-tight text-text-primary sm:text-[28px] lg:text-[32px]">
+              <h1 className="text-[26px] font-black leading-tight tracking-tight text-text-primary sm:text-[30px] lg:text-[34px]">
                 {gameName} {categoryLabel}
               </h1>
-              {/* V15t — Item count moved into the subtitle so the page
-                  has a single anchored block with title+count, then
-                  filters+sort below. No more competing alignments. */}
-              <div className="mt-0.5 text-[12.5px] text-text-tertiary">
-                <span className="font-semibold tabular-nums text-text-secondary">
-                  {sorted.length.toLocaleString('en-US')}
-                </span>{' '}
-                {sorted.length === 1 ? 'listing' : 'listings'} available
+
+              {/* Stats — floating text with dot separators (no cards).
+                  Scannable + keyword-rich; full introLine stays in the HTML
+                  (sr-only) for the crawler. */}
+              <div className="mt-3 flex flex-wrap items-center justify-center gap-x-2.5 gap-y-1.5 text-[13.5px] text-text-tertiary md:justify-start">
+                <span>
+                  <span className="font-bold tabular-nums text-text-primary">
+                    {sorted.length.toLocaleString('en-US')}
+                  </span>{' '}
+                  {sorted.length === 1 ? 'listing' : 'listings'}
+                </span>
+                {stats?.lowPrice != null && (
+                  <>
+                    <Dot />
+                    <span>
+                      from{' '}
+                      <span className="font-bold tabular-nums text-text-primary">
+                        ${formatStatPrice(stats.lowPrice)}
+                      </span>
+                    </span>
+                  </>
+                )}
+                {stats?.avgDeliveryLabel && (
+                  <>
+                    <Dot />
+                    <span>~{stats.avgDeliveryLabel} delivery</span>
+                  </>
+                )}
+                <Dot />
+                <span className="inline-flex items-center gap-1 font-semibold text-[#7ec98f]">
+                  <ShieldCheck aria-hidden className="h-3.5 w-3.5" />
+                  SafeDrop Protected
+                </span>
               </div>
-              {/* SEO intro — live stats, same source as metadata + JSON-LD. */}
-              {introLine && (
-                <p className="mt-0.5 text-[12.5px] text-text-tertiary">
-                  {introLine}
-                </p>
-              )}
+              {introLine && <p className="sr-only">{introLine}</p>}
             </div>
           </div>
 
-          {/* V15t — Filter row, left-aligned. Filters on the left, Sort
-              pinned to the right. Single consistent left edge from the
-              page title to the cards below — same anchor that Skinport
-              and Linear use. Mobile: filters as a 2-up grid, sort on its
-              own line below. */}
-          <div className="mb-3 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center sm:justify-start sm:gap-2.5">
+          {/* Filters — horizontal scroll slider (left→right reveals more).
+              One line, doesn't stack; scrolls on narrow phones. */}
+          <div
+            className="-mx-4 mb-3 flex items-center gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            style={{ WebkitOverflowScrolling: 'touch' }}
+          >
             {visibleFilters.map((f) => (
               <FilterSelect
                 key={f.slug}
@@ -322,31 +356,32 @@ export default function ItemsPageClient({
             <button
               type="button"
               onClick={clearFilters}
-              className="col-span-2 mt-0.5 h-9 px-1 text-left text-[12.5px] font-semibold text-text-tertiary underline decoration-border-default underline-offset-[3px] transition-colors hover:text-text-primary sm:col-span-1 sm:ml-1 sm:mt-0"
+              className="h-9 shrink-0 whitespace-nowrap px-2 text-[12.5px] font-semibold text-text-tertiary underline decoration-border-default underline-offset-[3px] transition-colors hover:text-text-primary"
             >
               Clear filters
             </button>
-            {/* Sort: pushed to the far right of the row on sm+ via ml-auto.
-                On mobile it drops to its own row. */}
-            <div className="col-span-2 sm:col-span-1 sm:ml-auto">
-              <SortSelect value={sort} onChange={setSort} />
-            </div>
           </div>
 
-          {/* Search — left-aligned, full filter-row width */}
-          <div className="relative">
-            <Search
-              className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary"
-              aria-hidden
-            />
-            <input
-              type="search"
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder="Search items or sellers…"
-              aria-label="Search items"
-              className="h-11 w-full rounded-lg border border-border-default bg-bg-overlay px-4 pl-11 text-[14.5px] text-text-primary outline-none transition-colors placeholder:text-text-tertiary focus:border-lime focus:ring-2 focus:ring-lime-tint-bg sm:h-12 sm:text-[15px]"
-            />
+          {/* Search + Filter on one line — search fills the left, compact
+              Filter pill pinned right. */}
+          <div className="flex items-center gap-2">
+            <div className="relative min-w-0 flex-1">
+              <Search
+                className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary"
+                aria-hidden
+              />
+              <input
+                type="search"
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder="Search items or sellers…"
+                aria-label="Search items"
+                className="h-11 w-full rounded-lg border border-border-default bg-bg-overlay px-4 pl-11 text-[14.5px] text-text-primary outline-none transition-colors placeholder:text-text-tertiary focus:border-lime focus:ring-2 focus:ring-lime-tint-bg sm:h-12 sm:text-[15px]"
+              />
+            </div>
+            <div className="shrink-0">
+              <SortSelect value={sort} onChange={setSort} />
+            </div>
           </div>
         </div>
       </section>
@@ -627,6 +662,11 @@ function SearchableFilterChip({
   )
 }
 
+/** Small dot separator for the floating header stat line. */
+function Dot() {
+  return <span aria-hidden className="text-text-disabled">·</span>
+}
+
 function SortSelect({
   value,
   onChange,
@@ -634,16 +674,18 @@ function SortSelect({
   value: ItemSort
   onChange: (s: ItemSort) => void
 }) {
-  const label = SORT_OPTIONS.find((s) => s.slug === value)?.label ?? 'Sort'
+  // Compact "Filter" pill — the active sort is shown as a checkmark inside.
+  const isDefault = value === SORT_OPTIONS[0]?.slug
   return (
     <Popover.Root>
       <Popover.Trigger asChild>
         <button
           type="button"
-          className="inline-flex h-10 items-center gap-2 rounded-lg border border-border-subtle bg-transparent px-3.5 text-[13.5px] font-semibold text-text-primary transition-colors hover:border-border-default"
+          aria-label="Sort and filter"
+          className="inline-flex h-11 shrink-0 items-center gap-1.5 rounded-lg border border-border-default bg-bg-overlay px-3 text-[13.5px] font-semibold text-text-primary transition-colors hover:border-border-strong sm:h-12"
         >
-          <SlidersHorizontal className="h-3.5 w-3.5 text-text-tertiary" aria-hidden />
-          {label}
+          <SlidersHorizontal className={cn('h-4 w-4', isDefault ? 'text-text-tertiary' : 'text-lime-text')} aria-hidden />
+          <span className="max-sm:sr-only">Filter</span>
           <ChevronDown className="h-3.5 w-3.5 text-text-tertiary" aria-hidden />
         </button>
       </Popover.Trigger>

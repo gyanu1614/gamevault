@@ -12,6 +12,7 @@
 import * as React from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { getPausedSellerIds } from '@/lib/actions/seller-presence'
+import { getTestSellerIds } from '@/lib/seo/public-hygiene'
 import { parseDeliveryMinutes } from '@/lib/utils/delivery-time'
 
 // React.cache exists at runtime in Next 14's bundled React, but the
@@ -75,15 +76,22 @@ export const getCategoryStats = requestMemo(
     // count/low price either. (The flexible-currency minQty>=100 client
     // filter is intentionally NOT mirrored here — stats describe the
     // full active book.)
-    const pausedSellerIds = await getPausedSellerIds()
+    const [pausedSellerIds, testSellerIds] = await Promise.all([
+      getPausedSellerIds(),
+      getTestSellerIds(),
+    ])
+    // SEO hygiene: exclude BOTH offline (paused) and test/demo sellers so the
+    // advertised count / low price / delivery in titles + JSON-LD reflect only
+    // real, buyable listings.
+    const hiddenSellerIds = Array.from(new Set([...pausedSellerIds, ...testSellerIds]))
     let query = supabase
       .from('listings')
       .select('price, delivery_time')
       .eq('game_id', gameId)
       .eq('category_id', categoryId)
       .eq('status', 'active')
-    if (pausedSellerIds.length > 0) {
-      query = query.not('seller_id', 'in', `(${pausedSellerIds.join(',')})`)
+    if (hiddenSellerIds.length > 0) {
+      query = query.not('seller_id', 'in', `(${hiddenSellerIds.join(',')})`)
     }
     const { data, error } = await query as any
 

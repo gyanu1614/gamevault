@@ -25,9 +25,14 @@ import {
   Coins,
   Check,
   ChevronRight,
+  ArrowRight,
   ShieldCheck,
   Headset,
 } from 'lucide-react'
+
+/* Deep forest-green for section links — readable on near-black without the
+   neon of lime. Not a token yet; kept here until reused elsewhere. */
+const FOREST_LINK = '#4FA96A'
 import Image from 'next/image'
 import Link from 'next/link'
 import {
@@ -96,10 +101,11 @@ function MobileSectionHeader({
       {href && (
         <Link
           href={href}
-          className={`mb-0.5 inline-flex min-h-[36px] shrink-0 items-center gap-1 rounded-full px-2 text-[12.5px] font-semibold text-lime-text ${PRESSED}`}
+          style={{ color: FOREST_LINK }}
+          className={`group mb-0.5 inline-flex min-h-[36px] shrink-0 items-center gap-1.5 rounded-full px-2 text-[13px] font-bold tracking-[-0.01em] ${PRESSED}`}
         >
           {linkLabel}
-          <span aria-hidden>→</span>
+          <ArrowRight aria-hidden className="h-[17px] w-[17px] transition-transform duration-200 group-hover:translate-x-0.5" strokeWidth={2.75} />
         </Link>
       )}
     </div>
@@ -182,17 +188,43 @@ function MobileHeroSearch() {
   useEffect(() => {
     if (!focused) return
 
-    const closeOnOutsidePointer = (event: PointerEvent) => {
+    // GameBoost-style dismissal (mobile-friendly):
+    //  • Tap OUTSIDE the search surface → close (detected on pointerup; a tap
+    //    is a pointer that moved <10px).
+    //  • A LARGE scroll (past a threshold from where the search opened) →
+    //    close. A small nudge/scroll keeps it open.
+    //  • Dismissing the keyboard alone (input blur) → do NOT close.
+    const start = { x: 0, y: 0, inside: false }
+    const openScrollY = window.scrollY
+
+    const onPointerDown = (event: PointerEvent) => {
       const target = event.target
-      if (target instanceof Node && searchRootRef.current?.contains(target)) return
-      setFocused(false)
+      start.x = event.clientX
+      start.y = event.clientY
+      start.inside = target instanceof Node && !!searchRootRef.current?.contains(target)
     }
 
-    // Capture before a link/button click, but only dismiss when the pointer is
-    // outside the complete search surface. This replaces the old blur-driven
-    // close and keeps the dropdown visible after the keyboard is hidden.
-    document.addEventListener('pointerdown', closeOnOutsidePointer, true)
-    return () => document.removeEventListener('pointerdown', closeOnOutsidePointer, true)
+    const onPointerUp = (event: PointerEvent) => {
+      if (start.inside) return // interaction began inside the search — keep open
+      const moved = Math.hypot(event.clientX - start.x, event.clientY - start.y)
+      if (moved < 10) setFocused(false) // genuine outside tap
+    }
+
+    // Only a MEANINGFUL scroll dismisses it — small nudges are ignored.
+    const SCROLL_CLOSE_PX = 120
+    const onScroll = () => {
+      if (Math.abs(window.scrollY - openScrollY) > SCROLL_CLOSE_PX) setFocused(false)
+    }
+
+    document.addEventListener('pointerdown', onPointerDown, true)
+    document.addEventListener('pointerup', onPointerUp, true)
+    window.addEventListener('scroll', onScroll, { passive: true })
+
+    return () => {
+      document.removeEventListener('pointerdown', onPointerDown, true)
+      document.removeEventListener('pointerup', onPointerUp, true)
+      window.removeEventListener('scroll', onScroll)
+    }
   }, [focused])
 
   const trimmed = q.trim()
@@ -253,24 +285,27 @@ function MobileHeroSearch() {
   return (
     <div ref={searchRootRef} className="relative -mx-3 sm:mx-0">
       <form onSubmit={submit} role="search">
+        {/* Recessed dark field to match the engraved category tiles (F):
+            deep inner shadow, hairline, quiet lime focus ring. */}
         <div
-          className="relative flex h-[52px] items-center overflow-hidden rounded-lg border border-border-subtle bg-card text-card-foreground shadow-sm backdrop-blur-md transition-colors focus-within:border-white/[0.18] focus-within:ring-1 focus-within:ring-white/[0.12]"
+          className="relative flex h-[50px] items-center overflow-hidden rounded-[14px] border border-white/[0.09] bg-[radial-gradient(circle_at_50%_0%,rgba(30,32,38,0.92),rgba(11,12,15,0.96))] shadow-[inset_0_1px_0_rgba(255,255,255,0.08),inset_0_-8px_16px_-10px_rgba(0,0,0,0.8),0_10px_24px_-16px_rgba(0,0,0,0.9)] transition-colors focus-within:border-[rgba(198,255,61,0.35)] focus-within:shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_0_0_3px_rgba(198,255,61,0.10),0_10px_24px_-16px_rgba(0,0,0,0.9)]"
         >
-          <Sheen />
-          <Search
+          <span
             aria-hidden
-            className="pointer-events-none absolute left-4 h-[18px] w-[18px] text-text-tertiary"
-          />
+            className="grid h-9 w-9 shrink-0 place-items-center"
+          >
+            <Search className="h-[19px] w-[19px] text-white/45" />
+          </span>
           <input
             type="search"
             enterKeyHint="search"
             value={q}
             onChange={(e) => setQ(e.target.value)}
             onFocus={() => setFocused(true)}
-            placeholder="Search games, currencies, items…"
-            aria-label="Search the marketplace"
+            placeholder="Search Games, Currency, Items…"
+            aria-label="Search The Marketplace"
             aria-autocomplete="list"
-            className="h-full w-full bg-transparent pl-12 pr-4 text-base text-text-primary outline-none placeholder:text-text-tertiary [&::-webkit-search-cancel-button]:hidden"
+            className="h-full w-full bg-transparent pl-1 pr-4 text-[15px] font-medium tracking-[-0.01em] text-white outline-none placeholder:font-medium placeholder:text-white/40 [&::-webkit-search-cancel-button]:hidden"
           />
         </div>
       </form>
@@ -382,42 +417,122 @@ function MobileSearchGameLogo({ game }: { game: NonNullable<NavCatRow['game']> }
 /* Chips open the navbar's category sub-screen (app-like) rather than
    dumping everyone on the same /browse page — tabId matches NAV_TABS
    in navbar-floating.tsx, which listens for dm:open-category. */
+/* icon → the shared house category set (public/icons/categories), rendered
+   with the white→forest gradient mask so hero chips match the hamburger. */
 const HERO_CHIPS = [
-  { label: 'Currencies', iconSrc: '/assets/category-icons/currencies.svg', tabId: 'currency' },
-  { label: 'Items', iconSrc: '/assets/category-icons/items.svg', tabId: 'items' },
-  { label: 'Accounts', iconSrc: '/assets/category-icons/accounts.svg', tabId: 'accounts' },
-  { label: 'Boosting', iconSrc: '/assets/category-icons/boosting.svg', tabId: 'boosting' },
-  { label: 'Top Ups', iconSrc: '/assets/category-icons/top-up.svg', tabId: 'top-up' },
+  { label: 'Currencies', icon: 'currency', tabId: 'currency' },
+  { label: 'Items', icon: 'items', tabId: 'items' },
+  { label: 'Accounts', icon: 'accounts', tabId: 'accounts' },
+  { label: 'Boosting', icon: 'boosting', tabId: 'boosting' },
+  { label: 'Top Ups', icon: 'top-up', tabId: 'top-up' },
 ] as const
+
+function maskStyle(icon: string): React.CSSProperties {
+  return {
+    maskImage: `url(/icons/categories/${icon}.svg)`,
+    WebkitMaskImage: `url(/icons/categories/${icon}.svg)`,
+    maskSize: 'contain',
+    WebkitMaskSize: 'contain',
+    maskRepeat: 'no-repeat',
+    WebkitMaskRepeat: 'no-repeat',
+    maskPosition: 'center',
+    WebkitMaskPosition: 'center',
+  }
+}
+
+/** Bare platinum-filled category glyph (quiet near-white), masked from the
+ *  shared house SVG set. The material lives in CategoryTile, not here. */
+function CategoryGlyph({
+  icon,
+  className = '',
+  style,
+}: {
+  icon: string
+  className?: string
+  style?: React.CSSProperties
+}) {
+  return (
+    <span
+      aria-hidden
+      className={`bg-[linear-gradient(180deg,#ffffff,#d8dde1)] drop-shadow-[0_1px_1px_rgba(0,0,0,0.35)] ${className}`}
+      style={{ ...maskStyle(icon), ...style }}
+    />
+  )
+}
+
+/** Frosted-glass tile wrapping a quiet platinum glyph — the premium
+ *  "Apple settings row" treatment. One look everywhere a category icon
+ *  appears (hero rail + hamburger). Size the tile via `size`. */
+function CategoryTile({
+  icon,
+  size = 44,
+  iconSize = 22,
+  className = '',
+}: {
+  icon: string
+  size?: number
+  iconSize?: number
+  className?: string
+}) {
+  return (
+    <span
+      className={`relative grid shrink-0 place-items-center overflow-hidden rounded-[13px] border border-white/[0.07] bg-[radial-gradient(circle_at_50%_18%,rgba(38,40,46,0.9),rgba(12,13,16,0.96))] shadow-[inset_0_1px_0_rgba(255,255,255,0.1),inset_0_-8px_14px_-8px_rgba(0,0,0,0.85)] ${className}`}
+      style={{ width: size, height: size }}
+    >
+      {/* Faint top edge-light only — recessed, engraved feel (treatment F). */}
+      <span aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-1/3 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.07),transparent)]" />
+      <CategoryGlyph icon={icon} className="relative" style={{ width: iconSize, height: iconSize }} />
+    </span>
+  )
+}
 
 export function MobileHero() {
   return (
     <section className={`relative z-30 ${MOBILE_GUTTER} pb-1 pt-6 text-center`}>
-      {/* Hero title — the Beam direction from the preview: oversized,
-          tightly tracked and animated with a slow premium gradient sweep. */}
+      {/* Trust pill — honest pre-launch signal only (no invented order
+          counts, matching the StatsMarquee copy rule). */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+        className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/[0.1] bg-white/[0.04] px-3.5 py-1.5 backdrop-blur-md"
+      >
+        <span className="relative flex h-1.5 w-1.5" aria-hidden>
+          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success opacity-75" />
+          <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-success" />
+        </span>
+        <span className="text-[11.5px] font-semibold tracking-[-0.01em] text-white/75">
+          SafeDrop Buyer Protection on Every Order
+        </span>
+      </motion.div>
+
+      {/* Hero title — restrained, standard size (≈30px on phones, matching
+          GameBoost/Eldorado) so it doesn't dwarf the category icons. Clean:
+          one soft shadow for legibility over the hero image, no 3D stack. */}
       <motion.h1
         initial={{ opacity: 0, y: 14 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-        className="text-center font-display text-[clamp(42px,13vw,64px)] font-black leading-[0.92] tracking-[-0.06em] text-white [text-shadow:0_3px_0_rgba(0,0,0,0.45),0_12px_28px_rgba(0,0,0,0.62)]"
+        className="text-center font-display text-[clamp(30px,8vw,44px)] font-extrabold leading-[1.02] tracking-[-0.03em] text-white [text-shadow:0_2px_16px_rgba(0,0,0,0.5)]"
       >
-        <span className="block">Game More.</span>
-        <span className="relative block bg-[linear-gradient(100deg,#4ade80,#c6ff3d,#fff,#c6ff3d)] bg-[length:240%_100%] bg-clip-text text-transparent animate-gradient-x [filter:drop-shadow(0_2px_0_rgba(0,0,0,0.45))_drop-shadow(0_10px_22px_rgba(0,0,0,0.52))]">
-          Grind Less.
+        <span className="block">The Safest Way</span>
+        <span className="relative block bg-[linear-gradient(100deg,#4ade80,#c6ff3d,#fff,#c6ff3d)] bg-[length:240%_100%] bg-clip-text text-transparent animate-gradient-x">
+          to Level Up.
         </span>
       </motion.h1>
-      <p className="t-body mx-auto mt-2 max-w-[32ch] text-text-secondary [text-shadow:0_2px_10px_rgba(0,0,0,0.7)]">
-        Accounts, currency, items and boosts — every order covered by SafeDrop
-        Buyer Protection.
+      <p className="mx-auto mt-3 max-w-[30ch] text-[15px] font-medium leading-snug text-white/65 [text-shadow:0_1px_12px_rgba(0,0,0,0.7)]">
+        Buy accounts, currency and items — held in escrow until you say it&apos;s
+        delivered.
       </p>
 
       <div className="mt-4">
         <MobileHeroSearch />
       </div>
 
-      {/* Category chip slider — 5 tiles, scroll-snap, last one peeks. */}
-      <div className="-mx-6 mt-3 flex snap-x snap-mandatory gap-2.5 overflow-x-auto px-3 pb-1 [scroll-padding-inline:0.75rem] scrollbar-hide sm:-mx-8 sm:px-8 sm:[scroll-padding-inline:2rem]">
-        {HERO_CHIPS.map(({ label, iconSrc, tabId }) => (
+      {/* Category rail — even 5-column grid so tiles line up on one grid
+          and labels center under each. All 5 fit at every phone width. */}
+      <div className="mt-5 grid grid-cols-5 gap-1.5">
+        {HERO_CHIPS.map(({ label, icon, tabId }) => (
           <button
             key={label}
             type="button"
@@ -426,19 +541,15 @@ export function MobileHero() {
                 new CustomEvent('dm:open-category', { detail: tabId }),
               )
             }
-            className={`group relative flex h-[76px] min-w-[88px] shrink-0 snap-start flex-col items-center justify-center gap-0.5 overflow-hidden rounded-xl border border-white/[0.13] bg-[linear-gradient(155deg,rgba(255,255,255,0.13),rgba(255,255,255,0.045)_58%,rgba(163,230,53,0.05))] px-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.10),0_10px_24px_-12px_rgba(0,0,0,0.75)] backdrop-blur-md transition-all hover:-translate-y-0.5 hover:border-white/[0.24] hover:bg-white/[0.14] active:bg-white/[0.17] ${PRESSED}`}
+            className={`group flex flex-col items-center gap-2 ${PRESSED}`}
           >
-            <Sheen />
-            {/* These are local SVGs. Keep them as plain images so Next's
-                image optimizer does not reject SVG responses on mobile. */}
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={iconSrc}
-              alt=""
-              aria-hidden="true"
-              className="relative h-8 w-8 object-contain drop-shadow-[0_4px_8px_rgba(0,0,0,0.38)] transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:scale-105"
+            <CategoryTile
+              icon={icon}
+              size={52}
+              iconSize={26}
+              className="transition-colors group-hover:border-white/[0.2] group-hover:bg-white/[0.09]"
             />
-            <span className="relative text-[11px] font-semibold leading-none tracking-[-0.01em] text-white/85 group-hover:text-white">
+            <span className="w-full truncate text-center text-[11.5px] font-semibold leading-none tracking-[-0.01em] text-white/70 transition-colors group-hover:text-white">
               {label}
             </span>
           </button>

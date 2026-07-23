@@ -1,24 +1,17 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
-import { motion } from 'framer-motion'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import useEmblaCarousel from 'embla-carousel-react'
 import Image from 'next/image'
 import Link from 'next/link'
 import {
   ChevronLeft,
   ChevronRight,
-  Tag,
-  Package,
-  CheckCircle2,
   ShieldCheck,
   Coins,
   Headset,
   LayoutGrid,
-  User,
-  Zap,
-  Rocket,
   Gift,
-  Swords,
 } from 'lucide-react'
 
 import { HeroCarousel } from '../components/HeroCarousel'
@@ -32,6 +25,8 @@ import { HowItWorks } from '../components/HowItWorks'
 import { WhyCard } from '../components/WhyCard'
 import { RecentlySoldTicker } from '../components/RecentlySoldTicker'
 import { PaymentsMarquee } from '@/components/marketplace/PaymentsMarquee'
+import TrustBox from '@/components/trust/TrustBox'
+import { TRUSTBOX_TEMPLATES } from '@/components/trust/trustbox-templates'
 import {
   MobileHero,
   MobilePopularGames,
@@ -48,16 +43,6 @@ import { formatFromPrice } from '../lib/popular-listings'
 import { getGameIcon } from '../lib/game-icons'
 
 
-/** V57 — Pre-footer category strip (reference: category pills under the
- *  closing CTA). Icons stay lucide so the strip inherits theme colors. */
-const CTA_CATEGORIES = [
-  { label: 'Accounts', icon: User, href: '/browse' },
-  { label: 'Currencies', icon: Coins, href: '/browse' },
-  { label: 'Top Ups', icon: Zap, href: '/#top-ups' },
-  { label: 'Items', icon: Swords, href: '/browse' },
-  { label: 'Boosting', icon: Rocket, href: '/browse' },
-  { label: 'Gift Cards', icon: Gift, href: '/#top-ups' },
-] as const
 
 type MarketplaceRailItem = {
   href: string
@@ -289,79 +274,53 @@ function ShopByCategoryShelf({
     { id: 'items', title: 'Top Items', items: completeMarketplaceRail(items ?? [], 'items') },
     { id: 'accounts', title: 'Top Accounts', items: completeMarketplaceRail(accounts ?? [], 'accounts') },
   ]
-  const [trackIndex, setTrackIndex] = useState(0)
-  const [panelWidth, setPanelWidth] = useState(0)
-  const [viewportWidth, setViewportWidth] = useState(0)
-  const viewportRef = useRef<HTMLDivElement | null>(null)
-  const touchStartX = useRef<number | null>(null)
+  // Embla drives the swipe/drag (native momentum + snapping) instead of the
+  // old hand-rolled touch math. `align: 'start'` + trimSnaps means EVERY
+  // slide — including the last (Accounts) — snaps flush to the left edge, so
+  // the final panel no longer sticks to the right. On md+ two panels show.
+  const [emblaRef, emblaApi] = useEmblaCarousel({
+    align: 'start',
+    containScroll: 'trimSnaps',
+    dragFree: false,
+    skipSnaps: false,
+  })
+  const [selectedIndex, setSelectedIndex] = useState(0)
+  const scrollTo = useCallback((idx: number) => emblaApi?.scrollTo(idx), [emblaApi])
 
-  // The reference uses a ~74/26 split on phones so the next sibling is
-  // unmistakably visible. At wider widths two panels can sit comfortably
-  // side-by-side, while each panel still owns its heading and divider.
   useEffect(() => {
-    const node = viewportRef.current
-    if (!node) return
-
-    const measure = () => {
-      const width = node.getBoundingClientRect().width
-      const ratio = window.matchMedia('(min-width: 768px)').matches ? 0.5 : 0.74
-      setViewportWidth(width)
-      setPanelWidth(width * ratio)
+    if (!emblaApi) return
+    const onSelect = () => setSelectedIndex(emblaApi.selectedScrollSnap())
+    onSelect()
+    emblaApi.on('select', onSelect)
+    emblaApi.on('reInit', onSelect)
+    return () => {
+      emblaApi.off('select', onSelect)
+      emblaApi.off('reInit', onSelect)
     }
+  }, [emblaApi])
 
-    measure()
-    if (typeof ResizeObserver === 'undefined') return
-    const observer = new ResizeObserver(measure)
-    observer.observe(node)
-    return () => observer.disconnect()
-  }, [])
+  const lastIndex = slides.length - 1
 
-  const move = (direction: 1 | -1) => {
-    setTrackIndex((current) => Math.max(0, Math.min(slides.length - 1, current + direction)))
-  }
-  const goTo = (index: number) => setTrackIndex(index)
-  // Keep the final mobile panel flush to the right edge so the preceding
-  // panel remains visible as a deliberate reverse-swipe affordance. The
-  // desktop two-up layout keeps its normal indexed offset.
-  const trackOffset = panelWidth && viewportWidth && trackIndex === slides.length - 1 && panelWidth > viewportWidth / 2
-    ? Math.max(0, panelWidth * slides.length - viewportWidth)
-    : trackIndex * panelWidth
-  const onTouchStart = (event: React.TouchEvent<HTMLDivElement>) => {
-    touchStartX.current = event.touches[0]?.clientX ?? null
-  }
-  const onTouchEnd = (event: React.TouchEvent<HTMLDivElement>) => {
-    if (touchStartX.current === null) return
-    const endX = event.changedTouches[0]?.clientX ?? touchStartX.current
-    const delta = endX - touchStartX.current
-    touchStartX.current = null
-    if (Math.abs(delta) < 48) return
-    move(delta < 0 ? 1 : -1)
-  }
   return (
     <div className="relative">
-      <div
-        ref={viewportRef}
-        onTouchStart={onTouchStart}
-        onTouchEnd={onTouchEnd}
-        className="relative overflow-hidden touch-pan-y"
-        aria-label="Browse popular marketplace categories"
-      >
-        <motion.div
-          className="flex w-full will-change-transform"
-          animate={{ x: trackOffset ? -trackOffset : 0 }}
-          transition={{ type: 'tween', duration: 0.58, ease: [0.22, 1, 0.36, 1] }}
-        >
+      <div ref={emblaRef} className="overflow-hidden" aria-label="Browse popular marketplace categories">
+        <div className="flex touch-pan-y">
           {slides.map((slide, index) => (
             <CategoryRailPanel
               key={slide.id}
               slide={slide}
-              panelWidth={panelWidth}
-              onNext={() => move(1)}
-              canAdvance={index < slides.length - 1}
-              isPeekPanel={index > 0}
+              onNext={() => scrollTo(Math.min(index + 1, lastIndex))}
+              canAdvance={index < lastIndex}
+              // Divider sits BETWEEN sections — never after the last one.
+              showDivider={index < lastIndex}
             />
           ))}
-        </motion.div>
+          {/* Trailing spacer (~26% on phones) so Embla can pull the LAST real
+              slide (Accounts) fully flush-left with nothing peeking, while
+              slides 1 & 2 still show the next panel peeking. Empty + hidden
+              from AT / not a snap point on md+. */}
+          <div aria-hidden className="w-[26%] shrink-0 grow-0 basis-[26%] md:hidden" />
+        </div>
       </div>
 
       <div className="flex items-center justify-center gap-3 pt-7" role="tablist" aria-label="Marketplace categories">
@@ -370,10 +329,10 @@ function ShopByCategoryShelf({
             key={slide.id}
             type="button"
             role="tab"
-            aria-selected={index === trackIndex}
+            aria-selected={index === selectedIndex}
             aria-label={`Show ${slide.title}`}
-            onClick={() => goTo(index)}
-            className={`h-2.5 w-2.5 rounded-full transition-all duration-300 ${index === trackIndex ? 'bg-white shadow-[0_0_12px_rgba(255,255,255,0.7)]' : 'bg-white/25 hover:bg-white/45'}`}
+            onClick={() => scrollTo(index)}
+            className={`h-2.5 w-2.5 rounded-full transition-all duration-300 ${index === selectedIndex ? 'bg-white shadow-[0_0_12px_rgba(255,255,255,0.7)]' : 'bg-white/25 hover:bg-white/45'}`}
           />
         ))}
       </div>
@@ -383,22 +342,23 @@ function ShopByCategoryShelf({
 
 function CategoryRailPanel({
   slide,
-  panelWidth,
   onNext,
   canAdvance,
-  isPeekPanel,
+  showDivider,
 }: {
   slide: MarketplaceRailSlide
-  panelWidth: number
   onNext: () => void
   canAdvance: boolean
-  isPeekPanel: boolean
+  showDivider: boolean
 }) {
   return (
     <section
       aria-label={slide.title}
-      className={`relative w-[74%] shrink-0 pb-2 pr-6 sm:pl-4 sm:pr-8 md:w-1/2 ${isPeekPanel ? 'pl-4' : 'pl-0'}`}
-      style={{ width: panelWidth ? `${panelWidth}px` : undefined }}
+      // Embla slide: ~74% on phones so the NEXT panel peeks (signals "swipe
+      // for more") on slides 1 & 2; a trailing spacer lets the last slide
+      // (Accounts) still land flush-left with nothing peeking. Two-up (50%)
+      // from md. pr gives the rows breathing room before the divider seam.
+      className="relative w-[74%] shrink-0 grow-0 basis-[74%] pb-2 pr-8 sm:pr-10 md:basis-1/2 md:w-1/2 md:pr-12 md:pl-4"
     >
       <div className="mb-5 flex items-center gap-1.5 sm:mb-6">
         <h3 className="font-display text-[21px] font-extrabold leading-none tracking-tight text-white sm:text-[27px]">
@@ -416,7 +376,16 @@ function CategoryRailPanel({
         ) : null}
       </div>
 
-      <div className="relative space-y-1 after:absolute after:inset-y-0 after:-right-6 after:w-px after:bg-white/[0.24] after:content-[''] sm:after:-right-8">
+      <div
+        className={`relative space-y-1 ${
+          // Between-section divider sits in the panel's right-padding gap,
+          // well clear of the icon/name, so it reads as a section seam next
+          // to the peeking panel. Never rendered after the last section.
+          showDivider
+            ? "after:absolute after:inset-y-0 after:-right-4 after:w-px after:bg-white/[0.16] after:content-[''] sm:after:-right-5 md:after:-right-6"
+            : ''
+        }`}
+      >
         {slide.items.slice(0, 5).map((item) => (
           <CategoryRailItem key={item.href ?? `${item.game}-${item.name}`} item={item} />
         ))}
@@ -724,6 +693,19 @@ export function HomePage() {
           <div className="lg:hidden">
             <MobileTrustRows />
           </div>
+
+          {/* Trustpilot rating — compact micro widget (stars + rating +
+              count on one line). Stays tidy even with few/no reviews, unlike
+              the carousel which renders a big empty box. Lazy-loaded; renders
+              nothing until the env var is set. */}
+          <div className="mt-8 flex justify-center sm:mt-10">
+            <TrustBox
+              templateId={TRUSTBOX_TEMPLATES.microCombo}
+              height="28px"
+              width="280px"
+              theme="dark"
+            />
+          </div>
         </div>
       </section>
 
@@ -826,29 +808,6 @@ export function HomePage() {
               Create free account
             </Link>
           </div>
-        </div>
-
-        {/* Category strip — glass pills, the whole catalog one tap away. */}
-        <div className="relative z-10 mx-auto mt-8 flex max-w-[380px] flex-wrap items-center justify-center gap-2 px-4 lg:mt-16 lg:max-w-5xl lg:gap-3 lg:px-6">
-          {CTA_CATEGORIES.map(({ label, icon: Icon, href }) => (
-            <Link
-              key={label}
-              href={href}
-              className="group relative inline-flex h-10 items-center gap-2 overflow-hidden rounded-full border border-border-default bg-[rgba(20,20,27,0.56)] px-4 backdrop-blur-md transition-all duration-200 hover:-translate-y-0.5 hover:border-lime-tint-border hover:bg-[rgba(26,26,35,0.75)] lg:h-12 lg:gap-2.5 lg:px-5"
-            >
-              <span
-                aria-hidden
-                className="pointer-events-none absolute inset-x-0 top-0 h-1/2 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.05),transparent)]"
-              />
-              <Icon
-                aria-hidden="true"
-                className="relative h-4 w-4 text-text-tertiary transition-colors group-hover:text-lime-text lg:h-[17px] lg:w-[17px]"
-              />
-              <span className="relative text-[13px] font-semibold text-text-secondary transition-colors group-hover:text-text-primary lg:text-[14.5px]">
-                {label}
-              </span>
-            </Link>
-          ))}
         </div>
       </section>
     </div>

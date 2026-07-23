@@ -137,6 +137,84 @@ export async function toggleGamePopular(id: string, isPopular: boolean) {
   return { success: true }
 }
 
+/**
+ * Flip games.is_spotlight so the mobile hamburger "Spotlight" games grid
+ * features / drops the game. Independent of is_popular. Same
+ * current-flag-in, action-flips pattern as toggleGamePopular.
+ */
+export async function toggleGameSpotlight(id: string, isSpotlight: boolean) {
+  await requireAdmin()
+  const supabase = getAdminSupabase()
+
+  const { error } = await (supabase
+    .from('games') as any)
+    .update({ is_spotlight: !isSpotlight })
+    .eq('id', id)
+
+  if (error) return { success: false, error: error.message }
+  revalidatePath('/admin/games')
+  // Bust the marketplace-menu spotlight query on the client side too.
+  revalidatePath('/')
+  return { success: true }
+}
+
+// ─── SEO overrides ────────────────────────────────────────────────────────────
+
+export interface GameSeoData {
+  seo_title?: string | null
+  seo_description?: string | null
+  seo_h1?: string | null
+  seo_intro?: string | null
+  ecosystem?: string | null
+  /** true = force index, false = force noindex, null = auto by content. */
+  seo_indexable?: boolean | null
+  seo_noindex_reason?: string | null
+}
+
+/** Read a game's SEO override fields for the admin SEO tab. */
+export async function fetchGameSeo(id: string): Promise<GameSeoData & { name: string; slug: string } | null> {
+  await requireAdmin()
+  const supabase = getAdminSupabase()
+  const { data, error } = await (supabase
+    .from('games') as any)
+    .select('name, slug, seo_title, seo_description, seo_h1, seo_intro, ecosystem, seo_indexable, seo_noindex_reason')
+    .eq('id', id)
+    .single()
+  if (error || !data) return null
+  return data as any
+}
+
+/**
+ * Save a game's SEO override fields. Blank strings are stored as NULL so the
+ * template layer falls back to auto-generation (empty override = use template).
+ */
+export async function updateGameSeo(id: string, data: GameSeoData) {
+  await requireAdmin()
+  const supabase = getAdminSupabase()
+
+  const nn = (v: string | null | undefined) => {
+    const t = (v ?? '').trim()
+    return t.length > 0 ? t : null
+  }
+
+  const { error } = await (supabase.from('games') as any)
+    .update({
+      seo_title: nn(data.seo_title),
+      seo_description: nn(data.seo_description),
+      seo_h1: nn(data.seo_h1),
+      seo_intro: nn(data.seo_intro),
+      ecosystem: nn(data.ecosystem),
+      seo_indexable: data.seo_indexable ?? null,
+      seo_noindex_reason: nn(data.seo_noindex_reason),
+    })
+    .eq('id', id)
+
+  if (error) return { success: false, error: error.message }
+  revalidatePath('/admin/games')
+  revalidatePath('/') // public pages read the templates
+  return { success: true }
+}
+
 // ─── Game Icon Upload ─────────────────────────────────────────────────────────
 
 export async function uploadGameIcon(

@@ -25,8 +25,9 @@ import GameWizard from './GameWizard'
 import { CurrencyConfigForm } from './CurrencyConfigForm'
 import { AccountConfigForm } from './AccountConfigForm'
 import { BoostingConfigForm } from './BoostingConfigForm'
+import { SeoOverrideForm } from './SeoOverrideForm'
 
-type Tab = 'setup' | 'currency' | 'items' | 'accounts' | 'boosting'
+type Tab = 'setup' | 'currency' | 'items' | 'accounts' | 'boosting' | 'seo'
 
 // Mirrors the GameWizard's existing types so this file doesn't have
 // to import internal interfaces. The shapes come from
@@ -101,6 +102,9 @@ export default function GameDetailTabs({
               Boosting
             </TabsTrigger>
           )}
+          <TabsTrigger value="seo" className="data-[state=active]:bg-bg-overlay">
+            SEO
+          </TabsTrigger>
         </TabsList>
 
         {/* Setup — runs the existing 4-step wizard (Identity, Branding,
@@ -144,6 +148,10 @@ export default function GameDetailTabs({
             </CategoryEmptyHint>
           </TabsContent>
         )}
+
+        <TabsContent value="seo" className="mt-6">
+          <SeoOverrideForm gameId={game.id} gameName={game.name} />
+        </TabsContent>
       </Tabs>
     </div>
   )
