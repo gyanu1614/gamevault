@@ -106,7 +106,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   const { data: category } = await supabase
     .from('categories')
-    .select('id, name, metadata')
+    .select('id, name, metadata, seo_title, seo_description, seo_h1, seo_intro')
     .eq('slug', categorySlug)
     .eq('game_id', game.id)
     .single() as any
@@ -167,13 +167,24 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   const hasListings = stats.count > 0 && priceLabel != null
 
+  // Admin overrides (categories.seo_*) win; otherwise the stats-aware
+  // templates below. `.trim() || fallback` keeps blank overrides on template.
+  const seoOverride = (v: string | null | undefined, fallback: string) =>
+    (v ?? '').trim() || fallback
+
   return {
-    title: hasListings
-      ? `Buy ${game.name} ${category.name} from ${priceLabel}`
-      : `Buy ${game.name} ${category.name} — Cheap & Safe`,
-    description: hasListings
-      ? `Buy ${game.name} ${category.name} from verified sellers. ${stats.count} live listings from ${priceLabel}. SafeDrop protection: get what you ordered or your money back.`
-      : `Be the first to sell ${game.name} ${category.name} on DropMarket — list in minutes at 5–7% fees. Every order covered by SafeDrop Buyer Protection.`,
+    title: seoOverride(
+      category.seo_title,
+      hasListings
+        ? `Buy ${game.name} ${category.name} from ${priceLabel}`
+        : `Buy ${game.name} ${category.name} — Cheap & Safe`,
+    ),
+    description: seoOverride(
+      category.seo_description,
+      hasListings
+        ? `Buy ${game.name} ${category.name} from verified sellers. ${stats.count} live listings from ${priceLabel}. SafeDrop protection: get what you ordered or your money back.`
+        : `Be the first to sell ${game.name} ${category.name} on DropMarket — list in minutes at 5–7% fees. Every order covered by SafeDrop Buyer Protection.`,
+    ),
     keywords: [
       `${game.name.toLowerCase()} ${category.name.toLowerCase()}`,
       `buy ${game.name.toLowerCase()} ${category.name.toLowerCase()}`,

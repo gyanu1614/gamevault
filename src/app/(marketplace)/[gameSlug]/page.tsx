@@ -12,7 +12,9 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { ArrowRight, Package, TrendingUp } from 'lucide-react'
 import Image from 'next/image'
-import { JsonLd, breadcrumbList } from '@/lib/seo/jsonld'
+import { JsonLd, breadcrumbList, faqPage } from '@/lib/seo/jsonld'
+import { resolveGameSeo } from '@/lib/seo/templates'
+import { SITE_URL } from '@/config/site'
 
 interface PageProps {
   params: Promise<{
@@ -26,7 +28,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   const { data: game } = await supabase
     .from('games')
-    .select('id, name, description')
+    .select('id, name, description, ecosystem, seo_title, seo_description, seo_h1, seo_intro, seo_indexable')
     .eq('slug', gameSlug)
     .single() as any
 
@@ -35,6 +37,18 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       title: 'Game Not Found'
     }
   }
+
+  // Category labels the game has enabled (for template copy + accounts flag).
+  const { data: gameCats } = (await supabase
+    .from('categories')
+    .select('name, slug, metadata')
+    .eq('game_id', game.id)
+    .eq('is_active', true)
+    .order('display_order', { ascending: true })) as any
+  const categoryLabels: string[] = (gameCats ?? []).map(
+    (c: any) => c.name || (c.metadata?.label ?? c.slug),
+  )
+  const hasAccounts = (gameCats ?? []).some((c: any) => c.metadata?.type === 'account')
 
   // Index bar (mirrors sitemap.ts): an empty hub — no active listings
   // and no curated currency config — stays out of the index until it
@@ -55,29 +69,33 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       .eq('category_type', 'currency')
       .limit(1),
   ] as const) as any
-  const indexable = (listingCount ?? 0) > 0 || (curatedCfg?.length ?? 0) > 0
+  // Indexability: admin override (seo_indexable) wins; otherwise auto by
+  // real content (active listings or a curated currency config).
+  const autoIndexable = (listingCount ?? 0) > 0 || (curatedCfg?.length ?? 0) > 0
+  const indexable = game.seo_indexable ?? autoIndexable
+
+  // Auto-SEO engine: admin overrides merged with smart templates.
+  const seo = resolveGameSeo({
+    name: game.name,
+    categoryLabels,
+    hasAccounts,
+    ecosystem: game.ecosystem,
+    description: game.description,
+    overrides: game,
+  })
 
   return {
-    // Root template appends " | DropMarket". Long game names get the
-    // short pattern so the rendered title stays ≤60 chars.
-    title:
-      game.name.length > 12
-        ? `Buy & Sell ${game.name} Items`
-        : `Buy & Sell ${game.name} Accounts, Items & Currency`,
-    description: `Browse ${game.name} accounts, items, and currency. ${game.description ? `${game.description} ` : ''}Every order is covered by SafeDrop Buyer Protection.`,
+    title: seo.title,
+    description: seo.description,
     robots: indexable ? undefined : { index: false, follow: true },
-    keywords: [
-      `${game.name.toLowerCase()} accounts`,
-      `buy ${game.name.toLowerCase()} account`,
-      `sell ${game.name.toLowerCase()} items`,
-      `${game.name.toLowerCase()} marketplace`,
-      `${game.name.toLowerCase()} currency`
-    ],
+    keywords: seo.keywords,
+    alternates: { canonical: `${SITE_URL}/${gameSlug}` },
     openGraph: {
-      title: `${game.name} Marketplace - DropMarket`,
-      description: `Buy and sell ${game.name} accounts and items safely`,
-      type: 'website'
-    }
+      title: seo.title,
+      description: seo.description,
+      type: 'website',
+      url: `${SITE_URL}/${gameSlug}`,
+    },
   }
 }
 
@@ -97,7 +115,7 @@ async function getGameData(gameSlug: string) {
 
   const { data: categories, error: categoriesError } = await supabase
     .from('categories')
-    .select('id, name, slug, description, icon')
+    .select('id, name, slug, description, icon, metadata')
     .eq('game_id', game.id)
     .eq('is_active', true)
     .order('display_order', { ascending: true })
@@ -167,6 +185,16 @@ export default async function GameBrowsePage({ params }: PageProps) {
   const featuredListings = await getFeaturedListings(game.id)
   const categories = game.categories || []
 
+  // Auto-SEO: resolved H1 / intro / FAQ (admin overrides + templates).
+  const seo = resolveGameSeo({
+    name: game.name,
+    categoryLabels: categories.map((c: any) => c.name || c.slug),
+    hasAccounts: categories.some((c: any) => c.metadata?.type === 'account'),
+    ecosystem: game.ecosystem,
+    description: game.description,
+    overrides: game,
+  })
+
   return (
     <div className="min-h-screen bg-bg-base">
       <JsonLd
@@ -175,6 +203,7 @@ export default async function GameBrowsePage({ params }: PageProps) {
           { name: game.name, path: `/${gameSlug}` },
         ])}
       />
+      <JsonLd data={faqPage(seo.faq.map((f) => ({ q: f.q, a: f.a })))} />
       {/* Hero Section */}
       <section className="relative pt-24 pb-16 px-4 sm:px-6 lg:px-8">
         <div className="absolute inset-0 bg-gradient-to-b from-[rgba(198,255,61,0.05)] via-transparent to-transparent" />
@@ -204,10 +233,10 @@ export default async function GameBrowsePage({ params }: PageProps) {
 
             <div className="flex-1">
               <h1 className="text-4xl md:text-5xl font-bold text-text-primary mb-4">
-                {game.name} Marketplace
+                {seo.h1}
               </h1>
-              <p className="text-xl text-text-secondary mb-6">
-                {game.description}
+              <p className="text-lg text-text-secondary mb-6 max-w-3xl leading-relaxed">
+                {seo.intro}
               </p>
 
               <div className="flex flex-wrap gap-4">
@@ -289,6 +318,24 @@ export default async function GameBrowsePage({ params }: PageProps) {
           </div>
         </section>
       )}
+
+      {/* SEO FAQ — visible + matches the FAQPage JSON-LD above. Auto-generated
+          per game; helps the hub clear the content floor. */}
+      <section aria-labelledby="game-faq" className="py-16 px-4 sm:px-6 lg:px-8 border-t border-border-subtle">
+        <div className="mx-auto max-w-3xl">
+          <h2 id="game-faq" className="text-2xl font-bold text-text-primary mb-6">
+            Frequently Asked Questions
+          </h2>
+          <dl className="space-y-5">
+            {seo.faq.map((f) => (
+              <div key={f.q} className="rounded-xl border border-border-subtle bg-bg-overlay p-5">
+                <dt className="text-[15px] font-semibold text-text-primary">{f.q}</dt>
+                <dd className="mt-1.5 text-[14px] leading-relaxed text-text-secondary">{f.a}</dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+      </section>
     </div>
   )
 }
