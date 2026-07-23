@@ -188,17 +188,43 @@ function MobileHeroSearch() {
   useEffect(() => {
     if (!focused) return
 
-    const closeOnOutsidePointer = (event: PointerEvent) => {
+    // GameBoost-style dismissal (mobile-friendly):
+    //  • Tap OUTSIDE the search surface → close (detected on pointerup; a tap
+    //    is a pointer that moved <10px).
+    //  • A LARGE scroll (past a threshold from where the search opened) →
+    //    close. A small nudge/scroll keeps it open.
+    //  • Dismissing the keyboard alone (input blur) → do NOT close.
+    const start = { x: 0, y: 0, inside: false }
+    const openScrollY = window.scrollY
+
+    const onPointerDown = (event: PointerEvent) => {
       const target = event.target
-      if (target instanceof Node && searchRootRef.current?.contains(target)) return
-      setFocused(false)
+      start.x = event.clientX
+      start.y = event.clientY
+      start.inside = target instanceof Node && !!searchRootRef.current?.contains(target)
     }
 
-    // Capture before a link/button click, but only dismiss when the pointer is
-    // outside the complete search surface. This replaces the old blur-driven
-    // close and keeps the dropdown visible after the keyboard is hidden.
-    document.addEventListener('pointerdown', closeOnOutsidePointer, true)
-    return () => document.removeEventListener('pointerdown', closeOnOutsidePointer, true)
+    const onPointerUp = (event: PointerEvent) => {
+      if (start.inside) return // interaction began inside the search — keep open
+      const moved = Math.hypot(event.clientX - start.x, event.clientY - start.y)
+      if (moved < 10) setFocused(false) // genuine outside tap
+    }
+
+    // Only a MEANINGFUL scroll dismisses it — small nudges are ignored.
+    const SCROLL_CLOSE_PX = 120
+    const onScroll = () => {
+      if (Math.abs(window.scrollY - openScrollY) > SCROLL_CLOSE_PX) setFocused(false)
+    }
+
+    document.addEventListener('pointerdown', onPointerDown, true)
+    document.addEventListener('pointerup', onPointerUp, true)
+    window.addEventListener('scroll', onScroll, { passive: true })
+
+    return () => {
+      document.removeEventListener('pointerdown', onPointerDown, true)
+      document.removeEventListener('pointerup', onPointerUp, true)
+      window.removeEventListener('scroll', onScroll)
+    }
   }, [focused])
 
   const trimmed = q.trim()

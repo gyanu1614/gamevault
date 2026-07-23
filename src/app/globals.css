@@ -156,6 +156,20 @@
     border-radius: var(--radius-sm);
   }
 
+  /* Prevent mobile Safari/Chrome from auto-zooming when an input is
+     focused. Browsers zoom whenever a form control's font-size is < 16px.
+     Scoped to coarse pointers (touch) so desktop keeps its exact type sizes;
+     pinch-zoom stays enabled (we DON'T touch the viewport meta), so this is
+     accessibility-safe. Applies to every text input, textarea and select
+     site-wide (search boxes, filters, forms) — no per-input change needed. */
+  @media (pointer: coarse) {
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+    textarea,
+    select {
+      font-size: 16px;
+    }
+  }
+
   h1, h2, h3, h4, h5, h6 {
     margin: 0;
     font-family: var(--font-display), "Inter", system-ui, sans-serif;
