@@ -151,8 +151,8 @@ export default async function SabValueCalculatorPage({ params, searchParams }: P
       />
 
       <section className="border-b border-border-subtle">
-        <div className="mx-auto w-full max-w-7xl px-4 pb-10 pt-10 sm:px-6 sm:pb-14 sm:pt-14 lg:px-8">
-          <nav className="mb-6 flex items-center gap-2 text-sm text-text-tertiary">
+        <div className="mx-auto w-full max-w-7xl px-4 pb-7 pt-5 sm:px-6 sm:pb-8 sm:pt-6 lg:px-8">
+          <nav className="mb-4 flex items-center gap-2 text-[12.5px] text-text-tertiary">
             <Link href="/steal-a-brainrot" className="transition-colors hover:text-text-primary">
               Steal a Brainrot
             </Link>
@@ -161,20 +161,20 @@ export default async function SabValueCalculatorPage({ params, searchParams }: P
           </nav>
 
           <div className="max-w-3xl">
-            <p className="mb-3 text-sm font-semibold uppercase tracking-[0.18em] text-lime-text">
+            <p className="mb-2 text-[11.5px] font-bold uppercase tracking-[0.14em] text-lime-text">
               Free SAB calculator
             </p>
-            <h1 className="text-4xl font-extrabold tracking-tight text-text-primary sm:text-5xl">
+            <h1 className="text-[22px] font-black leading-tight tracking-tight text-text-primary sm:text-[28px] lg:text-[32px]">
               Steal a Brainrot Value Calculator
             </h1>
-            <p className="mt-5 text-lg leading-8 text-text-secondary">
+            <p className="mt-2 max-w-2xl text-[13px] leading-6 text-text-secondary sm:text-sm">
               Choose any Brainrot and mutation to calculate estimated income per second, minute, hour, and day.
             </p>
           </div>
         </div>
       </section>
 
-      <section className="mx-auto w-full max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+      <section className="mx-auto w-full max-w-7xl px-4 py-7 sm:px-6 sm:py-8 lg:px-8">
         <ValueCalculatorClient
           brainrots={brainrots}
           mutations={mutations}

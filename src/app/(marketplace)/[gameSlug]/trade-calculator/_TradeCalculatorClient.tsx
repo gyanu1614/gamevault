@@ -2,14 +2,20 @@
 
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
-import { ArrowRight, Plus, Search, Trash2 } from 'lucide-react'
+import {
+  ArrowRight,
+  LockKeyhole,
+  Plus,
+  Search,
+  Trash2,
+  X,
+} from 'lucide-react'
 
 export type TradeBrainrot = {
   id: string
   name: string
   slug: string
   rarity: string
-  baseIncomePerSecond: number | null
   imageUrl: string | null
 }
 
@@ -20,11 +26,21 @@ export type TradeMutation = {
   multiplier: number
 }
 
-export type TradeOverride = {
+export type TradePrice = {
   brainrotId: string
   mutationId: string
-  incomePerSecond: number
+  marketValueUsd: number
+  marketLowUsd: number
+  marketHighUsd: number
+  sourceType: string
+  sourceName: string | null
+  confidenceLabel: string
+  sampleSize: number
+  priceUpdatedAt: string | null
+  isTradeReady: boolean
 }
+
+type Side = 'give' | 'receive'
 
 type TradeEntry = {
   instanceId: string
@@ -33,497 +49,919 @@ type TradeEntry = {
   quantity: number
 }
 
-type SideKey = 'give' | 'receive'
+type EditorState = {
+  side: Side
+  instanceId?: string
+} | null
 
 type SideSummary = {
-  totalIncome: number
-  unknownCount: number
+  point: number
+  low: number
+  high: number
+  unknown: number
+  lowConfidence: number
 }
 
 interface TradeCalculatorClientProps {
   brainrots: TradeBrainrot[]
   mutations: TradeMutation[]
-  overrides: TradeOverride[]
+  prices: TradePrice[]
 }
 
-function createInstanceId(): string {
-  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
-    return crypto.randomUUID()
+function makeId(): string {
+  return typeof crypto !== 'undefined' &&
+    'randomUUID' in crypto
+    ? crypto.randomUUID()
+    : `${Date.now()}-${Math.random()
+        .toString(36)
+        .slice(2)}`
+}
+
+function formatMoney(value: number | null): string {
+  if (value == null || !Number.isFinite(value)) {
+    return 'Unknown'
   }
 
-  return `${Date.now()}-${Math.random().toString(36).slice(2)}`
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  }).format(value)
 }
 
-function formatIncome(value: number | null): string {
-  if (value == null || !Number.isFinite(value)) return 'Unknown'
+function formatRange(
+  low: number | null,
+  high: number | null,
+  point: number | null,
+): string {
+  if (point == null) return 'No market estimate'
 
-  return `$${new Intl.NumberFormat('en-US', {
-    maximumFractionDigits: 0,
-  }).format(value)}/s`
+  if (
+    low != null &&
+    high != null &&
+    Math.abs(high - low) > 0.01
+  ) {
+    return `${formatMoney(low)}–${formatMoney(high)}`
+  }
+
+  return formatMoney(point)
 }
 
-function formatSignedIncome(value: number): string {
-  const sign = value > 0 ? '+' : value < 0 ? '-' : ''
-  return `${sign}${formatIncome(Math.abs(value))}`
+function confidenceLabel(value: string): string {
+  if (value === 'reviewed') return 'Reviewed'
+  if (value === 'high') return 'High confidence'
+  if (value === 'medium') return 'Medium confidence'
+  if (value === 'low') return 'Low confidence'
+  return 'Insufficient data'
 }
 
 export default function TradeCalculatorClient({
   brainrots,
   mutations,
-  overrides,
+  prices,
 }: TradeCalculatorClientProps) {
   const defaultMutationId =
-    mutations.find((mutation) => mutation.slug === 'default')?.id ??
+    mutations.find(
+      (mutation) => mutation.slug === 'default',
+    )?.id ??
     mutations[0]?.id ??
     ''
 
-  const [giveEntries, setGiveEntries] = useState<TradeEntry[]>([])
-  const [receiveEntries, setReceiveEntries] = useState<TradeEntry[]>([])
+  const [give, setGive] = useState<TradeEntry[]>([])
+  const [receive, setReceive] = useState<TradeEntry[]>([])
+  const [editor, setEditor] =
+    useState<EditorState>(null)
+  const [search, setSearch] = useState('')
 
   const brainrotMap = useMemo(
-    () => new Map(brainrots.map((brainrot) => [brainrot.id, brainrot])),
+    () =>
+      new Map(
+        brainrots.map((brainrot) => [
+          brainrot.id,
+          brainrot,
+        ]),
+      ),
     [brainrots],
   )
 
   const mutationMap = useMemo(
-    () => new Map(mutations.map((mutation) => [mutation.id, mutation])),
+    () =>
+      new Map(
+        mutations.map((mutation) => [
+          mutation.id,
+          mutation,
+        ]),
+      ),
     [mutations],
   )
 
-  const overrideMap = useMemo(
+  const priceMap = useMemo(
     () =>
       new Map(
-        overrides.map((override) => [
-          `${override.brainrotId}:${override.mutationId}`,
-          override.incomePerSecond,
+        prices.map((price) => [
+          `${price.brainrotId}:${price.mutationId}`,
+          price,
         ]),
       ),
-    [overrides],
+    [prices],
   )
 
-  const entryIncome = (entry: TradeEntry): number | null => {
-    const brainrot = brainrotMap.get(entry.brainrotId)
-    const mutation = mutationMap.get(entry.mutationId)
+  const getEntries = (side: Side) =>
+    side === 'give' ? give : receive
 
-    if (!brainrot || !mutation) return null
-
-    const override = overrideMap.get(`${brainrot.id}:${mutation.id}`)
-    const unitIncome =
-      override ??
-      (brainrot.baseIncomePerSecond == null
-        ? null
-        : brainrot.baseIncomePerSecond * mutation.multiplier)
-
-    if (unitIncome == null) return null
-    return unitIncome * entry.quantity
+  const setEntries = (
+    side: Side,
+    updater: (entries: TradeEntry[]) => TradeEntry[],
+  ) => {
+    if (side === 'give') {
+      setGive((entries) => updater(entries))
+    } else {
+      setReceive((entries) => updater(entries))
+    }
   }
 
-  const summarize = (entries: TradeEntry[]): SideSummary => {
-    let totalIncome = 0
-    let unknownCount = 0
+  const getEntryPrice = (
+    entry: TradeEntry,
+  ): TradePrice | null =>
+    priceMap.get(
+      `${entry.brainrotId}:${entry.mutationId}`,
+    ) ?? null
 
-    entries.forEach((entry) => {
-      const income = entryIncome(entry)
-      if (income == null) {
-        unknownCount += 1
-      } else {
-        totalIncome += income
+  const summarize = (
+    entries: TradeEntry[],
+  ): SideSummary => {
+    let point = 0
+    let low = 0
+    let high = 0
+    let unknown = 0
+    let lowConfidence = 0
+
+    for (const entry of entries) {
+      const price = getEntryPrice(entry)
+
+      if (
+        !price ||
+        !price.isTradeReady ||
+        price.marketValueUsd == null
+      ) {
+        unknown += 1
+        continue
       }
-    })
 
-    return { totalIncome, unknownCount }
+      point +=
+        price.marketValueUsd * entry.quantity
+      low += price.marketLowUsd * entry.quantity
+      high += price.marketHighUsd * entry.quantity
+
+      if (
+        price.confidenceLabel === 'low' ||
+        price.confidenceLabel === 'insufficient'
+      ) {
+        lowConfidence += 1
+      }
+    }
+
+    return {
+      point,
+      low,
+      high,
+      unknown,
+      lowConfidence,
+    }
   }
 
-  const giveSummary = summarize(giveEntries)
-  const receiveSummary = summarize(receiveEntries)
+  const giveSummary = summarize(give)
+  const receiveSummary = summarize(receive)
 
   const ready =
-    giveEntries.length > 0 &&
-    receiveEntries.length > 0 &&
-    giveSummary.unknownCount === 0 &&
-    receiveSummary.unknownCount === 0 &&
-    giveSummary.totalIncome > 0
+    give.length > 0 &&
+    receive.length > 0 &&
+    giveSummary.unknown === 0 &&
+    receiveSummary.unknown === 0 &&
+    giveSummary.point > 0
 
-  const difference = receiveSummary.totalIncome - giveSummary.totalIncome
+  const pointDifference =
+    receiveSummary.point - giveSummary.point
+
   const percentageDifference = ready
-    ? (difference / giveSummary.totalIncome) * 100
+    ? (pointDifference / giveSummary.point) * 100
     : null
 
   const verdict = (() => {
     if (!ready || percentageDifference == null) {
       return {
-        label: 'Add both sides',
-        description: 'Choose at least one verified-value Brainrot on each side.',
-        className: 'border-border-subtle bg-black/15 text-text-secondary',
+        label: '?',
+        caption: 'Add priced variants to both sides',
+        border: 'border-white/10',
+        background: 'bg-white/[0.04]',
+        text: 'text-text-secondary',
       }
     }
 
-    if (Math.abs(percentageDifference) <= 5) {
+    const fairTolerance = 0.05
+
+    const clearWin =
+      receiveSummary.low >
+      giveSummary.high * (1 + fairTolerance)
+
+    const clearLoss =
+      receiveSummary.high <
+      giveSummary.low * (1 - fairTolerance)
+
+    const rangesOverlapWithinTolerance =
+      receiveSummary.low <=
+        giveSummary.high * (1 + fairTolerance) &&
+      giveSummary.low <=
+        receiveSummary.high * (1 + fairTolerance)
+
+    if (clearWin) {
       return {
-        label: 'Fair',
-        description: 'The two sides are within 5% of each other.',
-        className: 'border-warning/30 bg-warning/10 text-warning',
+        label: 'WIN',
+        caption:
+          'Even the lowest receive estimate beats the highest give estimate',
+        border: 'border-success/40',
+        background: 'bg-success/10',
+        text: 'text-success',
       }
     }
 
-    if (percentageDifference > 0) {
+    if (clearLoss) {
       return {
-        label: 'Win',
-        description: 'You receive more mutation-adjusted income value than you give.',
-        className: 'border-success/30 bg-success/10 text-success',
+        label: 'LOSS',
+        caption:
+          'Even the highest receive estimate is below the lowest give estimate',
+        border: 'border-danger/40',
+        background: 'bg-danger/10',
+        text: 'text-danger',
+      }
+    }
+
+    if (
+      Math.abs(percentageDifference) <= 5 &&
+      rangesOverlapWithinTolerance
+    ) {
+      return {
+        label: 'FAIR',
+        caption:
+          'Estimated values are within the 5% fair range',
+        border: 'border-warning/40',
+        background: 'bg-warning/10',
+        text: 'text-warning',
       }
     }
 
     return {
-      label: 'Loss',
-      description: 'You give more mutation-adjusted income value than you receive.',
-      className: 'border-danger/30 bg-danger/10 text-danger',
+      label: 'UNCERTAIN',
+      caption:
+        'The market ranges overlap too much for a reliable W/F/L result',
+      border: 'border-white/20',
+      background: 'bg-white/[0.06]',
+      text: 'text-text-primary',
     }
   })()
 
-  const setEntries = (
-    side: SideKey,
-    updater: (entries: TradeEntry[]) => TradeEntry[],
-  ) => {
-    if (side === 'give') {
-      setGiveEntries((entries) => updater(entries))
-    } else {
-      setReceiveEntries((entries) => updater(entries))
-    }
+  const filteredBrainrots = useMemo(() => {
+    const query = search.trim().toLowerCase()
+
+    const matching = !query
+      ? brainrots
+      : brainrots.filter((brainrot) =>
+          `${brainrot.name} ${brainrot.rarity}`
+            .toLowerCase()
+            .includes(query),
+        )
+
+    return matching
+      .sort((a, b) => {
+        const aPrice = priceMap.get(
+          `${a.id}:${defaultMutationId}`,
+        )
+        const bPrice = priceMap.get(
+          `${b.id}:${defaultMutationId}`,
+        )
+
+        if (aPrice && !bPrice) return -1
+        if (!aPrice && bPrice) return 1
+        return a.name.localeCompare(b.name)
+      })
+      .slice(0, 20)
+  }, [
+    brainrots,
+    defaultMutationId,
+    priceMap,
+    search,
+  ])
+
+  const activeEntry =
+    editor?.instanceId
+      ? getEntries(editor.side).find(
+          (entry) =>
+            entry.instanceId === editor.instanceId,
+        ) ?? null
+      : null
+
+  const openEmptySlot = (side: Side) => {
+    setSearch('')
+    setEditor({ side })
   }
 
-  const addEntry = (side: SideKey, brainrotId: string) => {
-    if (!defaultMutationId) return
+  const openEntry = (
+    side: Side,
+    instanceId: string,
+  ) => {
+    setSearch('')
+    setEditor({ side, instanceId })
+  }
 
-    setEntries(side, (entries) => [
+  const addBrainrot = (brainrotId: string) => {
+    if (!editor || !defaultMutationId) return
+    if (getEntries(editor.side).length >= 9) return
+
+    setEntries(editor.side, (entries) => [
       ...entries,
       {
-        instanceId: createInstanceId(),
+        instanceId: makeId(),
         brainrotId,
         mutationId: defaultMutationId,
         quantity: 1,
       },
     ])
+
+    setEditor(null)
+    setSearch('')
   }
 
-  const updateEntry = (
-    side: SideKey,
-    instanceId: string,
+  const updateActiveEntry = (
     patch: Partial<TradeEntry>,
   ) => {
-    setEntries(side, (entries) =>
+    if (!editor?.instanceId) return
+
+    setEntries(editor.side, (entries) =>
       entries.map((entry) =>
-        entry.instanceId === instanceId ? { ...entry, ...patch } : entry,
+        entry.instanceId === editor.instanceId
+          ? { ...entry, ...patch }
+          : entry,
       ),
     )
   }
 
-  const removeEntry = (side: SideKey, instanceId: string) => {
-    setEntries(side, (entries) =>
-      entries.filter((entry) => entry.instanceId !== instanceId),
+  const removeActiveEntry = () => {
+    if (!editor?.instanceId) return
+
+    setEntries(editor.side, (entries) =>
+      entries.filter(
+        (entry) =>
+          entry.instanceId !== editor.instanceId,
+      ),
     )
+
+    setEditor(null)
   }
 
-  const clearAll = () => {
-    setGiveEntries([])
-    setReceiveEntries([])
-  }
-
-  if (brainrots.length === 0 || mutations.length === 0) {
-    return (
-      <div className="rounded-2xl border border-border-subtle bg-bg-overlay p-8 text-center text-text-secondary">
-        Trade calculator data is temporarily unavailable.
-      </div>
-    )
+  const clearTrade = () => {
+    setGive([])
+    setReceive([])
+    setEditor(null)
   }
 
   return (
-    <div className="space-y-6">
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_360px]">
-        <TradeSide
-          title="You give"
-          description="Brainrots leaving your inventory"
-          side="give"
-          entries={giveEntries}
-          brainrots={brainrots}
-          mutations={mutations}
-          brainrotMap={brainrotMap}
-          entryIncome={entryIncome}
-          onAdd={addEntry}
-          onUpdate={updateEntry}
-          onRemove={removeEntry}
-        />
+    <>
+      <section className="overflow-hidden rounded-[24px] border border-white/10 bg-[linear-gradient(145deg,rgba(37,39,49,0.98),rgba(22,24,32,0.98))] shadow-2xl">
+        <div className="border-b border-white/10 px-5 py-4 text-center sm:px-8">
+          <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-lime-text">
+            DropMarket trade checker
+          </p>
 
-        <TradeSide
-          title="You receive"
-          description="Brainrots entering your inventory"
-          side="receive"
-          entries={receiveEntries}
-          brainrots={brainrots}
-          mutations={mutations}
-          brainrotMap={brainrotMap}
-          entryIncome={entryIncome}
-          onAdd={addEntry}
-          onUpdate={updateEntry}
-          onRemove={removeEntry}
-        />
+          <h2 className="mt-1 text-[18px] font-black tracking-tight text-white sm:text-[20px]">
+            IS THIS TRADE FAIR?
+          </h2>
+        </div>
 
-        <aside className="space-y-4 xl:sticky xl:top-24 xl:self-start">
-          <section className="rounded-2xl border border-border-subtle bg-bg-overlay p-5 sm:p-6">
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-lime-text">
-              Trade result
+        <div className="grid gap-6 p-5 sm:p-8 lg:grid-cols-[minmax(0,1fr)_180px_minmax(0,1fr)] lg:items-center">
+          <TradeGrid
+            side="give"
+            label="YOU GIVE"
+            entries={give}
+            brainrotMap={brainrotMap}
+            mutationMap={mutationMap}
+            priceMap={priceMap}
+            summary={giveSummary}
+            onEmptyClick={openEmptySlot}
+            onEntryClick={openEntry}
+          />
+
+          <div className="order-first flex flex-col items-center justify-center lg:order-none">
+            <div
+              className={`flex h-36 w-36 flex-col items-center justify-center rounded-full border-2 shadow-xl ${verdict.border} ${verdict.background}`}
+            >
+              <span
+                className={`text-center text-[28px] font-black tracking-tight sm:text-[30px] ${verdict.text}`}
+              >
+                {verdict.label}
+              </span>
+
+              {percentageDifference == null ? (
+                <LockKeyhole className="mt-2 h-5 w-5 text-text-tertiary" />
+              ) : (
+                <span
+                  className={`mt-1 text-sm font-bold ${verdict.text}`}
+                >
+                  {percentageDifference > 0 ? '+' : ''}
+                  {percentageDifference.toFixed(1)}%
+                </span>
+              )}
+            </div>
+
+            <p className="mt-4 max-w-[220px] text-center text-[12.5px] font-semibold leading-5 text-text-secondary">
+              {verdict.caption}
             </p>
 
-            <div className={`mt-4 rounded-2xl border p-5 ${verdict.className}`}>
-              <p className="text-3xl font-extrabold tracking-tight">{verdict.label}</p>
-              <p className="mt-2 text-sm leading-6 opacity-90">{verdict.description}</p>
-            </div>
-
-            <div className="mt-4 grid grid-cols-2 gap-3">
-              <SummaryCard label="You give" value={giveSummary.totalIncome} />
-              <SummaryCard label="You receive" value={receiveSummary.totalIncome} />
-            </div>
-
-            <dl className="mt-5 space-y-4">
-              <ResultRow
-                label="Value difference"
-                value={ready ? formatSignedIncome(difference) : 'Pending'}
-              />
-              <ResultRow
-                label="Percentage difference"
-                value={
-                  percentageDifference == null
-                    ? 'Pending'
-                    : `${percentageDifference > 0 ? '+' : ''}${percentageDifference.toFixed(1)}%`
-                }
-              />
-              <ResultRow
-                label="Fair range"
-                value="Within 5%"
-              />
-            </dl>
-
-            {(giveSummary.unknownCount > 0 || receiveSummary.unknownCount > 0) && (
-              <p className="mt-5 rounded-xl border border-warning/20 bg-warning/5 p-3 text-xs leading-5 text-warning">
-                The verdict is paused because one or more selected Brainrots has no verified base income.
+            {ready && (
+              <p className="mt-1 text-center text-xs text-text-tertiary">
+                Midpoint difference:{' '}
+                {formatMoney(
+                  Math.abs(pointDifference),
+                )}
               </p>
             )}
-
-            <button
-              type="button"
-              onClick={clearAll}
-              className="mt-5 w-full rounded-xl border border-border-subtle px-4 py-2.5 text-sm font-semibold text-text-primary transition hover:border-white/20"
-            >
-              Clear trade
-            </button>
-          </section>
-
-          <section className="rounded-2xl border border-border-subtle bg-bg-overlay p-5">
-            <h2 className="font-bold text-text-primary">How this estimate works</h2>
-            <p className="mt-3 text-sm leading-6 text-text-secondary">
-              Each Brainrot uses its verified base income, selected mutation multiplier, quantity, and any verified variant override. This is an income-based estimate, not a guaranteed cash price.
-            </p>
-            <Link
-              href="/steal-a-brainrot/values"
-              className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-lime-text"
-            >
-              Browse Brainrot values
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-          </section>
-        </aside>
-      </div>
-    </div>
-  )
-}
-
-function TradeSide({
-  title,
-  description,
-  side,
-  entries,
-  brainrots,
-  mutations,
-  brainrotMap,
-  entryIncome,
-  onAdd,
-  onUpdate,
-  onRemove,
-}: {
-  title: string
-  description: string
-  side: SideKey
-  entries: TradeEntry[]
-  brainrots: TradeBrainrot[]
-  mutations: TradeMutation[]
-  brainrotMap: Map<string, TradeBrainrot>
-  entryIncome: (entry: TradeEntry) => number | null
-  onAdd: (side: SideKey, brainrotId: string) => void
-  onUpdate: (side: SideKey, instanceId: string, patch: Partial<TradeEntry>) => void
-  onRemove: (side: SideKey, instanceId: string) => void
-}) {
-  const [query, setQuery] = useState('')
-
-  const matches = useMemo(() => {
-    const normalized = query.trim().toLowerCase()
-    if (!normalized) return []
-
-    return brainrots
-      .filter((brainrot) =>
-        `${brainrot.name} ${brainrot.rarity}`.toLowerCase().includes(normalized),
-      )
-      .slice(0, 8)
-  }, [brainrots, query])
-
-  const addBrainrot = (brainrotId: string) => {
-    onAdd(side, brainrotId)
-    setQuery('')
-  }
-
-  return (
-    <section className="rounded-2xl border border-border-subtle bg-bg-overlay p-5 sm:p-6">
-      <div>
-        <h2 className="text-xl font-bold text-text-primary">{title}</h2>
-        <p className="mt-1 text-sm text-text-secondary">{description}</p>
-      </div>
-
-      <div className="relative mt-5">
-        <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary" />
-        <input
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          placeholder="Search and add a Brainrot"
-          className="h-12 w-full rounded-xl border border-border-subtle bg-black/15 pl-10 pr-4 text-text-primary outline-none placeholder:text-text-tertiary focus:border-lime-text/60"
-        />
-      </div>
-
-      {query.trim() && (
-        <div className="mt-2 max-h-64 space-y-1 overflow-y-auto rounded-xl border border-border-subtle bg-black/20 p-2">
-          {matches.length > 0 ? (
-            matches.map((brainrot) => (
-              <button
-                key={brainrot.id}
-                type="button"
-                onClick={() => addBrainrot(brainrot.id)}
-                className="flex w-full items-center gap-3 rounded-lg p-2 text-left transition hover:bg-white/5"
-              >
-                <div className="h-10 w-10 flex-shrink-0 overflow-hidden rounded-lg bg-black/20 p-1">
-                  {brainrot.imageUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={brainrot.imageUrl} alt="" className="h-full w-full object-contain" />
-                  ) : null}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold text-text-primary">{brainrot.name}</p>
-                  <p className="text-xs text-text-tertiary">{brainrot.rarity} · {formatIncome(brainrot.baseIncomePerSecond)}</p>
-                </div>
-                <Plus className="h-4 w-4 text-lime-text" />
-              </button>
-            ))
-          ) : (
-            <p className="p-3 text-sm text-text-secondary">No Brainrots found.</p>
-          )}
-        </div>
-      )}
-
-      <div className="mt-5 space-y-3">
-        {entries.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-border-subtle bg-black/10 px-4 py-10 text-center text-sm text-text-tertiary">
-            Search above to add the first Brainrot.
           </div>
-        ) : (
-          entries.map((entry) => {
-            const brainrot = brainrotMap.get(entry.brainrotId)
-            if (!brainrot) return null
 
-            return (
-              <div key={entry.instanceId} className="rounded-xl border border-border-subtle bg-black/10 p-3">
-                <div className="flex items-start gap-3">
-                  <div className="h-14 w-14 flex-shrink-0 overflow-hidden rounded-lg bg-black/20 p-1.5">
-                    {brainrot.imageUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={brainrot.imageUrl} alt="" className="h-full w-full object-contain" />
-                    ) : null}
-                  </div>
+          <TradeGrid
+            side="receive"
+            label="YOU RECEIVE"
+            entries={receive}
+            brainrotMap={brainrotMap}
+            mutationMap={mutationMap}
+            priceMap={priceMap}
+            summary={receiveSummary}
+            onEmptyClick={openEmptySlot}
+            onEntryClick={openEntry}
+          />
+        </div>
 
-                  <div className="min-w-0 flex-1">
-                    <Link
-                      href={`/steal-a-brainrot/values/${brainrot.slug}`}
-                      className="line-clamp-1 font-semibold text-text-primary hover:text-lime-text"
-                    >
-                      {brainrot.name}
-                    </Link>
-                    <p className="mt-0.5 text-xs text-text-tertiary">{brainrot.rarity}</p>
-                  </div>
+        {(giveSummary.unknown > 0 ||
+          receiveSummary.unknown > 0) && (
+          <div className="mx-5 mb-3 rounded-xl border border-warning/25 bg-warning/10 px-4 py-3 text-center text-[12.5px] text-warning sm:mx-8">
+            The verdict is paused because one or more
+            selected mutation variants has no cash-market
+            estimate.
+          </div>
+        )}
 
-                  <button
-                    type="button"
-                    onClick={() => onRemove(side, entry.instanceId)}
-                    aria-label={`Remove ${brainrot.name}`}
-                    className="rounded-lg p-2 text-text-tertiary transition hover:bg-white/5 hover:text-danger"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </div>
+        {(giveSummary.lowConfidence > 0 ||
+          receiveSummary.lowConfidence > 0) &&
+          giveSummary.unknown === 0 &&
+          receiveSummary.unknown === 0 && (
+            <div className="mx-5 mb-3 rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-center text-[12.5px] text-text-secondary sm:mx-8">
+              Low-confidence evidence is included. The
+              verdict uses the full low-to-high market range
+              rather than only the midpoint.
+            </div>
+          )}
 
-                <div className="mt-3 grid grid-cols-[minmax(0,1fr)_88px] gap-2">
-                  <select
-                    value={entry.mutationId}
-                    onChange={(event) =>
-                      onUpdate(side, entry.instanceId, { mutationId: event.target.value })
-                    }
-                    className="h-10 min-w-0 rounded-lg border border-border-subtle bg-bg-overlay px-2 text-sm text-text-primary outline-none focus:border-lime-text/60"
-                  >
-                    {mutations.map((mutation) => (
-                      <option key={mutation.id} value={mutation.id}>
-                        {mutation.name} ({mutation.multiplier}x)
-                      </option>
-                    ))}
-                  </select>
+        <div className="grid gap-3 border-t border-white/10 bg-black/15 p-5 sm:grid-cols-2 sm:px-8">
+          <button
+            type="button"
+            onClick={clearTrade}
+            className="min-h-11 rounded-xl bg-danger px-5 py-2.5 text-[13px] font-black uppercase tracking-wide text-white transition hover:opacity-90"
+          >
+            Clear trade
+          </button>
+
+          <Link
+            href="/steal-a-brainrot/values"
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-lime-text px-5 py-2.5 text-[13px] font-black uppercase tracking-wide text-black transition hover:opacity-90"
+          >
+            View values
+            <ArrowRight className="h-4 w-4" />
+          </Link>
+        </div>
+      </section>
+
+      <p className="mt-4 text-center text-[12.5px] leading-5 text-text-tertiary">
+        Cash estimates may use DropMarket sales, completed
+        external sales, reviewed ranges, or current listings.
+        They are estimates, not guaranteed sale prices.
+      </p>
+
+      {editor && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              setEditor(null)
+            }
+          }}
+        >
+          <div className="max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-white/10 bg-bg-base p-5 shadow-2xl sm:p-6">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <h3 className="text-[18px] font-bold text-text-primary">
+                  {activeEntry
+                    ? 'Edit Brainrot'
+                    : 'Add Brainrot'}
+                </h3>
+
+                <p className="mt-1 text-[12.5px] text-text-secondary">
+                  {editor.side === 'give'
+                    ? 'Your side of the trade'
+                    : 'Their side of the trade'}
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setEditor(null)}
+                className="rounded-lg p-2 text-text-tertiary transition hover:bg-white/5 hover:text-white"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {activeEntry ? (
+              <EntryEditor
+                entry={activeEntry}
+                brainrot={
+                  brainrotMap.get(
+                    activeEntry.brainrotId,
+                  ) ?? null
+                }
+                mutations={mutations}
+                priceMap={priceMap}
+                price={getEntryPrice(activeEntry)}
+                onUpdate={updateActiveEntry}
+                onRemove={removeActiveEntry}
+              />
+            ) : (
+              <>
+                <div className="relative mt-5">
+                  <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary" />
 
                   <input
-                    type="number"
-                    min={1}
-                    max={99}
-                    value={entry.quantity}
-                    onChange={(event) => {
-                      const parsed = Number.parseInt(event.target.value, 10)
-                      onUpdate(side, entry.instanceId, {
-                        quantity: Number.isFinite(parsed) ? Math.min(99, Math.max(1, parsed)) : 1,
-                      })
-                    }}
-                    aria-label={`${brainrot.name} quantity`}
-                    className="h-10 rounded-lg border border-border-subtle bg-bg-overlay px-2 text-center text-sm text-text-primary outline-none focus:border-lime-text/60"
+                    autoFocus
+                    value={search}
+                    onChange={(event) =>
+                      setSearch(event.target.value)
+                    }
+                    placeholder="Search Brainrots..."
+                    className="h-11 w-full rounded-xl border border-border-subtle bg-black/20 pl-10 pr-4 text-sm text-text-primary outline-none placeholder:text-text-tertiary focus:border-lime-text/60"
                   />
                 </div>
 
-                <div className="mt-3 flex items-center justify-between gap-3 border-t border-border-subtle pt-3 text-sm">
-                  <span className="text-text-tertiary">Adjusted value</span>
-                  <span className="font-bold text-text-primary">{formatIncome(entryIncome(entry))}</span>
+                <div className="mt-4 space-y-2">
+                  {filteredBrainrots.map(
+                    (brainrot) => {
+                      const defaultPrice =
+                        priceMap.get(
+                          `${brainrot.id}:${defaultMutationId}`,
+                        ) ?? null
+
+                      return (
+                        <button
+                          key={brainrot.id}
+                          type="button"
+                          onClick={() =>
+                            addBrainrot(brainrot.id)
+                          }
+                          className="flex w-full items-center gap-3 rounded-xl border border-border-subtle bg-black/10 p-3 text-left transition hover:border-lime-text/40 hover:bg-white/[0.04]"
+                        >
+                          <div className="h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-black/20 p-1.5">
+                            {brainrot.imageUrl && (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img
+                                src={
+                                  brainrot.imageUrl
+                                }
+                                alt=""
+                                className="h-full w-full object-contain"
+                              />
+                            )}
+                          </div>
+
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-semibold text-text-primary">
+                              {brainrot.name}
+                            </p>
+
+                            <p className="mt-0.5 text-xs text-text-tertiary">
+                              {brainrot.rarity} ·{' '}
+                              {defaultPrice
+                                ? formatRange(
+                                    defaultPrice.marketLowUsd,
+                                    defaultPrice.marketHighUsd,
+                                    defaultPrice.marketValueUsd,
+                                  )
+                                : 'No default cash estimate'}
+                            </p>
+                          </div>
+
+                          <Plus className="h-5 w-5 text-lime-text" />
+                        </button>
+                      )
+                    },
+                  )}
                 </div>
-              </div>
-            )
-          })
-        )}
-      </div>
-    </section>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+    </>
   )
 }
 
-function SummaryCard({ label, value }: { label: string; value: number }) {
+function TradeGrid({
+  side,
+  label,
+  entries,
+  brainrotMap,
+  mutationMap,
+  priceMap,
+  summary,
+  onEmptyClick,
+  onEntryClick,
+}: {
+  side: Side
+  label: string
+  entries: TradeEntry[]
+  brainrotMap: Map<string, TradeBrainrot>
+  mutationMap: Map<string, TradeMutation>
+  priceMap: Map<string, TradePrice>
+  summary: SideSummary
+  onEmptyClick: (side: Side) => void
+  onEntryClick: (
+    side: Side,
+    instanceId: string,
+  ) => void
+}) {
   return (
-    <div className="rounded-xl border border-border-subtle bg-black/15 p-4">
-      <p className="text-xs font-semibold uppercase tracking-wide text-text-tertiary">{label}</p>
-      <p className="mt-2 break-words font-bold text-text-primary">{formatIncome(value)}</p>
+    <div>
+      <div className="mb-4 text-center">
+        <p className="text-[11px] font-black uppercase tracking-[0.18em] text-text-tertiary">
+          {label}
+        </p>
+
+        <p className="mt-1 text-[15px] font-bold text-white">
+          {formatMoney(summary.point)}
+        </p>
+
+        {summary.unknown === 0 &&
+          Math.abs(summary.high - summary.low) >
+            0.01 && (
+            <p className="mt-0.5 text-[11px] text-text-tertiary">
+              {formatMoney(summary.low)}–
+              {formatMoney(summary.high)}
+            </p>
+          )}
+      </div>
+
+      <div className="mx-auto grid max-w-[390px] grid-cols-3 gap-2.5 sm:gap-3">
+        {Array.from({ length: 9 }).map(
+          (_, index) => {
+            const entry = entries[index]
+
+            if (!entry) {
+              return (
+                <button
+                  key={index}
+                  type="button"
+                  onClick={() =>
+                    onEmptyClick(side)
+                  }
+                  className="group aspect-square rounded-xl border border-dashed border-white/15 bg-black/20 transition hover:border-lime-text/50 hover:bg-lime-text/5"
+                >
+                  <Plus className="mx-auto h-6 w-6 text-white/20 transition group-hover:text-lime-text" />
+                </button>
+              )
+            }
+
+            const brainrot = brainrotMap.get(
+              entry.brainrotId,
+            )
+
+            const mutation = mutationMap.get(
+              entry.mutationId,
+            )
+
+            const price =
+              priceMap.get(
+                `${entry.brainrotId}:${entry.mutationId}`,
+              ) ?? null
+
+            return (
+              <button
+                key={entry.instanceId}
+                type="button"
+                title={
+                  price
+                    ? `${brainrot?.name}: ${formatRange(
+                        price.marketLowUsd,
+                        price.marketHighUsd,
+                        price.marketValueUsd,
+                      )}`
+                    : `${brainrot?.name}: No market estimate`
+                }
+                onClick={() =>
+                  onEntryClick(
+                    side,
+                    entry.instanceId,
+                  )
+                }
+                className="group relative aspect-square overflow-hidden rounded-xl border border-white/15 bg-black/25 p-2 transition hover:-translate-y-0.5 hover:border-lime-text/50"
+              >
+                {brainrot?.imageUrl && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={brainrot.imageUrl}
+                    alt={brainrot.name}
+                    className="h-full w-full object-contain transition group-hover:scale-105"
+                  />
+                )}
+
+                <span className="absolute left-1.5 top-1.5 max-w-[70%] truncate rounded-md bg-black/80 px-1.5 py-0.5 text-[9px] font-bold text-white">
+                  {mutation?.name ?? 'Default'}
+                </span>
+
+                {entry.quantity > 1 && (
+                  <span className="absolute right-1.5 top-1.5 rounded-md bg-black/80 px-1.5 py-0.5 text-[10px] font-black text-white">
+                    ×{entry.quantity}
+                  </span>
+                )}
+
+                <span
+                  className={`absolute inset-x-1.5 bottom-1.5 truncate rounded-md bg-black/85 px-1.5 py-1 text-[9px] font-bold ${
+                    price
+                      ? 'text-white'
+                      : 'text-warning'
+                  }`}
+                >
+                  {price
+                    ? formatMoney(
+                        price.marketValueUsd *
+                          entry.quantity,
+                      )
+                    : 'No estimate'}
+                </span>
+              </button>
+            )
+          },
+        )}
+      </div>
+
+      <p className="mt-3 text-center text-[11px] text-text-tertiary">
+        {entries.length}/9 slots used
+      </p>
     </div>
   )
 }
 
-function ResultRow({ label, value }: { label: string; value: string }) {
+function EntryEditor({
+  entry,
+  brainrot,
+  mutations,
+  priceMap,
+  price,
+  onUpdate,
+  onRemove,
+}: {
+  entry: TradeEntry
+  brainrot: TradeBrainrot | null
+  mutations: TradeMutation[]
+  priceMap: Map<string, TradePrice>
+  price: TradePrice | null
+  onUpdate: (patch: Partial<TradeEntry>) => void
+  onRemove: () => void
+}) {
   return (
-    <div className="flex items-center justify-between gap-4 border-b border-border-subtle pb-4 last:border-0 last:pb-0">
-      <dt className="text-sm text-text-secondary">{label}</dt>
-      <dd className="text-right text-sm font-bold text-text-primary">{value}</dd>
+    <div className="mt-5">
+      <div className="flex items-center gap-4 rounded-xl border border-border-subtle bg-black/15 p-4">
+        <div className="h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-black/20 p-2">
+          {brainrot?.imageUrl && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={brainrot.imageUrl}
+              alt=""
+              className="h-full w-full object-contain"
+            />
+          )}
+        </div>
+
+        <div className="min-w-0">
+          <p className="font-bold text-text-primary">
+            {brainrot?.name ?? 'Unknown Brainrot'}
+          </p>
+
+          <p className="mt-1 text-xs text-text-tertiary">
+            {brainrot?.rarity}
+          </p>
+
+          <p
+            className={`mt-2 text-sm font-bold ${
+              price
+                ? 'text-lime-text'
+                : 'text-warning'
+            }`}
+          >
+            {price
+              ? formatRange(
+                  price.marketLowUsd *
+                    entry.quantity,
+                  price.marketHighUsd *
+                    entry.quantity,
+                  price.marketValueUsd *
+                    entry.quantity,
+                )
+              : 'No cash-market estimate'}
+          </p>
+
+          {price && (
+            <p className="mt-1 text-[11px] text-text-tertiary">
+              {confidenceLabel(
+                price.confidenceLabel,
+              )}
+              {price.sourceName
+                ? ` · ${price.sourceName}`
+                : ''}
+            </p>
+          )}
+        </div>
+      </div>
+
+      <label className="mt-5 block">
+        <span className="text-[11px] font-semibold uppercase tracking-wide text-text-tertiary">
+          Mutation
+        </span>
+
+        <select
+          value={entry.mutationId}
+          onChange={(event) =>
+            onUpdate({
+              mutationId: event.target.value,
+            })
+          }
+          className="mt-2 h-11 w-full rounded-xl border border-border-subtle bg-black/15 px-3 text-sm text-text-primary outline-none focus:border-lime-text/60"
+        >
+          {mutations.map((mutation) => {
+            const mutationPrice =
+              priceMap.get(
+                `${entry.brainrotId}:${mutation.id}`,
+              ) ?? null
+
+            return (
+              <option
+                key={mutation.id}
+                value={mutation.id}
+              >
+                {mutation.name}{' '}
+                {mutationPrice
+                  ? `(${formatMoney(
+                      mutationPrice.marketValueUsd,
+                    )})`
+                  : '(No estimate)'}
+              </option>
+            )
+          })}
+        </select>
+      </label>
+
+      <label className="mt-4 block">
+        <span className="text-[11px] font-semibold uppercase tracking-wide text-text-tertiary">
+          Quantity
+        </span>
+
+        <input
+          type="number"
+          min={1}
+          max={99}
+          value={entry.quantity}
+          onChange={(event) => {
+            const parsed = Number.parseInt(
+              event.target.value,
+              10,
+            )
+
+            onUpdate({
+              quantity: Number.isFinite(parsed)
+                ? Math.min(
+                    99,
+                    Math.max(1, parsed),
+                  )
+                : 1,
+            })
+          }}
+          className="mt-2 h-11 w-full rounded-xl border border-border-subtle bg-black/15 px-3 text-sm text-text-primary outline-none focus:border-lime-text/60"
+        />
+      </label>
+
+      <button
+        type="button"
+        onClick={onRemove}
+        className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-danger/30 bg-danger/10 px-4 py-2.5 text-[13px] font-bold text-danger transition hover:bg-danger/15"
+      >
+        <Trash2 className="h-4 w-4" />
+        Remove Brainrot
+      </button>
     </div>
   )
 }

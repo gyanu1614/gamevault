@@ -214,8 +214,8 @@ export default async function BrainrotValuePage({ params }: PageProps) {
       )}
 
       <section className="border-b border-border-subtle">
-        <div className="mx-auto w-full max-w-7xl px-4 pb-10 pt-8 sm:px-6 sm:pb-14 sm:pt-12 lg:px-8">
-          <nav className="mb-7 flex flex-wrap items-center gap-2 text-sm text-text-tertiary">
+        <div className="mx-auto w-full max-w-7xl px-4 pb-7 pt-5 sm:px-6 sm:pb-8 sm:pt-6 lg:px-8">
+          <nav className="mb-4 flex flex-wrap items-center gap-2 text-[12.5px] text-text-tertiary">
             <Link href="/steal-a-brainrot" className="transition-colors hover:text-text-primary">
               Steal a Brainrot
             </Link>
@@ -254,11 +254,11 @@ export default async function BrainrotValuePage({ params }: PageProps) {
                 </span>
               </div>
 
-              <h1 className="mt-5 text-4xl font-extrabold tracking-tight text-text-primary sm:text-5xl">
+              <h1 className="mt-4 text-[22px] font-black leading-tight tracking-tight text-text-primary sm:text-[28px] lg:text-[32px]">
                 {brainrot.name} Value
               </h1>
 
-              <p className="mt-4 max-w-3xl text-lg leading-8 text-text-secondary">
+              <p className="mt-2 max-w-2xl text-[13px] leading-6 text-text-secondary sm:text-sm">
                 Current value, income, mutation multipliers, rarity, and marketplace availability for {brainrot.name} in Steal a Brainrot.
               </p>
 
@@ -298,7 +298,7 @@ export default async function BrainrotValuePage({ params }: PageProps) {
         </div>
       </section>
 
-      <div className="mx-auto grid w-full max-w-7xl gap-6 px-4 py-10 sm:px-6 lg:grid-cols-[minmax(0,1fr)_340px] lg:px-8">
+      <div className="mx-auto grid w-full max-w-7xl gap-6 px-4 py-7 sm:px-6 sm:py-8 lg:grid-cols-[minmax(0,1fr)_340px] lg:px-8">
         <div className="space-y-6">
           <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <FactCard label="Rarity" value={brainrot.rarity} />
