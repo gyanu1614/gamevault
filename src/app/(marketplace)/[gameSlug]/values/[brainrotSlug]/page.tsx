@@ -185,7 +185,7 @@ export default async function BrainrotValuePage({ params }: PageProps) {
   const patientSale = formatMoney(brainrot.patient_sale_usd)
   const updatedLabel = formatDate(brainrot.price_updated_at)
 
-  const marketplaceHref = `/steal-a-brainrot/buy-items?attr_category=${encodeURIComponent(brainrot.slug)}`
+  const marketplaceHref = `/steal-a-brainrot/buy-items?search=${encodeURIComponent(brainrot.name)}`
   const canonicalPath = `/steal-a-brainrot/values/${brainrot.slug}`
 
   return (
