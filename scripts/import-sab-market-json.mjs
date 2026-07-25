@@ -290,12 +290,15 @@ async function sendBatch({
   secret,
   sourceSlug,
   listings,
+  deferPublication,
 }) {
   const response = await fetch(endpoint, {
     method: "POST",
     headers: {
       "content-type": "application/json",
       "x-import-secret": secret,
+      "x-defer-publication":
+        deferPublication ? "true" : "false",
     },
     body: JSON.stringify({
       source_slug: sourceSlug,
@@ -322,7 +325,7 @@ async function sendBatch({
     responseBody.ok !== true
   ) {
     throw new Error(
-      `${sourceSlug} import failed: ${
+      `${sourceSlug} import failed (HTTP ${response.status}): ${
         responseBody.details ??
         responseBody.error ??
         `HTTP ${response.status}`
@@ -331,6 +334,52 @@ async function sendBatch({
   }
 
   return responseBody;
+}
+
+const sleep = (milliseconds) =>
+  new Promise((resolvePromise) =>
+    setTimeout(resolvePromise, milliseconds),
+  );
+
+async function sendBatchWithRetry(args) {
+  const maximumAttempts = 5;
+  let lastError;
+
+  for (
+    let attempt = 1;
+    attempt <= maximumAttempts;
+    attempt += 1
+  ) {
+    try {
+      return await sendBatch(args);
+    } catch (error) {
+      lastError = error;
+
+      if (attempt === maximumAttempts) {
+        break;
+      }
+
+      const delayMilliseconds = attempt * 3000;
+
+      console.warn(
+        `Batch attempt ${attempt} failed: ${
+          error instanceof Error
+            ? error.message
+            : String(error)
+        }`,
+      );
+
+      console.warn(
+        `Retrying in ${
+          delayMilliseconds / 1000
+        } seconds...`,
+      );
+
+      await sleep(delayMilliseconds);
+    }
+  }
+
+  throw lastError;
 }
 
 async function main() {
@@ -405,27 +454,58 @@ async function main() {
     process.env.SAB_MARKET_IMPORT_URL ??
     DEFAULT_ENDPOINT;
 
+  const batchSize = Number(
+    process.env.SAB_MARKET_IMPORT_BATCH_SIZE ?? "25",
+  );
+
+  if (
+    !Number.isInteger(batchSize) ||
+    batchSize < 1 ||
+    batchSize > 500
+  ) {
+    throw new Error(
+      "SAB_MARKET_IMPORT_BATCH_SIZE must be an integer from 1 to 500",
+    );
+  }
+
+  const batchDelayMilliseconds = Number(
+    process.env.SAB_MARKET_IMPORT_BATCH_DELAY_MS ?? "5000",
+  );
+
+  if (
+    !Number.isInteger(batchDelayMilliseconds) ||
+    batchDelayMilliseconds < 0
+  ) {
+    throw new Error(
+      "SAB_MARKET_IMPORT_BATCH_DELAY_MS must be zero or greater",
+    );
+  }
+
   for (const [sourceSlug, listings] of groups) {
     for (
       let batchStart = 0;
       batchStart < listings.length;
-      batchStart += 500
+      batchStart += batchSize
     ) {
       const batch = listings.slice(
         batchStart,
-        batchStart + 500,
+        batchStart + batchSize,
       );
 
-      const response = await sendBatch({
+      const isFinalBatch =
+        batchStart + batch.length >= listings.length;
+
+      const response = await sendBatchWithRetry({
         endpoint,
         secret,
         sourceSlug,
         listings: batch,
+        deferPublication: !isFinalBatch,
       });
 
       console.log(
         `\n${sourceSlug} batch ${
-          Math.floor(batchStart / 500) + 1
+          Math.floor(batchStart / batchSize) + 1
         }:`,
       );
 
@@ -457,6 +537,19 @@ async function main() {
             2,
           ),
         );
+      }
+
+      if (
+        batchStart + batchSize < listings.length &&
+        batchDelayMilliseconds > 0
+      ) {
+        console.log(
+          `Waiting ${
+            batchDelayMilliseconds / 1000
+          } seconds before the next batch...`,
+        );
+
+        await sleep(batchDelayMilliseconds);
       }
     }
   }

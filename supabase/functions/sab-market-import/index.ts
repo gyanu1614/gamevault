@@ -169,6 +169,10 @@ Deno.serve(async (request) => {
   const suppliedSecret =
     request.headers.get("x-import-secret") ?? "";
 
+  const deferPublication =
+    request.headers.get("x-defer-publication") ===
+    "true";
+
   if (
     !constantTimeEqual(
       suppliedSecret,
@@ -301,6 +305,23 @@ Deno.serve(async (request) => {
     const importResult = Array.isArray(importData)
       ? importData[0] ?? null
       : importData;
+
+    if (deferPublication) {
+      return jsonResponse({
+        ok: true,
+        result: importResult,
+        publication: {
+          ok: true,
+          skipped: true,
+          reason: "deferred_until_final_batch",
+        },
+        revalidation: {
+          ok: true,
+          skipped: true,
+          reason: "deferred_until_final_batch",
+        },
+      });
+    }
 
     const {
       data: publishedRows,
