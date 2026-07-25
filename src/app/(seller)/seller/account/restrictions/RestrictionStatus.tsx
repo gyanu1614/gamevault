@@ -123,11 +123,11 @@ export default function RestrictionStatus({ profile, restrictions }: Restriction
                       If you believe this restriction was made in error or would like to appeal, please contact our support team.
                     </p>
                     <a
-                      href="mailto:test@gmail.com"
+                      href="mailto:support@dropmarket.gg"
                       className="inline-flex items-center gap-2 text-sm font-medium text-blue-400 hover:text-blue-300 transition-colors"
                     >
                       <Mail className="h-4 w-4" />
-                      test@gmail.com
+                      support@dropmarket.gg
                     </a>
                   </div>
                 </div>

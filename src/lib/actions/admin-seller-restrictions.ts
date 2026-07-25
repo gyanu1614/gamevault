@@ -88,9 +88,9 @@ export async function restrictSeller(params: RestrictSellerParams): Promise<{ su
       : 'Your Seller Account Restriction Has Been Lifted'
 
     const notificationMessage = status === 'restricted'
-      ? `Your seller account has been restricted. You cannot create or publish new listings. Reason: ${reason || 'No reason provided'}. Contact support at test@gmail.com for assistance.`
+      ? `Your seller account has been restricted. You cannot create or publish new listings. Reason: ${reason || 'No reason provided'}. Contact support at support@dropmarket.gg for assistance.`
       : status === 'banned'
-      ? `Your seller account has been banned. You no longer have access to seller features. Reason: ${reason || 'No reason provided'}. Contact support at test@gmail.com for assistance.`
+      ? `Your seller account has been banned. You no longer have access to seller features. Reason: ${reason || 'No reason provided'}. Contact support at support@dropmarket.gg for assistance.`
       : `Your seller account restriction has been lifted. You can now create and publish listings again.`
 
     const notificationType = status === 'restricted'

@@ -245,7 +245,10 @@ export default function PrivacyClient({ requests: initialRequests }: Props) {
       {/* Legal note */}
       <motion.div variants={item} className="space-y-1 text-xs text-text-tertiary">
         <p>DropMarket processes personal data under GDPR (EU) 2016/679 and applicable privacy laws.</p>
-        <p>For questions, contact <span className="text-text-secondary">privacy@dropmarket.gg</span></p>
+        {/* support@, not privacy@ — matches the privacy policy's stated contact
+            (lib/legal/documents.ts) and the one alias that's actually
+            monitored. A dedicated privacy@ inbox would just bounce. */}
+        <p>For questions, contact <span className="text-text-secondary">support@dropmarket.gg</span></p>
       </motion.div>
     </motion.div>
   )

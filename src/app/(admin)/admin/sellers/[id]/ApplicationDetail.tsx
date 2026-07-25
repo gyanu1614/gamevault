@@ -1743,7 +1743,7 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
             >
               &quot;Your seller account is{' '}
               {restrictionType === 'banned' ? 'banned' : 'under review'}. Please contact support
-              at test@gmail.com&quot;
+              at support@dropmarket.gg&quot;
             </p>
           </div>
 

@@ -42,8 +42,7 @@ import HowItWorksBand from '@/components/marketplace/HowItWorksBand'
 import { BlogSection } from '@/components/blog/BlogSection'
 import { SectionHeading } from '@/components/marketplace/SectionHeading'
 import { TrustBand } from '@/components/marketplace/TrustBand'
-import TrustBox from '@/components/trust/TrustBox'
-import { TRUSTBOX_TEMPLATES } from '@/components/trust/trustbox-templates'
+import { TrustpilotLink } from '@/components/trust/TrustpilotLink'
 import { PaymentsMarquee } from '@/components/marketplace/PaymentsMarquee'
 import { FaqCards } from '@/components/marketplace/FaqCards'
 import type { TemplateField } from '@/lib/templates/types'
@@ -509,27 +508,6 @@ export default function ListingDetailClient({
               </CardContent>
             </Card>
 
-            {/* Similar listings — carousel moved into the left column */}
-            {similarOffersAsItems && similarOffersAsItems.length > 0 ? (
-              <ItemCarouselSection
-                title="Similar Listings"
-                subtitle={`Other ${listing.categoryName.toLowerCase()} listings for ${listing.gameName}`}
-                offers={similarOffersAsItems}
-                gameSlug={listing.gameSlug}
-                viewerId={viewerId}
-                className="mt-8 sm:mt-10"
-              />
-            ) : (
-              similarOffers.length > 0 && (
-                <CarouselSection
-                  title="Similar Listings"
-                  subtitle={`Other ${listing.categoryName.toLowerCase()} listings for ${listing.gameName}`}
-                  items={similarOffers}
-                  gameSlug={listing.gameSlug}
-                  className="mt-8 sm:mt-10"
-                />
-              )
-            )}
           </div>
 
           {/* RIGHT — combined details + buy panel (one card).
@@ -703,14 +681,40 @@ export default function ListingDetailClient({
               {/* Trustpilot rating — compact micro line, reassurance at the
                   buy decision point. Lazy-loaded; renders nothing until the
                   env var is set. */}
-              <TrustBox
-                templateId={TRUSTBOX_TEMPLATES.microCombo}
-                height="24px"
-                theme="dark"
-                className="mt-3 flex justify-center"
-              />
+              {/* Our own link, not a TrustBox — display widgets need Plus and
+                  only ever rendered Trustpilot's white fallback logo whose
+                  href pointed at trustpilot.com, not our profile. */}
+              <TrustpilotLink className="mt-3 flex justify-center" />
           </div>
         </div>
+
+        {/* ─── SIMILAR LISTINGS — V53: pulled OUT of the left column and made
+            a full-width section below the grid. Nested in the left column it
+            rendered BEFORE the buy panel once the grid collapsed to one
+            column on mobile, so phone users met "Similar Listings" before the
+            thing they came to buy. Order can't fix that from inside a column
+            (it wasn't a direct grid child), so it moves here: buy panel, then
+            similar listings, on every width. */}
+        {similarOffersAsItems && similarOffersAsItems.length > 0 ? (
+          <ItemCarouselSection
+            title="Similar Listings"
+            subtitle={`Other ${listing.categoryName.toLowerCase()} listings for ${listing.gameName}`}
+            offers={similarOffersAsItems}
+            gameSlug={listing.gameSlug}
+            viewerId={viewerId}
+            className="mt-12 sm:mt-16"
+          />
+        ) : (
+          similarOffers.length > 0 && (
+            <CarouselSection
+              title="Similar Listings"
+              subtitle={`Other ${listing.categoryName.toLowerCase()} listings for ${listing.gameName}`}
+              items={similarOffers}
+              gameSlug={listing.gameSlug}
+              className="mt-12 sm:mt-16"
+            />
+          )
+        )}
 
         {/* ─── OTHER SELLERS — same item, cross-seller price comparison.
             V28: replaces "From the same seller" (the seller's shop is one

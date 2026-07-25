@@ -125,11 +125,11 @@ export default function RestrictionStatus({ profile, restrictions }: Restriction
                       Contact support to appeal this restriction.
                     </p>
                     <a
-                      href="mailto:test@gmail.com"
+                      href="mailto:support@dropmarket.gg"
                       className="inline-flex items-center gap-1.5 text-xs font-medium text-lime-text hover:text-lime transition-colors"
                     >
                       <Mail className="h-3.5 w-3.5" />
-                      test@gmail.com
+                      support@dropmarket.gg
                     </a>
                   </div>
                 </div>

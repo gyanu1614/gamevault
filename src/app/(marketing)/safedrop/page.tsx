@@ -23,8 +23,7 @@ import {
   Wallet
 } from 'lucide-react'
 import Link from 'next/link'
-import TrustBox from '@/components/trust/TrustBox'
-import { TRUSTBOX_TEMPLATES } from '@/components/trust/trustbox-templates'
+import { TrustpilotLink } from '@/components/trust/TrustpilotLink'
 import { SafeDropExplainer } from './_SafeDropExplainer'
 
 export const metadata: Metadata = {
@@ -441,12 +440,9 @@ export default function SafeDropPage() {
             </p>
           </div>
           <div className="flex justify-center">
-            <TrustBox
-              templateId={TRUSTBOX_TEMPLATES.microCombo}
-              height="28px"
-              width="300px"
-              theme="dark"
-            />
+            {/* Our own link, not a TrustBox — display widgets need Plus and
+                only ever rendered Trustpilot's white fallback logo. */}
+            <TrustpilotLink />
           </div>
         </div>
       </section>

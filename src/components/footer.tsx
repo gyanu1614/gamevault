@@ -10,8 +10,7 @@
 'use client'
 
 import Link from 'next/link'
-import TrustBox from '@/components/trust/TrustBox'
-import { TRUSTBOX_TEMPLATES } from '@/components/trust/trustbox-templates'
+import { TrustpilotLink } from '@/components/trust/TrustpilotLink'
 
 const NAV_LINKS: Array<{ name: string; href: string }> = [
   { name: 'Browse Listings', href: '/browse' },
@@ -102,10 +101,13 @@ const MOBILE_LINK_GROUPS: Array<{ title: string; links: Array<{ name: string; hr
   {
     title: 'Legal',
     links: [
-      { name: 'Terms Of Use', href: '/legal/terms' },
-      { name: 'Privacy Policy', href: '/legal/privacy' },
-      { name: 'Refunds & Disputes', href: '/legal/refunds' },
-      { name: 'Company Details', href: '/legal/company' },
+      // NOT /legal/* — the legal routes live in the (legal) ROUTE GROUP, which
+      // contributes no URL segment, so the real paths have no /legal prefix.
+      // These four 404'd on every mobile page view until 2026-07-25.
+      { name: 'Terms Of Use', href: '/terms' },
+      { name: 'Privacy Policy', href: '/privacy' },
+      { name: 'Refunds & Disputes', href: '/refunds' },
+      { name: 'Company Details', href: '/company' },
     ],
   },
 ]
@@ -176,15 +178,10 @@ function MobileFooter() {
           ))}
         </div>
 
-        {/* Trustpilot micro rating — compact, site-wide. Lazy-loaded; renders
-            nothing until the business-unit env var is set. */}
-        <TrustBox
-          templateId={TRUSTBOX_TEMPLATES.microCombo}
-          height="24px"
-          width="200px"
-          theme="dark"
-          className="mt-1"
-        />
+        {/* Trustpilot — our own link, NOT a TrustBox: display widgets need a
+            Plus plan, so the widget only ever rendered Trustpilot's white
+            fallback logo pointing at their homepage. See TrustpilotLink. */}
+        <TrustpilotLink className="mt-1" />
 
         {/* Payment row — monochrome wordmarks, no licensed art. */}
         <div
@@ -260,13 +257,8 @@ export function Footer() {
           ))}
         </div>
 
-        {/* Trustpilot micro rating — compact, site-wide (desktop footer). */}
-        <TrustBox
-          templateId={TRUSTBOX_TEMPLATES.microCombo}
-          height="24px"
-          width="240px"
-          theme="dark"
-        />
+        {/* Trustpilot — our own link (desktop footer). See TrustpilotLink. */}
+        <TrustpilotLink />
 
         {/* Docs — the full compliance pack in three centered mini-columns */}
         <div className="grid w-full max-w-2xl grid-cols-1 gap-8 border-t border-white/[0.06] pt-7 sm:grid-cols-3">

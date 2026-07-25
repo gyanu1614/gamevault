@@ -75,7 +75,7 @@ export default function RestrictionBanner({ status, reason, dismissible = true }
             </Link>
 
             <a
-              href="mailto:test@gmail.com"
+              href="mailto:support@dropmarket.gg"
               className="text-sm text-text-secondary hover:text-white transition-colors underline"
             >
               Contact Support

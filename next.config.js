@@ -62,6 +62,25 @@ const nextConfig = {
         destination: '/safedrop',
         permanent: true,
       },
+      {
+        // The legal pages live in the (legal) route group, which adds no URL
+        // segment — so /legal/terms never existed, only /terms. The mobile
+        // footer linked the /legal/* form on every page, so Google has very
+        // likely crawled these 404s. Recovers them, plus any external links
+        // or bookmarks that picked them up.
+        source: '/legal/:path*',
+        destination: '/:path*',
+        permanent: true,
+      },
+      {
+        // /sell was linked from two blog posts and the category empty state
+        // but never existed — only /sell/new, /sell/bulk, /sell/edit. The
+        // (sell) layout guards auth, so logged-out visitors get bounced to
+        // /login with a return path rather than seeing the wizard.
+        source: '/sell',
+        destination: '/sell/new',
+        permanent: false,
+      },
     ]
   },
 }

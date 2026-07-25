@@ -25,8 +25,7 @@ import { HowItWorks } from '../components/HowItWorks'
 import { WhyCard } from '../components/WhyCard'
 import { RecentlySoldTicker } from '../components/RecentlySoldTicker'
 import { PaymentsMarquee } from '@/components/marketplace/PaymentsMarquee'
-import TrustBox from '@/components/trust/TrustBox'
-import { TRUSTBOX_TEMPLATES } from '@/components/trust/trustbox-templates'
+import { TrustpilotLink } from '@/components/trust/TrustpilotLink'
 import {
   MobileHero,
   MobilePopularGames,
@@ -699,12 +698,9 @@ export function HomePage() {
               the carousel which renders a big empty box. Lazy-loaded; renders
               nothing until the env var is set. */}
           <div className="mt-8 flex justify-center sm:mt-10">
-            <TrustBox
-              templateId={TRUSTBOX_TEMPLATES.microCombo}
-              height="28px"
-              width="280px"
-              theme="dark"
-            />
+            {/* Our own link, not a TrustBox — display widgets need Plus and
+                only ever rendered Trustpilot's white fallback logo. */}
+            <TrustpilotLink />
           </div>
         </div>
       </section>

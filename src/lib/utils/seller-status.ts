@@ -37,13 +37,13 @@ export function getStatusMessage(status: SellerStatus, reason?: string | null): 
     case 'restricted':
       return {
         title: 'Account Restricted',
-        message: reason || 'Your seller account is under review. Please contact support at test@gmail.com',
+        message: reason || 'Your seller account is under review. Please contact support at support@dropmarket.gg',
         severity: 'warning'
       }
     case 'banned':
       return {
         title: 'Account Banned',
-        message: reason || 'Your seller account has been banned. Please contact support at test@gmail.com',
+        message: reason || 'Your seller account has been banned. Please contact support at support@dropmarket.gg',
         severity: 'error'
       }
     case 'active':

@@ -27,6 +27,12 @@ export default function robots(): MetadataRoute.Robots {
           '/wallet/',
           '/wishlist/',
           '/checkout/',
+          // Internal preview/scratch routes. They return 200 to anyone who
+          // finds them and have no metadata, so left crawlable they'd land in
+          // the index as junk pages under the brand.
+          '/dev/',
+          '/test',
+          '/test-connection',
           // Parameterized duplicates: sorted views and campaign-tagged
           // URLs render the same content as the canonical page.
           '/*?sort=',
