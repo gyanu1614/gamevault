@@ -58,3 +58,8 @@ OldProgress/
 .claude/
 .next-check/
 design-refs/
+
+data/sab-market-imports/*.csv
+!data/sab-market-imports/template.csv
+data/sab-market-feeds/itemku-latest.json
+data/sab-market-feeds/itemku-debug.png

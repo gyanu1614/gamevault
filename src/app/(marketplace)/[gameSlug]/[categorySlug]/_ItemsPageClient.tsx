@@ -71,8 +71,10 @@ export default function ItemsPageClient({
     window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior })
   }, [])
 
-  const [q, setQ] = useState('')
-  const [debouncedQ, setDebouncedQ] = useState('')
+  const searchParams = useSearchParams()
+  const initialSearch = searchParams.get('search')?.trim() ?? ''
+  const [q, setQ] = useState(initialSearch)
+  const [debouncedQ, setDebouncedQ] = useState(initialSearch.toLowerCase())
   useEffect(() => {
     const t = setTimeout(() => setDebouncedQ(q.trim().toLowerCase()), 200)
     return () => clearTimeout(t)
@@ -83,7 +85,6 @@ export default function ItemsPageClient({
   // /steal-a-brainrot/buy-items?attr_category=garama. We read each
   // `attr_<slug>` param and keep only those whose option actually exists
   // in this category's taxonomy (defensive against stale links).
-  const searchParams = useSearchParams()
   const initialAttrFilters = useMemo(() => {
     const seeded: Record<string, string> = {}
     for (const f of taxonomy.filters ?? []) {

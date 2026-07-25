@@ -32,6 +32,15 @@ function legalDocPath(slug: string): string {
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const supabase = await createClient()
 
+  const { data: sabBrainrots, error: sabBrainrotsError } = await (supabase as any)
+    .from('sab_brainrot_catalog')
+    .select('slug')
+    .order('slug', { ascending: true })
+
+  if (sabBrainrotsError) {
+    console.error('Unable to load SAB Brainrots for sitemap:', sabBrainrotsError)
+  }
+
   // Static marketing/trust pages — no lastmod (see policy above).
   const staticPages: MetadataRoute.Sitemap = [
     {
@@ -209,11 +218,32 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.75,
   }))
 
+  const sabPages: MetadataRoute.Sitemap = [
+    {
+      url: `${BASE_URL}/steal-a-brainrot/values`,
+      changeFrequency: 'daily',
+      priority: 0.85,
+    },
+    {
+      url: `${BASE_URL}/steal-a-brainrot/value-calculator`,
+      changeFrequency: 'weekly',
+      priority: 0.8,
+    },
+    ...((sabBrainrots ?? []) as { slug: string }[])
+      .filter((brainrot) => Boolean(brainrot.slug))
+      .map((brainrot) => ({
+        url: `${BASE_URL}/steal-a-brainrot/values/${brainrot.slug}`,
+        changeFrequency: 'weekly' as const,
+        priority: 0.7,
+      })),
+  ]
+
   return [
     ...staticPages,
     ...legalPages,
     ...blogPages,
     ...landingPages,
+    ...sabPages,
     ...gamePages,
     ...categoryPages,
     ...listingPages,

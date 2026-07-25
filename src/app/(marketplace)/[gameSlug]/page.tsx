@@ -10,7 +10,7 @@ import { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
-import { ArrowRight, Package, TrendingUp } from 'lucide-react'
+import { ArrowRight, Calculator, Package, TrendingUp } from 'lucide-react'
 import Image from 'next/image'
 import { JsonLd, breadcrumbList } from '@/lib/seo/jsonld'
 
@@ -223,6 +223,52 @@ export default async function GameBrowsePage({ params }: PageProps) {
           </div>
         </div>
       </section>
+
+      {gameSlug === 'steal-a-brainrot' && (
+        <section className="px-4 pb-4 sm:px-6 lg:px-8">
+          <div className="mx-auto max-w-7xl">
+            <h2 className="mb-6 text-3xl font-bold text-text-primary">
+              Steal a Brainrot Tools
+            </h2>
+
+            <div className="grid gap-6 md:grid-cols-2">
+              <Link
+                href="/steal-a-brainrot/values"
+                className="group rounded-xl border border-border-subtle bg-bg-overlay p-6 transition hover:-translate-y-0.5 hover:border-lime"
+              >
+                <TrendingUp className="h-7 w-7 text-lime-text" />
+                <h3 className="mt-4 text-xl font-semibold text-text-primary">
+                  Brainrot Values
+                </h3>
+                <p className="mt-2 text-sm leading-6 text-text-secondary">
+                  Browse every Brainrot, rarity, income, mutation values, and marketplace availability.
+                </p>
+                <span className="mt-5 flex items-center gap-2 text-sm font-medium text-lime-text">
+                  Browse all values
+                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                </span>
+              </Link>
+
+              <Link
+                href="/steal-a-brainrot/value-calculator"
+                className="group rounded-xl border border-border-subtle bg-bg-overlay p-6 transition hover:-translate-y-0.5 hover:border-lime"
+              >
+                <Calculator className="h-7 w-7 text-lime-text" />
+                <h3 className="mt-4 text-xl font-semibold text-text-primary">
+                  Value Calculator
+                </h3>
+                <p className="mt-2 text-sm leading-6 text-text-secondary">
+                  Select a Brainrot and mutation to calculate its income and compare variants.
+                </p>
+                <span className="mt-5 flex items-center gap-2 text-sm font-medium text-lime-text">
+                  Open calculator
+                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                </span>
+              </Link>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Categories */}
       <section className="py-16 px-4 sm:px-6 lg:px-8">
