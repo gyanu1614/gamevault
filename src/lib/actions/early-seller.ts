@@ -12,6 +12,7 @@
 
 import { headers } from 'next/headers'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
+import { requireAdmin } from '@/lib/actions/admin-permissions'
 
 export interface EarlySellerInput {
   username: string
@@ -24,6 +25,19 @@ export interface EarlySellerInput {
 export interface EarlySellerResult {
   ok: boolean
   error?: string
+}
+
+export type EarlySellerStatus = 'new' | 'contacted' | 'approved' | 'rejected'
+
+export interface EarlySellerSignup {
+  id: string
+  username: string
+  email: string
+  discord: string | null
+  sells: string | null
+  note: string | null
+  status: EarlySellerStatus
+  created_at: string
 }
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -82,5 +96,76 @@ export async function submitEarlySeller(
   } catch (err) {
     console.error('[early-seller] unexpected error:', err)
     return { ok: false, error: 'Something went wrong. Please try again.' }
+  }
+}
+
+// ── Admin ────────────────────────────────────────────────────────────────────
+
+const VALID_STATUSES: EarlySellerStatus[] = ['new', 'contacted', 'approved', 'rejected']
+
+export interface EarlySellerListResult {
+  ok: boolean
+  signups?: EarlySellerSignup[]
+  error?: string
+}
+
+/** Admin-only — fetch every waitlist signup, newest first. */
+export async function getEarlySellerSignups(): Promise<EarlySellerListResult> {
+  try {
+    await requireAdmin()
+  } catch {
+    return { ok: false, error: 'Not authorized.' }
+  }
+
+  try {
+    const supabase = createServiceRoleClient()
+    const { data, error } = await (supabase as any)
+      .from('early_seller_signups')
+      .select('id, username, email, discord, sells, note, status, created_at')
+      .order('created_at', { ascending: false })
+
+    if (error) {
+      console.error('[early-seller] list failed:', error)
+      return { ok: false, error: 'Failed to load signups.' }
+    }
+
+    return { ok: true, signups: (data ?? []) as EarlySellerSignup[] }
+  } catch (err) {
+    console.error('[early-seller] list error:', err)
+    return { ok: false, error: 'Failed to load signups.' }
+  }
+}
+
+/** Admin-only — move a signup through the review pipeline. */
+export async function updateEarlySellerStatus(
+  id: string,
+  status: EarlySellerStatus,
+): Promise<EarlySellerResult> {
+  try {
+    await requireAdmin()
+  } catch {
+    return { ok: false, error: 'Not authorized.' }
+  }
+
+  if (!VALID_STATUSES.includes(status)) {
+    return { ok: false, error: 'Invalid status.' }
+  }
+
+  try {
+    const supabase = createServiceRoleClient()
+    const { error } = await (supabase as any)
+      .from('early_seller_signups')
+      .update({ status })
+      .eq('id', id)
+
+    if (error) {
+      console.error('[early-seller] status update failed:', error)
+      return { ok: false, error: 'Failed to update status.' }
+    }
+
+    return { ok: true }
+  } catch (err) {
+    console.error('[early-seller] status update error:', err)
+    return { ok: false, error: 'Failed to update status.' }
   }
 }

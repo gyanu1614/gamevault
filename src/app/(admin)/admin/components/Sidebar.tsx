@@ -32,6 +32,7 @@ import {
   IconDeviceGamepad2,
   IconShoppingCart,
   IconTicket,
+  IconRocket,
   IconLayoutSidebarLeftCollapse,
   IconLayoutSidebarLeftExpand,
 } from '@tabler/icons-react'
@@ -56,6 +57,7 @@ const LINKS = [
   { label: 'Orders',              href: '/admin/orders',         icon: IconShoppingCart,    roles: ['admin', 'support', 'super_admin'] },
   { label: 'Seller Applications', href: '/admin/sellers',        icon: IconFileText,        roles: ['admin', 'moderator', 'super_admin'] },
   { label: 'Active Sellers',      href: '/admin/active-sellers', icon: IconBuildingStore,   roles: ['admin', 'moderator', 'support', 'super_admin'] },
+  { label: 'Founding Sellers',    href: '/admin/early-sellers',  icon: IconRocket,          roles: ['admin', 'super_admin'] },
   { label: 'Disputes',            href: '/admin/disputes',       icon: IconMessage2,        roles: ['admin', 'support', 'super_admin'] },
   { label: 'Analytics',           href: '/admin/analytics',      icon: IconChartBar,        roles: ['admin', 'super_admin'] },
   { label: 'Fraud',               href: '/admin/fraud',          icon: IconShieldX,         roles: ['admin', 'super_admin'] },
