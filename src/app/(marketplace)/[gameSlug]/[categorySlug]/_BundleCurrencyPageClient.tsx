@@ -27,7 +27,7 @@
  * SafeDrop-watermarked offer panel with the shared TrustBand.
  */
 
-import { useMemo, useRef, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useAuthDialog } from '@/components/auth/AuthDialog'
@@ -35,14 +35,8 @@ import { BadgeCheck, Check, Clock, Flame, Package, ShieldCheck, SlidersHorizonta
 import { cn } from '@/lib/utils'
 import { Card } from '@/components/ui/card'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { NumberField } from '@/components/ui/number-field'
+import { MobileSlider } from '@/components/ui/mobile-slider'
 import { Button } from '@/components/ui/button'
 import HowItWorksBand from '@/components/marketplace/HowItWorksBand'
 import { SectionHeading } from '@/components/marketplace/SectionHeading'
@@ -148,6 +142,13 @@ export default function BundleCurrencyPageClient({
     return bestId
   }, [data.bundles, data.offers])
   const [bundleId, setBundleId] = useState<string>(popularBundleId)
+
+  // V53 — Feeds MobileSlider so the selected tile is always scrolled into
+  // view on mobile (the pre-selected "Popular" bundle is often not the first).
+  const selectedBundleIndex = useMemo(
+    () => Math.max(0, data.bundles.findIndex((b) => b.id === bundleId)),
+    [data.bundles, bundleId],
+  )
 
   // V19/P24/P4 — Buyer-side quantity stepper. Always integer; bundles
   // sell in whole multiples. Capped at the best seller's stock.
@@ -288,6 +289,7 @@ export default function BundleCurrencyPageClient({
               grid look. Icon centered on top, label below. Sized
               snug so PC / PS / XBOX fit one line on desktop. */}
           <OptionTiles
+            variant="pill"
             options={data.platforms.map((p) => ({
               value: p.value,
               icon: p.icon_url ?? null,
@@ -313,6 +315,7 @@ export default function BundleCurrencyPageClient({
             Region
           </h2>
           <OptionTiles
+            variant="pill"
             options={data.regions.map((r) => ({
               value: r.value,
               // V51 — Flag from the stored option, else resolved by
@@ -332,124 +335,150 @@ export default function BundleCurrencyPageClient({
       {/* V52 — pt bumped (was pt-4): the selector rows above and the
           bundle grid read as separate sections, not one blob. */}
       <div className="mx-auto grid w-full max-w-7xl gap-6 px-4 pt-10 sm:px-6 sm:pt-12 lg:grid-cols-[1fr_360px] lg:items-stretch lg:gap-8 lg:px-8">
-        {/* LEFT COLUMN — bundle grid + other sellers */}
-        <div className="space-y-6">
+        {/* LEFT COLUMN — bundle grid + other sellers.
+            min-w-0 is load-bearing: grid items default to `min-width: auto`,
+            so without it this column sizes itself to the min-content width of
+            the bundle slider's full 12-card row (~1900px) and stretches the
+            whole page sideways on mobile. */}
+        <div className="min-w-0 space-y-6">
           <section>
             <h2 className="mb-3 text-[15px] font-bold text-text-primary">
               Choose Amount
             </h2>
-            <RadioGroup
-              value={bundleId}
-              onValueChange={(v) => {
-                setBundleId(v)
-                setQty(1)
-                setPickedListingId('')
-              }}
-              // V47b — 4-up ~195px tiles: middle ground between the
-              // original bulky cards and the too-tight 5-up pass.
-              className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4"
+            {/* V53 — Below `md` the tiles become a swipeable embla slider
+                (peeking neighbour signals "there's more" without needing
+                dots or arrows); at `md`+ the container flips back to the
+                same 3/4-up grid as before. One markup tree, CSS-only
+                layout switch — see MobileSlider for why that can't flash. */}
+            <MobileSlider
+              activeIndex={selectedBundleIndex}
+              itemCount={data.bundles.length}
             >
-              {data.bundles.map((bundle) => {
-                const cheapestForBundle = data.offers
-                  .filter(
-                    (o) =>
-                      o.bundleId === bundle.id &&
-                      (!region || !o.region || o.region === region),
-                  )
-                  .reduce(
-                    (min, o) => Math.min(min, o.pricePerBundle),
-                    Infinity,
-                  )
-                const on = bundleId === bundle.id
-                const isPopular = bundle.id === popularBundleId
-                return (
-                  <label key={bundle.id} className="block">
-                    <RadioGroupItem value={bundle.id} className="sr-only" />
-                    {/* V47b — Refined tile: top sheen, icon spotlight,
-                        floating drop-shadow on the 3D art, hover lift,
-                        soft lime glow + lime price when selected. Alpha
-                        colors are hex/rgba literals (lime/[0.x]
-                        utilities don't compile). */}
-                    <Card
-                      className={cn(
-                        'group relative cursor-pointer overflow-hidden border-2 bg-[rgba(20,20,27,0.56)] p-3 backdrop-blur-md transition-all duration-200',
-                        on
-                          ? 'border-[#ABE52BB3] shadow-[0_10px_26px_-10px_rgba(171,229,43,0.22)]'
-                          : 'border-border-default hover:-translate-y-0.5 hover:border-border-strong hover:bg-[rgba(26,26,35,0.70)] hover:shadow-[0_12px_24px_-12px_rgba(0,0,0,0.6)]',
-                      )}
+              <RadioGroup
+                value={bundleId}
+                onValueChange={(v) => {
+                  setBundleId(v)
+                  setQty(1)
+                  setPickedListingId('')
+                }}
+                // V47b — 4-up ~195px tiles: middle ground between the
+                // original bulky cards and the too-tight 5-up pass.
+                className="flex gap-3 md:grid md:grid-cols-3 lg:grid-cols-4"
+              >
+                {data.bundles.map((bundle) => {
+                  const cheapestForBundle = data.offers
+                    .filter(
+                      (o) =>
+                        o.bundleId === bundle.id &&
+                        (!region || !o.region || o.region === region),
+                    )
+                    .reduce(
+                      (min, o) => Math.min(min, o.pricePerBundle),
+                      Infinity,
+                    )
+                  const on = bundleId === bundle.id
+                  const isPopular = bundle.id === popularBundleId
+                  return (
+                    // Slide sizing — FIXED widths, deliberately not a % basis:
+                    // a percentage flex-basis resolves against an indefinite
+                    // width while the parent grid column measures itself, falls
+                    // back to content sizing, and blows the row (and the page)
+                    // wide. 152px puts 2 cards + a peeking third on a 390px
+                    // phone, so the row reads as swipeable at a glance.
+                    // md:w-auto is required — unlike flex-basis, an explicit
+                    // width is NOT inert on a grid item and would otherwise
+                    // pin the desktop tiles to 152px.
+                    <label
+                      key={bundle.id}
+                      className="block w-[152px] shrink-0 sm:w-[168px] md:w-auto"
                     >
-                      {/* Top sheen — faint light falling from above. */}
-                      <span
-                        aria-hidden
-                        className="pointer-events-none absolute inset-x-0 top-0 h-1/2 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.06),transparent)]"
-                      />
-                      {/* Icon spotlight — soft pool of light behind the
-                          art so the 3D render pops off the surface. */}
-                      <span
-                        aria-hidden
+                      <RadioGroupItem value={bundle.id} className="sr-only" />
+                      {/* V47b — Refined tile: top sheen, icon spotlight,
+                          floating drop-shadow on the 3D art, hover lift,
+                          soft lime glow + lime price when selected. Alpha
+                          colors are hex/rgba literals (lime/[0.x]
+                          utilities don't compile). */}
+                      <Card
                         className={cn(
-                          'pointer-events-none absolute left-1/2 top-2 h-14 w-24 -translate-x-1/2 rounded-full blur-xl transition-colors duration-200',
-                          on ? 'bg-[#C6FF3D24]' : 'bg-white/[0.07]',
+                          'group relative cursor-pointer overflow-hidden border-2 bg-[rgba(20,20,27,0.56)] p-3 backdrop-blur-md transition-all duration-200',
+                          on
+                            ? 'border-[#ABE52BB3] shadow-[0_10px_26px_-10px_rgba(171,229,43,0.22)]'
+                            : 'border-border-default hover:-translate-y-0.5 hover:border-border-strong hover:bg-[rgba(26,26,35,0.70)] hover:shadow-[0_12px_24px_-12px_rgba(0,0,0,0.6)]',
                         )}
-                      />
-                      {isPopular && (
-                        <span className="absolute left-1.5 top-1.5 z-10 inline-flex items-center gap-0.5 rounded-full bg-lime-text px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-text-inverse">
-                          <Flame className="h-2 w-2" /> Popular
-                        </span>
-                      )}
-                      {on && (
+                      >
+                        {/* Top sheen — faint light falling from above. */}
                         <span
                           aria-hidden
-                          className="absolute right-1.5 top-1.5 z-10 flex h-4 w-4 items-center justify-center rounded-full bg-lime-pressed text-text-inverse"
-                        >
-                          <Check className="h-2.5 w-2.5" strokeWidth={3} />
-                        </span>
-                      )}
-                      <div className="relative flex h-14 items-center justify-center sm:h-16">
-                        {bundle.icon_url ? (
-                          /* eslint-disable-next-line @next/next/no-img-element */
-                          <img
-                            src={bundle.icon_url}
-                            alt=""
-                            className="max-h-full max-w-full object-contain drop-shadow-[0_10px_10px_rgba(0,0,0,0.45)] transition-transform duration-300 group-hover:scale-[1.06]"
-                          />
-                        ) : (
-                          <div
+                          className="pointer-events-none absolute inset-x-0 top-0 h-1/2 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.06),transparent)]"
+                        />
+                        {/* Icon spotlight — soft pool of light behind the
+                            art so the 3D render pops off the surface. */}
+                        <span
+                          aria-hidden
+                          className={cn(
+                            'pointer-events-none absolute left-1/2 top-2 h-14 w-24 -translate-x-1/2 rounded-full blur-xl transition-colors duration-200',
+                            on ? 'bg-[#C6FF3D24]' : 'bg-white/[0.07]',
+                          )}
+                        />
+                        {isPopular && (
+                          <span className="absolute left-1.5 top-1.5 z-10 inline-flex items-center gap-0.5 rounded-full bg-lime-text px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-text-inverse">
+                            <Flame className="h-2 w-2" /> Popular
+                          </span>
+                        )}
+                        {on && (
+                          <span
                             aria-hidden
-                            className="h-full w-full rounded-lg bg-bg-raised-hover"
-                          />
+                            className="absolute right-1.5 top-1.5 z-10 flex h-4 w-4 items-center justify-center rounded-full bg-lime-pressed text-text-inverse"
+                          >
+                            <Check className="h-2.5 w-2.5" strokeWidth={3} />
+                          </span>
                         )}
-                      </div>
-                      <div className="relative mt-2 line-clamp-1 text-[13px] font-semibold text-text-primary">
-                        {bundle.name}
-                      </div>
-                      {/* Hairline fading right — softer than a full rule. */}
-                      <div
-                        className="mt-2 h-px bg-gradient-to-r from-border-default to-transparent"
-                        aria-hidden
-                      />
-                      <div className="relative mt-2 text-[11px] text-text-tertiary">
-                        {cheapestForBundle === Infinity ? (
-                          'No offers'
-                        ) : (
-                          <>
-                            from{' '}
-                            <span
-                              className={cn(
-                                'text-[13px] font-bold tabular-nums',
-                                on ? 'text-lime-text' : 'text-text-primary',
-                              )}
-                            >
-                              {formatPrice(cheapestForBundle)}
-                            </span>
-                          </>
-                        )}
-                      </div>
-                    </Card>
-                  </label>
-                )
-              })}
-            </RadioGroup>
+                        <div className="relative flex h-14 items-center justify-center sm:h-16">
+                          {bundle.icon_url ? (
+                            /* eslint-disable-next-line @next/next/no-img-element */
+                            <img
+                              src={bundle.icon_url}
+                              alt=""
+                              className="max-h-full max-w-full object-contain drop-shadow-[0_10px_10px_rgba(0,0,0,0.45)] transition-transform duration-300 group-hover:scale-[1.06]"
+                            />
+                          ) : (
+                            <div
+                              aria-hidden
+                              className="h-full w-full rounded-lg bg-bg-raised-hover"
+                            />
+                          )}
+                        </div>
+                        <div className="relative mt-2 line-clamp-1 text-[13px] font-semibold text-text-primary">
+                          {bundle.name}
+                        </div>
+                        {/* Hairline fading right — softer than a full rule. */}
+                        <div
+                          className="mt-2 h-px bg-gradient-to-r from-border-default to-transparent"
+                          aria-hidden
+                        />
+                        <div className="relative mt-2 text-[11px] text-text-tertiary">
+                          {cheapestForBundle === Infinity ? (
+                            'No offers'
+                          ) : (
+                            <>
+                              from{' '}
+                              <span
+                                className={cn(
+                                  'text-[13px] font-bold tabular-nums',
+                                  on ? 'text-lime-text' : 'text-text-primary',
+                                )}
+                              >
+                                {formatPrice(cheapestForBundle)}
+                              </span>
+                            </>
+                          )}
+                        </div>
+                      </Card>
+                    </label>
+                  )
+                })}
+              </RadioGroup>
+            </MobileSlider>
           </section>
         </div>
 
@@ -608,172 +637,130 @@ function OptionTiles({
   selected,
   onSelect,
   uppercase = false,
+  variant = 'tile',
 }: {
   options: Array<{ value: string; icon: string | null; label: string }>
   selected: string
   onSelect: (value: string) => void
   uppercase?: boolean
+  /**
+   * `tile` — square-ish card, icon stacked over label (platform logos).
+   * `pill` — horizontal card, icon + label + check on one line (regions).
+   *   "Pill" is the LAYOUT, not the radius: corners stay rectangular per the
+   *   site's no-pill-shapes direction, unlike the fully-rounded reference.
+   */
+  variant?: 'tile' | 'pill'
 }) {
   const n = options.length
+  const selectedIndex = Math.max(
+    0,
+    options.findIndex((o) => o.value === selected),
+  )
 
-  // V52c — Dropdown choreography: the panel always opens BELOW the
-  // trigger, immediately, with its fluid entry animation — and if its
-  // bottom edge is clipped by the viewport, the page then GLIDES down
-  // just enough to reveal it (the popper tracks its anchor, so the
-  // whole trigger+panel assembly moves as one). Sequence reads as
-  // open → reveal, not scroll → pop.
-  //
-  // The glide is rAF-driven with instant steps: native smooth
-  // scrolling gets wedged by the select's scroll lock (an interrupted
-  // CSS-smooth animation keeps ownership of the scroller and silently
-  // eats all later scrollTo calls). Programmatic instant scrolls keep
-  // working while the panel is open.
-  const [open, setOpen] = useState(false)
-  const triggerRef = useRef<HTMLButtonElement | null>(null)
-  const handleOpenChange = (next: boolean) => {
-    setOpen(next)
-    if (!next) return
-    // Let the entry animation mostly play (300ms), measuring the REAL
-    // panel edge mid-flight (zoom is ~97% by then; +18px buffer
-    // covers the remainder), then glide.
-    window.setTimeout(() => {
-      const panel = document.querySelector('[role="listbox"]')
-      const rect = (panel ?? triggerRef.current)?.getBoundingClientRect()
-      if (!rect) return
-      const overflow = rect.bottom + 18 - window.innerHeight
-      if (overflow <= 0) return
-      const startY = window.scrollY
-      const t0 = performance.now()
-      const DURATION = 300
-      const ease = (t: number) => 1 - Math.pow(1 - t, 3)
-      const step = (now: number) => {
-        const t = Math.min(1, (now - t0) / DURATION)
-        window.scrollTo({
-          top: startY + overflow * ease(t),
-          behavior: 'instant' as ScrollBehavior,
-        })
-        if (t < 1) requestAnimationFrame(step)
-      }
-      requestAnimationFrame(step)
-    }, 180)
-  }
 
-  // 7+ options: dropdown, one row of UI regardless of count.
-  if (n > 6) {
-    const active = options.find((o) => o.value === selected)
-    return (
-      <div className="lg:max-w-[calc(100%-24.5rem)]">
-        {/* Themed dropdown — glass surface, rounded-lg (site card
-            geometry), roomy padding; icon + name in trigger and rows. */}
-        <Select value={selected} onValueChange={onSelect} open={open} onOpenChange={handleOpenChange}>
-          <SelectTrigger ref={triggerRef} className="h-[52px] w-full max-w-[320px] rounded-lg border-border-default bg-[rgba(17,17,23,0.92)] px-4 shadow-[0_4px_14px_-6px_rgba(0,0,0,0.5)] backdrop-blur-md hover:bg-[rgba(24,24,32,0.95)]">
-            <SelectValue>
-              {active && (
-                <span className="flex items-center gap-3">
-                  {active.icon && (
-                    /* eslint-disable-next-line @next/next/no-img-element */
-                    <img
-                      src={active.icon}
-                      alt=""
-                      className="h-6 w-6 shrink-0 object-contain drop-shadow-[0_4px_6px_rgba(0,0,0,0.4)]"
-                    />
-                  )}
-                  <span className={cn('text-[14px] font-semibold', uppercase && 'uppercase tracking-wide')}>
-                    {active.label}
-                  </span>
-                </span>
-              )}
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent
-            side="bottom"
-            sideOffset={6}
-            avoidCollisions={false}
-            className="max-h-80 min-w-[320px] origin-top rounded-lg border-border-default bg-[rgba(17,17,23,0.97)] p-1.5 backdrop-blur-xl data-[state=open]:duration-300 data-[state=open]:ease-out data-[state=open]:slide-in-from-top-2"
-          >
-            {options.map((o) => (
-              <SelectItem
-                key={o.value}
-                value={o.value}
-                className="rounded-md px-3 py-2.5 text-[13.5px] focus:bg-bg-raised-hover data-[state=checked]:bg-lime-tint-bg/40 data-[state=checked]:text-lime-text"
-              >
-                <span className="flex items-center gap-3">
-                  {o.icon && (
-                    /* eslint-disable-next-line @next/next/no-img-element */
-                    <img src={o.icon} alt="" className="h-5 w-5 shrink-0 object-contain" />
-                  )}
-                  <span className={cn('font-medium', uppercase && 'uppercase tracking-wide')}>{o.label}</span>
-                </span>
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-    )
-  }
 
   return (
-    <RadioGroup
-      value={selected}
-      onValueChange={onSelect}
-      className="flex flex-wrap gap-2.5 lg:max-w-[calc(100%-24.5rem)] lg:flex-nowrap lg:gap-3"
-    >
-      {options.map((o) => {
-        const on = selected === o.value
-        return (
-          <label
-            key={o.value}
-            className="block w-[122px] flex-none lg:w-auto lg:min-w-0 lg:max-w-[122px] lg:flex-1"
-          >
-            <RadioGroupItem value={o.value} className="sr-only" />
-            {/* V47b — Refined pick tile: sheen + hover lift + muted
-                lime selection glow. */}
-            <Card
+    // V53 — Below `md` the row swipes instead of wrapping onto a second line
+    // (4 platforms used to wrap 3+1, which read as a broken grid on a phone).
+    <MobileSlider activeIndex={selectedIndex} itemCount={n}>
+      <RadioGroup
+        value={selected}
+        onValueChange={onSelect}
+        className="flex gap-2.5 md:flex-wrap lg:max-w-[calc(100%-24.5rem)] lg:flex-nowrap lg:gap-3"
+      >
+        {options.map((o) => {
+          const on = selected === o.value
+          return (
+            <label
+              key={o.value}
               className={cn(
-                'group relative flex h-[76px] cursor-pointer flex-col items-center justify-center gap-1.5 overflow-hidden border-2 bg-[rgba(20,20,27,0.56)] p-2 backdrop-blur-md transition-all duration-200',
-                on
-                  ? 'border-[#ABE52BB3] shadow-[0_8px_22px_-8px_rgba(171,229,43,0.22)]'
-                  : 'border-border-default hover:-translate-y-0.5 hover:border-border-strong hover:bg-[rgba(26,26,35,0.70)] hover:shadow-[0_10px_22px_-10px_rgba(0,0,0,0.6)]',
+                'block shrink-0',
+                // Fixed width, never a % basis — see the bundle slides for why
+                // a percentage collapses to content sizing here.
+                variant === 'pill'
+                  ? 'w-auto'
+                  : 'w-[122px] lg:w-auto lg:min-w-0 lg:max-w-[122px] lg:flex-1',
               )}
             >
-              <span
-                aria-hidden
-                className="pointer-events-none absolute inset-x-0 top-0 h-1/2 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.06),transparent)]"
-              />
-              {on && (
-                <span
-                  aria-hidden
-                  className="absolute right-1.5 top-1.5 z-10 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-lime-pressed text-text-inverse"
-                >
-                  <Check className="h-2 w-2" strokeWidth={3} />
-                </span>
-              )}
-              {o.icon ? (
-                /* eslint-disable-next-line @next/next/no-img-element */
-                <img
-                  src={o.icon}
-                  alt=""
-                  className="h-8 w-8 shrink-0 object-contain drop-shadow-[0_6px_8px_rgba(0,0,0,0.45)] transition-transform duration-300 group-hover:scale-105"
-                />
-              ) : (
-                <div
-                  aria-hidden
-                  className="h-8 w-8 shrink-0 rounded-lg bg-bg-raised-hover"
-                />
-              )}
-              <span
+              <RadioGroupItem value={o.value} className="sr-only" />
+              {/* V47b — Refined pick tile: sheen + hover lift + muted
+                  lime selection glow. */}
+              <Card
                 className={cn(
-                  'max-w-full truncate text-[11px] font-semibold text-text-primary',
-                  uppercase && 'uppercase tracking-wide',
+                  'group relative flex cursor-pointer overflow-hidden border-2 bg-[rgba(20,20,27,0.56)] backdrop-blur-md transition-all duration-200',
+                  variant === 'pill'
+                    ? // Horizontal: icon + label + check on one line.
+                      'h-[52px] items-center gap-2.5 px-3.5 py-0'
+                    : 'h-[76px] flex-col items-center justify-center gap-1.5 p-2',
+                  on
+                    ? 'border-[#ABE52BB3] shadow-[0_8px_22px_-8px_rgba(171,229,43,0.22)]'
+                    : 'border-border-default hover:-translate-y-0.5 hover:border-border-strong hover:bg-[rgba(26,26,35,0.70)] hover:shadow-[0_10px_22px_-10px_rgba(0,0,0,0.6)]',
                 )}
               >
-                {o.label}
-              </span>
-            </Card>
-          </label>
-        )
-      })}
-    </RadioGroup>
+                <span
+                  aria-hidden
+                  className="pointer-events-none absolute inset-x-0 top-0 h-1/2 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.06),transparent)]"
+                />
+                {/* Tile: check floats in the corner. Pill: it's the trailing
+                    item on the line (like the reference's radio dot), so it
+                    can't overlap the label. */}
+                {on && variant === 'tile' && (
+                  <span
+                    aria-hidden
+                    className="absolute right-1.5 top-1.5 z-10 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-lime-pressed text-text-inverse"
+                  >
+                    <Check className="h-2 w-2" strokeWidth={3} />
+                  </span>
+                )}
+                {o.icon ? (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img
+                    src={o.icon}
+                    alt=""
+                    className={cn(
+                      'shrink-0 object-contain drop-shadow-[0_6px_8px_rgba(0,0,0,0.45)] transition-transform duration-300 group-hover:scale-105',
+                      variant === 'pill' ? 'h-6 w-6' : 'h-8 w-8',
+                    )}
+                  />
+                ) : (
+                  <div
+                    aria-hidden
+                    className={cn(
+                      'shrink-0 rounded-lg bg-bg-raised-hover',
+                      variant === 'pill' ? 'h-6 w-6' : 'h-8 w-8',
+                    )}
+                  />
+                )}
+                <span
+                  className={cn(
+                    'truncate font-semibold text-text-primary',
+                    variant === 'pill'
+                      ? 'text-[13px]'
+                      : 'max-w-full text-[11px]',
+                    uppercase && 'uppercase tracking-wide',
+                  )}
+                >
+                  {o.label}
+                </span>
+                {variant === 'pill' && (
+                  <span
+                    aria-hidden
+                    className={cn(
+                      'ml-1 flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full border transition-colors duration-200',
+                      on
+                        ? 'border-transparent bg-lime-pressed text-text-inverse'
+                        : 'border-border-strong bg-transparent',
+                    )}
+                  >
+                    {on && <Check className="h-2.5 w-2.5" strokeWidth={3} />}
+                  </span>
+                )}
+              </Card>
+            </label>
+          )
+        })}
+      </RadioGroup>
+    </MobileSlider>
   )
 }
 

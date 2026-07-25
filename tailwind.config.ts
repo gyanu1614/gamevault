@@ -165,6 +165,12 @@ const config: Config = {
         caption:       ['12px', { lineHeight: '1.35',  letterSpacing: '0.02em',   fontWeight: '500' }],
         mono:          ['13px', { lineHeight: '1.45',  letterSpacing: '0',        fontWeight: '400' }],
         overline:      ['12px', { lineHeight: '1.35',  letterSpacing: '0.14em',   fontWeight: '600' }],
+        // Sub-caption tier for badges, chips and dense meta rows. Added because
+        // the scale bottomed out at 12px while ~700 call sites sat at 9–11.5px:
+        // rounding those up to `caption` would have inflated every badge. Use
+        // these instead of new arbitrary text-[Npx] values.
+        label:         ['11px', { lineHeight: '1.3',   letterSpacing: '0.01em',   fontWeight: '600' }],
+        'label-sm':    ['10px', { lineHeight: '1.25',  letterSpacing: '0.04em',   fontWeight: '700' }],
       },
 
       // ── Border Radius ───────────────────────────────────────────
