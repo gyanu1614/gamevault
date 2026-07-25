@@ -20,10 +20,14 @@ create table if not exists public.early_seller_signups (
   created_at    timestamptz not null default now()
 );
 
--- One signup per email (case-insensitive). A repeat submit just updates
--- the existing row via the server action's upsert.
+-- One signup per email. A repeat submit just updates the existing row via the
+-- server action's upsert, which relies on ON CONFLICT (email) — so this index
+-- must be on the bare column, not on lower(email): Postgres only infers a
+-- conflict target from an index whose definition matches exactly. The action
+-- lowercases the address before writing, so this stays case-insensitive in
+-- practice. (See 20260724_early_seller_signups_upsert_index_fix.sql.)
 create unique index if not exists early_seller_signups_email_key
-  on public.early_seller_signups (lower(email));
+  on public.early_seller_signups (email);
 
 create index if not exists early_seller_signups_status_idx
   on public.early_seller_signups (status, created_at desc);

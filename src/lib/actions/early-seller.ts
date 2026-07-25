@@ -13,6 +13,10 @@
 import { headers } from 'next/headers'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { requireAdmin } from '@/lib/actions/admin-permissions'
+import {
+  sendEarlySellerWelcomeEmail,
+  sendEarlySellerAdminNotificationEmail,
+} from '@/lib/email'
 
 export interface EarlySellerInput {
   username: string
@@ -25,6 +29,12 @@ export interface EarlySellerInput {
 export interface EarlySellerResult {
   ok: boolean
   error?: string
+  /**
+   * Set alongside `ok: false` when the rejection reason is specifically that
+   * this address is already registered — so the form can style it as
+   * reassurance ("you're already in") rather than a hard failure.
+   */
+  alreadyOnList?: boolean
 }
 
 export type EarlySellerStatus = 'new' | 'contacted' | 'approved' | 'rejected'
@@ -72,27 +82,68 @@ export async function submitEarlySeller(
 
   try {
     const supabase = createServiceRoleClient()
-    const { error } = await (supabase as any)
-      .from('early_seller_signups')
-      .upsert(
-        {
-          username,
-          email,
-          discord: clean(input.discord, 80),
-          sells: clean(input.sells, 300),
-          note: clean(input.note, 600),
-          ip,
-          user_agent: userAgent,
-        },
-        { onConflict: 'email', ignoreDuplicates: false },
-      )
-
-    if (error) {
-      console.error('[early-seller] insert failed:', error)
-      return { ok: false, error: 'Something went wrong. Please try again.' }
+    const row = {
+      username,
+      email,
+      discord: clean(input.discord, 80),
+      sells: clean(input.sells, 300),
+      note: clean(input.note, 600),
+      ip,
+      user_agent: userAgent,
     }
 
-    return { ok: true }
+    // Insert first so a genuine duplicate surfaces as a unique violation
+    // (23505) rather than being silently absorbed by an upsert. That's what
+    // tells us to report `alreadyOnList` — and it's race-safe: two concurrent
+    // submits of the same address can't both win the insert, the loser falls
+    // through to the update below.
+    const { error: insertError } = await (supabase as any)
+      .from('early_seller_signups')
+      .insert(row)
+
+    if (!insertError) {
+      // Fire both emails, but never let them affect the signup: the row is
+      // already committed, so a Resend outage or a bad address must not turn a
+      // successful signup into an error. Awaited (not detached) because a
+      // serverless invocation can be frozen the moment the action returns,
+      // which would silently drop an in-flight request. allSettled so one
+      // failing address can't reject the other.
+      const results = await Promise.allSettled([
+        sendEarlySellerWelcomeEmail({ to: email, username }),
+        sendEarlySellerAdminNotificationEmail({
+          username,
+          email,
+          discord: row.discord,
+          sells: row.sells,
+          note: row.note,
+        }),
+      ])
+      results.forEach((r, i) => {
+        const which = i === 0 ? 'welcome' : 'admin-notification'
+        if (r.status === 'rejected') {
+          console.error(`[early-seller] ${which} email threw:`, r.reason)
+        } else if (!r.value.success) {
+          console.error(`[early-seller] ${which} email failed:`, r.value.error)
+        }
+      })
+
+      return { ok: true }
+    }
+
+    // 23505 = unique violation on the email index: this address is already on
+    // the waitlist. Reject it rather than upserting — one signup per address,
+    // and the visitor gets told instead of seeing a second "you're on the
+    // list" that implies a fresh entry.
+    if (insertError.code === '23505') {
+      return {
+        ok: false,
+        alreadyOnList: true,
+        error: 'This email is already on the waitlist — you’re in. No need to sign up again.',
+      }
+    }
+
+    console.error('[early-seller] insert failed:', insertError)
+    return { ok: false, error: 'Something went wrong. Please try again.' }
   } catch (err) {
     console.error('[early-seller] unexpected error:', err)
     return { ok: false, error: 'Something went wrong. Please try again.' }

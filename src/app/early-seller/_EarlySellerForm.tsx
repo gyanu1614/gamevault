@@ -10,6 +10,7 @@
 import { useState, useTransition } from 'react'
 import Link from 'next/link'
 import { CheckCircle2, Loader2, ArrowRight } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import { GlassInput, GlassTextarea } from '@/components/ui/glass-input'
 import { submitEarlySeller } from '@/lib/actions/early-seller'
 
@@ -19,6 +20,9 @@ export function EarlySellerForm() {
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
   const [done, setDone] = useState(false)
+  // Repeat submit of an address already on the list — same success state, but
+  // it says so rather than implying a fresh signup.
+  const [alreadyOnList, setAlreadyOnList] = useState(false)
 
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -33,8 +37,14 @@ export function EarlySellerForm() {
     }
     startTransition(async () => {
       const res = await submitEarlySeller(payload)
-      if (res.ok) setDone(true)
-      else setError(res.error ?? 'Something went wrong.')
+      if (res.ok) {
+        setDone(true)
+      } else {
+        // A duplicate address is a rejection, but not a failure the visitor
+        // needs to fix — flagged so it renders calm rather than red.
+        setAlreadyOnList(!!res.alreadyOnList)
+        setError(res.error ?? 'Something went wrong.')
+      }
     })
   }
 
@@ -111,7 +121,14 @@ export function EarlySellerForm() {
       </div>
 
       {error && (
-        <p className="mt-4 text-[13px] font-medium text-red-400">{error}</p>
+        <p
+          className={cn(
+            'mt-4 text-[13px] font-medium',
+            alreadyOnList ? 'text-[#F5C451]' : 'text-red-400',
+          )}
+        >
+          {error}
+        </p>
       )}
 
       <button
