@@ -47,6 +47,15 @@
        transparent PNG so the layer renders cleanly.
    ─────────────────────────────────────────────────────────── */
 :root {
+  /* Y coordinate where the fixed mobile navbar ends — i.e. where any chrome
+     that must sit directly BELOW it starts (game sub-nav, mobile dropdown
+     panels and their scrims, the account drawer).
+     The mobile bar is 60px tall and rides at --beta-banner-offset, which
+     BetaBanner keeps updated as the banner scrolls away (0 when there's no
+     banner). Anything that hardcodes 60px instead of this var ends up hidden
+     UNDER the navbar as soon as an announcement banner is mounted. */
+  --navbar-bottom: calc(60px + var(--beta-banner-offset, 0px));
+
   --color-glow-violet:      #1E1636;
   --color-glow-violet-soft: #16112A;
   --color-bg-top:           #100C18;

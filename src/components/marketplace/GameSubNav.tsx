@@ -43,7 +43,9 @@ export default function GameSubNav({
 }: GameSubNavProps) {
   const router = useRouter()
   // Hide-on-scroll: slides up with the primary navbar (shared signal).
-  const { hidden: scrollHidden } = useScrollDirection({ revealAt: 40 })
+  // `hideBelow: 768` matches this bar's own `max-md:fixed` treatment — above
+  // `md` it sits in normal flow and must stay put.
+  const { hidden: scrollHidden } = useScrollDirection({ revealAt: 40, hideBelow: 768 })
   // V14m — Track which tab is mid-navigation so we can show a small spinner
   // on it (instead of the whole UI sitting silent until the new page paints).
   const [isPendingNav, startNavTransition] = useTransition()
@@ -105,10 +107,17 @@ export default function GameSubNav({
       <motion.div
         initial={false}
         /* Slide up in lockstep with the primary navbar so the two bars read
-           as ONE unit: travel the sub-nav's own height PLUS the 60px navbar
-           above it, so it fully clears the top on scroll-down (mobile only —
-           the transform is harmless on desktop where the bar isn't fixed). */
-        animate={{ y: scrollHidden ? 'calc(-100% - 60px)' : '0%' }}
+           as ONE unit: travel the sub-nav's own height PLUS the navbar above
+           it, so it fully clears the top on scroll-down. Mobile only — and
+           enforced by `hideBelow` on the hook above, NOT by `position`: a
+           transform still moves the element visually even in normal flow, so
+           without that gate this bar visibly jumped on desktop too.
+
+           The 120px overshoots the navbar's 60px on purpose: with a banner
+           mounted this bar starts lower, and framer can't interpolate a
+           calc() containing var(--navbar-bottom). Overshooting is invisible
+           (it's off-screen either way) and guarantees a full clear. */
+        animate={{ y: scrollHidden ? 'calc(-100% - 120px)' : '0%' }}
         transition={{ type: 'spring', stiffness: 420, damping: 40, mass: 0.8 }}
         className={cn(
           'pointer-events-auto w-full max-w-fit',
@@ -122,7 +131,7 @@ export default function GameSubNav({
           // taller tab buttons below (py-1 -> py-2.5 for >=36px targets)
           // so the pill's overall height barely grows.
           'px-2 py-1 sm:px-2.5 sm:py-2',
-          'max-md:fixed max-md:inset-x-0 max-md:top-[60px] max-md:z-[45] max-md:max-w-none max-md:!rounded-none max-md:!border-x-0 max-md:!border-t-0 max-md:border-b max-md:border-white/[0.08] max-md:px-2 max-md:py-2 max-md:!bg-[#0b0f0c]',
+          'max-md:fixed max-md:inset-x-0 max-md:top-[var(--navbar-bottom)] max-md:z-[45] max-md:max-w-none max-md:!rounded-none max-md:!border-x-0 max-md:!border-t-0 max-md:border-b max-md:border-white/[0.08] max-md:px-2 max-md:py-2 max-md:!bg-[#0b0f0c]',
         )}
         style={{ backgroundColor: 'rgba(28, 28, 37, 0.30)' }}
       >

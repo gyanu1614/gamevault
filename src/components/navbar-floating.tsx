@@ -345,7 +345,16 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
   // top-0. Hide-on-scroll: the whole bar slides up on scroll-down and
   // back on scroll-up (good-mobile-site behaviour), via the shared
   // useScrollDirection signal.
-  const { hidden: scrollHidden, scrolled: scrolledNative } = useScrollDirection({ revealAt: 40 })
+  //
+  // `hideBelow: 1024` keeps the slide-away on the mobile bar only (below `lg`,
+  // where the pill collapses into the fixed 60px app-shell bar). On desktop the
+  // navbar is permanent — it still morphs to the full-width bar via `scrolled`,
+  // it just never leaves. The hide is a Framer inline transform, so this can't
+  // be expressed as a `max-lg:` utility; it has to be gated in JS.
+  const { hidden: scrollHidden, scrolled: scrolledNative } = useScrollDirection({
+    revealAt: 40,
+    hideBelow: 1024,
+  })
   // V19/P15.b — `forceScrolled` short-circuits the scroll listener so
   // pages like /sell/* can lock the navbar in its full-width bar mode
   // even at scrollY=0. Everywhere else falls through to live scroll.
@@ -1118,9 +1127,9 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                         <div
                           aria-hidden
                           onClick={() => setNotificationsOpen(false)}
-                          className="animate-fade-in fixed inset-0 top-[60px] bg-black/60 sm:hidden"
+                          className="animate-fade-in fixed inset-0 top-[var(--navbar-bottom)] bg-black/60 sm:hidden"
                         />
-                        <div className="fixed inset-x-0 top-[60px] sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-[27px] sm:w-[480px] sm:max-w-[92vw] animate-in fade-in-0 sm:zoom-in-95 slide-in-from-top-2 duration-200 max-sm:duration-[250ms]">
+                        <div className="fixed inset-x-0 top-[var(--navbar-bottom)] sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-[27px] sm:w-[480px] sm:max-w-[92vw] animate-in fade-in-0 sm:zoom-in-95 slide-in-from-top-2 duration-200 max-sm:duration-[250ms]">
                           {/* V61 — Marketplace glass panel (was flat black):
                               near-opaque dark surface + top sheen, roomier
                               type and spacing. Capped to the dynamic viewport
@@ -1266,9 +1275,9 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                         <div
                           aria-hidden
                           onClick={() => setActivityOpen(false)}
-                          className="animate-fade-in fixed inset-0 top-[60px] bg-black/60 sm:hidden"
+                          className="animate-fade-in fixed inset-0 top-[var(--navbar-bottom)] bg-black/60 sm:hidden"
                         />
-                        <div className="fixed inset-x-0 top-[60px] sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-[27px] sm:w-[480px] sm:max-w-[92vw] animate-in fade-in-0 sm:zoom-in-95 slide-in-from-top-2 duration-200 max-sm:duration-[250ms]">
+                        <div className="fixed inset-x-0 top-[var(--navbar-bottom)] sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-[27px] sm:w-[480px] sm:max-w-[92vw] animate-in fade-in-0 sm:zoom-in-95 slide-in-from-top-2 duration-200 max-sm:duration-[250ms]">
                           {/* V61 — Same glass panel as Notifications. */}
                           <div className="relative flex max-h-[calc(100dvh-7rem)] flex-col overflow-hidden rounded-lg border border-[#A3E635]/[0.12] bg-[linear-gradient(180deg,#14241A_0%,#0E1611_100%)] shadow-[0_24px_48px_-12px_rgba(0,0,0,0.85)] p-5 max-sm:rounded-none max-sm:rounded-b-2xl max-sm:border-x-0 max-sm:border-t-0 max-sm:max-h-[calc(100dvh-60px-env(safe-area-inset-bottom)-16px)]">
                             <span aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-16 bg-[linear-gradient(to_bottom,rgba(163,230,53,0.06),transparent)]" />
@@ -1380,9 +1389,9 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                       <div
                         aria-hidden
                         onClick={() => setUserMenuOpen(false)}
-                        className="animate-fade-in fixed inset-0 top-[60px] bg-black/60 sm:hidden"
+                        className="animate-fade-in fixed inset-0 top-[var(--navbar-bottom)] bg-black/60 sm:hidden"
                       />
-                      <div className="fixed inset-x-0 top-[60px] sm:absolute sm:inset-x-auto sm:-right-6 sm:top-full sm:mt-[25px] sm:w-[360px] sm:max-w-[92vw] animate-in fade-in-0 sm:zoom-in-95 slide-in-from-top-2 duration-200 max-sm:duration-[250ms]">
+                      <div className="fixed inset-x-0 top-[var(--navbar-bottom)] sm:absolute sm:inset-x-auto sm:-right-6 sm:top-full sm:mt-[25px] sm:w-[360px] sm:max-w-[92vw] animate-in fade-in-0 sm:zoom-in-95 slide-in-from-top-2 duration-200 max-sm:duration-[250ms]">
                         {/* V61 — Marketplace glass panel: near-opaque dark
                             surface + top sheen, wider (360px) with roomier
                             rows so the menu reads as a proper panel, not a
@@ -2353,18 +2362,24 @@ function CategoryDropdown({
                 fewer games but the popover doesn't shrink — the empty
                 lower area absorbs visually instead of changing layout
                 when you hover between tabs. */}
-            {/* V21/P7.z — Translucent navbar-matched surface instead of
-                flat black, so backdrop-blur actually engages and the
-                dropdown reads as glass over the page (same token as the
-                search panel). */}
+            {/* V53 — OPAQUE surface. This was rgba(10,10,15,0.92) + blur to
+                read as glass, but the 8% that came through was enough to show
+                the hero headline and cover art straight through the menu, and
+                the backdrop-blur that was supposed to mush it isn't engaging
+                here (the menu is portalled beneath framer-transformed navbar
+                ancestors, which resets the backdrop root). Rather than fight
+                the backdrop root, the fill is now solid — transparency becomes
+                impossible regardless of what's behind it. blur/saturate
+                dropped with it: both are inert once the fill is opaque (same
+                reasoning as the mobile menu surface above). */}
             <div
               // data-dropdown marks the portalled content as "inside" for the
               // document-level outside-tap handler in Navbar — taps/clicks
               // inside the mega-menu stay open, anywhere else dismisses it
               // (the touch counterpart of the mouseleave debounce).
               data-dropdown
-              className="w-[min(960px,92vw)] overflow-hidden rounded-2xl border border-white/10 shadow-2xl backdrop-blur-2xl backdrop-saturate-150"
-              style={{ backgroundColor: 'rgba(10, 10, 15, 0.92)' }}
+              className="w-[min(960px,92vw)] overflow-hidden rounded-2xl border border-white/10 shadow-2xl"
+              style={{ backgroundColor: '#0B0B11' }}
             >
               {/* V21/P7.aa — min-h on the GRID (not the card) so the left
                   "Popular" column's background + right border stretch the
@@ -2890,14 +2905,16 @@ function GlobalSearch({
         {open && (
           <div
             // CSS entrance, not framer (rAF-stall class).
-            // V21/P7.t — Translucent navbar-matched surface (not flat
-            // black). Width tracks the bar: full when expanded, fixed
-            // when collapsed.
+            // V53 — Opaque, matching the mega-menu fix above: this sits in the
+            // same transformed navbar subtree, so its backdrop-blur doesn't
+            // engage either and the 6% it let through showed page content
+            // behind the results. Width tracks the bar: full when expanded,
+            // fixed when collapsed.
             className={cn(
-              'animate-fade-in absolute top-full mt-2 overflow-hidden rounded-xl border border-white/[0.12] shadow-[0_16px_50px_rgba(0,0,0,0.6)] backdrop-blur-2xl backdrop-saturate-150',
+              'animate-fade-in absolute top-full mt-2 overflow-hidden rounded-xl border border-white/[0.12] shadow-[0_16px_50px_rgba(0,0,0,0.6)]',
               expanded ? 'inset-x-0' : 'right-0 w-[440px]',
             )}
-            style={{ backgroundColor: 'rgba(10, 10, 15, 0.94)' }}
+            style={{ backgroundColor: '#0B0B11' }}
           >
             <div className="max-h-[420px] overflow-y-auto p-1.5">
               {searching && !hasResults ? (
