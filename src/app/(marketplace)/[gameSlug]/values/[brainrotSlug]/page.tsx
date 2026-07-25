@@ -50,6 +50,16 @@ type MutationRow = {
   is_verified_variant: boolean
 }
 
+type TradePriceRow = {
+  market_value_usd: number | string | null
+  market_low_usd: number | string | null
+  market_high_usd: number | string | null
+  confidence_label: string
+  external_sample_size: number
+  price_updated_at: string | null
+  is_trade_ready: boolean
+}
+
 function asNumber(value: number | string | null | undefined): number | null {
   if (value == null) return null
   const parsed = Number(value)
@@ -70,8 +80,11 @@ function formatMoney(value: number | string | null | undefined): string | null {
 function formatIncome(value: number | string | null | undefined): string {
   const amount = asNumber(value)
   if (amount == null) return 'Unknown'
-  return `$${new Intl.NumberFormat('en-US', {
-    maximumFractionDigits: 0,
+
+  return `${new Intl.NumberFormat('en-US', {
+    notation: 'compact',
+    compactDisplay: 'short',
+    maximumFractionDigits: 1,
   }).format(amount)}/s`
 }
 
@@ -100,6 +113,27 @@ async function getBrainrot(slug: string): Promise<BrainrotRow | null> {
   }
 
   return (data as BrainrotRow | null) ?? null
+}
+
+async function getDefaultTradePrice(
+  brainrotId: string,
+): Promise<TradePriceRow | null> {
+  const supabase = await createClient()
+  const { data, error } = await (supabase as any)
+    .from('sab_trade_price_catalog')
+    .select(
+      'market_value_usd,market_low_usd,market_high_usd,confidence_label,external_sample_size,price_updated_at,is_trade_ready',
+    )
+    .eq('brainrot_id', brainrotId)
+    .eq('mutation_slug', 'default')
+    .maybeSingle()
+
+  if (error) {
+    console.error('Unable to load default mutation market price:', error)
+    return null
+  }
+
+  return (data as TradePriceRow | null) ?? null
 }
 
 async function getMutations(brainrotId: string): Promise<MutationOption[]> {
@@ -173,17 +207,40 @@ export default async function BrainrotValuePage({ params }: PageProps) {
   const brainrot = await getBrainrot(brainrotSlug)
   if (!brainrot) notFound()
 
-  const [mutations, relatedBrainrots] = await Promise.all([
+  const [mutations, relatedBrainrots, defaultTradePrice] = await Promise.all([
     getMutations(brainrot.id),
     getRelatedBrainrots(brainrot),
+    getDefaultTradePrice(brainrot.id),
   ])
 
-  const displayPrice = formatMoney(brainrot.display_price_usd)
+  const hasTradeReadyMarketPrice =
+    defaultTradePrice?.is_trade_ready === true &&
+    asNumber(defaultTradePrice.market_value_usd) != null
+
+  const displayPrice = formatMoney(
+    hasTradeReadyMarketPrice
+      ? defaultTradePrice.market_value_usd
+      : brainrot.display_price_usd,
+  )
   const cheapestPrice = formatMoney(brainrot.cheapest_active_price_usd)
-  const marketValue = formatMoney(brainrot.market_value_usd)
+  const marketValue = formatMoney(
+    hasTradeReadyMarketPrice
+      ? defaultTradePrice.market_value_usd
+      : brainrot.market_value_usd,
+  )
+  const marketLow = formatMoney(defaultTradePrice?.market_low_usd)
+  const marketHigh = formatMoney(defaultTradePrice?.market_high_usd)
+  const marketSampleSize = defaultTradePrice?.external_sample_size ?? 0
+  const effectiveConfidenceLabel = hasTradeReadyMarketPrice
+    ? defaultTradePrice.confidence_label
+    : brainrot.confidence_label
   const quickSale = formatMoney(brainrot.quick_sale_usd)
   const patientSale = formatMoney(brainrot.patient_sale_usd)
-  const updatedLabel = formatDate(brainrot.price_updated_at)
+  const updatedLabel = formatDate(
+    hasTradeReadyMarketPrice
+      ? defaultTradePrice.price_updated_at
+      : brainrot.price_updated_at,
+  )
 
   const marketplaceHref = `/steal-a-brainrot/buy-items?search=${encodeURIComponent(brainrot.name)}`
   const canonicalPath = `/steal-a-brainrot/values/${brainrot.slug}`
@@ -250,7 +307,7 @@ export default async function BrainrotValuePage({ params }: PageProps) {
                   {brainrot.obtainability}
                 </span>
                 <span className="rounded-full border border-border-subtle bg-bg-overlay px-3 py-1 text-xs font-semibold capitalize text-text-secondary">
-                  {brainrot.confidence_label} confidence
+                  {effectiveConfidenceLabel} confidence
                 </span>
               </div>
 
@@ -263,12 +320,27 @@ export default async function BrainrotValuePage({ params }: PageProps) {
               </p>
 
               <div className="mt-7 rounded-2xl border border-border-subtle bg-bg-overlay p-5 sm:p-6">
-                <p className="text-sm font-semibold text-text-tertiary">Current DropMarket price</p>
+                <p className="text-sm font-semibold text-text-tertiary">Current Market Price</p>
                 {displayPrice ? (
-                  <div className="mt-2 flex flex-wrap items-end gap-x-3 gap-y-1">
-                    <p className="text-3xl font-extrabold text-text-primary">{displayPrice}</p>
-                    <p className="pb-1 text-sm text-text-secondary">{brainrot.display_price_label}</p>
-                  </div>
+                  <>
+                    <div className="mt-2 flex flex-wrap items-end gap-x-3 gap-y-1">
+                      <p className="text-3xl font-extrabold text-text-primary">{displayPrice}</p>
+                      <p className="pb-1 text-sm text-text-secondary">
+                        Estimated from current comparable listings
+                      </p>
+                    </div>
+
+                    {hasTradeReadyMarketPrice && (
+                      <p className="mt-3 text-sm text-text-tertiary">
+                        {marketLow && marketHigh
+                          ? `Typical market range ${marketLow}–${marketHigh}`
+                          : 'Current comparable market estimate'}
+                        {marketSampleSize > 0
+                          ? ` · Based on ${marketSampleSize.toLocaleString()} current listings`
+                          : ''}
+                      </p>
+                    )}
+                  </>
                 ) : (
                   <p className="mt-2 text-xl font-bold text-text-primary">Not enough verified market data</p>
                 )}
@@ -316,12 +388,12 @@ export default async function BrainrotValuePage({ params }: PageProps) {
           <section className="rounded-2xl border border-border-subtle bg-bg-overlay p-5 sm:p-6">
             <h2 className="text-xl font-bold text-text-primary">{brainrot.name} market value</h2>
             <p className="mt-3 leading-7 text-text-secondary">
-              DropMarket separates the cheapest current listing from the estimated market value. Live listing prices show what buyers can purchase now, while market value uses recent completed sales when enough verified data exists.
+              Current Market Price is estimated from recent comparable marketplace listings and completed sales when available. Extreme prices, bundles, and unclear variants are excluded.
             </p>
 
             <div className="mt-6 grid gap-3 sm:grid-cols-2">
               <ValueRow label="Cheapest active listing" value={cheapestPrice ?? 'No active listings'} />
-              <ValueRow label="Estimated market value" value={marketValue ?? 'Insufficient data'} />
+              <ValueRow label="Current market price" value={marketValue ?? 'Insufficient data'} />
               <ValueRow label="Quick-sale estimate" value={quickSale ?? 'Insufficient data'} />
               <ValueRow label="Patient-sale estimate" value={patientSale ?? 'Insufficient data'} />
             </div>
@@ -366,7 +438,7 @@ export default async function BrainrotValuePage({ params }: PageProps) {
               <h2 className="font-bold">Pricing integrity</h2>
             </div>
             <p className="mt-3 text-sm leading-6 text-text-secondary">
-              Test listings, cancelled orders, refunds, disputes, and unverified mappings are excluded from DropMarket value calculations.
+              Extreme prices, bundles, account sales, unclear mutations, test listings, cancelled orders, refunds, disputes, and unverified mappings are excluded from market calculations.
             </p>
           </section>
         </aside>

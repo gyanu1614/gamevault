@@ -14,6 +14,13 @@ interface PageProps {
   params: Promise<{ gameSlug: string }>
 }
 
+type DirectoryTradePriceRow = {
+  brainrot_id: string
+  market_value_usd: number | string | null
+  confidence_label: string | null
+  is_trade_ready: boolean
+}
+
 export async function generateMetadata({
   params,
 }: PageProps): Promise<Metadata> {
@@ -41,19 +48,65 @@ export async function generateMetadata({
 async function getBrainrots(): Promise<BrainrotDirectoryItem[]> {
   const supabase = await createClient()
 
-  const { data, error } = await (supabase as any)
-    .from('sab_brainrot_market_catalog')
-    .select(
-      'id,name,slug,rarity,obtainability,base_income_per_second,image_url,display_price_usd,display_price_label,display_price_source,confidence_label',
-    )
-    .order('name', { ascending: true })
+  const [brainrotResult, priceResult] = await Promise.all([
+    (supabase as any)
+      .from('sab_brainrot_market_catalog')
+      .select(
+        'id,name,slug,rarity,obtainability,base_income_per_second,image_url,display_price_usd,display_price_label,display_price_source,confidence_label',
+      )
+      .order('name', { ascending: true }),
 
-  if (error) {
-    console.error('Unable to load SAB values directory:', error)
+    (supabase as any)
+      .from('sab_trade_price_catalog')
+      .select(
+        'brainrot_id,market_value_usd,confidence_label,is_trade_ready',
+      )
+      .eq('mutation_slug', 'default')
+      .eq('is_trade_ready', true),
+  ])
+
+  if (brainrotResult.error) {
+    console.error(
+      'Unable to load SAB values directory:',
+      brainrotResult.error,
+    )
     return []
   }
 
-  return (data ?? []) as BrainrotDirectoryItem[]
+  if (priceResult.error) {
+    console.error(
+      'Unable to load SAB directory market prices:',
+      priceResult.error,
+    )
+  }
+
+  const priceByBrainrot = new Map(
+    ((priceResult.data ?? []) as DirectoryTradePriceRow[])
+      .filter(
+        (row) =>
+          row.is_trade_ready &&
+          row.market_value_usd != null &&
+          Number.isFinite(Number(row.market_value_usd)),
+      )
+      .map((row) => [row.brainrot_id, row]),
+  )
+
+  return (
+    (brainrotResult.data ?? []) as BrainrotDirectoryItem[]
+  ).map((brainrot) => {
+    const price = priceByBrainrot.get(brainrot.id)
+
+    if (!price) return brainrot
+
+    return {
+      ...brainrot,
+      display_price_usd: Number(price.market_value_usd),
+      display_price_label: 'Current Market Price',
+      display_price_source: 'verified_market_estimate',
+      confidence_label:
+        price.confidence_label ?? brainrot.confidence_label,
+    }
+  })
 }
 
 export default async function BrainrotValuesPage({ params }: PageProps) {

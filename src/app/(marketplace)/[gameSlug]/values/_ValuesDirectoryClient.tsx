@@ -46,8 +46,10 @@ function formatIncome(value: number | string | null): string {
   const amount = asNumber(value)
   if (amount == null) return 'Unknown'
 
-  return `$${new Intl.NumberFormat('en-US', {
-    maximumFractionDigits: 0,
+  return `${new Intl.NumberFormat('en-US', {
+    notation: 'compact',
+    compactDisplay: 'short',
+    maximumFractionDigits: 1,
   }).format(amount)}/s`
 }
 
@@ -277,7 +279,7 @@ export default function ValuesDirectoryClient({
                   <div className="mt-3 border-t border-border-subtle pt-3">
                     {displayPrice ? (
                       <p className="text-sm font-bold text-text-primary">
-                        {brainrot.display_price_label} {displayPrice}
+                        Current Market Price {displayPrice}
                       </p>
                     ) : (
                       <p className="text-xs leading-5 text-text-tertiary">

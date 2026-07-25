@@ -58,3 +58,6 @@ OldProgress/
 .claude/
 .next-check/
 design-refs/
+
+data/sab-market-imports/*.csv
+!data/sab-market-imports/template.csv

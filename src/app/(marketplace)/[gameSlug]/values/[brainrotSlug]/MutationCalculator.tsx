@@ -22,8 +22,11 @@ interface MutationCalculatorProps {
 
 function formatIncome(value: number | null): string {
   if (value == null || !Number.isFinite(value)) return 'Unknown'
-  return `$${new Intl.NumberFormat('en-US', {
-    maximumFractionDigits: 0,
+
+  return `${new Intl.NumberFormat('en-US', {
+    notation: 'compact',
+    compactDisplay: 'short',
+    maximumFractionDigits: 1,
   }).format(value)}/s`
 }
 
