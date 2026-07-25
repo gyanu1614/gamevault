@@ -53,6 +53,13 @@ function formatIncome(value: number | string | null): string {
   }).format(amount)}/s`
 }
 
+function formatConfidence(value: string): string {
+  if (value === 'high') return 'High confidence'
+  if (value === 'medium') return 'Medium confidence'
+  if (value === 'low') return 'Low confidence'
+  return 'Estimate'
+}
+
 function compareIncome(
   a: BrainrotDirectoryItem,
   b: BrainrotDirectoryItem,
@@ -278,9 +285,14 @@ export default function ValuesDirectoryClient({
 
                   <div className="mt-3 border-t border-border-subtle pt-3">
                     {displayPrice ? (
-                      <p className="text-sm font-bold text-text-primary">
-                        Current Market Price {displayPrice}
-                      </p>
+                      <>
+                        <p className="text-sm font-bold text-text-primary">
+                          Average Current Market Price {displayPrice}
+                        </p>
+                        <p className="mt-1 text-[11px] font-medium text-text-tertiary">
+                          {formatConfidence(brainrot.confidence_label)}
+                        </p>
+                      </>
                     ) : (
                       <p className="text-xs leading-5 text-text-tertiary">
                         Not enough verified market data

@@ -518,6 +518,20 @@ async function main() {
       );
 
       console.log(JSON.stringify(response.result, null, 2));
+
+      if (response.publication) {
+        console.log(
+          "Publication:",
+          JSON.stringify(response.publication, null, 2),
+        );
+      }
+
+      if (response.revalidation) {
+        console.log(
+          "Revalidation:",
+          JSON.stringify(response.revalidation, null, 2),
+        );
+      }
     }
   }
 

@@ -120,7 +120,7 @@ async function getDefaultTradePrice(
 ): Promise<TradePriceRow | null> {
   const supabase = await createClient()
   const { data, error } = await (supabase as any)
-    .from('sab_trade_price_catalog')
+    .from('sab_public_price_catalog')
     .select(
       'market_value_usd,market_low_usd,market_high_usd,confidence_label,external_sample_size,price_updated_at,is_trade_ready',
     )
@@ -213,32 +213,32 @@ export default async function BrainrotValuePage({ params }: PageProps) {
     getDefaultTradePrice(brainrot.id),
   ])
 
-  const hasTradeReadyMarketPrice =
-    defaultTradePrice?.is_trade_ready === true &&
-    asNumber(defaultTradePrice.market_value_usd) != null
+  const hasPublicMarketPrice =
+    defaultTradePrice != null &&
+    asNumber(defaultTradePrice?.market_value_usd) != null
 
   const displayPrice = formatMoney(
-    hasTradeReadyMarketPrice
-      ? defaultTradePrice.market_value_usd
+    hasPublicMarketPrice
+      ? defaultTradePrice?.market_value_usd
       : brainrot.display_price_usd,
   )
   const cheapestPrice = formatMoney(brainrot.cheapest_active_price_usd)
   const marketValue = formatMoney(
-    hasTradeReadyMarketPrice
-      ? defaultTradePrice.market_value_usd
+    hasPublicMarketPrice
+      ? defaultTradePrice?.market_value_usd
       : brainrot.market_value_usd,
   )
   const marketLow = formatMoney(defaultTradePrice?.market_low_usd)
   const marketHigh = formatMoney(defaultTradePrice?.market_high_usd)
   const marketSampleSize = defaultTradePrice?.external_sample_size ?? 0
-  const effectiveConfidenceLabel = hasTradeReadyMarketPrice
-    ? defaultTradePrice.confidence_label
+  const effectiveConfidenceLabel = hasPublicMarketPrice
+    ? defaultTradePrice?.confidence_label
     : brainrot.confidence_label
   const quickSale = formatMoney(brainrot.quick_sale_usd)
   const patientSale = formatMoney(brainrot.patient_sale_usd)
   const updatedLabel = formatDate(
-    hasTradeReadyMarketPrice
-      ? defaultTradePrice.price_updated_at
+    hasPublicMarketPrice
+      ? defaultTradePrice?.price_updated_at
       : brainrot.price_updated_at,
   )
 
@@ -330,15 +330,22 @@ export default async function BrainrotValuePage({ params }: PageProps) {
                       </p>
                     </div>
 
-                    {hasTradeReadyMarketPrice && (
-                      <p className="mt-3 text-sm text-text-tertiary">
-                        {marketLow && marketHigh
-                          ? `Typical market range ${marketLow}–${marketHigh}`
-                          : 'Current comparable market estimate'}
-                        {marketSampleSize > 0
-                          ? ` · Based on ${marketSampleSize.toLocaleString()} current listings`
-                          : ''}
-                      </p>
+                    {hasPublicMarketPrice && (
+                      <>
+                        <p className="mt-3 text-sm text-text-tertiary">
+                          {marketLow && marketHigh
+                            ? `Typical market range ${marketLow}–${marketHigh}`
+                            : 'Current comparable market estimate'}
+                          {marketSampleSize > 0
+                            ? ` · Based on ${marketSampleSize.toLocaleString()} current listings`
+                            : ''}
+                        </p>
+                        {defaultTradePrice?.is_trade_ready !== true && (
+                          <p className="mt-2 text-xs text-text-tertiary">
+                            Display estimate only · Cash trade verdict requires stronger evidence
+                          </p>
+                        )}
+                      </>
                     )}
                   </>
                 ) : (
@@ -428,7 +435,7 @@ export default async function BrainrotValuePage({ params }: PageProps) {
               <StatRow label="Active listings" value={brainrot.active_listing_count.toLocaleString()} />
               <StatRow label="Completed sales" value={brainrot.completed_sale_count.toLocaleString()} />
               <StatRow label="Unique sellers" value={brainrot.unique_seller_count.toLocaleString()} />
-              <StatRow label="Confidence" value={brainrot.confidence_label} capitalize />
+              <StatRow label="Confidence" value={effectiveConfidenceLabel} capitalize />
             </dl>
           </section>
 

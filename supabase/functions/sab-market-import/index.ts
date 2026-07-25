@@ -74,6 +74,9 @@ async function revalidateMarketPages():
   const revalidateSecret = Deno.env.get(
     "SAB_MARKET_REVALIDATE_SECRET",
   );
+  const vercelBypassSecret = Deno.env.get(
+    "VERCEL_AUTOMATION_BYPASS_SECRET",
+  );
 
   if (!revalidateUrl || !revalidateSecret) {
     return {
@@ -85,12 +88,19 @@ async function revalidateMarketPages():
   }
 
   try {
+    const headers: Record<string, string> = {
+      "content-type": "application/json",
+      "x-revalidate-secret": revalidateSecret,
+    };
+
+    if (vercelBypassSecret) {
+      headers["x-vercel-protection-bypass"] =
+        vercelBypassSecret;
+    }
+
     const response = await fetch(revalidateUrl, {
       method: "POST",
-      headers: {
-        "content-type": "application/json",
-        "x-revalidate-secret": revalidateSecret,
-      },
+      headers,
       body: JSON.stringify({
         reason: "sab-market-import",
       }),

@@ -57,12 +57,11 @@ async function getBrainrots(): Promise<BrainrotDirectoryItem[]> {
       .order('name', { ascending: true }),
 
     (supabase as any)
-      .from('sab_trade_price_catalog')
+      .from('sab_public_price_catalog')
       .select(
         'brainrot_id,market_value_usd,confidence_label,is_trade_ready',
       )
-      .eq('mutation_slug', 'default')
-      .eq('is_trade_ready', true),
+      .eq('mutation_slug', 'default'),
   ])
 
   if (brainrotResult.error) {
@@ -84,7 +83,6 @@ async function getBrainrots(): Promise<BrainrotDirectoryItem[]> {
     ((priceResult.data ?? []) as DirectoryTradePriceRow[])
       .filter(
         (row) =>
-          row.is_trade_ready &&
           row.market_value_usd != null &&
           Number.isFinite(Number(row.market_value_usd)),
       )
@@ -101,8 +99,8 @@ async function getBrainrots(): Promise<BrainrotDirectoryItem[]> {
     return {
       ...brainrot,
       display_price_usd: Number(price.market_value_usd),
-      display_price_label: 'Current Market Price',
-      display_price_source: 'verified_market_estimate',
+      display_price_label: 'Average Current Market Price',
+      display_price_source: 'public_market_estimate',
       confidence_label:
         price.confidence_label ?? brainrot.confidence_label,
     }

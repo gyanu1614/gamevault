@@ -63,6 +63,7 @@ export type CalculatorPrice = {
   confidenceLabel: string
   sampleSize: number
   priceUpdatedAt: string | null
+  isTradeReady: boolean
 }
 
 interface ValueCalculatorClientProps {
@@ -602,6 +603,11 @@ export default function ValueCalculatorClient({
                         ? ` · Based on ${selectedPrice.sampleSize.toLocaleString()} current listings`
                         : ''}
                     </p>
+                    {!selectedPrice.isTradeReady && (
+                      <p className="mt-2 text-xs text-text-tertiary">
+                        Display estimate only · Cash trade verdict requires stronger evidence
+                      </p>
+                    )}
                   </>
                 ) : (
                   <>

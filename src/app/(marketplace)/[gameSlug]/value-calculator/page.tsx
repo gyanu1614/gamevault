@@ -100,11 +100,10 @@ async function getAllCalculatorPrices(
 
   while (true) {
     const { data, error } = await (supabase as any)
-      .from('sab_trade_price_catalog')
+      .from('sab_public_price_catalog')
       .select(
         'brainrot_id,mutation_id,market_value_usd,market_low_usd,market_high_usd,confidence_label,external_sample_size,price_updated_at,is_trade_ready',
       )
-      .eq('is_trade_ready', true)
       .range(from, from + pageSize - 1)
 
     if (error) {
@@ -228,7 +227,7 @@ async function getCalculatorData(): Promise<{
     .map((row): CalculatorPrice | null => {
       const marketValueUsd = asNumber(row.market_value_usd)
 
-      if (!row.is_trade_ready || marketValueUsd == null) {
+      if (marketValueUsd == null) {
         return null
       }
 
@@ -244,6 +243,7 @@ async function getCalculatorData(): Promise<{
           row.confidence_label ?? 'insufficient',
         sampleSize: row.external_sample_size ?? 0,
         priceUpdatedAt: row.price_updated_at,
+        isTradeReady: row.is_trade_ready,
       }
     })
     .filter((row): row is CalculatorPrice => row !== null)
