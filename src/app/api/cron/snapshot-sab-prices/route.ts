@@ -10,6 +10,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { pingIndexNow } from '@/lib/seo/indexnow'
 
 // Must be set in environment variables. No fallback — fail closed if unset
 // so a missing CRON_SECRET can never be triggered with a known default token.
@@ -39,10 +40,42 @@ export async function GET(request: NextRequest) {
     const capturedCount = typeof data === 'number' ? data : 0
     console.log(`✅ Captured ${capturedCount} SAB price snapshot rows`)
 
+    // Freshness signal: now that today's prices are captured, ping IndexNow so
+    // Bing/Yandex (+ ChatGPT search, which reads Bing's index) re-crawl the SAB
+    // value pages the same day they change. This makes our "updated daily" claim
+    // a real signal engines act on — not just sitemap lastmod on the next crawl.
+    // Fire-and-forget + no-op outside prod; never blocks the capture result.
+    let pingedCount = 0
+    try {
+      const { data: slugRows } = await supabase
+        .from('sab_public_price_catalog')
+        .select('brainrot_slug')
+        .eq('mutation_slug', 'default') as { data: { brainrot_slug: string }[] | null }
+
+      const itemPaths = Array.from(
+        new Set((slugRows ?? []).map((r) => r.brainrot_slug).filter(Boolean)),
+      ).map((slug) => `/steal-a-brainrot/values/${slug}`)
+
+      // Hub pages change daily too; lead with them. IndexNow accepts up to
+      // 10k URLs/request, so the ~500 item pages fit in a single batch.
+      const paths = [
+        '/steal-a-brainrot',
+        '/steal-a-brainrot/values',
+        '/steal-a-brainrot/calculator',
+        ...itemPaths,
+      ]
+      await pingIndexNow(paths)
+      pingedCount = paths.length
+    } catch (pingErr) {
+      // Never fail the cron over a freshness ping.
+      console.error('IndexNow ping after snapshot failed (non-fatal):', pingErr)
+    }
+
     return NextResponse.json({
       success: true,
       captured: capturedCount,
-      message: `Captured ${capturedCount} SAB price snapshot rows`,
+      pinged: pingedCount,
+      message: `Captured ${capturedCount} SAB price snapshot rows; pinged ${pingedCount} URLs to IndexNow`,
     })
   } catch (error: any) {
     console.error('Unexpected error in snapshot-sab-prices cron:', error)

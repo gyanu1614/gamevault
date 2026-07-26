@@ -19,6 +19,7 @@ import Link from 'next/link'
 import { Shield, Zap, Star, ArrowRight, CheckCircle2, ChevronDown } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { getLandingPage, getAllLandingPageSlugs, LandingPage } from '@/lib/seo/landingPages'
+import { breadcrumbList, productAggregate } from '@/lib/seo/jsonld'
 import type { ListingWithRelations } from '@/types/database'
 
 import { SITE_URL } from '@/config/site'
@@ -155,7 +156,29 @@ function buildStructuredData(page: LandingPage, listings: ListingWithRelations[]
       }
     : null
 
-  return { faqSchema, itemListSchema }
+  // BreadcrumbList — was missing; gives these top-of-funnel money pages the
+  // breadcrumb rich result the category/SAB pages already get.
+  const breadcrumbSchema = breadcrumbList([
+    { name: 'Home', path: '/' },
+    { name: page.headline, path: `/buy/${page.slug}` },
+  ])
+
+  // Product + AggregateOffer — stronger for price/rating rich results than the
+  // ItemList alone. Only emitted when there are real live offers to price it.
+  const prices = listings.map((l) => l.price).filter((p) => Number.isFinite(p) && p > 0)
+  const productSchema = prices.length > 0
+    ? productAggregate({
+        name: page.headline,
+        description: page.description,
+        brand: listings[0]?.game?.name || 'DropMarket',
+        lowPrice: Math.min(...prices),
+        highPrice: Math.max(...prices),
+        offerCount: prices.length,
+        url: `/buy/${page.slug}`,
+      })
+    : null
+
+  return { faqSchema, itemListSchema, breadcrumbSchema, productSchema }
 }
 
 /* ------------------------------------------------------------------ */
@@ -171,7 +194,8 @@ export default async function SEOLandingPage({
   if (!page) notFound()
 
   const listings = await getListings(page)
-  const { faqSchema, itemListSchema } = buildStructuredData(page, listings)
+  const { faqSchema, itemListSchema, breadcrumbSchema, productSchema } =
+    buildStructuredData(page, listings)
 
   const minPrice = listings.length > 0 ? Math.min(...listings.map((l) => l.price)) : null
 
@@ -180,8 +204,18 @@ export default async function SEOLandingPage({
       {/* Structured data */}
       <script
         type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+      />
+      <script
+        type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
       />
+      {productSchema && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(productSchema) }}
+        />
+      )}
       {itemListSchema && (
         <script
           type="application/ld+json"

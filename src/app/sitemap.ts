@@ -233,7 +233,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.85,
     },
     {
-      url: `${BASE_URL}/steal-a-brainrot/value-calculator`,
+      // Canonical calculator route. The old /value-calculator + /trade-calculator
+      // URLs 301 here (next.config.js), so we emit only the live one to avoid
+      // pointing Google at a redirect and splitting equity between two URLs.
+      url: `${BASE_URL}/steal-a-brainrot/calculator`,
       changeFrequency: 'weekly',
       priority: 0.8,
     },
@@ -241,7 +244,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       .filter((brainrot) => Boolean(brainrot.slug))
       .map((brainrot) => ({
         url: `${BASE_URL}/steal-a-brainrot/values/${brainrot.slug}`,
-        changeFrequency: 'weekly' as const,
+        // Prices refresh daily via the snapshot cron — advertise real freshness.
+        changeFrequency: 'daily' as const,
         priority: 0.7,
       })),
   ]

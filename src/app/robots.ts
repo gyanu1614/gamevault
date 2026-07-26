@@ -39,6 +39,21 @@ export default function robots(): MetadataRoute.Robots {
           '/*&sort=',
           '/*?utm_',
           '/*&utm_',
+          // Faceted filter params (rarity / obtainability on the SAB values
+          // directory, attribute filters + pagination on category pages).
+          // Each renders a filtered SLICE of a page Google already has via the
+          // clean URL — crawling them wastes budget on a new domain and creates
+          // near-duplicates. The canonical (no-param) page carries the content.
+          // NOTE: `?search=` is deliberately NOT blocked — item-filtered
+          // buy-items deep links (our internal-link targets) use it on purpose.
+          '/*?rarity=',
+          '/*&rarity=',
+          '/*?obtainability=',
+          '/*&obtainability=',
+          '/*?attr_',
+          '/*&attr_',
+          '/*?page=',
+          '/*&page=',
         ],
       },
     ],
