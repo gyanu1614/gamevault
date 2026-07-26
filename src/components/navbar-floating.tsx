@@ -994,7 +994,7 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
             <Link href="/" className="flex shrink-0 items-center gap-2 max-lg:mr-auto">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src="/brand/logo-mark-lime.png"
+                src="/brand/logo-mark-white.png"
                 alt="DropMarket"
                 width={32}
                 height={32}
@@ -1911,7 +1911,7 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                     className="flex items-center gap-2.5"
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src="/brand/logo-mark-lime.png" alt="DropMarket" className="h-9 w-9" />
+                    <img src="/brand/logo-mark-white.png" alt="DropMarket" className="h-9 w-9" />
                     <span className="font-display text-[20px] font-extrabold tracking-[-0.03em] text-white">
                       Drop<span className="text-lime-text">Market</span>
                     </span>

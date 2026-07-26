@@ -36,6 +36,19 @@ export function LayoutWrapper({ children }: { children: React.ReactNode }) {
     pathname?.startsWith('/dev/seller-intro-preview') ||
     pathname?.startsWith('/kyc/complete')
 
+  // SAB "DropMarket Values" hub (values directory, per-brainrot pages, and
+  // the cash/trade calculators) is an SEO/content destination with its own
+  // slim forest header (see _ValuesHeader) — strip the global navbar + beta
+  // banner so it reads as its own section, not the storefront. Footer stays
+  // for internal-link SEO. Same "own slim header" precedent as checkout.
+  // The Values HUB (directory / item / calculator) strips the global navbar for
+  // its own slim "DropMarket Values" header. The SAB LANDING is a normal
+  // MARKETPLACE page — it keeps the global navbar + the standard GameSubNav pill
+  // (like every other game/category page), so it is NOT matched here.
+  const isValuesHub =
+    !!pathname &&
+    /^\/[^/]+\/(values|value-calculator|trade-calculator|calculator)(\/|$)/.test(pathname)
+
   // Check if we're on a seller page with sidebar (not /new or /edit)
   const isSellerPageWithSidebar = pathname?.startsWith('/seller') &&
     !pathname?.includes('/new') &&
@@ -53,10 +66,10 @@ export function LayoutWrapper({ children }: { children: React.ReactNode }) {
           page; the fixed navbar reads its remaining height and rides just
           below it. Self-hides on chrome-less shells (admin/checkout/seller
           application) to match the navbar rules below. */}
-      {!isAdminPage && !isCheckout && !isSellerApplication && <BetaBanner />}
+      {!isAdminPage && !isCheckout && !isSellerApplication && !isValuesHub && <BetaBanner />}
       {/* P5 — Checkout strips the global navbar: the page carries its
           own slim header (brand left · secure badge right). */}
-      {!isAdminPage && !isCheckout && !isSellerApplication && (
+      {!isAdminPage && !isCheckout && !isSellerApplication && !isValuesHub && (
         <Navbar forceScrolled={isSellWizard} />
       )}
       <main className="flex-1">{children}</main>

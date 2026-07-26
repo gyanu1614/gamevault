@@ -39,6 +39,18 @@ const nextConfig = {
   async redirects() {
     return [
       {
+        // Merged the value + trade calculators into one /calculator page with
+        // Cash / Trade tabs. 301 the old routes so their SEO equity moves over.
+        source: '/steal-a-brainrot/value-calculator',
+        destination: '/steal-a-brainrot/calculator',
+        permanent: true,
+      },
+      {
+        source: '/steal-a-brainrot/trade-calculator',
+        destination: '/steal-a-brainrot/calculator?tab=trade',
+        permanent: true,
+      },
+      {
         source: '/marketplace',
         destination: '/',
         permanent: true,

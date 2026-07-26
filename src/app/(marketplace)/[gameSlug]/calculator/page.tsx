@@ -1,0 +1,335 @@
+import type { Metadata } from 'next'
+import { notFound } from 'next/navigation'
+import { createClient } from '@/lib/supabase/server'
+import { JsonLd, breadcrumbList, faqPage } from '@/lib/seo/jsonld'
+import { CalculatorSeo, CALCULATOR_FAQ } from './_CalculatorSeo'
+import { SabHeroBackdrop } from '../values/_SabHeroBackdrop'
+import { asNumber } from '@/lib/sab/format'
+import CalculatorClient, {
+  type CalcBrainrot,
+  type CalcMutation,
+  type CalcPrice,
+} from './_CalculatorClient'
+
+export const revalidate = 3600
+
+interface PageProps {
+  params: Promise<{ gameSlug: string }>
+  searchParams: Promise<{
+    brainrot?: string
+    mutation?: string
+    tab?: string
+  }>
+}
+
+type BrainrotRow = {
+  id: string
+  name: string
+  slug: string
+  rarity: string
+  base_income_per_second: number | string | null
+  image_url: string | null
+}
+
+type MutationRow = {
+  id: string
+  name: string
+  slug: string
+  income_multiplier: number | string
+  availability: string
+}
+
+type CashPriceRow = {
+  brainrot_id: string
+  mutation_id: string
+  market_value_usd: number | string | null
+  market_low_usd: number | string | null
+  market_high_usd: number | string | null
+  confidence_label: string | null
+  external_sample_size: number | null
+  price_updated_at: string | null
+  is_trade_ready: boolean
+}
+
+type TradePriceRow = {
+  brainrot_id: string
+  mutation_id: string
+  market_value_usd: number | string | null
+  market_low_usd: number | string | null
+  market_high_usd: number | string | null
+  confidence_label: string | null
+  external_sample_size: number | null
+  is_trade_ready: boolean
+}
+
+export async function generateMetadata({
+  params,
+}: PageProps): Promise<Metadata> {
+  const { gameSlug } = await params
+
+  if (gameSlug !== 'steal-a-brainrot') {
+    return { title: 'Calculator Not Found' }
+  }
+
+  const monthYear = new Date().toLocaleDateString('en-US', {
+    month: 'long',
+    year: 'numeric',
+    timeZone: 'UTC',
+  })
+
+  return {
+    title: `Steal a Brainrot Value & WFL Trade Calculator (${monthYear}) — Live Cash Prices`,
+    description: `Check the live cash value of any Steal a Brainrot Brainrot and mutation, then run a full trade through the Win/Fair/Loss (WFL) checker. Real marketplace prices updated daily, mutation values, typical ranges, and confidence-aware verdicts — free, ${monthYear}.`,
+    alternates: {
+      canonical: '/steal-a-brainrot/calculator',
+    },
+    openGraph: {
+      title:
+        'Steal a Brainrot Value & Trade Calculator',
+      description:
+        'Look up mutation cash prices and check whether a trade is a Win, Fair, or Loss.',
+      url: '/steal-a-brainrot/calculator',
+      type: 'website',
+    },
+  }
+}
+
+async function getAllCashPrices(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+): Promise<CashPriceRow[]> {
+  const pageSize = 1000
+  const rows: CashPriceRow[] = []
+  let from = 0
+
+  while (true) {
+    const { data, error } = await (supabase as any)
+      .from('sab_public_price_catalog')
+      .select(
+        'brainrot_id,mutation_id,market_value_usd,market_low_usd,market_high_usd,confidence_label,external_sample_size,price_updated_at,is_trade_ready',
+      )
+      .range(from, from + pageSize - 1)
+
+    if (error) {
+      console.error(
+        'Unable to load calculator cash prices:',
+        error,
+      )
+      break
+    }
+
+    const page = (data ?? []) as CashPriceRow[]
+    rows.push(...page)
+
+    if (page.length < pageSize) break
+    from += pageSize
+  }
+
+  return rows
+}
+
+async function getAllTradePrices(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+): Promise<TradePriceRow[]> {
+  const pageSize = 1000
+  const rows: TradePriceRow[] = []
+  let from = 0
+
+  while (true) {
+    const { data, error } = await (supabase as any)
+      .from('sab_trade_price_catalog')
+      .select(
+        'brainrot_id,mutation_id,market_value_usd,market_low_usd,market_high_usd,confidence_label,external_sample_size,is_trade_ready',
+      )
+      .eq('is_trade_ready', true)
+      .range(from, from + pageSize - 1)
+
+    if (error) {
+      console.error(
+        'Unable to load calculator trade prices:',
+        error,
+      )
+      break
+    }
+
+    const page = (data ?? []) as TradePriceRow[]
+    rows.push(...page)
+
+    if (page.length < pageSize) break
+    from += pageSize
+  }
+
+  return rows
+}
+
+async function getCalculatorData(): Promise<{
+  brainrots: CalcBrainrot[]
+  mutations: CalcMutation[]
+  cashPrices: CalcPrice[]
+  tradePrices: CalcPrice[]
+}> {
+  const supabase = await createClient()
+
+  const [
+    brainrotResult,
+    mutationResult,
+    cashPriceRows,
+    tradePriceRows,
+  ] = await Promise.all([
+    (supabase as any)
+      .from('sab_brainrot_catalog')
+      .select(
+        'id,name,slug,rarity,base_income_per_second,image_url',
+      )
+      .order('name', { ascending: true }),
+
+    (supabase as any)
+      .from('sab_mutation_catalog')
+      .select(
+        'id,name,slug,income_multiplier,availability',
+      )
+      .order('income_multiplier', { ascending: true }),
+
+    getAllCashPrices(supabase),
+    getAllTradePrices(supabase),
+  ])
+
+  if (brainrotResult.error) {
+    console.error(
+      'Unable to load calculator Brainrots:',
+      brainrotResult.error,
+    )
+  }
+
+  if (mutationResult.error) {
+    console.error(
+      'Unable to load calculator mutations:',
+      mutationResult.error,
+    )
+  }
+
+  const brainrots = (
+    (brainrotResult.data ?? []) as BrainrotRow[]
+  ).map((row) => ({
+    id: row.id,
+    name: row.name,
+    slug: row.slug,
+    rarity: row.rarity,
+    baseIncomePerSecond: asNumber(row.base_income_per_second),
+    imageUrl: row.image_url,
+  }))
+
+  const mutations = (
+    (mutationResult.data ?? []) as MutationRow[]
+  ).map((row) => ({
+    id: row.id,
+    name: row.name,
+    slug: row.slug,
+    multiplier: Number(row.income_multiplier),
+    availability: row.availability,
+  }))
+
+  const toPrice = (
+    row: CashPriceRow | TradePriceRow,
+  ): CalcPrice | null => {
+    const marketValueUsd = asNumber(row.market_value_usd)
+    if (marketValueUsd == null) return null
+
+    return {
+      brainrotId: row.brainrot_id,
+      mutationId: row.mutation_id,
+      marketValueUsd,
+      marketLowUsd:
+        asNumber(row.market_low_usd) ?? marketValueUsd,
+      marketHighUsd:
+        asNumber(row.market_high_usd) ?? marketValueUsd,
+      confidenceLabel: row.confidence_label ?? 'insufficient',
+      sampleSize: row.external_sample_size ?? 0,
+      isTradeReady: row.is_trade_ready,
+    }
+  }
+
+  const cashPrices = cashPriceRows
+    .map(toPrice)
+    .filter((row): row is CalcPrice => row !== null)
+
+  const tradePrices = tradePriceRows
+    .map(toPrice)
+    .filter(
+      (row): row is CalcPrice =>
+        row !== null && row.isTradeReady,
+    )
+
+  return { brainrots, mutations, cashPrices, tradePrices }
+}
+
+export default async function SabCalculatorPage({
+  params,
+  searchParams,
+}: PageProps) {
+  const [{ gameSlug }, resolvedSearchParams] =
+    await Promise.all([params, searchParams])
+
+  if (gameSlug !== 'steal-a-brainrot') notFound()
+
+  const { brainrots, mutations, cashPrices, tradePrices } =
+    await getCalculatorData()
+
+  // Top brainrots by default cash value — the value table + internal links.
+  const defaultMutationId =
+    mutations.find((m) => m.slug === 'default')?.id ?? mutations[0]?.id
+  const defaultPriceByBrainrot = new Map<string, number>()
+  for (const p of cashPrices) {
+    if (p.mutationId === defaultMutationId && p.marketValueUsd != null) {
+      defaultPriceByBrainrot.set(p.brainrotId, p.marketValueUsd)
+    }
+  }
+  const topValues = brainrots
+    .map((b) => ({
+      slug: b.slug,
+      name: b.name,
+      rarity: b.rarity,
+      priceUsd: defaultPriceByBrainrot.get(b.id) ?? null,
+    }))
+    .filter((r) => r.priceUsd != null)
+    .sort((a, b) => (b.priceUsd ?? 0) - (a.priceUsd ?? 0))
+    .slice(0, 40)
+
+  const monthYear = new Date().toLocaleDateString('en-US', {
+    month: 'long',
+    year: 'numeric',
+    timeZone: 'UTC',
+  })
+
+  return (
+    <main className="relative min-h-screen bg-[#0C0F0E] pb-24">
+      <SabHeroBackdrop height={420}>
+      <JsonLd
+        data={breadcrumbList([
+          { name: 'Home', path: '/' },
+          {
+            name: 'Steal a Brainrot',
+            path: '/steal-a-brainrot',
+          },
+          {
+            name: 'Calculator',
+            path: '/steal-a-brainrot/calculator',
+          },
+        ])}
+      />
+
+      <CalculatorClient
+        brainrots={brainrots}
+        mutations={mutations}
+        cashPrices={cashPrices}
+        tradePrices={tradePrices}
+        initialBrainrotSlug={resolvedSearchParams.brainrot}
+        initialMutationSlug={resolvedSearchParams.mutation}
+        initialTab={resolvedSearchParams.tab === 'trade' ? 'trade' : 'cash'}
+      />
+
+      <CalculatorSeo monthYear={monthYear} topValues={topValues} />
+      <JsonLd data={faqPage(CALCULATOR_FAQ)} />
+      </SabHeroBackdrop>
+    </main>
+  )
+}
