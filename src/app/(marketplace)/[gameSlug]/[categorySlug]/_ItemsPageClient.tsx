@@ -532,7 +532,7 @@ function SearchableFilterChip({
       }}
     >
       <Popover.Anchor asChild>
-        <div className="relative inline-flex h-11 w-full sm:w-auto sm:min-w-[170px]">
+        <div className="relative inline-flex h-11 w-[150px] shrink-0 sm:w-auto sm:min-w-[170px]">
           {/* The input IS the trigger. Clicking it sets open=true via the
               onClick handler; Radix's Popover.Trigger is intentionally NOT
               used here so the input retains focus naturally. */}
