@@ -558,17 +558,12 @@ function SearchableFilterChip({
               isActive && !open
                 ? 'placeholder:text-text-primary placeholder:font-medium'
                 : 'placeholder:text-text-tertiary',
-              isActive && !open && 'border-lime-tint-border bg-lime-tint-bg/30',
-              isActive && !open ? 'pl-7' : 'pl-3.5',
-              'pr-9',
+              // Active chip: neutral emphasis only — the selected value text
+              // already signals it's applied, so no lime border/fill/dot.
+              isActive && !open && 'border-border-strong',
+              'pl-3.5 pr-9',
             )}
           />
-          {isActive && !open && (
-            <span
-              aria-hidden
-              className="pointer-events-none absolute left-3 top-1/2 h-1.5 w-1.5 -translate-y-1/2 rounded-full bg-lime"
-            />
-          )}
           {isActive ? (
             <button
               type="button"
