@@ -20,6 +20,7 @@ import Link from 'next/link'
 import { ShieldCheck, Coins, BadgeCheck, ArrowRight, ChevronDown, Tag, Wallet, CheckCircle2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { getSellPage, getAllSellPageSlugs, SellPage } from '@/lib/seo/sellPages'
+import { HeroBackdrop, HeroBackdropPreload } from '@/components/hero-backdrop'
 import type { ListingWithRelations } from '@/types/database'
 
 import { SITE_URL } from '@/config/site'
@@ -193,6 +194,9 @@ export default async function SellSEOLandingPage({
 
   return (
     <>
+      {/* Preload the hero backdrop so it's cached before .hero-backdrop mounts. */}
+      <HeroBackdropPreload name="home" />
+
       {/* Structured data */}
       <script
         type="application/ld+json"
@@ -203,22 +207,23 @@ export default async function SellSEOLandingPage({
         dangerouslySetInnerHTML={{ __html: JSON.stringify(howToSchema) }}
       />
 
-      <main className="min-h-screen">
+      {/* Shared DropMarket hero backdrop (same art + scrim as the homepage),
+          spanning the hero band and fading into the page below it. */}
+      <HeroBackdrop name="home">
         {/* ---- Hero ---- */}
         <section className="relative pt-16 pb-12 px-4 overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-b from-lime/[0.07] via-transparent to-transparent pointer-events-none" />
           <div className="mx-auto max-w-5xl text-center relative">
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-lime/10 border border-lime-tint-border text-sm font-medium text-lime-text mb-6">
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-lime/10 border border-lime-tint-border text-sm font-medium text-lime-text mb-6 backdrop-blur-sm">
               <ShieldCheck className="w-3.5 h-3.5" />
               Get paid safely — protected by SafeDrop
             </div>
 
-            <h1 className="text-4xl sm:text-5xl md:text-6xl font-display font-bold text-foreground mb-5 leading-tight">
+            <h1 className="text-4xl sm:text-5xl md:text-6xl font-display font-bold text-foreground mb-5 leading-tight [text-shadow:0_2px_20px_rgba(0,0,0,0.55)]">
               <span className="mr-3">{page.emoji}</span>
               {page.headline}
             </h1>
 
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-8">
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-8 [text-shadow:0_1px_12px_rgba(0,0,0,0.7)]">
               {page.subCopy}
             </p>
 
@@ -436,7 +441,7 @@ export default async function SellSEOLandingPage({
             </div>
           </div>
         </section>
-      </main>
+      </HeroBackdrop>
     </>
   )
 }
