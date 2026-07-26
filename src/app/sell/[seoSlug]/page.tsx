@@ -17,9 +17,11 @@
 import { Metadata, ResolvingMetadata } from 'next'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { ShieldCheck, Coins, BadgeCheck, ArrowRight, ChevronDown, Tag, Wallet, CheckCircle2 } from 'lucide-react'
+import Image from 'next/image'
+import { ShieldCheck, ArrowRight, ChevronDown, Tag, Wallet, CheckCircle2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { getSellPage, getAllSellPageSlugs, SellPage } from '@/lib/seo/sellPages'
+import { getGameIcon } from '@/features/home/lib/game-icons'
 import { HeroBackdrop, HeroBackdropPreload } from '@/components/hero-backdrop'
 import type { ListingWithRelations } from '@/types/database'
 
@@ -192,6 +194,9 @@ export default async function SellSEOLandingPage({
     ? `/${page.gameSlug}${page.categorySlug ? `/${page.categorySlug}` : ''}`
     : '/browse'
 
+  // Real game logo (from the shared /games registry) instead of an emoji.
+  const logoSrc = page.gameSlug ? getGameIcon(page.gameSlug) : null
+
   return (
     <>
       {/* Preload the hero backdrop so it's cached before .hero-backdrop mounts. */}
@@ -211,49 +216,47 @@ export default async function SellSEOLandingPage({
           spanning the hero band and fading into the page below it. */}
       <HeroBackdrop name="home">
         {/* ---- Hero ---- */}
-        <section className="relative pt-16 pb-12 px-4 overflow-hidden">
-          <div className="mx-auto max-w-5xl text-center relative">
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-lime/10 border border-lime-tint-border text-sm font-medium text-lime-text mb-6 backdrop-blur-sm">
-              <ShieldCheck className="w-3.5 h-3.5" />
-              Get paid safely — protected by SafeDrop
-            </div>
+        <section className="relative px-4 pt-14 pb-16 sm:pt-16 sm:pb-20">
+          <div className="mx-auto max-w-3xl text-center">
+            {logoSrc && (
+              <Image
+                src={logoSrc}
+                alt={`${page.assetLabel} logo`}
+                width={72}
+                height={72}
+                className="mx-auto mb-6 h-16 w-16 rounded-2xl object-cover shadow-[0_10px_30px_rgba(0,0,0,0.55)] ring-1 ring-white/10"
+              />
+            )}
 
-            <h1 className="text-4xl sm:text-5xl md:text-6xl font-display font-bold text-foreground mb-5 leading-tight [text-shadow:0_2px_20px_rgba(0,0,0,0.55)]">
-              <span className="mr-3">{page.emoji}</span>
+            <h1 className="font-display text-[34px] font-extrabold leading-[1.05] tracking-[-0.03em] text-foreground [text-shadow:0_2px_24px_rgba(0,0,0,0.6)] sm:text-5xl md:text-6xl">
               {page.headline}
             </h1>
 
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-8 [text-shadow:0_1px_12px_rgba(0,0,0,0.7)]">
+            <p className="mx-auto mt-4 max-w-xl text-[15px] leading-relaxed text-muted-foreground [text-shadow:0_1px_12px_rgba(0,0,0,0.7)] sm:text-lg">
               {page.subCopy}
             </p>
 
-            {/* Seller value chips */}
-            <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 mb-10 text-sm">
-              <span className="flex items-center gap-1.5 text-emerald-400">
-                <CheckCircle2 className="w-4 h-4" />
-                Free to list
-              </span>
-              <span className="flex items-center gap-1.5 text-emerald-400">
-                <CheckCircle2 className="w-4 h-4" />
-                Commission only when it sells — from 5%
-              </span>
-              <span className="flex items-center gap-1.5 text-emerald-400">
-                <CheckCircle2 className="w-4 h-4" />
-                Chargeback-protected payouts
-              </span>
+            {/* Value props — floating, no boxes */}
+            <div className="mt-6 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm">
+              {['Free to list', 'Commission from 5% — only when it sells', 'Chargeback-protected payouts'].map((t) => (
+                <span key={t} className="flex items-center gap-1.5 text-emerald-400">
+                  <CheckCircle2 className="h-4 w-4 shrink-0" />
+                  {t}
+                </span>
+              ))}
             </div>
 
-            <div className="flex flex-wrap items-center justify-center gap-3">
+            <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
               <Link
                 href="/early-seller"
-                className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-lime hover:bg-lime-hover text-text-inverse font-semibold text-sm transition-all duration-200 hover:shadow-glow"
+                className="inline-flex items-center gap-2 rounded-lg bg-lime px-6 py-3 text-sm font-semibold text-text-inverse transition-all duration-200 hover:bg-lime-hover hover:shadow-glow"
               >
                 Start selling
-                <ArrowRight className="w-4 h-4" />
+                <ArrowRight className="h-4 w-4" />
               </Link>
               <Link
                 href="/fees"
-                className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-white/[0.06] hover:bg-white/[0.10] border border-white/[0.10] text-sm font-medium text-foreground transition-all duration-200"
+                className="inline-flex items-center gap-2 px-4 py-3 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
               >
                 See the fees
               </Link>
@@ -261,183 +264,111 @@ export default async function SellSEOLandingPage({
           </div>
         </section>
 
-        {/* ---- How selling works ---- */}
-        <section className="py-12 px-4">
-          <div className="mx-auto max-w-5xl">
-            <h2 className="text-xl font-display font-bold text-foreground mb-6 text-center">
-              How selling works
-            </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {HOW_STEPS.map((step, i) => (
-                <div
-                  key={step.title}
-                  className="relative rounded-2xl bg-white/[0.04] border border-border-subtle p-6"
-                >
-                  <span className="absolute top-4 right-5 text-4xl font-black text-white/[0.05] leading-none select-none">
-                    {i + 1}
+        {/* ---- How selling works — floating columns, no cards ---- */}
+        <section className="px-4 py-12">
+          <div className="mx-auto grid max-w-4xl gap-8 sm:grid-cols-3 sm:gap-10">
+            {HOW_STEPS.map((step, i) => (
+              <div key={step.title} className="text-center sm:text-left">
+                <div className="mb-3 flex items-center justify-center gap-2 sm:justify-start">
+                  <step.icon className="h-6 w-6 text-lime-text" />
+                  <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-lime-text/70">
+                    Step {i + 1}
                   </span>
-                  <step.icon className="w-7 h-7 text-lime-text mb-3" />
-                  <h3 className="font-semibold text-foreground text-sm mb-1.5">{step.title}</h3>
-                  <p className="text-xs text-muted-foreground leading-relaxed">{step.desc}</p>
                 </div>
-              ))}
-            </div>
+                <h3 className="mb-1.5 text-[15px] font-semibold text-foreground">{step.title}</h3>
+                <p className="text-sm leading-relaxed text-muted-foreground">{step.desc}</p>
+              </div>
+            ))}
           </div>
         </section>
 
-        {/* ---- Live market activity (proof buyers are here) ---- */}
+        {/* ---- Live market — floating divide-y rows (proof buyers are here) ---- */}
         {listings.length > 0 && (
-          <section className="py-12 px-4">
-            <div className="mx-auto max-w-5xl">
-              <h2 className="text-xl font-display font-bold text-foreground mb-2">
-                There&apos;s a live market for {page.assetLabel}s
-              </h2>
-              <p className="text-sm text-muted-foreground mb-6">
-                {listings.length}+ active listings right now — price yours against what&apos;s already selling.
-              </p>
-
-              {/* Desktop table */}
-              <div className="hidden md:block rounded-2xl overflow-hidden border border-border-subtle bg-bg-overlay">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-border-subtle">
-                      <th className="text-left px-5 py-3 font-medium text-muted-foreground">Listing</th>
-                      <th className="text-left px-5 py-3 font-medium text-muted-foreground">Seller</th>
-                      <th className="text-right px-5 py-3 font-medium text-muted-foreground">Price</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {listings.map((listing) => (
-                      <tr key={listing.id} className="border-b border-white/[0.04]">
-                        <td className="px-5 py-3.5">
-                          <span className="font-medium text-foreground line-clamp-1">{listing.title}</span>
-                        </td>
-                        <td className="px-5 py-3.5">
-                          <span className="text-muted-foreground">{listing.seller?.username}</span>
-                        </td>
-                        <td className="px-5 py-3.5 text-right">
-                          <span className="font-mono font-bold text-foreground text-base">
-                            ${listing.price.toFixed(2)}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Mobile card list */}
-              <div className="md:hidden space-y-3">
-                {listings.slice(0, 5).map((listing) => (
-                  <div
-                    key={listing.id}
-                    className="flex items-center justify-between gap-4 p-4 rounded-2xl bg-white/[0.04] border border-border-subtle"
-                  >
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-foreground line-clamp-1">{listing.title}</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">{listing.seller?.username}</p>
-                    </div>
-                    <p className="font-mono font-bold text-foreground shrink-0">${listing.price.toFixed(2)}</p>
-                  </div>
-                ))}
-              </div>
-
-              <div className="mt-6">
+          <section className="px-4 py-8">
+            <div className="mx-auto max-w-2xl">
+              <div className="mb-1 flex items-baseline justify-between gap-4">
+                <h2 className="font-display text-lg font-semibold text-foreground">
+                  Live market for {page.assetLabel}s
+                </h2>
                 <Link
                   href={marketHref}
-                  className="inline-flex items-center gap-2 text-sm text-lime-text hover:text-lime-text font-medium transition-colors"
+                  className="inline-flex items-center gap-1 text-sm font-medium text-lime-text transition-transform hover:translate-x-0.5"
                 >
-                  Browse the live market
-                  <ArrowRight className="w-4 h-4" />
+                  Browse all
+                  <ArrowRight className="h-3.5 w-3.5" />
                 </Link>
+              </div>
+              <p className="mb-4 text-sm text-muted-foreground">
+                {listings.length}+ active listings right now — price yours against what&apos;s already selling.
+              </p>
+              <div className="divide-y divide-white/[0.06]">
+                {listings.slice(0, 5).map((listing) => (
+                  <div key={listing.id} className="flex items-center justify-between gap-4 py-3">
+                    <div className="min-w-0">
+                      <p className="line-clamp-1 text-sm font-medium text-foreground">{listing.title}</p>
+                      <p className="mt-0.5 text-xs text-muted-foreground">{listing.seller?.username}</p>
+                    </div>
+                    <p className="shrink-0 font-mono text-sm font-semibold tabular-nums text-foreground">
+                      ${listing.price.toFixed(2)}
+                    </p>
+                  </div>
+                ))}
               </div>
             </div>
           </section>
         )}
 
-        {/* ---- Seller trust signals ---- */}
-        <section className="py-10 px-4 border-y border-border-subtle bg-bg-overlay">
-          <div className="mx-auto max-w-5xl">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-              {[
-                {
-                  icon: Coins,
-                  title: 'Keep more of every sale',
-                  desc: 'Commission from 5% — a fraction of the 17–26% the big marketplaces skim. Free to list; you only pay when it sells.',
-                },
-                {
-                  icon: ShieldCheck,
-                  title: 'Paid safely, no chargebacks',
-                  desc: 'Buyers pay into SafeDrop up front. Funds release to you on confirmation and can\'t be clawed back weeks later.',
-                },
-                {
-                  icon: BadgeCheck,
-                  title: 'A marketplace with real buyers',
-                  desc: 'Verified buyers and sellers, live ratings, and 24/7 human support — so your listings sell to real people.',
-                },
-              ].map((item) => (
-                <div key={item.title} className="flex gap-4">
-                  <item.icon className="w-7 h-7 text-lime-text shrink-0" />
-                  <div>
-                    <h3 className="font-semibold text-foreground text-sm mb-1">{item.title}</h3>
-                    <p className="text-xs text-muted-foreground leading-relaxed">{item.desc}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* ---- FAQ ---- */}
-        <section className="py-14 px-4">
-          <div className="mx-auto max-w-3xl">
-            <h2 className="text-2xl font-display font-bold text-foreground mb-8 text-center">
+        {/* ---- FAQ — floating divide-y ---- */}
+        <section className="px-4 py-10">
+          <div className="mx-auto max-w-2xl">
+            <h2 className="mb-6 text-center font-display text-xl font-semibold text-foreground">
               Selling FAQs
             </h2>
-            <div className="space-y-3">
+            <div className="divide-y divide-white/[0.08]">
               {page.faqs.map((faq, i) => (
-                <details
-                  key={i}
-                  className="group rounded-2xl bg-white/[0.04] border border-border-subtle overflow-hidden"
-                >
-                  <summary className="flex items-center justify-between gap-4 px-5 py-4 cursor-pointer list-none font-medium text-foreground text-sm select-none hover:text-lime-text transition-colors">
+                <details key={i} className="group py-3.5">
+                  <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-sm font-medium text-foreground transition-colors hover:text-lime-text">
                     {faq.q}
-                    <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0 transition-transform group-open:rotate-180" />
+                    <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" />
                   </summary>
-                  <div className="px-5 pb-4 text-sm text-muted-foreground leading-relaxed border-t border-border-subtle pt-3">
-                    {faq.a}
-                  </div>
+                  <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{faq.a}</p>
                 </details>
               ))}
             </div>
           </div>
         </section>
 
-        {/* ---- CTA ---- */}
-        <section className="py-14 px-4">
-          <div className="mx-auto max-w-3xl text-center">
-            <div className="rounded-2xl bg-gradient-to-br from-lime/[0.12] to-cyan-500/[0.06] border border-lime-tint-border p-10">
-              <h2 className="text-2xl font-display font-bold text-foreground mb-3">
-                Ready to sell your {page.assetLabel}?
-              </h2>
-              <p className="text-muted-foreground text-sm mb-6 max-w-md mx-auto">
-                Join the founding-seller programme — lower fees, early access, and a founding badge. It takes a minute, and you add payout details later.
-              </p>
-              <div className="flex flex-wrap items-center justify-center gap-3">
-                <Link
-                  href="/early-seller"
-                  className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-lime hover:bg-lime-hover text-text-inverse font-semibold text-sm transition-all duration-200"
-                >
-                  Start selling
-                  <ArrowRight className="w-4 h-4" />
-                </Link>
-                <Link
-                  href={marketHref}
-                  className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-white/[0.06] hover:bg-white/[0.10] border border-white/[0.10] text-sm font-medium text-foreground transition-all duration-200"
-                >
-                  Browse the market
-                </Link>
-              </div>
+        {/* ---- Closing CTA — floating, no box ---- */}
+        <section className="relative overflow-hidden px-4 py-16">
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-0"
+            style={{
+              background:
+                'radial-gradient(50% 60% at 50% 40%, rgba(198,255,61,0.08), transparent 70%)',
+            }}
+          />
+          <div className="relative mx-auto max-w-xl text-center">
+            <h2 className="mb-3 font-display text-2xl font-bold tracking-[-0.02em] text-foreground sm:text-3xl">
+              Ready to sell your {page.assetLabel}?
+            </h2>
+            <p className="mx-auto mb-6 max-w-md text-sm text-muted-foreground">
+              Join the founding-seller programme — lower fees, early access, and a founding badge. Takes a minute; add payout details later.
+            </p>
+            <div className="flex flex-wrap items-center justify-center gap-3">
+              <Link
+                href="/early-seller"
+                className="inline-flex items-center gap-2 rounded-lg bg-lime px-6 py-3 text-sm font-semibold text-text-inverse transition-all duration-200 hover:bg-lime-hover hover:shadow-glow"
+              >
+                Start selling
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+              <Link
+                href={marketHref}
+                className="inline-flex items-center gap-2 px-4 py-3 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+              >
+                Browse the market
+              </Link>
             </div>
           </div>
         </section>
