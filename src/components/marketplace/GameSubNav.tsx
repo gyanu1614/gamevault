@@ -32,6 +32,14 @@ interface GameSubNavProps {
   gameImageUrl?: string | null
   currentCategorySlug: string
   categories: GameCategory[]
+  /**
+   * Optional extra tab links rendered after the category strip (separated by a
+   * divider). Used by the Steal a Brainrot landing to surface the Values /
+   * Calculator tools alongside the marketplace categories. The caller supplies
+   * ready-made link nodes (e.g. SwooshLinks) so this shared component stays
+   * game-agnostic.
+   */
+  extraTabs?: React.ReactNode
 }
 
 export default function GameSubNav({
@@ -40,6 +48,7 @@ export default function GameSubNav({
   gameImageUrl,
   currentCategorySlug,
   categories,
+  extraTabs,
 }: GameSubNavProps) {
   const router = useRouter()
   // Hide-on-scroll: slides up with the primary navbar (shared signal).
@@ -233,6 +242,14 @@ export default function GameSubNav({
                 </button>
               )
             })}
+            {/* Extra tool tabs (Values / Calculator on the SAB landing),
+                separated from the categories by a hairline. */}
+            {extraTabs && (
+              <>
+                <div className="mx-1 h-4 w-px shrink-0 bg-white/[0.12] sm:mx-1.5 sm:h-5" />
+                {extraTabs}
+              </>
+            )}
             </div>
             {/* Right-edge fade — overflow affordance, phones only */}
             <span

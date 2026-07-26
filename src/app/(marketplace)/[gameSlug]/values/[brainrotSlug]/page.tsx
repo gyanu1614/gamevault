@@ -1,10 +1,18 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { ArrowRight, ExternalLink, ShieldCheck, TrendingUp } from 'lucide-react'
+import { ChevronRight, ExternalLink, ShieldCheck, TrendingUp } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
-import { JsonLd, breadcrumbList, productAggregate } from '@/lib/seo/jsonld'
-import MutationCalculator, { type MutationOption } from './MutationCalculator'
+import { JsonLd, breadcrumbList, productAggregate, faqPage } from '@/lib/seo/jsonld'
+import { FaqCards } from '@/components/marketplace/FaqCards'
+import { buildBrainrotFaq } from '@/lib/sab/faq'
+import ItemHero, { type MutationOption } from './_ItemHero'
+import { SimilarBrainrots } from './_SimilarBrainrots'
+import { ValuesHeader } from '../_ValuesHeader'
+import { SabHeroBackdrop } from '../_SabHeroBackdrop'
+import { SabSubNav } from '../_SabSubNav'
+import { cn } from '@/lib/utils'
+import { sabCard } from '@/lib/sab/theme'
 
 export const revalidate = 3600
 
@@ -51,6 +59,17 @@ type MutationRow = {
 }
 
 type TradePriceRow = {
+  market_value_usd: number | string | null
+  market_low_usd: number | string | null
+  market_high_usd: number | string | null
+  confidence_label: string
+  external_sample_size: number
+  price_updated_at: string | null
+  is_trade_ready: boolean
+}
+
+type MutationMarketPriceRow = {
+  mutation_slug: string
   market_value_usd: number | string | null
   market_low_usd: number | string | null
   market_high_usd: number | string | null
@@ -138,28 +157,110 @@ async function getDefaultTradePrice(
 
 async function getMutations(brainrotId: string): Promise<MutationOption[]> {
   const supabase = await createClient()
-  const { data, error } = await (supabase as any)
-    .from('sab_brainrot_mutation_calculator')
-    .select(
-      'mutation_slug,mutation_name,income_multiplier,mutation_availability,calculated_income_per_second,income_source,is_verified_variant',
-    )
-    .eq('brainrot_id', brainrotId)
-    .order('income_multiplier', { ascending: true })
 
-  if (error) {
-    console.error('Unable to load Brainrot mutations:', error)
+  // Fetch mutation income data and per-mutation market prices in parallel, then
+  // merge so each mutation carries its real USD market value (not just income).
+  const [calculatorResult, pricesResult] = await Promise.all([
+    (supabase as any)
+      .from('sab_brainrot_mutation_calculator')
+      .select(
+        'mutation_slug,mutation_name,income_multiplier,mutation_availability,calculated_income_per_second,income_source,is_verified_variant',
+      )
+      .eq('brainrot_id', brainrotId)
+      .order('income_multiplier', { ascending: true }),
+    (supabase as any)
+      .from('sab_public_price_catalog')
+      .select(
+        'mutation_slug,market_value_usd,market_low_usd,market_high_usd,confidence_label,external_sample_size,price_updated_at,is_trade_ready',
+      )
+      .eq('brainrot_id', brainrotId),
+  ])
+
+  if (calculatorResult.error) {
+    console.error('Unable to load Brainrot mutations:', calculatorResult.error)
     return []
   }
 
-  return ((data ?? []) as MutationRow[]).map((row) => ({
-    slug: row.mutation_slug,
-    name: row.mutation_name,
-    multiplier: Number(row.income_multiplier),
-    availability: row.mutation_availability,
-    calculatedIncomePerSecond: asNumber(row.calculated_income_per_second),
-    incomeSource: row.income_source,
-    isVerifiedVariant: row.is_verified_variant,
-  }))
+  if (pricesResult.error) {
+    console.error('Unable to load Brainrot mutation prices:', pricesResult.error)
+  }
+
+  const priceBySlug = new Map<string, MutationMarketPriceRow>(
+    ((pricesResult.data ?? []) as MutationMarketPriceRow[]).map((row) => [
+      row.mutation_slug,
+      row,
+    ]),
+  )
+
+  const rows = (calculatorResult.data ?? []) as MutationRow[]
+
+  // Anchor for the fallback estimate: the default mutation's real price and
+  // multiplier. When a mutation has NO market listings, we scale the default
+  // price by the mutation's income multiplier so the page still shows a
+  // number (clearly flagged as estimated) — anything beats a blank.
+  const defaultRow = rows.find((r) => r.mutation_slug === 'default')
+  const defaultPrice = asNumber(
+    priceBySlug.get('default')?.market_value_usd ?? null,
+  )
+  const defaultMultiplier = Number(defaultRow?.income_multiplier) || 1
+
+  return rows.map((row) => {
+    const price = priceBySlug.get(row.mutation_slug)
+    const realValue = asNumber(price?.market_value_usd ?? null)
+
+    // Derive an estimate only when there's no real value, we have a default
+    // anchor, and this isn't the default itself.
+    let estimatedValue: number | null = null
+    if (realValue == null && defaultPrice != null && row.mutation_slug !== 'default') {
+      const ratio = Number(row.income_multiplier) / defaultMultiplier
+      if (Number.isFinite(ratio) && ratio > 0) {
+        estimatedValue = Math.round(defaultPrice * ratio * 100) / 100
+      }
+    }
+
+    return {
+      slug: row.mutation_slug,
+      name: row.mutation_name,
+      multiplier: Number(row.income_multiplier),
+      availability: row.mutation_availability,
+      calculatedIncomePerSecond: asNumber(row.calculated_income_per_second),
+      incomeSource: row.income_source,
+      isVerifiedVariant: row.is_verified_variant,
+      marketValueUsd: realValue ?? estimatedValue,
+      marketLowUsd: asNumber(price?.market_low_usd ?? null),
+      marketHighUsd: asNumber(price?.market_high_usd ?? null),
+      marketConfidenceLabel: price?.confidence_label ?? null,
+      marketSampleSize: price?.external_sample_size ?? 0,
+      marketUpdatedAt: price?.price_updated_at ?? null,
+      isEstimated: realValue == null && estimatedValue != null,
+    }
+  })
+}
+
+// Daily price history per mutation, for the trend chart. Resilient: returns an
+// empty map if the table isn't present yet (migration not applied) or on error,
+// so the page renders fine before history exists — the chart shows a
+// "collecting history" state in that case.
+async function getPriceHistory(
+  brainrotId: string,
+): Promise<Record<string, { date: string; median: number }[]>> {
+  const supabase = await createClient()
+  const { data, error } = await (supabase as any)
+    .from('sab_price_history')
+    .select('mutation_slug:mutation_id,history_date,median_usd,sab_mutations(slug)')
+    .eq('brainrot_id', brainrotId)
+    .order('history_date', { ascending: true })
+
+  if (error || !data) return {}
+
+  const bySlug: Record<string, { date: string; median: number }[]> = {}
+  for (const row of data as any[]) {
+    const slug = row.sab_mutations?.slug
+    const median = asNumber(row.median_usd)
+    if (!slug || median == null) continue
+    ;(bySlug[slug] = bySlug[slug] ?? []).push({ date: row.history_date, median })
+  }
+  return bySlug
 }
 
 async function getRelatedBrainrots(brainrot: BrainrotRow): Promise<BrainrotRow[]> {
@@ -170,9 +271,33 @@ async function getRelatedBrainrots(brainrot: BrainrotRow): Promise<BrainrotRow[]
     .eq('rarity', brainrot.rarity)
     .neq('id', brainrot.id)
     .order('name', { ascending: true })
-    .limit(4)
+    .limit(24)
 
-  return (data ?? []) as BrainrotRow[]
+  const rows = (data ?? []) as BrainrotRow[]
+  if (rows.length === 0) return rows
+
+  // display_price_usd only reflects verified trade-ready prices (often null).
+  // Pull the real default cash value from the public catalog so cards show a
+  // price instead of "pending", matching what the item page displays.
+  const { data: prices } = await (supabase as any)
+    .from('sab_public_price_catalog')
+    .select('brainrot_id,market_value_usd')
+    .eq('mutation_slug', 'default')
+    .in(
+      'brainrot_id',
+      rows.map((r) => r.id),
+    )
+
+  const priceById = new Map<string, number | string | null>(
+    ((prices ?? []) as Array<{ brainrot_id: string; market_value_usd: number | string | null }>).map(
+      (p) => [p.brainrot_id, p.market_value_usd],
+    ),
+  )
+
+  return rows
+    .map((r) => ({ ...r, display_price_usd: priceById.get(r.id) ?? r.display_price_usd }))
+    .sort((a, b) => (asNumber(b.display_price_usd) ?? 0) - (asNumber(a.display_price_usd) ?? 0))
+    .slice(0, 12)
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
@@ -207,10 +332,11 @@ export default async function BrainrotValuePage({ params }: PageProps) {
   const brainrot = await getBrainrot(brainrotSlug)
   if (!brainrot) notFound()
 
-  const [mutations, relatedBrainrots, defaultTradePrice] = await Promise.all([
+  const [mutations, relatedBrainrots, defaultTradePrice, priceHistory] = await Promise.all([
     getMutations(brainrot.id),
     getRelatedBrainrots(brainrot),
     getDefaultTradePrice(brainrot.id),
+    getPriceHistory(brainrot.id),
   ])
 
   const hasPublicMarketPrice =
@@ -243,10 +369,33 @@ export default async function BrainrotValuePage({ params }: PageProps) {
   )
 
   const marketplaceHref = `/steal-a-brainrot/buy-items?search=${encodeURIComponent(brainrot.name)}`
+
+  // Highest-value priced mutation (excluding default) for the FAQ copy.
+  const topMutation = mutations
+    .filter((m) => m.slug !== 'default' && asNumber(m.marketValueUsd) != null)
+    .sort((a, b) => (asNumber(b.marketValueUsd) ?? 0) - (asNumber(a.marketValueUsd) ?? 0))[0]
+
+  const faqItems = buildBrainrotFaq({
+    name: brainrot.name,
+    rarity: brainrot.rarity,
+    obtainability: brainrot.obtainability,
+    baseIncomePerSecond: brainrot.base_income_per_second,
+    ingameCost: brainrot.ingame_cost,
+    defaultPriceUsd: hasPublicMarketPrice
+      ? (defaultTradePrice?.market_value_usd ?? null)
+      : brainrot.market_value_usd,
+    lowUsd: defaultTradePrice?.market_low_usd ?? null,
+    highUsd: defaultTradePrice?.market_high_usd ?? null,
+    topMutation: topMutation
+      ? { name: topMutation.name, priceUsd: topMutation.marketValueUsd }
+      : null,
+    sampleSize: marketSampleSize,
+  })
   const canonicalPath = `/steal-a-brainrot/values/${brainrot.slug}`
 
   return (
-    <main className="min-h-screen pb-24">
+    <main className="relative min-h-screen bg-[#0C0F0E] pb-24">
+      <SabHeroBackdrop height={560}>
       <JsonLd
         data={breadcrumbList([
           { name: 'Home', path: '/' },
@@ -270,145 +419,64 @@ export default async function BrainrotValuePage({ params }: PageProps) {
         />
       )}
 
-      <section className="border-b border-border-subtle">
-        <div className="mx-auto w-full max-w-7xl px-4 pb-7 pt-5 sm:px-6 sm:pb-8 sm:pt-6 lg:px-8">
-          <nav className="mb-4 flex flex-wrap items-center gap-2 text-[12.5px] text-text-tertiary">
-            <Link href="/steal-a-brainrot" className="transition-colors hover:text-text-primary">
-              Steal a Brainrot
-            </Link>
-            <ArrowRight className="h-4 w-4" />
-            <Link href="/steal-a-brainrot/values" className="transition-colors hover:text-text-primary">
-              Values
-            </Link>
-            <ArrowRight className="h-4 w-4" />
-            <span className="text-text-primary">{brainrot.name}</span>
-          </nav>
+      <ValuesHeader gameName="Steal a Brainrot" buyHref={marketplaceHref} />
+      <SabSubNav />
 
-          <div className="grid gap-8 lg:grid-cols-[360px_minmax(0,1fr)] lg:items-center">
-            <div className="aspect-square overflow-hidden rounded-3xl border border-border-subtle bg-bg-overlay p-5">
-              {brainrot.image_url ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={brainrot.image_url}
-                  alt={brainrot.image_alt || `${brainrot.name} Steal a Brainrot`}
-                  className="h-full w-full object-contain"
-                />
-              ) : (
-                <div className="flex h-full items-center justify-center text-text-tertiary">No image available</div>
-              )}
-            </div>
+      <section className="mx-auto w-full max-w-7xl px-4 pt-6 sm:px-6 lg:px-8">
+        <nav className="mb-4 flex flex-wrap items-center gap-1.5 text-[12.5px] text-[#6D7A72]">
+          <Link href="/steal-a-brainrot/values" className="transition-colors hover:text-[#F1F3F1]">
+            Brainrot
+          </Link>
+          <ChevronRight className="h-3.5 w-3.5" />
+          <Link
+            href={`/steal-a-brainrot/values?rarity=${encodeURIComponent(brainrot.rarity)}`}
+            className="transition-colors hover:text-[#F1F3F1]"
+          >
+            {brainrot.rarity}
+          </Link>
+          <ChevronRight className="h-3.5 w-3.5" />
+          <span className="text-[#E6EAE7]">{brainrot.name}</span>
+        </nav>
 
-            <div>
-              <div className="flex flex-wrap gap-2">
-                <span className="rounded-full border border-border-subtle bg-bg-overlay px-3 py-1 text-xs font-semibold text-text-secondary">
-                  {brainrot.rarity}
-                </span>
-                <span className="rounded-full border border-border-subtle bg-bg-overlay px-3 py-1 text-xs font-semibold text-text-secondary">
-                  {brainrot.obtainability}
-                </span>
-                <span className="rounded-full border border-border-subtle bg-bg-overlay px-3 py-1 text-xs font-semibold capitalize text-text-secondary">
-                  {effectiveConfidenceLabel} confidence
-                </span>
-              </div>
-
-              <h1 className="mt-4 text-[22px] font-black leading-tight tracking-tight text-text-primary sm:text-[28px] lg:text-[32px]">
-                {brainrot.name} Value
-              </h1>
-
-              <p className="mt-2 max-w-2xl text-[13px] leading-6 text-text-secondary sm:text-sm">
-                Current value, income, mutation multipliers, rarity, and marketplace availability for {brainrot.name} in Steal a Brainrot.
-              </p>
-
-              <div className="mt-7 rounded-2xl border border-border-subtle bg-bg-overlay p-5 sm:p-6">
-                <p className="text-sm font-semibold text-text-tertiary">Current Market Price</p>
-                {displayPrice ? (
-                  <>
-                    <div className="mt-2 flex flex-wrap items-end gap-x-3 gap-y-1">
-                      <p className="text-3xl font-extrabold text-text-primary">{displayPrice}</p>
-                      <p className="pb-1 text-sm text-text-secondary">
-                        Estimated from current comparable listings
-                      </p>
-                    </div>
-
-                    {hasPublicMarketPrice && (
-                      <>
-                        <p className="mt-3 text-sm text-text-tertiary">
-                          {marketLow && marketHigh
-                            ? `Typical market range ${marketLow}–${marketHigh}`
-                            : 'Current comparable market estimate'}
-                          {marketSampleSize > 0
-                            ? ` · Based on ${marketSampleSize.toLocaleString()} current listings`
-                            : ''}
-                        </p>
-                        {defaultTradePrice?.is_trade_ready !== true && (
-                          <p className="mt-2 text-xs text-text-tertiary">
-                            Display estimate only · Cash trade verdict requires stronger evidence
-                          </p>
-                        )}
-                      </>
-                    )}
-                  </>
-                ) : (
-                  <p className="mt-2 text-xl font-bold text-text-primary">Not enough verified market data</p>
-                )}
-
-                <div className="mt-5 flex flex-wrap gap-3">
-                  <Link
-                    href={marketplaceHref}
-                    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-lime-text px-5 py-2.5 text-sm font-bold text-black transition hover:opacity-90"
-                  >
-                    View {brainrot.name} listings
-                    <ExternalLink className="h-4 w-4" />
-                  </Link>
-                  <Link
-                    href="/steal-a-brainrot/values"
-                    className="inline-flex min-h-11 items-center justify-center rounded-xl border border-border-subtle px-5 py-2.5 text-sm font-semibold text-text-primary transition hover:border-white/20"
-                  >
-                    Browse all values
-                  </Link>
-                </div>
-
-                {updatedLabel && (
-                  <p className="mt-4 text-xs text-text-tertiary">Pricing snapshot updated {updatedLabel}</p>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
+        <ItemHero
+          brainrotName={brainrot.name}
+          rarity={brainrot.rarity}
+          obtainability={brainrot.obtainability}
+          baseIncomePerSecond={asNumber(brainrot.base_income_per_second)}
+          ingameCost={formatMoney(brainrot.ingame_cost)}
+          imageUrl={brainrot.image_url}
+          imageAlt={brainrot.image_alt}
+          mutations={mutations}
+          listingsHref={marketplaceHref}
+          priceHistory={priceHistory}
+          updatedAt={
+            hasPublicMarketPrice
+              ? (defaultTradePrice?.price_updated_at ?? null)
+              : brainrot.price_updated_at
+          }
+        />
       </section>
 
       <div className="mx-auto grid w-full max-w-7xl gap-6 px-4 py-7 sm:px-6 sm:py-8 lg:grid-cols-[minmax(0,1fr)_340px] lg:px-8">
         <div className="space-y-6">
-          <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <FactCard label="Rarity" value={brainrot.rarity} />
-            <FactCard label="Base income" value={formatIncome(brainrot.base_income_per_second)} />
-            <FactCard label="Obtainability" value={brainrot.obtainability} />
-            <FactCard label="In-game cost" value={formatMoney(brainrot.ingame_cost) ?? 'Unknown'} />
-          </section>
 
-          <MutationCalculator
-            brainrotName={brainrot.name}
-            baseIncomePerSecond={asNumber(brainrot.base_income_per_second)}
-            mutations={mutations}
-          />
-
-          <section className="rounded-2xl border border-border-subtle bg-bg-overlay p-5 sm:p-6">
-            <h2 className="text-xl font-bold text-text-primary">{brainrot.name} market value</h2>
-            <p className="mt-3 leading-7 text-text-secondary">
-              Current Market Price is estimated from recent comparable marketplace listings and completed sales when available. Extreme prices, bundles, and unclear variants are excluded.
+          <section className={cn(sabCard, 'p-5 sm:p-6')}>
+            <h2 className="text-lg font-semibold text-[#F1F3F1]">{brainrot.name} market value</h2>
+            <p className="mt-2 text-sm leading-6 text-[#9BA8A0]">
+              Estimated from recent comparable marketplace listings and completed sales when available. Extreme prices, bundles, and unclear variants are excluded.
             </p>
 
-            <div className="mt-6 grid gap-3 sm:grid-cols-2">
-              <ValueRow label="Cheapest active listing" value={cheapestPrice ?? 'No active listings'} />
-              <ValueRow label="Current market price" value={marketValue ?? 'Insufficient data'} />
-              <ValueRow label="Quick-sale estimate" value={quickSale ?? 'Insufficient data'} />
-              <ValueRow label="Patient-sale estimate" value={patientSale ?? 'Insufficient data'} />
-            </div>
+            <dl className="mt-5 divide-y divide-white/[0.07] border-y border-white/[0.07]">
+              <BodyRow label="Cheapest active listing" value={cheapestPrice ?? 'No active listings'} />
+              <BodyRow label="Current market price" value={marketValue ?? 'Insufficient data'} />
+              <BodyRow label="Quick-sale estimate" value={quickSale ?? 'Insufficient data'} />
+              <BodyRow label="Patient-sale estimate" value={patientSale ?? 'Insufficient data'} />
+            </dl>
           </section>
 
-          <section className="rounded-2xl border border-border-subtle bg-bg-overlay p-5 sm:p-6">
-            <h2 className="text-xl font-bold text-text-primary">About {brainrot.name}</h2>
-            <p className="mt-3 leading-7 text-text-secondary">
+          <section className={cn(sabCard, 'p-5 sm:p-6')}>
+            <h2 className="text-lg font-semibold text-[#F1F3F1]">About {brainrot.name}</h2>
+            <p className="mt-2 text-sm leading-6 text-[#9BA8A0]">
               {brainrot.name} is a {brainrot.rarity} Brainrot with a base income of {formatIncome(brainrot.base_income_per_second)}. Its current obtainability status is {brainrot.obtainability}. Mutation income estimates use the verified base income and each mutation&apos;s multiplier unless a verified variant-specific override exists.
             </p>
             {brainrot.source_url && (
@@ -416,7 +484,7 @@ export default async function BrainrotValuePage({ params }: PageProps) {
                 href={brainrot.source_url}
                 target="_blank"
                 rel="noreferrer"
-                className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-text-primary underline underline-offset-4"
+                className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-[#4FB477] underline-offset-4 hover:underline"
               >
                 View source information
                 <ExternalLink className="h-4 w-4" />
@@ -426,93 +494,73 @@ export default async function BrainrotValuePage({ params }: PageProps) {
         </div>
 
         <aside className="space-y-6">
-          <section className="rounded-2xl border border-border-subtle bg-bg-overlay p-5">
-            <div className="flex items-center gap-2 text-text-primary">
-              <TrendingUp className="h-5 w-5 text-lime-text" />
-              <h2 className="font-bold">Market activity</h2>
+          <section className={cn(sabCard, 'p-5')}>
+            <div className="flex items-center gap-2">
+              <TrendingUp className="h-[18px] w-[18px] text-[#4FB477]" />
+              <h2 className="text-sm font-semibold text-[#F1F3F1]">Market activity</h2>
             </div>
-            <dl className="mt-5 space-y-4">
-              <StatRow label="Active listings" value={brainrot.active_listing_count.toLocaleString()} />
-              <StatRow label="Completed sales" value={brainrot.completed_sale_count.toLocaleString()} />
-              <StatRow label="Unique sellers" value={brainrot.unique_seller_count.toLocaleString()} />
-              <StatRow label="Confidence" value={effectiveConfidenceLabel} capitalize />
+            <dl className="mt-4 divide-y divide-white/[0.07] border-y border-white/[0.07]">
+              <BodyRow label="Active listings" value={brainrot.active_listing_count.toLocaleString()} />
+              <BodyRow label="Completed sales" value={brainrot.completed_sale_count.toLocaleString()} />
+              <BodyRow label="Unique sellers" value={brainrot.unique_seller_count.toLocaleString()} />
+              <BodyRow label="Confidence" value={effectiveConfidenceLabel} capitalize />
             </dl>
           </section>
 
-          <section className="rounded-2xl border border-border-subtle bg-bg-overlay p-5">
-            <div className="flex items-center gap-2 text-text-primary">
-              <ShieldCheck className="h-5 w-5 text-lime-text" />
-              <h2 className="font-bold">Pricing integrity</h2>
+          <section className={cn(sabCard, 'p-5')}>
+            <div className="flex items-center gap-2">
+              <ShieldCheck className="h-[18px] w-[18px] text-[#4FB477]" />
+              <h2 className="text-sm font-semibold text-[#F1F3F1]">Pricing integrity</h2>
             </div>
-            <p className="mt-3 text-sm leading-6 text-text-secondary">
+            <p className="mt-2.5 text-[13px] leading-6 text-[#9BA8A0]">
               Extreme prices, bundles, account sales, unclear mutations, test listings, cancelled orders, refunds, disputes, and unverified mappings are excluded from market calculations.
             </p>
           </section>
         </aside>
       </div>
 
-      {relatedBrainrots.length > 0 && (
-        <section className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="border-t border-border-subtle pt-10">
-            <div className="flex items-center justify-between gap-4">
-              <h2 className="text-2xl font-bold text-text-primary">Related {brainrot.rarity} Brainrots</h2>
-              <Link href="/steal-a-brainrot/values" className="text-sm font-semibold text-text-secondary hover:text-text-primary">
-                See all values
-              </Link>
-            </div>
+      <SimilarBrainrots
+        rarity={brainrot.rarity}
+        items={relatedBrainrots.map((r) => ({
+          id: r.id,
+          name: r.name,
+          slug: r.slug,
+          rarity: r.rarity,
+          imageUrl: r.image_url,
+          priceUsd: r.display_price_usd,
+        }))}
+      />
 
-            <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-              {relatedBrainrots.map((related) => (
-                <Link
-                  key={related.id}
-                  href={`/steal-a-brainrot/values/${related.slug}`}
-                  className="overflow-hidden rounded-2xl border border-border-subtle bg-bg-overlay transition hover:-translate-y-0.5 hover:border-white/20"
-                >
-                  <div className="aspect-square bg-black/20 p-3">
-                    {related.image_url && (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={related.image_url} alt={`${related.name} Steal a Brainrot`} className="h-full w-full object-contain" />
-                    )}
-                  </div>
-                  <div className="p-3">
-                    <p className="font-bold text-text-primary">{related.name}</p>
-                    <p className="mt-1 text-xs text-text-tertiary">
-                      {formatMoney(related.display_price_usd) ?? 'Market data pending'}
-                    </p>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
+      {/* Curated FAQ — unique per brainrot (SEO) + FAQPage structured data. */}
+      <section className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="border-t border-white/[0.07] pt-10">
+          <h2 className="text-lg font-semibold text-[#F1F3F1]">{brainrot.name} — questions</h2>
+          <FaqCards items={faqItems} defaultOpen={0} className="mt-5" />
+        </div>
+      </section>
+      <JsonLd data={faqPage(faqItems)} />
+      </SabHeroBackdrop>
     </main>
   )
 }
 
-function FactCard({ label, value }: { label: string; value: string }) {
+// Shared label:value row for the body sections — grey dividers, tabular-nums,
+// matching the hero's StatRow so every SAB surface reads the same.
+function BodyRow({
+  label,
+  value,
+  capitalize = false,
+}: {
+  label: string
+  value: string
+  capitalize?: boolean
+}) {
   return (
-    <div className="rounded-2xl border border-border-subtle bg-bg-overlay p-4">
-      <p className="text-xs font-semibold uppercase tracking-wide text-text-tertiary">{label}</p>
-      <p className="mt-2 break-words text-base font-bold text-text-primary">{value}</p>
-    </div>
-  )
-}
-
-function ValueRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-xl border border-border-subtle bg-black/15 p-4">
-      <p className="text-xs font-semibold uppercase tracking-wide text-text-tertiary">{label}</p>
-      <p className="mt-2 font-bold text-text-primary">{value}</p>
-    </div>
-  )
-}
-
-function StatRow({ label, value, capitalize = false }: { label: string; value: string; capitalize?: boolean }) {
-  return (
-    <div className="flex items-center justify-between gap-4 border-b border-border-subtle pb-4 last:border-0 last:pb-0">
-      <dt className="text-sm text-text-secondary">{label}</dt>
-      <dd className={`text-sm font-bold text-text-primary ${capitalize ? 'capitalize' : ''}`}>{value}</dd>
+    <div className="flex items-center justify-between gap-3 py-2.5 text-sm">
+      <dt className="text-[#9BA8A0]">{label}</dt>
+      <dd className={`font-medium tabular-nums text-[#F1F3F1] ${capitalize ? 'capitalize' : ''}`}>
+        {value}
+      </dd>
     </div>
   )
 }

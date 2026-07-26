@@ -1,0 +1,76 @@
+name: SAB Eldorado Daily Market Collection
+
+# Priority-queue Eldorado collection: fills mutation prices on the highest-value
+# brainrots first (OGs/Secrets, biggest coverage gaps), with deep pagination so
+# every mutation gets enough samples. API-based — no browser needed, unlike the
+# Itemku workflow. The collector's own progress file rotates through the queue
+# across runs, so daily runs steadily widen coverage.
+
+on:
+  workflow_dispatch:
+    inputs:
+      max_brainrots:
+        description: How many brainrots to collect this run
+        required: false
+        default: "120"
+      max_pages:
+        description: Offer pages to fetch per brainrot (deeper = more mutations)
+        required: false
+        default: "10"
+      reset_progress:
+        description: Restart the queue from the top (true/false)
+        required: false
+        default: "false"
+  schedule:
+    # 05:00 UTC — before the price-snapshot cron (06:00) so the snapshot
+    # captures the fresh values collected here.
+    - cron: "0 5 * * *"
+
+concurrency:
+  group: sab-eldorado-daily-market
+  cancel-in-progress: false
+
+jobs:
+  collect-and-import:
+    runs-on: ubuntu-latest
+    # GitHub Actions allows up to 6h; a full priority sweep is ~30-40 min.
+    timeout-minutes: 120
+
+    permissions:
+      contents: read
+
+    env:
+      SAB_MARKET_IMPORT_SECRET: ${{ secrets.SAB_MARKET_IMPORT_SECRET }}
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Collect and import Eldorado market data (priority queue)
+        run: >-
+          npm run sab:eldorado:send --
+          --max-brainrots ${{ inputs.max_brainrots || '120' }}
+          --max-pages ${{ inputs.max_pages || '10' }}
+          --samples-per-variant 8
+          --delay-ms 1500
+          ${{ (inputs.reset_progress == 'true') && '--reset-progress' || '' }}
+
+      - name: Upload collection report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eldorado-sab-market-${{ github.run_id }}
+          path: data/sab-market-feeds/eldorado-api-latest.json
+          if-no-files-found: warn
+          retention-days: 14

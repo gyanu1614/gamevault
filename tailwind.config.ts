@@ -274,6 +274,13 @@ const config: Config = {
           '0%, 100%': { transform: 'translate(0%, 0%) scale(1)' },
           '50%':       { transform: 'translate(-10%, 8%) scale(1.15)' },
         },
+        // Flowing gradient sweep for bg-clip-text labels (SAB sub-nav exit
+        // tabs). Pairs with a 200%-wide gradient so the highlight glides
+        // across the text and loops seamlessly.
+        'text-flow': {
+          '0%':   { backgroundPosition: '0% 50%' },
+          '100%': { backgroundPosition: '-200% 50%' },
+        },
       },
 
       // ── Animations ──────────────────────────────────────────────
@@ -299,6 +306,7 @@ const config: Config = {
         'gradient-x':      'gradient-x 36s linear infinite',
         'aurora-drift-a':  'aurora-drift-a 22s ease-in-out infinite',
         'aurora-drift-b':  'aurora-drift-b 28s ease-in-out infinite',
+        'text-flow':       'text-flow 4s linear infinite',
       },
 
       // ── Backdrop Blur ───────────────────────────────────────────

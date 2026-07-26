@@ -15,6 +15,11 @@ import Image from 'next/image'
 import { JsonLd, breadcrumbList, faqPage } from '@/lib/seo/jsonld'
 import { resolveGameSeo } from '@/lib/seo/templates'
 import { SITE_URL } from '@/config/site'
+import GameSubNav from '@/components/marketplace/GameSubNav'
+import { SabLanding } from './values/_SabLanding'
+import { SabNavExtras } from './values/_SabNavExtras'
+import { loadItemsTaxonomy, listingToOffer } from './[categorySlug]/_itemsData'
+import type { ItemOffer } from './[categorySlug]/_itemsTypes'
 
 interface PageProps {
   params: Promise<{
@@ -173,6 +178,96 @@ async function getFeaturedListings(gameId: string, limit: number = 6) {
   return listings || []
 }
 
+export type SabTopValue = {
+  slug: string
+  name: string
+  rarity: string
+  imageUrl: string | null
+  priceUsd: number | null
+}
+
+// Top brainrots by live default cash value, for the SAB landing carousel.
+async function getSabTopValues(): Promise<SabTopValue[]> {
+  const supabase = await createClient()
+  const { data: rows } = await (supabase as any)
+    .from('sab_public_price_catalog')
+    .select('brainrot_slug,brainrot_name,rarity,image_url,market_value_usd,mutation_slug')
+    .eq('mutation_slug', 'default')
+    .order('market_value_usd', { ascending: false })
+    .limit(18)
+
+  return ((rows ?? []) as any[]).map((r) => ({
+    slug: r.brainrot_slug,
+    name: r.brainrot_name,
+    rarity: r.rarity,
+    imageUrl: r.image_url,
+    priceUsd: r.market_value_usd == null ? null : Number(r.market_value_usd),
+  }))
+}
+
+/**
+ * Top item + account listings for the SAB landing carousels, mapped to the
+ * SAME `ItemOffer` shape the marketplace catalog uses so the carousels render
+ * the real landscape `ItemCard`. Real inventory is thin pre-launch, so we
+ * INCLUDE test/own sellers here (no is_test filter) — this is a marketing
+ * surface, not an SEO-indexed listing count. Accounts are detected by the
+ * joined category metadata.type === 'account'.
+ */
+async function getSabLandingOffers(gameId: string): Promise<{
+  itemOffers: ItemOffer[]
+  accountOffers: ItemOffer[]
+  minPriceUsd: number | null
+}> {
+  const supabase = await createClient()
+
+  // Same select shape as the buy-items page's RawListing so listingToOffer()
+  // gets everything it needs (seller rating/reviews/sales, category, template).
+  const [{ data: rows }, itemsTaxonomy, accountsTaxonomy] = await Promise.all([
+    supabase
+      .from('listings')
+      .select(
+        `
+        id, slug, title, price, original_price, delivery_time,
+        quantity, is_unlimited, images, template_data, status,
+        seller:profiles!listings_seller_id_fkey(
+          id, username, shop_name, avatar_url, seller_tier,
+          seller_rating, total_reviews, total_sales, is_verified
+        ),
+        category:categories!listings_category_id_fkey(slug, name, metadata)
+      `,
+      )
+      .eq('game_id', gameId)
+      .eq('status', 'active')
+      .order('updated_at', { ascending: false })
+      .limit(24),
+    loadItemsTaxonomy(gameId, 'items'),
+    loadItemsTaxonomy(gameId, 'accounts'),
+  ] as const) as any
+
+  const itemOffers: ItemOffer[] = []
+  const accountOffers: ItemOffer[] = []
+  const prices: number[] = []
+
+  for (const row of (rows ?? []) as any[]) {
+    const isAccount = row.category?.metadata?.type === 'account'
+    const offer = listingToOffer(row, isAccount ? accountsTaxonomy : itemsTaxonomy)
+    if (Number.isFinite(offer.pricePerUnit) && offer.pricePerUnit > 0) {
+      prices.push(offer.pricePerUnit)
+    }
+    if (isAccount) {
+      if (accountOffers.length < 12) accountOffers.push(offer)
+    } else if (itemOffers.length < 12) {
+      itemOffers.push(offer)
+    }
+  }
+
+  return {
+    itemOffers,
+    accountOffers,
+    minPriceUsd: prices.length > 0 ? Math.min(...prices) : null,
+  }
+}
+
 export default async function GameBrowsePage({ params }: PageProps) {
   const { gameSlug } = await params
   const game = await getGameData(gameSlug)
@@ -185,6 +280,16 @@ export default async function GameBrowsePage({ params }: PageProps) {
   const featuredListings = await getFeaturedListings(game.id)
   const categories = game.categories || []
 
+  // Top brainrot values for the SAB landing carousel (marketplace inventory is
+  // thin pre-launch, so we lead with our rich value data).
+  const isSab = gameSlug === 'steal-a-brainrot'
+  const [sabTopValues, sabListings] = await Promise.all([
+    isSab ? getSabTopValues() : Promise.resolve([]),
+    isSab
+      ? getSabLandingOffers(game.id)
+      : Promise.resolve({ itemOffers: [], accountOffers: [], minPriceUsd: null }),
+  ])
+
   // Auto-SEO: resolved H1 / intro / FAQ (admin overrides + templates).
   const seo = resolveGameSeo({
     name: game.name,
@@ -194,6 +299,47 @@ export default async function GameBrowsePage({ params }: PageProps) {
     description: game.description,
     overrides: game,
   })
+
+  // Steal a Brainrot gets its own forest-themed "DropMarket Values" landing
+  // (header + sub-nav + backdrop + value carousels), separate from the generic
+  // game layout other games use.
+  if (gameSlug === 'steal-a-brainrot') {
+    // A standard MARKETPLACE page — same chrome as every other game/category
+    // page: global navbar + GameSubNav pill + the homepage-style hero header.
+    // The body carries Top Selling Items/Accounts carousels + links into the
+    // Values/Calculator hub (which have their own forest theme).
+    return (
+      <div className="min-h-screen">
+        <JsonLd
+          data={breadcrumbList([
+            { name: 'Home', path: '/' },
+            { name: game.name, path: `/${gameSlug}` },
+          ])}
+        />
+        <JsonLd data={faqPage(seo.faq.map((f) => ({ q: f.q, a: f.a })))} />
+
+        <GameSubNav
+          gameSlug={gameSlug}
+          gameName={game.name}
+          gameImageUrl={game.image_url}
+          currentCategorySlug=""
+          categories={categories}
+          extraTabs={<SabNavExtras />}
+        />
+
+        <SabLanding
+          gameSlug={gameSlug}
+          gameName={game.name}
+          gameImageUrl={game.image_url}
+          listingCount={sabListings.itemOffers.length + sabListings.accountOffers.length}
+          minPriceUsd={sabListings.minPriceUsd}
+          topValues={sabTopValues}
+          itemOffers={sabListings.itemOffers}
+          accountOffers={sabListings.accountOffers}
+        />
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-bg-base">
