@@ -18,11 +18,13 @@ import { Metadata, ResolvingMetadata } from 'next'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
-import { ShieldCheck, ArrowRight, ChevronDown, Tag, Wallet, CheckCircle2 } from 'lucide-react'
+import { ArrowRight, CheckCircle2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { getSellPage, getAllSellPageSlugs, SellPage } from '@/lib/seo/sellPages'
 import { getGameIcon } from '@/features/home/lib/game-icons'
 import { HeroBackdrop, HeroBackdropPreload } from '@/components/hero-backdrop'
+import { FaqCards } from '@/components/marketplace/FaqCards'
+import { HowSellingWorks } from './_HowSellingWorks'
 import type { ListingWithRelations } from '@/types/database'
 
 import { SITE_URL } from '@/config/site'
@@ -161,24 +163,6 @@ function buildStructuredData(page: SellPage) {
 /* Page component                                                       */
 /* ------------------------------------------------------------------ */
 
-const HOW_STEPS = [
-  {
-    icon: Tag,
-    title: 'List it free',
-    desc: 'Create your listing in minutes. No upfront cost — you only pay commission when it sells.',
-  },
-  {
-    icon: ShieldCheck,
-    title: 'Buyer pays into SafeDrop',
-    desc: 'The buyer pays up front before you deliver. You never hand over goods hoping to get paid.',
-  },
-  {
-    icon: Wallet,
-    title: 'Get paid safely',
-    desc: 'Once the buyer confirms, your proceeds are released — protected from chargebacks.',
-  },
-] as const
-
 export default async function SellSEOLandingPage({
   params,
 }: {
@@ -264,22 +248,9 @@ export default async function SellSEOLandingPage({
           </div>
         </section>
 
-        {/* ---- How selling works — floating columns, no cards ---- */}
-        <section className="px-4 py-12">
-          <div className="mx-auto grid max-w-4xl gap-8 sm:grid-cols-3 sm:gap-10">
-            {HOW_STEPS.map((step, i) => (
-              <div key={step.title} className="text-center sm:text-left">
-                <div className="mb-3 flex items-center justify-center gap-2 sm:justify-start">
-                  <step.icon className="h-6 w-6 text-lime-text" />
-                  <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-lime-text/70">
-                    Step {i + 1}
-                  </span>
-                </div>
-                <h3 className="mb-1.5 text-[15px] font-semibold text-foreground">{step.title}</h3>
-                <p className="text-sm leading-relaxed text-muted-foreground">{step.desc}</p>
-              </div>
-            ))}
-          </div>
+        {/* ---- How selling works — animated flow (client) ---- */}
+        <section className="px-4 py-14">
+          <HowSellingWorks />
         </section>
 
         {/* ---- Live market — floating divide-y rows (proof buyers are here) ---- */}
@@ -318,23 +289,38 @@ export default async function SellSEOLandingPage({
           </section>
         )}
 
-        {/* ---- FAQ — floating divide-y ---- */}
+        {/* ---- About — unique, keyword-rich prose (SEO depth) ---- */}
         <section className="px-4 py-10">
           <div className="mx-auto max-w-2xl">
-            <h2 className="mb-6 text-center font-display text-xl font-semibold text-foreground">
-              Selling FAQs
+            <h2 className="mb-6 font-display text-xl font-semibold text-foreground sm:text-2xl">
+              About selling your {page.assetLabel}
             </h2>
-            <div className="divide-y divide-white/[0.08]">
-              {page.faqs.map((faq, i) => (
-                <details key={i} className="group py-3.5">
-                  <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-sm font-medium text-foreground transition-colors hover:text-lime-text">
-                    {faq.q}
-                    <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" />
-                  </summary>
-                  <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{faq.a}</p>
-                </details>
+            <div className="space-y-7">
+              {page.about.map((sec) => (
+                <div key={sec.heading}>
+                  <h3 className="mb-2 text-[15px] font-semibold text-foreground">{sec.heading}</h3>
+                  <div className="space-y-3 text-[15px] leading-[1.65] text-muted-foreground">
+                    {sec.body
+                      .split(/\n{2,}/)
+                      .map((p) => p.trim())
+                      .filter(Boolean)
+                      .map((p, j) => (
+                        <p key={j}>{p}</p>
+                      ))}
+                  </div>
+                </div>
               ))}
             </div>
+          </div>
+        </section>
+
+        {/* ---- FAQ — items-page FaqCards style ---- */}
+        <section className="px-4 py-10">
+          <div className="mx-auto max-w-3xl">
+            <h2 className="text-center font-display text-2xl font-semibold text-foreground">
+              Selling FAQs
+            </h2>
+            <FaqCards items={page.faqs} defaultOpen={-1} />
           </div>
         </section>
 
