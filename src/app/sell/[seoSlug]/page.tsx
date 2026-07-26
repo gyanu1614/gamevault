@@ -256,7 +256,7 @@ export default async function SellSEOLandingPage({
         {/* ---- Live market — floating divide-y rows (proof buyers are here) ---- */}
         {listings.length > 0 && (
           <section className="px-4 py-8">
-            <div className="mx-auto max-w-2xl">
+            <div className="mx-auto max-w-3xl">
               <div className="mb-1 flex items-baseline justify-between gap-4">
                 <h2 className="font-display text-lg font-semibold text-foreground">
                   Live market for {page.assetLabel}s
@@ -291,7 +291,7 @@ export default async function SellSEOLandingPage({
 
         {/* ---- About — unique, keyword-rich prose (SEO depth) ---- */}
         <section className="px-4 py-10">
-          <div className="mx-auto max-w-2xl">
+          <div className="mx-auto max-w-3xl">
             <h2 className="mb-6 font-display text-xl font-semibold text-foreground sm:text-2xl">
               About selling your {page.assetLabel}
             </h2>
@@ -334,7 +334,7 @@ export default async function SellSEOLandingPage({
                 'radial-gradient(50% 60% at 50% 40%, rgba(198,255,61,0.08), transparent 70%)',
             }}
           />
-          <div className="relative mx-auto max-w-xl text-center">
+          <div className="relative mx-auto max-w-3xl text-center">
             <h2 className="mb-3 font-display text-2xl font-bold tracking-[-0.02em] text-foreground sm:text-3xl">
               Ready to sell your {page.assetLabel}?
             </h2>

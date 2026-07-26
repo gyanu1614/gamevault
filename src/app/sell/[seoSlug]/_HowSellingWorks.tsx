@@ -60,7 +60,7 @@ export function HowSellingWorks() {
       initial="hidden"
       whileInView="show"
       viewport={{ once: true, amount: 0.4 }}
-      className="mx-auto grid max-w-4xl items-start gap-y-10 sm:grid-cols-[1fr_auto_1fr_auto_1fr] sm:gap-x-2"
+      className="mx-auto grid max-w-3xl items-start gap-y-10 sm:grid-cols-[1fr_auto_1fr_auto_1fr] sm:gap-x-2"
     >
       {STEPS.map((step, i) => (
         <div key={step.title} className="contents">
