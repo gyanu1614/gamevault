@@ -52,6 +52,7 @@ import { getPausedSellerIds } from '@/lib/actions/seller-presence'
 import { loadItemsTaxonomy, listingToOffer as listingToItemOffer } from './_itemsData'
 import ItemsPageClient from './_ItemsPageClient'
 import { resolveItemBySlug } from './_itemResolver'
+import { SabNavExtras } from '../values/_SabNavExtras'
 
 interface PageProps {
   params: Promise<{
@@ -495,6 +496,7 @@ export default async function CategoryBrowsePage({ params, searchParams }: PageP
           gameImageUrl={game?.image_url}
           currentCategorySlug={realCategorySlug ?? 'currency'}
           categories={categories}
+          extraTabs={gameSlug === 'steal-a-brainrot' ? <SabNavExtras /> : undefined}
         />
         <BundleCurrencyPageClient
           data={data}
@@ -645,6 +647,7 @@ export default async function CategoryBrowsePage({ params, searchParams }: PageP
           // Falls back to 'currency' if no per-game row was found.
           currentCategorySlug={realCategorySlug ?? 'currency'}
           categories={categories}
+          extraTabs={gameSlug === 'steal-a-brainrot' ? <SabNavExtras /> : undefined}
         />
         <CurrencyPageClient
           data={mergedData}
@@ -781,6 +784,7 @@ export default async function CategoryBrowsePage({ params, searchParams }: PageP
           gameImageUrl={(game as any).image_url}
           currentCategorySlug={category.slug}
           categories={allCategories}
+          extraTabs={gameSlug === 'steal-a-brainrot' ? <SabNavExtras /> : undefined}
         />
         {/* Suspense boundary required for the client's useSearchParams
             (reads ?attr_<slug>= deep-link filters from a navbar search). */}
@@ -855,6 +859,7 @@ export default async function CategoryBrowsePage({ params, searchParams }: PageP
         gameImageUrl={(game as any).image_url}
         currentCategorySlug={categorySlug}
         categories={allCategories}
+        extraTabs={gameSlug === 'steal-a-brainrot' ? <SabNavExtras /> : undefined}
       />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

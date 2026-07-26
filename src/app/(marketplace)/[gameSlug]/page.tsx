@@ -17,7 +17,7 @@ import { resolveGameSeo } from '@/lib/seo/templates'
 import { SITE_URL } from '@/config/site'
 import GameSubNav from '@/components/marketplace/GameSubNav'
 import { SabLanding } from './values/_SabLanding'
-import { SwooshLink } from './values/_SwooshLink'
+import { SabNavExtras } from './values/_SabNavExtras'
 import { loadItemsTaxonomy, listingToOffer } from './[categorySlug]/_itemsData'
 import type { ItemOffer } from './[categorySlug]/_itemsTypes'
 
@@ -324,26 +324,7 @@ export default async function GameBrowsePage({ params }: PageProps) {
           gameImageUrl={game.image_url}
           currentCategorySlug=""
           categories={categories}
-          extraTabs={
-            <>
-              <SwooshLink
-                href="/steal-a-brainrot/values"
-                to="values"
-                ariaLabel="Steal a Brainrot Values"
-                className="relative flex flex-shrink-0 items-center whitespace-nowrap rounded-md px-3 py-2.5 text-[13px] font-semibold text-text-secondary transition-colors hover:text-gray-100 sm:px-3.5 sm:py-2 sm:text-[13.5px]"
-              >
-                Values
-              </SwooshLink>
-              <SwooshLink
-                href="/steal-a-brainrot/calculator"
-                to="values"
-                ariaLabel="Steal a Brainrot Calculator"
-                className="relative flex flex-shrink-0 items-center whitespace-nowrap rounded-md px-3 py-2.5 text-[13px] font-semibold text-text-secondary transition-colors hover:text-gray-100 sm:px-3.5 sm:py-2 sm:text-[13.5px]"
-              >
-                Calculator
-              </SwooshLink>
-            </>
-          }
+          extraTabs={<SabNavExtras />}
         />
 
         <SabLanding
