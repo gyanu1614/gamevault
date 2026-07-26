@@ -69,6 +69,10 @@ export function MobileSlider({
     align: 'start',
     // Stops embla parking a half-empty frame at either end.
     containScroll: 'trimSnaps',
+    // Without this, embla clamps every drag to the adjacent snap point, so a
+    // hard flick feels identical to a light one. This lets fling velocity
+    // carry past several cards, matching native swipe-carousel feel.
+    skipSnaps: true,
   })
   const [isActive, setIsActive] = useState(false)
   // Don't yank the carousel on first mount — only on genuine selection changes.
