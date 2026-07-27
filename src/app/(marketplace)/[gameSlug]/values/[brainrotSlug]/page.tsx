@@ -297,7 +297,10 @@ async function getRelatedBrainrots(brainrot: BrainrotRow): Promise<BrainrotRow[]
   return rows
     .map((r) => ({ ...r, display_price_usd: priceById.get(r.id) ?? r.display_price_usd }))
     .sort((a, b) => (asNumber(b.display_price_usd) ?? 0) - (asNumber(a.display_price_usd) ?? 0))
-    .slice(0, 12)
+    // 20 sibling links (was 12): a denser related-items block is the strongest
+    // internal-link-mesh lever competitors (Rolimons) use — every item page
+    // feeds keyword-rich links to 20 others, spreading crawl + equity.
+    .slice(0, 20)
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {

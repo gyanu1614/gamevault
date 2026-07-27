@@ -180,13 +180,18 @@ export default function ItemHero({
             </div>
             <Link
               href={listingHref}
+              // Keyword-rich anchor ("Buy Dragon Cannelloni") not generic "Buy
+              // Now" — the internal link then carries the item's keywords to the
+              // marketplace money page (internal-link sculpting). aria-label
+              // keeps the accessible name explicit.
+              aria-label={`Buy ${displayName}`}
               className="group mt-4 inline-flex w-full items-center justify-center gap-1.5 rounded-lg px-5 py-3 text-sm font-bold text-black transition-transform duration-100 active:translate-y-0.5 lg:w-auto"
               style={{
                 backgroundColor: visual.color,
                 boxShadow: `0 4px 0 0 ${shade(visual.color, -0.35)}, 0 10px 20px -6px ${visual.color}66`,
               }}
             >
-              Buy Now
+              Buy {displayName}
               <ArrowForwardIcon sx={{ fontSize: 18 }} />
             </Link>
           </div>
