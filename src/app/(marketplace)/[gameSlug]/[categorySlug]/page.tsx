@@ -93,6 +93,42 @@ function buildIntroLine(
   return `Be the first to sell ${gameName} ${categoryLabel} on DropMarket — list in minutes at 5–7% fees.`
 }
 
+/**
+ * Deterministic small hash of a string → stable index. Lets empty-inventory
+ * pages pick a consistent-but-DIFFERENT copy variant per game, so their
+ * titles/descriptions aren't near-duplicates (Bing/Google flag identical meta
+ * across pages). Same game always maps to the same variant.
+ */
+function pickVariant(seed: string, count: number): number {
+  let h = 0
+  for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) >>> 0
+  return h % count
+}
+
+/** Unique-per-game title for a zero-inventory category page. */
+function emptyTitleFor(gameName: string, categoryName: string): string {
+  // NOTE: the root layout appends " | DropMarket" via metadata title.template,
+  // so variants must NOT include it (avoids "... | DropMarket | DropMarket").
+  const variants = [
+    `Buy ${gameName} ${categoryName} — Cheap & Safe`,
+    `${gameName} ${categoryName} for Sale — Verified Sellers`,
+    `Sell & Buy ${gameName} ${categoryName} Safely`,
+    `${gameName} ${categoryName} Marketplace — SafeDrop Protected`,
+  ]
+  return variants[pickVariant(`${gameName}|${categoryName}|t`, variants.length)]
+}
+
+/** Unique-per-game description for a zero-inventory category page. */
+function emptyDescriptionFor(gameName: string, categoryName: string): string {
+  const variants = [
+    `Be the first to sell ${gameName} ${categoryName} on DropMarket — list in minutes at 5–7% fees. Every order is covered by SafeDrop Buyer Protection.`,
+    `Looking to buy or sell ${gameName} ${categoryName}? DropMarket connects verified traders with SafeDrop escrow, so you only pay once delivery is confirmed.`,
+    `${gameName} ${categoryName} on DropMarket: low seller fees, fast delivery, and SafeDrop Buyer Protection on every trade. Be an early seller and set the price.`,
+    `Trade ${gameName} ${categoryName} the safe way. DropMarket holds payment in SafeDrop escrow until you get exactly what you ordered — or your money back.`,
+  ]
+  return variants[pickVariant(`${gameName}|${categoryName}|d`, variants.length)]
+}
+
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { gameSlug, categorySlug } = await params
   const supabase = await createClient()
@@ -178,13 +214,13 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       category.seo_title,
       hasListings
         ? `Buy ${game.name} ${category.name} from ${priceLabel}`
-        : `Buy ${game.name} ${category.name} — Cheap & Safe`,
+        : emptyTitleFor(game.name, category.name),
     ),
     description: seoOverride(
       category.seo_description,
       hasListings
         ? `Buy ${game.name} ${category.name} from verified sellers. ${stats.count} live listings from ${priceLabel}. SafeDrop protection: get what you ordered or your money back.`
-        : `Be the first to sell ${game.name} ${category.name} on DropMarket — list in minutes at 5–7% fees. Every order covered by SafeDrop Buyer Protection.`,
+        : emptyDescriptionFor(game.name, category.name),
     ),
     keywords: [
       `${game.name.toLowerCase()} ${category.name.toLowerCase()}`,

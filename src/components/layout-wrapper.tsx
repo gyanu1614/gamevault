@@ -5,7 +5,14 @@ import { Navbar } from '@/components/navbar-floating'
 import { Footer } from '@/components/footer'
 import { BetaBanner } from '@/components/beta-banner'
 
-export function LayoutWrapper({ children }: { children: React.ReactNode }) {
+export function LayoutWrapper({
+  children,
+  footerGameLinks,
+}: {
+  children: React.ReactNode
+  /** Server-rendered game/value link block, injected into the Footer. */
+  footerGameLinks?: React.ReactNode
+}) {
   const pathname = usePathname()
 
   // Don't show navbar and footer on admin pages
@@ -76,7 +83,7 @@ export function LayoutWrapper({ children }: { children: React.ReactNode }) {
       {/* Sidebar'd account/seller pages have no marketing footer — it
           scrolled awkwardly over the sidebar and adds nothing there. */}
       {!isAdminPage && !isSellWizard && !isCheckout && !isSellerApplication && !hasSidebar && (
-        <Footer />
+        <Footer gameLinks={footerGameLinks} />
       )}
     </div>
   )

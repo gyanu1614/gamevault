@@ -121,9 +121,11 @@ const PAYMENT_ROW: Array<{ key: string; node: React.ReactNode }> = [
   { key: 'klarna', node: <span className="text-[12.5px] font-black tracking-tight">Klarna.</span> },
 ]
 
-function MobileFooter() {
+function MobileFooter({ gameLinks }: { gameLinks?: React.ReactNode }) {
   return (
     <div className="lg:hidden px-5 py-10">
+      {/* Game/value links — the site-wide internal-link mesh (SEO). */}
+      {gameLinks && <div className="mb-8">{gameLinks}</div>}
       {/* 2-column link grid — full compliance pack stays linked. */}
       <div className="grid grid-cols-2 gap-x-6 gap-y-8">
         {MOBILE_LINK_GROUPS.map((group) => (
@@ -203,10 +205,10 @@ function MobileFooter() {
   )
 }
 
-export function Footer() {
+export function Footer({ gameLinks }: { gameLinks?: React.ReactNode }) {
   return (
     <footer className="border-t border-white/[0.08] bg-[#0a0a0f]">
-      <MobileFooter />
+      <MobileFooter gameLinks={gameLinks} />
       <div className="mx-auto hidden max-w-4xl flex-col items-center gap-7 px-6 py-12 text-center lg:flex">
         {/* Brand */}
         <Link href="/" className="flex items-center gap-2.5">
@@ -259,6 +261,10 @@ export function Footer() {
 
         {/* Trustpilot — our own link (desktop footer). See TrustpilotLink. */}
         <TrustpilotLink />
+
+        {/* Game/value links — site-wide internal-link mesh (SEO). Server-
+            rendered anchors so search engines see them on every page. */}
+        {gameLinks}
 
         {/* Docs — the full compliance pack in three centered mini-columns */}
         <div className="grid w-full max-w-2xl grid-cols-1 gap-8 border-t border-white/[0.06] pt-7 sm:grid-cols-3">
