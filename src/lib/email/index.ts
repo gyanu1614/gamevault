@@ -1,6 +1,30 @@
 import { Resend } from 'resend'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
+// Lazily construct the Resend client on first send, not at module load.
+// `new Resend(undefined)` throws immediately, which would crash any page that
+// merely imports this module (e.g. /admin/early-sellers) when RESEND_API_KEY
+// isn't set — common in local dev. This defers that so pages render, and when
+// the key is absent it no-ops the send (logs a warning) instead of throwing.
+let _client: Resend | null = null
+function getResendClient(): Resend | null {
+  const key = process.env.RESEND_API_KEY
+  if (!key) return null
+  if (!_client) _client = new Resend(key)
+  return _client
+}
+
+const resend = {
+  emails: {
+    async send(payload: Parameters<Resend['emails']['send']>[0]) {
+      const client = getResendClient()
+      if (!client) {
+        console.warn('[email] RESEND_API_KEY not set — skipping email send.')
+        return { data: null, error: null }
+      }
+      return client.emails.send(payload)
+    },
+  },
+}
 
 const FROM_EMAIL = 'DropMarket <noreply@dropmarket.gg>'
 // Replies to any transactional email land in the monitored support inbox
