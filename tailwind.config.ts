@@ -14,6 +14,31 @@ const config: Config = {
     extend: {
       // ── Colors ─────────────────────────────────────────────────
       colors: {
+        // Content hub (blog / values / calculator). Namespaced `ct` so a game
+        // theme never leaks into shared marketplace components. Values come
+        // from `contentThemeVars()` on a per-game wrapper — see
+        // src/lib/content/theme.ts.
+        ct: {
+          bg:          'var(--ct-bg)',
+          'bg-deep':   'var(--ct-bg-deep)',
+          surface:     'var(--ct-surface)',
+          'surface-2': 'var(--ct-surface-2)',
+          hover:       'var(--ct-hover)',
+          line:        'var(--ct-line)',
+          'line-soft': 'var(--ct-line-soft)',
+          'line-strong': 'var(--ct-line-strong)',
+          text:        'var(--ct-text)',
+          'text-2':    'var(--ct-text-2)',
+          muted:       'var(--ct-text-muted)',
+          dim:         'var(--ct-text-dim)',
+          faint:       'var(--ct-text-faint)',
+          negative:    'var(--ct-negative)',
+          accent:      'var(--ct-accent)',
+          'accent-text':   'var(--ct-accent-text)',
+          'accent-border': 'var(--ct-accent-border)',
+          'accent-deep':   'var(--ct-accent-deep)',
+          'on-accent':     'var(--ct-on-accent)',
+        },
         // shadcn/radix compatible — updated to use var() directly (GV tokens are hex, not HSL)
         border: {
           DEFAULT: 'var(--border)',

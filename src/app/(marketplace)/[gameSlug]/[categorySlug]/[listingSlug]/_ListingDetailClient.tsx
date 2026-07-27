@@ -39,7 +39,6 @@ import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/component
 import { formatDeliveryLabel } from '@/lib/utils/delivery-time'
 import DescriptionIcon from '@/components/icons/DescriptionIcon'
 import HowItWorksBand from '@/components/marketplace/HowItWorksBand'
-import { BlogSection } from '@/components/blog/BlogSection'
 import { SectionHeading } from '@/components/marketplace/SectionHeading'
 import { TrustBand } from '@/components/marketplace/TrustBand'
 import { TrustpilotLink } from '@/components/trust/TrustpilotLink'
@@ -130,6 +129,9 @@ interface Props {
    *  side: exact-variant matches cheapest-first, then same item with a
    *  different rarity/mutation). Replaces "From the same seller". */
   otherSellerOffers?: ItemOffer[] | null
+  /** Server-rendered blog rail (DB-backed <BlogRail>), passed as a slot so
+   *  this client component doesn't import the blog data layer. */
+  blogRail?: React.ReactNode
 }
 
 const TIER_BADGES: Record<string, { label: string; color: string }> = {
@@ -153,7 +155,7 @@ const PREVIEW_STATUS_LABELS: Record<string, string> = {
 }
 
 export default function ListingDetailClient({
-  listing, viewerId, previewStatus, templateFields, similarOffers, similarOffersAsItems, otherSellerOffers,
+  listing, viewerId, previewStatus, templateFields, similarOffers, similarOffersAsItems, otherSellerOffers, blogRail,
 }: Props) {
   const router = useRouter()
   const { open: openAuth } = useAuthDialog()
@@ -741,8 +743,9 @@ export default function ListingDetailClient({
           categoryName={listing.categoryName}
         />
 
-        {/* ─── BLOG — game-relevant guides rail ─────────────────── */}
-        <BlogSection gameSlug={listing.gameSlug} gameName={listing.gameName} />
+        {/* ─── BLOG — game-relevant guides rail (server-rendered from the DB,
+             passed in as a slot so this client component stays DB-agnostic) ── */}
+        {blogRail}
       </div>
 
       {/* ─── ACCEPTED PAYMENTS — full-bleed wordmark marquee, outside

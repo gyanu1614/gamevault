@@ -26,6 +26,7 @@ import BundleCurrencyPageClient, {
   type BundleCurrencyPageData,
   type BundleOffer,
 } from './_BundleCurrencyPageClient'
+import { BlogRail } from '@/components/blog/BlogRail'
 import { fetchCategoryConfigBySlug } from '@/lib/actions/admin-category-configs'
 import { normalizePlatformOptions } from '@/lib/types/category-configs'
 import { JsonLd, breadcrumbList, productAggregate, faqPage } from '@/lib/seo/jsonld'
@@ -538,6 +539,7 @@ export default async function CategoryBrowsePage({ params, searchParams }: PageP
           data={data}
           viewerId={viewer?.id ?? null}
           introLine={introLine}
+          blogRail={<BlogRail gameSlug={gameSlug} gameName={gameName} />}
         />
         {game?.id && (
           <RelatedGames
@@ -691,6 +693,7 @@ export default async function CategoryBrowsePage({ params, searchParams }: PageP
           viewerId={viewer?.id ?? null}
           gameSlug={gameSlug}
           introLine={introLine}
+          blogRail={<BlogRail gameSlug={gameSlug} gameName={gameName} />}
         />
         {game?.id && (
           <RelatedGames

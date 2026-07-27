@@ -43,7 +43,6 @@ import { SectionHeading } from '@/components/marketplace/SectionHeading'
 import { FaqCards } from '@/components/marketplace/FaqCards'
 import { TrustBand } from '@/components/marketplace/TrustBand'
 import { PaymentsMarquee } from '@/components/marketplace/PaymentsMarquee'
-import { BlogSection } from '@/components/blog/BlogSection'
 import type { CurrencyBundle, PlatformOption } from '@/lib/types/category-configs'
 import { getRegionIcon } from '@/lib/marketplace/region-platform-presets'
 import type { CurrencyFaq, CurrencyStep } from './_CurrencyMeta'
@@ -103,12 +102,15 @@ export default function BundleCurrencyPageClient({
   data,
   viewerId,
   introLine,
+  blogRail,
 }: {
   data: BundleCurrencyPageData
   viewerId: string | null
   /** SEO intro sentence (live stats), server-computed so it lands in
    *  the initial HTML. Rendered under the header tagline. */
   introLine?: string | null
+  /** Server-rendered blog rail (DB-backed), passed as a slot. */
+  blogRail?: React.ReactNode
 }) {
   // V19/P24/P4 — Region selection defaults to the first enabled region.
   // When admin disabled regions entirely we use empty string as a
@@ -611,7 +613,7 @@ export default function BundleCurrencyPageClient({
         )}
 
         {/* ─── BLOG — game-relevant guides rail. */}
-        <BlogSection gameSlug={data.gameSlug} gameName={data.gameName} />
+        {blogRail}
       </div>
 
       {/* ─── ACCEPTED PAYMENTS — full-bleed wordmark marquee. */}

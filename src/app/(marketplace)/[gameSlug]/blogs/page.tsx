@@ -5,29 +5,84 @@
  */
 
 import type { Metadata } from 'next'
-import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { ArrowRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { sabCard } from '@/lib/sab/theme'
 import { createClient } from '@/lib/supabase/server'
 import { getGamePosts } from '@/lib/blog/db'
 import { JsonLd, breadcrumbList } from '@/lib/seo/jsonld'
-import { ValuesHeader } from '../values/_ValuesHeader'
 import { SabHeroBackdrop } from '../values/_SabHeroBackdrop'
+import { ValuesHeader } from '../values/_ValuesHeader'
 import { SabSubNav } from '../values/_SabSubNav'
+import { getGameContentTheme } from '@/lib/content/theme'
+import { BlogHubHero, type BlogHubStat } from './_BlogHubHero'
+import { FeaturedGuide } from './_FeaturedGuide'
+import { ArticleGrid } from './_ArticleGrid'
+import { ValuesTeaser, CalculatorTeaser, HubBuyCta } from './_HubTeasers'
+import { getHubTopValues } from './_hubData'
 
 export const revalidate = 3600
 
-async function getGame(gameSlug: string) {
+interface HubGame {
+  name: string
+  slug: string
+  image_url: string | null
+  seo_h1: string | null
+  seo_intro: string | null
+}
+
+async function getGame(gameSlug: string): Promise<HubGame | null> {
   const supabase = await createClient()
-  const { data } = await supabase
+  const { data } = await (supabase as any)
     .from('games')
-    .select('name, slug, is_active')
+    .select('name, slug, image_url, seo_h1, seo_intro, is_active')
     .eq('slug', gameSlug)
     .eq('is_active', true)
     .maybeSingle()
-  return data as { name: string; slug: string } | null
+  return (data as HubGame | null) ?? null
+}
+
+/**
+ * How many items we hold a public price for. Drives the "Items priced" stat,
+ * which is omitted entirely rather than shown as 0 for games we haven't
+ * started pricing.
+ */
+async function getPricedItemCount(gameSlug: string): Promise<number> {
+  if (gameSlug !== 'steal-a-brainrot') return 0
+  const supabase = await createClient()
+  const { count, error } = await (supabase as any)
+    .from('sab_public_price_catalog')
+    .select('brainrot_id', { count: 'exact', head: true })
+    .eq('mutation_slug', 'default')
+  if (error) {
+    console.error('Unable to count priced items for blog hub:', error)
+    return 0
+  }
+  return count ?? 0
+}
+
+const DAY_MONTH = new Intl.DateTimeFormat('en-GB', {
+  day: 'numeric',
+  month: 'short',
+  timeZone: 'UTC',
+})
+
+const POST_TYPE_LABEL: Record<string, string> = {
+  value: 'Values',
+  seller: 'Selling',
+  guide: 'Guide',
+}
+
+const CARD_DATE = new Intl.DateTimeFormat('en-GB', {
+  day: '2-digit',
+  month: 'short',
+  year: 'numeric',
+  timeZone: 'UTC',
+})
+
+function formatCardDate(iso: string): string {
+  const d = new Date(iso)
+  return Number.isFinite(d.getTime()) ? CARD_DATE.format(d).toUpperCase() : ''
 }
 
 export async function generateMetadata({
@@ -54,87 +109,141 @@ export default async function GameBlogIndex({
   const game = await getGame(gameSlug)
   if (!game) notFound()
 
-  const posts = await getGamePosts(gameSlug)
+  const [posts, pricedItems, topValues] = await Promise.all([
+    getGamePosts(gameSlug),
+    getPricedItemCount(gameSlug),
+    getHubTopValues(gameSlug, 4),
+  ])
+
+  const theme = getGameContentTheme(gameSlug)
+
+  // Newest post carries the "Start here" slot; the rail below shows the rest.
+  const [featured, ...rest] = posts
+
+  // Newest publish date across the game's posts — a real freshness signal
+  // rather than "today", which would be true of any page load.
+  const newest = posts
+    .map((p) => new Date(p.publishedAt).getTime())
+    .filter((t) => Number.isFinite(t))
+    .sort((a, b) => b - a)[0]
+
+  const stats: BlogHubStat[] = [
+    { label: 'Guides', value: String(posts.length) },
+  ]
+  if (pricedItems > 0) {
+    stats.push({ label: 'Items Priced', value: String(pricedItems) })
+  }
+  if (newest) {
+    stats.push({ label: 'Last Updated', value: DAY_MONTH.format(new Date(newest)) })
+  }
+  if (pricedItems > 0) {
+    stats.push({ label: 'Priced From', value: 'Real sales', accent: true })
+  }
+
+  const articleCards = rest.map((post) => ({
+    slug: post.slug,
+    title: post.title,
+    excerpt: post.excerpt,
+    category: POST_TYPE_LABEL[post.postType] ?? 'Guide',
+    date: formatCardDate(post.publishedAt),
+  }))
 
   return (
+    // Same shell as the Values page: opaque #0C0F0E base, shared backdrop with
+    // the header + sub-nav inside it. The hero content floats on top exactly as
+    // Values does, so the navbar reads over the faded (dark) part of the image.
     <main className="relative min-h-screen bg-[#0C0F0E] pb-24">
-      <JsonLd
-        data={breadcrumbList([
-          { name: 'Home', path: '/' },
-          { name: game.name, path: `/${gameSlug}` },
-          { name: 'Guides', path: `/${gameSlug}/blogs` },
-        ])}
-      />
+      {/* Header + sub-nav live INSIDE the backdrop (same as Values) so the dark
+          scrim sits behind them and the tabs stay legible at the top of the
+          page. The overlap-on-scroll bug is solved by the content wrapper's
+          z-index below, not by pulling the nav out here. */}
       <SabHeroBackdrop>
         <ValuesHeader gameName={game.name} buyHref={`/${gameSlug}/buy-items`} />
-        <SabSubNav />
+        <SabSubNav gameSlug={gameSlug} buyHref={`/${gameSlug}/buy-items`} />
 
-        <div className="mx-auto w-full max-w-5xl px-4 pb-6 pt-8 sm:px-6 lg:px-8">
-          <p className="mb-2 text-[11.5px] font-bold uppercase tracking-[0.14em] text-[#4FB477]">
-            DropMarket value database
-          </p>
-          <h1 className="text-[24px] font-semibold leading-tight tracking-tight text-[#F1F3F1] sm:text-[32px]">
-            {game.name} guides &amp; value lists
-          </h1>
-          <p className="mt-3 max-w-2xl text-sm leading-6 text-[#9BA8A0]">
-            Value lists, trading guides, and selling tips for {game.name} — built from real
-            marketplace data and refreshed regularly.
-          </p>
-        </div>
+        <JsonLd
+          data={breadcrumbList([
+            { name: 'Home', path: '/' },
+            { name: game.name, path: `/${gameSlug}` },
+            { name: 'Guides', path: `/${gameSlug}/blogs` },
+          ])}
+        />
+
+        <BlogHubHero
+          gameSlug={gameSlug}
+          gameName={game.name}
+          logoUrl={game.image_url}
+          kicker="Guides & Value Reports"
+          title={`${game.name} Blog`}
+          lead={theme.heroLead}
+          about={game.seo_intro || theme.heroAbout}
+          stats={stats}
+          artItems={topValues.map((v) => ({
+            name: v.name,
+            slug: v.slug,
+            imageUrl: v.imageUrl ?? '',
+            priceLabel: v.priceLabel,
+          }))}
+        />
       </SabHeroBackdrop>
 
-      <div className="relative z-10 mx-auto w-full max-w-5xl px-4 sm:px-6 lg:px-8">
+      {/* No z-index here (matches Values): a z-10 wrapper created a stacking
+          context that beat the fixed header — which sits in SabHeroBackdrop's
+          own z-10 context earlier in the DOM — letting cards scroll over the
+          navbar. Plain flow keeps the header on top. */}
+      <div className="relative mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
+        {featured && (
+          <FeaturedGuide
+            href={`/${gameSlug}/blogs/${featured.slug}`}
+            category={POST_TYPE_LABEL[featured.postType] ?? 'Guide'}
+            readMinutes={featured.readMinutes}
+            title={featured.title}
+            excerpt={featured.excerpt}
+            publishedAt={featured.publishedAt}
+            cover={featured.cover}
+            initials={theme.initials}
+          />
+        )}
+
         {posts.length === 0 ? (
-          <div className={cn(sabCard, 'px-6 py-14 text-center')}>
+          <div className={cn(sabCard, 'mt-12 px-6 py-14 text-center sm:mt-16')}>
             <p className="text-[15px] font-semibold text-[#F1F3F1]">No guides yet</p>
             <p className="mt-2 text-[13px] text-[#9BA8A0]">
               Check back soon — {game.name} guides are on the way.
             </p>
           </div>
         ) : (
-          <div className="grid gap-4 sm:grid-cols-2">
-            {posts.map((post) => (
-              <Link
-                key={post.id}
-                href={`/${gameSlug}/blogs/${post.slug}`}
-                className={cn(
-                  sabCard,
-                  'group flex flex-col overflow-hidden transition hover:-translate-y-0.5 hover:border-[#2A3A31]',
-                )}
-              >
-                {post.cover && (
-                  <div className="aspect-[16/9] overflow-hidden bg-[#0E1211]">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={post.cover}
-                      alt=""
-                      className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                    />
-                  </div>
-                )}
-                <div className="flex flex-1 flex-col p-5">
-                  <p className="text-[11px] font-semibold uppercase tracking-wide text-[#4FB477]">
-                    {post.postType === 'value'
-                      ? 'Value list'
-                      : post.postType === 'seller'
-                        ? 'Seller guide'
-                        : 'Guide'}
-                  </p>
-                  <h2 className="mt-1.5 text-[16px] font-semibold leading-snug text-[#F1F3F1]">
-                    {post.title}
-                  </h2>
-                  <p className="mt-2 line-clamp-2 flex-1 text-[13px] leading-relaxed text-[#9BA8A0]">
-                    {post.excerpt}
-                  </p>
-                  <span className="mt-4 inline-flex items-center gap-1.5 text-[13px] font-semibold text-[#4FB477]">
-                    Read guide
-                    <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-                  </span>
-                </div>
-              </Link>
-            ))}
-          </div>
+          <ArticleGrid
+            gameName={game.name}
+            gameSlug={gameSlug}
+            posts={articleCards}
+          />
         )}
+
+        <ValuesTeaser
+          gameSlug={gameSlug}
+          items={topValues}
+          footnote="Prices are medians of completed sales and active listings. Bundles, account sales and disputed orders are excluded. Change indicators appear only where we hold enough price history."
+        />
+
+        <CalculatorTeaser
+          gameSlug={gameSlug}
+          example={{
+            title: 'Check a trade before you accept it',
+            body: 'Put one item on each side, pick the mutation, and see whether the offer is a win, fair or a loss against observed sale prices.',
+            offer: 'Antonio · Default — $149.99',
+            give: 'Bunny and Eggy · Lava — $183.72',
+            letter: 'L',
+            verdict: 'You come out behind',
+            qualifier: 'Based on completed sales',
+          }}
+        />
+
+        <HubBuyCta
+          gameName={game.name}
+          buyHref={`/${gameSlug}/buy-items`}
+          title={`Skip the grind — buy the ${game.name} item you want`}
+        />
       </div>
     </main>
   )

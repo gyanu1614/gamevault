@@ -1,16 +1,17 @@
 /**
- * /[game]/blogs/[slug] — a single content article in the Values-hub chrome.
- * Reads from the DB (blog_posts). Data-rich body, answer-first, dated; carries
- * the legal-safe ContentDisclaimer. Value/seller posts deep-link into the
- * marketplace (Eldorado model) via CTAs.
+ * /[game]/blogs/[slug] — a single content article.
+ *
+ * Uses the content-design article layout (sticky TOC sidebar + prose column,
+ * key-takeaways box, section headings, FAQ accordion, related grid, buy CTA)
+ * rendered entirely in the Values forest palette. Only what a post actually
+ * contains is shown — no synthesised tables, FAQs or takeaways.
  */
 
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { ArrowRight, ArrowLeft, Clock } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
-import { getGamePost } from '@/lib/blog/db'
+import { getGamePost, getPostsTaggedForGame } from '@/lib/blog/db'
 import { formatDate } from '@/lib/sab/format'
 import { JsonLd, breadcrumbList } from '@/lib/seo/jsonld'
 import { SITE_URL } from '@/config/site'
@@ -18,18 +19,33 @@ import { ContentDisclaimer } from '@/components/content/ContentDisclaimer'
 import { ValuesHeader } from '../../values/_ValuesHeader'
 import { SabHeroBackdrop } from '../../values/_SabHeroBackdrop'
 import { SabSubNav } from '../../values/_SabSubNav'
+import { ArticleBody, extractToc } from './_articleBody'
+import { ArticleToc } from './_ArticleToc'
 
 export const revalidate = 3600
 
+const POST_TYPE_LABEL: Record<string, string> = {
+  value: 'Value list',
+  seller: 'Seller guide',
+  guide: 'Guide',
+}
+
+const RELATED_DATE = new Intl.DateTimeFormat('en-GB', {
+  day: '2-digit',
+  month: 'short',
+  year: 'numeric',
+  timeZone: 'UTC',
+})
+
 async function getGame(gameSlug: string) {
   const supabase = await createClient()
-  const { data } = await supabase
+  const { data } = await (supabase as any)
     .from('games')
-    .select('name, slug, is_active')
+    .select('name, slug, image_url, is_active')
     .eq('slug', gameSlug)
     .eq('is_active', true)
     .maybeSingle()
-  return data as { name: string; slug: string } | null
+  return (data as { name: string; slug: string; image_url: string | null } | null) ?? null
 }
 
 export async function generateMetadata({
@@ -61,11 +77,25 @@ export default async function GameBlogArticle({
   params: Promise<{ gameSlug: string; slug: string }>
 }) {
   const { gameSlug, slug } = await params
-  const [game, post] = await Promise.all([getGame(gameSlug), getGamePost(gameSlug, slug)])
+  const [game, post] = await Promise.all([
+    getGame(gameSlug),
+    getGamePost(gameSlug, slug),
+  ])
   if (!game || !post) notFound()
 
-  const kindLabel =
-    post.postType === 'value' ? 'Value list' : post.postType === 'seller' ? 'Seller guide' : 'Guide'
+  const kindLabel = POST_TYPE_LABEL[post.postType] ?? 'Guide'
+  const toc = extractToc(post.body)
+  // A TOC sidebar only earns its column when there are ≥2 sections. With
+  // fewer, collapse to a single column so the prose aligns with the hero
+  // instead of being pushed right by an empty 220px rail.
+  const hasToc = toc.length >= 2
+  const buyHref = `/${gameSlug}/buy-items`
+  const formattedDate = post.publishedAt ? formatDate(post.publishedAt) : null
+  const updatedLabel = formattedDate ? formattedDate.toUpperCase() : null
+
+  // Related = other posts for this game, excluding the current one.
+  const tagged = await getPostsTaggedForGame(gameSlug, 4)
+  const related = tagged.filter((p) => p.slug !== slug).slice(0, 3)
 
   return (
     <main className="relative min-h-screen bg-[#0C0F0E] pb-24">
@@ -77,7 +107,6 @@ export default async function GameBlogArticle({
           { name: post.title, path: `/${gameSlug}/blogs/${slug}` },
         ])}
       />
-      {/* Article schema — helps Google + AI understand the content + freshness. */}
       <JsonLd
         data={{
           '@context': 'https://schema.org',
@@ -92,80 +121,187 @@ export default async function GameBlogArticle({
         }}
       />
 
+      {/* Header + sub-nav INSIDE the backdrop (same as Values) so the dark
+          scrim sits behind the tabs and they stay legible at top-of-page. */}
       <SabHeroBackdrop>
-        <ValuesHeader gameName={game.name} buyHref={`/${gameSlug}/buy-items`} />
-        <SabSubNav />
+        <ValuesHeader gameName={game.name} buyHref={buyHref} />
+        <SabSubNav gameSlug={gameSlug} buyHref={buyHref} />
 
-        <article className="mx-auto w-full max-w-3xl px-4 pb-6 pt-8 sm:px-6 lg:px-8">
-          <nav className="mb-4 flex items-center gap-1.5 text-[12.5px] text-[#6D7A72]">
-            <Link href={`/${gameSlug}/blogs`} className="inline-flex items-center gap-1 transition-colors hover:text-[#F1F3F1]">
-              <ArrowLeft className="h-3.5 w-3.5" />
-              {game.name} guides
+        {/* HERO — breadcrumb, category, title, lead, byline. */}
+        <div className="mx-auto w-full max-w-7xl px-4 pb-10 pt-8 sm:px-6 lg:px-8">
+          {/* Breadcrumb — brighter grey so it reads on the backdrop. */}
+          <nav className="mb-6 flex flex-wrap items-center gap-1.5 text-[12.5px] text-[#9BA8A0]">
+            <Link
+              href={`/${gameSlug}`}
+              className="transition-colors hover:text-[#F1F3F1]"
+            >
+              {game.name}
             </Link>
+            <span aria-hidden className="text-[#4C564E]">
+              /
+            </span>
+            <Link
+              href={`/${gameSlug}/blogs`}
+              className="transition-colors hover:text-[#F1F3F1]"
+            >
+              Blog
+            </Link>
+            <span aria-hidden className="text-[#4C564E]">
+              /
+            </span>
+            <span className="font-medium text-[#F1F3F1]">{kindLabel}</span>
           </nav>
 
-          <p className="text-[11.5px] font-bold uppercase tracking-[0.14em] text-[#4FB477]">
-            {kindLabel}
-          </p>
-          <h1 className="mt-1.5 text-[26px] font-semibold leading-tight tracking-tight text-[#F1F3F1] sm:text-[34px]">
-            {post.title}
-          </h1>
-          <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12.5px] text-[#9BA8A0]">
-            <span>{post.author}</span>
-            <span className="text-[#3A463F]">·</span>
-            <span className="inline-flex items-center gap-1">
-              <Clock className="h-3.5 w-3.5" />
-              {post.readMinutes} min read
-            </span>
-            {post.publishedAt && (
-              <>
-                <span className="text-[#3A463F]">·</span>
-                <span>Updated {formatDate(post.publishedAt)}</span>
-              </>
+          {/* Game identity block — same as the hub, so articles feel part of
+              the same hub rather than a bare document. */}
+          <div className="mb-7 flex items-center gap-4">
+            {game.image_url ? (
+              // eslint-disable-next-line @next/next/no-img-element -- remote game logo
+              <img
+                src={game.image_url}
+                alt=""
+                className="h-[52px] w-[52px] shrink-0 object-cover"
+              />
+            ) : (
+              <span
+                aria-hidden
+                className="flex h-[52px] w-[52px] shrink-0 items-center justify-center bg-[#1B6B3F] font-mono text-[15px] font-bold text-white"
+              >
+                {game.name.slice(0, 3).toUpperCase()}
+              </span>
             )}
+            <span className="flex flex-col gap-1.5">
+              <span className="text-[18px] font-bold leading-none tracking-tight text-[#F1F3F1]">
+                {game.name}
+              </span>
+              <span className="font-mono text-[11px] font-medium uppercase tracking-[0.16em] text-[#8FBF9C]">
+                Roblox
+              </span>
+            </span>
           </div>
-        </article>
+
+          <div className="max-w-3xl">
+            <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.16em] text-[#4FB477]">
+              {kindLabel}
+            </p>
+            {/* Title — heavier weight + tight tracking for a strong, crawlable
+                H1; the article H1 is the primary on-page SEO signal. */}
+            <h1 className="text-balance text-[30px] font-bold leading-[1.08] tracking-[-0.03em] text-[#F1F3F1] sm:text-[42px]">
+              {post.title}
+            </h1>
+            <p className="mt-4 max-w-2xl text-pretty text-[15px] leading-7 text-[#B7C0B8] sm:text-[17px]">
+              {post.excerpt}
+            </p>
+
+            {/* Byline */}
+            <div className="mt-7 flex flex-wrap items-center gap-3.5 border-t border-[#191F19] pt-5">
+              <span className="flex h-9 w-9 items-center justify-center border border-[#23331F] bg-[#0D140E] font-mono text-[11px] font-bold text-[#8FBF9C]">
+                DM
+              </span>
+              <span className="flex flex-col gap-1">
+                <span className="text-[13px] font-semibold text-[#D7DED4]">
+                  {post.author}
+                </span>
+                <span className="font-mono text-[11px] text-[#5E685E]">
+                  {updatedLabel ? `UPDATED ${updatedLabel} · ` : ''}
+                  {post.readMinutes} MIN READ
+                </span>
+              </span>
+            </div>
+          </div>
+        </div>
       </SabHeroBackdrop>
 
-      <div className="relative z-10 mx-auto w-full max-w-3xl px-4 sm:px-6 lg:px-8">
-        {post.cover && (
-          <div className="mb-8 overflow-hidden rounded-lg border border-[#1E2723]">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={post.cover} alt="" className="w-full object-cover" />
+      {/* BODY — sticky TOC sidebar + prose column. */}
+      <div className="relative mx-auto w-full max-w-7xl px-4 pt-10 sm:px-6 sm:pt-14 lg:px-8">
+        <div
+          className={`grid items-start gap-10 ${
+            hasToc ? 'lg:grid-cols-[220px_minmax(0,1fr)] lg:gap-14' : ''
+          }`}
+        >
+          {hasToc && (
+            <ArticleToc
+              entries={toc}
+              buyHref={buyHref}
+              buyLabel={`Buy ${game.name} items`}
+            />
+          )}
+
+          <div className="max-w-[720px]">
+            {post.cover && (
+              <div className="mb-10 overflow-hidden border border-[#1E2723]">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={post.cover} alt="" className="w-full object-cover" />
+              </div>
+            )}
+
+            <ArticleBody body={post.body} />
+
+            {/* CTA */}
+            <div className="mt-14 border border-[#23331F] bg-[#0D140E] p-6 sm:p-8">
+              <h2 className="mb-3 text-[22px] font-semibold leading-tight tracking-tight text-[#F1F3F1]">
+                Skip the grind — buy the {game.name} item you want
+              </h2>
+              <p className="mb-5 max-w-md text-sm leading-relaxed text-[#98A398]">
+                Every order is covered by SafeDrop — the seller is paid only
+                after you confirm delivery.
+              </p>
+              <div className="flex flex-wrap gap-3">
+                <Link
+                  href={buyHref}
+                  className="inline-flex items-center gap-1.5 bg-[#1B6B3F] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#1f7a48]"
+                >
+                  Buy {game.name} items →
+                </Link>
+                <Link
+                  href={`/${gameSlug}/values`}
+                  className="inline-flex items-center gap-1.5 border border-[#26332C] bg-white/[0.03] px-5 py-3 text-sm font-semibold text-[#E6EAE7] transition hover:border-[#2A3A31] hover:bg-white/[0.06]"
+                >
+                  See all {game.name} values →
+                </Link>
+              </div>
+            </div>
+
+            {/* Related guides */}
+            {related.length > 0 && (
+              <section className="mt-14">
+                <h2 className="mb-4 border-t border-[#1A211A] pt-8 text-[22px] font-bold tracking-tight text-[#F2F6F0]">
+                  Related guides
+                </h2>
+                <div className="grid gap-px overflow-hidden border border-[#1A211A] bg-[#1A211A] sm:grid-cols-3">
+                  {related.map((r) => (
+                    <Link
+                      key={r.slug}
+                      href={`/${gameSlug}/blogs/${r.slug}`}
+                      className="flex flex-col gap-2.5 bg-[#0B0F0C] p-5 transition-colors hover:bg-[#101710]"
+                    >
+                      <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-[#8FBF9C]">
+                        {POST_TYPE_LABEL[r.postType] ?? 'Guide'}
+                      </span>
+                      <span className="text-[15px] font-semibold leading-snug text-[#E4EAE2]">
+                        {r.title}
+                      </span>
+                      {r.publishedAt && (
+                        <span className="font-mono text-[10px] text-[#5E685E]">
+                          UPDATED{' '}
+                          {RELATED_DATE.format(
+                            new Date(r.publishedAt),
+                          ).toUpperCase()}
+                        </span>
+                      )}
+                    </Link>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            <ContentDisclaimer
+              gameName={game.name}
+              gameSlug={gameSlug}
+              includeValueNote={post.postType !== 'guide'}
+            />
           </div>
-        )}
-
-        {/* Body — one <p> per paragraph. Kept plain server-rendered text so it's
-            crawlable by search + AI engines (which run no JavaScript). */}
-        <div className="space-y-5 text-[15px] leading-7 text-[#C6CEC9]">
-          {post.body.map((para, i) => (
-            <p key={i}>{para}</p>
-          ))}
         </div>
-
-        {/* Deep-link CTAs into the marketplace + tools (the Eldorado model). */}
-        <div className="mt-10 flex flex-wrap gap-3">
-          <Link
-            href={`/${gameSlug}/values`}
-            className="inline-flex items-center gap-2 rounded-lg bg-[#1B6B3F] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#1f7a48]"
-          >
-            See all {game.name} values
-            <ArrowRight className="h-4 w-4" />
-          </Link>
-          <Link
-            href={`/${gameSlug}/buy-items`}
-            className="inline-flex items-center gap-2 rounded-lg border border-[#26332C] bg-white/[0.03] px-4 py-2.5 text-sm font-semibold text-[#F1F3F1] transition hover:border-[#2A3A31] hover:bg-white/[0.06]"
-          >
-            Browse the marketplace
-            <ArrowRight className="h-4 w-4" />
-          </Link>
-        </div>
-
-        <ContentDisclaimer
-          gameName={game.name}
-          gameSlug={gameSlug}
-          includeValueNote={post.postType !== 'guide'}
-        />
       </div>
     </main>
   )
