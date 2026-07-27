@@ -10,7 +10,16 @@ import { mutationVisual, mutationOrder, shade } from '@/lib/sab/mutations'
 import { sabHero, sabInteractive } from '@/lib/sab/theme'
 import { FreshnessBadge } from '@/lib/sab/FreshnessBadge'
 import { MutationDot } from '@/lib/sab/MutationDot'
-import { PriceTrendChart, type PricePoint } from './_PriceTrendChart'
+import dynamic from 'next/dynamic'
+import { type PricePoint } from './_PriceTrendChart'
+
+// recharts is ~100KB and the chart sits below the fold (often just a
+// "collecting data" state early on). Lazy-load it so it doesn't bloat the
+// item page's initial JS / hurt INP. Client-only — recharts needs the DOM.
+const PriceTrendChart = dynamic(
+  () => import('./_PriceTrendChart').then((m) => m.PriceTrendChart),
+  { ssr: false },
+)
 
 export type MutationOption = {
   slug: string
