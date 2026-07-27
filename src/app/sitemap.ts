@@ -95,6 +95,32 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     })),
   ]
 
+  // DB-driven per-game blog posts (/[game]/blogs/[slug]) + their index pages.
+  // Only PUBLISHED, game-scoped posts. Index pages are added per game that has
+  // at least one published post.
+  const { data: gamePostRows } = (await supabase
+    .from('blog_posts')
+    .select('slug, primary_game_slug, updated_at')
+    .eq('status', 'published')
+    .not('primary_game_slug', 'is', null)) as unknown as {
+    data: { slug: string; primary_game_slug: string; updated_at: string }[] | null
+  }
+  const gameBlogIndexSlugs = new Set<string>()
+  const gameBlogPages: MetadataRoute.Sitemap = (gamePostRows ?? []).map((p) => {
+    gameBlogIndexSlugs.add(p.primary_game_slug)
+    return {
+      url: `${BASE_URL}/${p.primary_game_slug}/blogs/${p.slug}`,
+      ...(p.updated_at ? { lastModified: new Date(p.updated_at) } : {}),
+      changeFrequency: 'weekly' as const,
+      priority: 0.55,
+    }
+  })
+  const gameBlogIndexPages: MetadataRoute.Sitemap = Array.from(gameBlogIndexSlugs).map((g) => ({
+    url: `${BASE_URL}/${g}/blogs`,
+    changeFrequency: 'weekly' as const,
+    priority: 0.6,
+  }))
+
   // Fetch games, active listings (with game/category slugs), and the
   // curated currency configs in parallel.
   const [{ data: games }, { data: listings }, { data: currencyConfigs }] =
@@ -260,6 +286,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...staticPages,
     ...legalPages,
     ...blogPages,
+    ...gameBlogIndexPages,
+    ...gameBlogPages,
     ...landingPages,
     ...sabPages,
     ...gamePages,

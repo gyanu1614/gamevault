@@ -6,6 +6,7 @@ import CalculateOutlinedIcon from '@mui/icons-material/CalculateOutlined'
 import TableChartOutlinedIcon from '@mui/icons-material/TableChartOutlined'
 import StorefrontOutlinedIcon from '@mui/icons-material/StorefrontOutlined'
 import HomeOutlinedIcon from '@mui/icons-material/HomeOutlined'
+import ArticleOutlinedIcon from '@mui/icons-material/ArticleOutlined'
 import NorthEastIcon from '@mui/icons-material/NorthEast'
 import type { SvgIconComponent } from '@mui/icons-material'
 import { SwooshLink } from './_SwooshLink'
@@ -28,6 +29,12 @@ const TABS: Tab[] = [
     match: (p) => p === '/steal-a-brainrot',
     // Overview IS the marketplace landing — leaving the hub for it swooshes.
     exits: true,
+  },
+  {
+    label: 'Blog',
+    href: '/steal-a-brainrot/blogs',
+    Icon: ArticleOutlinedIcon,
+    match: (p) => p.startsWith('/steal-a-brainrot/blogs'),
   },
   {
     label: 'Values',
