@@ -33,15 +33,22 @@ export async function generateMetadata({
     return { title: 'Values Not Found' }
   }
 
+  // Target the #1 query shape "[game] value list [Month Year]". The dated
+  // modifier is a real freshness signal (prices update daily), and "value
+  // list" is the exact head term competitors title on. Computed at request
+  // time so it stays current without edits.
+  const now = new Date()
+  const monthYear = now.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+  const title = `Steal a Brainrot Value List (${monthYear}) — Prices & Income`
+
   return {
-    title: 'Steal a Brainrot Values, Prices & Income',
-    description:
-      'Browse Steal a Brainrot values, income, rarity, obtainability, mutations, and live DropMarket pricing for every Brainrot.',
+    title,
+    description: `Steal a Brainrot value list for ${monthYear}: live cash values, income, rarity, obtainability, and mutation prices for every Brainrot — updated daily from real DropMarket marketplace data.`,
     alternates: { canonical: '/steal-a-brainrot/values' },
     openGraph: {
-      title: 'Steal a Brainrot Values, Prices & Income',
+      title,
       description:
-        'Compare Brainrot values, income, rarity, mutations, and live marketplace pricing.',
+        'Compare Brainrot values, income, rarity, mutations, and live marketplace pricing — updated daily.',
       url: '/steal-a-brainrot/values',
       type: 'website',
     },
