@@ -38,6 +38,26 @@ const nextConfig = {
   // SEO during the transition.
   async redirects() {
     return [
+      // Category slugs canonicalized to the buy-{x} SEO pattern (was bare
+      // items/accounts/currency on legacy games). 301 the old bare URLs → the
+      // canonical buy- URL so Google consolidates on the ranking-friendly slug.
+      // Renamed games: adopt-me, blox-fruits, blade-ball, brookhaven-rp,
+      // murder-mystery-2, gta-vi, steal-a-brainrot (accounts only).
+      {
+        source: '/:game(adopt-me|blox-fruits|blade-ball|brookhaven-rp|murder-mystery-2|gta-vi)/items',
+        destination: '/:game/buy-items',
+        permanent: true,
+      },
+      {
+        source: '/:game(adopt-me|blox-fruits|blade-ball|brookhaven-rp|steal-a-brainrot)/accounts',
+        destination: '/:game/buy-accounts',
+        permanent: true,
+      },
+      {
+        source: '/blade-ball/currency',
+        destination: '/blade-ball/buy-currency',
+        permanent: true,
+      },
       // Blog posts migrated from flat /blog/[slug] to nested /[game]/blogs/[slug]
       // (DB-backed CMS). 301 the old flat URLs so Google moves the ranking to
       // the canonical nested URL — no duplicate content. General (non-game)
