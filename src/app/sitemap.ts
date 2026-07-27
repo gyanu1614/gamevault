@@ -272,6 +272,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: 'monthly',
       priority: 0.5,
     },
+    {
+      // Price Index — the citable data-story / link-magnet page.
+      url: `${BASE_URL}/steal-a-brainrot/price-index`,
+      changeFrequency: 'daily',
+      priority: 0.7,
+    },
     ...((sabBrainrots ?? []) as { slug: string }[])
       .filter((brainrot) => Boolean(brainrot.slug))
       .map((brainrot) => ({
