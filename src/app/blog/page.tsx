@@ -4,8 +4,10 @@
  */
 
 import type { Metadata } from 'next'
-import { getAllPosts } from '@/lib/blog/posts'
+import { getAllPublishedPosts } from '@/lib/blog/db'
 import { BlogCard } from '@/components/blog/BlogCard'
+
+export const revalidate = 3600
 
 export const metadata: Metadata = {
   title: 'Blog — Trading Guides & Safety Tips',
@@ -13,8 +15,13 @@ export const metadata: Metadata = {
     'Trading guides, item value breakdowns, and marketplace safety tips from the DropMarket team.',
 }
 
-export default function BlogIndexPage() {
-  const posts = getAllPosts()
+/** A post's canonical URL: nested under its game when it has one, else flat. */
+function postHref(post: { slug: string; primaryGameSlug: string | null }): string {
+  return post.primaryGameSlug ? `/${post.primaryGameSlug}/blogs/${post.slug}` : `/blog/${post.slug}`
+}
+
+export default async function BlogIndexPage() {
+  const posts = await getAllPublishedPosts()
   return (
     <main className="min-h-screen pb-24">
       <div className="mx-auto w-full max-w-7xl px-4 pt-12 sm:px-6 sm:pt-16 lg:px-8">
@@ -32,7 +39,7 @@ export default function BlogIndexPage() {
 
         <div className="mt-12 grid grid-cols-1 gap-x-6 gap-y-12 sm:grid-cols-2 lg:grid-cols-3">
           {posts.map((p, i) => (
-            <BlogCard key={p.slug} post={p} index={i} />
+            <BlogCard key={p.id} post={p} index={i} href={postHref(p)} />
           ))}
         </div>
       </div>

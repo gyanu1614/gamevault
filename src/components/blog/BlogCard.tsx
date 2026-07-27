@@ -55,18 +55,24 @@ export function BlogCard({
   post,
   index = 0,
   variant = 'default',
+  href,
 }: {
   post: BlogPost
   index?: number
   variant?: BlogCardVariant
+  /** Override the link target. Defaults to the flat /blog/[slug]; the blog
+   *  index passes the post's true (possibly nested) URL to avoid a redirect
+   *  double-hop for posts that now live under /[game]/blogs/[slug]. */
+  href?: string
 }) {
   const date = formatDate(post.publishedAt)
   const featured = variant === 'featured'
+  const url = href ?? `/blog/${post.slug}`
 
   if (variant === 'compact') {
     return (
       <Link
-        href={`/blog/${post.slug}`}
+        href={url}
         className="group flex min-w-0 items-center gap-3 overflow-hidden rounded-lg border border-border-default bg-[rgba(20,20,27,0.56)] p-2.5 backdrop-blur-md transition-all duration-200 hover:border-border-strong hover:bg-[rgba(26,26,35,0.70)]"
       >
         <div
@@ -102,7 +108,7 @@ export function BlogCard({
 
   return (
     <Link
-      href={`/blog/${post.slug}`}
+      href={url}
       className={cn(
         'group flex h-full min-w-0 overflow-hidden rounded-lg border border-border-default bg-[rgba(20,20,27,0.56)] backdrop-blur-md transition-all duration-200',
         'hover:-translate-y-0.5 hover:border-border-strong hover:bg-[rgba(26,26,35,0.70)] hover:shadow-[0_12px_28px_-14px_rgba(0,0,0,0.65)]',
