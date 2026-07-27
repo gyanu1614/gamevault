@@ -240,6 +240,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: 'weekly',
       priority: 0.8,
     },
+    {
+      // E-E-A-T / AI-citability: how we source & calculate values.
+      url: `${BASE_URL}/steal-a-brainrot/values/methodology`,
+      changeFrequency: 'monthly',
+      priority: 0.5,
+    },
     ...((sabBrainrots ?? []) as { slug: string }[])
       .filter((brainrot) => Boolean(brainrot.slug))
       .map((brainrot) => ({
