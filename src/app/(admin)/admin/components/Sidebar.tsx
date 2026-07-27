@@ -33,6 +33,7 @@ import {
   IconShoppingCart,
   IconTicket,
   IconRocket,
+  IconArticle,
   IconLayoutSidebarLeftCollapse,
   IconLayoutSidebarLeftExpand,
 } from '@tabler/icons-react'
@@ -62,6 +63,7 @@ const LINKS = [
   { label: 'Analytics',           href: '/admin/analytics',      icon: IconChartBar,        roles: ['admin', 'super_admin'] },
   { label: 'Fraud',               href: '/admin/fraud',          icon: IconShieldX,         roles: ['admin', 'super_admin'] },
   { label: 'Games',               href: '/admin/games',          icon: IconDeviceGamepad2,  roles: ['admin', 'super_admin'] },
+  { label: 'Blog & Content',      href: '/admin/blog',           icon: IconArticle,         roles: ['admin', 'super_admin'] },
   { label: 'Moderation',          href: '/admin/moderation',     icon: IconClipboardCheck,  roles: ['admin', 'moderator', 'super_admin'] },
   { label: 'Promo Codes',         href: '/admin/promos',         icon: IconTicket,          roles: ['admin', 'super_admin'] },
   { label: 'Utilities',           href: '/admin/utils',          icon: IconTool,            roles: ['admin', 'super_admin'] },
