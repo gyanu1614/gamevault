@@ -461,8 +461,32 @@ export default async function BrainrotValuePage({ params }: PageProps) {
         <div className="space-y-6">
 
           <section className={cn(sabCard, 'p-5 sm:p-6')}>
-            <h2 className="text-lg font-semibold text-[#F1F3F1]">{brainrot.name} market value</h2>
-            <p className="mt-2 text-sm leading-6 text-[#9BA8A0]">
+            <h2 className="text-lg font-semibold text-[#F1F3F1]">
+              How much is {brainrot.name} worth?
+            </h2>
+            {/* Answer-first, dated, quotable lead sentence — the exact string an
+                AI answer engine (ChatGPT/Perplexity) lifts as a citation. Kept
+                as plain server-rendered text (AI crawlers run no JavaScript).
+                See search-engines-ai-seo-research memo (Princeton GEO study:
+                statistics + freshness are the top citation levers). */}
+            <p className="mt-2 text-sm leading-6 text-[#C6CEC9]">
+              {marketValue ? (
+                <>
+                  The current value of <strong className="font-semibold text-[#F1F3F1]">{brainrot.name}</strong>{' '}
+                  in Steal a Brainrot is <strong className="font-semibold text-[#F1F3F1]">{marketValue}</strong>
+                  {updatedLabel ? <> as of {updatedLabel}</> : null}, based on live DropMarket
+                  marketplace data. It is a {brainrot.rarity} Brainrot with a base income of{' '}
+                  {formatIncome(brainrot.base_income_per_second)}.
+                </>
+              ) : (
+                <>
+                  {brainrot.name} is a {brainrot.rarity} Brainrot in Steal a Brainrot with a base income
+                  of {formatIncome(brainrot.base_income_per_second)}. Live pricing is still being
+                  collected — check back as DropMarket gathers more marketplace data.
+                </>
+              )}
+            </p>
+            <p className="mt-2 text-xs leading-5 text-[#9BA8A0]">
               Estimated from recent comparable marketplace listings and completed sales when available. Extreme prices, bundles, and unclear variants are excluded.
             </p>
 
