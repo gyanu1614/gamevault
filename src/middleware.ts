@@ -1,6 +1,17 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { isProtectedPath } from '@/lib/auth/protected-routes'
+import { getAllSellPageSlugs } from '@/lib/seo/sellPages'
+
+/**
+ * Public seller-intent SEO landing pages that live under the otherwise-
+ * protected /sell prefix (which also holds the seller listing tools:
+ * /sell/new, /sell/edit, /sell/bulk). Only these EXACT marketing slugs are
+ * public; the listing routes stay gated. Single source of truth = sellPages.ts.
+ */
+const PUBLIC_SELL_SEO_PATHS = new Set(
+  getAllSellPageSlugs().map((slug) => `/sell/${slug}`),
+)
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
@@ -21,7 +32,9 @@ export async function middleware(request: NextRequest) {
     '/account/become-seller',
     '/account/seller-status'
   ]
-  const isPublicSellerRoute = publicSellerRoutes.some(route => pathname.startsWith(route))
+  const isPublicSellerRoute =
+    publicSellerRoutes.some(route => pathname.startsWith(route)) ||
+    PUBLIC_SELL_SEO_PATHS.has(pathname)
 
   if (isProtectedRoute && !isPublicSellerRoute) {
     try {

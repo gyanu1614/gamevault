@@ -13,6 +13,7 @@
 import { MetadataRoute } from 'next'
 import { createClient } from '@/lib/supabase/server'
 import { getAllLandingPageSlugs } from '@/lib/seo/landingPages'
+import { getAllSellPageSlugs } from '@/lib/seo/sellPages'
 import { LEGAL_DOCS } from '@/lib/legal/documents'
 import { getAllPosts } from '@/lib/blog/posts'
 
@@ -252,6 +253,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.75,
   }))
 
+  // Seller-intent SEO landing pages — /sell/[seoSlug] (see sellPages.ts).
+  const sellLandingPages: MetadataRoute.Sitemap = getAllSellPageSlugs().map((slug) => ({
+    url: `${BASE_URL}/sell/${slug}`,
+    changeFrequency: 'weekly' as const,
+    priority: 0.75,
+  }))
+
   const sabPages: MetadataRoute.Sitemap = [
     {
       url: `${BASE_URL}/steal-a-brainrot/values`,
@@ -295,6 +303,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...gameBlogIndexPages,
     ...gameBlogPages,
     ...landingPages,
+    ...sellLandingPages,
     ...sabPages,
     ...gamePages,
     ...categoryPages,
