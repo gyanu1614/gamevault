@@ -104,16 +104,48 @@ export function GuideCard({
   return (
     <Link
       href={`/${gameSlug}/blogs/${post.slug}`}
-      className="group flex w-[268px] shrink-0 flex-col border border-[#1E2723] bg-[#121613] transition-colors hover:border-[#2F4237] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#8FBF9C] sm:w-[320px]"
+      className="group relative flex w-[300px] shrink-0 flex-col border border-[#1E2723] bg-[#121613] transition-colors duration-200 hover:border-[#33453A] hover:bg-[#171D19] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#8FBF9C] sm:w-[392px]"
     >
-      {/* ── Cover — 16:9 keeps the card compact ── */}
-      <div className="relative aspect-video w-full overflow-hidden bg-[#0E1A11]">
+      {/* ── Interior accent, same recipe as the currency bundle tiles: a soft
+          pool of accent light inside the card rather than a flat fill, brought
+          up on hover. Ours is forest rather than lime.
+
+          Both layers sit FIRST in the DOM and every sibling below is
+          `relative`, so painting order alone keeps them behind the art and the
+          type — no z-index, which is what let cards climb over the navbar the
+          last time. ── */}
+      <span
+        aria-hidden
+        className="pointer-events-none absolute inset-0 opacity-75 transition-opacity duration-300 group-hover:opacity-100"
+        style={{
+          background:
+            'radial-gradient(115% 85% at 6% 100%, rgba(79,180,119,0.15), rgba(79,180,119,0.045) 44%, rgba(18,22,19,0) 74%)',
+        }}
+      />
+      {/* Spotlight pool under the cover — lifts the art off the body, the way
+          the bundle tile's icon spotlight does. */}
+      <span
+        aria-hidden
+        className="pointer-events-none absolute left-1/2 top-[48%] h-14 w-4/5 -translate-x-1/2 bg-[#4FB4771F] opacity-60 blur-2xl transition-opacity duration-300 group-hover:opacity-100"
+      />
+      {/* ── Cover — 2:1 rather than 16:9. The card got wider to fit more of the
+          headline per line, and a 16:9 crop would have grown the height with it;
+          the wider ratio keeps the card's height where it was. ── */}
+      <div className="relative aspect-[2/1] w-full shrink-0 overflow-hidden bg-[#0E1A11]">
         {post.cover ? (
           // eslint-disable-next-line @next/next/no-img-element -- remote cover art
+          // Overscanned by 1px on every side: at fractional device-pixel
+          // offsets an exactly-inset image can expose a hairline of raw art at
+          // the overflow-hidden edge, which read as a red/green line flashing
+          // under the cover on hover. No hover zoom — the highlight is the grey
+          // lift on the card, nothing moves.
           <img
             src={post.cover}
             alt=""
-            className="absolute inset-0 h-full w-full object-cover"
+            // max-w-none is required: the preflight `img { max-width: 100% }`
+            // otherwise clamps the box back to the clip width, which left a
+            // 1px gap on the right — an edge that can flash raw art.
+            className="absolute -inset-px h-[calc(100%+2px)] w-[calc(100%+2px)] max-w-none object-cover"
           />
         ) : (
           // No cover yet — a tinted hatch reads as deliberate where an empty
@@ -170,20 +202,29 @@ export function GuideCard({
         </span>
       </div>
 
-      {/* ── Body — headline, then a single meta row. ── */}
-      <div className="flex flex-col gap-2.5 px-[18px] pb-[18px] pt-1">
-        <span className="line-clamp-2 text-pretty text-[17px] font-extrabold leading-[1.15] tracking-[-0.02em] text-white sm:text-[18px]">
+      {/* ── Body — headline, then a single meta row. ──
+          The headline is the one thing meant to catch the eye, so it gets the
+          size and the near-white; the meta row was competing at #CFD8D1 bold
+          and is now demoted to a quiet grey. Nothing here shouts except the
+          title. */}
+      <div className="relative flex flex-col gap-3 px-5 pb-5 pt-2">
+        <span className="line-clamp-2 text-balance text-[19px] font-extrabold leading-[1.18] tracking-[-0.025em] text-[#F7FAF6] transition-colors duration-200 group-hover:text-white sm:text-[21px]">
           {post.title}
         </span>
-        <span aria-hidden className="h-px bg-[#1E2723]" />
+        {/* Hairline fading to the right (bundle-tile detail), with a mint wipe
+            on hover — the card's one piece of motion aimed at the type rather
+            than the art. */}
+        <span aria-hidden className="relative block h-px bg-[linear-gradient(90deg,#1E2723,rgba(30,39,35,0))]">
+          <span className="absolute inset-y-0 left-0 w-full origin-left scale-x-0 bg-[linear-gradient(90deg,#8FBF9C,rgba(143,191,156,0))] transition-transform duration-500 ease-out group-hover:scale-x-100" />
+        </span>
         <div className="flex items-center justify-between gap-2">
           <span className="flex items-center gap-2">
-            <span className="font-mono text-[11px] font-bold text-[#CFD8D1]">
+            <span className="font-mono text-[11px] font-medium text-[#818E86]">
               {post.date}
             </span>
-            <span aria-hidden className="h-1 w-1 bg-[#8FBF9C]" />
-            <span className="flex items-center gap-1 font-mono text-[11px] font-bold text-[#CFD8D1]">
-              <AccessTimeIcon sx={{ fontSize: 13 }} className="text-[#8FBF9C]" />
+            <span aria-hidden className="h-1 w-1 bg-[#3C4A41]" />
+            <span className="flex items-center gap-1 font-mono text-[11px] font-medium text-[#818E86]">
+              <AccessTimeIcon sx={{ fontSize: 13 }} className="text-[#5D6B62]" />
               {post.readMinutes} min
             </span>
           </span>

@@ -77,3 +77,9 @@ export async function getHubNavData(gameSlug: string): Promise<HubNavData> {
     accountsHref,
   }
 }
+
+/**
+ * Nav clearance tokens live in `hubNavGeometry` — this module is server-only,
+ * so client components cannot import from here. Re-exported for convenience.
+ */
+export { HUB_NAV_CLEAR, HUB_NAV_CLEAR_HERO } from '@/components/content/hubNavGeometry'

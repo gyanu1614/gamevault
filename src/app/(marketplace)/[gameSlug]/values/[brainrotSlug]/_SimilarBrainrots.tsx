@@ -100,7 +100,7 @@ function ArrowBtn({ dir, onClick }: { dir: 1 | -1; onClick: () => void }) {
       type="button"
       onClick={onClick}
       aria-label={dir === 1 ? 'Next' : 'Previous'}
-      className="grid h-8 w-8 place-items-center rounded-lg border border-[#26332C] bg-white/[0.03] text-[#B7C0BA] transition hover:border-[#2A3A31] hover:bg-white/[0.06]"
+      className="grid h-8 w-8 place-items-center border border-[#26332C] bg-white/[0.03] text-[#B7C0BA] transition hover:border-[#2A3A31] hover:bg-white/[0.06]"
     >
       {dir === 1 ? (
         <ChevronRightIcon sx={{ fontSize: 20 }} />

@@ -52,7 +52,10 @@ export function FeaturedGuide({
 
       <Link
         href={href}
-        className="group relative block overflow-hidden border border-[#1E2723] bg-[#0C0F0E] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#3FA35C] lg:h-[360px]"
+        // No hover background here: the photo dissolve's end stops are pinned
+        // to #0C0F0E, so shifting the block's bg would open a visible seam in
+        // the gradient. Border + CTA carry the hover state instead.
+        className="group relative block overflow-hidden border border-[#1E2723] bg-[#0C0F0E] transition-colors duration-200 hover:border-[#33453A] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#3FA35C] lg:h-[360px]"
       >
         {/* ── Image layer ── */}
         {/* Mobile: full-width 16:9 band. Desktop: absolute left half. */}
@@ -62,7 +65,7 @@ export function FeaturedGuide({
             <img
               src={cover}
               alt=""
-              className="h-full w-full object-cover transition-transform duration-[400ms] ease-[cubic-bezier(.2,.8,.2,1)] group-hover:scale-[1.03]"
+              className="h-full w-full object-cover"
             />
           ) : (
             <div className="h-full w-full bg-[#0E1A11]" />
@@ -96,6 +99,25 @@ export function FeaturedGuide({
             </span>
           </span>
         </div>
+
+        {/* ── Interior accent — the currency bundle tiles' pool-of-light idea
+            in forest, pooling behind the copy and CTA so the panel isn't a flat
+            dark rectangle. Sits after the image layer and before the panel, so
+            painting order puts it over the faded photo tail and under the type
+            without a single z-index. ── */}
+        <span
+          aria-hidden
+          className="pointer-events-none absolute inset-0 opacity-80 transition-opacity duration-300 group-hover:opacity-100"
+          style={{
+            background:
+              'radial-gradient(85% 115% at 100% 100%, rgba(79,180,119,0.17), rgba(79,180,119,0.05) 40%, rgba(12,15,14,0) 70%)',
+          }}
+        />
+        {/* Top sheen — faint light falling from above, as on the bundle tile. */}
+        <span
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 top-0 h-1/3 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.045),transparent)]"
+        />
 
         {/* ── Text panel — overlaps onto the faded image tail on desktop.
             `relative` lifts it above the absolutely-positioned image layer,

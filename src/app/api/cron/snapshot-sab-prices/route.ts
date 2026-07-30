@@ -9,7 +9,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createServiceRoleClient } from '@/lib/supabase/service'
 import { pingIndexNow } from '@/lib/seo/indexnow'
 
 // Must be set in environment variables. No fallback — fail closed if unset
@@ -24,10 +24,18 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const supabase = await createClient()
+    // MUST be the service-role client. The capture function is defined as:
+    //   revoke all on function sab_capture_price_history(date)
+    //     from public, anon, authenticated;
+    //   grant execute ... to service_role;
+    // Calling it through the anon/SSR client (as this route originally did)
+    // fails the permission check on every run, which is why the table held a
+    // single manually-seeded day while the cron appeared to be scheduled and
+    // healthy.
+    const admin = createServiceRoleClient()
 
     // Capture today's catalog. Idempotent per calendar day (UTC).
-    const { data, error } = await supabase.rpc('sab_capture_price_history')
+    const { data, error } = await admin.rpc('sab_capture_price_history')
 
     if (error) {
       console.error('Error capturing SAB price snapshot:', error)
@@ -47,7 +55,7 @@ export async function GET(request: NextRequest) {
     // Fire-and-forget + no-op outside prod; never blocks the capture result.
     let pingedCount = 0
     try {
-      const { data: slugRows } = await supabase
+      const { data: slugRows } = await admin
         .from('sab_public_price_catalog')
         .select('brainrot_slug')
         .eq('mutation_slug', 'default') as { data: { brainrot_slug: string }[] | null }

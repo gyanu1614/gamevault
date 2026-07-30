@@ -18,10 +18,12 @@ import ArrowForwardIcon from '@mui/icons-material/ArrowForward'
 import DeleteOutlineIcon from '@mui/icons-material/Delete'
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined'
 import { cn } from '@/lib/utils'
+import { HUB_NAV_CLEAR } from '@/components/content/hubNavGeometry'
 import {
   formatCash,
   formatMultiplier,
   formatIncome,
+  formatConfidence,
 } from '@/lib/sab/format'
 import {
   mutationOrder,
@@ -93,13 +95,6 @@ function makeId(): string {
         .slice(2)}`
 }
 
-function confidenceLabel(value: string): string {
-  if (value === 'reviewed') return 'Reviewed'
-  if (value === 'high') return 'High confidence'
-  if (value === 'medium') return 'Medium confidence'
-  if (value === 'low') return 'Low confidence'
-  return 'Insufficient data'
-}
 
 /* -------------------------------------------------------------------------- */
 /* Root — owns the tab state, shared lookup maps                              */
@@ -141,18 +136,19 @@ export default function CalculatorClient({
     <>
       {/* Nav renders server-side in the page (HubNav). No breadcrumb — the
           BreadcrumbList JSON-LD keeps the SERP trail. pt clears the nav. */}
-      <section className="mx-auto w-full max-w-7xl px-4 pt-[92px] sm:px-6 lg:px-8">
+      <section className={`mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 ${HUB_NAV_CLEAR}`}>
         {/* Hero copy */}
         <div className="max-w-[720px]">
           <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.18em] text-[#5FC17B]">
             DropMarket Calculator
           </p>
           <h1 className="text-[32px] font-bold leading-[1.04] tracking-[-0.03em] text-[#F2F6F0] sm:text-[42px] lg:text-[48px]">
-            Steal a Brainrot value &amp; trade calculator
+            Steal a Brainrot WFL calculator
           </h1>
           <p className="mt-4 max-w-xl text-[15px] leading-7 text-[#98A398] sm:text-[17px]">
-            Look up the live cash value of any mutation, then check whether a
-            full trade is a Win, Fair or Loss.
+            Put both sides of a trade in and see instantly whether it&apos;s a
+            Win, Fair or Loss — priced from real completed sales, not guesses.
+            Need a single item&apos;s price? Switch to Cash Price.
           </p>
         </div>
 
@@ -160,8 +156,8 @@ export default function CalculatorClient({
         <div className="mt-8 inline-flex border border-[#1E251E] bg-[#0B0F0C]">
           {(
             [
+              ['trade', 'WFL Trade Check'],
               ['cash', 'Cash Price'],
-              ['trade', 'Trade / WFL'],
             ] as const
           ).map(([value, label]) => {
             const active = tab === value
@@ -550,7 +546,7 @@ function CashResult({
               </span>
             )}
             <span className="border border-[#23331F] px-2.5 py-1.5 font-mono text-[11px] font-medium text-[#8FBF9C]">
-              {price ? confidenceLabel(price.confidenceLabel).toUpperCase() : 'NO DATA'}
+              {price ? formatConfidence(price.confidenceLabel).toUpperCase() : 'NO DATA'}
             </span>
           </div>
           <Link
@@ -1171,7 +1167,7 @@ function TradeTab({
                       setSearch(event.target.value)
                     }
                     placeholder="Search Brainrots..."
-                    className="h-11 w-full rounded-lg border border-[#1E2723] bg-white/[0.03] pl-10 pr-4 text-base text-[#F1F3F1] outline-none placeholder:text-[#6D7A72] focus:border-[#2A3A31]"
+                    className="h-11 w-full border border-[#1E2723] bg-white/[0.03] pl-10 pr-4 text-base text-[#F1F3F1] outline-none placeholder:text-[#6D7A72] focus:border-[#2A3A31]"
                   />
                 </div>
 
@@ -1194,7 +1190,7 @@ function TradeTab({
                           sabInteractive,
                         )}
                       >
-                        <div className="h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-white/[0.03] p-1.5">
+                        <div className="h-12 w-12 shrink-0 overflow-hidden bg-white/[0.03] p-1.5">
                           {brainrot.imageUrl && (
                             // eslint-disable-next-line @next/next/no-img-element
                             <img
@@ -1283,7 +1279,7 @@ function TradeSide({
                 key={index}
                 type="button"
                 onClick={() => onEmptyClick(side)}
-                className="group aspect-square rounded-lg border border-dashed border-white/15 bg-white/[0.02] transition hover:border-[#4FB477]/50 hover:bg-[#4FB477]/5"
+                className="group aspect-square border border-dashed border-white/15 bg-white/[0.02] transition hover:border-[#4FB477]/50 hover:bg-[#4FB477]/5"
               >
                 <AddIcon
                   sx={{ fontSize: 24 }}
@@ -1311,7 +1307,7 @@ function TradeSide({
               onClick={() =>
                 onEntryClick(side, entry.instanceId)
               }
-              className="group relative aspect-square overflow-hidden rounded-lg border border-[#1E2723] bg-white/[0.03] p-2 transition hover:-translate-y-0.5 hover:border-[#2A3A31]"
+              className="group relative aspect-square overflow-hidden border border-[#1E2723] bg-white/[0.03] p-2 transition hover:-translate-y-0.5 hover:border-[#2A3A31]"
             >
               {brainrot?.imageUrl && (
                 // eslint-disable-next-line @next/next/no-img-element
@@ -1390,8 +1386,8 @@ function EntryEditor({
 
   return (
     <div className="mt-5">
-      <div className="flex items-center gap-4 rounded-lg bg-white/[0.025] p-4">
-        <div className="h-20 w-20 shrink-0 overflow-hidden rounded-lg bg-white/[0.03] p-2">
+      <div className="flex items-center gap-4 bg-white/[0.025] p-4">
+        <div className="h-20 w-20 shrink-0 overflow-hidden bg-white/[0.03] p-2">
           {brainrot?.imageUrl && (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -1421,7 +1417,7 @@ function EntryEditor({
           </p>
           {price && (
             <p className="mt-1 text-[11px] text-[#6D7A72]">
-              {confidenceLabel(price.confidenceLabel)}
+              {formatConfidence(price.confidenceLabel)}
             </p>
           )}
         </div>
@@ -1436,7 +1432,7 @@ function EntryEditor({
           onChange={(event) =>
             onUpdate({ mutationId: event.target.value })
           }
-          className="mt-2 h-11 w-full rounded-lg border border-[#1E2723] bg-white/[0.03] px-3 text-base text-[#F1F3F1] outline-none focus:border-[#2A3A31]"
+          className="mt-2 h-11 w-full border border-[#1E2723] bg-white/[0.03] px-3 text-base text-[#F1F3F1] outline-none focus:border-[#2A3A31]"
         >
           {mutations.map((mutation) => {
             const mutationPrice =
@@ -1481,14 +1477,14 @@ function EntryEditor({
                 : 1,
             })
           }}
-          className="mt-2 h-11 w-full rounded-lg border border-[#1E2723] bg-white/[0.03] px-3 text-base text-[#F1F3F1] outline-none focus:border-[#2A3A31]"
+          className="mt-2 h-11 w-full border border-[#1E2723] bg-white/[0.03] px-3 text-base text-[#F1F3F1] outline-none focus:border-[#2A3A31]"
         />
       </label>
 
       <button
         type="button"
         onClick={onRemove}
-        className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-[#E23B4E]/30 bg-[#E23B4E]/10 px-4 py-2.5 text-[13px] font-semibold text-[#E23B4E] transition hover:bg-[#E23B4E]/15"
+        className="mt-5 inline-flex w-full items-center justify-center gap-2 border border-[#E23B4E]/30 bg-[#E23B4E]/10 px-4 py-2.5 text-[13px] font-semibold text-[#E23B4E] transition hover:bg-[#E23B4E]/15"
       >
         <DeleteOutlineIcon sx={{ fontSize: 16 }} />
         Remove Brainrot

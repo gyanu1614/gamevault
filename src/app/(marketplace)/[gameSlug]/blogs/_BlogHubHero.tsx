@@ -9,6 +9,8 @@
  * Shared by every game's blog hub, so the copy is composed from the game name.
  */
 
+import { HUB_NAV_CLEAR_HERO } from '@/components/content/hubNavGeometry'
+
 export function BlogHubHero({
   gameName,
   lead,
@@ -18,9 +20,11 @@ export function BlogHubHero({
 }) {
   return (
     <section>
-      {/* pt clears the fixed HubNav. The trust panel now occupies the space
-          below, so this only needs enough room to breathe. */}
-      <div className="mx-auto w-full max-w-3xl px-4 pb-10 pt-[104px] text-center sm:px-6 sm:pb-12 sm:pt-[120px]">
+      {/* Clearance for the fixed HubNav comes from the shared constant, so a
+          change to the nav's height can't leave this hero overlapping it. */}
+      <div
+        className={`mx-auto w-full max-w-3xl px-4 pb-10 text-center sm:px-6 sm:pb-12 ${HUB_NAV_CLEAR_HERO}`}
+      >
         <h1 className="text-balance text-[32px] font-bold leading-[1.06] tracking-[-0.03em] text-[#F2F6F0] sm:text-[44px] lg:text-[52px]">
           {gameName} Blog &amp; News
         </h1>

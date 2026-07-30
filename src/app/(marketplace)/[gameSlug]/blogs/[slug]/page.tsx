@@ -18,7 +18,7 @@ import { SITE_URL } from '@/config/site'
 import { ContentDisclaimer } from '@/components/content/ContentDisclaimer'
 import { SabHeroBackdrop } from '../../values/_SabHeroBackdrop'
 import { HubNav } from '@/components/content/HubNav'
-import { getHubNavData } from '@/lib/content/hubNav'
+import { getHubNavData, HUB_NAV_CLEAR } from '@/lib/content/hubNav'
 import { ArticleBody, extractToc } from './_articleBody'
 import { ArticleToc } from './_ArticleToc'
 
@@ -131,7 +131,7 @@ export default async function GameBlogArticle({
         {/* HERO — category, title, lead, byline. No visible breadcrumb (the
             BreadcrumbList JSON-LD keeps the SERP trail) and no identity block
             (the game now lives in the HubNav switcher). pt clears the nav. */}
-        <div className="mx-auto w-full max-w-7xl px-4 pb-10 pt-[92px] sm:px-6 lg:px-8">
+        <div className={`mx-auto w-full max-w-7xl px-4 pb-10 sm:px-6 lg:px-8 ${HUB_NAV_CLEAR}`}>
           <div className="max-w-3xl">
             <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.16em] text-[#4FB477]">
               {kindLabel}

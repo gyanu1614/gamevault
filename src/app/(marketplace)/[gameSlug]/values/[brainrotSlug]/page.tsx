@@ -10,7 +10,7 @@ import ItemHero, { type MutationOption } from './_ItemHero'
 import { SimilarBrainrots } from './_SimilarBrainrots'
 import { SabHeroBackdrop } from '../_SabHeroBackdrop'
 import { HubNav } from '@/components/content/HubNav'
-import { getHubNavData } from '@/lib/content/hubNav'
+import { getHubNavData, HUB_NAV_CLEAR } from '@/lib/content/hubNav'
 import { cn } from '@/lib/utils'
 import { sabCard } from '@/lib/sab/theme'
 
@@ -427,7 +427,7 @@ export default async function BrainrotValuePage({ params }: PageProps) {
       <HubNav data={hubNav} />
 
       {/* pt clears the fixed HubNav. */}
-      <section className="mx-auto w-full max-w-7xl px-4 pt-[92px] sm:px-6 lg:px-8">
+      <section className={`mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 ${HUB_NAV_CLEAR}`}>
         <nav className="mb-4 flex flex-wrap items-center gap-1.5 text-[12.5px] text-[#9BA8A0]">
           <Link href="/steal-a-brainrot/values" className="transition-colors hover:text-[#F1F3F1]">
             Values
@@ -564,7 +564,7 @@ export default async function BrainrotValuePage({ params }: PageProps) {
       <section className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="border-t border-white/[0.07] pt-10">
           <h2 className="text-lg font-semibold text-[#F1F3F1]">{brainrot.name} — questions</h2>
-          <FaqCards items={faqItems} defaultOpen={0} className="mt-5" />
+          <FaqCards items={faqItems} defaultOpen={0} className="mt-5" square />
         </div>
       </section>
       <JsonLd data={faqPage(faqItems)} />

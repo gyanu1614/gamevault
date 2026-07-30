@@ -80,8 +80,8 @@ export async function generateMetadata({
   })
 
   return {
-    title: `Steal a Brainrot Value & WFL Trade Calculator (${monthYear}) — Live Cash Prices`,
-    description: `Check the live cash value of any Steal a Brainrot Brainrot and mutation, then run a full trade through the Win/Fair/Loss (WFL) checker. Real marketplace prices updated daily, mutation values, typical ranges, and confidence-aware verdicts — free, ${monthYear}.`,
+    title: `Steal a Brainrot WFL Calculator (${monthYear}) — Win, Fair or Loss Trade Checker`,
+    description: `Free Steal a Brainrot WFL calculator: put both sides of a trade in and see instantly whether it's a Win, Fair or Loss. Priced from real completed sales and live listings, every mutation covered, updated daily — ${monthYear}.`,
     alternates: {
       canonical: '/steal-a-brainrot/calculator',
     },
@@ -329,7 +329,10 @@ export default async function SabCalculatorPage({
         tradePrices={tradePrices}
         initialBrainrotSlug={resolvedSearchParams.brainrot}
         initialMutationSlug={resolvedSearchParams.mutation}
-        initialTab={resolvedSearchParams.tab === 'trade' ? 'trade' : 'cash'}
+        // WFL is the page's job now. Cash prices already have a whole page
+        // (/values), so they stay available here as the secondary tab but no
+        // longer greet everyone who lands on the calculator.
+        initialTab={resolvedSearchParams.tab === 'cash' ? 'cash' : 'trade'}
       />
 
       <CalculatorSeo monthYear={monthYear} topValues={topValues} />
