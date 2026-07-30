@@ -103,7 +103,7 @@ export function GuideCard({
 }) {
   return (
     <Link
-      href={`/${gameSlug}/blogs/${post.slug}`}
+      href={`/${gameSlug}/blog/${post.slug}`}
       className="group relative flex w-[300px] shrink-0 flex-col border border-[#1E2723] bg-[#121613] transition-colors duration-200 hover:border-[#33453A] hover:bg-[#171D19] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#8FBF9C] sm:w-[392px]"
     >
       {/* ── Interior accent, same recipe as the currency bundle tiles: a soft

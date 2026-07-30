@@ -1,5 +1,5 @@
 /**
- * /[game]/blogs — the game's content collection (value + seller guides).
+ * /[game]/blog — the game's content collection (value + seller guides).
  * Lives in the Values-hub chrome. Reads published posts from the DB
  * (blog_posts, scoped by primary_game_slug).
  */
@@ -98,7 +98,7 @@ export async function generateMetadata({
   return {
     title: `${game.name} Guides, Values & Trading Tips`,
     description: `Value lists, trading guides, and selling tips for ${game.name} — updated regularly with real DropMarket marketplace data.`,
-    alternates: { canonical: `/${gameSlug}/blogs` },
+    alternates: { canonical: `/${gameSlug}/blog` },
   }
 }
 
@@ -180,7 +180,7 @@ export default async function GameBlogIndex({
           data={breadcrumbList([
             { name: 'Home', path: '/' },
             { name: game.name, path: `/${gameSlug}` },
-            { name: 'Guides', path: `/${gameSlug}/blogs` },
+            { name: 'Guides', path: `/${gameSlug}/blog` },
           ])}
         />
 
@@ -198,7 +198,7 @@ export default async function GameBlogIndex({
 
         {featured && (
           <FeaturedGuide
-            href={`/${gameSlug}/blogs/${featured.slug}`}
+            href={`/${gameSlug}/blog/${featured.slug}`}
             category={POST_TYPE_LABEL[featured.postType] ?? 'Guide'}
             readMinutes={featured.readMinutes}
             title={featured.title}

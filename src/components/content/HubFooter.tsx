@@ -50,7 +50,7 @@ export function HubFooter({
   // Data-driven, exactly like the nav: a game without a calculator or a
   // storefront category simply doesn't get that link.
   const hubLinks: HubFooterLink[] = [
-    { name: 'Guides', href: `/${gameSlug}/blogs` },
+    { name: 'Guides', href: `/${gameSlug}/blog` },
     ...tools.map((tool) => ({
       name: tool === 'values' ? 'Value List' : 'WFL Calculator',
       href: `/${gameSlug}/${tool}`,

@@ -2,7 +2,7 @@
  * /blog — the site-wide guide index.
  *
  * Two jobs, in this order:
- *   1. Route readers into the per-game content hubs (/[game]/blogs), which is
+ *   1. Route readers into the per-game content hubs (/[game]/blog), which is
  *      where every post actually lives now. That also sculpts internal links
  *      from one crawlable page into each hub.
  *   2. Show the newest posts across every game underneath, so the page still
@@ -35,7 +35,7 @@ export const metadata: Metadata = {
 
 /** A post's canonical URL: nested under its game when it has one, else flat. */
 function postHref(post: { slug: string; primaryGameSlug: string | null }): string {
-  return post.primaryGameSlug ? `/${post.primaryGameSlug}/blogs/${post.slug}` : `/blog/${post.slug}`
+  return post.primaryGameSlug ? `/${post.primaryGameSlug}/blog/${post.slug}` : `/blog/${post.slug}`
 }
 
 interface GameRow {
@@ -97,7 +97,7 @@ export default async function BlogIndexPage() {
               {hubs.map(({ game, count }) => (
                 <Link
                   key={game.slug}
-                  href={`/${game.slug}/blogs`}
+                  href={`/${game.slug}/blog`}
                   className="group flex items-center gap-3 border border-border-default bg-[rgba(20,20,27,0.56)] p-3 backdrop-blur-md transition-all duration-200 hover:-translate-y-0.5 hover:border-border-strong hover:bg-[rgba(26,26,35,0.70)]"
                 >
                   {/* Monogram fallback — several games have no art yet, and an

@@ -611,7 +611,7 @@ export async function upsertGameCategory(
 
 /**
  * Upload the per-game banner behind the end-of-article CTA on
- * /[game]/blogs/[slug].
+ * /[game]/blog/[slug].
  *
  * Deliberately separate from uploadGameCoverV2: cover_url is the game's CARD
  * art (portrait-ish, cropped for a tile, used across the marketplace), while

@@ -4,7 +4,7 @@
  * Reads published posts from the `blog_posts` table (see migration
  * 20260727000000_blog_posts_cms.sql). This is the CMS-swap the file-based
  * `posts.ts` was designed for — same `BlogPost` shape, now editable from the
- * admin panel and scoped to nested per-game URLs (/[game]/blogs/[slug]).
+ * admin panel and scoped to nested per-game URLs (/[game]/blog/[slug]).
  *
  * These are async (DB round-trips); the file-based helpers in posts.ts stay as
  * the seed/import source and a synchronous fallback for any surface not yet
@@ -70,7 +70,7 @@ function rowToPost(row: BlogPostRow): DbBlogPost {
 const SELECT =
   'id,slug,title,excerpt,author,read_minutes,post_type,status,primary_game_slug,game_slugs,cover_url,body,seo_title,seo_description,published_at'
 
-/** All published posts scoped to a game (its nested /[game]/blogs collection). */
+/** All published posts scoped to a game (its nested /[game]/blog collection). */
 export async function getGamePosts(gameSlug: string): Promise<DbBlogPost[]> {
   const supabase = await createClient()
   const { data, error } = await supabase

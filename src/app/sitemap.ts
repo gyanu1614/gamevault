@@ -95,7 +95,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     })),
   ]
 
-  // DB-driven per-game blog posts (/[game]/blogs/[slug]) + their index pages.
+  // DB-driven per-game blog posts (/[game]/blog/[slug]) + their index pages.
   // Only PUBLISHED, game-scoped posts. Index pages are added per game that has
   // at least one published post.
   const { data: gamePostRows } = (await supabase
@@ -109,14 +109,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const gameBlogPages: MetadataRoute.Sitemap = (gamePostRows ?? []).map((p) => {
     gameBlogIndexSlugs.add(p.primary_game_slug)
     return {
-      url: `${BASE_URL}/${p.primary_game_slug}/blogs/${p.slug}`,
+      url: `${BASE_URL}/${p.primary_game_slug}/blog/${p.slug}`,
       ...(p.updated_at ? { lastModified: new Date(p.updated_at) } : {}),
       changeFrequency: 'weekly' as const,
       priority: 0.55,
     }
   })
   const gameBlogIndexPages: MetadataRoute.Sitemap = Array.from(gameBlogIndexSlugs).map((g) => ({
-    url: `${BASE_URL}/${g}/blogs`,
+    url: `${BASE_URL}/${g}/blog`,
     changeFrequency: 'weekly' as const,
     priority: 0.6,
   }))

@@ -62,7 +62,7 @@ export function BlogCard({
   variant?: BlogCardVariant
   /** Override the link target. Defaults to the flat /blog/[slug]; the blog
    *  index passes the post's true (possibly nested) URL to avoid a redirect
-   *  double-hop for posts that now live under /[game]/blogs/[slug]. */
+   *  double-hop for posts that now live under /[game]/blog/[slug]. */
   href?: string
 }) {
   const date = formatDate(post.publishedAt)
