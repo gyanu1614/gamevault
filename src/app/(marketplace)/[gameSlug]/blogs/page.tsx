@@ -15,7 +15,7 @@ import { SabHeroBackdrop } from '../values/_SabHeroBackdrop'
 import { HubNav } from '@/components/content/HubNav'
 import { getHubNavData } from '@/lib/content/hubNav'
 import { getGameContentTheme } from '@/lib/content/theme'
-import { BlogHubHero, type BlogHubStat } from './_BlogHubHero'
+import { BlogHubHero } from './_BlogHubHero'
 import { FeaturedGuide } from './_FeaturedGuide'
 import { ArticleGrid } from './_ArticleGrid'
 import { ValuesTeaser, CalculatorTeaser, HubBuyCta } from './_HubTeasers'
@@ -109,37 +109,16 @@ export default async function GameBlogIndex({
   const game = await getGame(gameSlug)
   if (!game) notFound()
 
-  const [posts, pricedItems, topValues, hubNav] = await Promise.all([
+  const [posts, topValues, hubNav] = await Promise.all([
     getGamePosts(gameSlug),
-    getPricedItemCount(gameSlug),
     getHubTopValues(gameSlug, 4),
     getHubNavData(gameSlug),
   ])
 
   const theme = getGameContentTheme(gameSlug)
 
-  // Newest post carries the "Start here" slot; the rail below shows the rest.
+  // Newest post carries the featured slot; the carousel below shows the rest.
   const [featured, ...rest] = posts
-
-  // Newest publish date across the game's posts — a real freshness signal
-  // rather than "today", which would be true of any page load.
-  const newest = posts
-    .map((p) => new Date(p.publishedAt).getTime())
-    .filter((t) => Number.isFinite(t))
-    .sort((a, b) => b - a)[0]
-
-  const stats: BlogHubStat[] = [
-    { label: 'Guides', value: String(posts.length) },
-  ]
-  if (pricedItems > 0) {
-    stats.push({ label: 'Items Priced', value: String(pricedItems) })
-  }
-  if (newest) {
-    stats.push({ label: 'Last Updated', value: DAY_MONTH.format(new Date(newest)) })
-  }
-  if (pricedItems > 0) {
-    stats.push({ label: 'Priced From', value: 'Real sales', accent: true })
-  }
 
   const articleCards = rest.map((post) => ({
     slug: post.slug,
@@ -169,20 +148,7 @@ export default async function GameBlogIndex({
           ])}
         />
 
-        <BlogHubHero
-          gameSlug={gameSlug}
-          kicker="Guides & Value Reports"
-          title={`${game.name} Blog`}
-          lead={theme.heroLead}
-          about={game.seo_intro || theme.heroAbout}
-          stats={stats}
-          artItems={topValues.map((v) => ({
-            name: v.name,
-            slug: v.slug,
-            imageUrl: v.imageUrl ?? '',
-            priceLabel: v.priceLabel,
-          }))}
-        />
+        <BlogHubHero gameName={game.name} lead={theme.heroLead} />
       </SabHeroBackdrop>
 
       {/* No z-index here (matches Values): a z-10 wrapper created a stacking
