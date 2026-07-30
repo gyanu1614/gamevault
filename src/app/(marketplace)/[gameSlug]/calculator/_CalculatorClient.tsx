@@ -80,11 +80,6 @@ interface CalculatorClientProps {
 
 type Tab = 'cash' | 'trade'
 
-const POPULAR_BRAINROT_SLUGS = [
-  'garama-and-madundung',
-  'dragon-cannelloni',
-  'skibidi-toilet',
-]
 
 function makeId(): string {
   return typeof crypto !== 'undefined' &&
@@ -109,7 +104,9 @@ export default function CalculatorClient({
   initialMutationSlug,
   initialTab = 'cash',
 }: CalculatorClientProps) {
-  const [tab, setTab] = useState<Tab>(initialTab)
+  // Mode comes from the URL now (?tab=cash), chosen in the navbar's Calculator
+  // menu — there is no in-page switcher to hold local state for.
+  const tab = initialTab
 
   const orderedMutations = useMemo(
     () =>
@@ -138,46 +135,19 @@ export default function CalculatorClient({
           BreadcrumbList JSON-LD keeps the SERP trail. pt clears the nav. */}
       <section className={`mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 ${HUB_NAV_CLEAR}`}>
         {/* Hero copy */}
-        <div className="max-w-[720px]">
-          <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.18em] text-[#5FC17B]">
-            DropMarket Calculator
-          </p>
-          <h1 className="text-[32px] font-bold leading-[1.04] tracking-[-0.03em] text-[#F2F6F0] sm:text-[42px] lg:text-[48px]">
-            Steal a Brainrot WFL calculator
+        {/* Centred hero, matching the Values page. The lead is wider than the
+            headline on purpose so it sets in two lines rather than three. */}
+        <div className="mx-auto max-w-3xl text-center">
+          <h1 className="text-balance text-[32px] font-bold leading-[1.04] tracking-[-0.03em] text-[#F2F6F0] sm:text-[42px] lg:text-[48px]">
+            Steal a Brainrot WFL Calculator
           </h1>
-          <p className="mt-4 max-w-xl text-[15px] leading-7 text-[#98A398] sm:text-[17px]">
+          {/* Wider than the headline on purpose: at max-w-2xl this wrapped to three
+              lines. It does not need to match the title's measure. */}
+          <p className="mx-auto mt-4 max-w-4xl text-pretty text-[15px] leading-7 text-[#98A398] sm:text-[17px]">
             Put both sides of a trade in and see instantly whether it&apos;s a
             Win, Fair or Loss — priced from real completed sales, not guesses.
             Need a single item&apos;s price? Switch to Cash Price.
           </p>
-        </div>
-
-        {/* Tab switch — square segmented control (design style). */}
-        <div className="mt-8 inline-flex border border-[#1E251E] bg-[#0B0F0C]">
-          {(
-            [
-              ['trade', 'WFL Trade Check'],
-              ['cash', 'Cash Price'],
-            ] as const
-          ).map(([value, label]) => {
-            const active = tab === value
-            return (
-              <button
-                key={value}
-                type="button"
-                onClick={() => setTab(value)}
-                aria-pressed={active}
-                className={cn(
-                  'px-6 py-3.5 text-[13px] font-semibold transition',
-                  active
-                    ? 'bg-[#3FA35C] text-[#08110B]'
-                    : 'text-[#9BA8A0] hover:text-[#F1F3F1]',
-                )}
-              >
-                {label}
-              </button>
-            )
-          })}
         </div>
 
         <div className="mt-10">
@@ -268,24 +238,27 @@ function CashTab({
     return result
   }, [defaultMutation, prices])
 
+  /**
+   * Quick picks, ranked by the same signal the value list uses: how many real
+   * listings and sales we observed (`sampleSize`). The old version was three
+   * hardcoded slugs that would rot the moment the meta moved — this tracks the
+   * market on its own, and only ever offers items we can actually price.
+   */
   const popularBrainrots = useMemo(() => {
-    const prioritized = POPULAR_BRAINROT_SLUGS.map((slug) =>
-      brainrots.find((b) => b.slug === slug),
-    ).filter(
-      (b): b is CalcBrainrot => b != null,
-    )
+    const samples = new Map<string, number>()
+    for (const price of prices) {
+      // Default-mutation rows carry the item's overall market activity.
+      if (defaultMutation && price.mutationId !== defaultMutation.id) continue
+      samples.set(price.brainrotId, price.sampleSize ?? 0)
+    }
 
-    const seen = new Set(prioritized.map((b) => b.id))
-    const fallback = brainrots
-      .filter(
-        (b) =>
-          !seen.has(b.id) &&
-          b.baseIncomePerSecond != null,
-      )
-      .slice(0, Math.max(0, 3 - prioritized.length))
+    const ranked = brainrots
+      .filter((b) => samples.has(b.id))
+      .sort((a, b) => (samples.get(b.id) ?? 0) - (samples.get(a.id) ?? 0))
 
-    return [...prioritized, ...fallback].slice(0, 6)
-  }, [brainrots])
+    // If nothing is priced yet, fall back to any item rather than an empty list.
+    return (ranked.length > 0 ? ranked : brainrots).slice(0, 6)
+  }, [brainrots, prices, defaultMutation])
 
   const visibleBrainrots = useMemo(() => {
     const query = search.trim().toLowerCase()
@@ -320,6 +293,10 @@ function CashTab({
     mutationSlug: string,
   ) => {
     const params = new URLSearchParams()
+    // `tab=cash` MUST survive this rewrite. The active mode is read from the
+    // URL now (it used to be local state), so dropping the param here bounced
+    // the user to the WFL tab a moment after picking a Brainrot.
+    params.set('tab', 'cash')
     params.set('brainrot', brainrotSlug)
     params.set('mutation', mutationSlug)
     router.replace(`${pathname}?${params.toString()}`, {
@@ -686,10 +663,20 @@ function TradeTab({
     mutations[0]?.id ??
     ''
 
+  // Rarest-first ordering for the mutation step, computed once.
+  const orderedMutations = useMemo(
+    () => [...mutations].sort((a, b) => mutationOrder(a.slug) - mutationOrder(b.slug)),
+    [mutations],
+  )
+
   const [give, setGive] = useState<TradeEntry[]>([])
   const [receive, setReceive] = useState<TradeEntry[]>([])
   const [editor, setEditor] = useState<EditorState>(null)
   const [search, setSearch] = useState('')
+  // Picking a Brainrot no longer commits it. It parks here while the mutation
+  // is chosen, because a Brainrot's mutation changes its value several times
+  // over — silently defaulting to Default was quietly wrong on most picks.
+  const [pendingBrainrotId, setPendingBrainrotId] = useState<string | null>(null)
 
   const priceMap = useMemo(
     () =>
@@ -771,6 +758,35 @@ function TradeTab({
     receiveSummary.unknown === 0 &&
     giveSummary.point > 0
 
+  /**
+   * Flattened view of both sides for the "Brainrots in this trade" table.
+   * Built from the same entries the verdict uses, so the table can never
+   * disagree with the maths above it.
+   */
+  const tradeItems = useMemo(() => {
+    const build = (entries: TradeEntry[], side: 'give' | 'receive') =>
+      entries.map((entry) => {
+        const brainrot = brainrotMap.get(entry.brainrotId)
+        const mutation = mutationMap.get(entry.mutationId)
+        const price = priceMap.get(`${entry.brainrotId}:${entry.mutationId}`)
+        return {
+          key: entry.instanceId,
+          side,
+          name: brainrot?.name ?? 'Unknown Brainrot',
+          imageUrl: brainrot?.imageUrl ?? null,
+          mutationName: mutation?.name ?? 'Default',
+          quantity: entry.quantity,
+          // No price is a real state (unpriced variant) — say so rather than
+          // printing $0.00.
+          priceLabel: price
+            ? formatCash(price.marketValueUsd * entry.quantity) ?? '—'
+            : 'No price yet',
+        }
+      })
+
+    return [...build(give, 'give'), ...build(receive, 'receive')]
+  }, [give, receive, brainrotMap, mutationMap, priceMap])
+
   const pointDifference =
     receiveSummary.point - giveSummary.point
 
@@ -811,7 +827,7 @@ function TradeTab({
       return {
         label: 'WIN',
         caption:
-          'Even the lowest receive estimate beats the highest give estimate',
+          "You're getting more than you give — even at the worst price we've seen",
         border: 'border-[#4FB477]/50',
         background: 'bg-[#4FB477]/10',
         text: 'text-[#4FB477]',
@@ -822,7 +838,7 @@ function TradeTab({
       return {
         label: 'LOSS',
         caption:
-          'Even the highest receive estimate is below the lowest give estimate',
+          "You're giving away more than you get — even at the best price we've seen",
         border: 'border-[#E23B4E]/50',
         background: 'bg-[#E23B4E]/10',
         text: 'text-[#E23B4E]',
@@ -836,7 +852,7 @@ function TradeTab({
       return {
         label: 'FAIR',
         caption:
-          'Estimated values are within the 5% fair range',
+          'Both sides are worth about the same',
         border: 'border-[#E0B155]/50',
         background: 'bg-[#E0B155]/10',
         text: 'text-[#E0B155]',
@@ -846,7 +862,7 @@ function TradeTab({
     return {
       label: 'UNCERTAIN',
       caption:
-        'The market ranges overlap too much for a reliable W/F/L result',
+        "Too close to call — prices move enough that this could go either way",
       border: 'border-white/20',
       background: 'bg-white/[0.06]',
       text: 'text-[#F1F3F1]',
@@ -920,8 +936,8 @@ function TradeTab({
     setEditor({ side, instanceId })
   }
 
-  const addBrainrot = (brainrotId: string) => {
-    if (!editor || !defaultMutationId) return
+  const addBrainrot = (brainrotId: string, mutationId: string) => {
+    if (!editor) return
     if (getEntries(editor.side).length >= 9) return
 
     setEntries(editor.side, (entries) => [
@@ -929,13 +945,14 @@ function TradeTab({
       {
         instanceId: makeId(),
         brainrotId,
-        mutationId: defaultMutationId,
+        mutationId,
         quantity: 1,
       },
     ])
 
     setEditor(null)
     setSearch('')
+    setPendingBrainrotId(null)
   }
 
   const updateActiveEntry = (
@@ -1041,10 +1058,20 @@ function TradeTab({
             </p>
 
             {ready && (
-              <p className="mt-1 text-center text-xs tabular-nums text-[#6D7A72]">
-                Midpoint difference:{' '}
-                {formatCash(Math.abs(pointDifference)) ??
-                  '—'}
+              /* Was "Midpoint difference: $108.66" — a number with no subject.
+                 Now it says who is up and by how much. */
+              <p className="mt-1 max-w-[230px] text-center text-xs leading-5 text-[#6D7A72]">
+                {pointDifference === 0 ? (
+                  'Both sides come to the same value'
+                ) : (
+                  <>
+                    {pointDifference > 0 ? 'You gain ' : 'You lose '}
+                    <span className="font-semibold tabular-nums text-[#B7C0BA]">
+                      {formatCash(Math.abs(pointDifference)) ?? '—'}
+                    </span>{' '}
+                    on this trade
+                  </>
+                )}
               </p>
             )}
           </div>
@@ -1100,6 +1127,70 @@ function TradeTab({
         </div>
       </div>
 
+      {/* ── Items in this trade ──
+          Every Brainrot on either side, with a direct route to buy that exact
+          one. The verdict tells you whether the trade is good; this turns
+          "their side is worth more" into something you can act on. Only
+          rendered once something is on the table. */}
+      {tradeItems.length > 0 && (
+        <div className="mt-6 border border-[#1E2723] bg-[#101410]">
+          <div className="border-b border-[#1E2723] px-4 py-3">
+            <h3 className="text-[15px] font-semibold text-[#F1F3F1]">
+              Brainrots in this trade
+            </h3>
+            <p className="mt-0.5 text-[12.5px] text-[#8B978F]">
+              Tap any one to see it for sale on DropMarket.
+            </p>
+          </div>
+
+          <ul className="divide-y divide-[#1A211A]">
+            {tradeItems.map((item) => (
+              <li key={item.key}>
+                <Link
+                  href={`/steal-a-brainrot/buy-items?search=${encodeURIComponent(item.name)}`}
+                  className="group grid grid-cols-[44px_minmax(0,1fr)_auto] items-center gap-3 px-4 py-3 transition-colors hover:bg-[#161C16]"
+                >
+                  <span className="flex h-11 w-11 items-center justify-center overflow-hidden bg-[#0B0F0C]">
+                    {item.imageUrl && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={item.imageUrl}
+                        alt=""
+                        className="h-full w-full object-contain p-1"
+                      />
+                    )}
+                  </span>
+
+                  <span className="flex min-w-0 flex-col gap-0.5">
+                    <span className="truncate text-[14.5px] font-semibold text-[#F1F3F1]">
+                      {item.name}
+                      {item.quantity > 1 && (
+                        <span className="ml-1.5 text-[12.5px] font-normal text-[#8B978F]">
+                          ×{item.quantity}
+                        </span>
+                      )}
+                    </span>
+                    <span className="text-[12.5px] text-[#8B978F]">
+                      {item.mutationName} · {item.side === 'give' ? 'Your side' : 'Their side'}
+                    </span>
+                  </span>
+
+                  <span className="flex items-center gap-2 text-right">
+                    <span className="text-[14.5px] font-bold tabular-nums text-[#8FBF9C]">
+                      {item.priceLabel}
+                    </span>
+                    <ArrowForwardIcon
+                      sx={{ fontSize: 16 }}
+                      className="shrink-0 text-[#3A4A40] transition-transform duration-200 group-hover:translate-x-0.5 group-hover:text-[#8FBF9C]"
+                    />
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       <p className="mt-4 text-center font-mono text-[11px] leading-5 text-[#5E685E]">
         Cash estimates may use DropMarket sales, completed
         external sales, reviewed ranges, or current listings.
@@ -1112,6 +1203,7 @@ function TradeTab({
           onMouseDown={(event) => {
             if (event.target === event.currentTarget) {
               setEditor(null)
+              setPendingBrainrotId(null)
             }
           }}
         >
@@ -1132,7 +1224,10 @@ function TradeTab({
 
               <button
                 type="button"
-                onClick={() => setEditor(null)}
+                onClick={() => {
+                  setEditor(null)
+                  setPendingBrainrotId(null)
+                }}
                 className="flex h-8 w-8 items-center justify-center border border-[#263026] text-[#6D7A72] transition hover:text-[#F1F3F1]"
               >
                 <CloseIcon sx={{ fontSize: 20 }} />
@@ -1155,72 +1250,132 @@ function TradeTab({
               />
             ) : (
               <>
-                <div className="relative mt-5">
-                  <SearchIcon
-                    sx={{ fontSize: 18 }}
-                    className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#6D7A72]"
-                  />
-                  <input
-                    autoFocus
-                    value={search}
-                    onChange={(event) =>
-                      setSearch(event.target.value)
-                    }
-                    placeholder="Search Brainrots..."
-                    className="h-11 w-full border border-[#1E2723] bg-white/[0.03] pl-10 pr-4 text-base text-[#F1F3F1] outline-none placeholder:text-[#6D7A72] focus:border-[#2A3A31]"
-                  />
-                </div>
-
-                <div className="mt-4 space-y-2">
-                  {filteredBrainrots.map((brainrot) => {
-                    const defaultPrice =
-                      priceMap.get(
-                        `${brainrot.id}:${defaultMutationId}`,
-                      ) ?? null
-
+                {pendingBrainrotId ? (
+                  /* ── Step 2: which mutation? ──
+                     No prices here on purpose: the whole point of the WFL tab
+                     is the verdict, and showing each variant's cash value
+                     turns the picker into a price list (that's what the Cash
+                     Price mode and the value list are for). */
+                  (() => {
+                    const picked = brainrotMap.get(pendingBrainrotId)
+                    if (!picked) return null
                     return (
-                      <button
-                        key={brainrot.id}
-                        type="button"
-                        onClick={() =>
-                          addBrainrot(brainrot.id)
-                        }
-                        className={cn(
-                          'flex w-full items-center gap-3 px-3 py-3 text-left',
-                          sabInteractive,
-                        )}
-                      >
-                        <div className="h-12 w-12 shrink-0 overflow-hidden bg-white/[0.03] p-1.5">
-                          {brainrot.imageUrl && (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img
-                              src={brainrot.imageUrl}
-                              alt=""
-                              className="h-full w-full object-contain"
-                            />
-                          )}
+                      <div className="mt-5">
+                        <button
+                          type="button"
+                          onClick={() => setPendingBrainrotId(null)}
+                          className="mb-4 inline-flex items-center gap-1.5 text-[13px] font-semibold text-[#8FBF9C] transition hover:text-[#B9DCC4]"
+                        >
+                          ← Back to Brainrots
+                        </button>
+
+                        <div className="flex items-center gap-3 border border-[#1E2723] bg-white/[0.02] p-3">
+                          <div className="h-12 w-12 shrink-0 overflow-hidden bg-white/[0.03] p-1.5">
+                            {picked.imageUrl && (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img
+                                src={picked.imageUrl}
+                                alt=""
+                                className="h-full w-full object-contain"
+                              />
+                            )}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-semibold text-[#F1F3F1]">
+                              {picked.name}
+                            </p>
+                            <p className="mt-0.5 text-xs text-[#6D7A72]">{picked.rarity}</p>
+                          </div>
                         </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-semibold text-[#F1F3F1]">
-                            {brainrot.name}
-                          </p>
-                          <p className="mt-0.5 text-xs tabular-nums text-[#6D7A72]">
-                            {brainrot.rarity} ·{' '}
-                            {defaultPrice
-                              ? formatCash(
-                                  defaultPrice.marketValueUsd,
-                                )
-                              : 'No default estimate'}
-                          </p>
+
+                        <p className="mt-5 font-mono text-[11px] uppercase tracking-[0.1em] text-[#8FBF9C]">
+                          Choose the mutation
+                        </p>
+
+                        <div className="mt-3 grid grid-cols-2 gap-2">
+                          {orderedMutations.map((mutation) => {
+                            const priced = priceMap.has(
+                              `${picked.id}:${mutation.id}`,
+                            )
+                            const visual = mutationVisual(mutation.slug)
+                            return (
+                              <button
+                                key={mutation.id}
+                                type="button"
+                                disabled={!priced}
+                                onClick={() => addBrainrot(picked.id, mutation.id)}
+                                className={cn(
+                                  'flex items-center gap-2 border px-3 py-2.5 text-left text-[13px] font-semibold transition',
+                                  priced
+                                    ? 'border-[#1E2723] bg-white/[0.03] text-[#F1F3F1] hover:border-[#2F6B46] hover:bg-white/[0.06]'
+                                    : 'cursor-not-allowed border-[#161d19] text-[#4A544C]',
+                                )}
+                              >
+                                <MutationDot visual={visual} />
+                                <span className="truncate">{mutation.name}</span>
+                              </button>
+                            )
+                          })}
                         </div>
-                        <AddIcon
-                          sx={{ fontSize: 20 }}
-                          className="text-[#4FB477]"
-                        />
-                      </button>
+
+                        <p className="mt-4 text-[12px] leading-5 text-[#6D7A72]">
+                          Greyed-out mutations have no verified sale or listing for this
+                          Brainrot yet, so we can&apos;t price them.
+                        </p>
+                      </div>
                     )
-                  })}
-                </div>
+                  })()
+                ) : (
+                  <>
+                    <div className="relative mt-5">
+                      <SearchIcon
+                        sx={{ fontSize: 18 }}
+                        className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#6D7A72]"
+                      />
+                      <input
+                        autoFocus
+                        value={search}
+                        onChange={(event) => setSearch(event.target.value)}
+                        placeholder="Search Brainrots..."
+                        className="h-11 w-full border border-[#1E2723] bg-white/[0.03] pl-10 pr-4 text-base text-[#F1F3F1] outline-none placeholder:text-[#6D7A72] focus:border-[#2A3A31]"
+                      />
+                    </div>
+
+                    <div className="mt-4 space-y-2">
+                      {filteredBrainrots.map((brainrot) => (
+                        <button
+                          key={brainrot.id}
+                          type="button"
+                          onClick={() => setPendingBrainrotId(brainrot.id)}
+                          className={cn(
+                            'flex w-full items-center gap-3 px-3 py-3 text-left',
+                            sabInteractive,
+                          )}
+                        >
+                          <div className="h-12 w-12 shrink-0 overflow-hidden bg-white/[0.03] p-1.5">
+                            {brainrot.imageUrl && (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img
+                                src={brainrot.imageUrl}
+                                alt=""
+                                className="h-full w-full object-contain"
+                              />
+                            )}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-semibold text-[#F1F3F1]">
+                              {brainrot.name}
+                            </p>
+                            {/* Rarity only — the price is deliberately withheld
+                                until the verdict. */}
+                            <p className="mt-0.5 text-xs text-[#6D7A72]">{brainrot.rarity}</p>
+                          </div>
+                          <AddIcon sx={{ fontSize: 20 }} className="text-[#4FB477]" />
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
               </>
             )}
           </div>

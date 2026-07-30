@@ -16,6 +16,7 @@ import { sabCard } from '@/lib/sab/theme'
 import { JsonLd, breadcrumbList, faqPage } from '@/lib/seo/jsonld'
 import { SabHeroBackdrop } from '../_SabHeroBackdrop'
 import { HubNav } from '@/components/content/HubNav'
+import { HubFooter } from '@/components/content/HubFooter'
 import { getHubNavData, HUB_NAV_CLEAR } from '@/lib/content/hubNav'
 
 export const revalidate = 86400
@@ -74,7 +75,7 @@ export default async function MethodologyPage({
   const hubNav = await getHubNavData(gameSlug)
 
   return (
-    <main className="relative min-h-screen bg-[#0C0F0E] pb-24">
+    <main className="relative min-h-screen bg-[#0C0F0E]">
       <JsonLd
         data={breadcrumbList([
           { name: 'Home', path: '/' },
@@ -198,7 +199,14 @@ export default async function MethodologyPage({
           </Link>
         </div>
       </div>
-    </main>
+          <HubFooter
+        gameName={hubNav.current.name}
+        gameSlug={hubNav.current.slug}
+        tools={hubNav.tools}
+        itemsHref={hubNav.itemsHref}
+        accountsHref={hubNav.accountsHref}
+      />
+</main>
   )
 }
 

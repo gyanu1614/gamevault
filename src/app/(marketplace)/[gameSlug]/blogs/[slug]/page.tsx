@@ -18,6 +18,7 @@ import { SITE_URL } from '@/config/site'
 import { ContentDisclaimer } from '@/components/content/ContentDisclaimer'
 import { SabHeroBackdrop } from '../../values/_SabHeroBackdrop'
 import { HubNav } from '@/components/content/HubNav'
+import { HubFooter } from '@/components/content/HubFooter'
 import { getHubNavData, HUB_NAV_CLEAR } from '@/lib/content/hubNav'
 import { ArticleBody, extractToc } from './_articleBody'
 import { ArticleToc } from './_ArticleToc'
@@ -39,13 +40,39 @@ const RELATED_DATE = new Intl.DateTimeFormat('en-GB', {
 
 async function getGame(gameSlug: string) {
   const supabase = await createClient()
-  const { data } = await (supabase as any)
+
+  const base = 'name, slug, image_url, is_active, cover_url'
+
+  // blog_cta_image_url ships in a migration that has to be applied by hand, so
+  // the page must work either side of it. Selecting a column that doesn't
+  // exist yet fails the whole query — which 404'd every article until the
+  // migration ran. Ask for it, and quietly fall back if the schema is behind.
+  const withBanner = await (supabase as any)
     .from('games')
-    .select('name, slug, image_url, is_active')
+    .select(`${base}, blog_cta_image_url`)
     .eq('slug', gameSlug)
     .eq('is_active', true)
     .maybeSingle()
-  return (data as { name: string; slug: string; image_url: string | null } | null) ?? null
+
+  if (!withBanner.error) {
+    return (withBanner.data as GameRow | null) ?? null
+  }
+
+  const { data } = await (supabase as any)
+    .from('games')
+    .select(base)
+    .eq('slug', gameSlug)
+    .eq('is_active', true)
+    .maybeSingle()
+  return (data as GameRow | null) ?? null
+}
+
+type GameRow = {
+  name: string
+  slug: string
+  image_url: string | null
+  cover_url?: string | null
+  blog_cta_image_url?: string | null
 }
 
 export async function generateMetadata({
@@ -89,6 +116,11 @@ export default async function GameBlogArticle({
   // fewer, collapse to a single column so the prose aligns with the hero
   // instead of being pushed right by an empty 220px rail.
   const hasToc = toc.length >= 2
+
+  // Per-game CTA banner. blog_cta_image_url is the dedicated wide asset (see
+  // the games_blog_cta_image migration); cover_url is the card art, used as a
+  // stand-in until a banner is uploaded for that game.
+  const ctaImage = game.blog_cta_image_url || game.cover_url || null
   const buyHref = `/${gameSlug}/buy-items`
   const formattedDate = post.publishedAt ? formatDate(post.publishedAt) : null
   const updatedLabel = formattedDate ? formattedDate.toUpperCase() : null
@@ -101,7 +133,7 @@ export default async function GameBlogArticle({
   const related = tagged.filter((p) => p.slug !== slug).slice(0, 3)
 
   return (
-    <main className="relative min-h-screen bg-[#0C0F0E] pb-24">
+    <main className="relative min-h-screen bg-[#0C0F0E]">
       <JsonLd
         data={breadcrumbList([
           { name: 'Home', path: '/' },
@@ -132,25 +164,29 @@ export default async function GameBlogArticle({
             BreadcrumbList JSON-LD keeps the SERP trail) and no identity block
             (the game now lives in the HubNav switcher). pt clears the nav. */}
         <div className={`mx-auto w-full max-w-7xl px-4 pb-10 sm:px-6 lg:px-8 ${HUB_NAV_CLEAR}`}>
-          <div className="max-w-3xl">
+          {/* Centred like the hub pages, but a step down in size: the hub H1 is
+              a 3-4 word product name, an article H1 is a full sentence. At
+              hub scale ("Steal a Brainrot - Value" is 54px) a long title would
+              run to four lines and swamp the fold, so this tops out at 38px. */}
+          <div className="mx-auto max-w-3xl text-center">
             <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.16em] text-[#4FB477]">
               {kindLabel}
             </p>
             {/* Title — heavier weight + tight tracking for a strong, crawlable
                 H1; the article H1 is the primary on-page SEO signal. */}
-            <h1 className="text-balance text-[30px] font-bold leading-[1.08] tracking-[-0.03em] text-[#F1F3F1] sm:text-[42px]">
+            <h1 className="text-balance text-[27px] font-bold leading-[1.1] tracking-[-0.03em] text-[#F1F3F1] sm:text-[34px] lg:text-[38px]">
               {post.title}
             </h1>
-            <p className="mt-4 max-w-2xl text-pretty text-[15px] leading-7 text-[#B7C0B8] sm:text-[17px]">
+            <p className="mx-auto mt-4 max-w-2xl text-pretty text-[15px] leading-7 text-[#B7C0B8] sm:text-[17px]">
               {post.excerpt}
             </p>
 
             {/* Byline */}
-            <div className="mt-7 flex flex-wrap items-center gap-3.5 border-t border-[#191F19] pt-5">
+            <div className="mt-7 flex flex-wrap items-center justify-center gap-3.5 border-t border-[#191F19] pt-5">
               <span className="flex h-9 w-9 items-center justify-center border border-[#23331F] bg-[#0D140E] font-mono text-[11px] font-bold text-[#8FBF9C]">
                 DM
               </span>
-              <span className="flex flex-col gap-1">
+              <span className="flex flex-col gap-1 text-left">
                 <span className="text-[13px] font-semibold text-[#D7DED4]">
                   {post.author}
                 </span>
@@ -179,7 +215,7 @@ export default async function GameBlogArticle({
             />
           )}
 
-          <div className="max-w-[720px]">
+          <div className="mx-auto w-full max-w-[760px]">
             {post.cover && (
               <div className="mb-10 overflow-hidden border border-[#1E2723]">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -189,8 +225,23 @@ export default async function GameBlogArticle({
 
             <ArticleBody body={post.body} />
 
-            {/* CTA */}
-            <div className="mt-14 border border-[#23331F] bg-[#0D140E] p-6 sm:p-8">
+            {/* CTA — per-game banner behind it.
+                Prefers the purpose-made blog_cta_image_url; falls back to the
+                game's card art so every game gets a background today, and a
+                flat panel if neither exists. A scrim keeps the copy readable
+                whatever the art. */}
+            <div
+              className="relative mt-14 overflow-hidden border border-[#23331F] bg-[#0D140E] p-6 sm:p-8"
+              style={
+                ctaImage
+                  ? {
+                      backgroundImage: `linear-gradient(90deg, rgba(9,14,10,0.96) 0%, rgba(9,14,10,0.88) 45%, rgba(9,14,10,0.62) 100%), url(${ctaImage})`,
+                      backgroundSize: 'cover',
+                      backgroundPosition: 'center',
+                    }
+                  : undefined
+              }
+            >
               <h2 className="mb-3 text-[22px] font-semibold leading-tight tracking-tight text-[#F1F3F1]">
                 Skip the grind — buy the {game.name} item you want
               </h2>
@@ -255,6 +306,13 @@ export default async function GameBlogArticle({
           </div>
         </div>
       </div>
-    </main>
+          <HubFooter
+        gameName={hubNav.current.name}
+        gameSlug={hubNav.current.slug}
+        tools={hubNav.tools}
+        itemsHref={hubNav.itemsHref}
+        accountsHref={hubNav.accountsHref}
+      />
+</main>
   )
 }

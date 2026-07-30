@@ -8,6 +8,7 @@ import ValuesDirectoryClient, {
 } from './_ValuesDirectoryClient'
 import { SabHeroBackdrop } from './_SabHeroBackdrop'
 import { HubNav } from '@/components/content/HubNav'
+import { HubFooter } from '@/components/content/HubFooter'
 import { getHubNavData, HUB_NAV_CLEAR } from '@/lib/content/hubNav'
 
 export const revalidate = 3600
@@ -223,7 +224,7 @@ export default async function BrainrotValuesPage({ params }: PageProps) {
   ])
 
   return (
-    <main className="relative min-h-screen bg-[#0C0F0E] pb-24">
+    <main className="relative min-h-screen bg-[#0C0F0E]">
       <SabHeroBackdrop>
       <HubNav data={hubNav} />
       <JsonLd
@@ -331,6 +332,13 @@ export default async function BrainrotValuesPage({ params }: PageProps) {
         )}
       </section>
       </SabHeroBackdrop>
-    </main>
+          <HubFooter
+        gameName={hubNav.current.name}
+        gameSlug={hubNav.current.slug}
+        tools={hubNav.tools}
+        itemsHref={hubNav.itemsHref}
+        accountsHref={hubNav.accountsHref}
+      />
+</main>
   )
 }

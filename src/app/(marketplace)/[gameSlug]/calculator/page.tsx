@@ -5,6 +5,7 @@ import { JsonLd, breadcrumbList, faqPage } from '@/lib/seo/jsonld'
 import { CalculatorSeo, CALCULATOR_FAQ } from './_CalculatorSeo'
 import { SabHeroBackdrop } from '../values/_SabHeroBackdrop'
 import { HubNav } from '@/components/content/HubNav'
+import { HubFooter } from '@/components/content/HubFooter'
 import { getHubNavData } from '@/lib/content/hubNav'
 import { asNumber } from '@/lib/sab/format'
 import CalculatorClient, {
@@ -305,9 +306,9 @@ export default async function SabCalculatorPage({
   const hubNav = await getHubNavData('steal-a-brainrot')
 
   return (
-    <main className="relative min-h-screen bg-[#0C0F0E] pb-24">
+    <main className="relative min-h-screen bg-[#0C0F0E]">
       <SabHeroBackdrop height={420}>
-      <HubNav data={hubNav} />
+      <HubNav data={hubNav} calcMode={resolvedSearchParams.tab === 'cash' ? 'cash' : 'trade'} />
       <JsonLd
         data={breadcrumbList([
           { name: 'Home', path: '/' },
@@ -338,6 +339,13 @@ export default async function SabCalculatorPage({
       <CalculatorSeo monthYear={monthYear} topValues={topValues} />
       <JsonLd data={faqPage(CALCULATOR_FAQ)} />
       </SabHeroBackdrop>
-    </main>
+          <HubFooter
+        gameName={hubNav.current.name}
+        gameSlug={hubNav.current.slug}
+        tools={hubNav.tools}
+        itemsHref={hubNav.itemsHref}
+        accountsHref={hubNav.accountsHref}
+      />
+</main>
   )
 }

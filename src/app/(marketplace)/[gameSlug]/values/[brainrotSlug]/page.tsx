@@ -10,6 +10,7 @@ import ItemHero, { type MutationOption } from './_ItemHero'
 import { SimilarBrainrots } from './_SimilarBrainrots'
 import { SabHeroBackdrop } from '../_SabHeroBackdrop'
 import { HubNav } from '@/components/content/HubNav'
+import { HubFooter } from '@/components/content/HubFooter'
 import { getHubNavData, HUB_NAV_CLEAR } from '@/lib/content/hubNav'
 import { cn } from '@/lib/utils'
 import { sabCard } from '@/lib/sab/theme'
@@ -399,7 +400,7 @@ export default async function BrainrotValuePage({ params }: PageProps) {
   const canonicalPath = `/steal-a-brainrot/values/${brainrot.slug}`
 
   return (
-    <main className="relative min-h-screen bg-[#0C0F0E] pb-24">
+    <main className="relative min-h-screen bg-[#0C0F0E]">
       <SabHeroBackdrop height={560}>
       <JsonLd
         data={breadcrumbList([
@@ -569,7 +570,14 @@ export default async function BrainrotValuePage({ params }: PageProps) {
       </section>
       <JsonLd data={faqPage(faqItems)} />
       </SabHeroBackdrop>
-    </main>
+          <HubFooter
+        gameName={hubNav.current.name}
+        gameSlug={hubNav.current.slug}
+        tools={hubNav.tools}
+        itemsHref={hubNav.itemsHref}
+        accountsHref={hubNav.accountsHref}
+      />
+</main>
   )
 }
 

@@ -13,6 +13,7 @@ import { getGamePosts } from '@/lib/blog/db'
 import { JsonLd, breadcrumbList } from '@/lib/seo/jsonld'
 import { SabHeroBackdrop } from '../values/_SabHeroBackdrop'
 import { HubNav } from '@/components/content/HubNav'
+import { HubFooter } from '@/components/content/HubFooter'
 import { getHubNavData } from '@/lib/content/hubNav'
 import { getGameContentTheme } from '@/lib/content/theme'
 import { BlogHubHero } from './_BlogHubHero'
@@ -169,7 +170,7 @@ export default async function GameBlogIndex({
     // Same shell as the Values page: opaque #0C0F0E base, shared backdrop with
     // the header + sub-nav inside it. The hero content floats on top exactly as
     // Values does, so the navbar reads over the faded (dark) part of the image.
-    <main className="relative min-h-screen bg-[#0C0F0E] pb-24">
+    <main className="relative min-h-screen bg-[#0C0F0E]">
       {/* Single-row shared hub nav (game switcher + tools + storefront),
           inside the backdrop so the scrim keeps it legible at top of page. */}
       <SabHeroBackdrop>
@@ -248,6 +249,13 @@ export default async function GameBlogIndex({
           title={`Skip the grind — buy the ${game.name} item you want`}
         />
       </div>
-    </main>
+          <HubFooter
+        gameName={hubNav.current.name}
+        gameSlug={hubNav.current.slug}
+        tools={hubNav.tools}
+        itemsHref={hubNav.itemsHref}
+        accountsHref={hubNav.accountsHref}
+      />
+</main>
   )
 }

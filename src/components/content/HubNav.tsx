@@ -27,7 +27,18 @@ const TOOL_LABEL: Record<'values' | 'calculator', string> = {
   calculator: 'Calculator',
 }
 
-export function HubNav({ data }: { data: HubNavData }) {
+export function HubNav({
+  data,
+  calcMode,
+}: {
+  data: HubNavData
+  /**
+   * Which calculator mode is showing, when we're on the calculator page. Comes
+   * from the page's own resolved searchParams rather than useSearchParams(),
+   * which would drag every hub page into a Suspense boundary at build time.
+   */
+  calcMode?: 'cash' | 'trade'
+}) {
   const pathname = usePathname() ?? ''
   const [open, setOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement | null>(null)
@@ -186,13 +197,42 @@ export function HubNav({ data }: { data: HubNavData }) {
         <nav className="flex min-w-0 flex-1 items-center justify-start gap-4 self-stretch overflow-x-auto sm:gap-7 md:flex-none md:justify-center md:gap-9 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {[
             { key: 'guides', label: 'Guides', href: `/${current.slug}/blogs` },
-            ...tools.map((tool) => ({
-              key: tool,
-              label: TOOL_LABEL[tool],
-              href: `/${current.slug}/${tool}`,
-            })),
+            // The calculator's two modes are their own tabs rather than a
+            // dropdown: two options never justified a menu, and flat tabs are
+            // one tap instead of two — plus both are crawlable links.
+            ...tools.flatMap((tool) =>
+              tool === 'calculator'
+                ? [
+                    {
+                      key: 'calculator',
+                      label: 'WFL Calculator',
+                      href: `/${current.slug}/calculator`,
+                    },
+                    {
+                      key: 'cash',
+                      label: 'Cash Price',
+                      href: `/${current.slug}/calculator?tab=cash`,
+                    },
+                  ]
+                : [
+                    {
+                      key: tool,
+                      label: TOOL_LABEL[tool],
+                      href: `/${current.slug}/${tool}`,
+                    },
+                  ],
+            ),
           ].map((tab) => {
-            const active = pathname.startsWith(tab.href)
+            // ?tab=cash and the bare calculator URL share a pathname, so the
+            // active tab is decided by the query too — otherwise both light up.
+            const onCalculator = pathname.startsWith(`/${current.slug}/calculator`)
+            const active =
+              tab.key === 'calculator'
+                ? onCalculator && calcMode !== 'cash'
+                : tab.key === 'cash'
+                  ? onCalculator && calcMode === 'cash'
+                  : pathname.startsWith(tab.href)
+
             return (
               <Link
                 key={tab.key}
@@ -200,9 +240,7 @@ export function HubNav({ data }: { data: HubNavData }) {
                 // h-full so the active underline sits on the bar's bottom edge
                 // rather than hugging the text.
                 className={`relative flex h-full shrink-0 items-center whitespace-nowrap text-[14px] font-semibold transition sm:text-[15px] ${
-                  active
-                    ? 'text-[#F1F3F1]'
-                    : 'text-[#A6B2AA] hover:text-[#E4EAE2]'
+                  active ? 'text-[#F1F3F1]' : 'text-[#A6B2AA] hover:text-[#E4EAE2]'
                 }`}
               >
                 {tab.label}
