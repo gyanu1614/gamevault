@@ -31,9 +31,9 @@ function buildTabs(gameSlug: string, buyHref: string): Tab[] {
   return [
     {
       label: 'Blog',
-      href: `${hub}/blogs`,
+      href: `${hub}/blog`,
       Icon: ArticleOutlinedIcon,
-      match: (p) => p.startsWith(`${hub}/blogs`),
+      match: (p) => p.startsWith(`${hub}/blog`),
     },
     {
       label: 'Values',

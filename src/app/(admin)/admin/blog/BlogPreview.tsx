@@ -13,8 +13,8 @@
  */
 
 import { useState } from 'react'
-import { GuideCard } from '../../../(marketplace)/[gameSlug]/blogs/_ArticleGrid'
-import { ArticleBody } from '../../../(marketplace)/[gameSlug]/blogs/[slug]/_articleBody'
+import { GuideCard } from '../../../(marketplace)/[gameSlug]/blog/_ArticleGrid'
+import { ArticleBody } from '../../../(marketplace)/[gameSlug]/blog/[slug]/_articleBody'
 
 const CARD_DATE = new Intl.DateTimeFormat('en-GB', {
   day: '2-digit',

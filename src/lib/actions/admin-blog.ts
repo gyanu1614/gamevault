@@ -63,15 +63,15 @@ function revalidatePostPaths(gameSlug: string | null, slug: string) {
   revalidatePath('/admin/blog')
   revalidatePath('/blog')
   if (gameSlug) {
-    revalidatePath(`/${gameSlug}/blogs`)
-    revalidatePath(`/${gameSlug}/blogs/${slug}`)
+    revalidatePath(`/${gameSlug}/blog`)
+    revalidatePath(`/${gameSlug}/blog/${slug}`)
     revalidatePath(`/${gameSlug}`) // Overview surfaces latest guides.
   }
 }
 
 /** Ping IndexNow for a freshly published post (no-op outside prod). */
 async function pingPost(gameSlug: string | null, slug: string) {
-  const path = gameSlug ? `/${gameSlug}/blogs/${slug}` : `/blog/${slug}`
+  const path = gameSlug ? `/${gameSlug}/blog/${slug}` : `/blog/${slug}`
   try {
     await pingIndexNow([path])
   } catch {

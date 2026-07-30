@@ -38,6 +38,20 @@ const nextConfig = {
   // SEO during the transition.
   async redirects() {
     return [
+      // The per-game content hub moved from /[game]/blogs to /[game]/blog, so
+      // the whole site uses the singular form (the site-wide index was already
+      // /blog). These URLs are in the sitemap and may be indexed, so both the
+      // hub and every article 301 to their new home rather than 404ing.
+      {
+        source: '/:game/blogs',
+        destination: '/:game/blog',
+        permanent: true,
+      },
+      {
+        source: '/:game/blogs/:slug',
+        destination: '/:game/blog/:slug',
+        permanent: true,
+      },
       // Category slugs canonicalized to the buy-{x} SEO pattern (was bare
       // items/accounts/currency on legacy games). 301 the old bare URLs → the
       // canonical buy- URL so Google consolidates on the ranking-friendly slug.

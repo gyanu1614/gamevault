@@ -6,7 +6,7 @@
  *   [game icon + name ▾]        [Values] [Calculator]       [Buy items][Accounts]
  *
  * - The game name opens the game switcher; picking a game goes to ITS hub
- *   home (/{slug}/blogs). The current game's row also returns to hub home,
+ *   home (/{slug}/blog). The current game's row also returns to hub home,
  *   so the name doubles as the "Blog/home" link — no separate Blog tab.
  * - Tool tabs and buy buttons are data-driven; games without a category or
  *   tool simply don't render that control.
@@ -147,7 +147,7 @@ export function HubNav({
                   <Link
                     key={g.slug}
                     role="menuitem"
-                    href={`/${g.slug}/blogs`}
+                    href={`/${g.slug}/blog`}
                     onClick={() => setOpen(false)}
                     className={`relative flex items-center gap-3 px-4 py-3 text-[15px] transition-colors ${
                       active
@@ -196,7 +196,7 @@ export function HubNav({
             and the flex-1 side groups do the centring. */}
         <nav className="flex min-w-0 flex-1 items-center justify-start gap-4 self-stretch overflow-x-auto sm:gap-7 md:flex-none md:justify-center md:gap-9 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {[
-            { key: 'guides', label: 'Guides', href: `/${current.slug}/blogs` },
+            { key: 'guides', label: 'Guides', href: `/${current.slug}/blog` },
             // The calculator's two modes are their own tabs rather than a
             // dropdown: two options never justified a menu, and flat tabs are
             // one tap instead of two — plus both are crawlable links.

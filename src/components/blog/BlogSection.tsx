@@ -6,7 +6,7 @@
  * page) + their resolved hrefs, so it works from any client or server tree
  * without a data dependency. Hidden automatically when there are no posts.
  *
- * Each post carries its true href (nested /[game]/blogs/[slug] when it has a
+ * Each post carries its true href (nested /[game]/blog/[slug] when it has a
  * game, else /blog/[slug]) so the rail never links through a 301 redirect.
  */
 

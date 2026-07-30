@@ -171,7 +171,7 @@ export function BlogEditor({
             placeholder="value-list"
           />
           <p className="mt-1 text-xs text-gray-500">
-            {primaryGame ? `/${primaryGame}/blogs/${slug || '…'}` : `/blog/${slug || '…'}`}
+            {primaryGame ? `/${primaryGame}/blog/${slug || '…'}` : `/blog/${slug || '…'}`}
           </p>
         </div>
 

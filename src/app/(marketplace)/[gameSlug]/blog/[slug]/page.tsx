@@ -1,5 +1,5 @@
 /**
- * /[game]/blogs/[slug] — a single content article.
+ * /[game]/blog/[slug] — a single content article.
  *
  * Uses the content-design article layout (sticky TOC sidebar + prose column,
  * key-takeaways box, section headings, FAQ accordion, related grid, buy CTA)
@@ -83,11 +83,11 @@ export async function generateMetadata({
   const { gameSlug, slug } = await params
   const post = await getGamePost(gameSlug, slug)
   if (!post) return { title: 'Not Found' }
-  const url = `${SITE_URL}/${gameSlug}/blogs/${slug}`
+  const url = `${SITE_URL}/${gameSlug}/blog/${slug}`
   return {
     title: post.seoTitle || post.title,
     description: post.seoDescription || post.excerpt,
-    alternates: { canonical: `/${gameSlug}/blogs/${slug}` },
+    alternates: { canonical: `/${gameSlug}/blog/${slug}` },
     openGraph: {
       title: post.seoTitle || post.title,
       description: post.seoDescription || post.excerpt,
@@ -138,8 +138,8 @@ export default async function GameBlogArticle({
         data={breadcrumbList([
           { name: 'Home', path: '/' },
           { name: game.name, path: `/${gameSlug}` },
-          { name: 'Guides', path: `/${gameSlug}/blogs` },
-          { name: post.title, path: `/${gameSlug}/blogs/${slug}` },
+          { name: 'Guides', path: `/${gameSlug}/blog` },
+          { name: post.title, path: `/${gameSlug}/blog/${slug}` },
         ])}
       />
       <JsonLd
@@ -152,7 +152,7 @@ export default async function GameBlogArticle({
           publisher: { '@type': 'Organization', name: 'DropMarket' },
           datePublished: post.publishedAt,
           ...(post.cover ? { image: post.cover } : {}),
-          mainEntityOfPage: `${SITE_URL}/${gameSlug}/blogs/${slug}`,
+          mainEntityOfPage: `${SITE_URL}/${gameSlug}/blog/${slug}`,
         }}
       />
 
@@ -275,7 +275,7 @@ export default async function GameBlogArticle({
                   {related.map((r) => (
                     <Link
                       key={r.slug}
-                      href={`/${gameSlug}/blogs/${r.slug}`}
+                      href={`/${gameSlug}/blog/${r.slug}`}
                       className="flex flex-col gap-2.5 bg-[#0B0F0C] p-5 transition-colors hover:bg-[#101710]"
                     >
                       <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-[#8FBF9C]">
