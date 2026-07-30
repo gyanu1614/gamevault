@@ -109,7 +109,7 @@
     background-size:   100% 100%;
     background-attachment: fixed;
     color: var(--color-text-primary);
-    font-family: var(--font-display), "Inter", system-ui, sans-serif;
+    font-family: var(--font-display), "Figtree", system-ui, sans-serif;
     font-size: var(--text-body-size);
     line-height: var(--text-body-lh);
     -webkit-font-smoothing: antialiased;
@@ -181,7 +181,7 @@
 
   h1, h2, h3, h4, h5, h6 {
     margin: 0;
-    font-family: var(--font-display), "Inter", system-ui, sans-serif;
+    font-family: var(--font-display), "Figtree", system-ui, sans-serif;
   }
 
   /* Scrollbar — GV style */

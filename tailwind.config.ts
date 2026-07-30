@@ -172,10 +172,12 @@ const config: Config = {
 
       // ── Typography ──────────────────────────────────────────────
       fontFamily: {
-        // GV v2 — Satoshi display, General Sans body, Geist Mono
-        sans:    ['var(--font-inter)', 'Inter', 'system-ui', 'sans-serif'],
-        display: ['var(--font-inter)', 'Inter', 'system-ui', 'sans-serif'],
-        body:    ['var(--font-inter)', 'Inter', 'system-ui', 'sans-serif'],
+        // One text font (Figtree) across sans/display/body, plus JetBrains Mono
+        // for numbers, prices and uppercase data labels. The --font-inter
+        // variable name is legacy — it now resolves to Figtree; see layout.tsx.
+        sans:    ['var(--font-inter)', 'Figtree', 'system-ui', 'sans-serif'],
+        display: ['var(--font-inter)', 'Figtree', 'system-ui', 'sans-serif'],
+        body:    ['var(--font-inter)', 'Figtree', 'system-ui', 'sans-serif'],
         mono:    ['var(--font-mono)', 'JetBrains Mono', 'ui-monospace', 'monospace'],
       },
       fontSize: {
