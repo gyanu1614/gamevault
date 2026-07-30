@@ -113,16 +113,17 @@ export function CalculatorTeaser({
     <section className="pt-12 sm:pt-16">
       <div className="grid gap-px overflow-hidden border border-[#1A211A] bg-[#1A211A] lg:grid-cols-[1fr_1fr]">
         {/* Copy side */}
-        <div className="bg-[#0B0F0C] p-6 sm:p-8">
-          <div className="mb-4 flex items-center gap-2.5">
+        <div className="bg-[#0B0F0C] p-5 sm:p-8">
+          <div className="mb-3 flex items-center gap-2.5 sm:mb-4">
             <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-[#8FBF9C]">
               Trade Calculator
             </span>
           </div>
-          <h3 className="mb-3 text-[20px] font-semibold leading-snug tracking-tight text-[#F1F3F1] sm:text-[24px]">
+          <h3 className="mb-2.5 text-[20px] font-semibold leading-snug tracking-tight text-[#F1F3F1] sm:mb-3 sm:text-[24px]">
             {example.title}
           </h3>
-          <p className="mb-6 max-w-md text-sm leading-relaxed text-[#98A398]">
+          {/* Clamped on mobile — the full pitch is a scroll cost on a teaser. */}
+          <p className="mb-5 line-clamp-2 max-w-md text-sm leading-relaxed text-[#98A398] sm:mb-6 sm:line-clamp-none">
             {example.body}
           </p>
           <Link
@@ -134,25 +135,25 @@ export function CalculatorTeaser({
           </Link>
         </div>
 
-        {/* Worked example side */}
-        <div className="flex flex-col gap-2 bg-[#0A0D0B] p-6 sm:p-8">
-          <div className="flex items-center justify-between border border-[#1A211A] bg-[#0B0F0C] px-4 py-3.5">
+        {/* Worked example side — tighter rows on mobile. */}
+        <div className="flex flex-col gap-1.5 bg-[#0A0D0B] p-5 sm:gap-2 sm:p-8">
+          <div className="flex items-center justify-between gap-3 border border-[#1A211A] bg-[#0B0F0C] px-3.5 py-2.5 sm:px-4 sm:py-3.5">
             <span className="font-mono text-[11px] uppercase tracking-[0.08em] text-[#5E685E]">
               They offer
             </span>
-            <span className="font-mono text-[13px] font-semibold text-[#D7DED4]">
+            <span className="truncate font-mono text-[12px] font-semibold text-[#D7DED4] sm:text-[13px]">
               {example.offer}
             </span>
           </div>
-          <div className="flex items-center justify-between border border-[#1A211A] bg-[#0B0F0C] px-4 py-3.5">
+          <div className="flex items-center justify-between gap-3 border border-[#1A211A] bg-[#0B0F0C] px-3.5 py-2.5 sm:px-4 sm:py-3.5">
             <span className="font-mono text-[11px] uppercase tracking-[0.08em] text-[#5E685E]">
               You give
             </span>
-            <span className="font-mono text-[13px] font-semibold text-[#D7DED4]">
+            <span className="truncate font-mono text-[12px] font-semibold text-[#D7DED4] sm:text-[13px]">
               {example.give}
             </span>
           </div>
-          <div className="mt-2 flex items-center justify-between border border-[#23331F] bg-[#0D140E] p-4">
+          <div className="mt-1.5 flex items-center justify-between gap-3 border border-[#23331F] bg-[#0D140E] p-3.5 sm:mt-2 sm:p-4">
             <span className="flex items-center gap-3">
               <span className="flex h-9 w-9 items-center justify-center border border-[#4FB477] font-mono text-[15px] font-bold text-[#8FBF9C]">
                 {example.letter}

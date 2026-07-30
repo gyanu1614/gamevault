@@ -100,14 +100,15 @@ export function FeaturedGuide({
         {/* ── Text panel — overlaps onto the faded image tail on desktop.
             `relative` lifts it above the absolutely-positioned image layer,
             which otherwise paints over the panel's first characters. ── */}
-        <div className="relative flex flex-col justify-center gap-4 p-6 sm:p-8 lg:ml-[48%] lg:h-full lg:w-[52%] lg:py-0 lg:pl-10 lg:pr-11">
+        <div className="relative flex flex-col justify-center gap-3 p-5 sm:gap-4 sm:p-8 lg:ml-[48%] lg:h-full lg:w-[52%] lg:py-0 lg:pl-10 lg:pr-11">
           <p className="font-mono text-[12px] font-extrabold uppercase tracking-[0.2em] text-[#3FA35C]">
             {category} · {readMinutes} min read
           </p>
-          <h3 className="text-pretty text-[30px] font-extrabold leading-[1.08] tracking-[-0.025em] text-white lg:text-[40px]">
+          <h3 className="text-pretty text-[26px] font-extrabold leading-[1.08] tracking-[-0.025em] text-white sm:text-[30px] lg:text-[40px]">
             {title}
           </h3>
-          <p className="text-pretty text-[16px] leading-[1.55] text-[#9BA8A0]">
+          {/* Clamped on mobile so the block doesn't dominate the scroll. */}
+          <p className="line-clamp-2 text-pretty text-[15px] leading-[1.55] text-[#9BA8A0] sm:line-clamp-none sm:text-[16px]">
             {excerpt}
           </p>
           <div className="mt-2 flex items-center gap-5">

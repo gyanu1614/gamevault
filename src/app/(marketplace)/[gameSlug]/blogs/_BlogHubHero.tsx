@@ -55,7 +55,9 @@ export function BlogHubHero({
               {lead}
             </p>
             {about && (
-              <p className="mt-4 max-w-xl text-[13px] leading-relaxed text-[#7C877C]">
+              // Clamped on mobile (the full copy is a big scroll cost there);
+              // shown in full from sm up where there's room.
+              <p className="mt-4 line-clamp-3 max-w-xl text-[13px] leading-relaxed text-[#7C877C] sm:line-clamp-none">
                 {about}
               </p>
             )}
