@@ -198,3 +198,62 @@ function normalizeRow(row: any): AdminBlogPost {
     updated_at: row.updated_at ?? '',
   }
 }
+
+/* ── Image uploads ─────────────────────────────────────────────────────── */
+
+const BLOG_BUCKET = 'blog-images'
+
+/**
+ * Upload a blog image (cover or inline body photo) to the public
+ * `blog-images` bucket and return its public URL. The bucket is created on
+ * first use so no manual storage setup is needed.
+ */
+export async function uploadBlogImage(fileData: {
+  name: string
+  type: string
+  size: number
+  base64: string
+}): Promise<{ success: true; url: string } | { success: false; error: string }> {
+  try {
+    await requireAdmin()
+    const supabase = getAdminSupabase()
+
+    const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'image/gif']
+    if (!validTypes.includes(fileData.type)) {
+      return { success: false, error: 'Invalid file type. Allowed: PNG, JPEG, WebP, GIF' }
+    }
+    if (fileData.size > 4_194_304) {
+      return { success: false, error: 'Image must be 4 MB or smaller' }
+    }
+
+    // Idempotent bucket setup — createBucket errors if it exists; ignore that.
+    await supabase.storage
+      .createBucket(BLOG_BUCKET, { public: true })
+      .catch(() => undefined)
+
+    const commaIdx = fileData.base64.indexOf(',')
+    const base64Data = commaIdx >= 0 ? fileData.base64.slice(commaIdx + 1) : fileData.base64
+    const buffer = Buffer.from(base64Data, 'base64')
+
+    const ext = (fileData.name.split('.').pop() || 'jpg').toLowerCase()
+    const safeExt = /^[a-z0-9]{2,5}$/.test(ext) ? ext : 'jpg'
+    const path = `posts/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${safeExt}`
+
+    const { error: upErr } = await supabase.storage
+      .from(BLOG_BUCKET)
+      .upload(path, buffer, {
+        contentType: fileData.type,
+        cacheControl: '31536000',
+        upsert: false,
+      })
+    if (upErr) return { success: false, error: upErr.message }
+
+    const { data: urlData } = supabase.storage.from(BLOG_BUCKET).getPublicUrl(path)
+    return { success: true, url: urlData.publicUrl }
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Upload failed',
+    }
+  }
+}

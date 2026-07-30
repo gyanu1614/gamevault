@@ -16,9 +16,9 @@ import { formatDate } from '@/lib/sab/format'
 import { JsonLd, breadcrumbList } from '@/lib/seo/jsonld'
 import { SITE_URL } from '@/config/site'
 import { ContentDisclaimer } from '@/components/content/ContentDisclaimer'
-import { ValuesHeader } from '../../values/_ValuesHeader'
 import { SabHeroBackdrop } from '../../values/_SabHeroBackdrop'
-import { SabSubNav } from '../../values/_SabSubNav'
+import { HubNav } from '@/components/content/HubNav'
+import { getHubNavData } from '@/lib/content/hubNav'
 import { ArticleBody, extractToc } from './_articleBody'
 import { ArticleToc } from './_ArticleToc'
 
@@ -94,7 +94,10 @@ export default async function GameBlogArticle({
   const updatedLabel = formattedDate ? formattedDate.toUpperCase() : null
 
   // Related = other posts for this game, excluding the current one.
-  const tagged = await getPostsTaggedForGame(gameSlug, 4)
+  const [tagged, hubNav] = await Promise.all([
+    getPostsTaggedForGame(gameSlug, 4),
+    getHubNavData(gameSlug),
+  ])
   const related = tagged.filter((p) => p.slug !== slug).slice(0, 3)
 
   return (
@@ -121,65 +124,14 @@ export default async function GameBlogArticle({
         }}
       />
 
-      {/* Header + sub-nav INSIDE the backdrop (same as Values) so the dark
-          scrim sits behind the tabs and they stay legible at top-of-page. */}
+      {/* Shared hub nav inside the backdrop so the scrim keeps it legible. */}
       <SabHeroBackdrop>
-        <ValuesHeader gameName={game.name} buyHref={buyHref} />
-        <SabSubNav gameSlug={gameSlug} buyHref={buyHref} />
+        <HubNav data={hubNav} />
 
-        {/* HERO — breadcrumb, category, title, lead, byline. */}
-        <div className="mx-auto w-full max-w-7xl px-4 pb-10 pt-8 sm:px-6 lg:px-8">
-          {/* Breadcrumb — brighter grey so it reads on the backdrop. */}
-          <nav className="mb-6 flex flex-wrap items-center gap-1.5 text-[12.5px] text-[#9BA8A0]">
-            <Link
-              href={`/${gameSlug}`}
-              className="transition-colors hover:text-[#F1F3F1]"
-            >
-              {game.name}
-            </Link>
-            <span aria-hidden className="text-[#4C564E]">
-              /
-            </span>
-            <Link
-              href={`/${gameSlug}/blogs`}
-              className="transition-colors hover:text-[#F1F3F1]"
-            >
-              Blog
-            </Link>
-            <span aria-hidden className="text-[#4C564E]">
-              /
-            </span>
-            <span className="font-medium text-[#F1F3F1]">{kindLabel}</span>
-          </nav>
-
-          {/* Game identity block — same as the hub, so articles feel part of
-              the same hub rather than a bare document. */}
-          <div className="mb-7 flex items-center gap-4">
-            {game.image_url ? (
-              // eslint-disable-next-line @next/next/no-img-element -- remote game logo
-              <img
-                src={game.image_url}
-                alt=""
-                className="h-[52px] w-[52px] shrink-0 object-cover"
-              />
-            ) : (
-              <span
-                aria-hidden
-                className="flex h-[52px] w-[52px] shrink-0 items-center justify-center bg-[#1B6B3F] font-mono text-[15px] font-bold text-white"
-              >
-                {game.name.slice(0, 3).toUpperCase()}
-              </span>
-            )}
-            <span className="flex flex-col gap-1.5">
-              <span className="text-[18px] font-bold leading-none tracking-tight text-[#F1F3F1]">
-                {game.name}
-              </span>
-              <span className="font-mono text-[11px] font-medium uppercase tracking-[0.16em] text-[#8FBF9C]">
-                Roblox
-              </span>
-            </span>
-          </div>
-
+        {/* HERO — category, title, lead, byline. No visible breadcrumb (the
+            BreadcrumbList JSON-LD keeps the SERP trail) and no identity block
+            (the game now lives in the HubNav switcher). pt clears the nav. */}
+        <div className="mx-auto w-full max-w-7xl px-4 pb-10 pt-[92px] sm:px-6 lg:px-8">
           <div className="max-w-3xl">
             <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.16em] text-[#4FB477]">
               {kindLabel}

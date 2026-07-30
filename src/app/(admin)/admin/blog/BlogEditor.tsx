@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   type AdminBlogPost,
@@ -9,7 +9,27 @@ import {
   type BlogStatus,
   insertBlogPost,
   updateBlogPost,
+  uploadBlogImage,
 } from '@/lib/actions/admin-blog'
+import { BlogPreview } from './BlogPreview'
+
+/** Read a File into the base64 payload uploadBlogImage expects. */
+function fileToPayload(
+  file: File,
+): Promise<{ name: string; type: string; size: number; base64: string }> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () =>
+      resolve({
+        name: file.name,
+        type: file.type,
+        size: file.size,
+        base64: String(reader.result),
+      })
+    reader.onerror = () => reject(new Error('Could not read the file'))
+    reader.readAsDataURL(file)
+  })
+}
 
 type GameOption = { slug: string; name: string }
 
@@ -28,10 +48,13 @@ const field =
 export function BlogEditor({
   post,
   games,
+  defaultGameSlug,
 }: {
   /** Existing post when editing; undefined when creating. */
   post?: AdminBlogPost
   games: GameOption[]
+  /** Pre-selects the game when creating from a game's admin view. */
+  defaultGameSlug?: string
 }) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
@@ -45,9 +68,38 @@ export function BlogEditor({
   const [readMinutes, setReadMinutes] = useState(post?.read_minutes ?? 5)
   const [postType, setPostType] = useState<BlogPostType>(post?.post_type ?? 'value')
   const [status, setStatus] = useState<BlogStatus>(post?.status ?? 'draft')
-  const [primaryGame, setPrimaryGame] = useState(post?.primary_game_slug ?? '')
+  const [primaryGame, setPrimaryGame] = useState(
+    post?.primary_game_slug ?? defaultGameSlug ?? '',
+  )
   const [coverUrl, setCoverUrl] = useState(post?.cover_url ?? '')
   const [body, setBody] = useState((post?.body ?? []).join('\n\n'))
+  const [uploading, setUploading] = useState<'cover' | 'body' | null>(null)
+  const [previewOpen, setPreviewOpen] = useState(false)
+  const coverInputRef = useRef<HTMLInputElement | null>(null)
+  const bodyInputRef = useRef<HTMLInputElement | null>(null)
+
+  const handleUpload = async (file: File, target: 'cover' | 'body') => {
+    setError(null)
+    setUploading(target)
+    try {
+      const payload = await fileToPayload(file)
+      const res = await uploadBlogImage(payload)
+      if (!res.success) {
+        setError(res.error)
+        return
+      }
+      if (target === 'cover') {
+        setCoverUrl(res.url)
+      } else {
+        // Append as a markdown image paragraph the article renderer shows.
+        setBody((b) => `${b.trimEnd()}\n\n![Image](${res.url})\n\n`)
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Upload failed')
+    } finally {
+      setUploading(null)
+    }
+  }
   const [seoTitle, setSeoTitle] = useState(post?.seo_title ?? '')
   const [seoDescription, setSeoDescription] = useState(post?.seo_description ?? '')
 
@@ -135,7 +187,30 @@ export function BlogEditor({
         </div>
 
         <div>
-          <label className={label}>Body</label>
+          <div className="mb-1.5 flex items-center justify-between">
+            <label className={label.replace('mb-1.5 block ', '')}>Body</label>
+            <div>
+              <input
+                ref={bodyInputRef}
+                type="file"
+                accept="image/png,image/jpeg,image/webp,image/gif"
+                className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0]
+                  if (f) void handleUpload(f, 'body')
+                  e.target.value = ''
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => bodyInputRef.current?.click()}
+                disabled={uploading !== null}
+                className="rounded-lg border border-lime/50 px-3 py-1.5 text-xs font-semibold text-lime-text transition hover:bg-lime/10 disabled:opacity-50"
+              >
+                {uploading === 'body' ? 'Uploading…' : '+ Insert image'}
+              </button>
+            </div>
+          </div>
           <textarea
             className={`${field} font-mono text-[13px] leading-6`}
             rows={18}
@@ -144,7 +219,9 @@ export function BlogEditor({
             placeholder={'Write in paragraphs.\n\nSeparate each paragraph with a blank line.'}
           />
           <p className="mt-1 text-xs text-gray-500">
-            Separate paragraphs with a blank line. Keep it data-rich — real values, dated, no filler.
+            Separate paragraphs with a blank line. Use ## for section headings,
+            - for bullets, and ![caption](url) for photos — Insert image
+            uploads and appends one for you.
           </p>
         </div>
 
@@ -218,13 +295,42 @@ export function BlogEditor({
             />
           </div>
           <div>
-            <label className={label}>Cover image URL</label>
-            <input
-              className={field}
-              value={coverUrl}
-              onChange={(e) => setCoverUrl(e.target.value)}
-              placeholder="/section-bg/…jpg"
-            />
+            <label className={label}>Cover image</label>
+            <div className="flex items-center gap-2">
+              <input
+                className={field}
+                value={coverUrl}
+                onChange={(e) => setCoverUrl(e.target.value)}
+                placeholder="Upload or paste a URL"
+              />
+              <input
+                ref={coverInputRef}
+                type="file"
+                accept="image/png,image/jpeg,image/webp,image/gif"
+                className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0]
+                  if (f) void handleUpload(f, 'cover')
+                  e.target.value = ''
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => coverInputRef.current?.click()}
+                disabled={uploading !== null}
+                className="shrink-0 rounded-lg border border-lime/50 px-3 py-2 text-xs font-semibold text-lime-text transition hover:bg-lime/10 disabled:opacity-50"
+              >
+                {uploading === 'cover' ? 'Uploading…' : 'Upload'}
+              </button>
+            </div>
+            {coverUrl && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={coverUrl}
+                alt="Cover preview"
+                className="mt-2 h-24 w-full rounded-md border border-white/10 object-cover"
+              />
+            )}
           </div>
         </div>
 
@@ -245,6 +351,13 @@ export function BlogEditor({
           </button>
           <button
             type="button"
+            onClick={() => setPreviewOpen(true)}
+            className="rounded-lg border border-lime/50 px-4 py-2.5 text-sm font-semibold text-lime-text transition hover:bg-lime/10"
+          >
+            Preview
+          </button>
+          <button
+            type="button"
             onClick={() => router.push('/admin/blog')}
             className="rounded-lg border border-white/15 px-4 py-2.5 text-sm font-semibold text-gray-300 transition hover:border-white/30"
           >
@@ -252,6 +365,21 @@ export function BlogEditor({
           </button>
         </div>
       </div>
+
+      {/* Live preview — renders from current editor state, no save needed. */}
+      <BlogPreview
+        open={previewOpen}
+        onClose={() => setPreviewOpen(false)}
+        gameSlug={primaryGame || null}
+        slug={slug}
+        title={title}
+        excerpt={excerpt}
+        author={author}
+        readMinutes={readMinutes}
+        postType={postType}
+        coverUrl={coverUrl}
+        body={body}
+      />
     </div>
   )
 }

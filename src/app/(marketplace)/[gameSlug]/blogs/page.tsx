@@ -12,8 +12,8 @@ import { createClient } from '@/lib/supabase/server'
 import { getGamePosts } from '@/lib/blog/db'
 import { JsonLd, breadcrumbList } from '@/lib/seo/jsonld'
 import { SabHeroBackdrop } from '../values/_SabHeroBackdrop'
-import { ValuesHeader } from '../values/_ValuesHeader'
-import { SabSubNav } from '../values/_SabSubNav'
+import { HubNav } from '@/components/content/HubNav'
+import { getHubNavData } from '@/lib/content/hubNav'
 import { getGameContentTheme } from '@/lib/content/theme'
 import { BlogHubHero, type BlogHubStat } from './_BlogHubHero'
 import { FeaturedGuide } from './_FeaturedGuide'
@@ -109,10 +109,11 @@ export default async function GameBlogIndex({
   const game = await getGame(gameSlug)
   if (!game) notFound()
 
-  const [posts, pricedItems, topValues] = await Promise.all([
+  const [posts, pricedItems, topValues, hubNav] = await Promise.all([
     getGamePosts(gameSlug),
     getPricedItemCount(gameSlug),
     getHubTopValues(gameSlug, 4),
+    getHubNavData(gameSlug),
   ])
 
   const theme = getGameContentTheme(gameSlug)
@@ -146,6 +147,8 @@ export default async function GameBlogIndex({
     excerpt: post.excerpt,
     category: POST_TYPE_LABEL[post.postType] ?? 'Guide',
     date: formatCardDate(post.publishedAt),
+    cover: post.cover,
+    readMinutes: post.readMinutes,
   }))
 
   return (
@@ -153,13 +156,10 @@ export default async function GameBlogIndex({
     // the header + sub-nav inside it. The hero content floats on top exactly as
     // Values does, so the navbar reads over the faded (dark) part of the image.
     <main className="relative min-h-screen bg-[#0C0F0E] pb-24">
-      {/* Header + sub-nav live INSIDE the backdrop (same as Values) so the dark
-          scrim sits behind them and the tabs stay legible at the top of the
-          page. The overlap-on-scroll bug is solved by the content wrapper's
-          z-index below, not by pulling the nav out here. */}
+      {/* Single-row shared hub nav (game switcher + tools + storefront),
+          inside the backdrop so the scrim keeps it legible at top of page. */}
       <SabHeroBackdrop>
-        <ValuesHeader gameName={game.name} buyHref={`/${gameSlug}/buy-items`} />
-        <SabSubNav gameSlug={gameSlug} buyHref={`/${gameSlug}/buy-items`} />
+        <HubNav data={hubNav} />
 
         <JsonLd
           data={breadcrumbList([
@@ -171,8 +171,6 @@ export default async function GameBlogIndex({
 
         <BlogHubHero
           gameSlug={gameSlug}
-          gameName={game.name}
-          logoUrl={game.image_url}
           kicker="Guides & Value Reports"
           title={`${game.name} Blog`}
           lead={theme.heroLead}

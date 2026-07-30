@@ -4,6 +4,8 @@ import { createClient } from '@/lib/supabase/server'
 import { JsonLd, breadcrumbList, faqPage } from '@/lib/seo/jsonld'
 import { CalculatorSeo, CALCULATOR_FAQ } from './_CalculatorSeo'
 import { SabHeroBackdrop } from '../values/_SabHeroBackdrop'
+import { HubNav } from '@/components/content/HubNav'
+import { getHubNavData } from '@/lib/content/hubNav'
 import { asNumber } from '@/lib/sab/format'
 import CalculatorClient, {
   type CalcBrainrot,
@@ -300,9 +302,12 @@ export default async function SabCalculatorPage({
     timeZone: 'UTC',
   })
 
+  const hubNav = await getHubNavData('steal-a-brainrot')
+
   return (
     <main className="relative min-h-screen bg-[#0C0F0E] pb-24">
       <SabHeroBackdrop height={420}>
+      <HubNav data={hubNav} />
       <JsonLd
         data={breadcrumbList([
           { name: 'Home', path: '/' },

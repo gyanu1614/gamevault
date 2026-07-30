@@ -33,8 +33,6 @@ import {
   sabCard,
   sabInteractive,
 } from '@/lib/sab/theme'
-import { ValuesHeader } from '../values/_ValuesHeader'
-import { SabSubNav } from '../values/_SabSubNav'
 
 /* -------------------------------------------------------------------------- */
 /* Shared types (unified across the cash + trade tabs)                        */
@@ -141,45 +139,9 @@ export default function CalculatorClient({
 
   return (
     <>
-      <ValuesHeader
-        gameName="Steal a Brainrot"
-        buyHref="/steal-a-brainrot/buy-items"
-      />
-      <SabSubNav />
-
-      <section className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
-        {/* Breadcrumb */}
-        <nav className="flex flex-wrap items-center gap-1.5 pt-8 text-[12.5px] text-[#9BA8A0]">
-          <Link
-            href="/steal-a-brainrot"
-            className="transition-colors hover:text-[#F1F3F1]"
-          >
-            Steal a Brainrot
-          </Link>
-          <span aria-hidden className="text-[#4C564E]">
-            /
-          </span>
-          <span className="font-medium text-[#F1F3F1]">Calculator</span>
-        </nav>
-
-        {/* Game identity block — same as the blog hub for consistency. */}
-        <div className="mb-7 mt-6 flex items-center gap-4">
-          <span
-            aria-hidden
-            className="flex h-[52px] w-[52px] shrink-0 items-center justify-center bg-[#1B6B3F] font-mono text-[15px] font-bold text-white"
-          >
-            SAB
-          </span>
-          <span className="flex flex-col gap-1.5">
-            <span className="text-[18px] font-bold leading-none tracking-tight text-[#F1F3F1]">
-              Steal a Brainrot
-            </span>
-            <span className="font-mono text-[11px] font-medium uppercase tracking-[0.16em] text-[#8FBF9C]">
-              Roblox
-            </span>
-          </span>
-        </div>
-
+      {/* Nav renders server-side in the page (HubNav). No breadcrumb — the
+          BreadcrumbList JSON-LD keeps the SERP trail. pt clears the nav. */}
+      <section className="mx-auto w-full max-w-7xl px-4 pt-[92px] sm:px-6 lg:px-8">
         {/* Hero copy */}
         <div className="max-w-[720px]">
           <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.18em] text-[#5FC17B]">

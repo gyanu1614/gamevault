@@ -1,15 +1,14 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { ArrowRight, Calculator, Search, ShoppingCart } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { JsonLd, breadcrumbList } from '@/lib/seo/jsonld'
 import ValuesDirectoryClient, {
   type BrainrotDirectoryItem,
 } from './_ValuesDirectoryClient'
-import { ValuesHeader } from './_ValuesHeader'
 import { SabHeroBackdrop } from './_SabHeroBackdrop'
-import { SabSubNav } from './_SabSubNav'
+import { HubNav } from '@/components/content/HubNav'
+import { getHubNavData } from '@/lib/content/hubNav'
 
 export const revalidate = 3600
 
@@ -124,12 +123,29 @@ export default async function BrainrotValuesPage({ params }: PageProps) {
     notFound()
   }
 
-  const brainrots = await getBrainrots()
+  const [brainrots, hubNav] = await Promise.all([
+    getBrainrots(),
+    getHubNavData(gameSlug),
+  ])
+
+  // Real "highest tracked value" for the hero stat — the top default-mutation
+  // price across the catalog. Omitted (—) if nothing is priced yet.
+  const highestValue = brainrots.reduce<number>((max, b) => {
+    const v = Number(b.display_price_usd)
+    return Number.isFinite(v) && v > max ? v : max
+  }, 0)
+  const highestValueLabel =
+    highestValue > 0
+      ? highestValue.toLocaleString('en-US', {
+          style: 'currency',
+          currency: 'USD',
+        })
+      : null
 
   return (
     <main className="relative min-h-screen bg-[#0C0F0E] pb-24">
       <SabHeroBackdrop>
-      <ValuesHeader gameName="Steal a Brainrot" buyHref="/steal-a-brainrot/buy-items" />
+      <HubNav data={hubNav} />
       <JsonLd
         data={breadcrumbList([
           { name: 'Home', path: '/' },
@@ -138,56 +154,56 @@ export default async function BrainrotValuesPage({ params }: PageProps) {
         ])}
       />
 
-      <SabSubNav />
-
       <section>
-        <div className="mx-auto w-full max-w-7xl px-4 pb-8 pt-8 sm:px-6 lg:px-8">
-          <nav className="mb-4 flex items-center gap-1.5 text-[12.5px] text-[#6D7A72]">
-            <Link
-              href="/steal-a-brainrot"
-              className="transition-colors hover:text-[#F1F3F1]"
-            >
-              Brainrot
-            </Link>
-            <ArrowRight className="h-3.5 w-3.5" />
-            <span className="text-[#E6EAE7]">Values</span>
-          </nav>
+        {/* pt clears the fixed HubNav; visible breadcrumb removed (JSON-LD
+            above keeps the SERP breadcrumb). */}
+        <div className="mx-auto w-full max-w-7xl px-4 pb-8 pt-[92px] sm:px-6 lg:px-8">
 
-          {/* Two-column hero: copy left, actions right (fills the empty space). */}
-          <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
+          {/* Design hero: live badge + big title, stat block on the right.
+              Stats show only metrics we can source — no fabricated 24h volume
+              or seller counts. */}
+          <div className="flex flex-col gap-10 lg:flex-row lg:items-end lg:justify-between">
             <div className="max-w-2xl">
-              <p className="mb-2 text-[11.5px] font-bold uppercase tracking-[0.14em] text-[#4FB477]">
-                DropMarket value database
-              </p>
-              <h1 className="text-[22px] font-semibold leading-tight tracking-tight text-[#F1F3F1] sm:text-[28px] lg:text-[32px]">
-                Steal a Brainrot Values
+              <div className="mb-6 inline-flex items-center gap-2 border border-[#23331F] bg-[#0E1A11] px-3 py-2">
+                <span className="h-1.5 w-1.5 animate-pulse bg-[#3FA35C]" />
+                <span className="font-mono text-[10px] font-medium uppercase tracking-[0.12em] text-[#8FBF9C]">
+                  Priced from real sales
+                </span>
+              </div>
+              <h1 className="text-[32px] font-bold leading-[1.04] tracking-[-0.03em] text-[#F2F6F0] sm:text-[40px] lg:text-[52px]">
+                Steal a Brainrot value list
               </h1>
-              <p className="mt-2 text-[13px] leading-6 text-[#9BA8A0] sm:text-sm">
-                Compare every Brainrot by rarity, base income, obtainability,
-                mutation income, and verified marketplace pricing.
+              <p className="mt-4 max-w-xl text-[15px] leading-7 text-[#98A398] sm:text-[17px]">
+                Real cash values from completed DropMarket sales — not community
+                guesses. Every Brainrot, its income per second, and what it
+                trades for right now.
               </p>
             </div>
 
-            <div className="flex shrink-0 flex-col items-stretch gap-3 sm:flex-row lg:flex-col lg:items-end">
-              <div className="flex flex-wrap gap-3">
-                <Link
-                  href="/steal-a-brainrot/calculator"
-                  className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-[#1B6B3F] px-5 py-2.5 text-sm font-bold text-white shadow-[0_4px_12px_-4px_rgba(27,107,63,0.6)] transition hover:bg-[#1f7a48]"
-                >
-                  <Calculator className="h-4 w-4" />
-                  Open value calculator
-                </Link>
-                <Link
-                  href="/steal-a-brainrot/buy-items"
-                  className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-[#26332C] bg-white/[0.03] px-5 py-2.5 text-sm font-semibold text-[#E6EAE7] transition hover:border-[#2A3A31] hover:bg-white/[0.06]"
-                >
-                  <ShoppingCart className="h-4 w-4" />
-                  Browse marketplace
-                </Link>
+            <div className="grid w-full shrink-0 grid-cols-2 gap-px overflow-hidden border border-[#1A211A] bg-[#1A211A] sm:w-auto sm:min-w-[380px]">
+              <div className="bg-[#0A0D0B] p-5">
+                <div className="mb-2.5 font-mono text-[10px] font-medium uppercase tracking-[0.12em] text-[#5E685E]">
+                  Tracked
+                </div>
+                <div className="text-[24px] font-bold text-[#F2F6F0] tabular-nums">
+                  {brainrots.length.toLocaleString()}
+                </div>
               </div>
-              <div className="inline-flex items-center gap-2 self-start rounded-lg border border-[#1E2723] bg-[#111613] px-4 py-2.5 text-sm text-[#9BA8A0] lg:self-end">
-                <Search className="h-4 w-4 text-[#4FB477]" />
-                <span className="tabular-nums">{brainrots.length.toLocaleString()}</span> Brainrots in the database
+              <div className="bg-[#0A0D0B] p-5">
+                <div className="mb-2.5 font-mono text-[10px] font-medium uppercase tracking-[0.12em] text-[#5E685E]">
+                  Highest
+                </div>
+                <div className="text-[24px] font-bold text-[#8FBF9C] tabular-nums">
+                  {highestValueLabel ?? '—'}
+                </div>
+              </div>
+              <div className="col-span-2 bg-[#0A0D0B] p-5">
+                <div className="mb-2.5 font-mono text-[10px] font-medium uppercase tracking-[0.12em] text-[#5E685E]">
+                  Priced from
+                </div>
+                <div className="text-[20px] font-bold text-[#F2F6F0]">
+                  Completed sales &amp; active listings
+                </div>
               </div>
             </div>
           </div>

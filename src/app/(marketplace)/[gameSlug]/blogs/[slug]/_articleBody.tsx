@@ -128,6 +128,29 @@ export function ArticleBody({ body }: { body: string[] }) {
           {label}
         </h2>,
       )
+    } else if (/^!\[[^\]]*\]\([^)]+\)$/.test(line.trim())) {
+      // Image block: ![caption](url) on its own line. Rendered as a bordered
+      // figure with a mono caption, matching the article design.
+      const m = line.trim().match(/^!\[([^\]]*)\]\(([^)]+)\)$/)
+      if (m) {
+        const [, alt, src] = m
+        blocks.push(
+          <figure key={key++} className="my-8">
+            {/* eslint-disable-next-line @next/next/no-img-element -- CMS-uploaded photo */}
+            <img
+              src={src}
+              alt={alt || ''}
+              loading="lazy"
+              className="w-full border border-[#1E2723] bg-[#0E1A11] object-cover"
+            />
+            {alt && alt !== 'Image' && (
+              <figcaption className="mt-2.5 font-mono text-[11px] leading-relaxed text-[#5E685E]">
+                {alt}
+              </figcaption>
+            )}
+          </figure>,
+        )
+      }
     } else if (line.startsWith('> ')) {
       blocks.push(
         <blockquote

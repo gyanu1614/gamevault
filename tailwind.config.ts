@@ -291,6 +291,17 @@ const config: Config = {
           '0%, 100%': { backgroundPosition: '200% 50%' },
           '50%':       { backgroundPosition: '-200% 50%' },
         },
+        // Content hub — periodic light band sweeping across a filled button.
+        'shine-sweep': {
+          '0%, 55%':   { transform: 'translateX(-130%) skewX(-18deg)' },
+          '85%, 100%': { transform: 'translateX(330%) skewX(-18deg)' },
+        },
+        // Content hub — arrow nudges right every few seconds.
+        'arrow-nudge': {
+          '0%, 70%, 100%': { transform: 'translateX(0)' },
+          '80%':            { transform: 'translateX(3px)' },
+          '90%':            { transform: 'translateX(0)' },
+        },
         'aurora-drift-a': {
           '0%, 100%': { transform: 'translate(0%, 0%) scale(1)' },
           '50%':       { transform: 'translate(8%, -6%) scale(1.1)' },
@@ -329,6 +340,8 @@ const config: Config = {
         'scale-in':        'scale-in 0.2s cubic-bezier(0.25, 0.1, 0.25, 1) forwards',
         'slide-right':     'slide-right 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
         'gradient-x':      'gradient-x 36s linear infinite',
+        'shine-sweep':     'shine-sweep 3.2s ease-in-out infinite',
+        'arrow-nudge':     'arrow-nudge 3s ease-in-out infinite',
         'aurora-drift-a':  'aurora-drift-a 22s ease-in-out infinite',
         'aurora-drift-b':  'aurora-drift-b 28s ease-in-out infinite',
         'text-flow':       'text-flow 4s linear infinite',

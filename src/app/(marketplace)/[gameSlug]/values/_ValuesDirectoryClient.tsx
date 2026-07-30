@@ -7,7 +7,24 @@ import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown'
 import CheckIcon from '@mui/icons-material/Check'
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
 import ChevronRightIcon from '@mui/icons-material/ChevronRight'
-import { sabInteractive } from '@/lib/sab/theme'
+import type { CSSProperties } from 'react'
+
+/**
+ * Rarity → accent colour, so a card lights up in its own rarity's colour on
+ * hover — the same idea as the mutation colours in the item modal, applied at
+ * the directory level where cards are keyed by rarity, not mutation.
+ */
+const RARITY_COLORS: Record<string, string> = {
+  Secret: '#E23B4E',
+  Mythic: '#A98BFF',
+  Legendary: '#F5C542',
+  Epic: '#7FE3F0',
+  Rare: '#4FB477',
+}
+
+function rarityColor(rarity: string): string {
+  return RARITY_COLORS[rarity] ?? '#4FB477'
+}
 
 /**
  * Themed dropdown — replaces native <select> (whose open menu can't be styled
@@ -355,24 +372,37 @@ export default function ValuesDirectoryClient({
           </button>
         </div>
       ) : (
-        <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-5 lg:grid-cols-4 xl:grid-cols-5">
+        <div className="mt-6 grid grid-cols-2 gap-px border border-[#1A211A] bg-[#1A211A] sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
           {visibleBrainrots.map((brainrot) => {
             const displayPrice = formatMoney(brainrot.display_price_usd)
+            const rc = rarityColor(brainrot.rarity)
 
             return (
               <Link
                 key={brainrot.id}
                 href={`/steal-a-brainrot/values/${brainrot.slug}`}
-                className={`group block overflow-hidden ${sabInteractive}`}
+                // On hover the card lights up in its rarity's colour: a soft
+                // radial behind the art only — no outline. `--rc` drives the glow.
+                style={{ ['--rc' as string]: rc } as CSSProperties}
+                className="group relative block overflow-hidden bg-[#0B0F0C] transition-colors hover:bg-[#101710]"
               >
-                <div className="aspect-square overflow-hidden bg-[#0E1211]">
+                <div className="relative aspect-square overflow-hidden bg-[#0E1211]">
+                  {/* Rarity-colour glow, revealed on hover. */}
+                  <span
+                    aria-hidden
+                    className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+                    style={{
+                      background:
+                        'radial-gradient(60% 60% at 50% 42%, color-mix(in srgb, var(--rc) 18%, transparent), transparent 72%)',
+                    }}
+                  />
                   {brainrot.image_url ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={brainrot.image_url}
                       alt={`${brainrot.name} Steal a Brainrot`}
                       loading="lazy"
-                      className="h-full w-full object-contain p-3 transition duration-300 group-hover:scale-[1.03]"
+                      className="relative h-full w-full object-contain p-3 transition duration-300 group-hover:scale-[1.04]"
                     />
                   ) : (
                     <div className="flex h-full items-center justify-center px-4 text-center text-sm text-[#6D7A72]">
@@ -386,13 +416,14 @@ export default function ValuesDirectoryClient({
                     <h2 className="line-clamp-1 text-sm font-semibold text-[#F1F3F1] sm:text-[15px]">
                       {brainrot.name}
                     </h2>
-                    <span className="shrink-0 rounded-md border border-[#26332C] bg-white/[0.04] px-1.5 py-0.5 text-[10px] font-semibold text-[#9BA8A0]">
+                    <span
+                      className="shrink-0 border px-1.5 py-0.5 font-mono text-[10px] font-semibold"
+                      style={{ borderColor: rc, color: rc }}
+                    >
                       {brainrot.rarity}
                     </span>
                   </div>
 
-                  {/* Clean label:value rows with grey dividers — matches the
-                      item page. No more clunky "Average Current Market Price". */}
                   <dl className="mt-3 divide-y divide-white/[0.06] border-t border-white/[0.06]">
                     <div className="flex items-center justify-between gap-2 py-2">
                       <dt className="text-xs text-[#8B978F]">Income</dt>
@@ -402,7 +433,7 @@ export default function ValuesDirectoryClient({
                     </div>
                     <div className="flex items-center justify-between gap-2 py-2">
                       <dt className="text-xs text-[#8B978F]">Cash value</dt>
-                      <dd className="text-sm font-semibold tabular-nums text-[#F1F3F1]">
+                      <dd className="text-sm font-semibold tabular-nums text-[#8FBF9C]">
                         {displayPrice ?? '—'}
                       </dd>
                     </div>

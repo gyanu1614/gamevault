@@ -8,7 +8,6 @@
  * Only the game-badge + hairline stat-grid layout come from the content design.
  */
 
-import Link from 'next/link'
 import { HeroArtGrid, type HeroArtItem } from './_HeroArtGrid'
 
 export interface BlogHubStat {
@@ -19,8 +18,6 @@ export interface BlogHubStat {
 
 export function BlogHubHero({
   gameSlug,
-  gameName,
-  logoUrl,
   kicker,
   title,
   lead,
@@ -29,8 +26,6 @@ export function BlogHubHero({
   artItems,
 }: {
   gameSlug: string
-  gameName: string
-  logoUrl?: string | null
   kicker: string
   title: string
   lead: string
@@ -40,58 +35,13 @@ export function BlogHubHero({
 }) {
   const hasArt = artItems.filter((i) => i.imageUrl).length >= 4
   return (
+    // pt clears the fixed single-row HubNav. No visible breadcrumb — the
+    // BreadcrumbList JSON-LD schema (injected by the page) keeps the SERP
+    // breadcrumb, so removing the visual costs nothing in Search.
     <section>
-      <div className="mx-auto w-full max-w-7xl px-4 pb-10 pt-8 sm:px-6 lg:px-8">
-        {/* Breadcrumb — brighter than the Values grey so it stays legible on
-            the hero backdrop; current crumb is near-white. */}
-        <nav className="mb-6 flex flex-wrap items-center gap-1.5 text-[12.5px] text-[#9BA8A0]">
-          <Link href="/" className="transition-colors hover:text-[#F1F3F1]">
-            DropMarket
-          </Link>
-          <span aria-hidden className="text-[#4C564E]">
-            /
-          </span>
-          <Link
-            href={`/${gameSlug}`}
-            className="transition-colors hover:text-[#F1F3F1]"
-          >
-            {gameName}
-          </Link>
-          <span aria-hidden className="text-[#4C564E]">
-            /
-          </span>
-          <span className="font-medium text-[#F1F3F1]">Blog</span>
-        </nav>
-
-        {/* Game identity block — accent square (logo or initials) beside the
-            game name and its platform. Bigger and bolder than a chip so the
-            game reads as the owner of the hub. */}
-        <div className="mb-7 flex items-center gap-4">
-          {logoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element -- remote game logo
-            <img
-              src={logoUrl}
-              alt=""
-              className="h-[52px] w-[52px] shrink-0 object-cover"
-            />
-          ) : (
-            <span
-              aria-hidden
-              className="flex h-[52px] w-[52px] shrink-0 items-center justify-center bg-[#1B6B3F] font-mono text-[15px] font-bold text-white"
-            >
-              {gameName.slice(0, 3).toUpperCase()}
-            </span>
-          )}
-          <span className="flex flex-col gap-1.5">
-            <span className="text-[18px] font-bold leading-none tracking-tight text-[#F1F3F1]">
-              {gameName}
-            </span>
-            <span className="font-mono text-[11px] font-medium uppercase tracking-[0.16em] text-[#8FBF9C]">
-              Roblox
-            </span>
-          </span>
-        </div>
-
+      <div className="mx-auto w-full max-w-7xl px-4 pb-10 pt-[92px] sm:px-6 lg:px-8">
+        {/* Game identity now lives in the HubNav game switcher — the hero
+            starts straight at the kicker + title. */}
         <div className="flex flex-col gap-10 lg:flex-row lg:items-start lg:justify-between">
           <div className="max-w-2xl">
             {/* Kicker + short H1 + one-line subtext — Values' rhythm exactly. */}
