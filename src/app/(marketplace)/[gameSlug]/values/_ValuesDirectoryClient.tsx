@@ -2,12 +2,59 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
-import { Search, SlidersHorizontal } from 'lucide-react'
+import { Search } from 'lucide-react'
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown'
 import CheckIcon from '@mui/icons-material/Check'
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
 import ChevronRightIcon from '@mui/icons-material/ChevronRight'
-import { sabInteractive } from '@/lib/sab/theme'
+import ChevronRightSmall from '@mui/icons-material/ChevronRight'
+import type { CSSProperties } from 'react'
+import { formatConfidence } from '@/lib/sab/format'
+
+/**
+ * Rarity → accent colour. Drives both the rarity filter chips and each row's
+ * rarity tag, so a rarity reads the same colour everywhere on the page.
+ *
+ * All eight rarities that actually exist in the catalog are covered — the map
+ * used to hold five, which silently fell back to green for Brainrot God,
+ * Common and OG.
+ */
+const RARITY_COLORS: Record<string, string> = {
+  Secret: '#E23B4E',
+  'Brainrot God': '#FF8A3D',
+  Mythic: '#A98BFF',
+  Legendary: '#F5C542',
+  Epic: '#7FE3F0',
+  Rare: '#4FB477',
+  Common: '#9BA8A0',
+  OG: '#E7C6FF',
+}
+
+/** Rarest first — the order players think in, not alphabetical. */
+const RARITY_ORDER = [
+  'Secret',
+  'Brainrot God',
+  'Mythic',
+  'Legendary',
+  'Epic',
+  'Rare',
+  'Common',
+  'OG',
+]
+
+/** One class for every column header, so they can never drift apart. */
+const COL_HEAD =
+  'text-[12px] font-semibold uppercase tracking-[0.07em] text-[#98A398]'
+
+function rarityColor(rarity: string): string {
+  return RARITY_COLORS[rarity] ?? '#4FB477'
+}
+
+/**
+ * Popular is an ORDERING, not a cut: the list stays complete and simply runs
+ * most-traded first, so page 1 is the top 25 by popularity and paging carries
+ * on down the same ranking to the end of the catalog.
+ */
 
 /**
  * Themed dropdown — replaces native <select> (whose open menu can't be styled
@@ -45,7 +92,7 @@ function Dropdown({
         aria-haspopup="listbox"
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
-        className="flex h-11 w-full items-center justify-between gap-2 rounded-lg border border-[#1E2723] bg-[#111613] px-3.5 text-sm text-[#F1F3F1] outline-none transition hover:border-[#2A3A31] focus:border-[#2E5B44]"
+        className="flex h-11 w-full items-center justify-between gap-2 border border-[#1E2723] bg-[#111613] px-3.5 text-sm text-[#F1F3F1] outline-none transition hover:border-[#2A3A31] focus:border-[#2E5B44]"
       >
         <span className="truncate">{current}</span>
         <KeyboardArrowDownIcon
@@ -56,7 +103,7 @@ function Dropdown({
       {open && (
         <div
           role="listbox"
-          className="absolute z-30 mt-1.5 max-h-72 w-full overflow-auto rounded-lg border border-[#1E2723] bg-[#0E1211] p-1 shadow-[0_16px_40px_-16px_rgba(0,0,0,0.9)]"
+          className="absolute z-30 mt-1.5 max-h-72 w-full overflow-auto border border-[#1E2723] bg-[#0E1211] p-1 shadow-[0_16px_40px_-16px_rgba(0,0,0,0.9)]"
         >
           {options.map((o) => {
             const active = o.value === value
@@ -70,7 +117,7 @@ function Dropdown({
                   onChange(o.value)
                   setOpen(false)
                 }}
-                className={`flex w-full items-center justify-between gap-2 rounded-md px-2.5 py-2 text-left text-sm transition ${
+                className={`flex w-full items-center justify-between gap-2 px-2.5 py-2 text-left text-sm transition ${
                   active
                     ? 'bg-[#15402A] text-[#EDF3E9]'
                     : 'text-[#C6CEC9] hover:bg-white/[0.04]'
@@ -99,15 +146,24 @@ export type BrainrotDirectoryItem = {
   display_price_label: string
   display_price_source: string
   confidence_label: string
+  /**
+   * Listings/sales we actually observed behind this item's price. The only
+   * popularity signal we hold — our own marketplace counters are all still
+   * zero — so it's what the Popular view ranks by.
+   */
+  sample_size?: number | null
 }
 
-type SortOption = 'name' | 'income-desc' | 'income-asc'
+type SortOption = 'value-desc' | 'name' | 'income-desc' | 'income-asc'
+
+/** 'popular' | 'all' | a rarity name. Exactly one is ever active. */
+type View = string
 
 interface ValuesDirectoryClientProps {
   brainrots: BrainrotDirectoryItem[]
 }
 
-function asNumber(value: number | string | null): number | null {
+function asNumber(value: number | string | null | undefined): number | null {
   if (value == null) return null
   const parsed = Number(value)
   return Number.isFinite(parsed) ? parsed : null
@@ -127,7 +183,7 @@ function formatMoney(value: number | string | null): string | null {
 
 function formatIncome(value: number | string | null): string {
   const amount = asNumber(value)
-  if (amount == null) return 'Unknown'
+  if (amount == null) return '—'
 
   return `${new Intl.NumberFormat('en-US', {
     notation: 'compact',
@@ -136,27 +192,25 @@ function formatIncome(value: number | string | null): string {
   }).format(amount)}/s`
 }
 
-function formatConfidence(value: string): string {
-  if (value === 'high') return 'High confidence'
-  if (value === 'medium') return 'Medium confidence'
-  if (value === 'low') return 'Low confidence'
-  return 'Estimate'
-}
 
-// Color-coded confidence chip — matches the item page's ConfidenceBadge.
-function ConfidencePill({ label }: { label: string }) {
-  const tone =
-    label === 'high'
-      ? { fg: '#4FB477', bg: 'rgba(79,180,119,0.12)' }
+/**
+ * Price accuracy — floating coloured text, no chip.
+ *
+ * The filled box read as a button and boxed every row twice (rarity tag +
+ * pill). Colour alone carries the signal now: green = trust it, amber = treat
+ * as a guide, maroon = rough. Sized to the rest of the row, not smaller.
+ */
+function ConfidenceText({ label }: { label: string }) {
+  // Green for both 'reviewed' (a human checked it) and 'high'; amber is the
+  // middle rung; maroon covers low and no-data.
+  const color =
+    label === 'reviewed' || label === 'high'
+      ? '#5FC17B'
       : label === 'medium'
-        ? { fg: '#E0B155', bg: 'rgba(224,177,85,0.12)' }
-        : { fg: '#9BA8A0', bg: 'rgba(155,168,160,0.1)' }
+        ? '#E0B155'
+        : '#C97B6B'
   return (
-    <span
-      className="mt-2 inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-semibold capitalize"
-      style={{ color: tone.fg, backgroundColor: tone.bg }}
-    >
-      <span className="h-1 w-1 rounded-full" style={{ backgroundColor: tone.fg }} />
+    <span className="text-[13.5px] font-semibold" style={{ color }}>
       {formatConfidence(label)}
     </span>
   )
@@ -177,35 +231,48 @@ function compareIncome(
   return direction === 'asc' ? aIncome - bIncome : bIncome - aIncome
 }
 
+/** Highest value first, unpriced items last (never sorted as if they were $0). */
+function compareValue(a: BrainrotDirectoryItem, b: BrainrotDirectoryItem): number {
+  const av = asNumber(a.display_price_usd)
+  const bv = asNumber(b.display_price_usd)
+  if (av == null && bv == null) return a.name.localeCompare(b.name)
+  if (av == null) return 1
+  if (bv == null) return -1
+  return bv - av
+}
+
+
 export default function ValuesDirectoryClient({
   brainrots,
 }: ValuesDirectoryClientProps) {
   const [query, setQuery] = useState('')
-  const [rarity, setRarity] = useState('all')
+  // Popular is the landing view: A–Z put "1x1x1x1" first, which tells a
+  // visitor nothing about what the game actually trades.
+  const [view, setView] = useState<View>('popular')
   const [obtainability, setObtainability] = useState('all')
-  const [sort, setSort] = useState<SortOption>('name')
+  const [sort, setSort] = useState<SortOption>('value-desc')
 
-  const rarities = useMemo(
-    () =>
-      Array.from(
-        new Set(brainrots.map((brainrot) => brainrot.rarity).filter(Boolean)),
-      ).sort((a, b) => a.localeCompare(b)),
-    [brainrots],
-  )
+  // Only rarities present in the data get a chip, in rarest-first order.
+  const rarities = useMemo(() => {
+    const present = new Set(brainrots.map((b) => b.rarity).filter(Boolean))
+    const known = RARITY_ORDER.filter((r) => present.has(r))
+    const unknown = [...present].filter((r) => !RARITY_ORDER.includes(r)).sort()
+    return [...known, ...unknown]
+  }, [brainrots])
 
   const obtainabilityOptions = useMemo(
     () =>
       Array.from(
-        new Set(
-          brainrots
-            .map((brainrot) => brainrot.obtainability)
-            .filter(Boolean),
-        ),
+        new Set(brainrots.map((brainrot) => brainrot.obtainability).filter(Boolean)),
       ).sort((a, b) => a.localeCompare(b)),
     [brainrots],
   )
 
-  const PAGE_SIZE = 60
+  const PAGE_SIZE = 25
+  const searching = query.trim().length > 0
+  // A search should look through everything, not just the 10 popular rows —
+  // otherwise searching from the landing view mostly returns nothing.
+  const effectiveView = searching && view === 'popular' ? 'all' : view
 
   const filteredBrainrots = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase()
@@ -218,28 +285,53 @@ export default function ValuesDirectoryClient({
           .includes(normalizedQuery)
 
       const matchesRarity =
-        rarity === 'all' || brainrot.rarity === rarity
+        effectiveView === 'popular' ||
+        effectiveView === 'all' ||
+        brainrot.rarity === effectiveView
 
       const matchesObtainability =
-        obtainability === 'all' ||
-        brainrot.obtainability === obtainability
+        obtainability === 'all' || brainrot.obtainability === obtainability
 
       return matchesQuery && matchesRarity && matchesObtainability
     })
 
+    // Popular = most observed market activity first, whole list.
+    if (effectiveView === 'popular') {
+      return [...filtered].sort((a, b) => {
+        const diff = (asNumber(b.sample_size) ?? 0) - (asNumber(a.sample_size) ?? 0)
+        return diff !== 0 ? diff : compareValue(a, b)
+      })
+    }
+
     return [...filtered].sort((a, b) => {
       if (sort === 'income-desc') return compareIncome(a, b, 'desc')
       if (sort === 'income-asc') return compareIncome(a, b, 'asc')
-      return a.name.localeCompare(b.name)
+      if (sort === 'name') return a.name.localeCompare(b.name)
+      return compareValue(a, b)
     })
-  }, [brainrots, obtainability, query, rarity, sort])
+  }, [brainrots, effectiveView, obtainability, query, sort])
 
   const totalPages = Math.max(1, Math.ceil(filteredBrainrots.length / PAGE_SIZE))
   const [page, setPage] = useState(1)
-  // Reset to page 1 whenever the filtered set changes (new search/filter/sort).
+
+  /**
+   * Paging without this left you stranded at the bottom of the page, staring
+   * at the pagination bar while a brand-new page 2 sat above the fold. Glide
+   * back to the top of the page on every page change.
+   *
+   * Smooth by default, instant for anyone who asked the OS for reduced motion —
+   * a long smooth scroll is exactly the kind of movement that setting exists
+   * to suppress.
+   */
+  const goToPage = (next: number) => {
+    setPage(next)
+    if (typeof window === 'undefined') return
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    window.scrollTo({ top: 0, behavior: reduced ? 'auto' : 'smooth' })
+  }
   useEffect(() => {
     setPage(1)
-  }, [query, rarity, obtainability, sort])
+  }, [query, view, obtainability, sort])
   const currentPage = Math.min(page, totalPages)
 
   const visibleBrainrots = useMemo(
@@ -248,175 +340,310 @@ export default function ValuesDirectoryClient({
   )
 
   const filtersActive =
-    query.trim().length > 0 ||
-    rarity !== 'all' ||
-    obtainability !== 'all' ||
-    sort !== 'name'
+    searching || view !== 'popular' || obtainability !== 'all' || sort !== 'value-desc'
 
   const resetFilters = () => {
     setQuery('')
-    setRarity('all')
+    setView('popular')
     setObtainability('all')
-    setSort('name')
+    setSort('value-desc')
   }
 
   return (
     <>
-      <div className="rounded-lg border border-[#1E2723] bg-[#121613] p-4 sm:p-5">
-        <div className="flex items-center gap-2 text-sm font-semibold text-[#F1F3F1]">
-          <SlidersHorizontal className="h-4 w-4 text-[#4FB477]" />
-          Search and filter
-        </div>
-
-        <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(260px,1fr)_200px_220px_190px]">
-          <label className="relative block">
-            <span className="sr-only">Search Brainrots</span>
-            <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#6D7A72]" />
-            <input
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search Brainrot name, rarity..."
-              className="h-11 w-full rounded-lg border border-[#1E2723] bg-[#111613] pl-10 pr-4 text-base text-[#F1F3F1] outline-none transition placeholder:text-[#6D7A72] focus:border-[#2E5B44] sm:text-sm"
-            />
-          </label>
-
-          <Dropdown
-            ariaLabel="Filter by rarity"
-            value={rarity}
-            onChange={setRarity}
-            options={[
-              { value: 'all', label: 'All rarities' },
-              ...rarities.map((o) => ({ value: o, label: o })),
-            ]}
+      {/* ── Search + secondary controls ── */}
+      <div className="grid gap-3 sm:grid-cols-[minmax(240px,1fr)_200px_190px]">
+        <label className="relative block">
+          <span className="sr-only">Search Brainrots</span>
+          <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#6D7A72]" />
+          <input
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Search Brainrot name, rarity..."
+            className="h-11 w-full border border-[#1E2723] bg-[#111613] pl-10 pr-4 text-base text-[#F1F3F1] outline-none transition placeholder:text-[#6D7A72] focus:border-[#2E5B44] sm:text-sm"
           />
+        </label>
 
-          <Dropdown
-            ariaLabel="Filter by obtainability"
-            value={obtainability}
-            onChange={setObtainability}
-            options={[
-              { value: 'all', label: 'All obtainability' },
-              ...obtainabilityOptions.map((o) => ({ value: o, label: o })),
-            ]}
-          />
+        <Dropdown
+          ariaLabel="Filter by obtainability"
+          value={obtainability}
+          onChange={setObtainability}
+          options={[
+            { value: 'all', label: 'All obtainability' },
+            ...obtainabilityOptions.map((o) => ({ value: o, label: o })),
+          ]}
+        />
 
+        {/* Popular is itself an ordering, so the sort control would contradict
+            it — hidden in that view rather than shown doing nothing. */}
+        {effectiveView !== 'popular' ? (
           <Dropdown
             ariaLabel="Sort Brainrots"
             value={sort}
             onChange={(v) => setSort(v as SortOption)}
             options={[
+              { value: 'value-desc', label: 'Highest value' },
               { value: 'name', label: 'Name A–Z' },
               { value: 'income-desc', label: 'Highest income' },
               { value: 'income-asc', label: 'Lowest income' },
             ]}
           />
-        </div>
-
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm">
-          <p className="text-[#9BA8A0]">
-            Showing{' '}
-            <span className="font-semibold tabular-nums text-[#F1F3F1]">
-              {filteredBrainrots.length === 0
-                ? '0'
-                : `${((currentPage - 1) * PAGE_SIZE + 1).toLocaleString()}–${Math.min(
-                    currentPage * PAGE_SIZE,
-                    filteredBrainrots.length,
-                  ).toLocaleString()}`}
-            </span>{' '}
-            of <span className="tabular-nums">{filteredBrainrots.length.toLocaleString()}</span> Brainrots
+        ) : (
+          /* Desktop only: on a phone this note landed as its own orphan line
+             between the filters and the chips, and the Popular chip already
+             says what the ordering is. */
+          <p className="hidden h-11 items-center text-[12.5px] leading-snug text-[#6D7A72] sm:flex">
+            Ranked by listings and sales we observed
           </p>
-
-          {filtersActive && (
-            <button
-              type="button"
-              onClick={resetFilters}
-              className="font-semibold text-[#4FB477] transition hover:opacity-80"
-            >
-              Reset filters
-            </button>
-          )}
-        </div>
+        )}
       </div>
 
-      {visibleBrainrots.length === 0 ? (
-        <div className="mt-6 rounded-lg border border-[#1E2723] bg-[#121613] px-6 py-12 text-center">
-          <h2 className="text-xl font-semibold text-[#F1F3F1]">
-            No Brainrots found
-          </h2>
-          <p className="mt-2 text-[#9BA8A0]">
-            Try changing the search or filters.
-          </p>
+      {/* ── Rarity chips — one row, single-select, full width ──
+          Sits under the search row. `flex-nowrap` + horizontal scroll keeps it
+          to a single line at every width — on a phone it scrolls instead of
+          wrapping to a second row. From sm up each chip is `flex-1`, so the row
+          spans the full width of the list below it rather than stopping ~2/3
+          across, and the chips read as one segmented control. */}
+      <div className="mt-3 flex flex-nowrap items-stretch gap-2 overflow-x-auto pb-1 sm:overflow-visible [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <button
+          type="button"
+          onClick={() => setView('popular')}
+          aria-pressed={view === 'popular'}
+          className={`flex shrink-0 items-center justify-center gap-1.5 whitespace-nowrap px-3.5 py-2.5 text-[13px] font-semibold transition sm:flex-1 sm:shrink ${
+            view === 'popular'
+              ? 'bg-[#3FA35C] text-[#08110B]'
+              : 'border border-[#2F6B46] text-[#8FBF9C] hover:bg-[#4FB477]/10'
+          }`}
+        >
+          <span
+            aria-hidden
+            className={`h-1.5 w-1.5 ${view === 'popular' ? 'bg-[#08110B]' : 'bg-[#4FB477]'}`}
+          />
+          Popular
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setView('all')}
+          aria-pressed={view === 'all'}
+          className={`shrink-0 whitespace-nowrap px-3.5 py-2.5 text-[13px] font-semibold transition sm:flex-1 sm:shrink ${
+            view === 'all'
+              ? 'bg-[#E8EDE9] text-[#0C0F0E]'
+              : 'border border-[#26332C] text-[#C6CEC9] hover:border-[#3A4A40]'
+          }`}
+        >
+          All {brainrots.length}
+        </button>
+
+        {rarities.map((r) => {
+          const active = view === r
+          const rc = rarityColor(r)
+          return (
+            <button
+              key={r}
+              type="button"
+              onClick={() => setView(r)}
+              aria-pressed={active}
+              // Each chip carries its own rarity colour: filled when selected,
+              // hairline + coloured label when not.
+              style={
+                active
+                  ? { backgroundColor: rc, color: '#0B0F0C', borderColor: rc }
+                  : { borderColor: `${rc}59`, color: rc }
+              }
+              className="shrink-0 whitespace-nowrap border px-3.5 py-2.5 text-[13px] font-semibold transition hover:brightness-110 sm:flex-1 sm:shrink"
+            >
+              {r}
+            </button>
+          )
+        })}
+      </div>
+
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-3 text-sm">
+        <p className="text-[#9BA8A0]">
+          Showing{' '}
+          <span className="font-semibold tabular-nums text-[#F1F3F1]">
+            {filteredBrainrots.length === 0
+              ? '0'
+              : `${((currentPage - 1) * PAGE_SIZE + 1).toLocaleString()}–${Math.min(
+                  currentPage * PAGE_SIZE,
+                  filteredBrainrots.length,
+                ).toLocaleString()}`}
+          </span>{' '}
+          of <span className="tabular-nums">{filteredBrainrots.length.toLocaleString()}</span>{' '}
+          Brainrots
+          {/* Trust line, inline — it used to be a badge on its own row above
+              the title, costing a full line of vertical space for six words. */}
+          <span className="ml-2.5 hidden items-center gap-1.5 align-middle sm:inline-flex">
+            <span aria-hidden className="h-1.5 w-1.5 animate-pulse bg-[#3FA35C]" />
+            <span className="font-mono text-[10px] font-medium uppercase tracking-[0.12em] text-[#8FBF9C]">
+              Priced from real sales
+            </span>
+          </span>
+        </p>
+
+        {filtersActive && (
           <button
             type="button"
             onClick={resetFilters}
-            className="mt-5 rounded-lg bg-[#1B6B3F] px-5 py-2.5 text-sm font-bold text-white transition hover:bg-[#1f7a48]"
+            className="font-semibold text-[#4FB477] transition hover:opacity-80"
+          >
+            Reset filters
+          </button>
+        )}
+      </div>
+
+      {visibleBrainrots.length === 0 ? (
+        <div className="mt-6 border border-[#1E2723] bg-[#121613] px-6 py-12 text-center">
+          <h2 className="text-xl font-semibold text-[#F1F3F1]">No Brainrots found</h2>
+          <p className="mt-2 text-[#9BA8A0]">Try changing the search or filters.</p>
+          <button
+            type="button"
+            onClick={resetFilters}
+            className="mt-5 bg-[#1B6B3F] px-5 py-2.5 text-sm font-bold text-white transition hover:bg-[#1f7a48]"
           >
             Clear filters
           </button>
         </div>
       ) : (
-        <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-5 lg:grid-cols-4 xl:grid-cols-5">
-          {visibleBrainrots.map((brainrot) => {
-            const displayPrice = formatMoney(brainrot.display_price_usd)
+        /* ── List view ──
+           A row per item reads far better than a card grid for a 498-item
+           reference list: the eye scans one column of names instead of
+           tracking a 5-across grid, and each row has room for supporting
+           copy the cards had nowhere to put. */
+        <div className="mt-5 border border-[#1E2723] bg-[#101410]">
+          {/* Column headers, desktop only.
+              Was 10px mono in #5E685E, which sat barely above the background —
+              now 11px semibold in a legible grey. Each header uses the SAME
+              alignment class as the cells below it, so nothing reads as
+              floating off-centre in its column. */}
+          <div className="hidden grid-cols-[64px_minmax(0,1.5fr)_minmax(0,0.85fr)_minmax(0,1fr)_minmax(0,0.9fr)_minmax(0,0.9fr)] gap-4 border-b border-[#1E2723] px-4 py-3 lg:grid">
+            <span className={COL_HEAD}>Item</span>
+            <span className={COL_HEAD}>Name</span>
+            <span className={`${COL_HEAD} text-center`}>Listings tracked</span>
+            <span className={`${COL_HEAD} text-center`}>Price accuracy</span>
+            <span className={`${COL_HEAD} text-right`}>Income</span>
+            {/* "Cash value", not just "Value" — the whole point is that these are
+                real dollars, not in-game currency or community value-list
+                points. Worth the two extra characters. */}
+            <span className={`${COL_HEAD} text-right`}>Cash value</span>
+          </div>
 
-            return (
-              <Link
-                key={brainrot.id}
-                href={`/steal-a-brainrot/values/${brainrot.slug}`}
-                className={`group block overflow-hidden ${sabInteractive}`}
-              >
-                <div className="aspect-square overflow-hidden bg-[#0E1211]">
-                  {brainrot.image_url ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={brainrot.image_url}
-                      alt={`${brainrot.name} Steal a Brainrot`}
-                      loading="lazy"
-                      className="h-full w-full object-contain p-3 transition duration-300 group-hover:scale-[1.03]"
-                    />
-                  ) : (
-                    <div className="flex h-full items-center justify-center px-4 text-center text-sm text-[#6D7A72]">
-                      No image
-                    </div>
-                  )}
-                </div>
+          <ul className="divide-y divide-[#1A211A]">
+            {visibleBrainrots.map((brainrot, i) => {
+              const displayPrice = formatMoney(brainrot.display_price_usd)
+              const rc = rarityColor(brainrot.rarity)
+              const listings = asNumber(brainrot.sample_size)
+              const rank =
+                effectiveView === 'popular'
+                  ? (currentPage - 1) * PAGE_SIZE + i + 1
+                  : null
 
-                <div className="p-3 sm:p-4">
-                  <div className="flex items-start justify-between gap-2">
-                    <h2 className="line-clamp-1 text-sm font-semibold text-[#F1F3F1] sm:text-[15px]">
-                      {brainrot.name}
-                    </h2>
-                    <span className="shrink-0 rounded-md border border-[#26332C] bg-white/[0.04] px-1.5 py-0.5 text-[10px] font-semibold text-[#9BA8A0]">
-                      {brainrot.rarity}
+              return (
+                <li key={brainrot.id}>
+                  <Link
+                    href={`/steal-a-brainrot/values/${brainrot.slug}`}
+                    style={{ ['--rc' as string]: rc } as CSSProperties}
+                    className="group grid grid-cols-[64px_minmax(0,1fr)_auto] items-center gap-3 px-3 py-3.5 transition-colors hover:bg-[#161C16] sm:gap-4 sm:px-4 lg:grid-cols-[64px_minmax(0,1.5fr)_minmax(0,0.85fr)_minmax(0,1fr)_minmax(0,0.9fr)_minmax(0,0.9fr)]"
+                  >
+                    {/* Art — 64px, up from 52, which lifts the row height a
+                        touch and gives the render room to read. */}
+                    <span className="relative flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden bg-[#0B0F0C]">
+                      <span
+                        aria-hidden
+                        className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+                        style={{
+                          background:
+                            'radial-gradient(70% 70% at 50% 45%, color-mix(in srgb, var(--rc) 26%, transparent), transparent 74%)',
+                        }}
+                      />
+                      {brainrot.image_url ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={brainrot.image_url}
+                          alt={`${brainrot.name} Steal a Brainrot`}
+                          loading="lazy"
+                          className="relative h-full w-full object-contain p-1"
+                        />
+                      ) : (
+                        <span className="font-mono text-[9px] text-[#5E685E]">N/A</span>
+                      )}
                     </span>
-                  </div>
 
-                  {/* Clean label:value rows with grey dividers — matches the
-                      item page. No more clunky "Average Current Market Price". */}
-                  <dl className="mt-3 divide-y divide-white/[0.06] border-t border-white/[0.06]">
-                    <div className="flex items-center justify-between gap-2 py-2">
-                      <dt className="text-xs text-[#8B978F]">Income</dt>
-                      <dd className="text-xs font-medium tabular-nums text-[#D6DCD8]">
-                        {formatIncome(brainrot.base_income_per_second)}
-                      </dd>
-                    </div>
-                    <div className="flex items-center justify-between gap-2 py-2">
-                      <dt className="text-xs text-[#8B978F]">Cash value</dt>
-                      <dd className="text-sm font-semibold tabular-nums text-[#F1F3F1]">
+                    {/* Name, with rarity + obtainability beneath. Obtainability
+                        moved here from the old Details column, which has been
+                        split into two proper columns. */}
+                    <span className="flex min-w-0 flex-col gap-1.5">
+                      <span className="flex min-w-0 items-center gap-2">
+                        {rank && (
+                          <span className="shrink-0 font-mono text-[12px] font-bold tabular-nums text-[#6D7A72]">
+                            {rank}
+                          </span>
+                        )}
+                        <span className="truncate text-[16.5px] font-semibold text-[#F1F3F1] transition-colors group-hover:text-white">
+                          {brainrot.name}
+                        </span>
+                      </span>
+                      <span className="flex flex-wrap items-center gap-2">
+                        <span
+                          className="shrink-0 border px-2 py-0.5 font-mono text-[11px] font-semibold"
+                          style={{ borderColor: `${rc}66`, color: rc }}
+                        >
+                          {brainrot.rarity}
+                        </span>
+                        {brainrot.obtainability && (
+                          <span className="text-[13px] capitalize text-[#8B978F]">
+                            {brainrot.obtainability}
+                          </span>
+                        )}
+                        {/* Income rides under the name only where it has no
+                            column of its own. */}
+                        <span className="font-mono text-[12.5px] tabular-nums text-[#8B978F] lg:hidden">
+                          {formatIncome(brainrot.base_income_per_second)}
+                        </span>
+                      </span>
+                    </span>
+
+                    {/* Listings tracked — centred under its header rather
+                        than hugging the right edge of a wide column. */}
+                    <span className="hidden text-center lg:block">
+                      {listings && listings > 0 ? (
+                        <span className="font-mono text-[14.5px] tabular-nums text-[#D6DCD8]">
+                          {listings.toLocaleString()}
+                        </span>
+                      ) : (
+                        <span className="font-mono text-[14.5px] text-[#5E685E]">—</span>
+                      )}
+                    </span>
+
+                    {/* Price accuracy — centred under its header. Every data
+                        column pairs its cell alignment with its header. */}
+                    <span className="hidden text-center lg:block">
+                      {displayPrice ? (
+                        <ConfidenceText label={brainrot.confidence_label} />
+                      ) : (
+                        <span className="text-[13px] text-[#8B978F]">Not enough data</span>
+                      )}
+                    </span>
+
+                    <span className="hidden text-right font-mono text-[14.5px] tabular-nums text-[#D6DCD8] lg:block">
+                      {formatIncome(brainrot.base_income_per_second)}
+                    </span>
+
+                    <span className="flex items-center justify-end gap-1.5 text-right">
+                      <span className="text-[16px] font-bold tabular-nums text-[#8FBF9C] sm:text-[17.5px]">
                         {displayPrice ?? '—'}
-                      </dd>
-                    </div>
-                  </dl>
-
-                  {displayPrice ? (
-                    <ConfidencePill label={brainrot.confidence_label} />
-                  ) : (
-                    <p className="mt-2 text-[11px] text-[#6D7A72]">Not enough market data yet</p>
-                  )}
-                </div>
-              </Link>
-            )
-          })}
+                      </span>
+                      <ChevronRightSmall
+                        sx={{ fontSize: 18 }}
+                        className="shrink-0 text-[#3A4A40] transition-transform duration-200 group-hover:translate-x-0.5 group-hover:text-[#8FBF9C]"
+                      />
+                    </span>
+                  </Link>
+                </li>
+              )
+            })}
+          </ul>
         </div>
       )}
 
@@ -424,9 +651,9 @@ export default function ValuesDirectoryClient({
         <div className="mt-8 flex items-center justify-center gap-1.5">
           <button
             type="button"
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            onClick={() => goToPage(Math.max(1, currentPage - 1))}
             disabled={currentPage === 1}
-            className="flex h-9 items-center gap-1 rounded-lg border border-[#26332C] bg-white/[0.03] px-3 text-sm font-semibold text-[#C6CEC9] transition enabled:hover:border-[#2A3A31] enabled:hover:bg-white/[0.06] disabled:opacity-40"
+            className="flex h-9 items-center gap-1 border border-[#26332C] bg-white/[0.03] px-3 text-sm font-semibold text-[#C6CEC9] transition enabled:hover:border-[#2A3A31] enabled:hover:bg-white/[0.06] disabled:opacity-40"
           >
             <ChevronLeftIcon sx={{ fontSize: 18 }} />
             Prev
@@ -440,9 +667,9 @@ export default function ValuesDirectoryClient({
               <button
                 key={n}
                 type="button"
-                onClick={() => setPage(n as number)}
+                onClick={() => goToPage(n as number)}
                 aria-current={n === currentPage ? 'page' : undefined}
-                className={`h-9 min-w-9 rounded-lg px-2 text-sm font-semibold tabular-nums transition ${
+                className={`h-9 min-w-9 px-2 text-sm font-semibold tabular-nums transition ${
                   n === currentPage
                     ? 'bg-[#1B6B3F] text-white'
                     : 'border border-[#26332C] bg-white/[0.03] text-[#C6CEC9] hover:border-[#2A3A31] hover:bg-white/[0.06]'
@@ -454,9 +681,9 @@ export default function ValuesDirectoryClient({
           )}
           <button
             type="button"
-            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            onClick={() => goToPage(Math.min(totalPages, currentPage + 1))}
             disabled={currentPage === totalPages}
-            className="flex h-9 items-center gap-1 rounded-lg border border-[#26332C] bg-white/[0.03] px-3 text-sm font-semibold text-[#C6CEC9] transition enabled:hover:border-[#2A3A31] enabled:hover:bg-white/[0.06] disabled:opacity-40"
+            className="flex h-9 items-center gap-1 border border-[#26332C] bg-white/[0.03] px-3 text-sm font-semibold text-[#C6CEC9] transition enabled:hover:border-[#2A3A31] enabled:hover:bg-white/[0.06] disabled:opacity-40"
           >
             Next
             <ChevronRightIcon sx={{ fontSize: 18 }} />

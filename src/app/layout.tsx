@@ -1,6 +1,6 @@
 import { SITE_URL } from '@/config/site'
 import type { Metadata } from 'next'
-import { Inter, JetBrains_Mono } from 'next/font/google'
+import { Figtree, JetBrains_Mono } from 'next/font/google'
 import './globals.css'
 import { Providers } from '@/components/providers'
 import { LayoutWrapper } from '@/components/layout-wrapper'
@@ -10,9 +10,14 @@ import RecentPurchaseToast, { DailyStatsToast } from '@/components/marketplace/R
 import { Analytics } from "@vercel/analytics/next"
 import { AllHeroesPreload } from '@/components/hero-backdrop'
 
-// Inter — single font for everything (display + body), same approach as Eldorado/G2G
-// Exposed as both --font-display (new) and --font-inter (legacy alias for existing components)
-const inter = Inter({
+// Figtree — the single text font for everything (display + body). Geometric
+// and slightly warmer than Inter, in the Proxima Nova family of shapes, and
+// licensed for commercial use via Google Fonts.
+//
+// The CSS variable is still called --font-inter: it's referenced in
+// tailwind.config and across many components, so keeping the name makes this a
+// one-line typeface swap instead of a codebase-wide rename.
+const bodyFont = Figtree({
   subsets: ['latin'],
   weight: ['400', '500', '600', '700', '800', '900'],
   variable: '--font-inter',
@@ -82,7 +87,7 @@ export default function RootLayout({
             page. */}
         <AllHeroesPreload />
       </head>
-      <body className={`${inter.variable} ${jetbrainsMono.variable} font-sans antialiased`} style={{ '--font-display': 'var(--font-inter)', '--font-body': 'var(--font-inter)' } as React.CSSProperties}>
+      <body className={`${bodyFont.variable} ${jetbrainsMono.variable} font-sans antialiased`} style={{ '--font-display': 'var(--font-inter)', '--font-body': 'var(--font-inter)' } as React.CSSProperties}>
         <Providers>
           <LayoutWrapper footerGameLinks={<FooterGameLinks />}>
             {children}

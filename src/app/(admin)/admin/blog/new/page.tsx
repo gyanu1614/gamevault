@@ -15,14 +15,22 @@ async function getGames() {
   return (data ?? []) as { slug: string; name: string }[]
 }
 
-export default async function NewBlogPostPage() {
+export default async function NewBlogPostPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ game?: string }>
+}) {
   await requireAdmin()
-  const games = await getGames()
+  const [games, params] = await Promise.all([getGames(), searchParams])
+  // Pre-select the game when arriving from a game's view in Blog & Content.
+  const defaultGameSlug = games.some((g) => g.slug === params.game)
+    ? params.game
+    : undefined
   return (
     <div className="space-y-6">
       <PageHeader title="New post" description="Create a value guide, seller guide, or article." />
       <AdminPanel>
-        <BlogEditor games={games} />
+        <BlogEditor games={games} defaultGameSlug={defaultGameSlug} />
       </AdminPanel>
     </div>
   )

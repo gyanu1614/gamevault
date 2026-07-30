@@ -49,3 +49,30 @@ export function formatDate(value: string | null | undefined): string | null {
   if (Number.isNaN(date.getTime())) return null
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 }
+
+/**
+ * Confidence label → plain wording.
+ *
+ * Maps the DB's confidence_label ('reviewed' | 'high' | 'medium' | 'low' |
+ * anything else) to words a 13-year-old trading Brainrots actually parses.
+ * "High confidence" is analyst-speak; it says nothing about whether the number
+ * can be trusted.
+ *
+ * The scale is deliberately about ACCURACY, not confidence, because that's the
+ * question a buyer is asking. 'reviewed' sits outside the scale — it means a
+ * human checked the price, which is a different claim from "lots of samples
+ * agreed", so it gets its own word rather than being folded into the top rung.
+ *
+ * Display only. Nothing branches on these strings, and the stored values are
+ * untouched — renaming here can never affect pricing or the data layer.
+ *
+ * Single source of truth: this wording was copy-pasted into four separate
+ * clients, which is how a rename ends up half-applied.
+ */
+export function formatConfidence(value: string | null | undefined): string {
+  if (value === 'reviewed') return 'Verified'
+  if (value === 'high') return 'Highly Accurate'
+  if (value === 'medium') return 'Accurate'
+  if (value === 'low') return 'Low Accuracy'
+  return 'No Data Yet'
+}

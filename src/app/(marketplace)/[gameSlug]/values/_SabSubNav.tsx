@@ -5,7 +5,6 @@ import { usePathname } from 'next/navigation'
 import CalculateOutlinedIcon from '@mui/icons-material/CalculateOutlined'
 import TableChartOutlinedIcon from '@mui/icons-material/TableChartOutlined'
 import StorefrontOutlinedIcon from '@mui/icons-material/StorefrontOutlined'
-import HomeOutlinedIcon from '@mui/icons-material/HomeOutlined'
 import ArticleOutlinedIcon from '@mui/icons-material/ArticleOutlined'
 import NorthEastIcon from '@mui/icons-material/NorthEast'
 import type { SvgIconComponent } from '@mui/icons-material'
@@ -21,49 +20,61 @@ type Tab = {
   exits?: boolean
 }
 
-const TABS: Tab[] = [
-  {
-    label: 'Overview',
-    href: '/steal-a-brainrot',
-    Icon: HomeOutlinedIcon,
-    match: (p) => p === '/steal-a-brainrot',
-    // Overview IS the marketplace landing — leaving the hub for it swooshes.
-    exits: true,
-  },
-  {
-    label: 'Blog',
-    href: '/steal-a-brainrot/blogs',
-    Icon: ArticleOutlinedIcon,
-    match: (p) => p.startsWith('/steal-a-brainrot/blogs'),
-  },
-  {
-    label: 'Values',
-    href: '/steal-a-brainrot/values',
-    Icon: TableChartOutlinedIcon,
-    match: (p) => p.startsWith('/steal-a-brainrot/values'),
-  },
-  {
-    label: 'Calculator',
-    href: '/steal-a-brainrot/calculator',
-    Icon: CalculateOutlinedIcon,
-    match: (p) => p.startsWith('/steal-a-brainrot/calculator'),
-  },
-  {
-    label: 'Buy Items',
-    href: '/steal-a-brainrot/buy-items',
-    Icon: StorefrontOutlinedIcon,
-    match: (p) => p.startsWith('/steal-a-brainrot/buy-items'),
-    exits: true,
-  },
-]
+/**
+ * Tabs are derived per game rather than hardcoded, so a second game's content
+ * hub gets the same nav by passing its own slug. `buyHref` is separate because
+ * the storefront category slug is canonicalised per game (see
+ * `getCanonicalCategorySlug`) and is not always `buy-items`.
+ */
+function buildTabs(gameSlug: string, buyHref: string): Tab[] {
+  const hub = `/${gameSlug}`
+  return [
+    {
+      label: 'Blog',
+      href: `${hub}/blogs`,
+      Icon: ArticleOutlinedIcon,
+      match: (p) => p.startsWith(`${hub}/blogs`),
+    },
+    {
+      label: 'Values',
+      href: `${hub}/values`,
+      Icon: TableChartOutlinedIcon,
+      match: (p) => p.startsWith(`${hub}/values`),
+    },
+    {
+      label: 'Calculator',
+      href: `${hub}/calculator`,
+      Icon: CalculateOutlinedIcon,
+      match: (p) => p.startsWith(`${hub}/calculator`),
+    },
+    {
+      label: 'Buy Items',
+      href: buyHref,
+      Icon: StorefrontOutlinedIcon,
+      match: (p) => p.startsWith(buyHref),
+      exits: true,
+    },
+  ]
+}
 
 /**
- * Game sub-navigation for the Steal a Brainrot section — Overview / Values /
- * Calculator / Buy Items. Sits under the DropMarket Values header. Shown only
- * on SAB pages, not site-wide. Horizontally scrollable on mobile.
+ * Game sub-navigation for a game's content hub — Blog / Values / Calculator,
+ * plus Buy Items which exits to the storefront. Sits under the DropMarket
+ * Values header. Horizontally scrollable on mobile.
+ *
+ * Overview was dropped: it pointed at the same storefront landing that the
+ * header's top-right CTA and the Buy Items tab already reach, so it was a
+ * third exit competing with two others.
  */
-export function SabSubNav() {
+export function SabSubNav({
+  gameSlug = 'steal-a-brainrot',
+  buyHref,
+}: {
+  gameSlug?: string
+  buyHref?: string
+} = {}) {
   const pathname = usePathname() ?? ''
+  const TABS = buildTabs(gameSlug, buyHref ?? `/${gameSlug}/buy-items`)
 
   return (
     <div className="border-b border-[#161d19] bg-[#0C0F0E]/60 pt-[60px]">

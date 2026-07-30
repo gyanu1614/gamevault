@@ -63,7 +63,7 @@ export default function MutationCalculator({
   }`
 
   return (
-    <section className="overflow-hidden rounded-2xl border border-[#234B38] bg-[#0F3320] shadow-[0_20px_60px_-30px_rgba(0,0,0,0.8)]">
+    <section className="overflow-hidden border border-[#234B38] bg-[#0F3320] shadow-[0_20px_60px_-30px_rgba(0,0,0,0.8)]">
       {/* Header */}
       <div className="border-b border-[#1F4432] px-5 py-4 sm:px-6">
         <h2 className="text-lg font-bold text-[#F1F5EE]">{brainrotName} cash prices</h2>
@@ -86,7 +86,7 @@ export default function MutationCalculator({
                 onClick={() => setSelectedSlug(mutation.slug)}
                 aria-pressed={active}
                 className={cn(
-                  'group relative min-h-[52px] rounded-xl border px-3 py-2 text-left transition',
+                  'group relative min-h-[52px] border px-3 py-2 text-left transition',
                   active
                     ? 'border-transparent bg-[#15402A] ring-2'
                     : 'border-[#254B38] bg-[#12331F] hover:border-[#2E5B44]',
@@ -121,7 +121,7 @@ export default function MutationCalculator({
         <div className="mt-6 grid gap-4 lg:grid-cols-[1.1fr_1fr]">
           {/* Cash price */}
           <div
-            className="rounded-xl border p-5"
+            className="border p-5"
             style={{ borderColor: `${visual.color}55`, backgroundColor: visual.soft }}
           >
             <div className="flex items-center gap-2">
@@ -153,7 +153,7 @@ export default function MutationCalculator({
 
             <Link
               href={selectedListingsHref}
-              className="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-[#1B5E3A] px-4 py-2.5 text-sm font-bold text-white transition hover:bg-[#227446]"
+              className="mt-4 inline-flex items-center gap-1.5 bg-[#1B5E3A] px-4 py-2.5 text-sm font-bold text-white transition hover:bg-[#227446]"
             >
               View {selected.name} listings
               <ArrowRight className="h-4 w-4" />
@@ -186,7 +186,7 @@ function Stat({
   className?: string
 }) {
   return (
-    <div className={cn('rounded-xl border border-[#254B38] bg-[#12331F] p-4', className)}>
+    <div className={cn('border border-[#254B38] bg-[#12331F] p-4', className)}>
       <p className="text-xs font-semibold uppercase tracking-wide text-[#8FA898]">{label}</p>
       <p className="mt-1.5 text-xl font-bold text-[#EDF3E9]">{value}</p>
     </div>

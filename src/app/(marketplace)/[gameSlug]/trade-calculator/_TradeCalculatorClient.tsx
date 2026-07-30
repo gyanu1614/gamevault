@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
+import { formatConfidence } from '@/lib/sab/format'
 import {
   ArrowRight,
   LockKeyhole,
@@ -108,13 +109,6 @@ function formatRange(
   return formatMoney(point)
 }
 
-function confidenceLabel(value: string): string {
-  if (value === 'reviewed') return 'Reviewed'
-  if (value === 'high') return 'High confidence'
-  if (value === 'medium') return 'Medium confidence'
-  if (value === 'low') return 'Low confidence'
-  return 'Insufficient data'
-}
 
 export default function TradeCalculatorClient({
   brainrots,
@@ -877,7 +871,7 @@ function EntryEditor({
 
           {price && (
             <p className="mt-1 text-[11px] text-text-tertiary">
-              {confidenceLabel(
+              {formatConfidence(
                 price.confidenceLabel,
               )}
               {price.sourceName

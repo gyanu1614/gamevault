@@ -26,7 +26,6 @@ import { SectionHeading } from '@/components/marketplace/SectionHeading'
 import { FaqCards } from '@/components/marketplace/FaqCards'
 import { TrustBand } from '@/components/marketplace/TrustBand'
 import { PaymentsMarquee } from '@/components/marketplace/PaymentsMarquee'
-import { BlogSection } from '@/components/blog/BlogSection'
 import type { CurrencyPageData, Offer } from './_currencyData'
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -263,6 +262,7 @@ export default function CurrencyPageClient({
   viewerId,
   gameSlug,
   introLine,
+  blogRail,
 }: {
   data: CurrencyPageData
   gameImageUrl?: string | null
@@ -273,6 +273,8 @@ export default function CurrencyPageClient({
   /** SEO intro sentence (live stats), server-computed so it lands in
    *  the initial HTML. Rendered under the hero header. */
   introLine?: string | null
+  /** Server-rendered blog rail (DB-backed), passed as a slot. */
+  blogRail?: React.ReactNode
 }) {
   const allOffers = useMemo<Offer[]>(() => [data.hero, ...data.sellers], [data])
   const [activeId, setActiveId] = useState<string>(data.hero.id)
@@ -489,10 +491,8 @@ export default function CurrencyPageClient({
           <SeoBlock currency={data.currency} />
         </div>
 
-        {/* ─── BLOG — game-relevant guides rail. */}
-        {gameSlug && (
-          <BlogSection gameSlug={gameSlug} gameName={data.currency.game} />
-        )}
+        {/* ─── BLOG — game-relevant guides rail (server-rendered, slot). */}
+        {blogRail}
       </div>
 
       {/* ─── ACCEPTED PAYMENTS — full-bleed wordmark marquee. */}

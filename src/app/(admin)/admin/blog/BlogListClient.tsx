@@ -21,10 +21,39 @@ const STATUS_STYLE: Record<string, string> = {
   archived: 'bg-white/10 text-gray-400 border-white/15',
 }
 
-export function BlogListClient({ posts }: { posts: AdminBlogPost[] }) {
+export interface BlogGameOption {
+  name: string
+  slug: string
+  imageUrl: string | null
+}
+
+export function BlogListClient({
+  posts,
+  games,
+}: {
+  posts: AdminBlogPost[]
+  /** All active games — drives the per-game rail. A game added in admin
+   *  appears here automatically with a zero count. */
+  games: BlogGameOption[]
+}) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
   const [busyId, setBusyId] = useState<string | null>(null)
+  // null = games overview; 'all' | 'general' | a game slug = posts view
+  const [selected, setSelected] = useState<string | null>(null)
+
+  const countBySlug = posts.reduce<Record<string, number>>((acc, p) => {
+    const key = p.primary_game_slug || 'general'
+    acc[key] = (acc[key] ?? 0) + 1
+    return acc
+  }, {})
+
+  const visiblePosts =
+    selected === 'all' || selected === null
+      ? posts
+      : posts.filter((p) => (p.primary_game_slug || 'general') === selected)
+
+  const selectedGame = games.find((g) => g.slug === selected)
 
   const togglePublish = (post: AdminBlogPost) => {
     setBusyId(post.id)
@@ -46,15 +75,94 @@ export function BlogListClient({ posts }: { posts: AdminBlogPost[] }) {
     })
   }
 
-  if (posts.length === 0) {
+  // ── Games overview — the landing view. A card per game, driven by the
+  //    games table, so a game added in admin appears here automatically. ──
+  if (selected === null) {
     return (
-      <div className="py-16 text-center text-sm text-gray-400">
-        No posts yet. Click <span className="font-semibold text-white">+ New post</span> to write one.
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+        <button
+          type="button"
+          onClick={() => setSelected('all')}
+          className="flex flex-col items-start gap-2 rounded-lg border border-white/15 bg-white/[0.03] p-4 text-left transition hover:border-lime/50"
+        >
+          <span className="text-sm font-semibold text-white">All posts</span>
+          <span className="text-xs text-gray-500">{posts.length} total</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setSelected('general')}
+          className="flex flex-col items-start gap-2 rounded-lg border border-white/15 bg-white/[0.03] p-4 text-left transition hover:border-lime/50"
+        >
+          <span className="text-sm font-semibold text-white">General</span>
+          <span className="text-xs text-gray-500">
+            {countBySlug.general ?? 0} posts · no game
+          </span>
+        </button>
+        {games.map((g) => (
+          <button
+            key={g.slug}
+            type="button"
+            onClick={() => setSelected(g.slug)}
+            className="flex flex-col items-start gap-2 rounded-lg border border-white/15 bg-white/[0.03] p-4 text-left transition hover:border-lime/50"
+          >
+            <span className="flex items-center gap-2">
+              {g.imageUrl && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={g.imageUrl} alt="" className="h-6 w-6 rounded-md object-cover" />
+              )}
+              <span className="text-sm font-semibold text-white">{g.name}</span>
+            </span>
+            <span className="text-xs text-gray-500">
+              {countBySlug[g.slug] ?? 0} {(countBySlug[g.slug] ?? 0) === 1 ? 'post' : 'posts'}
+            </span>
+          </button>
+        ))}
       </div>
     )
   }
 
+  // ── Posts view for the chosen game ──
   return (
+    <div>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-white/10 pb-4">
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setSelected(null)}
+            className="rounded-md border border-white/15 px-2.5 py-1.5 text-xs font-semibold text-gray-300 transition hover:border-white/30"
+          >
+            ← Games
+          </button>
+          <span className="flex items-center gap-2 text-sm font-semibold text-white">
+            {selectedGame?.imageUrl && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={selectedGame.imageUrl} alt="" className="h-5 w-5 rounded-md object-cover" />
+            )}
+            {selected === 'all'
+              ? 'All posts'
+              : selected === 'general'
+                ? 'General posts'
+                : selectedGame?.name ?? selected}
+            <span className="font-normal text-gray-500">({visiblePosts.length})</span>
+          </span>
+        </div>
+        {selected !== 'all' && selected !== 'general' && (
+          <Link
+            href={`/admin/blog/new?game=${selected}`}
+            className="inline-flex rounded-md border border-lime/50 px-3 py-1.5 text-xs font-semibold text-lime-text transition hover:bg-lime/10"
+          >
+            + New {selectedGame?.name ?? selected} post
+          </Link>
+        )}
+      </div>
+
+      {visiblePosts.length === 0 ? (
+        <div className="py-16 text-center text-sm text-gray-400">
+          {selected === 'all'
+            ? 'No posts yet. Click + New post to write one.'
+            : 'No posts for this game yet. Use the button above to write the first one.'}
+        </div>
+      ) : (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
@@ -68,7 +176,7 @@ export function BlogListClient({ posts }: { posts: AdminBlogPost[] }) {
           </tr>
         </thead>
         <tbody>
-          {posts.map((post) => {
+          {visiblePosts.map((post) => {
             const isBusy = busyId === post.id && pending
             return (
               <tr key={post.id} className="border-b border-white/[0.06] hover:bg-white/[0.02]">
@@ -128,6 +236,8 @@ export function BlogListClient({ posts }: { posts: AdminBlogPost[] }) {
           })}
         </tbody>
       </table>
+    </div>
+      )}
     </div>
   )
 }

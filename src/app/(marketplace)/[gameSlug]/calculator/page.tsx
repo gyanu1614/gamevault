@@ -4,6 +4,9 @@ import { createClient } from '@/lib/supabase/server'
 import { JsonLd, breadcrumbList, faqPage } from '@/lib/seo/jsonld'
 import { CalculatorSeo, CALCULATOR_FAQ } from './_CalculatorSeo'
 import { SabHeroBackdrop } from '../values/_SabHeroBackdrop'
+import { HubNav } from '@/components/content/HubNav'
+import { HubFooter } from '@/components/content/HubFooter'
+import { getHubNavData } from '@/lib/content/hubNav'
 import { asNumber } from '@/lib/sab/format'
 import CalculatorClient, {
   type CalcBrainrot,
@@ -78,8 +81,8 @@ export async function generateMetadata({
   })
 
   return {
-    title: `Steal a Brainrot Value & WFL Trade Calculator (${monthYear}) — Live Cash Prices`,
-    description: `Check the live cash value of any Steal a Brainrot Brainrot and mutation, then run a full trade through the Win/Fair/Loss (WFL) checker. Real marketplace prices updated daily, mutation values, typical ranges, and confidence-aware verdicts — free, ${monthYear}.`,
+    title: `Steal a Brainrot WFL Calculator (${monthYear}) — Win, Fair or Loss Trade Checker`,
+    description: `Free Steal a Brainrot WFL calculator: put both sides of a trade in and see instantly whether it's a Win, Fair or Loss. Priced from real completed sales and live listings, every mutation covered, updated daily — ${monthYear}.`,
     alternates: {
       canonical: '/steal-a-brainrot/calculator',
     },
@@ -300,9 +303,12 @@ export default async function SabCalculatorPage({
     timeZone: 'UTC',
   })
 
+  const hubNav = await getHubNavData('steal-a-brainrot')
+
   return (
-    <main className="relative min-h-screen bg-[#0C0F0E] pb-24">
+    <main className="relative min-h-screen bg-[#0C0F0E]">
       <SabHeroBackdrop height={420}>
+      <HubNav data={hubNav} calcMode={resolvedSearchParams.tab === 'cash' ? 'cash' : 'trade'} />
       <JsonLd
         data={breadcrumbList([
           { name: 'Home', path: '/' },
@@ -324,12 +330,22 @@ export default async function SabCalculatorPage({
         tradePrices={tradePrices}
         initialBrainrotSlug={resolvedSearchParams.brainrot}
         initialMutationSlug={resolvedSearchParams.mutation}
-        initialTab={resolvedSearchParams.tab === 'trade' ? 'trade' : 'cash'}
+        // WFL is the page's job now. Cash prices already have a whole page
+        // (/values), so they stay available here as the secondary tab but no
+        // longer greet everyone who lands on the calculator.
+        initialTab={resolvedSearchParams.tab === 'cash' ? 'cash' : 'trade'}
       />
 
       <CalculatorSeo monthYear={monthYear} topValues={topValues} />
       <JsonLd data={faqPage(CALCULATOR_FAQ)} />
       </SabHeroBackdrop>
-    </main>
+          <HubFooter
+        gameName={hubNav.current.name}
+        gameSlug={hubNav.current.slug}
+        tools={hubNav.tools}
+        itemsHref={hubNav.itemsHref}
+        accountsHref={hubNav.accountsHref}
+      />
+</main>
   )
 }

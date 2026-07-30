@@ -8,9 +8,10 @@ import { FaqCards } from '@/components/marketplace/FaqCards'
 import { buildBrainrotFaq } from '@/lib/sab/faq'
 import ItemHero, { type MutationOption } from './_ItemHero'
 import { SimilarBrainrots } from './_SimilarBrainrots'
-import { ValuesHeader } from '../_ValuesHeader'
 import { SabHeroBackdrop } from '../_SabHeroBackdrop'
-import { SabSubNav } from '../_SabSubNav'
+import { HubNav } from '@/components/content/HubNav'
+import { HubFooter } from '@/components/content/HubFooter'
+import { getHubNavData, HUB_NAV_CLEAR } from '@/lib/content/hubNav'
 import { cn } from '@/lib/utils'
 import { sabCard } from '@/lib/sab/theme'
 
@@ -335,12 +336,14 @@ export default async function BrainrotValuePage({ params }: PageProps) {
   const brainrot = await getBrainrot(brainrotSlug)
   if (!brainrot) notFound()
 
-  const [mutations, relatedBrainrots, defaultTradePrice, priceHistory] = await Promise.all([
-    getMutations(brainrot.id),
-    getRelatedBrainrots(brainrot),
-    getDefaultTradePrice(brainrot.id),
-    getPriceHistory(brainrot.id),
-  ])
+  const [mutations, relatedBrainrots, defaultTradePrice, priceHistory, hubNav] =
+    await Promise.all([
+      getMutations(brainrot.id),
+      getRelatedBrainrots(brainrot),
+      getDefaultTradePrice(brainrot.id),
+      getPriceHistory(brainrot.id),
+      getHubNavData(gameSlug),
+    ])
 
   const hasPublicMarketPrice =
     defaultTradePrice != null &&
@@ -397,7 +400,7 @@ export default async function BrainrotValuePage({ params }: PageProps) {
   const canonicalPath = `/steal-a-brainrot/values/${brainrot.slug}`
 
   return (
-    <main className="relative min-h-screen bg-[#0C0F0E] pb-24">
+    <main className="relative min-h-screen bg-[#0C0F0E]">
       <SabHeroBackdrop height={560}>
       <JsonLd
         data={breadcrumbList([
@@ -422,23 +425,23 @@ export default async function BrainrotValuePage({ params }: PageProps) {
         />
       )}
 
-      <ValuesHeader gameName="Steal a Brainrot" buyHref={marketplaceHref} />
-      <SabSubNav />
+      <HubNav data={hubNav} />
 
-      <section className="mx-auto w-full max-w-7xl px-4 pt-6 sm:px-6 lg:px-8">
-        <nav className="mb-4 flex flex-wrap items-center gap-1.5 text-[12.5px] text-[#6D7A72]">
+      {/* pt clears the fixed HubNav. */}
+      <section className={`mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 ${HUB_NAV_CLEAR}`}>
+        <nav className="mb-4 flex flex-wrap items-center gap-1.5 text-[12.5px] text-[#9BA8A0]">
           <Link href="/steal-a-brainrot/values" className="transition-colors hover:text-[#F1F3F1]">
-            Brainrot
+            Values
           </Link>
-          <ChevronRight className="h-3.5 w-3.5" />
+          <ChevronRight className="h-3.5 w-3.5 text-[#4C564E]" />
           <Link
             href={`/steal-a-brainrot/values?rarity=${encodeURIComponent(brainrot.rarity)}`}
             className="transition-colors hover:text-[#F1F3F1]"
           >
             {brainrot.rarity}
           </Link>
-          <ChevronRight className="h-3.5 w-3.5" />
-          <span className="text-[#E6EAE7]">{brainrot.name}</span>
+          <ChevronRight className="h-3.5 w-3.5 text-[#4C564E]" />
+          <span className="font-medium text-[#F1F3F1]">{brainrot.name}</span>
         </nav>
 
         <ItemHero
@@ -562,12 +565,19 @@ export default async function BrainrotValuePage({ params }: PageProps) {
       <section className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="border-t border-white/[0.07] pt-10">
           <h2 className="text-lg font-semibold text-[#F1F3F1]">{brainrot.name} — questions</h2>
-          <FaqCards items={faqItems} defaultOpen={0} className="mt-5" />
+          <FaqCards items={faqItems} defaultOpen={0} className="mt-5" square />
         </div>
       </section>
       <JsonLd data={faqPage(faqItems)} />
       </SabHeroBackdrop>
-    </main>
+          <HubFooter
+        gameName={hubNav.current.name}
+        gameSlug={hubNav.current.slug}
+        tools={hubNav.tools}
+        itemsHref={hubNav.itemsHref}
+        accountsHref={hubNav.accountsHref}
+      />
+</main>
   )
 }
 

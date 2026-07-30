@@ -29,6 +29,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { cn } from '@/lib/utils'
+import { formatConfidence } from '@/lib/sab/format'
 
 export type CalculatorBrainrot = {
   id: string
@@ -135,12 +136,6 @@ function formatRange(
   return formatMoney(point)
 }
 
-function formatConfidence(value: string): string {
-  if (value === 'high') return 'High confidence'
-  if (value === 'medium') return 'Medium confidence'
-  if (value === 'low') return 'Low confidence'
-  return 'Insufficient data'
-}
 
 export default function ValueCalculatorClient({
   brainrots,

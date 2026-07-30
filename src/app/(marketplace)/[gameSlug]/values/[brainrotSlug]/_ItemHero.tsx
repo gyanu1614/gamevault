@@ -177,7 +177,7 @@ export default function ItemHero({
                 mutation (badge) and an unpriced one (note). */}
             <div className="mt-2.5 flex min-h-[28px] flex-wrap items-center gap-2 lg:justify-end">
               {selected.isEstimated ? (
-                <span className="inline-flex items-center gap-1.5 rounded-md border border-[#3A3320] bg-[#2A2410]/40 px-2 py-1 text-[11.5px] font-semibold text-[#D9C27A]">
+                <span className="inline-flex items-center gap-1.5 border border-[#3A3320] bg-[#2A2410]/40 px-2 py-1 text-[11.5px] font-semibold text-[#D9C27A]">
                   <span className="h-1.5 w-1.5 rounded-full bg-[#D9C27A]" />
                   Estimated from multiplier
                 </span>
@@ -194,7 +194,7 @@ export default function ItemHero({
               // marketplace money page (internal-link sculpting). aria-label
               // keeps the accessible name explicit.
               aria-label={`Buy ${displayName}`}
-              className="group mt-4 inline-flex w-full items-center justify-center gap-1.5 rounded-lg px-5 py-3 text-sm font-bold text-black transition-transform duration-100 active:translate-y-0.5 lg:w-auto"
+              className="group mt-4 inline-flex w-full items-center justify-center gap-1.5 px-5 py-3 text-sm font-bold text-black transition-transform duration-100 active:translate-y-0.5 lg:w-auto"
               style={{
                 backgroundColor: visual.color,
                 boxShadow: `0 4px 0 0 ${shade(visual.color, -0.35)}, 0 10px 20px -6px ${visual.color}66`,
@@ -277,7 +277,7 @@ function ConfidenceBadge({ label }: { label: string }) {
         : { fg: '#9BA8A0', bg: 'rgba(155,168,160,0.1)', bd: 'rgba(155,168,160,0.25)' }
   return (
     <span
-      className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-[11.5px] font-semibold capitalize"
+      className="inline-flex items-center gap-1.5 px-2 py-1 text-[11.5px] font-semibold capitalize"
       style={{ color: tone.fg, backgroundColor: tone.bg, border: `1px solid ${tone.bd}` }}
     >
       <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: tone.fg }} />

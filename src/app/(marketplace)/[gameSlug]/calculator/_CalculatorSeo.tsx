@@ -78,7 +78,7 @@ export function CalculatorSeo({
             its full value, mutation prices, and daily trend.
           </p>
 
-          <div className="mt-4 overflow-hidden rounded-lg border border-[#1E2723]">
+          <div className="mt-4 overflow-hidden border border-[#1E2723]">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-[#1E2723] bg-white/[0.02] text-left text-xs uppercase tracking-wide text-[#6D7A72]">
@@ -126,7 +126,7 @@ export function CalculatorSeo({
             return (
               <div
                 key={m.slug}
-                className="flex items-center gap-2 rounded-lg border border-[#1E2723] bg-[#111613] px-3 py-2"
+                className="flex items-center gap-2 border border-[#1E2723] bg-[#111613] px-3 py-2"
               >
                 <span
                   className="h-2.5 w-2.5 shrink-0 rounded-full"
@@ -180,28 +180,66 @@ export function CalculatorSeo({
             A Brainrot&apos;s worth comes down to a few factors, all of which the calculator accounts
             for:
           </p>
-          <ul className="mt-3 space-y-2 text-[#9BA8A0]">
-            <li className="leading-7">
-              <strong className="text-[#EDF3E9]">Income per second</strong> — the core value driver.
-              Higher-earning Brainrots are worth more because they generate cash faster in-game.
-            </li>
-            <li className="leading-7">
-              <strong className="text-[#EDF3E9]">Rarity tier</strong> — from Common up to Mythic,
-              Legendary, Secret, and the top-tier OG Brainrots. Secret and OG variants are the most
-              sought-after and command the highest prices.
-            </li>
-            <li className="leading-7">
-              <strong className="text-[#EDF3E9]">Mutations</strong> — traits like Rainbow, Cursed,
-              Galaxy, and Diamond multiply both income and value. A mutated Brainrot can be worth
-              several times its default price, which is why the calculator prices each mutation
-              separately.
-            </li>
-            <li className="leading-7">
-              <strong className="text-[#EDF3E9]">Market demand</strong> — prices shift after game
-              updates and new releases. Because our data updates daily, the values you see keep pace
-              with the real market.
-            </li>
-          </ul>
+
+          {/* Entity-named H3s rather than one prose block. Each sub-heading is
+              the exact thing players search ("brainrot income per second",
+              "brainrot mutations value"), which gives the section real topical
+              coverage instead of burying the terms mid-paragraph. Same copy,
+              same visual weight — no hidden text, which would be cloaking. */}
+          <div className="mt-4 space-y-4">
+            <div>
+              <h3 className="text-[15px] font-semibold text-[#EDF3E9]">Income Per Second</h3>
+              <p className="mt-1.5 leading-7 text-[#9BA8A0]">
+                The core value driver. Higher-earning Brainrots are worth more because they generate
+                cash faster in-game — you can compare every Brainrot&apos;s income side by side in the{' '}
+                <Link href="/steal-a-brainrot/values" className="text-[#8FBF9C] underline underline-offset-2 hover:text-[#B9DCC4]">
+                  Steal a Brainrot value list
+                </Link>
+                .
+              </p>
+            </div>
+            <div>
+              <h3 className="text-[15px] font-semibold text-[#EDF3E9]">Brainrot Rarity</h3>
+              <p className="mt-1.5 leading-7 text-[#9BA8A0]">
+                From Common up to Mythic, Legendary, Secret, and the top-tier OG Brainrots. Secret
+                and OG variants are the most sought-after and command the highest prices.
+              </p>
+            </div>
+            <div>
+              <h3 className="text-[15px] font-semibold text-[#EDF3E9]">Applied Mutations</h3>
+              <p className="mt-1.5 leading-7 text-[#9BA8A0]">
+                Traits like Rainbow, Cursed, Galaxy, and Diamond multiply both income and value. A
+                mutated Brainrot can be worth several times its default price, which is why the
+                calculator prices each mutation separately rather than deriving it from a multiplier.
+              </p>
+            </div>
+            <div>
+              <h3 className="text-[15px] font-semibold text-[#EDF3E9]">Market Trends &amp; Demand</h3>
+              <p className="mt-1.5 leading-7 text-[#9BA8A0]">
+                Prices shift after game updates and new releases. Because our data updates daily, the
+                values you see keep pace with the real market — see how we build them in the{' '}
+                <Link href="/steal-a-brainrot/values/methodology" className="text-[#8FBF9C] underline underline-offset-2 hover:text-[#B9DCC4]">
+                  pricing methodology
+                </Link>
+                .
+              </p>
+            </div>
+            <div>
+              <h3 className="text-[15px] font-semibold text-[#EDF3E9]">Purchase Price</h3>
+              <p className="mt-1.5 leading-7 text-[#9BA8A0]">
+                What a Brainrot actually sells for in cash, rather than what a value list claims.
+                Every price here comes from completed sales and live listings — you can{' '}
+                <Link href="/steal-a-brainrot/buy-items" className="text-[#8FBF9C] underline underline-offset-2 hover:text-[#B9DCC4]">
+                  buy Steal a Brainrot items
+                </Link>{' '}
+                or{' '}
+                <Link href="/steal-a-brainrot/buy-accounts" className="text-[#8FBF9C] underline underline-offset-2 hover:text-[#B9DCC4]">
+                  browse accounts
+                </Link>{' '}
+                at these prices with SafeDrop protection.
+              </p>
+            </div>
+          </div>
         </div>
 
         <div>
@@ -222,7 +260,7 @@ export function CalculatorSeo({
         <h2 className="text-xl font-semibold text-[#F1F3F1]">
           Steal a Brainrot calculator — frequently asked questions
         </h2>
-        <FaqCards items={faqItems} defaultOpen={0} className="mt-5" />
+        <FaqCards items={faqItems} defaultOpen={0} className="mt-5" square />
       </section>
     </div>
   )

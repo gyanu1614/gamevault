@@ -14,6 +14,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getTemplateFields } from '@/lib/templates'
 import ViewTracker from '@/components/listings/ViewTracker'
 import ListingDetailClient, { type ListingForDetail } from './_ListingDetailClient'
+import { BlogRail } from '@/components/blog/BlogRail'
 import { listingToOffer as listingToItemOffer, loadItemsTaxonomy } from '../_itemsData'
 import { partitionSameItem } from '../_offerMatching'
 import type { ItemOffer, ItemsTaxonomy } from '../_itemsTypes'
@@ -401,6 +402,7 @@ export default async function ListingDetailPage({ params }: PageProps) {
       <ListingDetailClient
         listing={shaped}
         viewerId={viewer?.id ?? null}
+        blogRail={<BlogRail gameSlug={shaped.gameSlug} gameName={shaped.gameName} />}
         // Owner/admin preview of a non-active listing: amber banner +
         // purchase disabled (buying would bypass moderation).
         previewStatus={isPreview ? (listing.status as string) : null}

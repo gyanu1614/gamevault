@@ -6,6 +6,7 @@
 import Link from 'next/link'
 import { requireAdmin } from '@/lib/actions/admin-permissions'
 import { fetchAdminBlogPosts } from '@/lib/actions/admin-blog'
+import { getAllGames } from '@/lib/utils/games'
 import { PageHeader, AdminPanel } from '../components/kit'
 import { BlogListClient } from './BlogListClient'
 
@@ -13,7 +14,10 @@ export const dynamic = 'force-dynamic'
 
 export default async function AdminBlogPage() {
   await requireAdmin()
-  const posts = await fetchAdminBlogPosts()
+  const [posts, games] = await Promise.all([
+    fetchAdminBlogPosts(),
+    getAllGames(),
+  ])
 
   return (
     <div className="space-y-6">
@@ -30,7 +34,14 @@ export default async function AdminBlogPage() {
         }
       />
       <AdminPanel>
-        <BlogListClient posts={posts} />
+        <BlogListClient
+          posts={posts}
+          games={games.map((g) => ({
+            name: g.name,
+            slug: g.slug,
+            imageUrl: g.image_url,
+          }))}
+        />
       </AdminPanel>
     </div>
   )

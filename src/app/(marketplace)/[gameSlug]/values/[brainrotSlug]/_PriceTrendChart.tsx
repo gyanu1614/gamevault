@@ -75,7 +75,7 @@ export function PriceTrendChart({
       {/* Not enough days yet — we capture one point per day, so a real trend
           needs a few days to accumulate. Show an honest collecting state. */}
       {data.length < 2 ? (
-        <div className="mt-4 flex h-[140px] flex-col items-center justify-center rounded-lg border border-dashed border-[#254B38] bg-white/[0.02] text-center">
+        <div className="mt-4 flex h-[140px] flex-col items-center justify-center border border-dashed border-[#254B38] bg-white/[0.02] text-center">
           <p className="text-sm font-medium text-[#9BA8A0]">Collecting price history</p>
           <p className="mt-1 max-w-[280px] text-xs text-[#6D7A72]">
             We snapshot the {mutationName} price every day. The trend line appears once we have a

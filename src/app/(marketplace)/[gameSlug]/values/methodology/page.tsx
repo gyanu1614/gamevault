@@ -14,9 +14,10 @@ import { ArrowRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { sabCard } from '@/lib/sab/theme'
 import { JsonLd, breadcrumbList, faqPage } from '@/lib/seo/jsonld'
-import { ValuesHeader } from '../_ValuesHeader'
 import { SabHeroBackdrop } from '../_SabHeroBackdrop'
-import { SabSubNav } from '../_SabSubNav'
+import { HubNav } from '@/components/content/HubNav'
+import { HubFooter } from '@/components/content/HubFooter'
+import { getHubNavData, HUB_NAV_CLEAR } from '@/lib/content/hubNav'
 
 export const revalidate = 86400
 
@@ -71,8 +72,10 @@ export default async function MethodologyPage({
     return null
   }
 
+  const hubNav = await getHubNavData(gameSlug)
+
   return (
-    <main className="relative min-h-screen bg-[#0C0F0E] pb-24">
+    <main className="relative min-h-screen bg-[#0C0F0E]">
       <JsonLd
         data={breadcrumbList([
           { name: 'Home', path: '/' },
@@ -84,10 +87,10 @@ export default async function MethodologyPage({
       <JsonLd data={faqPage(FAQ)} />
 
       <SabHeroBackdrop>
-        <ValuesHeader gameName="Steal a Brainrot" buyHref="/steal-a-brainrot/buy-items" />
-        <SabSubNav />
+        <HubNav data={hubNav} />
 
-        <div className="mx-auto w-full max-w-3xl px-4 pb-8 pt-8 sm:px-6 lg:px-8">
+        {/* pt clears the fixed HubNav. */}
+        <div className={`mx-auto w-full max-w-3xl px-4 pb-8 sm:px-6 lg:px-8 ${HUB_NAV_CLEAR}`}>
           <nav className="mb-4 flex items-center gap-1.5 text-[12.5px] text-[#6D7A72]">
             <Link href="/steal-a-brainrot/values" className="transition-colors hover:text-[#F1F3F1]">
               Values
@@ -182,21 +185,28 @@ export default async function MethodologyPage({
         <div className="flex flex-wrap gap-3 pt-2">
           <Link
             href="/steal-a-brainrot/values"
-            className="inline-flex items-center gap-2 rounded-lg bg-[#1B6B3F] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#1f7a48]"
+            className="inline-flex items-center gap-2 bg-[#1B6B3F] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#1f7a48]"
           >
             Browse all Brainrot values
             <ArrowRight className="h-4 w-4" />
           </Link>
           <Link
             href="/steal-a-brainrot/calculator"
-            className="inline-flex items-center gap-2 rounded-lg border border-[#26332C] bg-white/[0.03] px-4 py-2.5 text-sm font-semibold text-[#F1F3F1] transition hover:border-[#2A3A31] hover:bg-white/[0.06]"
+            className="inline-flex items-center gap-2 border border-[#26332C] bg-white/[0.03] px-4 py-2.5 text-sm font-semibold text-[#F1F3F1] transition hover:border-[#2A3A31] hover:bg-white/[0.06]"
           >
             Open the value calculator
             <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
       </div>
-    </main>
+          <HubFooter
+        gameName={hubNav.current.name}
+        gameSlug={hubNav.current.slug}
+        tools={hubNav.tools}
+        itemsHref={hubNav.itemsHref}
+        accountsHref={hubNav.accountsHref}
+      />
+</main>
   )
 }
 

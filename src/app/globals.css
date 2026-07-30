@@ -109,7 +109,7 @@
     background-size:   100% 100%;
     background-attachment: fixed;
     color: var(--color-text-primary);
-    font-family: var(--font-display), "Inter", system-ui, sans-serif;
+    font-family: var(--font-display), "Figtree", system-ui, sans-serif;
     font-size: var(--text-body-size);
     line-height: var(--text-body-lh);
     -webkit-font-smoothing: antialiased;
@@ -165,6 +165,17 @@
     border-radius: var(--radius-sm);
   }
 
+  /* The content hub is square-edged and forest-themed, so the site-wide lime
+     rounded focus ring reads as a foreign element there — most visibly as a
+     green box around the calculator's search field (text inputs match
+     :focus-visible on click, not just on keyboard). Same cue, hub palette,
+     zero radius. Deliberately NOT removed: a focus indicator is the only way
+     a keyboard user can tell where they are. */
+  .hub-chrome :focus-visible {
+    box-shadow: 0 0 0 1.5px rgba(143, 191, 156, 0.35);
+    border-radius: 0;
+  }
+
   /* Prevent mobile Safari/Chrome from auto-zooming when an input is
      focused. Browsers zoom whenever a form control's font-size is < 16px.
      Scoped to coarse pointers (touch) so desktop keeps its exact type sizes;
@@ -181,7 +192,7 @@
 
   h1, h2, h3, h4, h5, h6 {
     margin: 0;
-    font-family: var(--font-display), "Inter", system-ui, sans-serif;
+    font-family: var(--font-display), "Figtree", system-ui, sans-serif;
   }
 
   /* Scrollbar — GV style */

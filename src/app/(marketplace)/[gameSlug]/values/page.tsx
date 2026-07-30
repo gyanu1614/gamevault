@@ -1,15 +1,15 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { ArrowRight, Calculator, Search, ShoppingCart } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { JsonLd, breadcrumbList } from '@/lib/seo/jsonld'
 import ValuesDirectoryClient, {
   type BrainrotDirectoryItem,
 } from './_ValuesDirectoryClient'
-import { ValuesHeader } from './_ValuesHeader'
 import { SabHeroBackdrop } from './_SabHeroBackdrop'
-import { SabSubNav } from './_SabSubNav'
+import { HubNav } from '@/components/content/HubNav'
+import { HubFooter } from '@/components/content/HubFooter'
+import { getHubNavData, HUB_NAV_CLEAR } from '@/lib/content/hubNav'
 
 export const revalidate = 3600
 
@@ -22,6 +22,8 @@ type DirectoryTradePriceRow = {
   market_value_usd: number | string | null
   confidence_label: string | null
   is_trade_ready: boolean
+  /** Observed listings/sales behind the price — our popularity signal. */
+  external_sample_size: number | string | null
 }
 
 export async function generateMetadata({
@@ -55,6 +57,93 @@ export async function generateMetadata({
   }
 }
 
+const USD_FMT = new Intl.NumberFormat('en-US', {
+  style: 'currency',
+  currency: 'USD',
+})
+
+export interface MoverItem {
+  slug: string
+  name: string
+  rarity: string
+  imageUrl: string | null
+  price: number
+  changePct: number
+}
+
+/**
+ * "Biggest movers" — 7-day percentage change per item, computed from real
+ * daily snapshots in sab_price_history (default mutation only).
+ *
+ * Deliberately gated: returns [] unless we hold at least two distinct
+ * snapshot days, because a "change" needs two points to be true. History
+ * cannot be backfilled, so this stays empty until enough days accumulate and
+ * the section self-hides rather than inventing movement.
+ */
+async function getBiggestMovers(limit = 3): Promise<MoverItem[]> {
+  const supabase = await createClient()
+
+  const since = new Date()
+  since.setUTCDate(since.getUTCDate() - 8)
+  const sinceStr = since.toISOString().slice(0, 10)
+
+  const { data, error } = await (supabase as any)
+    .from('sab_price_history')
+    .select(
+      'brainrot_id,history_date,median_usd,sab_mutations!inner(slug),sab_brainrots!inner(slug,name,rarity,image_url)',
+    )
+    .eq('sab_mutations.slug', 'default')
+    .gte('history_date', sinceStr)
+    .order('history_date', { ascending: true })
+
+  if (error || !data) return []
+
+  type Row = {
+    brainrot_id: string
+    history_date: string
+    median_usd: number | string | null
+    sab_brainrots?: {
+      slug: string
+      name: string
+      rarity: string | null
+      image_url: string | null
+    } | null
+  }
+
+  const days = new Set<string>()
+  const byItem = new Map<
+    string,
+    { first: number; last: number; meta: NonNullable<Row['sab_brainrots']> }
+  >()
+
+  for (const row of data as Row[]) {
+    const value = Number(row.median_usd)
+    const meta = row.sab_brainrots
+    if (!Number.isFinite(value) || value <= 0 || !meta) continue
+    days.add(row.history_date)
+    const existing = byItem.get(row.brainrot_id)
+    // Rows arrive oldest-first, so `first` sticks and `last` keeps updating.
+    if (existing) existing.last = value
+    else byItem.set(row.brainrot_id, { first: value, last: value, meta })
+  }
+
+  // A change needs two distinct days of evidence.
+  if (days.size < 2) return []
+
+  return [...byItem.values()]
+    .filter((x) => x.first > 0 && x.last !== x.first)
+    .map((x) => ({
+      slug: x.meta.slug,
+      name: x.meta.name,
+      rarity: x.meta.rarity ?? '',
+      imageUrl: x.meta.image_url,
+      price: x.last,
+      changePct: ((x.last - x.first) / x.first) * 100,
+    }))
+    .sort((a, b) => Math.abs(b.changePct) - Math.abs(a.changePct))
+    .slice(0, limit)
+}
+
 async function getBrainrots(): Promise<BrainrotDirectoryItem[]> {
   const supabase = await createClient()
 
@@ -69,7 +158,7 @@ async function getBrainrots(): Promise<BrainrotDirectoryItem[]> {
     (supabase as any)
       .from('sab_public_price_catalog')
       .select(
-        'brainrot_id,market_value_usd,confidence_label,is_trade_ready',
+        'brainrot_id,market_value_usd,confidence_label,is_trade_ready,external_sample_size',
       )
       .eq('mutation_slug', 'default'),
   ])
@@ -113,6 +202,10 @@ async function getBrainrots(): Promise<BrainrotDirectoryItem[]> {
       display_price_source: 'public_market_estimate',
       confidence_label:
         price.confidence_label ?? brainrot.confidence_label,
+      // How many real listings/sales we observed for this item. The only
+      // popularity signal we actually hold — our own marketplace counts
+      // (active_listing_count etc.) are still all zero.
+      sample_size: Number(price.external_sample_size ?? 0),
     }
   })
 }
@@ -124,12 +217,16 @@ export default async function BrainrotValuesPage({ params }: PageProps) {
     notFound()
   }
 
-  const brainrots = await getBrainrots()
+  const [brainrots, hubNav, movers] = await Promise.all([
+    getBrainrots(),
+    getHubNavData(gameSlug),
+    getBiggestMovers(3),
+  ])
 
   return (
-    <main className="relative min-h-screen bg-[#0C0F0E] pb-24">
+    <main className="relative min-h-screen bg-[#0C0F0E]">
       <SabHeroBackdrop>
-      <ValuesHeader gameName="Steal a Brainrot" buyHref="/steal-a-brainrot/buy-items" />
+      <HubNav data={hubNav} />
       <JsonLd
         data={breadcrumbList([
           { name: 'Home', path: '/' },
@@ -138,65 +235,90 @@ export default async function BrainrotValuesPage({ params }: PageProps) {
         ])}
       />
 
-      <SabSubNav />
-
       <section>
-        <div className="mx-auto w-full max-w-7xl px-4 pb-8 pt-8 sm:px-6 lg:px-8">
-          <nav className="mb-4 flex items-center gap-1.5 text-[12.5px] text-[#6D7A72]">
-            <Link
-              href="/steal-a-brainrot"
-              className="transition-colors hover:text-[#F1F3F1]"
-            >
-              Brainrot
-            </Link>
-            <ArrowRight className="h-3.5 w-3.5" />
-            <span className="text-[#E6EAE7]">Values</span>
-          </nav>
+        {/* pt clears the fixed HubNav; visible breadcrumb removed (JSON-LD
+            above keeps the SERP breadcrumb). */}
+        <div className={`mx-auto w-full max-w-7xl px-4 pb-8 sm:px-6 lg:px-8 ${HUB_NAV_CLEAR}`}>
 
-          {/* Two-column hero: copy left, actions right (fills the empty space). */}
-          <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
-            <div className="max-w-2xl">
-              <p className="mb-2 text-[11.5px] font-bold uppercase tracking-[0.14em] text-[#4FB477]">
-                DropMarket value database
-              </p>
-              <h1 className="text-[22px] font-semibold leading-tight tracking-tight text-[#F1F3F1] sm:text-[28px] lg:text-[32px]">
-                Steal a Brainrot Values
-              </h1>
-              <p className="mt-2 text-[13px] leading-6 text-[#9BA8A0] sm:text-sm">
-                Compare every Brainrot by rarity, base income, obtainability,
-                mutation income, and verified marketplace pricing.
-              </p>
-            </div>
-
-            <div className="flex shrink-0 flex-col items-stretch gap-3 sm:flex-row lg:flex-col lg:items-end">
-              <div className="flex flex-wrap gap-3">
-                <Link
-                  href="/steal-a-brainrot/calculator"
-                  className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-[#1B6B3F] px-5 py-2.5 text-sm font-bold text-white shadow-[0_4px_12px_-4px_rgba(27,107,63,0.6)] transition hover:bg-[#1f7a48]"
-                >
-                  <Calculator className="h-4 w-4" />
-                  Open value calculator
-                </Link>
-                <Link
-                  href="/steal-a-brainrot/buy-items"
-                  className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-[#26332C] bg-white/[0.03] px-5 py-2.5 text-sm font-semibold text-[#E6EAE7] transition hover:border-[#2A3A31] hover:bg-white/[0.06]"
-                >
-                  <ShoppingCart className="h-4 w-4" />
-                  Browse marketplace
-                </Link>
-              </div>
-              <div className="inline-flex items-center gap-2 self-start rounded-lg border border-[#1E2723] bg-[#111613] px-4 py-2.5 text-sm text-[#9BA8A0] lg:self-end">
-                <Search className="h-4 w-4 text-[#4FB477]" />
-                <span className="tabular-nums">{brainrots.length.toLocaleString()}</span> Brainrots in the database
-              </div>
-            </div>
+          {/* Centred hero. The stat block (Tracked / Highest / Priced from)
+              and the standalone "Priced from real sales" badge both used to
+              live here; the badge now rides on the results line where it costs
+              no vertical space, and the stats were redundant with the list
+              itself. The lead is wider than the title on purpose so it sets in
+              two lines instead of three. */}
+          <div className="flex flex-col items-center text-center">
+            <h1 className="text-balance text-[32px] font-bold leading-[1.04] tracking-[-0.03em] text-[#F2F6F0] sm:text-[42px] lg:text-[54px]">
+              Steal a Brainrot - Value
+            </h1>
+            <p className="mx-auto mt-4 max-w-3xl text-pretty text-[15px] leading-7 text-[#98A398] sm:text-[17px]">
+              Real cash values from completed DropMarket sales — not community
+              guesses. Every Brainrot, its income per second, and what it trades
+              for right now.
+            </p>
           </div>
         </div>
       </section>
 
-      <section className="mx-auto w-full max-w-7xl px-4 pb-10 sm:px-6 lg:px-8">
+      {/* Biggest movers — only rendered once we hold 2+ days of real
+          snapshots, so it never shows invented movement. */}
+      {movers.length > 0 && (
+        <section className="mx-auto w-full max-w-7xl px-4 pb-2 sm:px-6 lg:px-8">
+          <div className="mb-4 flex flex-wrap items-baseline justify-between gap-3">
+            <h2 className="text-[20px] font-semibold tracking-tight text-[#F1F3F1] sm:text-[24px]">
+              Biggest movers this week
+            </h2>
+            <span className="font-mono text-[11px] uppercase tracking-[0.1em] text-[#5E685E]">
+              Based on completed sales · 7d
+            </span>
+          </div>
+          <div className="grid gap-px border border-[#1A211A] bg-[#1A211A] sm:grid-cols-3">
+            {movers.map((m) => {
+              const up = m.changePct >= 0
+              return (
+                <Link
+                  key={m.slug}
+                  href={`/steal-a-brainrot/values/${m.slug}`}
+                  className="flex items-center gap-4 bg-[#0B0F0C] p-5 transition-colors hover:bg-[#111A12] sm:gap-5 sm:p-6"
+                >
+                  {m.imageUrl && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={m.imageUrl}
+                      alt=""
+                      loading="lazy"
+                      className="h-16 w-16 shrink-0 object-contain sm:h-[76px] sm:w-[76px]"
+                    />
+                  )}
+                  <span className="flex min-w-0 flex-col gap-1.5">
+                    <span className="font-mono text-[10px] font-medium uppercase tracking-[0.12em] text-[#5E685E]">
+                      {m.rarity}
+                    </span>
+                    <span className="truncate text-[17px] font-bold tracking-tight text-[#F2F6F0] sm:text-[19px]">
+                      {m.name}
+                    </span>
+                    <span className="flex items-baseline gap-2.5">
+                      <span className="font-mono text-[16px] font-bold tabular-nums text-[#E4EAE2] sm:text-[18px]">
+                        {USD_FMT.format(m.price)}
+                      </span>
+                      <span
+                        className="font-mono text-[12px] font-semibold tabular-nums"
+                        style={{ color: up ? '#8FBF9C' : '#C97B6B' }}
+                      >
+                        {up ? '+' : '−'}
+                        {Math.abs(m.changePct).toFixed(1)}%
+                      </span>
+                    </span>
+                  </span>
+                </Link>
+              )
+            })}
+          </div>
+        </section>
+      )}
+
+      <section className="mx-auto w-full max-w-7xl px-4 pb-10 pt-10 sm:px-6 lg:px-8">
         {brainrots.length === 0 ? (
-          <div className="rounded-lg border border-[#1E2723] bg-[#121613] px-6 py-12 text-center">
+          <div className="border border-[#1E2723] bg-[#121613] px-6 py-12 text-center">
             <h2 className="text-xl font-semibold text-[#F1F3F1]">
               Values are temporarily unavailable
             </h2>
@@ -210,6 +332,13 @@ export default async function BrainrotValuesPage({ params }: PageProps) {
         )}
       </section>
       </SabHeroBackdrop>
-    </main>
+          <HubFooter
+        gameName={hubNav.current.name}
+        gameSlug={hubNav.current.slug}
+        tools={hubNav.tools}
+        itemsHref={hubNav.itemsHref}
+        accountsHref={hubNav.accountsHref}
+      />
+</main>
   )
 }

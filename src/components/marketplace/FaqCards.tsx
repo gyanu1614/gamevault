@@ -7,6 +7,10 @@
  * at ~640px, 40px rounded-square +/− toggle (lime-filled when open),
  * cards nearly touching. Presentational — every surface brings its own
  * items and heading.
+ *
+ * `square` opts into the game content hub's geometry (zero radius, forest
+ * accent instead of lime). The rounded lime default stays for the marketplace
+ * pages — currency, bundle and listing detail — which share this component.
  */
 
 import { useState } from 'react'
@@ -22,11 +26,14 @@ export function FaqCards({
   items,
   defaultOpen = 0,
   className,
+  square = false,
 }: {
   items: FaqItem[]
   /** Index opened initially; -1 for all closed. */
   defaultOpen?: number
   className?: string
+  /** Content-hub variant: square edges, forest accent. */
+  square?: boolean
 }) {
   const [openIdx, setOpenIdx] = useState<number>(defaultOpen)
   return (
@@ -37,7 +44,8 @@ export function FaqCards({
           <div
             key={i}
             className={cn(
-              'overflow-hidden rounded-[20px] transition-colors',
+              'overflow-hidden transition-colors',
+              square ? 'border border-[#1E2723]' : 'rounded-[20px]',
               open ? 'bg-white/[0.06]' : 'bg-white/[0.04] hover:bg-white/[0.06]',
             )}
           >
@@ -54,9 +62,12 @@ export function FaqCards({
                 <span
                   aria-hidden
                   className={cn(
-                    'flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] transition-all',
+                    'flex h-10 w-10 shrink-0 items-center justify-center transition-all',
+                    square ? '' : 'rounded-[10px]',
                     open
-                      ? 'bg-lime text-text-inverse'
+                      ? square
+                        ? 'bg-[#1B6B3F] text-white'
+                        : 'bg-lime text-text-inverse'
                       : 'bg-white/[0.05] text-text-secondary',
                   )}
                 >

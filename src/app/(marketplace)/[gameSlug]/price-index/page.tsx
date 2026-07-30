@@ -19,9 +19,10 @@ import { createClient } from '@/lib/supabase/server'
 import { formatCash } from '@/lib/sab/format'
 import { JsonLd, breadcrumbList } from '@/lib/seo/jsonld'
 import { ContentDisclaimer } from '@/components/content/ContentDisclaimer'
-import { ValuesHeader } from '../values/_ValuesHeader'
 import { SabHeroBackdrop } from '../values/_SabHeroBackdrop'
-import { SabSubNav } from '../values/_SabSubNav'
+import { HubNav } from '@/components/content/HubNav'
+import { HubFooter } from '@/components/content/HubFooter'
+import { getHubNavData, HUB_NAV_CLEAR } from '@/lib/content/hubNav'
 
 export const revalidate = 3600
 
@@ -134,12 +135,16 @@ export default async function PriceIndexPage({
   const { gameSlug } = await params
   if (gameSlug !== 'steal-a-brainrot') notFound()
 
-  const [topValues, movers] = await Promise.all([getTopValues(), getMovers()])
+  const [topValues, movers, hubNav] = await Promise.all([
+    getTopValues(),
+    getMovers(),
+    getHubNavData(gameSlug),
+  ])
   const monthYear = new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
   const today = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 
   return (
-    <main className="relative min-h-screen bg-[#0C0F0E] pb-24">
+    <main className="relative min-h-screen bg-[#0C0F0E]">
       <JsonLd
         data={breadcrumbList([
           { name: 'Home', path: '/' },
@@ -148,9 +153,9 @@ export default async function PriceIndexPage({
         ])}
       />
       <SabHeroBackdrop>
-        <ValuesHeader gameName="Steal a Brainrot" buyHref="/steal-a-brainrot/buy-items" />
-        <SabSubNav />
-        <div className="mx-auto w-full max-w-4xl px-4 pb-6 pt-8 sm:px-6 lg:px-8">
+        <HubNav data={hubNav} />
+        {/* pt clears the fixed HubNav. */}
+        <div className={`mx-auto w-full max-w-4xl px-4 pb-6 sm:px-6 lg:px-8 ${HUB_NAV_CLEAR}`}>
           <p className="mb-2 text-[11.5px] font-bold uppercase tracking-[0.14em] text-[#4FB477]">
             DropMarket value database
           </p>
@@ -221,14 +226,14 @@ export default async function PriceIndexPage({
         <div className="flex flex-wrap gap-3">
           <Link
             href="/steal-a-brainrot/values"
-            className="inline-flex items-center gap-2 rounded-lg bg-[#1B6B3F] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#1f7a48]"
+            className="inline-flex items-center gap-2 bg-[#1B6B3F] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#1f7a48]"
           >
             See the full value list
             <ArrowRight className="h-4 w-4" />
           </Link>
           <Link
             href="/steal-a-brainrot/values/methodology"
-            className="inline-flex items-center gap-2 rounded-lg border border-[#26332C] bg-white/[0.03] px-4 py-2.5 text-sm font-semibold text-[#F1F3F1] transition hover:border-[#2A3A31] hover:bg-white/[0.06]"
+            className="inline-flex items-center gap-2 border border-[#26332C] bg-white/[0.03] px-4 py-2.5 text-sm font-semibold text-[#F1F3F1] transition hover:border-[#2A3A31] hover:bg-white/[0.06]"
           >
             How these values are calculated
             <ArrowRight className="h-4 w-4" />
@@ -237,7 +242,14 @@ export default async function PriceIndexPage({
 
         <ContentDisclaimer gameName="Steal a Brainrot" gameSlug="steal-a-brainrot" />
       </div>
-    </main>
+          <HubFooter
+        gameName={hubNav.current.name}
+        gameSlug={hubNav.current.slug}
+        tools={hubNav.tools}
+        itemsHref={hubNav.itemsHref}
+        accountsHref={hubNav.accountsHref}
+      />
+</main>
   )
 }
 

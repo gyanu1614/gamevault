@@ -54,7 +54,7 @@ export function LayoutWrapper({
   // (like every other game/category page), so it is NOT matched here.
   const isValuesHub =
     !!pathname &&
-    /^\/[^/]+\/(values|value-calculator|trade-calculator|calculator|blogs)(\/|$)/.test(pathname)
+    /^\/[^/]+\/(values|value-calculator|trade-calculator|calculator|blogs|price-index)(\/|$)/.test(pathname)
 
   // Check if we're on a seller page with sidebar (not /new or /edit)
   const isSellerPageWithSidebar = pathname?.startsWith('/seller') &&
@@ -68,7 +68,7 @@ export function LayoutWrapper({
   const hasSidebar = isSellerPageWithSidebar || isAccountPage
 
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className={`flex min-h-screen flex-col${isValuesHub ? ' hub-chrome' : ''}`}>
       {/* Beta announcement bar — normal-flow so it scrolls away with the
           page; the fixed navbar reads its remaining height and rides just
           below it. Self-hides on chrome-less shells (admin/checkout/seller
@@ -82,9 +82,15 @@ export function LayoutWrapper({
       <main className="flex-1">{children}</main>
       {/* Sidebar'd account/seller pages have no marketing footer — it
           scrolled awkwardly over the sidebar and adds nothing there. */}
-      {!isAdminPage && !isSellWizard && !isCheckout && !isSellerApplication && !hasSidebar && (
-        <Footer gameLinks={footerGameLinks} />
-      )}
+      {/* The content hub renders its own compact forest footer (HubFooter,
+          per page, since it needs the game's data). The tall lime marketplace
+          footer would be more footer than page on a guide or value list. */}
+      {!isAdminPage &&
+        !isSellWizard &&
+        !isCheckout &&
+        !isSellerApplication &&
+        !hasSidebar &&
+        !isValuesHub && <Footer gameLinks={footerGameLinks} />}
     </div>
   )
 }

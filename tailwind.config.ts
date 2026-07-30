@@ -14,6 +14,31 @@ const config: Config = {
     extend: {
       // ── Colors ─────────────────────────────────────────────────
       colors: {
+        // Content hub (blog / values / calculator). Namespaced `ct` so a game
+        // theme never leaks into shared marketplace components. Values come
+        // from `contentThemeVars()` on a per-game wrapper — see
+        // src/lib/content/theme.ts.
+        ct: {
+          bg:          'var(--ct-bg)',
+          'bg-deep':   'var(--ct-bg-deep)',
+          surface:     'var(--ct-surface)',
+          'surface-2': 'var(--ct-surface-2)',
+          hover:       'var(--ct-hover)',
+          line:        'var(--ct-line)',
+          'line-soft': 'var(--ct-line-soft)',
+          'line-strong': 'var(--ct-line-strong)',
+          text:        'var(--ct-text)',
+          'text-2':    'var(--ct-text-2)',
+          muted:       'var(--ct-text-muted)',
+          dim:         'var(--ct-text-dim)',
+          faint:       'var(--ct-text-faint)',
+          negative:    'var(--ct-negative)',
+          accent:      'var(--ct-accent)',
+          'accent-text':   'var(--ct-accent-text)',
+          'accent-border': 'var(--ct-accent-border)',
+          'accent-deep':   'var(--ct-accent-deep)',
+          'on-accent':     'var(--ct-on-accent)',
+        },
         // shadcn/radix compatible — updated to use var() directly (GV tokens are hex, not HSL)
         border: {
           DEFAULT: 'var(--border)',
@@ -147,10 +172,12 @@ const config: Config = {
 
       // ── Typography ──────────────────────────────────────────────
       fontFamily: {
-        // GV v2 — Satoshi display, General Sans body, Geist Mono
-        sans:    ['var(--font-inter)', 'Inter', 'system-ui', 'sans-serif'],
-        display: ['var(--font-inter)', 'Inter', 'system-ui', 'sans-serif'],
-        body:    ['var(--font-inter)', 'Inter', 'system-ui', 'sans-serif'],
+        // One text font (Figtree) across sans/display/body, plus JetBrains Mono
+        // for numbers, prices and uppercase data labels. The --font-inter
+        // variable name is legacy — it now resolves to Figtree; see layout.tsx.
+        sans:    ['var(--font-inter)', 'Figtree', 'system-ui', 'sans-serif'],
+        display: ['var(--font-inter)', 'Figtree', 'system-ui', 'sans-serif'],
+        body:    ['var(--font-inter)', 'Figtree', 'system-ui', 'sans-serif'],
         mono:    ['var(--font-mono)', 'JetBrains Mono', 'ui-monospace', 'monospace'],
       },
       fontSize: {
@@ -266,6 +293,17 @@ const config: Config = {
           '0%, 100%': { backgroundPosition: '200% 50%' },
           '50%':       { backgroundPosition: '-200% 50%' },
         },
+        // Content hub — periodic light band sweeping across a filled button.
+        'shine-sweep': {
+          '0%, 55%':   { transform: 'translateX(-130%) skewX(-18deg)' },
+          '85%, 100%': { transform: 'translateX(330%) skewX(-18deg)' },
+        },
+        // Content hub — arrow nudges right every few seconds.
+        'arrow-nudge': {
+          '0%, 70%, 100%': { transform: 'translateX(0)' },
+          '80%':            { transform: 'translateX(3px)' },
+          '90%':            { transform: 'translateX(0)' },
+        },
         'aurora-drift-a': {
           '0%, 100%': { transform: 'translate(0%, 0%) scale(1)' },
           '50%':       { transform: 'translate(8%, -6%) scale(1.1)' },
@@ -304,6 +342,8 @@ const config: Config = {
         'scale-in':        'scale-in 0.2s cubic-bezier(0.25, 0.1, 0.25, 1) forwards',
         'slide-right':     'slide-right 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
         'gradient-x':      'gradient-x 36s linear infinite',
+        'shine-sweep':     'shine-sweep 3.2s ease-in-out infinite',
+        'arrow-nudge':     'arrow-nudge 3s ease-in-out infinite',
         'aurora-drift-a':  'aurora-drift-a 22s ease-in-out infinite',
         'aurora-drift-b':  'aurora-drift-b 28s ease-in-out infinite',
         'text-flow':       'text-flow 4s linear infinite',
