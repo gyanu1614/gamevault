@@ -16,6 +16,7 @@ import { HubNav } from '@/components/content/HubNav'
 import { getHubNavData } from '@/lib/content/hubNav'
 import { getGameContentTheme } from '@/lib/content/theme'
 import { BlogHubHero } from './_BlogHubHero'
+import { HubTrustBox, type HubTrustStat } from './_HubTrustBox'
 import { FeaturedGuide } from './_FeaturedGuide'
 import { ArticleGrid } from './_ArticleGrid'
 import { ValuesTeaser, CalculatorTeaser, HubBuyCta } from './_HubTeasers'
@@ -109,8 +110,9 @@ export default async function GameBlogIndex({
   const game = await getGame(gameSlug)
   if (!game) notFound()
 
-  const [posts, topValues, hubNav] = await Promise.all([
+  const [posts, pricedItems, topValues, hubNav] = await Promise.all([
     getGamePosts(gameSlug),
+    getPricedItemCount(gameSlug),
     getHubTopValues(gameSlug, 4),
     getHubNavData(gameSlug),
   ])
@@ -119,6 +121,39 @@ export default async function GameBlogIndex({
 
   // Newest post carries the featured slot; the carousel below shows the rest.
   const [featured, ...rest] = posts
+
+  // Trust panel — only cells we can actually source. A game with nothing
+  // priced yet drops those cells instead of showing zeroes.
+  const newestPost = posts
+    .map((p) => new Date(p.publishedAt).getTime())
+    .filter((t) => Number.isFinite(t))
+    .sort((a, b) => b - a)[0]
+
+  const trustStats: HubTrustStat[] = []
+  if (pricedItems > 0) {
+    trustStats.push({
+      label: 'Items priced',
+      value: pricedItems.toLocaleString(),
+      hint: 'Tracked across every mutation',
+    })
+  }
+  trustStats.push({
+    label: 'Priced from',
+    value: 'Real sales',
+    hint: 'Completed orders and live listings',
+  })
+  if (newestPost) {
+    trustStats.push({
+      label: 'Last updated',
+      value: DAY_MONTH.format(new Date(newestPost)),
+      hint: 'Guides refreshed as prices move',
+    })
+  }
+  trustStats.push({
+    label: 'Every order',
+    value: 'SafeDrop',
+    hint: 'Seller paid only after you confirm',
+  })
 
   const articleCards = rest.map((post) => ({
     slug: post.slug,
@@ -156,6 +191,10 @@ export default async function GameBlogIndex({
           own z-10 context earlier in the DOM — letting cards scroll over the
           navbar. Plain flow keeps the header on top. */}
       <div className="relative mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
+        {/* Trust panel — sits in the gap between the title and the featured
+            guide, so the first thing below the headline is why to believe us. */}
+        <HubTrustBox stats={trustStats} />
+
         {featured && (
           <FeaturedGuide
             href={`/${gameSlug}/blogs/${featured.slug}`}

@@ -18,10 +18,9 @@ export function BlogHubHero({
 }) {
   return (
     <section>
-      {/* pt clears the fixed HubNav. The generous pb is intentional — it's the
-          gap reserved for a hero image / editorial art between the title and
-          the featured card. */}
-      <div className="mx-auto w-full max-w-3xl px-4 pb-14 pt-[104px] text-center sm:px-6 sm:pb-20 sm:pt-[120px]">
+      {/* pt clears the fixed HubNav. The trust panel now occupies the space
+          below, so this only needs enough room to breathe. */}
+      <div className="mx-auto w-full max-w-3xl px-4 pb-10 pt-[104px] text-center sm:px-6 sm:pb-12 sm:pt-[120px]">
         <h1 className="text-balance text-[32px] font-bold leading-[1.06] tracking-[-0.03em] text-[#F2F6F0] sm:text-[44px] lg:text-[52px]">
           {gameName} Blog &amp; News
         </h1>
