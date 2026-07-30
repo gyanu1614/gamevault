@@ -36,6 +36,8 @@ function getAdminSupabase() {
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface GameDetail {
+  /** Wide banner behind the blog CTA. Present once the migration is applied. */
+  blog_cta_image_url?: string | null
   id: string
   name: string
   slug: string
@@ -101,9 +103,23 @@ type Result<T> =
 export async function fetchGameById(id: string): Promise<GameDetail | null> {
   await requireAdmin()
   const supabase = getAdminSupabase()
+
+  const base =
+    'id, name, slug, emoji, image_url, cover_url, display_name, sort_order, is_active'
+
+  // blog_cta_image_url arrives in a hand-applied migration. Selecting a column
+  // that doesn't exist fails the WHOLE query, which would take the game editor
+  // down rather than just hiding one field — so ask for it, and fall back.
+  const withBanner = await supabase
+    .from('games')
+    .select(`${base}, blog_cta_image_url`)
+    .eq('id', id)
+    .maybeSingle()
+  if (!withBanner.error && withBanner.data) return withBanner.data as GameDetail
+
   const { data, error } = await supabase
     .from('games')
-    .select('id, name, slug, emoji, image_url, cover_url, display_name, sort_order, is_active')
+    .select(base)
     .eq('id', id)
     .maybeSingle()
   if (error || !data) return null
@@ -590,5 +606,97 @@ export async function upsertGameCategory(
     return { success: true, data: { id: gameCategoryRowId } }
   } catch (e: any) {
     return { success: false, error: e?.message ?? 'Unknown error' }
+  }
+}
+
+/**
+ * Upload the per-game banner behind the end-of-article CTA on
+ * /[game]/blogs/[slug].
+ *
+ * Deliberately separate from uploadGameCoverV2: cover_url is the game's CARD
+ * art (portrait-ish, cropped for a tile, used across the marketplace), while
+ * this is a wide banner that copy sits on top of. Sharing one column would
+ * mean a card crop change silently reflows every article CTA.
+ *
+ * Recommended asset: 2560 x 640 (4:1), JPG/WebP, under 400 KB. It renders up
+ * to 1280px wide and ~260px tall, so 2560 covers 2x displays. Keep the focal
+ * point off-centre-left — the copy occupies the left third under a scrim.
+ *
+ * Reuses the existing `game-covers` bucket under a `blog-cta/` prefix, so no
+ * new bucket or storage policy is required.
+ */
+export async function uploadGameBlogCtaImage(
+  gameId: string,
+  fileData: { name: string; type: string; size: number; base64: string }
+): Promise<Result<{ url: string }>> {
+  try {
+    await requireAdmin()
+    const supabase = getAdminSupabase()
+
+    const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp']
+    if (!validTypes.includes(fileData.type)) {
+      return { success: false, error: 'Invalid file type. Allowed: PNG, JPEG, WebP' }
+    }
+    if (fileData.size > 4_194_304) {
+      return { success: false, error: 'Banner must be 4 MB or smaller' }
+    }
+
+    const commaIdx = fileData.base64.indexOf(',')
+    const base64Data = commaIdx >= 0 ? fileData.base64.slice(commaIdx + 1) : fileData.base64
+    const buffer = Buffer.from(base64Data, 'base64')
+
+    const ext = (fileData.name.split('.').pop() || 'jpg').toLowerCase()
+    const path = `blog-cta/${gameId}-${Date.now()}.${ext}`
+
+    // Clear the previous banner so the bucket doesn't accumulate orphans.
+    const { data: existing } = await supabase
+      .from('games')
+      .select('blog_cta_image_url')
+      .eq('id', gameId)
+      .maybeSingle()
+    const oldUrl = (existing as { blog_cta_image_url: string | null } | null)
+      ?.blog_cta_image_url
+    if (oldUrl) {
+      const marker = '/game-covers/'
+      const idx = oldUrl.indexOf(marker)
+      if (idx >= 0) {
+        const oldPath = oldUrl.slice(idx + marker.length)
+        if (oldPath.startsWith('blog-cta/')) {
+          await supabase.storage.from('game-covers').remove([oldPath])
+        }
+      }
+    }
+
+    const { error: upErr } = await supabase.storage
+      .from('game-covers')
+      .upload(path, buffer, { contentType: fileData.type, cacheControl: '3600', upsert: true })
+    if (upErr) return { success: false, error: upErr.message }
+
+    const { data: urlData } = supabase.storage.from('game-covers').getPublicUrl(path)
+    const publicUrl = urlData.publicUrl
+
+    const { error: updErr } = await supabase
+      .from('games')
+      .update({ blog_cta_image_url: publicUrl })
+      .eq('id', gameId)
+    if (updErr) {
+      // The column ships in a migration that is applied by hand; say so plainly
+      // rather than surfacing a raw Postgres error.
+      if (/blog_cta_image_url/.test(updErr.message)) {
+        return {
+          success: false,
+          error:
+            'The blog_cta_image_url column is missing — apply migration ' +
+            '20260730120000_games_blog_cta_image.sql, then try again.',
+        }
+      }
+      return { success: false, error: updErr.message }
+    }
+
+    revalidatePath('/admin/games')
+    revalidatePath(`/admin/games/${gameId}/edit`)
+    return { success: true, data: { url: publicUrl } }
+  } catch (e: any) {
+    return { success: false, error: e?.message ?? 'Upload failed' }
   }
 }

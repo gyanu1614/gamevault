@@ -34,6 +34,7 @@ import {
   deleteGameLogoV2,
   uploadGameCoverV2,
   deleteGameCoverV2,
+  uploadGameBlogCtaImage,
   type GameDetail,
   type GameCategoryRow,
 } from '@/lib/actions/admin-game-wizard'
@@ -235,6 +236,10 @@ export default function GameWizard({ mode, game, globalCategories, initialGameCa
   const [logoUrl, setLogoUrl] = useState<string | null>(game?.image_url ?? null)
   const [coverUrl, setCoverUrl] = useState<string | null>(game?.cover_url ?? null)
   const [isUploadingCover, setIsUploadingCover] = useState(false)
+  const [blogCtaUrl, setBlogCtaUrl] = useState<string | null>(
+    game?.blog_cta_image_url ?? null,
+  )
+  const [isUploadingBlogCta, setIsUploadingBlogCta] = useState(false)
   // gameId only exists after step 1 saves (for create mode). In edit mode, it's the route param.
   const [gameId, setGameId] = useState<string | null>(game?.id ?? null)
 
@@ -377,6 +382,28 @@ export default function GameWizard({ mode, game, globalCategories, initialGameCa
       toast.success('Cover uploaded')
     } finally {
       setIsUploadingCover(false)
+    }
+  }
+
+  const handleBlogCtaFile = async (file: File) => {
+    if (!gameId) return
+    if (file.size > 4_194_304) { toast.error('Banner must be 4 MB or smaller'); return }
+    setIsUploadingBlogCta(true)
+    try {
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload  = () => resolve(reader.result as string)
+        reader.onerror = () => reject(reader.error)
+        reader.readAsDataURL(file)
+      })
+      const res = await uploadGameBlogCtaImage(gameId, {
+        name: file.name, type: file.type, size: file.size, base64,
+      })
+      if (!res.success) { toast.error(res.error); return }
+      setBlogCtaUrl(res.data.url)
+      toast.success('Blog banner uploaded')
+    } finally {
+      setIsUploadingBlogCta(false)
     }
   }
 
@@ -653,6 +680,46 @@ export default function GameWizard({ mode, game, globalCategories, initialGameCa
                     </button>
                   )}
                 </div>
+              </div>
+
+              <div className="h-px bg-bg-raised-hover" />
+
+              {/* Blog CTA banner — separate from cover art on purpose: this one
+                  is wide and has copy sitting on top of it. */}
+              <div>
+                <div className="text-sm font-medium text-text-primary">Blog CTA banner</div>
+                <p className="text-xs text-text-tertiary">
+                  Wide JPG/PNG/WebP, <strong>2560×640 (4:1)</strong> recommended, under 400 KB.
+                  Sits behind the &ldquo;Skip the grind&rdquo; block at the end of every guide for
+                  this game. Keep the focal point off-centre-left — the copy covers the left third
+                  under a dark scrim. Falls back to the cover art if left empty. Max 4 MB.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-5">
+                <div className="flex h-24 w-full max-w-[384px] items-center justify-center overflow-hidden rounded-2xl border border-border-default bg-bg-raised">
+                  {blogCtaUrl ? (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img src={blogCtaUrl} alt="Blog CTA banner" className="h-full w-full object-cover" />
+                  ) : (
+                    <ImageIcon className="h-8 w-8 text-text-disabled" />
+                  )}
+                </div>
+
+                <label className={cn(
+                  'inline-flex h-10 shrink-0 cursor-pointer items-center gap-2 rounded-xl bg-lime px-4 text-sm font-semibold text-text-inverse transition-colors hover:bg-lime-hover',
+                  isUploadingBlogCta && 'pointer-events-none opacity-60'
+                )}>
+                  {isUploadingBlogCta ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                  {blogCtaUrl ? 'Replace banner' : 'Upload banner'}
+                  <input
+                    type="file"
+                    accept="image/png,image/jpeg,image/jpg,image/webp"
+                    className="hidden"
+                    onChange={(e) => { const f = e.target.files?.[0]; if (f) handleBlogCtaFile(f); e.currentTarget.value = '' }}
+                    disabled={isUploadingBlogCta}
+                  />
+                </label>
               </div>
             </div>
           )}
