@@ -25,6 +25,8 @@ export type VariantPrice = {
   isEstimated: boolean
   /** The correction layer replaced a thin/absurd price with a peer anchor. */
   isAnchored: boolean
+  /** This mutation's income/sec (base × mutation multiplier), null if unknown. */
+  incomePerSecond: number | null
 }
 
 export type BrainrotPricing = {
@@ -112,6 +114,7 @@ function toVariant(row: CatalogRow): VariantPrice {
     updatedAt: row.price_updated_at,
     isEstimated: false,
     isAnchored: Boolean(row.is_anchored),
+    incomePerSecond: null,
   }
 }
 
@@ -124,22 +127,38 @@ export async function getBrainrotPricing(
 ): Promise<BrainrotPricing | null> {
   const supabase = botSupabase()
 
-  const [catalogResult, metaResult, multipliers] = await Promise.all([
-    supabase
-      .from('sab_public_price_catalog_corrected')
-      .select(CATALOG_COLUMNS)
-      .eq('brainrot_slug', slug),
-    supabase
-      .from('sab_brainrot_market_catalog')
-      .select('id,name,slug,rarity,image_url,base_income_per_second')
-      .eq('slug', slug)
-      .maybeSingle(),
-    getMeasuredMultipliers(),
-  ])
+  const [catalogResult, metaResult, incomeResult, multipliers] =
+    await Promise.all([
+      supabase
+        .from('sab_public_price_catalog_corrected')
+        .select(CATALOG_COLUMNS)
+        .eq('brainrot_slug', slug),
+      supabase
+        .from('sab_brainrot_market_catalog')
+        .select('id,name,slug,rarity,image_url,base_income_per_second')
+        .eq('slug', slug)
+        .maybeSingle(),
+      // Per-mutation income (base × multiplier), so a Radioactive shows its own
+      // income, not the base — resolved by slug below.
+      supabase
+        .from('sab_brainrot_mutation_calculator')
+        .select('brainrot_slug,mutation_slug,calculated_income_per_second')
+        .eq('brainrot_slug', slug),
+      getMeasuredMultipliers(),
+    ])
 
   if (catalogResult.error) {
     console.error('Discord bot price lookup failed:', catalogResult.error)
     return null
+  }
+
+  const incomeBySlug = new Map<string, number>()
+  for (const row of (incomeResult.data ?? []) as {
+    mutation_slug: string
+    calculated_income_per_second: number | string | null
+  }[]) {
+    const income = asNumber(row.calculated_income_per_second)
+    if (income != null) incomeBySlug.set(row.mutation_slug, income)
   }
 
   const rows = (catalogResult.data ?? []) as CatalogRow[]
@@ -181,8 +200,14 @@ export async function getBrainrotPricing(
         updatedAt: defaultPrice.updatedAt,
         isEstimated: true,
         isAnchored: false,
+        incomePerSecond: incomeBySlug.get(mutationSlug) ?? null,
       })
     }
+  }
+
+  // Stamp each priced variant with its own mutation income.
+  for (const variant of priced) {
+    variant.incomePerSecond = incomeBySlug.get(variant.mutationSlug) ?? null
   }
 
   const mutations = [...priced, ...derived].sort(

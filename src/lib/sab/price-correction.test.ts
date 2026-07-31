@@ -528,6 +528,68 @@ describe('computeCorrections — default mutation', () => {
   })
 })
 
+describe('computeCorrections — mutation below default (premium floor)', () => {
+  // Default with real evidence + a premium mutation whose scraped listings are
+  // noise priced below the default. The Skibidi Radioactive shape.
+  function premiumCase(defaultPrice: number, mutationScraped: number) {
+    const peers = peerGroup(6)
+    // Establish rainbow ≈ 3x default from 20 well-sampled pairs so the measured
+    // multiplier exists.
+    const pairs: VariantEstimate[] = []
+    for (let i = 0; i < 20; i += 1) {
+      const id = `pair-${i}`
+      pairs.push(variant(id, { valueUsd: 10 }))
+      pairs.push(
+        variant(id, {
+          mutationId: 'm-rainbow',
+          mutationSlug: 'rainbow',
+          valueUsd: 30,
+        }),
+      )
+    }
+    const pairBrainrots = Array.from({ length: 20 }, (_, i) =>
+      brainrot(`pair-${i}`, { rarity: 'Epic' }),
+    )
+
+    return computeCorrections({
+      brainrots: [...peers.brainrots, ...pairBrainrots, brainrot('tgt', { rarity: 'Epic' })],
+      variants: [
+        ...peers.variants,
+        ...pairs,
+        variant('tgt', {
+          mutationSlug: 'default',
+          mutationId: 'm-default',
+          valueUsd: defaultPrice,
+          sampleCount: 10,
+          listingPrices: Array.from({ length: 10 }, () => defaultPrice),
+        }),
+        variant('tgt', {
+          mutationSlug: 'rainbow',
+          mutationId: 'm-rainbow-tgt',
+          valueUsd: mutationScraped,
+          sampleCount: 6,
+          listingPrices: Array.from({ length: 6 }, () => mutationScraped),
+        }),
+      ],
+    }).filter((c) => c.mutationId === 'm-rainbow-tgt')[0]
+  }
+
+  it('replaces a premium mutation priced below its default with the multiplier estimate', () => {
+    // default $200, rainbow (3x measured) scraped at $70 — impossible.
+    const c = premiumCase(200, 70)
+    expect(c.reason).toBe('variant_anchored')
+    // ~default($200) * measured 3x = ~$600, flagged low.
+    expect(c.valueUsd).toBeGreaterThan(500)
+    expect(c.confidence).toBe('low')
+  })
+
+  it('leaves a premium mutation priced sensibly above its default alone', () => {
+    const c = premiumCase(200, 620)
+    expect(c.reason).not.toBe('variant_anchored')
+    expect(c.valueUsd).toBe(620)
+  })
+})
+
 describe('computeCorrections — mutation variants', () => {
   function withRainbow(rainbowValue: number, sampleCount: number) {
     const variants: VariantEstimate[] = []
@@ -569,10 +631,20 @@ describe('computeCorrections — mutation variants', () => {
     expect(correction.valueUsd).toBe(30)
   })
 
-  it('leaves a well-sampled variant alone', () => {
-    const correction = withRainbow(1, MIN_TRUSTED_SAMPLES)
+  it('leaves a well-sampled variant alone when priced sensibly', () => {
+    // Rainbow at $40 vs a $10 default is a normal premium — untouched.
+    const correction = withRainbow(40, MIN_TRUSTED_SAMPLES)
     expect(correction.reason).toBe('trusted')
-    expect(correction.valueUsd).toBe(1)
+    expect(correction.valueUsd).toBe(40)
+  })
+
+  it('overrides a well-sampled variant priced below its default', () => {
+    // Rainbow (10x tier) at $1 vs a $10 default is impossible — the premium
+    // floor rule replaces it with the multiplier estimate, low confidence.
+    const correction = withRainbow(1, MIN_TRUSTED_SAMPLES)
+    expect(correction.reason).toBe('variant_anchored')
+    expect(correction.valueUsd).toBeGreaterThan(10)
+    expect(correction.confidence).toBe('low')
   })
 
   it('keeps a thin variant that sits inside the fence', () => {

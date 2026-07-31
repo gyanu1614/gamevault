@@ -99,13 +99,21 @@ export function valueMessage(
     inline: true,
   })
 
-  const range = variant ? formatRange(variant.lowUsd, variant.highUsd) : null
+  // Range only when it's a real measured spread — an estimated/anchored price
+  // has no meaningful range, and showing the pre-correction one (the stale
+  // $70–$98.75 on Radioactive) is worse than showing none.
+  const showRange = variant && !variant.isEstimated && !variant.isAnchored
+  const range = showRange ? formatRange(variant.lowUsd, variant.highUsd) : null
   if (range) fields.push({ name: 'Range', value: range, inline: true })
 
-  if (pricing.incomePerSecond != null) {
+  // Income for THIS mutation (base × multiplier), not the base — a Radioactive
+  // earns more than the default. Fall back to base only if the per-mutation
+  // figure is unknown.
+  const income = variant?.incomePerSecond ?? pricing.incomePerSecond
+  if (income != null) {
     fields.push({
       name: 'Income',
-      value: formatIncome(pricing.incomePerSecond),
+      value: formatIncome(income),
       inline: true,
     })
   }
@@ -116,19 +124,27 @@ export function valueMessage(
 
   const updated = variant ? relativeTimestamp(variant.updatedAt) : null
 
+  // Lead with the mutation name + its price so the exact variant being quoted is
+  // unmistakable — "Radioactive · $622.15".
+  const variantHeadline =
+    variant && variant.valueUsd != null
+      ? `${variant.mutationName} · ${formatCash(variant.valueUsd)}`
+      : variant
+        ? variant.mutationName
+        : null
+
   const embed: Embed = {
     title: clamp(pricing.name, Limits.embedTitle),
     url: itemUrl(pricing.slug),
     description: [
       pricing.rarity ? `**${pricing.rarity}**` : null,
-      variant ? `${variant.mutationName} mutation` : null,
+      variantHeadline,
     ]
       .filter(Boolean)
       .join(' · '),
     color: rarityColor(pricing.rarity),
     fields,
     footer: FOOTER,
-    ...(updated ? {} : {}),
   }
 
   if (pricing.imageUrl) embed.thumbnail = { url: pricing.imageUrl }

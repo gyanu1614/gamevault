@@ -161,6 +161,17 @@ export type VariantEstimate = {
  */
 export const LADDER_MAX_INVERSION_RATIO = 2
 
+/**
+ * A mutation with a real premium (multiplier at least this) must not price
+ * BELOW its own default — a Radioactive costs MORE than the base, always. When
+ * scraped listings say otherwise it's thin noise from throwaway accounts (the
+ * Skibidi Radioactive case: reputable sellers list it at $494-899, but a knot
+ * of 1-14-day accounts listed $22-70, and the floor took the noise). Below the
+ * default, we fall back to the measured default x premium estimate and flag it
+ * low confidence rather than publish an impossible number.
+ */
+export const MUTATION_PREMIUM_FLOOR_MULTIPLIER = 1.5
+
 export type Correction = {
   brainrotId: string
   mutationId: string
@@ -731,6 +742,35 @@ function correctVariant(
       ? defaultValue * multiplier
       : null
 
+  // A premium mutation priced below its own default is impossible — thin noise.
+  // When we can detect it (we know the default and this is a real premium tier),
+  // substitute the measured default x premium estimate, flagged low confidence.
+  // Returns null when the value is fine or we can't judge it.
+  const premiumFloorEstimate = (value: number | null): Correction | null => {
+    if (
+      !isUsable(value) ||
+      !isUsable(defaultValue) ||
+      !isUsable(multiplier) ||
+      multiplier < MUTATION_PREMIUM_FLOOR_MULTIPLIER
+    ) {
+      return null
+    }
+    // Allow a little slack — only override when clearly below the default.
+    if (value >= defaultValue * 0.95) return null
+    return {
+      ...base,
+      valueUsd: roundCents(anchor!),
+      lowUsd: null,
+      highUsd: null,
+      reason: 'variant_anchored',
+      confidence: 'low',
+      anchorUsd: anchor,
+      cohortSize: 0,
+      isAnchored: true,
+      isPublishable: true,
+    }
+  }
+
   if (variant.isReviewed && isUsable(variant.valueUsd)) {
     return {
       ...base,
@@ -753,6 +793,9 @@ function correctVariant(
     const floor = lowestSupportedPrice(variant.listingPrices ?? [])
 
     if (isUsable(floor)) {
+      // A premium mutation floored below its default is noise, not a deal.
+      const overridden = premiumFloorEstimate(floor)
+      if (overridden) return overridden
       return {
         ...base,
         valueUsd: roundCents(floor),
@@ -767,6 +810,8 @@ function correctVariant(
       }
     }
 
+    const overridden = premiumFloorEstimate(variant.valueUsd)
+    if (overridden) return overridden
     return {
       ...base,
       valueUsd: variant.valueUsd,
