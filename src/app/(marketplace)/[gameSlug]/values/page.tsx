@@ -156,7 +156,7 @@ async function getBrainrots(): Promise<BrainrotDirectoryItem[]> {
       .order('name', { ascending: true }),
 
     (supabase as any)
-      .from('sab_public_price_catalog')
+      .from('sab_public_price_catalog_corrected')
       .select(
         'brainrot_id,market_value_usd,confidence_label,is_trade_ready,external_sample_size',
       )

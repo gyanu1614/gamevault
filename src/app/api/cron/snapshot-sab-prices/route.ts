@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
     let pingedCount = 0
     try {
       const { data: slugRows } = await admin
-        .from('sab_public_price_catalog')
+        .from('sab_public_price_catalog_corrected')
         .select('brainrot_slug')
         .eq('mutation_slug', 'default') as { data: { brainrot_slug: string }[] | null }
 
