@@ -53,7 +53,7 @@ async function getPricedItemCount(gameSlug: string): Promise<number> {
   if (gameSlug !== 'steal-a-brainrot') return 0
   const supabase = await createClient()
   const { count, error } = await (supabase as any)
-    .from('sab_public_price_catalog')
+    .from('sab_public_price_catalog_corrected')
     .select('brainrot_id', { count: 'exact', head: true })
     .eq('mutation_slug', 'default')
   if (error) {

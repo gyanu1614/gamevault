@@ -50,6 +50,26 @@ export const MIN_COHORT_SIZE = 3
 export const MIN_MULTIPLIER_PAIRS = 20
 
 /**
+ * Floor pricing — the "cheapest you can actually buy at" number.
+ *
+ * A marketplace value is more useful as a realistic FLOOR than as a fair
+ * midpoint: a buyer wants the lowest real price, not the average. But the naive
+ * "cheapest listing" is exactly the bait trap — a lone $0.50 or $9.98 shill
+ * sets a price nobody can transact at (this is how Spyder Elephant published
+ * $9.98 off one listing).
+ *
+ * So the floor is the lowest price that has SUPPORT: the cheapest value where a
+ * cluster of at least FLOOR_MIN_CLUSTER listings sit within FLOOR_BAND_RATIO of
+ * each other. One or two cheap outliers below that cluster are ignored. Only a
+ * genuine cluster of near-identical cheap listings — real cheap floor, or
+ * coordinated fraud that no price statistic can distinguish from one — moves it.
+ */
+export const FLOOR_MIN_CLUSTER = 3
+
+/** Cheapest and Nth-cheapest of a supporting cluster must be within this. */
+export const FLOOR_BAND_RATIO = 1.6
+
+/**
  * Observed marketplace price floor (p1 = $0.28 across 423 published prices).
  * Listings do not go below roughly this regardless of item value, so a model
  * predicting less than this is describing something the market cannot express.
@@ -57,6 +77,7 @@ export const MIN_MULTIPLIER_PAIRS = 20
 export const MARKET_PRICE_FLOOR_USD = 0.28
 
 export type CorrectionReason =
+  | 'floor'
   | 'trusted'
   | 'thin_sample_within_anchor'
   | 'thin_sample_anchored'
@@ -87,6 +108,14 @@ export type VariantEstimate = {
    * review pointless.
    */
   isReviewed?: boolean
+  /**
+   * The cleaned per-listing prices behind this variant (from
+   * sab_market_clean_listing_evidence, already IQR-fenced). When present and
+   * dense enough, the headline becomes the lowest SUPPORTED price rather than
+   * the median — the "cheapest you can actually buy at". Optional so callers
+   * that don't have listing-level data still get median-based corrections.
+   */
+  listingPrices?: number[]
 }
 
 export type Correction = {
@@ -127,6 +156,40 @@ export function quantile(values: number[], q: number): number | null {
   return sorted[index]
 }
 
+/**
+ * The lowest price with support — the realistic floor.
+ *
+ * Walks the sorted prices upward and returns the first value whose next
+ * FLOOR_MIN_CLUSTER listings (itself included) fall within FLOOR_BAND_RATIO.
+ * That is the cheapest point where enough sellers agree for the price to be
+ * real. Lone cheap baits below the cluster are skipped over rather than shown.
+ *
+ * Returns null when no cluster qualifies (too few listings, or prices too
+ * scattered to trust a floor) — the caller then falls back to the anchor logic,
+ * so a thin or bait-heavy item never publishes a fabricated floor.
+ */
+export function lowestSupportedPrice(
+  prices: number[],
+  minCluster: number = FLOOR_MIN_CLUSTER,
+  bandRatio: number = FLOOR_BAND_RATIO,
+): number | null {
+  const sorted = prices
+    .filter((price) => Number.isFinite(price) && price > 0)
+    .sort((left, right) => left - right)
+
+  if (sorted.length < minCluster) return null
+
+  for (let start = 0; start <= sorted.length - minCluster; start += 1) {
+    const clusterLow = sorted[start]
+    const clusterHigh = sorted[start + minCluster - 1]
+    if (clusterHigh <= clusterLow * bandRatio) {
+      return clusterLow
+    }
+  }
+
+  return null
+}
+
 function isUsable(value: number | null | undefined): value is number {
   return typeof value === 'number' && Number.isFinite(value) && value > 0
 }
@@ -144,9 +207,16 @@ function roundCents(value: number): number {
  * used rather than the mean because the ratio distribution has a long right
  * tail (a handful of variants trade at 10x+).
  */
+export type MutationMultiplier = {
+  /** Market premium as a multiple of the same Brainrot's default price. */
+  multiplier: number
+  /** Well-sampled variant/default pairs behind the measurement. */
+  pairCount: number
+}
+
 export function measureMutationMultipliers(
   variants: VariantEstimate[],
-): Map<string, number> {
+): Map<string, MutationMultiplier> {
   const byBrainrot = new Map<string, VariantEstimate[]>()
 
   for (const variant of variants) {
@@ -184,12 +254,14 @@ export function measureMutationMultipliers(
     }
   }
 
-  const multipliers = new Map<string, number>()
+  const multipliers = new Map<string, MutationMultiplier>()
 
   for (const [slug, values] of ratios) {
     if (values.length < MIN_MULTIPLIER_PAIRS) continue
     const value = median(values)
-    if (isUsable(value)) multipliers.set(slug, value)
+    if (isUsable(value)) {
+      multipliers.set(slug, { multiplier: value, pairCount: values.length })
+    }
   }
 
   return multipliers
@@ -329,21 +401,55 @@ function correctDefault(
   const cohort = meta ? cohortPricesFor(meta, wellSampled) : []
   const anchor = median(cohort)
 
-  // Real evidence stands on its own, cohort agreement or not. Same for a
-  // human-reviewed price, however thin the listing data behind it.
-  if (
-    (variant.isReviewed || variant.sampleCount >= MIN_TRUSTED_SAMPLES) &&
-    isUsable(variant.valueUsd)
-  ) {
+  // A human-reviewed price wins outright — never second-guess a manual check,
+  // and don't drop it to a scraped floor.
+  if (variant.isReviewed && isUsable(variant.valueUsd)) {
     return {
       ...base,
       valueUsd: variant.valueUsd,
       lowUsd: variant.lowUsd,
       highUsd: variant.highUsd,
       reason: 'trusted',
-      confidence: variant.isReviewed
-        ? 'high'
-        : confidenceFor(variant.sampleCount, variant.sourceCount),
+      confidence: 'high',
+      anchorUsd: anchor,
+      cohortSize: cohort.length,
+      isAnchored: false,
+      isPublishable: true,
+    }
+  }
+
+  // Well-sampled: prefer the lowest SUPPORTED price — the cheapest a buyer can
+  // actually transact at — over the median midpoint. Only when there are enough
+  // clustered listings to trust a floor; otherwise fall through to the median.
+  if (variant.sampleCount >= MIN_TRUSTED_SAMPLES && isUsable(variant.valueUsd)) {
+    const floor = lowestSupportedPrice(variant.listingPrices ?? [])
+
+    if (isUsable(floor)) {
+      return {
+        ...base,
+        valueUsd: roundCents(floor),
+        // Keep the real spread. The low end is now the floor itself; the high
+        // end stays the median-blend's high so the range still shows headroom.
+        lowUsd: roundCents(floor),
+        highUsd: variant.highUsd ?? variant.valueUsd,
+        reason: 'floor',
+        confidence: confidenceFor(variant.sampleCount, variant.sourceCount),
+        anchorUsd: anchor,
+        cohortSize: cohort.length,
+        isAnchored: false,
+        isPublishable: true,
+      }
+    }
+
+    // No trustworthy floor (too few/too-scattered listings): the median blend
+    // is still real evidence, so publish it as before.
+    return {
+      ...base,
+      valueUsd: variant.valueUsd,
+      lowUsd: variant.lowUsd,
+      highUsd: variant.highUsd,
+      reason: 'trusted',
+      confidence: confidenceFor(variant.sampleCount, variant.sourceCount),
       anchorUsd: anchor,
       cohortSize: cohort.length,
       isAnchored: false,
@@ -415,7 +521,7 @@ function correctDefault(
 function correctVariant(
   variant: VariantEstimate,
   correctedDefaults: Map<string, number>,
-  multipliers: Map<string, number>,
+  multipliers: Map<string, MutationMultiplier>,
 ): Correction {
   const base = {
     brainrotId: variant.brainrotId,
@@ -425,25 +531,55 @@ function correctVariant(
   }
 
   const defaultValue = correctedDefaults.get(variant.brainrotId)
-  const multiplier = multipliers.get(variant.mutationSlug)
+  const multiplier = multipliers.get(variant.mutationSlug)?.multiplier
   const anchor =
     isUsable(defaultValue) && isUsable(multiplier)
       ? defaultValue * multiplier
       : null
 
-  if (
-    (variant.isReviewed || variant.sampleCount >= MIN_TRUSTED_SAMPLES) &&
-    isUsable(variant.valueUsd)
-  ) {
+  if (variant.isReviewed && isUsable(variant.valueUsd)) {
     return {
       ...base,
       valueUsd: variant.valueUsd,
       lowUsd: variant.lowUsd,
       highUsd: variant.highUsd,
       reason: 'trusted',
-      confidence: variant.isReviewed
-        ? 'high'
-        : confidenceFor(variant.sampleCount, variant.sourceCount),
+      confidence: 'high',
+      anchorUsd: anchor,
+      cohortSize: 0,
+      isAnchored: false,
+      isPublishable: true,
+    }
+  }
+
+  // Well-sampled mutation: same floor-first preference as defaults. Mutations
+  // usually have too few listings for a floor to qualify, in which case this
+  // falls through to the median blend.
+  if (variant.sampleCount >= MIN_TRUSTED_SAMPLES && isUsable(variant.valueUsd)) {
+    const floor = lowestSupportedPrice(variant.listingPrices ?? [])
+
+    if (isUsable(floor)) {
+      return {
+        ...base,
+        valueUsd: roundCents(floor),
+        lowUsd: roundCents(floor),
+        highUsd: variant.highUsd ?? variant.valueUsd,
+        reason: 'floor',
+        confidence: confidenceFor(variant.sampleCount, variant.sourceCount),
+        anchorUsd: anchor,
+        cohortSize: 0,
+        isAnchored: false,
+        isPublishable: true,
+      }
+    }
+
+    return {
+      ...base,
+      valueUsd: variant.valueUsd,
+      lowUsd: variant.lowUsd,
+      highUsd: variant.highUsd,
+      reason: 'trusted',
+      confidence: confidenceFor(variant.sampleCount, variant.sourceCount),
       anchorUsd: anchor,
       cohortSize: 0,
       isAnchored: false,

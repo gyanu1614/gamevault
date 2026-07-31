@@ -14,7 +14,14 @@
     "sab:itemku:collect": "node scripts/collect-itemku-sab.mjs",
     "sab:itemku:send": "node scripts/collect-itemku-sab.mjs --send",
     "sab:eldorado:collect": "node scripts/collect-eldorado-sab-api-v6.mjs",
-    "sab:eldorado:send": "node scripts/collect-eldorado-sab-api-v6.mjs --send"
+    "sab:eldorado:send": "node scripts/collect-eldorado-sab-api-v6.mjs --send",
+    "sab:eldorado:panel": "node scripts/collect-eldorado-sab-api-v6.mjs --send --refresh-after-hours 20",
+    "sab:g2g:collect": "node scripts/collect-g2g-sab.mjs",
+    "sab:g2g:send": "node scripts/collect-g2g-sab.mjs --send",
+    "sab:g2g:panel": "node scripts/collect-g2g-sab.mjs --send --refresh-after-hours 20",
+    "discord:register": "node scripts/register-discord-commands.mjs",
+    "discord:register:global": "node scripts/register-discord-commands.mjs --global",
+    "discord:list": "node scripts/register-discord-commands.mjs --list"
   },
   "dependencies": {
     "@dicebear/collection": "^9.3.1",

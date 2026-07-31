@@ -3,8 +3,18 @@ name: SAB Eldorado Daily Market Collection
 # Priority-queue Eldorado collection: fills mutation prices on the highest-value
 # brainrots first (OGs/Secrets, biggest coverage gaps), with deep pagination so
 # every mutation gets enough samples. API-based — no browser needed, unlike the
-# Itemku workflow. The collector's own progress file rotates through the queue
-# across runs, so daily runs steadily widen coverage.
+# Itemku workflow.
+#
+# Rotation is DATABASE-driven (--refresh-after-hours), not progress-file driven.
+# The progress file is committed to the repo and this workflow never commits it
+# back, so a scheduled run always checked out the same frozen state (200
+# attempts, all 2026-07-26), skipped those, and re-crawled the same next-120
+# every single day. Coverage could not grow past ~320 of 498 and nothing was
+# ever revisited — which is why listing disappearance carried no signal and
+# ended_at was null on every row.
+#
+# Re-crawling the same panel daily is also what /api/cron/expire-sab-listings
+# depends on: absence only means something if we actually looked again.
 
 on:
   workflow_dispatch:
@@ -21,6 +31,10 @@ on:
         description: Restart the queue from the top (true/false)
         required: false
         default: "false"
+      refresh_after_hours:
+        description: Re-crawl anything not priced within this many hours (0 = backfill only)
+        required: false
+        default: "20"
   schedule:
     # 05:00 UTC — before the price-snapshot cron (06:00) so the snapshot
     # captures the fresh values collected here.
@@ -64,6 +78,7 @@ jobs:
           --max-pages ${{ inputs.max_pages || '10' }}
           --samples-per-variant 8
           --delay-ms 1500
+          --refresh-after-hours ${{ inputs.refresh_after_hours || '20' }}
           ${{ (inputs.reset_progress == 'true') && '--reset-progress' || '' }}
 
       - name: Upload collection report
