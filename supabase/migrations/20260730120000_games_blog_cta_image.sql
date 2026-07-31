@@ -19,7 +19,7 @@ alter table public.games
   add column if not exists blog_cta_image_url text;
 
 comment on column public.games.blog_cta_image_url is
-  'Wide banner behind the end-of-article CTA on /[game]/blogs/[slug]. '
+  'Wide banner behind the end-of-article CTA on /[game]/blog/[slug]. '
   'Recommended 2560x640 (4:1), JPG/WebP, <400KB. Falls back to cover_url.';
 
 notify pgrst, 'reload schema';

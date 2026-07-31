@@ -55,16 +55,42 @@ const nextConfig = {
       // Category slugs canonicalized to the buy-{x} SEO pattern (was bare
       // items/accounts/currency on legacy games). 301 the old bare URLs → the
       // canonical buy- URL so Google consolidates on the ranking-friendly slug.
-      // Renamed games: adopt-me, blox-fruits, blade-ball, brookhaven-rp,
-      // murder-mystery-2, gta-vi, steal-a-brainrot (accounts only).
+      //
+      // These used to whitelist a handful of games, which left /cs2/items,
+      // /valorant/accounts and friends 404ing even though the canonical page
+      // existed — GSC had them sitting in the noindex bucket. Now generic,
+      // with the two games whose items category isn't literally "buy-items"
+      // listed first (Next takes the FIRST matching rule, so order matters).
       {
-        source: '/:game(adopt-me|blox-fruits|blade-ball|brookhaven-rp|murder-mystery-2|gta-vi)/items',
+        source: '/fortnite/items',
+        destination: '/fortnite/buy-skins',
+        permanent: true,
+      },
+      {
+        source: '/minecraft/items',
+        destination: '/minecraft/buy-server-items',
+        permanent: true,
+      },
+      {
+        // Every other game with an items catalogue uses "buy-items". The three
+        // that have no items category at all (lol, r6-siege, valorant) land on
+        // a 404 either way, so a generic rule costs them nothing.
+        source: '/:game/items',
         destination: '/:game/buy-items',
         permanent: true,
       },
       {
-        source: '/:game(adopt-me|blox-fruits|blade-ball|brookhaven-rp|steal-a-brainrot)/accounts',
+        // Every active game except lol has a buy-accounts category.
+        source: '/:game/accounts',
         destination: '/:game/buy-accounts',
+        permanent: true,
+      },
+      {
+        // The game's slug is "lol"; the spelled-out name was only ever an
+        // inbound guess, and /game/league-of-legends 308s here via the
+        // /game/:path* rule below.
+        source: '/league-of-legends',
+        destination: '/lol',
         permanent: true,
       },
       {
@@ -172,16 +198,14 @@ const nextConfig = {
         destination: '/:path*',
         permanent: true,
       },
-      {
-        // Same cleanup: the one legacy /currency/* URL with a true modern
-        // equivalent. The rest of /currency/* and all of /topup/* have no
-        // matching page, so they now return a clean 404 + noindex — which is
-        // what Google wants for a dead URL. Redirecting those to the homepage
-        // would just be a soft 404 again.
-        source: '/currency/apex-coins',
-        destination: '/apex-legends/buy-currency',
-        permanent: true,
-      },
+      // No /currency/* or /topup/* rule on purpose. Apex Legends has no
+      // currency category at all (boosting, buy-accounts, buy-items), and the
+      // rest of that legacy space has no modern equivalent either, so those
+      // URLs return a clean 404 + noindex — which is what Google wants for a
+      // dead URL. An earlier pass redirected /currency/apex-coins to
+      // /apex-legends/buy-currency because that URL answered 200 when checked;
+      // that 200 was the soft-404 bug itself, and the target never existed.
+      // Verify a redirect target against a FIXED build, not a broken one.
     ]
   },
 }
