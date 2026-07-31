@@ -46,10 +46,10 @@ export const metadata: Metadata = {
   },
   description:
     'The safest peer-to-peer marketplace for gaming items, currency, and accounts. Every order covered by SafeDrop Buyer Protection. 18+ games, instant delivery.',
-  keywords: [
-    'gaming marketplace', 'buy robux', 'sell game accounts', 'valorant accounts',
-    'roblox robux', 'cs2 skins', 'genshin crystals', 'safedrop', 'p2p gaming',
-  ],
+  // No site-wide `keywords`: Google ignores the meta-keywords tag entirely, so a
+  // single stuffed string on every page was dead weight. Pages that want
+  // keywords set their own page-specific list in generateMetadata (e.g. the
+  // game landing pages via seo/templates); everything else simply omits the tag.
   openGraph: {
     type: 'website',
     siteName: 'DropMarket',

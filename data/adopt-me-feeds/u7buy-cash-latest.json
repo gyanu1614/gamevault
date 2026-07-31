@@ -1,0 +1,2981 @@
+{
+  "source": "u7buy",
+  "collector_version": 1,
+  "collected_at": "2026-07-31T05:54:46.538Z",
+  "pet_count": 60,
+  "listing_count": 297,
+  "matched": 297,
+  "skipped": 3640,
+  "listings": [
+    {
+      "slug": "african-wild-dog",
+      "name": "African Wild Dog",
+      "variant": "FR",
+      "priceUsd": 70.4,
+      "title": "FR - African Wild Dog",
+      "sellerId": "2027679714237038594",
+      "completedOrders": 252,
+      "favorableRate": 100
+    },
+    {
+      "slug": "african-wild-dog",
+      "name": "African Wild Dog",
+      "variant": "NFR",
+      "priceUsd": 300.3,
+      "title": "NFR - African Wild Dog",
+      "sellerId": "2027679714237038594",
+      "completedOrders": 252,
+      "favorableRate": 100
+    },
+    {
+      "slug": "african-wild-dog",
+      "name": "African Wild Dog",
+      "variant": "MFR",
+      "priceUsd": 999.9,
+      "title": "MFR - African Wild Dog",
+      "sellerId": "2027679714237038594",
+      "completedOrders": 252,
+      "favorableRate": 100
+    },
+    {
+      "slug": "alpaca",
+      "name": "Alpaca",
+      "variant": "MFR",
+      "priceUsd": 170.5,
+      "title": "MFR - Alpaca",
+      "sellerId": "2027679714237038594",
+      "completedOrders": 252,
+      "favorableRate": 100
+    },
+    {
+      "slug": "alpaca",
+      "name": "Alpaca",
+      "variant": "FR",
+      "priceUsd": 15.4,
+      "title": "FR - Alpaca",
+      "sellerId": "2027679714237038594",
+      "completedOrders": 252,
+      "favorableRate": 100
+    },
+    {
+      "slug": "alpaca",
+      "name": "Alpaca",
+      "variant": "NFR",
+      "priceUsd": 50.6,
+      "title": "NFR - Alpaca",
+      "sellerId": "2027679714237038594",
+      "completedOrders": 252,
+      "favorableRate": 100
+    },
+    {
+      "slug": "alpaca",
+      "name": "Alpaca",
+      "variant": "N",
+      "priceUsd": 12.25,
+      "title": "Adopt Me > Alpaca > Normal",
+      "sellerId": "1898284713964793959",
+      "completedOrders": 93728,
+      "favorableRate": 99.65
+    },
+    {
+      "slug": "amami-rabbit",
+      "name": "Amami Rabbit",
+      "variant": "N",
+      "priceUsd": 0.737,
+      "title": "Adopt Me > Amami Rabbit > Normal",
+      "sellerId": "1898284713964793959",
+      "completedOrders": 93728,
+      "favorableRate": 99.65
+    },
+    {
+      "slug": "balloon-unicorn",
+      "name": "Balloon Unicorn",
+      "variant": "NFR",
+      "priceUsd": 300.3,
+      "title": "NFR - Balloon Unicorn",
+      "sellerId": "2027679714237038594",
+      "completedOrders": 252,
+      "favorableRate": 100
+    },
+    {
+      "slug": "balloon-unicorn",
+      "name": "Balloon Unicorn",
+      "variant": "MFR",
+      "priceUsd": 1007.48,
+      "title": "Balloon Unicorn MFR",
+      "sellerId": "1898284714027708434",
+      "completedOrders": 52588,
+      "favorableRate": 99.71
+    },
+    {
+      "slug": "balloon-unicorn",
+      "name": "Balloon Unicorn",
+      "variant": "FR",
+      "priceUsd": 99,
+      "title": "BALLOON UNICORN FR/F/R | FAST DELIVERY | SELLER ONLINE",
+      "sellerId": "1990326733529223170",
+      "completedOrders": 1802,
+      "favorableRate": 100
+    },
+    {
+      "slug": "balloon-unicorn",
+      "name": "Balloon Unicorn",
+      "variant": "FR",
+      "priceUsd": 70.4,
+      "title": "FR - Balloon Unicorn",
+      "sellerId": "2027679714237038594",
+      "completedOrders": 252,
+      "favorableRate": 100
+    },
+    {
+      "slug": "balloon-unicorn",
+      "name": "Balloon Unicorn",
+      "variant": "MFR",
+      "priceUsd": 900.9,
+      "title": "MFR - Balloon Unicorn",
+      "sellerId": "2027679714237038594",
+      "completedOrders": 252,
+      "favorableRate": 100
+    },
+    {
+      "slug": "balloon-unicorn",
+      "name": "Balloon Unicorn",
+      "variant": "NFR",
+      "priceUsd": 305.49,
+      "title": "Balloon Unicorn NFR",
+      "sellerId": "1898284714027708434",
+      "completedOrders": 52588,
+      "favorableRate": 99.71
+    },
+    {
+      "slug": "balloon-unicorn",
+      "name": "Balloon Unicorn",
+      "variant": "FR",
+      "priceUsd": 657.42,
+      "title": "Balloon Unicorn FR",
+      "sellerId": "1898284714027708434",
+      "completedOrders": 52588,
+      "favorableRate": 99.71
+    },
+    {
+      "slug": "balloon-unicorn",
+      "name": "Balloon Unicorn",
+      "variant": "FR",
+      "priceUsd": 92.57,
+      "title": "Adopt Me > Balloon Unicorn > FR",
+      "sellerId": "1898284713964793959",
+      "completedOrders": 93728,
+      "favorableRate": 99.65
+    },
+    {
+      "slug": "bat-dragon",
+      "name": "Bat Dragon",
+      "variant": "MFR",
+      "priceUsd": 1650,
+      "title": "Bat Dragon MFR",
+      "sellerId": "1898284714027708434",
+      "completedOrders": 52588,
+      "favorableRate": 99.71
+    },
+    {
+      "slug": "bat-dragon",
+      "name": "Bat Dragon",
+      "variant": "NFR",
+      "priceUsd": 1104.72,
+      "title": "Bat Dragon  NFR < Fast Delivery 24/7 Online",
+      "sellerId": "1904773868236410881",
+      "completedOrders": 1041,
+      "favorableRate": 99.89
+    },
+    {
+      "slug": "bat-dragon",
+      "name": "Bat Dragon",
+      "variant": "FR",
+      "priceUsd": 377.15,
+      "title": "Bat Dragon  FR < Fast Delivery 24/7 Online",
+      "sellerId": "1904773868236410881",
+      "completedOrders": 1041,
+      "favorableRate": 99.89
+    },
+    {
+      "slug": "bat-dragon",
+      "name": "Bat Dragon",
+      "variant": "FR",
+      "priceUsd": 350.9,
+      "title": "FR - Bat Dragon",
+      "sellerId": "2027679714237038594",
+      "completedOrders": 252,
+      "favorableRate": 100
+    },
+    {
+      "slug": "bat-dragon",
+      "name": "Bat Dragon",
+      "variant": "NFR",
+      "priceUsd": 999.9,
+      "title": "NFR - Bat Dragon",
+      "sellerId": "2027679714237038594",
+      "completedOrders": 252,
+      "favorableRate": 100
+    },
+    {
+      "slug": "bat-dragon",
+      "name": "Bat Dragon",
+      "variant": "NFR",
+      "priceUsd": 1038.65,
+      "title": "Bat Dragon NFR",
+      "sellerId": "1898284714027708434",
+      "completedOrders": 52588,
+      "favorableRate": 99.71
+    },
+    {
+      "slug": "bat-dragon",
+      "name": "Bat Dragon",
+      "variant": "FR",
+      "priceUsd": 396.76,
+      "title": "Bat Dragon FR",
+      "sellerId": "1898284714027708434",
+      "completedOrders": 52588,
+      "favorableRate": 99.71
+    },
+    {
+      "slug": "black-panther",
+      "name": "Black Panther",
+      "variant": "FR",
+      "priceUsd": 3.28,
+      "title": "Black Panther  FR < Fast Delivery 24/7 Online",
+      "sellerId": "1904773868236410881",
+      "completedOrders": 1041,
+      "favorableRate": 99.89
+    },
+    {
+      "slug": "black-panther",
+      "name": "Black Panther",
+      "variant": "NFR",
+      "priceUsd": 5.41,
+      "title": "Black Panther  NFR < Fast Delivery 24/7 Online",
+      "sellerId": "1904773868236410881",
+      "completedOrders": 1041,
+      "favorableRate": 99.89
+    },
+    {
+      "slug": "black-panther",
+      "name": "Black Panther",
+      "variant": "FR",
+      "priceUsd": 18.46,
+      "title": "Black Panther FR",
+      "sellerId": "1898284714027708434",
+      "completedOrders": 52588,
+      "favorableRate": 99.71
+    },
+    {
+      "slug": "black-panther",
+      "name": "Black Panther",
+      "variant": "MFR",
+      "priceUsd": 134.86,
+      "title": "Black Panther MFR",
+      "sellerId": "1898284714027708434",
+      "completedOrders": 52588,
+      "favorableRate": 99.71
+    },
+    {
+      "slug": "black-panther",
+      "name": "Black Panther",
+      "variant": "NFR",
+      "priceUsd": 37.32,
+      "title": "Black Panther NFR",
+      "sellerId": "1898284714027708434",
+      "completedOrders": 52588,
+      "favorableRate": 99.71
+    },
+    {
+      "slug": "blazing-lion",
+      "name": "Blazing Lion",
+      "variant": "FR",
+      "priceUsd": 75.43,
+      "title": "Blazing Lion  FR < Fast Delivery 24/7 Online",
+      "sellerId": "1904773868236410881",
+      "completedOrders": 1041,
+      "favorableRate": 99.89
+    },
+    {
+      "slug": "blazing-lion",
+      "name": "Blazing Lion",
+      "variant": "FR",
+      "priceUsd": 70.4,
+      "title": "FR - Blazing Lion",
+      "sellerId": "2027679714237038594",
+      "completedOrders": 252,
+      "favorableRate": 100
+    },
+    {
+      "slug": "blazing-lion",
+      "name": "Blazing Lion",
+      "variant": "NFR",
+      "priceUsd": 330,
+      "title": "NFR - Blazing Lion",
+      "sellerId": "2027679714237038594",
+      "completedOrders": 252,
+      "favorableRate": 100
+    },
+    {
+      "slug": "blazing-lion",
+      "name": "Blazing Lion",
+      "variant": "MFR",
+      "priceUsd": 1100,
+      "title": "MFR - Blazing Lion",
+      "sellerId": "2027679714237038594",
+      "completedOrders": 252,
+      "favorableRate": 100
+    },
+    {
+      "slug": "blue-dog",
+      "name": "Blue Dog",
+      "variant": "FR",
+      "priceUsd": 10.78,
+      "title": "Blue Dog  FR < Fast Delivery 24/7 Online",
+      "sellerId": "1904773868236410881",
+      "completedOrders": 1041,
+      "favorableRate": 99.89
+    },
+    {
+      "slug": "blue-dog",
+      "name": "Blue Dog",
+      "variant": "FR",
+      "priceUsd": 9.9,
+      "title": "FR - Blue Dog",
+      "sellerId": "2027679714237038594",
+      "completedOrders": 252,
+      "favorableRate": 100
+    },
+    {
+      "slug": "blue-dog",
+      "name": "Blue Dog",
+      "variant": "NFR",
+      "priceUsd": 30.8,
+      "title": "NFR - Blue Dog",
+      "sellerId": "2027679714237038594",
+      "completedOrders": 252,
+      "favorableRate": 100
+    },
+    {
+      "slug": "blue-dog",
+      "name": "Blue Dog",
+      "variant": "MFR",
+      "priceUsd": 100.1,
+      "title": "MFR - Blue Dog",
+      "sellerId": "2027679714237038594",
+      "completedOrders": 252,
+      "favorableRate": 100
+    },
+    {
+      "slug": "blue-dog",
+      "name": "Blue Dog",
+      "variant": "NFR",
+      "priceUsd": 205.65,
+      "title": "Blue Dog NFR",
+      "sellerId": "1898284714027708434",
+      "completedOrders": 52588,
+      "favorableRate": 99.71
+    },
+    {
+      "slug": "blue-dog",
+      "name": "Blue Dog",
+      "variant": "FR",
+      "priceUsd": 81.21,
+      "title": "Blue Dog FR",
+      "sellerId": "1898284714027708434",
+      "completedOrders": 52588,
+      "favorableRate": 99.71
+    },
+    {
+      "slug": "blue-dog",
+      "name": "Blue Dog",
+      "variant": "FR",
+      "priceUsd": 10.92,
+      "title": "Adopt Me > Blue Dog > FR",
+      "sellerId": "1898284713964793959",
+      "completedOrders": 93728,
+      "favorableRate": 99.65
+    },
+    {
+      "slug": "blue-dog",
+      "name": "Blue Dog",
+      "variant": "FR",
+      "priceUsd": 17.46,
+      "title": "FR Blue Dog | Adopt Me",
+      "sellerId": "1898293506178105376",
+      "completedOrders": 265,
+      "favorableRate": 98.37
+    },
+    {
+      "slug": "border-collie",
+      "name": "Border Collie",
+      "variant": "FR",
+      "priceUsd": 9.37,
+      "title": "Border Collie  FR < Fast Delivery 24/7 Online",
+      "sellerId": "1904773868236410881",
+      "completedOrders": 1041,
+      "favorableRate": 99.89
+    },
+    {
+      "slug": "border-collie",
+      "name": "Border Collie",
+      "variant": "MFR",
+      "priceUsd": 91.15,
+      "title": "Border Collie  MFR < Fast Delivery 24/7 Online",
+      "sellerId": "1904773868236410881",
+      "completedOrders": 1041,
+      "favorableRate": 99.89
+    },
+    {
+      "slug": "border-collie",
+      "name": "Border Collie",
+      "variant": "NFR",
+      "priceUsd": 210.67,
+      "title": "Border Collie NFR",
+      "sellerId": "1898284714027708434",
+      "completedOrders": 52588,
+      "favorableRate": 99.71
+    },
+    {
+      "slug": "border-collie",
+      "name": "Border Collie",
+      "variant": "MFR",
+      "priceUsd": 667.97,
+      "title": "Border Collie MFR",
+      "sellerId": "1898284714027708434",
+      "completedOrders": 52588,
+      "favorableRate": 99.71
+    },
+    {
+      "slug": "brachiosaurus",
+      "name": "Brachiosaurus",
+      "variant": "N",
+      "priceUsd": 0.264,
+      "title": "Adopt Me > Brachiosaurus > Normal",
+      "sellerId": "1898284713964793959",
+      "completedOrders": 93728,
+      "favorableRate": 99.65
+    },
+    {
+      "slug": "brown-bear",
+      "name": "Brown Bear",
+      "variant": "FR",
+      "priceUsd": 4.22,
+      "title": "Brown Bear  FR < Fast Delivery 24/7 Online",
+      "sellerId": "1904773868236410881",
+      "completedOrders": 1041,
+      "favorableRate": 99.89
+    },
+    {
+      "slug": "brown-bear",
+      "name": "Brown Bear",
+      "variant": "NFR",
+      "priceUsd": 11.21,
+      "title": "Brown Bear  NFR < Fast Delivery 24/7 Online",
+      "sellerId": "1904773868236410881",
+      "completedOrders": 1041,
+      "favorableRate": 99.89
+    },
+    {
+      "slug": "brown-bear",
+      "name": "Brown Bear",
+      "variant": "NFR",
+      "priceUsd": 11,
+      "title": "NFR - Brown Bear",
+      "sellerId": "2027679714237038594",
+      "completedOrders": 252,
+      "favorableRate": 100
+    },
+    {
+      "slug": "brown-bear",
+      "name": "Brown Bear",
+      "variant": "MFR",
+      "priceUsd": 33,
+      "title": "MFR - Brown Bear",
+      "sellerId": "2027679714237038594",
+      "completedOrders": 252,
+      "favorableRate": 100
+    },
+    {
+      "slug": "brown-bear",
+      "name": "Brown Bear",
+      "variant": "FR",
+      "priceUsd": 4.4,
+      "title": "FR - Brown Bear",
+      "sellerId": "2027679714237038594",
+      "completedOrders": 252,
+      "favorableRate": 100
+    },
+    {
+      "slug": "brown-bear",
+      "name": "Brown Bear",
+      "variant": "FR",
+      "priceUsd": 29.53,
+      "title": "Brown Bear FR",
+      "sellerId": "1898284714027708434",
+      "completedOrders": 52588,
+      "favorableRate": 99.71
+    },
+    {
+      "slug": "brown-bear",
+      "name": "Brown Bear",
+      "variant": "NFR",
+      "priceUsd": 82.26,
+      "title": "Brown Bear NFR",
+      "sellerId": "1898284714027708434",
+      "completedOrders": 52588,
+      "favorableRate": 99.71
+    },
+    {
+      "slug": "brown-bear",
+      "name": "Brown Bear",
+      "variant": "MFR",
+      "priceUsd": 300.7,
+      "title": "Brown Bear MFR",
+      "sellerId": "1898284714027708434",
+      "completedOrders": 52588,
+      "favorableRate": 99.71
+    },
+    {
+      "slug": "brown-bear",
+      "name": "Brown Bear",
+      "variant": "NFR",
+      "priceUsd": 22.44,
+      "title": "NFR Brown Bear | Adopt Me",
+      "sellerId": "1898293506178105376",
+      "completedOrders": 265,
+      "favorableRate": 98.37
+    },
+    {
+      "slug": "cabbit",
+      "name": "Cabbit",
+      "variant": "FR",
+      "priceUsd": 15.4,
+      "title": "FR - Cabbit",
+      "sellerId": "2027679714237038594",
+      "completedOrders": 252,
+      "favorableRate": 100
+    },
+    {
+      "slug": "cabbit",
+      "name": "Cabbit",
+      "variant": "MFR",
+      "priceUsd": 110,
+      "title": "MFR - Cabbit",
+      "sellerId": "2027679714237038594",
+      "completedOrders": 252,
+      "favorableRate": 100
+    },
+    {
+      "slug": "cabbit",
+      "name": "Cabbit",
+      "variant": "NFR",
+      "priceUsd": 35.2,
+      "title": "NFR - Cabbit",
+      "sellerId": "2027679714237038594",
+      "completedOrders": 252,
+      "favorableRate": 100
+    },
+    {
+      "slug": "cabbit",
+      "name": "Cabbit",
+      "variant": "NFR",
+      "priceUsd": 36.96,
+      "title": "Adopt Me > Cabbit > NFR",
+      "sellerId": "1898284713964793959",
+      "completedOrders": 93728,
+      "favorableRate": 99.65
+    },
+    {
+      "slug": "cabbit",
+      "name": "Cabbit",
+      "variant": "FR",
+      "priceUsd": 17.08,
+      "title": "Adopt Me > Cabbit > FR",
+      "sellerId": "1898284713964793959",
+      "completedOrders": 93728,
+      "favorableRate": 99.65
+    },
+    {
+      "slug": "capybara",
+      "name": "Capybara",
+      "variant": "N",
+      "priceUsd": 1.27,
+      "title": "Adopt Me > Capybara > Normal",
+      "sellerId": "1898284713964793959",
+      "completedOrders": 93728,
+      "favorableRate": 99.65
+    },
+    {
+      "slug": "chick",
+      "name": "Chick",
+      "variant": "FR",
+      "priceUsd": 2.16,
+      "title": "Chick  FR < Fast Delivery 24/7 Online",
+      "sellerId": "1904773868236410881",
+      "completedOrders": 1041,
+      "favorableRate": 99.89
+    },
+    {
+      "slug": "chick",
+      "name": "Chick",
+      "variant": "MFR",
+      "priceUsd": 5.1,
+      "title": "Chick  MFR < Fast Delivery 24/7 Online",
+      "sellerId": "1904773868236410881",
+      "completedOrders": 1041,
+      "favorableRate": 99.89
+    },
+    {
+      "slug": "chick",
+      "name": "Chick",
+      "variant": "NFR",
+      "priceUsd": 3.24,
+      "title": "Chick  NFR < Fast Delivery 24/7 Online",
+      "sellerId": "1904773868236410881",
+      "completedOrders": 1041,
+      "favorableRate": 99.89
+    },
+    {
+      "slug": "chick",
+      "name": "Chick",
+      "variant": "FR",
+      "priceUsd": 2.2,
+      "title": "FR - Chick",
+      "sellerId": "2027679714237038594",
+      "completedOrders": 252,
+      "favorableRate": 100
+    },
+    {
+      "slug": "chick",
+      "name": "Chick",
+      "variant": "NFR",
+      "priceUsd": 3.3,
+      "title": "NFR - Chick",
+      "sellerId": "2027679714237038594",
+      "completedOrders": 252,
+      "favorableRate": 100
+    },
+    {
+      "slug": "chick",
+      "name": "Chick",
+      "variant": "MFR",
+      "priceUsd": 5.5,
+      "title": "MFR - Chick",
+      "sellerId": "2027679714237038594",
+      "completedOrders": 252,
+      "favorableRate": 100
+    },
+    {
+      "slug": "chicken",
+      "name": "Chicken",
+      "variant": "NFR",
+      "priceUsd": 6.49,
+      "title": "Chicken  NFR < Fast Delivery 24/7 Online",
+      "sellerId": "1904773868236410881",
+      "completedOrders": 1041,
+      "favorableRate": 99.89
+    },
+    {
+      "slug": "chicken",
+      "name": "Chicken",
+      "variant": "MFR",
+      "priceUsd": 17.95,
+      "title": "Chicken  MFR < Fast Delivery 24/7 Online",
+      "sellerId": "1904773868236410881",
+      "completedOrders": 1041,
+      "favorableRate": 99.89
+    },
+    {
+      "slug": "chicken",
+      "name": "Chicken",
+      "variant": "FR",
+      "priceUsd": 3.33,
+      "title": "Chicken  FR < Fast Delivery 24/7 Online",
+      "sellerId": "1904773868236410881",
+      "completedOrders": 1041,
+      "favorableRate": 99.89
+    },
+    {
+      "slug": "chicken",
+      "name": "Chicken",
+      "variant": "MFR",
+      "priceUsd": 18.7,
+      "title": "MFR - Chicken",
+      "sellerId": "2027679714237038594",
+      "completedOrders": 252,
+      "favorableRate": 100
+    },
+    {
+      "slug": "chicken",
+      "name": "Chicken",
+      "variant": "NFR",
+      "priceUsd": 6.6,
+      "title": "NFR - Chicken",
+      "sellerId": "2027679714237038594",
+      "completedOrders": 252,
+      "favorableRate": 100
+    },
+    {
+      "slug": "chicken",
+      "name": "Chicken",
+      "variant": "FR",
+      "priceUsd": 3.3,
+      "title": "FR - Chicken",
+      "sellerId": "2027679714237038594",
+      "completedOrders": 252,
+      "favorableRate": 100
+    },
+    {
+      "slug": "chicken",
+      "name": "Chicken",
+      "variant": "NFR",
+      "priceUsd": 6.93,
+      "title": "NFR Neon Fly Ride Chicken | Adopt Me",
+      "sellerId": "1898284717194407969",
+      "completedOrders": 1812,
+      "favorableRate": 99.94
+    },
+    {
+      "slug": "chicken",
+      "name": "Chicken",
+      "variant": "N",
+      "priceUsd": 2.31,
+      "title": "Adopt Me > Chicken > Normal",
+      "sellerId": "1898284713964793959",
+      "completedOrders": 93728,
+      "favorableRate": 99.65
+    },
+    {
+      "slug": "cockroach",
+      "name": "Cockroach",
+      "variant": "N",
+      "priceUsd": 0.462,
+      "title": "Adopt Me > Cockroach > Normal",
+      "sellerId": "1898284713964793959",
+      "completedOrders": 93728,
+      "favorableRate": 99.65
+    },
+    {
+      "slug": "cow",
+      "name": "Cow",
+      "variant": "FR",
+      "priceUsd": 17.92,
+      "title": "Cow  FR < Fast Delivery 24/7 Online",
+      "sellerId": "1904773868236410881",
+      "completedOrders": 1041,
+      "favorableRate": 99.89
+    },
+    {
+      "slug": "cow",
+      "name": "Cow",
+      "variant": "FR",
+      "priceUsd": 16.5,
+      "title": "FR - Cow",
+      "sellerId": "2027679714237038594",
+      "completedOrders": 252,
+      "favorableRate": 100
+    },
+    {
+      "slug": "cow",
+      "name": "Cow",
+      "variant": "MFR",
+      "priceUsd": 110,
+      "title": "MFR - Cow",
+      "sellerId": "2027679714237038594",
+      "completedOrders": 252,
+      "favorableRate": 100
+    },
+    {
+      "slug": "cow",
+      "name": "Cow",
+      "variant": "FR",
+      "priceUsd": 10.99,
+      "title": "FR COW - FAST DELIVERY ",
+      "sellerId": "1940001452311719937",
+      "completedOrders": 2083,
+      "favorableRate": 99.61
+    },
+    {
+      "slug": "cow",
+      "name": "Cow",
+      "variant": "NFR",
+      "priceUsd": 37.28,
+      "title": "Cow  NFR < Fast Delivery 24/7 Online",
+      "sellerId": "1904773868236410881",
+      "completedOrders": 1041,
+      "favorableRate": 99.89
+    },
+    {
+      "slug": "cow",
+      "name": "Cow",
+      "variant": "MFR",
+      "priceUsd": 122.89,
+      "title": "Cow  MFR < Fast Delivery 24/7 Online",
+      "sellerId": "1904773868236410881",
+      "completedOrders": 1041,
+      "favorableRate": 99.89
+    },
+    {
+      "slug": "cow",
+      "name": "Cow",
+      "variant": "NFR",
+      "priceUsd": 35.2,
+      "title": "NFR - Cow",
+      "sellerId": "2027679714237038594",
+      "completedOrders": 252,
+      "favorableRate": 100
+    },
+    {
+      "slug": "cow",
+      "name": "Cow",
+      "variant": "MFR",
+      "priceUsd": 1030.89,
+      "title": "Cow MFR",
+      "sellerId": "1898284714027708434",
+      "completedOrders": 52588,
+      "favorableRate": 99.71
+    },
+    {
+      "slug": "cow",
+      "name": "Cow",
+      "variant": "FR",
+      "priceUsd": 140.13,
+      "title": "Cow FR",
+      "sellerId": "1898284714027708434",
+      "completedOrders": 52588,
+      "favorableRate": 99.71
+    },
+    {
+      "slug": "cow",
+      "name": "Cow",
+      "variant": "NFR",
+      "priceUsd": 314.14,
+      "title": "Cow NFR",
+      "sellerId": "1898284714027708434",
+      "completedOrders": 52588,
+      "favorableRate": 99.71
+    },
+    {
+      "slug": "cow",
+      "name": "Cow",
+      "variant": "FR",
+      "priceUsd": 22,
+      "title": "⚡FR COW - ADOPT ME | INSTANT DELIVERY⚡",
+      "sellerId": "1964939282024509441",
+      "completedOrders": 504,
+      "favorableRate": 99.8
+    },
+    {
+      "slug": "crow",
+      "name": "Crow",
+      "variant": "FR",
+      "priceUsd": 83.6,
+      "title": "Crow  FR < Fast Delivery 24/7 Online",
+      "sellerId": "1904773868236410881",
+      "completedOrders": 1041,
+      "favorableRate": 99.89
+    },
+    {
+      "slug": "crow",
+      "name": "Crow",
+      "variant": "FR",
+      "priceUsd": 62.7,
+      "title": "FR CROW - FAST DELIVERY ",
+      "sellerId": "1940001452311719937",
+      "completedOrders": 2083,
+      "favorableRate": 99.61
+    },
+    {
+      "slug": "crow",
+      "name": "Crow",
+      "variant": "NFR",
+      "priceUsd": 180.72,
+      "title": "Crow  NFR < Fast Delivery 24/7 Online",
+      "sellerId": "1904773868236410881",
+      "completedOrders": 1041,
+      "favorableRate": 99.89
+    },
+    {
+      "slug": "crow",
+      "name": "Crow",
+      "variant": "NFR",
+      "priceUsd": 180.4,
+      "title": "NFR - Crow",
+      "sellerId": "2027679714237038594",
+      "completedOrders": 252,
+      "favorableRate": 100
+    },
+    {
+      "slug": "crow",
+      "name": "Crow",
+      "variant": "FR",
+      "priceUsd": 70.4,
+      "title": "FR - Crow",
+      "sellerId": "2027679714237038594",
+      "completedOrders": 252,
+      "favorableRate": 100
+    },
+    {
+      "slug": "crow",
+      "name": "Crow",
+      "variant": "MFR",
+      "priceUsd": 650.1,
+      "title": "MFR - Crow",
+      "sellerId": "2027679714237038594",
+      "completedOrders": 252,
+      "favorableRate": 100
+    },
+    {
+      "slug": "crow",
+      "name": "Crow",
+      "variant": "MFR",
+      "priceUsd": 1085.75,
+      "title": "Crow MFR",
+      "sellerId": "1898284714027708434",
+      "completedOrders": 52588,
+      "favorableRate": 99.71
+    },
+    {
+      "slug": "crow",
+      "name": "Crow",
+      "variant": "NFR",
+      "priceUsd": 1516,
+      "title": "Crow NFR",
+      "sellerId": "1898284714027708434",
+      "completedOrders": 52588,
+      "favorableRate": 99.71
+    },
+    {
+      "slug": "crow",
+      "name": "Crow",
+      "variant": "FR",
+      "priceUsd": 702.64,
+      "title": "Crow FR",
+      "sellerId": "1898284714027708434",
+      "completedOrders": 52588,
+      "favorableRate": 99.71
+    },
+    {
+      "slug": "cryptid",
+      "name": "Cryptid",
+      "variant": "NFR",
+      "priceUsd": 150.7,
+      "title": "NFR - Cryptid",
+      "sellerId": "2027679714237038594",
+      "completedOrders": 252,
+      "favorableRate": 100
+    },
+    {
+      "slug": "cryptid",
+      "name": "Cryptid",
+      "variant": "FR",
+      "priceUsd": 60.5,
+      "title": "FR - Cryptid",
+      "sellerId": "2027679714237038594",
+      "completedOrders": 252,
+      "favorableRate": 100
+    },
+    {
+      "slug": "cryptid",
+      "name": "Cryptid",
+      "variant": "MFR",
+      "priceUsd": 500.5,
+      "title": "MFR - Cryptid",
+      "sellerId": "2027679714237038594",
+      "completedOrders": 252,
+      "favorableRate": 100
+    },
+    {
+      "slug": "dalmatian",
+      "name": "Dalmatian",
+      "variant": "NFR",
+      "priceUsd": 94.82,
+      "title": "Dalmatian  NFR < Fast Delivery 24/7 Online",
+      "sellerId": "1904773868236410881",
+      "completedOrders": 1041,
+      "favorableRate": 99.89
+    },
+    {
+      "slug": "dalmatian",
+      "name": "Dalmatian",
+      "variant": "FR",
+      "priceUsd": 29.09,
+      "title": "Dalmatian  FR < Fast Delivery 24/7 Online",
+      "sellerId": "1904773868236410881",
+      "completedOrders": 1041,
+      "favorableRate": 99.89
+    },
+    {
+      "slug": "dalmatian",
+      "name": "Dalmatian",
+      "variant": "FR",
+      "priceUsd": 25.3,
+      "title": "FR - Dalmatian",
+      "sellerId": "2027679714237038594",
+      "completedOrders": 252,
+      "favorableRate": 100
+    },
+    {
+      "slug": "dalmatian",
+      "name": "Dalmatian",
+      "variant": "NFR",
+      "priceUsd": 90.2,
+      "title": "NFR - Dalmatian",
+      "sellerId": "2027679714237038594",
+      "completedOrders": 252,
+      "favorableRate": 100
+    },
+    {
+      "slug": "dalmatian",
+      "name": "Dalmatian",
+      "variant": "MFR",
+      "priceUsd": 360.8,
+      "title": "MFR - Dalmatian",
+      "sellerId": "2027679714237038594",
+      "completedOrders": 252,
+      "favorableRate": 100
+    },
+    {
+      "slug": "dalmatian",
+      "name": "Dalmatian",
+      "variant": "NFR",
+      "priceUsd": 902.75,
+      "title": "Dalmatian NFR",
+      "sellerId": "1898284714027708434",
+      "completedOrders": 52588,
+      "favorableRate": 99.71
+    },
+    {
+      "slug": "dalmatian",
+      "name": "Dalmatian",
+      "variant": "FR",
+      "priceUsd": 228.33,
+      "title": "Dalmatian FR",
+      "sellerId": "1898284714027708434",
+      "completedOrders": 52588,
+      "favorableRate": 99.71
+    },
+    {
+      "slug": "dalmatian",
+      "name": "Dalmatian",
+      "variant": "FR",
+      "priceUsd": 40.09,
+      "title": "FR Dalmatian | Adopt Me",
+      "sellerId": "1898293506178105376",
+      "completedOrders": 265,
+      "favorableRate": 98.37
+    },
+    {
+      "slug": "drake",
+      "name": "Drake",
+      "variant": "FR",
+      "priceUsd": 2.53,
+      "title": "Drake  FR < Fast Delivery 24/7 Online",
+      "sellerId": "1904773868236410881",
+      "completedOrders": 1041,
+      "favorableRate": 99.89
+    },
+    {
+      "slug": "drake",
+      "name": "Drake",
+      "variant": "NFR",
+      "priceUsd": 4.47,
+      "title": "Drake  NFR < Fast Delivery 24/7 Online",
+      "sellerId": "1904773868236410881",
+      "completedOrders": 1041,
+      "favorableRate": 99.89
+    },
+    {
+      "slug": "elephant",
+      "name": "Elephant",
+      "variant": "NFR",
+      "priceUsd": 27.17,
+      "title": "Elephant  NFR < Fast Delivery 24/7 Online",
+      "sellerId": "1904773868236410881",
+      "completedOrders": 1041,
+      "favorableRate": 99.89
+    },
+    {
+      "slug": "elephant",
+      "name": "Elephant",
+      "variant": "FR",
+      "priceUsd": 10.42,
+      "title": "Elephant  FR < Fast Delivery 24/7 Online",
+      "sellerId": "1904773868236410881",
+      "completedOrders": 1041,
+      "favorableRate": 99.89
+    },
+    {
+      "slug": "elephant",
+      "name": "Elephant",
+      "variant": "MFR",
+      "priceUsd": 90.2,
+      "title": "MFR - Elephant",
+      "sellerId": "2027679714237038594",
+      "completedOrders": 252,
+      "favorableRate": 100
+    },
+    {
+      "slug": "elephant",
+      "name": "Elephant",
+      "variant": "FR",
+      "priceUsd": 8.8,
+      "title": "FR - Elephant",
+      "sellerId": "2027679714237038594",
+      "completedOrders": 252,
+      "favorableRate": 100
+    },
+    {
+      "slug": "elephant",
+      "name": "Elephant",
+      "variant": "NFR",
+      "priceUsd": 25.3,
+      "title": "NFR - Elephant",
+      "sellerId": "2027679714237038594",
+      "completedOrders": 252,
+      "favorableRate": 100
+    },
+    {
+      "slug": "elephant",
+      "name": "Elephant",
+      "variant": "NFR",
+      "priceUsd": 223.32,
+      "title": "Elephant NFR",
+      "sellerId": "1898284714027708434",
+      "completedOrders": 52588,
+      "favorableRate": 99.71
+    },
+    {
+      "slug": "elephant",
+      "name": "Elephant",
+      "variant": "FR",
+      "priceUsd": 77.26,
+      "title": "Elephant FR",
+      "sellerId": "1898284714027708434",
+      "completedOrders": 52588,
+      "favorableRate": 99.71
+    },
+    {
+      "slug": "elephant",
+      "name": "Elephant",
+      "variant": "MFR",
+      "priceUsd": 824.18,
+      "title": "Elephant MFR",
+      "sellerId": "1898284714027708434",
+      "completedOrders": 52588,
+      "favorableRate": 99.71
+    },
+    {
+      "slug": "elephant",
+      "name": "Elephant",
+      "variant": "NFR",
+      "priceUsd": 60.66,
+      "title": "NFR Elephant | Adopt Me",
+      "sellerId": "1898293506178105376",
+      "completedOrders": 265,
+      "favorableRate": 98.37
+    },
+    {
+      "slug": "elephant",
+      "name": "Elephant",
+      "variant": "FR",
+      "priceUsd": 26.71,
+      "title": "FR Elephant | Adopt Me",
+      "sellerId": "1898293506178105376",
+      "completedOrders": 265,
+      "favorableRate": 98.37
+    },
+    {
+      "slug": "flamingo",
+      "name": "Flamingo",
+      "variant": "FR",
+      "priceUsd": 12.72,
+      "title": "Flamingo  FR < Fast Delivery 24/7 Online",
+      "sellerId": "1904773868236410881",
+      "completedOrders": 1041,
+      "favorableRate": 99.89
+    },
+    {
+      "slug": "flamingo",
+      "name": "Flamingo",
+      "variant": "MFR",
+      "priceUsd": 140.8,
+      "title": "MFR - Flamingo",
+      "sellerId": "2027679714237038594",
+      "completedOrders": 252,
+      "favorableRate": 100
+    },
+    {
+      "slug": "flamingo",
+      "name": "Flamingo",
+      "variant": "FR",
+      "priceUsd": 9.9,
+      "title": "FR - Flamingo",
+      "sellerId": "2027679714237038594",
+      "completedOrders": 252,
+      "favorableRate": 100
+    },
+    {
+      "slug": "flamingo",
+      "name": "Flamingo",
+      "variant": "NFR",
+      "priceUsd": 33,
+      "title": "NFR - Flamingo",
+      "sellerId": "2027679714237038594",
+      "completedOrders": 252,
+      "favorableRate": 100
+    },
+    {
+      "slug": "flamingo",
+      "name": "Flamingo",
+      "variant": "NFR",
+      "priceUsd": 295.3,
+      "title": "Flamingo NFR",
+      "sellerId": "1898284714027708434",
+      "completedOrders": 52588,
+      "favorableRate": 99.71
+    },
+    {
+      "slug": "flamingo",
+      "name": "Flamingo",
+      "variant": "FR",
+      "priceUsd": 93.87,
+      "title": "Flamingo FR",
+      "sellerId": "1898284714027708434",
+      "completedOrders": 52588,
+      "favorableRate": 99.71
+    },
+    {
+      "slug": "frost-dragon",
+      "name": "Frost Dragon",
+      "variant": "FR",
+      "priceUsd": 80.3,
+      "title": "⭐ FR Frost Dragon | Adopt Me | Instant Delivery ⭐",
+      "sellerId": "1973768650671128577",
+      "completedOrders": 6414,
+      "favorableRate": 99.9
+    },
+    {
+      "slug": "frost-dragon",
+      "name": "Frost Dragon",
+      "variant": "FR",
+      "priceUsd": 110,
+      "title": "Frost Dragon  FR < Fast Delivery 24/7 Online",
+      "sellerId": "1904773868236410881",
+      "completedOrders": 1041,
+      "favorableRate": 99.89
+    },
+    {
+      "slug": "frost-dragon",
+      "name": "Frost Dragon",
+      "variant": "NFR",
+      "priceUsd": 247.25,
+      "title": "Frost Dragon  NFR < Fast Delivery 24/7 Online",
+      "sellerId": "1904773868236410881",
+      "completedOrders": 1041,
+      "favorableRate": 99.89
+    },
+    {
+      "slug": "frost-dragon",
+      "name": "Frost Dragon",
+      "variant": "MFR",
+      "priceUsd": 717.24,
+      "title": "Frost Dragon  MFR < Fast Delivery 24/7 Online",
+      "sellerId": "1904773868236410881",
+      "completedOrders": 1041,
+      "favorableRate": 99.89
+    },
+    {
+      "slug": "frost-dragon",
+      "name": "Frost Dragon",
+      "variant": "MFR",
+      "priceUsd": 700.7,
+      "title": "MFR - Frost Dragon",
+      "sellerId": "2027679714237038594",
+      "completedOrders": 252,
+      "favorableRate": 100
+    },
+    {
+      "slug": "frost-dragon",
+      "name": "Frost Dragon",
+      "variant": "FR",
+      "priceUsd": 121,
+      "title": "FR - Frost Dragon",
+      "sellerId": "2027679714237038594",
+      "completedOrders": 252,
+      "favorableRate": 100
+    },
+    {
+      "slug": "frost-dragon",
+      "name": "Frost Dragon",
+      "variant": "NFR",
+      "priceUsd": 231,
+      "title": "NFR - Frost Dragon",
+      "sellerId": "2027679714237038594",
+      "completedOrders": 252,
+      "favorableRate": 100
+    },
+    {
+      "slug": "frost-dragon",
+      "name": "Frost Dragon",
+      "variant": "MFR",
+      "priceUsd": 1154.99,
+      "title": "Frost Dragon MFR",
+      "sellerId": "1898284714027708434",
+      "completedOrders": 52589,
+      "favorableRate": 99.71
+    },
+    {
+      "slug": "frost-dragon",
+      "name": "Frost Dragon",
+      "variant": "NFR",
+      "priceUsd": 375.12,
+      "title": "Frost Dragon NFR",
+      "sellerId": "1898284714027708434",
+      "completedOrders": 52589,
+      "favorableRate": 99.71
+    },
+    {
+      "slug": "frost-dragon",
+      "name": "Frost Dragon",
+      "variant": "FR",
+      "priceUsd": 1028.25,
+      "title": "Frost Dragon FR",
+      "sellerId": "1898284714027708434",
+      "completedOrders": 52589,
+      "favorableRate": 99.71
+    },
+    {
+      "slug": "frost-dragon",
+      "name": "Frost Dragon",
+      "variant": "FR",
+      "priceUsd": 85.8,
+      "title": "FR Fly Ride Frost Dragon | Adopt Me",
+      "sellerId": "1898284717194407969",
+      "completedOrders": 1812,
+      "favorableRate": 99.94
+    },
+    {
+      "slug": "frost-dragon",
+      "name": "Frost Dragon",
+      "variant": "FR",
+      "priceUsd": 82.49,
+      "title": "FR FROST DRAGON - ADOPT ME ",
+      "sellerId": "1940001452311719937",
+      "completedOrders": 2083,
+      "favorableRate": 99.61
+    },
+    {
+      "slug": "frost-dragon",
+      "name": "Frost Dragon",
+      "variant": "FR",
+      "priceUsd": 149.89,
+      "title": "Adopt Me > Frost Dragon > FR",
+      "sellerId": "1898284713964793959",
+      "completedOrders": 93728,
+      "favorableRate": 99.65
+    },
+    {
+      "slug": "frost-dragon",
+      "name": "Frost Dragon",
+      "variant": "FR",
+      "priceUsd": 169.4,
+      "title": "FR Frost Dragon | Adopt Me",
+      "sellerId": "1898293506178105376",
+      "completedOrders": 265,
+      "favorableRate": 98.37
+    },
+    {
+      "slug": "frost-dragon",
+      "name": "Frost Dragon",
+      "variant": "NFR",
+      "priceUsd": 299.2,
+      "title": "NFR Frost Dragon | Adopt Me",
+      "sellerId": "1898293506178105376",
+      "completedOrders": 265,
+      "favorableRate": 98.37
+    },
+    {
+      "slug": "frost-dragon",
+      "name": "Frost Dragon",
+      "variant": "NFR",
+      "priceUsd": 247.46,
+      "title": "Adopt Me > Frost Dragon > NFR",
+      "sellerId": "1898284713964793959",
+      "completedOrders": 93728,
+      "favorableRate": 99.65
+    },
+    {
+      "slug": "giant-anteater",
+      "name": "Giant Anteater",
+      "variant": "N",
+      "priceUsd": 5.42,
+      "title": "Adopt Me > Giant Anteater > Normal",
+      "sellerId": "1898284713964793959",
+      "completedOrders": 93728,
+      "favorableRate": 99.65
+    },
+    {
+      "slug": "giant-panda",
+      "name": "Giant Panda",
+      "variant": "NFR",
+      "priceUsd": 280.5,
+      "title": "NFR - Giant Panda",
+      "sellerId": "2027679714237038594",
+      "completedOrders": 252,
+      "favorableRate": 100
+    },
+    {
+      "slug": "giant-panda",
+      "name": "Giant Panda",
+      "variant": "FR",
+      "priceUsd": 77,
+      "title": "FR - Giant Panda",
+      "sellerId": "2027679714237038594",
+      "completedOrders": 252,
+      "favorableRate": 100
+    },
+    {
+      "slug": "giant-panda",
+      "name": "Giant Panda",
+      "variant": "MFR",
+      "priceUsd": 1100,
+      "title": "MFR - Giant Panda",
+      "sellerId": "2027679714237038594",
+      "completedOrders": 252,
+      "favorableRate": 100
+    },
+    {
+      "slug": "giraffe",
+      "name": "Giraffe",
+      "variant": "MFR",
+      "priceUsd": 1430,
+      "title": "Giraffe  MFR < Fast Delivery 24/7 Online",
+      "sellerId": "1904773868236410881",
+      "completedOrders": 1041,
+      "favorableRate": 99.89
+    },
+    {
+      "slug": "giraffe",
+      "name": "Giraffe",
+      "variant": "NFR",
+      "priceUsd": 439.78,
+      "title": "Giraffe  NFR < Fast Delivery 24/7 Online",
+      "sellerId": "1904773868236410881",
+      "completedOrders": 1041,
+      "favorableRate": 99.89
+    },
+    {
+      "slug": "giraffe",
+      "name": "Giraffe",
+      "variant": "FR",
+      "priceUsd": 198,
+      "title": "Giraffe  FR < Fast Delivery 24/7 Online",
+      "sellerId": "1904773868236410881",
+      "completedOrders": 1041,
+      "favorableRate": 99.89
+    },
+    {
+      "slug": "giraffe",
+      "name": "Giraffe",
+      "variant": "FR",
+      "priceUsd": 180.4,
+      "title": "FR - Giraffe",
+      "sellerId": "2027679714237038594",
+      "completedOrders": 252,
+      "favorableRate": 100
+    },
+    {
+      "slug": "giraffe",
+      "name": "Giraffe",
+      "variant": "MFR",
+      "priceUsd": 1400.3,
+      "title": "MFR - Giraffe",
+      "sellerId": "2027679714237038594",
+      "completedOrders": 252,
+      "favorableRate": 100
+    },
+    {
+      "slug": "giraffe",
+      "name": "Giraffe",
+      "variant": "NFR",
+      "priceUsd": 400.4,
+      "title": "NFR - Giraffe",
+      "sellerId": "2027679714237038594",
+      "completedOrders": 252,
+      "favorableRate": 100
+    },
+    {
+      "slug": "giraffe",
+      "name": "Giraffe",
+      "variant": "MFR",
+      "priceUsd": 1516.73,
+      "title": "Giraffe MFR",
+      "sellerId": "1898284714027708434",
+      "completedOrders": 52589,
+      "favorableRate": 99.71
+    },
+    {
+      "slug": "giraffe",
+      "name": "Giraffe",
+      "variant": "NFR",
+      "priceUsd": 436.01,
+      "title": "Giraffe NFR",
+      "sellerId": "1898284714027708434",
+      "completedOrders": 52589,
+      "favorableRate": 99.71
+    },
+    {
+      "slug": "giraffe",
+      "name": "Giraffe",
+      "variant": "FR",
+      "priceUsd": 1652.31,
+      "title": "Giraffe FR",
+      "sellerId": "1898284714027708434",
+      "completedOrders": 52589,
+      "favorableRate": 99.71
+    },
+    {
+      "slug": "giraffe",
+      "name": "Giraffe",
+      "variant": "FR",
+      "priceUsd": 194.3,
+      "title": "FR Giraffe | Adopt Me",
+      "sellerId": "1898293506178105376",
+      "completedOrders": 265,
+      "favorableRate": 98.37
+    },
+    {
+      "slug": "goose",
+      "name": "Goose",
+      "variant": "FR",
+      "priceUsd": 17.52,
+      "title": "Goose  FR < Fast Delivery 24/7 Online",
+      "sellerId": "1904773868236410881",
+      "completedOrders": 1041,
+      "favorableRate": 99.89
+    },
+    {
+      "slug": "goose",
+      "name": "Goose",
+      "variant": "MFR",
+      "priceUsd": 169.72,
+      "title": "Goose  MFR < Fast Delivery 24/7 Online",
+      "sellerId": "1904773868236410881",
+      "completedOrders": 1041,
+      "favorableRate": 99.89
+    },
+    {
+      "slug": "goose",
+      "name": "Goose",
+      "variant": "NFR",
+      "priceUsd": 42.94,
+      "title": "Goose  NFR < Fast Delivery 24/7 Online",
+      "sellerId": "1904773868236410881",
+      "completedOrders": 1041,
+      "favorableRate": 99.89
+    },
+    {
+      "slug": "goose",
+      "name": "Goose",
+      "variant": "FR",
+      "priceUsd": 16.5,
+      "title": "FR - Goose",
+      "sellerId": "2027679714237038594",
+      "completedOrders": 252,
+      "favorableRate": 100
+    },
+    {
+      "slug": "goose",
+      "name": "Goose",
+      "variant": "NFR",
+      "priceUsd": 40.7,
+      "title": "NFR - Goose",
+      "sellerId": "2027679714237038594",
+      "completedOrders": 252,
+      "favorableRate": 100
+    },
+    {
+      "slug": "goose",
+      "name": "Goose",
+      "variant": "MFR",
+      "priceUsd": 154,
+      "title": "MFR - Goose",
+      "sellerId": "2027679714237038594",
+      "completedOrders": 252,
+      "favorableRate": 100
+    },
+    {
+      "slug": "goose",
+      "name": "Goose",
+      "variant": "FR",
+      "priceUsd": 137.11,
+      "title": "Goose FR",
+      "sellerId": "1898284714027708434",
+      "completedOrders": 52589,
+      "favorableRate": 99.71
+    },
+    {
+      "slug": "goose",
+      "name": "Goose",
+      "variant": "NFR",
+      "priceUsd": 379.92,
+      "title": "Goose NFR",
+      "sellerId": "1898284714027708434",
+      "completedOrders": 52589,
+      "favorableRate": 99.71
+    },
+    {
+      "slug": "goose",
+      "name": "Goose",
+      "variant": "MFR",
+      "priceUsd": 1441.13,
+      "title": "Goose MFR",
+      "sellerId": "1898284714027708434",
+      "completedOrders": 52589,
+      "favorableRate": 99.71
+    },
+    {
+      "slug": "goose",
+      "name": "Goose",
+      "variant": "N",
+      "priceUsd": 20.46,
+      "title": "Adopt Me > Goose > Normal",
+      "sellerId": "1898284713964793959",
+      "completedOrders": 93728,
+      "favorableRate": 99.65
+    },
+    {
+      "slug": "harp-seal",
+      "name": "Harp Seal",
+      "variant": "FR",
+      "priceUsd": 5.5,
+      "title": "FR - Harp Seal",
+      "sellerId": "2027679714237038594",
+      "completedOrders": 252,
+      "favorableRate": 100
+    },
+    {
+      "slug": "harp-seal",
+      "name": "Harp Seal",
+      "variant": "MFR",
+      "priceUsd": 20.9,
+      "title": "MFR - Harp Seal",
+      "sellerId": "2027679714237038594",
+      "completedOrders": 252,
+      "favorableRate": 100
+    },
+    {
+      "slug": "harp-seal",
+      "name": "Harp Seal",
+      "variant": "NFR",
+      "priceUsd": 8.8,
+      "title": "NFR - Harp Seal",
+      "sellerId": "2027679714237038594",
+      "completedOrders": 252,
+      "favorableRate": 100
+    },
+    {
+      "slug": "harp-seal",
+      "name": "Harp Seal",
+      "variant": "N",
+      "priceUsd": 1.62,
+      "title": "Adopt Me > Harp Seal > Normal",
+      "sellerId": "1898284713964793959",
+      "completedOrders": 93728,
+      "favorableRate": 99.65
+    },
+    {
+      "slug": "hedgehog",
+      "name": "Hedgehog",
+      "variant": "NFR",
+      "priceUsd": 125.69,
+      "title": "Hedgehog  NFR < Fast Delivery 24/7 Online",
+      "sellerId": "1904773868236410881",
+      "completedOrders": 1041,
+      "favorableRate": 99.89
+    },
+    {
+      "slug": "hedgehog",
+      "name": "Hedgehog",
+      "variant": "FR",
+      "priceUsd": 32.55,
+      "title": "Hedgehog  FR < Fast Delivery 24/7 Online",
+      "sellerId": "1904773868236410881",
+      "completedOrders": 1041,
+      "favorableRate": 99.89
+    },
+    {
+      "slug": "hedgehog",
+      "name": "Hedgehog",
+      "variant": "FR",
+      "priceUsd": 30.8,
+      "title": "FR - Hedgehog",
+      "sellerId": "2027679714237038594",
+      "completedOrders": 252,
+      "favorableRate": 100
+    },
+    {
+      "slug": "hedgehog",
+      "name": "Hedgehog",
+      "variant": "NFR",
+      "priceUsd": 121,
+      "title": "NFR - Hedgehog",
+      "sellerId": "2027679714237038594",
+      "completedOrders": 252,
+      "favorableRate": 100
+    },
+    {
+      "slug": "hedgehog",
+      "name": "Hedgehog",
+      "variant": "MFR",
+      "priceUsd": 520.3,
+      "title": "MFR - Hedgehog",
+      "sellerId": "2027679714237038594",
+      "completedOrders": 252,
+      "favorableRate": 100
+    },
+    {
+      "slug": "hedgehog",
+      "name": "Hedgehog",
+      "variant": "FR",
+      "priceUsd": 274.2,
+      "title": "Hedgehog FR",
+      "sellerId": "1898284714027708434",
+      "completedOrders": 52589,
+      "favorableRate": 99.71
+    },
+    {
+      "slug": "hedgehog",
+      "name": "Hedgehog",
+      "variant": "NFR",
+      "priceUsd": 1036.95,
+      "title": "Hedgehog NFR",
+      "sellerId": "1898284714027708434",
+      "completedOrders": 52589,
+      "favorableRate": 99.71
+    },
+    {
+      "slug": "hedgehog",
+      "name": "Hedgehog",
+      "variant": "FR",
+      "priceUsd": 56.54,
+      "title": "FR Hedgehog | Adopt Me",
+      "sellerId": "1898293506178105376",
+      "completedOrders": 265,
+      "favorableRate": 98.37
+    },
+    {
+      "slug": "hyena",
+      "name": "Hyena",
+      "variant": "FR",
+      "priceUsd": 4.7,
+      "title": "Hyena  FR < Fast Delivery 24/7 Online",
+      "sellerId": "1904773868236410881",
+      "completedOrders": 1041,
+      "favorableRate": 99.89
+    },
+    {
+      "slug": "hyena",
+      "name": "Hyena",
+      "variant": "MFR",
+      "priceUsd": 40.7,
+      "title": "MFR - Hyena",
+      "sellerId": "2027679714237038594",
+      "completedOrders": 252,
+      "favorableRate": 100
+    },
+    {
+      "slug": "hyena",
+      "name": "Hyena",
+      "variant": "NFR",
+      "priceUsd": 12.1,
+      "title": "NFR - Hyena",
+      "sellerId": "2027679714237038594",
+      "completedOrders": 252,
+      "favorableRate": 100
+    },
+    {
+      "slug": "hyena",
+      "name": "Hyena",
+      "variant": "FR",
+      "priceUsd": 5.5,
+      "title": "FR - Hyena",
+      "sellerId": "2027679714237038594",
+      "completedOrders": 252,
+      "favorableRate": 100
+    },
+    {
+      "slug": "hyena",
+      "name": "Hyena",
+      "variant": "MFR",
+      "priceUsd": 382.69,
+      "title": "Hyena MFR",
+      "sellerId": "1898284714027708434",
+      "completedOrders": 52589,
+      "favorableRate": 99.71
+    },
+    {
+      "slug": "hyena",
+      "name": "Hyena",
+      "variant": "FR",
+      "priceUsd": 39.68,
+      "title": "Hyena FR",
+      "sellerId": "1898284714027708434",
+      "completedOrders": 52589,
+      "favorableRate": 99.71
+    },
+    {
+      "slug": "hyena",
+      "name": "Hyena",
+      "variant": "NFR",
+      "priceUsd": 101.78,
+      "title": "Hyena NFR",
+      "sellerId": "1898284714027708434",
+      "completedOrders": 52589,
+      "favorableRate": 99.71
+    },
+    {
+      "slug": "lion",
+      "name": "Lion",
+      "variant": "FR",
+      "priceUsd": 7.7,
+      "title": "FR - Lion",
+      "sellerId": "2027679714237038594",
+      "completedOrders": 252,
+      "favorableRate": 100
+    },
+    {
+      "slug": "lion",
+      "name": "Lion",
+      "variant": "FR",
+      "priceUsd": 7.62,
+      "title": "Lion  FR < Fast Delivery 24/7 Online",
+      "sellerId": "1904773868236410881",
+      "completedOrders": 1041,
+      "favorableRate": 99.89
+    },
+    {
+      "slug": "lion",
+      "name": "Lion",
+      "variant": "NFR",
+      "priceUsd": 23.48,
+      "title": "Lion  NFR < Fast Delivery 24/7 Online",
+      "sellerId": "1904773868236410881",
+      "completedOrders": 1041,
+      "favorableRate": 99.89
+    },
+    {
+      "slug": "lion",
+      "name": "Lion",
+      "variant": "MFR",
+      "priceUsd": 88,
+      "title": "MFR - Lion",
+      "sellerId": "2027679714237038594",
+      "completedOrders": 252,
+      "favorableRate": 100
+    },
+    {
+      "slug": "lion",
+      "name": "Lion",
+      "variant": "NFR",
+      "priceUsd": 23.1,
+      "title": "NFR - Lion",
+      "sellerId": "2027679714237038594",
+      "completedOrders": 252,
+      "favorableRate": 100
+    },
+    {
+      "slug": "meerkat",
+      "name": "Meerkat",
+      "variant": "MFR",
+      "priceUsd": 101.2,
+      "title": "MFR Meerkat | Adopt Me",
+      "sellerId": "1898293506178105376",
+      "completedOrders": 265,
+      "favorableRate": 98.37
+    },
+    {
+      "slug": "meerkat",
+      "name": "Meerkat",
+      "variant": "FR",
+      "priceUsd": 11.88,
+      "title": "FR Meerkat | Adopt Me",
+      "sellerId": "1898293506178105376",
+      "completedOrders": 265,
+      "favorableRate": 98.37
+    },
+    {
+      "slug": "meerkat",
+      "name": "Meerkat",
+      "variant": "NFR",
+      "priceUsd": 26.71,
+      "title": "NFR Meerkat | Adopt Me",
+      "sellerId": "1898293506178105376",
+      "completedOrders": 265,
+      "favorableRate": 98.37
+    },
+    {
+      "slug": "meerkat",
+      "name": "Meerkat",
+      "variant": "FR",
+      "priceUsd": 5.1,
+      "title": "Meerkat  FR < Fast Delivery 24/7 Online",
+      "sellerId": "1904773868236410881",
+      "completedOrders": 1041,
+      "favorableRate": 99.89
+    },
+    {
+      "slug": "meerkat",
+      "name": "Meerkat",
+      "variant": "NFR",
+      "priceUsd": 13.67,
+      "title": "Meerkat  NFR < Fast Delivery 24/7 Online",
+      "sellerId": "1904773868236410881",
+      "completedOrders": 1041,
+      "favorableRate": 99.89
+    },
+    {
+      "slug": "meerkat",
+      "name": "Meerkat",
+      "variant": "FR",
+      "priceUsd": 5.5,
+      "title": "FR - Meerkat",
+      "sellerId": "2027679714237038594",
+      "completedOrders": 252,
+      "favorableRate": 100
+    },
+    {
+      "slug": "meerkat",
+      "name": "Meerkat",
+      "variant": "NFR",
+      "priceUsd": 13.2,
+      "title": "NFR - Meerkat",
+      "sellerId": "2027679714237038594",
+      "completedOrders": 252,
+      "favorableRate": 100
+    },
+    {
+      "slug": "meerkat",
+      "name": "Meerkat",
+      "variant": "MFR",
+      "priceUsd": 45.1,
+      "title": "MFR - Meerkat",
+      "sellerId": "2027679714237038594",
+      "completedOrders": 252,
+      "favorableRate": 100
+    },
+    {
+      "slug": "meerkat",
+      "name": "Meerkat",
+      "variant": "NFR",
+      "priceUsd": 105.46,
+      "title": "Meerkat NFR",
+      "sellerId": "1898284714027708434",
+      "completedOrders": 52589,
+      "favorableRate": 99.71
+    },
+    {
+      "slug": "meerkat",
+      "name": "Meerkat",
+      "variant": "FR",
+      "priceUsd": 35.2,
+      "title": "Meerkat FR",
+      "sellerId": "1898284714027708434",
+      "completedOrders": 52589,
+      "favorableRate": 99.71
+    },
+    {
+      "slug": "meerkat",
+      "name": "Meerkat",
+      "variant": "N",
+      "priceUsd": 4.42,
+      "title": "Adopt Me > Meerkat > Normal",
+      "sellerId": "1898284713964793959",
+      "completedOrders": 93728,
+      "favorableRate": 99.65
+    },
+    {
+      "slug": "mini-pig",
+      "name": "Mini Pig",
+      "variant": "NFR",
+      "priceUsd": 60.5,
+      "title": "NFR - Mini Pig",
+      "sellerId": "2027679714237038594",
+      "completedOrders": 252,
+      "favorableRate": 100
+    },
+    {
+      "slug": "mini-pig",
+      "name": "Mini Pig",
+      "variant": "FR",
+      "priceUsd": 20.9,
+      "title": "FR - Mini Pig",
+      "sellerId": "2027679714237038594",
+      "completedOrders": 252,
+      "favorableRate": 100
+    },
+    {
+      "slug": "mini-pig",
+      "name": "Mini Pig",
+      "variant": "MFR",
+      "priceUsd": 200.2,
+      "title": "MFR - Mini Pig",
+      "sellerId": "2027679714237038594",
+      "completedOrders": 252,
+      "favorableRate": 100
+    },
+    {
+      "slug": "munchkin-cat",
+      "name": "Munchkin Cat",
+      "variant": "FR",
+      "priceUsd": 8.8,
+      "title": "FR - Munchkin Cat",
+      "sellerId": "2027679714237038594",
+      "completedOrders": 252,
+      "favorableRate": 100
+    },
+    {
+      "slug": "munchkin-cat",
+      "name": "Munchkin Cat",
+      "variant": "NFR",
+      "priceUsd": 18.7,
+      "title": "NFR - Munchkin Cat",
+      "sellerId": "2027679714237038594",
+      "completedOrders": 252,
+      "favorableRate": 100
+    },
+    {
+      "slug": "munchkin-cat",
+      "name": "Munchkin Cat",
+      "variant": "MFR",
+      "priceUsd": 40.7,
+      "title": "MFR - Munchkin Cat",
+      "sellerId": "2027679714237038594",
+      "completedOrders": 252,
+      "favorableRate": 100
+    },
+    {
+      "slug": "munchkin-cat",
+      "name": "Munchkin Cat",
+      "variant": "N",
+      "priceUsd": 7.18,
+      "title": "Adopt Me > Munchkin Cat > Normal",
+      "sellerId": "1898284713964793959",
+      "completedOrders": 93728,
+      "favorableRate": 99.65
+    },
+    {
+      "slug": "owl",
+      "name": "Owl",
+      "variant": "MFR",
+      "priceUsd": 1215.25,
+      "title": "Owl  MFR < Fast Delivery 24/7 Online",
+      "sellerId": "1904773868236410881",
+      "completedOrders": 1041,
+      "favorableRate": 99.89
+    },
+    {
+      "slug": "owl",
+      "name": "Owl",
+      "variant": "NFR",
+      "priceUsd": 272.4,
+      "title": "Owl  NFR < Fast Delivery 24/7 Online",
+      "sellerId": "1904773868236410881",
+      "completedOrders": 1041,
+      "favorableRate": 99.89
+    },
+    {
+      "slug": "owl",
+      "name": "Owl",
+      "variant": "FR",
+      "priceUsd": 102.15,
+      "title": "Owl FR < Fast Delivery 24/7 Online",
+      "sellerId": "1904773868236410881",
+      "completedOrders": 1041,
+      "favorableRate": 99.89
+    },
+    {
+      "slug": "owl",
+      "name": "Owl",
+      "variant": "FR",
+      "priceUsd": 99,
+      "title": "FR - Owl",
+      "sellerId": "2027679714237038594",
+      "completedOrders": 252,
+      "favorableRate": 100
+    },
+    {
+      "slug": "owl",
+      "name": "Owl",
+      "variant": "NFR",
+      "priceUsd": 250.8,
+      "title": "NFR - Owl",
+      "sellerId": "2027679714237038594",
+      "completedOrders": 252,
+      "favorableRate": 100
+    },
+    {
+      "slug": "owl",
+      "name": "Owl",
+      "variant": "MFR",
+      "priceUsd": 1090.1,
+      "title": "MFR - Owl",
+      "sellerId": "2027679714237038594",
+      "completedOrders": 252,
+      "favorableRate": 100
+    },
+    {
+      "slug": "owl",
+      "name": "Owl",
+      "variant": "NFR",
+      "priceUsd": 234.76,
+      "title": "Owl NFR",
+      "sellerId": "1898284714027708434",
+      "completedOrders": 52589,
+      "favorableRate": 99.71
+    },
+    {
+      "slug": "owl",
+      "name": "Owl",
+      "variant": "MFR",
+      "priceUsd": 1221.88,
+      "title": "Owl MFR",
+      "sellerId": "1898284714027708434",
+      "completedOrders": 52589,
+      "favorableRate": 99.71
+    },
+    {
+      "slug": "owl",
+      "name": "Owl",
+      "variant": "FR",
+      "priceUsd": 838.56,
+      "title": "Owl FR",
+      "sellerId": "1898284714027708434",
+      "completedOrders": 52589,
+      "favorableRate": 99.71
+    },
+    {
+      "slug": "parrot",
+      "name": "Parrot",
+      "variant": "MFR",
+      "priceUsd": 492.41,
+      "title": "Parrot MFR < Fast Delivery 24/7 Online",
+      "sellerId": "1904773868236410881",
+      "completedOrders": 1041,
+      "favorableRate": 99.89
+    },
+    {
+      "slug": "parrot",
+      "name": "Parrot",
+      "variant": "NFR",
+      "priceUsd": 178.11,
+      "title": "Parrot  NFR < Fast Delivery 24/7 Online",
+      "sellerId": "1904773868236410881",
+      "completedOrders": 1041,
+      "favorableRate": 99.89
+    },
+    {
+      "slug": "parrot",
+      "name": "Parrot",
+      "variant": "FR",
+      "priceUsd": 82.5,
+      "title": "Parrot  FR < Fast Delivery 24/7 Online",
+      "sellerId": "1904773868236410881",
+      "completedOrders": 1041,
+      "favorableRate": 99.89
+    },
+    {
+      "slug": "parrot",
+      "name": "Parrot",
+      "variant": "NFR",
+      "priceUsd": 170.5,
+      "title": "NFR - Parrot",
+      "sellerId": "2027679714237038594",
+      "completedOrders": 252,
+      "favorableRate": 100
+    },
+    {
+      "slug": "parrot",
+      "name": "Parrot",
+      "variant": "FR",
+      "priceUsd": 80.3,
+      "title": "FR - Parrot",
+      "sellerId": "2027679714237038594",
+      "completedOrders": 252,
+      "favorableRate": 100
+    },
+    {
+      "slug": "parrot",
+      "name": "Parrot",
+      "variant": "MFR",
+      "priceUsd": 600.6,
+      "title": "MFR - Parrot",
+      "sellerId": "2027679714237038594",
+      "completedOrders": 252,
+      "favorableRate": 100
+    },
+    {
+      "slug": "parrot",
+      "name": "Parrot",
+      "variant": "NFR",
+      "priceUsd": 1494.12,
+      "title": "Parrot NFR",
+      "sellerId": "1898284714027708434",
+      "completedOrders": 52589,
+      "favorableRate": 99.71
+    },
+    {
+      "slug": "parrot",
+      "name": "Parrot",
+      "variant": "MFR",
+      "priceUsd": 624.06,
+      "title": "Parrot MFR",
+      "sellerId": "1898284714027708434",
+      "completedOrders": 52589,
+      "favorableRate": 99.71
+    },
+    {
+      "slug": "parrot",
+      "name": "Parrot",
+      "variant": "FR",
+      "priceUsd": 722.54,
+      "title": "Parrot FR",
+      "sellerId": "1898284714027708434",
+      "completedOrders": 52589,
+      "favorableRate": 99.71
+    },
+    {
+      "slug": "parrot",
+      "name": "Parrot",
+      "variant": "FR",
+      "priceUsd": 57.2,
+      "title": "Adopt me-  FR parrot🦜-fast delivery",
+      "sellerId": "1931527686321360897",
+      "completedOrders": 191,
+      "favorableRate": 98.92
+    },
+    {
+      "slug": "parrot",
+      "name": "Parrot",
+      "variant": "FR",
+      "priceUsd": 71.5,
+      "title": "FR parrot",
+      "sellerId": "1908250348590493697",
+      "completedOrders": 4076,
+      "favorableRate": 99.34
+    },
+    {
+      "slug": "parrot",
+      "name": "Parrot",
+      "variant": "NFR",
+      "priceUsd": 194.3,
+      "title": "NFR Parrot | Adopt Me",
+      "sellerId": "1898293506178105376",
+      "completedOrders": 265,
+      "favorableRate": 98.37
+    },
+    {
+      "slug": "parrot",
+      "name": "Parrot",
+      "variant": "FR",
+      "priceUsd": 101.2,
+      "title": "FR Parrot | Adopt Me",
+      "sellerId": "1898293506178105376",
+      "completedOrders": 265,
+      "favorableRate": 98.37
+    },
+    {
+      "slug": "pelican",
+      "name": "Pelican",
+      "variant": "FR",
+      "priceUsd": 21.4,
+      "title": "Pelican  FR < Fast Delivery 24/7 Online",
+      "sellerId": "1904773868236410881",
+      "completedOrders": 1041,
+      "favorableRate": 99.89
+    },
+    {
+      "slug": "pelican",
+      "name": "Pelican",
+      "variant": "NFR",
+      "priceUsd": 111.06,
+      "title": "Pelican  NFR < Fast Delivery 24/7 Online",
+      "sellerId": "1904773868236410881",
+      "completedOrders": 1041,
+      "favorableRate": 99.89
+    },
+    {
+      "slug": "peppermint-penguin",
+      "name": "Peppermint Penguin",
+      "variant": "FR",
+      "priceUsd": 14.26,
+      "title": "Peppermint Penguin  FR < Fast Delivery 24/7 Online",
+      "sellerId": "1904773868236410881",
+      "completedOrders": 1041,
+      "favorableRate": 99.89
+    },
+    {
+      "slug": "peppermint-penguin",
+      "name": "Peppermint Penguin",
+      "variant": "MFR",
+      "priceUsd": 201.13,
+      "title": "Peppermint Penguin  MFR < Fast Delivery 24/7 Online",
+      "sellerId": "1904773868236410881",
+      "completedOrders": 1041,
+      "favorableRate": 99.89
+    },
+    {
+      "slug": "peppermint-penguin",
+      "name": "Peppermint Penguin",
+      "variant": "NFR",
+      "priceUsd": 40.86,
+      "title": "Peppermint Penguin  NFR < Fast Delivery 24/7 Online",
+      "sellerId": "1904773868236410881",
+      "completedOrders": 1041,
+      "favorableRate": 99.89
+    },
+    {
+      "slug": "peppermint-penguin",
+      "name": "Peppermint Penguin",
+      "variant": "MFR",
+      "priceUsd": 180.4,
+      "title": "MFR - Peppermint Penguin",
+      "sellerId": "2027679714237038594",
+      "completedOrders": 252,
+      "favorableRate": 100
+    },
+    {
+      "slug": "peppermint-penguin",
+      "name": "Peppermint Penguin",
+      "variant": "NFR",
+      "priceUsd": 40.7,
+      "title": "NFR - Peppermint Penguin",
+      "sellerId": "2027679714237038594",
+      "completedOrders": 252,
+      "favorableRate": 100
+    },
+    {
+      "slug": "peppermint-penguin",
+      "name": "Peppermint Penguin",
+      "variant": "FR",
+      "priceUsd": 12.1,
+      "title": "FR - Peppermint Penguin",
+      "sellerId": "2027679714237038594",
+      "completedOrders": 252,
+      "favorableRate": 100
+    },
+    {
+      "slug": "pig",
+      "name": "Pig",
+      "variant": "FR",
+      "priceUsd": 49.44,
+      "title": "Pig FR",
+      "sellerId": "1898284714027708434",
+      "completedOrders": 52589,
+      "favorableRate": 99.71
+    },
+    {
+      "slug": "pig",
+      "name": "Pig",
+      "variant": "MFR",
+      "priceUsd": 43.16,
+      "title": "Pig  MFR < Fast Delivery 24/7 Online",
+      "sellerId": "1904773868236410881",
+      "completedOrders": 1041,
+      "favorableRate": 99.89
+    },
+    {
+      "slug": "pig",
+      "name": "Pig",
+      "variant": "FR",
+      "priceUsd": 6.24,
+      "title": "Pig  FR < Fast Delivery 24/7 Online",
+      "sellerId": "1904773868236410881",
+      "completedOrders": 1041,
+      "favorableRate": 99.89
+    },
+    {
+      "slug": "pig",
+      "name": "Pig",
+      "variant": "NFR",
+      "priceUsd": 13.62,
+      "title": "Pig  NFR < Fast Delivery 24/7 Online",
+      "sellerId": "1904773868236410881",
+      "completedOrders": 1041,
+      "favorableRate": 99.89
+    },
+    {
+      "slug": "pig",
+      "name": "Pig",
+      "variant": "NFR",
+      "priceUsd": 12.1,
+      "title": "NFR - Pig",
+      "sellerId": "2027679714237038594",
+      "completedOrders": 252,
+      "favorableRate": 100
+    },
+    {
+      "slug": "pig",
+      "name": "Pig",
+      "variant": "FR",
+      "priceUsd": 6.6,
+      "title": "FR - Pig",
+      "sellerId": "2027679714237038594",
+      "completedOrders": 252,
+      "favorableRate": 100
+    },
+    {
+      "slug": "pig",
+      "name": "Pig",
+      "variant": "MFR",
+      "priceUsd": 40.7,
+      "title": "MFR - Pig",
+      "sellerId": "2027679714237038594",
+      "completedOrders": 252,
+      "favorableRate": 100
+    },
+    {
+      "slug": "pig",
+      "name": "Pig",
+      "variant": "MFR",
+      "priceUsd": 362,
+      "title": "Pig MFR",
+      "sellerId": "1898284714027708434",
+      "completedOrders": 52589,
+      "favorableRate": 99.71
+    },
+    {
+      "slug": "pig",
+      "name": "Pig",
+      "variant": "NFR",
+      "priceUsd": 99.8,
+      "title": "Pig NFR",
+      "sellerId": "1898284714027708434",
+      "completedOrders": 52589,
+      "favorableRate": 99.71
+    },
+    {
+      "slug": "pink-cat",
+      "name": "Pink Cat",
+      "variant": "MFR",
+      "priceUsd": 48.2,
+      "title": "Pink Cat  MFR < Fast Delivery 24/7 Online",
+      "sellerId": "1904773868236410881",
+      "completedOrders": 1041,
+      "favorableRate": 99.89
+    },
+    {
+      "slug": "pink-cat",
+      "name": "Pink Cat",
+      "variant": "NFR",
+      "priceUsd": 14.98,
+      "title": "Pink Cat  NFR < Fast Delivery 24/7 Online",
+      "sellerId": "1904773868236410881",
+      "completedOrders": 1041,
+      "favorableRate": 99.89
+    },
+    {
+      "slug": "pink-cat",
+      "name": "Pink Cat",
+      "variant": "FR",
+      "priceUsd": 7.41,
+      "title": "Pink Cat  FR < Fast Delivery 24/7 Online",
+      "sellerId": "1904773868236410881",
+      "completedOrders": 1041,
+      "favorableRate": 99.89
+    },
+    {
+      "slug": "pink-cat",
+      "name": "Pink Cat",
+      "variant": "FR",
+      "priceUsd": 6.6,
+      "title": "FR - Pink Cat",
+      "sellerId": "2027679714237038594",
+      "completedOrders": 252,
+      "favorableRate": 100
+    },
+    {
+      "slug": "pink-cat",
+      "name": "Pink Cat",
+      "variant": "NFR",
+      "priceUsd": 15.4,
+      "title": "NFR - Pink Cat",
+      "sellerId": "2027679714237038594",
+      "completedOrders": 252,
+      "favorableRate": 100
+    },
+    {
+      "slug": "pink-cat",
+      "name": "Pink Cat",
+      "variant": "MFR",
+      "priceUsd": 50.6,
+      "title": "MFR - Pink Cat",
+      "sellerId": "2027679714237038594",
+      "completedOrders": 252,
+      "favorableRate": 100
+    },
+    {
+      "slug": "pink-cat",
+      "name": "Pink Cat",
+      "variant": "NFR",
+      "priceUsd": 110.74,
+      "title": "Pink Cat NFR",
+      "sellerId": "1898284714027708434",
+      "completedOrders": 52589,
+      "favorableRate": 99.71
+    },
+    {
+      "slug": "pink-cat",
+      "name": "Pink Cat",
+      "variant": "FR",
+      "priceUsd": 48.51,
+      "title": "Pink Cat FR",
+      "sellerId": "1898284714027708434",
+      "completedOrders": 52589,
+      "favorableRate": 99.71
+    },
+    {
+      "slug": "pink-cat",
+      "name": "Pink Cat",
+      "variant": "N",
+      "priceUsd": 6.11,
+      "title": "Adopt Me > Pink Cat > Normal",
+      "sellerId": "1898284713964793959",
+      "completedOrders": 93728,
+      "favorableRate": 99.65
+    },
+    {
+      "slug": "pink-cat",
+      "name": "Pink Cat",
+      "variant": "FR",
+      "priceUsd": 7.42,
+      "title": "Adopt Me > Pink Cat > FR",
+      "sellerId": "1898284713964793959",
+      "completedOrders": 93728,
+      "favorableRate": 99.65
+    },
+    {
+      "slug": "pink-cat",
+      "name": "Pink Cat",
+      "variant": "NFR",
+      "priceUsd": 20.55,
+      "title": "NFR Pink Cat | Adopt Me",
+      "sellerId": "1898293506178105376",
+      "completedOrders": 265,
+      "favorableRate": 98.37
+    },
+    {
+      "slug": "polar-bear",
+      "name": "Polar Bear",
+      "variant": "NFR",
+      "priceUsd": 26.71,
+      "title": "NFR Polar Bear | Adopt Me",
+      "sellerId": "1898293506178105376",
+      "completedOrders": 265,
+      "favorableRate": 98.37
+    },
+    {
+      "slug": "polar-bear",
+      "name": "Polar Bear",
+      "variant": "NFR",
+      "priceUsd": 9.53,
+      "title": "Polar Bear  NFR < Fast Delivery 24/7 Online",
+      "sellerId": "1904773868236410881",
+      "completedOrders": 1041,
+      "favorableRate": 99.89
+    },
+    {
+      "slug": "polar-bear",
+      "name": "Polar Bear",
+      "variant": "FR",
+      "priceUsd": 3.96,
+      "title": "Polar Bear  FR < Fast Delivery 24/7 Online",
+      "sellerId": "1904773868236410881",
+      "completedOrders": 1041,
+      "favorableRate": 99.89
+    },
+    {
+      "slug": "polar-bear",
+      "name": "Polar Bear",
+      "variant": "MFR",
+      "priceUsd": 32.31,
+      "title": "Polar Bear  MFR < Fast Delivery 24/7 Online",
+      "sellerId": "1904773868236410881",
+      "completedOrders": 1041,
+      "favorableRate": 99.89
+    },
+    {
+      "slug": "polar-bear",
+      "name": "Polar Bear",
+      "variant": "NFR",
+      "priceUsd": 8.8,
+      "title": "NFR - Polar Bear",
+      "sellerId": "2027679714237038594",
+      "completedOrders": 252,
+      "favorableRate": 100
+    },
+    {
+      "slug": "polar-bear",
+      "name": "Polar Bear",
+      "variant": "MFR",
+      "priceUsd": 28.6,
+      "title": "MFR - Polar Bear",
+      "sellerId": "2027679714237038594",
+      "completedOrders": 252,
+      "favorableRate": 100
+    },
+    {
+      "slug": "polar-bear",
+      "name": "Polar Bear",
+      "variant": "FR",
+      "priceUsd": 3.3,
+      "title": "FR - Polar Bear",
+      "sellerId": "2027679714237038594",
+      "completedOrders": 252,
+      "favorableRate": 100
+    },
+    {
+      "slug": "polar-bear",
+      "name": "Polar Bear",
+      "variant": "MFR",
+      "priceUsd": 258.52,
+      "title": "Polar Bear MFR",
+      "sellerId": "1898284714027708434",
+      "completedOrders": 52589,
+      "favorableRate": 99.71
+    },
+    {
+      "slug": "polar-bear",
+      "name": "Polar Bear",
+      "variant": "FR",
+      "priceUsd": 22.68,
+      "title": "Polar Bear FR",
+      "sellerId": "1898284714027708434",
+      "completedOrders": 52589,
+      "favorableRate": 99.71
+    },
+    {
+      "slug": "polar-bear",
+      "name": "Polar Bear",
+      "variant": "NFR",
+      "priceUsd": 65.39,
+      "title": "Polar Bear NFR",
+      "sellerId": "1898284714027708434",
+      "completedOrders": 52589,
+      "favorableRate": 99.71
+    },
+    {
+      "slug": "polar-bear",
+      "name": "Polar Bear",
+      "variant": "MFR",
+      "priceUsd": 70.92,
+      "title": "MFR Polar Bear | Adopt Me",
+      "sellerId": "1898293506178105376",
+      "completedOrders": 265,
+      "favorableRate": 98.37
+    },
+    {
+      "slug": "quokka",
+      "name": "Quokka",
+      "variant": "MFR",
+      "priceUsd": 9.88,
+      "title": "Quokka  MFR < Fast Delivery 24/7 Online",
+      "sellerId": "1904773868236410881",
+      "completedOrders": 1041,
+      "favorableRate": 99.89
+    },
+    {
+      "slug": "quokka",
+      "name": "Quokka",
+      "variant": "N",
+      "priceUsd": 0.869,
+      "title": "Adopt Me > Quokka > Normal",
+      "sellerId": "1898284713964793959",
+      "completedOrders": 93728,
+      "favorableRate": 99.65
+    },
+    {
+      "slug": "robin",
+      "name": "Robin",
+      "variant": "FR",
+      "priceUsd": 2.79,
+      "title": "Robin  FR < Fast Delivery 24/7 Online",
+      "sellerId": "1904773868236410881",
+      "completedOrders": 1041,
+      "favorableRate": 99.89
+    },
+    {
+      "slug": "robin",
+      "name": "Robin",
+      "variant": "NFR",
+      "priceUsd": 2.03,
+      "title": "Robin  NFR < Fast Delivery 24/7 Online",
+      "sellerId": "1904773868236410881",
+      "completedOrders": 1041,
+      "favorableRate": 99.89
+    },
+    {
+      "slug": "robin",
+      "name": "Robin",
+      "variant": "MFR",
+      "priceUsd": 14.01,
+      "title": "Robin  MFR < Fast Delivery 24/7 Online",
+      "sellerId": "1904773868236410881",
+      "completedOrders": 1041,
+      "favorableRate": 99.89
+    },
+    {
+      "slug": "robin",
+      "name": "Robin",
+      "variant": "N",
+      "priceUsd": 0.264,
+      "title": "Adopt Me > Robin > Normal",
+      "sellerId": "1898284713964793959",
+      "completedOrders": 93728,
+      "favorableRate": 99.65
+    },
+    {
+      "slug": "shadow-dragon",
+      "name": "Shadow Dragon",
+      "variant": "MFR",
+      "priceUsd": 1413.94,
+      "title": "Shadow Dragon  MFR < Fast Delivery 24/7 Online",
+      "sellerId": "1904773868236410881",
+      "completedOrders": 1041,
+      "favorableRate": 99.89
+    },
+    {
+      "slug": "shadow-dragon",
+      "name": "Shadow Dragon",
+      "variant": "FR",
+      "priceUsd": 305.91,
+      "title": "Shadow Dragon  FR < Fast Delivery 24/7 Online",
+      "sellerId": "1904773868236410881",
+      "completedOrders": 1041,
+      "favorableRate": 99.89
+    },
+    {
+      "slug": "shadow-dragon",
+      "name": "Shadow Dragon",
+      "variant": "NFR",
+      "priceUsd": 565.7,
+      "title": "Shadow Dragon  NFR < Fast Delivery 24/7 Online",
+      "sellerId": "1904773868236410881",
+      "completedOrders": 1041,
+      "favorableRate": 99.89
+    },
+    {
+      "slug": "shadow-dragon",
+      "name": "Shadow Dragon",
+      "variant": "FR",
+      "priceUsd": 290.4,
+      "title": "FR - Shadow Dragon",
+      "sellerId": "2027679714237038594",
+      "completedOrders": 252,
+      "favorableRate": 100
+    },
+    {
+      "slug": "shadow-dragon",
+      "name": "Shadow Dragon",
+      "variant": "NFR",
+      "priceUsd": 520.3,
+      "title": "NFR - Shadow Dragon",
+      "sellerId": "2027679714237038594",
+      "completedOrders": 252,
+      "favorableRate": 100
+    },
+    {
+      "slug": "shadow-dragon",
+      "name": "Shadow Dragon",
+      "variant": "MFR",
+      "priceUsd": 1300.2,
+      "title": "MFR - Shadow Dragon",
+      "sellerId": "2027679714237038594",
+      "completedOrders": 252,
+      "favorableRate": 100
+    },
+    {
+      "slug": "shadow-dragon",
+      "name": "Shadow Dragon",
+      "variant": "MFR",
+      "priceUsd": 1526.79,
+      "title": "Shadow Dragon MFR",
+      "sellerId": "1898284714027708434",
+      "completedOrders": 52589,
+      "favorableRate": 99.71
+    },
+    {
+      "slug": "shadow-dragon",
+      "name": "Shadow Dragon",
+      "variant": "NFR",
+      "priceUsd": 560.86,
+      "title": "Shadow Dragon NFR",
+      "sellerId": "1898284714027708434",
+      "completedOrders": 52589,
+      "favorableRate": 99.71
+    },
+    {
+      "slug": "shadow-dragon",
+      "name": "Shadow Dragon",
+      "variant": "FR",
+      "priceUsd": 426.33,
+      "title": "Shadow Dragon FR",
+      "sellerId": "1898284714027708434",
+      "completedOrders": 52589,
+      "favorableRate": 99.71
+    },
+    {
+      "slug": "shadow-dragon",
+      "name": "Shadow Dragon",
+      "variant": "FR",
+      "priceUsd": 337.87,
+      "title": "Adopt Me > Shadow Dragon > FR",
+      "sellerId": "1898284713964793959",
+      "completedOrders": 93728,
+      "favorableRate": 99.65
+    },
+    {
+      "slug": "shrew",
+      "name": "Shrew",
+      "variant": "MFR",
+      "priceUsd": 386.79,
+      "title": "Shrew MFR",
+      "sellerId": "1898284714027708434",
+      "completedOrders": 52589,
+      "favorableRate": 99.71
+    },
+    {
+      "slug": "shrew",
+      "name": "Shrew",
+      "variant": "FR",
+      "priceUsd": 29.14,
+      "title": "Shrew FR",
+      "sellerId": "1898284714027708434",
+      "completedOrders": 52589,
+      "favorableRate": 99.71
+    },
+    {
+      "slug": "shrew",
+      "name": "Shrew",
+      "variant": "NFR",
+      "priceUsd": 87.54,
+      "title": "Shrew NFR",
+      "sellerId": "1898284714027708434",
+      "completedOrders": 52589,
+      "favorableRate": 99.71
+    },
+    {
+      "slug": "siamese-cat",
+      "name": "Siamese Cat",
+      "variant": "FR",
+      "priceUsd": 16.14,
+      "title": "Adopt Me > Siamese Cat > FR",
+      "sellerId": "1898284713964793959",
+      "completedOrders": 93728,
+      "favorableRate": 99.65
+    },
+    {
+      "slug": "siamese-cat",
+      "name": "Siamese Cat",
+      "variant": "FR",
+      "priceUsd": 15.4,
+      "title": "FR - Siamese Cat",
+      "sellerId": "2027679714237038594",
+      "completedOrders": 252,
+      "favorableRate": 100
+    },
+    {
+      "slug": "siamese-cat",
+      "name": "Siamese Cat",
+      "variant": "MFR",
+      "priceUsd": 80.3,
+      "title": "MFR - Siamese Cat",
+      "sellerId": "2027679714237038594",
+      "completedOrders": 252,
+      "favorableRate": 100
+    },
+    {
+      "slug": "siamese-cat",
+      "name": "Siamese Cat",
+      "variant": "NFR",
+      "priceUsd": 30.8,
+      "title": "NFR - Siamese Cat",
+      "sellerId": "2027679714237038594",
+      "completedOrders": 252,
+      "favorableRate": 100
+    },
+    {
+      "slug": "siamese-cat",
+      "name": "Siamese Cat",
+      "variant": "N",
+      "priceUsd": 14.06,
+      "title": "Adopt Me > Siamese Cat > Normal",
+      "sellerId": "1898284713964793959",
+      "completedOrders": 93728,
+      "favorableRate": 99.65
+    },
+    {
+      "slug": "silly-duck",
+      "name": "Silly Duck",
+      "variant": "NFR",
+      "priceUsd": 7.7,
+      "title": "NFR - Silly Duck",
+      "sellerId": "2027679714237038594",
+      "completedOrders": 252,
+      "favorableRate": 100
+    },
+    {
+      "slug": "silly-duck",
+      "name": "Silly Duck",
+      "variant": "MFR",
+      "priceUsd": 20.9,
+      "title": "MFR - Silly Duck",
+      "sellerId": "2027679714237038594",
+      "completedOrders": 252,
+      "favorableRate": 100
+    },
+    {
+      "slug": "silly-duck",
+      "name": "Silly Duck",
+      "variant": "FR",
+      "priceUsd": 3.3,
+      "title": "FR - Silly Duck",
+      "sellerId": "2027679714237038594",
+      "completedOrders": 252,
+      "favorableRate": 100
+    },
+    {
+      "slug": "silly-duck",
+      "name": "Silly Duck",
+      "variant": "NFR",
+      "priceUsd": 41.4,
+      "title": "Silly Duck NFR",
+      "sellerId": "1898284714027708434",
+      "completedOrders": 52589,
+      "favorableRate": 99.71
+    },
+    {
+      "slug": "silly-duck",
+      "name": "Silly Duck",
+      "variant": "MFR",
+      "priceUsd": 131.83,
+      "title": "Silly Duck MFR",
+      "sellerId": "1898284714027708434",
+      "completedOrders": 52589,
+      "favorableRate": 99.71
+    },
+    {
+      "slug": "silly-duck",
+      "name": "Silly Duck",
+      "variant": "N",
+      "priceUsd": 1.45,
+      "title": "Adopt Me > Silly Duck > Normal",
+      "sellerId": "1898284713964793959",
+      "completedOrders": 93728,
+      "favorableRate": 99.65
+    }
+  ]
+}

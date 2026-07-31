@@ -13,6 +13,7 @@ import CalculatorClient, {
   type CalcMutation,
   type CalcPrice,
 } from './_CalculatorClient'
+import AdoptMeCalculatorPage from './_AdoptMeCalculatorPage'
 
 export const revalidate = 3600
 
@@ -69,6 +70,30 @@ export async function generateMetadata({
   params,
 }: PageProps): Promise<Metadata> {
   const { gameSlug } = await params
+
+  if (gameSlug === 'adopt-me') {
+    const monthYear = new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' })
+    const title = `Adopt Me WFL Calculator (${monthYear}) — Win, Fair or Loss + Real Money`
+    return {
+      title,
+      description: `Free Adopt Me WFL calculator: add both sides of a trade, pick each pet's variant, and see if it's a Win, Fair or Loss — in trade value AND in real money (USD). The only Adopt Me trade checker that shows the cash side. Updated ${monthYear}.`,
+      alternates: { canonical: '/adopt-me/calculator' },
+      keywords: [
+        'adopt me wfl calculator',
+        'adopt me trade calculator',
+        'adopt me win fair loss',
+        'is this adopt me trade fair',
+        'adopt me trade value calculator',
+        'adopt me trade calculator real money',
+      ],
+      openGraph: {
+        title,
+        description: 'Check whether an Adopt Me trade is a Win, Fair or Loss — in trade value and in real money.',
+        url: '/adopt-me/calculator',
+        type: 'website',
+      },
+    }
+  }
 
   if (gameSlug !== 'steal-a-brainrot') {
     return { title: 'Calculator Not Found' }
@@ -271,6 +296,12 @@ export default async function SabCalculatorPage({
 }: PageProps) {
   const [{ gameSlug }, resolvedSearchParams] =
     await Promise.all([params, searchParams])
+
+  // Adopt Me WFL calculator (dual trade + cash verdict). ?tab=cash on Adopt Me
+  // deep-links to the values list instead of a separate cash tab (see nav).
+  if (gameSlug === 'adopt-me') {
+    return <AdoptMeCalculatorPage />
+  }
 
   if (gameSlug !== 'steal-a-brainrot') notFound()
 

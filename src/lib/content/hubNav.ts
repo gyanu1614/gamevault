@@ -31,6 +31,8 @@ export interface HubNavData {
 
 const GAME_TOOLS: Record<string, Array<'values' | 'calculator'>> = {
   'steal-a-brainrot': ['values', 'calculator'],
+  // Adopt Me: values + the WFL calculator are both live now.
+  'adopt-me': ['values', 'calculator'],
 }
 
 export async function getHubNavData(gameSlug: string): Promise<HubNavData> {

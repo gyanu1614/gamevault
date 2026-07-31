@@ -1,0 +1,909 @@
+{
+  "source": "adoptmevalues.app",
+  "collector_version": 1,
+  "collected_at": "2026-07-31T03:27:19.939Z",
+  "enriched": true,
+  "pet_count": 60,
+  "pets": [
+    {
+      "slug": "african-wild-dog",
+      "name": "African Wild Dog",
+      "rarity": "ultra_rare",
+      "rarity_raw": "ultra rare",
+      "image_url": "https://fetch-images.b-cdn.net/images/pets/African%20Wild%20Dog.png",
+      "trade_values": {
+        "N": 152,
+        "NEON": 521,
+        "MEGA": 1900
+      },
+      "obtainability": null,
+      "demand_rank": 1,
+      "demand_trend": null
+    },
+    {
+      "slug": "bat-dragon",
+      "name": "Bat Dragon",
+      "rarity": "legendary",
+      "rarity_raw": "legendary",
+      "image_url": "https://fetch-images.b-cdn.net/images/pets/Bat%20Dragon.png",
+      "trade_values": {
+        "N": 905,
+        "NEON": 2100,
+        "MEGA": 7200
+      },
+      "obtainability": null,
+      "demand_rank": 1,
+      "demand_trend": null
+    },
+    {
+      "slug": "goose",
+      "name": "Goose",
+      "rarity": "rare",
+      "rarity_raw": "rare",
+      "image_url": "https://fetch-images.b-cdn.net/images/pets/Goose.png",
+      "trade_values": {
+        "N": 37,
+        "NEON": 97,
+        "MEGA": 320
+      },
+      "obtainability": null,
+      "demand_rank": 1,
+      "demand_trend": null
+    },
+    {
+      "slug": "chicken",
+      "name": "Chicken",
+      "rarity": "common",
+      "rarity_raw": "common",
+      "image_url": "https://fetch-images.b-cdn.net/images/pets/Chicken.png",
+      "trade_values": {
+        "N": 1,
+        "NEON": 7,
+        "MEGA": 30
+      },
+      "obtainability": null,
+      "demand_rank": 1,
+      "demand_trend": null
+    },
+    {
+      "slug": "blue-dog",
+      "name": "Blue Dog",
+      "rarity": "uncommon",
+      "rarity_raw": "uncommon",
+      "image_url": "https://fetch-images.b-cdn.net/images/pets/Blue%20Dog.png",
+      "trade_values": {
+        "N": 13,
+        "NEON": 45,
+        "MEGA": 182
+      },
+      "obtainability": null,
+      "demand_rank": 1,
+      "demand_trend": null
+    },
+    {
+      "slug": "hedgehog",
+      "name": "Hedgehog",
+      "rarity": "ultra_rare",
+      "rarity_raw": "ultra rare",
+      "image_url": "https://fetch-images.b-cdn.net/images/pets/Hedgehog.png",
+      "trade_values": {
+        "N": 66,
+        "NEON": 248,
+        "MEGA": 985
+      },
+      "obtainability": null,
+      "demand_rank": 2,
+      "demand_trend": null
+    },
+    {
+      "slug": "shadow-dragon",
+      "name": "Shadow Dragon",
+      "rarity": "legendary",
+      "rarity_raw": "legendary",
+      "image_url": "https://fetch-images.b-cdn.net/images/pets/Shadow%20Dragon.png",
+      "trade_values": {
+        "N": 662,
+        "NEON": 1300,
+        "MEGA": 3700
+      },
+      "obtainability": null,
+      "demand_rank": 2,
+      "demand_trend": null
+    },
+    {
+      "slug": "cow",
+      "name": "Cow",
+      "rarity": "rare",
+      "rarity_raw": "rare",
+      "image_url": "https://fetch-images.b-cdn.net/images/pets/Cow.png",
+      "trade_values": {
+        "N": 35,
+        "NEON": 75,
+        "MEGA": 218
+      },
+      "obtainability": null,
+      "demand_rank": 2,
+      "demand_trend": null
+    },
+    {
+      "slug": "ash-zebra",
+      "name": "Ash Zebra",
+      "rarity": "common",
+      "rarity_raw": "common",
+      "image_url": "https://fetch-images.b-cdn.net/images/pets/Ash%20Zebra.png",
+      "trade_values": {
+        "N": 0,
+        "NEON": 3,
+        "MEGA": 12
+      },
+      "obtainability": null,
+      "demand_rank": 2,
+      "demand_trend": null
+    },
+    {
+      "slug": "pink-cat",
+      "name": "Pink Cat",
+      "rarity": "uncommon",
+      "rarity_raw": "uncommon",
+      "image_url": "https://fetch-images.b-cdn.net/images/pets/Pink%20Cat.png",
+      "trade_values": {
+        "N": 8,
+        "NEON": 24,
+        "MEGA": 90
+      },
+      "obtainability": null,
+      "demand_rank": 2,
+      "demand_trend": null
+    },
+    {
+      "slug": "dalmatian",
+      "name": "Dalmatian",
+      "rarity": "ultra_rare",
+      "rarity_raw": "ultra rare",
+      "image_url": "https://fetch-images.b-cdn.net/images/pets/Dalmatian.png",
+      "trade_values": {
+        "N": 58,
+        "NEON": 197,
+        "MEGA": 780
+      },
+      "obtainability": null,
+      "demand_rank": 3,
+      "demand_trend": null
+    },
+    {
+      "slug": "giraffe",
+      "name": "Giraffe",
+      "rarity": "legendary",
+      "rarity_raw": "legendary",
+      "image_url": "https://fetch-images.b-cdn.net/images/pets/Giraffe.png",
+      "trade_values": {
+        "N": 448,
+        "NEON": 902,
+        "MEGA": 3400
+      },
+      "obtainability": null,
+      "demand_rank": 3,
+      "demand_trend": null
+    },
+    {
+      "slug": "elephant",
+      "name": "Elephant",
+      "rarity": "rare",
+      "rarity_raw": "rare",
+      "image_url": "https://fetch-images.b-cdn.net/images/pets/Elephant.png",
+      "trade_values": {
+        "N": 17,
+        "NEON": 53,
+        "MEGA": 190
+      },
+      "obtainability": null,
+      "demand_rank": 3,
+      "demand_trend": null
+    },
+    {
+      "slug": "chick",
+      "name": "Chick",
+      "rarity": "common",
+      "rarity_raw": "common",
+      "image_url": "https://fetch-images.b-cdn.net/images/pets/Chick.png",
+      "trade_values": {
+        "N": 0,
+        "NEON": 2,
+        "MEGA": 10
+      },
+      "obtainability": null,
+      "demand_rank": 3,
+      "demand_trend": null
+    },
+    {
+      "slug": "meerkat",
+      "name": "Meerkat",
+      "rarity": "uncommon",
+      "rarity_raw": "uncommon",
+      "image_url": "https://fetch-images.b-cdn.net/images/pets/Meerkat.png",
+      "trade_values": {
+        "N": 5,
+        "NEON": 24,
+        "MEGA": 96
+      },
+      "obtainability": null,
+      "demand_rank": 3,
+      "demand_trend": null
+    },
+    {
+      "slug": "mini-pig",
+      "name": "Mini Pig",
+      "rarity": "ultra_rare",
+      "rarity_raw": "ultra rare",
+      "image_url": "https://fetch-images.b-cdn.net/images/pets/Mini%20Pig.png",
+      "trade_values": {
+        "N": 42,
+        "NEON": 120,
+        "MEGA": 423
+      },
+      "obtainability": null,
+      "demand_rank": 4,
+      "demand_trend": null
+    },
+    {
+      "slug": "frost-dragon",
+      "name": "Frost Dragon",
+      "rarity": "legendary",
+      "rarity_raw": "legendary",
+      "image_url": "https://fetch-images.b-cdn.net/images/pets/Frost%20Dragon.png",
+      "trade_values": {
+        "N": 304,
+        "NEON": 543,
+        "MEGA": 1600
+      },
+      "obtainability": null,
+      "demand_rank": 4,
+      "demand_trend": null
+    },
+    {
+      "slug": "border-collie",
+      "name": "Border Collie",
+      "rarity": "rare",
+      "rarity_raw": "rare",
+      "image_url": "https://fetch-images.b-cdn.net/images/pets/Border%20Collie.png",
+      "trade_values": {
+        "N": 12,
+        "NEON": 46,
+        "MEGA": 180
+      },
+      "obtainability": null,
+      "demand_rank": 4,
+      "demand_trend": null
+    },
+    {
+      "slug": "silly-duck",
+      "name": "Silly Duck",
+      "rarity": "uncommon",
+      "rarity_raw": "uncommon",
+      "image_url": "https://fetch-images.b-cdn.net/images/pets/Silly%20Duck.png",
+      "trade_values": {
+        "N": 2,
+        "NEON": 9,
+        "MEGA": 35
+      },
+      "obtainability": null,
+      "demand_rank": 4,
+      "demand_trend": null
+    },
+    {
+      "slug": "dirty-ducky",
+      "name": "Dirty Ducky",
+      "rarity": "common",
+      "rarity_raw": "common",
+      "image_url": "https://fetch-images.b-cdn.net/images/pets/Dirty%20Ducky.png",
+      "trade_values": {
+        "N": 0,
+        "NEON": 2,
+        "MEGA": 7
+      },
+      "obtainability": null,
+      "demand_rank": 4,
+      "demand_trend": null
+    },
+    {
+      "slug": "pelican",
+      "name": "Pelican",
+      "rarity": "ultra_rare",
+      "rarity_raw": "ultra rare",
+      "image_url": "https://fetch-images.b-cdn.net/images/pets/Pelican.png",
+      "trade_values": {
+        "N": 36,
+        "NEON": 142,
+        "MEGA": 568
+      },
+      "obtainability": null,
+      "demand_rank": 5,
+      "demand_trend": null
+    },
+    {
+      "slug": "owl",
+      "name": "Owl",
+      "rarity": "legendary",
+      "rarity_raw": "legendary",
+      "image_url": "https://fetch-images.b-cdn.net/images/pets/Owl.png",
+      "trade_values": {
+        "N": 239,
+        "NEON": 593,
+        "MEGA": 2200
+      },
+      "obtainability": null,
+      "demand_rank": 5,
+      "demand_trend": null
+    },
+    {
+      "slug": "malaysian-tapir",
+      "name": "Malaysian Tapir",
+      "rarity": "common",
+      "rarity_raw": "common",
+      "image_url": "https://fetch-images.b-cdn.net/images/pets/Malaysian%20Tapir.png",
+      "trade_values": {
+        "N": 0,
+        "NEON": 2,
+        "MEGA": 7
+      },
+      "obtainability": null,
+      "demand_rank": 5,
+      "demand_trend": null
+    },
+    {
+      "slug": "wild-boar",
+      "name": "Wild Boar",
+      "rarity": "uncommon",
+      "rarity_raw": "uncommon",
+      "image_url": "https://fetch-images.b-cdn.net/images/pets/Wild%20Boar.png",
+      "trade_values": {
+        "N": 2,
+        "NEON": 8,
+        "MEGA": 31
+      },
+      "obtainability": null,
+      "demand_rank": 5,
+      "demand_trend": null
+    },
+    {
+      "slug": "munchkin-cat",
+      "name": "Munchkin Cat",
+      "rarity": "rare",
+      "rarity_raw": "rare",
+      "image_url": "https://fetch-images.b-cdn.net/images/pets/Munchkin%20Cat.png",
+      "trade_values": {
+        "N": 9,
+        "NEON": 30,
+        "MEGA": 68
+      },
+      "obtainability": null,
+      "demand_rank": 5,
+      "demand_trend": null
+    },
+    {
+      "slug": "peppermint-penguin",
+      "name": "Peppermint Penguin",
+      "rarity": "ultra_rare",
+      "rarity_raw": "ultra rare",
+      "image_url": "https://fetch-images.b-cdn.net/images/pets/Peppermint%20Penguin.png",
+      "trade_values": {
+        "N": 27,
+        "NEON": 95,
+        "MEGA": 380
+      },
+      "obtainability": null,
+      "demand_rank": 6,
+      "demand_trend": null
+    },
+    {
+      "slug": "parrot",
+      "name": "Parrot",
+      "rarity": "legendary",
+      "rarity_raw": "legendary",
+      "image_url": "https://fetch-images.b-cdn.net/images/pets/Parrot.png",
+      "trade_values": {
+        "N": 190,
+        "NEON": 390,
+        "MEGA": 1100
+      },
+      "obtainability": null,
+      "demand_rank": 6,
+      "demand_trend": null
+    },
+    {
+      "slug": "pig",
+      "name": "Pig",
+      "rarity": "rare",
+      "rarity_raw": "rare",
+      "image_url": "https://fetch-images.b-cdn.net/images/pets/Pig.png",
+      "trade_values": {
+        "N": 9,
+        "NEON": 22,
+        "MEGA": 85
+      },
+      "obtainability": null,
+      "demand_rank": 6,
+      "demand_trend": null
+    },
+    {
+      "slug": "coyote",
+      "name": "Coyote",
+      "rarity": "common",
+      "rarity_raw": "common",
+      "image_url": "https://fetch-images.b-cdn.net/images/pets/Coyote.png",
+      "trade_values": {
+        "N": 0,
+        "NEON": 2,
+        "MEGA": 6
+      },
+      "obtainability": null,
+      "demand_rank": 6,
+      "demand_trend": null
+    },
+    {
+      "slug": "capybara",
+      "name": "Capybara",
+      "rarity": "uncommon",
+      "rarity_raw": "uncommon",
+      "image_url": "https://fetch-images.b-cdn.net/images/pets/Capybara.png",
+      "trade_values": {
+        "N": 1,
+        "NEON": 7,
+        "MEGA": 29
+      },
+      "obtainability": null,
+      "demand_rank": 6,
+      "demand_trend": null
+    },
+    {
+      "slug": "shrew",
+      "name": "Shrew",
+      "rarity": "rare",
+      "rarity_raw": "rare",
+      "image_url": "https://fetch-images.b-cdn.net/images/pets/Shrew.png",
+      "trade_values": {
+        "N": 7,
+        "NEON": 21,
+        "MEGA": 85
+      },
+      "obtainability": null,
+      "demand_rank": 7,
+      "demand_trend": null
+    },
+    {
+      "slug": "classic-teapot",
+      "name": "Classic Teapot",
+      "rarity": "common",
+      "rarity_raw": "common",
+      "image_url": "https://fetch-images.b-cdn.net/images/pets/Classic%20Teapot.png",
+      "trade_values": {
+        "N": 0,
+        "NEON": 1,
+        "MEGA": 6
+      },
+      "obtainability": null,
+      "demand_rank": 7,
+      "demand_trend": null
+    },
+    {
+      "slug": "black-panther",
+      "name": "Black Panther",
+      "rarity": "uncommon",
+      "rarity_raw": "uncommon",
+      "image_url": "https://fetch-images.b-cdn.net/images/pets/Black%20Panther.png",
+      "trade_values": {
+        "N": 1,
+        "NEON": 7,
+        "MEGA": 27
+      },
+      "obtainability": null,
+      "demand_rank": 7,
+      "demand_trend": null
+    },
+    {
+      "slug": "cabbit",
+      "name": "Cabbit",
+      "rarity": "ultra_rare",
+      "rarity_raw": "ultra rare",
+      "image_url": "https://fetch-images.b-cdn.net/images/pets/Cabbit.png",
+      "trade_values": {
+        "N": 26,
+        "NEON": 58,
+        "MEGA": 220
+      },
+      "obtainability": null,
+      "demand_rank": 7,
+      "demand_trend": null
+    },
+    {
+      "slug": "giant-panda",
+      "name": "Giant Panda",
+      "rarity": "legendary",
+      "rarity_raw": "legendary",
+      "image_url": "https://fetch-images.b-cdn.net/images/pets/Giant%20Panda.png",
+      "trade_values": {
+        "N": 177,
+        "NEON": 702,
+        "MEGA": 2800
+      },
+      "obtainability": null,
+      "demand_rank": 7,
+      "demand_trend": null
+    },
+    {
+      "slug": "crow",
+      "name": "Crow",
+      "rarity": "legendary",
+      "rarity_raw": "legendary",
+      "image_url": "https://fetch-images.b-cdn.net/images/pets/Crow.png",
+      "trade_values": {
+        "N": 170,
+        "NEON": 390,
+        "MEGA": 1400
+      },
+      "obtainability": null,
+      "demand_rank": 8,
+      "demand_trend": null
+    },
+    {
+      "slug": "giant-anteater",
+      "name": "Giant Anteater",
+      "rarity": "rare",
+      "rarity_raw": "rare",
+      "image_url": "https://fetch-images.b-cdn.net/images/pets/Giant%20Anteater.png",
+      "trade_values": {
+        "N": 6,
+        "NEON": 27,
+        "MEGA": 108
+      },
+      "obtainability": null,
+      "demand_rank": 8,
+      "demand_trend": null
+    },
+    {
+      "slug": "robin",
+      "name": "Robin",
+      "rarity": "common",
+      "rarity_raw": "common",
+      "image_url": "https://fetch-images.b-cdn.net/images/pets/Robin.png",
+      "trade_values": {
+        "N": 0,
+        "NEON": 1,
+        "MEGA": 5
+      },
+      "obtainability": null,
+      "demand_rank": 8,
+      "demand_trend": null
+    },
+    {
+      "slug": "harp-seal",
+      "name": "Harp Seal",
+      "rarity": "uncommon",
+      "rarity_raw": "uncommon",
+      "image_url": "https://fetch-images.b-cdn.net/images/pets/Harp%20Seal.png",
+      "trade_values": {
+        "N": 1,
+        "NEON": 7,
+        "MEGA": 27
+      },
+      "obtainability": null,
+      "demand_rank": 8,
+      "demand_trend": null
+    },
+    {
+      "slug": "siamese-cat",
+      "name": "Siamese Cat",
+      "rarity": "ultra_rare",
+      "rarity_raw": "ultra rare",
+      "image_url": "https://fetch-images.b-cdn.net/images/pets/Siamese%20Cat.png",
+      "trade_values": {
+        "N": 23,
+        "NEON": 47,
+        "MEGA": 142
+      },
+      "obtainability": null,
+      "demand_rank": 8,
+      "demand_trend": null
+    },
+    {
+      "slug": "flamingo",
+      "name": "Flamingo",
+      "rarity": "ultra_rare",
+      "rarity_raw": "ultra rare",
+      "image_url": "https://fetch-images.b-cdn.net/images/pets/Flamingo.png",
+      "trade_values": {
+        "N": 21,
+        "NEON": 78,
+        "MEGA": 302
+      },
+      "obtainability": null,
+      "demand_rank": 9,
+      "demand_trend": null
+    },
+    {
+      "slug": "balloon-unicorn",
+      "name": "Balloon Unicorn",
+      "rarity": "legendary",
+      "rarity_raw": "legendary",
+      "image_url": "https://fetch-images.b-cdn.net/images/pets/Balloon%20Unicorn.png",
+      "trade_values": {
+        "N": 164,
+        "NEON": 532,
+        "MEGA": 1900
+      },
+      "obtainability": null,
+      "demand_rank": 9,
+      "demand_trend": null
+    },
+    {
+      "slug": "ring-tailed-lemur",
+      "name": "Ring-Tailed Lemur",
+      "rarity": "rare",
+      "rarity_raw": "rare",
+      "image_url": "https://fetch-images.b-cdn.net/images/pets/Ring-Tailed%20Lemur.png",
+      "trade_values": {
+        "N": 5,
+        "NEON": 22,
+        "MEGA": 92
+      },
+      "obtainability": null,
+      "demand_rank": 9,
+      "demand_trend": null
+    },
+    {
+      "slug": "brachiosaurus",
+      "name": "Brachiosaurus",
+      "rarity": "common",
+      "rarity_raw": "common",
+      "image_url": "https://fetch-images.b-cdn.net/images/pets/Brachiosaurus.png",
+      "trade_values": {
+        "N": 0,
+        "NEON": 1,
+        "MEGA": 5
+      },
+      "obtainability": null,
+      "demand_rank": 9,
+      "demand_trend": null
+    },
+    {
+      "slug": "drake",
+      "name": "Drake",
+      "rarity": "uncommon",
+      "rarity_raw": "uncommon",
+      "image_url": "https://fetch-images.b-cdn.net/images/pets/Drake.png",
+      "trade_values": {
+        "N": 1,
+        "NEON": 6,
+        "MEGA": 23
+      },
+      "obtainability": null,
+      "demand_rank": 9,
+      "demand_trend": null
+    },
+    {
+      "slug": "caterpillar",
+      "name": "Caterpillar",
+      "rarity": "ultra_rare",
+      "rarity_raw": "ultra rare",
+      "image_url": "https://fetch-images.b-cdn.net/images/pets/Caterpillar.png",
+      "trade_values": {
+        "N": 19,
+        "NEON": 79,
+        "MEGA": 318
+      },
+      "obtainability": null,
+      "demand_rank": 10,
+      "demand_trend": null
+    },
+    {
+      "slug": "blazing-lion",
+      "name": "Blazing Lion",
+      "rarity": "legendary",
+      "rarity_raw": "legendary",
+      "image_url": "https://fetch-images.b-cdn.net/images/pets/Blazing%20Lion.png",
+      "trade_values": {
+        "N": 141,
+        "NEON": 555,
+        "MEGA": 1900
+      },
+      "obtainability": null,
+      "demand_rank": 10,
+      "demand_trend": null
+    },
+    {
+      "slug": "hyena",
+      "name": "Hyena",
+      "rarity": "rare",
+      "rarity_raw": "rare",
+      "image_url": "https://fetch-images.b-cdn.net/images/pets/Hyena.png",
+      "trade_values": {
+        "N": 4,
+        "NEON": 19,
+        "MEGA": 76
+      },
+      "obtainability": null,
+      "demand_rank": 10,
+      "demand_trend": null
+    },
+    {
+      "slug": "cockroach",
+      "name": "Cockroach",
+      "rarity": "common",
+      "rarity_raw": "common",
+      "image_url": "https://fetch-images.b-cdn.net/images/pets/Cockroach.png",
+      "trade_values": {
+        "N": 0,
+        "NEON": 1,
+        "MEGA": 5
+      },
+      "obtainability": null,
+      "demand_rank": 10,
+      "demand_trend": null
+    },
+    {
+      "slug": "amami-rabbit",
+      "name": "Amami Rabbit",
+      "rarity": "uncommon",
+      "rarity_raw": "uncommon",
+      "image_url": "https://fetch-images.b-cdn.net/images/pets/Amami%20Rabbit.png",
+      "trade_values": {
+        "N": 1,
+        "NEON": 3,
+        "MEGA": 14
+      },
+      "obtainability": null,
+      "demand_rank": 10,
+      "demand_trend": null
+    },
+    {
+      "slug": "alpaca",
+      "name": "Alpaca",
+      "rarity": "ultra_rare",
+      "rarity_raw": "ultra rare",
+      "image_url": "https://fetch-images.b-cdn.net/images/pets/Alpaca.png",
+      "trade_values": {
+        "N": 17,
+        "NEON": 69,
+        "MEGA": 272
+      },
+      "obtainability": null,
+      "demand_rank": 11,
+      "demand_trend": null
+    },
+    {
+      "slug": "brown-bear",
+      "name": "Brown Bear",
+      "rarity": "rare",
+      "rarity_raw": "rare",
+      "image_url": "https://fetch-images.b-cdn.net/images/pets/Brown%20Bear.png",
+      "trade_values": {
+        "N": 4,
+        "NEON": 18,
+        "MEGA": 70
+      },
+      "obtainability": null,
+      "demand_rank": 11,
+      "demand_trend": null
+    },
+    {
+      "slug": "dugong",
+      "name": "Dugong",
+      "rarity": "common",
+      "rarity_raw": "common",
+      "image_url": "https://fetch-images.b-cdn.net/images/pets/Dugong.png",
+      "trade_values": {
+        "N": 0,
+        "NEON": 1,
+        "MEGA": 5
+      },
+      "obtainability": null,
+      "demand_rank": 11,
+      "demand_trend": null
+    },
+    {
+      "slug": "quokka",
+      "name": "Quokka",
+      "rarity": "uncommon",
+      "rarity_raw": "uncommon",
+      "image_url": "https://fetch-images.b-cdn.net/images/pets/Quokka.png",
+      "trade_values": {
+        "N": 0,
+        "NEON": 3,
+        "MEGA": 12
+      },
+      "obtainability": null,
+      "demand_rank": 11,
+      "demand_trend": null
+    },
+    {
+      "slug": "cryptid",
+      "name": "Cryptid",
+      "rarity": "legendary",
+      "rarity_raw": "legendary",
+      "image_url": "https://fetch-images.b-cdn.net/images/pets/Cryptid.png",
+      "trade_values": {
+        "N": 133,
+        "NEON": 310,
+        "MEGA": 1100
+      },
+      "obtainability": null,
+      "demand_rank": 11,
+      "demand_trend": null
+    },
+    {
+      "slug": "lion",
+      "name": "Lion",
+      "rarity": "ultra_rare",
+      "rarity_raw": "ultra rare",
+      "image_url": "https://fetch-images.b-cdn.net/images/pets/Lion.png",
+      "trade_values": {
+        "N": 15,
+        "NEON": 48,
+        "MEGA": 188
+      },
+      "obtainability": null,
+      "demand_rank": 12,
+      "demand_trend": null
+    },
+    {
+      "slug": "haetae",
+      "name": "Haetae",
+      "rarity": "legendary",
+      "rarity_raw": "legendary",
+      "image_url": "https://fetch-images.b-cdn.net/images/pets/Haetae.png",
+      "trade_values": {
+        "N": 116,
+        "NEON": 400,
+        "MEGA": 1600
+      },
+      "obtainability": null,
+      "demand_rank": 12,
+      "demand_trend": null
+    },
+    {
+      "slug": "polar-bear",
+      "name": "Polar Bear",
+      "rarity": "rare",
+      "rarity_raw": "rare",
+      "image_url": "https://fetch-images.b-cdn.net/images/pets/Polar%20Bear.png",
+      "trade_values": {
+        "N": 4,
+        "NEON": 17,
+        "MEGA": 66
+      },
+      "obtainability": null,
+      "demand_rank": 12,
+      "demand_trend": null
+    },
+    {
+      "slug": "liger",
+      "name": "Liger",
+      "rarity": "common",
+      "rarity_raw": "common",
+      "image_url": "https://fetch-images.b-cdn.net/images/pets/Liger.png",
+      "trade_values": {
+        "N": 0,
+        "NEON": 1,
+        "MEGA": 4
+      },
+      "obtainability": null,
+      "demand_rank": 12,
+      "demand_trend": null
+    },
+    {
+      "slug": "canadian-goose",
+      "name": "Canadian Goose",
+      "rarity": "uncommon",
+      "rarity_raw": "uncommon",
+      "image_url": "https://fetch-images.b-cdn.net/images/pets/Canadian%20Goose.png",
+      "trade_values": {
+        "N": 0,
+        "NEON": 3,
+        "MEGA": 11
+      },
+      "obtainability": null,
+      "demand_rank": 12,
+      "demand_trend": null
+    }
+  ]
+}

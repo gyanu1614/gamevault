@@ -14,7 +14,13 @@
     "sab:itemku:collect": "node scripts/collect-itemku-sab.mjs",
     "sab:itemku:send": "node scripts/collect-itemku-sab.mjs --send",
     "sab:eldorado:collect": "node scripts/collect-eldorado-sab-api-v6.mjs",
-    "sab:eldorado:send": "node scripts/collect-eldorado-sab-api-v6.mjs --send"
+    "sab:eldorado:send": "node scripts/collect-eldorado-sab-api-v6.mjs --send",
+    "adoptme:catalog": "node scripts/collect-adoptmevalues.mjs --enrich --send",
+    "adoptme:cash:eldorado": "node scripts/collect-eldorado-adoptme.mjs",
+    "adoptme:cash:u7buy": "node scripts/collect-u7buy-adoptme.mjs",
+    "adoptme:cash:import": "node scripts/import-adoptme-cash.mjs --write",
+    "adoptme:cash:refresh": "npm run adoptme:cash:eldorado && npm run adoptme:cash:u7buy && npm run adoptme:cash:import",
+    "adoptme:snapshot": "node scripts/adopt-me-snapshot-history.mjs"
   },
   "dependencies": {
     "@dicebear/collection": "^9.3.1",

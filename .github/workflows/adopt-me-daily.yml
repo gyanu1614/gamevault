@@ -1,0 +1,74 @@
+name: Adopt Me Daily Prices
+
+# Refreshes Adopt Me cash values from the marketplaces (Eldorado + u7buy) and
+# captures the daily price-history snapshot. Runs in CI because the collectors
+# scrape live external sites — they need a real network and can't run inside a
+# Vercel serverless cron. Both collectors use plain fetch (the u7buy endpoint
+# was reverse-engineered), so NO browser install is needed here.
+#
+# The weekly catalog refresh (new pets/eggs on Adopt Me's Friday updates) is a
+# separate workflow: adopt-me-weekly-catalog.yml.
+
+on:
+  workflow_dispatch:
+    inputs:
+      max_pages:
+        description: Offer pages to fetch per pet (deeper = more samples)
+        required: false
+        default: "4"
+  schedule:
+    # 05:30 UTC daily — after the SAB collection (05:00) settles.
+    - cron: "30 5 * * *"
+
+concurrency:
+  group: adopt-me-daily-prices
+  cancel-in-progress: false
+
+jobs:
+  refresh-and-snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    permissions:
+      contents: read
+
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      # Tuning (optional overrides for the fake-listing filters).
+      ELDORADO_AM_MAX_PAGES: ${{ inputs.max_pages || '4' }}
+      U7_AM_MAX_PAGES: "3"
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Collect Eldorado cash listings (fake-filtered)
+        run: npm run adoptme:cash:eldorado
+
+      - name: Collect u7buy cash listings (seller-trust filtered)
+        run: npm run adoptme:cash:u7buy
+
+      - name: Import pooled low-end prices to Supabase
+        run: npm run adoptme:cash:import
+
+      - name: Capture daily price-history snapshot
+        run: npm run adoptme:snapshot
+
+      - name: Upload feeds (debug artifact)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: adopt-me-cash-feeds-${{ github.run_id }}
+          path: data/adopt-me-feeds/*-cash-latest.json
+          if-no-files-found: warn
+          retention-days: 14

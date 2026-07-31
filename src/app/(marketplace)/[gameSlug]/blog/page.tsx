@@ -20,7 +20,8 @@ import { BlogHubHero } from './_BlogHubHero'
 import { HubTrustBox, type HubTrustStat } from './_HubTrustBox'
 import { FeaturedGuide } from './_FeaturedGuide'
 import { ArticleGrid } from './_ArticleGrid'
-import { ValuesTeaser, CalculatorTeaser, HubBuyCta } from './_HubTeasers'
+import { ValuesTeaser, CalculatorTeaser } from './_HubTeasers'
+import { HubBuyCta } from '@/components/content/HubBuyCta'
 import { getHubTopValues } from './_hubData'
 
 export const revalidate = 3600
@@ -53,7 +54,7 @@ async function getPricedItemCount(gameSlug: string): Promise<number> {
   if (gameSlug !== 'steal-a-brainrot') return 0
   const supabase = await createClient()
   const { count, error } = await (supabase as any)
-    .from('sab_public_price_catalog')
+    .from('sab_public_price_catalog_corrected')
     .select('brainrot_id', { count: 'exact', head: true })
     .eq('mutation_slug', 'default')
   if (error) {
@@ -130,24 +131,32 @@ export default async function GameBlogIndex({
     .filter((t) => Number.isFinite(t))
     .sort((a, b) => b - a)[0]
 
+  // Every cell must be TRUE for this specific game. A game we haven't priced
+  // yet has no sales to cite, so the sales-based cells are suppressed rather
+  // than asserted falsely — otherwise the panel claims "priced from real sales"
+  // on a hub whose values (once they exist) are derived estimates.
+  const hasPricing = pricedItems > 0
+
   const trustStats: HubTrustStat[] = []
-  if (pricedItems > 0) {
+  if (hasPricing) {
     trustStats.push({
       label: 'Items priced',
       value: pricedItems.toLocaleString(),
-      hint: 'Tracked across every mutation',
+      hint: 'Tracked across every variant',
+    })
+    trustStats.push({
+      label: 'Priced from',
+      value: 'Real sales',
+      hint: 'Completed orders and live listings',
     })
   }
-  trustStats.push({
-    label: 'Priced from',
-    value: 'Real sales',
-    hint: 'Completed orders and live listings',
-  })
   if (newestPost) {
     trustStats.push({
       label: 'Last updated',
       value: DAY_MONTH.format(new Date(newestPost)),
-      hint: 'Guides refreshed as prices move',
+      // Only tie the date to price movement once prices actually exist; before
+      // that it only reflects when the latest guide was published.
+      hint: hasPricing ? 'Refreshed as prices move' : 'Latest guide published',
     })
   }
   trustStats.push({
@@ -230,23 +239,29 @@ export default async function GameBlogIndex({
           footnote="Prices are medians of completed sales and active listings. Bundles, account sales and disputed orders are excluded. Change indicators appear only where we hold enough price history."
         />
 
+        {/* Sample items come from the game's own theme, never a hardcoded
+            fixture — so an Adopt Me visitor sees Adopt Me pets, not Brainrots. */}
         <CalculatorTeaser
           gameSlug={gameSlug}
           example={{
             title: 'Check a trade before you accept it',
-            body: 'Put one item on each side, pick the mutation, and see whether the offer is a win, fair or a loss against observed sale prices.',
-            offer: 'Antonio · Default — $149.99',
-            give: 'Bunny and Eggy · Lava — $183.72',
-            letter: 'L',
-            verdict: 'You come out behind',
-            qualifier: 'Based on completed sales',
+            // "observed sale prices" only once we hold real sales; a game still
+            // on derived estimates says so instead of overclaiming.
+            body: hasPricing
+              ? 'Put one item on each side, pick the variant, and see whether the offer is a win, fair or a loss against observed sale prices.'
+              : 'Put one item on each side, pick the variant, and see whether the offer is a win, fair or a loss against current estimated values.',
+            offer: theme.calculatorExample.offer,
+            give: theme.calculatorExample.give,
+            letter: theme.calculatorExample.letter,
+            verdict: theme.calculatorExample.verdict,
+            qualifier: theme.calculatorExample.qualifier,
           }}
         />
 
         <HubBuyCta
           gameName={game.name}
+          gameSlug={gameSlug}
           buyHref={`/${gameSlug}/buy-items`}
-          title={`Skip the grind — buy the ${game.name} item you want`}
         />
       </div>
           <HubFooter

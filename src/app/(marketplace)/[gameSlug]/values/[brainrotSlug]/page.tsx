@@ -14,6 +14,8 @@ import { HubFooter } from '@/components/content/HubFooter'
 import { getHubNavData, HUB_NAV_CLEAR } from '@/lib/content/hubNav'
 import { cn } from '@/lib/utils'
 import { sabCard } from '@/lib/sab/theme'
+import AdoptMePetPage from './_AdoptMePetPage'
+import { getAdoptMePet } from './_adoptMePetData'
 
 export const revalidate = 3600
 
@@ -306,6 +308,47 @@ async function getRelatedBrainrots(brainrot: BrainrotRow): Promise<BrainrotRow[]
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { gameSlug, brainrotSlug } = await params
+
+  if (gameSlug === 'adopt-me') {
+    const pet = await getAdoptMePet(brainrotSlug)
+    if (!pet) return { title: 'Value Not Found' }
+    const monthYear = new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' })
+    // Title leads with the pet name + "value" (the head term) and carries the
+    // real-money wedge; keeps DropMarket last.
+    const title = `${pet.name} Value in Adopt Me (${monthYear}) — Cash & Trade Value | DropMarket`
+    const description = `How much is a ${pet.name} worth in Adopt Me in real money? See the ${pet.name}'s cash value (USD) and community trade value — Normal, Fly Ride, Neon and Mega prices, updated ${monthYear} from real marketplace listings.`
+    const canonical = `/adopt-me/values/${pet.slug}`
+    // Page-specific keywords targeting the uncontested long-tail the brief
+    // names — "worth in real money / USD / can you sell". Per-pet, not the dead
+    // site-wide stuffed string.
+    const keywords = [
+      `${pet.name} value`,
+      `${pet.name} value adopt me`,
+      `${pet.name} worth`,
+      `how much is a ${pet.name} worth`,
+      `${pet.name} value in real money`,
+      `${pet.name} usd value`,
+      `${pet.name} fly ride value`,
+      `${pet.name} neon value`,
+      `${pet.name} mega neon value`,
+      `sell ${pet.name} adopt me`,
+      `adopt me ${pet.name} price`,
+    ]
+    return {
+      title,
+      description,
+      keywords,
+      alternates: { canonical },
+      openGraph: {
+        title,
+        description,
+        url: canonical,
+        type: 'website',
+        images: pet.imageUrl ? [pet.imageUrl] : [],
+      },
+    }
+  }
+
   if (gameSlug !== 'steal-a-brainrot') return { title: 'Value Not Found' }
 
   const brainrot = await getBrainrot(brainrotSlug)
@@ -331,6 +374,15 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default async function BrainrotValuePage({ params }: PageProps) {
   const { gameSlug, brainrotSlug } = await params
+
+  // Adopt Me per-pet page — only publishable pets (has_page) render; anything
+  // thin or unpriced 404s rather than shipping an empty page.
+  if (gameSlug === 'adopt-me') {
+    const pet = await getAdoptMePet(brainrotSlug)
+    if (!pet) notFound()
+    return <AdoptMePetPage pet={pet} />
+  }
+
   if (gameSlug !== 'steal-a-brainrot') notFound()
 
   const brainrot = await getBrainrot(brainrotSlug)

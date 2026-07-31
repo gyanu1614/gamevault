@@ -172,37 +172,5 @@ export function CalculatorTeaser({
   )
 }
 
-/* ─────────────────────────── Buy CTA ─────────────────────────── */
-
-export function HubBuyCta({
-  gameName,
-  buyHref,
-  title,
-}: {
-  gameName: string
-  buyHref: string
-  title: string
-}) {
-  return (
-    <section className="pt-12 sm:pt-16">
-      <div className="flex flex-wrap items-center justify-between gap-6 border border-[#23331F] bg-[#0D140E] p-6 sm:p-10">
-        <div>
-          <h2 className="mb-3 text-[22px] font-semibold leading-tight tracking-tight text-[#F1F3F1] sm:text-[26px]">
-            {title}
-          </h2>
-          <p className="max-w-xl text-sm leading-relaxed text-[#98A398]">
-            Every order is covered by SafeDrop — the seller is paid only after
-            you confirm delivery.
-          </p>
-        </div>
-        <Link
-          href={buyHref}
-          className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap bg-[#1B6B3F] px-6 py-4 text-sm font-semibold text-white transition hover:bg-[#1f7a48]"
-        >
-          Buy {gameName} items
-          <ArrowRight className="h-4 w-4" />
-        </Link>
-      </div>
-    </section>
-  )
-}
+/* Buy CTA moved to the shared @/components/content/HubBuyCta (per-game bg hero
+   + used at the end of every hub page). */

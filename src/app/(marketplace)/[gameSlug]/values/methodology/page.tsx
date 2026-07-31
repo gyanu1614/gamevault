@@ -19,6 +19,7 @@ import { SabHeroBackdrop } from '../_SabHeroBackdrop'
 import { HubNav } from '@/components/content/HubNav'
 import { HubFooter } from '@/components/content/HubFooter'
 import { getHubNavData, HUB_NAV_CLEAR } from '@/lib/content/hubNav'
+import AdoptMeMethodology from './_AdoptMeMethodology'
 
 export const revalidate = 86400
 
@@ -28,6 +29,30 @@ export async function generateMetadata({
   params: Promise<{ gameSlug: string }>
 }): Promise<Metadata> {
   const { gameSlug } = await params
+
+  if (gameSlug === 'adopt-me') {
+    return {
+      title: 'How DropMarket Values Adopt Me Pets — Methodology',
+      description:
+        'How DropMarket calculates Adopt Me pet values: trade value vs cash value, real marketplace listings, fake-listing filtering, the 8 variants, confidence scoring and daily updates.',
+      alternates: { canonical: '/adopt-me/values/methodology' },
+      keywords: [
+        'adopt me value methodology',
+        'how are adopt me values calculated',
+        'adopt me trade value vs cash value',
+        'adopt me pet real money value',
+        'are adopt me values accurate',
+      ],
+      openGraph: {
+        title: 'How DropMarket Values Adopt Me Pets',
+        description:
+          'Trade value vs cash value, real listings, fake-listing filtering, and how the 8 variants are priced.',
+        url: '/adopt-me/values/methodology',
+        type: 'article',
+      },
+    }
+  }
+
   // Only SAB has a methodology page. Every other game answered
   // `200 + empty body + index,follow` here — a soft 404. See the body.
   if (gameSlug !== 'steal-a-brainrot') notFound()
@@ -71,6 +96,12 @@ export default async function MethodologyPage({
   params: Promise<{ gameSlug: string }>
 }) {
   const { gameSlug } = await params
+
+  // Adopt Me has its own methodology page (trade-vs-cash wedge, fake filtering).
+  if (gameSlug === 'adopt-me') {
+    return <AdoptMeMethodology />
+  }
+
   // `return null` here rendered an empty page with a 200 + index,follow —
   // GSC counted /{game}/values/methodology for every other game as a soft
   // 404. A real 404 is the honest answer.

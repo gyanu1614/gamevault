@@ -10,6 +10,7 @@ import { SabHeroBackdrop } from './_SabHeroBackdrop'
 import { HubNav } from '@/components/content/HubNav'
 import { HubFooter } from '@/components/content/HubFooter'
 import { getHubNavData, HUB_NAV_CLEAR } from '@/lib/content/hubNav'
+import AdoptMeValuesPage from './_AdoptMeValuesPage'
 
 export const revalidate = 3600
 
@@ -30,6 +31,39 @@ export async function generateMetadata({
   params,
 }: PageProps): Promise<Metadata> {
   const { gameSlug } = await params
+
+  if (gameSlug === 'adopt-me') {
+    const monthYear = new Date().toLocaleDateString('en-US', {
+      month: 'long',
+      year: 'numeric',
+      timeZone: 'UTC',
+    })
+    const title = `Adopt Me Value List (${monthYear}) — Pet Values in USD | DropMarket`
+    return {
+      title,
+      description: `Adopt Me value list for ${monthYear}: real cash values and community trade values for every pet and potion variant (Fly Ride, Neon, Mega) — the only list that shows what a pet is worth in real money.`,
+      keywords: [
+        'adopt me value list',
+        'adopt me values',
+        'adopt me pet values',
+        'adopt me values in real money',
+        'adopt me pet values usd',
+        'adopt me fly ride values',
+        'adopt me neon values',
+        'adopt me mega values',
+        'how much are adopt me pets worth',
+        'sell adopt me pets for money',
+      ],
+      alternates: { canonical: '/adopt-me/values' },
+      openGraph: {
+        title,
+        description:
+          'Every Adopt Me pet, every variant — community trade value and DropMarket cash value side by side.',
+        url: '/adopt-me/values',
+        type: 'website',
+      },
+    }
+  }
 
   if (gameSlug !== 'steal-a-brainrot') {
     return { title: 'Values Not Found' }
@@ -212,6 +246,12 @@ async function getBrainrots(): Promise<BrainrotDirectoryItem[]> {
 
 export default async function BrainrotValuesPage({ params }: PageProps) {
   const { gameSlug } = await params
+
+  // Adopt Me has its own page (different economy: variants, dual-axis, no
+  // income). Delegate rather than branch inline so the SAB path stays intact.
+  if (gameSlug === 'adopt-me') {
+    return <AdoptMeValuesPage />
+  }
 
   if (gameSlug !== 'steal-a-brainrot') {
     notFound()

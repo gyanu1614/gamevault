@@ -211,7 +211,13 @@ export function HubNav({
                     {
                       key: 'cash',
                       label: 'Cash Price',
-                      href: `/${current.slug}/calculator?tab=cash`,
+                      // Adopt Me has no separate cash TAB — its value list is
+                      // the cash lookup, so Cash Price deep-links there. SAB
+                      // keeps its ?tab=cash calculator mode.
+                      href:
+                        current.slug === 'adopt-me'
+                          ? `/${current.slug}/values`
+                          : `/${current.slug}/calculator?tab=cash`,
                     },
                   ]
                 : [

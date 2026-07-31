@@ -45,6 +45,28 @@ export interface GameContentTheme {
    * `games.seo_intro` overrides it once someone writes something better.
    */
   heroAbout: string
+  /**
+   * A representative worked example for the blog's calculator promo. MUST use
+   * real items and the real variant/mutation vocabulary of THIS game — the
+   * promo previously shipped a hardcoded Steal a Brainrot fixture on every
+   * game's hub, so an Adopt Me visitor saw Brainrot names. Scoping it to the
+   * theme means every game hub inherits a correct sample from its own entry.
+   */
+  calculatorExample: CalcPromoExample
+}
+
+/** Static worked-example for the blog calculator promo (see `calculatorExample`). */
+export interface CalcPromoExample {
+  /** Left side of the trade — "They offer". */
+  offer: string
+  /** Right side — "You give". */
+  give: string
+  /** Verdict letter shown in the badge: W / F / L. */
+  letter: string
+  /** Plain-language verdict line. */
+  verdict: string
+  /** Small qualifier under the verdict. */
+  qualifier: string
 }
 
 /** Neutral tokens — identical across every game. */
@@ -93,6 +115,15 @@ const DEFAULT_THEME: GameContentTheme = {
     'What items are actually worth — priced from completed sales, not trading-server rumours.',
   heroAbout:
     'These guides track what buyers really pay, and what that means whether you are buying, selling or holding. Every value is built from completed sales and active listings on DropMarket, never from estimates.',
+  // Neutral, game-agnostic fallback — no item names, so an unthemed game never
+  // shows another game's items. Reads as an illustrative placeholder.
+  calculatorExample: {
+    offer: 'Their side of the trade',
+    give: 'Your side of the trade',
+    letter: 'F',
+    verdict: 'See if the trade is fair',
+    qualifier: 'Based on completed sales',
+  },
 }
 
 const THEMES: Record<string, GameContentTheme> = {
@@ -110,6 +141,14 @@ const THEMES: Record<string, GameContentTheme> = {
       'Everything worth knowing about what Brainrots are actually worth — priced from completed sales, not trading-server rumours.',
     heroAbout:
       'Steal a Brainrot is a Roblox base-building game where players steal and defend Brainrots that generate income per second. Almost all trading happens around Secrets and mutated variants, and prices move whenever an event adds or retires supply. These guides track what people really pay, and what that means if you are buying, selling or holding.',
+    // SAB items + SAB mutation vocabulary (Default / Lava …).
+    calculatorExample: {
+      offer: 'Antonio · Default — $149.99',
+      give: 'Bunny and Eggy · Lava — $183.72',
+      letter: 'L',
+      verdict: 'You come out behind',
+      qualifier: 'Based on completed sales',
+    },
   },
   'adopt-me': {
     name: 'Adopt Me',
@@ -121,10 +160,26 @@ const THEMES: Record<string, GameContentTheme> = {
     onAccent: '#0B0810',
     ambient: ambientFor('176,123,201', 135, 40),
     heroTitle: 'Adopt Me pet values, neons and trading guides',
+    // No "completed sales" claim: at launch Adopt Me cash values are derived
+    // estimates (the marketplace has no Adopt Me sales history yet). The lead
+    // stays honest — trade value + an estimated cash value — until real orders
+    // replace the estimates. Update this once sales data exists.
     heroLead:
-      'What pets are really worth in cash and in trade — built from completed sales, with the demand shifts that move them.',
+      'What pets are worth in trade — and an estimated cash value in real money, with the demand shifts that move them.',
     heroAbout:
       'Adopt Me is a Roblox pet-collecting and trading game where value is driven almost entirely by event exclusivity and age rather than in-game cost. Legendary event pets, neons and megas carry most of the trading volume, and prices swing hard whenever an old pet is rereleased. These guides track what buyers pay and what that means before you accept an offer.',
+    // Adopt Me pets + the Adopt Me variant vocabulary (Fly Ride / Neon Fly
+    // Ride) — never SAB items or SAB mutations. Prices omitted on purpose: at
+    // launch Adopt Me cash values are derived estimates, so a concrete dollar
+    // figure here would misrepresent them as observed. The variant names alone
+    // carry the point of the promo (pick a variant, check the trade).
+    calculatorExample: {
+      offer: 'Frost Dragon · Neon Fly Ride',
+      give: 'Shadow Dragon · Fly Ride',
+      letter: 'F',
+      verdict: 'Check if this trade is fair',
+      qualifier: 'Cash values estimated until sales land',
+    },
   },
 }
 

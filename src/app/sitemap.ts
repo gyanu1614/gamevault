@@ -42,6 +42,19 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     console.error('Unable to load SAB Brainrots for sitemap:', sabBrainrotsError)
   }
 
+  // Only PUBLISHABLE Adopt Me pets (has_page) — a pet without a description
+  // 404s, and submitting a 404 to Google is a soft-404 signal. updated_at gives
+  // a real lastmod so freshness is honest.
+  const { data: adoptMePets, error: adoptMePetsError } = await (supabase as any)
+    .from('adopt_me_pets')
+    .select('slug, updated_at')
+    .eq('has_page', true)
+    .order('slug', { ascending: true })
+
+  if (adoptMePetsError) {
+    console.error('Unable to load Adopt Me pets for sitemap:', adoptMePetsError)
+  }
+
   // Static marketing/trust pages — no lastmod (see policy above).
   const staticPages: MetadataRoute.Sitemap = [
     {
@@ -299,6 +312,38 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       })),
   ]
 
+  // Adopt Me hub — mirrors the SAB block.
+  const adoptMePages: MetadataRoute.Sitemap = [
+    {
+      url: `${BASE_URL}/adopt-me/values`,
+      changeFrequency: 'daily',
+      priority: 0.85,
+    },
+    {
+      url: `${BASE_URL}/adopt-me/calculator`,
+      changeFrequency: 'weekly',
+      priority: 0.8,
+    },
+    {
+      url: `${BASE_URL}/adopt-me/neon-calculator`,
+      changeFrequency: 'weekly',
+      priority: 0.6,
+    },
+    {
+      url: `${BASE_URL}/adopt-me/values/methodology`,
+      changeFrequency: 'monthly',
+      priority: 0.5,
+    },
+    ...((adoptMePets ?? []) as { slug: string; updated_at: string | null }[])
+      .filter((pet) => Boolean(pet.slug))
+      .map((pet) => ({
+        url: `${BASE_URL}/adopt-me/values/${pet.slug}`,
+        lastModified: pet.updated_at ? new Date(pet.updated_at) : undefined,
+        changeFrequency: 'daily' as const,
+        priority: 0.7,
+      })),
+  ]
+
   return [
     ...staticPages,
     ...legalPages,
@@ -307,6 +352,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...gameBlogPages,
     ...landingPages,
     ...sabPages,
+    ...adoptMePages,
     ...gamePages,
     ...categoryPages,
     ...listingPages,
