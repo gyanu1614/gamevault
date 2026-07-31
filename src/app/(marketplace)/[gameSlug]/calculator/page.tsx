@@ -131,7 +131,7 @@ async function getAllCashPrices(
 
   while (true) {
     const { data, error } = await (supabase as any)
-      .from('sab_public_price_catalog')
+      .from('sab_public_price_catalog_corrected')
       .select(
         'brainrot_id,mutation_id,market_value_usd,market_low_usd,market_high_usd,confidence_label,external_sample_size,price_updated_at,is_trade_ready',
       )

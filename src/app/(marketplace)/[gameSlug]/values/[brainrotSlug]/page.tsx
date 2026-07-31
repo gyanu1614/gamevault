@@ -82,6 +82,12 @@ type MutationMarketPriceRow = {
   is_trade_ready: boolean
 }
 
+/** Measured market premium per mutation — see sab_mutation_price_multipliers. */
+type MutationPriceMultiplierRow = {
+  mutation_slug: string
+  price_multiplier: number | string
+}
+
 function asNumber(value: number | string | null | undefined): number | null {
   if (value == null) return null
   const parsed = Number(value)
@@ -142,7 +148,7 @@ async function getDefaultTradePrice(
 ): Promise<TradePriceRow | null> {
   const supabase = await createClient()
   const { data, error } = await (supabase as any)
-    .from('sab_public_price_catalog')
+    .from('sab_public_price_catalog_corrected')
     .select(
       'market_value_usd,market_low_usd,market_high_usd,confidence_label,external_sample_size,price_updated_at,is_trade_ready',
     )
@@ -161,9 +167,10 @@ async function getDefaultTradePrice(
 async function getMutations(brainrotId: string): Promise<MutationOption[]> {
   const supabase = await createClient()
 
-  // Fetch mutation income data and per-mutation market prices in parallel, then
-  // merge so each mutation carries its real USD market value (not just income).
-  const [calculatorResult, pricesResult] = await Promise.all([
+  // Fetch mutation income data, per-mutation market prices, and the measured
+  // mutation price premiums in parallel, then merge so each mutation carries
+  // its real USD market value (not just income).
+  const [calculatorResult, pricesResult, multiplierResult] = await Promise.all([
     (supabase as any)
       .from('sab_brainrot_mutation_calculator')
       .select(
@@ -172,11 +179,14 @@ async function getMutations(brainrotId: string): Promise<MutationOption[]> {
       .eq('brainrot_id', brainrotId)
       .order('income_multiplier', { ascending: true }),
     (supabase as any)
-      .from('sab_public_price_catalog')
+      .from('sab_public_price_catalog_corrected')
       .select(
         'mutation_slug,market_value_usd,market_low_usd,market_high_usd,confidence_label,external_sample_size,price_updated_at,is_trade_ready',
       )
       .eq('brainrot_id', brainrotId),
+    (supabase as any)
+      .from('sab_mutation_price_multipliers')
+      .select('mutation_slug,price_multiplier'),
   ])
 
   if (calculatorResult.error) {
@@ -197,10 +207,29 @@ async function getMutations(brainrotId: string): Promise<MutationOption[]> {
 
   const rows = (calculatorResult.data ?? []) as MutationRow[]
 
+  /**
+   * MEASURED price premium per mutation, not the income multiplier.
+   *
+   * This used to scale the default price by the mutation's INCOME multiplier,
+   * which badly overstated high-tier mutations: measured across 1,155
+   * well-sampled variant/default pairs, the market premium saturates around
+   * 2.5-3.5x however high income scales (Rainbow is 10x income but ~3.0x
+   * price). A Rainbow estimate was therefore roughly threefold too high.
+   *
+   * The table is refreshed daily by /api/cron/correct-sab-prices. If it hasn't
+   * been populated yet we fall back to the old income-multiplier behaviour
+   * rather than showing nothing.
+   */
+  const priceMultiplierBySlug = new Map<string, number>(
+    ((multiplierResult?.data ?? []) as MutationPriceMultiplierRow[]).map(
+      (row) => [row.mutation_slug, Number(row.price_multiplier)],
+    ),
+  )
+
   // Anchor for the fallback estimate: the default mutation's real price and
   // multiplier. When a mutation has NO market listings, we scale the default
-  // price by the mutation's income multiplier so the page still shows a
-  // number (clearly flagged as estimated) — anything beats a blank.
+  // price by the measured premium so the page still shows a number (clearly
+  // flagged as estimated) — anything beats a blank.
   const defaultRow = rows.find((r) => r.mutation_slug === 'default')
   const defaultPrice = asNumber(
     priceBySlug.get('default')?.market_value_usd ?? null,
@@ -215,7 +244,9 @@ async function getMutations(brainrotId: string): Promise<MutationOption[]> {
     // anchor, and this isn't the default itself.
     let estimatedValue: number | null = null
     if (realValue == null && defaultPrice != null && row.mutation_slug !== 'default') {
-      const ratio = Number(row.income_multiplier) / defaultMultiplier
+      const ratio =
+        priceMultiplierBySlug.get(row.mutation_slug) ??
+        Number(row.income_multiplier) / defaultMultiplier
       if (Number.isFinite(ratio) && ratio > 0) {
         estimatedValue = Math.round(defaultPrice * ratio * 100) / 100
       }
@@ -283,7 +314,7 @@ async function getRelatedBrainrots(brainrot: BrainrotRow): Promise<BrainrotRow[]
   // Pull the real default cash value from the public catalog so cards show a
   // price instead of "pending", matching what the item page displays.
   const { data: prices } = await (supabase as any)
-    .from('sab_public_price_catalog')
+    .from('sab_public_price_catalog_corrected')
     .select('brainrot_id,market_value_usd')
     .eq('mutation_slug', 'default')
     .in(

@@ -223,8 +223,92 @@ function normalizeListing(
       quantity,
       total_price_usd: totalPriceUsd,
       observed_at: observedAt.toISOString(),
+
+      ...optionalSignals(raw),
     },
   };
+}
+
+/**
+ * Optional collector-supplied enrichment, passed through to the listing.
+ *
+ * The listing above is a strict whitelist, which is why seller data never
+ * reached the database even though the collector was already parsing it — the
+ * fields were silently dropped here. These are the sanctioned extras. They
+ * land in sab_market_raw_listings.raw_payload, which the import RPC fills with
+ * the whole incoming item, so no database change is needed to store them.
+ *
+ * Still whitelisted and bounded rather than spread wholesale: a feed is
+ * untrusted input, and the point of this function is to widen the gate by
+ * exactly four fields, not to remove it.
+ */
+const SIGNAL_STRING_FIELDS = [
+  "seller_reference",
+  "collector_version",
+  // Seller trust identity (point 4): who is selling and how old the account is.
+  "seller_id",
+  "seller_username",
+  "seller_created_date",
+];
+const SIGNAL_NUMBER_FIELDS = [
+  "seller_rating",
+  "seller_sales_count",
+  "seller_account_age_days",
+];
+const MAX_SIGNAL_STRING_LENGTH = 80;
+
+function optionalSignals(raw) {
+  const signals = {};
+
+  for (const field of SIGNAL_STRING_FIELDS) {
+    const value = raw[field];
+    if (typeof value === "string" && value.trim()) {
+      signals[field] = value.trim().slice(0, MAX_SIGNAL_STRING_LENGTH);
+    }
+  }
+
+  for (const field of SIGNAL_NUMBER_FIELDS) {
+    if (raw[field] == null) continue;
+    const value = Number(raw[field]);
+    if (Number.isFinite(value) && value >= 0) signals[field] = value;
+  }
+
+  for (const field of ["source_signals", "income_band"]) {
+    const value = raw[field];
+    if (value && typeof value === "object" && !Array.isArray(value)) {
+      signals[field] = value;
+    }
+  }
+
+  return signals;
+}
+
+/**
+ * Title-quality reject list (points 2 + 3).
+ *
+ * Applied to every source in the importer, so it protects the whole pipeline
+ * regardless of which collector produced the feed. A rejected listing is
+ * DROPPED, not fatal — one toy or scam title must not abort a 10k-row import.
+ *
+ * Returns a rejection reason string, or null if the title is clean.
+ */
+const REJECT_PATTERNS = [
+  // Point 2: toys / merch / non-item listings named after the Brainrot.
+  { reason: "toy_or_merch", re: /\b(plush(ie)?|toy|figure|figurine|keychain|sticker|poster|mug|shirt|hoodie|merch)\b/i },
+  // Point 2: bundles / accounts / multi-item — not a single-item price.
+  { reason: "bundle_or_account", re: /\b(bundle|pack|combo|lot|account|acc\b|full\s+game|starter|mega|giant\s+set|all\s+brainrots)\b/i },
+  // Point 2: age/stage listings (leftover from other games' schemas).
+  { reason: "age_or_stage", re: /\b(newborn|junior|pre.?teen|full.?grown|mega.?neon|neon)\b/i },
+  // Point 3: scam "add me in-game" bait.
+  { reason: "scam_add_me", re: /\b(add\s+me|you\s+need\s+to\s+add|friend\s+request|friend\s+me|dm\s+me\s+first|dm\s+first|message\s+me\s+first|read\s+desc|check\s+desc|go\s+first)\b/i },
+];
+
+function titleRejectReason(title) {
+  const text = String(title ?? "");
+  for (const { reason, re } of REJECT_PATTERNS) {
+    if (re.test(text)) return reason;
+  }
+  return null;
 }
 
 function flattenFeed(payload) {
@@ -348,7 +432,26 @@ async function main() {
     throw new Error("Feed contains no listings");
   }
 
-  const records = flattened.map(
+  // Drop toy/bundle/scam titles before validation (points 2 + 3). Counted, not
+  // fatal — noise gets skipped, the rest of the feed imports normally.
+  const rejectCounts = {};
+  const cleaned = flattened.filter(({ raw }) => {
+    const reason = titleRejectReason(raw?.title);
+    if (reason) {
+      rejectCounts[reason] = (rejectCounts[reason] ?? 0) + 1;
+      return false;
+    }
+    return true;
+  });
+
+  const rejectedTotal = flattened.length - cleaned.length;
+  if (rejectedTotal > 0) {
+    console.log(
+      `Dropped ${rejectedTotal} listing(s) on title quality: ${JSON.stringify(rejectCounts)}`,
+    );
+  }
+
+  const records = cleaned.map(
     ({ raw, sourceSlug }, index) =>
       normalizeListing(
         raw,

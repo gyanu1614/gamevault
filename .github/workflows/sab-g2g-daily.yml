@@ -1,0 +1,83 @@
+name: SAB G2G Daily Market Collection
+
+# Third price source (after Eldorado and Itemku). G2G exposes a public no-auth
+# JSON API, so this needs no browser — it iterates the SAB Brainrot taxonomy and
+# calls sls.g2g.com/v3/offer/search per Brainrot. Its value is DEPTH: a single
+# variant returns dozens of independent sellers, which is what lets the blend's
+# median discard outliers instead of averaging two sources into their midpoint.
+#
+# Runs at 05:20 UTC — after Eldorado (05:00) and before the price snapshot
+# (06:00), so the day's snapshot captures the freshly-blended 3-source values.
+#
+# DB-driven panel refresh (--refresh-after-hours) mirrors the Eldorado job, so
+# daily runs re-crawl the same Brainrots rather than only backfilling new ones.
+
+on:
+  workflow_dispatch:
+    inputs:
+      max_brainrots:
+        description: How many Brainrots to collect this run
+        required: false
+        default: "120"
+      max_pages:
+        description: Offer pages per Brainrot (48 offers/page)
+        required: false
+        default: "3"
+      reset_progress:
+        description: Restart the queue from the top (true/false)
+        required: false
+        default: "false"
+      refresh_after_hours:
+        description: Re-crawl anything not attempted within this many hours (0 = backfill only)
+        required: false
+        default: "20"
+  schedule:
+    - cron: "20 5 * * *"
+
+concurrency:
+  group: sab-g2g-daily-market
+  cancel-in-progress: false
+
+jobs:
+  collect-and-import:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    permissions:
+      contents: read
+
+    env:
+      SAB_MARKET_IMPORT_SECRET: ${{ secrets.SAB_MARKET_IMPORT_SECRET }}
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Collect and import G2G market data
+        run: >-
+          npm run sab:g2g:send --
+          --max-brainrots ${{ inputs.max_brainrots || '120' }}
+          --max-pages ${{ inputs.max_pages || '3' }}
+          --delay-ms 1500
+          --refresh-after-hours ${{ inputs.refresh_after_hours || '20' }}
+          ${{ (inputs.reset_progress == 'true') && '--reset-progress' || '' }}
+
+      - name: Upload collection report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: g2g-sab-market-${{ github.run_id }}
+          path: data/sab-market-feeds/g2g-api-latest.json
+          if-no-files-found: warn
+          retention-days: 14

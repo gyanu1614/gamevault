@@ -1,0 +1,1632 @@
+{
+ "generated_note": "G2G SAB taxonomy snapshot; regenerate via keyword_relation/attributes/search",
+ "service_id": "0765978e-3fdf-48b4-bed3-184823aa439e",
+ "brand_id": "lgc_game_24733",
+ "item_type_brainrot": "c5311a6a",
+ "rarities": [
+  {
+   "name": "Secret",
+   "fa": "d2b2e725",
+   "brainrots": [
+    {
+     "name": "Bisonte Giuppitere",
+     "fa": "05905058"
+    },
+    {
+     "name": "Los Matteos",
+     "fa": "29d400c2"
+    },
+    {
+     "name": "La Vacca Saturno Saturnita",
+     "fa": "c1b65f06"
+    },
+    {
+     "name": "Trenostruzzo Turbo 4000",
+     "fa": "31cf38fb"
+    },
+    {
+     "name": "Torrtuginni Dragonfrutini",
+     "fa": "03b6c3b6"
+    },
+    {
+     "name": "Agarrini La Palini",
+     "fa": "905e29d0"
+    },
+    {
+     "name": "Fragola La La La",
+     "fa": "c1c3f311"
+    },
+    {
+     "name": "Los Tralaleritos",
+     "fa": "5484fca4"
+    },
+    {
+     "name": "La Karkerkar Combinasion",
+     "fa": "6faf15ac"
+    },
+    {
+     "name": "Las Tralaleritas",
+     "fa": "79af9cca"
+    },
+    {
+     "name": "Job Job Job Sahur",
+     "fa": "e34fbb4d"
+    },
+    {
+     "name": "Las Vaquitas Saturnitas",
+     "fa": "105b9a7b"
+    },
+    {
+     "name": "Graipuss Medussi",
+     "fa": "a3b307f9"
+    },
+    {
+     "name": "La Sahur Combinasion",
+     "fa": "404273ce"
+    },
+    {
+     "name": "To to to Sahur",
+     "fa": "6a35d4ef"
+    },
+    {
+     "name": "Pot Hotspot",
+     "fa": "e9319bf2"
+    },
+    {
+     "name": "Chicleteira Bicicleteira",
+     "fa": "57e9dac1"
+    },
+    {
+     "name": "Los Chicleteiras",
+     "fa": "7f7b412e"
+    },
+    {
+     "name": "La Grande Combinasion",
+     "fa": "e9dd1612"
+    },
+    {
+     "name": "Los Combinasionas",
+     "fa": "9a3f2c89"
+    },
+    {
+     "name": "Nuclearo Dinossauro",
+     "fa": "b4f66326"
+    },
+    {
+     "name": "Las Sis",
+     "fa": "b433a7d5"
+    },
+    {
+     "name": "Los Hotspotsitos",
+     "fa": "8c9c7a80"
+    },
+    {
+     "name": "Celularcini Viciosini",
+     "fa": "feabfc97"
+    },
+    {
+     "name": "Los Bros",
+     "fa": "521c8455"
+    },
+    {
+     "name": "Tralaledon",
+     "fa": "c1922315"
+    },
+    {
+     "name": "Esok Sekolah",
+     "fa": "5f1f5921"
+    },
+    {
+     "name": "Los Tacoritas",
+     "fa": "66c62c0a"
+    },
+    {
+     "name": "Ketupat Kepat",
+     "fa": "065522ab"
+    },
+    {
+     "name": "Tictac Sahur",
+     "fa": "a6059432"
+    },
+    {
+     "name": "La Supreme Combinasion",
+     "fa": "5e87c86b"
+    },
+    {
+     "name": "Ketchuru and Musturu",
+     "fa": "c8a03a5f"
+    },
+    {
+     "name": "Garama and Madundung",
+     "fa": "2d5a9a70"
+    },
+    {
+     "name": "Spaghetti Tualetti",
+     "fa": "e867d88a"
+    },
+    {
+     "name": "Dragon Cannelloni",
+     "fa": "04c41f3e"
+    },
+    {
+     "name": "Secret Lucky Block",
+     "fa": "ba0eaf5d"
+    },
+    {
+     "name": "Chillin Chili",
+     "fa": "5b230962"
+    },
+    {
+     "name": "1x1x1x1",
+     "fa": "f7aa1569"
+    },
+    {
+     "name": "Noo my examine",
+     "fa": "0411054e"
+    },
+    {
+     "name": "Chicleteirina Bicicleteirina",
+     "fa": "8e5c3af3"
+    },
+    {
+     "name": "Tang Tang Keletang",
+     "fa": "39a3c1ef"
+    },
+    {
+     "name": "Swag Soda",
+     "fa": "a352d297"
+    },
+    {
+     "name": "Money Money Puggy",
+     "fa": "5669d8b0"
+    },
+    {
+     "name": "Capitano Moby",
+     "fa": "2e02479f"
+    },
+    {
+     "name": "La Secret Combinasion",
+     "fa": "5ec4e13a"
+    },
+    {
+     "name": "Burguro And Fryuro",
+     "fa": "0069ecb5"
+    },
+    {
+     "name": "Dragon Gingerini",
+     "fa": "c9264a11"
+    },
+    {
+     "name": "Los Primos",
+     "fa": "0ce79e24"
+    },
+    {
+     "name": "Los Mobilis",
+     "fa": "36381b09"
+    },
+    {
+     "name": "Eviledon",
+     "fa": "6c330611"
+    },
+    {
+     "name": "Spooky and Pumpky",
+     "fa": "7729e2b2"
+    },
+    {
+     "name": "Mieteteira Bicicleteira",
+     "fa": "9d179fa3"
+    },
+    {
+     "name": "La Casa Boo",
+     "fa": "32c7f031"
+    },
+    {
+     "name": "Guest 666",
+     "fa": "7976bd1f"
+    },
+    {
+     "name": "Orcaledon",
+     "fa": "58e760fb"
+    },
+    {
+     "name": "Fishino Clownino",
+     "fa": "0487135d"
+    },
+    {
+     "name": "Cuadramat and Pakrahmatmamat",
+     "fa": "84e5d1ab"
+    },
+    {
+     "name": "Los Planitos",
+     "fa": "6248c045"
+    },
+    {
+     "name": "Lavadorito Spinito",
+     "fa": "b7a42eff"
+    },
+    {
+     "name": "Pirulitoita Bicicleteira",
+     "fa": "b4f80e38"
+    },
+    {
+     "name": "Los Puggies",
+     "fa": "33828ead"
+    },
+    {
+     "name": "Los Spaghettis",
+     "fa": "dc63a6fa"
+    },
+    {
+     "name": "Fragrama and Chocrama",
+     "fa": "1a2a89f6"
+    },
+    {
+     "name": "Cooki and Milki",
+     "fa": "68856ba8"
+    },
+    {
+     "name": "Chicleteira Noelteira",
+     "fa": "776abb65"
+    },
+    {
+     "name": "Ginger Gerat",
+     "fa": "63a50d18"
+    },
+    {
+     "name": "Ho Ho Ho Sahur",
+     "fa": "3133c2f2"
+    },
+    {
+     "name": "La Vacca Prese Presente",
+     "fa": "6852f0b4"
+    },
+    {
+     "name": "Triplito Tralaleritos",
+     "fa": "d32e246e"
+    },
+    {
+     "name": "Santa Hotspot",
+     "fa": "2132b059"
+    },
+    {
+     "name": "Los Candies",
+     "fa": "dcbea835"
+    },
+    {
+     "name": "Festive 67",
+     "fa": "3fdc8a05"
+    },
+    {
+     "name": "La Ginger Sekolah",
+     "fa": "547b2e27"
+    },
+    {
+     "name": "Reinito Sleighito",
+     "fa": "06e958d3"
+    },
+    {
+     "name": "Bunnyman",
+     "fa": "4e70c27f"
+    },
+    {
+     "name": "Donkeyturbo Express",
+     "fa": "439cc4f7"
+    },
+    {
+     "name": "Money Money Reindeer",
+     "fa": "fe56dcd8"
+    },
+    {
+     "name": "Chimnino",
+     "fa": "c414a7f9"
+    },
+    {
+     "name": "Los Jolly Combinasionas",
+     "fa": "8fa96c65"
+    },
+    {
+     "name": "Cerberus",
+     "fa": "950aa3f6"
+    },
+    {
+     "name": "Jolly Jolly Sahur",
+     "fa": "ed156845"
+    },
+    {
+     "name": "Hydra Dragon Cannelloni",
+     "fa": "8208efb4"
+    },
+    {
+     "name": "Popuru and Fizzuru",
+     "fa": "06770436"
+    },
+    {
+     "name": "Los Trios",
+     "fa": "7dce3ce2"
+    },
+    {
+     "name": "Bacuru and Egguru",
+     "fa": "ad0e9976"
+    },
+    {
+     "name": "Los Sekolahs",
+     "fa": "5add2509"
+    },
+    {
+     "name": "Chill Puppy",
+     "fa": "c2a39105"
+    },
+    {
+     "name": "Ketupat Bros",
+     "fa": "e0f38131"
+    },
+    {
+     "name": "Arcadopus",
+     "fa": "9af310b1"
+    },
+    {
+     "name": "Mi Gatito",
+     "fa": "2b09bca1"
+    },
+    {
+     "name": "Los Mi Gatitos",
+     "fa": "b0430db1"
+    },
+    {
+     "name": "Popcuru and Fizzuru",
+     "fa": "bca795a6"
+    },
+    {
+     "name": "Spinny Hammy",
+     "fa": "621db7ec"
+    },
+    {
+     "name": "Love Love Love Sahur",
+     "fa": "4c561d79"
+    },
+    {
+     "name": "Cupid Hotspot",
+     "fa": "34683cea"
+    },
+    {
+     "name": "Noo my Heart",
+     "fa": "4b74000b"
+    },
+    {
+     "name": "Chicleteira Cupideira",
+     "fa": "d3344159"
+    },
+    {
+     "name": "Rosetti Tualetti",
+     "fa": "2c2a3aa3"
+    },
+    {
+     "name": "Rosey and Teddy",
+     "fa": "b541534e"
+    },
+    {
+     "name": "La Food Combinasion",
+     "fa": "02923ad7"
+    },
+    {
+     "name": "Los Amigos",
+     "fa": "f1a62b62"
+    },
+    {
+     "name": "Sammyni Fattini",
+     "fa": "7f69eb25"
+    },
+    {
+     "name": "Los Sekolahs",
+     "fa": "5b3cec33"
+    },
+    {
+     "name": "DJ Panda",
+     "fa": "0409d6d2"
+    },
+    {
+     "name": "Ventoliero Pavonero",
+     "fa": "71516e0f"
+    },
+    {
+     "name": "Fishboard",
+     "fa": "44d9990c"
+    },
+    {
+     "name": "Celestial Pegasus",
+     "fa": "7e7675c6"
+    },
+    {
+     "name": "La Vacca Lepre Lepreino",
+     "fa": "af911e88"
+    },
+    {
+     "name": "Luck Luck Luck Sahur",
+     "fa": "e04825d0"
+    },
+    {
+     "name": "Noo my Gold",
+     "fa": "343c27ce"
+    },
+    {
+     "name": "Snailo Clovero",
+     "fa": "9faa51ea"
+    },
+    {
+     "name": "Gold Gold Gold",
+     "fa": "71f9806f"
+    },
+    {
+     "name": "Fortunu and Coinuru",
+     "fa": "dd09c0ef"
+    },
+    {
+     "name": "La Lucky Grande",
+     "fa": "5e69d16c"
+    },
+    {
+     "name": "Nacho Spyder",
+     "fa": "b0bb7de1"
+    },
+    {
+     "name": "Foxini Lanternini",
+     "fa": "b8cf85f4"
+    },
+    {
+     "name": "Eid Eid Eid Sahur",
+     "fa": "49de8954"
+    },
+    {
+     "name": "La Romantic Grande",
+     "fa": "2363fc84"
+    },
+    {
+     "name": "Buntteo",
+     "fa": "f73327a3"
+    },
+    {
+     "name": "Bunny Bunny Bunny Sahur",
+     "fa": "0e6efae9"
+    },
+    {
+     "name": "Noo my Eggs",
+     "fa": "55e234fd"
+    },
+    {
+     "name": "Easter Easter Easter Sahur",
+     "fa": "76ff2e31"
+    },
+    {
+     "name": "Los Bunitos",
+     "fa": "06dbc09d"
+    },
+    {
+     "name": "Baskito",
+     "fa": "fd20fac0"
+    },
+    {
+     "name": "Churrito Bunnito",
+     "fa": "73cc718d"
+    },
+    {
+     "name": "Hopilikalika Hopilikalako",
+     "fa": "581f1bf6"
+    },
+    {
+     "name": "Hydra Bunny",
+     "fa": "57293dc1"
+    },
+    {
+     "name": "Quackini Snackini",
+     "fa": "3cf22684"
+    },
+    {
+     "name": "Bunny and Eggy",
+     "fa": "797f5214"
+    },
+    {
+     "name": "Los Mariachis",
+     "fa": "8814bc24"
+    },
+    {
+     "name": "Cash or Card",
+     "fa": "d50ac459"
+    },
+    {
+     "name": "Strawberrita",
+     "fa": "2301cf79"
+    },
+    {
+     "name": "Berryno",
+     "fa": "7aca922c"
+    },
+    {
+     "name": "Globa Steppa",
+     "fa": "d2b70e1d"
+    },
+    {
+     "name": "Rico Dinero",
+     "fa": "ad17f545"
+    },
+    {
+     "name": "Pancake and Syrup",
+     "fa": "54cc473a"
+    },
+    {
+     "name": "Arcadragon",
+     "fa": "66fcfada"
+    },
+    {
+     "name": "Gym Bros",
+     "fa": "8743bd0d"
+    },
+    {
+     "name": "Paradiso Axolottino",
+     "fa": "f94fcde4"
+    },
+    {
+     "name": "Boppin Bunny",
+     "fa": "26346021"
+    },
+    {
+     "name": "Money Money Bros",
+     "fa": "bd9bc46a"
+    },
+    {
+     "name": "Ice Dragon",
+     "fa": "86a6c23a"
+    },
+    {
+     "name": "John Doe",
+     "fa": "fe40b543"
+    },
+    {
+     "name": "Duggy Bros",
+     "fa": "123fc70f"
+    },
+    {
+     "name": "Futbolini Skatini",
+     "fa": "075b7ffa"
+    },
+    {
+     "name": "Los Hackers",
+     "fa": "a6ee48fe"
+    },
+    {
+     "name": "Digi Narwhal",
+     "fa": "eac90e90"
+    },
+    {
+     "name": "Guerriro Digitale",
+     "fa": "bfd01592"
+    },
+    {
+     "name": "La Anniversary Grande",
+     "fa": "5b7f5dcf"
+    },
+    {
+     "name": "Flancito",
+     "fa": "d369e5e2"
+    },
+    {
+     "name": "Jelly Moby",
+     "fa": "ccdaced2"
+    },
+    {
+     "name": "Sammyni Cakini",
+     "fa": "f239a03f"
+    },
+    {
+     "name": "Steakini Fattini",
+     "fa": "44cd57c7"
+    },
+    {
+     "name": "Bananito",
+     "fa": "7fbce894"
+    },
+    {
+     "name": "Caylusaurus",
+     "fa": "5ff280ef"
+    },
+    {
+     "name": "Chicleteira Surfeiteira",
+     "fa": "a05500e3"
+    },
+    {
+     "name": "Girafini Raftini",
+     "fa": "a4af4f00"
+    },
+    {
+     "name": "La Summer Grande",
+     "fa": "eff240fa"
+    },
+    {
+     "name": "Hippo Golazo",
+     "fa": "3d47e36c"
+    },
+    {
+     "name": "Esok Goala",
+     "fa": "7e320877"
+    },
+    {
+     "name": "Ref Ref Ref Sahur",
+     "fa": "910af18d"
+    },
+    {
+     "name": "Bufalino Boomberino",
+     "fa": "c2d3d0d9"
+    },
+    {
+     "name": "Capitano Americano",
+     "fa": "98e2ead7"
+    },
+    {
+     "name": "Los Sigmas",
+     "fa": "d5c958a8"
+    },
+    {
+     "name": "Los Tangcitos",
+     "fa": "5bcb3fb4"
+    },
+    {
+     "name": "Los Tictacs",
+     "fa": "bd2baafa"
+    },
+    {
+     "name": "Los Admins",
+     "fa": "00d9ad2e"
+    },
+    {
+     "name": "Moby Bros",
+     "fa": "de472f21"
+    },
+    {
+     "name": "Toro Españolo",
+     "fa": "634bf26d"
+    },
+    {
+     "name": "Pizza and Ranch",
+     "fa": "3f324d4f"
+    },
+    {
+     "name": "Examen Bros",
+     "fa": "a9652524"
+    },
+    {
+     "name": "Los Secret Combinasionas",
+     "fa": "bf08dc8a"
+    },
+    {
+     "name": "Chicleteira Champeona",
+     "fa": "b7c251c0"
+    }
+   ]
+  },
+  {
+   "name": "Brainrot God",
+   "fa": "dc0240f9",
+   "brainrots": [
+    {
+     "name": "Cocofanto Elefanto",
+     "fa": "5a7aab27"
+    },
+    {
+     "name": "Antonio",
+     "fa": "289d5d13"
+    },
+    {
+     "name": "Girafa Celestre",
+     "fa": "2899fb5e"
+    },
+    {
+     "name": "Tralalero Tralala",
+     "fa": "6d895390"
+    },
+    {
+     "name": "Los Crocodillitos",
+     "fa": "94852f0f"
+    },
+    {
+     "name": "Tigroligre Frutonni",
+     "fa": "24daed4a"
+    },
+    {
+     "name": "Odin Din Din Dun",
+     "fa": "6b535efb"
+    },
+    {
+     "name": "Tukanno Bananno",
+     "fa": "cbc0299f"
+    },
+    {
+     "name": "Orcalero Orcala",
+     "fa": "18a71faa"
+    },
+    {
+     "name": "Tralalita Tralala",
+     "fa": "fc7f5342"
+    },
+    {
+     "name": "Trenostruzzo Turbo 3000",
+     "fa": "0c7ea251"
+    },
+    {
+     "name": "Trippi Troppi Troppa Trippa",
+     "fa": "9eb9fc91"
+    },
+    {
+     "name": "Las Cappuchinas",
+     "fa": "b07a49d4"
+    },
+    {
+     "name": "Ballerino Lololo",
+     "fa": "8c3fef9b"
+    },
+    {
+     "name": "Bulbito Bandito Traktorito",
+     "fa": "b388b299"
+    },
+    {
+     "name": "Los Tungtungtungcitos",
+     "fa": "06ecb422"
+    },
+    {
+     "name": "Pakrahmatmamat",
+     "fa": "87b22b8b"
+    },
+    {
+     "name": "Piccione Macchina",
+     "fa": "abd9ef52"
+    },
+    {
+     "name": "Brr es Teh Patipum",
+     "fa": "beee7824"
+    },
+    {
+     "name": "Tractoro Dinosauro",
+     "fa": "48050885"
+    },
+    {
+     "name": "Los Orcalitos",
+     "fa": "d3299923"
+    },
+    {
+     "name": "Orcalita Orcala",
+     "fa": "69bdb597"
+    },
+    {
+     "name": "Cacasito Satalito",
+     "fa": "2a71e73e"
+    },
+    {
+     "name": "Tartaruga Cisterna",
+     "fa": "70ddfb26"
+    },
+    {
+     "name": "Dug dug dug",
+     "fa": "4873de3d"
+    },
+    {
+     "name": "Piccionetta Machina",
+     "fa": "0c16a643"
+    },
+    {
+     "name": "Mastodontico Telepiedone",
+     "fa": "839ded39"
+    },
+    {
+     "name": "Anpali Babel",
+     "fa": "729c5fcd"
+    },
+    {
+     "name": "Belula Beluga",
+     "fa": "2c3b683d"
+    },
+    {
+     "name": "Brainrot God Lucky Block",
+     "fa": "a2afe03b"
+    },
+    {
+     "name": "Pop Pop Sahur",
+     "fa": "29b25657"
+    },
+    {
+     "name": "Statutino Libertino",
+     "fa": "34899038"
+    },
+    {
+     "name": "Buho de Noelo",
+     "fa": "47c6f2d5"
+    },
+    {
+     "name": "Chrismasmamat",
+     "fa": "cb52ab59"
+    },
+    {
+     "name": "Pandanini Frostini",
+     "fa": "ffb6bf28"
+    },
+    {
+     "name": "Boba Panda",
+     "fa": "a57fccca"
+    },
+    {
+     "name": "Dolphini Jetskini",
+     "fa": "9891125d"
+    },
+    {
+     "name": "Luv Luv Luv",
+     "fa": "73ccbd01"
+    },
+    {
+     "name": "Karkerheart Luvkur",
+     "fa": "6c30a320"
+    },
+    {
+     "name": "Patteo",
+     "fa": "538e1eed"
+    },
+    {
+     "name": "Clovkur Kurkur",
+     "fa": "01d6033c"
+    },
+    {
+     "name": "Bunny Tralala",
+     "fa": "120f3d52"
+    },
+    {
+     "name": "Eggdin Egg Egg Dun",
+     "fa": "e76045f6"
+    },
+    {
+     "name": "Appelini",
+     "fa": "21af512f"
+    },
+    {
+     "name": "Pineaplino",
+     "fa": "7dd3df36"
+    },
+    {
+     "name": "Lazy Ducky",
+     "fa": "26bf6a93"
+    },
+    {
+     "name": "Trenoturbo Axolotrico 9000",
+     "fa": "fdfc0fd2"
+    }
+   ]
+  },
+  {
+   "name": "Valentines",
+   "fa": "664454a1",
+   "brainrots": [
+    {
+     "name": "Heart Lucky Block",
+     "fa": "f8ba12ef"
+    }
+   ]
+  },
+  {
+   "name": "Festive",
+   "fa": "4d2d5c7c",
+   "brainrots": [
+    {
+     "name": "Festive Lucky Block",
+     "fa": "1585523f"
+    }
+   ]
+  },
+  {
+   "name": "Spooky",
+   "fa": "6fd3b2da",
+   "brainrots": [
+    {
+     "name": "Spooky Lucky Block",
+     "fa": "b6b53348"
+    }
+   ]
+  },
+  {
+   "name": "Taco",
+   "fa": "bb7aeb43",
+   "brainrots": [
+    {
+     "name": "Chihuanini Taconini",
+     "fa": "5f39f4b0"
+    },
+    {
+     "name": "Tipi Topi Taco",
+     "fa": "6ae87f95"
+    },
+    {
+     "name": "Capi Taco",
+     "fa": "8771c429"
+    },
+    {
+     "name": "Gattito Tacoto",
+     "fa": "f82c1c55"
+    },
+    {
+     "name": "Bombardini Tortini",
+     "fa": "0710b8cf"
+    },
+    {
+     "name": "Los Tipi Tacos",
+     "fa": "5eec3170"
+    },
+    {
+     "name": "Nooo My Hotspot",
+     "fa": "62754e26"
+    },
+    {
+     "name": "Quesadilla Crocodila",
+     "fa": "748b2667"
+    },
+    {
+     "name": "Los Nooo My Hotspotsitos",
+     "fa": "dddb4f0d"
+    },
+    {
+     "name": "Tacorita Bicicleta",
+     "fa": "0a29d796"
+    },
+    {
+     "name": "Taco Lucky Block",
+     "fa": "1d252817"
+    },
+    {
+     "name": "Los Chihuaninis",
+     "fa": "a5f0b2b7"
+    },
+    {
+     "name": "Los Gattitos",
+     "fa": "63b9e679"
+    },
+    {
+     "name": "Mariachi Corazoni",
+     "fa": "28960e25"
+    },
+    {
+     "name": "Burrito Bandito",
+     "fa": "65b2edd8"
+    },
+    {
+     "name": "Los Cucarachas",
+     "fa": "a559dda0"
+    },
+    {
+     "name": "Los Quesadillas",
+     "fa": "28c640a4"
+    },
+    {
+     "name": "Los Burritos",
+     "fa": "cfbe52ef"
+    },
+    {
+     "name": "Perrito Burrito",
+     "fa": "540d9ecf"
+    },
+    {
+     "name": "Quesadillo Vampiro",
+     "fa": "c515f2be"
+    },
+    {
+     "name": "Chipso and Queso",
+     "fa": "69765839"
+    },
+    {
+     "name": "La Taco Combinasion",
+     "fa": "0a6ddcda"
+    },
+    {
+     "name": "Los Taco Blocks",
+     "fa": "9ef24772"
+    }
+   ]
+  },
+  {
+   "name": "Exclusive",
+   "fa": "4293fd65",
+   "brainrots": [
+    {
+     "name": "Gattatino Nyanino",
+     "fa": "187bf24e"
+    },
+    {
+     "name": "Raccooni Jandelini",
+     "fa": "24806290"
+    },
+    {
+     "name": "Matteo",
+     "fa": "22f483a3"
+    },
+    {
+     "name": "Espresso Signora",
+     "fa": "c1a796c6"
+    },
+    {
+     "name": "Unclito Samito",
+     "fa": "a1953812"
+    },
+    {
+     "name": "Extinct Ballerina",
+     "fa": "e8be8f4e"
+    },
+    {
+     "name": "Urubini Flamenguini",
+     "fa": "e418b136"
+    },
+    {
+     "name": "Karkerkar Kurkur",
+     "fa": "7b405208"
+    },
+    {
+     "name": "Sammyini Spyderini",
+     "fa": "c05a5db6"
+    },
+    {
+     "name": "Dul Dul Dul",
+     "fa": "aeca4cbb"
+    },
+    {
+     "name": "Chachechi",
+     "fa": "6f888d76"
+    },
+    {
+     "name": "Extinct Tralalero",
+     "fa": "4cd0e4bd"
+    },
+    {
+     "name": "La Cucaracha",
+     "fa": "7483f854"
+    },
+    {
+     "name": "Extinct Matteo",
+     "fa": "aecbf4a1"
+    },
+    {
+     "name": "Tacorita Bicicleta",
+     "fa": "c2c690a4"
+    },
+    {
+     "name": "La Extinct Grande",
+     "fa": "112cc5e9"
+    },
+    {
+     "name": "Vampira Cappucina",
+     "fa": "a573c769"
+    },
+    {
+     "name": "Ballerina Peppermintina",
+     "fa": "1ef5102e"
+    },
+    {
+     "name": "Pakrahmatmatina",
+     "fa": "c5500981"
+    },
+    {
+     "name": "Brasilini Berimbini",
+     "fa": "faf72d2e"
+    },
+    {
+     "name": "Corn Corn Corn Sahur",
+     "fa": "e07d9472"
+    },
+    {
+     "name": "Bambu Bambu Sahur",
+     "fa": "0c09cae5"
+    },
+    {
+     "name": "Krupuk Pagi Pagi",
+     "fa": "d81d36c3"
+    },
+    {
+     "name": "Skull Skull Skull",
+     "fa": "cb9bc9ac"
+    },
+    {
+     "name": "Cocoa Assassino",
+     "fa": "6a7a639a"
+    },
+    {
+     "name": "Frankentteo",
+     "fa": "358ae9ba"
+    },
+    {
+     "name": "Santteo",
+     "fa": "710e26ff"
+    },
+    {
+     "name": "La Vacca Jacko Linterino",
+     "fa": "b3dbc374"
+    },
+    {
+     "name": "Giftini Spyderini",
+     "fa": "c2913f24"
+    },
+    {
+     "name": "Coffin Tung Tung Tung Sahur",
+     "fa": "a8e40d9e"
+    },
+    {
+     "name": "List List List Sahur",
+     "fa": "4e90c21f"
+    },
+    {
+     "name": "Horegini Boom",
+     "fa": "12033af1"
+    },
+    {
+     "name": "Pot Pumpkin",
+     "fa": "ab813c46"
+    },
+    {
+     "name": "Naughty Naughty",
+     "fa": "f1803f47"
+    },
+    {
+     "name": "Noo my Candy",
+     "fa": "26818568"
+    },
+    {
+     "name": "Noo my Present",
+     "fa": "561c0fc1"
+    },
+    {
+     "name": "Rang Ring Bus",
+     "fa": "a82b0a5f"
+    },
+    {
+     "name": "Boatito Auratito",
+     "fa": "e3da673c"
+    },
+    {
+     "name": "Reindeer Tralala",
+     "fa": "4c0e5927"
+    },
+    {
+     "name": "Zombie Tralala",
+     "fa": "fda11642"
+    },
+    {
+     "name": "Los 25",
+     "fa": "21d3bfd4"
+    },
+    {
+     "name": "La Spooky Grande",
+     "fa": "490f9abd"
+    },
+    {
+     "name": "Gobblino Uniciclino",
+     "fa": "bb0be020"
+    },
+    {
+     "name": "W or L",
+     "fa": "bc14c3fb"
+    },
+    {
+     "name": "La Jolly Grande",
+     "fa": "481bfe61"
+    },
+    {
+     "name": "Swaggy Bros",
+     "fa": "6083cdca"
+    }
+   ]
+  },
+  {
+   "name": "Admin",
+   "fa": "985df260",
+   "brainrots": [
+    {
+     "name": "Carloo",
+     "fa": "9261e737"
+    },
+    {
+     "name": "Alessio",
+     "fa": "562ac733"
+    },
+    {
+     "name": "Los Bombinitos",
+     "fa": "5f89907c"
+    },
+    {
+     "name": "Crabbo Limonetta",
+     "fa": "2470557f"
+    },
+    {
+     "name": "Blackhole Goat",
+     "fa": "5d760904"
+    },
+    {
+     "name": "Los Spyderinis",
+     "fa": "c651a418"
+    },
+    {
+     "name": "Guerriro Digitale",
+     "fa": "1df838dc"
+    },
+    {
+     "name": "67",
+     "fa": "1b1a2004"
+    },
+    {
+     "name": "Admin Lucky Block",
+     "fa": "a55cb410"
+    }
+   ]
+  },
+  {
+   "name": "OG",
+   "fa": "f03244dc",
+   "brainrots": [
+    {
+     "name": "Strawberry Elephant",
+     "fa": "6e34f84c"
+    },
+    {
+     "name": "Meowl",
+     "fa": "b0709144"
+    },
+    {
+     "name": "Skibidi Toilet",
+     "fa": "830cbb12"
+    },
+    {
+     "name": "Spyder Elephant",
+     "fa": "a459f445"
+    }
+   ]
+  },
+  {
+   "name": "Mythic",
+   "fa": "2191a0f3",
+   "brainrots": [
+    {
+     "name": "Frigo Camelo",
+     "fa": "df00a6d7"
+    },
+    {
+     "name": "Orangutini Ananassini",
+     "fa": "8d859637"
+    },
+    {
+     "name": "Rhino Toasterino",
+     "fa": "0cf04713"
+    },
+    {
+     "name": "Bombardiro Crocodilo",
+     "fa": "e043f1f4"
+    },
+    {
+     "name": "Bruto Gialutto",
+     "fa": "27e6a474"
+    },
+    {
+     "name": "Spioniro Golubiro",
+     "fa": "ccbb2f1f"
+    },
+    {
+     "name": "Bombombini Gusini",
+     "fa": "d0076fbe"
+    },
+    {
+     "name": "Zibra Zubra Zibralini",
+     "fa": "9d059d1e"
+    },
+    {
+     "name": "Tigrilini Watermelini",
+     "fa": "91a30420"
+    },
+    {
+     "name": "Avocadorilla",
+     "fa": "75cc7a0c"
+    },
+    {
+     "name": "Cavallo Virtuoso",
+     "fa": "f911fc64"
+    },
+    {
+     "name": "Gorillo Subwoofero",
+     "fa": "8cf23069"
+    },
+    {
+     "name": "Gorillo Watermelondrillo",
+     "fa": "d1a8623b"
+    },
+    {
+     "name": "Tob Tobi Tobi",
+     "fa": "c2c2bcbc"
+    },
+    {
+     "name": "Lerulerulerule",
+     "fa": "bdf13d5e"
+    },
+    {
+     "name": "Ganganzelli Trulala",
+     "fa": "6943e9c4"
+    },
+    {
+     "name": "Te Te Te Sahur",
+     "fa": "d65c4e26"
+    },
+    {
+     "name": "Rhino Helicopterino",
+     "fa": "b928b096"
+    },
+    {
+     "name": "Tracoducotulu Delapeladustuz",
+     "fa": "d313d3e6"
+    },
+    {
+     "name": "Los Noobinis",
+     "fa": "1565b5b6"
+    },
+    {
+     "name": "Carrotini Brainini",
+     "fa": "a003d646"
+    },
+    {
+     "name": "Carloo",
+     "fa": "a3155dfe"
+    },
+    {
+     "name": "Elefanto Frigo",
+     "fa": "3b6efb14"
+    },
+    {
+     "name": "Mythic Lucky Block",
+     "fa": "e73bc74a"
+    },
+    {
+     "name": "Centrucci Nuclucci",
+     "fa": "722e570f"
+    },
+    {
+     "name": "Cachorrito Melonito",
+     "fa": "8f11792c"
+    },
+    {
+     "name": "Toiletto Focaccino",
+     "fa": "3b8f028f"
+    },
+    {
+     "name": "Spongini Quackini",
+     "fa": "b09c59f1"
+    },
+    {
+     "name": "Fizzy Soda",
+     "fa": "ce3f1ef8"
+    }
+   ]
+  },
+  {
+   "name": "Legendary",
+   "fa": "0d77b561",
+   "brainrots": [
+    {
+     "name": "Burbaloni Loliloli",
+     "fa": "edfd8aca"
+    },
+    {
+     "name": "Chimpanzini Bananini",
+     "fa": "447ed300"
+    },
+    {
+     "name": "Tirilikalika Tirilikalako",
+     "fa": "b0f9fdb7"
+    },
+    {
+     "name": "Ballerina Cappuccina",
+     "fa": "6d60a081"
+    },
+    {
+     "name": "Chef Crabracadabra",
+     "fa": "27d555d6"
+    },
+    {
+     "name": "Lionel Cactuseli",
+     "fa": "2dcc31c9"
+    },
+    {
+     "name": "Glorbo Fruttodrillo",
+     "fa": "51b3753e"
+    },
+    {
+     "name": "Quivioli Ameleonni",
+     "fa": "a7ee81e2"
+    },
+    {
+     "name": "Blueberrinni Octopusini",
+     "fa": "5c7a72bd"
+    },
+    {
+     "name": "Caramello Filtrello",
+     "fa": "cf5e29e6"
+    },
+    {
+     "name": "Pipi Potato",
+     "fa": "4f4b9089"
+    },
+    {
+     "name": "Strawberelli Flamingelli",
+     "fa": "75ecd609"
+    },
+    {
+     "name": "Cocosini Mama",
+     "fa": "351a630a"
+    },
+    {
+     "name": "Pandaccini Bananini",
+     "fa": "52ab3acf"
+    },
+    {
+     "name": "Pi Pi Watermelon",
+     "fa": "efeeb2f8"
+    },
+    {
+     "name": "Signore Carapace",
+     "fa": "aa1d5c90"
+    },
+    {
+     "name": "Sigma Boy",
+     "fa": "96ac5b77"
+    },
+    {
+     "name": "Sigma Girl",
+     "fa": "946f5236"
+    }
+   ]
+  },
+  {
+   "name": "Epic",
+   "fa": "a0bb8412",
+   "brainrots": [
+    {
+     "name": "Cappuccino Assassino",
+     "fa": "2657c899"
+    },
+    {
+     "name": "Bandito Axolito",
+     "fa": "157d774a"
+    },
+    {
+     "name": "Brr Brr Patapim",
+     "fa": "064d6538"
+    },
+    {
+     "name": "Avocadini Antilopini",
+     "fa": "7631a2d0"
+    },
+    {
+     "name": "Trulimero Trulicina",
+     "fa": "e1d9498a"
+    },
+    {
+     "name": "Bambini Crostini",
+     "fa": "56439393"
+    },
+    {
+     "name": "Malame Amarele",
+     "fa": "6bf4b9fd"
+    },
+    {
+     "name": "Bananita Dolphinita",
+     "fa": "7d5bb7d5"
+    },
+    {
+     "name": "Perochello Lemonchello",
+     "fa": "73a15727"
+    },
+    {
+     "name": "Brri Brri Bicus Dicus Bombicus",
+     "fa": "5a6c189f"
+    },
+    {
+     "name": "Ti Ti Ti Sahur",
+     "fa": "b406bed1"
+    },
+    {
+     "name": "Avocadini Guffo",
+     "fa": "832bd9f1"
+    },
+    {
+     "name": "Mangolini Parrocini",
+     "fa": "eb744a9a"
+    },
+    {
+     "name": "Salamino Penguino",
+     "fa": "bf577b14"
+    },
+    {
+     "name": "Penguino Cocosino",
+     "fa": "f6c20535"
+    }
+   ]
+  },
+  {
+   "name": "Rare",
+   "fa": "d27b4b44",
+   "brainrots": [
+    {
+     "name": "Trippi Troppi",
+     "fa": "1bf17428"
+    },
+    {
+     "name": "Gangster Footera",
+     "fa": "f55b74dc"
+    },
+    {
+     "name": "Bandito Bobritto",
+     "fa": "3a41e780"
+    },
+    {
+     "name": "Boneca Ambalabu",
+     "fa": "cc97a2b0"
+    },
+    {
+     "name": "Cacto Hipopotamo",
+     "fa": "8d5b061d"
+    },
+    {
+     "name": "Ta Ta Ta Ta Sahur",
+     "fa": "6818b609"
+    },
+    {
+     "name": "Tric-Trac-Baraboom",
+     "fa": "41eac133"
+    },
+    {
+     "name": "Pipi Avocado",
+     "fa": "e025b594"
+    },
+    {
+     "name": "Tung Tung Tung Sahur",
+     "fa": "dbc345af"
+    },
+    {
+     "name": "Pinealotto Fruttarino",
+     "fa": "ec7afd82"
+    }
+   ]
+  },
+  {
+   "name": "Common",
+   "fa": "babde655",
+   "brainrots": [
+    {
+     "name": "Noobini Pizzanini",
+     "fa": "64853fde"
+    },
+    {
+     "name": "Lirilì Larilà",
+     "fa": "9b8145b6"
+    },
+    {
+     "name": "Tim Cheese",
+     "fa": "f16ac638"
+    },
+    {
+     "name": "Fluriflura",
+     "fa": "17dae23b"
+    },
+    {
+     "name": "Talpa Di Fero",
+     "fa": "0df7a1b4"
+    },
+    {
+     "name": "Svinina Bombardino",
+     "fa": "743e6585"
+    },
+    {
+     "name": "Pipi Kiwi",
+     "fa": "3ea57c21"
+    },
+    {
+     "name": "Pipi Corni",
+     "fa": "cfe05eee"
+    }
+   ]
+  }
+ ]
+}
