@@ -44,7 +44,28 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: Collect and import Itemku market data
-        run: npm run sab:itemku:send
+        # Itemku is Playwright/browser-based, so it's inherently flakier than the
+        # API collectors — a transient bot-check or browser-launch failure should
+        # not fail the whole daily run. Retry up to 3 times with backoff; only a
+        # genuine, repeated failure aborts the job. Itemku is a secondary source
+        # (Eldorado + G2G are the primary blend), so a rare fully-failed day is
+        # low impact anyway.
+        run: |
+          for attempt in 1 2 3; do
+            echo "::group::Itemku collect attempt ${attempt}/3"
+            if npm run sab:itemku:send; then
+              echo "::endgroup::"
+              echo "Itemku collection succeeded on attempt ${attempt}"
+              exit 0
+            fi
+            echo "::endgroup::"
+            echo "::warning::Itemku attempt ${attempt} failed"
+            if [ "${attempt}" -lt 3 ]; then
+              sleep $((attempt * 30))
+            fi
+          done
+          echo "::error::Itemku collection failed after 3 attempts"
+          exit 1
 
       - name: Upload collection report
         if: always()
