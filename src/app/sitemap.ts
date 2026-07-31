@@ -12,7 +12,8 @@
 
 import { MetadataRoute } from 'next'
 import { createClient } from '@/lib/supabase/server'
-import { getAllLandingPageSlugs } from '@/lib/seo/landingPages'
+import { LANDING_PAGES } from '@/lib/seo/landingPages'
+import { isLandingPageIndexable } from '@/lib/seo/landingPageInventory'
 import { LEGAL_DOCS } from '@/lib/legal/documents'
 import { getAllPosts } from '@/lib/blog/posts'
 
@@ -246,11 +247,21 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       })) || []
 
   // SEO landing pages (curated copy; no meaningful change date → no lastmod).
-  const landingPages: MetadataRoute.Sitemap = getAllLandingPageSlugs().map((slug) => ({
-    url: `${BASE_URL}/buy/${slug}`,
-    changeFrequency: 'weekly' as const,
-    priority: 0.75,
-  }))
+  // Only the ones with real inventory: an empty landing page is noindexed by
+  // the route itself, and submitting a noindexed URL in the sitemap is a
+  // contradiction Google reports as an error. Previously every configured slug
+  // was listed unconditionally, including four that rendered "coming soon".
+  const landingPageCandidates = LANDING_PAGES
+  const landingPageHasInventory = await Promise.all(
+    landingPageCandidates.map((page) => isLandingPageIndexable(page)),
+  )
+  const landingPages: MetadataRoute.Sitemap = landingPageCandidates
+    .filter((_, i) => landingPageHasInventory[i])
+    .map((page) => ({
+      url: `${BASE_URL}/buy/${page.slug}`,
+      changeFrequency: 'weekly' as const,
+      priority: 0.75,
+    }))
 
   const sabPages: MetadataRoute.Sitemap = [
     {

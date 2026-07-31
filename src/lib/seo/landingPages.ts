@@ -7,6 +7,16 @@
  *
  * Add new pages by appending to LANDING_PAGES and they'll automatically
  * appear in the sitemap and be rendered by the dynamic route.
+ *
+ * `gameSlug` and `categorySlug` MUST match live `games.slug` / `categories.slug`
+ * values — check the DB, don't guess from the URL. Every entry here was
+ * originally written against the pre-rename taxonomy (bare `accounts`, `items`,
+ * `currency`, and `league-of-legends` for a game whose slug is `lol`), and none
+ * of them resolved: four pages showed "coming soon" and three quietly listed
+ * the game's entire inventory. Categories are `buy-*` now and vary per game
+ * (`buy-vp`, `buy-skins`, `buy-robux`, `buy-server-items`, …). A slug that
+ * doesn't resolve now yields an empty, noindexed page rather than wrong
+ * inventory — visible, but still worth getting right.
  */
 
 export interface LandingPageFAQ {
@@ -52,7 +62,7 @@ export const LANDING_PAGES: LandingPage[] = [
     subCopy:
       'Find high-value, verified Roblox accounts from trusted sellers. Every purchase covered by SafeDrop Buyer Protection.',
     gameSlug: 'roblox',
-    categorySlug: 'accounts',
+    categorySlug: 'buy-accounts',
     emoji: '🟥',
     schemaCategory: 'Roblox Accounts',
     faqs: [
@@ -83,7 +93,7 @@ export const LANDING_PAGES: LandingPage[] = [
     subCopy:
       'Score rare Roblox limited items and UGC accessories from verified sellers — all covered by SafeDrop Buyer Protection.',
     gameSlug: 'roblox',
-    categorySlug: 'items',
+    categorySlug: 'buy-items',
     emoji: '🟥',
     schemaCategory: 'Roblox Items',
     faqs: [
@@ -112,7 +122,7 @@ export const LANDING_PAGES: LandingPage[] = [
     subCopy:
       'Skip the grind. Purchase ranked Valorant accounts with top-tier skins from verified sellers.',
     gameSlug: 'valorant',
-    categorySlug: 'accounts',
+    categorySlug: 'buy-accounts',
     emoji: '🔴',
     schemaCategory: 'Valorant Accounts',
     faqs: [
@@ -139,7 +149,7 @@ export const LANDING_PAGES: LandingPage[] = [
     subCopy:
       'Top up your VP wallet at below-market rates from trusted DropMarket sellers.',
     gameSlug: 'valorant',
-    categorySlug: 'currency',
+    categorySlug: 'buy-vp',
     emoji: '🔴',
     schemaCategory: 'Valorant Currency',
     faqs: [
@@ -164,7 +174,7 @@ export const LANDING_PAGES: LandingPage[] = [
     subCopy:
       'Find OG Fortnite accounts with season-1 skins and rare cosmetics. All sellers verified, every order covered by SafeDrop.',
     gameSlug: 'fortnite',
-    categorySlug: 'accounts',
+    categorySlug: 'buy-accounts',
     emoji: '🎮',
     schemaCategory: 'Fortnite Accounts',
     faqs: [
@@ -191,7 +201,7 @@ export const LANDING_PAGES: LandingPage[] = [
     subCopy:
       'Get the rarest Fortnite cosmetics without grinding. Verified sellers, covered by SafeDrop Buyer Protection.',
     gameSlug: 'fortnite',
-    categorySlug: 'items',
+    categorySlug: 'buy-skins',
     emoji: '🎮',
     schemaCategory: 'Fortnite Cosmetics',
     faqs: [
@@ -211,8 +221,8 @@ export const LANDING_PAGES: LandingPage[] = [
     headline: 'Buy League of Legends Accounts',
     subCopy:
       'Find LoL smurf accounts, high-elo mains, and accounts with full champion pools at the best prices.',
-    gameSlug: 'league-of-legends',
-    categorySlug: 'accounts',
+    gameSlug: 'lol',
+    categorySlug: 'buy-accounts',
     emoji: '⚔️',
     schemaCategory: 'League of Legends Accounts',
     faqs: [

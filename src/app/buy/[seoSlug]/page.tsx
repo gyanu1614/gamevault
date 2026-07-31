@@ -19,6 +19,7 @@ import Link from 'next/link'
 import { Shield, Zap, Star, ArrowRight, CheckCircle2, ChevronDown } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { getLandingPage, getAllLandingPageSlugs, LandingPage } from '@/lib/seo/landingPages'
+import { getLandingPageListings } from '@/lib/seo/landingPageInventory'
 import { breadcrumbList, productAggregate } from '@/lib/seo/jsonld'
 import type { ListingWithRelations } from '@/types/database'
 
@@ -47,9 +48,17 @@ export async function generateMetadata(
 
   const url = `${BASE_URL}/buy/${page.slug}`
 
+  // Indexability gate, mirroring the game hubs: a landing page with nothing to
+  // list is thin content, and shipping thin pages is what got us a bucket of
+  // soft 404s in the first place. Stay out of the index until there's real
+  // inventory, but keep following links. `getLandingPageListings` is cached,
+  // so this shares the page body's query rather than adding one.
+  const indexable = (await getLandingPageListings(page)).length > 0
+
   return {
     title: page.title,
     description: page.description,
+    robots: indexable ? undefined : { index: false, follow: true },
     alternates: { canonical: url },
     openGraph: {
       title: page.title,
@@ -70,45 +79,8 @@ export async function generateMetadata(
 /* Data fetching                                                        */
 /* ------------------------------------------------------------------ */
 
-async function getListings(page: LandingPage) {
-  const supabase = await createClient()
-
-  let query = supabase
-    .from('listings')
-    .select(
-      `
-      id, slug, title, price, currency, images, delivery_time, is_unlimited, quantity, views, sales,
-      seller:profiles!listings_seller_id_fkey(id, username, avatar_url, seller_rating),
-      game:games!listings_game_id_fkey(id, name, slug, emoji),
-      category:categories!listings_category_id_fkey(id, name, slug, icon)
-    `,
-    )
-    .eq('status', 'active')
-    .order('sales', { ascending: false })
-    .limit(12)
-
-  if (page.gameSlug) {
-    const { data: game } = await supabase
-      .from('games')
-      .select('id')
-      .eq('slug', page.gameSlug)
-      .single() as { data: { id: string } | null; error: unknown }
-    if (game) query = query.eq('game_id', game.id)
-  }
-
-  if (page.categorySlug) {
-    const { data: category } = await supabase
-      .from('categories')
-      .select('id')
-      .eq('slug', page.categorySlug)
-      .single() as { data: { id: string } | null; error: unknown }
-    if (category) query = query.eq('category_id', category.id)
-  }
-
-  const { data, error } = await query
-  if (error) return []
-  return (data ?? []) as unknown as ListingWithRelations[]
-}
+// Listing resolution lives in @/lib/seo/landingPageInventory so the page and
+// the sitemap can never disagree about what a landing page contains.
 
 /* ------------------------------------------------------------------ */
 /* Schema.org JSON-LD                                                   */
@@ -193,7 +165,7 @@ export default async function SEOLandingPage({
   const page = getLandingPage(params.seoSlug)
   if (!page) notFound()
 
-  const listings = await getListings(page)
+  const listings = await getLandingPageListings(page)
   const { faqSchema, itemListSchema, breadcrumbSchema, productSchema } =
     buildStructuredData(page, listings)
 
