@@ -107,6 +107,15 @@ describe('lowestSupportedPrice', () => {
     expect(lowestSupportedPrice([1, 5, 30, 200])).toBeNull()
   })
 
+  it('drops fake-cheap listings below 25% of the median (point 5)', () => {
+    // The Headless Horseman shape: two $44.88 fakes against a real $1000+
+    // cluster. The $44.88 pair is below 25% of the median → dropped, and the
+    // real cluster sets the floor.
+    const prices = [44.88, 44.88, 1000, 1000, 1050, 4000, 8999.99]
+    const floor = lowestSupportedPrice(prices)
+    expect(floor).toBe(1000)
+  })
+
   it('drops non-positive and non-finite prices before clustering', () => {
     const prices = [0, -1, Number.NaN, 1.0, 1.0, 1.05]
     expect(lowestSupportedPrice(prices)).toBe(1.0)
@@ -170,6 +179,57 @@ describe('measureMutationMultipliers', () => {
     }
 
     expect(measureMutationMultipliers(variants).has('rainbow')).toBe(false)
+  })
+})
+
+describe('computeCorrections — mutation ladder (point 6)', () => {
+  // A brainrot with a Default and one higher-tier mutation. Each variant gets
+  // enough dense listings that both would normally publish.
+  function ladderCase(defaultPrice: number, goldPrice: number) {
+    const peers = peerGroup(6)
+    const dense = (p: number) => [p, p, p, p, p, p, p, p]
+    return computeCorrections({
+      brainrots: [...peers.brainrots, brainrot('lad')],
+      variants: [
+        ...peers.variants,
+        variant('lad', {
+          mutationSlug: 'default',
+          mutationId: 'm-default',
+          valueUsd: defaultPrice,
+          sampleCount: 20,
+          incomeMultiplier: 1,
+          listingPrices: dense(defaultPrice),
+        }),
+        variant('lad', {
+          mutationSlug: 'gold',
+          mutationId: 'm-gold',
+          valueUsd: goldPrice,
+          sampleCount: 20,
+          incomeMultiplier: 1.25,
+          listingPrices: dense(goldPrice),
+        }),
+      ],
+    }).filter((c) => c.brainrotId === 'lad')
+  }
+
+  it('suppresses a lower tier priced implausibly above a higher tier', () => {
+    // Default $50 but Gold (higher tier) only $10 → Default is mislabeled noise.
+    const out = ladderCase(50, 10)
+    const def = out.find((c) => c.mutationId === 'm-default')!
+    expect(def.isPublishable).toBe(false)
+    expect(def.valueUsd).toBeNull()
+  })
+
+  it('leaves a correctly-ordered ladder alone', () => {
+    // Default $10, Gold $12 — normal ordering, both publish.
+    const out = ladderCase(10, 12)
+    expect(out.every((c) => c.isPublishable)).toBe(true)
+  })
+
+  it('tolerates mild inversion within the ratio', () => {
+    // Default $12, Gold $10 — inverted but within 2x, so noise-tolerant.
+    const out = ladderCase(12, 10)
+    expect(out.every((c) => c.isPublishable)).toBe(true)
   })
 })
 

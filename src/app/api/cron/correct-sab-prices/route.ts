@@ -59,6 +59,11 @@ type EvidenceRow = {
   unit_price_usd: number | string | null
 }
 
+type MutationRow = {
+  slug: string
+  income_multiplier: number | string | null
+}
+
 function toNumber(value: number | string | null | undefined): number | null {
   if (value == null) return null
   const parsed = Number(value)
@@ -109,12 +114,13 @@ export async function GET(request: NextRequest) {
     // Also read the cleaned per-listing evidence — the IQR-fenced individual
     // prices behind each variant — so the floor ("cheapest you can actually buy
     // at") can be computed from real listings rather than the median blend.
-    const [catalog, brainrots, evidence] = await Promise.all([
+    const [catalog, mutations, brainrots, evidence] = await Promise.all([
       selectAll<CatalogRow>(
         admin,
         'sab_public_price_catalog',
         'brainrot_id,mutation_id,mutation_slug,market_value_usd,market_low_usd,market_high_usd,confidence_label,external_sample_size,source_count',
       ),
+      selectAll<MutationRow>(admin, 'sab_mutations', 'slug,income_multiplier'),
       selectAll<BrainrotRow>(
         admin,
         'sab_brainrots',
@@ -126,6 +132,14 @@ export async function GET(request: NextRequest) {
         'brainrot_id,mutation_id,unit_price_usd',
       ),
     ])
+
+    // Mutation slug → income multiplier, the value-ladder ordering for the
+    // ladder sanity check.
+    const multiplierBySlug = new Map<string, number>()
+    for (const row of mutations) {
+      const multiplier = toNumber(row.income_multiplier)
+      if (multiplier != null) multiplierBySlug.set(row.slug, multiplier)
+    }
 
     // Group cleaned listing prices by (brainrot, mutation) so each variant can
     // read its own floor candidates in O(1).
@@ -158,6 +172,7 @@ export async function GET(request: NextRequest) {
       isReviewed: row.confidence_label === 'reviewed',
       listingPrices:
         pricesByVariant.get(`${row.brainrot_id}:${row.mutation_id}`) ?? [],
+      incomeMultiplier: multiplierBySlug.get(row.mutation_slug) ?? undefined,
     }))
 
     const corrections = computeCorrections({ brainrots: metas, variants })
