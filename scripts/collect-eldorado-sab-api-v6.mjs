@@ -27,7 +27,11 @@ const ELDORADO_MIN_ACCOUNT_AGE_DAYS = Number(
 function parseArgs(argv) {
   const options = {
     maxBrainrots: Number(process.env.ELDORADO_MAX_BRAINROTS ?? 5),
-    samplesPerVariant: Number(process.env.ELDORADO_SAMPLES_PER_VARIANT ?? 8),
+    // Capture ALL available listings per mutation, not an artificial cap — the
+    // confidence tiers already reflect the count, and depth is what makes a
+    // price trustworthy. 25 is the schema max; most items have far fewer
+    // listings than this, so it only bites on the well-listed ones.
+    samplesPerVariant: Number(process.env.ELDORADO_SAMPLES_PER_VARIANT ?? 25),
     // Pages of offers to fetch per brainrot. Page 1 alone under-samples rare
     // mutations (1-2 listings each), so they never clear the publish threshold.
     // Fetching several pages accumulates enough samples to price every mutation.

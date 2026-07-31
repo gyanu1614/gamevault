@@ -76,7 +76,7 @@ jobs:
           npm run sab:eldorado:send --
           --max-brainrots ${{ inputs.max_brainrots || '120' }}
           --max-pages ${{ inputs.max_pages || '10' }}
-          --samples-per-variant 8
+          --samples-per-variant 25
           --delay-ms 1500
           --refresh-after-hours ${{ inputs.refresh_after_hours || '20' }}
           ${{ (inputs.reset_progress == 'true') && '--reset-progress' || '' }}
