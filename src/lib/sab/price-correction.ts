@@ -468,10 +468,12 @@ function enforceMutationLadder(
     ]),
   )
 
-  // Group publishable, priced corrections by Brainrot with their tier.
+  // Group publishable, priced corrections by Brainrot with their tier AND
+  // sample count — the sample count is what decides which side of an inversion
+  // is the noise.
   const byBrainrot = new Map<
     string,
-    { correction: Correction; multiplier: number }[]
+    { correction: Correction; multiplier: number; samples: number }[]
   >()
 
   for (const correction of corrections) {
@@ -481,7 +483,7 @@ function enforceMutationLadder(
     )
     if (!isUsable(multiplier)) continue
     const list = byBrainrot.get(correction.brainrotId)
-    const entry = { correction, multiplier }
+    const entry = { correction, multiplier, samples: correction.sampleCount }
     if (list) list.push(entry)
     else byBrainrot.set(correction.brainrotId, [entry])
   }
@@ -490,19 +492,30 @@ function enforceMutationLadder(
 
   for (const group of byBrainrot.values()) {
     for (const entry of group) {
-      // The cheapest price among strictly-higher tiers.
-      let cheaperHigher: number | null = null
+      // NEVER suppress a well-sampled price on ladder grounds. A price backed by
+      // real listings is evidence, not noise — if it disagrees with the ladder,
+      // the ladder assumption (mutation X always costs more than Y) is what's
+      // wrong, not the measurement. Only THIN estimates can be ladder-noise.
+      // (This is the Skibidi bug: an 11-sample $224 default was being nuked by a
+      // $70 estimated higher-tier mutation.)
+      if (entry.samples >= MIN_TRUSTED_SAMPLES) continue
+
+      // Compare a thin LOWER tier only against a WELL-SAMPLED higher tier — a
+      // noisy neighbour can't be the yardstick. If this thin low-tier estimate
+      // sits implausibly above a trusted higher tier, it's the noise: drop it.
+      let trustedHigher: number | null = null
       for (const other of group) {
         if (other.multiplier <= entry.multiplier) continue
+        if (other.samples < MIN_TRUSTED_SAMPLES) continue
         const value = other.correction.valueUsd!
-        if (cheaperHigher == null || value < cheaperHigher) {
-          cheaperHigher = value
+        if (trustedHigher == null || value < trustedHigher) {
+          trustedHigher = value
         }
       }
 
       if (
-        cheaperHigher != null &&
-        entry.correction.valueUsd! > cheaperHigher * LADDER_MAX_INVERSION_RATIO
+        trustedHigher != null &&
+        entry.correction.valueUsd! > trustedHigher * LADDER_MAX_INVERSION_RATIO
       ) {
         suppress.add(entry.correction)
       }

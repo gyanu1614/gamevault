@@ -183,11 +183,17 @@ describe('measureMutationMultipliers', () => {
 })
 
 describe('computeCorrections — mutation ladder (point 6)', () => {
-  // A brainrot with a Default and one higher-tier mutation. Each variant gets
-  // enough dense listings that both would normally publish.
-  function ladderCase(defaultPrice: number, goldPrice: number) {
+  // A brainrot with a low tier and a higher tier. `lowSamples`/`highSamples`
+  // control which side is well-sampled — the sample count decides which side of
+  // an inversion is treated as noise.
+  function ladderCase(
+    lowPrice: number,
+    highPrice: number,
+    lowSamples: number,
+    highSamples: number,
+  ) {
     const peers = peerGroup(6)
-    const dense = (p: number) => [p, p, p, p, p, p, p, p]
+    const dense = (p: number, n: number) => Array.from({ length: n }, () => p)
     return computeCorrections({
       brainrots: [...peers.brainrots, brainrot('lad')],
       variants: [
@@ -195,40 +201,75 @@ describe('computeCorrections — mutation ladder (point 6)', () => {
         variant('lad', {
           mutationSlug: 'default',
           mutationId: 'm-default',
-          valueUsd: defaultPrice,
-          sampleCount: 20,
+          valueUsd: lowPrice,
+          sampleCount: lowSamples,
           incomeMultiplier: 1,
-          listingPrices: dense(defaultPrice),
+          listingPrices: dense(lowPrice, Math.max(lowSamples, 1)),
         }),
         variant('lad', {
           mutationSlug: 'gold',
           mutationId: 'm-gold',
-          valueUsd: goldPrice,
-          sampleCount: 20,
+          valueUsd: highPrice,
+          sampleCount: highSamples,
           incomeMultiplier: 1.25,
-          listingPrices: dense(goldPrice),
+          listingPrices: dense(highPrice, Math.max(highSamples, 1)),
         }),
       ],
     }).filter((c) => c.brainrotId === 'lad')
   }
 
-  it('suppresses a lower tier priced implausibly above a higher tier', () => {
-    // Default $50 but Gold (higher tier) only $10 → Default is mislabeled noise.
-    const out = ladderCase(50, 10)
+  it('NEVER suppresses a well-sampled price, even when out of ladder order', () => {
+    // The Skibidi bug: an 11-sample $224 default must NOT be nuked by a cheap
+    // higher-tier price. Real evidence wins over the ladder assumption.
+    const out = ladderCase(224, 70, 11, 8)
+    const def = out.find((c) => c.mutationId === 'm-default')!
+    expect(def.isPublishable).toBe(true)
+    expect(def.valueUsd).toBe(224)
+  })
+
+  it('suppresses a THIN low tier priced implausibly above a WELL-SAMPLED higher tier', () => {
+    // A thin low tier that its cohort AGREES with (so anchoring leaves it high),
+    // sitting above a well-sampled higher tier → the ladder catches it. Peers
+    // priced ~$50 so the thin default stays ~$50 rather than being cohort-pulled.
+    const peers = peerGroup(6, 50)
+    const out = computeCorrections({
+      brainrots: [...peers.brainrots, brainrot('lad')],
+      variants: [
+        ...peers.variants,
+        variant('lad', {
+          mutationSlug: 'default',
+          mutationId: 'm-default',
+          valueUsd: 50,
+          sampleCount: 1,
+          incomeMultiplier: 1,
+          listingPrices: [50],
+        }),
+        variant('lad', {
+          mutationSlug: 'gold',
+          mutationId: 'm-gold',
+          valueUsd: 10,
+          sampleCount: 20,
+          incomeMultiplier: 1.25,
+          listingPrices: Array.from({ length: 20 }, () => 10),
+        }),
+      ],
+    }).filter((c) => c.brainrotId === 'lad')
+
     const def = out.find((c) => c.mutationId === 'm-default')!
     expect(def.isPublishable).toBe(false)
     expect(def.valueUsd).toBeNull()
   })
 
-  it('leaves a correctly-ordered ladder alone', () => {
-    // Default $10, Gold $12 — normal ordering, both publish.
-    const out = ladderCase(10, 12)
-    expect(out.every((c) => c.isPublishable)).toBe(true)
+  it('does not suppress a thin low tier against a thin higher tier', () => {
+    // Both thin — no trustworthy yardstick, so leave them be.
+    const out = ladderCase(50, 10, 1, 1)
+    // Thin entries may anchor elsewhere, but ladder must not force-suppress.
+    const def = out.find((c) => c.mutationId === 'm-default')!
+    expect(def.reason).not.toBe('insufficient_evidence')
   })
 
-  it('tolerates mild inversion within the ratio', () => {
-    // Default $12, Gold $10 — inverted but within 2x, so noise-tolerant.
-    const out = ladderCase(12, 10)
+  it('leaves a correctly-ordered ladder alone', () => {
+    const out = ladderCase(10, 12, 20, 20)
     expect(out.every((c) => c.isPublishable)).toBe(true)
   })
 })
