@@ -98,38 +98,38 @@ const nextConfig = {
         destination: '/blade-ball/buy-currency',
         permanent: true,
       },
-      // Blog posts migrated from flat /blog/[slug] to nested /[game]/blogs/[slug]
+      // Blog posts migrated from flat /blog/[slug] to nested /[game]/blog/[slug]
       // (DB-backed CMS). 301 the old flat URLs so Google moves the ranking to
       // the canonical nested URL — no duplicate content. General (non-game)
       // posts stay at /blog. One-time set for the imported posts.
       {
         source: '/blog/steal-a-brainrot-trading-guide',
-        destination: '/steal-a-brainrot/blogs/steal-a-brainrot-trading-guide',
+        destination: '/steal-a-brainrot/blog/steal-a-brainrot-trading-guide',
         permanent: true,
       },
       {
         source: '/blog/spot-overpriced-brainrots',
-        destination: '/steal-a-brainrot/blogs/spot-overpriced-brainrots',
+        destination: '/steal-a-brainrot/blog/spot-overpriced-brainrots',
         permanent: true,
       },
       {
         source: '/blog/steal-a-brainrot-trading-values-explained',
-        destination: '/steal-a-brainrot/blogs/steal-a-brainrot-trading-values-explained',
+        destination: '/steal-a-brainrot/blog/steal-a-brainrot-trading-values-explained',
         permanent: true,
       },
       {
         source: '/blog/how-to-sell-roblox-brainrots-for-real-money',
-        destination: '/steal-a-brainrot/blogs/how-to-sell-roblox-brainrots-for-real-money',
+        destination: '/steal-a-brainrot/blog/how-to-sell-roblox-brainrots-for-real-money',
         permanent: true,
       },
       {
         source: '/blog/adopt-me-pet-values-explained',
-        destination: '/adopt-me/blogs/adopt-me-pet-values-explained',
+        destination: '/adopt-me/blog/adopt-me-pet-values-explained',
         permanent: true,
       },
       {
         source: '/blog/is-it-safe-to-buy-game-accounts',
-        destination: '/valorant/blogs/is-it-safe-to-buy-game-accounts',
+        destination: '/valorant/blog/is-it-safe-to-buy-game-accounts',
         permanent: true,
       },
       {
