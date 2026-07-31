@@ -15,6 +15,15 @@ const DEFAULT_OUTPUT = "data/sab-market-feeds/eldorado-api-latest.json";
 const DEFAULT_PROGRESS = "data/sab-market-feeds/eldorado-api-progress.json";
 const COLLECTOR_VERSION = 6;
 
+// Point 4(a): Eldorado accounts younger than this post the fake-cheap bait.
+// "Registered ~3 months ago" per the pricing hardening spec. Eldorado hides
+// order/feedback counts (userOrderInfo is null), so age is the only trust
+// signal it exposes; the 100+-ratings half of the rule applies on u7buy, which
+// exposes completedNum/favorableRate. Env-overridable for tuning.
+const ELDORADO_MIN_ACCOUNT_AGE_DAYS = Number(
+  process.env.ELDORADO_MIN_ACCOUNT_AGE_DAYS ?? 90,
+);
+
 function parseArgs(argv) {
   const options = {
     maxBrainrots: Number(process.env.ELDORADO_MAX_BRAINROTS ?? 5),
@@ -440,9 +449,17 @@ function findOfferObjects(payload, expectedName) {
   const seen = new WeakSet();
   const expected = comparable(expectedName);
 
-  function visit(value, depth = 0) {
+  // The offers API returns each listing as { offer, user, userOrderInfo }.
+  // Seller trust (user.createdDate, user.id) lives on the `user` SIBLING of the
+  // priced `offer` object, so when we match an offer we attach the nearest
+  // enclosing wrapper that carries a `user` — otherwise the seller data, which
+  // is the whole point of the trust filter, is left behind.
+  function visit(value, depth = 0, wrapper = null) {
     if (!value || typeof value !== "object" || depth > 9 || seen.has(value)) return;
     seen.add(value);
+
+    const nextWrapper =
+      !Array.isArray(value) && value.user && value.offer ? value : wrapper;
 
     if (!Array.isArray(value)) {
       const leaves = flattenLeaves(value);
@@ -465,12 +482,17 @@ function findOfferObjects(payload, expectedName) {
           price_path: price.path,
           text,
           raw: value,
+          // Prefer the full { offer, user } wrapper so seller fields survive.
+          seller: extractSeller(nextWrapper ?? value),
+          // The seller's structured "Mutations" attribute, cross-checked
+          // against the title (point 1). Null when the offer carries none.
+          attribute_mutation: extractMutationAttribute(nextWrapper ?? value),
         });
       }
     }
 
     const entries = Array.isArray(value) ? value : Object.values(value);
-    for (const entry of entries) visit(entry, depth + 1);
+    for (const entry of entries) visit(entry, depth + 1, nextWrapper);
   }
 
   visit(payload);
@@ -480,6 +502,68 @@ function findOfferObjects(payload, expectedName) {
     if (!current || result.text.length > current.text.length) bestById.set(result.id, result);
   }
   return [...bestById.values()];
+}
+
+/**
+ * The seller-set "Mutations" attribute value, e.g. "None", "Gold", "Rainbow".
+ *
+ * Used only to CROSS-CHECK the title-derived mutation (point 1) — never as the
+ * source of truth, because sellers mislabel it. Returns the raw string; the
+ * caller compares it to the title and drops the listing on disagreement.
+ */
+function extractMutationAttribute(wrapper) {
+  if (!wrapper || typeof wrapper !== "object") return null;
+  const offer = wrapper.offer ?? wrapper;
+  const lists = [offer.attributes, offer.offerAttributeIdValues].filter(
+    Array.isArray,
+  );
+  for (const list of lists) {
+    for (const attr of list) {
+      if (!/mutation/i.test(attr?.name ?? "")) continue;
+      const raw = attr.value;
+      const value =
+        typeof raw === "object" && raw ? (raw.name ?? raw.id ?? null) : raw;
+      if (typeof value === "string" && value.trim()) return value.trim();
+    }
+  }
+  return null;
+}
+
+/**
+ * Seller trust fields from an Eldorado { offer, user } wrapper.
+ *
+ * Eldorado hides feedback/order counts (userOrderInfo is null) and marks
+ * essentially everyone isVerifiedSeller=true, so those are useless. What it
+ * DOES expose, and what actually separates fakes from real sellers, is:
+ *   - user.createdDate — brand-new accounts post the fake-cheap listings
+ *   - user.id / offer.userId — one seller spamming N identical copies
+ * Both were being fetched and discarded. Verified against live data 2026-07-31.
+ */
+function extractSeller(wrapper) {
+  if (!wrapper || typeof wrapper !== "object") return null;
+  const user = wrapper.user ?? {};
+  const offer = wrapper.offer ?? {};
+  const createdDate = user.createdDate ?? null;
+
+  let accountAgeDays = null;
+  if (createdDate) {
+    const created = Date.parse(createdDate);
+    if (Number.isFinite(created)) {
+      accountAgeDays = Math.max(
+        0,
+        Math.round((Date.now() - created) / 86_400_000),
+      );
+    }
+  }
+
+  return {
+    seller_id: offer.userId ?? user.id ?? null,
+    seller_username: user.username ?? null,
+    seller_created_date: createdDate,
+    seller_account_age_days: accountAgeDays,
+    // Kept for the record even though it is uninformative on Eldorado.
+    seller_is_verified: user.isVerifiedSeller ?? null,
+  };
 }
 
 /**
@@ -905,14 +989,34 @@ async function collectOne({
 
   let incomeFilteredCount = 0;
   let missingIncomeRangeCount = 0;
+  let newAccountRejects = 0;
+  let duplicateRejects = 0;
+  let mutationDisagreementRejects = 0;
 
   const rawCandidates = apiCandidates.length > 0
     ? apiCandidates.map((candidate) => ({ ...candidate, source: "api" }))
     : bodyCandidates;
 
   for (const candidate of rawCandidates) {
+    // Point 1: derive the mutation from the TITLE (detectMutation), and if the
+    // seller also set a structured Mutations attribute, require it to AGREE.
+    // A listing whose title-mutation contradicts its own attribute is
+    // mislabeled — drop it rather than guess which one is right.
     const mutation = candidate.mutation ?? detectMutation(candidate.text, mutations);
     if (!mutation?.id) continue;
+
+    if (candidate.attribute_mutation) {
+      const attrMutation = detectMutation(
+        `x ${candidate.attribute_mutation} x`,
+        mutations,
+      );
+      // Only enforce when the attribute maps to a mutation we recognise; an
+      // unmappable attribute string tells us nothing.
+      if (attrMutation?.slug && attrMutation.slug !== mutation.slug) {
+        mutationDisagreementRejects += 1;
+        continue;
+      }
+    }
 
     const incomeRanges = parseIncomeRanges(candidate.text);
     if (incomeRanges.length === 0) {
@@ -1005,17 +1109,40 @@ async function collectOne({
     };
   }
 
-  const sellerCounts = new Map();
+  // One seller spamming N identical copies must count ONCE, keyed by the
+  // seller's ACCOUNT ID (offer.userId) rather than the display name — names
+  // collide and can be changed, ids can't. Falls back to the parsed name only
+  // when the API gave us no id.
+  const seenBySeller = new Set();
   const byVariant = new Map();
   for (const candidate of selectedCandidates) {
     const variantRows = byVariant.get(candidate.mutation.slug) ?? [];
     if (variantRows.length >= samplesPerVariant) continue;
     const signals = extractListingSignals(candidate);
-    const seller = signals.seller_reference?.toLowerCase() ?? null;
-    if (seller) {
-      const sellerKey = `${candidate.mutation.slug}:${seller}`;
-      if ((sellerCounts.get(sellerKey) ?? 0) >= 2) continue;
-      sellerCounts.set(sellerKey, (sellerCounts.get(sellerKey) ?? 0) + 1);
+    const seller = candidate.seller ?? {};
+
+    // Point 4(a): drop brand-new accounts. The fake-cheap listings come from
+    // days-old accounts (verified live: 5-15 day accounts spammed the cheap
+    // cluster). Keep listings whose age is unknown — absence of data is not
+    // evidence of a fake — and let the import-side floor catch those.
+    if (
+      Number.isFinite(seller.seller_account_age_days) &&
+      seller.seller_account_age_days < ELDORADO_MIN_ACCOUNT_AGE_DAYS
+    ) {
+      newAccountRejects += 1;
+      continue;
+    }
+
+    // Point 4(b): dedup identical (seller, mutation, price) copies.
+    const sellerId =
+      seller.seller_id ?? signals.seller_reference?.toLowerCase() ?? null;
+    if (sellerId) {
+      const dupKey = `${sellerId}:${candidate.mutation.slug}:${candidate.price}`;
+      if (seenBySeller.has(dupKey)) {
+        duplicateRejects += 1;
+        continue;
+      }
+      seenBySeller.add(dupKey);
     }
 
     const externalId = String(candidate.id);
@@ -1042,6 +1169,7 @@ async function collectOne({
       // which the import RPC fills with the whole incoming item — so these
       // arrive without touching that function.
       ...signals,
+      ...seller,
       income_band: candidate.income_range
         ? {
             label: candidate.income_range.label ?? null,
@@ -1079,6 +1207,9 @@ async function collectOne({
     body_candidates: bodyCandidates.length,
     income_filtered_candidates: incomeFilteredCount,
     missing_income_range_candidates: missingIncomeRangeCount,
+    new_account_rejects: newAccountRejects,
+    duplicate_seller_rejects: duplicateRejects,
+    mutation_disagreement_rejects: mutationDisagreementRejects,
     selected_income_bands: selectedIncomeBands,
     listings: [...byVariant.values()].flat(),
     variants: Object.fromEntries([...byVariant].map(([slug, rows]) => [slug, rows.length])),
