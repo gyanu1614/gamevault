@@ -182,53 +182,117 @@ describe('measureMutationMultipliers', () => {
   })
 })
 
-describe('computeCorrections — mutation ladder (point 6)', () => {
-  // A brainrot with a Default and one higher-tier mutation. Each variant gets
-  // enough dense listings that both would normally publish.
-  function ladderCase(defaultPrice: number, goldPrice: number) {
+describe('computeCorrections — rarity-aware minimum evidence', () => {
+  it('suppresses a thin OG even with a cohort anchor (Spyder Elephant)', () => {
+    // n=1 OG must NOT publish a cohort-anchored price — one untradeable listing
+    // is not a market.
     const peers = peerGroup(6)
-    const dense = (p: number) => [p, p, p, p, p, p, p, p]
+    const result = computeCorrections({
+      brainrots: [
+        ...peers.brainrots,
+        brainrot('spyder', { rarity: 'OG' }),
+      ],
+      variants: [
+        ...peers.variants,
+        variant('spyder', {
+          valueUsd: 323,
+          sampleCount: 1,
+          listingPrices: [323],
+        }),
+      ],
+    })
+    const c = result.find((r) => r.brainrotId === 'spyder')!
+    expect(c.isPublishable).toBe(false)
+    expect(c.valueUsd).toBeNull()
+  })
+
+  it('publishes an OG once it has 5+ listings', () => {
+    const peers = peerGroup(6)
+    const result = computeCorrections({
+      brainrots: [...peers.brainrots, brainrot('og5', { rarity: 'OG' })],
+      variants: [
+        ...peers.variants,
+        variant('og5', {
+          valueUsd: 500,
+          sampleCount: 6,
+          listingPrices: [500, 500, 500, 500, 500, 500],
+        }),
+      ],
+    })
+    const c = result.find((r) => r.brainrotId === 'og5')!
+    expect(c.isPublishable).toBe(true)
+  })
+
+  it('still publishes a non-high-value rarity at 3 listings', () => {
+    const peers = peerGroup(6)
+    const result = computeCorrections({
+      brainrots: [...peers.brainrots, brainrot('rare3', { rarity: 'Rare' })],
+      variants: [
+        ...peers.variants,
+        variant('rare3', {
+          valueUsd: 4,
+          sampleCount: 3,
+          listingPrices: [4, 4, 4],
+        }),
+      ],
+    })
+    const c = result.find((r) => r.brainrotId === 'rare3')!
+    expect(c.isPublishable).toBe(true)
+  })
+})
+
+describe('computeCorrections — mutation ladder (point 6)', () => {
+  // Low tier vs higher tier, with per-side sample counts — the sample count
+  // decides which side of an inversion is treated as noise. Uses Epic rarity so
+  // the OG/Secret publish gate doesn't interfere.
+  function ladderCase(
+    lowPrice: number,
+    highPrice: number,
+    lowSamples: number,
+    highSamples: number,
+  ) {
+    const peers = peerGroup(6)
+    const dense = (p: number, n: number) => Array.from({ length: n }, () => p)
     return computeCorrections({
-      brainrots: [...peers.brainrots, brainrot('lad')],
+      brainrots: [...peers.brainrots, brainrot('lad', { rarity: 'Epic' })],
       variants: [
         ...peers.variants,
         variant('lad', {
           mutationSlug: 'default',
           mutationId: 'm-default',
-          valueUsd: defaultPrice,
-          sampleCount: 20,
+          valueUsd: lowPrice,
+          sampleCount: lowSamples,
           incomeMultiplier: 1,
-          listingPrices: dense(defaultPrice),
+          listingPrices: dense(lowPrice, Math.max(lowSamples, 1)),
         }),
         variant('lad', {
           mutationSlug: 'gold',
           mutationId: 'm-gold',
-          valueUsd: goldPrice,
-          sampleCount: 20,
+          valueUsd: highPrice,
+          sampleCount: highSamples,
           incomeMultiplier: 1.25,
-          listingPrices: dense(goldPrice),
+          listingPrices: dense(highPrice, Math.max(highSamples, 1)),
         }),
       ],
     }).filter((c) => c.brainrotId === 'lad')
   }
 
-  it('suppresses a lower tier priced implausibly above a higher tier', () => {
-    // Default $50 but Gold (higher tier) only $10 → Default is mislabeled noise.
-    const out = ladderCase(50, 10)
+  it('NEVER suppresses a well-sampled price, even out of ladder order', () => {
+    // The Strawberry/Skibidi bug: an 11-sample high default must NOT be nuked by
+    // a cheap higher-tier price.
+    const out = ladderCase(224, 70, 11, 8)
     const def = out.find((c) => c.mutationId === 'm-default')!
-    expect(def.isPublishable).toBe(false)
-    expect(def.valueUsd).toBeNull()
+    expect(def.isPublishable).toBe(true)
+    expect(def.valueUsd).toBe(224)
   })
 
   it('leaves a correctly-ordered ladder alone', () => {
-    // Default $10, Gold $12 — normal ordering, both publish.
-    const out = ladderCase(10, 12)
+    const out = ladderCase(10, 12, 20, 20)
     expect(out.every((c) => c.isPublishable)).toBe(true)
   })
 
   it('tolerates mild inversion within the ratio', () => {
-    // Default $12, Gold $10 — inverted but within 2x, so noise-tolerant.
-    const out = ladderCase(12, 10)
+    const out = ladderCase(12, 10, 20, 20)
     expect(out.every((c) => c.isPublishable)).toBe(true)
   })
 })
@@ -299,7 +363,7 @@ describe('computeCorrections — floor pricing', () => {
   it('does not floor a thin item — it anchors or suppresses as before', () => {
     const peers = peerGroup(6)
     const result = computeCorrections({
-      brainrots: [...peers.brainrots, brainrot('thin')],
+      brainrots: [...peers.brainrots, brainrot('thin', { rarity: 'Epic' })],
       variants: [
         ...peers.variants,
         // n=1 with a cheap listing: must NOT publish $9.98 as a floor.
@@ -357,10 +421,12 @@ describe('computeCorrections — default mutation', () => {
   })
 
   it('anchors a thin price that is absurd for its class', () => {
+    // Epic rarity: below the OG/Secret 5+ gate, so the thin-anchoring path
+    // (not the rarity suppression) is exercised.
     const peers = peerGroup(6)
 
     const result = computeCorrections({
-      brainrots: [...peers.brainrots, brainrot('thin')],
+      brainrots: [...peers.brainrots, brainrot('thin', { rarity: 'Epic' })],
       variants: [
         ...peers.variants,
         variant('thin', { valueUsd: 0.5, sampleCount: 1 }),
@@ -378,7 +444,7 @@ describe('computeCorrections — default mutation', () => {
     const peers = peerGroup(6)
 
     const result = computeCorrections({
-      brainrots: [...peers.brainrots, brainrot('thin')],
+      brainrots: [...peers.brainrots, brainrot('thin', { rarity: 'Epic' })],
       variants: [
         ...peers.variants,
         variant('thin', { valueUsd: 500, sampleCount: 2 }),
@@ -395,7 +461,7 @@ describe('computeCorrections — default mutation', () => {
     const peers = peerGroup(6)
 
     const result = computeCorrections({
-      brainrots: [...peers.brainrots, brainrot('thin')],
+      brainrots: [...peers.brainrots, brainrot('thin', { rarity: 'Epic' })],
       variants: [
         ...peers.variants,
         variant('thin', { valueUsd: 12, sampleCount: 1 }),

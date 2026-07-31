@@ -34,6 +34,26 @@
 export const MIN_TRUSTED_SAMPLES = 3
 
 /**
+ * Minimum clean listings required to PUBLISH any price at all, by rarity.
+ *
+ * The high-value rarities (OG, Secret) are where a wrong price hurts most and
+ * where thin data is most dangerous — Spyder Elephant published $323 off a
+ * SINGLE untradeable listing (14 exist, sold for Robux, no real cash market).
+ * For those, one or two listings is not a market, so we require more before
+ * showing anything; below it the item reads "not enough data" rather than a
+ * fabricated number. Everything else keeps the base threshold.
+ */
+export const MIN_PUBLISH_SAMPLES_HIGH_VALUE = 5
+
+const HIGH_VALUE_RARITIES = new Set(['OG', 'Secret'])
+
+export function minPublishSamples(rarity: string | null | undefined): number {
+  return rarity && HIGH_VALUE_RARITIES.has(rarity)
+    ? MIN_PUBLISH_SAMPLES_HIGH_VALUE
+    : MIN_TRUSTED_SAMPLES
+}
+
+/**
  * How far a thin estimate may sit from its anchor before being overridden.
  * 3x is deliberately loose — this catches "absurd", not "a bit off", so real
  * price dispersion survives.
@@ -468,10 +488,11 @@ function enforceMutationLadder(
     ]),
   )
 
-  // Group publishable, priced corrections by Brainrot with their tier.
+  // Group publishable, priced corrections by Brainrot with their tier AND
+  // sample count — the sample count decides which side of an inversion is noise.
   const byBrainrot = new Map<
     string,
-    { correction: Correction; multiplier: number }[]
+    { correction: Correction; multiplier: number; samples: number }[]
   >()
 
   for (const correction of corrections) {
@@ -481,7 +502,7 @@ function enforceMutationLadder(
     )
     if (!isUsable(multiplier)) continue
     const list = byBrainrot.get(correction.brainrotId)
-    const entry = { correction, multiplier }
+    const entry = { correction, multiplier, samples: correction.sampleCount }
     if (list) list.push(entry)
     else byBrainrot.set(correction.brainrotId, [entry])
   }
@@ -490,19 +511,27 @@ function enforceMutationLadder(
 
   for (const group of byBrainrot.values()) {
     for (const entry of group) {
-      // The cheapest price among strictly-higher tiers.
-      let cheaperHigher: number | null = null
+      // NEVER suppress a well-sampled price on ladder grounds. A price backed by
+      // real listings is evidence, not noise — if it disagrees with the ladder,
+      // the ladder assumption (mutation X always costs more than Y) is what's
+      // wrong, not the measurement. Only THIN estimates can be ladder-noise.
+      if (entry.samples >= MIN_TRUSTED_SAMPLES) continue
+
+      // Compare a thin LOWER tier only against a WELL-SAMPLED higher tier — a
+      // noisy neighbour can't be the yardstick.
+      let trustedHigher: number | null = null
       for (const other of group) {
         if (other.multiplier <= entry.multiplier) continue
+        if (other.samples < MIN_TRUSTED_SAMPLES) continue
         const value = other.correction.valueUsd!
-        if (cheaperHigher == null || value < cheaperHigher) {
-          cheaperHigher = value
+        if (trustedHigher == null || value < trustedHigher) {
+          trustedHigher = value
         }
       }
 
       if (
-        cheaperHigher != null &&
-        entry.correction.valueUsd! > cheaperHigher * LADDER_MAX_INVERSION_RATIO
+        trustedHigher != null &&
+        entry.correction.valueUsd! > trustedHigher * LADDER_MAX_INVERSION_RATIO
       ) {
         suppress.add(entry.correction)
       }
@@ -555,6 +584,29 @@ function correctDefault(
       cohortSize: cohort.length,
       isAnchored: false,
       isPublishable: true,
+    }
+  }
+
+  // Rarity-aware minimum evidence: for the HIGH-VALUE rarities (OG/Secret) a
+  // handful of listings is not a market. Below the raised threshold, publish
+  // NOTHING — not even a cohort-anchored estimate — because a green price on a
+  // 1-listing OG (Spyder Elephant: 14 exist, Robux-only, untradeable) reads as
+  // real. This is STRICTER than the normal thin-sample handling below and only
+  // applies to the high-value rarities; lower rarities keep the existing
+  // anchor-at-n=1 behaviour (a wrong $2 estimate on a common item is low-stakes).
+  const publishMin = minPublishSamples(meta?.rarity)
+  if (publishMin > MIN_TRUSTED_SAMPLES && variant.sampleCount < publishMin) {
+    return {
+      ...base,
+      valueUsd: null,
+      lowUsd: null,
+      highUsd: null,
+      reason: 'insufficient_evidence',
+      confidence: 'none',
+      anchorUsd: anchor,
+      cohortSize: cohort.length,
+      isAnchored: false,
+      isPublishable: false,
     }
   }
 
