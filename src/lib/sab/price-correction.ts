@@ -70,6 +70,15 @@ export const FLOOR_MIN_CLUSTER = 3
 export const FLOOR_BAND_RATIO = 1.6
 
 /**
+ * Cluster-relative floor (point 5): a listing priced below this fraction of the
+ * group median is a fake, not a deal — a $0.67 listing in a $300 cluster, or the
+ * $44.88 pair Headless Horseman had against a $1000+ cluster. Dropped BEFORE the
+ * supported-cluster search, so fake-cheap listings that dodge the seller/title
+ * filters upstream still cannot set the floor.
+ */
+export const CLUSTER_FLOOR_RATIO = 0.25
+
+/**
  * Observed marketplace price floor (p1 = $0.28 across 423 published prices).
  * Listings do not go below roughly this regardless of item value, so a model
  * predicting less than this is describing something the market cannot express.
@@ -116,7 +125,21 @@ export type VariantEstimate = {
    * that don't have listing-level data still get median-based corrections.
    */
   listingPrices?: number[]
+  /**
+   * The mutation's income multiplier — its rung on the value ladder (Default=1,
+   * Gold=1.25 … Rainbow=10). Used only for the ladder sanity check (point 6):
+   * a lower rung must not price implausibly above a higher one. Optional.
+   */
+  incomeMultiplier?: number
 }
+
+/**
+ * Ladder tolerance: a lower-tier mutation may sit at most this many times above
+ * a higher-tier one before it's treated as leftover mislabeled noise. Loose on
+ * purpose — real mutation premiums are noisy, so this catches "absurd", not
+ * "slightly out of order".
+ */
+export const LADDER_MAX_INVERSION_RATIO = 2
 
 export type Correction = {
   brainrotId: string
@@ -173,9 +196,20 @@ export function lowestSupportedPrice(
   minCluster: number = FLOOR_MIN_CLUSTER,
   bandRatio: number = FLOOR_BAND_RATIO,
 ): number | null {
-  const sorted = prices
+  const positive = prices
     .filter((price) => Number.isFinite(price) && price > 0)
     .sort((left, right) => left - right)
+
+  if (positive.length < minCluster) return null
+
+  // Point 5: drop listings below CLUSTER_FLOOR_RATIO of the median before
+  // looking for a supported cluster, so a knot of fake-cheap listings can't
+  // form its own "cluster" beneath the real market.
+  const groupMedian = median(positive)
+  const sorted =
+    isUsable(groupMedian) && groupMedian > 0
+      ? positive.filter((price) => price >= groupMedian * CLUSTER_FLOOR_RATIO)
+      : positive
 
   if (sorted.length < minCluster) return null
 
@@ -188,6 +222,24 @@ export function lowestSupportedPrice(
   }
 
   return null
+}
+
+/**
+ * Raise a displayed low so it never sits below the point-5 cluster floor of the
+ * item's own listings. Keeps the range honest when the headline came from the
+ * median blend rather than the floor branch.
+ */
+function clampLowToClusterFloor(
+  low: number | null,
+  listingPrices: number[] | undefined,
+): number | null {
+  if (!isUsable(low) || !listingPrices?.length) return low
+  const groupMedian = median(
+    listingPrices.filter((p) => Number.isFinite(p) && p > 0),
+  )
+  if (!isUsable(groupMedian)) return low
+  const clusterFloor = groupMedian * CLUSTER_FLOOR_RATIO
+  return low < clusterFloor ? roundCents(clusterFloor) : low
 }
 
 function isUsable(value: number | null | undefined): value is number {
@@ -320,11 +372,19 @@ function cohortPricesFor(
   return []
 }
 
+/**
+ * Confidence from the SURVIVING clean sample count (honesty rule, point on
+ * confidence tiers). The display collapses to three words — "Highly Accurate"
+ * (high), "Accurate" (medium), "Low Accuracy" (low) — so the spec's four rungs
+ * map as: >=10 clean samples → high, >=3 → medium, else low. A second source
+ * agreeing is required for the top tier, since cross-source agreement is the
+ * strongest signal a price is real.
+ */
 function confidenceFor(
   sampleCount: number,
   sourceCount: number,
 ): ConfidenceLabel {
-  if (sampleCount >= 8 && sourceCount >= 2) return 'high'
+  if (sampleCount >= 10 && sourceCount >= 2) return 'high'
   if (sampleCount >= MIN_TRUSTED_SAMPLES) return 'medium'
   return 'low'
 }
@@ -383,7 +443,87 @@ export function computeCorrections(input: CorrectionInput): Correction[] {
     )
   }
 
-  return corrections
+  return enforceMutationLadder(corrections, input.variants)
+}
+
+/**
+ * Ladder sanity (point 6): within a Brainrot, a lower-tier mutation must not
+ * price implausibly above a higher-tier one. When it does, the lower rung's
+ * price is leftover mislabeled noise — suppress it rather than publish an
+ * out-of-order value that makes the whole mutation list look untrustworthy.
+ *
+ * "Higher tier" is the income multiplier (Default < Gold < … < Rainbow). We
+ * compare each mutation against the cheapest higher rung and drop it only if it
+ * exceeds that by more than LADDER_MAX_INVERSION_RATIO — loose enough to leave
+ * genuine premium noise alone.
+ */
+function enforceMutationLadder(
+  corrections: Correction[],
+  variants: VariantEstimate[],
+): Correction[] {
+  const multiplierByVariant = new Map(
+    variants.map((v) => [
+      `${v.brainrotId}:${v.mutationId}`,
+      v.incomeMultiplier ?? null,
+    ]),
+  )
+
+  // Group publishable, priced corrections by Brainrot with their tier.
+  const byBrainrot = new Map<
+    string,
+    { correction: Correction; multiplier: number }[]
+  >()
+
+  for (const correction of corrections) {
+    if (!correction.isPublishable || !isUsable(correction.valueUsd)) continue
+    const multiplier = multiplierByVariant.get(
+      `${correction.brainrotId}:${correction.mutationId}`,
+    )
+    if (!isUsable(multiplier)) continue
+    const list = byBrainrot.get(correction.brainrotId)
+    const entry = { correction, multiplier }
+    if (list) list.push(entry)
+    else byBrainrot.set(correction.brainrotId, [entry])
+  }
+
+  const suppress = new Set<Correction>()
+
+  for (const group of byBrainrot.values()) {
+    for (const entry of group) {
+      // The cheapest price among strictly-higher tiers.
+      let cheaperHigher: number | null = null
+      for (const other of group) {
+        if (other.multiplier <= entry.multiplier) continue
+        const value = other.correction.valueUsd!
+        if (cheaperHigher == null || value < cheaperHigher) {
+          cheaperHigher = value
+        }
+      }
+
+      if (
+        cheaperHigher != null &&
+        entry.correction.valueUsd! > cheaperHigher * LADDER_MAX_INVERSION_RATIO
+      ) {
+        suppress.add(entry.correction)
+      }
+    }
+  }
+
+  if (!suppress.size) return corrections
+
+  return corrections.map((correction) =>
+    suppress.has(correction)
+      ? {
+          ...correction,
+          valueUsd: null,
+          lowUsd: null,
+          highUsd: null,
+          reason: 'insufficient_evidence',
+          confidence: 'none',
+          isPublishable: false,
+        }
+      : correction,
+  )
 }
 
 function correctDefault(
@@ -442,11 +582,13 @@ function correctDefault(
     }
 
     // No trustworthy floor (too few/too-scattered listings): the median blend
-    // is still real evidence, so publish it as before.
+    // is still real evidence, so publish it as before — but never advertise a
+    // low below the point-5 cluster floor, so the displayed range can't quote a
+    // fake-cheap listing the price itself rejected.
     return {
       ...base,
       valueUsd: variant.valueUsd,
-      lowUsd: variant.lowUsd,
+      lowUsd: clampLowToClusterFloor(variant.lowUsd, variant.listingPrices),
       highUsd: variant.highUsd,
       reason: 'trusted',
       confidence: confidenceFor(variant.sampleCount, variant.sourceCount),
