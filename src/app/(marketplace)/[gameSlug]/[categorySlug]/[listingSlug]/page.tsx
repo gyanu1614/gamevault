@@ -7,9 +7,10 @@
 
 import { SITE_URL } from '@/config/site'
 import { JsonLd, breadcrumbList } from '@/lib/seo/jsonld'
-import React from 'react'
+import React, { Suspense, cache } from 'react'
 import { Metadata } from 'next'
 import { notFound } from 'next/navigation'
+import ListingDetailSkeleton from './_ListingDetailSkeleton'
 import { createClient } from '@/lib/supabase/server'
 import { getTemplateFields } from '@/lib/templates'
 import ViewTracker from '@/components/listings/ViewTracker'
@@ -65,7 +66,13 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   }
 
   if (!listing) {
-    return { title: 'Listing Not Found' }
+    // SEO/soft-404 — bail out of METADATA, not just the body. `loading.tsx`
+    // on the parent segment puts this page inside a Suspense boundary, so the
+    // `notFound()` in the page component fires after the shell has streamed
+    // with a 200 (the response answered `200 + "Listing Not Found" +
+    // index,follow`). Metadata resolves before the shell flushes, so throwing
+    // here is what actually produces a real 404 + noindex.
+    notFound()
   }
 
   return {
@@ -93,7 +100,11 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   }
 }
 
-async function getListing(listingSlug: string) {
+// Wrapped in React `cache()` so the route gate (which must resolve the
+// listing BEFORE anything streams, to decide 200 vs 404) and the page body
+// share a single execution per request — one set of queries, and the view
+// counter below still increments exactly once.
+const getListing = cache(async function getListing(listingSlug: string) {
   const supabase = await createClient()
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
@@ -143,7 +154,7 @@ async function getListing(listingSlug: string) {
   }
 
   return { listing, isPreview }
-}
+})
 
 async function getSellerStats(sellerId: string) {
   const supabase = await createClient()
@@ -232,7 +243,31 @@ async function getCarouselListings({
   return (data ?? []) as any[]
 }
 
-export default async function ListingDetailPage({ params }: PageProps) {
+/**
+ * Route gate — decides 200 vs 404 BEFORE any HTML streams.
+ *
+ * The status code is fixed the moment the shell flushes, so the existence
+ * check cannot live behind a Suspense boundary (that was the soft-404 bug:
+ * a dead listing answered `200 + "Listing Not Found" + index,follow`).
+ * This component awaits the listing first — no boundary above it — so
+ * `notFound()` still reaches the response. The `cache()` on `getListing`
+ * makes the body's identical call free.
+ *
+ * The skeleton is preserved by wrapping the (slow) body in Suspense here
+ * instead of in a route-level `loading.tsx`.
+ */
+export default async function ListingDetailRoute({ params }: PageProps) {
+  const { listingSlug } = await params
+  if (!(await getListing(listingSlug))) notFound()
+
+  return (
+    <Suspense fallback={<ListingDetailSkeleton />}>
+      <ListingDetailPage params={params} />
+    </Suspense>
+  )
+}
+
+async function ListingDetailPage({ params }: PageProps) {
   const { gameSlug, categorySlug, listingSlug } = await params
   const listingResult = await getListing(listingSlug)
 

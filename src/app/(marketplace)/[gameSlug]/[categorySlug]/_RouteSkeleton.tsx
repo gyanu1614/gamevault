@@ -3,9 +3,16 @@
 /**
  * V19/P23 — Route loading skeleton dispatcher.
  *
- * Next's `loading.tsx` is a Suspense fallback and can't read params.
- * So we read the URL on the client and pick the right skeleton by
- * category slug:
+ * SEO — this used to be `loading.tsx`. A route-level loading file is a
+ * Suspense boundary ABOVE the page, so the HTTP shell flushed with a 200
+ * before the page could call `notFound()`: every unmatched game/category
+ * URL answered `200 + "Not Found"` (a soft 404 Google was invited to
+ * index). It is now a plain component used as the fallback of an in-page
+ * Suspense boundary, so the route gate runs first and can still set a real
+ * 404 — same skeleton, correct status.
+ *
+ * It still can't read params (it stayed a client component), so we read the
+ * URL on the client and pick the right skeleton by category slug:
  *   • items / buy-items / metadata.type=items → ItemsSkeleton (filter band + landscape card grid)
  *   • everything else                          → CurrencySkeleton (hero card + seller rows)
  *
@@ -50,7 +57,7 @@ const FLEX_CURRENCY_SLUGS = new Set([
   'buy-currency',
 ])
 
-export default function CategoryLoading() {
+export default function CategoryRouteSkeleton() {
   const pathname = usePathname() ?? ''
   const segments = pathname.split('/').filter(Boolean)
   const categorySlug = segments[segments.length - 1] ?? ''

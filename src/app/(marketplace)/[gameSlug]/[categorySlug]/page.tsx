@@ -5,7 +5,7 @@
  * Apple/Spotify-inspired minimal dark theme with game vibe.
  */
 
-import React, { Suspense } from 'react'
+import React, { Suspense, cache } from 'react'
 import { Metadata } from 'next'
 import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
@@ -20,7 +20,8 @@ import GameDirectory from '@/components/marketplace/GameDirectory'
 import CategoryPageLayout from '@/components/marketplace/CategoryPageLayout'
 import { buildSynonymSearchQuery } from '@/lib/utils/gaming-synonyms'
 import { ChevronLeft } from 'lucide-react'
-import { getCurrencyShell, listingToOffer } from './_currencyData'
+import { getCurrencyShell as getCurrencyShellUncached, listingToOffer } from './_currencyData'
+import RouteSkeleton from './_RouteSkeleton'
 import CurrencyPageClient from './_CurrencyPageClient'
 import BundleCurrencyPageClient, {
   type BundleCurrencyPageData,
@@ -140,7 +141,14 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     .eq('slug', gameSlug)
     .single() as any
 
-  if (!game) return { title: 'Not Found' }
+  // SEO/soft-404 — bail out of METADATA, not just the body. `loading.tsx`
+  // puts this page inside a Suspense boundary, so a `notFound()` thrown from
+  // the page component fires after the shell has already streamed with a 200.
+  // Legacy URLs (/game/roblox, /topup/steam-wallet, …) therefore answered
+  // `200 + "Not Found" + index,follow` — a textbook soft 404 that invites
+  // Google to index a dead page. Metadata resolves before the shell flushes,
+  // so throwing here is what actually produces a real 404 + noindex.
+  if (!game) notFound()
 
   const { data: category } = await supabase
     .from('categories')
@@ -175,7 +183,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
         },
       }
     }
-    return { title: 'Not Found' }
+    // Not a category and not an item slug — real 404 (see note above).
+    notFound()
   }
 
   // CATEGORY branch — live stats drive the title/description so the
@@ -245,7 +254,16 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 // ─── Data fetching ─────────────────────────────────────────────────────────────
 
-async function getGameAndCategory(gameSlug: string, categorySlug: string) {
+// Both resolvers run twice per request — once in the route gate (which must
+// settle 200-vs-404 before anything streams) and once in the page body.
+// React `cache()` collapses that to a single execution per request, so the
+// gate costs no extra queries.
+const getCurrencyShell = cache(getCurrencyShellUncached)
+
+const getGameAndCategory = cache(async function getGameAndCategory(
+  gameSlug: string,
+  categorySlug: string,
+) {
   const supabase = await createClient()
 
   const gameResult = await supabase
@@ -268,7 +286,7 @@ async function getGameAndCategory(gameSlug: string, categorySlug: string) {
   if (categoryResult.error || !categoryResult.data) return null
 
   return { game: gameResult.data, category: categoryResult.data }
-}
+})
 
 async function getAllGameCategories(gameId: string): Promise<GameCategory[]> {
   const supabase = await createClient()
@@ -365,7 +383,57 @@ async function getListings(
 
 // ─── Page ──────────────────────────────────────────────────────────────────────
 
-export default async function CategoryBrowsePage({ params, searchParams }: PageProps) {
+/**
+ * Route gate — decides 200 / 301 / 404 BEFORE any HTML streams.
+ *
+ * The status code is fixed the moment the shell flushes, so this resolution
+ * cannot sit behind a Suspense boundary. That was the soft-404 bug: with a
+ * route-level `loading.tsx` above the page, legacy URLs (/game/roblox,
+ * /topup/steam-wallet, …) and any unknown category answered
+ * `200 + "Not Found" + index,follow` — Google was being invited to index a
+ * dead page. Running the same checks here, with no boundary above, lets
+ * `notFound()` and `redirect()` reach the response again.
+ *
+ * The mirrored checks are free: both resolvers are `cache()`d, so the body
+ * below reuses these results rather than re-querying.
+ */
+export default async function CategoryBrowseRoute(props: PageProps) {
+  const { gameSlug, categorySlug } = await props.params
+
+  const routeExists =
+    (await getCurrencyShell(gameSlug, categorySlug)) !== null ||
+    (await getGameAndCategory(gameSlug, categorySlug)) !== null
+
+  if (!routeExists) {
+    // Not a category — it may still be an SEO item slug, which 301s to the
+    // canonical listing URL (mirrors the body's item branch, but from
+    // outside the boundary so the redirect is a real HTTP 307/308).
+    const sb = await createClient()
+    const gameRes = await sb
+      .from('games')
+      .select('id')
+      .eq('slug', gameSlug)
+      .eq('is_active', true)
+      .single() as any
+    if (gameRes.data?.id) {
+      const resolved = await resolveItemBySlug(gameRes.data.id, categorySlug)
+      if (resolved) {
+        redirect(`/${gameSlug}/${resolved.categorySlug}/${resolved.listingSlug}`)
+      }
+    }
+    notFound()
+  }
+
+  // Skeleton preserved — it just lives in an in-page boundary now instead of
+  // a route-level loading.tsx.
+  return (
+    <Suspense fallback={<RouteSkeleton />}>
+      <CategoryBrowsePage {...props} />
+    </Suspense>
+  )
+}
+
+async function CategoryBrowsePage({ params, searchParams }: PageProps) {
   const { gameSlug, categorySlug } = await params
   const resolvedSearchParams = await searchParams
 

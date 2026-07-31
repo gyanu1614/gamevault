@@ -9,6 +9,7 @@
  */
 
 import type { Metadata } from 'next'
+import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -27,7 +28,9 @@ export async function generateMetadata({
   params: Promise<{ gameSlug: string }>
 }): Promise<Metadata> {
   const { gameSlug } = await params
-  if (gameSlug !== 'steal-a-brainrot') return { title: 'Not Found' }
+  // Only SAB has a methodology page. Every other game answered
+  // `200 + empty body + index,follow` here — a soft 404. See the body.
+  if (gameSlug !== 'steal-a-brainrot') notFound()
   return {
     title: 'How DropMarket Values Steal a Brainrot Prices — Methodology',
     description:
@@ -68,8 +71,11 @@ export default async function MethodologyPage({
   params: Promise<{ gameSlug: string }>
 }) {
   const { gameSlug } = await params
+  // `return null` here rendered an empty page with a 200 + index,follow —
+  // GSC counted /{game}/values/methodology for every other game as a soft
+  // 404. A real 404 is the honest answer.
   if (gameSlug !== 'steal-a-brainrot') {
-    return null
+    notFound()
   }
 
   const hubNav = await getHubNavData(gameSlug)

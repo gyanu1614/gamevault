@@ -161,6 +161,27 @@ const nextConfig = {
         destination: '/sell/new',
         permanent: false,
       },
+      {
+        // GSC soft-404 cleanup (2026-07-30). Google has a set of `/game/*`
+        // URLs it keeps re-crawling — /game/roblox, /game/cs2,
+        // /game/fortnite/items. That prefix never existed in this codebase;
+        // the canonical hub is /{gameSlug}. The mapping is exact, so 301
+        // rather than 404 and let the equity move over. Unknown games fall
+        // through to a real 404 at /{slug}, which is the right answer.
+        source: '/game/:path*',
+        destination: '/:path*',
+        permanent: true,
+      },
+      {
+        // Same cleanup: the one legacy /currency/* URL with a true modern
+        // equivalent. The rest of /currency/* and all of /topup/* have no
+        // matching page, so they now return a clean 404 + noindex — which is
+        // what Google wants for a dead URL. Redirecting those to the homepage
+        // would just be a soft 404 again.
+        source: '/currency/apex-coins',
+        destination: '/apex-legends/buy-currency',
+        permanent: true,
+      },
     ]
   },
 }

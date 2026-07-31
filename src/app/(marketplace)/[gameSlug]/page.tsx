@@ -37,11 +37,10 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     .eq('slug', gameSlug)
     .single() as any
 
-  if (!game) {
-    return {
-      title: 'Game Not Found'
-    }
-  }
+  // 404 from metadata so the status is decided before anything streams —
+  // consistent with the category/listing routes, where a Suspense boundary
+  // otherwise locks the response to 200 (soft 404). See those files.
+  if (!game) notFound()
 
   // Category labels the game has enabled (for template copy + accounts flag).
   const { data: gameCats } = (await supabase

@@ -1,6 +1,14 @@
 /**
  * V16 — Listing detail skeleton.
  *
+ * SEO — this used to be `loading.tsx`. A route-level loading file is a
+ * Suspense boundary ABOVE the page, so the HTTP shell flushed with a 200
+ * before the page could call `notFound()`: every dead listing URL answered
+ * `200 + "Listing Not Found"` (a soft 404 Google was invited to index).
+ * It is now a plain component used as the fallback of an in-page Suspense
+ * boundary, so the page's existence check runs first and can still set a
+ * real 404 — same skeleton, correct status.
+ *
  * Mirrors the real _ListingDetailClient layout so the transition into
  * the actual page is shape-stable: breadcrumb → title row → 2-col grid
  * (square gallery left + sticky purchase card right) → tabs card →
@@ -25,7 +33,7 @@ function CardShell({ className = '', children }: { className?: string; children?
   )
 }
 
-export default function ListingDetailLoading() {
+export default function ListingDetailSkeleton() {
   return (
     <main className="min-h-screen bg-bg-base pb-32 sm:pb-12">
       <div className="mx-auto w-full max-w-7xl px-3 pt-8 sm:px-6 sm:pt-10 lg:px-8">
