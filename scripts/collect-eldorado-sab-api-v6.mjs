@@ -31,6 +31,10 @@ function parseArgs(argv) {
     send: false,
     resetProgress: false,
     saveApi: false,
+    // Hours after which an already-collected Brainrot becomes eligible again.
+    // 0 keeps the original backfill behaviour: attempt each Brainrot once,
+    // never revisit. See the eligibility filter in run() for why this matters.
+    refreshAfterHours: Number(process.env.ELDORADO_REFRESH_AFTER_HOURS ?? 0),
   };
 
   for (let index = 0; index < argv.length; index += 1) {
@@ -49,6 +53,7 @@ function parseArgs(argv) {
       else if (argument === "--output") options.outputPath = value;
       else if (argument === "--progress") options.progressPath = value;
       else if (argument === "--brainrot") options.brainrot = value.trim();
+      else if (argument === "--refresh-after-hours") options.refreshAfterHours = Number(value);
       else throw new Error(`Unknown argument: ${argument}`);
       index += 1;
     }
@@ -56,6 +61,13 @@ function parseArgs(argv) {
 
   if (!Number.isInteger(options.maxBrainrots) || options.maxBrainrots < 1 || options.maxBrainrots > 250) {
     throw new Error("--max-brainrots must be an integer from 1 to 250");
+  }
+  if (
+    !Number.isFinite(options.refreshAfterHours) ||
+    options.refreshAfterHours < 0 ||
+    options.refreshAfterHours > 720
+  ) {
+    throw new Error("--refresh-after-hours must be a number from 0 to 720");
   }
   if (!Number.isInteger(options.samplesPerVariant) || options.samplesPerVariant < 5 || options.samplesPerVariant > 25) {
     throw new Error("--samples-per-variant must be an integer from 5 to 25");
@@ -119,7 +131,7 @@ async function buildQueue(requestedName) {
       "id,name,slug,rarity,base_income_per_second",
       "name.asc",
     ),
-    supabaseRows("sab_public_price_catalog", "brainrot_id,mutation_slug,confidence_label,external_sample_size,source_count"),
+    supabaseRows("sab_public_price_catalog", "brainrot_id,mutation_slug,confidence_label,external_sample_size,source_count,price_updated_at"),
     supabaseRows("sab_mutation_catalog", "id,name,slug,income_multiplier", "income_multiplier.asc"),
     supabaseRows(
       "sab_brainrot_mutation_calculator",
@@ -175,6 +187,13 @@ async function buildQueue(requestedName) {
       mutation_gap: gap,
       priority_score: priorityScore,
       priority: confidence === "missing" ? 0 : confidence === "low" ? 1 : 2,
+
+      // When this Brainrot's price last moved. The collector runs on the anon
+      // key, which is denied sab_market_raw_listings, so this is the only
+      // last-touched signal available to it — and unlike the progress file it
+      // is real shared state, so CI and local runs agree.
+      last_priced_at: price?.price_updated_at ?? null,
+      rarity_weight: rarityWeight(brainrot.rarity),
     };
   });
 
@@ -461,6 +480,59 @@ function findOfferObjects(payload, expectedName) {
     if (!current || result.text.length > current.text.length) bestById.set(result.id, result);
   }
   return [...bestById.values()];
+}
+
+/**
+ * Seller-quality and delivery signals for one listing.
+ *
+ * The pipeline had no notion of WHO is selling: seller_reference,
+ * seller_rating and seller_sales_count were null on all 16k rows, so a lone
+ * listing from a brand-new account counted exactly as much as one from a
+ * seller with thousands of completed orders. That is a large part of why bait
+ * listings survived to publication — a $9.98 ask on a 1T-cost Brainrot had
+ * nothing to be weighed against.
+ *
+ * Two best-effort sources: the rendered offer text, which reliably carries
+ * "SellerName 99.2% (1,234)", and the upstream object walked generically.
+ *
+ * Deliberately schema-agnostic. Eldorado renames fields, and a collector that
+ * hard-codes their key names starts returning silent nulls when they do —
+ * the same failure mode that left these columns empty in the first place.
+ * Capped in both count and length: an oversized payload has broken the edge
+ * function import before.
+ */
+const SIGNAL_KEY_PATTERN =
+  /seller|rating|feedback|sales|orders|delivery|median|review|verified|vouch/i;
+const MAX_SIGNAL_ENTRIES = 12;
+const MAX_SIGNAL_VALUE_LENGTH = 64;
+
+function extractListingSignals(candidate) {
+  const match = candidate.text?.match(
+    /([A-Za-z0-9_.#-]{2,40})\s+(\d{2,3}(?:\.\d+)?)%\s*\(([0-9,]+)\)/,
+  );
+
+  const rating = match?.[2] ? Number(match[2]) : null;
+  const salesCount = match?.[3]
+    ? Number(match[3].replace(/,/g, ""))
+    : null;
+
+  const signals = {};
+
+  for (const { path, value } of flattenLeaves(candidate.raw ?? {})) {
+    if (Object.keys(signals).length >= MAX_SIGNAL_ENTRIES) break;
+    if (!SIGNAL_KEY_PATTERN.test(path)) continue;
+    if (value == null || typeof value === "object") continue;
+    const text = String(value);
+    if (!text || text.length > MAX_SIGNAL_VALUE_LENGTH) continue;
+    signals[path] = typeof value === "number" ? value : text;
+  }
+
+  return {
+    seller_reference: match?.[1] ?? null,
+    seller_rating: Number.isFinite(rating) ? rating : null,
+    seller_sales_count: Number.isFinite(salesCount) ? salesCount : null,
+    source_signals: Object.keys(signals).length ? signals : null,
+  };
 }
 
 function bodyTextOffers(bodyText, brainrot, mutations) {
@@ -938,8 +1010,8 @@ async function collectOne({
   for (const candidate of selectedCandidates) {
     const variantRows = byVariant.get(candidate.mutation.slug) ?? [];
     if (variantRows.length >= samplesPerVariant) continue;
-    const sellerMatch = candidate.text.match(/([A-Za-z0-9_.#-]{2,40})\s+\d{2,3}(?:\.\d+)?%\s*\([0-9,]+\)/);
-    const seller = sellerMatch?.[1]?.toLowerCase() ?? null;
+    const signals = extractListingSignals(candidate);
+    const seller = signals.seller_reference?.toLowerCase() ?? null;
     if (seller) {
       const sellerKey = `${candidate.mutation.slug}:${seller}`;
       if ((sellerCounts.get(sellerKey) ?? 0) >= 2) continue;
@@ -965,6 +1037,19 @@ async function collectOne({
       quantity: 1,
       total_price_usd: candidate.price,
       observed_at: observedAt,
+
+      // Everything below rides through to sab_market_raw_listings.raw_payload,
+      // which the import RPC fills with the whole incoming item — so these
+      // arrive without touching that function.
+      ...signals,
+      income_band: candidate.income_range
+        ? {
+            label: candidate.income_range.label ?? null,
+            lower: candidate.income_range.lower ?? null,
+            upper: candidate.income_range.upper ?? null,
+          }
+        : null,
+      collector_version: COLLECTOR_VERSION,
     });
     byVariant.set(candidate.mutation.slug, variantRows);
   }
@@ -1027,24 +1112,89 @@ async function main() {
     totals,
   } = await buildQueue(options.brainrot);
   const progress = await readProgress(options.progressPath, options.resetProgress);
-  const targets = queue
-    .filter((row) => {
-      const attempt = progress.attempts[row.id];
-      if (!attempt) return true;
+  // Eligibility.
+  //
+  // BACKFILL (default): attempt each Brainrot once, never look again. Right for
+  // cold start, wrong forever after — and worse in CI than it looks. The
+  // progress file is committed to the repo but the workflow never commits it
+  // back, so every scheduled run checks out the same frozen state (200 attempts,
+  // all dated 2026-07-26), skips those, and re-crawls the same next-N items.
+  // Coverage cannot grow past that, the original 200 are never revisited, and a
+  // listing that vanishes from our data almost always means "we did not look"
+  // rather than "it sold" — which is exactly why disappearance measured as a
+  // 49% coin flip and ended_at was null on all 16k rows.
+  //
+  // PANEL REFRESH (--refresh-after-hours): eligibility comes from the DATABASE
+  // (`price_updated_at`), not the inert progress file, so CI and local runs
+  // agree and the queue actually rotates. Stale items become eligible again,
+  // which both restores coverage growth and gives /api/cron/expire-sab-listings
+  // the repeated observations it needs before absence means anything.
+  const refreshAfterMs = options.refreshAfterHours * 60 * 60 * 1000;
+  const usePanelRefresh = options.refreshAfterHours > 0;
 
-      // Retry old empty results once because v6 adds Eldorado Search Items
-      // fallback. Collected rows and v6 empties remain completed.
+  // A never-priced Brainrot is the stalest thing there is, but it must stay a
+  // FINITE number: Infinity * rarity_weight is Infinity for every rarity, which
+  // silently collapses the weighting and sorts the never-priced block
+  // alphabetically — so Epics would be collected ahead of Secrets, the exact
+  // opposite of the priority we want.
+  const NEVER_PRICED_STALENESS_HOURS = 24 * 365;
+
+  const stalenessHours = (row) => {
+    const lastPriced = Date.parse(row.last_priced_at ?? "");
+    if (!Number.isFinite(lastPriced)) return NEVER_PRICED_STALENESS_HOURS;
+    return Math.min(
+      NEVER_PRICED_STALENESS_HOURS,
+      (Date.now() - lastPriced) / (60 * 60 * 1000),
+    );
+  };
+
+  const eligible = queue.filter((row) => {
+    if (usePanelRefresh) {
+      const lastPriced = Date.parse(row.last_priced_at ?? "");
+      // Never priced, or not priced recently enough — either way, go look.
       return (
-        attempt.status === "empty" &&
-        attempt.collector_version !== COLLECTOR_VERSION
+        !Number.isFinite(lastPriced) || Date.now() - lastPriced >= refreshAfterMs
       );
-    })
-    .slice(0, options.maxBrainrots);
+    }
+
+    const attempt = progress.attempts[row.id];
+    if (!attempt) return true;
+
+    // Retry old empty results once because v6 adds Eldorado Search Items
+    // fallback. Collected rows and v6 empties remain completed.
+    return (
+      attempt.status === "empty" &&
+      attempt.collector_version !== COLLECTOR_VERSION
+    );
+  });
+
+  if (usePanelRefresh) {
+    // Stalest first, but weighted by rarity so high-value Secrets/OGs come due
+    // sooner than commons. A flat staleness sort would refresh the whole
+    // catalog evenly and starve the items buyers actually convert on; a flat
+    // priority sort would re-crawl the same head every day and never rotate.
+    eligible.sort(
+      (left, right) =>
+        stalenessHours(right) * right.rarity_weight -
+          stalenessHours(left) * left.rarity_weight ||
+        left.name.localeCompare(right.name, "en", { sensitivity: "base" }),
+    );
+  }
+
+  const targets = eligible.slice(0, options.maxBrainrots);
 
   console.log("Eldorado API-first Brainrot queue");
   console.log(`  catalog: ${totals.catalog}`);
   console.log(`  missing default prices: ${totals.missing_default_prices}`);
   console.log(`  low-confidence default prices: ${totals.low_default_prices}`);
+  console.log(
+    `  mode: ${
+      usePanelRefresh
+        ? `panel refresh (DB-driven; anything not priced within ${options.refreshAfterHours}h)`
+        : "backfill (progress-file driven; new Brainrots only)"
+    }`,
+  );
+  console.log(`  eligible: ${eligible.length}`);
   console.log(`  selected this run: ${targets.length}`);
 
   if (!targets.length) {

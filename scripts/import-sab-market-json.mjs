@@ -223,8 +223,53 @@ function normalizeListing(
       quantity,
       total_price_usd: totalPriceUsd,
       observed_at: observedAt.toISOString(),
+
+      ...optionalSignals(raw),
     },
   };
+}
+
+/**
+ * Optional collector-supplied enrichment, passed through to the listing.
+ *
+ * The listing above is a strict whitelist, which is why seller data never
+ * reached the database even though the collector was already parsing it — the
+ * fields were silently dropped here. These are the sanctioned extras. They
+ * land in sab_market_raw_listings.raw_payload, which the import RPC fills with
+ * the whole incoming item, so no database change is needed to store them.
+ *
+ * Still whitelisted and bounded rather than spread wholesale: a feed is
+ * untrusted input, and the point of this function is to widen the gate by
+ * exactly four fields, not to remove it.
+ */
+const SIGNAL_STRING_FIELDS = ["seller_reference", "collector_version"];
+const SIGNAL_NUMBER_FIELDS = ["seller_rating", "seller_sales_count"];
+const MAX_SIGNAL_STRING_LENGTH = 80;
+
+function optionalSignals(raw) {
+  const signals = {};
+
+  for (const field of SIGNAL_STRING_FIELDS) {
+    const value = raw[field];
+    if (typeof value === "string" && value.trim()) {
+      signals[field] = value.trim().slice(0, MAX_SIGNAL_STRING_LENGTH);
+    }
+  }
+
+  for (const field of SIGNAL_NUMBER_FIELDS) {
+    if (raw[field] == null) continue;
+    const value = Number(raw[field]);
+    if (Number.isFinite(value) && value >= 0) signals[field] = value;
+  }
+
+  for (const field of ["source_signals", "income_band"]) {
+    const value = raw[field];
+    if (value && typeof value === "object" && !Array.isArray(value)) {
+      signals[field] = value;
+    }
+  }
+
+  return signals;
 }
 
 function flattenFeed(payload) {
