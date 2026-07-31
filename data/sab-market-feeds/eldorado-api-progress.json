@@ -1,20 +1,25 @@
 {
   "version": 1,
-  "updated_at": "2026-07-31T06:47:46.671Z",
+  "updated_at": "2026-07-31T21:50:41.012Z",
   "attempts": {
-    "ee6058a4-38d2-44ec-bfb8-4a7e68752b0f": {
-      "brainrot_name": "Antonio",
+    "5be562a2-6172-421b-94be-6d75539debc7": {
+      "brainrot_name": "Skibidi Toilet",
       "status": "collected",
-      "attempted_at": "2026-07-31T06:47:46.671Z",
-      "listing_count": 14,
+      "attempted_at": "2026-07-31T21:50:41.012Z",
+      "listing_count": 60,
       "variants": {
-        "default": 8,
-        "rainbow": 1,
-        "gold": 3,
-        "lava": 1,
-        "diamond": 1
+        "galaxy": 3,
+        "diamond": 7,
+        "rainbow": 3,
+        "default": 25,
+        "gold": 9,
+        "cursed": 1,
+        "candy": 4,
+        "divine": 6,
+        "bloodrot": 1,
+        "radioactive": 1
       },
-      "final_url": "https://www.eldorado.gg/antonio-for-sale/i/259?te_v2=ANTONIO",
+      "final_url": "https://www.eldorado.gg/skibidi-toilet-for-sale/i/259?te_v2=SKIBIDI_TOILET",
       "collector_version": 6
     }
   }
