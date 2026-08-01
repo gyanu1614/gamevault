@@ -173,7 +173,10 @@ select
     as confidence_label,
   catalog.external_sample_size,
   catalog.source_count,
-  catalog.price_updated_at,
+  -- Correction freshness when corrected, else the raw catalog time. See the
+  -- 20260801000000 migration for the rationale.
+  coalesce(correction.computed_at, catalog.price_updated_at)
+    as price_updated_at,
 
   catalog.is_trade_ready,
   catalog.is_public_estimate,
