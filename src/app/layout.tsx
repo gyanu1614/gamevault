@@ -1,6 +1,6 @@
 import { SITE_URL } from '@/config/site'
 import type { Metadata } from 'next'
-import { Figtree, JetBrains_Mono } from 'next/font/google'
+import { Inter, Figtree, JetBrains_Mono } from 'next/font/google'
 import './globals.css'
 import { Providers } from '@/components/providers'
 import { LayoutWrapper } from '@/components/layout-wrapper'
@@ -10,17 +10,25 @@ import RecentPurchaseToast, { DailyStatsToast } from '@/components/marketplace/R
 import { Analytics } from "@vercel/analytics/next"
 import { AllHeroesPreload } from '@/components/hero-backdrop'
 
-// Figtree — the single text font for everything (display + body). Geometric
-// and slightly warmer than Inter, in the Proxima Nova family of shapes, and
-// licensed for commercial use via Google Fonts.
-//
-// The CSS variable is still called --font-inter: it's referenced in
-// tailwind.config and across many components, so keeping the name makes this a
-// one-line typeface swap instead of a codebase-wide rename.
-const bodyFont = Figtree({
+// Two text faces, split by surface:
+//   • MARKETPLACE (storefront, everything by default) → Inter, exposed as
+//     --font-inter. This is the site's original typeface and what every
+//     component reading --font-inter resolves to unless a scope overrides it.
+//   • CONTENT HUB (values / calculators / blog) → Figtree, exposed as
+//     --font-figtree. globals.css remaps --font-inter → --font-figtree inside
+//     the `.hub-chrome` wrapper, so hub pages pick up Figtree with no
+//     component changes; the marketplace keeps Inter.
+const inter = Inter({
   subsets: ['latin'],
   weight: ['400', '500', '600', '700', '800', '900'],
   variable: '--font-inter',
+  display: 'swap',
+})
+
+const figtree = Figtree({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700', '800', '900'],
+  variable: '--font-figtree',
   display: 'swap',
 })
 
@@ -87,7 +95,7 @@ export default function RootLayout({
             page. */}
         <AllHeroesPreload />
       </head>
-      <body className={`${bodyFont.variable} ${jetbrainsMono.variable} font-sans antialiased`} style={{ '--font-display': 'var(--font-inter)', '--font-body': 'var(--font-inter)' } as React.CSSProperties}>
+      <body className={`${inter.variable} ${figtree.variable} ${jetbrainsMono.variable} font-sans antialiased`} style={{ '--font-display': 'var(--font-inter)', '--font-body': 'var(--font-inter)' } as React.CSSProperties}>
         <Providers>
           <LayoutWrapper footerGameLinks={<FooterGameLinks />}>
             {children}

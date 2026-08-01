@@ -70,7 +70,7 @@ export function HubFooter({
     // on each page's <main>, but the footer renders inside that main, so the
     // padding landed BELOW the footer as 96px of dead space at the end of
     // every hub page.
-    <footer className="mt-24 border-t border-[#1E2723] bg-[#0A0D0B]">
+    <footer className="relative z-10 mt-24 border-t border-[#1E2723] bg-[#0A0D0B]">
       <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 sm:py-10 lg:px-10">
         {/* Row 1 — brand + the two link sets, side by side rather than stacked */}
         <div className="flex flex-col gap-7 sm:flex-row sm:items-start sm:justify-between sm:gap-10">

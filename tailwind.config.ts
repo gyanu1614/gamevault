@@ -172,12 +172,14 @@ const config: Config = {
 
       // ── Typography ──────────────────────────────────────────────
       fontFamily: {
-        // One text font (Figtree) across sans/display/body, plus JetBrains Mono
-        // for numbers, prices and uppercase data labels. The --font-inter
-        // variable name is legacy — it now resolves to Figtree; see layout.tsx.
-        sans:    ['var(--font-inter)', 'Figtree', 'system-ui', 'sans-serif'],
-        display: ['var(--font-inter)', 'Figtree', 'system-ui', 'sans-serif'],
-        body:    ['var(--font-inter)', 'Figtree', 'system-ui', 'sans-serif'],
+        // Text font resolves from --font-inter: Inter on the marketplace
+        // (global), Figtree inside .hub-chrome (values/calc/blog — remapped in
+        // globals.css). Plus JetBrains Mono for numbers, prices and uppercase
+        // data labels. Fallbacks list both faces so either surface degrades to
+        // a real match before system-ui.
+        sans:    ['var(--font-inter)', 'Inter', 'Figtree', 'system-ui', 'sans-serif'],
+        display: ['var(--font-inter)', 'Inter', 'Figtree', 'system-ui', 'sans-serif'],
+        body:    ['var(--font-inter)', 'Inter', 'Figtree', 'system-ui', 'sans-serif'],
         mono:    ['var(--font-mono)', 'JetBrains Mono', 'ui-monospace', 'monospace'],
       },
       fontSize: {

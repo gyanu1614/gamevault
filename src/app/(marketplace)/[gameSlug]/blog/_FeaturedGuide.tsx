@@ -55,7 +55,7 @@ export function FeaturedGuide({
         // No hover background here: the photo dissolve's end stops are pinned
         // to #0C0F0E, so shifting the block's bg would open a visible seam in
         // the gradient. Border + CTA carry the hover state instead.
-        className="group relative block overflow-hidden border border-[#1E2723] bg-[#0C0F0E] transition-colors duration-200 hover:border-[#33453A] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#3FA35C] lg:h-[360px]"
+        className="group relative block overflow-hidden border border-[#1E2723] bg-[#0C0F0E] transition-colors duration-200 hover:border-[#33453A] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#3FA35C] lg:h-[300px]"
       >
         {/* ── Image layer ── */}
         {/* Mobile: full-width 16:9 band. Desktop: absolute left half. */}
@@ -65,7 +65,10 @@ export function FeaturedGuide({
             <img
               src={cover}
               alt=""
-              className="h-full w-full object-cover"
+              // object-position ~35% (left of centre) so a centred-subject cover
+              // pulls its pets into the visible left part of the panel instead
+              // of hiding under the right-side fade — without clipping them off.
+              className="h-full w-full object-cover [object-position:35%_center]"
             />
           ) : (
             <div className="h-full w-full bg-[#0E1A11]" />
@@ -89,13 +92,12 @@ export function FeaturedGuide({
                 'linear-gradient(180deg, rgba(12,15,14,.5) 0%, rgba(12,15,14,0) 30%, rgba(12,15,14,.55) 78%, #0C0F0E 100%)',
             }}
           />
-          {/* Overlay label row */}
-          <span className="pointer-events-none absolute left-[30px] top-[26px] flex items-center gap-3">
-            <span className="bg-[#3FA35C] px-[11px] py-1.5 font-mono text-[11px] font-extrabold uppercase tracking-[0.16em] text-[#08110B]">
-              Featured
-            </span>
-            <span className="font-mono text-[12px] font-extrabold uppercase tracking-[0.2em] text-white [text-shadow:0_2px_10px_rgba(0,0,0,.8)]">
-              Guide
+          {/* Overlay label — no solid green box; just the word in Figtree over
+              the art, matching the grid card's eyebrow. */}
+          <span className="pointer-events-none absolute left-[30px] top-[26px] flex items-center gap-2.5">
+            <span aria-hidden className="h-2 w-2 rounded-full bg-[#4FB477]" />
+            <span className="text-[13px] font-bold uppercase tracking-[0.08em] text-[#A7D8B6] [text-shadow:0_2px_10px_rgba(0,0,0,.85)]">
+              Featured Guide
             </span>
           </span>
         </div>
@@ -122,24 +124,24 @@ export function FeaturedGuide({
         {/* ── Text panel — overlaps onto the faded image tail on desktop.
             `relative` lifts it above the absolutely-positioned image layer,
             which otherwise paints over the panel's first characters. ── */}
-        <div className="relative flex flex-col justify-center gap-3 p-5 sm:gap-4 sm:p-8 lg:ml-[48%] lg:h-full lg:w-[52%] lg:py-0 lg:pl-10 lg:pr-11">
-          <p className="font-mono text-[12px] font-extrabold uppercase tracking-[0.2em] text-[#3FA35C]">
+        <div className="relative flex flex-col justify-center gap-2.5 p-5 sm:gap-3 sm:p-8 lg:ml-[48%] lg:h-full lg:w-[52%] lg:py-0 lg:pl-10 lg:pr-11">
+          <p className="text-[12px] font-bold uppercase tracking-[0.08em] text-[#4FB477]">
             {category} · {readMinutes} min read
           </p>
-          <h3 className="text-pretty text-[26px] font-extrabold leading-[1.08] tracking-[-0.025em] text-white sm:text-[30px] lg:text-[40px]">
+          <h3 className="text-pretty text-[24px] font-extrabold leading-[1.08] tracking-[-0.025em] text-white sm:text-[27px] lg:text-[30px]">
             {title}
           </h3>
-          {/* Clamped on mobile so the block doesn't dominate the scroll. */}
-          <p className="line-clamp-2 text-pretty text-[15px] leading-[1.55] text-[#9BA8A0] sm:line-clamp-none sm:text-[16px]">
+          {/* Clamped so the panel always fits the shorter card height. */}
+          <p className="line-clamp-2 text-pretty text-[14px] leading-[1.5] text-[#9BA8A0] sm:text-[15px]">
             {excerpt}
           </p>
-          <div className="mt-2 flex items-center gap-5">
-            <span className="inline-flex h-[50px] items-center gap-2 whitespace-nowrap bg-[#3FA35C] px-[26px] text-[16px] font-extrabold text-[#08110B] transition-colors group-hover:bg-[#4CBB6B]">
+          <div className="mt-1 flex items-center gap-4">
+            <span className="inline-flex h-[44px] items-center gap-2 whitespace-nowrap bg-[#3FA35C] px-[22px] text-[15px] font-extrabold text-[#08110B] transition-colors group-hover:bg-[#4CBB6B]">
               Read the guide
-              <ArrowForwardIcon sx={{ fontSize: 20 }} />
+              <ArrowForwardIcon sx={{ fontSize: 18 }} />
             </span>
             {updated && (
-              <span className="font-mono text-[12px] font-extrabold uppercase tracking-[0.16em] text-[#6D7A72]">
+              <span className="text-[12px] font-semibold text-[#8A968D]">
                 Updated {updated}
               </span>
             )}

@@ -10,7 +10,9 @@
  * across six files — which meant any change to the nav's height left some
  * pages overlapping it and others with a gap.
  *
- * Keep these in step with the header height in HubNav: h-[64px] sm:h-[76px].
+ * Keep these in step with the header height in HubNav: h-[56px] sm:h-[68px].
+ * (Each clear = nav height + the same comfortable gap; when the nav height
+ * changes, shift these by the identical amount so the gap stays constant.)
  *
  * NOTE: this lives under src/components, not src/lib, on purpose — Tailwind's
  * `content` globs cover src/components but NOT src/lib, so arbitrary classes
@@ -18,7 +20,7 @@
  */
 
 /** Standard clearance: nav height + a comfortable gap. */
-export const HUB_NAV_CLEAR = 'pt-[100px] sm:pt-[112px]'
+export const HUB_NAV_CLEAR = 'pt-[92px] sm:pt-[104px]'
 
 /** Extra air, for the centred blog-hub hero where the H1 needs room. */
-export const HUB_NAV_CLEAR_HERO = 'pt-[112px] sm:pt-[140px]'
+export const HUB_NAV_CLEAR_HERO = 'pt-[104px] sm:pt-[132px]'

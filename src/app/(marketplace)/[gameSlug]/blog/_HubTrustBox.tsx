@@ -27,6 +27,18 @@ const ICONS = [InsightsIcon, PaidIcon, BoltIcon, ShieldCheckIcon]
 export function HubTrustBox({ stats }: { stats: HubTrustStat[] }) {
   if (stats.length === 0) return null
 
+  // The grid tracks the ACTUAL stat count so there are never empty cells — a
+  // game with 2 stats shows a clean 2-up, not a 4-up with a lopsided green
+  // void on the right. Explicit classes (not a template) so Tailwind emits them.
+  const cols =
+    stats.length >= 4
+      ? 'sm:grid-cols-2 lg:grid-cols-4'
+      : stats.length === 3
+        ? 'sm:grid-cols-3'
+        : stats.length === 2
+          ? 'sm:grid-cols-2'
+          : 'sm:grid-cols-1'
+
   return (
     <div
       className="group relative overflow-hidden border border-[rgba(79,180,119,0.14)] shadow-[0_18px_44px_-20px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.05)] transition-all duration-300 hover:border-[rgba(79,180,119,0.26)] hover:shadow-[0_26px_56px_-22px_rgba(0,0,0,0.8),inset_0_1px_0_rgba(255,255,255,0.07)]"
@@ -35,8 +47,8 @@ export function HubTrustBox({ stats }: { stats: HubTrustStat[] }) {
           'radial-gradient(140% 160% at 88% 8%, rgba(79,180,119,0.10), rgba(79,180,119,0.03) 45%, rgba(11,15,12,0.94) 82%)',
       }}
     >
-      {/* Hairline cell grid — the stat-box shape, over the glass background. */}
-      <div className="grid grid-cols-2 gap-px bg-[rgba(79,180,119,0.10)] lg:grid-cols-4">
+      {/* Hairline cell grid — one column per real stat, so no empty cells. */}
+      <div className={`grid grid-cols-1 gap-px bg-[rgba(79,180,119,0.10)] ${cols}`}>
         {stats.map((stat, i) => {
           const Icon = ICONS[i % ICONS.length]
           return (

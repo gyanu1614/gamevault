@@ -62,8 +62,10 @@ export function HubNav({
   const { current, games, tools, itemsHref, accountsHref } = data
 
   return (
-    // Always solid — no transparent state at the top of the page.
-    <header className="fixed inset-x-0 top-0 z-50 border-b border-[#1E2723] bg-[#0C0F0E]">
+    // Always solid — no transparent state at the top of the page. A hair
+    // lighter than the page base (#0C0F0E) so the bar reads as its own surface
+    // rather than a black void.
+    <header className="fixed inset-x-0 top-0 z-50 border-b border-[#1E2723] bg-[#121714]">
       {/* Full-bleed row: no max-width cap, so the brand sits at the true left
           edge of the page and the storefront buttons at the true right edge.
           Only the page gutter insets them. The tab group stays centred on the
@@ -71,7 +73,7 @@ export function HubNav({
           basis means the middle lands dead centre regardless of how wide the
           game name or buttons are. HUB_NAV_H is the single source of truth for
           the height; pages clear it via HUB_NAV_CLEAR. */}
-      <div className="flex h-[64px] w-full items-center gap-2.5 px-4 sm:h-[76px] sm:gap-4 sm:px-6 lg:px-10">
+      <div className="flex h-[56px] w-full items-center gap-2.5 px-4 sm:h-[68px] sm:gap-4 sm:px-6 lg:px-10">
         {/* ── Brand mark + game switcher ──
             shrink-0 below md (the row is already tight on a phone), flex-1 from
             md up so it claims its half and centres the tabs. */}
@@ -208,17 +210,18 @@ export function HubNav({
                       label: 'WFL Calculator',
                       href: `/${current.slug}/calculator`,
                     },
-                    {
-                      key: 'cash',
-                      label: 'Cash Price',
-                      // Adopt Me has no separate cash TAB — its value list is
-                      // the cash lookup, so Cash Price deep-links there. SAB
-                      // keeps its ?tab=cash calculator mode.
-                      href:
-                        current.slug === 'adopt-me'
-                          ? `/${current.slug}/values`
-                          : `/${current.slug}/calculator?tab=cash`,
-                    },
+                    // "Cash Price" is a SAB-only tab (its calculator has a
+                    // ?tab=cash mode). Adopt Me has no separate cash tab — its
+                    // value list IS the cash lookup — so it's omitted there.
+                    ...(current.slug === 'adopt-me'
+                      ? []
+                      : [
+                          {
+                            key: 'cash',
+                            label: 'Cash Price',
+                            href: `/${current.slug}/calculator?tab=cash`,
+                          },
+                        ]),
                   ]
                 : [
                     {

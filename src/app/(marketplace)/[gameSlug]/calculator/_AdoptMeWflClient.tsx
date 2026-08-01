@@ -20,6 +20,7 @@ import { useMemo, useState } from 'react'
 import { X, Plus, Search, ArrowLeft } from 'lucide-react'
 import type { CalcPet, Variant } from './_adoptMeCalcTypes'
 import { VARIANTS, VARIANT_LABEL } from './_adoptMeCalcTypes'
+import { VariantAxisPicker } from './_VariantAxisPicker'
 
 const USD = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' })
 const TRADE = new Intl.NumberFormat('en-US')
@@ -185,26 +186,17 @@ function Side({
                     <X className="h-4 w-4" />
                   </button>
                 </div>
-                {/* Segmented variant pills — only variants that have a cash
-                    price (scrolls on narrow screens). */}
-                <div className="flex overflow-x-auto border border-[#1E2723] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                  {VARIANTS.filter((code) => pet.values[code]?.cashUsd != null).map((code, i) => {
-                    const active = code === e.variant
-                    return (
-                      <button
-                        key={code}
-                        type="button"
-                        onClick={() => onVariant(side, e.id, code)}
-                        title={VARIANT_LABEL[code]}
-                        className={`shrink-0 px-2.5 py-1.5 text-[12px] font-semibold transition ${i > 0 ? 'border-l border-[#1E2723]' : ''} ${
-                          active ? 'bg-[#B07BC9] text-[#0B0810]' : 'text-[#9BA8A0] hover:bg-white/[0.04]'
-                        }`}
-                      >
-                        {code}
-                      </button>
-                    )
-                  })}
-                </div>
+                {/* Two-axis variant picker: tier (Default/Neon/Mega) + Fly/Ride
+                    toggles. Unpriced (no-cash) forms are greyed and blocked. */}
+                <VariantAxisPicker
+                  variant={e.variant}
+                  onChange={(code) => onVariant(side, e.id, code)}
+                  hasCash={(code) => pet.values[code]?.cashUsd != null}
+                  disableUnpriced
+                />
+                <p className="mt-1.5 text-[11px] text-[#6D7A72]">
+                  {VARIANT_LABEL[e.variant]}
+                </p>
               </div>
             )
           })
@@ -365,11 +357,22 @@ function PetPicker({
 }) {
   const [q, setQ] = useState('')
   const [chosen, setChosen] = useState<CalcPet | null>(null)
+  // Local variant while picking, so the axis picker + price preview are live
+  // before the pet is committed. Defaults to the first priced form (FR-ish).
+  const [draft, setDraft] = useState<Variant>('FR')
 
   const filtered = useMemo(() => {
     const s = q.trim().toLowerCase()
     return s ? pets.filter((p) => p.name.toLowerCase().includes(s)) : pets
   }, [q, pets])
+
+  // When a pet is chosen, seed the draft variant to its first priced form so
+  // the preview isn't empty.
+  const choosePet = (p: CalcPet) => {
+    const firstPriced = VARIANTS.find((c) => p.values[c]?.cashUsd != null) ?? 'FR'
+    setDraft(firstPriced)
+    setChosen(p)
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/70 p-4 pt-[10vh] backdrop-blur-sm" onClick={onClose}>
@@ -398,7 +401,7 @@ function PetPicker({
         {!chosen ? (
           <div className="max-h-[50vh] overflow-y-auto">
             {filtered.map((p) => (
-              <button key={p.slug} type="button" onClick={() => setChosen(p)} className="flex w-full items-center gap-3 px-4 py-2.5 text-left transition hover:bg-white/[0.04]">
+              <button key={p.slug} type="button" onClick={() => choosePet(p)} className="flex w-full items-center gap-3 px-4 py-2.5 text-left transition hover:bg-white/[0.04]">
                 {p.imageUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element -- remote pet art
                   <img src={p.imageUrl} alt="" className="h-8 w-8 shrink-0 object-contain" />
@@ -411,41 +414,56 @@ function PetPicker({
             {filtered.length === 0 && <div className="px-4 py-8 text-center text-[13px] text-[#6D7A72]">No pets match.</div>}
           </div>
         ) : (
-          /* Step 2: pick variant — only variants with a cash price are
-             selectable; the rest are greyed out and disabled. */
-          <div className="max-h-[50vh] overflow-y-auto p-2">
-            {VARIANTS.map((code) => {
-              const v = chosen.values[code]
+          /* Step 2: two-axis variant picker — tier + Fly/Ride toggles, with a
+             live price preview and a confirm. Unpriced forms are greyed. */
+          <div className="max-h-[60vh] overflow-y-auto p-4">
+            <VariantAxisPicker
+              variant={draft}
+              onChange={setDraft}
+              hasCash={(code) => chosen.values[code]?.cashUsd != null}
+              disableUnpriced
+            />
+
+            {/* Live preview of the selected form's value. */}
+            {(() => {
+              const v = chosen.values[draft]
               const priced = v?.cashUsd != null
               return (
-                <button
-                  key={code}
-                  type="button"
-                  disabled={!priced}
-                  onClick={() => priced && onPick(chosen.slug, code)}
-                  className={`flex w-full items-center justify-between gap-3 px-3 py-2.5 text-left transition ${
-                    priced ? 'hover:bg-white/[0.04]' : 'cursor-not-allowed opacity-40'
-                  }`}
-                >
-                  <span className="flex items-center gap-2.5">
-                    <span className="w-12 bg-[#241733] px-1.5 py-0.5 text-center text-[11px] font-semibold text-[#CBA8DA]">{code}</span>
-                    <span className="text-[14px] text-[#E6EAE7]">{VARIANT_LABEL[code]}</span>
+                <div className="mt-4 flex items-center justify-between gap-3 border border-[#1E2723] bg-[#0B0F0C] px-4 py-3">
+                  <span className="flex flex-col">
+                    <span className="text-[13px] font-semibold text-[#E6EAE7]">
+                      {chosen.name} · {VARIANT_LABEL[draft]}
+                    </span>
+                    <span className="text-[11px] text-[#7C8A80]">{draft}</span>
                   </span>
                   <span className="text-right">
                     {priced ? (
                       <>
-                        <span className="block font-mono text-[13px] font-semibold tabular-nums text-[#8FBF9C]">{USD.format(v!.cashUsd!)}</span>
-                        <span className="block font-mono text-[11px] tabular-nums text-[#8B978F]">
-                          {v?.tradeValue != null ? `${TRADE.format(v.tradeValue)} trade` : ''}
+                        <span className="block font-mono text-[15px] font-bold tabular-nums text-[#8FBF9C]">
+                          {USD.format(v!.cashUsd!)}
                         </span>
+                        {v?.tradeValue != null && (
+                          <span className="block font-mono text-[11px] tabular-nums text-[#8B978F]">
+                            {TRADE.format(v.tradeValue)} trade
+                          </span>
+                        )}
                       </>
                     ) : (
-                      <span className="text-[12px] text-[#6D7A72]">no cash price</span>
+                      <span className="text-[12px] text-[#6D7A72]">no cash price yet</span>
                     )}
                   </span>
-                </button>
+                </div>
               )
-            })}
+            })()}
+
+            <button
+              type="button"
+              onClick={() => onPick(chosen.slug, draft)}
+              disabled={chosen.values[draft]?.cashUsd == null}
+              className="mt-4 w-full bg-[#1B6B3F] py-3 text-[14px] font-semibold text-white transition hover:bg-[#1f7a48] disabled:cursor-not-allowed disabled:bg-[#1E2723] disabled:text-[#6D7A72]"
+            >
+              Add {chosen.name} · {draft}
+            </button>
           </div>
         )}
       </div>

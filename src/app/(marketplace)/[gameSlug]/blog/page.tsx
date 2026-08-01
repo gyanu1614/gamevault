@@ -17,12 +17,12 @@ import { HubFooter } from '@/components/content/HubFooter'
 import { getHubNavData } from '@/lib/content/hubNav'
 import { getGameContentTheme } from '@/lib/content/theme'
 import { BlogHubHero } from './_BlogHubHero'
-import { HubTrustBox, type HubTrustStat } from './_HubTrustBox'
+import { HubStatStrip } from './_HubStatStrip'
 import { FeaturedGuide } from './_FeaturedGuide'
 import { ArticleGrid } from './_ArticleGrid'
 import { ValuesTeaser, CalculatorTeaser } from './_HubTeasers'
 import { HubBuyCta } from '@/components/content/HubBuyCta'
-import { getHubTopValues } from './_hubData'
+import { getHubTopValues, getHubStatStrip, getHubCalcExample } from './_hubData'
 
 export const revalidate = 3600
 
@@ -99,7 +99,13 @@ export async function generateMetadata({
   return {
     title: `${game.name} Guides, Values & Trading Tips`,
     description: `Value lists, trading guides, and selling tips for ${game.name} — updated regularly with real DropMarket marketplace data.`,
-    alternates: { canonical: `/${gameSlug}/blog` },
+    alternates: {
+      canonical: `/${gameSlug}/blog`,
+      // RSS autodiscovery — lets readers/crawlers find the feed from the index.
+      types: {
+        'application/rss+xml': `/${gameSlug}/blog/feed`,
+      },
+    },
   }
 }
 
@@ -112,58 +118,22 @@ export default async function GameBlogIndex({
   const game = await getGame(gameSlug)
   if (!game) notFound()
 
-  const [posts, pricedItems, topValues, hubNav] = await Promise.all([
-    getGamePosts(gameSlug),
-    getPricedItemCount(gameSlug),
-    getHubTopValues(gameSlug, 4),
-    getHubNavData(gameSlug),
-  ])
+  const [posts, pricedItems, topValues, statStrip, calcExample, hubNav] =
+    await Promise.all([
+      getGamePosts(gameSlug),
+      getPricedItemCount(gameSlug),
+      getHubTopValues(gameSlug, 4),
+      getHubStatStrip(gameSlug),
+      getHubCalcExample(gameSlug),
+      getHubNavData(gameSlug),
+    ])
 
   const theme = getGameContentTheme(gameSlug)
 
   // Newest post carries the featured slot; the carousel below shows the rest.
   const [featured, ...rest] = posts
 
-  // Trust panel — only cells we can actually source. A game with nothing
-  // priced yet drops those cells instead of showing zeroes.
-  const newestPost = posts
-    .map((p) => new Date(p.publishedAt).getTime())
-    .filter((t) => Number.isFinite(t))
-    .sort((a, b) => b - a)[0]
-
-  // Every cell must be TRUE for this specific game. A game we haven't priced
-  // yet has no sales to cite, so the sales-based cells are suppressed rather
-  // than asserted falsely — otherwise the panel claims "priced from real sales"
-  // on a hub whose values (once they exist) are derived estimates.
   const hasPricing = pricedItems > 0
-
-  const trustStats: HubTrustStat[] = []
-  if (hasPricing) {
-    trustStats.push({
-      label: 'Items priced',
-      value: pricedItems.toLocaleString(),
-      hint: 'Tracked across every variant',
-    })
-    trustStats.push({
-      label: 'Priced from',
-      value: 'Real sales',
-      hint: 'Completed orders and live listings',
-    })
-  }
-  if (newestPost) {
-    trustStats.push({
-      label: 'Last updated',
-      value: DAY_MONTH.format(new Date(newestPost)),
-      // Only tie the date to price movement once prices actually exist; before
-      // that it only reflects when the latest guide was published.
-      hint: hasPricing ? 'Refreshed as prices move' : 'Latest guide published',
-    })
-  }
-  trustStats.push({
-    label: 'Every order',
-    value: 'SafeDrop',
-    hint: 'Seller paid only after you confirm',
-  })
 
   const articleCards = rest.map((post) => ({
     slug: post.slug,
@@ -201,9 +171,10 @@ export default async function GameBlogIndex({
           own z-10 context earlier in the DOM — letting cards scroll over the
           navbar. Plain flow keeps the header on top. */}
       <div className="relative mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
-        {/* Trust panel — sits in the gap between the title and the featured
-            guide, so the first thing below the headline is why to believe us. */}
-        <HubTrustBox stats={trustStats} />
+        {/* Compact stat strip — real, data-backed stats (top pet, highest
+            value, pets tracked, price mover when history supports it), between
+            the title and the featured guide. Self-hides with no data. */}
+        <HubStatStrip stats={statStrip} />
 
         {featured && (
           <FeaturedGuide
@@ -256,6 +227,7 @@ export default async function GameBlogIndex({
             verdict: theme.calculatorExample.verdict,
             qualifier: theme.calculatorExample.qualifier,
           }}
+          realExample={calcExample}
         />
 
         <HubBuyCta

@@ -12,6 +12,7 @@ import { useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { ArrowRight } from 'lucide-react'
 import type { AdoptMePetVariant, Variant } from './_adoptMePetData'
+import { VariantAxisPicker } from '../../calculator/_VariantAxisPicker'
 
 const USD = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' })
 const TRADE = new Intl.NumberFormat('en-US')
@@ -157,6 +158,21 @@ export default function AdoptMePetHero({
             Cash values estimated until we hold enough real sales
           </span>
         </div>
+      </div>
+
+      {/* Two-axis picker — the primary control: tier (Default/Neon/Mega) +
+          Fly/Ride. Drives the hero price. The grid below stays as a full
+          value-by-variant reference (and still taps to reprice). Both share
+          selectedCode, so they always agree. */}
+      <div className="border border-[#1E2723] bg-[#0E1211] p-3.5">
+        <p className="mb-2.5 text-sm font-medium text-[#F1F3F1]">Choose a variant</p>
+        <VariantAxisPicker
+          variant={selectedCode}
+          onChange={pick}
+          hasCash={() => true}
+          accent={accent}
+          onAccent="#0B0810"
+        />
       </div>
 
       {/* Tappable variant grid — the SAB "tap to update the price above" pattern */}
