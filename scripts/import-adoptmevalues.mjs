@@ -190,20 +190,55 @@ async function main() {
     }
     existing ? updated++ : inserted++
 
-    // --- upsert the 8 variant value rows (by pet_id + variant) ---
-    const rows = buildVariantRows(upserted.id, pet.trade_values).map((r) => ({
+    // --- write the 8 variant value rows (by pet_id + variant) ---
+    // CRITICAL: this catalog importer owns ONLY the trade columns. The USD cash
+    // columns (cash_value_usd, listings_tracked, confidence, last_priced_at) are
+    // owned by the marketplace cash pipeline (import-adoptme-cash.mjs). A blind
+    // upsert here would blank real cash on every catalog refresh — so we INSERT
+    // brand-new variant rows in full (cash correctly NULL) but only UPDATE the
+    // TRADE columns on rows that already exist, leaving their cash untouched.
+    const built = buildVariantRows(upserted.id, pet.trade_values).map((r) => ({
       ...r,
       pet_id: upserted.id,
     }))
-    const { error: valErr } = await sb
+
+    // Which (pet_id, variant) rows already exist?
+    const { data: existingVariants, error: exErr } = await sb
       .from('adopt_me_pet_values')
-      .upsert(rows, { onConflict: 'pet_id,variant' })
+      .select('variant')
+      .eq('pet_id', upserted.id)
+    if (exErr) {
+      console.error(`  ❌ ${pet.name} values (lookup): ${exErr.message}`)
+      continue
+    }
+    const have = new Set((existingVariants ?? []).map((r) => r.variant))
+
+    const toInsert = built.filter((r) => !have.has(r.variant))
+    const toUpdate = built.filter((r) => have.has(r.variant))
+
+    let valErr = null
+    // New rows: insert in full (their cash is legitimately NULL).
+    if (toInsert.length > 0) {
+      const { error } = await sb.from('adopt_me_pet_values').insert(toInsert)
+      valErr = valErr || error
+    }
+    // Existing rows: touch ONLY the trade columns — never the cash columns.
+    for (const r of toUpdate) {
+      const { error } = await sb
+        .from('adopt_me_pet_values')
+        .update({ trade_value: r.trade_value, is_estimated: r.is_estimated })
+        .eq('pet_id', upserted.id)
+        .eq('variant', r.variant)
+      valErr = valErr || error
+    }
 
     if (valErr) {
       console.error(`  ❌ ${pet.name} values: ${valErr.message}`)
     } else {
-      valueRows += rows.length
-      console.log(`  ✅ ${pet.name} (${pet.rarity}) — ${rows.length} variants`)
+      valueRows += built.length
+      console.log(
+        `  ✅ ${pet.name} (${pet.rarity}) — ${toInsert.length} new, ${toUpdate.length} trade-updated`,
+      )
     }
   }
 
