@@ -216,9 +216,14 @@ async function main() {
   if (opts.send) {
     console.log('\n--send: handing feed to the importer…')
     await new Promise((res, rej) => {
-      const child = spawn('node', ['scripts/import-adoptmevalues.mjs', opts.outputPath], {
-        stdio: 'inherit',
-      })
+      // --write so the importer actually PERSISTS. Without it the importer
+      // dry-runs ("Would upsert…") and nothing reaches the DB — which is the
+      // whole point of --send.
+      const child = spawn(
+        'node',
+        ['scripts/import-adoptmevalues.mjs', opts.outputPath, '--write'],
+        { stdio: 'inherit' },
+      )
       child.on('exit', (code) => (code === 0 ? res() : rej(new Error(`importer exited ${code}`))))
     })
   }
