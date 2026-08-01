@@ -44,7 +44,14 @@ const MIN_COMPLETED_ORDERS = Number(process.env.U7_MIN_COMPLETED ?? 100)
 const MIN_FAVORABLE_RATE = Number(process.env.U7_MIN_FAVORABLE ?? 90)
 
 function loadEnv() {
-  const raw = readFileSync(new URL('../.env.local', import.meta.url), 'utf8')
+  // No-op when .env.local is absent (CI uses GitHub-secret env vars).
+  let raw
+  try {
+    raw = readFileSync(new URL('../.env.local', import.meta.url), 'utf8')
+  } catch (err) {
+    if (err && err.code === 'ENOENT') return
+    throw err
+  }
   for (const line of raw.split('\n')) {
     const m = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*)\s*$/)
     if (m && !process.env[m[1]]) process.env[m[1]] = m[2]
