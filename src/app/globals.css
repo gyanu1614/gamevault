@@ -165,6 +165,15 @@
     border-radius: var(--radius-sm);
   }
 
+  /* Content-hub typeface: the marketplace runs on Inter (the global
+     --font-inter); the hub (values / calculators / blog) runs on Figtree.
+     Every component reads --font-inter, so remapping that single variable to
+     --font-figtree inside the hub wrapper switches the whole hub to Figtree
+     with no per-component changes — and leaves the marketplace on Inter. */
+  .hub-chrome {
+    --font-inter: var(--font-figtree);
+  }
+
   /* The content hub is square-edged and forest-themed, so the site-wide lime
      rounded focus ring reads as a foreign element there — most visibly as a
      green box around the calculator's search field (text inputs match

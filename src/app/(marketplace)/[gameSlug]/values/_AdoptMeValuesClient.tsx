@@ -19,7 +19,7 @@ import type { CSSProperties } from 'react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import ChevronRightIcon from '@mui/icons-material/ChevronRight'
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown'
-import CheckIcon from '@mui/icons-material/Check'
+import { VariantAxisPicker } from '../calculator/_VariantAxisPicker'
 
 /* ── Rarity → accent. Adopt Me's five tiers only. ─────────────────────────── */
 const RARITY_META: Record<string, { label: string; color: string }> = {
@@ -431,34 +431,15 @@ function VariantDropdown({
         <KeyboardArrowDownIcon sx={{ fontSize: 18 }} className={`shrink-0 text-[#8B978F] transition ${open ? 'rotate-180' : ''}`} />
       </button>
       {open && (
-        <div
-          role="listbox"
-          className="absolute right-0 z-30 mt-1.5 w-full min-w-[13rem] overflow-hidden border border-[#1E2723] bg-[#0E1211] p-1 shadow-[0_16px_40px_-16px_rgba(0,0,0,0.9)]"
-        >
-          {VARIANTS.map((v) => {
-            const active = v === value
-            return (
-              <button
-                key={v}
-                type="button"
-                role="option"
-                aria-selected={active}
-                onClick={() => {
-                  onChange(v)
-                  setOpen(false)
-                }}
-                className={`flex w-full items-center justify-between gap-2 px-2.5 py-2 text-left text-[14px] transition ${
-                  active ? 'bg-white/[0.06] text-[#F1F3F1]' : 'text-[#C6CEC9] hover:bg-white/[0.04]'
-                }`}
-              >
-                <span className="flex items-center gap-2">
-                  <span className="w-10 text-[11px] font-semibold text-[#E6EAE7]">{v}</span>
-                  <span className="truncate">{VARIANT_LABEL[v]}</span>
-                </span>
-                {active && <CheckIcon sx={{ fontSize: 16 }} className="shrink-0 text-[#4FB477]" />}
-              </button>
-            )
-          })}
+        <div className="absolute right-0 z-30 mt-1.5 w-full min-w-[15rem] border border-[#1E2723] bg-[#0E1211] p-3.5 shadow-[0_16px_40px_-16px_rgba(0,0,0,0.9)]">
+          {/* Two-axis picker: tier (Default/Neon/Mega) + Fly/Ride. The list
+              falls back to trade value for unpriced forms, so nothing is
+              disabled here — every form is a valid whole-list view. */}
+          <VariantAxisPicker
+            variant={value}
+            onChange={onChange}
+            hasCash={() => true}
+          />
         </div>
       )}
     </div>
