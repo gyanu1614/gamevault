@@ -15,10 +15,23 @@ const DEFAULT_OUTPUT = "data/sab-market-feeds/eldorado-api-latest.json";
 const DEFAULT_PROGRESS = "data/sab-market-feeds/eldorado-api-progress.json";
 const COLLECTOR_VERSION = 6;
 
+// Point 4(a): Eldorado accounts younger than this post the fake-cheap bait.
+// "Registered ~3 months ago" per the pricing hardening spec. Eldorado hides
+// order/feedback counts (userOrderInfo is null), so age is the only trust
+// signal it exposes; the 100+-ratings half of the rule applies on u7buy, which
+// exposes completedNum/favorableRate. Env-overridable for tuning.
+const ELDORADO_MIN_ACCOUNT_AGE_DAYS = Number(
+  process.env.ELDORADO_MIN_ACCOUNT_AGE_DAYS ?? 90,
+);
+
 function parseArgs(argv) {
   const options = {
     maxBrainrots: Number(process.env.ELDORADO_MAX_BRAINROTS ?? 5),
-    samplesPerVariant: Number(process.env.ELDORADO_SAMPLES_PER_VARIANT ?? 8),
+    // Capture ALL available listings per mutation, not an artificial cap — the
+    // confidence tiers already reflect the count, and depth is what makes a
+    // price trustworthy. 25 is the schema max; most items have far fewer
+    // listings than this, so it only bites on the well-listed ones.
+    samplesPerVariant: Number(process.env.ELDORADO_SAMPLES_PER_VARIANT ?? 25),
     // Pages of offers to fetch per brainrot. Page 1 alone under-samples rare
     // mutations (1-2 listings each), so they never clear the publish threshold.
     // Fetching several pages accumulates enough samples to price every mutation.
@@ -31,6 +44,10 @@ function parseArgs(argv) {
     send: false,
     resetProgress: false,
     saveApi: false,
+    // Hours after which an already-collected Brainrot becomes eligible again.
+    // 0 keeps the original backfill behaviour: attempt each Brainrot once,
+    // never revisit. See the eligibility filter in run() for why this matters.
+    refreshAfterHours: Number(process.env.ELDORADO_REFRESH_AFTER_HOURS ?? 0),
   };
 
   for (let index = 0; index < argv.length; index += 1) {
@@ -49,6 +66,7 @@ function parseArgs(argv) {
       else if (argument === "--output") options.outputPath = value;
       else if (argument === "--progress") options.progressPath = value;
       else if (argument === "--brainrot") options.brainrot = value.trim();
+      else if (argument === "--refresh-after-hours") options.refreshAfterHours = Number(value);
       else throw new Error(`Unknown argument: ${argument}`);
       index += 1;
     }
@@ -56,6 +74,13 @@ function parseArgs(argv) {
 
   if (!Number.isInteger(options.maxBrainrots) || options.maxBrainrots < 1 || options.maxBrainrots > 250) {
     throw new Error("--max-brainrots must be an integer from 1 to 250");
+  }
+  if (
+    !Number.isFinite(options.refreshAfterHours) ||
+    options.refreshAfterHours < 0 ||
+    options.refreshAfterHours > 720
+  ) {
+    throw new Error("--refresh-after-hours must be a number from 0 to 720");
   }
   if (!Number.isInteger(options.samplesPerVariant) || options.samplesPerVariant < 5 || options.samplesPerVariant > 25) {
     throw new Error("--samples-per-variant must be an integer from 5 to 25");
@@ -119,7 +144,7 @@ async function buildQueue(requestedName) {
       "id,name,slug,rarity,base_income_per_second",
       "name.asc",
     ),
-    supabaseRows("sab_public_price_catalog", "brainrot_id,mutation_slug,confidence_label,external_sample_size,source_count"),
+    supabaseRows("sab_public_price_catalog", "brainrot_id,mutation_slug,confidence_label,external_sample_size,source_count,price_updated_at"),
     supabaseRows("sab_mutation_catalog", "id,name,slug,income_multiplier", "income_multiplier.asc"),
     supabaseRows(
       "sab_brainrot_mutation_calculator",
@@ -175,6 +200,13 @@ async function buildQueue(requestedName) {
       mutation_gap: gap,
       priority_score: priorityScore,
       priority: confidence === "missing" ? 0 : confidence === "low" ? 1 : 2,
+
+      // When this Brainrot's price last moved. The collector runs on the anon
+      // key, which is denied sab_market_raw_listings, so this is the only
+      // last-touched signal available to it — and unlike the progress file it
+      // is real shared state, so CI and local runs agree.
+      last_priced_at: price?.price_updated_at ?? null,
+      rarity_weight: rarityWeight(brainrot.rarity),
     };
   });
 
@@ -421,9 +453,17 @@ function findOfferObjects(payload, expectedName) {
   const seen = new WeakSet();
   const expected = comparable(expectedName);
 
-  function visit(value, depth = 0) {
+  // The offers API returns each listing as { offer, user, userOrderInfo }.
+  // Seller trust (user.createdDate, user.id) lives on the `user` SIBLING of the
+  // priced `offer` object, so when we match an offer we attach the nearest
+  // enclosing wrapper that carries a `user` — otherwise the seller data, which
+  // is the whole point of the trust filter, is left behind.
+  function visit(value, depth = 0, wrapper = null) {
     if (!value || typeof value !== "object" || depth > 9 || seen.has(value)) return;
     seen.add(value);
+
+    const nextWrapper =
+      !Array.isArray(value) && value.user && value.offer ? value : wrapper;
 
     if (!Array.isArray(value)) {
       const leaves = flattenLeaves(value);
@@ -446,12 +486,17 @@ function findOfferObjects(payload, expectedName) {
           price_path: price.path,
           text,
           raw: value,
+          // Prefer the full { offer, user } wrapper so seller fields survive.
+          seller: extractSeller(nextWrapper ?? value),
+          // The seller's structured "Mutations" attribute, cross-checked
+          // against the title (point 1). Null when the offer carries none.
+          attribute_mutation: extractMutationAttribute(nextWrapper ?? value),
         });
       }
     }
 
     const entries = Array.isArray(value) ? value : Object.values(value);
-    for (const entry of entries) visit(entry, depth + 1);
+    for (const entry of entries) visit(entry, depth + 1, nextWrapper);
   }
 
   visit(payload);
@@ -461,6 +506,121 @@ function findOfferObjects(payload, expectedName) {
     if (!current || result.text.length > current.text.length) bestById.set(result.id, result);
   }
   return [...bestById.values()];
+}
+
+/**
+ * The seller-set "Mutations" attribute value, e.g. "None", "Gold", "Rainbow".
+ *
+ * Used only to CROSS-CHECK the title-derived mutation (point 1) — never as the
+ * source of truth, because sellers mislabel it. Returns the raw string; the
+ * caller compares it to the title and drops the listing on disagreement.
+ */
+function extractMutationAttribute(wrapper) {
+  if (!wrapper || typeof wrapper !== "object") return null;
+  const offer = wrapper.offer ?? wrapper;
+  const lists = [offer.attributes, offer.offerAttributeIdValues].filter(
+    Array.isArray,
+  );
+  for (const list of lists) {
+    for (const attr of list) {
+      if (!/mutation/i.test(attr?.name ?? "")) continue;
+      const raw = attr.value;
+      const value =
+        typeof raw === "object" && raw ? (raw.name ?? raw.id ?? null) : raw;
+      if (typeof value === "string" && value.trim()) return value.trim();
+    }
+  }
+  return null;
+}
+
+/**
+ * Seller trust fields from an Eldorado { offer, user } wrapper.
+ *
+ * Eldorado hides feedback/order counts (userOrderInfo is null) and marks
+ * essentially everyone isVerifiedSeller=true, so those are useless. What it
+ * DOES expose, and what actually separates fakes from real sellers, is:
+ *   - user.createdDate — brand-new accounts post the fake-cheap listings
+ *   - user.id / offer.userId — one seller spamming N identical copies
+ * Both were being fetched and discarded. Verified against live data 2026-07-31.
+ */
+function extractSeller(wrapper) {
+  if (!wrapper || typeof wrapper !== "object") return null;
+  const user = wrapper.user ?? {};
+  const offer = wrapper.offer ?? {};
+  const createdDate = user.createdDate ?? null;
+
+  let accountAgeDays = null;
+  if (createdDate) {
+    const created = Date.parse(createdDate);
+    if (Number.isFinite(created)) {
+      accountAgeDays = Math.max(
+        0,
+        Math.round((Date.now() - created) / 86_400_000),
+      );
+    }
+  }
+
+  return {
+    seller_id: offer.userId ?? user.id ?? null,
+    seller_username: user.username ?? null,
+    seller_created_date: createdDate,
+    seller_account_age_days: accountAgeDays,
+    // Kept for the record even though it is uninformative on Eldorado.
+    seller_is_verified: user.isVerifiedSeller ?? null,
+  };
+}
+
+/**
+ * Seller-quality and delivery signals for one listing.
+ *
+ * The pipeline had no notion of WHO is selling: seller_reference,
+ * seller_rating and seller_sales_count were null on all 16k rows, so a lone
+ * listing from a brand-new account counted exactly as much as one from a
+ * seller with thousands of completed orders. That is a large part of why bait
+ * listings survived to publication — a $9.98 ask on a 1T-cost Brainrot had
+ * nothing to be weighed against.
+ *
+ * Two best-effort sources: the rendered offer text, which reliably carries
+ * "SellerName 99.2% (1,234)", and the upstream object walked generically.
+ *
+ * Deliberately schema-agnostic. Eldorado renames fields, and a collector that
+ * hard-codes their key names starts returning silent nulls when they do —
+ * the same failure mode that left these columns empty in the first place.
+ * Capped in both count and length: an oversized payload has broken the edge
+ * function import before.
+ */
+const SIGNAL_KEY_PATTERN =
+  /seller|rating|feedback|sales|orders|delivery|median|review|verified|vouch/i;
+const MAX_SIGNAL_ENTRIES = 12;
+const MAX_SIGNAL_VALUE_LENGTH = 64;
+
+function extractListingSignals(candidate) {
+  const match = candidate.text?.match(
+    /([A-Za-z0-9_.#-]{2,40})\s+(\d{2,3}(?:\.\d+)?)%\s*\(([0-9,]+)\)/,
+  );
+
+  const rating = match?.[2] ? Number(match[2]) : null;
+  const salesCount = match?.[3]
+    ? Number(match[3].replace(/,/g, ""))
+    : null;
+
+  const signals = {};
+
+  for (const { path, value } of flattenLeaves(candidate.raw ?? {})) {
+    if (Object.keys(signals).length >= MAX_SIGNAL_ENTRIES) break;
+    if (!SIGNAL_KEY_PATTERN.test(path)) continue;
+    if (value == null || typeof value === "object") continue;
+    const text = String(value);
+    if (!text || text.length > MAX_SIGNAL_VALUE_LENGTH) continue;
+    signals[path] = typeof value === "number" ? value : text;
+  }
+
+  return {
+    seller_reference: match?.[1] ?? null,
+    seller_rating: Number.isFinite(rating) ? rating : null,
+    seller_sales_count: Number.isFinite(salesCount) ? salesCount : null,
+    source_signals: Object.keys(signals).length ? signals : null,
+  };
 }
 
 function bodyTextOffers(bodyText, brainrot, mutations) {
@@ -833,14 +993,34 @@ async function collectOne({
 
   let incomeFilteredCount = 0;
   let missingIncomeRangeCount = 0;
+  let newAccountRejects = 0;
+  let duplicateRejects = 0;
+  let mutationDisagreementRejects = 0;
 
   const rawCandidates = apiCandidates.length > 0
     ? apiCandidates.map((candidate) => ({ ...candidate, source: "api" }))
     : bodyCandidates;
 
   for (const candidate of rawCandidates) {
+    // Point 1: derive the mutation from the TITLE (detectMutation), and if the
+    // seller also set a structured Mutations attribute, require it to AGREE.
+    // A listing whose title-mutation contradicts its own attribute is
+    // mislabeled — drop it rather than guess which one is right.
     const mutation = candidate.mutation ?? detectMutation(candidate.text, mutations);
     if (!mutation?.id) continue;
+
+    if (candidate.attribute_mutation) {
+      const attrMutation = detectMutation(
+        `x ${candidate.attribute_mutation} x`,
+        mutations,
+      );
+      // Only enforce when the attribute maps to a mutation we recognise; an
+      // unmappable attribute string tells us nothing.
+      if (attrMutation?.slug && attrMutation.slug !== mutation.slug) {
+        mutationDisagreementRejects += 1;
+        continue;
+      }
+    }
 
     const incomeRanges = parseIncomeRanges(candidate.text);
     if (incomeRanges.length === 0) {
@@ -933,17 +1113,40 @@ async function collectOne({
     };
   }
 
-  const sellerCounts = new Map();
+  // One seller spamming N identical copies must count ONCE, keyed by the
+  // seller's ACCOUNT ID (offer.userId) rather than the display name — names
+  // collide and can be changed, ids can't. Falls back to the parsed name only
+  // when the API gave us no id.
+  const seenBySeller = new Set();
   const byVariant = new Map();
   for (const candidate of selectedCandidates) {
     const variantRows = byVariant.get(candidate.mutation.slug) ?? [];
     if (variantRows.length >= samplesPerVariant) continue;
-    const sellerMatch = candidate.text.match(/([A-Za-z0-9_.#-]{2,40})\s+\d{2,3}(?:\.\d+)?%\s*\([0-9,]+\)/);
-    const seller = sellerMatch?.[1]?.toLowerCase() ?? null;
-    if (seller) {
-      const sellerKey = `${candidate.mutation.slug}:${seller}`;
-      if ((sellerCounts.get(sellerKey) ?? 0) >= 2) continue;
-      sellerCounts.set(sellerKey, (sellerCounts.get(sellerKey) ?? 0) + 1);
+    const signals = extractListingSignals(candidate);
+    const seller = candidate.seller ?? {};
+
+    // Point 4(a): drop brand-new accounts. The fake-cheap listings come from
+    // days-old accounts (verified live: 5-15 day accounts spammed the cheap
+    // cluster). Keep listings whose age is unknown — absence of data is not
+    // evidence of a fake — and let the import-side floor catch those.
+    if (
+      Number.isFinite(seller.seller_account_age_days) &&
+      seller.seller_account_age_days < ELDORADO_MIN_ACCOUNT_AGE_DAYS
+    ) {
+      newAccountRejects += 1;
+      continue;
+    }
+
+    // Point 4(b): dedup identical (seller, mutation, price) copies.
+    const sellerId =
+      seller.seller_id ?? signals.seller_reference?.toLowerCase() ?? null;
+    if (sellerId) {
+      const dupKey = `${sellerId}:${candidate.mutation.slug}:${candidate.price}`;
+      if (seenBySeller.has(dupKey)) {
+        duplicateRejects += 1;
+        continue;
+      }
+      seenBySeller.add(dupKey);
     }
 
     const externalId = String(candidate.id);
@@ -965,6 +1168,20 @@ async function collectOne({
       quantity: 1,
       total_price_usd: candidate.price,
       observed_at: observedAt,
+
+      // Everything below rides through to sab_market_raw_listings.raw_payload,
+      // which the import RPC fills with the whole incoming item — so these
+      // arrive without touching that function.
+      ...signals,
+      ...seller,
+      income_band: candidate.income_range
+        ? {
+            label: candidate.income_range.label ?? null,
+            lower: candidate.income_range.lower ?? null,
+            upper: candidate.income_range.upper ?? null,
+          }
+        : null,
+      collector_version: COLLECTOR_VERSION,
     });
     byVariant.set(candidate.mutation.slug, variantRows);
   }
@@ -994,6 +1211,9 @@ async function collectOne({
     body_candidates: bodyCandidates.length,
     income_filtered_candidates: incomeFilteredCount,
     missing_income_range_candidates: missingIncomeRangeCount,
+    new_account_rejects: newAccountRejects,
+    duplicate_seller_rejects: duplicateRejects,
+    mutation_disagreement_rejects: mutationDisagreementRejects,
     selected_income_bands: selectedIncomeBands,
     listings: [...byVariant.values()].flat(),
     variants: Object.fromEntries([...byVariant].map(([slug, rows]) => [slug, rows.length])),
@@ -1027,24 +1247,89 @@ async function main() {
     totals,
   } = await buildQueue(options.brainrot);
   const progress = await readProgress(options.progressPath, options.resetProgress);
-  const targets = queue
-    .filter((row) => {
-      const attempt = progress.attempts[row.id];
-      if (!attempt) return true;
+  // Eligibility.
+  //
+  // BACKFILL (default): attempt each Brainrot once, never look again. Right for
+  // cold start, wrong forever after — and worse in CI than it looks. The
+  // progress file is committed to the repo but the workflow never commits it
+  // back, so every scheduled run checks out the same frozen state (200 attempts,
+  // all dated 2026-07-26), skips those, and re-crawls the same next-N items.
+  // Coverage cannot grow past that, the original 200 are never revisited, and a
+  // listing that vanishes from our data almost always means "we did not look"
+  // rather than "it sold" — which is exactly why disappearance measured as a
+  // 49% coin flip and ended_at was null on all 16k rows.
+  //
+  // PANEL REFRESH (--refresh-after-hours): eligibility comes from the DATABASE
+  // (`price_updated_at`), not the inert progress file, so CI and local runs
+  // agree and the queue actually rotates. Stale items become eligible again,
+  // which both restores coverage growth and gives /api/cron/expire-sab-listings
+  // the repeated observations it needs before absence means anything.
+  const refreshAfterMs = options.refreshAfterHours * 60 * 60 * 1000;
+  const usePanelRefresh = options.refreshAfterHours > 0;
 
-      // Retry old empty results once because v6 adds Eldorado Search Items
-      // fallback. Collected rows and v6 empties remain completed.
+  // A never-priced Brainrot is the stalest thing there is, but it must stay a
+  // FINITE number: Infinity * rarity_weight is Infinity for every rarity, which
+  // silently collapses the weighting and sorts the never-priced block
+  // alphabetically — so Epics would be collected ahead of Secrets, the exact
+  // opposite of the priority we want.
+  const NEVER_PRICED_STALENESS_HOURS = 24 * 365;
+
+  const stalenessHours = (row) => {
+    const lastPriced = Date.parse(row.last_priced_at ?? "");
+    if (!Number.isFinite(lastPriced)) return NEVER_PRICED_STALENESS_HOURS;
+    return Math.min(
+      NEVER_PRICED_STALENESS_HOURS,
+      (Date.now() - lastPriced) / (60 * 60 * 1000),
+    );
+  };
+
+  const eligible = queue.filter((row) => {
+    if (usePanelRefresh) {
+      const lastPriced = Date.parse(row.last_priced_at ?? "");
+      // Never priced, or not priced recently enough — either way, go look.
       return (
-        attempt.status === "empty" &&
-        attempt.collector_version !== COLLECTOR_VERSION
+        !Number.isFinite(lastPriced) || Date.now() - lastPriced >= refreshAfterMs
       );
-    })
-    .slice(0, options.maxBrainrots);
+    }
+
+    const attempt = progress.attempts[row.id];
+    if (!attempt) return true;
+
+    // Retry old empty results once because v6 adds Eldorado Search Items
+    // fallback. Collected rows and v6 empties remain completed.
+    return (
+      attempt.status === "empty" &&
+      attempt.collector_version !== COLLECTOR_VERSION
+    );
+  });
+
+  if (usePanelRefresh) {
+    // Stalest first, but weighted by rarity so high-value Secrets/OGs come due
+    // sooner than commons. A flat staleness sort would refresh the whole
+    // catalog evenly and starve the items buyers actually convert on; a flat
+    // priority sort would re-crawl the same head every day and never rotate.
+    eligible.sort(
+      (left, right) =>
+        stalenessHours(right) * right.rarity_weight -
+          stalenessHours(left) * left.rarity_weight ||
+        left.name.localeCompare(right.name, "en", { sensitivity: "base" }),
+    );
+  }
+
+  const targets = eligible.slice(0, options.maxBrainrots);
 
   console.log("Eldorado API-first Brainrot queue");
   console.log(`  catalog: ${totals.catalog}`);
   console.log(`  missing default prices: ${totals.missing_default_prices}`);
   console.log(`  low-confidence default prices: ${totals.low_default_prices}`);
+  console.log(
+    `  mode: ${
+      usePanelRefresh
+        ? `panel refresh (DB-driven; anything not priced within ${options.refreshAfterHours}h)`
+        : "backfill (progress-file driven; new Brainrots only)"
+    }`,
+  );
+  console.log(`  eligible: ${eligible.length}`);
   console.log(`  selected this run: ${targets.length}`);
 
   if (!targets.length) {

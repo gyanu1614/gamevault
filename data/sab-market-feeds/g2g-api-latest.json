@@ -1,0 +1,3900 @@
+{
+  "source_slug": "g2g",
+  "collected_at": "2026-07-31T05:23:00.324Z",
+  "strategy": "g2g_public_offer_search_v3_by_brainrot",
+  "collector_version": 1,
+  "targets_requested": 1,
+  "targets_collected": 1,
+  "listing_count": 144,
+  "target_summaries": [
+    {
+      "brainrot_name": "Garama and Madundung",
+      "rarity": "Secret",
+      "status": "collected",
+      "listing_count": 144,
+      "total_offer": 1
+    }
+  ],
+  "listings": [
+    {
+      "external_listing_id": "G1757692576383MR",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1757692576383MR",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 50-99 M/s > No Mutation",
+      "currency": "USD",
+      "listed_price": 1.05,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 1.05,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "aeritan",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 589,
+        "total_offer": 1,
+        "g2g_offer_id": "G1757692576383MR"
+      },
+      "income_band": {
+        "label": "50-99 M/s",
+        "lower": 50000000,
+        "upper": 99000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1759852640699YZ",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1759852640699YZ",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 50-99 M/s > No Mutation",
+      "currency": "USD",
+      "listed_price": 2.99,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 2.99,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "Bushidol269",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 258,
+        "total_offer": 1,
+        "g2g_offer_id": "G1759852640699YZ"
+      },
+      "income_band": {
+        "label": "50-99 M/s",
+        "lower": 50000000,
+        "upper": 99000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1761779910602HT",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1761779910602HT",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 50-99 M/s > No Mutation",
+      "currency": "USD",
+      "listed_price": 2.71,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 2.71,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "Rickkshop",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 3212995,
+        "total_offer": 1,
+        "g2g_offer_id": "G1761779910602HT"
+      },
+      "income_band": {
+        "label": "50-99 M/s",
+        "lower": 50000000,
+        "upper": 99000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1765459190884UK",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1765459190884UK",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung",
+      "currency": "USD",
+      "listed_price": 17.15,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 17.15,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "LpStoree",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 54,
+        "total_offer": 1,
+        "g2g_offer_id": "G1765459190884UK"
+      },
+      "income_band": null,
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1765648141536PV",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1765648141536PV",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung",
+      "currency": "USD",
+      "listed_price": 18.07,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 18.07,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "RareFound",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 12,
+        "total_offer": 1,
+        "g2g_offer_id": "G1765648141536PV"
+      },
+      "income_band": null,
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1765786590235WG",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1765786590235WG",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 50-99 M/s > No Mutation",
+      "currency": "USD",
+      "listed_price": 1,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 1,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "Yacobb",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 959,
+        "total_offer": 1,
+        "g2g_offer_id": "G1765786590235WG"
+      },
+      "income_band": {
+        "label": "50-99 M/s",
+        "lower": 50000000,
+        "upper": 99000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1767439395947XO",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1767439395947XO",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 250-499 M/s > Gold",
+      "currency": "USD",
+      "listed_price": 17.49,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 17.49,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "CNLTeam",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 999,
+        "total_offer": 1,
+        "g2g_offer_id": "G1767439395947XO"
+      },
+      "income_band": {
+        "label": "250-499 M/s",
+        "lower": 250000000,
+        "upper": 499000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1767791284820KK",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1767791284820KK",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 50-99 M/s > No Mutation",
+      "currency": "USD",
+      "listed_price": 1.04,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 1.04,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "CNLTeam",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 999,
+        "total_offer": 1,
+        "g2g_offer_id": "G1767791284820KK"
+      },
+      "income_band": {
+        "label": "50-99 M/s",
+        "lower": 50000000,
+        "upper": 99000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1768850148426CK",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1768850148426CK",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 50-99 M/s > No Mutation",
+      "currency": "USD",
+      "listed_price": 1.29,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 1.29,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "ProMerchant",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 965236,
+        "total_offer": 1,
+        "g2g_offer_id": "G1768850148426CK"
+      },
+      "income_band": {
+        "label": "50-99 M/s",
+        "lower": 50000000,
+        "upper": 99000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1768850150530FB",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1768850150530FB",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 500-749 M/s > No Mutation",
+      "currency": "USD",
+      "listed_price": 3.1,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 3.1,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "ProMerchant",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 965236,
+        "total_offer": 1,
+        "g2g_offer_id": "G1768850150530FB"
+      },
+      "income_band": {
+        "label": "500-749 M/s",
+        "lower": 500000000,
+        "upper": 749000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1768850159057PD",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1768850159057PD",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 500-749 M/s > Rainbow",
+      "currency": "USD",
+      "listed_price": 4.51,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 4.51,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "ProMerchant",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 965236,
+        "total_offer": 1,
+        "g2g_offer_id": "G1768850159057PD"
+      },
+      "income_band": {
+        "label": "500-749 M/s",
+        "lower": 500000000,
+        "upper": 749000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1768850160317FI",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1768850160317FI",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 250-499 M/s > No Mutation",
+      "currency": "USD",
+      "listed_price": 2.22,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 2.22,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "ProMerchant",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 965236,
+        "total_offer": 1,
+        "g2g_offer_id": "G1768850160317FI"
+      },
+      "income_band": {
+        "label": "250-499 M/s",
+        "lower": 250000000,
+        "upper": 499000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1768850165787HJ",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1768850165787HJ",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 50-99 M/s > Gold",
+      "currency": "USD",
+      "listed_price": 1.63,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 1.63,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "ProMerchant",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 965236,
+        "total_offer": 1,
+        "g2g_offer_id": "G1768850165787HJ"
+      },
+      "income_band": {
+        "label": "50-99 M/s",
+        "lower": 50000000,
+        "upper": 99000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1768850168565GZ",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1768850168565GZ",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 750-999 M/s > No Mutation",
+      "currency": "USD",
+      "listed_price": 4.51,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 4.51,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "ProMerchant",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 965236,
+        "total_offer": 1,
+        "g2g_offer_id": "G1768850168565GZ"
+      },
+      "income_band": {
+        "label": "750-999 M/s",
+        "lower": 750000000,
+        "upper": 999000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1768850179162EU",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1768850179162EU",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 100-249 M/s > No Mutation",
+      "currency": "USD",
+      "listed_price": 3.32,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 3.32,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "ProMerchant",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 965236,
+        "total_offer": 1,
+        "g2g_offer_id": "G1768850179162EU"
+      },
+      "income_band": {
+        "label": "100-249 M/s",
+        "lower": 100000000,
+        "upper": 249000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1769572441559EA",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1769572441559EA",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 250-499 M/s > Radioactive",
+      "currency": "USD",
+      "listed_price": 5.48,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 5.48,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "Yacobb",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 20,
+        "total_offer": 1,
+        "g2g_offer_id": "G1769572441559EA"
+      },
+      "income_band": {
+        "label": "250-499 M/s",
+        "lower": 250000000,
+        "upper": 499000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1769572515725DD",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1769572515725DD",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 250-499 M/s > Yin-Yang",
+      "currency": "USD",
+      "listed_price": 5.36,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 5.36,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "Yacobb",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 15,
+        "total_offer": 1,
+        "g2g_offer_id": "G1769572515725DD"
+      },
+      "income_band": {
+        "label": "250-499 M/s",
+        "lower": 250000000,
+        "upper": 499000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1769572607279NO",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1769572607279NO",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 250-499 M/s > Lava",
+      "currency": "USD",
+      "listed_price": 4.18,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 4.18,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "Yacobb",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 20,
+        "total_offer": 1,
+        "g2g_offer_id": "G1769572607279NO"
+      },
+      "income_band": {
+        "label": "250-499 M/s",
+        "lower": 250000000,
+        "upper": 499000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1769612662205LS",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1769612662205LS",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 500-749 M/s > Rainbow",
+      "currency": "USD",
+      "listed_price": 4.12,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 4.12,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "Yacobb",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 98,
+        "total_offer": 1,
+        "g2g_offer_id": "G1769612662205LS"
+      },
+      "income_band": {
+        "label": "500-749 M/s",
+        "lower": 500000000,
+        "upper": 749000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1769798134532AT",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1769798134532AT",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 50-99 M/s > Diamond",
+      "currency": "USD",
+      "listed_price": 7.5,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 7.5,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "aeritan",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 994,
+        "total_offer": 1,
+        "g2g_offer_id": "G1769798134532AT"
+      },
+      "income_band": {
+        "label": "50-99 M/s",
+        "lower": 50000000,
+        "upper": 99000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1770152988544IE",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1770152988544IE",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 500-749 M/s > Rainbow",
+      "currency": "USD",
+      "listed_price": 4.12,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 4.12,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "EJAKLEVAY",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 25,
+        "total_offer": 1,
+        "g2g_offer_id": "G1770152988544IE"
+      },
+      "income_band": {
+        "label": "500-749 M/s",
+        "lower": 500000000,
+        "upper": 749000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1770289273904QN",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1770289273904QN",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 750-999 M/s > Gold",
+      "currency": "USD",
+      "listed_price": 6.51,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 6.51,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "ProMerchant",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 9658,
+        "total_offer": 1,
+        "g2g_offer_id": "G1770289273904QN"
+      },
+      "income_band": {
+        "label": "750-999 M/s",
+        "lower": 750000000,
+        "upper": 999000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1770289278959DU",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1770289278959DU",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 750-999 M/s > Rainbow",
+      "currency": "USD",
+      "listed_price": 10.19,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 10.19,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "ProMerchant",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 9658,
+        "total_offer": 1,
+        "g2g_offer_id": "G1770289278959DU"
+      },
+      "income_band": {
+        "label": "750-999 M/s",
+        "lower": 750000000,
+        "upper": 999000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1770289304870TY",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1770289304870TY",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 100-249 M/s > Gold",
+      "currency": "USD",
+      "listed_price": 3.16,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 3.16,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "ProMerchant",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 9658,
+        "total_offer": 1,
+        "g2g_offer_id": "G1770289304870TY"
+      },
+      "income_band": {
+        "label": "100-249 M/s",
+        "lower": 100000000,
+        "upper": 249000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1770289310369GZ",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1770289310369GZ",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 250-499 M/s > Gold",
+      "currency": "USD",
+      "listed_price": 2.76,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 2.76,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "ProMerchant",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 9658,
+        "total_offer": 1,
+        "g2g_offer_id": "G1770289310369GZ"
+      },
+      "income_band": {
+        "label": "250-499 M/s",
+        "lower": 250000000,
+        "upper": 499000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1770289310977IX",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1770289310977IX",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 500-749 M/s > Gold",
+      "currency": "USD",
+      "listed_price": 6.08,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 6.08,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "ProMerchant",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 9656,
+        "total_offer": 1,
+        "g2g_offer_id": "G1770289310977IX"
+      },
+      "income_band": {
+        "label": "500-749 M/s",
+        "lower": 500000000,
+        "upper": 749000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1770489937587NT",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1770489937587NT",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 50-99 M/s > Diamond",
+      "currency": "USD",
+      "listed_price": 1.3,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 1.3,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "Yacobb",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 974,
+        "total_offer": 1,
+        "g2g_offer_id": "G1770489937587NT"
+      },
+      "income_band": {
+        "label": "50-99 M/s",
+        "lower": 50000000,
+        "upper": 99000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1770526946487JD",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1770526946487JD",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 50-99 M/s > No Mutation",
+      "currency": "USD",
+      "listed_price": 6.89,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 6.89,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "Avocaa",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 9,
+        "total_offer": 1,
+        "g2g_offer_id": "G1770526946487JD"
+      },
+      "income_band": {
+        "label": "50-99 M/s",
+        "lower": 50000000,
+        "upper": 99000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1770538859197DG",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1770538859197DG",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 100-249 M/s > No Mutation",
+      "currency": "USD",
+      "listed_price": 9.59,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 9.59,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "Avocaa",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 9,
+        "total_offer": 1,
+        "g2g_offer_id": "G1770538859197DG"
+      },
+      "income_band": {
+        "label": "100-249 M/s",
+        "lower": 100000000,
+        "upper": 249000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1770550737303RO",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1770550737303RO",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 500-749 M/s > No Mutation",
+      "currency": "USD",
+      "listed_price": 2.26,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 2.26,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "Yacobb",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 10,
+        "total_offer": 1,
+        "g2g_offer_id": "G1770550737303RO"
+      },
+      "income_band": {
+        "label": "500-749 M/s",
+        "lower": 500000000,
+        "upper": 749000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1770705626241UO",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1770705626241UO",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 250-499 M/s > No Mutation",
+      "currency": "USD",
+      "listed_price": 1.64,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 1.64,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "Yacobb",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 20,
+        "total_offer": 1,
+        "g2g_offer_id": "G1770705626241UO"
+      },
+      "income_band": {
+        "label": "250-499 M/s",
+        "lower": 250000000,
+        "upper": 499000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1771233947681PE",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1771233947681PE",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 100-249 M/s > Candy",
+      "currency": "USD",
+      "listed_price": 5.36,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 5.36,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "Yacobb",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 15,
+        "total_offer": 1,
+        "g2g_offer_id": "G1771233947681PE"
+      },
+      "income_band": {
+        "label": "100-249 M/s",
+        "lower": 100000000,
+        "upper": 249000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1771255516479QS",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1771255516479QS",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 50-99 M/s > No Mutation",
+      "currency": "USD",
+      "listed_price": 1.43,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 1.43,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "IGMoney",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 100,
+        "total_offer": 1,
+        "g2g_offer_id": "G1771255516479QS"
+      },
+      "income_band": {
+        "label": "50-99 M/s",
+        "lower": 50000000,
+        "upper": 99000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1771269886814TX",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1771269886814TX",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 500-749 M/s > Diamond",
+      "currency": "USD",
+      "listed_price": 6.78,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 6.78,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "Yacobb",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 42,
+        "total_offer": 1,
+        "g2g_offer_id": "G1771269886814TX"
+      },
+      "income_band": {
+        "label": "500-749 M/s",
+        "lower": 500000000,
+        "upper": 749000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1771378996348DZ",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1771378996348DZ",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 500-749 M/s > Gold",
+      "currency": "USD",
+      "listed_price": 2.71,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 2.71,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "Yacobb",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 22,
+        "total_offer": 1,
+        "g2g_offer_id": "G1771378996348DZ"
+      },
+      "income_band": {
+        "label": "500-749 M/s",
+        "lower": 500000000,
+        "upper": 749000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1771419115999JK",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1771419115999JK",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 1+ B/s > No Mutation",
+      "currency": "USD",
+      "listed_price": 5.08,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 5.08,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "Yacobb",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 10,
+        "total_offer": 1,
+        "g2g_offer_id": "G1771419115999JK"
+      },
+      "income_band": {
+        "label": "1+ B/s",
+        "lower": 1000000000,
+        "upper": 1000000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1771437733197SX",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1771437733197SX",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 50-99 M/s > Gold",
+      "currency": "USD",
+      "listed_price": 1.24,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 1.24,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "Yacobb",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 991,
+        "total_offer": 1,
+        "g2g_offer_id": "G1771437733197SX"
+      },
+      "income_band": {
+        "label": "50-99 M/s",
+        "lower": 50000000,
+        "upper": 99000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1771765034307QY",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1771765034307QY",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 100-249 M/s > No Mutation",
+      "currency": "USD",
+      "listed_price": 3.31,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 3.31,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "CNLTeam",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 999,
+        "total_offer": 1,
+        "g2g_offer_id": "G1771765034307QY"
+      },
+      "income_band": {
+        "label": "100-249 M/s",
+        "lower": 100000000,
+        "upper": 249000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1771908663585ZS",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1771908663585ZS",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 50-99 M/s > No Mutation",
+      "currency": "USD",
+      "listed_price": 1,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 1,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "Jerstore1",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 59,
+        "total_offer": 1,
+        "g2g_offer_id": "G1771908663585ZS"
+      },
+      "income_band": {
+        "label": "50-99 M/s",
+        "lower": 50000000,
+        "upper": 99000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1772304047408ZF",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1772304047408ZF",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 250-499 M/s > Cursed",
+      "currency": "USD",
+      "listed_price": 11.86,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 11.86,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "Yacobb",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 8,
+        "total_offer": 1,
+        "g2g_offer_id": "G1772304047408ZF"
+      },
+      "income_band": {
+        "label": "250-499 M/s",
+        "lower": 250000000,
+        "upper": 499000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1772358238536OO",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1772358238536OO",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 500-749 M/s > Divine",
+      "currency": "USD",
+      "listed_price": 5.08,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 5.08,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "Yacobb",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 15,
+        "total_offer": 1,
+        "g2g_offer_id": "G1772358238536OO"
+      },
+      "income_band": {
+        "label": "500-749 M/s",
+        "lower": 500000000,
+        "upper": 749000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1772358348018PU",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1772358348018PU",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 250-499 M/s > Galaxy",
+      "currency": "USD",
+      "listed_price": 8.47,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 8.47,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "Yacobb",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 10,
+        "total_offer": 1,
+        "g2g_offer_id": "G1772358348018PU"
+      },
+      "income_band": {
+        "label": "250-499 M/s",
+        "lower": 250000000,
+        "upper": 499000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1772559830846UN",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1772559830846UN",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 250-499 M/s > No Mutation",
+      "currency": "USD",
+      "listed_price": 2.26,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 2.26,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "Jerstore1",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 9,
+        "total_offer": 1,
+        "g2g_offer_id": "G1772559830846UN"
+      },
+      "income_band": {
+        "label": "250-499 M/s",
+        "lower": 250000000,
+        "upper": 499000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1772559962159VI",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1772559962159VI",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 500-749 M/s > No Mutation",
+      "currency": "USD",
+      "listed_price": 3.11,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 3.11,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "Jerstore1",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 1,
+        "total_offer": 1,
+        "g2g_offer_id": "G1772559962159VI"
+      },
+      "income_band": {
+        "label": "500-749 M/s",
+        "lower": 500000000,
+        "upper": 749000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1772561688036VG",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1772561688036VG",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 50-99 M/s > Gold",
+      "currency": "USD",
+      "listed_price": 3.69,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 3.69,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "Bushidol269",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 254,
+        "total_offer": 1,
+        "g2g_offer_id": "G1772561688036VG"
+      },
+      "income_band": {
+        "label": "50-99 M/s",
+        "lower": 50000000,
+        "upper": 99000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1772597118340OY",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1772597118340OY",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 1+ B/s > No Mutation",
+      "currency": "USD",
+      "listed_price": 7.06,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 7.06,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "Jerstore1",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 2,
+        "total_offer": 1,
+        "g2g_offer_id": "G1772597118340OY"
+      },
+      "income_band": {
+        "label": "1+ B/s",
+        "lower": 1000000000,
+        "upper": 1000000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1772708101233QO",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1772708101233QO",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 250-499 M/s > Gold",
+      "currency": "USD",
+      "listed_price": 2.82,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 2.82,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "Yacobb",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 20,
+        "total_offer": 1,
+        "g2g_offer_id": "G1772708101233QO"
+      },
+      "income_band": {
+        "label": "250-499 M/s",
+        "lower": 250000000,
+        "upper": 499000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1772708257056JA",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1772708257056JA",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 500-749 M/s > Radioactive",
+      "currency": "USD",
+      "listed_price": 19.2,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 19.2,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "Yacobb",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 3,
+        "total_offer": 1,
+        "g2g_offer_id": "G1772708257056JA"
+      },
+      "income_band": {
+        "label": "500-749 M/s",
+        "lower": 500000000,
+        "upper": 749000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1772708333455YW",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1772708333455YW",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 500-749 M/s > Cursed",
+      "currency": "USD",
+      "listed_price": 19.76,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 19.76,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "Yacobb",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 11,
+        "total_offer": 1,
+        "g2g_offer_id": "G1772708333455YW"
+      },
+      "income_band": {
+        "label": "500-749 M/s",
+        "lower": 500000000,
+        "upper": 749000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1773328310365QF",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1773328310365QF",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 100-249 M/s > No Mutation",
+      "currency": "USD",
+      "listed_price": 6.44,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 6.44,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "Yacobb",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 5,
+        "total_offer": 1,
+        "g2g_offer_id": "G1773328310365QF"
+      },
+      "income_band": {
+        "label": "100-249 M/s",
+        "lower": 100000000,
+        "upper": 249000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1773341025495QK",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1773341025495QK",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 50-99 M/s > Gold Karambit",
+      "currency": "USD",
+      "listed_price": 2.54,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 2.54,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "Jerstore1",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 10,
+        "total_offer": 1,
+        "g2g_offer_id": "G1773341025495QK"
+      },
+      "income_band": {
+        "label": "50-99 M/s",
+        "lower": 50000000,
+        "upper": 99000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1773594060481GG",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1773594060481GG",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 50-99 M/s > No Mutation",
+      "currency": "USD",
+      "listed_price": 1.94,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 1.94,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "GGsSellers",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 47,
+        "total_offer": 1,
+        "g2g_offer_id": "G1773594060481GG"
+      },
+      "income_band": {
+        "label": "50-99 M/s",
+        "lower": 50000000,
+        "upper": 99000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1773654003322NT",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1773654003322NT",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 250-499 M/s > Lava",
+      "currency": "USD",
+      "listed_price": 4.24,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 4.24,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "Jerstore1",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 5,
+        "total_offer": 1,
+        "g2g_offer_id": "G1773654003322NT"
+      },
+      "income_band": {
+        "label": "250-499 M/s",
+        "lower": 250000000,
+        "upper": 499000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1773654054004JK",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1773654054004JK",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 250-499 M/s > Candy",
+      "currency": "USD",
+      "listed_price": 9.88,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 9.88,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "Jerstore1",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 1,
+        "total_offer": 1,
+        "g2g_offer_id": "G1773654054004JK"
+      },
+      "income_band": {
+        "label": "250-499 M/s",
+        "lower": 250000000,
+        "upper": 499000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1773819571314KN",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1773819571314KN",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 50-99 M/s > No Mutation",
+      "currency": "USD",
+      "listed_price": 1251.25,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 1251.25,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "DionysusGod",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 95,
+        "total_offer": 1,
+        "g2g_offer_id": "G1773819571314KN"
+      },
+      "income_band": {
+        "label": "50-99 M/s",
+        "lower": 50000000,
+        "upper": 99000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1773819571726WI",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1773819571726WI",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 50-99 M/s > Diamond",
+      "currency": "USD",
+      "listed_price": 1251.25,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 1251.25,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "DionysusGod",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 93,
+        "total_offer": 1,
+        "g2g_offer_id": "G1773819571726WI"
+      },
+      "income_band": {
+        "label": "50-99 M/s",
+        "lower": 50000000,
+        "upper": 99000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1773819571964WE",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1773819571964WE",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 500-749 M/s > Bloodrot",
+      "currency": "USD",
+      "listed_price": 929.5,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 929.5,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "DionysusGod",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 10,
+        "total_offer": 1,
+        "g2g_offer_id": "G1773819571964WE"
+      },
+      "income_band": {
+        "label": "500-749 M/s",
+        "lower": 500000000,
+        "upper": 749000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1773819573783GP",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1773819573783GP",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 100-249 M/s > No Mutation",
+      "currency": "USD",
+      "listed_price": 1251.25,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 1251.25,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "DionysusGod",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 999999,
+        "total_offer": 1,
+        "g2g_offer_id": "G1773819573783GP"
+      },
+      "income_band": {
+        "label": "100-249 M/s",
+        "lower": 100000000,
+        "upper": 249000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1773819576002UJ",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1773819576002UJ",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 500-749 M/s > Gold Karambit",
+      "currency": "USD",
+      "listed_price": 1251.25,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 1251.25,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "DionysusGod",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 11,
+        "total_offer": 1,
+        "g2g_offer_id": "G1773819576002UJ"
+      },
+      "income_band": {
+        "label": "500-749 M/s",
+        "lower": 500000000,
+        "upper": 749000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1773819576520VH",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1773819576520VH",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 500-749 M/s > Rainbow",
+      "currency": "USD",
+      "listed_price": 1251.25,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 1251.25,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "DionysusGod",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 24,
+        "total_offer": 1,
+        "g2g_offer_id": "G1773819576520VH"
+      },
+      "income_band": {
+        "label": "500-749 M/s",
+        "lower": 500000000,
+        "upper": 749000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1773819577972RE",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1773819577972RE",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 50-99 M/s > Gold Karambit",
+      "currency": "USD",
+      "listed_price": 1251.25,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 1251.25,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "DionysusGod",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 15,
+        "total_offer": 1,
+        "g2g_offer_id": "G1773819577972RE"
+      },
+      "income_band": {
+        "label": "50-99 M/s",
+        "lower": 50000000,
+        "upper": 99000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1773819580691RR",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1773819580691RR",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 250-499 M/s > Cursed",
+      "currency": "USD",
+      "listed_price": 1251.25,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 1251.25,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "DionysusGod",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 5,
+        "total_offer": 1,
+        "g2g_offer_id": "G1773819580691RR"
+      },
+      "income_band": {
+        "label": "250-499 M/s",
+        "lower": 250000000,
+        "upper": 499000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1773819582764WU",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1773819582764WU",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 100-249 M/s > Gold Karambit",
+      "currency": "USD",
+      "listed_price": 1251.25,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 1251.25,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "DionysusGod",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 3,
+        "total_offer": 1,
+        "g2g_offer_id": "G1773819582764WU"
+      },
+      "income_band": {
+        "label": "100-249 M/s",
+        "lower": 100000000,
+        "upper": 249000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1773819585498PK",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1773819585498PK",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 250-499 M/s > Radioactive",
+      "currency": "USD",
+      "listed_price": 1251.25,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 1251.25,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "DionysusGod",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 12,
+        "total_offer": 1,
+        "g2g_offer_id": "G1773819585498PK"
+      },
+      "income_band": {
+        "label": "250-499 M/s",
+        "lower": 250000000,
+        "upper": 499000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1773819608598XX",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1773819608598XX",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 250-499 M/s > No Mutation",
+      "currency": "USD",
+      "listed_price": 1251.25,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 1251.25,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "DionysusGod",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 1,
+        "total_offer": 1,
+        "g2g_offer_id": "G1773819608598XX"
+      },
+      "income_band": {
+        "label": "250-499 M/s",
+        "lower": 250000000,
+        "upper": 499000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1773819609051AV",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1773819609051AV",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 0-24 M/s > No Mutation",
+      "currency": "USD",
+      "listed_price": 1251.25,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 1251.25,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "DionysusGod",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 999999999,
+        "total_offer": 1,
+        "g2g_offer_id": "G1773819609051AV"
+      },
+      "income_band": {
+        "label": "0-24 M/s",
+        "lower": 0,
+        "upper": 24000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1774100526099JS",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1774100526099JS",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 750-999 M/s > No Mutation",
+      "currency": "USD",
+      "listed_price": 7.34,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 7.34,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "Yacobb",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 9,
+        "total_offer": 1,
+        "g2g_offer_id": "G1774100526099JS"
+      },
+      "income_band": {
+        "label": "750-999 M/s",
+        "lower": 750000000,
+        "upper": 999000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1774184524127FU",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1774184524127FU",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 50-99 M/s > Gold Karambit",
+      "currency": "USD",
+      "listed_price": 4.23,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 4.23,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "VynStore",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 1,
+        "total_offer": 1,
+        "g2g_offer_id": "G1774184524127FU"
+      },
+      "income_band": {
+        "label": "50-99 M/s",
+        "lower": 50000000,
+        "upper": 99000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1774260605950MA",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1774260605950MA",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 50-99 M/s > Gold",
+      "currency": "USD",
+      "listed_price": 4.08,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 4.08,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "CNLTeam",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 995,
+        "total_offer": 1,
+        "g2g_offer_id": "G1774260605950MA"
+      },
+      "income_band": {
+        "label": "50-99 M/s",
+        "lower": 50000000,
+        "upper": 99000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1774830528383SO",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1774830528383SO",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 500-749 M/s > Rainbow",
+      "currency": "USD",
+      "listed_price": 11.29,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 11.29,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "Banggox",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 1,
+        "total_offer": 1,
+        "g2g_offer_id": "G1774830528383SO"
+      },
+      "income_band": {
+        "label": "500-749 M/s",
+        "lower": 500000000,
+        "upper": 749000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1775910314402LA",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1775910314402LA",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 50-99 M/s > No Mutation",
+      "currency": "USD",
+      "listed_price": 1.33,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 1.33,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "RASTAKIID",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 40,
+        "total_offer": 1,
+        "g2g_offer_id": "G1775910314402LA"
+      },
+      "income_band": {
+        "label": "50-99 M/s",
+        "lower": 50000000,
+        "upper": 99000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1776159241083DG",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1776159241083DG",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 50-99 M/s > Diamond",
+      "currency": "USD",
+      "listed_price": 1.36,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 1.36,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "Jerstore1",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 93,
+        "total_offer": 1,
+        "g2g_offer_id": "G1776159241083DG"
+      },
+      "income_band": {
+        "label": "50-99 M/s",
+        "lower": 50000000,
+        "upper": 99000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1776336196222KK",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1776336196222KK",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 50-99 M/s > No Mutation",
+      "currency": "USD",
+      "listed_price": 1.64,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 1.64,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "Store_Cheapx",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 95,
+        "total_offer": 1,
+        "g2g_offer_id": "G1776336196222KK"
+      },
+      "income_band": {
+        "label": "50-99 M/s",
+        "lower": 50000000,
+        "upper": 99000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1776738041214TG",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1776738041214TG",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 500-749 M/s > No Mutation",
+      "currency": "USD",
+      "listed_price": 8.43,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 8.43,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "aeritan",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 995,
+        "total_offer": 1,
+        "g2g_offer_id": "G1776738041214TG"
+      },
+      "income_band": {
+        "label": "500-749 M/s",
+        "lower": 500000000,
+        "upper": 749000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1776781549640DR",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1776781549640DR",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 500-749 M/s > Cyber",
+      "currency": "USD",
+      "listed_price": 5.36,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 5.36,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "Yacobb",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 10,
+        "total_offer": 1,
+        "g2g_offer_id": "G1776781549640DR"
+      },
+      "income_band": {
+        "label": "500-749 M/s",
+        "lower": 500000000,
+        "upper": 749000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1776825880115FN",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1776825880115FN",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 500-749 M/s > Cyber",
+      "currency": "USD",
+      "listed_price": 10.53,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 10.53,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "aeritan",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 998,
+        "total_offer": 1,
+        "g2g_offer_id": "G1776825880115FN"
+      },
+      "income_band": {
+        "label": "500-749 M/s",
+        "lower": 500000000,
+        "upper": 749000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1777815091292TO",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1777815091292TO",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 50-99 M/s > Diamond",
+      "currency": "USD",
+      "listed_price": 3.99,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 3.99,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "Bushidol269",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 5,
+        "total_offer": 1,
+        "g2g_offer_id": "G1777815091292TO"
+      },
+      "income_band": {
+        "label": "50-99 M/s",
+        "lower": 50000000,
+        "upper": 99000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1777815496391GT",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1777815496391GT",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 500-749 M/s > Cyber",
+      "currency": "USD",
+      "listed_price": 16.99,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 16.99,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "Bushidol269",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 5,
+        "total_offer": 1,
+        "g2g_offer_id": "G1777815496391GT"
+      },
+      "income_band": {
+        "label": "500-749 M/s",
+        "lower": 500000000,
+        "upper": 749000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1777815630611HJ",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1777815630611HJ",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 250-499 M/s > Cursed",
+      "currency": "USD",
+      "listed_price": 16.99,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 16.99,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "Bushidol269",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 5,
+        "total_offer": 1,
+        "g2g_offer_id": "G1777815630611HJ"
+      },
+      "income_band": {
+        "label": "250-499 M/s",
+        "lower": 250000000,
+        "upper": 499000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1777815715727QQ",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1777815715727QQ",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 500-749 M/s > Divine",
+      "currency": "USD",
+      "listed_price": 16.99,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 16.99,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "Bushidol269",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 10,
+        "total_offer": 1,
+        "g2g_offer_id": "G1777815715727QQ"
+      },
+      "income_band": {
+        "label": "500-749 M/s",
+        "lower": 500000000,
+        "upper": 749000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1777815837965GB",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1777815837965GB",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 500-749 M/s > Rainbow",
+      "currency": "USD",
+      "listed_price": 15.69,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 15.69,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "Bushidol269",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 5,
+        "total_offer": 1,
+        "g2g_offer_id": "G1777815837965GB"
+      },
+      "income_band": {
+        "label": "500-749 M/s",
+        "lower": 500000000,
+        "upper": 749000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1777816042149PT",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1777816042149PT",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 250-499 M/s > Galaxy",
+      "currency": "USD",
+      "listed_price": 16.99,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 16.99,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "Bushidol269",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 5,
+        "total_offer": 1,
+        "g2g_offer_id": "G1777816042149PT"
+      },
+      "income_band": {
+        "label": "250-499 M/s",
+        "lower": 250000000,
+        "upper": 499000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1777817597679TJ",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1777817597679TJ",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 250-499 M/s > Radioactive",
+      "currency": "USD",
+      "listed_price": 16.99,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 16.99,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "Bushidol269",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 5,
+        "total_offer": 1,
+        "g2g_offer_id": "G1777817597679TJ"
+      },
+      "income_band": {
+        "label": "250-499 M/s",
+        "lower": 250000000,
+        "upper": 499000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1777817741462FI",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1777817741462FI",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 250-499 M/s > Lava",
+      "currency": "USD",
+      "listed_price": 16.99,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 16.99,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "Bushidol269",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 5,
+        "total_offer": 1,
+        "g2g_offer_id": "G1777817741462FI"
+      },
+      "income_band": {
+        "label": "250-499 M/s",
+        "lower": 250000000,
+        "upper": 499000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1777817877919FF",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1777817877919FF",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 100-249 M/s > Bloodrot",
+      "currency": "USD",
+      "listed_price": 36.69,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 36.69,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "Bushidol269",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 5,
+        "total_offer": 1,
+        "g2g_offer_id": "G1777817877919FF"
+      },
+      "income_band": {
+        "label": "100-249 M/s",
+        "lower": 100000000,
+        "upper": 249000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1777818006446WO",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1777818006446WO",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 100-249 M/s > Candy",
+      "currency": "USD",
+      "listed_price": 15.69,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 15.69,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "Bushidol269",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 5,
+        "total_offer": 1,
+        "g2g_offer_id": "G1777818006446WO"
+      },
+      "income_band": {
+        "label": "100-249 M/s",
+        "lower": 100000000,
+        "upper": 249000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1778060934939QT",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1778060934939QT",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 250-499 M/s > No Mutation",
+      "currency": "USD",
+      "listed_price": 4.9,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 4.9,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "Goldmasterz",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 534,
+        "total_offer": 1,
+        "g2g_offer_id": "G1778060934939QT"
+      },
+      "income_band": {
+        "label": "250-499 M/s",
+        "lower": 250000000,
+        "upper": 499000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1778061100644IS",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1778061100644IS",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 500-749 M/s > No Mutation",
+      "currency": "USD",
+      "listed_price": 6.9,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 6.9,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "Goldmasterz",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 432,
+        "total_offer": 1,
+        "g2g_offer_id": "G1778061100644IS"
+      },
+      "income_band": {
+        "label": "500-749 M/s",
+        "lower": 500000000,
+        "upper": 749000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1778061403569MB",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1778061403569MB",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 500-749 M/s > Rainbow",
+      "currency": "USD",
+      "listed_price": 14.9,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 14.9,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "Goldmasterz",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 535,
+        "total_offer": 1,
+        "g2g_offer_id": "G1778061403569MB"
+      },
+      "income_band": {
+        "label": "500-749 M/s",
+        "lower": 500000000,
+        "upper": 749000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1778925686649MB",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1778925686649MB",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 500-749 M/s > Rainbow",
+      "currency": "USD",
+      "listed_price": 13.99,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 13.99,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "Gurasa",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 10,
+        "total_offer": 1,
+        "g2g_offer_id": "G1778925686649MB"
+      },
+      "income_band": {
+        "label": "500-749 M/s",
+        "lower": 500000000,
+        "upper": 749000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1778925693593QF",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1778925693593QF",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 1+ B/s > Cyber",
+      "currency": "USD",
+      "listed_price": 22.99,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 22.99,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "Gurasa",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 10,
+        "total_offer": 1,
+        "g2g_offer_id": "G1778925693593QF"
+      },
+      "income_band": {
+        "label": "1+ B/s",
+        "lower": 1000000000,
+        "upper": 1000000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1779126576760VO",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1779126576760VO",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 500-749 M/s > Cyber",
+      "currency": "USD",
+      "listed_price": 8.47,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 8.47,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "Jerstore1",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 5,
+        "total_offer": 1,
+        "g2g_offer_id": "G1779126576760VO"
+      },
+      "income_band": {
+        "label": "500-749 M/s",
+        "lower": 500000000,
+        "upper": 749000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1779126723353BL",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1779126723353BL",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 500-749 M/s > Rainbow",
+      "currency": "USD",
+      "listed_price": 4.24,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 4.24,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "Jerstore1",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 7,
+        "total_offer": 1,
+        "g2g_offer_id": "G1779126723353BL"
+      },
+      "income_band": {
+        "label": "500-749 M/s",
+        "lower": 500000000,
+        "upper": 749000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1779207181822WF",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1779207181822WF",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 50-99 M/s > Gold",
+      "currency": "USD",
+      "listed_price": 1.64,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 1.64,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "Nemata",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 3,
+        "total_offer": 1,
+        "g2g_offer_id": "G1779207181822WF"
+      },
+      "income_band": {
+        "label": "50-99 M/s",
+        "lower": 50000000,
+        "upper": 99000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1779324763553AS",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1779324763553AS",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 100-249 M/s > Bloodrot",
+      "currency": "USD",
+      "listed_price": 12.99,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 12.99,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "Yacobb",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 3,
+        "total_offer": 1,
+        "g2g_offer_id": "G1779324763553AS"
+      },
+      "income_band": {
+        "label": "100-249 M/s",
+        "lower": 100000000,
+        "upper": 249000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1779698424671JY",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1779698424671JY",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 50-99 M/s > No Mutation",
+      "currency": "USD",
+      "listed_price": 1.74,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 1.74,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "ShiawaseGame",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 27,
+        "total_offer": 1,
+        "g2g_offer_id": "G1779698424671JY"
+      },
+      "income_band": {
+        "label": "50-99 M/s",
+        "lower": 50000000,
+        "upper": 99000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1779976273723IC",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1779976273723IC",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 50-99 M/s > Gold",
+      "currency": "USD",
+      "listed_price": 1.94,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 1.94,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "ShiawaseGame",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 10,
+        "total_offer": 1,
+        "g2g_offer_id": "G1779976273723IC"
+      },
+      "income_band": {
+        "label": "50-99 M/s",
+        "lower": 50000000,
+        "upper": 99000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1779976378149PU",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1779976378149PU",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 50-99 M/s > Diamond",
+      "currency": "USD",
+      "listed_price": 2.13,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 2.13,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "ShiawaseGame",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 15,
+        "total_offer": 1,
+        "g2g_offer_id": "G1779976378149PU"
+      },
+      "income_band": {
+        "label": "50-99 M/s",
+        "lower": 50000000,
+        "upper": 99000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1780085942255JT",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1780085942255JT",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 500-749 M/s > Rainbow",
+      "currency": "USD",
+      "listed_price": 6.49,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 6.49,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "Nemata",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 2,
+        "total_offer": 1,
+        "g2g_offer_id": "G1780085942255JT"
+      },
+      "income_band": {
+        "label": "500-749 M/s",
+        "lower": 500000000,
+        "upper": 749000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1780681229371MG",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1780681229371MG",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 750-999 M/s > Rainbow",
+      "currency": "USD",
+      "listed_price": 10.2,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 10.2,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "Gurasa",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 10,
+        "total_offer": 1,
+        "g2g_offer_id": "G1780681229371MG"
+      },
+      "income_band": {
+        "label": "750-999 M/s",
+        "lower": 750000000,
+        "upper": 999000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1780681231522CD",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1780681231522CD",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 500-749 M/s > Cyber",
+      "currency": "USD",
+      "listed_price": 10.2,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 10.2,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "Gurasa",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 10,
+        "total_offer": 1,
+        "g2g_offer_id": "G1780681231522CD"
+      },
+      "income_band": {
+        "label": "500-749 M/s",
+        "lower": 500000000,
+        "upper": 749000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1780681233818HI",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1780681233818HI",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 250-499 M/s > Galaxy",
+      "currency": "USD",
+      "listed_price": 9.64,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 9.64,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "Gurasa",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 8,
+        "total_offer": 1,
+        "g2g_offer_id": "G1780681233818HI"
+      },
+      "income_band": {
+        "label": "250-499 M/s",
+        "lower": 250000000,
+        "upper": 499000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1780681238758TP",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1780681238758TP",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 750-999 M/s > Radioactive",
+      "currency": "USD",
+      "listed_price": 9.64,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 9.64,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "Gurasa",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 10,
+        "total_offer": 1,
+        "g2g_offer_id": "G1780681238758TP"
+      },
+      "income_band": {
+        "label": "750-999 M/s",
+        "lower": 750000000,
+        "upper": 999000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1780681239665LS",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1780681239665LS",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 500-749 M/s > Lava",
+      "currency": "USD",
+      "listed_price": 9.07,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 9.07,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "Gurasa",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 7,
+        "total_offer": 1,
+        "g2g_offer_id": "G1780681239665LS"
+      },
+      "income_band": {
+        "label": "500-749 M/s",
+        "lower": 500000000,
+        "upper": 749000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1780681240736KZ",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1780681240736KZ",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 750-999 M/s > Cyber",
+      "currency": "USD",
+      "listed_price": 9.3,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 9.3,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "Gurasa",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 10,
+        "total_offer": 1,
+        "g2g_offer_id": "G1780681240736KZ"
+      },
+      "income_band": {
+        "label": "750-999 M/s",
+        "lower": 750000000,
+        "upper": 999000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1780681242734VZ",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1780681242734VZ",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 250-499 M/s > No Mutation",
+      "currency": "USD",
+      "listed_price": 6.8,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 6.8,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "Gurasa",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 10,
+        "total_offer": 1,
+        "g2g_offer_id": "G1780681242734VZ"
+      },
+      "income_band": {
+        "label": "250-499 M/s",
+        "lower": 250000000,
+        "upper": 499000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1780681245417XA",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1780681245417XA",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 500-749 M/s > No Mutation",
+      "currency": "USD",
+      "listed_price": 7.94,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 7.94,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "Gurasa",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 10,
+        "total_offer": 1,
+        "g2g_offer_id": "G1780681245417XA"
+      },
+      "income_band": {
+        "label": "500-749 M/s",
+        "lower": 500000000,
+        "upper": 749000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1780681475947ZI",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1780681475947ZI",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 500-749 M/s > Radioactive",
+      "currency": "USD",
+      "listed_price": 10.2,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 10.2,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "Gurasa",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 10,
+        "total_offer": 1,
+        "g2g_offer_id": "G1780681475947ZI"
+      },
+      "income_band": {
+        "label": "500-749 M/s",
+        "lower": 500000000,
+        "upper": 749000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1780684096663JB",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1780684096663JB",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 750-999 M/s > No Mutation",
+      "currency": "USD",
+      "listed_price": 9.13,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 9.13,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "Gurasa",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 10,
+        "total_offer": 1,
+        "g2g_offer_id": "G1780684096663JB"
+      },
+      "income_band": {
+        "label": "750-999 M/s",
+        "lower": 750000000,
+        "upper": 999000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1780760234185UC",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1780760234185UC",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 1+ B/s > Rainbow",
+      "currency": "USD",
+      "listed_price": 11.76,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 11.76,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "Gurasa",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 10,
+        "total_offer": 1,
+        "g2g_offer_id": "G1780760234185UC"
+      },
+      "income_band": {
+        "label": "1+ B/s",
+        "lower": 1000000000,
+        "upper": 1000000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1780790561044VS",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1780790561044VS",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 750-999 M/s > Divine",
+      "currency": "USD",
+      "listed_price": 9.86,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 9.86,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "Gurasa",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 10,
+        "total_offer": 1,
+        "g2g_offer_id": "G1780790561044VS"
+      },
+      "income_band": {
+        "label": "750-999 M/s",
+        "lower": 750000000,
+        "upper": 999000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1780790562610SH",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1780790562610SH",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 500-749 M/s > Gold",
+      "currency": "USD",
+      "listed_price": 6.09,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 6.09,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "Gurasa",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 10,
+        "total_offer": 1,
+        "g2g_offer_id": "G1780790562610SH"
+      },
+      "income_band": {
+        "label": "500-749 M/s",
+        "lower": 500000000,
+        "upper": 749000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1780842097479DT",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1780842097479DT",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 500-749 M/s > Bloodrot",
+      "currency": "USD",
+      "listed_price": 15.34,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 15.34,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "Gurasa",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 10,
+        "total_offer": 1,
+        "g2g_offer_id": "G1780842097479DT"
+      },
+      "income_band": {
+        "label": "500-749 M/s",
+        "lower": 500000000,
+        "upper": 749000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1780842101857OQ",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1780842101857OQ",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 250-499 M/s > Cursed",
+      "currency": "USD",
+      "listed_price": 9.38,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 9.38,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "Gurasa",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 10,
+        "total_offer": 1,
+        "g2g_offer_id": "G1780842101857OQ"
+      },
+      "income_band": {
+        "label": "250-499 M/s",
+        "lower": 250000000,
+        "upper": 499000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1780945143337NZ",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1780945143337NZ",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 1+ B/s > Yin-Yang",
+      "currency": "USD",
+      "listed_price": 12.46,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 12.46,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "Gurasa",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 8,
+        "total_offer": 1,
+        "g2g_offer_id": "G1780945143337NZ"
+      },
+      "income_band": {
+        "label": "1+ B/s",
+        "lower": 1000000000,
+        "upper": 1000000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1781393478820EA",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1781393478820EA",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 500-749 M/s > Yin-Yang",
+      "currency": "USD",
+      "listed_price": 9.45,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 9.45,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "Gurasa",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 9,
+        "total_offer": 1,
+        "g2g_offer_id": "G1781393478820EA"
+      },
+      "income_band": {
+        "label": "500-749 M/s",
+        "lower": 500000000,
+        "upper": 749000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1782150532042NH",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1782150532042NH",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 50-99 M/s > No Mutation",
+      "currency": "USD",
+      "listed_price": 1.13,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 1.13,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "WajeSHOP",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 179,
+        "total_offer": 1,
+        "g2g_offer_id": "G1782150532042NH"
+      },
+      "income_band": {
+        "label": "50-99 M/s",
+        "lower": 50000000,
+        "upper": 99000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1782915557368YN",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1782915557368YN",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 50-99 M/s > No Mutation",
+      "currency": "USD",
+      "listed_price": 1,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 1,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "HRxSTORE",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 40,
+        "total_offer": 1,
+        "g2g_offer_id": "G1782915557368YN"
+      },
+      "income_band": {
+        "label": "50-99 M/s",
+        "lower": 50000000,
+        "upper": 99000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1782940943259PG",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1782940943259PG",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 50-99 M/s > Gold",
+      "currency": "USD",
+      "listed_price": 1.38,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 1.38,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "HRxSTORE",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 99,
+        "total_offer": 1,
+        "g2g_offer_id": "G1782940943259PG"
+      },
+      "income_band": {
+        "label": "50-99 M/s",
+        "lower": 50000000,
+        "upper": 99000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1782941982411DQ",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1782941982411DQ",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 50-99 M/s > Diamond",
+      "currency": "USD",
+      "listed_price": 1.33,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 1.33,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "HRxSTORE",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 97,
+        "total_offer": 1,
+        "g2g_offer_id": "G1782941982411DQ"
+      },
+      "income_band": {
+        "label": "50-99 M/s",
+        "lower": 50000000,
+        "upper": 99000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1783201586234XG",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1783201586234XG",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 250-499 M/s > No Mutation",
+      "currency": "USD",
+      "listed_price": 1.69,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 1.69,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "HRxSTORE",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 15,
+        "total_offer": 1,
+        "g2g_offer_id": "G1783201586234XG"
+      },
+      "income_band": {
+        "label": "250-499 M/s",
+        "lower": 250000000,
+        "upper": 499000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1783202050292HH",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1783202050292HH",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 750-999 M/s > No Mutation",
+      "currency": "USD",
+      "listed_price": 4.52,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 4.52,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "HRxSTORE",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 7,
+        "total_offer": 1,
+        "g2g_offer_id": "G1783202050292HH"
+      },
+      "income_band": {
+        "label": "750-999 M/s",
+        "lower": 750000000,
+        "upper": 999000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1783207507627ZH",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1783207507627ZH",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 250-499 M/s > Lava",
+      "currency": "USD",
+      "listed_price": 4.23,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 4.23,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "HRxSTORE",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 3,
+        "total_offer": 1,
+        "g2g_offer_id": "G1783207507627ZH"
+      },
+      "income_band": {
+        "label": "250-499 M/s",
+        "lower": 250000000,
+        "upper": 499000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1783955222350CW",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1783955222350CW",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 1+ B/s > Diamond",
+      "currency": "USD",
+      "listed_price": 15.26,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 15.26,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "ProMerchant",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 5241,
+        "total_offer": 1,
+        "g2g_offer_id": "G1783955222350CW"
+      },
+      "income_band": {
+        "label": "1+ B/s",
+        "lower": 1000000000,
+        "upper": 1000000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1783955223138EX",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1783955223138EX",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 1+ B/s > Gold",
+      "currency": "USD",
+      "listed_price": 9.68,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 9.68,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "ProMerchant",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 5241,
+        "total_offer": 1,
+        "g2g_offer_id": "G1783955223138EX"
+      },
+      "income_band": {
+        "label": "1+ B/s",
+        "lower": 1000000000,
+        "upper": 1000000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1783955224469HH",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1783955224469HH",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 1+ B/s > No Mutation",
+      "currency": "USD",
+      "listed_price": 6.88,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 6.88,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "ProMerchant",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 5241,
+        "total_offer": 1,
+        "g2g_offer_id": "G1783955224469HH"
+      },
+      "income_band": {
+        "label": "1+ B/s",
+        "lower": 1000000000,
+        "upper": 1000000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1783955225829OV",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1783955225829OV",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 1+ B/s > Rainbow",
+      "currency": "USD",
+      "listed_price": 16.86,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 16.86,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "ProMerchant",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 5241,
+        "total_offer": 1,
+        "g2g_offer_id": "G1783955225829OV"
+      },
+      "income_band": {
+        "label": "1+ B/s",
+        "lower": 1000000000,
+        "upper": 1000000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1783955228729KW",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1783955228729KW",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 250-499 M/s > Diamond",
+      "currency": "USD",
+      "listed_price": 67.7,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 67.7,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "ProMerchant",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 5241,
+        "total_offer": 1,
+        "g2g_offer_id": "G1783955228729KW"
+      },
+      "income_band": {
+        "label": "250-499 M/s",
+        "lower": 250000000,
+        "upper": 499000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1783955229932ZY",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1783955229932ZY",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 500-749 M/s > Diamond",
+      "currency": "USD",
+      "listed_price": 6.77,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 6.77,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "ProMerchant",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 5241,
+        "total_offer": 1,
+        "g2g_offer_id": "G1783955229932ZY"
+      },
+      "income_band": {
+        "label": "500-749 M/s",
+        "lower": 500000000,
+        "upper": 749000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1783955233857RU",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1783955233857RU",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 750-999 M/s > Lava",
+      "currency": "USD",
+      "listed_price": 8.54,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 8.54,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "ProMerchant",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 5241,
+        "total_offer": 1,
+        "g2g_offer_id": "G1783955233857RU"
+      },
+      "income_band": {
+        "label": "750-999 M/s",
+        "lower": 750000000,
+        "upper": 999000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1784128064718LV",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1784128064718LV",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 50-99 M/s > Diamond",
+      "currency": "USD",
+      "listed_price": 1.69,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 1.69,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "ASYAHSTORE",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 23,
+        "total_offer": 1,
+        "g2g_offer_id": "G1784128064718LV"
+      },
+      "income_band": {
+        "label": "50-99 M/s",
+        "lower": 50000000,
+        "upper": 99000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1784857270844WY",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1784857270844WY",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 250-499 M/s > Bloodrot",
+      "currency": "USD",
+      "listed_price": 5.59,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 5.59,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "Yumnaqila",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 1,
+        "total_offer": 1,
+        "g2g_offer_id": "G1784857270844WY"
+      },
+      "income_band": {
+        "label": "250-499 M/s",
+        "lower": 250000000,
+        "upper": 499000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1785426575124UJ",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1785426575124UJ",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 250-499 M/s > Radioactive",
+      "currency": "USD",
+      "listed_price": 5.59,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 5.59,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "EJAKLEVAY",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 12,
+        "total_offer": 1,
+        "g2g_offer_id": "G1785426575124UJ"
+      },
+      "income_band": {
+        "label": "250-499 M/s",
+        "lower": 250000000,
+        "upper": 499000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1785426615108GH",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1785426615108GH",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 500-749 M/s > Cyber",
+      "currency": "USD",
+      "listed_price": 5.36,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 5.36,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "EJAKLEVAY",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 5,
+        "total_offer": 1,
+        "g2g_offer_id": "G1785426615108GH"
+      },
+      "income_band": {
+        "label": "500-749 M/s",
+        "lower": 500000000,
+        "upper": 749000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1785426669121CT",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1785426669121CT",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 500-749 M/s > Divine",
+      "currency": "USD",
+      "listed_price": 5.25,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 5.25,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "EJAKLEVAY",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 10,
+        "total_offer": 1,
+        "g2g_offer_id": "G1785426669121CT"
+      },
+      "income_band": {
+        "label": "500-749 M/s",
+        "lower": 500000000,
+        "upper": 749000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1785426710849ZL",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1785426710849ZL",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 100-249 M/s > Bloodrot",
+      "currency": "USD",
+      "listed_price": 16.88,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 16.88,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "EJAKLEVAY",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 3,
+        "total_offer": 1,
+        "g2g_offer_id": "G1785426710849ZL"
+      },
+      "income_band": {
+        "label": "100-249 M/s",
+        "lower": 100000000,
+        "upper": 249000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1785426780187PA",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1785426780187PA",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 100-249 M/s > Candy",
+      "currency": "USD",
+      "listed_price": 5.65,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 5.65,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "EJAKLEVAY",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 12,
+        "total_offer": 1,
+        "g2g_offer_id": "G1785426780187PA"
+      },
+      "income_band": {
+        "label": "100-249 M/s",
+        "lower": 100000000,
+        "upper": 249000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1785426828761GG",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1785426828761GG",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 250-499 M/s > Cursed",
+      "currency": "USD",
+      "listed_price": 5.65,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 5.65,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "EJAKLEVAY",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 5,
+        "total_offer": 1,
+        "g2g_offer_id": "G1785426828761GG"
+      },
+      "income_band": {
+        "label": "250-499 M/s",
+        "lower": 250000000,
+        "upper": 499000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1785427034947NQ",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1785427034947NQ",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 250-499 M/s > Lava",
+      "currency": "USD",
+      "listed_price": 4.23,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 4.23,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "EJAKLEVAY",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 7,
+        "total_offer": 1,
+        "g2g_offer_id": "G1785427034947NQ"
+      },
+      "income_band": {
+        "label": "250-499 M/s",
+        "lower": 250000000,
+        "upper": 499000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1785446195412CR",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1785446195412CR",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 1+ B/s > Divine",
+      "currency": "USD",
+      "listed_price": 17.92,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 17.92,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "ArgenGaming",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 1000,
+        "total_offer": 1,
+        "g2g_offer_id": "G1785446195412CR"
+      },
+      "income_band": {
+        "label": "1+ B/s",
+        "lower": 1000000000,
+        "upper": 1000000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1785446196622BL",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1785446196622BL",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 100-249 M/s > Candy",
+      "currency": "USD",
+      "listed_price": 6.62,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 6.62,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "ArgenGaming",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 1000,
+        "total_offer": 1,
+        "g2g_offer_id": "G1785446196622BL"
+      },
+      "income_band": {
+        "label": "100-249 M/s",
+        "lower": 100000000,
+        "upper": 249000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1785446213228XR",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1785446213228XR",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 50-99 M/s > Gold",
+      "currency": "USD",
+      "listed_price": 2.32,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 2.32,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "ArgenGaming",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 1000,
+        "total_offer": 1,
+        "g2g_offer_id": "G1785446213228XR"
+      },
+      "income_band": {
+        "label": "50-99 M/s",
+        "lower": 50000000,
+        "upper": 99000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1785446213566UM",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1785446213566UM",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 500-749 M/s > Cyber",
+      "currency": "USD",
+      "listed_price": 7.58,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 7.58,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "ArgenGaming",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 1000,
+        "total_offer": 1,
+        "g2g_offer_id": "G1785446213566UM"
+      },
+      "income_band": {
+        "label": "500-749 M/s",
+        "lower": 500000000,
+        "upper": 749000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    },
+    {
+      "external_listing_id": "G1785446221634DJ",
+      "listing_url": "https://www.g2g.com/categories/rbl-item/offer/G1785446221634DJ",
+      "listing_type": "active_listing",
+      "listing_status": "active",
+      "title": "Steal a Brainrot > Garama and Madundung > 1+ B/s > No Mutation",
+      "currency": "USD",
+      "listed_price": 6.89,
+      "shipping_price": 0,
+      "quantity": 1,
+      "total_price_usd": 6.89,
+      "observed_at": "2026-07-31T05:23:00.324Z",
+      "seller_reference": "ArgenGaming",
+      "seller_sales_count": null,
+      "source_signals": {
+        "available_qty": 1000,
+        "total_offer": 1,
+        "g2g_offer_id": "G1785446221634DJ"
+      },
+      "income_band": {
+        "label": "1+ B/s",
+        "lower": 1000000000,
+        "upper": 1000000000
+      },
+      "collector_version": 1,
+      "matched_brainrot_name": "Garama and Madundung"
+    }
+  ]
+}

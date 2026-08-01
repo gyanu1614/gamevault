@@ -189,7 +189,7 @@ export type SabTopValue = {
 async function getSabTopValues(): Promise<SabTopValue[]> {
   const supabase = await createClient()
   const { data: rows } = await (supabase as any)
-    .from('sab_public_price_catalog')
+    .from('sab_public_price_catalog_corrected')
     .select('brainrot_slug,brainrot_name,rarity,image_url,market_value_usd,mutation_slug')
     .eq('mutation_slug', 'default')
     .order('market_value_usd', { ascending: false })
