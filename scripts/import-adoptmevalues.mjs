@@ -27,8 +27,17 @@ import { resolve } from 'node:path'
 import { createClient } from '@supabase/supabase-js'
 
 // --- env (minimal loader, matches the SAB scripts) --------------------------
+// Reads .env.local locally, but is a NO-OP when the file is absent (CI, where
+// NEXT_PUBLIC_SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY come from GitHub secrets
+// via the workflow env). Missing file must never crash the importer.
 function loadEnv() {
-  const raw = readFileSync(new URL('../.env.local', import.meta.url), 'utf8')
+  let raw
+  try {
+    raw = readFileSync(new URL('../.env.local', import.meta.url), 'utf8')
+  } catch (err) {
+    if (err && err.code === 'ENOENT') return // no local env file — use process.env
+    throw err
+  }
   for (const line of raw.split('\n')) {
     const m = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*)\s*$/)
     if (m && !process.env[m[1]]) process.env[m[1]] = m[2]
