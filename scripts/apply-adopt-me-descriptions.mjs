@@ -12,6 +12,7 @@ import { readFileSync } from 'node:fs'
 import { createClient } from '@supabase/supabase-js'
 import { DESCRIPTIONS } from './adopt-me-descriptions.mjs'
 import { DESCRIPTIONS_WAVE2 } from './adopt-me-descriptions-wave2.mjs'
+import { DESCRIPTIONS_WAVE3 } from './adopt-me-descriptions-wave3.mjs'
 
 function loadEnv() {
   // No-op when .env.local is absent (CI uses GitHub-secret env vars).
@@ -36,7 +37,11 @@ const sb = createClient(
 )
 
 const write = process.argv.includes('--write')
-const entries = Object.entries({ ...DESCRIPTIONS, ...DESCRIPTIONS_WAVE2 })
+const entries = Object.entries({
+  ...DESCRIPTIONS,
+  ...DESCRIPTIONS_WAVE2,
+  ...DESCRIPTIONS_WAVE3,
+})
 console.log(`${entries.length} descriptions ${write ? '(writing)' : '(dry run)'}\n`)
 
 let ok = 0
