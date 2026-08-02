@@ -99,6 +99,14 @@ export const FLOOR_BAND_RATIO = 1.6
 export const CLUSTER_FLOOR_RATIO = 0.25
 
 /**
+ * If the cheapest supported cluster sits more than this multiple above the
+ * cheapest surviving listing, the listings are too scattered to trust a floor —
+ * there are real cheaper listings the cluster ignores. Bail to the cohort
+ * anchor instead of publishing an inflated high-cluster price.
+ */
+export const FLOOR_CLUSTER_MAX_LIFT = 3
+
+/**
  * Observed marketplace price floor (p1 = $0.28 across 423 published prices).
  * Listings do not go below roughly this regardless of item value, so a model
  * predicting less than this is describing something the market cannot express.
@@ -172,6 +180,16 @@ export const LADDER_MAX_INVERSION_RATIO = 2
  */
 export const MUTATION_PREMIUM_FLOOR_MULTIPLIER = 1.5
 
+/**
+ * How far above its measured `default × premium` a mutation may be priced before
+ * it's treated as bad data. A mutation more than this multiple above the premium
+ * estimate is almost always thin/incomplete listings that missed the cheap real
+ * market (Cursed Skibidi: $916 off 3 high-only listings vs a ~$570 expected
+ * premium and a $325-360 real market). Loose (2x) so genuine dispersion above
+ * the estimate survives — this catches "absurd", not "a bit high".
+ */
+export const MUTATION_PREMIUM_CEILING_RATIO = 2.5
+
 export type Correction = {
   brainrotId: string
   mutationId: string
@@ -233,26 +251,42 @@ export function lowestSupportedPrice(
 
   if (positive.length < minCluster) return null
 
-  // Point 5: drop listings below CLUSTER_FLOOR_RATIO of the median before
-  // looking for a supported cluster, so a knot of fake-cheap listings can't
-  // form its own "cluster" beneath the real market.
-  const groupMedian = median(positive)
-  const sorted =
-    isUsable(groupMedian) && groupMedian > 0
-      ? positive.filter((price) => price >= groupMedian * CLUSTER_FLOOR_RATIO)
-      : positive
-
-  if (sorted.length < minCluster) return null
-
-  for (let start = 0; start <= sorted.length - minCluster; start += 1) {
-    const clusterLow = sorted[start]
-    const clusterHigh = sorted[start + minCluster - 1]
-    if (clusterHigh <= clusterLow * bandRatio) {
-      return clusterLow
+  // Find the cheapest SUPPORTED cluster — the lowest price whose next
+  // (minCluster) listings fall within bandRatio. This is the raw floor before
+  // any bait/scatter judgement.
+  let clusterLow: number | null = null
+  for (let start = 0; start <= positive.length - minCluster; start += 1) {
+    if (positive[start + minCluster - 1] <= positive[start] * bandRatio) {
+      clusterLow = positive[start]
+      break
     }
   }
 
-  return null
+  if (clusterLow == null) return null
+
+  // Point 5 (bait below the cluster): listings priced far below the supported
+  // cluster are fakes, not deals — a $0.67 or $44.88 knot beneath a real
+  // cluster. They sit BELOW clusterLow by construction (the cluster is the
+  // cheapest supported price), so they never set the floor. Nothing more to do:
+  // clusterLow already ignores them.
+  //
+  // Reliability guard (scattered high-only market): if the cheapest supported
+  // cluster is itself far ABOVE the cheapest real listing, there are genuine
+  // cheaper listings the cluster ignores and the market is too scattered to
+  // trust a floor (Headless Horseman: lone $1000/$4000, cluster only at
+  // $8999-9999 → floor $8999 is absurd). Bail to the cohort anchor.
+  //
+  // We distinguish the two: a fake-cheap listing is a LONE outlier well below
+  // the cluster; a real cheaper listing has company or sits within reach. If
+  // there are 2+ listings below clusterLow / FLOOR_CLUSTER_MAX_LIFT, those are
+  // a real cheaper tier the cluster is wrongly skipping → bail.
+  const cheaperReal = positive.filter(
+    (price) => price < clusterLow! / FLOOR_CLUSTER_MAX_LIFT,
+  )
+  // A single lone cheap listing is bait (ignore); two or more is a real tier.
+  if (cheaperReal.length >= 2) return null
+
+  return clusterLow
 }
 
 /**
@@ -742,24 +776,30 @@ function correctVariant(
       ? defaultValue * multiplier
       : null
 
-  // A premium mutation priced below its own default is impossible — thin noise.
-  // When we can detect it (we know the default and this is a real premium tier),
-  // substitute the measured default x premium estimate, flagged low confidence.
-  // Returns null when the value is fine or we can't judge it.
-  const premiumFloorEstimate = (value: number | null): Correction | null => {
+  // A premium mutation's scraped price is IMPLAUSIBLE when it's far from what
+  // the measured premium predicts — either well BELOW its own default (a
+  // Radioactive can't cost less than the base) or far ABOVE default × premium
+  // (Cursed Skibidi showed $916 = 5.6× default off 3 high-only listings, when
+  // the measured Cursed premium is ~3.5× → ~$570 expected; the real market was
+  // $325-360). Both are thin/incomplete data. Substitute the measured
+  // default × premium estimate, flagged low confidence. Returns null when the
+  // value is plausible or we can't judge it (no default / no measured premium).
+  const premiumSanityEstimate = (value: number | null): Correction | null => {
     if (
       !isUsable(value) ||
       !isUsable(defaultValue) ||
+      !isUsable(anchor) ||
       !isUsable(multiplier) ||
       multiplier < MUTATION_PREMIUM_FLOOR_MULTIPLIER
     ) {
       return null
     }
-    // Allow a little slack — only override when clearly below the default.
-    if (value >= defaultValue * 0.95) return null
+    const belowDefault = value < defaultValue * 0.95
+    const aboveCeiling = value > anchor * MUTATION_PREMIUM_CEILING_RATIO
+    if (!belowDefault && !aboveCeiling) return null
     return {
       ...base,
-      valueUsd: roundCents(anchor!),
+      valueUsd: roundCents(anchor),
       lowUsd: null,
       highUsd: null,
       reason: 'variant_anchored',
@@ -794,7 +834,7 @@ function correctVariant(
 
     if (isUsable(floor)) {
       // A premium mutation floored below its default is noise, not a deal.
-      const overridden = premiumFloorEstimate(floor)
+      const overridden = premiumSanityEstimate(floor)
       if (overridden) return overridden
       return {
         ...base,
@@ -810,7 +850,7 @@ function correctVariant(
       }
     }
 
-    const overridden = premiumFloorEstimate(variant.valueUsd)
+    const overridden = premiumSanityEstimate(variant.valueUsd)
     if (overridden) return overridden
     return {
       ...base,

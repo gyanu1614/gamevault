@@ -1,23 +1,25 @@
 {
   "version": 1,
-  "updated_at": "2026-07-31T21:50:41.012Z",
+  "updated_at": "2026-08-02T07:20:14.396Z",
   "attempts": {
     "5be562a2-6172-421b-94be-6d75539debc7": {
       "brainrot_name": "Skibidi Toilet",
       "status": "collected",
-      "attempted_at": "2026-07-31T21:50:41.012Z",
-      "listing_count": 60,
+      "attempted_at": "2026-08-02T07:20:14.396Z",
+      "listing_count": 130,
       "variants": {
-        "galaxy": 3,
-        "diamond": 7,
-        "rainbow": 3,
         "default": 25,
-        "gold": 9,
-        "cursed": 1,
-        "candy": 4,
-        "divine": 6,
-        "bloodrot": 1,
-        "radioactive": 1
+        "gold": 25,
+        "diamond": 17,
+        "candy": 9,
+        "cursed": 10,
+        "divine": 19,
+        "rainbow": 8,
+        "galaxy": 3,
+        "lava": 6,
+        "bloodrot": 5,
+        "yin-yang": 1,
+        "radioactive": 2
       },
       "final_url": "https://www.eldorado.gg/skibidi-toilet-for-sale/i/259?te_v2=SKIBIDI_TOILET",
       "collector_version": 6

@@ -85,9 +85,12 @@ describe('lowestSupportedPrice', () => {
     expect(lowestSupportedPrice([0.1, ...real])).toBe(0.99)
   })
 
-  it('ignores two scattered baits below the cluster', () => {
+  it('bails when 2+ listings sit far below the cluster (indistinguishable)', () => {
+    // Two listings well below a $0.99 cluster — could be fakes OR a real cheaper
+    // tier, and price alone can't tell. Per policy, bail to the cohort anchor
+    // rather than guess. (Same rule that saves Headless from a $8999 floor.)
     const real = [0.99, 1.0, 1.0, 1.04, 1.05, 1.1]
-    expect(lowestSupportedPrice([0.1, 0.2, ...real])).toBe(0.99)
+    expect(lowestSupportedPrice([0.1, 0.2, ...real])).toBeNull()
   })
 
   it('does move for a genuine cluster of cheap listings', () => {
@@ -107,13 +110,18 @@ describe('lowestSupportedPrice', () => {
     expect(lowestSupportedPrice([1, 5, 30, 200])).toBeNull()
   })
 
-  it('drops fake-cheap listings below 25% of the median (point 5)', () => {
-    // The Headless Horseman shape: two $44.88 fakes against a real $1000+
-    // cluster. The $44.88 pair is below 25% of the median → dropped, and the
-    // real cluster sets the floor.
-    const prices = [44.88, 44.88, 1000, 1000, 1050, 4000, 8999.99]
-    const floor = lowestSupportedPrice(prices)
-    expect(floor).toBe(1000)
+  it('ignores a single lone cheap bait below the cluster', () => {
+    // One $0.10 bait below a real $0.99+ cluster → ignored, cluster wins.
+    expect(lowestSupportedPrice([0.1, 0.99, 1, 1, 1.04, 1.05])).toBe(0.99)
+  })
+
+  it('bails (null) when the cheapest cluster sits far above 2+ cheaper listings', () => {
+    // Scattered high-only market: lone $78 and $1000 below a cluster that only
+    // forms at $8999-9999. The floor can't distinguish "2 real cheaper listings
+    // the cluster ignores" from "2 fakes" by price alone, so it bails to let the
+    // cohort anchor decide rather than publish an absurd $8999. (Headless
+    // Horseman's real shape on 2026-08-01.)
+    expect(lowestSupportedPrice([78.37, 1000, 4000, 8999.99, 9450, 9999])).toBeNull()
   })
 
   it('drops non-positive and non-finite prices before clustering', () => {

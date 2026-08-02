@@ -1057,6 +1057,25 @@ async function collectOne({
   }
 
   for (const [mutationSlug, rows] of candidatesByMutation) {
+    // Income-band filtering only makes sense for the DEFAULT mutation, where the
+    // band distinguishes genuinely different items (a 50M/s vs a 500M/s of the
+    // same brainrot). For a specific MUTATION (Cursed, Rainbow, …) every listing
+    // IS that mutation regardless of the seller's income label — and mutations
+    // boost income, so the same item legitimately spans multiple bands. Filtering
+    // by band fragments the real market: Cursed Skibidi's cheap $325 listings sat
+    // in the 5-9.99 B/s band while the collector picked the 1-4.99 B/s band and
+    // kept only the expensive $454-999 tail. So pool ALL bands for mutations.
+    if (mutationSlug !== "default") {
+      selectedCandidates.push(...rows);
+      const allBands = [...new Set(rows.map((r) => r.income_range.label))];
+      selectedIncomeBands[mutationSlug] = {
+        pooled_all_bands: true,
+        bands: allBands,
+        sample_count: rows.length,
+      };
+      continue;
+    }
+
     const bands = new Map();
     for (const row of rows) {
       const bandRows = bands.get(row.income_band_key) ?? [];
