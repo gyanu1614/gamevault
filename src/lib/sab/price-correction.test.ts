@@ -128,6 +128,40 @@ describe('lowestSupportedPrice', () => {
     const prices = [0, -1, Number.NaN, 1.0, 1.0, 1.05]
     expect(lowestSupportedPrice(prices)).toBe(1.0)
   })
+
+  it('skips a lone low separated by a gap from the real cluster (Skibidi Toilet)', () => {
+    // Real 2026-08-02 shape: a lone $162.45 sits 18% below a tight $191-200
+    // cluster. The band ratio alone absorbs it (window spans only 1.20x), so the
+    // old floor was $162.45 — a phantom underprice. The step rule requires the
+    // floor-setter within 10% of its neighbour, so $162.45 is skipped and the
+    // real cluster sets the floor at $191.02.
+    const prices = [0.67, 162.45, 191.02, 194.72, 198.09, 198.09, 200]
+    expect(lowestSupportedPrice(prices)).toBe(191.02)
+  })
+
+  it('skips the lone low but still finds the cluster just above it', () => {
+    // A 13% first step is a gap; the fix does NOT null the item — it advances
+    // past the lone low to the dense cluster one step up.
+    expect(lowestSupportedPrice([0.3, 0.34, 0.35, 0.35, 0.36])).toBe(0.34)
+  })
+
+  it('keeps a genuinely tight cheap cluster (pennies apart)', () => {
+    // Steps of ~1% are a real floor, not an outlier — unchanged by the step rule.
+    expect(lowestSupportedPrice([0.99, 1.0, 1.0, 1.04])).toBe(0.99)
+  })
+
+  it('treats an exactly-FLOOR_STEP_RATIO step as within bound (boundary)', () => {
+    // (1.1 - 1.0) / 1.0 === 0.10000000000000009 in binary float; the epsilon in
+    // the guard keeps an exactly-10% step inside the bound, so $1.00 sets the
+    // floor rather than being skipped to $1.10.
+    expect(lowestSupportedPrice([1.0, 1.1, 1.1, 1.1])).toBe(1.0)
+  })
+
+  it('skips a low whose step just exceeds FLOOR_STEP_RATIO', () => {
+    // An 11% first step is over the bound → the lone $1.00 is skipped and the
+    // $1.11 cluster sets the floor.
+    expect(lowestSupportedPrice([1.0, 1.11, 1.11, 1.11])).toBe(1.11)
+  })
 })
 
 describe('measureMutationMultipliers', () => {
@@ -228,6 +262,97 @@ describe('computeCorrections — rarity-aware minimum evidence', () => {
       ],
     })
     const c = result.find((r) => r.brainrotId === 'og5')!
+    expect(c.isPublishable).toBe(true)
+  })
+
+  it('never inverts the range when the floor lands above a collapsed high', () => {
+    // The floor raises the headline above valueUsd. If the upstream high has
+    // collapsed to the point value (the catalog view coalesces high -> estimate),
+    // an unclamped high would sit BELOW the floor and invert the displayed range.
+    // The Math.max clamp must keep lowUsd <= highUsd. Listings cluster tightly at
+    // ~$5 while the blended value/high degenerated to $4.
+    const peers = peerGroup(6)
+    const result = computeCorrections({
+      brainrots: [...peers.brainrots, brainrot('collapsed', { rarity: 'Rare' })],
+      variants: [
+        ...peers.variants,
+        variant('collapsed', {
+          valueUsd: 4,
+          lowUsd: 4,
+          highUsd: 4, // collapsed to the point value
+          sampleCount: 6,
+          sourceCount: 2,
+          listingPrices: [5, 5, 5.1, 5.1, 5.2, 5.2],
+        }),
+      ],
+    })
+    const c = result.find((r) => r.brainrotId === 'collapsed')!
+    expect(c.reason).toBe('floor')
+    expect(c.valueUsd).toBe(5)
+    expect(c.lowUsd).toBe(5)
+    expect(c.highUsd).not.toBeNull()
+    expect(c.lowUsd!).toBeLessThanOrEqual(c.highUsd!)
+    expect(c.highUsd).toBe(5) // clamped up to the floor
+  })
+
+  it('suppresses an expensive single-source OG (Headless Horseman)', () => {
+    // n=5 OG passes the sample gate, but every listing is one marketplace
+    // (source_count=1). A five-figure price with no cross-source confirmation is
+    // the same unconfirmed market as a 1-listing item — suppress, don't publish.
+    const peers = peerGroup(6)
+    const result = computeCorrections({
+      brainrots: [...peers.brainrots, brainrot('headless', { rarity: 'OG' })],
+      variants: [
+        ...peers.variants,
+        variant('headless', {
+          valueUsd: 8999.99,
+          sampleCount: 5,
+          sourceCount: 1,
+          listingPrices: [8999.99, 8999.99, 9000, 9200, 9450],
+        }),
+      ],
+    })
+    const c = result.find((r) => r.brainrotId === 'headless')!
+    expect(c.isPublishable).toBe(false)
+    expect(c.valueUsd).toBeNull()
+    expect(c.reason).toBe('insufficient_evidence')
+  })
+
+  it('publishes the same expensive OG once a second source confirms it', () => {
+    const peers = peerGroup(6)
+    const result = computeCorrections({
+      brainrots: [...peers.brainrots, brainrot('headless2', { rarity: 'OG' })],
+      variants: [
+        ...peers.variants,
+        variant('headless2', {
+          valueUsd: 8999.99,
+          sampleCount: 5,
+          sourceCount: 2,
+          listingPrices: [8999.99, 8999.99, 9000, 9200, 9450],
+        }),
+      ],
+    })
+    const c = result.find((r) => r.brainrotId === 'headless2')!
+    expect(c.isPublishable).toBe(true)
+  })
+
+  it('still publishes a cheap single-source OG (money threshold not met)', () => {
+    // The cross-source rule only bites above the money threshold; a low-value
+    // OG on one source keeps the ordinary sample-gate behaviour.
+    const peers = peerGroup(6)
+    const result = computeCorrections({
+      brainrots: [...peers.brainrots, brainrot('cheapog', { rarity: 'OG' })],
+      variants: [
+        ...peers.variants,
+        variant('cheapog', {
+          valueUsd: 40,
+          sampleCount: 6,
+          sourceCount: 1,
+          listingPrices: [40, 40, 40, 40, 40, 40],
+        }),
+      ],
+    })
+    const c = result.find((r) => r.brainrotId === 'cheapog')!
     expect(c.isPublishable).toBe(true)
   })
 
