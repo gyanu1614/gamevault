@@ -5,10 +5,12 @@ import {
   MIN_TRUSTED_SAMPLES,
   computeCorrections,
   lowestSupportedPrice,
+  lowestSupportedPriceBySource,
   measureMutationMultipliers,
   median,
   quantile,
   type BrainrotMeta,
+  type SourcedPrice,
   type VariantEstimate,
 } from './price-correction'
 
@@ -161,6 +163,100 @@ describe('lowestSupportedPrice', () => {
     // An 11% first step is over the bound → the lone $1.00 is skipped and the
     // $1.11 cluster sets the floor.
     expect(lowestSupportedPrice([1.0, 1.11, 1.11, 1.11])).toBe(1.11)
+  })
+})
+
+describe('lowestSupportedPriceBySource', () => {
+  const s = (price: number, source: string): SourcedPrice => ({ price, source })
+
+  it('clamps a deep cross-source undercut to the verified market (Strawberry)', () => {
+    // Eldorado (trusted) floors at $700; a G2G cluster at $614-630 undercuts it by
+    // 12% with no seller-trust data. The floor must not drop below the verified
+    // market by more than the undercut band, so it lands near the $700 cluster,
+    // NOT $614.
+    const listings = [
+      s(300, 'eldorado'), // lone fake, skipped by the trusted floor's own logic
+      s(614.09, 'g2g'),
+      s(620, 'g2g'),
+      s(630, 'g2g'),
+      s(700, 'eldorado'),
+      s(733, 'eldorado'),
+      s(748.85, 'eldorado'),
+      s(750, 'eldorado'),
+      s(790, 'eldorado'),
+    ]
+    const floor = lowestSupportedPriceBySource(listings)
+    expect(floor).not.toBeNull()
+    // Must be at/above the verified market, well above the $614 G2G undercut.
+    expect(floor!).toBeGreaterThanOrEqual(700 * 0.92)
+    expect(floor!).toBeGreaterThan(630)
+  })
+
+  it('keeps a shallow cross-source deal within the undercut band (Dragon Cannelloni)', () => {
+    // Trusted floor $17.99; a G2G listing at $16.70 sits only 7% under — a
+    // plausible real deal, inside the 8% band — so it IS honoured as the floor.
+    const listings = [
+      s(16.7, 'g2g'),
+      s(17.99, 'eldorado'),
+      s(18, 'eldorado'),
+      s(18.5, 'eldorado'),
+      s(19, 'eldorado'),
+    ]
+    expect(lowestSupportedPriceBySource(listings)).toBeCloseTo(16.7, 2)
+  })
+
+  it('drops an extreme unverifiable fake far below the trusted market (Jelly Moby)', () => {
+    // A $1 Itemku listing under a $55 verified Eldorado market is a fake; the
+    // floor follows the trusted cluster, not the $1.
+    const listings = [
+      s(1, 'itemku'),
+      s(55, 'eldorado'),
+      s(55, 'eldorado'),
+      s(58, 'eldorado'),
+      s(60, 'eldorado'),
+    ]
+    const floor = lowestSupportedPriceBySource(listings)
+    expect(floor!).toBeGreaterThanOrEqual(55 * 0.92)
+  })
+
+  it('leaves an eldorado-cheapest group unchanged (the 91% healthy case)', () => {
+    // When the trusted source is already the cheapest, the source-aware floor
+    // equals the plain floor — no distortion of the healthy majority.
+    const prices = [5, 5, 5.1, 5.1, 5.2, 5.2]
+    const listings = prices.map((p) => s(p, 'eldorado'))
+    expect(lowestSupportedPriceBySource(listings)).toBe(
+      lowestSupportedPrice(prices),
+    )
+  })
+
+  it('falls back to the plain all-source floor when trusted evidence is thin', () => {
+    // Fewer than MIN_TRUSTED_SOURCE_LISTINGS trusted listings → behave exactly
+    // like the plain floor over all prices (no verified market to anchor to).
+    const listings = [
+      s(4, 'g2g'),
+      s(4, 'g2g'),
+      s(4.1, 'g2g'),
+      s(4.1, 'itemku'),
+      s(9, 'eldorado'),
+    ]
+    const prices = listings.map((l) => l.price)
+    expect(lowestSupportedPriceBySource(listings)).toBe(
+      lowestSupportedPrice(prices),
+    )
+  })
+
+  it('returns null when trusted listings exist but form no supported cluster', () => {
+    // Trusted prices are too scattered to floor; do not invent one from
+    // unverifiable sources.
+    const listings = [
+      s(10, 'eldorado'),
+      s(50, 'eldorado'),
+      s(300, 'eldorado'),
+      s(12, 'g2g'),
+      s(13, 'g2g'),
+      s(14, 'g2g'),
+    ]
+    expect(lowestSupportedPriceBySource(listings)).toBeNull()
   })
 })
 
