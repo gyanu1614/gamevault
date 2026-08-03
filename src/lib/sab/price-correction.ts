@@ -45,7 +45,23 @@ export const MIN_TRUSTED_SAMPLES = 3
  */
 export const MIN_PUBLISH_SAMPLES_HIGH_VALUE = 5
 
+/**
+ * Above this published value, a high-value rarity needs cross-source support to
+ * publish. Five listings from a SINGLE marketplace is not confirmation — it's
+ * one seller-pool that no downstream statistic can distinguish from coordinated
+ * or mispriced inventory. Headless Horseman published $8,999.99 off n=5 that
+ * were all Eldorado (source_count=1), thrashing $89 -> $8,999 -> $7,499 day to
+ * day. Real evidence at this price means at least two independent sources agree;
+ * below that we suppress rather than publish a confident five-figure guess.
+ */
+export const HIGH_VALUE_MULTI_SOURCE_THRESHOLD_USD = 1000
+export const MIN_SOURCES_HIGH_VALUE = 2
+
 const HIGH_VALUE_RARITIES = new Set(['OG', 'Secret'])
+
+function isHighValueRarity(rarity: string | null | undefined): boolean {
+  return !!rarity && HIGH_VALUE_RARITIES.has(rarity)
+}
 
 export function minPublishSamples(rarity: string | null | undefined): number {
   return rarity && HIGH_VALUE_RARITIES.has(rarity)
@@ -88,6 +104,26 @@ export const FLOOR_MIN_CLUSTER = 3
 
 /** Cheapest and Nth-cheapest of a supporting cluster must be within this. */
 export const FLOOR_BAND_RATIO = 1.6
+
+/**
+ * The cheapest listing that SETS the floor must have a close neighbour: the step
+ * from it up to the next listing may be at most this fraction of its own price.
+ *
+ * Without this, the band-ratio window absorbs a lone low listing sitting in a
+ * GAP just under the real cluster. Skibidi Toilet's listings were
+ * [162.45, 191.02, 194.72, 198.09, ...]: the window [162.45, 191.02, 194.72]
+ * spans only 1.20x (< 1.6), so 162.45 became the "floor" — but it is $29 (18%)
+ * below the next listing while the 191-200 cluster is packed within a few
+ * percent. That is one listing, not a floor. This rule requires the floor-setter
+ * to be within FLOOR_STEP_RATIO of its neighbour (a real cluster member), so a
+ * gap-separated lone low is skipped and the dense cluster above sets the floor.
+ *
+ * 0.10 (10%) is deliberately tight: genuine cheap clusters step in pennies
+ * ([0.99, 1.00, 1.00] steps 1%), while an outlier gap is 15-60%. It is looser
+ * than the band ratio because it governs a single adjacent step, not the whole
+ * window.
+ */
+export const FLOOR_STEP_RATIO = 0.1
 
 /**
  * Cluster-relative floor (point 5): a listing priced below this fraction of the
@@ -251,15 +287,38 @@ export function lowestSupportedPrice(
 
   if (positive.length < minCluster) return null
 
-  // Find the cheapest SUPPORTED cluster — the lowest price whose next
-  // (minCluster) listings fall within bandRatio. This is the raw floor before
-  // any bait/scatter judgement.
+  // Find the cheapest SUPPORTED cluster — the lowest price that (a) has its next
+  // (minCluster) listings within bandRatio AND (b) sits within FLOOR_STEP_RATIO
+  // of its immediate neighbour. Both are required: the band ratio keeps the
+  // whole window tight, and the step ratio keeps the FLOOR-SETTER from being a
+  // lone low listing separated by a gap from the real cluster above it
+  // (Skibidi Toilet: [162.45, 191.02, 194.72, ...] — the window is tight enough
+  // but 162.45 is 18% under its neighbour, so it is one listing, not a floor).
+  //
+  // When the cheapest member fails the step test, we do NOT reject the window —
+  // we advance past that lone low and let the dense cluster above set the floor.
   let clusterLow: number | null = null
   for (let start = 0; start <= positive.length - minCluster; start += 1) {
-    if (positive[start + minCluster - 1] <= positive[start] * bandRatio) {
-      clusterLow = positive[start]
-      break
-    }
+    const windowTight =
+      positive[start + minCluster - 1] <= positive[start] * bandRatio
+    if (!windowTight) continue
+
+    // The floor-setter must have a close neighbour. A large step from this
+    // listing to the next is the lone-outlier signature; skip it. The 1e-9
+    // epsilon keeps an EXACTLY-FLOOR_STEP_RATIO step inside the bound despite
+    // binary-float error ((1.1-1.0)/1.0 === 0.10000000000000009 > 0.1).
+    //
+    // `neighbour` is the next listing up. For any minCluster >= 2 it is inside
+    // the window and always defined; the `undefined` guard only matters if a
+    // caller passes minCluster === 1 (none does today), where a lone listing has
+    // no neighbour to support it and must not set a floor.
+    const neighbour = positive[start + 1]
+    if (neighbour === undefined) continue
+    const stepToNeighbour = (neighbour - positive[start]) / positive[start]
+    if (stepToNeighbour > FLOOR_STEP_RATIO + 1e-9) continue
+
+    clusterLow = positive[start]
+    break
   }
 
   if (clusterLow == null) return null
@@ -655,6 +714,32 @@ function correctDefault(
     }
   }
 
+  // Cross-source requirement for expensive high-value items: passing the sample
+  // gate is not enough when every listing comes from ONE marketplace. A
+  // five-figure OG confirmed by a single source (Headless Horseman: n=5, all
+  // Eldorado) is the same unconfirmed-market failure as a 1-listing item — the
+  // listing count just makes it look safer than it is. Require a second source
+  // before publishing above the money threshold; otherwise suppress.
+  if (
+    isHighValueRarity(meta?.rarity) &&
+    isUsable(variant.valueUsd) &&
+    (variant.valueUsd as number) >= HIGH_VALUE_MULTI_SOURCE_THRESHOLD_USD &&
+    variant.sourceCount < MIN_SOURCES_HIGH_VALUE
+  ) {
+    return {
+      ...base,
+      valueUsd: null,
+      lowUsd: null,
+      highUsd: null,
+      reason: 'insufficient_evidence',
+      confidence: 'none',
+      anchorUsd: anchor,
+      cohortSize: cohort.length,
+      isAnchored: false,
+      isPublishable: false,
+    }
+  }
+
   // Well-sampled: prefer the lowest SUPPORTED price — the cheapest a buyer can
   // actually transact at — over the median midpoint. Only when there are enough
   // clustered listings to trust a floor; otherwise fall through to the median.
@@ -667,8 +752,12 @@ function correctDefault(
         valueUsd: roundCents(floor),
         // Keep the real spread. The low end is now the floor itself; the high
         // end stays the median-blend's high so the range still shows headroom.
+        // Clamp high to at least the floor: the floor raises the headline, and
+        // the upstream catalog view coalesces a collapsed high to the point
+        // value, so an unclamped high can land BELOW the floor and invert the
+        // displayed range (lowUsd > highUsd).
         lowUsd: roundCents(floor),
-        highUsd: variant.highUsd ?? variant.valueUsd,
+        highUsd: roundCents(Math.max(floor, variant.highUsd ?? variant.valueUsd)),
         reason: 'floor',
         confidence: confidenceFor(variant.sampleCount, variant.sourceCount),
         anchorUsd: anchor,
@@ -840,7 +929,9 @@ function correctVariant(
         ...base,
         valueUsd: roundCents(floor),
         lowUsd: roundCents(floor),
-        highUsd: variant.highUsd ?? variant.valueUsd,
+        // Clamp high to at least the floor so a collapsed upstream high (view
+        // coalesces it to the point value) can't invert the displayed range.
+        highUsd: roundCents(Math.max(floor, variant.highUsd ?? variant.valueUsd)),
         reason: 'floor',
         confidence: confidenceFor(variant.sampleCount, variant.sourceCount),
         anchorUsd: anchor,
