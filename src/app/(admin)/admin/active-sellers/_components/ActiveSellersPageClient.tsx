@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useTransition } from 'react'
 import Link from 'next/link'
 import {
   Search,
@@ -20,12 +20,16 @@ import {
   ShieldAlert,
   Users,
   Activity,
-  Loader2
+  Loader2,
+  Award
 } from 'lucide-react'
 import { motion } from 'framer-motion'
+import { useQueryClient } from '@tanstack/react-query'
 import { cn } from '@/lib/utils'
 import { useActiveSellers, useSellerStats, type SellerStatsSummary } from '@/hooks/use-active-sellers'
 import type { ActiveSeller } from '@/lib/actions/admin-active-sellers'
+import { setFoundingSeller } from '@/lib/actions/admin-sellers'
+import FoundingSellerBadge from '@/components/seller/FoundingSellerBadge'
 import { PageHeader, StatCard, AdminPanel, TABLE } from '../../components/kit'
 
 
@@ -63,6 +67,31 @@ export default function ActiveSellersPageClient({
 
   // Use only real fetched data
   const sellers = fetchedSellers || []
+
+  // Founding-seller toggle. Grants/revokes profiles.founding_seller (which
+  // governs the locked commission in src/lib/fees + the storefront badge).
+  // `pendingFounding` tracks the row mid-flight so its button can spin and
+  // ignore double-clicks; on success we invalidate the list so the row's
+  // founding state and badge reflect the write.
+  const queryClient = useQueryClient()
+  const [, startFoundingTransition] = useTransition()
+  const [pendingFounding, setPendingFounding] = useState<string | null>(null)
+
+  function handleToggleFounding(seller: ActiveSeller) {
+    if (pendingFounding) return
+    setPendingFounding(seller.user_id)
+    startFoundingTransition(async () => {
+      const res = await setFoundingSeller(seller.user_id, seller.founding_seller)
+      if (!res.success) {
+        // Non-fatal: surface it but leave the row as-is (no optimistic flip).
+        console.error('[active-sellers] founding toggle failed:', res.error)
+        window.alert(`Couldn't update founding status: ${res.error ?? 'unknown error'}`)
+      } else {
+        await queryClient.invalidateQueries({ queryKey: ['active-sellers'] })
+      }
+      setPendingFounding(null)
+    })
+  }
 
   // Filter and sort sellers
   const filteredSellers = useMemo(() => {
@@ -408,9 +437,12 @@ export default function ActiveSellersPageClient({
 
                     {/* Tier */}
                     <td className={cn(TABLE.td, 'whitespace-nowrap')}>
-                      <span className={cn('inline-flex items-center rounded-md px-2 py-0.5 text-[10px] font-semibold uppercase', getTierColor(seller.seller_tier))}>
-                        {seller.seller_tier}
-                      </span>
+                      <div className="flex flex-wrap items-center gap-1">
+                        <span className={cn('inline-flex items-center rounded-md px-2 py-0.5 text-[10px] font-semibold uppercase', getTierColor(seller.seller_tier))}>
+                          {seller.seller_tier}
+                        </span>
+                        {seller.founding_seller && <FoundingSellerBadge size="xs" />}
+                      </div>
                     </td>
 
                     {/* Performance */}
@@ -468,6 +500,29 @@ export default function ActiveSellersPageClient({
                     {/* Actions */}
                     <td className={cn(TABLE.td, 'whitespace-nowrap text-right')}>
                       <div className="flex items-center justify-end gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => handleToggleFounding(seller)}
+                          disabled={pendingFounding === seller.user_id}
+                          title={
+                            seller.founding_seller
+                              ? 'Revoke founding-seller status'
+                              : 'Grant founding-seller status (locks a reduced commission for life)'
+                          }
+                          aria-pressed={seller.founding_seller}
+                          className={cn(
+                            'rounded-lg p-1.5 transition-colors disabled:opacity-50',
+                            seller.founding_seller
+                              ? 'text-[#F5C451] hover:bg-[#F5C451]/10'
+                              : 'text-text-tertiary hover:bg-bg-overlay hover:text-text-primary',
+                          )}
+                        >
+                          {pendingFounding === seller.user_id ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <Award className="h-3.5 w-3.5" />
+                          )}
+                        </button>
                         <Link
                           href={`/admin/sellers/${seller.id}`}
                           className="rounded-lg p-1.5 text-lime-text transition-colors hover:bg-lime-tint-bg"

@@ -99,21 +99,22 @@ export function BetaBanner() {
             </span>
             <span aria-hidden className="mx-2 text-white/20">·</span>
             <span className="font-semibold text-white">
-              We&apos;re now live in early access
+              Sell on DropMarket — keep more of every sale
             </span>
             <span className="hidden text-text-tertiary md:inline">
-              {' '}— full launch coming soon.
+              {' '}as a founding partner.
             </span>
           </p>
         </div>
 
-        {/* Right — CTA. Rectangular soft-corner button, not a pill. */}
+        {/* Right — CTA. Rectangular soft-corner button, not a pill. Verb +
+            scarcity beats the vague role-ask; ?src tags the funnel source. */}
         <Link
-          href="/early-seller"
+          href="/early-seller?src=banner"
           className="group inline-flex shrink-0 items-center gap-1.5 rounded-[8px] border border-[#F5C451]/35 bg-[#F5C451]/[0.08] px-3 py-[7px] text-[12px] font-semibold text-[#F5C451] transition-colors hover:border-[#F5C451]/55 hover:bg-[#F5C451]/[0.16] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F5C451]/50 sm:text-[12.5px]"
         >
-          <span className="hidden sm:inline">Become a Founding Seller</span>
-          <span className="sm:hidden">Founding Seller</span>
+          <span className="hidden sm:inline">Start Earning</span>
+          <span className="sm:hidden">Start Earning</span>
           <IconArrowRight className="h-[15px] w-[15px] transition-transform group-hover:translate-x-0.5" stroke={2.2} />
         </Link>
       </div>

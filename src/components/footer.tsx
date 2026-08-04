@@ -14,7 +14,10 @@ import { TrustpilotLink } from '@/components/trust/TrustpilotLink'
 
 const NAV_LINKS: Array<{ name: string; href: string }> = [
   { name: 'Browse Listings', href: '/browse' },
-  { name: 'Become A Seller', href: '/account/become-seller' },
+  // Beta: the become-seller wizard is post-launch; motivated sellers should
+  // land on the founding-seller waitlist, not a dead end. Label matches the
+  // destination + the banner campaign.
+  { name: 'Become a Founding Seller', href: '/early-seller?src=footer' },
   { name: 'SafeDrop', href: '/safedrop' },
   { name: 'Fees', href: '/fees' },
   { name: 'Blog', href: '/blog' },
@@ -92,7 +95,7 @@ const MOBILE_LINK_GROUPS: Array<{ title: string; links: Array<{ name: string; hr
     title: 'Marketplace',
     links: [
       { name: 'Browse Listings', href: '/browse' },
-      { name: 'Become A Seller', href: '/account/become-seller' },
+      { name: 'Become a Founding Seller', href: '/early-seller?src=footer' },
       { name: 'SafeDrop', href: '/safedrop' },
       { name: 'Fees', href: '/fees' },
       { name: 'Support', href: '/support' },

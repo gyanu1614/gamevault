@@ -98,3 +98,34 @@ describe('spec rules', () => {
     expect(payoutFee(100, 'crypto').net).toBe(87)
   })
 })
+
+describe('founding-seller discount (FOUNDING_DISCOUNT_PTS = 2)', () => {
+  const SAB = { categoryMetaType: 'currency', gameSlug: 'steal-a-brainrot' } // 10%
+  const ITEMS = { categoryMetaType: 'item', gameSlug: 'fortnite' }           // 7%
+
+  it('is off by default — no isFounding flag leaves rates unchanged', () => {
+    expect(commissionPct(CURRENCY)).toBe(5)
+    expect(commissionPct({ ...CURRENCY, isFounding: false })).toBe(5)
+  })
+
+  it('takes 2 points off each category rate for founding sellers', () => {
+    expect(commissionPct({ ...SAB, isFounding: true })).toBe(8) // Roblox economy 10 → 8
+    expect(commissionPct({ ...ITEMS, isFounding: true })).toBe(5) // items 7 → 5
+    expect(commissionPct({ ...CURRENCY, isFounding: true })).toBe(3) // standard currency 5 → 3
+    expect(commissionPct({ ...ACCOUNT_MID, isFounding: true })).toBe(13) // mid-risk account 15 → 13
+  })
+
+  it('floors at 0 — a promo/zero-rate category never goes negative', () => {
+    // currencyPromo is 0; even a founding seller can't pay less than nothing.
+    const promo = { categoryMetaType: 'currency', gameSlug: 'steal-a-brainrot' }
+    expect(commissionPct({ ...promo, isFounding: true })).toBeGreaterThanOrEqual(0)
+  })
+
+  it('flows through to commissionAmount and netProceeds', () => {
+    // $100 SAB sale: normal 10% = $10 (net $90); founding 8% = $8 (net $92).
+    expect(commissionAmount(100, SAB)).toBe(10)
+    expect(netProceeds(100, SAB)).toBe(90)
+    expect(commissionAmount(100, { ...SAB, isFounding: true })).toBe(8)
+    expect(netProceeds(100, { ...SAB, isFounding: true })).toBe(92)
+  })
+})

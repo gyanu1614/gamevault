@@ -24,6 +24,7 @@ import {
 // the verified explanation is reachable on touch devices.
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover'
 import { cn } from '@/lib/utils'
+import FoundingSellerBadge from '@/components/seller/FoundingSellerBadge'
 
 interface BannerConfig {
   type: 'custom' | 'preset'
@@ -45,6 +46,8 @@ interface SellerProfileBannerProps {
   listingsCount: number
   totalSales: number
   sellerTier: 'bronze' | 'silver' | 'gold' | 'platinum' | 'diamond'
+  /** Founding seller (first 100) — renders a permanent founding badge. */
+  isFoundingSeller?: boolean
   bannerConfig?: BannerConfig
   currentUserId?: string
   onMessageClick?: () => void
@@ -98,7 +101,7 @@ const TIER_CONFIG: Record<
 export default function SellerProfileBanner({
   sellerId, username, shopName, avatarUrl, isOnline = false,
   isVerified = false, rating, reviewsCount, listingsCount, totalSales,
-  sellerTier = 'bronze', bannerConfig, currentUserId,
+  sellerTier = 'bronze', isFoundingSeller = false, bannerConfig, currentUserId,
   onMessageClick, onFollowClick, isFollowing = false, className,
 }: SellerProfileBannerProps) {
   const tier = TIER_CONFIG[sellerTier] ?? TIER_CONFIG.bronze
@@ -228,6 +231,7 @@ export default function SellerProfileBanner({
               <TierIcon className="h-3 w-3" />
               {tier.label}
             </span>
+            {isFoundingSeller && <FoundingSellerBadge size="sm" />}
           </div>
           <p className="mt-1 text-sm text-text-secondary">@{username}</p>
 
