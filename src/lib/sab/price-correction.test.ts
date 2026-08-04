@@ -817,6 +817,81 @@ describe('computeCorrections — mutation below default (premium floor)', () => 
     expect(c.reason).not.toBe('variant_anchored')
     expect(c.valueUsd).toBe(620)
   })
+
+  // Gold Strawberry shipped $38.99 (a cluster of 4 mispriced Eldorado listings)
+  // against a $676 default — a 1.25x mutation at 6% of its base. The below-default
+  // rule must fire for ANY premium multiplier (>1), not only >=1.5x.
+  function goldCase(
+    defaultPrice: number,
+    goldScraped: number,
+    goldSamples = 6,
+  ) {
+    const peers = peerGroup(6)
+    // Establish gold ≈ 1.25x default from 20 well-sampled pairs.
+    const pairs: VariantEstimate[] = []
+    for (let i = 0; i < 20; i += 1) {
+      const id = `gp-${i}`
+      pairs.push(variant(id, { valueUsd: 100 }))
+      pairs.push(
+        variant(id, {
+          mutationId: 'm-gold',
+          mutationSlug: 'gold',
+          valueUsd: 125,
+        }),
+      )
+    }
+    const pairBrainrots = Array.from({ length: 20 }, (_, i) =>
+      brainrot(`gp-${i}`, { rarity: 'Epic' }),
+    )
+    return computeCorrections({
+      brainrots: [
+        ...peers.brainrots,
+        ...pairBrainrots,
+        brainrot('gtgt', { rarity: 'OG' }),
+      ],
+      variants: [
+        ...peers.variants,
+        ...pairs,
+        variant('gtgt', {
+          mutationSlug: 'default',
+          mutationId: 'm-default',
+          valueUsd: defaultPrice,
+          sampleCount: 10,
+          listingPrices: Array.from({ length: 10 }, () => defaultPrice),
+        }),
+        variant('gtgt', {
+          mutationSlug: 'gold',
+          mutationId: 'm-gold-tgt',
+          valueUsd: goldScraped,
+          sampleCount: goldSamples,
+          listingPrices: Array.from({ length: goldSamples }, () => goldScraped),
+        }),
+      ],
+    }).filter((c) => c.mutationId === 'm-gold-tgt')[0]
+  }
+
+  it('replaces a well-sampled 1.25x Gold priced below its default (Gold Strawberry)', () => {
+    // default $676, gold cluster scraped at $38.99 — impossible for a 1.25x item.
+    const c = goldCase(676, 38.99)
+    expect(c.reason).toBe('variant_anchored')
+    // ~default($676) * 1.25 = ~$845, must be above the default, flagged low.
+    expect(c.valueUsd!).toBeGreaterThan(676)
+    expect(c.confidence).toBe('low')
+  })
+
+  it('replaces a THIN 1.25x Gold priced just below its default', () => {
+    // The within-fence thin-sample path: $3 gold vs $4 default (Tukanno shape).
+    const c = goldCase(4, 3, 2)
+    expect(c.reason).toBe('variant_anchored')
+    expect(c.valueUsd!).toBeGreaterThanOrEqual(4)
+    expect(c.confidence).toBe('low')
+  })
+
+  it('leaves a 1.25x Gold priced correctly above its default alone', () => {
+    const c = goldCase(676, 850)
+    expect(c.reason).not.toBe('variant_anchored')
+    expect(c.valueUsd).toBe(850)
+  })
 })
 
 describe('computeCorrections — mutation variants', () => {
