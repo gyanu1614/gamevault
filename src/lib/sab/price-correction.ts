@@ -990,12 +990,22 @@ function correctVariant(
       !isUsable(defaultValue) ||
       !isUsable(anchor) ||
       !isUsable(multiplier) ||
-      multiplier < MUTATION_PREMIUM_FLOOR_MULTIPLIER
+      multiplier <= 1
     ) {
       return null
     }
+    // A mutation with ANY real premium (multiplier > 1) must not price below its
+    // own default — Gold Strawberry showed $38.99 (a cluster of 4 mispriced
+    // Eldorado listings) against a $676 default, i.e. 6% of the base for a 1.25×
+    // item. The below-default rule therefore applies to every premium mutation.
     const belowDefault = value < defaultValue * 0.95
-    const aboveCeiling = value > anchor * MUTATION_PREMIUM_CEILING_RATIO
+    // The above-ceiling rule only makes sense for a MEANINGFUL premium: a 1.25×
+    // Gold has no reliable ceiling to overshoot, so restrict it to >=1.5× where
+    // anchor × CEILING is a real bound (this preserves the original behaviour for
+    // the ceiling side while opening the floor side to Gold/low-premium mutations).
+    const aboveCeiling =
+      multiplier >= MUTATION_PREMIUM_FLOOR_MULTIPLIER &&
+      value > anchor * MUTATION_PREMIUM_CEILING_RATIO
     if (!belowDefault && !aboveCeiling) return null
     return {
       ...base,
@@ -1088,6 +1098,11 @@ function correctVariant(
     anchorDeviation(variant.valueUsd, anchor) <= ANCHOR_FENCE_RATIO
 
   if (withinFence) {
+    // Even a thin within-fence value must respect the ladder: a premium mutation
+    // priced below its own default is impossible, not a deal (Gold at $3 vs a $4
+    // default). Substitute the default × premium anchor when it is.
+    const overridden = premiumSanityEstimate(variant.valueUsd)
+    if (overridden) return overridden
     return {
       ...base,
       valueUsd: variant.valueUsd,
