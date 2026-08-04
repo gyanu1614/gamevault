@@ -5,6 +5,7 @@
  */
 
 import type { Metadata } from 'next'
+import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { sabCard } from '@/lib/sab/theme'
@@ -133,6 +134,11 @@ export default async function GameBlogIndex({
   // Newest post carries the featured slot; the carousel below shows the rest.
   const [featured, ...rest] = posts
 
+  // Only show the seller strip when this game actually has seller content to
+  // read — no point asking "sell your X" on a hub whose guides are all buyer
+  // material. Game-agnostic: driven by post_type, same as the article CTA.
+  const hasSellerPost = posts.some((p) => p.postType === 'seller')
+
   const hasPricing = pricedItems > 0
 
   const articleCards = rest.map((post) => ({
@@ -235,6 +241,25 @@ export default async function GameBlogIndex({
           gameSlug={gameSlug}
           buyHref={`/${gameSlug}/buy-items`}
         />
+
+        {/* Slim seller strip — only when this game has seller guides. Sub-
+            dominant single line (not a full CTA card), forest-rectangular. */}
+        {hasSellerPost && (
+          <Link
+            href={`/early-seller?src=${gameSlug}-blog-index`}
+            className="mt-6 flex flex-wrap items-center justify-between gap-2 border border-[#23331F] bg-[#0D140E] px-5 py-4 text-sm transition hover:border-[#2A3A31]"
+          >
+            <span className="text-[#98A398]">
+              Got {game.name} to sell?{' '}
+              <span className="font-semibold text-[#E6EAE7]">
+                Cash out at a lower fee, locked for life.
+              </span>
+            </span>
+            <span className="inline-flex items-center gap-1.5 font-semibold text-[#8FBF9C]">
+              Sell {game.name} for cash →
+            </span>
+          </Link>
+        )}
       </div>
           <HubFooter
         gameName={hubNav.current.name}

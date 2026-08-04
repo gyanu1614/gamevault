@@ -29,6 +29,8 @@ export interface EarlySellerInput {
   discord?: string
   sells?: string
   note?: string
+  /** ?src= funnel attribution (banner, footer, a game's blog sell-guide, …). */
+  source?: string
 }
 
 export interface EarlySellerResult {
@@ -51,6 +53,8 @@ export interface EarlySellerSignup {
   discord: string | null
   sells: string | null
   note: string | null
+  /** Funnel attribution — which surface the signup came through. */
+  source: string | null
   status: EarlySellerStatus
   created_at: string
 }
@@ -147,6 +151,8 @@ export async function submitEarlySeller(
       discord: clean(input.discord, 80),
       sells: clean(input.sells, 300),
       note: clean(input.note, 600),
+      // Funnel attribution — capped; NULL for direct/untagged visits.
+      source: clean(input.source, 120),
       ip,
       user_agent: userAgent,
     }
@@ -231,7 +237,7 @@ export async function getEarlySellerSignups(): Promise<EarlySellerListResult> {
     const supabase = createServiceRoleClient()
     const { data, error } = await (supabase as any)
       .from('early_seller_signups')
-      .select('id, username, email, discord, sells, note, status, created_at')
+      .select('id, username, email, discord, sells, note, source, status, created_at')
       .order('created_at', { ascending: false })
 
     if (error) {

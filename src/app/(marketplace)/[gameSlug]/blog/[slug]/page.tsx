@@ -265,6 +265,35 @@ export default async function GameBlogArticle({
               </div>
             </div>
 
+            {/* Sell CTA — only on seller-intent guides (post_type='seller'), so
+                a reader of a "how to sell your X" guide gets the founding-seller
+                ask while buyer guides don't. Game-agnostic: fires for every
+                game's seller posts (SAB, Adopt Me, …), not just one. Same
+                forest-rectangular treatment as the buy CTA above. */}
+            {post.postType === 'seller' && (
+              <div className="mt-6 border border-[#23331F] bg-[#0D140E] p-6 sm:p-8">
+                <div className="mb-3 flex items-center gap-2">
+                  <span className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-[#F5C451]">
+                    First 100 Sellers
+                  </span>
+                </div>
+                <h2 className="mb-3 text-[22px] font-semibold leading-tight tracking-tight text-[#F1F3F1]">
+                  Selling {game.name}? Lock a lower fee for life
+                </h2>
+                <p className="mb-5 max-w-md text-sm leading-relaxed text-[#98A398]">
+                  The first 100 sellers keep a permanently reduced commission —
+                  well below the 10–15% other marketplaces charge. SafeDrop pays
+                  you even if a buyer ghosts.
+                </p>
+                <Link
+                  href={`/early-seller?src=${gameSlug}-blog-${slug}`}
+                  className="inline-flex items-center gap-1.5 bg-[#1B6B3F] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#1f7a48]"
+                >
+                  Sell {game.name} for cash →
+                </Link>
+              </div>
+            )}
+
             {/* Related guides */}
             {related.length > 0 && (
               <section className="mt-14">

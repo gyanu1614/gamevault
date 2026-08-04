@@ -9,6 +9,8 @@
 
 import { useState, useTransition } from 'react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
+import { track } from '@vercel/analytics'
 import { CheckCircle2, Loader2, ArrowRight } from 'lucide-react'
 import { IconBrandDiscord } from '@tabler/icons-react'
 import { GlassInput, GlassTextarea } from '@/components/ui/glass-input'
@@ -32,6 +34,13 @@ export function EarlySellerForm({ progress }: { progress?: FoundingProgressData 
   // it says so rather than implying a fresh signup.
   const [alreadyOnList, setAlreadyOnList] = useState(false)
 
+  // Funnel attribution: the ?src= tag on the link they arrived through (banner,
+  // footer, a game's blog sell-guide, …). Null = direct/untagged. Persisted with
+  // the signup and sent on the analytics events so we can compare surfaces by
+  // COMPLETIONS, not just clicks.
+  const searchParams = useSearchParams()
+  const source = searchParams.get('src')
+
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     setError(null)
@@ -42,15 +51,21 @@ export function EarlySellerForm({ progress }: { progress?: FoundingProgressData 
       discord: String(fd.get('discord') ?? ''),
       sells: String(fd.get('sells') ?? ''),
       note: String(fd.get('note') ?? ''),
+      source: source ?? undefined,
     }
+    // Fired on submit attempt (before the round-trip) so a form abandonment
+    // after this point is still visible against the completion event.
+    track('seller_waitlist_submit_attempt', { source: source ?? 'direct' })
     startTransition(async () => {
       const res = await submitEarlySeller(payload)
       if (res.ok) {
+        track('seller_waitlist_submit', { source: source ?? 'direct', repeat: false })
         setDone(true)
       } else if (res.alreadyOnList) {
         // Already on the list isn't a failure — they're in. Send them to the
         // same onboarding moment (Discord + next steps) rather than a red
         // error, but flag it so the copy says "you're already in".
+        track('seller_waitlist_submit', { source: source ?? 'direct', repeat: true })
         setAlreadyOnList(true)
         setDone(true)
       } else {

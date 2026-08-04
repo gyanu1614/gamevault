@@ -7,6 +7,7 @@
  */
 
 import type { Metadata } from 'next'
+import { Suspense } from 'react'
 import { IconPercentage, IconRocket, IconRosetteDiscountCheck, IconShieldCheck } from '@tabler/icons-react'
 import { EarlySellerForm } from './_EarlySellerForm'
 import { getFoundingProgress } from '@/lib/actions/early-seller'
@@ -116,9 +117,13 @@ export default async function EarlySellerPage() {
           ))}
         </div>
 
-        {/* Form */}
+        {/* Form. Suspense boundary required: EarlySellerForm reads ?src= via
+            useSearchParams, which opts the subtree into client-side rendering
+            and would otherwise fail the build. */}
         <div className="mt-10">
-          <EarlySellerForm progress={progress} />
+          <Suspense fallback={null}>
+            <EarlySellerForm progress={progress} />
+          </Suspense>
         </div>
       </div>
     </main>
