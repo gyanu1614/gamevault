@@ -126,6 +126,33 @@ export const FLOOR_BAND_RATIO = 1.6
 export const FLOOR_STEP_RATIO = 0.1
 
 /**
+ * Sources whose listings carry seller-trust signals (verified flag, account age)
+ * and set the cheapest listing in ~91% of variants. Only these may SET a floor;
+ * cheaper listings from unverifiable sources (G2G, Itemku expose no seller trust
+ * data at all) can confirm a floor but not drag it below the trusted market.
+ */
+export const TRUSTED_FLOOR_SOURCES = new Set(['eldorado'])
+
+/**
+ * A cross-source listing may only lower the floor below the trusted-source floor
+ * if it sits within this fraction of it — a genuinely cheaper real deal. Deeper
+ * undercuts are treated as unverifiable and clamped to TRUSTED_FLOOR_UNDERCUT ×
+ * the trusted floor.
+ *
+ * Strawberry Elephant published $614.09 off a G2G cluster ($614/$620/$630) that
+ * undercut the verified Eldorado market ($700+) by 12% — no seller trust data
+ * exists to validate it, so it should not set the price. Dragon Cannelloni's
+ * $16.70 G2G listing sits 7% under Eldorado's $17.99 and IS kept (a plausible
+ * real deal). 0.92 (8%) is the knee that separates the two: measured against all
+ * 1821 live variant groups it corrects 53 items strictly UPWARD, 0 downward, and
+ * leaves the 96% of groups where Eldorado is already the cheapest untouched.
+ */
+export const TRUSTED_FLOOR_UNDERCUT = 0.92
+
+/** Minimum trusted-source listings before the trusted-source floor rule applies. */
+export const MIN_TRUSTED_SOURCE_LISTINGS = 3
+
+/**
  * Cluster-relative floor (point 5): a listing priced below this fraction of the
  * group median is a fake, not a deal — a $0.67 listing in a $300 cluster, or the
  * $44.88 pair Headless Horseman had against a $1000+ cluster. Dropped BEFORE the
@@ -189,6 +216,14 @@ export type VariantEstimate = {
    * that don't have listing-level data still get median-based corrections.
    */
   listingPrices?: number[]
+  /**
+   * The same per-listing prices tagged with their marketplace source. When
+   * present, the floor is computed source-trust-aware (lowestSupportedPriceBySource):
+   * only a trusted source may SET the floor, so an unverifiable cheap cluster
+   * (G2G/Itemku) can't drag the price below the verified market. Falls back to
+   * the plain `listingPrices` floor when absent or when trusted evidence is thin.
+   */
+  sourcedListingPrices?: SourcedPrice[]
   /**
    * The mutation's income multiplier — its rung on the value ladder (Default=1,
    * Gold=1.25 … Rainbow=10). Used only for the ladder sanity check (point 6):
@@ -346,6 +381,82 @@ export function lowestSupportedPrice(
   if (cheaperReal.length >= 2) return null
 
   return clusterLow
+}
+
+/** A single market listing tagged with the source it came from. */
+export type SourcedPrice = {
+  price: number
+  /** Marketplace slug, e.g. 'eldorado' | 'g2g' | 'itemku'. */
+  source: string
+}
+
+/**
+ * Source-trust-aware floor. The plain lowestSupportedPrice() trusts every source
+ * equally, so a tight cluster of cheap listings from a marketplace that exposes
+ * NO seller-trust data (G2G, Itemku) can set the price below the verified market
+ * — Strawberry Elephant published $614 off a G2G cluster while the verified
+ * Eldorado floor was $700+.
+ *
+ * The rule:
+ *   1. If there are at least MIN_TRUSTED_SOURCE_LISTINGS listings from a trusted
+ *      source, compute the TRUSTED floor from those alone.
+ *   2. The published floor may then be lowered by cheaper cross-source listings
+ *      only down to trustedFloor × TRUSTED_FLOOR_UNDERCUT — a genuinely-cheaper
+ *      real deal (Dragon Cannelloni's 7%-under G2G listing survives), never an
+ *      unverifiable deep undercut (Strawberry's 12%-under G2G is clamped up).
+ *   3. Without enough trusted listings, fall back to the plain all-source floor.
+ *
+ * Returns null on the same conditions as lowestSupportedPrice (no supported
+ * cluster / too scattered), so callers keep their existing null handling.
+ */
+export function lowestSupportedPriceBySource(
+  listings: SourcedPrice[],
+  trustedSources: Set<string> = TRUSTED_FLOOR_SOURCES,
+): number | null {
+  const usable = listings.filter(
+    (l) => Number.isFinite(l.price) && l.price > 0,
+  )
+  const allPrices = usable.map((l) => l.price)
+  const trustedPrices = usable
+    .filter((l) => trustedSources.has(l.source))
+    .map((l) => l.price)
+
+  // Not enough trusted evidence → plain all-source floor (unchanged behaviour).
+  if (trustedPrices.length < MIN_TRUSTED_SOURCE_LISTINGS) {
+    return lowestSupportedPrice(allPrices)
+  }
+
+  const trustedFloor = lowestSupportedPrice(trustedPrices)
+  // Trusted listings exist but form no supported cluster (scattered / too few
+  // after clustering): don't invent a floor from unverifiable sources.
+  if (trustedFloor == null) return null
+
+  // A cross-source listing may pull the floor down only to within the undercut
+  // band. Drop anything cheaper than that before searching the all-source floor,
+  // so a deep unverifiable undercut can't set the price, but a real near-floor
+  // deal still can.
+  const undercutLimit = trustedFloor * TRUSTED_FLOOR_UNDERCUT
+  const eligible = allPrices.filter((price) => price >= undercutLimit)
+  const blendedFloor = lowestSupportedPrice(eligible)
+
+  // The floor is the cheapest SUPPORTED eligible price, but never below the
+  // undercut limit (a lone real deal at the limit is honoured; nothing goes
+  // under the verified market by more than the band).
+  if (blendedFloor == null) return trustedFloor
+  return Math.max(blendedFloor, undercutLimit)
+}
+
+/**
+ * The floor for a variant, source-trust-aware when the sourced listings are
+ * present and falling back to the plain all-source floor otherwise. Single place
+ * both the default and variant floor branches read, so the trust rule applies
+ * uniformly.
+ */
+function variantFloor(variant: VariantEstimate): number | null {
+  if (variant.sourcedListingPrices?.length) {
+    return lowestSupportedPriceBySource(variant.sourcedListingPrices)
+  }
+  return lowestSupportedPrice(variant.listingPrices ?? [])
 }
 
 /**
@@ -744,7 +855,7 @@ function correctDefault(
   // actually transact at — over the median midpoint. Only when there are enough
   // clustered listings to trust a floor; otherwise fall through to the median.
   if (variant.sampleCount >= MIN_TRUSTED_SAMPLES && isUsable(variant.valueUsd)) {
-    const floor = lowestSupportedPrice(variant.listingPrices ?? [])
+    const floor = variantFloor(variant)
 
     if (isUsable(floor)) {
       return {
@@ -919,7 +1030,7 @@ function correctVariant(
   // usually have too few listings for a floor to qualify, in which case this
   // falls through to the median blend.
   if (variant.sampleCount >= MIN_TRUSTED_SAMPLES && isUsable(variant.valueUsd)) {
-    const floor = lowestSupportedPrice(variant.listingPrices ?? [])
+    const floor = variantFloor(variant)
 
     if (isUsable(floor)) {
       // A premium mutation floored below its default is noise, not a deal.

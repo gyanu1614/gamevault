@@ -25,6 +25,7 @@ import {
   computeCorrections,
   measureMutationMultipliers,
   type BrainrotMeta,
+  type SourcedPrice,
   type VariantEstimate,
 } from '@/lib/sab/price-correction'
 
@@ -57,6 +58,7 @@ type EvidenceRow = {
   brainrot_id: string
   mutation_id: string
   unit_price_usd: number | string | null
+  source_slug: string | null
 }
 
 type MutationRow = {
@@ -129,7 +131,7 @@ export async function GET(request: NextRequest) {
       selectAll<EvidenceRow>(
         admin,
         'sab_market_clean_listing_evidence',
-        'brainrot_id,mutation_id,unit_price_usd',
+        'brainrot_id,mutation_id,unit_price_usd,source_slug',
       ),
     ])
 
@@ -142,8 +144,12 @@ export async function GET(request: NextRequest) {
     }
 
     // Group cleaned listing prices by (brainrot, mutation) so each variant can
-    // read its own floor candidates in O(1).
+    // read its own floor candidates in O(1). Keep both a plain price list (for
+    // the range clamp and the fallback floor) and a source-tagged list, so the
+    // floor can be computed source-trust-aware — an unverifiable cheap cluster
+    // (G2G/Itemku) must not set the price below the verified Eldorado market.
     const pricesByVariant = new Map<string, number[]>()
+    const sourcedByVariant = new Map<string, SourcedPrice[]>()
     for (const row of evidence) {
       const price = toNumber(row.unit_price_usd)
       if (price == null || price <= 0) continue
@@ -151,6 +157,13 @@ export async function GET(request: NextRequest) {
       const list = pricesByVariant.get(key)
       if (list) list.push(price)
       else pricesByVariant.set(key, [price])
+
+      if (row.source_slug) {
+        const sourced = sourcedByVariant.get(key)
+        const entry = { price, source: row.source_slug }
+        if (sourced) sourced.push(entry)
+        else sourcedByVariant.set(key, [entry])
+      }
     }
 
     const metas: BrainrotMeta[] = brainrots.map((row) => ({
@@ -172,6 +185,9 @@ export async function GET(request: NextRequest) {
       isReviewed: row.confidence_label === 'reviewed',
       listingPrices:
         pricesByVariant.get(`${row.brainrot_id}:${row.mutation_id}`) ?? [],
+      sourcedListingPrices:
+        sourcedByVariant.get(`${row.brainrot_id}:${row.mutation_id}`) ??
+        undefined,
       incomeMultiplier: multiplierBySlug.get(row.mutation_slug) ?? undefined,
     }))
 
