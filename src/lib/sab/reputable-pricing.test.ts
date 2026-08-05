@@ -115,10 +115,17 @@ describe('reputablePrice — trust + edge rules', () => {
     expect(reputablePrice([])).toBeNull()
   })
 
-  it('a single reputable listing sets both cheapest and average', () => {
-    const out = reputablePrice([L(50, 5000), L(0.4, 0)])
+  it('returns null for a single reputable listing (not a market)', () => {
+    // One lone reputable seller is not a market — Tung Tung Tung Sahur (removed
+    // from the game) showed $9,999 off one 10k-review listing. Below the
+    // minimum, publish nothing.
+    expect(reputablePrice([L(9999, 10094), L(0.4, 0)])).toBeNull()
+  })
+
+  it('prices once a second reputable listing confirms it', () => {
+    const out = reputablePrice([L(50, 5000), L(52, 5000), L(0.4, 0)])
     expect(out?.cheapestUsd).toBe(50)
-    expect(out?.averageUsd).toBe(50)
+    expect(out?.averageUsd).toBe(51)
   })
 
   it('drops non-positive and non-finite prices', () => {
