@@ -193,7 +193,7 @@ async function getBiggestMovers(limit = 3): Promise<MoverItem[]> {
 async function getBrainrots(): Promise<BrainrotDirectoryItem[]> {
   const supabase = await createClient()
 
-  const [brainrotResult, priceResult] = await Promise.all([
+  const [brainrotResult, priceResult, popularityResult] = await Promise.all([
     (supabase as any)
       .from('sab_brainrot_market_catalog')
       .select(
@@ -207,6 +207,14 @@ async function getBrainrots(): Promise<BrainrotDirectoryItem[]> {
         'brainrot_id,market_value_usd,market_low_usd,market_high_usd,cheapest_usd,average_usd,confidence_label,is_trade_ready,external_sample_size',
       )
       .eq('mutation_slug', 'default'),
+
+    // Real marketplace popularity (Eldorado usePopularItems ranking). Read
+    // straight from sab_brainrots so the hand-edited catalog view needn't change.
+    // The Popular tab sorts by this; null-rank items sort after ranked ones.
+    (supabase as any)
+      .from('sab_brainrots')
+      .select('id,popularity_rank')
+      .not('popularity_rank', 'is', null),
   ])
 
   if (brainrotResult.error) {
@@ -234,15 +242,22 @@ async function getBrainrots(): Promise<BrainrotDirectoryItem[]> {
       .map((row) => [row.brainrot_id, row]),
   )
 
+  const rankByBrainrot = new Map(
+    ((popularityResult?.data ?? []) as { id: string; popularity_rank: number }[])
+      .map((row) => [row.id, row.popularity_rank] as const),
+  )
+
   return (
     (brainrotResult.data ?? []) as BrainrotDirectoryItem[]
   ).map((brainrot) => {
     const price = priceByBrainrot.get(brainrot.id)
+    const popularityRank = rankByBrainrot.get(brainrot.id) ?? null
 
-    if (!price) return brainrot
+    if (!price) return { ...brainrot, popularity_rank: popularityRank }
 
     return {
       ...brainrot,
+      popularity_rank: popularityRank,
       display_price_usd: Number(price.market_value_usd),
       display_price_label: 'Average Current Market Price',
       display_price_source: 'public_market_estimate',
