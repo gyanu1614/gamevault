@@ -7,7 +7,6 @@ import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown'
 import CheckIcon from '@mui/icons-material/Check'
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
 import ChevronRightIcon from '@mui/icons-material/ChevronRight'
-import ChevronRightSmall from '@mui/icons-material/ChevronRight'
 import type { CSSProperties } from 'react'
 
 /**
@@ -42,9 +41,6 @@ const RARITY_ORDER = [
 ]
 
 /** One class for every column header, so they can never drift apart. */
-const COL_HEAD =
-  'text-[12px] font-semibold uppercase tracking-[0.07em] text-[#98A398]'
-
 function rarityColor(rarity: string): string {
   return RARITY_COLORS[rarity] ?? '#4FB477'
 }
@@ -199,18 +195,6 @@ function formatMoney(value: number | string | null): string | null {
  * value itself proves nothing, so we show nothing rather than "$X – $X"). The
  * low is the value (our floor), so the range reads "value – high".
  */
-function formatIncome(value: number | string | null): string {
-  const amount = asNumber(value)
-  if (amount == null) return '—'
-
-  return `${new Intl.NumberFormat('en-US', {
-    notation: 'compact',
-    compactDisplay: 'short',
-    maximumFractionDigits: 1,
-  }).format(amount)}/s`
-}
-
-
 function compareIncome(
   a: BrainrotDirectoryItem,
   b: BrainrotDirectoryItem,
@@ -501,165 +485,110 @@ export default function ValuesDirectoryClient({
           </button>
         </div>
       ) : (
-        /* ── List view ──
-           A row per item reads far better than a card grid for a 498-item
-           reference list: the eye scans one column of names instead of
-           tracking a 5-across grid, and each row has room for supporting
-           copy the cards had nowhere to put. */
-        <div className="mt-5 border border-[#1E2723] bg-[#101410]">
-          {/* Column headers, desktop only.
-              Was 10px mono in #5E685E, which sat barely above the background —
-              now 11px semibold in a legible grey. Each header uses the SAME
-              alignment class as the cells below it, so nothing reads as
-              floating off-centre in its column. */}
-          {/* Buyer-facing columns. "Listings tracked" and "Price accuracy" were
-              jargon a buyer neither reads nor understands — replaced with the two
-              numbers they actually want: the cheapest a verified seller offers,
-              and the typical market price. Income stays; it's the one game stat
-              buyers do care about. */}
-          <div className="hidden grid-cols-[64px_minmax(0,1.6fr)_minmax(0,0.9fr)_minmax(0,0.9fr)_minmax(0,0.95fr)] gap-4 border-b border-[#1E2723] px-4 py-3 lg:grid">
-            <span className={COL_HEAD}>Item</span>
-            <span className={COL_HEAD}>Name</span>
-            <span className={`${COL_HEAD} text-right`}>Income</span>
-            <span className={`${COL_HEAD} text-right`}>Cheapest</span>
-            <span className={`${COL_HEAD} text-right`}>Market price</span>
-          </div>
+        /* Card grid — a full-width row per item wasted most of the width with
+           only 3-4 fields to fill. Compact cards read better and pack more per
+           screen: image + name + rarity, then a two-column Market / Cheapest
+           split. Responsive: 2 (mobile) → 3 (tablet) → 4 → 6 (widescreen). */
+        <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
+          {visibleBrainrots.map((brainrot) => {
+            // Market price = the reputable average when we have it, else the
+            // existing corrected value (older path / not-yet-repriced items).
+            // Cheapest = the reputable low; only shown when it undercuts the
+            // market price (a single reputable seller makes them equal).
+            const marketUsd =
+              asNumber(brainrot.average_usd) ??
+              asNumber(brainrot.display_price_usd)
+            const cheapestUsd = asNumber(brainrot.cheapest_usd)
+            const marketPrice = marketUsd != null ? formatMoney(marketUsd) : null
+            const cheapestPrice =
+              cheapestUsd != null &&
+              marketUsd != null &&
+              cheapestUsd < marketUsd - 0.005
+                ? formatMoney(cheapestUsd)
+                : null
+            const rc = rarityColor(brainrot.rarity)
 
-          <ul className="divide-y divide-[#1A211A]">
-            {visibleBrainrots.map((brainrot, i) => {
-              // Market price = the reputable average when we have it, else the
-              // existing corrected value (older path / not-yet-repriced items).
-              // Cheapest = the reputable low; only shown when it differs from the
-              // market price (a single reputable seller makes cheapest == market).
-              const marketUsd =
-                asNumber(brainrot.average_usd) ??
-                asNumber(brainrot.display_price_usd)
-              const cheapestUsd = asNumber(brainrot.cheapest_usd)
-              const marketPrice = marketUsd != null ? formatMoney(marketUsd) : null
-              const cheapestPrice =
-                cheapestUsd != null &&
-                marketUsd != null &&
-                cheapestUsd < marketUsd - 0.005
-                  ? formatMoney(cheapestUsd)
-                  : null
-              const rc = rarityColor(brainrot.rarity)
-              const rank =
-                effectiveView === 'popular'
-                  ? (currentPage - 1) * PAGE_SIZE + i + 1
-                  : null
-
-              return (
-                <li key={brainrot.id}>
-                  <Link
-                    href={`/steal-a-brainrot/values/${brainrot.slug}`}
-                    style={{ ['--rc' as string]: rc } as CSSProperties}
-                    className="group grid grid-cols-[64px_minmax(0,1fr)_auto] items-center gap-3 px-3 py-3.5 transition-colors hover:bg-[#161C16] sm:gap-4 sm:px-4 lg:grid-cols-[64px_minmax(0,1.6fr)_minmax(0,0.9fr)_minmax(0,0.9fr)_minmax(0,0.95fr)]"
-                  >
-                    {/* Art — 64px, up from 52, which lifts the row height a
-                        touch and gives the render room to read. */}
-                    <span className="relative flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden bg-[#0B0F0C]">
-                      <span
-                        aria-hidden
-                        className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
-                        style={{
-                          background:
-                            'radial-gradient(70% 70% at 50% 45%, color-mix(in srgb, var(--rc) 26%, transparent), transparent 74%)',
-                        }}
+            return (
+              <Link
+                key={brainrot.id}
+                href={`/steal-a-brainrot/values/${brainrot.slug}`}
+                style={{ ['--rc' as string]: rc } as CSSProperties}
+                className="group flex flex-col overflow-hidden rounded-[14px] border border-[#1E2723] bg-[#0F1512] transition-colors hover:border-[#2C3A31]"
+              >
+                {/* Art on a faint rarity-tinted header */}
+                <div
+                  className="flex justify-center px-3 pb-2 pt-4"
+                  style={{
+                    background:
+                      'linear-gradient(180deg, color-mix(in srgb, var(--rc) 8%, transparent), transparent)',
+                  }}
+                >
+                  <span className="relative flex h-16 w-16 items-center justify-center overflow-hidden rounded-[10px] bg-[#0B0F0C]">
+                    <span
+                      aria-hidden
+                      className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+                      style={{
+                        background:
+                          'radial-gradient(70% 70% at 50% 45%, color-mix(in srgb, var(--rc) 30%, transparent), transparent 74%)',
+                      }}
+                    />
+                    {brainrot.image_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={brainrot.image_url}
+                        alt={`${brainrot.name} Steal a Brainrot`}
+                        loading="lazy"
+                        className="relative h-full w-full object-contain p-1"
                       />
-                      {brainrot.image_url ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={brainrot.image_url}
-                          alt={`${brainrot.name} Steal a Brainrot`}
-                          loading="lazy"
-                          className="relative h-full w-full object-contain p-1"
-                        />
-                      ) : (
-                        <span className="font-mono text-[9px] text-[#5E685E]">N/A</span>
-                      )}
-                    </span>
+                    ) : (
+                      <span className="font-mono text-[9px] text-[#5E685E]">N/A</span>
+                    )}
+                  </span>
+                </div>
 
-                    {/* Name, with rarity + obtainability beneath. Obtainability
-                        moved here from the old Details column, which has been
-                        split into two proper columns. */}
-                    <span className="flex min-w-0 flex-col gap-1.5">
-                      <span className="flex min-w-0 items-center gap-2">
-                        {rank && (
-                          <span className="shrink-0 font-mono text-[12px] font-bold tabular-nums text-[#6D7A72]">
-                            {rank}
-                          </span>
-                        )}
-                        <span className="truncate text-[16.5px] font-semibold text-[#F1F3F1] transition-colors group-hover:text-white">
-                          {brainrot.name}
-                        </span>
-                      </span>
-                      <span className="flex flex-wrap items-center gap-2">
-                        <span
-                          className="shrink-0 border px-2 py-0.5 font-mono text-[11px] font-semibold"
-                          style={{ borderColor: `${rc}66`, color: rc }}
-                        >
-                          {brainrot.rarity}
-                        </span>
-                        {brainrot.obtainability && (
-                          <span className="text-[13px] capitalize text-[#8B978F]">
-                            {brainrot.obtainability}
-                          </span>
-                        )}
-                        {/* Income rides under the name only where it has no
-                            column of its own. */}
-                        <span className="font-mono text-[12.5px] tabular-nums text-[#8B978F] lg:hidden">
-                          {formatIncome(brainrot.base_income_per_second)}
-                        </span>
-                      </span>
+                {/* Name + rarity, centred */}
+                <div className="px-2.5 pb-2.5 text-center">
+                  <div className="truncate text-[13.5px] font-semibold text-[#F1F3F1] transition-colors group-hover:text-white">
+                    {brainrot.name}
+                  </div>
+                  <div className="mt-1">
+                    <span
+                      className="inline-block border px-2 py-0.5 font-mono text-[10px] font-semibold"
+                      style={{ borderColor: `${rc}66`, color: rc }}
+                    >
+                      {brainrot.rarity}
                     </span>
+                  </div>
+                </div>
 
-                    {/* Income — the one game stat buyers care about. */}
-                    <span className="hidden text-right font-mono text-[14.5px] tabular-nums text-[#D6DCD8] lg:block">
-                      {formatIncome(brainrot.base_income_per_second)}
-                    </span>
-
-                    {/* Cheapest — the lowest a verified seller offers. A muted
-                        em-dash when it equals the market price (single seller) or
-                        we don't yet hold reputable data. */}
-                    <span className="hidden text-right lg:block">
-                      {cheapestPrice ? (
-                        <span className="font-mono text-[14.5px] tabular-nums text-[#C6CEC9]">
-                          {cheapestPrice}
-                        </span>
-                      ) : (
-                        <span className="font-mono text-[14.5px] text-[#5E685E]">—</span>
-                      )}
-                    </span>
-
-                    {/* Market price — the headline (reputable average). Carries
-                        the chevron + the "verified sellers" trust cue. */}
-                    <span className="flex items-center justify-end gap-1.5 text-right">
-                      <span className="flex flex-col items-end">
-                        <span className="flex items-center gap-1.5">
-                          <span className="text-[16px] font-bold tabular-nums text-[#8FBF9C] sm:text-[17.5px]">
-                            {marketPrice ?? '—'}
-                          </span>
-                          <ChevronRightSmall
-                            sx={{ fontSize: 18 }}
-                            className="shrink-0 text-[#3A4A40] transition-transform duration-200 group-hover:translate-x-0.5 group-hover:text-[#8FBF9C]"
-                          />
-                        </span>
-                        {marketPrice ? (
-                          <span className="mt-0.5 mr-[22px] text-[11px] text-[#6E7A72]">
-                            from verified sellers
-                          </span>
-                        ) : (
-                          <span className="mt-0.5 mr-[22px] text-[11px] text-[#5E685E]">
-                            not enough data
-                          </span>
-                        )}
-                      </span>
-                    </span>
-                  </Link>
-                </li>
-              )
-            })}
-          </ul>
+                {/* Market | Cheapest split — the reference two-column footer */}
+                <div className="mt-auto grid grid-cols-2 border-t border-[#1A211A]">
+                  <div className="border-r border-[#1A211A] px-1.5 py-2.5 text-center">
+                    <div className="text-[9.5px] uppercase tracking-[0.04em] text-[#6E7A72]">
+                      Market
+                    </div>
+                    <div className="mt-0.5 truncate font-mono text-[15px] font-bold tabular-nums text-[#8FBF9C]">
+                      {marketPrice ?? '—'}
+                    </div>
+                  </div>
+                  <div className="px-1.5 py-2.5 text-center">
+                    <div className="text-[9.5px] uppercase tracking-[0.04em] text-[#6E7A72]">
+                      Cheapest
+                    </div>
+                    <div
+                      className={`mt-0.5 truncate font-mono text-[15px] tabular-nums ${
+                        cheapestPrice
+                          ? 'font-medium text-[#E4E9E5]'
+                          : 'text-[#5E685E]'
+                      }`}
+                    >
+                      {cheapestPrice ?? '—'}
+                    </div>
+                  </div>
+                </div>
+              </Link>
+            )
+          })}
         </div>
       )}
 
