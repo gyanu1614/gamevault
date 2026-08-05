@@ -32,6 +32,14 @@ export type MutationOption = {
   marketValueUsd: number | null
   marketLowUsd: number | null
   marketHighUsd: number | null
+  /**
+   * Reputable-seller prices: cheapest (lowest 100+ review listing) and average
+   * (typical). When present, the hero shows "Cheapest" + a headline "Market
+   * price" (= average) instead of the raw value. Null until the reputable path
+   * prices this mutation.
+   */
+  cheapestUsd?: number | null
+  averageUsd?: number | null
   marketConfidenceLabel: string | null
   marketSampleSize: number
   marketUpdatedAt: string | null
@@ -98,10 +106,16 @@ export default function ItemHero({
   const isDefault = selected.slug === 'default'
   // Mutation-driven name: "Diamond Garama and Madundung"; plain for Default.
   const displayName = isDefault ? brainrotName : `${selected.name} ${brainrotName}`
-  const cash = formatCash(selected.marketValueUsd)
-  const low = formatCash(selected.marketLowUsd)
-  const high = formatCash(selected.marketHighUsd)
-  const range = low && high && low !== high ? `${low} – ${high}` : null
+  // Market price = the reputable average when present, else the raw value.
+  // Cheapest = the reputable low, shown only when it undercuts the market price.
+  const marketPriceUsd = selected.averageUsd ?? selected.marketValueUsd
+  const cash = formatCash(marketPriceUsd)
+  const cheapest =
+    selected.cheapestUsd != null &&
+    marketPriceUsd != null &&
+    selected.cheapestUsd < marketPriceUsd - 0.005
+      ? formatCash(selected.cheapestUsd)
+      : null
   const listingHref = `${listingsHref}${
     isDefault ? '' : `%20${encodeURIComponent(selected.name)}`
   }`
@@ -158,7 +172,9 @@ export default function ItemHero({
               <StatRow label="Base income" value={formatIncome(baseIncomePerSecond)} />
               <StatRow label="Mutation" value={`${selected.name} · ${formatMultiplier(selected.multiplier)}`} />
               <StatRow label="In-game cost" value={ingameCost ?? 'Unknown'} />
-              <StatRow label="Market range" value={range ?? '—'} />
+              {/* Cheapest a verified seller offers. Em-dash when a single seller
+                  sets the price (cheapest == market) or we hold no reputable data. */}
+              <StatRow label="Cheapest" value={cheapest ?? '—'} />
             </dl>
           </div>
 
@@ -168,18 +184,24 @@ export default function ItemHero({
               className="text-xs font-semibold uppercase tracking-wide"
               style={{ color: visual.color }}
             >
-              {selected.name} cash price
+              Market price
             </p>
             <p className="mt-1 text-[34px] font-bold leading-none tracking-[-0.02em] text-[#F1F3F1] tabular-nums">
               {cash ?? 'No data yet'}
             </p>
             {/* Fixed-height row so the column doesn't resize between a priced
-                mutation (badge) and an unpriced one (note). */}
+                mutation (badge) and an unpriced one (note). When we hold
+                reputable data the "from verified sellers" cue replaces the
+                confidence-label jargon; estimated/no-data states are unchanged. */}
             <div className="mt-2.5 flex min-h-[28px] flex-wrap items-center gap-2 lg:justify-end">
               {selected.isEstimated ? (
                 <span className="inline-flex items-center gap-1.5 border border-[#3A3320] bg-[#2A2410]/40 px-2 py-1 text-[11.5px] font-semibold text-[#D9C27A]">
                   <span className="h-1.5 w-1.5 rounded-full bg-[#D9C27A]" />
                   Estimated from multiplier
+                </span>
+              ) : cash && selected.averageUsd != null ? (
+                <span className="text-[12.5px] text-[#8FBF9C]">
+                  from verified sellers
                 </span>
               ) : cash ? (
                 <ConfidenceBadge label={selected.marketConfidenceLabel ?? 'low'} />

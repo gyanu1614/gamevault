@@ -27,6 +27,7 @@ import {
   type BrainrotMeta,
   type SourcedPrice,
   type VariantEstimate,
+  type ReputableListing,
 } from '@/lib/sab/price-correction'
 
 // No fallback — fail closed so a missing secret can't be triggered with a
@@ -59,6 +60,22 @@ type EvidenceRow = {
   mutation_id: string
   unit_price_usd: number | string | null
   source_slug: string | null
+}
+
+type ReputableRow = {
+  brainrot_id: string
+  mutation_id: string
+  unit_price_usd: number | string | null
+  /** Eldorado ratingCount — total seller reviews; the reputable gate. */
+  seller_sales_count: number | null
+  listing_status: string | null
+  parse_status: string | null
+  is_bundle: boolean | null
+  is_account_listing: boolean | null
+  is_inventory_listing: boolean | null
+  is_duplicate: boolean | null
+  is_outlier: boolean | null
+  rejection_reason: string | null
 }
 
 type MutationRow = {
@@ -116,7 +133,8 @@ export async function GET(request: NextRequest) {
     // Also read the cleaned per-listing evidence — the IQR-fenced individual
     // prices behind each variant — so the floor ("cheapest you can actually buy
     // at") can be computed from real listings rather than the median blend.
-    const [catalog, mutations, brainrots, evidence] = await Promise.all([
+    const [catalog, mutations, brainrots, evidence, rawListings] =
+      await Promise.all([
       selectAll<CatalogRow>(
         admin,
         'sab_public_price_catalog',
@@ -132,6 +150,14 @@ export async function GET(request: NextRequest) {
         admin,
         'sab_market_clean_listing_evidence',
         'brainrot_id,mutation_id,unit_price_usd,source_slug',
+      ),
+      // Active raw listings carry the per-seller review count (seller_sales_count
+      // = Eldorado ratingCount) that the reputable-pricing model gates on. The
+      // clean evidence view doesn't expose it, so read the raw listings directly.
+      selectAll<ReputableRow>(
+        admin,
+        'sab_market_raw_listings',
+        'brainrot_id,mutation_id,unit_price_usd,seller_sales_count,listing_status,parse_status,is_bundle,is_account_listing,is_inventory_listing,is_duplicate,is_outlier,rejection_reason',
       ),
     ])
 
@@ -166,6 +192,39 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // Group ACTIVE, clean raw listings that carry a seller review count into
+    // {price, reviews} per variant — the input to the reputable-pricing model.
+    // Only listings that pass the same cleanliness filters the evidence view
+    // applies (active, matched, not bundle/account/dupe/outlier/rejected) count,
+    // so a fake/bundle can't slip in through this path. Listings without a review
+    // count (G2G/Itemku, or pre-collector-rerun Eldorado rows) are simply
+    // omitted — the variant then falls back to the source-trust floor.
+    const reputableByVariant = new Map<string, ReputableListing[]>()
+    for (const row of rawListings) {
+      if (row.listing_status !== 'active') continue
+      if (row.parse_status !== 'matched') continue
+      if (
+        row.is_bundle ||
+        row.is_account_listing ||
+        row.is_inventory_listing ||
+        row.is_duplicate ||
+        row.is_outlier ||
+        row.rejection_reason
+      ) {
+        continue
+      }
+      const price = toNumber(row.unit_price_usd)
+      if (price == null || price <= 0) continue
+      const reviews = row.seller_sales_count
+      if (reviews == null || !Number.isFinite(reviews)) continue
+
+      const key = `${row.brainrot_id}:${row.mutation_id}`
+      const entry = { priceUsd: price, reviews }
+      const list = reputableByVariant.get(key)
+      if (list) list.push(entry)
+      else reputableByVariant.set(key, [entry])
+    }
+
     const metas: BrainrotMeta[] = brainrots.map((row) => ({
       brainrotId: row.id,
       rarity: row.rarity,
@@ -187,6 +246,9 @@ export async function GET(request: NextRequest) {
         pricesByVariant.get(`${row.brainrot_id}:${row.mutation_id}`) ?? [],
       sourcedListingPrices:
         sourcedByVariant.get(`${row.brainrot_id}:${row.mutation_id}`) ??
+        undefined,
+      reputableListings:
+        reputableByVariant.get(`${row.brainrot_id}:${row.mutation_id}`) ??
         undefined,
       incomeMultiplier: multiplierBySlug.get(row.mutation_slug) ?? undefined,
     }))
@@ -211,6 +273,10 @@ export async function GET(request: NextRequest) {
       sample_count: correction.sampleCount,
       is_anchored: correction.isAnchored,
       is_publishable: correction.isPublishable,
+      // Reputable-seller split — the buyer-facing cheapest + average. Null on
+      // non-reputable paths; both surface on the value pages and the bot.
+      cheapest_usd: correction.cheapestUsd,
+      average_usd: correction.averageUsd,
       computed_at: startedAt,
     }))
 

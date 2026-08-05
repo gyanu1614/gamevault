@@ -9,6 +9,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
+import { revalidatePath } from 'next/cache'
 import { createServiceRoleClient } from '@/lib/supabase/service'
 import { pingIndexNow } from '@/lib/seo/indexnow'
 
@@ -136,6 +137,7 @@ export async function GET(request: NextRequest) {
     // a real signal engines act on — not just sitemap lastmod on the next crawl.
     // Fire-and-forget + no-op outside prod; never blocks the capture result.
     let pingedCount = 0
+    let revalidatedCount = 0
     try {
       const { data: slugRows } = await admin
         .from('sab_public_price_catalog_corrected')
@@ -156,16 +158,40 @@ export async function GET(request: NextRequest) {
       ]
       await pingIndexNow(paths)
       pingedCount = paths.length
+
+      // Bust the ISR cache for every price-bearing SAB page so today's corrected
+      // prices show the moment this cron finishes, instead of up to an hour later
+      // when the page's `revalidate = 3600` window happens to lapse. Without this,
+      // visitors can see a stale value list / calculator right after the daily
+      // update (the Discord bot reads the DB live and looked correct meanwhile).
+      // revalidatePath is a no-op cheap call; the price-bearing calculators share
+      // the same data as the value list.
+      const pricePages = [
+        '/steal-a-brainrot',
+        '/steal-a-brainrot/values',
+        '/steal-a-brainrot/calculator',
+        '/steal-a-brainrot/value-calculator',
+        '/steal-a-brainrot/trade-calculator',
+        ...itemPaths,
+      ]
+      for (const path of pricePages) {
+        revalidatePath(path)
+      }
+      revalidatedCount = pricePages.length
     } catch (pingErr) {
-      // Never fail the cron over a freshness ping.
-      console.error('IndexNow ping after snapshot failed (non-fatal):', pingErr)
+      // Never fail the cron over a freshness ping or revalidation.
+      console.error(
+        'IndexNow ping / revalidation after snapshot failed (non-fatal):',
+        pingErr,
+      )
     }
 
     return NextResponse.json({
       success: true,
       captured: capturedCount,
       pinged: pingedCount,
-      message: `Captured ${capturedCount} SAB price snapshot rows; pinged ${pingedCount} URLs to IndexNow`,
+      revalidated: revalidatedCount,
+      message: `Captured ${capturedCount} SAB price snapshot rows; pinged ${pingedCount} URLs to IndexNow; revalidated ${revalidatedCount} pages`,
     })
   } catch (error: any) {
     console.error('Unexpected error in snapshot-sab-prices cron:', error)

@@ -23,6 +23,16 @@ interface PageProps {
 type DirectoryTradePriceRow = {
   brainrot_id: string
   market_value_usd: number | string | null
+  /** Low/high of the real listings behind the value — the trust-signal range. */
+  market_low_usd: number | string | null
+  market_high_usd: number | string | null
+  /**
+   * Reputable-seller prices: cheapest (lowest 100+ review listing) and average
+   * (typical reputable price). When present these are the buyer-facing pair —
+   * "Cheapest" + "Market price". Null until a row is priced by the reputable path.
+   */
+  cheapest_usd: number | string | null
+  average_usd: number | string | null
   confidence_label: string | null
   is_trade_ready: boolean
   /** Observed listings/sales behind the price — our popularity signal. */
@@ -194,7 +204,7 @@ async function getBrainrots(): Promise<BrainrotDirectoryItem[]> {
     (supabase as any)
       .from('sab_public_price_catalog_corrected')
       .select(
-        'brainrot_id,market_value_usd,confidence_label,is_trade_ready,external_sample_size',
+        'brainrot_id,market_value_usd,market_low_usd,market_high_usd,cheapest_usd,average_usd,confidence_label,is_trade_ready,external_sample_size',
       )
       .eq('mutation_slug', 'default'),
   ])
@@ -238,6 +248,21 @@ async function getBrainrots(): Promise<BrainrotDirectoryItem[]> {
       display_price_source: 'public_market_estimate',
       confidence_label:
         price.confidence_label ?? brainrot.confidence_label,
+      // The real-listings range behind the value — shown on the row as a trust
+      // signal ("real listings $613–$799"), proving the headline value is
+      // grounded in actual market data rather than a community guess. These come
+      // straight from the corrected view, which already fences out fakes/stale
+      // listings, so no extra trust logic is needed here.
+      market_low_usd:
+        price.market_low_usd != null ? Number(price.market_low_usd) : null,
+      market_high_usd:
+        price.market_high_usd != null ? Number(price.market_high_usd) : null,
+      // Reputable cheapest + average — the buyer-facing "Cheapest" + "Market
+      // price" pair. Null until the reputable path prices this row.
+      cheapest_usd:
+        price.cheapest_usd != null ? Number(price.cheapest_usd) : null,
+      average_usd:
+        price.average_usd != null ? Number(price.average_usd) : null,
       // How many real listings/sales we observed for this item. The only
       // popularity signal we actually hold — our own marketplace counts
       // (active_listing_count etc.) are still all zero.
