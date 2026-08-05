@@ -83,8 +83,10 @@ describe('reputablePrice — real observed markets', () => {
       L(8999.99, 54956),
     ])
     expect(out?.cheapestUsd).toBe(4000)
-    // average = median of 4000, 5489.99, 6600, 7000, 8999.99
-    expect(out?.averageUsd).toBe(6600)
+    // average band is capped to within 2x of the cheapest ($4000 -> $8000), so
+    // the $8999.99 high-tier listing drops out: median of 4000, 5489.99, 6600,
+    // 7000 = $6044.995. Keeps the average anchored to the base tier.
+    expect(out?.averageUsd).toBe(6044.995)
   })
 })
 
@@ -138,6 +140,22 @@ describe('reputablePrice — trust + edge rules', () => {
     expect(out?.cheapestUsd).toBe(700)
   })
 
+  it('caps the average band so a pooled higher income tier cannot inflate it', () => {
+    // A base tier at ~$4000 pooled with a high-B/s tier at $9k+. Cheapest is the
+    // base ($4000); the average stays anchored to the base cluster (within 2x)
+    // rather than being dragged up by the $9k listings.
+    const out = reputablePrice([
+      { priceUsd: 4000, reviews: 1255 },
+      { priceUsd: 4500, reviews: 2000 },
+      { priceUsd: 5000, reviews: 3000 },
+      { priceUsd: 9450, reviews: 9926 },
+      { priceUsd: 9999, reviews: 9926 },
+    ])
+    expect(out?.cheapestUsd).toBe(4000)
+    // band = 4000, 4500, 5000 (9450/9999 exceed 2x $4000) → median 4500.
+    expect(out?.averageUsd).toBe(4500)
+  })
+
   it('a dense cheap cluster is honoured (no false gap-skip)', () => {
     // Garama-shaped: tight cluster from $1, all reputable. Cheapest stays $1.
     const out = reputablePrice([
@@ -148,6 +166,8 @@ describe('reputablePrice — trust + edge rules', () => {
       L(2.4, 5000),
     ])
     expect(out?.cheapestUsd).toBe(1)
-    expect(out?.averageUsd).toBe(1.2)
+    // $2.4 is >2x the $1 cheapest, so it's outside the average band: median of
+    // 1, 1.1, 1.2, 1.3 = 1.15.
+    expect(out?.averageUsd).toBe(1.15)
   })
 })

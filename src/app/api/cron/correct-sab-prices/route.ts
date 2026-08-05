@@ -53,6 +53,7 @@ type BrainrotRow = {
   rarity: string | null
   ingame_cost: number | string | null
   base_income_per_second: number | string | null
+  obtainability: string | null
 }
 
 type EvidenceRow = {
@@ -148,7 +149,7 @@ export async function GET(request: NextRequest) {
       selectAll<BrainrotRow>(
         admin,
         'sab_brainrots',
-        'id,rarity,ingame_cost,base_income_per_second',
+        'id,rarity,ingame_cost,base_income_per_second,obtainability',
       ),
       selectAll<EvidenceRow>(
         admin,
@@ -236,6 +237,7 @@ export async function GET(request: NextRequest) {
       rarity: row.rarity,
       ingameCost: toNumber(row.ingame_cost),
       incomePerSecond: toNumber(row.base_income_per_second),
+      obtainability: row.obtainability,
     }))
 
     const variants: VariantEstimate[] = catalog.map((row) => ({

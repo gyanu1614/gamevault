@@ -16,6 +16,7 @@
     "sab:eldorado:collect": "node scripts/collect-eldorado-sab-api-v6.mjs",
     "sab:eldorado:send": "node scripts/collect-eldorado-sab-api-v6.mjs --send",
     "sab:eldorado:panel": "node scripts/collect-eldorado-sab-api-v6.mjs --send --refresh-after-hours 20",
+    "sab:eldorado:popularity": "node scripts/collect-eldorado-popularity.mjs",
     "sab:g2g:collect": "node scripts/collect-g2g-sab.mjs",
     "sab:g2g:send": "node scripts/collect-g2g-sab.mjs --send",
     "sab:g2g:panel": "node scripts/collect-g2g-sab.mjs --send --refresh-after-hours 20",

@@ -685,6 +685,33 @@ describe('computeCorrections — reputable-seller pricing', () => {
     expect(c.cheapestUsd).toBe(4000) // skipped the 0-review fakes
   })
 
+  it('suppresses an unobtainable (removed) item even with reputable listings', () => {
+    // Tung Tung Tung Sahur was removed from the game; any listing is a dump of a
+    // dead item. Even with reputable listings, publish nothing.
+    const peers = peerGroup(6)
+    const result = computeCorrections({
+      brainrots: [
+        ...peers.brainrots,
+        brainrot('removed', { rarity: 'Secret', obtainability: 'unobtainable' }),
+      ],
+      variants: [
+        ...peers.variants,
+        variant('removed', {
+          valueUsd: 9999,
+          sampleCount: 5,
+          reputableListings: [
+            { priceUsd: 9999, reviews: 10000 },
+            { priceUsd: 10000, reviews: 8000 },
+          ],
+        }),
+      ],
+    })
+    const c = result.find((r) => r.brainrotId === 'removed')!
+    expect(c.isPublishable).toBe(false)
+    expect(c.valueUsd).toBeNull()
+    expect(c.reason).toBe('insufficient_evidence')
+  })
+
   it('falls through to the floor when no reputable listings exist', () => {
     // A variant with only listingPrices (no reviews) uses the old floor path.
     const peers = peerGroup(6)

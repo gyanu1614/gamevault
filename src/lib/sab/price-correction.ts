@@ -199,6 +199,13 @@ export type BrainrotMeta = {
   rarity: string | null
   ingameCost: number | null
   incomePerSecond: number | null
+  /**
+   * Whether the item can still be obtained in-game. When 'unobtainable' the item
+   * was removed/retired (Tung Tung Tung Sahur), so any listing is someone
+   * dumping a dead item at a random price — not a real tradeable market. We
+   * suppress the price rather than publish a confident phantom value.
+   */
+  obtainability?: string | null
 }
 
 export type VariantEstimate = {
@@ -840,6 +847,26 @@ function correctDefault(
       cohortSize: cohort.length,
       isAnchored: false,
       isPublishable: true,
+    }
+  }
+
+  // Removed / unobtainable items have no real market — any listing is someone
+  // dumping a dead item at a random price (Tung Tung Tung Sahur, removed from the
+  // game, showed $9,999). Publish nothing rather than a confident phantom value.
+  // A human-reviewed price already returned above, so a deliberate "last known
+  // value" still wins; this only suppresses the scraped price.
+  if (meta?.obtainability === 'unobtainable') {
+    return {
+      ...base,
+      valueUsd: null,
+      lowUsd: null,
+      highUsd: null,
+      reason: 'insufficient_evidence',
+      confidence: 'none',
+      anchorUsd: anchor,
+      cohortSize: cohort.length,
+      isAnchored: false,
+      isPublishable: false,
     }
   }
 
