@@ -92,17 +92,33 @@ export function valueMessage(
 
   const fields: EmbedField[] = []
 
-  const value = variant?.valueUsd != null ? formatCash(variant.valueUsd) : null
+  // Market price = the reputable average when present, else the corrected value.
+  // Cheapest = the reputable low, shown only when it undercuts the market price.
+  const marketUsd = variant?.averageUsd ?? variant?.valueUsd ?? null
+  const marketPrice = marketUsd != null ? formatCash(marketUsd) : null
+  const cheapestUsd = variant?.cheapestUsd ?? null
+  const cheapest =
+    cheapestUsd != null && marketUsd != null && cheapestUsd < marketUsd - 0.005
+      ? formatCash(cheapestUsd)
+      : null
+
+  if (cheapest) {
+    fields.push({ name: 'Cheapest', value: cheapest, inline: true })
+  }
   fields.push({
-    name: 'Value',
-    value: value ?? 'Not enough data yet',
+    name: 'Market price',
+    value: marketPrice ?? 'Not enough data yet',
     inline: true,
   })
 
-  // Range only when it's a real measured spread — an estimated/anchored price
-  // has no meaningful range, and showing the pre-correction one (the stale
-  // $70–$98.75 on Radioactive) is worse than showing none.
-  const showRange = variant && !variant.isEstimated && !variant.isAnchored
+  // Range only for older (non-reputable) rows that still lack a cheapest/average
+  // and are a real measured spread — an estimated/anchored price has no
+  // meaningful range, and a reputable row already shows the cheapest instead.
+  const showRange =
+    variant &&
+    variant.averageUsd == null &&
+    !variant.isEstimated &&
+    !variant.isAnchored
   const range = showRange ? formatRange(variant.lowUsd, variant.highUsd) : null
   if (range) fields.push({ name: 'Range', value: range, inline: true })
 
@@ -119,7 +135,16 @@ export function valueMessage(
   }
 
   if (variant) {
-    fields.push({ name: 'Confidence', value: provenance(variant), inline: false })
+    // "From verified sellers" for reputable rows; the older provenance line
+    // (confidence + listing/source counts) for everything else.
+    fields.push({
+      name: 'Based on',
+      value:
+        variant.averageUsd != null
+          ? 'Verified sellers (100+ reviews)'
+          : provenance(variant),
+      inline: false,
+    })
   }
 
   const updated = variant ? relativeTimestamp(variant.updatedAt) : null
@@ -127,8 +152,8 @@ export function valueMessage(
   // Lead with the mutation name + its price so the exact variant being quoted is
   // unmistakable — "Radioactive · $622.15".
   const variantHeadline =
-    variant && variant.valueUsd != null
-      ? `${variant.mutationName} · ${formatCash(variant.valueUsd)}`
+    variant && marketUsd != null
+      ? `${variant.mutationName} · ${formatCash(marketUsd)}`
       : variant
         ? variant.mutationName
         : null

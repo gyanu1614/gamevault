@@ -30,6 +30,13 @@
  * as a genuinely unusual item, not an error.
  */
 
+import {
+  reputablePrice,
+  type ReputableListing,
+} from './reputable-pricing'
+
+export type { ReputableListing } from './reputable-pricing'
+
 /** Below this, a price is an estimate rather than a measurement. */
 export const MIN_TRUSTED_SAMPLES = 3
 
@@ -177,6 +184,7 @@ export const FLOOR_CLUSTER_MAX_LIFT = 3
 export const MARKET_PRICE_FLOOR_USD = 0.28
 
 export type CorrectionReason =
+  | 'reputable'
   | 'floor'
   | 'trusted'
   | 'thin_sample_within_anchor'
@@ -224,6 +232,15 @@ export type VariantEstimate = {
    * the plain `listingPrices` floor when absent or when trusted evidence is thin.
    */
   sourcedListingPrices?: SourcedPrice[]
+  /**
+   * Per-listing price + seller review count, for the reputable-seller pricing
+   * model (reputable-pricing.ts). When present with enough reputable evidence,
+   * this becomes the PRIMARY price: value = the reputable Average, plus a
+   * separate cheapest. A price is real only if a reputable seller (100+ reviews)
+   * offers it — this is the strongest signal we have and outranks the older
+   * floor logic, which stays as the fallback for sources without review data.
+   */
+  reputableListings?: ReputableListing[]
   /**
    * The mutation's income multiplier — its rung on the value ladder (Default=1,
    * Gold=1.25 … Rainbow=10). Used only for the ladder sanity check (point 6):
@@ -275,6 +292,14 @@ export type Correction = {
   sampleCount: number
   isAnchored: boolean
   isPublishable: boolean
+  /**
+   * Reputable-seller pricing (reason === 'reputable'): the lowest and typical
+   * price among sellers with 100+ reviews. cheapestUsd is the buyer-facing
+   * "lowest", averageUsd feeds the headline valueUsd. Null on every other path
+   * (the older floor/anchor logic doesn't produce a reputable split).
+   */
+  cheapestUsd: number | null
+  averageUsd: number | null
 }
 
 const DEFAULT_MUTATION_SLUG = 'default'
@@ -457,6 +482,18 @@ function variantFloor(variant: VariantEstimate): number | null {
     return lowestSupportedPriceBySource(variant.sourcedListingPrices)
   }
   return lowestSupportedPrice(variant.listingPrices ?? [])
+}
+
+/**
+ * Reputable-seller cheapest + average for a variant, or null when we hold no
+ * reputable listings (no 100+ review seller). Thin wrapper so both the default
+ * and variant branches share one call site.
+ */
+function reputableFor(
+  variant: VariantEstimate,
+): ReturnType<typeof reputablePrice> {
+  if (!variant.reputableListings?.length) return null
+  return reputablePrice(variant.reputableListings)
 }
 
 /**
@@ -780,6 +817,10 @@ function correctDefault(
     mutationId: variant.mutationId,
     originalValueUsd: variant.valueUsd,
     sampleCount: variant.sampleCount,
+    // Reputable split is null on every non-reputable path; the reputable branch
+    // sets both. Spread into every return so the Correction type is satisfied.
+    cheapestUsd: null,
+    averageUsd: null,
   }
 
   const cohort = meta ? cohortPricesFor(meta, wellSampled) : []
@@ -795,6 +836,30 @@ function correctDefault(
       highUsd: variant.highUsd,
       reason: 'trusted',
       confidence: 'high',
+      anchorUsd: anchor,
+      cohortSize: cohort.length,
+      isAnchored: false,
+      isPublishable: true,
+    }
+  }
+
+  // Reputable-seller pricing — the strongest signal, so it outranks the floor.
+  // A price is real only if a seller with 100+ reviews offers it; the model
+  // returns the reputable Cheapest and the typical Average. The headline value
+  // is the Average (what it usually sells for); cheapest rides alongside. Only
+  // fires when we hold reputable evidence — sources without review data
+  // (G2G/Itemku) fall through to the source-trust floor below.
+  const reputable = reputableFor(variant)
+  if (reputable) {
+    return {
+      ...base,
+      valueUsd: roundCents(reputable.averageUsd),
+      lowUsd: roundCents(reputable.cheapestUsd),
+      highUsd: variant.highUsd ?? roundCents(reputable.averageUsd),
+      cheapestUsd: roundCents(reputable.cheapestUsd),
+      averageUsd: roundCents(reputable.averageUsd),
+      reason: 'reputable',
+      confidence: confidenceFor(reputable.reputableCount, variant.sourceCount),
       anchorUsd: anchor,
       cohortSize: cohort.length,
       isAnchored: false,
@@ -967,6 +1032,10 @@ function correctVariant(
     mutationId: variant.mutationId,
     originalValueUsd: variant.valueUsd,
     sampleCount: variant.sampleCount,
+    // Reputable split is null on every non-reputable path; the reputable branch
+    // sets both. Spread into every return so the Correction type is satisfied.
+    cheapestUsd: null,
+    averageUsd: null,
   }
 
   const defaultValue = correctedDefaults.get(variant.brainrotId)
@@ -1029,6 +1098,31 @@ function correctVariant(
       highUsd: variant.highUsd,
       reason: 'trusted',
       confidence: 'high',
+      anchorUsd: anchor,
+      cohortSize: 0,
+      isAnchored: false,
+      isPublishable: true,
+    }
+  }
+
+  // Reputable-seller pricing for the mutation — same primacy as defaults, but it
+  // must still respect the value ladder: a reputable Gold priced below its own
+  // default is noise (premiumSanityEstimate catches it). If the ladder rejects
+  // the reputable average, fall through to the anchor rather than publish an
+  // impossible number.
+  const reputable = reputableFor(variant)
+  if (reputable) {
+    const laddered = premiumSanityEstimate(reputable.averageUsd)
+    if (laddered) return laddered
+    return {
+      ...base,
+      valueUsd: roundCents(reputable.averageUsd),
+      lowUsd: roundCents(reputable.cheapestUsd),
+      highUsd: variant.highUsd ?? roundCents(reputable.averageUsd),
+      cheapestUsd: roundCents(reputable.cheapestUsd),
+      averageUsd: roundCents(reputable.averageUsd),
+      reason: 'reputable',
+      confidence: confidenceFor(reputable.reputableCount, variant.sourceCount),
       anchorUsd: anchor,
       cohortSize: 0,
       isAnchored: false,

@@ -17,6 +17,13 @@ export type VariantPrice = {
   valueUsd: number | null
   lowUsd: number | null
   highUsd: number | null
+  /**
+   * Reputable-seller prices: cheapest (lowest 100+ review listing) and average
+   * (typical). When present the embed shows "Cheapest" + "Market price" (=
+   * average) instead of the raw value/range. Null until repriced.
+   */
+  cheapestUsd?: number | null
+  averageUsd?: number | null
   confidence: string | null
   sampleSize: number
   sourceCount: number
@@ -41,7 +48,7 @@ export type BrainrotPricing = {
 }
 
 const CATALOG_COLUMNS =
-  'brainrot_id,brainrot_name,brainrot_slug,rarity,image_url,mutation_id,mutation_name,mutation_slug,market_value_usd,market_low_usd,market_high_usd,confidence_label,external_sample_size,source_count,price_updated_at,is_anchored'
+  'brainrot_id,brainrot_name,brainrot_slug,rarity,image_url,mutation_id,mutation_name,mutation_slug,market_value_usd,market_low_usd,market_high_usd,cheapest_usd,average_usd,confidence_label,external_sample_size,source_count,price_updated_at,is_anchored'
 
 type CatalogRow = {
   brainrot_id: string
@@ -55,6 +62,8 @@ type CatalogRow = {
   market_value_usd: number | string | null
   market_low_usd: number | string | null
   market_high_usd: number | string | null
+  cheapest_usd: number | string | null
+  average_usd: number | string | null
   confidence_label: string | null
   external_sample_size: number | null
   source_count: number | null
@@ -108,6 +117,8 @@ function toVariant(row: CatalogRow): VariantPrice {
     valueUsd: asNumber(row.market_value_usd),
     lowUsd: asNumber(row.market_low_usd),
     highUsd: asNumber(row.market_high_usd),
+    cheapestUsd: asNumber(row.cheapest_usd),
+    averageUsd: asNumber(row.average_usd),
     confidence: row.confidence_label,
     sampleSize: row.external_sample_size ?? 0,
     sourceCount: row.source_count ?? 0,

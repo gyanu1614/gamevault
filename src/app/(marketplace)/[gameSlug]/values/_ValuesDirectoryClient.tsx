@@ -9,7 +9,6 @@ import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
 import ChevronRightIcon from '@mui/icons-material/ChevronRight'
 import ChevronRightSmall from '@mui/icons-material/ChevronRight'
 import type { CSSProperties } from 'react'
-import { formatConfidence } from '@/lib/sab/format'
 
 /**
  * Rarity → accent colour. Drives both the rarity filter chips and each row's
@@ -147,6 +146,19 @@ export type BrainrotDirectoryItem = {
   display_price_source: string
   confidence_label: string
   /**
+   * Low/high of the real listings behind the value. Retained for items not yet
+   * priced by the reputable path (fallback range display).
+   */
+  market_low_usd?: number | null
+  market_high_usd?: number | null
+  /**
+   * Reputable-seller prices: cheapest (lowest 100+ review listing) and average
+   * (typical reputable price). When present these are the buyer-facing pair —
+   * the row shows "Cheapest $X" and the headline "Market price" is the average.
+   */
+  cheapest_usd?: number | null
+  average_usd?: number | null
+  /**
    * Listings/sales we actually observed behind this item's price. The only
    * popularity signal we hold — our own marketplace counters are all still
    * zero — so it's what the Popular view ranks by.
@@ -181,6 +193,12 @@ function formatMoney(value: number | string | null): string | null {
   }).format(amount)
 }
 
+/**
+ * The real-listings range shown under the value as a trust signal. Returns null
+ * unless the high is meaningfully above the value (a range that collapses to the
+ * value itself proves nothing, so we show nothing rather than "$X – $X"). The
+ * low is the value (our floor), so the range reads "value – high".
+ */
 function formatIncome(value: number | string | null): string {
   const amount = asNumber(value)
   if (amount == null) return '—'
@@ -192,29 +210,6 @@ function formatIncome(value: number | string | null): string {
   }).format(amount)}/s`
 }
 
-
-/**
- * Price accuracy — floating coloured text, no chip.
- *
- * The filled box read as a button and boxed every row twice (rarity tag +
- * pill). Colour alone carries the signal now: green = trust it, amber = treat
- * as a guide, maroon = rough. Sized to the rest of the row, not smaller.
- */
-function ConfidenceText({ label }: { label: string }) {
-  // Green for both 'reviewed' (a human checked it) and 'high'; amber is the
-  // middle rung; maroon covers low and no-data.
-  const color =
-    label === 'reviewed' || label === 'high'
-      ? '#5FC17B'
-      : label === 'medium'
-        ? '#E0B155'
-        : '#C97B6B'
-  return (
-    <span className="text-[13.5px] font-semibold" style={{ color }}>
-      {formatConfidence(label)}
-    </span>
-  )
-}
 
 function compareIncome(
   a: BrainrotDirectoryItem,
@@ -517,23 +512,37 @@ export default function ValuesDirectoryClient({
               now 11px semibold in a legible grey. Each header uses the SAME
               alignment class as the cells below it, so nothing reads as
               floating off-centre in its column. */}
-          <div className="hidden grid-cols-[64px_minmax(0,1.5fr)_minmax(0,0.85fr)_minmax(0,1fr)_minmax(0,0.9fr)_minmax(0,0.9fr)] gap-4 border-b border-[#1E2723] px-4 py-3 lg:grid">
+          {/* Buyer-facing columns. "Listings tracked" and "Price accuracy" were
+              jargon a buyer neither reads nor understands — replaced with the two
+              numbers they actually want: the cheapest a verified seller offers,
+              and the typical market price. Income stays; it's the one game stat
+              buyers do care about. */}
+          <div className="hidden grid-cols-[64px_minmax(0,1.6fr)_minmax(0,0.9fr)_minmax(0,0.9fr)_minmax(0,0.95fr)] gap-4 border-b border-[#1E2723] px-4 py-3 lg:grid">
             <span className={COL_HEAD}>Item</span>
             <span className={COL_HEAD}>Name</span>
-            <span className={`${COL_HEAD} text-center`}>Listings tracked</span>
-            <span className={`${COL_HEAD} text-center`}>Price accuracy</span>
             <span className={`${COL_HEAD} text-right`}>Income</span>
-            {/* "Cash value", not just "Value" — the whole point is that these are
-                real dollars, not in-game currency or community value-list
-                points. Worth the two extra characters. */}
-            <span className={`${COL_HEAD} text-right`}>Cash value</span>
+            <span className={`${COL_HEAD} text-right`}>Cheapest</span>
+            <span className={`${COL_HEAD} text-right`}>Market price</span>
           </div>
 
           <ul className="divide-y divide-[#1A211A]">
             {visibleBrainrots.map((brainrot, i) => {
-              const displayPrice = formatMoney(brainrot.display_price_usd)
+              // Market price = the reputable average when we have it, else the
+              // existing corrected value (older path / not-yet-repriced items).
+              // Cheapest = the reputable low; only shown when it differs from the
+              // market price (a single reputable seller makes cheapest == market).
+              const marketUsd =
+                asNumber(brainrot.average_usd) ??
+                asNumber(brainrot.display_price_usd)
+              const cheapestUsd = asNumber(brainrot.cheapest_usd)
+              const marketPrice = marketUsd != null ? formatMoney(marketUsd) : null
+              const cheapestPrice =
+                cheapestUsd != null &&
+                marketUsd != null &&
+                cheapestUsd < marketUsd - 0.005
+                  ? formatMoney(cheapestUsd)
+                  : null
               const rc = rarityColor(brainrot.rarity)
-              const listings = asNumber(brainrot.sample_size)
               const rank =
                 effectiveView === 'popular'
                   ? (currentPage - 1) * PAGE_SIZE + i + 1
@@ -544,7 +553,7 @@ export default function ValuesDirectoryClient({
                   <Link
                     href={`/steal-a-brainrot/values/${brainrot.slug}`}
                     style={{ ['--rc' as string]: rc } as CSSProperties}
-                    className="group grid grid-cols-[64px_minmax(0,1fr)_auto] items-center gap-3 px-3 py-3.5 transition-colors hover:bg-[#161C16] sm:gap-4 sm:px-4 lg:grid-cols-[64px_minmax(0,1.5fr)_minmax(0,0.85fr)_minmax(0,1fr)_minmax(0,0.9fr)_minmax(0,0.9fr)]"
+                    className="group grid grid-cols-[64px_minmax(0,1fr)_auto] items-center gap-3 px-3 py-3.5 transition-colors hover:bg-[#161C16] sm:gap-4 sm:px-4 lg:grid-cols-[64px_minmax(0,1.6fr)_minmax(0,0.9fr)_minmax(0,0.9fr)_minmax(0,0.95fr)]"
                   >
                     {/* Art — 64px, up from 52, which lifts the row height a
                         touch and gives the render room to read. */}
@@ -604,40 +613,47 @@ export default function ValuesDirectoryClient({
                       </span>
                     </span>
 
-                    {/* Listings tracked — centred under its header rather
-                        than hugging the right edge of a wide column. */}
-                    <span className="hidden text-center lg:block">
-                      {listings && listings > 0 ? (
-                        <span className="font-mono text-[14.5px] tabular-nums text-[#D6DCD8]">
-                          {listings.toLocaleString()}
+                    {/* Income — the one game stat buyers care about. */}
+                    <span className="hidden text-right font-mono text-[14.5px] tabular-nums text-[#D6DCD8] lg:block">
+                      {formatIncome(brainrot.base_income_per_second)}
+                    </span>
+
+                    {/* Cheapest — the lowest a verified seller offers. A muted
+                        em-dash when it equals the market price (single seller) or
+                        we don't yet hold reputable data. */}
+                    <span className="hidden text-right lg:block">
+                      {cheapestPrice ? (
+                        <span className="font-mono text-[14.5px] tabular-nums text-[#C6CEC9]">
+                          {cheapestPrice}
                         </span>
                       ) : (
                         <span className="font-mono text-[14.5px] text-[#5E685E]">—</span>
                       )}
                     </span>
 
-                    {/* Price accuracy — centred under its header. Every data
-                        column pairs its cell alignment with its header. */}
-                    <span className="hidden text-center lg:block">
-                      {displayPrice ? (
-                        <ConfidenceText label={brainrot.confidence_label} />
-                      ) : (
-                        <span className="text-[13px] text-[#8B978F]">Not enough data</span>
-                      )}
-                    </span>
-
-                    <span className="hidden text-right font-mono text-[14.5px] tabular-nums text-[#D6DCD8] lg:block">
-                      {formatIncome(brainrot.base_income_per_second)}
-                    </span>
-
+                    {/* Market price — the headline (reputable average). Carries
+                        the chevron + the "verified sellers" trust cue. */}
                     <span className="flex items-center justify-end gap-1.5 text-right">
-                      <span className="text-[16px] font-bold tabular-nums text-[#8FBF9C] sm:text-[17.5px]">
-                        {displayPrice ?? '—'}
+                      <span className="flex flex-col items-end">
+                        <span className="flex items-center gap-1.5">
+                          <span className="text-[16px] font-bold tabular-nums text-[#8FBF9C] sm:text-[17.5px]">
+                            {marketPrice ?? '—'}
+                          </span>
+                          <ChevronRightSmall
+                            sx={{ fontSize: 18 }}
+                            className="shrink-0 text-[#3A4A40] transition-transform duration-200 group-hover:translate-x-0.5 group-hover:text-[#8FBF9C]"
+                          />
+                        </span>
+                        {marketPrice ? (
+                          <span className="mt-0.5 mr-[22px] text-[11px] text-[#6E7A72]">
+                            from verified sellers
+                          </span>
+                        ) : (
+                          <span className="mt-0.5 mr-[22px] text-[11px] text-[#5E685E]">
+                            not enough data
+                          </span>
+                        )}
                       </span>
-                      <ChevronRightSmall
-                        sx={{ fontSize: 18 }}
-                        className="shrink-0 text-[#3A4A40] transition-transform duration-200 group-hover:translate-x-0.5 group-hover:text-[#8FBF9C]"
-                      />
                     </span>
                   </Link>
                 </li>

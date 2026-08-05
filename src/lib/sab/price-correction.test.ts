@@ -631,6 +631,80 @@ describe('computeCorrections — floor pricing', () => {
   })
 })
 
+describe('computeCorrections — reputable-seller pricing', () => {
+  it('publishes the reputable Average as value and Cheapest alongside (Skibidi)', () => {
+    const peers = peerGroup(6)
+    const result = computeCorrections({
+      brainrots: [...peers.brainrots, brainrot('skibidi', { rarity: 'OG' })],
+      variants: [
+        ...peers.variants,
+        variant('skibidi', {
+          valueUsd: 190, // the OLD wrong floor — must be overridden
+          sampleCount: 40,
+          reputableListings: [
+            { priceUsd: 217.99, reviews: 8096 },
+            { priceUsd: 220, reviews: 27893 },
+            { priceUsd: 224, reviews: 27893 },
+            { priceUsd: 225, reviews: 20633 },
+            { priceUsd: 225, reviews: 23256 },
+            { priceUsd: 299, reviews: 5000 },
+          ],
+        }),
+      ],
+    })
+    const c = result.find((r) => r.brainrotId === 'skibidi')!
+    expect(c.reason).toBe('reputable')
+    expect(c.cheapestUsd).toBe(217.99)
+    expect(c.averageUsd).toBe(224) // median of the 5 cheapest reputable
+    expect(c.valueUsd).toBe(224) // headline = average
+    expect(c.lowUsd).toBe(217.99) // low = cheapest
+  })
+
+  it('ignores sub-100-review fakes below the reputable market (Headless)', () => {
+    const peers = peerGroup(6)
+    const result = computeCorrections({
+      brainrots: [...peers.brainrots, brainrot('headless', { rarity: 'OG' })],
+      variants: [
+        ...peers.variants,
+        variant('headless', {
+          valueUsd: 369,
+          sampleCount: 30,
+          sourceCount: 2,
+          reputableListings: [
+            { priceUsd: 14.22, reviews: 0 }, // fake
+            { priceUsd: 32.93, reviews: 3 }, // fake
+            { priceUsd: 4000, reviews: 1255 },
+            { priceUsd: 5489.99, reviews: 9394 },
+            { priceUsd: 6600, reviews: 409 },
+          ],
+        }),
+      ],
+    })
+    const c = result.find((r) => r.brainrotId === 'headless')!
+    expect(c.reason).toBe('reputable')
+    expect(c.cheapestUsd).toBe(4000) // skipped the 0-review fakes
+  })
+
+  it('falls through to the floor when no reputable listings exist', () => {
+    // A variant with only listingPrices (no reviews) uses the old floor path.
+    const peers = peerGroup(6)
+    const result = computeCorrections({
+      brainrots: [...peers.brainrots, brainrot('norep', { rarity: 'Rare' })],
+      variants: [
+        ...peers.variants,
+        variant('norep', {
+          valueUsd: 5,
+          sampleCount: 6,
+          listingPrices: [5, 5, 5.1, 5.1, 5.2, 5.2],
+        }),
+      ],
+    })
+    const c = result.find((r) => r.brainrotId === 'norep')!
+    expect(c.reason).not.toBe('reputable')
+    expect(c.cheapestUsd).toBeNull()
+  })
+})
+
 describe('computeCorrections — default mutation', () => {
   it('leaves a well-sampled price untouched even when it defies its cohort', () => {
     const peers = peerGroup(6)

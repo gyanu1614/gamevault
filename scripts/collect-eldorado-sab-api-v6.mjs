@@ -547,6 +547,7 @@ function extractSeller(wrapper) {
   if (!wrapper || typeof wrapper !== "object") return null;
   const user = wrapper.user ?? {};
   const offer = wrapper.offer ?? {};
+  const orderInfo = wrapper.userOrderInfo ?? {};
   const createdDate = user.createdDate ?? null;
 
   let accountAgeDays = null;
@@ -560,13 +561,35 @@ function extractSeller(wrapper) {
     }
   }
 
+  // Seller reputation — the signal the reputable-pricing model runs on. These
+  // live on userOrderInfo, which is only populated when the request sets
+  // includeDeliveryMedians=true (otherwise the object is null — the old
+  // "Eldorado hides feedback counts" belief was this param being unset).
+  //   ratingCount   — total reviews/orders (the "(4771)" the website shows)
+  //   feedbackScore — the positive % (the "99.5%")
+  //   positiveCount — positive reviews
+  const ratingCount = Number.isFinite(orderInfo.ratingCount)
+    ? orderInfo.ratingCount
+    : null;
+  const feedbackScore = Number.isFinite(orderInfo.feedbackScore)
+    ? orderInfo.feedbackScore
+    : null;
+  const positiveCount = Number.isFinite(orderInfo.positiveCount)
+    ? orderInfo.positiveCount
+    : null;
+
   return {
     seller_id: offer.userId ?? user.id ?? null,
     seller_username: user.username ?? null,
     seller_created_date: createdDate,
     seller_account_age_days: accountAgeDays,
-    // Kept for the record even though it is uninformative on Eldorado.
     seller_is_verified: user.isVerifiedSeller ?? null,
+    // Total reviews → this is what "reputable (100+)" gates on. Written to the
+    // seller_sales_count column (previously always null); feedbackScore → the
+    // seller_rating column.
+    seller_rating: feedbackScore,
+    seller_sales_count: ratingCount,
+    seller_positive_count: positiveCount,
   };
 }
 
@@ -763,8 +786,16 @@ function offersApiUrl(tradeEnvironmentValue2, pageIndex = 1) {
     "numericAttributeFilters[0].attributeId",
     "steal-a-brainrot-ms-numeric",
   );
-  url.searchParams.set("useOfferAttributeSearch", "false");
+  // MUST be true: with it false the API returns a stale, incomplete
+  // relevance-ranked slice that MISSES the actual cheapest listings the website
+  // shows (Skibidi's $217.99, Meowl's $292.99 were absent; some sellers returned
+  // a different/stale listing). With it true the full current set returns. Note
+  // sortColumn=Price is ignored in this mode — we sort client-side downstream.
+  url.searchParams.set("useOfferAttributeSearch", "true");
   url.searchParams.set("usePopularItems", "false");
+  // Required for seller review counts: userOrderInfo (ratingCount / feedbackScore
+  // / positiveCount) is NULL unless this is set. This is the seller-reputation
+  // signal the reputable-pricing model depends on.
   url.searchParams.set("includeDeliveryMedians", "true");
   url.searchParams.set("usePerGameScore", "true");
   return url;

@@ -65,6 +65,8 @@ type TradePriceRow = {
   market_value_usd: number | string | null
   market_low_usd: number | string | null
   market_high_usd: number | string | null
+  cheapest_usd: number | string | null
+  average_usd: number | string | null
   confidence_label: string
   external_sample_size: number
   price_updated_at: string | null
@@ -76,6 +78,8 @@ type MutationMarketPriceRow = {
   market_value_usd: number | string | null
   market_low_usd: number | string | null
   market_high_usd: number | string | null
+  cheapest_usd: number | string | null
+  average_usd: number | string | null
   confidence_label: string
   external_sample_size: number
   price_updated_at: string | null
@@ -150,7 +154,7 @@ async function getDefaultTradePrice(
   const { data, error } = await (supabase as any)
     .from('sab_public_price_catalog_corrected')
     .select(
-      'market_value_usd,market_low_usd,market_high_usd,confidence_label,external_sample_size,price_updated_at,is_trade_ready',
+      'market_value_usd,market_low_usd,market_high_usd,cheapest_usd,average_usd,confidence_label,external_sample_size,price_updated_at,is_trade_ready',
     )
     .eq('brainrot_id', brainrotId)
     .eq('mutation_slug', 'default')
@@ -181,7 +185,7 @@ async function getMutations(brainrotId: string): Promise<MutationOption[]> {
     (supabase as any)
       .from('sab_public_price_catalog_corrected')
       .select(
-        'mutation_slug,market_value_usd,market_low_usd,market_high_usd,confidence_label,external_sample_size,price_updated_at,is_trade_ready',
+        'mutation_slug,market_value_usd,market_low_usd,market_high_usd,cheapest_usd,average_usd,confidence_label,external_sample_size,price_updated_at,is_trade_ready',
       )
       .eq('brainrot_id', brainrotId),
     (supabase as any)
@@ -263,6 +267,8 @@ async function getMutations(brainrotId: string): Promise<MutationOption[]> {
       marketValueUsd: realValue ?? estimatedValue,
       marketLowUsd: asNumber(price?.market_low_usd ?? null),
       marketHighUsd: asNumber(price?.market_high_usd ?? null),
+      cheapestUsd: asNumber(price?.cheapest_usd ?? null),
+      averageUsd: asNumber(price?.average_usd ?? null),
       marketConfidenceLabel: price?.confidence_label ?? null,
       marketSampleSize: price?.external_sample_size ?? 0,
       marketUpdatedAt: price?.price_updated_at ?? null,
@@ -437,7 +443,24 @@ export default async function BrainrotValuePage({ params }: PageProps) {
       ? defaultTradePrice?.market_value_usd
       : brainrot.display_price_usd,
   )
-  const cheapestPrice = formatMoney(brainrot.cheapest_active_price_usd)
+  // Reputable-seller pricing: the buyer-facing "Cheapest" + "Market price".
+  // Market price = the reputable average when we have it, else the corrected
+  // value. Cheapest = the reputable low, shown only when it undercuts the market
+  // price (a single reputable seller makes them equal).
+  const reputableAverage = asNumber(defaultTradePrice?.average_usd)
+  const reputableCheapest = asNumber(defaultTradePrice?.cheapest_usd)
+  const marketPriceUsd =
+    reputableAverage ??
+    (hasPublicMarketPrice
+      ? asNumber(defaultTradePrice?.market_value_usd)
+      : asNumber(brainrot.market_value_usd))
+  const marketPrice = formatMoney(marketPriceUsd)
+  const cheapestPrice =
+    reputableCheapest != null &&
+    marketPriceUsd != null &&
+    reputableCheapest < marketPriceUsd - 0.005
+      ? formatMoney(reputableCheapest)
+      : null
   const marketValue = formatMoney(
     hasPublicMarketPrice
       ? defaultTradePrice?.market_value_usd

@@ -42,7 +42,9 @@ describeLive('discord bot against live data', () => {
     expect(embed).toBeDefined()
     expect(embed?.title).toBe('Spyder Elephant')
 
-    const valueField = embed?.fields?.find((field) => field.name === 'Value')
+    const valueField = embed?.fields?.find(
+      (field) => field.name === 'Market price',
+    )
     expect(valueField).toBeDefined()
 
     // The whole point of the correction layer: the bot must NOT say $9.98.
