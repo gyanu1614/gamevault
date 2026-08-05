@@ -20,6 +20,7 @@ import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown'
 import NorthEastIcon from '@mui/icons-material/NorthEast'
+import SellOutlinedIcon from '@mui/icons-material/SellOutlined'
 import type { HubNavData } from '@/lib/content/hubNav'
 
 const TOOL_LABEL: Record<'values' | 'calculator', string> = {
@@ -59,7 +60,7 @@ export function HubNav({
     }
   }, [open])
 
-  const { current, games, tools, itemsHref, accountsHref } = data
+  const { current, games, tools, itemsHref, accountsHref, sellHref } = data
 
   return (
     // Always solid — no transparent state at the top of the page. A hair
@@ -261,30 +262,41 @@ export function HubNav({
           })}
         </nav>
 
-        {/* ── Storefront buttons (data-driven) — pinned to the right edge ── */}
+        {/* ── Storefront buttons — one SOLID BUY (green) + one SOLID SELL
+            (amber), a clean pair separated by a divider. Data-driven per game. ── */}
         <div className="flex shrink-0 items-center justify-end gap-2.5 md:flex-1">
-          {itemsHref && (
-            <Link
-              href={itemsHref}
-              className="flex items-center gap-1.5 whitespace-nowrap bg-[#3FA35C] px-3 py-2.5 text-[13px] font-semibold text-[#08110B] transition hover:bg-[#4CBB6B] sm:px-4 sm:py-3 sm:text-[14px]"
-            >
-              Buy items
-              {/* Option A — the arrow nudges right every few seconds. */}
-              <span className="hidden animate-arrow-nudge motion-reduce:animate-none sm:inline-block">
-                <NorthEastIcon sx={{ fontSize: 14 }} />
-              </span>
-            </Link>
-          )}
-          {accountsHref && (
-            <Link
-              href={accountsHref}
-              className="hidden items-center gap-1.5 whitespace-nowrap border border-[#2F6B46] px-4 py-3 text-[14px] font-semibold transition hover:border-[#3FA35C] md:flex"
-            >
-              {/* Flowing gradient text — the classic Buy Items effect. */}
-              <span className="animate-text-flow bg-[linear-gradient(110deg,#7Cd39a_0%,#F1F3F1_35%,#4FB477_60%,#7Cd39a_100%)] bg-[length:200%_100%] bg-clip-text text-transparent motion-reduce:animate-none motion-reduce:text-[#8FBF9C]">
-                Accounts
-              </span>
-            </Link>
+          {(() => {
+            // Buy = items board when it exists, else the accounts board.
+            const buyHref = itemsHref ?? accountsHref
+            if (!buyHref) return null
+            return (
+              <Link
+                href={buyHref}
+                className="flex items-center gap-1.5 whitespace-nowrap bg-[#3FA35C] px-3 py-2.5 text-[13px] font-semibold text-[#08110B] transition hover:bg-[#4CBB6B] sm:px-4 sm:py-3 sm:text-[14px]"
+              >
+                {/* Short label on phones, game name on larger screens. */}
+                <span className="sm:hidden">Shop</span>
+                <span className="hidden sm:inline">Shop {current.name}</span>
+                <span className="hidden animate-arrow-nudge motion-reduce:animate-none sm:inline-block">
+                  <NorthEastIcon sx={{ fontSize: 14 }} />
+                </span>
+              </Link>
+            )
+          })()}
+          {/* Sell — solid amber + a divider set it apart from the buy button so
+              it reads as its own action. Amber matches the founding-seller CTA. */}
+          {sellHref && (
+            <>
+              <span aria-hidden className="hidden h-6 w-px bg-[#24352A] sm:block" />
+              <Link
+                href={sellHref}
+                aria-label={`Sell ${current.name}`}
+                className="flex items-center gap-1.5 whitespace-nowrap bg-[#F5C451] px-3 py-2.5 text-[13px] font-semibold text-[#141414] transition hover:bg-[#F8D477] sm:px-4 sm:py-3 sm:text-[14px]"
+              >
+                <SellOutlinedIcon sx={{ fontSize: 15 }} />
+                Sell
+              </Link>
+            </>
           )}
         </div>
       </div>

@@ -7,9 +7,11 @@ import ValuesDirectoryClient, {
   type BrainrotDirectoryItem,
 } from './_ValuesDirectoryClient'
 import { SabHeroBackdrop } from './_SabHeroBackdrop'
+import { SabSellerCta } from '../_SabSellerCta'
 import { HubNav } from '@/components/content/HubNav'
 import { HubFooter } from '@/components/content/HubFooter'
 import { getHubNavData, HUB_NAV_CLEAR } from '@/lib/content/hubNav'
+import { HubHero } from '@/components/content/HubHero'
 import AdoptMeValuesPage from './_AdoptMeValuesPage'
 
 export const revalidate = 3600
@@ -278,25 +280,20 @@ export default async function BrainrotValuesPage({ params }: PageProps) {
       <section>
         {/* pt clears the fixed HubNav; visible breadcrumb removed (JSON-LD
             above keeps the SERP breadcrumb). */}
-        <div className={`mx-auto w-full max-w-7xl px-4 pb-8 sm:px-6 lg:px-8 ${HUB_NAV_CLEAR}`}>
-
-          {/* Centred hero. The stat block (Tracked / Highest / Priced from)
-              and the standalone "Priced from real sales" badge both used to
-              live here; the badge now rides on the results line where it costs
-              no vertical space, and the stats were redundant with the list
-              itself. The lead is wider than the title on purpose so it sets in
-              two lines instead of three. */}
-          <div className="flex flex-col items-center text-center">
-            <h1 className="text-balance text-[32px] font-bold leading-[1.04] tracking-[-0.03em] text-[#F2F6F0] sm:text-[42px] lg:text-[54px]">
-              Steal a Brainrot - Value
-            </h1>
-            <p className="mx-auto mt-4 max-w-3xl text-pretty text-[15px] leading-7 text-[#98A398] sm:text-[17px]">
+        {/* Shared hub hero — same type scale + spacing as every other hub
+            (see HubHero). The stat block and standalone "Priced from real
+            sales" badge that used to live here were removed: the badge rides
+            the results line, the stats were redundant with the list itself. */}
+        <HubHero
+          title="Steal a Brainrot - Value"
+          lead={
+            <>
               Real cash values from completed DropMarket sales — not community
               guesses. Every Brainrot, its income per second, and what it trades
               for right now.
-            </p>
-          </div>
-        </div>
+            </>
+          }
+        />
       </section>
 
       {/* Biggest movers — only rendered once we hold 2+ days of real
@@ -371,6 +368,12 @@ export default async function BrainrotValuesPage({ params }: PageProps) {
           <ValuesDirectoryClient brainrots={brainrots} />
         )}
       </section>
+
+      {/* Seller door at the bottom of the value list — the other half of the
+          dual buy/sell intent (buyers get HubBuyCta elsewhere). */}
+      {brainrots.length > 0 && (
+        <SabSellerCta gameSlug="steal-a-brainrot" gameName="Steal a Brainrot" src="sab-values" />
+      )}
       </SabHeroBackdrop>
           <HubFooter
         gameName={hubNav.current.name}

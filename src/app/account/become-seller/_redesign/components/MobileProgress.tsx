@@ -6,15 +6,20 @@
 
 'use client'
 
-import { PALETTE, REDESIGN_STEPS, TOTAL_REDESIGN_STEPS } from '../theme'
+import { PALETTE, REDESIGN_STEPS } from '../theme'
 
 interface MobileProgressProps {
   currentStep: number
+  /** Optional step-list override (defaults to the seller app's 5 steps). */
+  steps?: ReadonlyArray<{ id: number; label: string }>
 }
 
-export default function MobileProgress({ currentStep }: MobileProgressProps) {
-  const active = REDESIGN_STEPS.find((s) => s.id === currentStep)
-  const pct = (currentStep / TOTAL_REDESIGN_STEPS) * 100
+export default function MobileProgress({
+  currentStep,
+  steps = REDESIGN_STEPS,
+}: MobileProgressProps) {
+  const active = steps.find((s) => s.id === currentStep)
+  const pct = (currentStep / steps.length) * 100
 
   return (
     <div
@@ -26,7 +31,7 @@ export default function MobileProgress({ currentStep }: MobileProgressProps) {
           {active?.label}
         </span>
         <span className="text-xs font-medium" style={{ color: PALETTE.ink2 }}>
-          Step {currentStep} of {TOTAL_REDESIGN_STEPS}
+          Step {currentStep} of {steps.length}
         </span>
       </div>
       <div

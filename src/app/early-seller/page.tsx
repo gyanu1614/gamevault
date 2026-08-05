@@ -32,7 +32,7 @@ const PERKS = [
   {
     icon: IconPercentage,
     title: 'A Lower Fee, Locked For Life',
-    body: 'Other marketplaces take 10–15%. Founding sellers lock a permanently reduced commission — a rate that stays with your account even after full launch, and never goes back up.',
+    body: 'Keep more of every sale than on the big marketplaces — a lower rate that stays with your account permanently, even after full launch, and never goes back up.',
   },
   {
     icon: IconShieldCheck,

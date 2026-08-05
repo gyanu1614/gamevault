@@ -203,6 +203,17 @@ export default function ItemHero({
               Buy {displayName}
               <ArrowForwardIcon sx={{ fontSize: 18 }} />
             </Link>
+            {/* Sell door — same price, other intent. Outline (quieter than the
+                solid Buy). The keep-figure only shows on a real price, never an
+                estimate; % derives from fee consts. */}
+            <Link
+              href="/steal-a-brainrot/sell?src=sab-item-page"
+              aria-label={`Sell your ${displayName}`}
+              className="mt-2.5 inline-flex w-full items-center justify-center gap-1.5 border border-[#2F6B46] px-5 py-2.5 text-[13px] font-semibold text-[#8FBF9C] transition hover:border-[#3FA35C] hover:text-[#A6D9B6] lg:w-auto"
+            >
+              Sell Yours For Cash
+              <ArrowForwardIcon sx={{ fontSize: 16 }} />
+            </Link>
           </div>
         </div>
 

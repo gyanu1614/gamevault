@@ -2,8 +2,9 @@ import { JsonLd, breadcrumbList, faqPage } from '@/lib/seo/jsonld'
 import { SabHeroBackdrop } from '../values/_SabHeroBackdrop'
 import { HubNav } from '@/components/content/HubNav'
 import { HubFooter } from '@/components/content/HubFooter'
-import { getHubNavData, HUB_NAV_CLEAR } from '@/lib/content/hubNav'
+import { getHubNavData } from '@/lib/content/hubNav'
 import { HubBuyCta } from '@/components/content/HubBuyCta'
+import { HubHero } from '@/components/content/HubHero'
 import AdoptMeWflClient from './_AdoptMeWflClient'
 import { getAdoptMeCalcPets } from './_adoptMeCalcData'
 
@@ -56,18 +57,17 @@ export default async function AdoptMeCalculatorPage() {
       <SabHeroBackdrop height={360}>
         <HubNav data={hubNav} calcMode="trade" />
 
-        <div className={`mx-auto w-full max-w-7xl px-4 pb-6 sm:px-6 lg:px-8 ${HUB_NAV_CLEAR}`}>
-          <div className="flex flex-col items-center text-center">
-            <h1 className="text-balance text-[30px] font-bold leading-[1.05] tracking-[-0.02em] text-[#F2F6F0] sm:text-[42px]">
-              Adopt Me WFL Calculator
-            </h1>
-            <p className="mx-auto mt-3 max-w-2xl text-pretty text-[15px] leading-7 text-[#98A398] sm:text-[17px]">
+        <HubHero
+          title="Adopt Me WFL Calculator"
+          lead={
+            <>
               Put both sides of a trade in and see instantly whether it&apos;s a
               Win, Fair or Loss — in trade value and in real money. The only
               WFL checker that shows the cash side.
-            </p>
-          </div>
-        </div>
+            </>
+          }
+        />
+        {/* pb spacer between hero and calculator retained from the old pb-6. */}
 
         <div className="relative mx-auto w-full max-w-7xl px-4 pb-10 sm:px-6 lg:px-8">
           {pets.length === 0 ? (

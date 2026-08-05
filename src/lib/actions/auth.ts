@@ -17,9 +17,31 @@ export async function signup(formData: {
   fullName?: string
   avatarData?: string
   referralCode?: string
+  /**
+   * Where the email-confirmation link should land the user once their session
+   * is established. Flows into /auth/callback as ?next=. Must be a same-origin
+   * relative path (leading "/", not "//"); anything else is ignored and the
+   * callback falls back to "/". Defaults to "/" so existing callers (the global
+   * AuthDialog) are unchanged; the signup-to-sell flow passes
+   * "/account/become-seller" so a confirmed seller lands straight in the wizard.
+   */
+  redirectTo?: string
 }) {
   try {
     const supabase = await createClient()
+
+    // Build the confirmation-link destination. A caller-supplied redirectTo is
+    // carried through /auth/callback via ?next=; guard it to same-origin
+    // relative paths so a bad value can't send the user off-site.
+    const safeNext =
+      formData.redirectTo &&
+      formData.redirectTo.startsWith('/') &&
+      !formData.redirectTo.startsWith('//')
+        ? formData.redirectTo
+        : null
+    const emailRedirectTo =
+      `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback?type=signup` +
+      (safeNext ? `&next=${encodeURIComponent(safeNext)}` : '')
 
     // Log environment check
     console.log('🔍 Checking Supabase connection...')
@@ -59,7 +81,7 @@ export async function signup(formData: {
           username: formData.username,
           full_name: formData.fullName || null,
         },
-        emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback?type=signup`,
+        emailRedirectTo,
       },
     })
 

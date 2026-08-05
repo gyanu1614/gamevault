@@ -189,16 +189,9 @@ export async function getHubStatStrip(gameSlug: string): Promise<HubStat[]> {
     })
   }
 
-  if (published.length > 0) {
-    stats.push({
-      label: 'Pets tracked',
-      value: String(published.length),
-      href: `/${gameSlug}/values`,
-    })
-  }
-
-  // Price mover — ONLY when the history holds >=2 distinct dates for a pet, so
-  // the % is a real change, never a fabricated one. Biggest absolute move wins.
+  // Price movers — ONLY when the history holds >=2 distinct dates for a pet, so
+  // the % is a real change, never fabricated. These change daily (that's the
+  // point — the strip should feel live, not a static count).
   const hist = (histRes.error ? [] : (histRes.data ?? [])) as {
     pet_id: string
     cash_value_usd: number | string | null
@@ -212,7 +205,7 @@ export async function getHubStatStrip(gameSlug: string): Promise<HubStat[]> {
     list.push({ d: r.history_date, u })
     byPet.set(r.pet_id, list)
   }
-  let best: { name: string; pct: number } | null = null
+  const movers: { name: string; slug: string | null; pct: number }[] = []
   for (const [pid, arr] of byPet.entries()) {
     const dates = [...new Set(arr.map((x) => x.d))].sort()
     if (dates.length < 2) continue
@@ -220,19 +213,39 @@ export async function getHubStatStrip(gameSlug: string): Promise<HubStat[]> {
     const last = arr.find((x) => x.d === dates[dates.length - 1])?.u
     if (first == null || last == null || first === 0 || first === last) continue
     const pct = ((last - first) / first) * 100
-    if (!best || Math.abs(pct) > Math.abs(best.pct)) {
-      best = { name: byId.get(pid)?.name ?? 'A pet', pct }
-    }
+    const pet = byId.get(pid)
+    movers.push({ name: pet?.name ?? 'A pet', slug: pet?.slug ?? null, pct })
   }
-  if (best) {
-    const up = best.pct > 0
+
+  // "Trending" = the single biggest MOVE in either direction (the pet everyone's
+  // repricing right now) — distinct from "Biggest riser" (top gainer). Both are
+  // real, both shift daily, so the strip always feels live.
+  const trending = movers
+    .slice()
+    .sort((a, b) => Math.abs(b.pct) - Math.abs(a.pct))[0]
+  const topRiser = movers
+    .filter((m) => m.pct > 0)
+    .sort((a, b) => b.pct - a.pct)[0]
+
+  const pushMover = (
+    label: string,
+    m: { name: string; slug: string | null; pct: number } | undefined,
+  ) => {
+    if (!m) return
+    const up = m.pct > 0
     stats.push({
-      label: up ? 'Biggest riser' : 'Biggest faller',
-      value: best.name,
-      sub: `${up ? '+' : ''}${best.pct.toFixed(0)}%`,
+      label,
+      value: m.name,
+      sub: `${up ? '+' : ''}${m.pct.toFixed(0)}%`,
       trend: up ? 'up' : 'down',
-      href: `/${gameSlug}/values`,
+      href: m.slug ? `/${gameSlug}/values/${m.slug}` : `/${gameSlug}/values`,
     })
+  }
+
+  pushMover('Trending', trending)
+  // Only add "Biggest riser" if it's a DIFFERENT pet than Trending (avoid a dup).
+  if (topRiser && topRiser.name !== trending?.name) {
+    pushMover('Biggest riser', topRiser)
   }
 
   return stats

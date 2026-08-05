@@ -370,7 +370,7 @@ export default async function SabCalculatorPage({
 
       {/* Founding-seller pitch — below the calculator, where a price-checker
           has self-identified as a trader. Skippable; buyer's answer came first. */}
-      <SabSellerCta src="sab-calculator" />
+      <SabSellerCta gameSlug="steal-a-brainrot" gameName="Steal a Brainrot" src="sab-calculator" />
 
       <CalculatorSeo monthYear={monthYear} topValues={topValues} />
       <JsonLd data={faqPage(CALCULATOR_FAQ)} />

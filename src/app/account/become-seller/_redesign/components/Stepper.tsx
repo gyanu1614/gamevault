@@ -17,15 +17,25 @@ interface StepperProps {
    * the seller can go back and edit. Upcoming steps are never clickable.
    */
   onStepClick?: (step: number) => void
+  /**
+   * Optional step list override. Defaults to the seller application's 5 steps
+   * (REDESIGN_STEPS); the signup-to-sell flow passes its own 3-step list so the
+   * SAME rail visual can front the sign-up funnel.
+   */
+  steps?: ReadonlyArray<{ id: number; label: string }>
 }
 
-export default function Stepper({ currentStep, onStepClick }: StepperProps) {
+export default function Stepper({
+  currentStep,
+  onStepClick,
+  steps = REDESIGN_STEPS,
+}: StepperProps) {
   return (
     <ol className="flex flex-col gap-1" aria-label="Application progress">
-      {REDESIGN_STEPS.map((step, i) => {
+      {steps.map((step, i) => {
         const isCompleted = step.id < currentStep
         const isActive = step.id === currentStep
-        const isLast = i === REDESIGN_STEPS.length - 1
+        const isLast = i === steps.length - 1
         const clickable = isCompleted && !!onStepClick
 
         return (
