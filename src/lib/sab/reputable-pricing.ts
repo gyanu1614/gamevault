@@ -25,6 +25,16 @@
 export const REPUTABLE_MIN_REVIEWS = 100
 
 /**
+ * Minimum reputable listings before a reputable price is trustworthy. ONE lone
+ * listing is not a market — a single reputable seller dumping a removed item at
+ * a random price sets a confident-looking wrong value (Tung Tung Tung Sahur,
+ * removed from the game, showed $9,999 off one 10k-review listing). Requiring
+ * two independent reputable sellers kills the single-listing phantoms (only 5
+ * items sit at n=1) while keeping every genuine market (n>=2 items agree).
+ */
+export const REPUTABLE_MIN_LISTINGS = 2
+
+/**
  * A reputable listing priced below this fraction of the reputable median is a
  * fake/bait, not a deal — a $0.25 listing against a $700 market. Dropped before
  * anything else. Kept loose (25%) so genuine cheap listings survive; only the
@@ -88,7 +98,11 @@ export function reputablePrice(
     .map((l) => l.priceUsd)
     .sort((a, b) => a - b)
 
-  if (!reputable.length) return null
+  // One lone reputable listing is not a market — a single seller dumping a
+  // removed/dead item at a random price would publish a confident wrong value.
+  // Require at least REPUTABLE_MIN_LISTINGS; below that, return null and let the
+  // caller fall through to the floor/anchor (or show "not enough data").
+  if (reputable.length < REPUTABLE_MIN_LISTINGS) return null
 
   // Drop fake-cheap baits: below FAKE_CHEAP_RATIO of the reputable median. Use
   // the median of the full reputable set so a cluster of baits can't drag the

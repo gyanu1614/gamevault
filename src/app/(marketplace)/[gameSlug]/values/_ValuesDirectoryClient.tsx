@@ -247,7 +247,9 @@ export default function ValuesDirectoryClient({
     [brainrots],
   )
 
-  const PAGE_SIZE = 25
+  // 24 = a multiple of every grid width (2/3/4/6), so the last row of the card
+  // grid always fills evenly instead of stranding one card on its own row.
+  const PAGE_SIZE = 24
   const searching = query.trim().length > 0
   // A search should look through everything, not just the 10 popular rows —
   // otherwise searching from the landing view mostly returns nothing.
@@ -513,7 +515,7 @@ export default function ValuesDirectoryClient({
                 key={brainrot.id}
                 href={`/steal-a-brainrot/values/${brainrot.slug}`}
                 style={{ ['--rc' as string]: rc } as CSSProperties}
-                className="group flex flex-col overflow-hidden rounded-[14px] border border-[#1E2723] bg-[#0F1512] transition-colors hover:border-[#2C3A31]"
+                className="group flex flex-col overflow-hidden border border-[#1E2723] bg-[#0F1512] transition-colors hover:border-[#2C3A31]"
               >
                 {/* Art on a faint rarity-tinted header */}
                 <div
@@ -523,7 +525,7 @@ export default function ValuesDirectoryClient({
                       'linear-gradient(180deg, color-mix(in srgb, var(--rc) 8%, transparent), transparent)',
                   }}
                 >
-                  <span className="relative flex h-16 w-16 items-center justify-center overflow-hidden rounded-[10px] bg-[#0B0F0C]">
+                  <span className="relative flex h-16 w-16 items-center justify-center overflow-hidden bg-[#0B0F0C]">
                     <span
                       aria-hidden
                       className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
