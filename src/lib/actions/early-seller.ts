@@ -17,6 +17,11 @@ import {
   sendEarlySellerWelcomeEmail,
   sendEarlySellerAdminNotificationEmail,
 } from '@/lib/email'
+import {
+  FOUNDING_SPOT_CAP,
+  FOUNDING_CLAIMED_REVEAL_THRESHOLD,
+  type FoundingProgress,
+} from '@/lib/config/founding-seller'
 
 export interface EarlySellerInput {
   username: string
@@ -24,6 +29,8 @@ export interface EarlySellerInput {
   discord?: string
   sells?: string
   note?: string
+  /** ?src= funnel attribution (banner, footer, a game's blog sell-guide, …). */
+  source?: string
 }
 
 export interface EarlySellerResult {
@@ -46,8 +53,64 @@ export interface EarlySellerSignup {
   discord: string | null
   sells: string | null
   note: string | null
+  /** Funnel attribution — which surface the signup came through. */
+  source: string | null
   status: EarlySellerStatus
   created_at: string
+}
+
+// ── Founding-progress widget ─────────────────────────────────────────────────
+// Consts + the FoundingProgress type live in @/lib/config/founding-seller
+// (a plain module) — a 'use server' file may only export async functions.
+
+/**
+ * Real founding-programme progress for the /early-seller widget. Both numbers
+ * come straight from the DB — no seeding, no inflation. Public + unauthenticated
+ * (service-role because both tables are RLS-locked to reads). Never throws: on
+ * any failure it returns null and the widget simply doesn't render.
+ */
+export async function getFoundingProgress(): Promise<FoundingProgress | null> {
+  try {
+    const supabase = createServiceRoleClient()
+
+    // Granted founding sellers = the honest "claimed" number.
+    const grantedRes = await (supabase as any)
+      .from('profiles')
+      .select('id', { count: 'exact', head: true })
+      .eq('founding_seller', true)
+
+    const granted = grantedRes.count ?? 0
+
+    if (granted >= FOUNDING_CLAIMED_REVEAL_THRESHOLD) {
+      const count = Math.min(granted, FOUNDING_SPOT_CAP)
+      return {
+        mode: 'claimed',
+        count,
+        cap: FOUNDING_SPOT_CAP,
+        percent: Math.min(100, Math.round((count / FOUNDING_SPOT_CAP) * 100)),
+      }
+    }
+
+    // Early days: show real waitlist momentum instead of a near-zero claimed count.
+    const waitlistRes = await (supabase as any)
+      .from('early_seller_signups')
+      .select('id', { count: 'exact', head: true })
+
+    const waitlist = waitlistRes.count ?? 0
+    // Nothing to brag about yet — hide the widget rather than show "0".
+    if (waitlist <= 0) return null
+
+    const count = Math.min(waitlist, FOUNDING_SPOT_CAP)
+    return {
+      mode: 'waitlist',
+      count: waitlist,
+      cap: FOUNDING_SPOT_CAP,
+      percent: Math.min(100, Math.round((count / FOUNDING_SPOT_CAP) * 100)),
+    }
+  } catch (err) {
+    console.error('[early-seller] founding progress failed:', err)
+    return null
+  }
 }
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -88,6 +151,8 @@ export async function submitEarlySeller(
       discord: clean(input.discord, 80),
       sells: clean(input.sells, 300),
       note: clean(input.note, 600),
+      // Funnel attribution — capped; NULL for direct/untagged visits.
+      source: clean(input.source, 120),
       ip,
       user_agent: userAgent,
     }
@@ -172,7 +237,7 @@ export async function getEarlySellerSignups(): Promise<EarlySellerListResult> {
     const supabase = createServiceRoleClient()
     const { data, error } = await (supabase as any)
       .from('early_seller_signups')
-      .select('id, username, email, discord, sells, note, status, created_at')
+      .select('id, username, email, discord, sells, note, source, status, created_at')
       .order('created_at', { ascending: false })
 
     if (error) {

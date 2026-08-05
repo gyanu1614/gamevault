@@ -1,6 +1,7 @@
 import 'server-only'
 import { createClient } from '@/lib/supabase/server'
 import { getAllGames } from '@/lib/utils/games'
+import { hasGameContentTheme } from '@/lib/content/theme'
 
 /**
  * Data for the shared content-hub navbar: the game switcher list and the
@@ -27,6 +28,8 @@ export interface HubNavData {
   /** Storefront links — null when the game lacks that category. */
   itemsHref: string | null
   accountsHref: string | null
+  /** Seller landing (/[game]/sell) — null for games without a content hub. */
+  sellHref: string | null
 }
 
 const GAME_TOOLS: Record<string, Array<'values' | 'calculator'>> = {
@@ -77,6 +80,9 @@ export async function getHubNavData(gameSlug: string): Promise<HubNavData> {
     tools: GAME_TOOLS[gameSlug] ?? [],
     itemsHref,
     accountsHref,
+    // Sell landing exists for any game with a content hub (mirrors the /sell
+    // page's own gate), so the nav always offers a seller door alongside Buy.
+    sellHref: hasGameContentTheme(gameSlug) ? `/${gameSlug}/sell?src=${gameSlug}-hubnav` : null,
   }
 }
 

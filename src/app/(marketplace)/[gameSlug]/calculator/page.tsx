@@ -8,6 +8,7 @@ import { HubNav } from '@/components/content/HubNav'
 import { HubFooter } from '@/components/content/HubFooter'
 import { getHubNavData } from '@/lib/content/hubNav'
 import { asNumber } from '@/lib/sab/format'
+import { SabSellerCta } from '../_SabSellerCta'
 import CalculatorClient, {
   type CalcBrainrot,
   type CalcMutation,
@@ -366,6 +367,10 @@ export default async function SabCalculatorPage({
         // longer greet everyone who lands on the calculator.
         initialTab={resolvedSearchParams.tab === 'cash' ? 'cash' : 'trade'}
       />
+
+      {/* Founding-seller pitch — below the calculator, where a price-checker
+          has self-identified as a trader. Skippable; buyer's answer came first. */}
+      <SabSellerCta gameSlug="steal-a-brainrot" gameName="Steal a Brainrot" src="sab-calculator" />
 
       <CalculatorSeo monthYear={monthYear} topValues={topValues} />
       <JsonLd data={faqPage(CALCULATOR_FAQ)} />

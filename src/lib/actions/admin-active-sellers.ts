@@ -11,6 +11,7 @@ export interface ActiveSeller {
   email: string
   avatar_url: string | null
   seller_tier: string
+  founding_seller: boolean
   approved_at: string
   status: 'active' | 'restricted' | 'banned' | 'warning' | 'suspended'
   stats: {
@@ -64,6 +65,7 @@ export async function getActiveSellers(filters?: {
           email,
           avatar_url,
           seller_tier,
+          founding_seller,
           seller_status,
           updated_at
         )
@@ -103,6 +105,7 @@ export async function getActiveSellers(filters?: {
           email: app.profiles?.email || 'No email',
           avatar_url,
           seller_tier: app.profiles?.seller_tier || 'bronze',
+          founding_seller: app.profiles?.founding_seller === true,
           approved_at: app.reviewed_at || new Date().toISOString(),
           status: app.profiles?.seller_status || 'active',
           stats: {

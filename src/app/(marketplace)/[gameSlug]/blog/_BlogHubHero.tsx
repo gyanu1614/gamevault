@@ -9,7 +9,7 @@
  * Shared by every game's blog hub, so the copy is composed from the game name.
  */
 
-import { HUB_NAV_CLEAR_HERO } from '@/components/content/hubNavGeometry'
+import { HubHero } from '@/components/content/HubHero'
 
 export function BlogHubHero({
   gameName,
@@ -18,20 +18,12 @@ export function BlogHubHero({
   gameName: string
   lead: string
 }) {
+  // Shared hub hero — identical type scale + spacing as Values / Calculator /
+  // Sell, so every hub reads as one family (no bespoke 52px title or extra
+  // top air here anymore).
   return (
     <section>
-      {/* Clearance for the fixed HubNav comes from the shared constant, so a
-          change to the nav's height can't leave this hero overlapping it. */}
-      <div
-        className={`mx-auto w-full max-w-3xl px-4 pb-10 text-center sm:px-6 sm:pb-12 ${HUB_NAV_CLEAR_HERO}`}
-      >
-        <h1 className="text-balance text-[32px] font-bold leading-[1.06] tracking-[-0.03em] text-[#F2F6F0] sm:text-[44px] lg:text-[52px]">
-          {gameName} Blog &amp; News
-        </h1>
-        <p className="mx-auto mt-4 max-w-2xl text-pretty text-[15px] leading-7 text-[#98A398] sm:text-[17px]">
-          {lead}
-        </p>
-      </div>
+      <HubHero title={`${gameName} Blog & News`} lead={lead} />
     </section>
   )
 }

@@ -291,6 +291,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.8,
     },
     {
+      // Seller-intent landing ("sell X for cash") — the top of the seller funnel.
+      url: `${BASE_URL}/steal-a-brainrot/sell`,
+      changeFrequency: 'weekly',
+      priority: 0.75,
+    },
+    {
       // E-E-A-T / AI-citability: how we source & calculate values.
       url: `${BASE_URL}/steal-a-brainrot/values/methodology`,
       changeFrequency: 'monthly',
@@ -323,6 +329,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       url: `${BASE_URL}/adopt-me/calculator`,
       changeFrequency: 'weekly',
       priority: 0.8,
+    },
+    {
+      // Seller-intent landing ("sell X for cash") — top of the seller funnel.
+      url: `${BASE_URL}/adopt-me/sell`,
+      changeFrequency: 'weekly',
+      priority: 0.75,
     },
     {
       url: `${BASE_URL}/adopt-me/neon-calculator`,

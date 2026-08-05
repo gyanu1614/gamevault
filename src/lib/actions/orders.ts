@@ -88,6 +88,7 @@ export async function createOrder(data: CreateOrderData): Promise<{
         seller:seller_id (
           id,
           seller_tier,
+          founding_seller,
           username
         ),
         game:game_id ( slug ),
@@ -145,6 +146,9 @@ export async function createOrder(data: CreateOrderData): Promise<{
       categoryMetaType: listing.category?.metadata?.type as string | undefined,
       categorySlug: listing.category?.slug as string | undefined,
       gameSlug: listing.game?.slug as string | undefined,
+      // Founding sellers pay a permanently reduced commission (lib/fees).
+      // Read straight off the listing's seller join — no extra round-trip.
+      isFounding: listing.seller?.founding_seller === true,
     }
     const commission = commissionAmount(subtotal, feeInput)
 

@@ -150,6 +150,16 @@ export default function AdoptMePetHero({
               Buy {name}
               <ArrowRight className="h-4 w-4" />
             </Link>
+            {/* Sell door — outline, quieter than Buy. No keep-figure: Adopt Me
+                cash values are estimates, so we never attach a $ payout here. */}
+            <Link
+              href="/adopt-me/sell?src=am-item-page"
+              aria-label={`Sell your ${name}`}
+              className="mt-2.5 inline-flex w-full items-center justify-center gap-1.5 border border-[#2F6B46] px-5 py-2.5 text-[13px] font-semibold text-[#8FBF9C] transition hover:border-[#3FA35C] hover:text-[#A6D9B6] lg:w-auto"
+            >
+              Sell {name} For Cash
+              <ArrowRight className="h-4 w-4" />
+            </Link>
           </div>
         </div>
 

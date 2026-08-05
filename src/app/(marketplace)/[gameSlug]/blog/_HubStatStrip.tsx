@@ -19,7 +19,9 @@ export function HubStatStrip({ stats }: { stats: HubStat[] }) {
 
   return (
     <div className="mt-6 sm:mt-8">
-      <div className="flex flex-wrap items-stretch gap-x-8 gap-y-4 border-y border-[#1E2723] py-4 sm:gap-x-12">
+      {/* Centered, floating — no divider lines above/below (the strip stands on
+          its own over the hero backdrop). */}
+      <div className="flex flex-wrap items-stretch justify-center gap-x-8 gap-y-4 sm:gap-x-14">
         {stats.map((stat) => {
           const inner = (
             <span className="flex items-center gap-3">

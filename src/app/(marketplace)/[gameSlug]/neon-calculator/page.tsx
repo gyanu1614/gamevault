@@ -4,8 +4,9 @@ import { JsonLd, breadcrumbList, faqPage } from '@/lib/seo/jsonld'
 import { SabHeroBackdrop } from '../values/_SabHeroBackdrop'
 import { HubNav } from '@/components/content/HubNav'
 import { HubFooter } from '@/components/content/HubFooter'
-import { getHubNavData, HUB_NAV_CLEAR } from '@/lib/content/hubNav'
+import { getHubNavData } from '@/lib/content/hubNav'
 import { HubBuyCta } from '@/components/content/HubBuyCta'
+import { HubHero } from '@/components/content/HubHero'
 import { getAdoptMeCalcPets } from '../calculator/_adoptMeCalcData'
 import AdoptMeNeonClient from './_AdoptMeNeonClient'
 
@@ -86,17 +87,15 @@ export default async function NeonCalculatorPage({ params }: PageProps) {
       <SabHeroBackdrop height={340}>
         <HubNav data={hubNav} />
 
-        <div className={`mx-auto w-full max-w-3xl px-4 pb-6 sm:px-6 lg:px-8 ${HUB_NAV_CLEAR}`}>
-          <div className="text-center">
-            <h1 className="text-balance text-[30px] font-bold leading-[1.05] tracking-[-0.02em] text-[#F2F6F0] sm:text-[40px]">
-              Adopt Me Neon Cost Calculator
-            </h1>
-            <p className="mx-auto mt-3 max-w-2xl text-pretty text-[15px] leading-7 text-[#98A398] sm:text-[16px]">
+        <HubHero
+          title="Adopt Me Neon Cost Calculator"
+          lead={
+            <>
               How many pets it takes to make a Neon or Mega — and whether it&apos;s
               cheaper to build one or just buy it. In real money.
-            </p>
-          </div>
-        </div>
+            </>
+          }
+        />
 
         <div className="relative mx-auto w-full max-w-3xl px-4 pb-10 sm:px-6 lg:px-8">
           {pets.length === 0 ? (

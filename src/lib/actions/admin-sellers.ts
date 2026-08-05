@@ -239,6 +239,39 @@ export async function toggleSellerTest(profileId: string, isTest: boolean) {
 }
 
 /**
+ * Grant or revoke founding-seller status on a real seller profile (Phase 0
+ * seller acquisition). This is the ONLY way profiles.founding_seller flips —
+ * the /early-seller waitlist is triage only and never sets it. Being founding
+ * gives a permanently reduced commission (src/lib/fees, FOUNDING_DISCOUNT_PTS,
+ * read at order-creation time) and a storefront badge, so it must be
+ * admin-gated.
+ *
+ * Mirrors toggleSellerTest: service-role client (RLS blocks writing another
+ * user's profile) and `founding` is the CURRENT value, so we persist its
+ * negation — the caller passes what it is, we flip it.
+ */
+export async function setFoundingSeller(profileId: string, founding: boolean) {
+  await requireAdmin()
+  const { createClient: createServiceClient } = await import('@supabase/supabase-js')
+  const admin = createServiceClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  )
+
+  const { error } = await (admin.from('profiles') as any)
+    .update({ founding_seller: !founding })
+    .eq('id', profileId)
+
+  if (error) return { success: false, error: error.message }
+
+  const { revalidatePath } = await import('next/cache')
+  revalidatePath('/admin/sellers')
+  revalidatePath('/admin/active-sellers')
+  revalidatePath('/') // storefronts render the founding badge
+  return { success: true }
+}
+
+/**
  * Get all seller applications with filters
  */
 export async function getSellerApplications(

@@ -3,7 +3,8 @@ import { SITE_URL } from '@/config/site'
 import { SabHeroBackdrop } from './_SabHeroBackdrop'
 import { HubNav } from '@/components/content/HubNav'
 import { HubFooter } from '@/components/content/HubFooter'
-import { getHubNavData, HUB_NAV_CLEAR } from '@/lib/content/hubNav'
+import { getHubNavData } from '@/lib/content/hubNav'
+import { HubHero } from '@/components/content/HubHero'
 import AdoptMeValuesClient from './_AdoptMeValuesClient'
 import { getAdoptMePets } from './_adoptMeData'
 import { HubBuyCta } from '@/components/content/HubBuyCta'
@@ -53,18 +54,16 @@ export default async function AdoptMeValuesPage() {
         />
 
         <section>
-          <div className={`mx-auto w-full max-w-7xl px-4 pb-8 sm:px-6 lg:px-8 ${HUB_NAV_CLEAR}`}>
-            <div className="flex flex-col items-center text-center">
-              <h1 className="text-balance text-[32px] font-bold leading-[1.04] tracking-[-0.03em] text-[#F2F6F0] sm:text-[42px] lg:text-[54px]">
-                Adopt Me Value List
-              </h1>
-              <p className="mx-auto mt-4 max-w-3xl text-pretty text-[15px] leading-7 text-[#98A398] sm:text-[17px]">
+          <HubHero
+            title="Adopt Me Value List"
+            lead={
+              <>
                 What every pet is worth — in community trade value and in real
                 money. Pick a variant to reprice the whole list; Fly Ride is the
                 trading benchmark.
-              </p>
-            </div>
-          </div>
+              </>
+            }
+          />
         </section>
 
         {/* The list MUST live inside SabHeroBackdrop: the backdrop is an

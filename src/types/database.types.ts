@@ -2841,6 +2841,7 @@ export type Database = {
           positive_reviews: number | null
           referral_code: string | null
           referred_by: string | null
+          founding_seller: boolean
           role: string | null
           seller_balance: number
           seller_rating: number | null
@@ -2895,6 +2896,7 @@ export type Database = {
           pending_balance?: number
           positive_reviews?: number | null
           referral_code?: string | null
+          founding_seller?: boolean
           referred_by?: string | null
           role?: string | null
           seller_balance?: number
@@ -2950,6 +2952,7 @@ export type Database = {
           pending_balance?: number
           positive_reviews?: number | null
           referral_code?: string | null
+          founding_seller?: boolean
           referred_by?: string | null
           role?: string | null
           seller_balance?: number

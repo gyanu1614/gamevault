@@ -131,6 +131,7 @@ export default function SellerStorefront({ seller }: SellerStorefrontProps) {
             listingsCount={seller.stats.activeListings}
             totalSales={seller.stats.totalSales}
             sellerTier={sellerTier as 'bronze' | 'silver' | 'gold' | 'platinum' | 'diamond'}
+            isFoundingSeller={seller.profile.founding_seller === true}
             bannerConfig={
               seller.profile.banner_url
                 ? { type: 'custom', url: seller.profile.banner_url }

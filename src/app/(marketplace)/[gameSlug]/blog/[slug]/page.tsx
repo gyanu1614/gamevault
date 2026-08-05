@@ -12,6 +12,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getGamePost, getPostsTaggedForGame } from '@/lib/blog/db'
+import { SabSellerCta } from '../../_SabSellerCta'
 import { formatDate } from '@/lib/sab/format'
 import { JsonLd, breadcrumbList } from '@/lib/seo/jsonld'
 import { SITE_URL } from '@/config/site'
@@ -168,34 +169,31 @@ export default async function GameBlogArticle({
               a 3-4 word product name, an article H1 is a full sentence. At
               hub scale ("Steal a Brainrot - Value" is 54px) a long title would
               run to four lines and swamp the fold, so this tops out at 38px. */}
-          <div className="mx-auto max-w-3xl text-center">
-            <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.16em] text-[#4FB477]">
-              {kindLabel}
-            </p>
+          <div className="max-w-3xl">
+            {/* Eyebrow + read-time on one line — the tag reads as a label. */}
+            <div className="mb-3 flex flex-wrap items-center gap-2.5">
+              <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#4FB477]">
+                {kindLabel}
+              </span>
+              <span aria-hidden className="text-[#3A463A]">·</span>
+              <span className="font-mono text-[11px] text-[#5E685E]">
+                {post.readMinutes} min read
+              </span>
+            </div>
             {/* Title — heavier weight + tight tracking for a strong, crawlable
                 H1; the article H1 is the primary on-page SEO signal. */}
             <h1 className="text-balance text-[27px] font-bold leading-[1.1] tracking-[-0.03em] text-[#F1F3F1] sm:text-[34px] lg:text-[38px]">
               {post.title}
             </h1>
-            <p className="mx-auto mt-4 max-w-2xl text-pretty text-[15px] leading-7 text-[#B7C0B8] sm:text-[17px]">
+            <p className="mt-4 max-w-2xl text-pretty text-[15px] leading-7 text-[#B7C0B8] sm:text-[17px]">
               {post.excerpt}
             </p>
 
-            {/* Byline */}
-            <div className="mt-7 flex flex-wrap items-center justify-center gap-3.5 border-t border-[#191F19] pt-5">
-              <span className="flex h-9 w-9 items-center justify-center border border-[#23331F] bg-[#0D140E] font-mono text-[11px] font-bold text-[#8FBF9C]">
-                DM
-              </span>
-              <span className="flex flex-col gap-1 text-left">
-                <span className="text-[13px] font-semibold text-[#D7DED4]">
-                  {post.author}
-                </span>
-                <span className="font-mono text-[11px] text-[#5E685E]">
-                  {updatedLabel ? `UPDATED ${updatedLabel} · ` : ''}
-                  {post.readMinutes} MIN READ
-                </span>
-              </span>
-            </div>
+            {/* Byline — a single quiet line under the intro, left-aligned. */}
+            <p className="mt-5 font-mono text-[11px] text-[#5E685E]">
+              <span className="text-[#8FBF9C]">{post.author}</span>
+              {updatedLabel ? ` · Updated ${updatedLabel}` : ''}
+            </p>
           </div>
         </div>
       </SabHeroBackdrop>
@@ -264,6 +262,12 @@ export default async function GameBlogArticle({
                 </Link>
               </div>
             </div>
+
+            {/* Sell CTA — now UNCONDITIONAL (every article, not just
+                post_type='seller'). The buy CTA above is always-on; the sell
+                door should be too, so a reader of any guide can go either way.
+                One generalized component (per-game founding rate). */}
+            <SabSellerCta gameSlug={gameSlug} gameName={game.name} src={`${gameSlug}-blog-${slug}`} />
 
             {/* Related guides */}
             {related.length > 0 && (

@@ -20,10 +20,26 @@ import Stepper from './Stepper'
 interface LeftRailProps {
   currentStep: number
   onStepClick?: (step: number) => void
+  /**
+   * Optional overrides so the SAME rail can front a different flow (the
+   * signup-to-sell funnel) without duplicating the shell. Everything defaults
+   * to the seller application's values, so /account/become-seller is unchanged.
+   */
+  steps?: ReadonlyArray<{ id: number; label: string }>
+  heading?: string
+  subheading?: string
+  trustByStep?: Record<number, { title: string; body: string }>
 }
 
-export default function LeftRail({ currentStep, onStepClick }: LeftRailProps) {
-  const trust = TRUST_BY_STEP[currentStep] ?? TRUST_BY_STEP[1]
+export default function LeftRail({
+  currentStep,
+  onStepClick,
+  steps,
+  heading = 'Seller Application',
+  subheading = 'A short, formal application. Everything you enter stays encrypted and private.',
+  trustByStep = TRUST_BY_STEP,
+}: LeftRailProps) {
+  const trust = trustByStep[currentStep] ?? trustByStep[1]
 
   return (
     <aside
@@ -75,17 +91,16 @@ export default function LeftRail({ currentStep, onStepClick }: LeftRailProps) {
             </span>
           </div>
           <h1 className="text-3xl font-semibold tracking-tight text-white xl:text-[2rem]">
-            Seller Application
+            {heading}
           </h1>
           <p className="mt-2 max-w-xs text-sm leading-relaxed text-white/70">
-            A short, formal application. Everything you enter stays encrypted and
-            private.
+            {subheading}
           </p>
         </div>
 
         {/* Middle: stepper */}
         <div className="my-10">
-          <Stepper currentStep={currentStep} onStepClick={onStepClick} />
+          <Stepper currentStep={currentStep} onStepClick={onStepClick} steps={steps} />
         </div>
 
         {/* Bottom: rotating trust block, cross-fades per step */}

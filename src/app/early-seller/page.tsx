@@ -7,8 +7,10 @@
  */
 
 import type { Metadata } from 'next'
-import { IconPercentage, IconRocket, IconRosetteDiscountCheck } from '@tabler/icons-react'
+import { Suspense } from 'react'
+import { IconPercentage, IconRocket, IconRosetteDiscountCheck, IconShieldCheck } from '@tabler/icons-react'
 import { EarlySellerForm } from './_EarlySellerForm'
+import { getFoundingProgress } from '@/lib/actions/early-seller'
 
 const AMBER = '#F5C451'
 
@@ -29,8 +31,13 @@ export const metadata: Metadata = {
 const PERKS = [
   {
     icon: IconPercentage,
-    title: 'Reduced Seller Fees',
-    body: 'Lock in a lower commission rate that stays with your account permanently — even after full launch.',
+    title: 'A Lower Fee, Locked For Life',
+    body: 'Keep more of every sale than on the big marketplaces — a lower rate that stays with your account permanently, even after full launch, and never goes back up.',
+  },
+  {
+    icon: IconShieldCheck,
+    title: 'Paid Even If The Buyer Ghosts',
+    body: 'SafeDrop escrow holds the buyer’s payment the moment they order and releases it to you on delivery — so a buyer who disappears can’t cost you a completed sale.',
   },
   {
     icon: IconRocket,
@@ -44,7 +51,11 @@ const PERKS = [
   },
 ]
 
-export default function EarlySellerPage() {
+export default async function EarlySellerPage() {
+  // Real founding-programme progress (waitlist momentum now, claimed bar later).
+  // Fetched server-side so the widget arrives rendered — no client flash.
+  const progress = await getFoundingProgress()
+
   return (
     <main className="relative min-h-screen">
       {/* Ambient warm glow behind the hero. */}
@@ -82,8 +93,8 @@ export default function EarlySellerPage() {
 
         <p className="mx-auto mt-4 max-w-xl text-center text-[15px] leading-relaxed text-text-secondary text-balance">
           We&apos;re opening the marketplace to our first sellers. Join the first
-          100 to lock in reduced fees, get early access, and earn a permanent
-          founding-seller badge on your storefront.
+          100 to lock a lower fee for life, get paid even if a buyer ghosts with
+          SafeDrop escrow, and earn a permanent founding-seller badge.
         </p>
 
         {/* Perks — floating rows separated by hairlines, no boxed cards. */}
@@ -106,9 +117,13 @@ export default function EarlySellerPage() {
           ))}
         </div>
 
-        {/* Form */}
+        {/* Form. Suspense boundary required: EarlySellerForm reads ?src= via
+            useSearchParams, which opts the subtree into client-side rendering
+            and would otherwise fail the build. */}
         <div className="mt-10">
-          <EarlySellerForm />
+          <Suspense fallback={null}>
+            <EarlySellerForm progress={progress} />
+          </Suspense>
         </div>
       </div>
     </main>

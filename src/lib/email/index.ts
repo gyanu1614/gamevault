@@ -1,4 +1,5 @@
 import { Resend } from 'resend'
+import { DISCORD_INVITE_URL } from '@/lib/config/founding-seller'
 
 // Lazily construct the Resend client on first send, not at module load.
 // `new Resend(undefined)` throws immediately, which would crash any page that
@@ -1469,11 +1470,13 @@ export async function sendEarlySellerWelcomeEmail({
                   <p style="margin:0 0 16px;font-size:19px;font-weight:800;color:#ffffff;">Drop<span style="color:#a3e635;">Market</span></p>
                   <p style="margin:0 0 14px;display:inline-block;border:1px solid rgba(245,196,81,0.35);border-radius:7px;padding:5px 10px;font-size:11px;font-weight:700;letter-spacing:0.08em;color:#f5c451;">BETA &middot; FIRST 100 SELLERS</p>
                   <h1 style="margin:0 0 8px;font-size:20px;font-weight:700;color:#ffffff;">You're on the list, ${safeUsername}</h1>
-                  <p style="margin:0 0 22px;font-size:14px;line-height:1.55;color:#a1a1aa;">Thanks for registering as a founding seller. We're onboarding the first 100 in batches &mdash; we'll reach out by email or Discord when it's your turn.</p>
-                  <div style="background:rgba(163, 230, 53, 0.08);border:1px solid rgba(163, 230, 53, 0.3);border-radius:8px;padding:14px 16px;margin:0 0 18px;text-align:left;">
-                    <p style="margin:0;color:#a1a1aa;font-size:13px;line-height:1.6;">Your founding-seller perks: <strong style="color:#ffffff;">reduced commission locked in permanently</strong>, early listing access before public launch, and a founding badge on your storefront.</p>
+                  <p style="margin:0 0 20px;font-size:14px;line-height:1.55;color:#a1a1aa;">Thanks for registering as a founding seller. Onboarding runs on Discord &mdash; <strong style="color:#ffffff;">join the founding-seller community below</strong> to get set up. We onboard the first 100 in batches and will email you when it's your turn.</p>
+                  <div style="background:rgba(245, 196, 81, 0.08);border:1px solid rgba(245, 196, 81, 0.3);border-radius:8px;padding:14px 16px;margin:0 0 22px;text-align:left;">
+                    <p style="margin:0 0 8px;color:#f5c451;font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;">Your founding-seller perks</p>
+                    <p style="margin:0;color:#a1a1aa;font-size:13px;line-height:1.6;"><strong style="color:#ffffff;">A reduced commission locked to your account for life</strong>, early listing access before public launch, and a founding badge on your storefront.</p>
                   </div>
-                  <a href="${APP_URL}/early-seller" style="display:inline-block;background-color:#a3e635;color:#0a0a0f;text-decoration:none;padding:11px 28px;border-radius:6px;font-weight:700;font-size:14px;">See the Programme</a>
+                  <a href="${DISCORD_INVITE_URL}" style="display:inline-block;background-color:#f5c451;color:#141414;text-decoration:none;padding:11px 28px;border-radius:6px;font-weight:700;font-size:14px;">Join the Founding-Seller Discord</a>
+                  <p style="margin:16px 0 0;font-size:12px;line-height:1.5;color:#71717a;">Or <a href="${APP_URL}/early-seller" style="color:#a1a1aa;">see the full programme</a>.</p>
                 </div>
               </td></tr>
               <tr><td align="center" style="padding:14px 8px 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:11px;line-height:1.6;color:#a1a1aa;">

@@ -62,7 +62,8 @@ export function HubFooter({
     ...(itemsHref ? [{ name: `Buy ${gameName} Items`, href: itemsHref }] : []),
     ...(accountsHref ? [{ name: `${gameName} Accounts`, href: accountsHref }] : []),
     { name: 'Browse All Listings', href: '/browse' },
-    { name: 'Sell With Us', href: '/sell' },
+    // Per-game seller landing (bare /sell 404s). Keyword-anchored for SEO.
+    { name: `Sell ${gameName}`, href: `/${gameSlug}/sell` },
   ]
 
   return (

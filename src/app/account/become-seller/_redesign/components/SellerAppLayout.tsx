@@ -26,6 +26,17 @@ interface SellerAppLayoutProps {
   onStepClick?: (step: number) => void
   /** Opens the "watch how it works" video modal — stays reachable inside the shell. */
   onWatchVideo?: () => void
+  /**
+   * Optional rail overrides so the SAME shell can front a different flow (the
+   * signup-to-sell funnel: 3 steps, "Become a seller" heading). Everything
+   * defaults to the seller application, so /account/become-seller is unchanged.
+   */
+  rail?: {
+    steps?: ReadonlyArray<{ id: number; label: string }>
+    heading?: string
+    subheading?: string
+    trustByStep?: Record<number, { title: string; body: string }>
+  }
   children: ReactNode
 }
 
@@ -33,6 +44,7 @@ export default function SellerAppLayout({
   currentStep,
   onStepClick,
   onWatchVideo,
+  rail,
   children,
 }: SellerAppLayoutProps) {
   return (
@@ -42,7 +54,14 @@ export default function SellerAppLayout({
     >
       {/* Left rail — fixed, does not scroll (desktop only). */}
       <div className="lg:h-screen">
-        <LeftRail currentStep={currentStep} onStepClick={onStepClick} />
+        <LeftRail
+          currentStep={currentStep}
+          onStepClick={onStepClick}
+          steps={rail?.steps}
+          heading={rail?.heading}
+          subheading={rail?.subheading}
+          trustByStep={rail?.trustByStep}
+        />
       </div>
 
       {/* Right pane — ivory with soft forest washes, scrolls. */}
@@ -58,7 +77,7 @@ export default function SellerAppLayout({
           ].join(', '),
         }}
       >
-        <MobileProgress currentStep={currentStep} />
+        <MobileProgress currentStep={currentStep} steps={rail?.steps} />
 
         {/* Watch-how-it-works trigger, reachable from inside the stepper. */}
         {onWatchVideo && (

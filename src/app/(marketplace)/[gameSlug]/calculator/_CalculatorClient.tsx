@@ -137,13 +137,14 @@ export default function CalculatorClient({
         {/* Hero copy */}
         {/* Centred hero, matching the Values page. The lead is wider than the
             headline on purpose so it sets in two lines rather than three. */}
-        <div className="mx-auto max-w-3xl text-center">
-          <h1 className="text-balance text-[32px] font-bold leading-[1.04] tracking-[-0.03em] text-[#F2F6F0] sm:text-[42px] lg:text-[48px]">
+        {/* Type scale matches the shared HubHero (30 → 42px, mt-3). Kept
+            inline rather than <HubHero> because this hero shares its clearance
+            section with the calculator body below. */}
+        <div className="flex flex-col items-center text-center">
+          <h1 className="text-balance text-[30px] font-bold leading-[1.05] tracking-[-0.02em] text-[#F2F6F0] sm:text-[42px]">
             Steal a Brainrot WFL Calculator
           </h1>
-          {/* Wider than the headline on purpose: at max-w-2xl this wrapped to three
-              lines. It does not need to match the title's measure. */}
-          <p className="mx-auto mt-4 max-w-4xl text-pretty text-[15px] leading-7 text-[#98A398] sm:text-[17px]">
+          <p className="mx-auto mt-3 max-w-2xl text-pretty text-[15px] leading-7 text-[#98A398] sm:text-[17px]">
             Put both sides of a trade in and see instantly whether it&apos;s a
             Win, Fair or Loss — priced from real completed sales, not guesses.
             Need a single item&apos;s price? Switch to Cash Price.
@@ -526,13 +527,26 @@ function CashResult({
               {price ? formatConfidence(price.confidenceLabel).toUpperCase() : 'NO DATA'}
             </span>
           </div>
-          <Link
-            href={buyHref}
-            className="inline-flex items-center gap-1.5 self-start bg-[#3FA35C] px-5 py-3.5 text-[13px] font-semibold text-[#08110B] transition hover:bg-[#4CBB6B]"
-          >
-            Buy {brainrot.name}
-            <ArrowForwardIcon sx={{ fontSize: 16 }} />
-          </Link>
+          {/* Buy / Sell split at the price — both intents at peak arousal.
+              Buy solid (loud), Sell outline (quieter). Keep-figure only on a
+              real price; % from fee consts. */}
+          <div className="flex flex-wrap items-center gap-2.5 self-start">
+            <Link
+              href={buyHref}
+              className="inline-flex items-center gap-1.5 bg-[#3FA35C] px-5 py-3.5 text-[13px] font-semibold text-[#08110B] transition hover:bg-[#4CBB6B]"
+            >
+              Buy {brainrot.name}
+              <ArrowForwardIcon sx={{ fontSize: 16 }} />
+            </Link>
+            <Link
+              href="/steal-a-brainrot/sell?src=sab-calc-result"
+              aria-label={`Sell your ${brainrot.name}`}
+              className="inline-flex items-center gap-1.5 border border-[#2F6B46] px-5 py-3.5 text-[13px] font-semibold text-[#8FBF9C] transition hover:border-[#3FA35C] hover:text-[#A6D9B6]"
+            >
+              Sell Yours For Cash
+              <ArrowForwardIcon sx={{ fontSize: 16 }} />
+            </Link>
+          </div>
         </div>
       </div>
 

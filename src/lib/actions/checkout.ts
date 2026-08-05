@@ -55,7 +55,7 @@ export async function createCheckout(input: CreateCheckoutInput): Promise<Create
     // Listing + seller tier (server-side; never trust client amounts).
     const { data: listingRaw, error: listingError } = await supabase
       .from('listings')
-      .select('*, seller:seller_id ( id, seller_tier, username ), game:game_id ( slug ), category:category_id ( slug, metadata )')
+      .select('*, seller:seller_id ( id, seller_tier, founding_seller, username ), game:game_id ( slug ), category:category_id ( slug, metadata )')
       .eq('id', input.listingId)
       .single() as any
     const listing = listingRaw as any
@@ -76,6 +76,9 @@ export async function createCheckout(input: CreateCheckoutInput): Promise<Create
       categoryMetaType: listing.category?.metadata?.type as string | undefined,
       categorySlug: listing.category?.slug as string | undefined,
       gameSlug: listing.game?.slug as string | undefined,
+      // Founding sellers pay a permanently reduced commission (lib/fees).
+      // Read straight off the listing's seller join — no extra round-trip.
+      isFounding: listing.seller?.founding_seller === true,
     }
     const commission = commissionAmount(subtotal, feeInput)
     const promoDiscount = Math.min(Math.max(input.promoDiscount ?? 0, 0), subtotal)

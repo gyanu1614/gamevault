@@ -90,6 +90,20 @@ export const ROBLOX_ECONOMY_GAMES: string[] = [
 export const PROMO_ZERO_FEE_GAMES: string[] = []
 
 /**
+ * Founding-seller commission discount, in PERCENTAGE POINTS off the seller's
+ * per-category rate (floored at 0). This is what makes the "founding seller
+ * locks a reduced rate for life" perk real: a founding seller pays
+ * `max(0, categoryPct − FOUNDING_DISCOUNT_PTS)` on every category, forever
+ * (see profiles.founding_seller, granted by admin). It applies AFTER the
+ * promo/roblox-economy/account-risk category rate is resolved, so the discount
+ * follows each category proportionally rather than flattening them:
+ *   Roblox economy 10 → 8,  items/boosting 7 → 5,  standard currency 5 → 3,
+ *   mid-risk accounts 15 → 13,  promo 0 → 0 (already floored).
+ * ADJUSTABLE — one place to retune the founding programme.
+ */
+export const FOUNDING_DISCOUNT_PTS = 2
+
+/**
  * Account risk bands by game slug (spec: each account listing maps to
  * exactly one band via catalog config). Unlisted games default to mid.
  */
@@ -109,10 +123,21 @@ export interface CommissionInput {
   categoryMetaType?: string | null
   categorySlug?: string | null
   gameSlug?: string | null
+  /**
+   * When true, apply the founding-seller discount (FOUNDING_DISCOUNT_PTS off
+   * the resolved category rate, floored at 0). Sourced from
+   * profiles.founding_seller by the caller (checkout/orders look the seller up
+   * before computing commission). Omitted/false = today’s behaviour exactly.
+   */
+  isFounding?: boolean
 }
 
-/** Commission % for a listing (spec §1 table). */
-export function commissionPct(input: CommissionInput): number {
+/**
+ * Category commission %, BEFORE the founding-seller discount. This is the raw
+ * spec §1 table lookup; founding logic lives in commissionPct so this stays a
+ * pure category→rate map (also what the public Fees page quotes).
+ */
+function categoryCommissionPct(input: CommissionInput): number {
   const type: OfferType = classifyOfferType(
     input.categoryMetaType ?? undefined,
     input.categorySlug ?? undefined,
@@ -132,6 +157,17 @@ export function commissionPct(input: CommissionInput): number {
       // Boosting classifies as items today; both are 7% (spec §1).
       return COMMISSION_PCT.items
   }
+}
+
+/**
+ * Effective commission % for a listing (spec §1 table), after the
+ * founding-seller discount when `input.isFounding` is set. Founding sellers pay
+ * `max(0, categoryPct − FOUNDING_DISCOUNT_PTS)`.
+ */
+export function commissionPct(input: CommissionInput): number {
+  const base = categoryCommissionPct(input)
+  if (input.isFounding) return Math.max(0, base - FOUNDING_DISCOUNT_PTS)
+  return base
 }
 
 /** Commission amount on the item price (never on the buyer fee). */
