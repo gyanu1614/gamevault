@@ -44,12 +44,17 @@ export default function EmailConfirmedToast() {
     const qs = params.toString()
     router.replace(qs ? `${pathname}?${qs}` : pathname || '/')
 
+    // When we fall back to the sign-in modal, send the user back to where the
+    // confirmation link was headed (the current path) after they log in —
+    // otherwise they'd sign in and land on the homepage.
+    const postLoginRedirect = pathname && pathname !== '/' ? pathname : undefined
+
     if (authError) {
       if (authError === 'link_expired') {
         toast.error('Confirmation Link Expired', {
           description: 'Sign in and we can resend it.',
         })
-        open('login')
+        open('login', { redirect: postLoginRedirect })
       } else {
         toast.error('Confirmation Failed', {
           description: 'Try the link again or request a new one.',
@@ -72,7 +77,7 @@ export default function EmailConfirmedToast() {
           toast.success('Email Confirmed', {
             description: 'Sign in to continue.',
           })
-          open('login')
+          open('login', { redirect: postLoginRedirect })
         }
       } catch {
         // If the session read fails, still acknowledge the confirmation and
@@ -81,7 +86,7 @@ export default function EmailConfirmedToast() {
         toast.success('Email Confirmed', {
           description: 'Sign in to continue.',
         })
-        open('login')
+        open('login', { redirect: postLoginRedirect })
       }
     })()
   }, [searchParams, pathname, router, open])
