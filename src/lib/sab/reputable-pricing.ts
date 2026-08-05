@@ -55,6 +55,18 @@ export const CHEAPEST_MAX_GAP = 2
 /** How many of the cheapest reputable listings define the "average" band. */
 export const AVERAGE_SAMPLE_SIZE = 5
 
+/**
+ * The "average" band only includes listings within this multiple of the
+ * cheapest. Some items pool wildly different income tiers into one "default"
+ * price (a 550M/s Headless at $4000 next to a 16B/s Headless at $9,999), which
+ * would inflate a naive median-of-5. Capping the band to CHEAPEST × this keeps
+ * the average anchored to the real cheapest cluster. 2x is loose enough that
+ * genuine within-tier dispersion survives (Signore $709-899, Meowl $290-330 are
+ * both well under 2x, untouched) but a tier jump is excluded (Headless: the
+ * $9k+ high-B/s tier drops out of the $4000 base-tier average).
+ */
+export const AVERAGE_MAX_SPREAD = 2.0
+
 export type ReputableListing = {
   priceUsd: number
   /** Seller's total review/order count (Eldorado userOrderInfo.ratingCount). */
@@ -127,12 +139,17 @@ export function reputablePrice(
   }
   const cheapestUsd = sane[cheapestIndex]
 
-  // AVERAGE — the typical reputable price: median of the AVERAGE_SAMPLE_SIZE
-  // cheapest sane listings from the cheapest upward. Robust to the long
-  // expensive tail (a handful of $2000+ listings can't move it), and always has
-  // enough support because it's a fixed small count, not a percentage band.
-  const band = sane.slice(cheapestIndex, cheapestIndex + AVERAGE_SAMPLE_SIZE)
-  const averageUsd = median(band) ?? cheapestUsd
+  // AVERAGE — the typical reputable price: median of the cheapest sane listings
+  // from the cheapest upward, capped BOTH by count (AVERAGE_SAMPLE_SIZE) and by
+  // spread (within AVERAGE_MAX_SPREAD × cheapest). The count cap keeps it robust
+  // to the long expensive tail; the spread cap stops a pooled higher income tier
+  // (Headless $4000 base vs $9,999 high-B/s) from inflating it. Always includes
+  // at least the cheapest itself.
+  const spreadLimit = cheapestUsd * AVERAGE_MAX_SPREAD
+  const band = sane
+    .slice(cheapestIndex, cheapestIndex + AVERAGE_SAMPLE_SIZE)
+    .filter((p) => p <= spreadLimit)
+  const averageUsd = median(band.length ? band : [cheapestUsd]) ?? cheapestUsd
 
   return {
     cheapestUsd,
