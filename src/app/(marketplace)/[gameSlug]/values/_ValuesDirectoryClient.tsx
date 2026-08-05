@@ -155,11 +155,17 @@ export type BrainrotDirectoryItem = {
   cheapest_usd?: number | null
   average_usd?: number | null
   /**
-   * Listings/sales we actually observed behind this item's price. The only
-   * popularity signal we hold — our own marketplace counters are all still
-   * zero — so it's what the Popular view ranks by.
+   * Listings/sales we actually observed behind this item's price. Legacy
+   * popularity proxy — kept as the tiebreaker; the primary Popular ordering is
+   * now popularity_rank.
    */
   sample_size?: number | null
+  /**
+   * Real marketplace popularity rank (1 = most popular), from Eldorado's
+   * usePopularItems ordering. The Popular tab sorts by this; null-rank items
+   * (never seen in the popular feed) sort after all ranked items.
+   */
+  popularity_rank?: number | null
 }
 
 type SortOption = 'value-desc' | 'name' | 'income-desc' | 'income-asc'
@@ -276,9 +282,15 @@ export default function ValuesDirectoryClient({
       return matchesQuery && matchesRarity && matchesObtainability
     })
 
-    // Popular = most observed market activity first, whole list.
+    // Popular = real marketplace popularity first (Eldorado's usePopularItems
+    // ranking), whole list. Lower rank = more popular = earlier; items with no
+    // rank (never in the popular feed) sort after all ranked ones, then by our
+    // own observed activity, then by value.
     if (effectiveView === 'popular') {
       return [...filtered].sort((a, b) => {
+        const ra = a.popularity_rank ?? Number.POSITIVE_INFINITY
+        const rb = b.popularity_rank ?? Number.POSITIVE_INFINITY
+        if (ra !== rb) return ra - rb
         const diff = (asNumber(b.sample_size) ?? 0) - (asNumber(a.sample_size) ?? 0)
         return diff !== 0 ? diff : compareValue(a, b)
       })
