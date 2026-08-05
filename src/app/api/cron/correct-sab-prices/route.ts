@@ -66,8 +66,12 @@ type ReputableRow = {
   brainrot_id: string
   mutation_id: string
   unit_price_usd: number | string | null
-  /** Eldorado ratingCount — total seller reviews; the reputable gate. */
-  seller_sales_count: number | null
+  /**
+   * The full imported item. seller_sales_count (Eldorado ratingCount — total
+   * seller reviews, the reputable gate) lives here because the import RPC copies
+   * the whole payload but never fills the dedicated column.
+   */
+  raw_payload: { seller_sales_count?: number | string | null } | null
   listing_status: string | null
   parse_status: string | null
   is_bundle: boolean | null
@@ -151,13 +155,15 @@ export async function GET(request: NextRequest) {
         'sab_market_clean_listing_evidence',
         'brainrot_id,mutation_id,unit_price_usd,source_slug',
       ),
-      // Active raw listings carry the per-seller review count (seller_sales_count
-      // = Eldorado ratingCount) that the reputable-pricing model gates on. The
-      // clean evidence view doesn't expose it, so read the raw listings directly.
+      // Active raw listings carry the per-seller review count that the
+      // reputable-pricing model gates on. The import RPC stores it inside
+      // raw_payload (not the seller_sales_count COLUMN, which it never populates),
+      // so read raw_payload and pull the count from there. The clean evidence
+      // view doesn't expose reviews at all, so this is the only source.
       selectAll<ReputableRow>(
         admin,
         'sab_market_raw_listings',
-        'brainrot_id,mutation_id,unit_price_usd,seller_sales_count,listing_status,parse_status,is_bundle,is_account_listing,is_inventory_listing,is_duplicate,is_outlier,rejection_reason',
+        'brainrot_id,mutation_id,unit_price_usd,raw_payload,listing_status,parse_status,is_bundle,is_account_listing,is_inventory_listing,is_duplicate,is_outlier,rejection_reason',
       ),
     ])
 
@@ -215,7 +221,7 @@ export async function GET(request: NextRequest) {
       }
       const price = toNumber(row.unit_price_usd)
       if (price == null || price <= 0) continue
-      const reviews = row.seller_sales_count
+      const reviews = toNumber(row.raw_payload?.seller_sales_count)
       if (reviews == null || !Number.isFinite(reviews)) continue
 
       const key = `${row.brainrot_id}:${row.mutation_id}`
