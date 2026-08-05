@@ -623,7 +623,7 @@ export default function ValuesDirectoryClient({
                         we don't yet hold reputable data. */}
                     <span className="hidden text-right lg:block">
                       {cheapestPrice ? (
-                        <span className="font-mono text-[14.5px] tabular-nums text-[#C6CEC9]">
+                        <span className="font-mono text-[15px] font-medium tabular-nums text-[#E4E9E5]">
                           {cheapestPrice}
                         </span>
                       ) : (
