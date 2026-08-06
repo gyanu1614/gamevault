@@ -21,6 +21,7 @@ import { usePathname } from 'next/navigation'
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown'
 import NorthEastIcon from '@mui/icons-material/NorthEast'
 import SellOutlinedIcon from '@mui/icons-material/SellOutlined'
+import ShoppingBagOutlinedIcon from '@mui/icons-material/ShoppingBagOutlined'
 import type { HubNavData } from '@/lib/content/hubNav'
 
 const TOOL_LABEL: Record<'values' | 'calculator', string> = {
@@ -61,6 +62,55 @@ export function HubNav({
   }, [open])
 
   const { current, games, tools, itemsHref, accountsHref, sellHref } = data
+
+  // The page tabs, built once and rendered in two places: the inline desktop
+  // nav (md+) and the mobile sub-row (below md). One source avoids drift.
+  const tabs: { key: string; label: string; href: string }[] = [
+    { key: 'guides', label: 'Guides', href: `/${current.slug}/blog` },
+    // The calculator's two modes are their own tabs rather than a dropdown: two
+    // options never justified a menu, and flat tabs are one tap instead of two
+    // — plus both are crawlable links.
+    ...tools.flatMap((tool) =>
+      tool === 'calculator'
+        ? [
+            {
+              key: 'calculator',
+              label: 'WFL Calculator',
+              href: `/${current.slug}/calculator`,
+            },
+            // "Cash Price" is a SAB-only tab (its calculator has a ?tab=cash
+            // mode). Adopt Me has no separate cash tab — its value list IS the
+            // cash lookup — so it's omitted there.
+            ...(current.slug === 'adopt-me'
+              ? []
+              : [
+                  {
+                    key: 'cash',
+                    label: 'Cash Price',
+                    href: `/${current.slug}/calculator?tab=cash`,
+                  },
+                ]),
+          ]
+        : [
+            {
+              key: tool,
+              label: TOOL_LABEL[tool as 'values' | 'calculator'],
+              href: `/${current.slug}/${tool}`,
+            },
+          ],
+    ),
+  ]
+
+  const isTabActive = (tab: { key: string; href: string }) => {
+    // ?tab=cash and the bare calculator URL share a pathname, so the active tab
+    // is decided by the query too — otherwise both light up.
+    const onCalculator = pathname.startsWith(`/${current.slug}/calculator`)
+    return tab.key === 'calculator'
+      ? onCalculator && calcMode !== 'cash'
+      : tab.key === 'cash'
+        ? onCalculator && calcMode === 'cash'
+        : pathname.startsWith(tab.href)
+  }
 
   return (
     // Always solid — no transparent state at the top of the page. A hair
@@ -127,7 +177,9 @@ export function HubNav({
                 {current.name.slice(0, 3).toUpperCase()}
               </span>
             )}
-            <span className="hidden whitespace-nowrap text-[16px] font-semibold text-[#F1F3F1] md:inline">
+            {/* Game name now shows on mobile too — the top/sub split frees the
+                room the single row didn't have. Slightly smaller on phones. */}
+            <span className="whitespace-nowrap text-[15px] font-semibold text-[#F1F3F1] sm:text-[16px]">
               {current.name}
             </span>
             <KeyboardArrowDownIcon
@@ -187,69 +239,19 @@ export function HubNav({
         </div>
         </div>
 
-        {/* ── Section tabs, centred: Guides (home) + data-driven tools ──
-            Below md the row must stay shrinkable and scrollable — brand + tabs
-            + Buy items are wider than a phone, and this is the element that
-            gives. From md up it takes its natural width and the flex-1 side
-            groups centre it on the page. */}
-        {/* justify-start below md, NOT center: when this row overflows,
-            centering clips BOTH ends and leaves the first tab unreachable
-            ("ides" instead of "Guides"). Left-aligned, the first tab is always
-            whole and the rest scroll into view. At md+ it no longer overflows
-            and the flex-1 side groups do the centring. */}
-        <nav className="flex min-w-0 flex-1 items-center justify-start gap-4 self-stretch overflow-x-auto sm:gap-7 md:flex-none md:justify-center md:gap-9 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {[
-            { key: 'guides', label: 'Guides', href: `/${current.slug}/blog` },
-            // The calculator's two modes are their own tabs rather than a
-            // dropdown: two options never justified a menu, and flat tabs are
-            // one tap instead of two — plus both are crawlable links.
-            ...tools.flatMap((tool) =>
-              tool === 'calculator'
-                ? [
-                    {
-                      key: 'calculator',
-                      label: 'WFL Calculator',
-                      href: `/${current.slug}/calculator`,
-                    },
-                    // "Cash Price" is a SAB-only tab (its calculator has a
-                    // ?tab=cash mode). Adopt Me has no separate cash tab — its
-                    // value list IS the cash lookup — so it's omitted there.
-                    ...(current.slug === 'adopt-me'
-                      ? []
-                      : [
-                          {
-                            key: 'cash',
-                            label: 'Cash Price',
-                            href: `/${current.slug}/calculator?tab=cash`,
-                          },
-                        ]),
-                  ]
-                : [
-                    {
-                      key: tool,
-                      label: TOOL_LABEL[tool],
-                      href: `/${current.slug}/${tool}`,
-                    },
-                  ],
-            ),
-          ].map((tab) => {
-            // ?tab=cash and the bare calculator URL share a pathname, so the
-            // active tab is decided by the query too — otherwise both light up.
-            const onCalculator = pathname.startsWith(`/${current.slug}/calculator`)
-            const active =
-              tab.key === 'calculator'
-                ? onCalculator && calcMode !== 'cash'
-                : tab.key === 'cash'
-                  ? onCalculator && calcMode === 'cash'
-                  : pathname.startsWith(tab.href)
-
+        {/* ── Section tabs — DESKTOP (md+) only ──
+            Inline in the single row, centred on the page by the flex-1 side
+            groups. On mobile these move to the sub-row below the top row. */}
+        <nav className="hidden min-w-0 items-center justify-center gap-9 self-stretch md:flex md:flex-none">
+          {tabs.map((tab) => {
+            const active = isTabActive(tab)
             return (
               <Link
                 key={tab.key}
                 href={tab.href}
                 // h-full so the active underline sits on the bar's bottom edge
                 // rather than hugging the text.
-                className={`relative flex h-full shrink-0 items-center whitespace-nowrap text-[14px] font-semibold transition sm:text-[15px] ${
+                className={`relative flex h-full shrink-0 items-center whitespace-nowrap text-[15px] font-semibold transition ${
                   active ? 'text-[#F1F3F1]' : 'text-[#A6B2AA] hover:text-[#E4EAE2]'
                 }`}
               >
@@ -263,8 +265,10 @@ export function HubNav({
         </nav>
 
         {/* ── Storefront buttons — one SOLID BUY (green) + one SOLID SELL
-            (amber), a clean pair separated by a divider. Data-driven per game. ── */}
-        <div className="flex shrink-0 items-center justify-end gap-2.5 md:flex-1">
+            (amber), a clean pair separated by a divider. Data-driven per game.
+            ml-auto pushes the pair to the right edge on mobile (where the middle
+            nav is hidden); md:flex-1 takes over the centring role from md up. ── */}
+        <div className="ml-auto flex shrink-0 items-center justify-end gap-2.5 md:ml-0 md:flex-1">
           {(() => {
             // Buy = items board when it exists, else the accounts board.
             const buyHref = itemsHref ?? accountsHref
@@ -274,7 +278,9 @@ export function HubNav({
                 href={buyHref}
                 className="flex items-center gap-1.5 whitespace-nowrap bg-[#3FA35C] px-3 py-2.5 text-[13px] font-semibold text-[#08110B] transition hover:bg-[#4CBB6B] sm:px-4 sm:py-3 sm:text-[14px]"
               >
-                {/* Short label on phones, game name on larger screens. */}
+                {/* Bag icon on phones (matches the Sell pill's icon+text); the
+                    nudging arrow takes over from sm up. */}
+                <ShoppingBagOutlinedIcon sx={{ fontSize: 15 }} className="sm:hidden" />
                 <span className="sm:hidden">Shop</span>
                 <span className="hidden sm:inline">Shop {current.name}</span>
                 <span className="hidden animate-arrow-nudge motion-reduce:animate-none sm:inline-block">
@@ -300,6 +306,31 @@ export function HubNav({
           )}
         </div>
       </div>
+
+      {/* ── Mobile sub-row: the page tabs (below md only) ──
+          The desktop nav above is hidden under md; these move here so the top
+          row stays uncluttered. Left-aligned + horizontally scrollable so a long
+          set (Guides · Values · WFL Calculator · Cash Price) never clips the way
+          the old single-row bar did. */}
+      <nav className="flex items-center gap-6 overflow-x-auto border-t border-[#1E2723] px-4 [scrollbar-width:none] md:hidden [&::-webkit-scrollbar]:hidden">
+        {tabs.map((tab) => {
+          const active = isTabActive(tab)
+          return (
+            <Link
+              key={tab.key}
+              href={tab.href}
+              className={`relative flex shrink-0 items-center whitespace-nowrap py-2.5 text-[14px] font-semibold transition ${
+                active ? 'text-[#F1F3F1]' : 'text-[#A6B2AA] hover:text-[#E4EAE2]'
+              }`}
+            >
+              {tab.label}
+              {active && (
+                <span className="absolute inset-x-0 bottom-0 h-[2px] bg-[#4FB477]" />
+              )}
+            </Link>
+          )
+        })}
+      </nav>
     </header>
   )
 }
