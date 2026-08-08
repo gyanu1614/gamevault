@@ -49,7 +49,12 @@ const VARIANT_LABEL: Record<Variant, string> = {
 export interface AdoptMeVariantValue {
   variant: Variant
   tradeValue: number | null
+  /** Headline cash = reputable market (average) when present, else legacy value. */
   cashUsd: number | null
+  /** Lowest reputable-seller price (100+ reviews). Null until priced. */
+  cheapestUsd: number | null
+  /** Reputable market price (median of cheapest reputable listings). */
+  averageUsd: number | null
   isEstimated: boolean
   confidence: string
 }

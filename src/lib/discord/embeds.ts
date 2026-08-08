@@ -45,6 +45,14 @@ export function pageUrl(path: string): string {
   return `${SITE_URL}/${GAME_SLUG}${path}?${REF}`
 }
 
+/**
+ * Where /sell sends a would-be seller. The lighter waitlist on-ramp
+ * (email + username, no auth/KYC wall) rather than the auth-gated listing
+ * wizard — the KYC wall is the funnel's #1 leak, so the first touch stays
+ * frictionless and the concierge team takes it from the captured lead.
+ */
+export const SELLER_APPLY_URL = `${SITE_URL}/early-seller?${REF}`
+
 const FOOTER = { text: 'DropMarket Values • dropmarket.gg' }
 
 function linkButton(label: string, url: string): Component {
@@ -303,6 +311,117 @@ export function wflMessage(
     components: [
       linkButton('Open Trade Calculator ↗', pageUrl('/trade-calculator')),
     ],
+  }
+}
+
+/**
+ * `/sell` — the conversion command.
+ *
+ * Deliberately NOT a public listing: the bot never posts a peer sell offer
+ * (that would make the server an unregulated trading venue and put every scam
+ * on our books). Instead it replies EPHEMERALLY to the seller with their item's
+ * live value and routes them to the on-site application, where KYC + SafeDrop
+ * escrow live. The lead itself is mirrored to a private staff channel by the
+ * caller — see `sellerLeadPayload`.
+ */
+export function sellMessage(
+  pricing: BrainrotPricing,
+  selectedSlug: string,
+): MessagePayload {
+  const variant =
+    pricing.mutations.find((m) => m.mutationSlug === selectedSlug) ??
+    pricing.defaultPrice ??
+    pricing.mutations[0]
+
+  // Prefer the reputable average (the headline "market price"), else the
+  // corrected value — same precedence the /value embed uses.
+  const marketUsd = variant?.averageUsd ?? variant?.valueUsd ?? null
+  const valueLine =
+    marketUsd != null
+      ? `Your **${pricing.name}**${variant && variant.mutationSlug !== 'default' ? ` (${variant.mutationName})` : ''} is worth about **${formatCash(marketUsd)}** right now.`
+      : `We don't have a firm value for **${pricing.name}** yet — but you can still list it.`
+
+  const embed: Embed = {
+    title: '💸 Sell it for cash — safely',
+    description: [
+      valueLine,
+      '',
+      'On Discord you go first and hope they pay. On **DropMarket**, SafeDrop holds the buyer’s money *before* you deliver — so **you always get paid, even if the buyer ghosts**. No chargebacks, no “you first”, no scams.',
+      '',
+      '**Verified sellers get** a trust badge, priority placement, and buyers who came here *because* it’s safe. Founding sellers lock a reduced commission for life.',
+    ].join('\n'),
+    color: BRAND_COLOR,
+    footer: FOOTER,
+  }
+
+  if (pricing.imageUrl) embed.thumbnail = { url: pricing.imageUrl }
+
+  return {
+    embeds: [embed],
+    flags: MessageFlags.Ephemeral,
+    allowed_mentions: { parse: [] },
+    components: [linkButton('Apply to sell ↗', SELLER_APPLY_URL)],
+  }
+}
+
+/**
+ * A warm-lead card for the private staff channel. Fire-and-forget via webhook —
+ * a named seller intent (item + asking price + who) for 1:1 concierge outreach,
+ * which is how the first sellers actually get recruited. Never shown to members.
+ */
+export function sellerLeadPayload(input: {
+  brainrotName: string
+  mutationName: string | null
+  valueUsd: number | null
+  askingPrice: string | null
+  handle: string | null
+  userId: string | null
+}): MessagePayload {
+  const fields: EmbedField[] = [
+    {
+      name: 'Item',
+      value: clamp(
+        input.mutationName && input.mutationName !== 'Default'
+          ? `${input.brainrotName} · ${input.mutationName}`
+          : input.brainrotName,
+        Limits.fieldValue,
+      ),
+      inline: true,
+    },
+    {
+      name: 'Our value',
+      value: formatCash(input.valueUsd) ?? 'Unknown',
+      inline: true,
+    },
+  ]
+
+  if (input.askingPrice) {
+    fields.push({
+      name: 'Asking',
+      value: clamp(input.askingPrice, 100),
+      inline: true,
+    })
+  }
+
+  fields.push({
+    name: 'Seller',
+    value:
+      (input.userId ? `<@${input.userId}>` : null) ??
+      (input.handle ? `@${clamp(input.handle, 80)}` : 'unknown'),
+    inline: false,
+  })
+
+  return {
+    embeds: [
+      {
+        title: '🎯 New seller lead',
+        description: 'Someone ran `/sell` — a warm lead to DM.',
+        color: BRAND_COLOR,
+        fields,
+        footer: FOOTER,
+      },
+    ],
+    allowed_mentions: { parse: [] },
   }
 }
 

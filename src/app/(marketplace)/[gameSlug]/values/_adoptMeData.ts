@@ -25,6 +25,8 @@ type ValueRow = {
   variant: string
   trade_value: number | string | null
   cash_value_usd: number | string | null
+  cheapest_usd: number | string | null
+  average_usd: number | string | null
   is_estimated: boolean
   confidence: string | null
 }
@@ -45,7 +47,9 @@ export async function getAdoptMePets(): Promise<AdoptMePetItem[]> {
       .eq('is_active', true),
     (supabase as any)
       .from('adopt_me_pet_values')
-      .select('pet_id,variant,trade_value,cash_value_usd,is_estimated,confidence'),
+      .select(
+        'pet_id,variant,trade_value,cash_value_usd,cheapest_usd,average_usd,is_estimated,confidence',
+      ),
   ])
 
   if (petsRes.error) {
@@ -70,12 +74,18 @@ export async function getAdoptMePets(): Promise<AdoptMePetItem[]> {
     for (const row of valuesByPet.get(pet.id) ?? []) {
       if (!(VARIANTS as readonly string[]).includes(row.variant)) continue
       const tradeValue = num(row.trade_value)
-      const cashUsd = num(row.cash_value_usd)
+      const averageUsd = num(row.average_usd)
+      const cheapestUsd = num(row.cheapest_usd)
+      // Headline cash = the reputable market (average) when we have it, else the
+      // legacy cash_value_usd. Cheapest is shown alongside on the pet page.
+      const cashUsd = averageUsd ?? num(row.cash_value_usd)
       if (tradeValue != null && tradeValue > topTradeValue) topTradeValue = tradeValue
       values[row.variant as Variant] = {
         variant: row.variant as Variant,
         tradeValue,
         cashUsd,
+        cheapestUsd,
+        averageUsd,
         isEstimated: row.is_estimated,
         confidence: row.confidence ?? 'low',
       }

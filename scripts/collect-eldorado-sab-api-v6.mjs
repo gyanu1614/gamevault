@@ -124,17 +124,44 @@ async function supabaseRows(table, select, order) {
   const url = new URL(`/rest/v1/${table}`, base);
   url.searchParams.set("select", select);
   if (order) url.searchParams.set("order", order);
-  const response = await fetch(url, {
-    headers: {
-      apikey: key,
-      authorization: `Bearer ${key}`,
-      accept: "application/json",
-    },
-  });
-  if (!response.ok) {
-    throw new Error(`Supabase ${table} query failed (${response.status}): ${await response.text()}`);
+
+  // sab_public_price_catalog is a VIEW that recomputes an aggregation over ~16k
+  // rows on every full scan, so under concurrent DB load its unbounded fetch
+  // intermittently trips the statement timeout (57014 → 500). That's transient,
+  // so retry with backoff rather than aborting the whole crawl on one spike.
+  const maxAttempts = 4;
+  let lastError = null;
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    let response;
+    try {
+      response = await fetch(url, {
+        headers: {
+          apikey: key,
+          authorization: `Bearer ${key}`,
+          accept: "application/json",
+        },
+      });
+    } catch (networkError) {
+      lastError = networkError;
+      await sleep(500 * attempt);
+      continue;
+    }
+    if (response.ok) return response.json();
+
+    const body = await response.text();
+    lastError = new Error(
+      `Supabase ${table} query failed (${response.status}): ${body}`,
+    );
+    // Only retry the transient classes: statement timeout (57014) and 5xx.
+    const retryable =
+      response.status >= 500 || body.includes("57014");
+    if (!retryable || attempt === maxAttempts) throw lastError;
+    console.warn(
+      `  ${table} query timed out (attempt ${attempt}/${maxAttempts}) — retrying…`,
+    );
+    await sleep(1000 * attempt);
   }
-  return response.json();
+  throw lastError;
 }
 
 async function buildQueue(requestedName) {
@@ -446,6 +473,31 @@ function detectMutation(text, mutations) {
     const name = comparable(row.name);
     return normalized.includes(` ${name} `) || normalized.startsWith(`${name} `) || normalized.endsWith(` ${name}`);
   }) ?? null;
+}
+
+/**
+ * Resolve the seller's structured "Mutations" attribute value (e.g. "Gold",
+ * "None", "Yin Yang", "Crystal") to a catalog mutation — the PRIMARY source of
+ * truth. Probe-confirmed clean and 1:1 with sab_mutations, whereas titles
+ * routinely OMIT the mutation word ("Dragon Cannelloni" for a Gold), so the
+ * attribute is trusted first and the title is the fallback.
+ *
+ *   - "None" / "default" / "no mutation" -> the `default` mutation (a real,
+ *                                           trusted "this is base" signal)
+ *   - a value that maps to a catalog name -> that mutation row
+ *   - anything off-catalog ("Crystal", a future mutation, empty) -> null,
+ *     meaning "the attribute tells us nothing" so the caller falls back to the
+ *     title (never a drop on this alone).
+ *
+ * Delegates to detectMutation so the same comparable() normalizer and the
+ * None->default special-case are reused — the 14-row catalog IS the whitelist,
+ * no hand-maintained alias table.
+ */
+function mutationFromAttribute(attrValue, mutations) {
+  if (typeof attrValue !== "string" || !attrValue.trim()) return null;
+  // Wrap as `x <value> x` so detectMutation's word-boundary matcher fires for
+  // single-token names, exactly as the old veto path did.
+  return detectMutation(`x ${attrValue} x`, mutations);
 }
 
 function findOfferObjects(payload, expectedName) {
@@ -830,7 +882,13 @@ function searchOffersApiUrl(searchQuery) {
 function hasEnoughSamples(candidates, mutations, target) {
   const counts = new Map();
   for (const c of candidates) {
-    const mut = c.mutation ?? detectMutation(c.text, mutations);
+    // Count by the SAME attribute-primary rule the real loop files by, so a
+    // page of attribute-Gold / title-silent listings registers as Gold samples
+    // instead of piling into `default` and stopping pagination too early.
+    const mut =
+      mutationFromAttribute(c.attribute_mutation, mutations) ??
+      c.mutation ??
+      detectMutation(c.text, mutations);
     if (!mut?.slug) continue;
     counts.set(mut.slug, (counts.get(mut.slug) ?? 0) + 1);
   }
@@ -1033,25 +1091,40 @@ async function collectOne({
     : bodyCandidates;
 
   for (const candidate of rawCandidates) {
-    // Point 1: derive the mutation from the TITLE (detectMutation), and if the
-    // seller also set a structured Mutations attribute, require it to AGREE.
-    // A listing whose title-mutation contradicts its own attribute is
-    // mislabeled — drop it rather than guess which one is right.
-    const mutation = candidate.mutation ?? detectMutation(candidate.text, mutations);
-    if (!mutation?.id) continue;
+    // Point 1 (attribute-primary): the seller's structured "Mutations"
+    // attribute is the source of truth; the TITLE is the fallback. Titles
+    // routinely omit the mutation word ("Dragon Cannelloni" for a Gold), so
+    // trusting the title first misfiled those as None and lost the sample.
+    // The disagreement guard still drops a listing whose attribute and title
+    // each resolve to a DIFFERENT real (non-default) mutation — mislabeled and
+    // untrustworthy either way. A None/absent/off-catalog attribute never vetoes.
+    const attrMutation = mutationFromAttribute(
+      candidate.attribute_mutation,
+      mutations,
+    );
+    const titleMutation =
+      candidate.mutation ?? detectMutation(candidate.text, mutations);
 
-    if (candidate.attribute_mutation) {
-      const attrMutation = detectMutation(
-        `x ${candidate.attribute_mutation} x`,
-        mutations,
-      );
-      // Only enforce when the attribute maps to a mutation we recognise; an
-      // unmappable attribute string tells us nothing.
-      if (attrMutation?.slug && attrMutation.slug !== mutation.slug) {
-        mutationDisagreementRejects += 1;
-        continue;
-      }
+    if (
+      attrMutation?.id &&
+      attrMutation.slug !== "default" &&
+      titleMutation?.id &&
+      titleMutation.slug !== "default" &&
+      attrMutation.slug !== titleMutation.slug
+    ) {
+      mutationDisagreementRejects += 1;
+      continue;
     }
+
+    // Attribute wins when it maps to a real (non-default) mutation; otherwise
+    // (attribute absent, "None", or off-catalog like "Crystal") fall back to
+    // the title — which can still upgrade a None-attribute listing whose title
+    // clearly states the mutation. Skip only when NEITHER yields a mutation.
+    const mutation =
+      attrMutation?.id && attrMutation.slug !== "default"
+        ? attrMutation
+        : titleMutation;
+    if (!mutation?.id) continue;
 
     const incomeRanges = parseIncomeRanges(candidate.text);
     if (incomeRanges.length === 0) {
@@ -1097,6 +1170,9 @@ async function collectOne({
     // in the 5-9.99 B/s band while the collector picked the 1-4.99 B/s band and
     // kept only the expensive $454-999 tail. So pool ALL bands for mutations.
     if (mutationSlug !== "default") {
+      // Mutations pool all bands, so every listing is "canonical" for its
+      // mutation — cheapest and market both draw from the same pooled set.
+      for (const row of rows) row.is_canonical_band = true;
       selectedCandidates.push(...rows);
       const allBands = [...new Set(rows.map((r) => r.income_range.label))];
       selectedIncomeBands[mutationSlug] = {
@@ -1149,13 +1225,26 @@ async function collectOne({
       continue;
     }
 
-    selectedCandidates.push(...chosen.rows);
-    incomeFilteredCount += rows.length - chosen.rows.length;
+    // Emit ALL default-mutation bands, tagging which is CANONICAL. Rationale:
+    // for default, the income band distinguishes genuinely different-value items
+    // (a 250M/s vs an 875M/s Dragon Cannelloni), so MARKET price must come from
+    // the canonical band only. But CHEAPEST just wants the lowest real clean
+    // listing regardless of M/s — an 875M/s selling for $16 IS a cheaper way to
+    // get the pet. So we keep every band's listings (tagging non-canonical ones)
+    // rather than discard them, and let the correction layer use the canonical
+    // flag: market = canonical band, cheapest = all bands.
+    const canonicalRows = new Set(chosen.rows);
+    for (const row of rows) {
+      row.is_canonical_band = canonicalRows.has(row);
+    }
+    selectedCandidates.push(...rows);
     selectedIncomeBands[mutationSlug] = {
       label: chosen.rows[0].income_range.label,
       lower: chosen.rows[0].income_range.lower,
       upper: chosen.rows[0].income_range.upper,
       sample_count: chosen.rows.length,
+      total_emitted: rows.length,
+      non_canonical_emitted: rows.length - chosen.rows.length,
       matched_expected_income: chosen.matchesExpected,
       expected_income_per_second: hasExpectedIncome
         ? expectedIncome
@@ -1169,9 +1258,25 @@ async function collectOne({
   // when the API gave us no id.
   const seenBySeller = new Set();
   const byVariant = new Map();
-  for (const candidate of selectedCandidates) {
+  // Canonical-band rows first, then cheapest non-canonical — so the per-variant
+  // sample cap never starves the MARKET band, while the cheapest off-band
+  // listings still make it through for CHEAPEST.
+  const orderedCandidates = [...selectedCandidates].sort((a, b) => {
+    const ac = a.is_canonical_band === false ? 1 : 0;
+    const bc = b.is_canonical_band === false ? 1 : 0;
+    if (ac !== bc) return ac - bc;
+    return (a.price ?? 0) - (b.price ?? 0);
+  });
+  for (const candidate of orderedCandidates) {
     const variantRows = byVariant.get(candidate.mutation.slug) ?? [];
-    if (variantRows.length >= samplesPerVariant) continue;
+    // The cap counts CANONICAL rows only. Non-canonical (off-band) default
+    // listings ride through uncapped-by-this so CHEAPEST can always see the
+    // real floor — a handful of cheap outliers, not a flood.
+    const canonicalCount = variantRows.filter(
+      (row) => row.is_canonical_band !== false,
+    ).length;
+    if (candidate.is_canonical_band !== false && canonicalCount >= samplesPerVariant)
+      continue;
     const signals = extractListingSignals(candidate);
     const seller = candidate.seller ?? {};
 
@@ -1231,6 +1336,10 @@ async function collectOne({
             upper: candidate.income_range.upper ?? null,
           }
         : null,
+      // Whether this listing sits in the CANONICAL income band (the one that
+      // sets MARKET price). Non-canonical default listings still ride through so
+      // CHEAPEST can undercut across bands. Mutations are always canonical.
+      is_canonical_band: candidate.is_canonical_band ?? true,
       collector_version: COLLECTOR_VERSION,
     });
     byVariant.set(candidate.mutation.slug, variantRows);
