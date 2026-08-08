@@ -850,32 +850,18 @@ function correctDefault(
     }
   }
 
-  // Removed / unobtainable items have no real market — any listing is someone
-  // dumping a dead item at a random price (Tung Tung Tung Sahur, removed from the
-  // game, showed $9,999). Publish nothing rather than a confident phantom value.
-  // A human-reviewed price already returned above, so a deliberate "last known
-  // value" still wins; this only suppresses the scraped price.
-  if (meta?.obtainability === 'unobtainable') {
-    return {
-      ...base,
-      valueUsd: null,
-      lowUsd: null,
-      highUsd: null,
-      reason: 'insufficient_evidence',
-      confidence: 'none',
-      anchorUsd: anchor,
-      cohortSize: cohort.length,
-      isAnchored: false,
-      isPublishable: false,
-    }
-  }
-
-  // Reputable-seller pricing — the strongest signal, so it outranks the floor.
-  // A price is real only if a seller with 100+ reviews offers it; the model
-  // returns the reputable Cheapest and the typical Average. The headline value
-  // is the Average (what it usually sells for); cheapest rides alongside. Only
-  // fires when we hold reputable evidence — sources without review data
-  // (G2G/Itemku) fall through to the source-trust floor below.
+  // Reputable-seller pricing — the strongest signal, so it outranks everything
+  // below (including unobtainable suppression). A price is real only if a seller
+  // with 100+ reviews offers it; the model returns the reputable Cheapest and
+  // the typical Average. The headline value is the Average (what it usually
+  // sells for); cheapest rides alongside.
+  //
+  // This runs BEFORE the unobtainable check on purpose: an item can be
+  // unobtainable IN-GAME yet have a thriving RESALE market (Bacuru and Egguru —
+  // no longer dropped, but 23 reputable sellers actively list it at $0.50).
+  // When reputable sellers are actively trading it, the market is real
+  // regardless of obtainability. Only sources without review data (G2G/Itemku)
+  // fall through to the source-trust floor below.
   const reputable = reputableFor(variant)
   if (reputable) {
     return {
@@ -891,6 +877,27 @@ function correctDefault(
       cohortSize: cohort.length,
       isAnchored: false,
       isPublishable: true,
+    }
+  }
+
+  // Removed / unobtainable items with NO reputable market — any listing is
+  // someone dumping a dead item at a random price (Tung Tung Tung Sahur, removed
+  // from the game, showed $9,999 off one listing). Publish nothing rather than a
+  // confident phantom value. A human-reviewed price already returned above, and
+  // an actively-traded unobtainable item took the reputable branch above; this
+  // only suppresses the scraped price for genuinely dead items.
+  if (meta?.obtainability === 'unobtainable') {
+    return {
+      ...base,
+      valueUsd: null,
+      lowUsd: null,
+      highUsd: null,
+      reason: 'insufficient_evidence',
+      confidence: 'none',
+      anchorUsd: anchor,
+      cohortSize: cohort.length,
+      isAnchored: false,
+      isPublishable: false,
     }
   }
 
@@ -970,13 +977,22 @@ function correctDefault(
       }
     }
 
-    // No trustworthy floor (too few/too-scattered listings): the median blend
-    // is still real evidence, so publish it as before — but never advertise a
-    // low below the point-5 cluster floor, so the displayed range can't quote a
-    // fake-cheap listing the price itself rejected.
+    // No trustworthy floor AND no reputable seller. Prefer the cheapest
+    // SUPPORTED price (a cluster the market agrees on) over the median midpoint,
+    // so a genuinely cheap item shows what a buyer actually pays instead of a
+    // fabricated middle (Noobini Pizzanini: tight [2.06,2.94,6.69,6.99] → $2.06,
+    // not the $4.97 median). But use lowestSupportedPrice, NOT a raw minimum, so
+    // a lone bait-low ([1,8,40,120] → $1) can never set the value; when no
+    // cluster is supportable we keep the median blend as before. Never advertise
+    // a low below the point-5 cluster floor either.
+    const supportedLow = lowestSupportedPrice(variant.listingPrices ?? [])
+    const honestValue =
+      isUsable(supportedLow) && supportedLow <= (variant.valueUsd ?? Infinity)
+        ? supportedLow
+        : variant.valueUsd
     return {
       ...base,
-      valueUsd: variant.valueUsd,
+      valueUsd: roundCents(honestValue),
       lowUsd: clampLowToClusterFloor(variant.lowUsd, variant.listingPrices),
       highUsd: variant.highUsd,
       reason: 'trusted',
