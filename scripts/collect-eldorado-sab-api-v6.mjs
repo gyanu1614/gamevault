@@ -1629,6 +1629,53 @@ async function main() {
     throw new Error("SAB_MARKET_IMPORT_SECRET is required with --send");
   }
   await runImporter(options.outputPath);
+
+  // Reprice IMMEDIATELY after the whole crawl has landed. The correction cron
+  // is a single point-in-time read of the raw table; if it runs on its own
+  // clock while a multi-batch crawl is still importing, it prices a partial
+  // snapshot and stores a stale cheapest (Elefanto Frigo showed $259.99 while a
+  // $248 reputable listing existed). Triggering it HERE — after the last batch
+  // — closes that race by construction, for manual crawls too (a workflow-only
+  // step wouldn't cover `npm run sab:eldorado:send` run locally). Mirrors what
+  // adopt-me-daily.yml already does. Best-effort: the 10:00 UTC Vercel cron is
+  // an idempotent backstop, so a failure here never fails the crawl.
+  await triggerCorrection();
+}
+
+/**
+ * POST the SAB correction cron so the freshly-imported listings are repriced
+ * right away. No-op (with a note) when the trigger env isn't configured, so a
+ * bare `--send` still works; never throws — repricing is a follow-up, not part
+ * of the import's success.
+ */
+async function triggerCorrection() {
+  const apiUrl = process.env.PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_SITE_URL;
+  const secret = process.env.CRON_SECRET;
+  if (!apiUrl || !secret) {
+    console.log(
+      "\nSkipping post-crawl reprice (set PUBLIC_API_URL + CRON_SECRET to enable). " +
+        "The scheduled correct-prices cron will catch up.",
+    );
+    return;
+  }
+  const url = `${apiUrl.replace(/\/$/, "")}/api/cron/correct-prices?game=sab`;
+  try {
+    console.log("\nRepricing after crawl → correct-prices?game=sab …");
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { authorization: `Bearer ${secret}` },
+    });
+    const body = await response.text();
+    if (!response.ok) {
+      console.error(
+        `Post-crawl reprice failed (${response.status}): ${body.slice(0, 300)}`,
+      );
+      return;
+    }
+    console.log(`Repriced: ${body.slice(0, 300)}`);
+  } catch (error) {
+    console.error(`Post-crawl reprice threw: ${error.message}`);
+  }
 }
 
 main().catch((error) => {
