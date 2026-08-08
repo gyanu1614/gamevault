@@ -282,17 +282,43 @@ export default function ValuesDirectoryClient({
       return matchesQuery && matchesRarity && matchesObtainability
     })
 
-    // Popular = real marketplace popularity first (Eldorado's usePopularItems
-    // ranking), whole list. Lower rank = more popular = earlier; items with no
-    // rank (never in the popular feed) sort after all ranked ones, then by our
-    // own observed activity, then by value.
+    // Popular = a BLEND of real marketplace popularity AND cash value, so the
+    // tab surfaces items that are both traded a lot AND worth something — not
+    // popular-but-worthless junk. We rank each item on both axes independently
+    // (popularity_rank from Eldorado's usePopularItems; value rank from the
+    // corrected market price) and sort by the AVERAGE of the two rank positions.
+    // An item strong on both (e.g. #4 popular, #6 valuable) beats one that is
+    // wildly popular but near-worthless (#2 popular, #300 valuable). Items
+    // missing a rank on either axis take that axis's worst position, so they
+    // sink behind anything ranked on both.
     if (effectiveView === 'popular') {
+      const n = filtered.length
+      // Value rank: 0 = most valuable. Unpriced items get the worst position.
+      const byValue = [...filtered].sort(compareValue)
+      const valueRank = new Map<string, number>()
+      byValue.forEach((item, i) => valueRank.set(item.id, i))
+
+      // Popularity rank: Eldorado's is 1-based and sparse (not every item is in
+      // the feed). Rerank the ones that ARE present into a dense 0-based order,
+      // so the two axes are on the same scale; absent items take the worst.
+      const byPop = [...filtered]
+        .filter((item) => item.popularity_rank != null)
+        .sort((a, b) => (a.popularity_rank as number) - (b.popularity_rank as number))
+      const popRank = new Map<string, number>()
+      byPop.forEach((item, i) => popRank.set(item.id, i))
+
+      const blended = (item: BrainrotDirectoryItem) => {
+        const pr = popRank.has(item.id) ? popRank.get(item.id)! : n
+        const vr = valueRank.has(item.id) ? valueRank.get(item.id)! : n
+        return (pr + vr) / 2
+      }
+
       return [...filtered].sort((a, b) => {
-        const ra = a.popularity_rank ?? Number.POSITIVE_INFINITY
-        const rb = b.popularity_rank ?? Number.POSITIVE_INFINITY
-        if (ra !== rb) return ra - rb
-        const diff = (asNumber(b.sample_size) ?? 0) - (asNumber(a.sample_size) ?? 0)
-        return diff !== 0 ? diff : compareValue(a, b)
+        const diff = blended(a) - blended(b)
+        if (diff !== 0) return diff
+        // Tie-break: more observed activity, then higher value.
+        const act = (asNumber(b.sample_size) ?? 0) - (asNumber(a.sample_size) ?? 0)
+        return act !== 0 ? act : compareValue(a, b)
       })
     }
 
@@ -386,7 +412,7 @@ export default function ValuesDirectoryClient({
              between the filters and the chips, and the Popular chip already
              says what the ordering is. */
           <p className="hidden h-11 items-center text-[12.5px] leading-snug text-[#6D7A72] sm:flex">
-            Ranked by listings and sales we observed
+            Popular blends marketplace demand with cash value
           </p>
         )}
       </div>
