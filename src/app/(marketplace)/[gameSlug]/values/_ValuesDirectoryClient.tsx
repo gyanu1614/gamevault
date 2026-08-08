@@ -529,15 +529,23 @@ export default function ValuesDirectoryClient({
                 style={{ ['--rc' as string]: rc } as CSSProperties}
                 className="group flex flex-col overflow-hidden border border-[#1E2723] bg-[#0F1512] transition-colors hover:border-[#2C3A31]"
               >
-                {/* Art on a faint rarity-tinted header */}
+                {/* Art on a faint rarity-tinted header. Rarity rides top-right as
+                    small plain text (not a filled chip), so the art gets the
+                    room. Larger art (h-24) makes the card read as a showcase. */}
                 <div
-                  className="flex justify-center px-3 pb-2 pt-4"
+                  className="relative flex justify-center px-3 pb-2 pt-5"
                   style={{
                     background:
                       'linear-gradient(180deg, color-mix(in srgb, var(--rc) 8%, transparent), transparent)',
                   }}
                 >
-                  <span className="relative flex h-16 w-16 items-center justify-center">
+                  <span
+                    className="absolute right-2.5 top-2 font-mono text-[9.5px] font-normal uppercase tracking-[0.06em]"
+                    style={{ color: rc }}
+                  >
+                    {brainrot.rarity}
+                  </span>
+                  <span className="relative flex h-24 w-24 items-center justify-center">
                     <span
                       aria-hidden
                       className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
@@ -552,7 +560,7 @@ export default function ValuesDirectoryClient({
                         src={brainrot.image_url}
                         alt={`${brainrot.name} Steal a Brainrot`}
                         loading="lazy"
-                        className="relative h-full w-full object-contain p-1"
+                        className="relative h-full w-full object-contain drop-shadow-[0_8px_14px_rgba(0,0,0,0.5)]"
                       />
                     ) : (
                       <span className="font-mono text-[9px] text-[#5E685E]">N/A</span>
@@ -560,46 +568,51 @@ export default function ValuesDirectoryClient({
                   </span>
                 </div>
 
-                {/* Name + rarity, centred */}
-                <div className="px-2.5 pb-2.5 text-center">
-                  <div className="truncate text-[13.5px] font-semibold text-[#F1F3F1] transition-colors group-hover:text-white">
+                {/* Name, centred — shifted down under the larger art */}
+                <div className="px-2.5 pb-3 pt-1 text-center">
+                  <div className="truncate text-[14px] font-semibold text-[#F1F3F1] transition-colors group-hover:text-white">
                     {brainrot.name}
-                  </div>
-                  <div className="mt-1">
-                    <span
-                      className="inline-block border px-2 py-0.5 font-mono text-[10px] font-semibold"
-                      style={{ borderColor: `${rc}66`, color: rc }}
-                    >
-                      {brainrot.rarity}
-                    </span>
                   </div>
                 </div>
 
-                {/* Market | Cheapest split — the reference two-column footer */}
-                <div className="mt-auto grid grid-cols-2 border-t border-[#1A211A]">
-                  <div className="border-r border-[#1A211A] px-1.5 py-2.5 text-center">
-                    <div className="text-[9.5px] uppercase tracking-[0.04em] text-[#6E7A72]">
-                      Market
+                {/* Price footer. Never a bare dash: show BOTH as a split only
+                    when both exist; a single value fills the row centred (no
+                    empty column); nothing priced shows a quiet "No price yet". */}
+                {marketPrice && cheapestPrice ? (
+                  <div className="mt-auto grid grid-cols-2 border-t border-[#1A211A]">
+                    <div className="border-r border-[#1A211A] px-1.5 py-2.5 text-center">
+                      <div className="text-[9.5px] uppercase tracking-[0.04em] text-[#6E7A72]">
+                        Market
+                      </div>
+                      <div className="mt-0.5 truncate font-mono text-[15px] font-bold tabular-nums text-[#8FBF9C]">
+                        {marketPrice}
+                      </div>
                     </div>
-                    <div className="mt-0.5 truncate font-mono text-[15px] font-bold tabular-nums text-[#8FBF9C]">
-                      {marketPrice ?? '—'}
-                    </div>
-                  </div>
-                  <div className="px-1.5 py-2.5 text-center">
-                    <div className="text-[9.5px] uppercase tracking-[0.04em] text-[#6E7A72]">
-                      Cheapest
-                    </div>
-                    <div
-                      className={`mt-0.5 truncate font-mono text-[15px] tabular-nums ${
-                        cheapestPrice
-                          ? 'font-medium text-[#E4E9E5]'
-                          : 'text-[#5E685E]'
-                      }`}
-                    >
-                      {cheapestPrice ?? '—'}
+                    <div className="px-1.5 py-2.5 text-center">
+                      <div className="text-[9.5px] uppercase tracking-[0.04em] text-[#6E7A72]">
+                        Cheapest
+                      </div>
+                      <div className="mt-0.5 truncate font-mono text-[15px] font-medium tabular-nums text-[#E4E9E5]">
+                        {cheapestPrice}
+                      </div>
                     </div>
                   </div>
-                </div>
+                ) : marketPrice || cheapestPrice ? (
+                  <div className="mt-auto border-t border-[#1A211A] px-1.5 py-2.5 text-center">
+                    <div className="text-[9.5px] uppercase tracking-[0.04em] text-[#6E7A72]">
+                      {marketPrice ? 'Market' : 'Cheapest'}
+                    </div>
+                    <div className="mt-0.5 truncate font-mono text-[16px] font-bold tabular-nums text-[#8FBF9C]">
+                      {marketPrice ?? cheapestPrice}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="mt-auto border-t border-[#1A211A] px-1.5 py-3 text-center">
+                    <div className="font-mono text-[11px] uppercase tracking-[0.06em] text-[#5E685E]">
+                      No price yet
+                    </div>
+                  </div>
+                )}
               </Link>
             )
           })}

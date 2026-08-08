@@ -685,9 +685,40 @@ describe('computeCorrections — reputable-seller pricing', () => {
     expect(c.cheapestUsd).toBe(4000) // skipped the 0-review fakes
   })
 
-  it('suppresses an unobtainable (removed) item even with reputable listings', () => {
-    // Tung Tung Tung Sahur was removed from the game; any listing is a dump of a
-    // dead item. Even with reputable listings, publish nothing.
+  it('prices an unobtainable item that reputable sellers ACTIVELY trade', () => {
+    // Bacuru and Egguru is unobtainable IN-GAME but has a thriving resale market
+    // (many reputable sellers at $0.50). Active reputable trading = a real price,
+    // so reputable pricing outranks unobtainable suppression.
+    const peers = peerGroup(6)
+    const result = computeCorrections({
+      brainrots: [
+        ...peers.brainrots,
+        brainrot('traded', { rarity: 'Secret', obtainability: 'unobtainable' }),
+      ],
+      variants: [
+        ...peers.variants,
+        variant('traded', {
+          valueUsd: 0.98,
+          sampleCount: 47,
+          reputableListings: [
+            { priceUsd: 0.5, reviews: 5000 },
+            { priceUsd: 0.5, reviews: 3000 },
+            { priceUsd: 0.6, reviews: 1000 },
+            { priceUsd: 0.99, reviews: 800 },
+          ],
+        }),
+      ],
+    })
+    const c = result.find((r) => r.brainrotId === 'traded')!
+    expect(c.reason).toBe('reputable')
+    expect(c.isPublishable).toBe(true)
+    expect(c.cheapestUsd).toBe(0.5)
+  })
+
+  it('still suppresses an unobtainable item with NO reputable market', () => {
+    // Tung Tung Tung Sahur was removed and truly dead: a single reputable listing
+    // is one seller dumping a phantom price, not a market. REPUTABLE_MIN_LISTINGS
+    // (=2) returns null, so it falls through to unobtainable suppression.
     const peers = peerGroup(6)
     const result = computeCorrections({
       brainrots: [
@@ -698,11 +729,9 @@ describe('computeCorrections — reputable-seller pricing', () => {
         ...peers.variants,
         variant('removed', {
           valueUsd: 9999,
-          sampleCount: 5,
-          reputableListings: [
-            { priceUsd: 9999, reviews: 10000 },
-            { priceUsd: 10000, reviews: 8000 },
-          ],
+          sampleCount: 1,
+          // One lone reputable listing — not a market.
+          reputableListings: [{ priceUsd: 9999, reviews: 10000 }],
         }),
       ],
     })

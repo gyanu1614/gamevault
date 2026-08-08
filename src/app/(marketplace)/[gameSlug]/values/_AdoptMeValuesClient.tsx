@@ -262,7 +262,7 @@ export default function AdoptMeValuesClient({ pets }: { pets: AdoptMePetItem[] }
               Trade value <span className="text-[#8FBF9C]">({variant})</span> {sort === 'value-asc' ? '↑' : '↓'}
             </button>
             <span className="text-right text-[13px] font-medium text-[#C6CEC9]">
-              Cash USD <span className="text-[#8FBF9C]">({variant})</span>
+              Market · Cheapest <span className="text-[#8FBF9C]">({variant})</span>
             </span>
           </div>
 
@@ -340,7 +340,10 @@ export default function AdoptMeValuesClient({ pets }: { pets: AdoptMePetItem[] }
                       {v?.tradeValue != null ? TRADE.format(v.tradeValue) : '—'}
                     </span>
 
-                    {/* Cash (USD) + chevron — estimate-aware, never fake $0 */}
+                    {/* Market (headline) + Cheapest beneath — estimate-aware,
+                        never a fake $0 or bare dash. Cheapest only shows when it
+                        genuinely undercuts the market (a lone reputable seller
+                        makes them equal). */}
                     <span className="flex items-center justify-end gap-1.5 text-right">
                       <span className="flex flex-col items-end">
                         {v?.cashUsd != null ? (
@@ -348,9 +351,14 @@ export default function AdoptMeValuesClient({ pets }: { pets: AdoptMePetItem[] }
                             <span className="text-[16px] font-bold tabular-nums text-[#8FBF9C] sm:text-[17.5px]">
                               {USD.format(v.cashUsd)}
                             </span>
-                            {v.isEstimated && (
+                            {v.cheapestUsd != null &&
+                            v.cheapestUsd < v.cashUsd - 0.005 ? (
+                              <span className="font-mono text-[11px] tabular-nums text-[#8B978F]">
+                                cheapest {USD.format(v.cheapestUsd)}
+                              </span>
+                            ) : v.isEstimated ? (
                               <span className="font-mono text-[9px] uppercase tracking-[0.08em] text-[#8B7BA0]">Est.</span>
-                            )}
+                            ) : null}
                           </>
                         ) : (
                           <span className="font-mono text-[11px] uppercase tracking-[0.06em] text-[#6D7A72]">Est. pending</span>
