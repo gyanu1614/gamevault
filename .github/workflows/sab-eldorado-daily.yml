@@ -59,6 +59,11 @@ jobs:
       NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
       # The popularity step writes popularity_rank directly to sab_brainrots.
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      # Let the collector reprice as its LAST step (correct-prices?game=sab) once
+      # the whole crawl has landed — closes the snapshot-lag race that let a
+      # stale cheapest publish. The 10:00 UTC Vercel cron stays as a backstop.
+      PUBLIC_API_URL: ${{ secrets.PUBLIC_API_URL }}
+      CRON_SECRET: ${{ secrets.CRON_SECRET }}
 
     steps:
       - name: Check out repository
