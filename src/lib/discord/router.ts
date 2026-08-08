@@ -16,6 +16,7 @@ import {
 } from './commands/value'
 import { runTop } from './commands/top'
 import { runWfl } from './commands/wfl'
+import { runSell } from './commands/sell'
 import {
   focusedOption,
   optionMap,
@@ -58,6 +59,14 @@ export async function executeCommand(
 
     case 'top':
       return runTop(options.rarity, options.limit)
+
+    case 'sell':
+      return runSell(
+        interaction,
+        options.brainrot ?? '',
+        options.mutation,
+        options.price,
+      )
 
     default:
       console.error(`Discord interaction for unknown command: ${name}`)

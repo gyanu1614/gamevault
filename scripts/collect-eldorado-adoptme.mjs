@@ -74,16 +74,49 @@ function variantFromTitle(title) {
   return null
 }
 
-// Variants we are willing to publish as OBSERVED. NEON/MEGA plain forms are
-// low-volume and their titles are easily confused with NFR/MFR, so we keep them
-// out until we have a cleaner signal. FR/NFR/MFR are the reliable, high-volume
-// forms; N/F/R only when a title explicitly says so.
-const PUBLISHABLE_VARIANTS = new Set(['N', 'F', 'R', 'FR', 'NFR', 'MFR'])
+// Variants we are willing to publish as OBSERVED. NEON/MEGA plain forms were
+// previously excluded because their TITLES are easily confused with NFR/MFR —
+// but the structured Traits attribute distinguishes them unambiguously, so with
+// trait-primary detection they are safe to include. (A NEON/MEGA that comes ONLY
+// from a title, with no trait, is still risky, but the trait-first path means a
+// title-only NEON/MEGA is rare.) The full 8-form ladder is now publishable.
+const PUBLISHABLE_VARIANTS = new Set([
+  'N',
+  'F',
+  'R',
+  'FR',
+  'NEON',
+  'NFR',
+  'MEGA',
+  'MFR',
+])
 
-// For the title↔trait agreement check: map the UNAMBIGUOUS trait codes to our
-// variants. Ambiguous/absent traits (None, NF, NR, M…) are left out so they
-// neither confirm nor veto — the title alone decides those.
-const TRAIT_ALIAS = { FR: 'FR', NFR: 'NFR', MFR: 'MFR', F: 'F', R: 'R', N: 'N' }
+// Eldorado's structured "Traits" attribute is the PRIMARY variant source — it
+// is more reliable than parsing emoji-filled titles. Map its codes to our
+// 8-form ladder. The combo forms Eldorado also tracks (NR=Neon Ride, MF=Mega
+// Fly, MR=Mega Ride, NF=Neon Fly) and bare M have NO column/UI in our ladder,
+// so they are intentionally absent here → such listings fall through to the
+// title, and are skipped if the title gives no publishable variant either.
+//   N   Normal        F  Fly          R  Ride         FR  Fly Ride
+//   NEON Neon         MEGA Mega Neon  NFR Neon Fly Ride   MFR Mega Fly Ride
+const TRAIT_TO_VARIANT = {
+  N: 'N',
+  F: 'F',
+  R: 'R',
+  FR: 'FR',
+  NEON: 'NEON',
+  NFR: 'NFR',
+  MEGA: 'MEGA',
+  MFR: 'MFR',
+}
+
+/** Map an Eldorado trait code to our variant, or null if unmapped/None. */
+function variantFromTrait(trait) {
+  if (!trait) return null
+  const key = String(trait).trim().toUpperCase()
+  if (key === 'NONE') return null
+  return TRAIT_TO_VARIANT[key] ?? null
+}
 
 function loadEnv() {
   // No-op when .env.local is absent (CI uses GitHub-secret env vars).
@@ -256,21 +289,30 @@ async function main() {
             skipped++
             continue
           }
-          // Variant comes from the TITLE (the trait field is unreliable). If a
-          // trait is also present it must AGREE with the title — a mismatch
-          // (e.g. title says FR but trait says None) means a mislabeled listing
-          // we can't trust, so we drop it.
+          // Variant: TRAIT-PRIMARY, title fallback. Eldorado's structured Traits
+          // attribute is the reliable source (titles are emoji soup); when it
+          // gives an explicit, mapped variant we trust it. Only when the trait is
+          // None/absent/unmapped (e.g. a combo form we don't model) do we fall
+          // back to parsing the title. When BOTH exist and DISAGREE, we drop the
+          // listing — a mislabeled item we can't trust either way.
           const trait = traitValue(offer)
+          const traitVariant = variantFromTrait(trait)
           const titleVariant = variantFromTitle(title)
-          if (!titleVariant || !PUBLISHABLE_VARIANTS.has(titleVariant)) {
+
+          let variant = traitVariant ?? titleVariant
+          if (!variant || !PUBLISHABLE_VARIANTS.has(variant)) {
             skipped++
             continue
           }
-          if (trait && TRAIT_ALIAS[trait] && TRAIT_ALIAS[trait] !== titleVariant) {
+          // Both present and conflicting → untrustworthy, drop.
+          if (
+            traitVariant &&
+            titleVariant &&
+            traitVariant !== titleVariant
+          ) {
             skipped++
             continue
           }
-          const variant = titleVariant
           const price = Number(offer.pricePerUnit?.amount)
           const currency = offer.pricePerUnit?.currency
           if (!Number.isFinite(price) || price <= 0 || currency !== 'USD') {
@@ -279,6 +321,17 @@ async function main() {
           }
           // Capture seller id for dedup (identical seller+title+price copies).
           const sellerId = item.user?.id ?? null
+          // Seller reputation — the signal the reputable-pricing model runs on.
+          // userOrderInfo.ratingCount is the seller's total reviews/orders (the
+          // "(4771)" shown on the site), populated only because the request sets
+          // includeDeliveryMedians=true. This is what "reputable (100+)" gates on.
+          const orderInfo = item.userOrderInfo ?? {}
+          const reviews = Number.isFinite(orderInfo.ratingCount)
+            ? orderInfo.ratingCount
+            : null
+          const sellerRating = Number.isFinite(orderInfo.feedbackScore)
+            ? orderInfo.feedbackScore
+            : null
           listings.push({
             slug: pet.slug,
             name: pet.name,
@@ -287,6 +340,8 @@ async function main() {
             title,
             trait,
             sellerId,
+            reviews,
+            sellerRating,
             accountAgeDays: age != null ? Math.round(age) : null,
           })
           petListings++

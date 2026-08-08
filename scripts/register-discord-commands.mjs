@@ -108,6 +108,35 @@ const COMMANDS = [
     ],
   },
   {
+    name: "sell",
+    type: 1,
+    description: "Sell your Brainrot for cash — safely, with escrow",
+    integration_types: INTEGRATION_TYPES,
+    contexts: CONTEXTS,
+    options: [
+      {
+        name: "brainrot",
+        description: "Which Brainrot are you selling? Start typing",
+        type: OPTION_STRING,
+        required: true,
+        autocomplete: true,
+      },
+      {
+        name: "mutation",
+        description: "Mutation (defaults to no mutation)",
+        type: OPTION_STRING,
+        required: false,
+        autocomplete: true,
+      },
+      {
+        name: "price",
+        description: "Your asking price (optional, e.g. $250)",
+        type: OPTION_STRING,
+        required: false,
+      },
+    ],
+  },
+  {
     name: "top",
     type: 1,
     description: "Highest-value Brainrots right now",

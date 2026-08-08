@@ -33,7 +33,7 @@ export async function getAdoptMeCalcPets(): Promise<CalcPet[]> {
       .eq('is_active', true),
     (supabase as any)
       .from('adopt_me_pet_values')
-      .select('pet_id,variant,trade_value,cash_value_usd,is_estimated'),
+      .select('pet_id,variant,trade_value,cash_value_usd,average_usd,is_estimated'),
   ])
 
   if (petsRes.error) {
@@ -55,7 +55,9 @@ export async function getAdoptMeCalcPets(): Promise<CalcPet[]> {
         if (!(VARIANTS as readonly string[]).includes(row.variant)) continue
         values[row.variant as Variant] = {
           tradeValue: num(row.trade_value),
-          cashUsd: num(row.cash_value_usd),
+          // Prefer the reputable market price when present (matches the values
+          // list + pet page); fall back to the legacy cash value.
+          cashUsd: num(row.average_usd) ?? num(row.cash_value_usd),
           isEstimated: Boolean(row.is_estimated),
         }
       }

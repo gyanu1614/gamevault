@@ -121,16 +121,36 @@ export default function AdoptMePetHero({
             </dl>
           </div>
 
-          {/* Cash price + confidence + CTA */}
+          {/* Cash price + confidence + CTA. When we have a reputable market
+              price the headline IS that market price; a "Cheapest" line sits
+              under it whenever a reputable seller undercuts it. Mirrors SAB's
+              ItemHero cheapest/market split. */}
           <div className="lg:text-right">
             <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: accent }}>
-              {selected.label} cash value
+              {selected.averageUsd != null ? 'Market price' : `${selected.label} cash value`}
             </p>
             <p className="mt-1 text-[34px] font-bold leading-none tracking-[-0.02em] text-[#F1F3F1] tabular-nums">
               {selected.cashUsd != null ? USD.format(selected.cashUsd) : 'No data yet'}
             </p>
+            {/* Cheapest from a reputable seller — shown only when it genuinely
+                undercuts the market headline (never a duplicate number). */}
+            {selected.cheapestUsd != null &&
+              selected.cashUsd != null &&
+              selected.cheapestUsd < selected.cashUsd - 0.005 && (
+                <p className="mt-1.5 text-[13px] text-[#8B978F] tabular-nums lg:text-right">
+                  Cheapest{' '}
+                  <span className="font-semibold text-[#8FBF9C]">
+                    {USD.format(selected.cheapestUsd)}
+                  </span>
+                </p>
+              )}
             <div className="mt-2.5 flex min-h-[28px] flex-wrap items-center gap-2 lg:justify-end">
-              {selected.isEstimated ? (
+              {selected.averageUsd != null ? (
+                <span className="inline-flex items-center gap-1.5 border px-2 py-1 text-[11.5px] font-semibold" style={{ borderColor: '#8FBF9C44', color: '#8FBF9C' }}>
+                  <span className="h-1.5 w-1.5 rounded-full bg-[#8FBF9C]" />
+                  From verified sellers
+                </span>
+              ) : selected.isEstimated ? (
                 <span className="inline-flex items-center gap-1.5 border border-[#26332C] bg-white/[0.03] px-2 py-1 text-[11.5px] font-semibold text-[#9BA8A0]">
                   <span className="h-1.5 w-1.5 rounded-full bg-[#9BA8A0]" />
                   Estimated
@@ -165,7 +185,9 @@ export default function AdoptMePetHero({
 
         <div className="relative flex items-center justify-center border-t border-white/[0.06] px-5 py-3">
           <span className="font-mono text-[11px] uppercase tracking-[0.1em] text-[#6D7A72]">
-            Cash values estimated until we hold enough real sales
+            {selected.averageUsd != null
+              ? 'Cheapest + market price from sellers with 100+ reviews'
+              : 'Cash values estimated until we hold enough real sales'}
           </span>
         </div>
       </div>

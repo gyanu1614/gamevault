@@ -25,7 +25,12 @@ export interface AdoptMePetVariant {
   variant: Variant
   label: string
   tradeValue: number | null
+  /** Headline cash = reputable market (average) when present, else legacy value. */
   cashUsd: number | null
+  /** Lowest reputable-seller price (100+ reviews). Null until priced. */
+  cheapestUsd: number | null
+  /** Reputable market price (median of cheapest reputable listings). */
+  averageUsd: number | null
   isEstimated: boolean
   confidence: string
   listingsTracked: number
@@ -64,7 +69,9 @@ export async function getAdoptMePet(slug: string): Promise<AdoptMePetDetail | nu
 
   const { data: valueRows } = await (supabase as any)
     .from('adopt_me_pet_values')
-    .select('variant,trade_value,cash_value_usd,is_estimated,confidence,listings_tracked')
+    .select(
+      'variant,trade_value,cash_value_usd,cheapest_usd,average_usd,is_estimated,confidence,listings_tracked',
+    )
     .eq('pet_id', pet.id)
 
   const byVariant = new Map<string, any>()
@@ -72,11 +79,15 @@ export async function getAdoptMePet(slug: string): Promise<AdoptMePetDetail | nu
 
   const variants: AdoptMePetVariant[] = VARIANT_ORDER.map((variant) => {
     const r = byVariant.get(variant)
+    const averageUsd = r ? num(r.average_usd) : null
     return {
       variant,
       label: VARIANT_LABEL[variant],
       tradeValue: r ? num(r.trade_value) : null,
-      cashUsd: r ? num(r.cash_value_usd) : null,
+      // Headline = reputable market when present, else the legacy cash value.
+      cashUsd: averageUsd ?? (r ? num(r.cash_value_usd) : null),
+      cheapestUsd: r ? num(r.cheapest_usd) : null,
+      averageUsd,
       isEstimated: r ? Boolean(r.is_estimated) : true,
       confidence: r?.confidence ?? 'low',
       listingsTracked: r ? Number(r.listings_tracked ?? 0) : 0,
