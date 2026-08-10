@@ -165,19 +165,38 @@ async function supabaseRows(table, select, order) {
 }
 
 async function buildQueue(requestedName) {
-  const [brainrots, prices, mutations, calculatorRows] = await Promise.all([
-    supabaseRows(
-      "sab_brainrot_catalog",
-      "id,name,slug,rarity,base_income_per_second",
-      "name.asc",
-    ),
-    supabaseRows("sab_public_price_catalog", "brainrot_id,mutation_slug,confidence_label,external_sample_size,source_count,price_updated_at"),
-    supabaseRows("sab_mutation_catalog", "id,name,slug,income_multiplier", "income_multiplier.asc"),
-    supabaseRows(
-      "sab_brainrot_mutation_calculator",
-      "brainrot_id,mutation_id,calculated_income_per_second,is_verified_variant",
-    ),
-  ]);
+  const [brainrots, prices, mutations, calculatorRows, tradeableRows] =
+    await Promise.all([
+      supabaseRows(
+        "sab_brainrot_catalog",
+        "id,name,slug,rarity,base_income_per_second",
+        "name.asc",
+      ),
+      supabaseRows("sab_public_price_catalog", "brainrot_id,mutation_slug,confidence_label,external_sample_size,source_count,price_updated_at"),
+      supabaseRows("sab_mutation_catalog", "id,name,slug,income_multiplier", "income_multiplier.asc"),
+      supabaseRows(
+        "sab_brainrot_mutation_calculator",
+        "brainrot_id,mutation_id,calculated_income_per_second,is_verified_variant",
+      ),
+      // The curated crawl set: only VALUABLE/SELLABLE brainrots (recomputed
+      // nightly by the correction cron). We crawl only these — junk that nobody
+      // trades drops out. Read straight from sab_brainrots since the catalog
+      // view may not expose the column; tolerate its absence (pre-migration) by
+      // treating an empty/failed read as "everything tradeable".
+      supabaseRows("sab_brainrots", "id,is_tradeable").catch(() => []),
+    ]);
+
+  // Set of tradeable brainrot ids. If the column doesn't exist yet (migration
+  // not applied) the read returns rows without is_tradeable → we keep them all,
+  // so the crawl never silently empties before the flag is populated.
+  const tradeableIds = new Set(
+    tradeableRows
+      .filter((row) => row.is_tradeable !== false)
+      .map((row) => row.id),
+  );
+  const haveTradeableFlag = tradeableRows.some(
+    (row) => typeof row.is_tradeable === "boolean",
+  );
 
   const defaultPrices = new Map(
     prices
@@ -244,6 +263,13 @@ async function buildQueue(requestedName) {
     );
     if (!queue.length) throw new Error(`Brainrot not found: ${requestedName}`);
   } else {
+    // Crawl only the curated tradeable set — skip junk nobody buys so the cycle
+    // stays fast and fresh on the items that matter. Only enforced once the flag
+    // exists (haveTradeableFlag); before the first nightly recompute we crawl
+    // everything as before.
+    if (haveTradeableFlag) {
+      queue = queue.filter((row) => tradeableIds.has(row.id));
+    }
     // Include any brainrot still missing mutations (gap > 0) OR without a solid
     // default price. Previously this only took missing/low DEFAULT prices, which
     // skipped items that have a good default but many blank mutations — exactly
@@ -1639,42 +1665,50 @@ async function main() {
   // step wouldn't cover `npm run sab:eldorado:send` run locally). Mirrors what
   // adopt-me-daily.yml already does. Best-effort: the 10:00 UTC Vercel cron is
   // an idempotent backstop, so a failure here never fails the crawl.
-  await triggerCorrection();
+  await triggerPostCrawl();
 }
 
 /**
- * POST the SAB correction cron so the freshly-imported listings are repriced
- * right away. No-op (with a note) when the trigger env isn't configured, so a
- * bare `--send` still works; never throws — repricing is a follow-up, not part
- * of the import's success.
+ * After the whole crawl lands: (1) EXPIRE listings that vanished from the fresh
+ * results (sold/removed — a gone listing must stop setting the price), THEN
+ * (2) REPRICE from the cleaned-up active set. Order matters: expiring first
+ * means the reprice never sees a dead $200 listing that's no longer on Eldorado.
+ *
+ * No-op (with a note) when the trigger env isn't set, so a bare `--send` still
+ * works; never throws — these are follow-ups, not part of the import's success.
+ * The scheduled crons remain idempotent backstops.
  */
-async function triggerCorrection() {
+async function triggerPostCrawl() {
   const apiUrl = process.env.PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_SITE_URL;
   const secret = process.env.CRON_SECRET;
   if (!apiUrl || !secret) {
     console.log(
-      "\nSkipping post-crawl reprice (set PUBLIC_API_URL + CRON_SECRET to enable). " +
-        "The scheduled correct-prices cron will catch up.",
+      "\nSkipping post-crawl expire+reprice (set PUBLIC_API_URL + CRON_SECRET to enable). " +
+        "The scheduled crons will catch up.",
     );
     return;
   }
-  const url = `${apiUrl.replace(/\/$/, "")}/api/cron/correct-prices?game=sab`;
+  const base = apiUrl.replace(/\/$/, "");
+  // Expire is a GET, correct-prices a POST — match each route's verb.
+  await triggerCron("Expiring vanished listings", `${base}/api/cron/expire-sab-listings`, "GET", secret);
+  await triggerCron("Repricing after crawl", `${base}/api/cron/correct-prices?game=sab`, "POST", secret);
+}
+
+async function triggerCron(label, url, method, secret) {
   try {
-    console.log("\nRepricing after crawl → correct-prices?game=sab …");
+    console.log(`\n${label} → ${url.replace(/https?:\/\/[^/]+/, "")} …`);
     const response = await fetch(url, {
-      method: "POST",
+      method,
       headers: { authorization: `Bearer ${secret}` },
     });
     const body = await response.text();
     if (!response.ok) {
-      console.error(
-        `Post-crawl reprice failed (${response.status}): ${body.slice(0, 300)}`,
-      );
+      console.error(`${label} failed (${response.status}): ${body.slice(0, 300)}`);
       return;
     }
-    console.log(`Repriced: ${body.slice(0, 300)}`);
+    console.log(`${label} ok: ${body.slice(0, 300)}`);
   } catch (error) {
-    console.error(`Post-crawl reprice threw: ${error.message}`);
+    console.error(`${label} threw: ${error.message}`);
   }
 }
 

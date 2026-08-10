@@ -22,7 +22,7 @@ on:
       max_brainrots:
         description: How many brainrots to collect this run
         required: false
-        default: "120"
+        default: "210"
       max_pages:
         description: Offer pages to fetch per brainrot (deeper = more mutations)
         required: false
@@ -34,11 +34,16 @@ on:
       refresh_after_hours:
         description: Re-crawl anything not priced within this many hours (0 = backfill only)
         required: false
-        default: "20"
+        default: "6"
   schedule:
-    # 05:00 UTC — before the price-snapshot cron (06:00) so the snapshot
-    # captures the fresh values collected here.
-    - cron: "0 5 * * *"
+    # Every 3h over the CURATED tradeable set (~300 items, not all 498). The
+    # collector's staleness queue (--refresh-after-hours 6) makes each 3h run
+    # grab whichever tradeable items aged past 6h → about half the set per run,
+    # whole curated set every ~6h. No item's listings go older than ~6h, and we
+    # spend zero budget on junk nobody trades. Self-balancing (a new item is max-
+    # stale → crawled next run) and self-healing (a failed run just leaves items
+    # for the next tick — no static half to black out).
+    - cron: "0 */3 * * *"
 
 concurrency:
   group: sab-eldorado-daily-market
@@ -81,11 +86,11 @@ jobs:
       - name: Collect and import Eldorado market data (priority queue)
         run: >-
           npm run sab:eldorado:send --
-          --max-brainrots ${{ inputs.max_brainrots || '120' }}
+          --max-brainrots ${{ inputs.max_brainrots || '210' }}
           --max-pages ${{ inputs.max_pages || '10' }}
           --samples-per-variant 25
           --delay-ms 1500
-          --refresh-after-hours ${{ inputs.refresh_after_hours || '20' }}
+          --refresh-after-hours ${{ inputs.refresh_after_hours || '6' }}
           ${{ (inputs.reset_progress == 'true') && '--reset-progress' || '' }}
 
       # Refresh the "Popular" tab ordering from Eldorado's real popularity feed
