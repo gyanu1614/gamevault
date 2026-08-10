@@ -66,7 +66,9 @@ describe('reputablePrice — real observed markets', () => {
       L(929.99, 9921),
     ])
     expect(out?.cheapestUsd).toBe(709.9)
-    expect(out?.averageUsd).toBe(769.99) // median of 709.9, 749.5, 769.99, 869.98, 899
+    // >$500 item → 1000-review bar: $769.99 (824 reviews) now drops out.
+    // Average = median of the surviving cheap band 709.9, 749.5, 869.98, 899 = $869.98.
+    expect(out?.averageUsd).toBe(869.98)
   })
 
   it('Headless Horseman: skips $849/$1000 lone lows, cheapest 4000', () => {
@@ -83,10 +85,10 @@ describe('reputablePrice — real observed markets', () => {
       L(8999.99, 54956),
     ])
     expect(out?.cheapestUsd).toBe(4000)
-    // average band is capped to within 2x of the cheapest ($4000 -> $8000), so
-    // the $8999.99 high-tier listing drops out: median of 4000, 5489.99, 6600,
-    // 7000 = $6044.995. Keeps the average anchored to the base tier.
-    expect(out?.averageUsd).toBe(6044.995)
+    // >$500 item → 1000-review bar drops $6600 (409 reviews). Spread cap ($4000
+    // ->$8000) drops $8999.99. Surviving band: 4000, 5489.99, 7000 → median
+    // $5489.99. Anchored to the base tier, sub-1000-review sellers excluded.
+    expect(out?.averageUsd).toBe(5489.99)
   })
 })
 
@@ -169,5 +171,51 @@ describe('reputablePrice — trust + edge rules', () => {
     // $2.4 is >2x the $1 cheapest, so it's outside the average band: median of
     // 1, 1.1, 1.2, 1.3 = 1.15.
     expect(out?.averageUsd).toBe(1.15)
+  })
+})
+
+describe('reputablePrice — value-tiered review bar', () => {
+  it('cheap item: a 200+ review seller sets the cheapest even far below the next', () => {
+    // Boba Panda: $0.60 from a 5373-review seller is the REAL cheapest, even
+    // though the next reputable listing is $2 (>1.4x). Below SUPPORT_MIN_VALUE
+    // the support rule does not apply, so the low is trusted.
+    const out = reputablePrice([
+      { priceUsd: 0.6, reviews: 5373 },
+      { priceUsd: 2, reviews: 202 },
+    ])
+    expect(out?.cheapestUsd).toBe(0.6)
+  })
+
+  it('sub-200-review sellers do not count', () => {
+    const out = reputablePrice([
+      { priceUsd: 5, reviews: 150 }, // under 200 → excluded
+      { priceUsd: 10, reviews: 500 },
+      { priceUsd: 11, reviews: 500 },
+    ])
+    expect(out?.cheapestUsd).toBe(10)
+  })
+
+  it('high-value item: sellers under 1000 reviews are dropped', () => {
+    // A $700+ item demands 1000+ reviews; the $600/500-review listing is
+    // excluded, so the cheapest is the first 1000+ seller.
+    const out = reputablePrice([
+      { priceUsd: 600, reviews: 500 }, // under 1000 on a >$500 item → excluded
+      { priceUsd: 720, reviews: 4000 },
+      { priceUsd: 740, reviews: 3000 },
+      { priceUsd: 780, reviews: 12000 },
+    ])
+    expect(out?.cheapestUsd).toBe(720)
+  })
+
+  it('falls back a tier when the higher bar leaves too few listings', () => {
+    // Expensive item but only mid-review sellers exist — rather than show
+    // nothing, step down to the 500 bar so there IS a reputable price.
+    const out = reputablePrice([
+      { priceUsd: 700, reviews: 600 },
+      { priceUsd: 720, reviews: 550 },
+      { priceUsd: 750, reviews: 700 },
+    ])
+    expect(out?.cheapestUsd).toBe(700)
+    expect(out?.reputableCount).toBe(3)
   })
 })

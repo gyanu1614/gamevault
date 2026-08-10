@@ -21,8 +21,28 @@
  * unit-tested against real observed prices.
  */
 
-/** Minimum total reviews for a seller to count as reputable. */
-export const REPUTABLE_MIN_REVIEWS = 100
+/**
+ * Minimum total reviews for a seller to count as reputable — SCALED BY VALUE.
+ * A fake on a $0.50 item costs a buyer 50 cents; a fake on a $5000 Headless
+ * costs thousands, so the trust bar rises with the money at stake:
+ *   < $100      → 200+ reviews  (an established shop)
+ *   $100-$500   → 500+ reviews
+ *   > $500      → 1000+ reviews (only the most-proven sellers set a headline)
+ * The threshold is chosen from the item's own rough price (a first pass at the
+ * base bar), then the set is re-filtered — see reputablePrice().
+ */
+export const REPUTABLE_MIN_REVIEWS = 200 // base tier (< $100)
+export const REPUTABLE_MIN_REVIEWS_MID = 500 // $100-$500
+export const REPUTABLE_MIN_REVIEWS_HIGH = 1000 // > $500
+export const REPUTABLE_TIER_MID_USD = 100
+export const REPUTABLE_TIER_HIGH_USD = 500
+
+/** The review bar for a given item value. */
+export function reviewBarForValue(valueUsd: number): number {
+  if (valueUsd > REPUTABLE_TIER_HIGH_USD) return REPUTABLE_MIN_REVIEWS_HIGH
+  if (valueUsd > REPUTABLE_TIER_MID_USD) return REPUTABLE_MIN_REVIEWS_MID
+  return REPUTABLE_MIN_REVIEWS
+}
 
 /**
  * Minimum reputable listings before a reputable price is trustworthy. ONE lone
@@ -51,6 +71,37 @@ export const FAKE_CHEAP_RATIO = 0.25
  * ordinary dispersion.
  */
 export const CHEAPEST_MAX_GAP = 2
+
+/**
+ * "Cheapest, but not a LONELY cheapest." The listing that sets the headline
+ * price must have SUPPORT — at least one other reputable listing within this
+ * multiple of it — so a single seller sitting alone at the bottom can't set a
+ * fragile floor that jumps the moment they delist. If the lowest listing has no
+ * neighbour within this ratio, we advance to the first one that does. This is
+ * tighter than CHEAPEST_MAX_GAP (which only skips a huge chasm); this keeps the
+ * headline anchored to a price a couple of sellers actually agree on.
+ *
+ * 1.4 = the cheapest and its supporter are within 40% (John Pork $260 with
+ * $309/$320 above → $260 stands; a lone $200 under a $260-cluster → advance to
+ * $260). Set at 1.4 not 1.3 because high-value items legitimately disperse more
+ * at the bottom — Headless's real $4000 floor sits 1.37x under its $5489
+ * supporter, and that $4000 must survive. Loose enough for genuine dispersion,
+ * tight enough to reject a lone low sitting well under the cluster.
+ */
+export const CHEAPEST_SUPPORT_RATIO = 1.4
+
+/** A cluster this small can't demand support — one listing IS the market. */
+export const CHEAPEST_SUPPORT_MIN_CLUSTER = 3
+
+/**
+ * The support rule only applies AT/ABOVE this value. Below it, a low from a
+ * reputable (200+ review) seller is trusted as the cheapest even if it sits
+ * well under the next listing — cheap items legitimately have a wide low tail
+ * ($0.60 vs $2 Boba Panda) and hiding the real floor there misleads buyers. The
+ * lone-fake risk the support rule guards against is only material on expensive
+ * items (a $849 bait under a $4000 Headless cluster).
+ */
+export const SUPPORT_MIN_VALUE_USD = 50
 
 /** How many of the cheapest reputable listings define the "average" band. */
 export const AVERAGE_SAMPLE_SIZE = 5
@@ -105,15 +156,38 @@ export function median(values: number[]): number | null {
 export function reputablePrice(
   listings: ReputableListing[],
 ): ReputablePrice | null {
-  const reputable = listings
-    .filter((l) => isFinitePositive(l.priceUsd) && l.reviews >= REPUTABLE_MIN_REVIEWS)
+  const valid = listings.filter((l) => isFinitePositive(l.priceUsd))
+
+  // PASS 1 — the base bar (200+) to estimate the item's value tier.
+  const basePrices = valid
+    .filter((l) => l.reviews >= REPUTABLE_MIN_REVIEWS)
     .map((l) => l.priceUsd)
     .sort((a, b) => a - b)
+  if (basePrices.length < REPUTABLE_MIN_LISTINGS) return null
 
-  // One lone reputable listing is not a market — a single seller dumping a
-  // removed/dead item at a random price would publish a confident wrong value.
-  // Require at least REPUTABLE_MIN_LISTINGS; below that, return null and let the
-  // caller fall through to the floor/anchor (or show "not enough data").
+  // PASS 2 — pick the review bar from the rough value (the base-bar median),
+  // then re-filter. A $5000 item now demands 1000+ review sellers; a $0.50 item
+  // stays at 200+. USE CASE: if the higher bar leaves fewer than the minimum
+  // listings (an expensive item few 1000-review sellers touch), step DOWN a tier
+  // rather than show nothing — some reputable evidence beats none.
+  const roughValue = median(basePrices) ?? basePrices[0]
+  const tiers = [
+    reviewBarForValue(roughValue),
+    REPUTABLE_MIN_REVIEWS_MID,
+    REPUTABLE_MIN_REVIEWS,
+  ]
+  let reputable: number[] = basePrices
+  for (const bar of tiers) {
+    const filtered = valid
+      .filter((l) => l.reviews >= bar)
+      .map((l) => l.priceUsd)
+      .sort((a, b) => a - b)
+    if (filtered.length >= REPUTABLE_MIN_LISTINGS) {
+      reputable = filtered
+      break
+    }
+  }
+
   if (reputable.length < REPUTABLE_MIN_LISTINGS) return null
 
   // Drop fake-cheap baits: below FAKE_CHEAP_RATIO of the reputable median. Use
@@ -124,19 +198,33 @@ export function reputablePrice(
   const sane = reputable.filter((p) => p >= refMedian * FAKE_CHEAP_RATIO)
   if (!sane.length) return null
 
-  // CHEAPEST — walk up from the lowest sane price until we find one whose next
-  // neighbour is within CHEAPEST_MAX_GAP. A lone low separated by a bigger gap
-  // is skipped (Headless $849 under a $4000 cluster). If none qualifies (every
-  // step is a chasm), the market is too scattered to trust a floor below the
-  // top, so fall back to the last (highest) sane price — but that only happens
-  // for pathological single-listing tails.
-  let cheapestIndex = sane.length - 1
-  for (let i = 0; i < sane.length - 1; i += 1) {
-    if (sane[i + 1] <= sane[i] * CHEAPEST_MAX_GAP) {
-      cheapestIndex = i
-      break
+  // CHEAPEST — the lowest reputable price, with a support rule that ONLY applies
+  // to higher-value items. The lone-low risk is real for expensive items (a fake
+  // $849 under a $4000 Headless cluster) but HARMFUL for cheap ones: a $0.60
+  // Boba Panda from a 5373-review seller is genuinely the cheapest, yet a support
+  // rule would skip it to $2 just because its neighbour is far in ratio terms.
+  // So: below SUPPORT_MIN_VALUE_USD, the lowest sane reputable price IS the
+  // cheapest (a 200+ review seller at a low price is trusted). At/above it, a
+  // lone low must have a neighbour within CHEAPEST_SUPPORT_RATIO or we advance.
+  const highValue = (median(sane) ?? sane[0]) >= SUPPORT_MIN_VALUE_USD
+  const requireSupport =
+    highValue && sane.length >= CHEAPEST_SUPPORT_MIN_CLUSTER
+  let cheapestIndex = 0
+  if (requireSupport) {
+    // High-value: the cheapest must have a close neighbour (else it's a lone
+    // low we advance past). Fall back to the highest sane price if nothing
+    // qualifies (pathological single-listing tail).
+    cheapestIndex = sane.length - 1
+    for (let i = 0; i < sane.length - 1; i += 1) {
+      if (sane[i + 1] / sane[i] <= CHEAPEST_SUPPORT_RATIO) {
+        cheapestIndex = i
+        break
+      }
     }
   }
+  // Not high-value → index 0: the lowest sane reputable price. Fakes were
+  // already removed by the fake-cheap cut, so a 200+ review seller's low price
+  // is the real cheapest (Boba Panda $0.60 from 5373 reviews).
   const cheapestUsd = sane[cheapestIndex]
 
   // AVERAGE — the typical reputable price: median of the cheapest sane listings
