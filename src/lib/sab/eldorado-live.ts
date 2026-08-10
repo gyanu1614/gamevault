@@ -154,6 +154,25 @@ function offersUrl(tradeEnvironmentValue2: string): URL {
   return url
 }
 
+/**
+ * Search-query fallback. MOST brainrots have NO tradeEnvironmentValue2 (only
+ * ~1 in 25 resolves a te_v2 via the SEO map), so without this the live fetch
+ * returns nothing for the vast majority (Ginger Cisterna → 0 → stale $14.99).
+ * The batch collector uses this same path; the live layer must too.
+ */
+function searchOffersUrl(searchQuery: string): URL {
+  const url = new URL('/api/v1/item-management/offers', BASE_URL)
+  url.searchParams.set('gameId', GAME_ID)
+  url.searchParams.set('category', CATEGORY)
+  url.searchParams.set('searchQuery', searchQuery)
+  url.searchParams.set('pageIndex', '1')
+  url.searchParams.set('pageSize', '50')
+  url.searchParams.set('useMinPurchasePrice', 'false')
+  url.searchParams.set('useOfferAttributeSearch', 'true')
+  url.searchParams.set('includeDeliveryMedians', 'true')
+  return url
+}
+
 /** The seller's structured Mutations attribute value ("None"/"Gold"/…), or null. */
 function mutationAttribute(offer: EldoradoOffer['offer']): string | null {
   const lists = [offer?.attributes, offer?.offerAttributeIdValues].filter(
@@ -223,6 +242,13 @@ export async function fetchItemListings(
         results = rows
         break
       }
+    }
+    // Search-query fallback: most brainrots have no te_v2, so if the enum
+    // queries found nothing, search by name (the collector's fallback path).
+    // Without this, ~96% of items get zero live data and stay stale.
+    if (!results.length) {
+      const body = await fetchJson(searchOffersUrl(name), controller.signal)
+      results = (body?.results ?? []) as EldoradoOffer[]
     }
 
     const expected = compact(name).toLowerCase()
