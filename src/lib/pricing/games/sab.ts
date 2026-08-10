@@ -318,12 +318,27 @@ export async function runSabCorrection(): Promise<Record<string, unknown>> {
     `✅ SAB corrections: ${corrections.length} rows, ${anchored} anchored, ${suppressed} suppressed`,
   )
 
+  // Recompute the curated crawl set (is_tradeable) from the fresh corrections —
+  // the collector crawls only these, so a rising item is picked up next cycle
+  // and a dead one drops out, with no manual editing. Non-fatal: a stale flag
+  // for one cycle is cosmetic next to the corrections that already landed.
+  let tradeableUpdated = 0
+  const { data: tradeableCount, error: tradeableError } = await (admin as any).rpc(
+    'sab_recompute_tradeable',
+  )
+  if (tradeableError) {
+    console.error('Failed to recompute is_tradeable:', tradeableError)
+  } else {
+    tradeableUpdated = Number(tradeableCount ?? 0)
+  }
+
   return {
     corrected: corrections.length,
     anchored,
     suppressed,
     multipliers: multiplierRows.length,
     history_reconciled: historyReconciled,
+    tradeable_updated: tradeableUpdated,
     breakdown: summary,
   }
 }
