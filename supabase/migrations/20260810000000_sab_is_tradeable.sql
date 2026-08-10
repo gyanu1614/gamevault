@@ -60,7 +60,11 @@ begin
            and c.reason in ('reputable', 'trusted')
        )
     or b.popularity_rank is not null
-  );
+  )
+  -- Postgres safe-update guard rejects an UPDATE with no WHERE; this qualifier
+  -- matches every row (id is the PK, never null) so the recompute still touches
+  -- the whole table.
+  where b.id is not null;
   get diagnostics changed = row_count;
   return changed;
 end
