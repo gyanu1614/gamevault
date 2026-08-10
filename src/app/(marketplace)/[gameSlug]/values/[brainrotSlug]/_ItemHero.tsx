@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward'
 import { cn } from '@/lib/utils'
@@ -49,8 +49,6 @@ export type MutationOption = {
 
 interface ItemHeroProps {
   brainrotName: string
-  /** Catalog slug — used to fetch the live per-minute price for the default variant. */
-  brainrotSlug: string
   rarity: string
   obtainability: string
   baseIncomePerSecond: number | null
@@ -68,7 +66,6 @@ interface ItemHeroProps {
 
 export default function ItemHero({
   brainrotName,
-  brainrotSlug,
   rarity,
   obtainability,
   baseIncomePerSecond,
@@ -103,55 +100,6 @@ export default function ItemHero({
     [ordered, selectedSlug],
   )
 
-  // Live per-minute price for the DEFAULT variant. The server already rendered
-  // the stored price (below); on mount we fetch the item's CURRENT Eldorado
-  // listings via /api/sab/live-price and swap the numbers in if they came back
-  // fresh. Stored value is the instant fallback, so the page is never slower and
-  // never shows a spinner where a price should be.
-  const [live, setLive] = useState<{
-    cheapestUsd: number | null
-    marketUsd: number | null
-  } | null>(null)
-
-  useEffect(() => {
-    let cancelled = false
-    const controller = new AbortController()
-
-    async function pull() {
-      try {
-        const res = await fetch(
-          `/api/sab/live-price/${encodeURIComponent(brainrotSlug)}`,
-          { signal: controller.signal },
-        )
-        if (!res.ok) return
-        const data = await res.json()
-        // Only upgrade the display when the price is genuinely LIVE — a 'stored'
-        // response is what's already on screen, so leave it untouched.
-        if (!cancelled && data?.source === 'live') {
-          setLive({
-            cheapestUsd: data.cheapestUsd ?? null,
-            marketUsd: data.marketUsd ?? null,
-          })
-        }
-      } catch {
-        // Network hiccup → keep the stored price. No user-facing error.
-      }
-    }
-
-    pull()
-    // Tick every 60s while the tab is visible — the literal "refreshes every
-    // minute". Paused in the background so we don't fetch for hidden tabs.
-    const interval = setInterval(() => {
-      if (document.visibilityState === 'visible') pull()
-    }, 60_000)
-
-    return () => {
-      cancelled = true
-      controller.abort()
-      clearInterval(interval)
-    }
-  }, [brainrotSlug])
-
   if (!selected) return null
 
   const visual = mutationVisual(selected.slug)
@@ -160,15 +108,10 @@ export default function ItemHero({
   const displayName = isDefault ? brainrotName : `${selected.name} ${brainrotName}`
   // Market price = the reputable average when present, else the raw value.
   // Cheapest = the reputable low, shown only when it undercuts the market price.
-  // Live values (default variant only) override the stored ones when a fresh
-  // fetch succeeded — that's the per-minute freshness.
-  const liveActive = isDefault && live != null
-  const marketPriceUsd =
-    (liveActive ? live?.marketUsd : null) ??
-    selected.averageUsd ??
-    selected.marketValueUsd
-  const cheapestUsd =
-    (liveActive ? live?.cheapestUsd : null) ?? selected.cheapestUsd
+  // Prices are the STORED values from the 3h crawl (≤6h fresh) — no per-view live
+  // fetch, which caused a $225→$220 flicker on load and burned server CPU.
+  const marketPriceUsd = selected.averageUsd ?? selected.marketValueUsd
+  const cheapestUsd = selected.cheapestUsd
   const cash = formatCash(marketPriceUsd)
   const cheapest =
     cheapestUsd != null &&
@@ -254,16 +197,7 @@ export default function ItemHero({
                 reputable data the "from verified sellers" cue replaces the
                 confidence-label jargon; estimated/no-data states are unchanged. */}
             <div className="mt-2.5 flex min-h-[28px] flex-wrap items-center gap-2 lg:justify-end">
-              {liveActive && cash ? (
-                // Fresh straight from the marketplace this minute.
-                <span className="inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-[#8FBF9C]">
-                  <span className="relative flex h-2 w-2">
-                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#4FB477] opacity-70" />
-                    <span className="relative inline-flex h-2 w-2 rounded-full bg-[#4FB477]" />
-                  </span>
-                  Live · updated just now
-                </span>
-              ) : selected.isEstimated ? (
+              {selected.isEstimated ? (
                 <span className="inline-flex items-center gap-1.5 border border-[#3A3320] bg-[#2A2410]/40 px-2 py-1 text-[11.5px] font-semibold text-[#D9C27A]">
                   <span className="h-1.5 w-1.5 rounded-full bg-[#D9C27A]" />
                   Estimated from multiplier

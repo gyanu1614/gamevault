@@ -552,7 +552,6 @@ export default async function BrainrotValuePage({ params }: PageProps) {
 
         <ItemHero
           brainrotName={brainrot.name}
-          brainrotSlug={brainrot.slug}
           rarity={brainrot.rarity}
           obtainability={brainrot.obtainability}
           baseIncomePerSecond={asNumber(brainrot.base_income_per_second)}
