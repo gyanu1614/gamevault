@@ -69,6 +69,13 @@ type ReputableRow = {
   raw_payload: {
     seller_sales_count?: number | string | null
     title?: string | null
+    /** False when the collector tagged the listing OUTSIDE the item's canonical
+     * income tier. Kept for when the import preserves it, but the correction ALSO
+     * derives the tier itself from income_band below (import currently strips it). */
+    is_canonical_band?: boolean | null
+    /** The listing's income tier, e.g. {label:'750-999.99 M/s', upper: 999990000}.
+     * Compared against the mutation's canonical income to gate cheapest. */
+    income_band?: { label?: string | null; lower?: number | null; upper?: number | null } | null
   } | null
   listing_status: string | null
   parse_status: string | null
@@ -85,24 +92,42 @@ type MutationRow = {
   income_multiplier: number | string | null
 }
 
+type CalculatorRow = {
+  brainrot_id: string
+  mutation_id: string
+  calculated_income_per_second: number | string | null
+}
+
 function toNumber(value: number | string | null | undefined): number | null {
   if (value == null) return null
   const parsed = Number(value)
   return Number.isFinite(parsed) ? parsed : null
 }
 
+/**
+ * Page through an entire table/view with a STABLE order.
+ *
+ * `orderBy` is mandatory and must be a unique (or composite-unique) key. Without
+ * a deterministic ORDER BY, Postgres does not guarantee row order across
+ * `.range()` pages, so pagination silently SKIPS and DUPLICATES rows at page
+ * seams — differently on every call. That made the whole correction
+ * non-deterministic: the same Cyber Dragon Cannelloni repriced at $59 / $41.99 /
+ * $44.99 on back-to-back runs because the real $34 cheapest listing fell on a
+ * shifting page boundary and was sometimes read, sometimes lost. Ordering by a
+ * unique key makes every page a clean, gap-free, duplicate-free slice.
+ */
 async function selectAll<T>(
   client: ReturnType<typeof createServiceRoleClient>,
   table: string,
   columns: string,
+  orderBy: string[],
 ): Promise<T[]> {
   const rows: T[] = []
   for (let page = 0; ; page += 1) {
     const from = page * PAGE_SIZE
-    const { data, error } = await (client as any)
-      .from(table)
-      .select(columns)
-      .range(from, from + PAGE_SIZE - 1)
+    let query = (client as any).from(table).select(columns)
+    for (const col of orderBy) query = query.order(col, { ascending: true })
+    const { data, error } = await query.range(from, from + PAGE_SIZE - 1)
     if (error) throw new Error(`${table}: ${error.message}`)
     if (!data?.length) break
     rows.push(...(data as T[]))
@@ -115,28 +140,45 @@ export async function runSabCorrection(): Promise<Record<string, unknown>> {
   const admin = createServiceRoleClient()
   const startedAt = new Date().toISOString()
 
-  const [catalog, mutations, brainrots, evidence, rawListings] =
+  const [catalog, mutations, calculator, brainrots, evidence, rawListings] =
     await Promise.all([
+      // The catalog is a VIEW without an `id`; (brainrot_id, mutation_id) is its
+      // composite unique key. Every other table has a unique `id`.
       selectAll<CatalogRow>(
         admin,
         'sab_public_price_catalog',
         'brainrot_id,mutation_id,mutation_slug,market_value_usd,market_low_usd,market_high_usd,confidence_label,external_sample_size,source_count',
+        ['brainrot_id', 'mutation_id'],
       ),
-      selectAll<MutationRow>(admin, 'sab_mutations', 'slug,income_multiplier'),
+      selectAll<MutationRow>(admin, 'sab_mutations', 'slug,income_multiplier', [
+        'slug',
+      ]),
+      // Canonical income per brainrot+mutation — the tier a listing must be in to
+      // count for cheapest. A "Cyber Dragon" at 0.75 B/s is a weaker mislabeled
+      // item vs the real 2.6 B/s Cyber; excluding it keeps cheapest comparable.
+      selectAll<CalculatorRow>(
+        admin,
+        'sab_brainrot_mutation_calculator',
+        'brainrot_id,mutation_id,calculated_income_per_second',
+        ['brainrot_id', 'mutation_id'],
+      ),
       selectAll<BrainrotRow>(
         admin,
         'sab_brainrots',
         'id,rarity,ingame_cost,base_income_per_second,obtainability',
+        ['id'],
       ),
       selectAll<EvidenceRow>(
         admin,
         'sab_market_clean_listing_evidence',
         'brainrot_id,mutation_id,unit_price_usd,source_slug',
+        ['id'],
       ),
       selectAll<ReputableRow>(
         admin,
         'sab_market_raw_listings',
         'brainrot_id,mutation_id,unit_price_usd,raw_payload,listing_status,parse_status,is_bundle,is_account_listing,is_inventory_listing,is_duplicate,is_outlier,rejection_reason',
+        ['id'],
       ),
     ])
 
@@ -164,6 +206,22 @@ export async function runSabCorrection(): Promise<Record<string, unknown>> {
     }
   }
 
+  // Canonical income per brainrot+mutation (M/s the real item earns). A listing
+  // whose income tier sits meaningfully BELOW this is a weaker mislabeled item
+  // and must not set the mutation's cheapest.
+  const expectedIncomeByVariant = new Map<string, number>()
+  for (const row of calculator) {
+    const income = toNumber(row.calculated_income_per_second)
+    if (income != null && income > 0) {
+      expectedIncomeByVariant.set(`${row.brainrot_id}:${row.mutation_id}`, income)
+    }
+  }
+  // A listing is IN TIER when its income band reaches at least this fraction of
+  // the canonical income. 0.9 tolerates coarse band-label boundaries; a 0.75 B/s
+  // listing against a 2.6 B/s canonical (band upper 0.999B < 0.9×2.6B=2.34B) is
+  // out, while a same-tier or higher-tier listing stays in.
+  const TIER_FLOOR_RATIO = 0.9
+
   const reputableByVariant = new Map<string, ReputableListing[]>()
   for (const row of rawListings) {
     if (row.listing_status !== 'active') continue
@@ -181,6 +239,26 @@ export async function runSabCorrection(): Promise<Record<string, unknown>> {
     // Skip negative-cosmetic-trait listings (Taco): a cheaper, uglier item that
     // must not set the clean pet's cheapest. Kept in raw data, just not priced.
     if (COSMETIC_TRAIT_RE.test(row.raw_payload?.title ?? '')) continue
+    // Skip listings OUTSIDE the item's canonical income tier — a genuinely weaker
+    // item mislabeled under this mutation (a 0.75 B/s "Cyber" Dragon at $17 under
+    // the real 2.6 B/s $34 Cyber). Prefer the collector's flag when the import
+    // kept it; otherwise DERIVE the tier here from income_band vs the canonical
+    // income (the import currently strips the flag, so this derivation is what
+    // actually protects cheapest). Only a KNOWN below-tier listing is excluded;
+    // when we can't judge (no canonical income, no band) the listing still counts,
+    // so we never silently drop legitimate data.
+    if (row.raw_payload?.is_canonical_band === false) continue
+    const expectedIncome = expectedIncomeByVariant.get(
+      `${row.brainrot_id}:${row.mutation_id}`,
+    )
+    const bandUpper = toNumber(row.raw_payload?.income_band?.upper)
+    if (
+      expectedIncome != null &&
+      bandUpper != null &&
+      bandUpper < expectedIncome * TIER_FLOOR_RATIO
+    ) {
+      continue
+    }
     const price = toNumber(row.unit_price_usd)
     if (price == null || price <= 0) continue
     const reviews = toNumber(row.raw_payload?.seller_sales_count)

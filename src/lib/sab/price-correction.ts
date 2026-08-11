@@ -495,12 +495,27 @@ function variantFloor(variant: VariantEstimate): number | null {
  * Reputable-seller cheapest + average for a variant, or null when we hold no
  * reputable listings (no 100+ review seller). Thin wrapper so both the default
  * and variant branches share one call site.
+ *
+ * `minPriceUsd` (mutation branch only) is the value-ladder floor — a premium
+ * mutation can't legitimately cost less than its own default, so listings below
+ * it are dropped BEFORE pricing. That advances the cheapest to the first real
+ * at-or-above-floor listing instead of replacing the whole reputable result with
+ * an anchored estimate (the old premiumSanityEstimate behaviour, which threw away
+ * a correct $34 cheapest and published a $59 anchor). Default branch passes no
+ * floor, so nothing is dropped.
  */
 function reputableFor(
   variant: VariantEstimate,
+  minPriceUsd?: number | null,
 ): ReturnType<typeof reputablePrice> {
-  if (!variant.reputableListings?.length) return null
-  return reputablePrice(variant.reputableListings)
+  const listings = variant.reputableListings
+  if (!listings?.length) return null
+  const floored =
+    isUsable(minPriceUsd)
+      ? listings.filter((l) => l.priceUsd >= minPriceUsd * 0.95)
+      : listings
+  if (!floored.length) return null
+  return reputablePrice(floored)
 }
 
 /**
@@ -1133,30 +1148,25 @@ function correctVariant(
     }
   }
 
-  if (variant.isReviewed && isUsable(variant.valueUsd)) {
-    return {
-      ...base,
-      valueUsd: variant.valueUsd,
-      lowUsd: variant.lowUsd,
-      highUsd: variant.highUsd,
-      reason: 'trusted',
-      confidence: 'high',
-      anchorUsd: anchor,
-      cohortSize: 0,
-      isAnchored: false,
-      isPublishable: true,
-    }
-  }
-
-  // Reputable-seller pricing for the mutation — same primacy as defaults, but it
-  // must still respect the value ladder: a reputable Gold priced below its own
-  // default is noise (premiumSanityEstimate catches it). If the ladder rejects
-  // the reputable average, fall through to the anchor rather than publish an
-  // impossible number.
-  const reputable = reputableFor(variant)
+  // Reputable-seller pricing for the mutation — IDENTICAL primacy and treatment
+  // to defaults: when reputable sellers (value-tiered review bar) are actively
+  // listing this mutation, their real CHEAPEST is the price, published untouched.
+  // The one legitimate ladder rule (a premium mutation can't cost below its own
+  // default) is enforced by dropping sub-default listings BEFORE pricing (the
+  // `anchor` floor into reputableFor), which advances the cheapest to the first
+  // real at-or-above-floor listing — NOT by replacing a correct cheapest with an
+  // anchored estimate. This is the fix for Cyber/Radioactive Dragon Cannelloni,
+  // where premiumSanityEstimate was overriding a real $34/$32.90 floor with a
+  // fabricated $59/$42 anchor. This branch is checked FIRST (before the
+  // isReviewed/anchor fallbacks) so real listings always win.
+  //
+  // The ladder floor is the mutation's own DEFAULT value (not default×multiplier):
+  // a premium mutation legitimately can't cost less than the base item, but it
+  // absolutely CAN cost less than the multiplier estimate (that estimate is only a
+  // rough prior). Flooring at default×multiplier would wrongly drop the real $34
+  // Cyber cheapest just because $34 < $18×2. Floor at the default itself.
+  const reputable = reputableFor(variant, defaultValue)
   if (reputable) {
-    const laddered = premiumSanityEstimate(reputable.averageUsd)
-    if (laddered) return laddered
     return {
       ...base,
       valueUsd: roundCents(reputable.averageUsd),
@@ -1166,6 +1176,23 @@ function correctVariant(
       averageUsd: roundCents(reputable.averageUsd),
       reason: 'reputable',
       confidence: confidenceFor(reputable.reputableCount, variant.sourceCount),
+      anchorUsd: anchor,
+      cohortSize: 0,
+      isAnchored: false,
+      isPublishable: true,
+    }
+  }
+
+  // Hand-trusted raw catalog value (no reputable listings to override it).
+  // Fallback only: reputable evidence, when present, already won above.
+  if (variant.isReviewed && isUsable(variant.valueUsd)) {
+    return {
+      ...base,
+      valueUsd: variant.valueUsd,
+      lowUsd: variant.lowUsd,
+      highUsd: variant.highUsd,
+      reason: 'trusted',
+      confidence: 'high',
       anchorUsd: anchor,
       cohortSize: 0,
       isAnchored: false,

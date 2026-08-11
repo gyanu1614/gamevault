@@ -35,6 +35,22 @@ export function formatCash(value: number | string | null | undefined): string | 
   }).format(amount)
 }
 
+/**
+ * In-game currency cost, compact — e.g. "$250B", "$40B", "$1.5M". This is the
+ * game-world cash to buy the item (often billions/trillions), so full digits
+ * ("$250,000,000,000") are unreadable; we abbreviate with M/B/T. Returns null
+ * when there's no value so callers can show "Unknown".
+ */
+export function formatIngameCost(value: number | string | null | undefined): string | null {
+  const amount = asNumber(value)
+  if (amount == null) return null
+  return `$${new Intl.NumberFormat('en-US', {
+    notation: 'compact',
+    compactDisplay: 'short',
+    maximumFractionDigits: 2,
+  }).format(amount)}`
+}
+
 /** Multiplier badge, e.g. "7.5x". */
 export function formatMultiplier(value: number | string | null | undefined): string {
   const amount = asNumber(value)

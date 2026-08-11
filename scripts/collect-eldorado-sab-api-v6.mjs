@@ -35,7 +35,11 @@ function parseArgs(argv) {
     // Pages of offers to fetch per brainrot. Page 1 alone under-samples rare
     // mutations (1-2 listings each), so they never clear the publish threshold.
     // Fetching several pages accumulates enough samples to price every mutation.
-    maxPagesPerBrainrot: Number(process.env.ELDORADO_MAX_PAGES ?? 8),
+    // Page through the WHOLE brainrot feed by default (relevance-ranked, so the
+    // cheapest can be on any page). totalPages bounds it (~12 for a popular item);
+    // 25 is a hard safety cap against a pathological feed. See the deep-pagination
+    // block in collectOne for why we no longer early-stop on sample count.
+    maxPagesPerBrainrot: Number(process.env.ELDORADO_MAX_PAGES ?? 25),
     delayMs: Number(process.env.ELDORADO_DELAY_MS ?? 2500),
     outputPath: DEFAULT_OUTPUT,
     progressPath: DEFAULT_PROGRESS,
@@ -994,10 +998,16 @@ async function collectOne({
     }
   }
 
-  // Deep pagination — page 1 under-samples rare mutations, so once a
-  // tradeEnvironmentValue2 query has hit, walk additional pages and append
-  // their exact-name offers. Stop early once every seen mutation has enough
-  // samples, or when totalPages / maxPagesPerBrainrot is reached.
+  // Deep pagination — walk EVERY page of the brainrot's offers, not just until
+  // we have "enough samples". Eldorado's offer feed is relevance-ranked, NOT
+  // price-ranked (the API ignores sortColumn=Price with useOfferAttributeSearch),
+  // so a mutation's CHEAPEST listing can sit on any page — Dragon Cannelloni's
+  // real $32.90 Radioactive was on page 9 of 12. Stopping early at a sample count
+  // (met by the pricier early-page listings) is exactly what made us publish an
+  // inflated cheapest. So we page to totalPages, bounded by maxPagesPerBrainrot as
+  // a hard safety cap. This is ~12 requests for a popular item — bounded, runs on
+  // GitHub Actions (not Vercel), read-only public API, 2.5s spacing. We do NOT
+  // early-break on samples anymore; only an empty page or the page cap stops us.
   let pagesFetched = 1;
   if (
     apiCandidates.length > 0 &&
@@ -1007,7 +1017,6 @@ async function collectOne({
     const totalPages = Number(payload?.totalPages) || 1;
     const lastPage = Math.min(totalPages, maxPagesPerBrainrot);
     for (let page = 2; page <= lastPage; page += 1) {
-      if (hasEnoughSamples(apiCandidates, mutations, samplesPerVariant)) break;
       const pageApiUrl = offersApiUrl(
         selectedQuery.trade_environment_value_2,
         page,
@@ -1196,15 +1205,39 @@ async function collectOne({
     // in the 5-9.99 B/s band while the collector picked the 1-4.99 B/s band and
     // kept only the expensive $454-999 tail. So pool ALL bands for mutations.
     if (mutationSlug !== "default") {
-      // Mutations pool all bands, so every listing is "canonical" for its
-      // mutation — cheapest and market both draw from the same pooled set.
-      for (const row of rows) row.is_canonical_band = true;
+      // Mutations pool bands, BUT anchor to the item's canonical income tier so a
+      // genuinely WEAKER item can't set the floor. Two shapes we must separate:
+      //   • A cheap listing in a HIGHER band than expected — legitimate. Mutations
+      //     boost income, so the same pet often reads a higher M/s; that cheap
+      //     Cursed Skibidi at 5-9.99 B/s IS the real market. Keep as canonical.
+      //   • A cheap listing in a LOWER band than expected — a different, weaker
+      //     item mislabeled under this mutation (a 0.75 B/s "Cyber" Dragon at $17
+      //     under a 2.6 B/s $34 market). NOT comparable — tag non-canonical so it
+      //     never sets cheapest, though we still keep it for transparency.
+      // With no expected income (rare), fall back to pooling all as canonical.
+      const expectedIncome = rows[0]?.expected_income_per_second;
+      const hasExpectedIncome =
+        Number.isFinite(expectedIncome) && expectedIncome > 0;
+      // Allow a small tolerance below expected (label boundaries are coarse):
+      // a listing is "in tier" if its band's UPPER bound reaches ~90% of expected.
+      const tierFloor = hasExpectedIncome ? expectedIncome * 0.9 : 0;
+      for (const row of rows) {
+        row.is_canonical_band = hasExpectedIncome
+          ? (row.income_range?.upper ?? 0) >= tierFloor
+          : true;
+      }
       selectedCandidates.push(...rows);
       const allBands = [...new Set(rows.map((r) => r.income_range.label))];
+      const canonicalCount = rows.filter((r) => r.is_canonical_band).length;
       selectedIncomeBands[mutationSlug] = {
         pooled_all_bands: true,
+        tier_anchored: hasExpectedIncome,
+        expected_income_per_second: expectedIncome ?? null,
+        tier_floor: tierFloor || null,
         bands: allBands,
         sample_count: rows.length,
+        canonical_count: canonicalCount,
+        below_tier_count: rows.length - canonicalCount,
       };
       continue;
     }
