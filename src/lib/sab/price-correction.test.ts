@@ -1022,6 +1022,66 @@ describe('computeCorrections — mutation below default (premium floor)', () => 
     expect(c.reason).not.toBe('variant_anchored')
     expect(c.valueUsd).toBe(850)
   })
+
+  // Cyber/Radioactive Dragon Cannelloni regression: a mutation with a REAL
+  // reputable cheapest ($34 from an 18k-review seller) that sits above its own
+  // default but well below the mutation's average must publish that real
+  // cheapest — NOT get overridden to an anchored ~$59 estimate. This is the
+  // exact bug the rebuild fixes: premiumSanityEstimate used to swallow the
+  // reputable result on the mutation path (defaults were already immune).
+  it('publishes a mutation’s REAL reputable cheapest, untouched (Cyber Dragon Cannelloni)', () => {
+    const peers = peerGroup(6)
+    // Establish cyber ≈ 2x default from 20 well-sampled pairs so a measured
+    // multiplier exists (the old override needed one; the new path must ignore it).
+    const pairs: VariantEstimate[] = []
+    for (let i = 0; i < 20; i += 1) {
+      const id = `cy-${i}`
+      pairs.push(variant(id, { valueUsd: 18 }))
+      pairs.push(
+        variant(id, { mutationId: 'm-cyber', mutationSlug: 'cyber', valueUsd: 36 }),
+      )
+    }
+    const pairBrainrots = Array.from({ length: 20 }, (_, i) =>
+      brainrot(`cy-${i}`, { rarity: 'Secret' }),
+    )
+
+    const result = computeCorrections({
+      brainrots: [...peers.brainrots, ...pairBrainrots, brainrot('dc', { rarity: 'Secret' })],
+      variants: [
+        ...peers.variants,
+        ...pairs,
+        variant('dc', {
+          mutationSlug: 'default',
+          mutationId: 'm-default',
+          valueUsd: 18,
+          sampleCount: 10,
+          listingPrices: Array.from({ length: 10 }, () => 18),
+        }),
+        variant('dc', {
+          mutationSlug: 'cyber',
+          mutationId: 'm-cyber-dc',
+          valueUsd: 47.99, // old raw catalog value
+          sampleCount: 12,
+          // The real Eldorado shape: cheapest $34 (18k reviews), then the cluster.
+          reputableListings: [
+            { priceUsd: 34, reviews: 18131 },
+            { priceUsd: 40, reviews: 24913 },
+            { priceUsd: 41.99, reviews: 25948 },
+            { priceUsd: 44, reviews: 56770 },
+            { priceUsd: 47.99, reviews: 33787 },
+            { priceUsd: 59, reviews: 3646 },
+          ],
+        }),
+      ],
+    })
+    const c = result.find((r) => r.mutationId === 'm-cyber-dc')!
+    expect(c.reason).toBe('reputable')
+    expect(c.cheapestUsd).toBe(34) // the REAL cheapest, not a $59 anchor
+    expect(c.lowUsd).toBe(34)
+    expect(c.isAnchored).toBe(false)
+    // $34 is above the $18 default, so the below-default floor leaves it intact.
+    expect(c.averageUsd!).toBeLessThan(59) // median of the cheap cluster, not inflated
+  })
 })
 
 describe('computeCorrections — mutation variants', () => {

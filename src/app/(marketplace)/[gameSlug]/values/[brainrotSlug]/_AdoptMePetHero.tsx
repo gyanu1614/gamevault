@@ -17,6 +17,15 @@ import { VariantAxisPicker } from '../../calculator/_VariantAxisPicker'
 const USD = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' })
 const TRADE = new Intl.NumberFormat('en-US')
 
+/**
+ * Show the quiet "typically ~$X" market line only when the market (average)
+ * exceeds the cheapest by this multiple; below it the two are near-identical
+ * and the cheapest headline says it all. Mirrors SAB's ItemHero split — the
+ * buyer's headline is ALWAYS the cheapest real listing. Kept at 1.12 to match
+ * the Adopt Me values list page (_AdoptMeValuesClient).
+ */
+const MARKET_SECONDARY_GAP = 1.12
+
 /** Per-variant accent dot — Neon/Mega tiers read "hotter". */
 const VARIANT_COLOR: Record<string, string> = {
   N: '#9BA8A0',
@@ -69,6 +78,21 @@ export default function AdoptMePetHero({
   if (!selected) return null
 
   const accent = variantColor(selected.variant)
+  // CHEAPEST is the headline — the price a buyer acts on. MARKET (the typical
+  // reputable price = average) shows as a quiet secondary ONLY when it sits a
+  // meaningful step above the cheapest (> MARKET_SECONDARY_GAP); near-identical
+  // pairs read as one number. Mirrors SAB's _ItemHero exactly.
+  const marketUsd = selected.averageUsd ?? selected.cashUsd
+  const cheapestUsd = selected.cheapestUsd
+  // Headline = cheapest when we have it, else the market/estimate.
+  const headlineUsd = cheapestUsd ?? marketUsd
+  const showMarket =
+    cheapestUsd != null &&
+    marketUsd != null &&
+    marketUsd > cheapestUsd * MARKET_SECONDARY_GAP
+  const marketSecondary = showMarket ? USD.format(marketUsd) : null
+  // A reputable price exists whenever we priced an average from real listings.
+  const hasReputable = selected.averageUsd != null
   // Pet name FIRST, variant as a readable suffix: "Bat Dragon - Normal",
   // "Bat Dragon - FR", "Bat Dragon - Neon Fly Ride" — never "Mega Fly Ride Bat
   // Dragon". N reads as "Normal"; the potioned forms use their full label.
@@ -121,31 +145,26 @@ export default function AdoptMePetHero({
             </dl>
           </div>
 
-          {/* Cash price + confidence + CTA. When we have a reputable market
-              price the headline IS that market price; a "Cheapest" line sits
-              under it whenever a reputable seller undercuts it. Mirrors SAB's
-              ItemHero cheapest/market split. */}
+          {/* Cash price + confidence + CTA. CHEAPEST is the headline (the price a
+              buyer acts on); the typical/market price shows as a quiet secondary
+              only when it's a meaningful step above. Mirrors SAB's ItemHero
+              cheapest/market split. */}
           <div className="lg:text-right">
             <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: accent }}>
-              {selected.averageUsd != null ? 'Market price' : `${selected.label} cash value`}
+              {hasReputable ? 'Cheapest' : `${selected.label} cash value`}
             </p>
             <p className="mt-1 text-[34px] font-bold leading-none tracking-[-0.02em] text-[#F1F3F1] tabular-nums">
-              {selected.cashUsd != null ? USD.format(selected.cashUsd) : 'No data yet'}
+              {headlineUsd != null ? USD.format(headlineUsd) : 'No data yet'}
             </p>
-            {/* Cheapest from a reputable seller — shown only when it genuinely
-                undercuts the market headline (never a duplicate number). */}
-            {selected.cheapestUsd != null &&
-              selected.cashUsd != null &&
-              selected.cheapestUsd < selected.cashUsd - 0.005 && (
-                <p className="mt-1.5 text-[13px] text-[#8B978F] tabular-nums lg:text-right">
-                  Cheapest{' '}
-                  <span className="font-semibold text-[#8FBF9C]">
-                    {USD.format(selected.cheapestUsd)}
-                  </span>
-                </p>
-              )}
+            {/* Typical (market) price — shown only when it genuinely exceeds the
+                cheapest headline (never a duplicate number). */}
+            {marketSecondary && (
+              <p className="mt-1.5 text-[13px] text-[#7C8A80] tabular-nums lg:text-right">
+                typically ~{marketSecondary}
+              </p>
+            )}
             <div className="mt-2.5 flex min-h-[28px] flex-wrap items-center gap-2 lg:justify-end">
-              {selected.averageUsd != null ? (
+              {hasReputable ? (
                 <span className="inline-flex items-center gap-1.5 border px-2 py-1 text-[11.5px] font-semibold" style={{ borderColor: '#8FBF9C44', color: '#8FBF9C' }}>
                   <span className="h-1.5 w-1.5 rounded-full bg-[#8FBF9C]" />
                   From verified sellers
@@ -185,8 +204,8 @@ export default function AdoptMePetHero({
 
         <div className="relative flex items-center justify-center border-t border-white/[0.06] px-5 py-3">
           <span className="font-mono text-[11px] uppercase tracking-[0.1em] text-[#6D7A72]">
-            {selected.averageUsd != null
-              ? 'Cheapest + market price from sellers with 100+ reviews'
+            {hasReputable
+              ? 'Cheapest price from sellers with 100+ reviews'
               : 'Cash values estimated until we hold enough real sales'}
           </span>
         </div>

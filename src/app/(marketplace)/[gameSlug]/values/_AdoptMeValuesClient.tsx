@@ -72,6 +72,10 @@ export interface AdoptMePetItem {
 const USD = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' })
 const TRADE = new Intl.NumberFormat('en-US')
 
+/** Show the "typically ~$X" market line only when market exceeds cheapest by
+ * this multiple; matches the SAB cards (≥25% step, else cheapest alone). */
+const MARKET_SECONDARY_GAP = 1.25
+
 function rarityMeta(r: string) {
   return RARITY_META[r] ?? { label: r, color: '#9BA8A0' }
 }
@@ -262,7 +266,7 @@ export default function AdoptMeValuesClient({ pets }: { pets: AdoptMePetItem[] }
               Trade value <span className="text-[#8FBF9C]">({variant})</span> {sort === 'value-asc' ? '↑' : '↓'}
             </button>
             <span className="text-right text-[13px] font-medium text-[#C6CEC9]">
-              Market · Cheapest <span className="text-[#8FBF9C]">({variant})</span>
+              Cheapest <span className="text-[#8FBF9C]">({variant})</span>
             </span>
           </div>
 
@@ -340,21 +344,21 @@ export default function AdoptMeValuesClient({ pets }: { pets: AdoptMePetItem[] }
                       {v?.tradeValue != null ? TRADE.format(v.tradeValue) : '—'}
                     </span>
 
-                    {/* Market (headline) + Cheapest beneath — estimate-aware,
-                        never a fake $0 or bare dash. Cheapest only shows when it
-                        genuinely undercuts the market (a lone reputable seller
-                        makes them equal). */}
+                    {/* CHEAPEST is the headline; the typical (market) price shows
+                        beneath only when it's meaningfully higher — matches the SAB
+                        cards. Estimate-aware, never a fake $0 or bare dash. */}
                     <span className="flex items-center justify-end gap-1.5 text-right">
                       <span className="flex flex-col items-end">
-                        {v?.cashUsd != null ? (
+                        {v && (v.cheapestUsd ?? v.cashUsd) != null ? (
                           <>
                             <span className="text-[16px] font-bold tabular-nums text-[#8FBF9C] sm:text-[17.5px]">
-                              {USD.format(v.cashUsd)}
+                              {USD.format((v.cheapestUsd ?? v.cashUsd) as number)}
                             </span>
                             {v.cheapestUsd != null &&
-                            v.cheapestUsd < v.cashUsd - 0.005 ? (
+                            v.averageUsd != null &&
+                            v.averageUsd > v.cheapestUsd * MARKET_SECONDARY_GAP ? (
                               <span className="font-mono text-[11px] tabular-nums text-[#8B978F]">
-                                cheapest {USD.format(v.cheapestUsd)}
+                                typically ~{USD.format(v.averageUsd)}
                               </span>
                             ) : v.isEstimated ? (
                               <span className="font-mono text-[9px] uppercase tracking-[0.08em] text-[#8B7BA0]">Est.</span>

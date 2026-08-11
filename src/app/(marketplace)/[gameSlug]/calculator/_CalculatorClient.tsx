@@ -144,10 +144,9 @@ export default function CalculatorClient({
           <h1 className="text-balance text-[30px] font-bold leading-[1.05] tracking-[-0.02em] text-[#F2F6F0] sm:text-[42px]">
             Steal a Brainrot WFL Calculator
           </h1>
-          <p className="mx-auto mt-3 max-w-2xl text-pretty text-[15px] leading-7 text-[#98A398] sm:text-[17px]">
-            Put both sides of a trade in and see instantly whether it&apos;s a
-            Win, Fair or Loss — priced from real completed sales, not guesses.
-            Need a single item&apos;s price? Switch to Cash Price.
+          <p className="mx-auto mt-3 max-w-3xl text-pretty text-[15px] leading-7 text-[#98A398] sm:text-[17px]">
+            Add your Brainrot and the one you want, and see instantly if the trade
+            is a Win, Fair, or Loss — priced from real sales, not guesses.
           </p>
         </div>
 
@@ -165,7 +164,11 @@ export default function CalculatorClient({
             <TradeTab
               brainrots={brainrots}
               mutations={mutations}
-              prices={tradePrices}
+              // Value both sides at the SAME reputable price the rest of the site
+              // shows (cheapest ?? average ?? market, from the corrected catalog) —
+              // NOT the older sab_trade_price_catalog range, which was stale ($20.65
+              // vs the real $16.64 for Dragon Cannelloni). One price source sitewide.
+              prices={cashPrices}
               brainrotMap={brainrotMap}
               mutationMap={mutationMap}
             />
@@ -659,6 +662,118 @@ type Verdict = {
   text: string
 }
 
+/**
+ * Verdict as a fairness BAR: You lose ← Fair → You win. A marker sits at a
+ * position driven by the % difference (0% = dead center; ±swing pins to the
+ * ends). Rectangular, forest-themed, with a flowing sheen over the active
+ * (win/loss) side. Replaces the old dashed circle.
+ */
+function VerdictBar({
+  verdict,
+  percentageDifference,
+  pointDifference,
+  ready,
+}: {
+  verdict: Verdict
+  percentageDifference: number | null
+  pointDifference: number
+  ready: boolean
+}) {
+  // Map % → marker position (0–100). ±40% saturates to the ends; 0% = center.
+  const SWING = 40
+  const pct = percentageDifference ?? 0
+  const clamped = Math.max(-SWING, Math.min(SWING, pct))
+  const markerPos = 50 + (clamped / SWING) * 50 // 0..100
+
+  const isWin = verdict.label === 'WIN'
+  const isLoss = verdict.label === 'LOSS'
+  const isFair = verdict.label === 'FAIR'
+  const accent = isWin ? '#4FB477' : isLoss ? '#E23B4E' : isFair ? '#E0B155' : '#8C98A4'
+  const noData = percentageDifference == null
+
+  return (
+    <div
+      className="border-t border-[#1A211A] px-5 py-6 text-center sm:px-8 sm:py-7"
+      style={{
+        background: `radial-gradient(120% 120% at 50% 0%, ${accent}14, transparent 60%)`,
+      }}
+    >
+      {/* Big verdict + delta pill */}
+      <div className="flex flex-col items-center gap-2">
+        <span
+          className="text-[34px] font-black leading-none tracking-[-0.03em] sm:text-[40px]"
+          style={{ color: noData ? '#6D7A72' : accent }}
+        >
+          {noData ? <LockOutlinedIcon sx={{ fontSize: 34 }} /> : verdict.label}
+        </span>
+        {!noData && (
+          <span
+            className="inline-flex items-center gap-1.5 border px-3 py-1 text-[13px] font-bold tabular-nums"
+            style={{ color: accent, borderColor: `${accent}4d`, backgroundColor: `${accent}1a` }}
+          >
+            {isLoss ? <ThumbDownAltOutlinedIcon sx={{ fontSize: 15 }} /> : <span>{pct >= 0 ? '▲' : '▼'}</span>}
+            {pct > 0 ? '+' : ''}
+            {pct.toFixed(1)}%
+          </span>
+        )}
+      </div>
+
+      {/* The fairness bar — full, wide. */}
+      <div className="mx-auto mt-5 w-full max-w-[520px]">
+        <div className="mb-1.5 flex items-center justify-between text-[9.5px] font-bold uppercase tracking-[0.1em]">
+          <span style={{ color: isLoss ? '#E23B4E' : '#6D6664' }}>You lose</span>
+          <span style={{ color: isFair ? '#E0B155' : '#6D6664' }}>Fair</span>
+          <span style={{ color: isWin ? '#4FB477' : '#6D6664' }}>You win</span>
+        </div>
+        <div className="relative h-4 overflow-hidden border border-[#1E2723] bg-[#0E1512]">
+          <div
+            aria-hidden
+            className="absolute inset-0 opacity-45"
+            style={{
+              background:
+                'linear-gradient(90deg, rgba(226,59,78,0.55) 0%, rgba(224,177,85,0.4) 42%, rgba(224,177,85,0.4) 58%, rgba(79,180,119,0.55) 100%)',
+            }}
+          />
+          <div aria-hidden className="absolute inset-y-0 left-1/2 w-px bg-[#3A423C]" />
+          {!noData && (
+            <div
+              aria-hidden
+              className="sab-verdict-sheen pointer-events-none absolute inset-0"
+              style={{ background: `linear-gradient(110deg, transparent 35%, ${accent}66 50%, transparent 65%)` }}
+            />
+          )}
+          {!noData && (
+            <div
+              className="absolute top-1/2 h-5 w-5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-[#0B0F0C]"
+              style={{ left: `${markerPos}%`, backgroundColor: accent, boxShadow: `0 0 12px ${accent}b3` }}
+            />
+          )}
+        </div>
+      </div>
+
+      {/* Caption + gain line */}
+      <p className="mx-auto mt-5 max-w-[440px] text-[13px] font-medium leading-6 text-[#9BA8A0]">
+        {verdict.caption}
+      </p>
+      {ready && (
+        <p className="mx-auto mt-1.5 max-w-[440px] text-[12px] leading-5 text-[#6D7883]">
+          {pointDifference === 0 ? (
+            'Both sides come to the same value'
+          ) : (
+            <>
+              {pointDifference > 0 ? 'You gain ' : 'You lose '}
+              <span className="font-bold tabular-nums text-[#E4EAE2]">
+                {formatCash(Math.abs(pointDifference)) ?? '—'}
+              </span>{' '}
+              on this trade
+            </>
+          )}
+        </p>
+      )}
+    </div>
+  )
+}
+
 function TradeTab({
   brainrots,
   mutations,
@@ -1005,107 +1120,43 @@ function TradeTab({
   return (
     <>
       <div className="overflow-hidden border border-[#1A211A] bg-[#0B0F0C]">
-        <div className="border-b border-[#1A211A] bg-[#0E130F] px-5 py-4 text-center sm:px-8">
-          <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-[#8FBF9C]">
-            DropMarket trade checker
-          </p>
-          <h2 className="mt-1.5 text-[18px] font-bold tracking-tight text-[#F1F3F1] sm:text-[20px]">
-            Is this trade fair?
-          </h2>
-        </div>
-
-        <div className="grid gap-6 p-5 sm:p-8 lg:grid-cols-[minmax(0,1fr)_180px_minmax(0,1fr)] lg:items-center">
-          <TradeSide
-            side="give"
-            label="Your Side"
-            entries={give}
-            brainrotMap={brainrotMap}
-            mutationMap={mutationMap}
-            priceMap={priceMap}
-            summary={giveSummary}
-            onEmptyClick={openEmptySlot}
-            onEntryClick={openEntry}
-          />
-
-          <div className="order-first flex flex-col items-center justify-center lg:order-none">
-            <div
-              className={cn(
-                'flex h-36 w-36 flex-col items-center justify-center rounded-full border-2 border-dashed',
-                verdict.border,
-                verdict.background,
-              )}
-            >
-              <span
-                className={cn(
-                  'text-center text-[26px] font-bold tracking-tight',
-                  verdict.text,
-                )}
-              >
-                {verdict.label}
-              </span>
-              {percentageDifference == null ? (
-                <LockOutlinedIcon
-                  sx={{ fontSize: 20 }}
-                  className="mt-2 text-[#6D7A72]"
-                />
-              ) : verdict.label === 'LOSS' ? (
-                <span className={cn('mt-1 flex items-center gap-1.5 text-sm font-bold tabular-nums', verdict.text)}>
-                  <ThumbDownAltOutlinedIcon sx={{ fontSize: 16 }} />
-                  {percentageDifference > 0 ? '+' : ''}
-                  {percentageDifference.toFixed(1)}%
-                </span>
-              ) : (
-                <span
-                  className={cn(
-                    'mt-1 text-sm font-bold tabular-nums',
-                    verdict.text,
-                  )}
-                >
-                  {percentageDifference > 0 ? '+' : ''}
-                  {percentageDifference.toFixed(1)}%
-                </span>
-              )}
-            </div>
-
-            <p className="mt-4 max-w-[220px] text-center text-[12.5px] font-medium leading-5 text-[#9BA8A0]">
-              {verdict.caption}
-            </p>
-
-            {ready && (
-              /* Was "Midpoint difference: $108.66" — a number with no subject.
-                 Now it says who is up and by how much. */
-              <p className="mt-1 max-w-[230px] text-center text-xs leading-5 text-[#6D7A72]">
-                {pointDifference === 0 ? (
-                  'Both sides come to the same value'
-                ) : (
-                  <>
-                    {pointDifference > 0 ? 'You gain ' : 'You lose '}
-                    <span className="font-semibold tabular-nums text-[#B7C0BA]">
-                      {formatCash(Math.abs(pointDifference)) ?? '—'}
-                    </span>{' '}
-                    on this trade
-                  </>
-                )}
-              </p>
-            )}
+        {/* ── Two trade sides on top, side by side. Your side gets a faint green
+            wash, their side a faint red wash — a subtle "win on mine / loss on
+            theirs" cue without a separate tag. ── */}
+        <div className="grid grid-cols-1 sm:grid-cols-2">
+          <div className="border-b border-[#141B15] bg-[linear-gradient(180deg,rgba(79,180,119,0.05),transparent_60%)] p-5 sm:border-b-0 sm:border-r sm:p-6 lg:p-8">
+            <TradeSide
+              side="give"
+              label="Your Side"
+              entries={give}
+              brainrotMap={brainrotMap}
+              mutationMap={mutationMap}
+              priceMap={priceMap}
+              summary={giveSummary}
+              onEmptyClick={openEmptySlot}
+              onEntryClick={openEntry}
+            />
           </div>
-
-          <TradeSide
-            side="receive"
-            label="Their Side"
-            entries={receive}
-            brainrotMap={brainrotMap}
-            mutationMap={mutationMap}
-            priceMap={priceMap}
-            summary={receiveSummary}
-            onEmptyClick={openEmptySlot}
-            onEntryClick={openEntry}
-          />
+          <div className="bg-[linear-gradient(180deg,rgba(226,59,78,0.05),transparent_60%)] p-5 sm:p-6 lg:p-8">
+            <TradeSide
+              side="receive"
+              label="Their Side"
+              entries={receive}
+              brainrotMap={brainrotMap}
+              mutationMap={mutationMap}
+              priceMap={priceMap}
+              summary={receiveSummary}
+              onEmptyClick={openEmptySlot}
+              onEntryClick={openEntry}
+            />
+          </div>
         </div>
 
+        {/* Any pause/low-confidence notices sit between the sides and the verdict
+            so the verdict band always reads as the final answer. */}
         {(giveSummary.unknown > 0 ||
           receiveSummary.unknown > 0) && (
-          <div className="mx-5 mb-3 border border-[#E0B155]/25 bg-[#E0B155]/10 px-4 py-3 text-center text-[12.5px] text-[#E0B155] sm:mx-8">
+          <div className="border-t border-[#1A211A] bg-[#E0B155]/10 px-5 py-3 text-center text-[12.5px] text-[#E0B155] sm:px-8">
             The verdict is paused because one or more selected
             mutation variants has no cash-market estimate.
           </div>
@@ -1115,12 +1166,22 @@ function TradeTab({
           receiveSummary.lowConfidence > 0) &&
           giveSummary.unknown === 0 &&
           receiveSummary.unknown === 0 && (
-            <div className="mx-5 mb-3 bg-white/[0.04] px-4 py-3 text-center text-[12.5px] text-[#9BA8A0] sm:mx-8">
+            <div className="border-t border-[#1A211A] bg-white/[0.03] px-5 py-3 text-center text-[12.5px] text-[#9BA8A0] sm:px-8">
               Low-confidence evidence is included. The verdict
               uses the full low-to-high market range rather than
               only the midpoint.
             </div>
           )}
+
+        {/* ── Full-width verdict band: big WIN/LOSS + %, the fairness bar (you
+            lose ← fair → you win) with a marker driven by the % difference and a
+            flowing sheen, then the caption + gain line. ── */}
+        <VerdictBar
+          verdict={verdict}
+          percentageDifference={percentageDifference}
+          pointDifference={pointDifference}
+          ready={ready}
+        />
 
         <div className="grid gap-3 border-t border-[#1A211A] bg-black/20 p-5 sm:grid-cols-2 sm:px-8">
           <button

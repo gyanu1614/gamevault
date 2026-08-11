@@ -59,18 +59,34 @@ async function getGames(slugs: string[]): Promise<Map<string, GameRow>> {
 export default async function BlogIndexPage() {
   const posts = await getAllPublishedPosts()
 
-  // Posts per game — drives both the ordering and the count on each row.
-  const counts = new Map<string, number>()
+  // Group posts by game (newest-first within each — getAllPublishedPosts already
+  // returns newest-first). Posts with no game fall under a "General" bucket.
+  const GENERAL = '__general__'
+  const byGame = new Map<string, typeof posts>()
   for (const post of posts) {
-    if (!post.primaryGameSlug) continue
-    counts.set(post.primaryGameSlug, (counts.get(post.primaryGameSlug) ?? 0) + 1)
+    const key = post.primaryGameSlug ?? GENERAL
+    const list = byGame.get(key)
+    if (list) list.push(post)
+    else byGame.set(key, [post])
   }
-  const games = await getGames([...counts.keys()])
+  const games = await getGames([...byGame.keys()].filter((k) => k !== GENERAL))
 
-  const hubs = [...counts.entries()]
-    .map(([slug, count]) => ({ game: games.get(slug), count }))
-    .filter((hub): hub is { game: GameRow; count: number } => Boolean(hub.game))
-    .sort((a, b) => b.count - a.count || a.game.name.localeCompare(b.game.name))
+  // Build a section per game, ordered by that game's NEWEST post (so the most
+  // recently updated game leads). General goes last.
+  const sections = [...byGame.entries()]
+    .map(([slug, list]) => ({
+      slug,
+      game: slug === GENERAL ? null : games.get(slug) ?? null,
+      posts: list,
+      newest: list[0]?.publishedAt ?? '',
+    }))
+    // Drop game sections whose game row is missing (inactive), keep General.
+    .filter((s) => s.slug === GENERAL || s.game)
+    .sort((a, b) => {
+      if (a.slug === GENERAL) return 1
+      if (b.slug === GENERAL) return -1
+      return b.newest.localeCompare(a.newest)
+    })
 
   return (
     <main className="min-h-screen pb-24">
@@ -87,68 +103,62 @@ export default async function BlogIndexPage() {
           </p>
         </div>
 
-        {/* Hubs first — this page's main job is sending readers into a game. */}
-        {hubs.length > 0 && (
-          <section className="mt-12 sm:mt-14">
-            <h2 className="text-caption font-bold uppercase tracking-[0.14em] text-text-tertiary">
-              Browse By Game
-            </h2>
-            <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {hubs.map(({ game, count }) => (
-                <Link
-                  key={game.slug}
-                  href={`/${game.slug}/blog`}
-                  className="group flex items-center gap-3 border border-border-default bg-[rgba(20,20,27,0.56)] p-3 backdrop-blur-md transition-all duration-200 hover:-translate-y-0.5 hover:border-border-strong hover:bg-[rgba(26,26,35,0.70)]"
-                >
-                  {/* Monogram fallback — several games have no art yet, and an
-                      empty tile reads as a broken image. */}
-                  <span className="relative grid h-11 w-11 shrink-0 place-items-center overflow-hidden bg-white/[0.04] text-body-sm font-bold text-text-tertiary">
-                    {game.image_url ? (
-                      /* eslint-disable-next-line @next/next/no-img-element */
-                      <img
-                        src={game.image_url}
-                        alt=""
-                        loading="lazy"
-                        className="absolute inset-0 h-full w-full object-cover"
-                      />
-                    ) : (
-                      game.name.charAt(0).toUpperCase()
+        {posts.length === 0 ? (
+          <div className="mt-12 border border-border-default bg-[rgba(20,20,27,0.56)] px-6 py-14 text-center backdrop-blur-md">
+            <p className="text-body font-semibold text-text-primary">No guides yet</p>
+            <p className="mt-2 text-body-sm text-text-tertiary">
+              New guides land here as we publish them.
+            </p>
+          </div>
+        ) : (
+          <div className="mt-12 flex flex-col gap-12 sm:mt-14 sm:gap-14">
+            {sections.map(({ slug, game, posts: gamePosts }) => {
+              const name = game?.name ?? 'General'
+              const hubHref = game ? `/${game.slug}/blog` : null
+              // Show the newest 3 per game; "View all" links to the game hub.
+              const shown = gamePosts.slice(0, 3)
+              return (
+                <section key={slug}>
+                  {/* ── Section header: game icon + name + count · View all ── */}
+                  <div className="mb-4 flex items-center justify-between gap-3 border-b border-border-default pb-3">
+                    <div className="flex items-center gap-2.5">
+                      <span className="relative grid h-8 w-8 shrink-0 place-items-center overflow-hidden rounded-md bg-white/[0.04] text-body-sm font-bold text-text-tertiary">
+                        {game?.image_url ? (
+                          /* eslint-disable-next-line @next/next/no-img-element */
+                          <img src={game.image_url} alt="" loading="lazy" className="absolute inset-0 h-full w-full object-cover" />
+                        ) : (
+                          name.charAt(0).toUpperCase()
+                        )}
+                      </span>
+                      <h2 className="text-[17px] font-bold tracking-tight text-text-primary sm:text-[19px]">
+                        {name}
+                      </h2>
+                      <span className="text-caption text-text-tertiary">
+                        {gamePosts.length} {gamePosts.length === 1 ? 'guide' : 'guides'}
+                      </span>
+                    </div>
+                    {hubHref && (
+                      <Link
+                        href={hubHref}
+                        className="group inline-flex items-center gap-1 text-body-sm font-semibold text-lime-text transition hover:opacity-80"
+                      >
+                        View all
+                        <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" />
+                      </Link>
                     )}
-                  </span>
-                  <span className="flex min-w-0 flex-1 flex-col">
-                    <span className="truncate text-body-sm font-bold text-text-primary transition-colors group-hover:text-lime-text">
-                      {game.name}
-                    </span>
-                    <span className="text-caption text-text-tertiary">
-                      {count} {count === 1 ? 'guide' : 'guides'} · values &amp; calculator
-                    </span>
-                  </span>
-                  <ArrowRight className="h-4 w-4 shrink-0 text-text-tertiary transition-transform duration-200 group-hover:translate-x-0.5 group-hover:text-lime-text" />
-                </Link>
-              ))}
-            </div>
-          </section>
-        )}
+                  </div>
 
-        <section className="mt-12 sm:mt-16">
-          <h2 className="text-caption font-bold uppercase tracking-[0.14em] text-text-tertiary">
-            Latest Guides
-          </h2>
-          {posts.length === 0 ? (
-            <div className="mt-4 border border-border-default bg-[rgba(20,20,27,0.56)] px-6 py-14 text-center backdrop-blur-md">
-              <p className="text-body font-semibold text-text-primary">No guides yet</p>
-              <p className="mt-2 text-body-sm text-text-tertiary">
-                New guides land here as we publish them.
-              </p>
-            </div>
-          ) : (
-            <div className="mt-4 grid grid-cols-1 gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
-              {posts.map((post, i) => (
-                <BlogCard key={post.id} post={post} index={i} href={postHref(post)} />
-              ))}
-            </div>
-          )}
-        </section>
+                  {/* ── Uniform card grid (fixed via BlogCard) ── */}
+                  <div className="grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-2 lg:grid-cols-3">
+                    {shown.map((post, i) => (
+                      <BlogCard key={post.id} post={post} index={i} href={postHref(post)} />
+                    ))}
+                  </div>
+                </section>
+              )
+            })}
+          </div>
+        )}
       </div>
     </main>
   )

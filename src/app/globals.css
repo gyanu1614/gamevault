@@ -769,3 +769,15 @@
 @media (prefers-reduced-motion: reduce) {
   .dm-beam { animation: none; opacity: 0.35; }
 }
+
+/* Verdict-bar sheen — a soft highlight sweeps across the fairness bar. */
+@keyframes sab-verdict-sheen {
+  0% { transform: translateX(-120%); }
+  60%, 100% { transform: translateX(120%); }
+}
+.sab-verdict-sheen {
+  animation: sab-verdict-sheen 3.4s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .sab-verdict-sheen { animation: none; opacity: 0; }
+}

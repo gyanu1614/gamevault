@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import { JsonLd, breadcrumbList } from '@/lib/seo/jsonld'
 import ValuesDirectoryClient, {
   type BrainrotDirectoryItem,
+  type CardMutation,
 } from './_ValuesDirectoryClient'
 import { SabHeroBackdrop } from './_SabHeroBackdrop'
 import { SabSellerCta } from '../_SabSellerCta'
@@ -108,6 +109,32 @@ const USD_FMT = new Intl.NumberFormat('en-US', {
   currency: 'USD',
 })
 
+/**
+ * Page through an entire table in 1000-row chunks. Supabase/PostgREST caps a
+ * single select at 1000 rows, so `sab_brainrot_mutation_calculator` (~7k rows =
+ * 498 brainrots × 14 mutations) silently returned only its first 1000 — which is
+ * why most cards showed no mutation chip. A stable `.order()` keeps pages
+ * gap-free. `build(query)` applies table-specific columns/filters to each page.
+ */
+async function selectAllRows<T>(
+  build: (from: number, to: number) => any,
+): Promise<T[]> {
+  const PAGE = 1000
+  const rows: T[] = []
+  for (let page = 0; ; page += 1) {
+    const from = page * PAGE
+    const { data, error } = await build(from, from + PAGE - 1)
+    if (error) {
+      console.error('selectAllRows:', error)
+      break
+    }
+    if (!data?.length) break
+    rows.push(...(data as T[]))
+    if (data.length < PAGE) break
+  }
+  return rows
+}
+
 export interface MoverItem {
   slug: string
   name: string
@@ -193,7 +220,13 @@ async function getBiggestMovers(limit = 3): Promise<MoverItem[]> {
 async function getBrainrots(): Promise<BrainrotDirectoryItem[]> {
   const supabase = await createClient()
 
-  const [brainrotResult, priceResult, popularityResult] = await Promise.all([
+  const [
+    brainrotResult,
+    priceResult,
+    mutationPriceResult,
+    calculatorResult,
+    popularityResult,
+  ] = await Promise.all([
     (supabase as any)
       .from('sab_brainrot_market_catalog')
       .select(
@@ -201,12 +234,42 @@ async function getBrainrots(): Promise<BrainrotDirectoryItem[]> {
       )
       .order('name', { ascending: true }),
 
+    // Default-mutation price — still the headline the card leads with.
     (supabase as any)
       .from('sab_public_price_catalog_corrected')
       .select(
         'brainrot_id,market_value_usd,market_low_usd,market_high_usd,cheapest_usd,average_usd,confidence_label,is_trade_ready,external_sample_size',
       )
       .eq('mutation_slug', 'default'),
+
+    // ALL priced mutations (default included) so the card's in-card switcher can
+    // show each mutation's REAL cheapest/average. Coverage is sparse (~1.6 priced
+    // mutations/item), so this is a light payload — and we never estimate: a
+    // mutation with no row simply shows "No Sales" in the picker.
+    (supabase as any)
+      .from('sab_public_price_catalog_corrected')
+      .select('brainrot_id,mutation_slug,cheapest_usd,average_usd')
+      .not('cheapest_usd', 'is', null),
+
+    // Mutation display metadata (name, income multiplier, per-mutation income) for
+    // every brainrot+mutation — drives the picker labels and the income line.
+    // PAGINATED: ~7k rows (498 × 14) blow past PostgREST's 1000-row cap, which
+    // previously truncated it so most cards showed no mutation chip.
+    selectAllRows<{
+      brainrot_id: string
+      mutation_slug: string
+      mutation_name: string | null
+      income_multiplier: number | string | null
+      calculated_income_per_second: number | string | null
+    }>((from, to) =>
+      (supabase as any)
+        .from('sab_brainrot_mutation_calculator')
+        .select(
+          'brainrot_id,mutation_slug,mutation_name,income_multiplier,calculated_income_per_second',
+        )
+        .order('brainrot_id', { ascending: true })
+        .range(from, to),
+    ).then((data: unknown[]) => ({ data, error: null })),
 
     // Real marketplace popularity (Eldorado usePopularItems ranking). Read
     // straight from sab_brainrots so the hand-edited catalog view needn't change.
@@ -247,17 +310,88 @@ async function getBrainrots(): Promise<BrainrotDirectoryItem[]> {
       .map((row) => [row.id, row.popularity_rank] as const),
   )
 
+  // Per-mutation prices (real cheapest/average) keyed by brainrot then slug.
+  const mutationPriceByBrainrot = new Map<
+    string,
+    Map<string, { cheapest_usd: number | null; average_usd: number | null }>
+  >()
+  for (const row of (mutationPriceResult?.data ?? []) as {
+    brainrot_id: string
+    mutation_slug: string
+    cheapest_usd: number | string | null
+    average_usd: number | string | null
+  }[]) {
+    const inner = mutationPriceByBrainrot.get(row.brainrot_id) ?? new Map()
+    inner.set(row.mutation_slug, {
+      cheapest_usd: row.cheapest_usd != null ? Number(row.cheapest_usd) : null,
+      average_usd: row.average_usd != null ? Number(row.average_usd) : null,
+    })
+    mutationPriceByBrainrot.set(row.brainrot_id, inner)
+  }
+
+  // Mutation display metadata (name, multiplier, income) keyed by brainrot+slug.
+  const mutationMetaByBrainrot = new Map<
+    string,
+    Map<
+      string,
+      { name: string; multiplier: number | null; income: number | null }
+    >
+  >()
+  for (const row of (calculatorResult?.data ?? []) as {
+    brainrot_id: string
+    mutation_slug: string
+    mutation_name: string | null
+    income_multiplier: number | string | null
+    calculated_income_per_second: number | string | null
+  }[]) {
+    const inner = mutationMetaByBrainrot.get(row.brainrot_id) ?? new Map()
+    inner.set(row.mutation_slug, {
+      name: row.mutation_name ?? row.mutation_slug,
+      multiplier:
+        row.income_multiplier != null ? Number(row.income_multiplier) : null,
+      income:
+        row.calculated_income_per_second != null
+          ? Number(row.calculated_income_per_second)
+          : null,
+    })
+    mutationMetaByBrainrot.set(row.brainrot_id, inner)
+  }
+
+  /**
+   * Build the card's mutation list: EVERY mutation the item has metadata for,
+   * carrying its real cheapest/average when priced (null → the card shows "No
+   * Sales" for that mutation; we never estimate). Ordered by income multiplier
+   * so Default leads and premiums ascend.
+   */
+  const buildMutations = (brainrotId: string): CardMutation[] => {
+    const meta = mutationMetaByBrainrot.get(brainrotId)
+    if (!meta) return []
+    const prices = mutationPriceByBrainrot.get(brainrotId)
+    return [...meta.entries()]
+      .map(([slug, m]) => ({
+        slug,
+        name: m.name,
+        multiplier: m.multiplier,
+        income: m.income,
+        cheapest_usd: prices?.get(slug)?.cheapest_usd ?? null,
+        average_usd: prices?.get(slug)?.average_usd ?? null,
+      }))
+      .sort((a, b) => (a.multiplier ?? 0) - (b.multiplier ?? 0))
+  }
+
   return (
     (brainrotResult.data ?? []) as BrainrotDirectoryItem[]
   ).map((brainrot) => {
     const price = priceByBrainrot.get(brainrot.id)
     const popularityRank = rankByBrainrot.get(brainrot.id) ?? null
+    const mutations = buildMutations(brainrot.id)
 
-    if (!price) return { ...brainrot, popularity_rank: popularityRank }
+    if (!price) return { ...brainrot, popularity_rank: popularityRank, mutations }
 
     return {
       ...brainrot,
       popularity_rank: popularityRank,
+      mutations,
       display_price_usd: Number(price.market_value_usd),
       display_price_label: 'Average Current Market Price',
       display_price_source: 'public_market_estimate',

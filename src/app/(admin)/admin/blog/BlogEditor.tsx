@@ -12,6 +12,7 @@ import {
   uploadBlogImage,
 } from '@/lib/actions/admin-blog'
 import { BlogPreview } from './BlogPreview'
+import { BlogBodyEditor } from './BlogBodyEditor'
 
 /** Read a File into the base64 payload uploadBlogImage expects. */
 function fileToPayload(
@@ -59,6 +60,9 @@ export function BlogEditor({
   const router = useRouter()
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
+  const [toast, setToast] = useState<string | null>(null)
+  const bodyRef = useRef<HTMLTextAreaElement | null>(null)
+  const toastTimer = useRef<number>(0)
 
   const [title, setTitle] = useState(post?.title ?? '')
   const [slug, setSlug] = useState(post?.slug ?? '')
@@ -76,7 +80,6 @@ export function BlogEditor({
   const [uploading, setUploading] = useState<'cover' | 'body' | null>(null)
   const [previewOpen, setPreviewOpen] = useState(false)
   const coverInputRef = useRef<HTMLInputElement | null>(null)
-  const bodyInputRef = useRef<HTMLInputElement | null>(null)
 
   const handleUpload = async (file: File, target: 'cover' | 'body') => {
     setError(null)
@@ -88,14 +91,30 @@ export function BlogEditor({
         setError(res.error)
         return
       }
-      if (target === 'cover') {
-        setCoverUrl(res.url)
-      } else {
-        // Append as a markdown image paragraph the article renderer shows.
-        setBody((b) => `${b.trimEnd()}\n\n![Image](${res.url})\n\n`)
-      }
+      if (target === 'cover') setCoverUrl(res.url)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Upload failed')
+    } finally {
+      setUploading(null)
+    }
+  }
+
+  /** Upload a body image and RETURN its URL — the split editor places it at the
+   * cursor (with alignment), rather than appending to the end. */
+  const uploadBodyImage = async (file: File): Promise<string | null> => {
+    setError(null)
+    setUploading('body')
+    try {
+      const payload = await fileToPayload(file)
+      const res = await uploadBlogImage(payload)
+      if (!res.success) {
+        setError(res.error)
+        return null
+      }
+      return res.url
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Upload failed')
+      return null
     } finally {
       setUploading(null)
     }
@@ -107,6 +126,9 @@ export function BlogEditor({
     setTitle(v)
     if (!slugTouched) setSlug(slugify(v))
   }
+
+  type Tab = 'content' | 'cover' | 'seo' | 'settings'
+  const [tab, setTab] = useState<Tab>('content')
 
   const save = () => {
     setError(null)
@@ -140,159 +162,137 @@ export function BlogEditor({
         setError(res.error || 'Failed to save.')
         return
       }
-      router.push('/admin/blog')
+      // Stay on the editor and confirm with a toast (no jarring redirect to the
+      // list). refresh() re-runs the server component so the saved data is fresh.
+      setToast(post ? 'Blog updated' : 'Blog created')
       router.refresh()
+      window.clearTimeout(toastTimer.current)
+      toastTimer.current = window.setTimeout(() => setToast(null), 3000)
     })
   }
 
+  const TABS: { id: Tab; label: string }[] = [
+    { id: 'content', label: 'Content' },
+    { id: 'cover', label: 'Cover' },
+    { id: 'seo', label: 'SEO' },
+    { id: 'settings', label: 'Settings' },
+  ]
+  const statusTone =
+    status === 'published'
+      ? { dot: 'bg-lime', text: 'text-lime-text' }
+      : status === 'archived'
+        ? { dot: 'bg-gray-500', text: 'text-gray-400' }
+        : { dot: 'bg-amber-400', text: 'text-amber-300' }
+
   return (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
-      {/* Main column */}
-      <div className="space-y-5">
-        <div>
-          <label className={label}>Title</label>
-          <input
-            className={field}
-            value={title}
-            onChange={(e) => onTitle(e.target.value)}
-            placeholder="Steal a Brainrot Value List (July 2026)"
-          />
+    <div className="pb-24">
+      {/* ── Sticky action bar: tabs (left) · status + actions (right) ── */}
+      <div className="sticky top-0 z-30 -mx-4 mb-5 flex flex-wrap items-center justify-between gap-3 border-b border-white/10 bg-[#0B0F0C]/95 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6">
+        <div className="flex gap-1 rounded-lg border border-white/10 bg-white/[0.03] p-1">
+          {TABS.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => setTab(t.id)}
+              className={`rounded-md px-3.5 py-1.5 text-[13px] font-semibold transition ${
+                tab === t.id ? 'bg-lime text-black' : 'text-gray-300 hover:text-white'
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
         </div>
-
-        <div>
-          <label className={label}>Slug (URL)</label>
-          <input
-            className={field}
-            value={slug}
-            onChange={(e) => {
-              setSlugTouched(true)
-              setSlug(slugify(e.target.value))
-            }}
-            placeholder="value-list"
-          />
-          <p className="mt-1 text-xs text-gray-500">
-            {primaryGame ? `/${primaryGame}/blog/${slug || '…'}` : `/blog/${slug || '…'}`}
-          </p>
-        </div>
-
-        <div>
-          <label className={label}>Excerpt</label>
-          <textarea
-            className={field}
-            rows={2}
-            value={excerpt}
-            onChange={(e) => setExcerpt(e.target.value)}
-            placeholder="One-sentence summary shown on cards and in search."
-          />
-        </div>
-
-        <div>
-          <div className="mb-1.5 flex items-center justify-between">
-            <label className={label.replace('mb-1.5 block ', '')}>Body</label>
-            <div>
-              <input
-                ref={bodyInputRef}
-                type="file"
-                accept="image/png,image/jpeg,image/webp,image/gif"
-                className="hidden"
-                onChange={(e) => {
-                  const f = e.target.files?.[0]
-                  if (f) void handleUpload(f, 'body')
-                  e.target.value = ''
-                }}
-              />
-              <button
-                type="button"
-                onClick={() => bodyInputRef.current?.click()}
-                disabled={uploading !== null}
-                className="rounded-lg border border-lime/50 px-3 py-1.5 text-xs font-semibold text-lime-text transition hover:bg-lime/10 disabled:opacity-50"
-              >
-                {uploading === 'body' ? 'Uploading…' : '+ Insert image'}
-              </button>
-            </div>
-          </div>
-          <textarea
-            className={`${field} font-mono text-[13px] leading-6`}
-            rows={18}
-            value={body}
-            onChange={(e) => setBody(e.target.value)}
-            placeholder={'Write in paragraphs.\n\nSeparate each paragraph with a blank line.'}
-          />
-          <p className="mt-1 text-xs text-gray-500">
-            Separate paragraphs with a blank line. Use ## for section headings,
-            - for bullets, and ![caption](url) for photos — Insert image
-            uploads and appends one for you.
-          </p>
-        </div>
-
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div>
-            <label className={label}>SEO title (optional)</label>
-            <input className={field} value={seoTitle} onChange={(e) => setSeoTitle(e.target.value)} />
-          </div>
-          <div>
-            <label className={label}>SEO description (optional)</label>
-            <input
-              className={field}
-              value={seoDescription}
-              onChange={(e) => setSeoDescription(e.target.value)}
-            />
-          </div>
+        <div className="flex items-center gap-3">
+          <span className={`inline-flex items-center gap-1.5 text-xs font-semibold capitalize ${statusTone.text}`}>
+            <span className={`h-1.5 w-1.5 rounded-full ${statusTone.dot}`} />
+            {status}
+          </span>
+          <button
+            type="button"
+            onClick={() => setPreviewOpen(true)}
+            className="rounded-lg border border-white/15 px-3.5 py-2 text-[13px] font-semibold text-gray-200 transition hover:border-white/30"
+          >
+            Preview
+          </button>
+          <button
+            type="button"
+            onClick={() => router.push('/admin/blog')}
+            className="rounded-lg border border-white/15 px-3.5 py-2 text-[13px] font-semibold text-gray-300 transition hover:border-white/30"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={save}
+            disabled={pending}
+            className="rounded-lg bg-lime px-4 py-2 text-[13px] font-bold text-black transition hover:opacity-90 disabled:opacity-50"
+          >
+            {pending ? 'Saving…' : post ? 'Save changes' : 'Create post'}
+          </button>
         </div>
       </div>
 
-      {/* Sidebar */}
-      <div className="space-y-5">
-        <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
-          <div className="space-y-4">
+      {error && (
+        <div className="mb-5 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-400">
+          {error}
+        </div>
+      )}
+
+      {/* ── CONTENT tab: title + slug always visible, then full-width body ── */}
+      {tab === 'content' && (
+        <div className="space-y-5">
+          <div className="grid gap-4 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
             <div>
-              <label className={label}>Status</label>
-              <select className={field} value={status} onChange={(e) => setStatus(e.target.value as BlogStatus)}>
-                <option value="draft">Draft</option>
-                <option value="published">Published</option>
-                <option value="archived">Archived</option>
-              </select>
-            </div>
-            <div>
-              <label className={label}>Post type</label>
-              <select
+              <label className={label}>Title</label>
+              <input
                 className={field}
-                value={postType}
-                onChange={(e) => setPostType(e.target.value as BlogPostType)}
-              >
-                <option value="value">Value list</option>
-                <option value="seller">Seller guide</option>
-                <option value="guide">General guide</option>
-              </select>
+                value={title}
+                onChange={(e) => onTitle(e.target.value)}
+                placeholder="Steal a Brainrot Value List (July 2026)"
+              />
             </div>
             <div>
-              <label className={label}>Game</label>
-              <select className={field} value={primaryGame} onChange={(e) => setPrimaryGame(e.target.value)}>
-                <option value="">General (no game)</option>
-                {games.map((g) => (
-                  <option key={g.slug} value={g.slug}>
-                    {g.name}
-                  </option>
-                ))}
-              </select>
+              <label className={label}>Slug (URL)</label>
+              <input
+                className={field}
+                value={slug}
+                onChange={(e) => {
+                  setSlugTouched(true)
+                  setSlug(slugify(e.target.value))
+                }}
+                placeholder="value-list"
+              />
+              <p className="mt-1 truncate text-xs text-gray-500">
+                {primaryGame ? `/${primaryGame}/blog/${slug || '…'}` : `/blog/${slug || '…'}`}
+              </p>
             </div>
+          </div>
+          <div>
+            <label className={label}>Body</label>
+            <BlogBodyEditor
+              body={body}
+              setBody={setBody}
+              bodyRef={bodyRef}
+              onUploadImage={uploadBodyImage}
+              uploading={uploading === 'body'}
+            />
           </div>
         </div>
+      )}
 
-        <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4 space-y-4">
+      {/* ── COVER tab: excerpt + cover image ── */}
+      {tab === 'cover' && (
+        <div className="max-w-2xl space-y-5">
           <div>
-            <label className={label}>Author</label>
-            <input className={field} value={author} onChange={(e) => setAuthor(e.target.value)} />
-          </div>
-          <div>
-            <label className={label}>Read minutes</label>
-            <input
-              type="number"
+            <label className={label}>Excerpt</label>
+            <textarea
               className={field}
-              value={readMinutes}
-              onChange={(e) => setReadMinutes(Number(e.target.value))}
-              min={1}
+              rows={3}
+              value={excerpt}
+              onChange={(e) => setExcerpt(e.target.value)}
+              placeholder="One-sentence summary shown on cards and in search."
             />
+            <p className="mt-1 text-xs text-gray-500">Shown on the blog cards and in search results.</p>
           </div>
           <div>
             <label className={label}>Cover image</label>
@@ -328,43 +328,79 @@ export function BlogEditor({
               <img
                 src={coverUrl}
                 alt="Cover preview"
-                className="mt-2 h-24 w-full rounded-md border border-white/10 object-cover"
+                className="mt-3 aspect-[16/9] w-full max-w-md rounded-lg border border-white/10 object-cover"
               />
             )}
           </div>
         </div>
+      )}
 
-        {error && (
-          <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-400">
-            {error}
+      {/* ── SEO tab ── */}
+      {tab === 'seo' && (
+        <div className="max-w-2xl space-y-5">
+          <div>
+            <label className={label}>SEO title (optional)</label>
+            <input className={field} value={seoTitle} onChange={(e) => setSeoTitle(e.target.value)} placeholder="Falls back to the post title" />
           </div>
-        )}
-
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={save}
-            disabled={pending}
-            className="flex-1 rounded-lg bg-lime px-4 py-2.5 text-sm font-semibold text-black transition hover:opacity-90 disabled:opacity-50"
-          >
-            {pending ? 'Saving…' : post ? 'Save changes' : 'Create post'}
-          </button>
-          <button
-            type="button"
-            onClick={() => setPreviewOpen(true)}
-            className="rounded-lg border border-lime/50 px-4 py-2.5 text-sm font-semibold text-lime-text transition hover:bg-lime/10"
-          >
-            Preview
-          </button>
-          <button
-            type="button"
-            onClick={() => router.push('/admin/blog')}
-            className="rounded-lg border border-white/15 px-4 py-2.5 text-sm font-semibold text-gray-300 transition hover:border-white/30"
-          >
-            Cancel
-          </button>
+          <div>
+            <label className={label}>SEO description (optional)</label>
+            <textarea className={field} rows={3} value={seoDescription} onChange={(e) => setSeoDescription(e.target.value)} placeholder="Falls back to the excerpt" />
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* ── SETTINGS tab ── */}
+      {tab === 'settings' && (
+        <div className="grid max-w-3xl gap-5 sm:grid-cols-2">
+          <div>
+            <label className={label}>Status</label>
+            <select className={field} value={status} onChange={(e) => setStatus(e.target.value as BlogStatus)}>
+              <option value="draft">Draft</option>
+              <option value="published">Published</option>
+              <option value="archived">Archived</option>
+            </select>
+          </div>
+          <div>
+            <label className={label}>Post type</label>
+            <select className={field} value={postType} onChange={(e) => setPostType(e.target.value as BlogPostType)}>
+              <option value="value">Value list</option>
+              <option value="seller">Seller guide</option>
+              <option value="guide">General guide</option>
+            </select>
+          </div>
+          <div>
+            <label className={label}>Game</label>
+            <select className={field} value={primaryGame} onChange={(e) => setPrimaryGame(e.target.value)}>
+              <option value="">General (no game)</option>
+              {games.map((g) => (
+                <option key={g.slug} value={g.slug}>{g.name}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className={label}>Author</label>
+            <input className={field} value={author} onChange={(e) => setAuthor(e.target.value)} />
+          </div>
+          <div>
+            <label className={label}>Read minutes</label>
+            <input
+              type="number"
+              className={field}
+              value={readMinutes}
+              onChange={(e) => setReadMinutes(Number(e.target.value))}
+              min={1}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Save confirmation toast — stays on the editor, no redirect. */}
+      {toast && (
+        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2 rounded-lg border border-lime/40 bg-[#0E1211] px-4 py-3 text-sm font-semibold text-lime-text shadow-[0_16px_40px_-12px_rgba(0,0,0,0.8)]">
+          <span aria-hidden className="h-2 w-2 rounded-full bg-lime" />
+          {toast}
+        </div>
+      )}
 
       {/* Live preview — renders from current editor state, no save needed. */}
       <BlogPreview

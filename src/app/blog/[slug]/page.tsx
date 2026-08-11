@@ -44,21 +44,48 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   }
 }
 
-/** Inline [text](href) → Link; everything else passes through as text. */
+/**
+ * Inline markdown → nodes: `[text](href)` → Link, `**bold**` → strong,
+ * `*italic*`/`_italic_` → em. Bold matched before italic. Everything else is
+ * plain text. (Mirrors the per-game ArticleBody renderer so bold/italic work on
+ * this legacy route too.)
+ */
 function renderInline(text: string): ReactNode {
-  return text.split(/(\[[^\]]+\]\([^)\s]+\))/g).map((part, i) => {
-    const match = part.match(/^\[([^\]]+)\]\(([^)\s]+)\)$/)
-    if (!match) return part
-    return (
-      <Link
-        key={i}
-        href={match[2]}
-        className="font-semibold text-text-primary underline underline-offset-4 transition-opacity hover:opacity-80"
-      >
-        {match[1]}
-      </Link>
-    )
-  })
+  const re = /\[([^\]]+)\]\(([^)\s]+)\)|\*\*([^*]+)\*\*|\*([^*]+)\*|_([^_]+)_/g
+  const parts: ReactNode[] = []
+  let last = 0
+  let m: RegExpExecArray | null
+  let key = 0
+  while ((m = re.exec(text)) !== null) {
+    if (m.index > last) parts.push(text.slice(last, m.index))
+    const [full, linkLabel, href, bold, italicStar, italicUnderscore] = m
+    if (linkLabel != null && href != null) {
+      parts.push(
+        <Link
+          key={key++}
+          href={href}
+          className="font-semibold text-text-primary underline underline-offset-4 transition-opacity hover:opacity-80"
+        >
+          {linkLabel}
+        </Link>,
+      )
+    } else if (bold != null) {
+      parts.push(
+        <strong key={key++} className="font-semibold text-text-primary">
+          {renderInline(bold)}
+        </strong>,
+      )
+    } else {
+      parts.push(
+        <em key={key++} className="italic">
+          {renderInline(italicStar ?? italicUnderscore ?? '')}
+        </em>,
+      )
+    }
+    last = m.index + full.length
+  }
+  if (last < text.length) parts.push(text.slice(last))
+  return parts
 }
 
 function renderBlock(block: string, key: number): ReactNode {

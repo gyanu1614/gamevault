@@ -1,4 +1,4 @@
-import { formatCash, formatIncome } from './format'
+import { formatCash, formatIncome, formatIngameCost } from './format'
 
 /**
  * Generate curated, data-driven FAQ Q&As for a brainrot value page. Each answer
@@ -36,7 +36,7 @@ export function buildBrainrotFaq(input: FaqInput): { q: string; a: string }[] {
   } = input
 
   const price = formatCash(defaultPriceUsd)
-  const cost = formatCash(ingameCost)
+  const cost = formatIngameCost(ingameCost)
   const income = formatIncome(baseIncomePerSecond)
   const range =
     formatCash(lowUsd) && formatCash(highUsd) && formatCash(lowUsd) !== formatCash(highUsd)
