@@ -17,7 +17,7 @@ export type TopValueRow = {
 export const CALCULATOR_FAQ: { q: string; a: string }[] = [
   {
     q: 'How does the Steal a Brainrot value calculator work?',
-    a: `The DropMarket calculator looks up the live cash value (in USD) of any Brainrot and mutation from real marketplace listings, updated daily. Pick a Brainrot in Cash Price mode to see its current worth, or use Trade / WFL mode to add Brainrots to both sides and get an instant Win, Fair, or Loss verdict based on real market prices — not made-up value points.`,
+    a: `The DropMarket calculator looks up the live cash value (in USD) of any Brainrot and mutation from real marketplace listings, refreshed every few hours. Pick a Brainrot in Cash Price mode to see its current worth, or use Trade / WFL mode to add Brainrots to both sides and get an instant Win, Fair, or Loss verdict based on real market prices — not made-up value points.`,
   },
   {
     q: 'What is a WFL trade check in Steal a Brainrot?',
@@ -47,35 +47,59 @@ export const CALCULATOR_FAQ: { q: string; a: string }[] = [
  * value tables + internal links — not the tool itself. This gives us all of
  * that PLUS our edge: live daily prices linking to 498 real item pages.
  */
+/** "3h ago", "just now", "2d ago" — compact relative time from an ISO string. */
+function timeAgo(iso: string | null): string | null {
+  if (!iso) return null
+  const then = new Date(iso).getTime()
+  if (Number.isNaN(then)) return null
+  const mins = Math.max(0, Math.round((Date.now() - then) / 60000))
+  if (mins < 1) return 'just now'
+  if (mins < 60) return `${mins}m ago`
+  const hrs = Math.round(mins / 60)
+  if (hrs < 24) return `${hrs}h ago`
+  return `${Math.round(hrs / 24)}d ago`
+}
+
 export function CalculatorSeo({
   monthYear,
   topValues,
+  lastUpdated,
 }: {
   monthYear: string
   topValues: TopValueRow[]
+  lastUpdated?: string | null
 }) {
   const faqItems = CALCULATOR_FAQ
+  const updatedAgo = timeAgo(lastUpdated ?? null)
 
   return (
     <div className="mx-auto mt-8 w-full max-w-7xl px-4 sm:px-6 lg:px-8">
       {/* Live value table — floats on the page (no wrapping card box). */}
       {topValues.length > 0 && (
         <section>
-          <div className="flex flex-wrap items-end justify-between gap-2">
+          <div className="flex flex-wrap items-start justify-between gap-2">
             <h2 className="text-lg font-semibold text-[#F1F3F1]">
               Top Steal a Brainrot values ({monthYear})
             </h2>
-            <Link
-              href="/steal-a-brainrot/values"
-              className="inline-flex items-center gap-1 text-sm font-semibold text-[#4FB477] hover:underline"
-            >
-              See all 498 values
-              <ArrowForwardIcon sx={{ fontSize: 16 }} />
-            </Link>
+            <div className="flex flex-col items-end gap-1.5">
+              <Link
+                href="/steal-a-brainrot/values"
+                className="inline-flex items-center gap-1 text-sm font-semibold text-[#4FB477] hover:underline"
+              >
+                See all 498 values
+                <ArrowForwardIcon sx={{ fontSize: 16 }} />
+              </Link>
+              {updatedAgo && (
+                <span className="inline-flex items-center gap-1.5 font-mono text-[10.5px] font-medium uppercase tracking-[0.1em] text-[#8FBF9C]">
+                  <span aria-hidden className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#3FA35C]" />
+                  Updated {updatedAgo}
+                </span>
+              )}
+            </div>
           </div>
           <p className="mt-1 text-sm text-[#9BA8A0]">
-            Live cash prices for the most valuable Brainrots, updated daily. Click any Brainrot for
-            its full value, mutation prices, and daily trend.
+            Live cash prices for the most valuable Brainrots, refreshed every few hours from real
+            listings. Click any Brainrot for its full value, mutation prices, and daily trend.
           </p>
 
           <div className="mt-4 overflow-hidden border border-[#1E2723]">

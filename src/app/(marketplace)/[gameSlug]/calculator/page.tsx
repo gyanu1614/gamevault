@@ -50,6 +50,11 @@ type CashPriceRow = {
   market_value_usd: number | string | null
   market_low_usd: number | string | null
   market_high_usd: number | string | null
+  /** Reputable cheapest/average — the new buyer-facing prices. When present,
+   * cheapest is what the calculator should sum (a trade is valued at what you'd
+   * actually pay), falling back to average, then the legacy market value. */
+  cheapest_usd?: number | string | null
+  average_usd?: number | string | null
   confidence_label: string | null
   external_sample_size: number | null
   price_updated_at: string | null
@@ -108,7 +113,7 @@ export async function generateMetadata({
 
   return {
     title: `Steal a Brainrot WFL Calculator (${monthYear}) — Win, Fair or Loss Trade Checker`,
-    description: `Free Steal a Brainrot WFL calculator: put both sides of a trade in and see instantly whether it's a Win, Fair or Loss. Priced from real completed sales and live listings, every mutation covered, updated daily — ${monthYear}.`,
+    description: `Free Steal a Brainrot WFL calculator: put both sides of a trade in and see instantly whether it's a Win, Fair or Loss. Priced from real completed sales and live listings, every mutation covered, refreshed every few hours — ${monthYear}.`,
     alternates: {
       canonical: '/steal-a-brainrot/calculator',
     },
@@ -134,7 +139,7 @@ async function getAllCashPrices(
     const { data, error } = await (supabase as any)
       .from('sab_public_price_catalog_corrected')
       .select(
-        'brainrot_id,mutation_id,market_value_usd,market_low_usd,market_high_usd,confidence_label,external_sample_size,price_updated_at,is_trade_ready',
+        'brainrot_id,mutation_id,market_value_usd,market_low_usd,market_high_usd,cheapest_usd,average_usd,confidence_label,external_sample_size,price_updated_at,is_trade_ready',
       )
       .range(from, from + pageSize - 1)
 
@@ -195,6 +200,7 @@ async function getCalculatorData(): Promise<{
   mutations: CalcMutation[]
   cashPrices: CalcPrice[]
   tradePrices: CalcPrice[]
+  lastUpdated: string | null
 }> {
   const supabase = await createClient()
 
@@ -260,7 +266,12 @@ async function getCalculatorData(): Promise<{
   const toPrice = (
     row: CashPriceRow | TradePriceRow,
   ): CalcPrice | null => {
-    const marketValueUsd = asNumber(row.market_value_usd)
+    // Prefer the reputable CHEAPEST (what you'd actually pay), then average,
+    // then the legacy market value — so the calculator matches the item page.
+    const cheapest = asNumber((row as CashPriceRow).cheapest_usd)
+    const average = asNumber((row as CashPriceRow).average_usd)
+    const marketValueUsd =
+      cheapest ?? average ?? asNumber(row.market_value_usd)
     if (marketValueUsd == null) return null
 
     return {
@@ -288,7 +299,15 @@ async function getCalculatorData(): Promise<{
         row !== null && row.isTradeReady,
     )
 
-  return { brainrots, mutations, cashPrices, tradePrices }
+  // Newest crawl timestamp across all priced rows — powers the "Updated X ago"
+  // freshness stamp. Prices refresh every ~3h, so this is never stale for long.
+  let lastUpdated: string | null = null
+  for (const row of cashPriceRows) {
+    const ts = row.price_updated_at
+    if (ts && (lastUpdated == null || ts > lastUpdated)) lastUpdated = ts
+  }
+
+  return { brainrots, mutations, cashPrices, tradePrices, lastUpdated }
 }
 
 export default async function SabCalculatorPage({
@@ -306,7 +325,7 @@ export default async function SabCalculatorPage({
 
   if (gameSlug !== 'steal-a-brainrot') notFound()
 
-  const { brainrots, mutations, cashPrices, tradePrices } =
+  const { brainrots, mutations, cashPrices, tradePrices, lastUpdated } =
     await getCalculatorData()
 
   // Top brainrots by default cash value — the value table + internal links.
@@ -372,7 +391,7 @@ export default async function SabCalculatorPage({
           has self-identified as a trader. Skippable; buyer's answer came first. */}
       <SabSellerCta gameSlug="steal-a-brainrot" gameName="Steal a Brainrot" src="sab-calculator" />
 
-      <CalculatorSeo monthYear={monthYear} topValues={topValues} />
+      <CalculatorSeo monthYear={monthYear} topValues={topValues} lastUpdated={lastUpdated} />
       <JsonLd data={faqPage(CALCULATOR_FAQ)} />
       </SabHeroBackdrop>
           <HubFooter

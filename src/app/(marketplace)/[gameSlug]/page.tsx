@@ -429,7 +429,7 @@ export default async function GameBrowsePage({ params }: PageProps) {
               </Link>
 
               <Link
-                href="/steal-a-brainrot/value-calculator"
+                href="/steal-a-brainrot/calculator"
                 className="group rounded-xl border border-border-subtle bg-bg-overlay p-6 transition hover:-translate-y-0.5 hover:border-lime"
               >
                 <Calculator className="h-7 w-7 text-lime-text" />

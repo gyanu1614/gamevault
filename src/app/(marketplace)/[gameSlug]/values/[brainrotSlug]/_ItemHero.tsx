@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils'
 import { formatCash, formatIncome, formatMultiplier } from '@/lib/sab/format'
 import { motion } from 'framer-motion'
 import { mutationVisual, mutationOrder, shade } from '@/lib/sab/mutations'
-import { sabHero, sabInteractive } from '@/lib/sab/theme'
+import { sabHero } from '@/lib/sab/theme'
 import { FreshnessBadge } from '@/lib/sab/FreshnessBadge'
 import { MutationDot } from '@/lib/sab/MutationDot'
 import dynamic from 'next/dynamic'
@@ -106,22 +106,17 @@ export default function ItemHero({
   const isDefault = selected.slug === 'default'
   // Mutation-driven name: "Diamond Garama and Madundung"; plain for Default.
   const displayName = isDefault ? brainrotName : `${selected.name} ${brainrotName}`
-  // Market price = the reputable average when present, else the raw value.
-  // Cheapest = the reputable low, shown only when it undercuts the market price.
-  // Prices are the STORED values from the 3h crawl (≤6h fresh) — no per-view live
-  // fetch, which caused a $225→$220 flicker on load and burned server CPU.
-  const marketPriceUsd = selected.averageUsd ?? selected.marketValueUsd
+  // CHEAPEST is the headline — the price a buyer acts on. Stored values from the
+  // 3h crawl (≤6h fresh); no per-view live fetch.
+  const marketUsd = selected.averageUsd ?? selected.marketValueUsd
   const cheapestUsd = selected.cheapestUsd
-  const cash = formatCash(marketPriceUsd)
-  const cheapest =
-    cheapestUsd != null &&
-    marketPriceUsd != null &&
-    cheapestUsd < marketPriceUsd - 0.005
-      ? formatCash(cheapestUsd)
-      : null
+  // Headline = cheapest when we have it, else market.
+  const headlineUsd = cheapestUsd ?? marketUsd
+  const cash = formatCash(headlineUsd)
   const listingHref = `${listingsHref}${
     isDefault ? '' : `%20${encodeURIComponent(selected.name)}`
   }`
+
 
   return (
     <div className="space-y-4">
@@ -137,194 +132,192 @@ export default function ItemHero({
           animate={{ x: ['-6%', '10%', '-6%'], y: ['-4%', '6%', '-4%'], opacity: [0.6, 0.9, 0.6] }}
           transition={{ duration: 14, ease: 'easeInOut', repeat: Infinity }}
         />
-        <div className="relative grid gap-5 p-5 sm:p-6 lg:grid-cols-[190px_minmax(0,1fr)_240px] lg:items-center">
-          {/* Art — floats on the hero, larger, no nested border box */}
-          <div className="mx-auto aspect-square w-40 overflow-hidden sm:w-44 lg:mx-0 lg:w-[190px]">
+
+        <div className="relative grid gap-5 p-5 sm:p-6 lg:grid-cols-[176px_minmax(0,1fr)_240px] lg:items-center">
+          {/* Art — floats on the hero, mutation-tinted glow behind it. */}
+          <div
+            className="mx-auto flex aspect-square w-36 items-center justify-center sm:w-40 lg:mx-0 lg:w-[176px]"
+            style={{
+              background: `radial-gradient(120% 120% at 50% 15%, ${visual.color}22, transparent 72%)`,
+            }}
+          >
             {imageUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={imageUrl}
                 alt={imageAlt || `${displayName} Steal a Brainrot`}
-                className="h-full w-full object-contain drop-shadow-[0_14px_22px_rgba(0,0,0,0.55)]"
+                className="h-full w-full object-contain drop-shadow-[0_12px_18px_rgba(0,0,0,0.55)] [image-rendering:pixelated]"
               />
             ) : (
-              <div className="flex h-full items-center justify-center text-[10px] text-[#3E6B52]">
-                No image
-              </div>
+              <div className="text-[10px] text-[#3E6B52]">No image</div>
             )}
           </div>
 
-          {/* Name + labeled stat rows with grey dividers (currency-CTA pattern) */}
+          {/* Name + labeled stat rows with grey dividers. */}
           <div>
-            {/* Always shown (Default too) so the hero height never shifts
-                when switching mutations. */}
             <span
-              className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide"
+              className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide"
               style={{ color: visual.color }}
             >
               <MutationDot visual={visual} size={8} />
               {isDefault ? 'Default (no mutation)' : `${selected.name} mutation`}
             </span>
-            <h1 className="mt-2 text-2xl font-semibold leading-[1.15] tracking-[-0.01em] text-[#F1F3F1] sm:text-[30px]">
+            <h1 className="mt-1.5 text-2xl font-semibold leading-[1.1] tracking-[-0.015em] text-[#F1F3F1] sm:text-[28px]">
               {displayName}
             </h1>
+            <p className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] font-semibold uppercase tracking-[0.1em]">
+              <span style={{ color: rarityColor(rarity) }}>{rarity}</span>
+              <span className="text-[#3A423C]">·</span>
+              <span className="text-[#5D6670]">{obtainability}</span>
+            </p>
 
-            {/* Fixed set of rows — always the same count so the hero height
-                never changes between mutations, even when data is missing. */}
+            {/* Fixed row set so the hero height never shifts between mutations.
+                (Cheapest lives in the price column, so it's not repeated here.) */}
             <dl className="mt-4 divide-y divide-white/[0.07] border-y border-white/[0.07]">
-              <StatRow label="Base income" value={formatIncome(baseIncomePerSecond)} />
+              <StatRow label="Base income" value={formatIncome(selected.calculatedIncomePerSecond ?? baseIncomePerSecond)} />
               <StatRow label="Mutation" value={`${selected.name} · ${formatMultiplier(selected.multiplier)}`} />
               <StatRow label="In-game cost" value={ingameCost ?? 'Unknown'} />
-              {/* Cheapest a verified seller offers. Em-dash when a single seller
-                  sets the price (cheapest == market) or we hold no reputable data. */}
-              <StatRow label="Cheapest" value={cheapest ?? '—'} />
             </dl>
           </div>
 
-          {/* Price + CTA float — no box, aligns with the currency Buy Now cards */}
+          {/* Price + CTA column. */}
           <div className="lg:text-right">
-            <p
-              className="text-xs font-semibold uppercase tracking-wide"
-              style={{ color: visual.color }}
-            >
-              Market price
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-[#8FBF9C]">
+              {cheapestUsd != null ? 'Cheapest price' : 'Market price'}
             </p>
-            <p className="mt-1 text-[34px] font-bold leading-none tracking-[-0.02em] text-[#F1F3F1] tabular-nums">
+            <p className="mt-1 text-[34px] font-bold leading-none tracking-[-0.02em] text-[#F1F3F1] tabular-nums sm:text-[38px]">
               {cash ?? 'No data yet'}
             </p>
-            {/* Fixed-height row so the column doesn't resize between a priced
-                mutation (badge) and an unpriced one (note). When we hold
-                reputable data the "from verified sellers" cue replaces the
-                confidence-label jargon; estimated/no-data states are unchanged. */}
-            <div className="mt-2.5 flex min-h-[28px] flex-wrap items-center gap-2 lg:justify-end">
-              {selected.isEstimated ? (
-                <span className="inline-flex items-center gap-1.5 border border-[#3A3320] bg-[#2A2410]/40 px-2 py-1 text-[11.5px] font-semibold text-[#D9C27A]">
-                  <span className="h-1.5 w-1.5 rounded-full bg-[#D9C27A]" />
-                  Estimated from multiplier
-                </span>
-              ) : cash && selected.averageUsd != null ? (
-                <span className="text-[12.5px] text-[#8FBF9C]">
-                  from verified sellers
-                </span>
-              ) : cash ? (
-                <ConfidenceBadge label={selected.marketConfidenceLabel ?? 'low'} />
-              ) : (
-                <span className="text-[13px] text-[#9BA8A0]">No priced listings yet</span>
-              )}
+            {/* Freshness stamp — right under the price, like a receipt line. */}
+            <div className="mt-2 lg:flex lg:justify-end">
+              <FreshnessBadge updatedAt={selected.marketUpdatedAt ?? updatedAt} />
             </div>
+            {/* Only surface a note when the price is estimated or missing — the
+                clean priced case shows nothing extra. */}
+            {(selected.isEstimated || !cash) && (
+              <div className="mt-1 flex min-h-[20px] flex-wrap items-center gap-2 lg:justify-end">
+                {selected.isEstimated ? (
+                  <span className="inline-flex items-center gap-1.5 border border-[#3A3320] bg-[#2A2410]/40 px-2 py-0.5 text-[11px] font-semibold text-[#D9C27A]">
+                    <span className="h-1.5 w-1.5 rounded-full bg-[#D9C27A]" />
+                    Estimated from multiplier
+                  </span>
+                ) : (
+                  <span className="text-[12.5px] text-[#9BA8A0]">No priced listings yet</span>
+                )}
+              </div>
+            )}
+
+            {/* Buy — color-flowing gradient in the mutation hue, no chunky shadow. */}
             <Link
               href={listingHref}
-              // Keyword-rich anchor ("Buy Dragon Cannelloni") not generic "Buy
-              // Now" — the internal link then carries the item's keywords to the
-              // marketplace money page (internal-link sculpting). aria-label
-              // keeps the accessible name explicit.
               aria-label={`Buy ${displayName}`}
-              className="group mt-4 inline-flex w-full items-center justify-center gap-1.5 px-5 py-3 text-sm font-bold text-black transition-transform duration-100 active:translate-y-0.5 lg:w-auto"
+              className="group relative mt-4 inline-flex w-full items-center justify-center gap-1.5 overflow-hidden px-5 py-2.5 text-[13px] font-bold text-[#08110B] lg:w-auto"
               style={{
-                backgroundColor: visual.color,
-                boxShadow: `0 4px 0 0 ${shade(visual.color, -0.35)}, 0 10px 20px -6px ${visual.color}66`,
+                background: `linear-gradient(110deg, ${shade(visual.color, -0.12)}, ${visual.color}, ${shade(visual.color, -0.12)})`,
+                backgroundSize: '200% 100%',
               }}
             >
-              Buy {displayName}
-              <ArrowForwardIcon sx={{ fontSize: 18 }} />
+              <motion.span
+                aria-hidden
+                className="pointer-events-none absolute inset-0"
+                style={{ background: `linear-gradient(110deg, transparent 30%, ${shade(visual.color, 0.35)}66 50%, transparent 70%)` }}
+                animate={{ x: ['-120%', '120%'] }}
+                transition={{ duration: 3.2, ease: 'easeInOut', repeat: Infinity, repeatDelay: 1.4 }}
+              />
+              {/* Price-led label stays short + one line even for long names. */}
+              <span className="relative truncate whitespace-nowrap">
+                {cash ? `Buy from ${cash}` : `Buy ${displayName}`}
+              </span>
+              <ArrowForwardIcon sx={{ fontSize: 17 }} className="relative shrink-0" />
             </Link>
-            {/* Sell door — same price, other intent. Outline (quieter than the
-                solid Buy). The keep-figure only shows on a real price, never an
-                estimate; % derives from fee consts. */}
+            {/* Sell — same flowing style as Buy, in a fixed cash-green so the two
+                actions read as distinct intents (green = cash out). */}
             <Link
               href="/steal-a-brainrot/sell?src=sab-item-page"
               aria-label={`Sell your ${displayName}`}
-              className="mt-2.5 inline-flex w-full items-center justify-center gap-1.5 border border-[#2F6B46] px-5 py-2.5 text-[13px] font-semibold text-[#8FBF9C] transition hover:border-[#3FA35C] hover:text-[#A6D9B6] lg:w-auto"
+              className="group relative mt-2 inline-flex w-full items-center justify-center gap-1.5 overflow-hidden px-5 py-2.5 text-[13px] font-bold text-[#08110B] lg:w-auto"
+              style={{
+                background: 'linear-gradient(110deg, #2F8F57, #47C97C, #2F8F57)',
+                backgroundSize: '200% 100%',
+              }}
             >
-              Sell Yours For Cash
-              <ArrowForwardIcon sx={{ fontSize: 16 }} />
+              <motion.span
+                aria-hidden
+                className="pointer-events-none absolute inset-0"
+                style={{ background: 'linear-gradient(110deg, transparent 30%, #A6EFC466 50%, transparent 70%)' }}
+                animate={{ x: ['-120%', '120%'] }}
+                transition={{ duration: 3.2, ease: 'easeInOut', repeat: Infinity, repeatDelay: 1.4 }}
+              />
+              <span className="relative truncate whitespace-nowrap">Sell Yours For Cash</span>
+              <ArrowForwardIcon sx={{ fontSize: 15 }} className="relative shrink-0" />
             </Link>
           </div>
         </div>
-
-        {/* Freshness signal — centered at the hero bottom */}
-        <div className="relative flex items-center justify-center border-t border-white/[0.06] px-5 py-3">
-          <FreshnessBadge updatedAt={selected.marketUpdatedAt ?? updatedAt} />
-        </div>
       </div>
 
-      {/* Mutation chips float directly on the page — no wrapping card, so we
-          never nest bordered box-in-box. */}
+      {/* ── Mutation rail — pick a mutation, everything above updates. An EVEN
+          grid (not flex-wrap) so rows always fill cleanly with no orphan chips:
+          2 cols on mobile → 3 → 4 → 7 (14 mutations = two tidy rows of 7). ── */}
       <div>
-        <p className="px-1 text-sm font-medium text-[#F1F3F1]">
-          Cash price by mutation{' '}
-          <span className="font-normal text-[#6D7A72]">— tap to update the price above</span>
+        <p className="px-1 text-[12px] font-semibold uppercase tracking-[0.12em] text-[#6D7A72]">
+          Pick a mutation — everything updates
         </p>
-        <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+        <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7">
           {ordered.map((mutation) => {
             const mv = mutationVisual(mutation.slug)
             const active = mutation.slug === selected.slug
-            const price = formatCash(mutation.marketValueUsd)
             return (
               <button
                 key={mutation.slug}
                 type="button"
                 onClick={() => selectMutation(mutation.slug)}
                 aria-pressed={active}
-                className={cn(
-                  'group flex min-h-[48px] items-center gap-2 px-3 py-2 text-left',
-                  sabInteractive,
-                  active && 'ring-2',
-                )}
-                style={active ? ({ ['--tw-ring-color' as string]: mv.color } as React.CSSProperties) : undefined}
+                className="flex min-w-0 items-center justify-center gap-2 border px-3 py-2.5 text-[13px] font-semibold transition hover:brightness-110"
+                style={
+                  active
+                    ? { backgroundColor: mv.soft, borderColor: mv.color, color: mv.color }
+                    : { backgroundColor: '#12171A', borderColor: '#232A2F', color: '#C3CCD4' }
+                }
               >
                 <MutationDot visual={mv} size={10} />
-                <span className="min-w-0 flex-1">
-                  <span
-                    className="block truncate text-sm font-semibold"
-                    style={{ color: active ? mv.color : '#D6DCD8' }}
-                  >
-                    {mutation.name}
-                  </span>
-                </span>
-                <span className="text-right text-xs font-medium text-[#9BA8A0]">
-                  {price ?? formatMultiplier(mutation.multiplier)}
-                  {mutation.isEstimated && price && (
-                    <span className="ml-1 text-[10px] text-[#6D7A72]">est</span>
-                  )}
-                </span>
+                <span className="truncate">{mutation.name}</span>
               </button>
             )
           })}
         </div>
       </div>
 
-      {/* Price trend for the selected mutation — follows the chip selection. */}
+      {/* Combined price trend — the hero-selected mutation is pre-lit; toggle
+          legend chips to overlay/compare other mutations. Zoomed Y-axis. */}
       <PriceTrendChart
-        mutationSlug={selected.slug}
-        mutationName={selected.name}
-        points={priceHistory[selected.slug] ?? []}
+        selectedSlug={selected.slug}
+        selectedName={selected.name}
+        history={priceHistory}
+        mutations={ordered.map((m) => ({ slug: m.slug, name: m.name }))}
       />
     </div>
   )
 }
 
-function ConfidenceBadge({ label }: { label: string }) {
-  const tone =
-    label === 'high'
-      ? { fg: '#4FB477', bg: 'rgba(79,180,119,0.12)', bd: 'rgba(79,180,119,0.3)' }
-      : label === 'medium'
-        ? { fg: '#E0B155', bg: 'rgba(224,177,85,0.12)', bd: 'rgba(224,177,85,0.3)' }
-        : { fg: '#9BA8A0', bg: 'rgba(155,168,160,0.1)', bd: 'rgba(155,168,160,0.25)' }
-  return (
-    <span
-      className="inline-flex items-center gap-1.5 px-2 py-1 text-[11.5px] font-semibold capitalize"
-      style={{ color: tone.fg, backgroundColor: tone.bg, border: `1px solid ${tone.bd}` }}
-    >
-      <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: tone.fg }} />
-      {label} confidence
-    </span>
-  )
+/** Rarity → accent, mirrors the value-list card colors. */
+function rarityColor(rarity: string): string {
+  const map: Record<string, string> = {
+    Secret: '#E23B4E',
+    'Brainrot God': '#FF8A3D',
+    Mythic: '#A98BFF',
+    Legendary: '#F5C542',
+    Epic: '#7FE3F0',
+    Rare: '#4FB477',
+    Common: '#9BA8A0',
+    OG: '#E7C6FF',
+  }
+  return map[rarity] ?? '#9BA8A0'
 }
 
+/** Labeled key/value row in the identity stat list. */
 function StatRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-center justify-between gap-3 py-2 text-sm">
+    <div className="flex items-center justify-between gap-3 py-2 text-[14px]">
       <dt className="text-[#9BA8A0]">{label}</dt>
       <dd className="font-medium tabular-nums text-[#F1F3F1]">{value}</dd>
     </div>

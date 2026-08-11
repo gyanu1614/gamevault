@@ -1,13 +1,17 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { Search } from 'lucide-react'
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown'
 import CheckIcon from '@mui/icons-material/Check'
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
 import ChevronRightIcon from '@mui/icons-material/ChevronRight'
 import type { CSSProperties } from 'react'
+import { mutationVisual } from '@/lib/sab/mutations'
+import { MutationDot } from '@/lib/sab/MutationDot'
+import { formatIncome } from '@/lib/sab/format'
 
 /**
  * Rarity → accent colour. Drives both the rarity filter chips and each row's
@@ -129,6 +133,21 @@ function Dropdown({
   )
 }
 
+/**
+ * One mutation option for the in-card switcher. Prices are the REAL reputable
+ * cheapest/average for that mutation (null → the card shows "No Sales"; we never
+ * estimate). `income` is that mutation's income per second, `multiplier` its
+ * income multiplier vs default.
+ */
+export type CardMutation = {
+  slug: string
+  name: string
+  multiplier: number | null
+  income: number | null
+  cheapest_usd: number | null
+  average_usd: number | null
+}
+
 export type BrainrotDirectoryItem = {
   id: string
   name: string
@@ -141,6 +160,9 @@ export type BrainrotDirectoryItem = {
   display_price_label: string
   display_price_source: string
   confidence_label: string
+  /** Every mutation this item has metadata for, with real per-mutation prices
+   * (absent/null = no sales). Drives the in-card mutation switcher. */
+  mutations?: CardMutation[]
   /**
    * Low/high of the real listings behind the value. Retained for items not yet
    * priced by the reputable path (fallback range display).
@@ -227,15 +249,40 @@ function compareValue(a: BrainrotDirectoryItem, b: BrainrotDirectoryItem): numbe
 }
 
 
-export default function ValuesDirectoryClient({
+/**
+ * `useSearchParams` requires a Suspense boundary (Next.js). The default export
+ * wraps the inner component so the value page can render it directly, matching
+ * the pattern used by _BrowseClient.
+ */
+export default function ValuesDirectoryClient(props: ValuesDirectoryClientProps) {
+  return (
+    <Suspense fallback={null}>
+      <ValuesDirectoryClientInner {...props} />
+    </Suspense>
+  )
+}
+
+function ValuesDirectoryClientInner({
   brainrots,
 }: ValuesDirectoryClientProps) {
-  const [query, setQuery] = useState('')
+  // Filters live in the URL so they SURVIVE navigation: click an item, hit Back,
+  // and the same view/search/sort/page you left is restored (and the filtered
+  // view is shareable/bookmarkable). State is seeded from the query params on
+  // mount, then a sync effect mirrors changes back to the URL via replace().
+  const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+
+  const [query, setQuery] = useState(() => searchParams.get('q') ?? '')
   // Popular is the landing view: A–Z put "1x1x1x1" first, which tells a
   // visitor nothing about what the game actually trades.
-  const [view, setView] = useState<View>('popular')
-  const [obtainability, setObtainability] = useState('all')
-  const [sort, setSort] = useState<SortOption>('value-desc')
+  const [view, setView] = useState<View>(() => searchParams.get('view') ?? 'popular')
+  const [obtainability, setObtainability] = useState(
+    () => searchParams.get('obtain') ?? 'all',
+  )
+  const [sort, setSort] = useState<SortOption>(
+    () => (searchParams.get('sort') as SortOption) ?? 'value-desc',
+  )
 
   // Only rarities present in the data get a chip, in rarest-first order.
   const rarities = useMemo(() => {
@@ -331,7 +378,10 @@ export default function ValuesDirectoryClient({
   }, [brainrots, effectiveView, obtainability, query, sort])
 
   const totalPages = Math.max(1, Math.ceil(filteredBrainrots.length / PAGE_SIZE))
-  const [page, setPage] = useState(1)
+  const [page, setPage] = useState(() => {
+    const p = Number(searchParams.get('page'))
+    return Number.isInteger(p) && p > 0 ? p : 1
+  })
 
   /**
    * Paging without this left you stranded at the bottom of the page, staring
@@ -348,9 +398,36 @@ export default function ValuesDirectoryClient({
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
     window.scrollTo({ top: 0, behavior: reduced ? 'auto' : 'smooth' })
   }
+  // Reset to page 1 when the FILTERS change — but not on the very first render,
+  // so a page number restored from the URL (e.g. arriving back on page 3) isn't
+  // clobbered. A ref guards the initial mount.
+  const didMount = useRef(false)
   useEffect(() => {
+    if (!didMount.current) {
+      didMount.current = true
+      return
+    }
     setPage(1)
   }, [query, view, obtainability, sort])
+
+  // Mirror the current filter/search/sort/page into the URL (replace, so typing
+  // doesn't spam history). Because the params are in the URL, navigating into an
+  // item and hitting Back restores exactly this state. Only non-default values
+  // are written, keeping the URL clean on the landing view.
+  useEffect(() => {
+    const params = new URLSearchParams()
+    if (query.trim()) params.set('q', query.trim())
+    if (view !== 'popular') params.set('view', view)
+    if (obtainability !== 'all') params.set('obtain', obtainability)
+    if (sort !== 'value-desc') params.set('sort', sort)
+    if (page > 1) params.set('page', String(page))
+    const qs = params.toString()
+    const current = searchParams.toString()
+    if (qs !== current) {
+      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false })
+    }
+  }, [query, view, obtainability, sort, page, pathname, router, searchParams])
+
   const currentPage = Math.min(page, totalPages)
 
   const visibleBrainrots = useMemo(
@@ -530,118 +607,9 @@ export default function ValuesDirectoryClient({
            screen: image + name + rarity, then a two-column Market / Cheapest
            split. Responsive: 2 (mobile) → 3 (tablet) → 4 → 6 (widescreen). */
         <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
-          {visibleBrainrots.map((brainrot) => {
-            // Market price = the reputable average when we have it, else the
-            // existing corrected value (older path / not-yet-repriced items).
-            // Cheapest = the reputable low; only shown when it undercuts the
-            // market price (a single reputable seller makes them equal).
-            const marketUsd =
-              asNumber(brainrot.average_usd) ??
-              asNumber(brainrot.display_price_usd)
-            const cheapestUsd = asNumber(brainrot.cheapest_usd)
-            const marketPrice = marketUsd != null ? formatMoney(marketUsd) : null
-            const cheapestPrice =
-              cheapestUsd != null &&
-              marketUsd != null &&
-              cheapestUsd < marketUsd - 0.005
-                ? formatMoney(cheapestUsd)
-                : null
-            const rc = rarityColor(brainrot.rarity)
-
-            return (
-              <Link
-                key={brainrot.id}
-                href={`/steal-a-brainrot/values/${brainrot.slug}`}
-                style={{ ['--rc' as string]: rc } as CSSProperties}
-                className="group flex flex-col overflow-hidden border border-[#1E2723] bg-[#0F1512] transition-colors hover:border-[#2C3A31]"
-              >
-                {/* Art on a faint rarity-tinted header. Rarity rides top-right as
-                    small plain text (not a filled chip), so the art gets the
-                    room. Larger art (h-24) makes the card read as a showcase. */}
-                <div
-                  className="relative flex justify-center px-3 pb-2 pt-5"
-                  style={{
-                    background:
-                      'linear-gradient(180deg, color-mix(in srgb, var(--rc) 8%, transparent), transparent)',
-                  }}
-                >
-                  <span
-                    className="absolute right-2.5 top-2 font-mono text-[9.5px] font-normal uppercase tracking-[0.06em]"
-                    style={{ color: rc }}
-                  >
-                    {brainrot.rarity}
-                  </span>
-                  <span className="relative flex h-24 w-24 items-center justify-center">
-                    <span
-                      aria-hidden
-                      className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
-                      style={{
-                        background:
-                          'radial-gradient(70% 70% at 50% 45%, color-mix(in srgb, var(--rc) 30%, transparent), transparent 74%)',
-                      }}
-                    />
-                    {brainrot.image_url ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={brainrot.image_url}
-                        alt={`${brainrot.name} Steal a Brainrot`}
-                        loading="lazy"
-                        className="relative h-full w-full object-contain drop-shadow-[0_8px_14px_rgba(0,0,0,0.5)]"
-                      />
-                    ) : (
-                      <span className="font-mono text-[9px] text-[#5E685E]">N/A</span>
-                    )}
-                  </span>
-                </div>
-
-                {/* Name, centred — shifted down under the larger art */}
-                <div className="px-2.5 pb-3 pt-1 text-center">
-                  <div className="truncate text-[14px] font-semibold text-[#F1F3F1] transition-colors group-hover:text-white">
-                    {brainrot.name}
-                  </div>
-                </div>
-
-                {/* Price footer. Never a bare dash: show BOTH as a split only
-                    when both exist; a single value fills the row centred (no
-                    empty column); nothing priced shows a quiet "No price yet". */}
-                {marketPrice && cheapestPrice ? (
-                  <div className="mt-auto grid grid-cols-2 border-t border-[#1A211A]">
-                    <div className="border-r border-[#1A211A] px-1.5 py-2.5 text-center">
-                      <div className="text-[9.5px] uppercase tracking-[0.04em] text-[#6E7A72]">
-                        Market
-                      </div>
-                      <div className="mt-0.5 truncate font-mono text-[15px] font-bold tabular-nums text-[#8FBF9C]">
-                        {marketPrice}
-                      </div>
-                    </div>
-                    <div className="px-1.5 py-2.5 text-center">
-                      <div className="text-[9.5px] uppercase tracking-[0.04em] text-[#6E7A72]">
-                        Cheapest
-                      </div>
-                      <div className="mt-0.5 truncate font-mono text-[15px] font-medium tabular-nums text-[#E4E9E5]">
-                        {cheapestPrice}
-                      </div>
-                    </div>
-                  </div>
-                ) : marketPrice || cheapestPrice ? (
-                  <div className="mt-auto border-t border-[#1A211A] px-1.5 py-2.5 text-center">
-                    <div className="text-[9.5px] uppercase tracking-[0.04em] text-[#6E7A72]">
-                      {marketPrice ? 'Market' : 'Cheapest'}
-                    </div>
-                    <div className="mt-0.5 truncate font-mono text-[16px] font-bold tabular-nums text-[#8FBF9C]">
-                      {marketPrice ?? cheapestPrice}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="mt-auto border-t border-[#1A211A] px-1.5 py-3 text-center">
-                    <div className="font-mono text-[11px] uppercase tracking-[0.06em] text-[#5E685E]">
-                      No price yet
-                    </div>
-                  </div>
-                )}
-              </Link>
-            )
-          })}
+          {visibleBrainrots.map((brainrot) => (
+            <BrainrotCard key={brainrot.id} brainrot={brainrot} />
+          ))}
         </div>
       )}
 
@@ -689,6 +657,230 @@ export default function ValuesDirectoryClient({
         </div>
       )}
     </>
+  )
+}
+
+/**
+ * Grid card (design 1a). Leads with the DEFAULT mutation's cheapest, but lets the
+ * user switch mutation INSIDE the card via a chip → overlay picker; the income,
+ * Market and Cheapest numbers then recompute for the selected mutation from REAL
+ * per-mutation prices (never estimates — a mutation with no sale shows "No Sales").
+ * The card body is the link; the mutation chip + overlay stop propagation so only
+ * clicking the art/name navigates (carrying ?mutation= so the item page matches).
+ */
+function BrainrotCard({ brainrot }: { brainrot: BrainrotDirectoryItem }) {
+  const rc = rarityColor(brainrot.rarity)
+  const mutations = brainrot.mutations ?? []
+
+  // Default is the initial selection; if there's no default row, the first
+  // (lowest-multiplier) mutation leads.
+  const defaultMutation =
+    mutations.find((m) => m.slug === 'default') ?? mutations[0] ?? null
+  const [selectedSlug, setSelectedSlug] = useState<string | null>(
+    defaultMutation?.slug ?? null,
+  )
+  const [pickerOpen, setPickerOpen] = useState(false)
+
+  const selected =
+    mutations.find((m) => m.slug === selectedSlug) ?? defaultMutation
+  const isDefault = !selected || selected.slug === 'default'
+  const visual = mutationVisual(selected?.slug)
+
+  // Prices for the SELECTED mutation. For default we can fall back to the item's
+  // top-level cheapest/average (same value, but present even before the per-
+  // mutation query lands); for a real mutation we use only its own row.
+  const cheapestUsd = selected
+    ? selected.cheapest_usd ??
+      (isDefault ? asNumber(brainrot.cheapest_usd) : null)
+    : asNumber(brainrot.cheapest_usd)
+  const averageUsd = selected
+    ? selected.average_usd ??
+      (isDefault ? asNumber(brainrot.average_usd) : null)
+    : asNumber(brainrot.average_usd)
+  const marketUsd = averageUsd ?? (isDefault ? asNumber(brainrot.display_price_usd) : null)
+
+  const headlineUsd = cheapestUsd ?? marketUsd
+  const headline = headlineUsd != null ? formatMoney(headlineUsd) : null
+
+  // Income for the selected mutation (falls back to the item's base income for
+  // default). Only rendered when we have a real number.
+  const incomeValue = selected?.income ?? asNumber(brainrot.base_income_per_second)
+  const income = incomeValue != null ? formatIncome(incomeValue) : null
+
+  const href = isDefault
+    ? `/steal-a-brainrot/values/${brainrot.slug}`
+    : `/steal-a-brainrot/values/${brainrot.slug}?mutation=${encodeURIComponent(selected!.slug)}`
+
+  const hasMutations = mutations.length > 1
+  // The chip names the SELECTED mutation; for default it reads "Default" (not a
+  // generic "Mutation" prompt), so the card always states which variant it shows.
+  const chipLabel = isDefault ? 'Default' : selected!.name
+  const marketLabel = formatMoney(marketUsd)
+
+  return (
+    <div
+      style={{ ['--rc' as string]: rc } as CSSProperties}
+      className="group relative flex flex-col overflow-hidden border border-[#1E2723] bg-gradient-to-b from-[#14181A] to-[#0B0D0E] transition-colors hover:border-[#2C3A31]"
+    >
+      {/* ── Top row: mutation chip (left) · rarity (right), then a grey divider.
+          No colored fill — a defined header band on the plain card surface, with
+          a hairline separating it from the art below. ── */}
+      <div className="flex items-center justify-between gap-2 border-b border-[#1E2723] px-2.5 py-2">
+        {hasMutations ? (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              setPickerOpen((o) => !o)
+            }}
+            aria-label="Choose mutation"
+            className="inline-flex min-w-0 items-center gap-1 border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.1em] transition hover:brightness-125"
+            style={
+              isDefault
+                ? { color: '#8C98A4', borderColor: '#2A3138', backgroundColor: 'transparent' }
+                : { color: visual.color, borderColor: visual.color, backgroundColor: visual.soft }
+            }
+          >
+            <span className="truncate">{chipLabel}</span>
+            <span className="opacity-60">▾</span>
+          </button>
+        ) : (
+          <span className="min-w-0 truncate text-[10px] font-medium uppercase tracking-[0.1em] text-[#5E685E]">
+            No mutations
+          </span>
+        )}
+        <span
+          className="shrink-0 text-[10px] font-semibold uppercase tracking-[0.12em]"
+          style={{ color: rc }}
+        >
+          {brainrot.rarity}
+        </span>
+      </div>
+
+      {/* Card body is the link — art + name + income. */}
+      <Link href={href} className="flex flex-1 flex-col">
+        {/* Art on a mutation-tinted radial glow. */}
+        <div
+          className="relative flex h-[118px] items-center justify-center px-3"
+          style={{
+            background: isDefault
+              ? 'radial-gradient(120% 100% at 50% 8%, color-mix(in srgb, var(--rc) 12%, transparent), transparent 70%)'
+              : `radial-gradient(120% 100% at 50% 8%, ${visual.color}33, transparent 70%)`,
+          }}
+        >
+          {brainrot.image_url ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={brainrot.image_url}
+              alt={`${brainrot.name} Steal a Brainrot`}
+              loading="lazy"
+              className="h-[92px] w-[92px] object-contain drop-shadow-[0_8px_14px_rgba(0,0,0,0.5)] [image-rendering:pixelated]"
+            />
+          ) : (
+            <span className="font-mono text-[9px] text-[#5E685E]">N/A</span>
+          )}
+        </div>
+
+        {/* Name + income (M/s). */}
+        <div className="px-2.5 pb-2.5 pt-1 text-center">
+          <div className="truncate text-[14px] font-bold leading-tight text-[#F1F3F1] transition-colors group-hover:text-white">
+            {brainrot.name}
+          </div>
+          {income && (
+            <div className="mt-1 font-mono text-[11px] font-semibold text-[#7EE0A6]">
+              {income}
+            </div>
+          )}
+        </div>
+      </Link>
+
+      {/* ── Price footer: MARKET | CHEAPEST split by a vertical divider, matching
+          the design. Recomputes with the selected mutation. ── */}
+      <Link href={href} className="mt-auto block">
+        {headline ? (
+          <div className="flex border-t border-[#1A211A]">
+            <div className="flex-1 border-r border-[#1A211A] px-1.5 py-2.5 text-center">
+              <div className="font-mono text-[9px] uppercase tracking-[0.12em] text-[#5D6670]">
+                Market
+              </div>
+              <div className="mt-1 truncate font-mono text-[16px] font-bold tabular-nums text-[#7EE0A6]">
+                {marketLabel ?? headline}
+              </div>
+            </div>
+            <div className="flex-1 px-1.5 py-2.5 text-center">
+              <div className="font-mono text-[9px] uppercase tracking-[0.12em] text-[#5D6670]">
+                Cheapest
+              </div>
+              <div className="mt-1 truncate font-mono text-[16px] font-bold tabular-nums text-[#E9EDF2]">
+                {headline}
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="border-t border-[#1A211A] px-1.5 py-3.5 text-center">
+            <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-[#5E685E]">
+              {isDefault ? 'No price yet' : 'No Sales'}
+            </div>
+          </div>
+        )}
+      </Link>
+
+      {/* In-card mutation picker overlay — covers the whole card. */}
+      {pickerOpen && (
+        <div className="absolute inset-0 z-30 flex flex-col bg-[#060809]/[0.97] p-3">
+          <div className="mb-2 flex shrink-0 items-center justify-between">
+            <span className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[#8C98A4]">
+              Mutation
+            </span>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                setPickerOpen(false)
+              }}
+              aria-label="Close mutation picker"
+              className="-mr-1 -mt-1 px-1 text-[14px] leading-none text-[#8C98A4] transition hover:text-white"
+            >
+              ✕
+            </button>
+          </div>
+          <div className="flex flex-1 flex-col gap-1 overflow-y-auto [scrollbar-width:thin]">
+            {mutations.map((m) => {
+              const mv = mutationVisual(m.slug)
+              const active = m.slug === selected?.slug
+              return (
+                <button
+                  key={m.slug}
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    setSelectedSlug(m.slug)
+                    setPickerOpen(false)
+                  }}
+                  className="flex items-center gap-2 border px-2.5 py-1.5 text-left transition hover:border-[#40484F]"
+                  style={
+                    active
+                      ? { backgroundColor: mv.soft, borderColor: mv.color }
+                      : { backgroundColor: '#12171A', borderColor: '#232A2F' }
+                  }
+                >
+                  <MutationDot visual={mv} size={9} />
+                  <span
+                    className="truncate text-[12px] font-medium"
+                    style={{ color: active ? mv.color : '#C3CCD4' }}
+                  >
+                    {m.name}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
+    </div>
   )
 }
 

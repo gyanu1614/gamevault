@@ -41,6 +41,8 @@ export function BlogListClient({
   const [busyId, setBusyId] = useState<string | null>(null)
   // null = games overview; 'all' | 'general' | a game slug = posts view
   const [selected, setSelected] = useState<string | null>(null)
+  // Empty (0-post) games are collapsed by default so games WITH content lead.
+  const [showEmpty, setShowEmpty] = useState(false)
 
   const countBySlug = posts.reduce<Record<string, number>>((acc, p) => {
     const key = p.primary_game_slug || 'general'
@@ -75,48 +77,106 @@ export function BlogListClient({
     })
   }
 
-  // ── Games overview — the landing view. A card per game, driven by the
-  //    games table, so a game added in admin appears here automatically. ──
+  // ── Games overview — the landing view. Games WITH posts lead; empty games
+  //    (0 posts) collapse behind a toggle so the page isn't 20 dead tiles. ──
   if (selected === null) {
-    return (
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+    const gamesWithPosts = games.filter((g) => (countBySlug[g.slug] ?? 0) > 0)
+    const emptyGames = games.filter((g) => (countBySlug[g.slug] ?? 0) === 0)
+
+    const GameCard = ({ g }: { g: BlogGameOption }) => {
+      const count = countBySlug[g.slug] ?? 0
+      return (
         <button
           type="button"
-          onClick={() => setSelected('all')}
-          className="flex flex-col items-start gap-2 rounded-lg border border-white/15 bg-white/[0.03] p-4 text-left transition hover:border-lime/50"
+          onClick={() => setSelected(g.slug)}
+          className="group flex items-center gap-3 border border-white/10 bg-white/[0.02] p-3 text-left transition hover:border-lime/50 hover:bg-white/[0.04]"
         >
-          <span className="text-sm font-semibold text-white">All posts</span>
-          <span className="text-xs text-gray-500">{posts.length} total</span>
-        </button>
-        <button
-          type="button"
-          onClick={() => setSelected('general')}
-          className="flex flex-col items-start gap-2 rounded-lg border border-white/15 bg-white/[0.03] p-4 text-left transition hover:border-lime/50"
-        >
-          <span className="text-sm font-semibold text-white">General</span>
-          <span className="text-xs text-gray-500">
-            {countBySlug.general ?? 0} posts · no game
+          <span className="relative grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-md bg-white/[0.04] text-sm font-bold text-gray-500">
+            {g.imageUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={g.imageUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />
+            ) : (
+              g.name.charAt(0).toUpperCase()
+            )}
           </span>
-        </button>
-        {games.map((g) => (
-          <button
-            key={g.slug}
-            type="button"
-            onClick={() => setSelected(g.slug)}
-            className="flex flex-col items-start gap-2 rounded-lg border border-white/15 bg-white/[0.03] p-4 text-left transition hover:border-lime/50"
-          >
-            <span className="flex items-center gap-2">
-              {g.imageUrl && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={g.imageUrl} alt="" className="h-6 w-6 rounded-md object-cover" />
-              )}
-              <span className="text-sm font-semibold text-white">{g.name}</span>
+          <span className="flex min-w-0 flex-1 flex-col">
+            <span className="truncate text-sm font-semibold text-white transition-colors group-hover:text-lime-text">
+              {g.name}
             </span>
             <span className="text-xs text-gray-500">
-              {countBySlug[g.slug] ?? 0} {(countBySlug[g.slug] ?? 0) === 1 ? 'post' : 'posts'}
+              {count} {count === 1 ? 'post' : 'posts'}
             </span>
+          </span>
+        </button>
+      )
+    }
+
+    return (
+      <div className="space-y-6">
+        {/* Quick access: All + General. */}
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <button
+            type="button"
+            onClick={() => setSelected('all')}
+            className="flex flex-col items-start gap-1 rounded-lg border-2 border-lime/40 bg-lime/[0.06] p-4 text-left transition hover:border-lime/70"
+          >
+            <span className="text-sm font-bold text-white">All posts</span>
+            <span className="text-xs text-gray-400">{posts.length} total</span>
           </button>
-        ))}
+          <button
+            type="button"
+            onClick={() => setSelected('general')}
+            className="flex flex-col items-start gap-1 rounded-lg border border-white/15 bg-white/[0.03] p-4 text-left transition hover:border-lime/50"
+          >
+            <span className="text-sm font-semibold text-white">General</span>
+            <span className="text-xs text-gray-500">{countBySlug.general ?? 0} posts · no game</span>
+          </button>
+        </div>
+
+        {/* Games with content — the ones you actually manage. */}
+        {gamesWithPosts.length > 0 && (
+          <div>
+            <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-400">
+              Games with posts
+            </h2>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {gamesWithPosts.map((g) => (
+                <GameCard key={g.slug} g={g} />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Empty games — collapsed so they don't bury the active ones. */}
+        {emptyGames.length > 0 && (
+          <div>
+            <button
+              type="button"
+              onClick={() => setShowEmpty((v) => !v)}
+              className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-gray-500 transition hover:text-gray-300"
+            >
+              {showEmpty ? '▾' : '▸'} {emptyGames.length} games with no posts yet
+            </button>
+            {showEmpty && (
+              <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+                {emptyGames.map((g) => (
+                  <button
+                    key={g.slug}
+                    type="button"
+                    onClick={() => setSelected(g.slug)}
+                    className="flex items-center gap-2 border border-white/10 bg-white/[0.02] px-3 py-2 text-left transition hover:border-lime/50"
+                  >
+                    {g.imageUrl && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={g.imageUrl} alt="" className="h-5 w-5 shrink-0 rounded object-cover" />
+                    )}
+                    <span className="truncate text-[13px] text-gray-300">{g.name}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     )
   }
@@ -163,79 +223,86 @@ export function BlogListClient({
             : 'No posts for this game yet. Use the button above to write the first one.'}
         </div>
       ) : (
-    <div className="overflow-x-auto">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="border-b border-white/10 text-left text-xs uppercase tracking-wide text-gray-500">
-            <th className="px-3 py-2.5 font-semibold">Title</th>
-            <th className="px-3 py-2.5 font-semibold">Game</th>
-            <th className="px-3 py-2.5 font-semibold">Type</th>
-            <th className="px-3 py-2.5 font-semibold">Status</th>
-            <th className="px-3 py-2.5 font-semibold">Updated</th>
-            <th className="px-3 py-2.5 text-right font-semibold">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {visiblePosts.map((post) => {
-            const isBusy = busyId === post.id && pending
-            return (
-              <tr key={post.id} className="border-b border-white/[0.06] hover:bg-white/[0.02]">
-                <td className="px-3 py-3">
-                  <Link
-                    href={`/admin/blog/${post.id}`}
-                    className="font-medium text-white hover:text-lime-text"
-                  >
-                    {post.title || <span className="text-gray-500">(untitled)</span>}
-                  </Link>
-                  <div className="text-xs text-gray-500">/{post.slug}</div>
-                </td>
-                <td className="px-3 py-3 text-gray-300">
-                  {post.primary_game_slug || <span className="text-gray-600">general</span>}
-                </td>
-                <td className="px-3 py-3 text-gray-300">{TYPE_LABEL[post.post_type] ?? post.post_type}</td>
-                <td className="px-3 py-3">
-                  <span
-                    className={`inline-flex rounded-full border px-2 py-0.5 text-[11px] font-semibold ${
-                      STATUS_STYLE[post.status] ?? STATUS_STYLE.archived
-                    }`}
-                  >
-                    {post.status}
-                  </span>
-                </td>
-                <td className="px-3 py-3 text-xs text-gray-500">
-                  {post.updated_at ? new Date(post.updated_at).toLocaleDateString() : '—'}
-                </td>
-                <td className="px-3 py-3">
-                  <div className="flex items-center justify-end gap-2">
-                    <button
-                      type="button"
-                      onClick={() => togglePublish(post)}
-                      disabled={isBusy}
-                      className="rounded-md border border-white/15 px-2.5 py-1 text-xs font-semibold text-gray-200 transition hover:border-white/30 disabled:opacity-50"
-                    >
-                      {post.status === 'published' ? 'Unpublish' : 'Publish'}
-                    </button>
-                    <Link
-                      href={`/admin/blog/${post.id}`}
-                      className="rounded-md border border-white/15 px-2.5 py-1 text-xs font-semibold text-gray-200 transition hover:border-white/30"
-                    >
-                      Edit
-                    </Link>
-                    <button
-                      type="button"
-                      onClick={() => remove(post)}
-                      disabled={isBusy}
-                      className="rounded-md border border-red-500/30 px-2.5 py-1 text-xs font-semibold text-red-400 transition hover:bg-red-500/10 disabled:opacity-50"
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            )
-          })}
-        </tbody>
-      </table>
+    <div className="flex flex-col gap-2">
+      {visiblePosts.map((post) => {
+        const isBusy = busyId === post.id && pending
+        const gameLabel = post.primary_game_slug || 'general'
+        return (
+          <div
+            key={post.id}
+            className="flex items-center gap-3 border border-white/10 bg-white/[0.02] p-2.5 transition hover:border-white/20 sm:gap-4 sm:p-3"
+          >
+            {/* Cover thumbnail (or a placeholder tile). */}
+            <Link
+              href={`/admin/blog/${post.id}`}
+              className="relative aspect-[16/10] w-20 shrink-0 overflow-hidden rounded-md border border-white/10 bg-white/[0.03] sm:w-28"
+            >
+              {post.cover_url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={post.cover_url} alt="" className="h-full w-full object-cover" />
+              ) : (
+                <span className="flex h-full w-full items-center justify-center text-[10px] text-gray-600">
+                  No cover
+                </span>
+              )}
+            </Link>
+
+            {/* Title + meta. */}
+            <div className="min-w-0 flex-1">
+              <Link
+                href={`/admin/blog/${post.id}`}
+                className="block truncate text-[14px] font-semibold text-white hover:text-lime-text sm:text-[15px]"
+              >
+                {post.title || <span className="text-gray-500">(untitled)</span>}
+              </Link>
+              <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11.5px] text-gray-500">
+                <span className="text-gray-400">{TYPE_LABEL[post.post_type] ?? post.post_type}</span>
+                <span className="text-gray-700">·</span>
+                <span>{gameLabel}</span>
+                <span className="text-gray-700">·</span>
+                <span>
+                  {post.updated_at ? `updated ${new Date(post.updated_at).toLocaleDateString()}` : '—'}
+                </span>
+              </div>
+            </div>
+
+            {/* Status pill. */}
+            <span
+              className={`hidden shrink-0 rounded-full border px-2.5 py-0.5 text-[11px] font-semibold capitalize sm:inline-flex ${
+                STATUS_STYLE[post.status] ?? STATUS_STYLE.archived
+              }`}
+            >
+              {post.status}
+            </span>
+
+            {/* Actions. */}
+            <div className="flex shrink-0 items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => togglePublish(post)}
+                disabled={isBusy}
+                className="rounded-md border border-white/15 px-2.5 py-1 text-[12px] font-semibold text-gray-200 transition hover:border-white/30 disabled:opacity-50"
+              >
+                {post.status === 'published' ? 'Unpublish' : 'Publish'}
+              </button>
+              <Link
+                href={`/admin/blog/${post.id}`}
+                className="rounded-md border border-white/15 px-2.5 py-1 text-[12px] font-semibold text-gray-200 transition hover:border-white/30"
+              >
+                Edit
+              </Link>
+              <button
+                type="button"
+                onClick={() => remove(post)}
+                disabled={isBusy}
+                className="rounded-md border border-red-500/30 px-2.5 py-1 text-[12px] font-semibold text-red-400 transition hover:bg-red-500/10 disabled:opacity-50"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        )
+      })}
     </div>
       )}
     </div>

@@ -120,6 +120,17 @@ function formatIncome(value: number | string | null | undefined): string {
   }).format(amount)}/s`
 }
 
+/** In-game currency cost, compact — "$250B" not "$250,000,000,000". */
+function formatIngameCost(value: number | string | null | undefined): string | null {
+  const amount = asNumber(value)
+  if (amount == null) return null
+  return `$${new Intl.NumberFormat('en-US', {
+    notation: 'compact',
+    compactDisplay: 'short',
+    maximumFractionDigits: 2,
+  }).format(amount)}`
+}
+
 function formatDate(value: string | null): string | null {
   if (!value) return null
   const date = new Date(value)
@@ -555,7 +566,7 @@ export default async function BrainrotValuePage({ params }: PageProps) {
           rarity={brainrot.rarity}
           obtainability={brainrot.obtainability}
           baseIncomePerSecond={asNumber(brainrot.base_income_per_second)}
-          ingameCost={formatMoney(brainrot.ingame_cost)}
+          ingameCost={formatIngameCost(brainrot.ingame_cost)}
           imageUrl={brainrot.image_url}
           imageAlt={brainrot.image_alt}
           mutations={mutations}
