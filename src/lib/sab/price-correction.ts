@@ -135,7 +135,7 @@ export const FLOOR_STEP_RATIO = 0.1
 /**
  * Sources whose listings carry seller-trust signals (verified flag, account age)
  * and set the cheapest listing in ~91% of variants. Only these may SET a floor;
- * cheaper listings from unverifiable sources (G2G, Itemku expose no seller trust
+ * cheaper listings from unverifiable sources (G2G exposes no seller trust
  * data at all) can confirm a floor but not drag it below the trusted market.
  */
 export const TRUSTED_FLOOR_SOURCES = new Set(['eldorado'])
@@ -235,7 +235,7 @@ export type VariantEstimate = {
    * The same per-listing prices tagged with their marketplace source. When
    * present, the floor is computed source-trust-aware (lowestSupportedPriceBySource):
    * only a trusted source may SET the floor, so an unverifiable cheap cluster
-   * (G2G/Itemku) can't drag the price below the verified market. Falls back to
+   * (G2G) can't drag the price below the verified market. Falls back to
    * the plain `listingPrices` floor when absent or when trusted evidence is thin.
    */
   sourcedListingPrices?: SourcedPrice[]
@@ -418,14 +418,14 @@ export function lowestSupportedPrice(
 /** A single market listing tagged with the source it came from. */
 export type SourcedPrice = {
   price: number
-  /** Marketplace slug, e.g. 'eldorado' | 'g2g' | 'itemku'. */
+  /** Marketplace slug, e.g. 'eldorado' | 'g2g'. */
   source: string
 }
 
 /**
  * Source-trust-aware floor. The plain lowestSupportedPrice() trusts every source
  * equally, so a tight cluster of cheap listings from a marketplace that exposes
- * NO seller-trust data (G2G, Itemku) can set the price below the verified market
+ * NO seller-trust data (G2G) can set the price below the verified market
  * — Strawberry Elephant published $614 off a G2G cluster while the verified
  * Eldorado floor was $700+.
  *
@@ -875,7 +875,7 @@ function correctDefault(
   // unobtainable IN-GAME yet have a thriving RESALE market (Bacuru and Egguru —
   // no longer dropped, but 23 reputable sellers actively list it at $0.50).
   // When reputable sellers are actively trading it, the market is real
-  // regardless of obtainability. Only sources without review data (G2G/Itemku)
+  // regardless of obtainability. Only sources without review data (G2G)
   // fall through to the source-trust floor below.
   const reputable = reputableFor(variant)
   if (reputable) {

@@ -11,8 +11,6 @@
     "type-check": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "sab:itemku:collect": "node scripts/collect-itemku-sab.mjs",
-    "sab:itemku:send": "node scripts/collect-itemku-sab.mjs --send",
     "sab:eldorado:collect": "node scripts/collect-eldorado-sab-api-v6.mjs",
     "sab:eldorado:send": "node scripts/collect-eldorado-sab-api-v6.mjs --send",
     "sab:eldorado:panel": "node scripts/collect-eldorado-sab-api-v6.mjs --send --refresh-after-hours 20",

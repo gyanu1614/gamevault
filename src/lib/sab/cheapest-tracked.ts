@@ -25,7 +25,7 @@ export const TRUSTED_TRACKED_SOURCES = new Set(['eldorado'])
 export const TRACKED_FRESHNESS_HOURS = 48
 
 /**
- * A NON-trusted listing (G2G/Itemku — no seller-trust signals) may only be shown
+ * A NON-trusted listing (G2G — no seller-trust signals) may only be shown
  * if it is within this fraction of the item's published value: a plausibly-real
  * cheaper deal, not an unverifiable undercut. Matches the floor's
  * TRUSTED_FLOOR_UNDERCUT (0.92 = at most 8% under). The $97 G2G fake against a

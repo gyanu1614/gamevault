@@ -1,11 +1,12 @@
 /**
  * G2G Steal a Brainrot market collector.
  *
- * The THIRD price source (after Eldorado and Itemku). Its whole point is to
- * break single-sourcing: `sab_market_variant_price_estimates` already blends
- * per-source medians, and with two sources a "median" of two numbers is just
- * their midpoint — one bad source drags the price 50%. At three sources the
- * median discards the outlier. Today 892 of 1,000 variants rest on one source.
+ * The SECOND price source (alongside Eldorado). Its whole point is to break
+ * single-sourcing: `sab_market_variant_price_estimates` blends per-source
+ * medians, and an independent second source keeps a single bad Eldorado
+ * outlier from dragging a variant's price. As a no-review marketplace, G2G
+ * can only VALIDATE/TIGHTEN — it never sets the headline below Eldorado's
+ * verified reputable-seller price.
  *
  * Unlike the Eldorado collector this needs NO browser at runtime: G2G exposes a
  * public, no-auth JSON API (`sls.g2g.com/v3/offer/search`) that returns clean

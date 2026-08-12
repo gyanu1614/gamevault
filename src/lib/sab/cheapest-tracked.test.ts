@@ -98,7 +98,7 @@ describe('cheapestTracked', () => {
     // Only unverifiable listings far under value → nothing trustworthy to show.
     expect(
       cheapestTracked(
-        [listing(50, 'g2g', 2), listing(60, 'itemku', 2)],
+        [listing(50, 'g2g', 2), listing(60, 'g2g', 2)],
         676.57,
         NOW,
       ),
