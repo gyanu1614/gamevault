@@ -122,17 +122,16 @@ function requiredEnv(name) {
   return value;
 }
 
-async function supabaseRows(table, select, order) {
+// Fetch ONE bounded page [offset, offset+limit) of a table/view, with backoff
+// retry on the transient classes (statement timeout 57014 + 5xx). Returns the
+// parsed rows for that page only.
+async function supabasePage(table, select, order, offset, limit) {
   const base = requiredEnv("NEXT_PUBLIC_SUPABASE_URL");
   const key = requiredEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY");
   const url = new URL(`/rest/v1/${table}`, base);
   url.searchParams.set("select", select);
   if (order) url.searchParams.set("order", order);
 
-  // sab_public_price_catalog is a VIEW that recomputes an aggregation over ~16k
-  // rows on every full scan, so under concurrent DB load its unbounded fetch
-  // intermittently trips the statement timeout (57014 → 500). That's transient,
-  // so retry with backoff rather than aborting the whole crawl on one spike.
   const maxAttempts = 4;
   let lastError = null;
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
@@ -143,6 +142,10 @@ async function supabaseRows(table, select, order) {
           apikey: key,
           authorization: `Bearer ${key}`,
           accept: "application/json",
+          // Range paginates server-side so each request is a small, bounded
+          // scan that finishes well under the statement timeout.
+          range: `${offset}-${offset + limit - 1}`,
+          "range-unit": "items",
         },
       });
     } catch (networkError) {
@@ -157,30 +160,66 @@ async function supabaseRows(table, select, order) {
       `Supabase ${table} query failed (${response.status}): ${body}`,
     );
     // Only retry the transient classes: statement timeout (57014) and 5xx.
-    const retryable =
-      response.status >= 500 || body.includes("57014");
+    const retryable = response.status >= 500 || body.includes("57014");
     if (!retryable || attempt === maxAttempts) throw lastError;
     console.warn(
-      `  ${table} query timed out (attempt ${attempt}/${maxAttempts}) — retrying…`,
+      `  ${table} page ${offset}+ timed out (attempt ${attempt}/${maxAttempts}) — retrying…`,
     );
     await sleep(1000 * attempt);
   }
   throw lastError;
 }
 
+// Read an ENTIRE table/view in bounded pages. PostgREST caps a single response
+// at 1000 rows, so any table larger than that needs paging to be read in full;
+// a stable `order` is REQUIRED so page boundaries never skip or duplicate rows.
+async function supabaseRows(table, select, order) {
+  const pageSize = 1000;
+  const all = [];
+  for (let offset = 0; ; offset += pageSize) {
+    const page = await supabasePage(table, select, order, offset, pageSize);
+    all.push(...page);
+    if (page.length < pageSize) break; // short page = last page
+  }
+  return all;
+}
+
 async function buildQueue(requestedName) {
-  const [brainrots, prices, mutations, calculatorRows, tradeableRows] =
+  const [brainrots, correctionRows, mutations, calculatorRows, tradeableRows] =
     await Promise.all([
       supabaseRows(
         "sab_brainrot_catalog",
         "id,name,slug,rarity,base_income_per_second",
         "name.asc",
       ),
-      supabaseRows("sab_public_price_catalog", "brainrot_id,mutation_slug,confidence_label,external_sample_size,source_count,price_updated_at"),
+      // Coverage source: which brainrot+mutation pairs already have a published
+      // price, plus their confidence/value — used ONLY to prioritize the queue.
+      //
+      // Read from sab_price_corrections (a plain TABLE, the persisted output of
+      // the nightly correction pipeline) rather than sab_public_price_catalog.
+      // That catalog is a VIEW that re-runs the whole outlier-removal/clustering
+      // aggregation over every raw listing on each read; as listing volume grew
+      // it crossed the Postgres statement timeout (57014 → 500) and aborted the
+      // crawl even a single bounded page timed out, because LIMIT is applied
+      // AFTER the view materializes. The corrections table returns the same
+      // coverage in a fast indexed scan. Paged (stable order) to clear the
+      // 1000-row cap; degrade to empty coverage (crawl everything) if it fails.
+      supabaseRows(
+        "sab_price_corrections",
+        "brainrot_id,mutation_id,value_usd,confidence_label,is_publishable",
+        "brainrot_id.asc,mutation_id.asc",
+      ).catch((error) => {
+        console.warn(
+          `  sab_price_corrections read failed (${error.message}); ` +
+            `proceeding with empty coverage — crawling everything.`,
+        );
+        return [];
+      }),
       supabaseRows("sab_mutation_catalog", "id,name,slug,income_multiplier", "income_multiplier.asc"),
       supabaseRows(
         "sab_brainrot_mutation_calculator",
         "brainrot_id,mutation_id,calculated_income_per_second,is_verified_variant",
+        "brainrot_id.asc,mutation_id.asc",
       ),
       // The curated crawl set: only VALUABLE/SELLABLE brainrots (recomputed
       // nightly by the correction cron). We crawl only these — junk that nobody
@@ -189,6 +228,21 @@ async function buildQueue(requestedName) {
       // treating an empty/failed read as "everything tradeable".
       supabaseRows("sab_brainrots", "id,is_tradeable").catch(() => []),
     ]);
+
+  // Map corrections (mutation_id, value_usd) into the coverage shape the queue
+  // logic below expects: { brainrot_id, mutation_slug, confidence_label,
+  // market_value_usd }. Only publishable rows count as coverage — that matches
+  // what sab_public_price_catalog would have shown. Rows whose mutation_id is
+  // not in the catalog are skipped.
+  const mutationSlugById = new Map(mutations.map((m) => [m.id, m.slug]));
+  const prices = correctionRows
+    .filter((row) => row.is_publishable && mutationSlugById.has(row.mutation_id))
+    .map((row) => ({
+      brainrot_id: row.brainrot_id,
+      mutation_slug: mutationSlugById.get(row.mutation_id),
+      confidence_label: row.confidence_label,
+      market_value_usd: row.value_usd,
+    }));
 
   // Set of tradeable brainrot ids. If the column doesn't exist yet (migration
   // not applied) the read returns rows without is_tradeable → we keep them all,
