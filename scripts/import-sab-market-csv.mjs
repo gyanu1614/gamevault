@@ -7,7 +7,6 @@ const DEFAULT_ENDPOINT =
 const SOURCE_DOMAINS = new Map([
   ["ebay", ["ebay.com"]],
   ["eldorado", ["eldorado.gg"]],
-  ["itemku", ["itemku.com"]],
   ["g2g", ["g2g.com"]],
   ["u7buy", ["u7buy.com"]],
   ["zeusx", ["zeusx.com"]],

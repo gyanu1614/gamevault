@@ -2,8 +2,9 @@ name: SAB Eldorado Daily Market Collection
 
 # Priority-queue Eldorado collection: fills mutation prices on the highest-value
 # brainrots first (OGs/Secrets, biggest coverage gaps), with deep pagination so
-# every mutation gets enough samples. API-based — no browser needed, unlike the
-# Itemku workflow.
+# every mutation gets enough samples. API-based — no browser needed. This is the
+# PRIMARY, authoritative price source (reputable-seller cheapest); G2G runs
+# alongside as an independent cross-check.
 #
 # Rotation is DATABASE-driven (--refresh-after-hours), not progress-file driven.
 # The progress file is committed to the repo and this workflow never commits it

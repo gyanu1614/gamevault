@@ -206,10 +206,10 @@ describe('lowestSupportedPriceBySource', () => {
   })
 
   it('drops an extreme unverifiable fake far below the trusted market (Jelly Moby)', () => {
-    // A $1 Itemku listing under a $55 verified Eldorado market is a fake; the
+    // A $1 G2G listing under a $55 verified Eldorado market is a fake; the
     // floor follows the trusted cluster, not the $1.
     const listings = [
-      s(1, 'itemku'),
+      s(1, 'g2g'),
       s(55, 'eldorado'),
       s(55, 'eldorado'),
       s(58, 'eldorado'),
@@ -236,7 +236,7 @@ describe('lowestSupportedPriceBySource', () => {
       s(4, 'g2g'),
       s(4, 'g2g'),
       s(4.1, 'g2g'),
-      s(4.1, 'itemku'),
+      s(4.1, 'g2g'),
       s(9, 'eldorado'),
     ]
     const prices = listings.map((l) => l.price)

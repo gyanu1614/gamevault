@@ -7,7 +7,6 @@ const DEFAULT_ENDPOINT =
 const SUPPORTED_SOURCES = new Set([
   "ebay",
   "eldorado",
-  "itemku",
   "g2g",
   "u7buy",
   "zeusx",

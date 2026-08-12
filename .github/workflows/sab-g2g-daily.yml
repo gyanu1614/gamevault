@@ -1,6 +1,6 @@
 name: SAB G2G Daily Market Collection
 
-# Third price source (after Eldorado and Itemku). G2G exposes a public no-auth
+# Second price source (alongside Eldorado). G2G exposes a public no-auth
 # JSON API, so this needs no browser — it iterates the SAB Brainrot taxonomy and
 # calls sls.g2g.com/v3/offer/search per Brainrot. Its value is DEPTH: a single
 # variant returns dozens of independent sellers, which is what lets the blend's
