@@ -203,6 +203,15 @@ Deno.serve(async (request) => {
       ? body.source_slug.trim().toLowerCase()
       : "";
 
+  // Whether to recompute + republish market estimates after this insert.
+  // sab_publish_market_estimates() re-aggregates over ALL listings, so running
+  // it on every 500-listing batch means dozens of full recomputes per crawl —
+  // which intermittently trips the Postgres statement timeout (57014). A multi-
+  // batch importer sends publish:false on every batch and then makes ONE final
+  // publish:true call. Defaults to true so existing single-call clients are
+  // unaffected.
+  const shouldPublish = body.publish !== false;
+
   if (!sourceSlug) {
     return jsonResponse(
       {
@@ -301,6 +310,20 @@ Deno.serve(async (request) => {
     const importResult = Array.isArray(importData)
       ? importData[0] ?? null
       : importData;
+
+    // Skip the heavy full-dataset republish for intermediate batches — the
+    // caller runs it exactly once after the final batch (publish:true).
+    if (!shouldPublish) {
+      return jsonResponse({
+        ok: true,
+        result: importResult,
+        publication: {
+          ok: true,
+          skipped: true,
+          published_rows: 0,
+        },
+      });
+    }
 
     const {
       data: publishedRows,

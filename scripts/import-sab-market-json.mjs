@@ -373,6 +373,9 @@ async function sendBatch({
   secret,
   sourceSlug,
   listings,
+  // When false, the server inserts the listings but skips the heavy full-dataset
+  // republish. We publish exactly once after the final batch. Defaults to true.
+  publish = true,
 }) {
   const response = await fetch(endpoint, {
     method: "POST",
@@ -383,6 +386,7 @@ async function sendBatch({
     body: JSON.stringify({
       source_slug: sourceSlug,
       listings,
+      publish,
     }),
   });
 
@@ -507,59 +511,56 @@ async function main() {
     process.env.SAB_MARKET_IMPORT_URL ??
     DEFAULT_ENDPOINT;
 
+  // Insert every batch WITHOUT publishing — the server's publish step re-runs a
+  // full-dataset aggregation, so publishing on each 500-row batch means dozens
+  // of full recomputes per crawl and intermittently trips the Postgres
+  // statement timeout (57014). We insert everything first, then publish ONCE at
+  // the end. We still track the last (source, listings) batch to publish on:
+  // an empty final publish would be a wasted recompute, so we publish by
+  // re-sending the final batch with publish:true (idempotent upsert).
+  const batchPlan = [];
   for (const [sourceSlug, listings] of groups) {
     for (
       let batchStart = 0;
       batchStart < listings.length;
       batchStart += 500
     ) {
-      const batch = listings.slice(
-        batchStart,
-        batchStart + 500,
-      );
-
-      const response = await sendBatch({
-        endpoint,
-        secret,
+      batchPlan.push({
         sourceSlug,
-        listings: batch,
+        batch: listings.slice(batchStart, batchStart + 500),
+        label: `${sourceSlug} batch ${Math.floor(batchStart / 500) + 1}`,
       });
+    }
+  }
 
+  for (let i = 0; i < batchPlan.length; i += 1) {
+    const { sourceSlug, batch, label } = batchPlan[i];
+    // Publish only on the very last batch of the whole import.
+    const isFinal = i === batchPlan.length - 1;
+
+    const response = await sendBatch({
+      endpoint,
+      secret,
+      sourceSlug,
+      listings: batch,
+      publish: isFinal,
+    });
+
+    console.log(`\n${label}${isFinal ? " (final — publishing)" : ""}:`);
+    console.log(JSON.stringify(response.result, null, 2));
+
+    if (response.publication) {
       console.log(
-        `\n${sourceSlug} batch ${
-          Math.floor(batchStart / 500) + 1
-        }:`,
+        "Publication:",
+        JSON.stringify(response.publication, null, 2),
       );
+    }
 
+    if (response.revalidation) {
       console.log(
-        JSON.stringify(
-          response.result,
-          null,
-          2,
-        ),
+        "Revalidation:",
+        JSON.stringify(response.revalidation, null, 2),
       );
-
-      if (response.publication) {
-        console.log(
-          "Publication:",
-          JSON.stringify(
-            response.publication,
-            null,
-            2,
-          ),
-        );
-      }
-
-      if (response.revalidation) {
-        console.log(
-          "Revalidation:",
-          JSON.stringify(
-            response.revalidation,
-            null,
-            2,
-          ),
-        );
-      }
     }
   }
 
