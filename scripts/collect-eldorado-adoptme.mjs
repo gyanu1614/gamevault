@@ -93,10 +93,19 @@ const PUBLISHABLE_VARIANTS = new Set([
 
 // Eldorado's structured "Traits" attribute is the PRIMARY variant source — it
 // is more reliable than parsing emoji-filled titles. Map its codes to our
-// 8-form ladder. The combo forms Eldorado also tracks (NR=Neon Ride, MF=Mega
-// Fly, MR=Mega Ride, NF=Neon Fly) and bare M have NO column/UI in our ladder,
-// so they are intentionally absent here → such listings fall through to the
-// title, and are skipped if the title gives no publishable variant either.
+// 8-form ladder.
+//
+// IMPORTANT: Eldorado emits the Mega Neon form as trait code "M" (NOT "MEGA")
+// and also accepts "MEGA" from some listings — both are our MEGA column, so we
+// map BOTH. (Without the "M" alias every correctly-trait-tagged Mega listing was
+// dropped, so our MEGA column sat empty while $2k Mega pets existed on Eldorado.)
+//
+// The combo forms Eldorado also tracks — NR (Neon Ride), MR (Mega Ride), MF
+// (Mega Fly), NF (Neon Fly) — have NO column/UI in our 8-form ladder AND carry
+// negligible volume (a handful of listings across the whole catalog), so they
+// stay intentionally unmapped: such listings fall through to the title and are
+// skipped if the title gives no publishable variant either. We only price
+// variants we actually have a column and data for.
 //   N   Normal        F  Fly          R  Ride         FR  Fly Ride
 //   NEON Neon         MEGA Mega Neon  NFR Neon Fly Ride   MFR Mega Fly Ride
 const TRAIT_TO_VARIANT = {
@@ -107,6 +116,7 @@ const TRAIT_TO_VARIANT = {
   NEON: 'NEON',
   NFR: 'NFR',
   MEGA: 'MEGA',
+  M: 'MEGA', // Eldorado's Mega Neon trait code
   MFR: 'MFR',
 }
 
