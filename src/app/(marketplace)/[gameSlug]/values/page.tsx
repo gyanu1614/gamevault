@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { getCachedGridPrices } from '@/lib/sab/priceCache'
 import { JsonLd, breadcrumbList } from '@/lib/seo/jsonld'
 import ValuesDirectoryClient, {
   type BrainrotDirectoryItem,
@@ -220,10 +221,13 @@ async function getBiggestMovers(limit = 3): Promise<MoverItem[]> {
 async function getBrainrots(): Promise<BrainrotDirectoryItem[]> {
   const supabase = await createClient()
 
+  // Default-mutation prices + all priced mutations come from the cached, tagged
+  // reader (sab_price_display, indexed → ~5ms). Tagged so the whole grid
+  // refreshes the moment a crawl republishes; served from cache in between.
+  const gridPricesPromise = getCachedGridPrices()
+
   const [
     brainrotResult,
-    priceResult,
-    mutationPriceResult,
     calculatorResult,
     popularityResult,
   ] = await Promise.all([
@@ -233,23 +237,6 @@ async function getBrainrots(): Promise<BrainrotDirectoryItem[]> {
         'id,name,slug,rarity,obtainability,base_income_per_second,image_url,display_price_usd,display_price_label,display_price_source,confidence_label',
       )
       .order('name', { ascending: true }),
-
-    // Default-mutation price — still the headline the card leads with.
-    (supabase as any)
-      .from('sab_price_display')
-      .select(
-        'brainrot_id,market_value_usd,market_low_usd,market_high_usd,cheapest_usd,average_usd,confidence_label,is_trade_ready,external_sample_size',
-      )
-      .eq('mutation_slug', 'default'),
-
-    // ALL priced mutations (default included) so the card's in-card switcher can
-    // show each mutation's REAL cheapest/average. Coverage is sparse (~1.6 priced
-    // mutations/item), so this is a light payload — and we never estimate: a
-    // mutation with no row simply shows "No Sales" in the picker.
-    (supabase as any)
-      .from('sab_price_display')
-      .select('brainrot_id,mutation_slug,cheapest_usd,average_usd')
-      .not('cheapest_usd', 'is', null),
 
     // Mutation display metadata (name, income multiplier, per-mutation income) for
     // every brainrot+mutation — drives the picker labels and the income line.
@@ -280,6 +267,9 @@ async function getBrainrots(): Promise<BrainrotDirectoryItem[]> {
       .not('popularity_rank', 'is', null),
   ])
 
+  const { defaults: defaultPriceRows, mutations: mutationPriceRows } =
+    await gridPricesPromise
+
   if (brainrotResult.error) {
     console.error(
       'Unable to load SAB values directory:',
@@ -288,15 +278,8 @@ async function getBrainrots(): Promise<BrainrotDirectoryItem[]> {
     return []
   }
 
-  if (priceResult.error) {
-    console.error(
-      'Unable to load SAB directory market prices:',
-      priceResult.error,
-    )
-  }
-
   const priceByBrainrot = new Map(
-    ((priceResult.data ?? []) as DirectoryTradePriceRow[])
+    (defaultPriceRows as DirectoryTradePriceRow[])
       .filter(
         (row) =>
           row.market_value_usd != null &&
@@ -315,7 +298,7 @@ async function getBrainrots(): Promise<BrainrotDirectoryItem[]> {
     string,
     Map<string, { cheapest_usd: number | null; average_usd: number | null }>
   >()
-  for (const row of (mutationPriceResult?.data ?? []) as {
+  for (const row of mutationPriceRows as {
     brainrot_id: string
     mutation_slug: string
     cheapest_usd: number | string | null
