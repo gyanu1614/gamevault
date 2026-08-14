@@ -410,6 +410,22 @@ export async function runSabCorrection(): Promise<Record<string, unknown>> {
     tradeableUpdated = Number(tradeableCount ?? 0)
   }
 
+  // Materialize the display catalog from the fresh corrections. Every price page
+  // reads sab_price_display (an indexed plain table) instead of recomputing the
+  // heavy sab_public_price_catalog_corrected view per request. Runs here, off the
+  // request path, once per crawl. Non-fatal: if it fails, pages fall back to the
+  // previous snapshot (still correct, just a cycle old) rather than breaking.
+  let displayRefreshed = 0
+  const { data: displayCount, error: displayError } = await (admin as any).rpc(
+    'sab_refresh_price_display',
+  )
+  if (displayError) {
+    console.error('Failed to refresh sab_price_display:', displayError)
+  } else {
+    displayRefreshed = Number(displayCount ?? 0)
+    console.log(`✅ sab_price_display refreshed: ${displayRefreshed} rows`)
+  }
+
   return {
     corrected: corrections.length,
     anchored,
@@ -417,6 +433,7 @@ export async function runSabCorrection(): Promise<Record<string, unknown>> {
     multipliers: multiplierRows.length,
     history_reconciled: historyReconciled,
     tradeable_updated: tradeableUpdated,
+    display_refreshed: displayRefreshed,
     breakdown: summary,
   }
 }

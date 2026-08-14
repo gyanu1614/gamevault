@@ -32,7 +32,7 @@ type Mover = { slug: string; name: string; from: number; to: number; pct: number
 async function getTopValues(): Promise<TopValue[]> {
   const supabase = await createClient()
   const { data } = await (supabase as any)
-    .from('sab_public_price_catalog_corrected')
+    .from('sab_price_display')
     .select('brainrot_slug,brainrot_name,rarity,market_value_usd,mutation_slug')
     .eq('mutation_slug', 'default')
     .order('market_value_usd', { ascending: false })

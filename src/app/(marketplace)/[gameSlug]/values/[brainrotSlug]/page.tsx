@@ -163,7 +163,7 @@ async function getDefaultTradePrice(
 ): Promise<TradePriceRow | null> {
   const supabase = await createClient()
   const { data, error } = await (supabase as any)
-    .from('sab_public_price_catalog_corrected')
+    .from('sab_price_display')
     .select(
       'market_value_usd,market_low_usd,market_high_usd,cheapest_usd,average_usd,confidence_label,external_sample_size,price_updated_at,is_trade_ready',
     )
@@ -194,7 +194,7 @@ async function getMutations(brainrotId: string): Promise<MutationOption[]> {
       .eq('brainrot_id', brainrotId)
       .order('income_multiplier', { ascending: true }),
     (supabase as any)
-      .from('sab_public_price_catalog_corrected')
+      .from('sab_price_display')
       .select(
         'mutation_slug,market_value_usd,market_low_usd,market_high_usd,cheapest_usd,average_usd,confidence_label,external_sample_size,price_updated_at,is_trade_ready',
       )
@@ -331,7 +331,7 @@ async function getRelatedBrainrots(brainrot: BrainrotRow): Promise<BrainrotRow[]
   // Pull the real default cash value from the public catalog so cards show a
   // price instead of "pending", matching what the item page displays.
   const { data: prices } = await (supabase as any)
-    .from('sab_public_price_catalog_corrected')
+    .from('sab_price_display')
     .select('brainrot_id,market_value_usd')
     .eq('mutation_slug', 'default')
     .in(

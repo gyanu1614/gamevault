@@ -283,7 +283,7 @@ export async function getHubTopValues(
       .from('sab_brainrot_market_catalog')
       .select('id,name,slug,image_url,confidence_label'),
     (supabase as any)
-      .from('sab_public_price_catalog_corrected')
+      .from('sab_price_display')
       .select('brainrot_id,market_value_usd,confidence_label')
       .eq('mutation_slug', 'default'),
   ])

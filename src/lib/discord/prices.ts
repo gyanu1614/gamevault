@@ -141,7 +141,7 @@ export async function getBrainrotPricing(
   const [catalogResult, metaResult, incomeResult, multipliers] =
     await Promise.all([
       supabase
-        .from('sab_public_price_catalog_corrected')
+        .from('sab_price_display')
         .select(CATALOG_COLUMNS)
         .eq('brainrot_slug', slug),
       supabase
@@ -263,7 +263,7 @@ export async function getPricesForSlugs(
   if (!unique.length) return grouped
 
   const { data, error } = await botSupabase()
-    .from('sab_public_price_catalog_corrected')
+    .from('sab_price_display')
     .select(CATALOG_COLUMNS)
     .in('brainrot_slug', unique)
 
@@ -321,7 +321,7 @@ export async function getTopValues(
   limit: number,
 ): Promise<PricedItem[]> {
   let query = botSupabase()
-    .from('sab_public_price_catalog_corrected')
+    .from('sab_price_display')
     .select(CATALOG_COLUMNS)
     .eq('mutation_slug', 'default')
     .order('market_value_usd', { ascending: false })

@@ -15,9 +15,11 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
+import { revalidateTag } from 'next/cache'
 
 import { runSabCorrection } from '@/lib/pricing/games/sab'
 import { runAdoptMeCorrection } from '@/lib/pricing/games/adopt-me'
+import { PRICE_CACHE_TAG } from '@/lib/sab/priceCache'
 
 const CRON_SECRET = process.env.CRON_SECRET
 
@@ -63,6 +65,17 @@ export async function GET(request: NextRequest) {
       console.error(`correct-prices: ${game.key} failed:`, error)
       results[game.key] = { ok: false, error: error?.message ?? String(error) }
     }
+  }
+
+  // Prices just changed (sab_price_display was refreshed inside the SAB run).
+  // Revalidate the price-tagged ISR pages so they re-read the fresh snapshot on
+  // their next request instead of serving up to an hour of stale cache. Reads
+  // opt in via getCachedPrices() (unstable_cache + PRICE_CACHE_TAG); untagged
+  // pages still refresh on their normal 1h ISR cycle.
+  try {
+    revalidateTag(PRICE_CACHE_TAG)
+  } catch (error) {
+    console.error('correct-prices: revalidateTag failed:', error)
   }
 
   return NextResponse.json(

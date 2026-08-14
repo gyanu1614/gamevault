@@ -25,7 +25,7 @@ describeLive('discord bot against live data', () => {
 
   beforeAll(async () => {
     const { data } = await botSupabase()
-      .from('sab_public_price_catalog_corrected')
+      .from('sab_price_display')
       .select('market_value_usd')
       .eq('brainrot_slug', 'spyder-elephant')
       .eq('mutation_slug', 'default')

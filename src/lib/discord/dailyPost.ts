@@ -62,7 +62,7 @@ function toNumber(value: number | string | null | undefined): number | null {
 /** The N highest-value Brainrots (default mutation) from the corrected view. */
 async function getTopValues(): Promise<CatalogRow[]> {
   const { data, error } = await botSupabase()
-    .from('sab_public_price_catalog_corrected')
+    .from('sab_price_display')
     .select('brainrot_slug,brainrot_name,rarity,mutation_slug,market_value_usd')
     .eq('mutation_slug', DEFAULT_MUTATION)
     .order('market_value_usd', { ascending: false })
