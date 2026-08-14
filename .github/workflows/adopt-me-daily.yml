@@ -15,7 +15,7 @@ on:
       max_pages:
         description: Offer pages to fetch per pet (deeper = more samples)
         required: false
-        default: "4"
+        default: "10"
   schedule:
     # 05:30 UTC daily — after the SAB collection (05:00) settles.
     - cron: "30 5 * * *"
@@ -39,7 +39,11 @@ jobs:
       PUBLIC_API_URL: ${{ secrets.PUBLIC_API_URL }}
       CRON_SECRET: ${{ secrets.CRON_SECRET }}
       # Tuning (optional overrides for the fake-listing filters).
-      ELDORADO_AM_MAX_PAGES: ${{ inputs.max_pages || '4' }}
+      # Eldorado's offers API is relevance-ranked, not price-sorted, so the
+      # cheapest reputable listing can sit several pages deep (same reason SAB
+      # pages to 25). 4 pages missed cheaper listings (e.g. an FR Bat Dragon at
+      # $228 when we showed $236); 10 pages catches them without hammering the API.
+      ELDORADO_AM_MAX_PAGES: ${{ inputs.max_pages || '10' }}
       U7_AM_MAX_PAGES: "3"
 
     steps:
