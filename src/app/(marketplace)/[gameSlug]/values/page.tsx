@@ -236,7 +236,7 @@ async function getBrainrots(): Promise<BrainrotDirectoryItem[]> {
 
     // Default-mutation price — still the headline the card leads with.
     (supabase as any)
-      .from('sab_public_price_catalog_corrected')
+      .from('sab_price_display')
       .select(
         'brainrot_id,market_value_usd,market_low_usd,market_high_usd,cheapest_usd,average_usd,confidence_label,is_trade_ready,external_sample_size',
       )
@@ -247,7 +247,7 @@ async function getBrainrots(): Promise<BrainrotDirectoryItem[]> {
     // mutations/item), so this is a light payload — and we never estimate: a
     // mutation with no row simply shows "No Sales" in the picker.
     (supabase as any)
-      .from('sab_public_price_catalog_corrected')
+      .from('sab_price_display')
       .select('brainrot_id,mutation_slug,cheapest_usd,average_usd')
       .not('cheapest_usd', 'is', null),
 

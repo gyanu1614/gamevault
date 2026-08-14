@@ -42,7 +42,7 @@ function toNumber(value: number | string | null | undefined): number | null {
 /**
  * Snapshot today's CORRECTED prices into sab_price_history.
  *
- * Reads sab_public_price_catalog_corrected (the numbers users actually see),
+ * Reads sab_price_display (the materialized numbers users actually see),
  * maps to the history columns, and upserts on (brainrot, mutation, day) so a
  * re-run within the same UTC day is idempotent. Only rows with a real value are
  * captured — a null price is "no data", not a $0 snapshot.
@@ -56,7 +56,7 @@ async function captureFromCorrectedView(
   for (let page = 0; ; page += 1) {
     const from = page * PAGE_SIZE
     const { data, error } = await (admin as any)
-      .from('sab_public_price_catalog_corrected')
+      .from('sab_price_display')
       .select(
         'brainrot_id,mutation_id,market_value_usd,market_low_usd,market_high_usd,external_sample_size,source_count,confidence_label,is_trade_ready,is_public_estimate,price_updated_at',
       )
@@ -127,7 +127,7 @@ export async function GET(request: NextRequest) {
     // day-to-day (Spyder Elephant $323 -> $9.98, Headless $1000 -> $8999),
     // making trend charts and the daily-post "movers" pure noise. The RPC's
     // live definition is hand-edited and unreadable from the repo, so instead
-    // of rewriting it we snapshot directly from sab_public_price_catalog_corrected.
+    // of rewriting it we snapshot directly from sab_price_display.
     const capturedCount = await captureFromCorrectedView(admin)
     console.log(`✅ Captured ${capturedCount} SAB price snapshot rows (corrected)`)
 
@@ -140,7 +140,7 @@ export async function GET(request: NextRequest) {
     let revalidatedCount = 0
     try {
       const { data: slugRows } = await admin
-        .from('sab_public_price_catalog_corrected')
+        .from('sab_price_display')
         .select('brainrot_slug')
         .eq('mutation_slug', 'default') as { data: { brainrot_slug: string }[] | null }
 
