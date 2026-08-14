@@ -14,7 +14,7 @@ import { useMemo, useState, useTransition } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
 import {
-  Users, UserCheck, UserPlus, MailCheck, Copy, Download, Loader2, Inbox,
+  Users, UserCheck, UserPlus, MailCheck, Copy, Download, Loader2, Inbox, Send,
 } from 'lucide-react'
 import {
   getEarlySellerSignups,
@@ -22,6 +22,7 @@ import {
   type EarlySellerSignup,
   type EarlySellerStatus,
 } from '@/lib/actions/early-seller'
+import { sendFoundingInvite, sendFoundingInvitesToNew } from '@/lib/actions/founding-invite'
 import { PageHeader, StatCard, StatusBadge, TABLE } from '../components/kit'
 
 const STATUS_OPTIONS: EarlySellerStatus[] = ['new', 'contacted', 'approved', 'rejected']
@@ -61,6 +62,8 @@ export default function EarlySellersClient({
   const [signups, setSignups] = useState<EarlySellerSignup[]>(initialSignups)
   const [tab, setTab] = useState<Tab>('all')
   const [busyId, setBusyId] = useState<string | null>(null)
+  const [invitingId, setInvitingId] = useState<string | null>(null)
+  const [batchBusy, setBatchBusy] = useState(false)
   const [, startRefresh] = useTransition()
 
   const counts = useMemo(() => ({
@@ -88,6 +91,37 @@ export default function EarlySellersClient({
     } else {
       setSignups(prev) // roll back
       toast.error(res.error ?? 'Failed to update')
+    }
+  }
+
+  async function sendInvite(id: string) {
+    setInvitingId(id)
+    const res = await sendFoundingInvite(id)
+    setInvitingId(null)
+    if (res.ok) {
+      toast.success('Founding HQ invite sent')
+      // The action advances 'new' → 'contacted'; reflect it locally.
+      setSignups((cur) => cur.map((s) => (s.id === id && s.status === 'new' ? { ...s, status: 'contacted' } : s)))
+    } else {
+      toast.error(res.error ?? 'Could not send invite')
+    }
+  }
+
+  async function inviteAllNew() {
+    const newCount = signups.filter((s) => s.status === 'new').length
+    if (newCount === 0) {
+      toast.info('No applicants are still marked New.')
+      return
+    }
+    if (!confirm(`Send the Founding HQ invite to all ${newCount} applicants marked New?`)) return
+    setBatchBusy(true)
+    const res = await sendFoundingInvitesToNew()
+    setBatchBusy(false)
+    if (res.ok) {
+      toast.success(`Sent ${res.sent ?? 0} invite${res.sent === 1 ? '' : 's'}`)
+      setSignups((cur) => cur.map((s) => (s.status === 'new' ? { ...s, status: 'contacted' } : s)))
+    } else {
+      toast.error(res.error ?? 'Batch send failed')
     }
   }
 
@@ -132,14 +166,25 @@ export default function EarlySellersClient({
         description="Beta waitlist — early sellers who registered for the first-100 program."
         className="mb-0"
         actions={
-          <button
-            onClick={exportCsv}
-            disabled={visible.length === 0}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-border-default bg-bg-overlay px-3 py-2 text-[13px] font-semibold text-text-secondary transition-colors hover:bg-bg-overlay-2 hover:text-text-primary disabled:opacity-40"
-          >
-            <Download className="h-4 w-4" />
-            Export CSV
-          </button>
+          <>
+            <button
+              onClick={inviteAllNew}
+              disabled={batchBusy || counts.new === 0}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-lime px-3 py-2 text-[13px] font-semibold text-black transition-opacity hover:opacity-90 disabled:opacity-40"
+              title="Email every applicant still marked New their Founding HQ magic link"
+            >
+              {batchBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+              Invite New ({counts.new})
+            </button>
+            <button
+              onClick={exportCsv}
+              disabled={visible.length === 0}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-border-default bg-bg-overlay px-3 py-2 text-[13px] font-semibold text-text-secondary transition-colors hover:bg-bg-overlay-2 hover:text-text-primary disabled:opacity-40"
+            >
+              <Download className="h-4 w-4" />
+              Export CSV
+            </button>
+          </>
         }
       />
 
@@ -256,6 +301,19 @@ export default function EarlySellersClient({
                           {busyId === s.id && (
                             <Loader2 className="h-3.5 w-3.5 animate-spin text-text-tertiary" />
                           )}
+                          <button
+                            onClick={() => sendInvite(s.id)}
+                            disabled={invitingId === s.id}
+                            title="Send Founding HQ magic-link invite"
+                            aria-label="Send Founding HQ invite"
+                            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-border-subtle text-text-secondary transition-colors hover:bg-bg-overlay hover:text-lime-text disabled:opacity-40"
+                          >
+                            {invitingId === s.id ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              <Send className="h-3.5 w-3.5" />
+                            )}
+                          </button>
                         </div>
                       </td>
                     </motion.tr>

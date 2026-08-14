@@ -38,6 +38,7 @@ const ACCOUNT_MENU_ITEMS = [
   { label: 'Wallet', href: '/account/wallet', Icon: Wallet, sellerOnly: false },
   { label: 'Wishlist', href: '/account/wishlist', Icon: Heart, sellerOnly: false },
   { label: 'Rewards', href: '/account/loyalty', Icon: Sparkles, sellerOnly: false },
+  { label: 'Founding HQ', href: '/founding', Icon: Rocket, sellerOnly: false },
   { label: 'Settings', href: '/account/settings', Icon: Settings, sellerOnly: false },
 ] as const
 
