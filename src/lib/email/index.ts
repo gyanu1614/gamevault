@@ -6,8 +6,12 @@ import {
   emailButton,
   emailBox,
   emailRow,
-  emailSubtle,
   emailOrderSummary,
+  emailDetail,
+  emailDetailAccent,
+  emailItemRow,
+  emailFooterNote,
+  gameLogoUrl,
   EMAIL_TOKENS,
 } from './shell'
 
@@ -82,7 +86,7 @@ export async function sendApplicationReceivedEmail({
       }) +
       emailBox({ title: 'Application reference', html: `<span style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;overflow-wrap:anywhere;">${escapeHtml(applicationId)}</span>` }) +
       emailButton('View Application Status', `${APP_URL}/account/seller-status`) +
-      emailSubtle(`Questions in the meantime? Just reply to this email.`)
+      emailFooterNote(`Questions in the meantime? Just reply to this email.`)
 
     const { data, error } = await resend.emails.send({
       from: FROM_EMAIL,
@@ -91,8 +95,7 @@ export async function sendApplicationReceivedEmail({
       subject: `We got your application, ${name}`,
       html: emailShell({
         preview: `Your seller application is in and under review.`,
-        badgeEmoji: '📝',
-        eyebrow: 'Seller Application',
+        icon: 'application',
         heading: `Thanks, ${escapeHtml(name)} — we got it`,
         body,
       }),
@@ -134,8 +137,7 @@ export async function sendApplicationInReviewEmail({
       subject: 'Your seller application is in review',
       html: emailShell({
         preview: 'We’ve started reviewing your seller application.',
-        badgeEmoji: '🔍',
-        eyebrow: 'Seller Application',
+        icon: 'review',
         heading: `We're reviewing your application`,
         body,
       }),
@@ -195,7 +197,7 @@ export async function sendApplicationApprovedEmail({
         html: `<table role="presentation" width="100%" cellpadding="0" cellspacing="0">${listRows(donts, '✗', EMAIL_TOKENS.MUTED)}</table>`,
       }) +
       emailButton('Go to Your Dashboard', `${APP_URL}/account/dashboard`) +
-      emailSubtle(`Ready to sell? <a href="${APP_URL}/sell/new" style="color:${EMAIL_TOKENS.FOREST_2};font-weight:600;text-decoration:underline;">Create your first listing</a>.`)
+      emailFooterNote(`Ready to sell? <a href="${APP_URL}/sell/new" style="color:${EMAIL_TOKENS.FOREST_2};font-weight:600;text-decoration:underline;">Create your first listing</a>.`)
 
     const { data, error } = await resend.emails.send({
       from: FROM_EMAIL,
@@ -204,8 +206,7 @@ export async function sendApplicationApprovedEmail({
       subject: `You're approved to sell, ${name}!`,
       html: emailShell({
         preview: 'Your seller application is approved — your access is live.',
-        badgeEmoji: '🎉',
-        eyebrow: 'Seller Application',
+        icon: 'sale',
         heading: `Congratulations, ${escapeHtml(name)}!`,
         body,
       }),
@@ -244,7 +245,7 @@ export async function sendApplicationRejectedEmail({
         html: `Take a look at the feedback above, sort out what's mentioned, and submit a fresh application — we'd genuinely like to have you.`,
       }) +
       emailButton('Apply Again', `${APP_URL}/account/become-seller`) +
-      emailSubtle(`Questions? Just reply to this email.`)
+      emailFooterNote(`Questions? Just reply to this email.`)
 
     const { data, error } = await resend.emails.send({
       from: FROM_EMAIL,
@@ -253,8 +254,7 @@ export async function sendApplicationRejectedEmail({
       subject: 'An update on your seller application',
       html: emailShell({
         preview: 'An update on your DropMarket seller application.',
-        badgeEmoji: '📋',
-        eyebrow: 'Seller Application',
+        icon: 'rejected',
         heading: `Hi ${escapeHtml(name)}`,
         body,
       }),
@@ -292,7 +292,7 @@ export async function sendInfoRequestedEmail({
         html: `<span style="white-space:pre-wrap;overflow-wrap:anywhere;">${escapeHtml(message)}</span>`,
       }) +
       emailButton('View Application Status', `${APP_URL}/account/seller-status`) +
-      emailSubtle(`Please reply within 7 days so we can keep things moving.`)
+      emailFooterNote(`Please reply within 7 days so we can keep things moving.`)
 
     const { data, error } = await resend.emails.send({
       from: FROM_EMAIL,
@@ -301,8 +301,7 @@ export async function sendInfoRequestedEmail({
       subject: 'We need a bit more to finish your application',
       html: emailShell({
         preview: 'We need a little more information for your seller application.',
-        badgeEmoji: '📝',
-        eyebrow: 'Seller Application',
+        icon: 'application',
         heading: 'One quick thing',
         body,
       }),
@@ -352,7 +351,7 @@ export async function sendDisputeOpenedEmail({
     subject,
     html: emailShell({
       preview: `Order #${disputeId} — we'll review this dispute within 24–48 hours.`,
-      badgeEmoji: '⚖️',
+      icon: 'dispute',
       heading: role === 'buyer' ? 'Your dispute is open' : 'A dispute needs your attention',
       body:
         emailText(`Hi ${escapeHtml(name)} — our team will review this within 24&ndash;48 hours. Add any evidence you have in the order chat so we can sort it fairly.`) +
@@ -390,7 +389,7 @@ export async function sendDisputeResolvedEmail({
     subject: 'Your dispute has been resolved',
     html: emailShell({
       preview: `Your dispute has been resolved.`,
-      badgeEmoji: '⚖️',
+      icon: 'dispute',
       heading: 'Dispute resolved',
       body:
         emailText(`Hi ${escapeHtml(name)} — your dispute (${escapeHtml(disputeId.slice(0, 8))}) has been resolved.`) +
@@ -418,6 +417,7 @@ export async function sendNewOrderNotificationEmail({
   sellerName,
   buyerName,
   listingTitle,
+  gameSlug,
   quantity,
   totalAmount,
   sellerPayout,
@@ -428,6 +428,8 @@ export async function sendNewOrderNotificationEmail({
   sellerName: string
   buyerName: string
   listingTitle: string
+  /** Game slug — drives the item-row logo. Optional; falls back to a neutral mark. */
+  gameSlug?: string | null
   quantity: number
   totalAmount: number
   sellerPayout: number
@@ -437,22 +439,19 @@ export async function sendNewOrderNotificationEmail({
   const displayOrderId = orderNumber || orderId.slice(0, 8).toUpperCase()
   const orderUrl = `${APP_URL}/account/orders/${orderId}`
 
-  const summary =
-    emailRow('Order', `#${displayOrderId}`) +
-    emailRow('Item', escapeHtml(listingTitle)) +
-    emailRow('Quantity', String(quantity)) +
-    emailRow('Order total', `$${totalAmount.toFixed(2)}`) +
-    `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:10px 0 0;border-top:1px solid ${EMAIL_TOKENS.LINE};"><tr>
-      <td style="font-family:${EMAIL_TOKENS.FONT};font-size:15px;font-weight:700;color:${EMAIL_TOKENS.FOREST_2};padding-top:10px;">Your payout</td>
-      <td style="font-family:${EMAIL_TOKENS.FONT};font-size:17px;font-weight:800;color:${EMAIL_TOKENS.FOREST_2};text-align:right;padding-top:10px;">$${sellerPayout.toFixed(2)}</td>
-    </tr></table>`
-
   const body =
-    emailText(`Nice one, ${escapeHtml(sellerName)} — <strong style="color:${EMAIL_TOKENS.INK};">${escapeHtml(buyerName)}</strong> just bought your listing. Here are the details:`) +
-    emailBox({ html: summary }) +
-    emailText(`<strong style="color:${EMAIL_TOKENS.INK};">What's next:</strong> deliver the item to the buyer from your order page. You get paid the moment they confirm — or automatically when the protection window closes. Either way, the money's yours.`) +
-    emailButton('View Order & Deliver', orderUrl) +
-    emailSubtle(`Manage notifications in your <a href="${APP_URL}/account/settings" style="color:${EMAIL_TOKENS.FOREST_2};text-decoration:underline;">account settings</a>.`)
+    emailText(`Nice one, ${escapeHtml(sellerName)} — <strong class="dm-strong" style="color:${EMAIL_TOKENS.INK};">${escapeHtml(buyerName)}</strong> just bought your listing.`) +
+    emailDetail('Quantity', `x${quantity}`) +
+    emailDetail('Order total', `$${totalAmount.toFixed(2)}`) +
+    emailDetailAccent('Your payout', `$${sellerPayout.toFixed(2)}`) +
+    emailItemRow({
+      gameLogoUrl: gameLogoUrl(gameSlug),
+      itemName: escapeHtml(listingTitle),
+      subline: `Order #${displayOrderId}`,
+    }) +
+    emailText(`Deliver the item from your order page — you get paid the moment they confirm, or automatically when the protection window closes.`) +
+    emailButton('View Order & Deliver →', orderUrl) +
+    emailFooterNote(`Need a hand? Just reply to this email — a real person reads it.`)
 
   const { data, error } = await resend.emails.send({
     from: FROM_EMAIL,
@@ -461,8 +460,8 @@ export async function sendNewOrderNotificationEmail({
     subject: `You made a sale — ${listingTitle}`,
     html: emailShell({
       preview: `${buyerName} bought your listing. Your payout: $${sellerPayout.toFixed(2)}.`,
-      badgeEmoji: '🎉',
-      heading: 'You made a sale!',
+      icon: 'sale',
+      heading: 'You Made A Sale',
       body,
     }),
   })
@@ -480,6 +479,7 @@ export async function sendOrderCompletionEmail({
   orderId,
   orderNumber,
   listingTitle,
+  gameSlug,
   totalPaid,
   autoReleased = false,
 }: {
@@ -488,6 +488,7 @@ export async function sendOrderCompletionEmail({
   orderId: string
   orderNumber: string
   listingTitle: string
+  gameSlug?: string | null
   totalPaid: number
   /** True when the protection window expired without buyer confirmation. */
   autoReleased?: boolean
@@ -503,25 +504,23 @@ export async function sendOrderCompletionEmail({
     subject: `Order complete — ${listingTitle}`,
     html: emailShell({
       preview: `Your order #${orderNumber} is complete.`,
-      badgeEmoji: '✅',
-      heading: 'Your order is complete',
+      icon: 'ordered',
+      heading: 'Order Complete',
       body:
         emailText(
           autoReleased
             ? `Hi ${escapeHtml(name)} — your protection window ended with no issues reported, so this order completed automatically.`
             : `Thanks, ${escapeHtml(name)} — you've confirmed delivery, and your order is all wrapped up.`,
         ) +
-        emailOrderSummary([
-          ['Order', `#${orderNumber}`],
-          ['Item', escapeHtml(listingTitle)],
-          ['Total paid', `$${totalPaid.toFixed(2)}`],
-        ]) +
+        emailDetail('Total paid', `$${totalPaid.toFixed(2)}`) +
+        emailItemRow({ gameLogoUrl: gameLogoUrl(gameSlug), itemName: escapeHtml(listingTitle), subline: `Order #${orderNumber}` }) +
         emailText(
           autoReleased
             ? `This order was covered by SafeDrop for its full protection window — the seller is only paid now that the window has closed.`
             : `This order was covered by SafeDrop from checkout until you confirmed delivery — the seller is only paid now that you have.`,
         ) +
-        emailButton('View Your Order', `${APP_URL}/account/orders/${orderId}`),
+        emailButton('View Your Order →', `${APP_URL}/account/orders/${orderId}`) +
+        emailFooterNote(`Questions about this order? Just reply — a real person reads it.`),
     }),
   })
 
@@ -534,6 +533,7 @@ export async function sendOrderPaidEmail({
   orderId,
   orderNumber,
   listingTitle,
+  gameSlug,
   totalPaid,
 }: {
   to: string
@@ -541,6 +541,7 @@ export async function sendOrderPaidEmail({
   orderId: string
   orderNumber: string
   listingTitle: string
+  gameSlug?: string | null
   totalPaid: number
 }) {
   const { data, error } = await resend.emails.send({
@@ -550,17 +551,15 @@ export async function sendOrderPaidEmail({
     subject: `Order confirmed — ${listingTitle}`,
     html: emailShell({
       preview: `Payment confirmed for order #${orderNumber}.`,
-      badgeEmoji: '✅',
-      heading: 'Payment received',
+      icon: 'ordered',
+      heading: 'Payment Received',
       body:
         emailText(`Thanks, ${escapeHtml(name)} — your payment is confirmed and the seller's been told to start delivery.`) +
-        emailOrderSummary([
-          ['Order', `#${orderNumber}`],
-          ['Item', escapeHtml(listingTitle)],
-          ['Total paid', `$${totalPaid.toFixed(2)}`],
-        ]) +
+        emailDetail('Total paid', `$${totalPaid.toFixed(2)}`) +
+        emailItemRow({ gameLogoUrl: gameLogoUrl(gameSlug), itemName: escapeHtml(listingTitle), subline: `Order #${orderNumber}` }) +
         emailText(`You're covered by SafeDrop — the seller isn't paid until your order completes, and you get a full refund if it never arrives.`) +
-        emailButton('Track Your Order', `${APP_URL}/account/orders/${orderId}`),
+        emailButton('Track Your Order →', `${APP_URL}/account/orders/${orderId}`) +
+        emailFooterNote(`Questions about this order? Just reply — a real person reads it.`),
     }),
   })
 
@@ -573,6 +572,7 @@ export async function sendOrderDeliveredEmail({
   orderId,
   orderNumber,
   listingTitle,
+  gameSlug,
   windowHours,
   confirmBy,
 }: {
@@ -581,6 +581,7 @@ export async function sendOrderDeliveredEmail({
   orderId: string
   orderNumber: string
   listingTitle: string
+  gameSlug?: string | null
   windowHours: number
   /** ISO timestamp when the protection window auto-releases. */
   confirmBy: string
@@ -596,17 +597,18 @@ export async function sendOrderDeliveredEmail({
     subject: `Your order was delivered — confirm receipt`,
     html: emailShell({
       preview: `The seller delivered order #${orderNumber} — please confirm.`,
-      badgeEmoji: '📦',
-      heading: 'Your order was delivered',
+      icon: 'delivered',
+      heading: 'Order Delivered',
       body:
-        emailText(`Hi ${escapeHtml(name)} — the seller marked order <strong style="color:${EMAIL_TOKENS.INK};">#${orderNumber}</strong> (${escapeHtml(listingTitle)}) as delivered. Have a quick check that you got everything as described.`) +
+        emailText(`Hi ${escapeHtml(name)} — the seller marked your order as delivered. Have a quick check that you got everything as described.`) +
+        emailItemRow({ gameLogoUrl: gameLogoUrl(gameSlug), itemName: escapeHtml(listingTitle), subline: `Order #${orderNumber}` }) +
         emailBox({
           accent: true,
           title: 'Your protection window',
-          html: `<strong style="color:${EMAIL_TOKENS.INK};">${windowText}</strong> — until ${confirmByText}.<br>Confirm receipt once you're happy, or open a dispute if something's off. Do nothing and the order completes automatically when the window ends.`,
+          html: `<strong class="dm-strong" style="color:${EMAIL_TOKENS.INK};">${windowText}</strong> — until ${confirmByText}.<br>Confirm receipt once you're happy, or open a dispute if something's off. Do nothing and the order completes automatically when the window ends.`,
         }) +
-        emailButton('Review & Confirm Delivery', `${APP_URL}/account/orders/${orderId}`) +
-        emailSubtle(`Something not right? <a href="${APP_URL}/account/orders/${orderId}" style="color:${EMAIL_TOKENS.FOREST_2};font-weight:600;text-decoration:underline;">Open a dispute</a> before the window closes — SafeDrop has you covered.`),
+        emailButton('Review & Confirm Delivery →', `${APP_URL}/account/orders/${orderId}`) +
+        emailFooterNote(`Something not right? <a href="${APP_URL}/account/orders/${orderId}" style="color:${EMAIL_TOKENS.FOREST_2};font-weight:600;text-decoration:underline;">Open a dispute</a> before the window closes — SafeDrop has you covered.`),
     }),
   })
 
@@ -618,6 +620,7 @@ export async function sendOrderRefundedEmail({
   name,
   orderNumber,
   listingTitle,
+  gameSlug,
   amount,
   destination,
   pending = false,
@@ -626,6 +629,7 @@ export async function sendOrderRefundedEmail({
   name: string
   orderNumber: string
   listingTitle: string
+  gameSlug?: string | null
   amount: number
   /** Where the money went, e.g. 'your original payment method'. */
   destination: string
@@ -646,23 +650,18 @@ export async function sendOrderRefundedEmail({
       : `Refund processed — order #${orderNumber}`,
     html: emailShell({
       preview: pending ? `Your refund for order #${orderNumber} is being arranged.` : `$${amount.toFixed(2)} refunded for order #${orderNumber}.`,
-      badgeEmoji: '💸',
-      heading: pending ? 'Order cancelled' : 'Refund processed',
+      icon: 'refunded',
+      heading: pending ? 'Order Cancelled' : 'Refund Processed',
       body:
         emailText(
           pending
-            ? `Hi ${escapeHtml(name)} — order <strong style="color:${EMAIL_TOKENS.INK};">#${orderNumber}</strong> (${escapeHtml(listingTitle)}) was cancelled, and our team is arranging your refund per the Refund &amp; Dispute Policy.`
-            : `Hi ${escapeHtml(name)} — order <strong style="color:${EMAIL_TOKENS.INK};">#${orderNumber}</strong> (${escapeHtml(listingTitle)}) was cancelled and refunded.`,
+            ? `Hi ${escapeHtml(name)} — your order was cancelled, and our team is arranging your refund per the Refund &amp; Dispute Policy.`
+            : `Hi ${escapeHtml(name)} — your order was cancelled and refunded.`,
         ) +
-        emailOrderSummary(
-          pending
-            ? [['Refund amount', `$${amount.toFixed(2)}`]]
-            : [
-                ['Refund amount', `$${amount.toFixed(2)}`],
-                ['Refunded to', destination],
-              ],
-        ) +
-        (!pending && toWallet ? emailButton('Go to Your Wallet', `${APP_URL}/account/wallet`) : '') +
+        emailDetail('Refund amount', `$${amount.toFixed(2)}`) +
+        (pending ? '' : emailDetail('Refunded to', destination)) +
+        emailItemRow({ gameLogoUrl: gameLogoUrl(gameSlug), itemName: escapeHtml(listingTitle), subline: `Order #${orderNumber}` }) +
+        (!pending && toWallet ? emailButton('Go to Your Wallet →', `${APP_URL}/account/wallet`) : '') +
         emailText(
           pending
             ? `You'll get a confirmation the moment your refund is issued. Any questions in the meantime, support is one click away.`
@@ -682,6 +681,7 @@ export async function sendOrderCompletedSellerEmail({
   orderId,
   orderNumber,
   listingTitle,
+  gameSlug,
   payout,
   autoReleased = false,
 }: {
@@ -690,6 +690,7 @@ export async function sendOrderCompletedSellerEmail({
   orderId: string
   orderNumber: string
   listingTitle: string
+  gameSlug?: string | null
   payout: number
   autoReleased?: boolean
 }) {
@@ -700,20 +701,21 @@ export async function sendOrderCompletedSellerEmail({
     subject: `Sale complete — $${payout.toFixed(2)} added to your balance`,
     html: emailShell({
       preview: `+$${payout.toFixed(2)} added to your seller balance.`,
-      badgeEmoji: '💰',
-      heading: 'Sale complete',
+      icon: 'payout',
+      heading: 'Sale Complete',
       body:
         emailText(
           autoReleased
-            ? `Hi ${escapeHtml(name)} — the protection window on order <strong style="color:${EMAIL_TOKENS.INK};">#${orderNumber}</strong> closed with no issues, so it completed automatically.`
-            : `Hi ${escapeHtml(name)} — the buyer confirmed delivery on order <strong style="color:${EMAIL_TOKENS.INK};">#${orderNumber}</strong>.`,
+            ? `Hi ${escapeHtml(name)} — the protection window closed with no issues, so this sale completed automatically.`
+            : `Hi ${escapeHtml(name)} — the buyer confirmed delivery. This one's done.`,
         ) +
+        emailItemRow({ gameLogoUrl: gameLogoUrl(gameSlug), itemName: escapeHtml(listingTitle), subline: `Order #${orderNumber}` }) +
         emailBox({
           accent: true,
-          html: `<div style="text-align:center;"><div style="font-size:12px;color:${EMAIL_TOKENS.INK_2};margin-bottom:4px;overflow-wrap:anywhere;">${escapeHtml(listingTitle)}</div><div style="font-size:22px;font-weight:800;color:${EMAIL_TOKENS.FOREST_2};">+$${payout.toFixed(2)}</div><div style="font-size:12px;color:${EMAIL_TOKENS.INK_2};margin-top:4px;">added to your seller balance — withdraw any time</div></div>`,
+          html: `<div style="text-align:center;"><div class="dm-accent" style="font-size:22px;font-weight:800;color:${EMAIL_TOKENS.FOREST_2};">+$${payout.toFixed(2)}</div><div class="dm-body" style="font-size:12.5px;color:${EMAIL_TOKENS.INK_2};margin-top:4px;">added to your seller balance — withdraw any time</div></div>`,
         }) +
-        emailButton('View Order', `${APP_URL}/account/orders/${orderId}`) +
-        emailSubtle(`Withdraw any time from your <a href="${APP_URL}/account/wallet" style="color:${EMAIL_TOKENS.FOREST_2};font-weight:600;text-decoration:underline;">wallet</a> once you hit the payout minimum.`),
+        emailButton('View Order →', `${APP_URL}/account/orders/${orderId}`) +
+        emailFooterNote(`Withdraw any time from your <a href="${APP_URL}/account/wallet" style="color:${EMAIL_TOKENS.FOREST_2};font-weight:600;text-decoration:underline;">wallet</a> once you hit the payout minimum.`),
     }),
   })
 
@@ -743,12 +745,12 @@ export async function sendListingApprovedEmail({
     subject: `Your listing is live — ${listingTitle}`,
     html: emailShell({
       preview: `${listingTitle} passed review and is live.`,
-      badgeEmoji: '🟢',
+      icon: 'listinglive',
       heading: 'Your listing is live',
       body:
         emailText(`Hi ${escapeHtml(name)} — <strong style="color:${EMAIL_TOKENS.INK};">${escapeHtml(listingTitle)}</strong> passed review and is now live for buyers.`) +
         emailButton('View Your Listing', `${APP_URL}${listingPath || '/account/listings'}`) +
-        emailSubtle(`Manage all your offers from your <a href="${APP_URL}/account/listings" style="color:${EMAIL_TOKENS.FOREST_2};font-weight:600;text-decoration:underline;">seller dashboard</a>.`),
+        emailFooterNote(`Manage all your offers from your <a href="${APP_URL}/account/listings" style="color:${EMAIL_TOKENS.FOREST_2};font-weight:600;text-decoration:underline;">seller dashboard</a>.`),
     }),
   })
 
@@ -778,13 +780,13 @@ export async function sendListingRejectedEmail({
       : `Listing not approved — ${listingTitle}`,
     html: emailShell({
       preview: changesRequested ? `${listingTitle} needs a few changes.` : `${listingTitle} didn't pass review.`,
-      badgeEmoji: changesRequested ? '✏️' : '📋',
+      icon: changesRequested ? 'changes' : 'rejected',
       heading: changesRequested ? 'A few changes needed' : 'Listing not approved',
       body:
         emailText(`Hi ${escapeHtml(name)} — <strong style="color:${EMAIL_TOKENS.INK};">${escapeHtml(listingTitle)}</strong> ${changesRequested ? 'needs a few tweaks before it can go live.' : "didn't pass review this time."}`) +
         emailBox({ title: changesRequested ? 'What to change' : 'Why', html: `<span style="overflow-wrap:anywhere;">${escapeHtml(reason)}</span>` }) +
         emailButton(changesRequested ? 'Edit Your Listing' : 'Review Your Listings', `${APP_URL}/account/listings`) +
-        emailSubtle(`Questions about moderation? Just reply to this email.`),
+        emailFooterNote(`Questions about moderation? Just reply to this email.`),
     }),
   })
 
@@ -822,7 +824,7 @@ export async function sendWithdrawalProcessedEmail({
       : `Withdrawal request declined`,
     html: emailShell({
       preview: approved ? `$${amount.toFixed(2)} is on the way to your ${method}.` : `We couldn't process your withdrawal this time.`,
-      badgeEmoji: approved ? '💰' : '📋',
+      icon: approved ? 'payout' : 'rejected',
       heading: approved ? 'Withdrawal approved' : 'Withdrawal declined',
       body:
         emailText(
@@ -836,7 +838,7 @@ export async function sendWithdrawalProcessedEmail({
         ]) +
         (!approved && reason ? emailBox({ title: 'Why', html: `<span style="overflow-wrap:anywhere;">${escapeHtml(reason)}</span>` }) : '') +
         emailButton('View Your Wallet', `${APP_URL}/account/wallet`) +
-        emailSubtle(approved ? `Arrival depends on your payout method — usually 1&ndash;5 business days.` : `Questions? Just reply to this email.`),
+        emailFooterNote(approved ? `Arrival depends on your payout method — usually 1&ndash;5 business days.` : `Questions? Just reply to this email.`),
     }),
   })
 
@@ -859,7 +861,7 @@ export async function sendGuestWelcomeEmail({
     subject: `Track your order #${orderNumber} on DropMarket`,
     html: emailShell({
       preview: `We set up an account so you can track order #${orderNumber}.`,
-      badgeEmoji: '👋',
+      icon: 'welcome',
       heading: 'Welcome to DropMarket',
       body:
         emailText(`We set up an account for this email so you can track order <strong style="color:${EMAIL_TOKENS.INK};">#${orderNumber}</strong>, chat with your seller, and get delivery updates.`) +
@@ -867,7 +869,7 @@ export async function sendGuestWelcomeEmail({
           html: `We've also sent a separate email with a <strong style="color:${EMAIL_TOKENS.INK};">password setup link</strong> — click it to claim your account. If it expires, just use &ldquo;Forgot?&rdquo; on the login page.`,
         }) +
         emailButton('Track Your Order', `${APP_URL}/account/orders/${orderId}`) +
-        emailSubtle(`Didn't buy anything on DropMarket? Just reply and let us know.`),
+        emailFooterNote(`Didn't buy anything on DropMarket? Just reply and let us know.`),
     }),
   })
 
@@ -895,7 +897,7 @@ export async function sendNewMessageEmail({
     emailText(`Hi ${escapeHtml(name)}, <strong style="color:${EMAIL_TOKENS.INK};">${escapeHtml(senderName)}</strong> just messaged you about order <strong style="color:${EMAIL_TOKENS.INK};">#${orderNumber}</strong>:`) +
     emailBox({ html: `<span style="font-style:italic;overflow-wrap:anywhere;">&ldquo;${escapeHtml(truncated)}&rdquo;</span>` }) +
     emailButton('Reply Now', `${APP_URL}/account/orders/${orderId}`) +
-    emailSubtle(`We only email you for the first unread message in a chat, so replies won't flood your inbox.`)
+    emailFooterNote(`We only email you for the first unread message in a chat, so replies won't flood your inbox.`)
 
   const { data, error } = await resend.emails.send({
     from: FROM_EMAIL,
@@ -904,7 +906,7 @@ export async function sendNewMessageEmail({
     subject: `${senderName} messaged you about order #${orderNumber}`,
     html: emailShell({
       preview: `${senderName}: ${truncated}`,
-      badgeEmoji: '💬',
+      icon: 'message',
       heading: 'You have a new message',
       body,
     }),
@@ -937,13 +939,13 @@ export async function sendTrustpilotInvitationEmail({
     subject: `How was your DropMarket order, ${name}?`,
     html: emailShell({
       preview: `Your review helps other gamers shop safely — 60 seconds.`,
-      badgeEmoji: '⭐',
+      icon: 'star',
       heading: `How was it, ${escapeHtml(name)}?`,
       body:
         emailText(`We hope your order went great. A quick, honest review helps other gamers shop safely — and it recognises the sellers doing good work.`) +
         emailOrderSummary([['Order reference', `#${shortOrderId}`]]) +
         emailButton('Write a Review on Trustpilot', reviewUrl) +
-        emailSubtle(`It takes less than 60 seconds and means the world to us.`),
+        emailFooterNote(`It takes less than 60 seconds and means the world to us.`),
     }),
   })
 
@@ -978,8 +980,7 @@ export async function sendEarlySellerWelcomeEmail({
     subject: `You're on the founding-seller list, ${username}`,
     html: emailShell({
       preview: `You're on the DropMarket founding-seller list.`,
-      badgeEmoji: '🚀',
-      eyebrow: 'Founding Seller · First 100',
+      icon: 'founding',
       heading: `You're on the list, ${safeUsername}`,
       body:
         emailText(`Thanks for signing up as a founding seller. We onboard the first 100 in batches and we'll email you when it's your turn — with your personal Founding HQ link.`) +
@@ -990,7 +991,7 @@ export async function sendEarlySellerWelcomeEmail({
         }) +
         emailText(`In the meantime, the fastest way to get set up is our founding-seller Discord:`) +
         emailButton('Join the Founding Discord', DISCORD_INVITE_URL) +
-        emailSubtle(`Didn't sign up? Just reply and we'll remove you.`),
+        emailFooterNote(`Didn't sign up? Just reply and we'll remove you.`),
     }),
   })
 
@@ -1033,7 +1034,7 @@ export async function sendFoundingHqInviteEmail({
     }) +
     emailText(`Your Founding HQ is where it all lives — your status, the latest news from us, and the door to start selling. It's ready whenever you are:`) +
     emailButton('Open Your Founding HQ', hqUrl) +
-    emailSubtle(`Prefer to chat first? <a href="${DISCORD_INVITE_URL}" style="color:${EMAIL_TOKENS.FOREST_2};text-decoration:underline;">Join the founding-seller Discord</a>. This link is personal to you, so please don't forward it.`)
+    emailFooterNote(`Prefer to chat first? <a href="${DISCORD_INVITE_URL}" style="color:${EMAIL_TOKENS.FOREST_2};text-decoration:underline;">Join the founding-seller Discord</a>. This link is personal to you, so please don't forward it.`)
 
   const { data, error } = await resend.emails.send({
     from: FROM_EMAIL,
@@ -1042,8 +1043,7 @@ export async function sendFoundingHqInviteEmail({
     subject: `Your founding spot is ready, ${username}`,
     html: emailShell({
       preview: 'Your Founding HQ is ready — status, updates, and the door to start selling.',
-      badgeEmoji: '🚀',
-      eyebrow: 'Founding Seller',
+      icon: 'founding',
       heading: `Welcome in, ${safeUsername}`,
       body,
     }),
@@ -1079,7 +1079,7 @@ export async function sendEarlySellerAdminNotificationEmail({
     subject: `New founding-seller signup: ${username}`,
     html: emailShell({
       preview: `New waitlist entry: ${username}`,
-      badgeEmoji: '🚀',
+      icon: 'founding',
       heading: 'New founding-seller signup',
       body:
         emailText(`A new waitlist entry was added to the Founding Sellers table.`) +
