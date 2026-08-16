@@ -22,6 +22,7 @@ interface OrderComms {
   seller_payout: number | null
   quantity: number
   listingTitle: string
+  gameSlug: string | null
   buyer: { email: string | null; name: string }
   seller: { email: string | null; name: string }
 }
@@ -31,7 +32,7 @@ async function fetchOrderComms(orderId: string): Promise<OrderComms | null> {
   const { data: order } = await supabase
     .from('orders')
     .select(
-      'id, order_number, buyer_id, seller_id, total_amount, seller_payout, quantity, listing:listings!orders_listing_id_fkey(title)'
+      'id, order_number, buyer_id, seller_id, total_amount, seller_payout, quantity, listing:listings!orders_listing_id_fkey(title, game:game_id(slug))'
     )
     .eq('id', orderId)
     .single() as any
@@ -57,6 +58,7 @@ async function fetchOrderComms(orderId: string): Promise<OrderComms | null> {
     seller_payout: order.seller_payout,
     quantity: order.quantity ?? 1,
     listingTitle: order.listing?.title || 'your item',
+    gameSlug: order.listing?.game?.slug ?? null,
     buyer: profile(order.buyer_id),
     seller: profile(order.seller_id),
   }
@@ -112,6 +114,7 @@ export async function notifyOrderTransition(
               orderId: order.id,
               orderNumber,
               listingTitle: order.listingTitle,
+              gameSlug: order.gameSlug,
               totalPaid: order.total_amount ?? 0,
             })
           : Promise.resolve(),
@@ -122,6 +125,7 @@ export async function notifyOrderTransition(
               sellerName: order.seller.name,
               buyerName: order.buyer.name,
               listingTitle: order.listingTitle,
+              gameSlug: order.gameSlug,
               quantity: order.quantity,
               totalAmount: order.total_amount ?? 0,
               sellerPayout: order.seller_payout ?? 0,
@@ -178,6 +182,7 @@ export async function notifyOrderTransition(
             name: order.buyer.name,
             orderNumber,
             listingTitle: order.listingTitle,
+            gameSlug: order.gameSlug,
             amount: refundedAmount,
             destination: 'your DropMarket wallet',
           })
