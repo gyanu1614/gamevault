@@ -29,6 +29,10 @@ export interface EarlySellerInput {
   discord?: string
   sells?: string
   note?: string
+  /** Self-reported monthly $ revenue band: '0-500' | '500-1k' | '1k-5k' | '5k+'. */
+  monthlyVolume?: string
+  /** Game slugs they sell, plus any 'custom:<name>' free-text entries. */
+  games?: string[]
   /** ?src= funnel attribution (banner, footer, a game's blog sell-guide, …). */
   source?: string
 }
@@ -53,6 +57,10 @@ export interface EarlySellerSignup {
   discord: string | null
   sells: string | null
   note: string | null
+  /** Self-reported monthly $ revenue band, or null. */
+  monthly_volume: string | null
+  /** Game slugs / 'custom:<name>' entries, or null. */
+  games: string[] | null
   /** Funnel attribution — which surface the signup came through. */
   source: string | null
   status: EarlySellerStatus
@@ -145,12 +153,26 @@ export async function submitEarlySeller(
 
   try {
     const supabase = createServiceRoleClient()
+    // Monthly-volume band: only accept the four known values, else NULL.
+    const VOLUME_BANDS = ['0-500', '500-1k', '1k-5k', '5k+']
+    const monthlyVolume = VOLUME_BANDS.includes(String(input.monthlyVolume))
+      ? String(input.monthlyVolume)
+      : null
+    // Games: array of slugs / 'custom:<name>'. Cap count + each entry length.
+    const games = Array.isArray(input.games)
+      ? input.games
+          .map((g) => clean(g, 60))
+          .filter((g): g is string => Boolean(g))
+          .slice(0, 12)
+      : null
     const row = {
       username,
       email,
       discord: clean(input.discord, 80),
       sells: clean(input.sells, 300),
       note: clean(input.note, 600),
+      monthly_volume: monthlyVolume,
+      games: games && games.length ? games : null,
       // Funnel attribution — capped; NULL for direct/untagged visits.
       source: clean(input.source, 120),
       ip,
@@ -237,7 +259,7 @@ export async function getEarlySellerSignups(): Promise<EarlySellerListResult> {
     const supabase = createServiceRoleClient()
     const { data, error } = await (supabase as any)
       .from('early_seller_signups')
-      .select('id, username, email, discord, sells, note, source, status, created_at')
+      .select('id, username, email, discord, sells, note, monthly_volume, games, source, status, created_at')
       .order('created_at', { ascending: false })
 
     if (error) {

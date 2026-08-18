@@ -41,6 +41,7 @@ export function LayoutWrapper({
     pathname?.startsWith('/account/seller-status') ||
     pathname?.startsWith('/signup-become-seller') ||
     pathname?.startsWith('/founding') ||
+    pathname?.startsWith('/early-seller') ||
     pathname?.startsWith('/dev/seller-status-preview') ||
     pathname?.startsWith('/dev/seller-intro-preview') ||
     pathname?.startsWith('/kyc/complete')

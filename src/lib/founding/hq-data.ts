@@ -59,6 +59,9 @@ export interface JourneyStep {
   /** Short line shown under the current step only. */
   hint: string
   state: JourneyStepState
+  /** The action for the CURRENT step — a button that deep-links into the real
+   *  flow (signup / seller wizard / new listing). Only set on the current step. */
+  action?: { label: string; href: string } | null
 }
 
 export interface SellerJourney {
@@ -190,18 +193,50 @@ function buildJourney({
   if (appStatus === 'approved') reached = 3
   if (listingCount > 0) reached = 4
 
-  const defs: Array<{ key: JourneyStepKey; label: string; hint: string }> = [
+  // Each step's CTA when it is the CURRENT step — deep-links into the real flow.
+  // Step 2 (create account) → the existing signup-to-sell funnel (handles the
+  // password safely, tags founding); step 3 → the seller wizard (ID + agreement);
+  // step 4 → the new-listing flow. Review is a wait state (no primary action).
+  const defs: Array<{
+    key: JourneyStepKey
+    label: string
+    hint: string
+    action?: { label: string; href: string }
+  }> = [
     { key: 'claimed', label: 'Claimed your spot', hint: 'You’re in the founding programme.' },
-    { key: 'application', label: 'Application started', hint: 'Finish your seller application to move forward.' },
-    { key: 'review', label: 'Under review', hint: 'We’re reviewing your application — usually a couple of days.' },
-    { key: 'approved', label: 'Approved to sell', hint: 'You’re cleared — list your first item.' },
-    { key: 'listing', label: 'First listing live', hint: 'You’re selling. Nice.' },
+    {
+      key: 'application',
+      label: 'Create your account',
+      hint: 'Set up your account, then complete the seller application.',
+      action: { label: 'Create Your Account', href: '/signup-become-seller?src=founding-hq' },
+    },
+    {
+      key: 'review',
+      label: 'Get verified & sign',
+      hint: 'Verify your ID and sign the seller agreement to get approved.',
+      action: { label: 'Continue Your Application', href: '/account/become-seller' },
+    },
+    {
+      key: 'approved',
+      label: 'Approved to sell',
+      hint: 'You’re cleared — list your first item and start selling.',
+      action: { label: 'Make Your First Listing', href: '/sell/new' },
+    },
+    { key: 'listing', label: 'First listing live', hint: 'You’re selling. Nice.',
+      action: { label: 'View Your Listings', href: '/account/listings' } },
   ]
 
-  const steps: JourneyStep[] = defs.map((d, i) => ({
-    ...d,
-    state: i < reached ? 'done' : i === reached ? 'current' : 'upcoming',
-  }))
+  const steps: JourneyStep[] = defs.map((d, i) => {
+    const state: JourneyStepState = i < reached ? 'done' : i === reached ? 'current' : 'upcoming'
+    return {
+      key: d.key,
+      label: d.label,
+      hint: d.hint,
+      state,
+      // Only the current step surfaces its action button.
+      action: state === 'current' ? d.action ?? null : null,
+    }
+  })
 
   return { steps, activeIndex: reached }
 }
