@@ -197,23 +197,31 @@ export default function FoundingSignupClient({
 
       {/* ══════════ RIGHT IVORY PANEL ══════════ */}
       <main className="flex w-full flex-1 items-center justify-center px-5 py-10 lg:w-[62%] lg:overflow-y-auto lg:px-8">
-        <div
-          className="w-full max-w-[560px] rounded-xl border p-8 sm:p-11"
-          style={{ backgroundColor: C.paper, borderColor: C.line, boxShadow: '0 12px 32px rgba(15,51,32,0.06)' }}
-        >
+        <div className="w-full max-w-[440px]">
           {submitted ? (
-            <SubmittedState alreadyOnList={alreadyOnList} />
+            <div
+              className="rounded-xl border p-7 sm:p-8"
+              style={{ backgroundColor: C.paper, borderColor: C.line, boxShadow: '0 12px 32px rgba(15,51,32,0.06)' }}
+            >
+              <SubmittedState alreadyOnList={alreadyOnList} />
+            </div>
           ) : (
             <>
-              <h2 className="text-[24px] font-extrabold" style={{ color: C.ink, letterSpacing: '-0.4px' }}>
-                Apply In Under A Minute
-              </h2>
-              <p className="mt-1.5 text-[14px]" style={{ color: C.ink2 }}>
-                We review applications daily. No card needed.
-              </p>
+              {/* Heading OUTSIDE the card */}
+              <div className="mb-5">
+                <h2 className="text-[26px] font-extrabold" style={{ color: C.ink, letterSpacing: '-0.5px' }}>
+                  Apply In Under A Minute
+                </h2>
+                <p className="mt-1.5 text-[14px]" style={{ color: C.ink2 }}>
+                  We review applications daily. No card needed.
+                </p>
+              </div>
 
-              <div className="mt-7 flex flex-col gap-6">
-                <Field label="Email">
+              <div
+                className="flex flex-col gap-5 rounded-xl border p-7 sm:p-8"
+                style={{ backgroundColor: C.paper, borderColor: C.line, boxShadow: '0 12px 32px rgba(15,51,32,0.06)' }}
+              >
+                <Field label="Email" hint="We’ll send your seller link here.">
                   <input
                     type="email"
                     value={email}
@@ -236,39 +244,15 @@ export default function FoundingSignupClient({
                   />
                 </Field>
 
-                <Field label="What Do You Sell?">
+                <Field label="Any Past Selling Experience?" optional>
                   <input
                     value={sells}
                     onChange={(e) => setSells(e.target.value)}
-                    placeholder="e.g. limited pets, gamepasses, fruits"
+                    placeholder="e.g. Eldorado, G2G, Discord — where you sell now"
                     style={inputStyle}
                     onFocus={(e) => (e.target.style.borderColor = C.forest)}
                     onBlur={(e) => (e.target.style.borderColor = C.line)}
                   />
-                </Field>
-
-                {/* Monthly volume pills */}
-                <Field label="Monthly Volume">
-                  <div className="grid grid-cols-4 gap-2">
-                    {VOLUME_BANDS.map((b) => {
-                      const on = volume === b.value
-                      return (
-                        <button
-                          key={b.value}
-                          type="button"
-                          onClick={() => setVolume(on ? null : b.value)}
-                          className="h-[42px] rounded-full text-[14px] font-semibold transition-colors"
-                          style={{
-                            backgroundColor: on ? C.forest : C.paper,
-                            color: on ? '#fff' : C.ink,
-                            border: `1px solid ${on ? C.forest : C.line}`,
-                          }}
-                        >
-                          {b.label}
-                        </button>
-                      )
-                    })}
-                  </div>
                 </Field>
 
                 {/* Games multi-select */}
@@ -342,6 +326,30 @@ export default function FoundingSignupClient({
                   )}
                 </Field>
 
+                {/* Monthly volume pills */}
+                <Field label="Monthly Volume">
+                  <div className="grid grid-cols-4 gap-2">
+                    {VOLUME_BANDS.map((b) => {
+                      const on = volume === b.value
+                      return (
+                        <button
+                          key={b.value}
+                          type="button"
+                          onClick={() => setVolume(on ? null : b.value)}
+                          className="h-[42px] rounded-full text-[14px] font-semibold transition-colors"
+                          style={{
+                            backgroundColor: on ? C.forest : C.paper,
+                            color: on ? '#fff' : C.ink,
+                            border: `1px solid ${on ? C.forest : C.line}`,
+                          }}
+                        >
+                          {b.label}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </Field>
+
                 {error && <p className="text-[13px] font-medium" style={{ color: '#b42318' }}>{error}</p>}
 
                 <button
@@ -353,7 +361,7 @@ export default function FoundingSignupClient({
                   onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = C.forest2)}
                   onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = C.forest)}
                 >
-                  {pending ? 'Claiming…' : 'Claim My Spot'}
+                  {pending ? 'Submitting…' : 'Become a Seller'}
                   <ArrowRight className="h-[18px] w-[18px] transition-transform group-hover:translate-x-0.5" style={{ color: C.lime }} strokeWidth={2.5} />
                 </button>
               </div>
@@ -378,13 +386,14 @@ const inputStyle: React.CSSProperties = {
   backgroundColor: C.paper,
 }
 
-function Field({ label, optional, children }: { label: string; optional?: boolean; children: React.ReactNode }) {
+function Field({ label, optional, hint, children }: { label: string; optional?: boolean; hint?: string; children: React.ReactNode }) {
   return (
     <div>
       <label className="mb-2 block text-[13px] font-semibold" style={{ color: C.ink }}>
         {label}{optional && <span className="font-medium" style={{ color: C.ink2 }}> (Optional)</span>}
       </label>
       {children}
+      {hint && <p className="mt-1.5 text-[12px]" style={{ color: C.ink2 }}>{hint}</p>}
     </div>
   )
 }
