@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { Store, Clock, ArrowRight } from 'lucide-react'
+import { Store, Clock, ArrowRight, Rocket } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import { cn } from '@/lib/utils'
 
@@ -40,6 +40,46 @@ export default function BecomeSellerCta({
 
   // Approved sellers never see this CTA — the seller menu replaces it.
   if (user?.isApprovedSeller || status === 'approved') return null
+
+  // Founding-seller accounts (created via the magic-link flow) get their own
+  // entry pointing at the Founding HQ, instead of the generic seller CTA.
+  // `founding_seller` is a real profiles column (useAuth selects '*'), even
+  // though the Profile TS type doesn't list it yet.
+  const isFounding = Boolean((user?.profile as { founding_seller?: boolean } | null)?.founding_seller)
+  if (isFounding) {
+    if (variant === 'menu') {
+      return (
+        <Link
+          href="/founding"
+          onClick={onNavigate}
+          className={cn(
+            'mb-1 flex items-center gap-3 rounded-md px-4 py-2 text-[14px] text-text-secondary transition-colors hover:bg-white/[0.07] hover:text-text-primary',
+            className,
+          )}
+        >
+          <Rocket className="h-[18px] w-[18px] text-lime-text" />
+          Founding Seller
+        </Link>
+      )
+    }
+    return (
+      <div className={cn('rounded-lg border border-lime-tint-border bg-white/[0.04] p-6', className)}>
+        <div className="mb-3 flex items-center gap-2">
+          <Rocket className="h-5 w-5 text-lime-text" />
+          <h3 className="font-bold text-white">Founding Seller</h3>
+        </div>
+        <p className="mb-4 text-sm text-text-secondary">Your founding-seller setup — status, next steps, and the door to start selling.</p>
+        <Link
+          href="/founding"
+          onClick={onNavigate}
+          className="flex items-center justify-center gap-2 rounded-lg bg-lime px-4 py-2 text-sm font-semibold text-text-inverse transition-colors hover:bg-lime/90"
+        >
+          Open Founding HQ
+          <ArrowRight className="h-4 w-4" />
+        </Link>
+      </div>
+    )
+  }
 
   const isPending =
     status === 'pending' || status === 'under_review' || status === 'info_requested'
