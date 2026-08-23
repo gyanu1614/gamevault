@@ -1,113 +1,83 @@
 'use client'
 
 /**
- * SellerJourneyTracker — the founder's 4-step gated setup (Screen 2b), shown on
- * the Founding HQ. Steps: Confirm Email (auto-done) → Create Account → Verify &
- * Sign → First Listing. Each step is done / current / locked. The current step
- * surfaces its action button (from step.action). Step 2 opens a store-name modal
- * that hands off to the real signup flow (password is set there — never here).
+ * SellerJourneyTracker — "Set Up Your Storefront" (design 2b). The founder's
+ * four-step storefront setup, shown on the Founding HQ as one clean card:
  *
- * Forest Ledger palette; matches design-refs/founding-seller (Screen 2b).
+ *   [progress header: "N of 4 complete" + lime fill · "Launch: Sep 30"]
+ *   ─────────────────────────────────────────────────────────────────
+ *   (①) Confirm your email        Verified …                   [ Done ]
+ *   (②) Create your account       Pick a store name …   [ Create Account ]
+ *   (③) Verify & sign             Confirm your ID …     [ Start Verify ]🔒
+ *   (④) List your first item      Post an item …        [ Start Listing ]🔒
+ *
+ * Each row's action sits on the RIGHT and is styled by state:
+ *   done     → a quiet "Done" pill
+ *   current  → a solid forest button (the one thing to do next)
+ *   upcoming → a locked, disabled button (visible but greyed, with a lock)
+ *
+ * Step 2 opens a store-name modal that hands off to the real signup flow — the
+ * password is set there, never here (the hard rule). Forest Ledger palette.
  */
 
 import { useState } from 'react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
-import { Check, ArrowRight, X } from 'lucide-react'
+import { Check, ArrowRight, Lock, X } from 'lucide-react'
 import { PALETTE } from '@/app/account/become-seller/_redesign/theme'
-import type { SellerJourney } from '@/lib/founding/hq-data'
+import type { SellerJourney, JourneyStep } from '@/lib/founding/hq-data'
 
 const LIME_INK = '#0F3320'
+const LOCK_GREY = '#9AA095'
+const LOCK_BORDER = '#E4E5DE'
+const LOCK_BG = '#F4F5F0'
 
 export default function SellerJourneyTracker({ journey }: { journey: SellerJourney }) {
-  const { steps } = journey
+  const { steps, doneCount, total } = journey
   const [modalOpen, setModalOpen] = useState(false)
   const [storeName, setStoreName] = useState('')
 
+  const pct = Math.round((doneCount / total) * 100)
+
   return (
     <div
-      className="rounded-2xl border bg-white p-4"
-      style={{ borderColor: PALETTE.line, boxShadow: '0 2px 8px rgba(20,67,42,0.04)' }}
+      className="overflow-hidden rounded-2xl border bg-white"
+      style={{ borderColor: PALETTE.line, boxShadow: '0 4px 16px -8px rgba(20,67,42,0.10)' }}
     >
-      <ol className="flex flex-col">
-        {steps.map((step, i) => {
-          const isLast = i === steps.length - 1
-          const done = step.state === 'done'
-          const current = step.state === 'current'
-          // Step 2 ("create your account") opens the modal; others are links.
-          const isCreateAccount = step.key === 'application'
+      {/* ── Progress header ── */}
+      <div className="border-b px-5 py-4" style={{ borderColor: '#EEF0E8' }}>
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-[13px] font-semibold" style={{ color: PALETTE.ink }}>
+            {doneCount} of {total} complete
+          </span>
+          <span
+            className="rounded-full px-2.5 py-1 text-[11px] font-semibold"
+            style={{ backgroundColor: '#F2F4EC', color: PALETTE.forest2 }}
+          >
+            Launch · Sep 30
+          </span>
+        </div>
+        <div className="mt-2.5 h-2 w-full overflow-hidden rounded-full" style={{ backgroundColor: '#EEF0E8' }}>
+          <motion.div
+            initial={{ width: 0 }}
+            animate={{ width: `${pct}%` }}
+            transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+            className="h-full rounded-full"
+            style={{ background: `linear-gradient(90deg, ${PALETTE.forest2}, ${PALETTE.lime})` }}
+          />
+        </div>
+      </div>
 
-          return (
-            <li key={step.key} className="relative flex gap-3">
-              {/* connector */}
-              {!isLast && (
-                <span aria-hidden className="absolute left-[11px] top-6 w-[2px]" style={{ bottom: 0, backgroundColor: done ? PALETTE.forest2 : '#EAEBE3' }} />
-              )}
-
-              {/* node */}
-              <span className="relative z-10 shrink-0">
-                {done ? (
-                  <span className="flex h-[23px] w-[23px] items-center justify-center rounded-full" style={{ backgroundColor: PALETTE.lime }}>
-                    <Check className="h-3.5 w-3.5" style={{ color: LIME_INK }} strokeWidth={3} />
-                  </span>
-                ) : current ? (
-                  <motion.span
-                    initial={{ scale: 0.8 }}
-                    animate={{ scale: 1 }}
-                    transition={{ duration: 0.3, ease: 'easeOut' }}
-                    className="flex h-[23px] w-[23px] items-center justify-center rounded-full border-[1.5px]"
-                    style={{ borderColor: PALETTE.forest, color: PALETTE.forest }}
-                  >
-                    <span className="text-[12px] font-bold">{i + 1}</span>
-                  </motion.span>
-                ) : (
-                  <span className="flex h-[23px] w-[23px] items-center justify-center rounded-full border-[1.5px]" style={{ borderColor: '#DDE0D3', color: '#9AA095' }}>
-                    <span className="text-[12px] font-bold">{i + 1}</span>
-                  </span>
-                )}
-              </span>
-
-              {/* label + hint + action */}
-              <div className={`min-w-0 flex-1 ${isLast ? 'pb-0' : 'pb-5'}`}>
-                <div className="flex items-center justify-between gap-3">
-                  <div
-                    className="text-[14px] font-semibold leading-[23px]"
-                    style={{ color: current ? PALETTE.forest : done ? PALETTE.ink : '#9AA095' }}
-                  >
-                    {step.label}
-                  </div>
-                  {done && <span className="text-[13px] font-semibold" style={{ color: PALETTE.forest2 }}>Done</span>}
-                </div>
-
-                {current && (
-                  <>
-                    <p className="mt-0.5 text-[12.5px] leading-relaxed" style={{ color: PALETTE.ink2 }}>{step.hint}</p>
-                    {step.action &&
-                      (isCreateAccount ? (
-                        <button
-                          type="button"
-                          onClick={() => setModalOpen(true)}
-                          className="mt-2.5 inline-flex items-center gap-1.5 rounded-[9px] px-4 py-2 text-[13px] font-semibold text-white transition-colors"
-                          style={{ backgroundColor: PALETTE.forest }}
-                        >
-                          {step.action.label}
-                        </button>
-                      ) : (
-                        <Link
-                          href={step.action.href}
-                          className="mt-2.5 inline-flex items-center gap-1.5 rounded-[9px] px-4 py-2 text-[13px] font-semibold text-white transition-colors"
-                          style={{ backgroundColor: PALETTE.forest }}
-                        >
-                          {step.action.label}
-                          <ArrowRight className="h-3.5 w-3.5" style={{ color: PALETTE.lime }} strokeWidth={2.5} />
-                        </Link>
-                      ))}
-                  </>
-                )}
-              </div>
-            </li>
-          )
-        })}
+      {/* ── Steps ── */}
+      <ol className="divide-y" style={{ borderColor: '#F1F2EC' }}>
+        {steps.map((step, i) => (
+          <StepRow
+            key={step.key}
+            step={step}
+            index={i}
+            onCreateAccount={() => setModalOpen(true)}
+          />
+        ))}
       </ol>
 
       {modalOpen && (
@@ -118,6 +88,117 @@ export default function SellerJourneyTracker({ journey }: { journey: SellerJourn
         />
       )}
     </div>
+  )
+}
+
+/** One step row: status circle + title/description (left) · action (right). */
+function StepRow({
+  step,
+  index,
+  onCreateAccount,
+}: {
+  step: JourneyStep
+  index: number
+  onCreateAccount: () => void
+}) {
+  const done = step.state === 'done'
+  const current = step.state === 'current'
+  const upcoming = step.state === 'upcoming'
+  // Step 2 ("create your account") opens the modal; other actions are links.
+  const isCreateAccount = step.key === 'application'
+
+  return (
+    <li
+      className="flex items-center gap-3.5 px-5 py-4"
+      style={{ backgroundColor: current ? '#FBFCF8' : 'transparent' }}
+    >
+      {/* status circle */}
+      <span className="relative shrink-0">
+        {done ? (
+          <span className="flex h-7 w-7 items-center justify-center rounded-full" style={{ backgroundColor: PALETTE.lime }}>
+            <Check className="h-4 w-4" style={{ color: LIME_INK }} strokeWidth={3} />
+          </span>
+        ) : current ? (
+          <motion.span
+            initial={{ scale: 0.85 }}
+            animate={{ scale: 1 }}
+            transition={{ duration: 0.3, ease: 'easeOut' }}
+            className="flex h-7 w-7 items-center justify-center rounded-full"
+            style={{ backgroundColor: PALETTE.forest, color: '#fff' }}
+          >
+            <span className="text-[13px] font-bold">{index + 1}</span>
+          </motion.span>
+        ) : (
+          <span
+            className="flex h-7 w-7 items-center justify-center rounded-full border-[1.5px]"
+            style={{ borderColor: LOCK_BORDER, color: LOCK_GREY }}
+          >
+            <span className="text-[13px] font-bold">{index + 1}</span>
+          </span>
+        )}
+      </span>
+
+      {/* title + description */}
+      <div className="min-w-0 flex-1">
+        <div
+          className="text-[14.5px] font-semibold leading-tight"
+          style={{ color: done ? PALETTE.ink : current ? PALETTE.forest : '#8C9187' }}
+        >
+          {step.label}
+        </div>
+        <p
+          className="mt-0.5 text-[12.5px] leading-snug"
+          style={{ color: upcoming ? '#A7AC9F' : PALETTE.ink2 }}
+        >
+          {step.hint}
+        </p>
+      </div>
+
+      {/* right-aligned action */}
+      <div className="shrink-0">
+        {done ? (
+          <span
+            className="inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-[12.5px] font-semibold"
+            style={{ backgroundColor: '#EFF6EA', color: PALETTE.forest2 }}
+          >
+            <Check className="h-3.5 w-3.5" strokeWidth={2.5} />
+            Done
+          </span>
+        ) : !step.action ? null : current ? (
+          isCreateAccount ? (
+            <button
+              type="button"
+              onClick={onCreateAccount}
+              className="inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-[13px] font-semibold text-white shadow-sm transition-transform active:scale-[0.98]"
+              style={{ backgroundColor: PALETTE.forest }}
+            >
+              {step.action.label}
+              <ArrowRight className="h-3.5 w-3.5" style={{ color: PALETTE.lime }} strokeWidth={2.5} />
+            </button>
+          ) : (
+            <Link
+              href={step.action.href}
+              className="inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-[13px] font-semibold text-white shadow-sm transition-transform active:scale-[0.98]"
+              style={{ backgroundColor: PALETTE.forest }}
+            >
+              {step.action.label}
+              <ArrowRight className="h-3.5 w-3.5" style={{ color: PALETTE.lime }} strokeWidth={2.5} />
+            </Link>
+          )
+        ) : (
+          // upcoming — locked, disabled, but visible
+          <span
+            aria-disabled
+            title="Unlocks after the previous step"
+            className="inline-flex cursor-not-allowed items-center gap-1.5 rounded-lg border px-3.5 py-2 text-[13px] font-semibold"
+            style={{ borderColor: LOCK_BORDER, backgroundColor: LOCK_BG, color: LOCK_GREY }}
+          >
+            <Lock className="h-3.5 w-3.5" strokeWidth={2.5} />
+            {step.action.label}
+          </span>
+        )}
+      </div>
+    </li>
   )
 }
 
@@ -166,8 +247,8 @@ function CreateAccountModal({
           value={storeName}
           onChange={(e) => setStoreName(e.target.value)}
           placeholder="e.g. ForestPets"
-          className="w-full rounded-[10px] border px-3.5 outline-none"
-          style={{ height: 46, borderColor: PALETTE.line, fontSize: 15, color: PALETTE.ink }}
+          className="w-full rounded-[10px] border px-3.5 outline-none placeholder:text-[#9AA095]"
+          style={{ height: 46, borderColor: PALETTE.line, fontSize: 15, color: PALETTE.ink, backgroundColor: '#FFFFFF' }}
           onFocus={(e) => (e.target.style.borderColor = PALETTE.forest)}
           onBlur={(e) => (e.target.style.borderColor = PALETTE.line)}
         />
@@ -176,7 +257,7 @@ function CreateAccountModal({
         </p>
 
         <p className="mt-4 rounded-lg p-3 text-[12.5px] leading-relaxed" style={{ backgroundColor: '#F7F8F3', color: PALETTE.ink2 }}>
-          Next you’ll set a password on the secure signup screen — that finishes creating your account.
+          Next you&rsquo;ll set a password on the secure signup screen — that finishes creating your account.
         </p>
 
         <Link

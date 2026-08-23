@@ -1,19 +1,23 @@
 'use client'
 
 /**
- * FoundingContent — the ivory right pane of the Founding Seller HQ. Holds, top to
- * bottom: the primary "start selling" action, the auto-scrolling game marquee,
- * the admin-controlled announcements stream ("What's happening"), and a permanent
- * Discord card pinned to the bottom.
+ * FoundingContent — the ivory right pane of the Founding Seller HQ, built to
+ * design 2b ("Set Up Your Storefront"). Top to bottom:
+ *   · the invisible, auto-sliding game marquee (what you can sell)
+ *   · the "Set Up Your Storefront" heading + one-line intro
+ *   · the four-step storefront setup card (its own N-of-4 progress header, with
+ *     each step's action on the right — done / next / locked)
+ *   · the admin-controlled announcements stream ("What's happening")
+ *   · a permanent Discord card pinned to the bottom
  *
  * Lives in the seller application's "Forest Ledger" world (light ivory ground,
  * white cards, ink text, forest primary, lime as a hairline accent only) so HQ
- * and the application match. Background washes mirror the seller-app right pane.
+ * and the application match.
  */
 
 import { motion } from 'framer-motion'
 import { formatDistanceToNow } from 'date-fns'
-import { ArrowRight, Pin, ShieldCheck, Lock, Sparkles, ListChecks } from 'lucide-react'
+import { Pin, Sparkles } from 'lucide-react'
 import { PALETTE } from '@/app/account/become-seller/_redesign/theme'
 import GameMarquee, { type MarqueeGame } from './GameMarquee'
 import SellerJourneyTracker from './SellerJourneyTracker'
@@ -28,7 +32,6 @@ const PANE_BG = [
 ].join(', ')
 
 interface FoundingContentProps {
-  applyHref: string
   discordUrl: string
   hasDiscord: boolean
   games: MarqueeGame[]
@@ -48,7 +51,6 @@ function relative(iso: string): string {
 }
 
 export default function FoundingContent({
-  applyHref,
   discordUrl,
   hasDiscord,
   games,
@@ -57,6 +59,8 @@ export default function FoundingContent({
   user,
 }: FoundingContentProps) {
   const isSeller = Boolean(user?.isSeller)
+  const allDone = Boolean(journey && journey.doneCount >= journey.total)
+
   return (
     <div
       className="relative flex min-h-screen flex-col px-6 py-8 sm:px-10 lg:h-screen lg:min-h-0 lg:overflow-hidden lg:px-14 lg:py-10"
@@ -74,63 +78,32 @@ export default function FoundingContent({
         transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
         className="mx-auto flex w-full max-w-lg flex-1 flex-col lg:min-h-0"
       >
-        {/* ═══ ZONE 1 (fixed): games bar + start-selling block ═══ */}
+        {/* ═══ ZONE 1 (fixed): game marquee + heading ═══ */}
         <div className="shrink-0">
           {games.length > 0 && (
             <div className="mb-7">
-              <p className="mb-2.5 text-[11px] font-semibold uppercase tracking-[0.06em]" style={{ color: PALETTE.ink2 }}>
+              <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.06em]" style={{ color: PALETTE.ink2 }}>
                 Sell across every big Roblox game
               </p>
               <GameMarquee games={games} />
             </div>
           )}
 
-          <h2 className="text-[19px] font-semibold tracking-tight" style={{ color: PALETTE.ink }}>
-            {isSeller ? 'You’re a seller — go make a sale' : 'Start selling in about 10 minutes'}
+          <h2 className="text-[22px] font-bold tracking-tight" style={{ color: PALETTE.ink, letterSpacing: '-0.4px' }}>
+            {isSeller || allDone ? 'Your storefront is live' : 'Set Up Your Storefront'}
           </h2>
           <p className="mt-1.5 text-[13.5px] leading-relaxed" style={{ color: PALETTE.ink2 }}>
-            {isSeller
-              ? 'You’re all set up. List an item off live DropMarket Values and get paid the moment you deliver.'
-              : 'Set up your account, list your first item, and get paid the moment you deliver — even if the buyer ghosts.'}
+            {isSeller || allDone
+              ? 'You’re all set. List an item off live DropMarket Values and get paid the moment you deliver.'
+              : 'Four steps to your first sale. Leave and come back anytime — this page is yours, and your spot is held.'}
           </p>
-          <a
-            href={isSeller ? '/sell/new' : applyHref}
-            className="group mt-4 flex items-center justify-center gap-2.5 rounded-xl px-5 py-3.5 text-[15px] font-semibold text-white transition-transform active:scale-[0.99]"
-            style={{ backgroundColor: PALETTE.forest, boxShadow: '0 10px 24px -12px rgba(20,67,42,0.55)' }}
-          >
-            {isSeller ? 'Make Your First Sale' : 'Set Up Your Account & Start Selling'}
-            <ArrowRight
-              className="h-[18px] w-[18px] transition-transform group-hover:translate-x-1"
-              style={{ color: PALETTE.lime }}
-              strokeWidth={2.5}
-            />
-          </a>
-          <div className="mt-3 flex items-center justify-center gap-4 text-[11.5px]" style={{ color: PALETTE.ink2 }}>
-            {isSeller ? (
-              <>
-                <span className="inline-flex items-center gap-1.5"><ShieldCheck className="h-3.5 w-3.5" style={{ color: PALETTE.forest2 }} /> 2% founder discount applied</span>
-                <span className="inline-flex items-center gap-1.5"><Lock className="h-3.5 w-3.5" style={{ color: PALETTE.forest2 }} /> Escrow-protected payouts</span>
-              </>
-            ) : (
-              <>
-                <span className="inline-flex items-center gap-1.5"><ShieldCheck className="h-3.5 w-3.5" style={{ color: PALETTE.forest2 }} /> Encrypted</span>
-                <span className="inline-flex items-center gap-1.5"><Lock className="h-3.5 w-3.5" style={{ color: PALETTE.forest2 }} /> Verify only at payout</span>
-              </>
-            )}
-          </div>
         </div>
 
-        {/* ═══ ZONE 2 (single internal scroll region: tracker + announcements) ═══ */}
-        <div className="mt-6 flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto pr-0.5">
-          {/* Your progress — per-founder tracker */}
+        {/* ═══ ZONE 2 (single internal scroll region: setup card + announcements) ═══ */}
+        <div className="mt-5 flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto pr-0.5">
+          {/* Storefront setup — the four-step card (owns its own progress header) */}
           {journey && (
             <div className="shrink-0">
-              <div className="mb-3 flex items-center gap-2">
-                <ListChecks className="h-4 w-4" style={{ color: PALETTE.forest2 }} strokeWidth={2} />
-                <h3 className="text-[13px] font-semibold uppercase tracking-[0.06em]" style={{ color: PALETTE.ink2 }}>
-                  Your progress
-                </h3>
-              </div>
               <SellerJourneyTracker journey={journey} />
             </div>
           )}
@@ -144,67 +117,67 @@ export default function FoundingContent({
               </h3>
             </div>
 
-          {notices.length > 0 ? (
-            <div
-              className="rounded-2xl border bg-white p-5"
-              style={{ borderColor: PALETTE.line, boxShadow: '0 2px 8px rgba(20,67,42,0.04)' }}
-            >
-              <ul>
-                {notices.map((n, i) => {
-                  const isLast = i === notices.length - 1
-                  return (
-                    <li
-                      key={n.id}
-                      className="relative flex gap-4"
-                      style={{ paddingBottom: isLast ? 0 : 18, marginBottom: isLast ? 0 : 18 }}
-                    >
-                      {!isLast && <span aria-hidden className="absolute left-[5px] top-4 bottom-0 w-px" style={{ backgroundColor: '#EAEBE3' }} />}
-                      <span className="relative z-10 mt-[5px] shrink-0">
-                        <span
-                          className="block h-[11px] w-[11px] rounded-full ring-4"
-                          style={{
-                            backgroundColor: n.pinned ? PALETTE.lime : '#D2D6C8',
-                            // @ts-expect-error CSS var for ring color
-                            '--tw-ring-color': n.pinned ? 'rgba(163,230,53,0.18)' : '#FFFFFF',
-                          }}
-                        />
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <div className="text-[14px] font-semibold leading-snug" style={{ color: n.pinned ? PALETTE.forest : PALETTE.ink }}>
-                          {n.title}
+            {notices.length > 0 ? (
+              <div
+                className="rounded-2xl border bg-white p-5"
+                style={{ borderColor: PALETTE.line, boxShadow: '0 2px 8px rgba(20,67,42,0.04)' }}
+              >
+                <ul>
+                  {notices.map((n, i) => {
+                    const isLast = i === notices.length - 1
+                    return (
+                      <li
+                        key={n.id}
+                        className="relative flex gap-4"
+                        style={{ paddingBottom: isLast ? 0 : 18, marginBottom: isLast ? 0 : 18 }}
+                      >
+                        {!isLast && <span aria-hidden className="absolute left-[5px] top-4 bottom-0 w-px" style={{ backgroundColor: '#EAEBE3' }} />}
+                        <span className="relative z-10 mt-[5px] shrink-0">
+                          <span
+                            className="block h-[11px] w-[11px] rounded-full ring-4"
+                            style={{
+                              backgroundColor: n.pinned ? PALETTE.lime : '#D2D6C8',
+                              // @ts-expect-error CSS var for ring color
+                              '--tw-ring-color': n.pinned ? 'rgba(163,230,53,0.18)' : '#FFFFFF',
+                            }}
+                          />
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <div className="text-[14px] font-semibold leading-snug" style={{ color: n.pinned ? PALETTE.forest : PALETTE.ink }}>
+                            {n.title}
+                          </div>
+                          {n.body && (
+                            <p className="mt-1 whitespace-pre-line text-[13px] leading-relaxed" style={{ color: PALETTE.ink2 }}>
+                              {n.body}
+                            </p>
+                          )}
+                          <div className="mt-1.5 flex items-center gap-1.5 text-[11px]" style={{ color: '#9a9f92' }}>
+                            {n.pinned && <Pin className="h-3 w-3" strokeWidth={2} />}
+                            <span>{relative(n.created_at)}</span>
+                            {n.pinned && <span>· Pinned</span>}
+                          </div>
                         </div>
-                        {n.body && (
-                          <p className="mt-1 whitespace-pre-line text-[13px] leading-relaxed" style={{ color: PALETTE.ink2 }}>
-                            {n.body}
-                          </p>
-                        )}
-                        <div className="mt-1.5 flex items-center gap-1.5 text-[11px]" style={{ color: '#9a9f92' }}>
-                          {n.pinned && <Pin className="h-3 w-3" strokeWidth={2} />}
-                          <span>{relative(n.created_at)}</span>
-                          {n.pinned && <span>· Pinned</span>}
-                        </div>
-                      </div>
-                    </li>
-                  )
-                })}
-              </ul>
-            </div>
-          ) : (
-            <div
-              className="flex flex-col items-center rounded-2xl border bg-white px-6 py-8 text-center"
-              style={{ borderColor: PALETTE.line }}
-            >
-              <span className="flex h-11 w-11 items-center justify-center rounded-full" style={{ backgroundColor: '#F2F4EC' }}>
-                <Sparkles className="h-5 w-5" style={{ color: PALETTE.forest2 }} strokeWidth={2} />
-              </span>
-              <p className="mt-3 text-[13.5px] font-semibold" style={{ color: PALETTE.ink }}>
-                You&rsquo;re early — nothing to report yet
-              </p>
-              <p className="mt-1 max-w-xs text-[12.5px] leading-relaxed" style={{ color: PALETTE.ink2 }}>
-                Founding-seller updates, price news, and first-access drops will show up right here.
-              </p>
-            </div>
-          )}
+                      </li>
+                    )
+                  })}
+                </ul>
+              </div>
+            ) : (
+              <div
+                className="flex flex-col items-center rounded-2xl border bg-white px-6 py-8 text-center"
+                style={{ borderColor: PALETTE.line }}
+              >
+                <span className="flex h-11 w-11 items-center justify-center rounded-full" style={{ backgroundColor: '#F2F4EC' }}>
+                  <Sparkles className="h-5 w-5" style={{ color: PALETTE.forest2 }} strokeWidth={2} />
+                </span>
+                <p className="mt-3 text-[13.5px] font-semibold" style={{ color: PALETTE.ink }}>
+                  You&rsquo;re early — nothing to report yet
+                </p>
+                <p className="mt-1 max-w-xs text-[12.5px] leading-relaxed" style={{ color: PALETTE.ink2 }}>
+                  Founding-seller updates, price news, and first-access drops will show up right here.
+                </p>
+              </div>
+            )}
           </div>
         </div>
 

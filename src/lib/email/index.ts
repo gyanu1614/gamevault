@@ -963,8 +963,14 @@ export async function sendTrustpilotInvitationEmail({
 const EARLY_SELLER_NOTIFY_TO =
   process.env.EARLY_SELLER_NOTIFY_TO || 'support@dropmarket.gg'
 
-/** Confirmation to the person who just joined the founding-seller waitlist. */
-export async function sendEarlySellerWelcomeEmail({
+/**
+ * Founding-seller DISCORD invite — the second of the two emails a new signup
+ * gets (the first being their personal Founding HQ magic-link). Single, focused
+ * purpose: get them into the founding Discord so they can ask questions and hear
+ * updates while they set up. Deliberately NOT a "you're on the list" email —
+ * the HQ invite already welcomes them; this one just opens the community door.
+ */
+export async function sendEarlySellerDiscordInviteEmail({
   to,
   username,
 }: {
@@ -977,26 +983,26 @@ export async function sendEarlySellerWelcomeEmail({
     from: FROM_EMAIL,
     replyTo: REPLY_TO,
     to,
-    subject: `You're on the founding-seller list, ${username}`,
+    subject: `Join the founding-seller Discord, ${username}`,
     html: emailShell({
-      preview: `You're on the DropMarket founding-seller list.`,
-      icon: 'founding',
-      heading: `You're on the list, ${safeUsername}`,
+      preview: `Come meet the other founding sellers on Discord.`,
+      icon: 'welcome',
+      heading: `Come Say Hi On Discord`,
       body:
-        emailText(`Thanks for signing up as a founding seller. We onboard the first 100 in batches and we'll email you when it's your turn — with your personal Founding HQ link.`) +
-        emailBox({
-          accent: true,
-          title: 'Your founding perks, locked for life',
-          html: `<strong style="color:${EMAIL_TOKENS.INK};">2% lower fees on every sale</strong>, early listing access before the public launch, and a founding badge on your storefront.`,
-        }) +
-        emailText(`In the meantime, the fastest way to get set up is our founding-seller Discord:`) +
+        emailText(`Hey ${safeUsername} — while you get your storefront set up, come join the other founding sellers in our Discord. It's the fastest way to get help, hear about first-access drops, and talk pricing with people selling the same games.`) +
         emailButton('Join the Founding Discord', DISCORD_INVITE_URL) +
-        emailFooterNote(`Didn't sign up? Just reply and we'll remove you.`),
+        emailFooterNote(`Already checked your inbox for your Founding HQ link? That's the one that opens your seller setup. See you inside.`),
     }),
   })
 
   return error ? { success: false, error } : { success: true, data }
 }
+
+/**
+ * @deprecated Renamed to sendEarlySellerDiscordInviteEmail. Kept as a thin alias
+ * so any older caller keeps compiling; new code should call the Discord invite.
+ */
+export const sendEarlySellerWelcomeEmail = sendEarlySellerDiscordInviteEmail
 
 /**
  * Personalized "claim your spot" email — the entry point into the Founding

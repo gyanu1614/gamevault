@@ -197,7 +197,7 @@ export default function FoundingSignupClient({
 
       {/* ══════════ RIGHT IVORY PANEL ══════════ */}
       <main className="flex w-full flex-1 items-center justify-center px-5 py-10 lg:w-[62%] lg:overflow-y-auto lg:px-8">
-        <div className="w-full max-w-[440px]">
+        <div className="w-full max-w-[500px]">
           {submitted ? (
             <div
               className="rounded-xl border p-7 sm:p-8"
@@ -218,7 +218,7 @@ export default function FoundingSignupClient({
               </div>
 
               <div
-                className="flex flex-col gap-5 rounded-xl border p-7 sm:p-8"
+                className="flex flex-col gap-[18px] rounded-xl border p-6 sm:p-7"
                 style={{ backgroundColor: C.paper, borderColor: C.line, boxShadow: '0 12px 32px rgba(15,51,32,0.06)' }}
               >
                 <Field label="Email" hint="We’ll send your seller link here.">
@@ -376,7 +376,7 @@ export default function FoundingSignupClient({
 // ── Bits ──────────────────────────────────────────────────────────
 const inputStyle: React.CSSProperties = {
   width: '100%',
-  height: 46,
+  height: 44,
   borderRadius: 10,
   border: `1px solid ${C.line}`,
   padding: '0 14px',
@@ -427,37 +427,33 @@ function SubmittedState({ alreadyOnList }: { alreadyOnList: boolean }) {
           <CircleCheck className="h-8 w-8" style={{ color: C.forest3 }} strokeWidth={2.5} />
         </span>
         <h2 className="mt-5 text-[26px] font-extrabold" style={{ color: C.ink, letterSpacing: '-0.4px' }}>
-          {alreadyOnList ? "You're Already In" : 'Submitted Successfully'}
+          {alreadyOnList ? "You're Already In" : 'Check Your Email'}
         </h2>
         <p className="mt-2 max-w-[380px] text-[15px] leading-relaxed" style={{ color: C.ink2 }}>
-          Check your email for further steps. Your magic link confirms your email and opens your founding-seller setup.
+          {alreadyOnList
+            ? 'You already have a founding-seller invite. Open the magic link in your inbox to pick up where you left off.'
+            : 'We just sent your founding-seller link. Open it to confirm your email instantly and start setting up your storefront.'}
         </p>
       </div>
 
-      <div className="my-7 border-t" style={{ borderColor: C.line }} />
+      <div className="my-6 border-t" style={{ borderColor: C.line }} />
 
-      <ol className="flex flex-col gap-4">
-        {[
-          { n: 1, active: true, text: 'Open the magic link — your email is confirmed instantly.' },
-          { n: 2, active: false, text: 'Create your seller account — password & store name.' },
-          { n: 3, active: false, text: 'Verify ID, sign the seller agreement, make your first listing.' },
-        ].map((s) => (
-          <li key={s.n} className="flex items-start gap-3.5">
-            <span
-              className="flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-full border text-[13px] font-bold"
-              style={{
-                borderColor: s.active ? C.forest : C.line,
-                color: s.active ? C.forest : C.placeholder,
-              }}
-            >
-              {s.n}
-            </span>
-            <span className="pt-0.5 text-[14px] leading-relaxed" style={{ color: s.active ? C.ink : C.ink2 }}>
-              {s.text}
-            </span>
-          </li>
-        ))}
-      </ol>
+      {/* One clear next step — the whole action is "open the link". */}
+      <div
+        className="flex items-start gap-3 rounded-[12px] p-4"
+        style={{ backgroundColor: C.tint, border: `1px solid ${C.line}` }}
+      >
+        <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full" style={{ backgroundColor: C.forest }}>
+          <ArrowRight className="h-3.5 w-3.5" style={{ color: C.lime }} strokeWidth={2.75} />
+        </span>
+        <p className="text-[14px] leading-relaxed" style={{ color: C.ink }}>
+          <span className="font-semibold">Open the magic link in your email</span> — your email is confirmed instantly and your founding-seller setup opens.
+        </p>
+      </div>
+
+      <p className="mt-4 text-center text-[12.5px]" style={{ color: C.ink2 }}>
+        Didn’t get it? Check spam, or give it a minute.
+      </p>
     </div>
   )
 }

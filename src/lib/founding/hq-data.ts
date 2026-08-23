@@ -43,12 +43,15 @@ export interface FoundingFounder {
   appliedAt: string
 }
 
-/** The five milestones on a founder's path to selling, in order. */
+/**
+ * The four storefront-setup milestones a founder works through, in order.
+ * "Confirm email" is done the moment they arrive from the magic link, so it
+ * leads; the remaining three carry them into the real signup/verify/list flow.
+ */
 export type JourneyStepKey =
-  | 'claimed'
+  | 'email'
   | 'application'
   | 'review'
-  | 'approved'
   | 'listing'
 
 export type JourneyStepState = 'done' | 'current' | 'upcoming'
@@ -56,11 +59,15 @@ export type JourneyStepState = 'done' | 'current' | 'upcoming'
 export interface JourneyStep {
   key: JourneyStepKey
   label: string
-  /** Short line shown under the current step only. */
+  /** One-line description shown under every step title (design 2b). */
   hint: string
   state: JourneyStepState
-  /** The action for the CURRENT step — a button that deep-links into the real
-   *  flow (signup / seller wizard / new listing). Only set on the current step. */
+  /**
+   * The step's right-aligned action. Present on done / current / upcoming so the
+   * card can render it in the matching visual state (done → "Done" pill, current
+   * → solid button, upcoming → locked/disabled). `null` means no button (a step
+   * that is purely a status, like the confirmed email).
+   */
   action?: { label: string; href: string } | null
 }
 
@@ -68,6 +75,10 @@ export interface SellerJourney {
   steps: JourneyStep[]
   /** Index of the current (or last-done) step, for the progress fill. */
   activeIndex: number
+  /** How many of the four steps are fully done — drives "N of 4 complete". */
+  doneCount: number
+  /** Total steps (4) — kept explicit so the UI copy never drifts. */
+  total: number
 }
 
 export interface FoundingHqData {
@@ -174,8 +185,13 @@ async function resolveSellerJourney(email: string): Promise<SellerJourney> {
 }
 
 /**
- * Turn raw signals into the ordered 5-step tracker. The "furthest reached" step
- * is `current`; everything before it is `done`, everything after `upcoming`.
+ * Turn raw signals into the ordered 4-step storefront setup (design 2b). The
+ * "furthest reached" step is `current`; everything before it is `done`,
+ * everything after `upcoming`. Every step keeps its action so the card can
+ * render a "Done" pill, a live button, or a locked button per state.
+ *
+ * Step 0 (confirm email) is always done here — a founder only reaches this HQ
+ * by opening their magic link, which confirms the email.
  */
 function buildJourney({
   hasAccount,
@@ -186,44 +202,46 @@ function buildJourney({
   appStatus: string | null
   listingCount: number
 }): SellerJourney {
-  // How far along are they? (0 = claimed … 4 = listing live)
-  let reached = 0 // claimed — always true for a founder on their HQ
-  if (hasAccount || appStatus) reached = 1 // application started
+  // How far along are they? (0 = email confirmed … 3 = listing live)
+  let reached = 0 // email confirmed — always true for a founder on their HQ
+  if (hasAccount || appStatus) reached = 1 // account created / application started
   if (appStatus === 'pending' || appStatus === 'under_review' || appStatus === 'info_requested') reached = 2
-  if (appStatus === 'approved') reached = 3
-  if (listingCount > 0) reached = 4
+  if (appStatus === 'approved') reached = 2 // approved → next real action is listing
+  if (listingCount > 0) reached = 3
 
-  // Each step's CTA when it is the CURRENT step — deep-links into the real flow.
-  // Step 2 (create account) → the existing signup-to-sell funnel (handles the
-  // password safely, tags founding); step 3 → the seller wizard (ID + agreement);
-  // step 4 → the new-listing flow. Review is a wait state (no primary action).
+  // Each step's action deep-links into the real flow. Step 2 (create account) is
+  // handled by the tracker as a store-name modal → the signup-to-sell funnel
+  // (which sets the password safely + tags founding); step 3 → the seller wizard
+  // (ID + agreement); step 4 → the new-listing flow.
   const defs: Array<{
     key: JourneyStepKey
     label: string
     hint: string
     action?: { label: string; href: string }
   }> = [
-    { key: 'claimed', label: 'Claimed your spot', hint: 'You’re in the founding programme.' },
+    {
+      key: 'email',
+      label: 'Confirm your email',
+      hint: 'Verified the moment you opened your founding link.',
+    },
     {
       key: 'application',
       label: 'Create your account',
-      hint: 'Set up your account, then complete the seller application.',
-      action: { label: 'Create Your Account', href: '/signup-become-seller?src=founding-hq' },
+      hint: 'Pick a store name and set a password — takes a minute.',
+      action: { label: 'Create Account', href: '/signup-become-seller?src=founding-hq' },
     },
     {
       key: 'review',
-      label: 'Get verified & sign',
-      hint: 'Verify your ID and sign the seller agreement to get approved.',
-      action: { label: 'Continue Your Application', href: '/account/become-seller' },
+      label: 'Verify & sign',
+      hint: 'Confirm your ID and sign the seller agreement to get approved.',
+      action: { label: 'Start Verification', href: '/account/become-seller' },
     },
     {
-      key: 'approved',
-      label: 'Approved to sell',
-      hint: 'You’re cleared — list your first item and start selling.',
-      action: { label: 'Make Your First Listing', href: '/sell/new' },
+      key: 'listing',
+      label: 'List your first item',
+      hint: 'Post an item off live DropMarket Values and start selling.',
+      action: { label: 'Start Listing', href: '/sell/new' },
     },
-    { key: 'listing', label: 'First listing live', hint: 'You’re selling. Nice.',
-      action: { label: 'View Your Listings', href: '/account/listings' } },
   ]
 
   const steps: JourneyStep[] = defs.map((d, i) => {
@@ -233,12 +251,12 @@ function buildJourney({
       label: d.label,
       hint: d.hint,
       state,
-      // Only the current step surfaces its action button.
-      action: state === 'current' ? d.action ?? null : null,
+      // Action travels in every state; the card styles it by state.
+      action: d.action ?? null,
     }
   })
 
-  return { steps, activeIndex: reached }
+  return { steps, activeIndex: reached, doneCount: reached, total: defs.length }
 }
 
 /** Sample journey shown to an admin previewing /founding. */

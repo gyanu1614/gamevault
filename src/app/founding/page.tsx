@@ -97,10 +97,6 @@ export default async function FoundingHqPage({
   const { founder, cap, progress, journey, user } = data
   const claimed = progress?.count ?? 0
 
-  // The apply CTA carries founding attribution + the applicant's email prefill
-  // when we know it (magic-link path), handing off to the existing signup flow.
-  const applyHref = '/signup-become-seller?src=founding-hq'
-
   return (
     <div
       className="min-h-screen w-full overflow-x-hidden lg:grid lg:h-screen lg:grid-cols-[38%_62%] lg:overflow-hidden"
@@ -113,7 +109,6 @@ export default async function FoundingHqPage({
         claimed={claimed}
       />
       <FoundingContent
-        applyHref={applyHref}
         discordUrl={DISCORD_INVITE_URL}
         hasDiscord={Boolean(founder?.hasDiscord)}
         games={games}
