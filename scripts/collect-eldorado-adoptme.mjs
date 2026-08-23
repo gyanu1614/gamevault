@@ -6,11 +6,12 @@
  *   - variant comes from the offer's structured "Traits" attribute, not the
  *     title — cleaner than SAB's title parsing
  *
- * For each pet in adopt_me_pets it searches the offers API, keeps only offers
- * whose title is an EXACT pet-name match with a recognised trait (so noise like
- * "Shadow Dragon Ducky" — a different pet — is excluded), and records each
- * clean listing's USD price + variant. Writes raw listings to JSON; the
- * importer computes the per-variant median and confidence.
+ * For each pet in adopt_me_pets it queries the offers API filtered by the
+ * CANONICAL pet identity (tradeEnvironmentValue2 = the exact Item Name), walks
+ * every page, and records each listing's USD price + variant (from the
+ * structured Traits attribute). Toys/bundles/accounts named after the pet and
+ * scam-bait titles are rejected. Writes raw listings to JSON; the importer /
+ * correction cron computes the reputable cheapest + average.
  *
  * Polite: one pet at a time, delay between pets, a few pages each. Tune with
  * flags. USER runs this against the live site (as the SAB collector is run).
@@ -154,7 +155,10 @@ function parseArgs(argv) {
   const o = {
     send: false,
     limit: Number(process.env.ELDORADO_AM_LIMIT ?? 0),
-    maxPages: Number(process.env.ELDORADO_AM_MAX_PAGES ?? 3),
+    // Safety ceiling on pages per pet. te_v2 scopes to one pet, so this is high
+    // enough to cover the busiest pet (Owl ~13 pages) while the empty-page break
+    // stops small pets early. Was 3 (too low — truncated the cheapest listings).
+    maxPages: Number(process.env.ELDORADO_AM_MAX_PAGES ?? 20),
     delayMs: Number(process.env.ELDORADO_AM_DELAY_MS ?? 1500),
     outputPath: DEFAULT_OUTPUT,
     slugs: null, // comma-separated slugs to target a subset
@@ -175,7 +179,46 @@ function parseArgs(argv) {
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 
-function offersUrl(searchQuery, pageIndex) {
+/**
+ * Offers URL — filters by the CANONICAL pet identity, not a fuzzy title search.
+ *
+ * `tradeEnvironmentValue2=<pet name>` is Eldorado's server-side "Item Name"
+ * facet (the dropdown in the site UI). Passing the plain pet name returns ONLY
+ * that exact pet — e.g. te_v2="Owl" gives 628 offers, 100% real Owl, ZERO Snow
+ * Owl / Peach Owl / Grave Owl contamination. The old `searchQuery=<name>` did a
+ * SUBSTRING match: "Owl" pulled every *-Owl pet (on one page of 50, only 12 of
+ * 50 were the real Owl), which is why cheapest prices were wrong.
+ *
+ * (SAB resolves te_v2 via `seoAliasMappings?seoAlias=<slug>-for-sale`; Adopt Me
+ * pet slugs 404 on that endpoint, but the plain NAME works as te_v2 directly.)
+ */
+function offersUrl(itemName, pageIndex) {
+  const u = new URL('/api/v1/item-management/offers', BASE_URL)
+  u.searchParams.set('gameId', GAME_ID)
+  u.searchParams.set('category', CATEGORY)
+  u.searchParams.set('tradeEnvironmentValue2', itemName)
+  u.searchParams.set('pageIndex', String(pageIndex))
+  u.searchParams.set('pageSize', '50')
+  u.searchParams.set('includeDeliveryMedians', 'true')
+  return u.toString()
+}
+
+async function fetchOffers(itemName, pageIndex) {
+  const res = await fetch(offersUrl(itemName, pageIndex), {
+    headers: { 'user-agent': UA, accept: 'application/json' },
+  })
+  if (!res.ok) throw new Error(`offers ${itemName} p${pageIndex} → ${res.status}`)
+  return res.json()
+}
+
+/**
+ * Fallback offers URL — a fuzzy `searchQuery` used ONLY when the exact te_v2
+ * returns nothing (e.g. a casing/spelling drift: our "Ring-Tailed Lemur" vs
+ * Eldorado's "Ring-tailed Lemur", which te_v2 treats case-sensitively). The
+ * caller MUST re-filter the results by normalised Item Name, because searchQuery
+ * is a substring match that also returns other pets.
+ */
+function searchOffersUrl(searchQuery, pageIndex) {
   const u = new URL('/api/v1/item-management/offers', BASE_URL)
   u.searchParams.set('gameId', GAME_ID)
   u.searchParams.set('category', CATEGORY)
@@ -186,12 +229,18 @@ function offersUrl(searchQuery, pageIndex) {
   return u.toString()
 }
 
-async function fetchOffers(searchQuery, pageIndex) {
-  const res = await fetch(offersUrl(searchQuery, pageIndex), {
+async function fetchSearchOffers(searchQuery, pageIndex) {
+  const res = await fetch(searchOffersUrl(searchQuery, pageIndex), {
     headers: { 'user-agent': UA, accept: 'application/json' },
   })
-  if (!res.ok) throw new Error(`offers ${searchQuery} p${pageIndex} → ${res.status}`)
+  if (!res.ok) throw new Error(`search ${searchQuery} p${pageIndex} → ${res.status}`)
   return res.json()
+}
+
+/** The offer's structured "Item Name" (canonical pet identity), or null. */
+function itemNameOf(offer) {
+  const tev = offer?.tradeEnvironmentValues || []
+  return tev.find((a) => a.name === 'Item Name')?.value ?? null
 }
 
 /** Normalise a title/name for exact matching (strip emoji, punctuation, case). */
@@ -276,15 +325,56 @@ async function main() {
     const pet = targets[i]
     let petListings = 0
     try {
-      for (let page = 1; page <= opts.maxPages; page += 1) {
-        const body = await fetchOffers(pet.name, page)
+      // Walk EVERY page for this pet. te_v2 scopes the result set to the exact
+      // pet, so the cheapest reputable listing (which can sit deep in a
+      // popularity-sorted response) is never missed. `opts.maxPages` is a safety
+      // ceiling only; we stop early when the API reports the last page or a page
+      // comes back empty.
+      const petKey = normalizeName(pet.name)
+      let firstBody = await fetchOffers(pet.name, 1)
+      // FALLBACK: te_v2 is case/spelling-sensitive. If the exact name returns
+      // nothing (our "Ring-Tailed Lemur" vs Eldorado's "Ring-tailed Lemur"),
+      // switch to a fuzzy searchQuery and re-verify each result's structured
+      // Item Name against the pet name, normalised (case/punctuation-insensitive)
+      // — so we recover the listings without letting other pets leak in.
+      let useSearchFallback = false
+      if ((Number(firstBody?.recordCount) || 0) === 0) {
+        useSearchFallback = true
+        firstBody = await fetchSearchOffers(pet.name, 1)
+      }
+      const fetchPage = (page) =>
+        useSearchFallback
+          ? fetchSearchOffers(pet.name, page)
+          : fetchOffers(pet.name, page)
+      const totalPages = Math.min(
+        Number(firstBody?.totalPages) || 1,
+        opts.maxPages,
+      )
+      for (let page = 1; page <= totalPages; page += 1) {
+        const body = page === 1 ? firstBody : await fetchPage(page)
         const results = body?.results ?? []
+        if (!results.length) break
         const nowMs = Date.now()
         for (const item of results) {
           const offer = item.offer
           if (!offer) continue
           const title = offer.offerTitle
-          if (!titleMatchesPet(title, pet.name)) {
+          // In fallback mode the search is fuzzy, so enforce identity here via
+          // the structured Item Name (normalised). In te_v2 mode the server
+          // already guaranteed identity; skip only if a stray Item Name appears.
+          if (useSearchFallback) {
+            const iname = itemNameOf(offer)
+            if (!iname || normalizeName(iname) !== petKey) {
+              skipped++
+              continue
+            }
+          }
+          // Identity is now guaranteed by the te_v2 (Item Name) server filter,
+          // so we no longer gate on a strict title match (that silently dropped
+          // legit listings with emoji/marketing titles like "🌟 FR 🐛 Owl • ⚡").
+          // We still reject TOYS/bundles/accounts named after the pet, which can
+          // legitimately carry the same Item Name (an "Owl Plush" is not an Owl).
+          if (TOY_WORDS.test(normalizeName(title))) {
             skipped++
             continue
           }

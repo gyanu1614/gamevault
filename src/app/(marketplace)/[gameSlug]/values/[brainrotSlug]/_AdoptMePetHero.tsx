@@ -21,10 +21,11 @@ const TRADE = new Intl.NumberFormat('en-US')
  * Show the quiet "typically ~$X" market line only when the market (average)
  * exceeds the cheapest by this multiple; below it the two are near-identical
  * and the cheapest headline says it all. Mirrors SAB's ItemHero split — the
- * buyer's headline is ALWAYS the cheapest real listing. Kept at 1.12 to match
- * the Adopt Me values list page (_AdoptMeValuesClient).
+ * buyer's headline is ALWAYS the cheapest real listing. 1.25 matches the Adopt
+ * Me values list page (_AdoptMeValuesClient) and SAB's _ItemHero, so a pet shows
+ * the same "typically ~$X" line on its page and in the list.
  */
-const MARKET_SECONDARY_GAP = 1.12
+const MARKET_SECONDARY_GAP = 1.25
 
 /** Per-variant accent dot — Neon/Mega tiers read "hotter". */
 const VARIANT_COLOR: Record<string, string> = {
