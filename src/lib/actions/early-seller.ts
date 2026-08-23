@@ -14,7 +14,6 @@ import { headers } from 'next/headers'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { requireAdmin } from '@/lib/actions/admin-permissions'
 import {
-  sendEarlySellerDiscordInviteEmail,
   sendFoundingHqInviteEmail,
   sendEarlySellerAdminNotificationEmail,
 } from '@/lib/email'
@@ -204,23 +203,22 @@ export async function submitEarlySeller(
       .single()
 
     if (!insertError) {
-      // Fire all three emails, but never let them affect the signup: the row is
+      // Fire the emails, but never let them affect the signup: the row is
       // already committed, so a Resend outage or a bad address must not turn a
       // successful signup into an error. Awaited (not detached) because a
       // serverless invocation can be frozen the moment the action returns,
       // which would silently drop an in-flight request. allSettled so one
-      // failing send can't reject the others.
+      // failing send can't reject the other.
       //
-      // 1) Founding HQ magic-link → the primary email; opening it confirms the
-      //    address and lands them straight in their seller setup (/founding).
-      // 2) A separate Discord invite → the community door.
-      // 3) Internal admin ping.
+      // ONE applicant-facing email — their Founding HQ invite. It carries both
+      // the "application ready" magic-link AND the Discord invite in a single,
+      // polished first-touch (see sendFoundingHqInviteEmail). Plus the internal
+      // admin ping. (We deliberately do NOT send a second Discord-only email.)
       const hqUrl = inserted?.id ? hqUrlFor(inserted.id, email) : null
       const sends: Array<{ which: string; p: Promise<{ success: boolean; error?: unknown }> }> = []
       if (hqUrl) {
         sends.push({ which: 'hq-invite', p: sendFoundingHqInviteEmail({ to: email, username, hqUrl }) })
       }
-      sends.push({ which: 'discord-invite', p: sendEarlySellerDiscordInviteEmail({ to: email, username }) })
       sends.push({
         which: 'admin-notification',
         p: sendEarlySellerAdminNotificationEmail({
