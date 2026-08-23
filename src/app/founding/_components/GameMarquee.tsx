@@ -1,13 +1,16 @@
 'use client'
 
 /**
- * Auto-scrolling game strip for the Founding HQ. A gentle, continuous marquee of
- * the real game logos (from the shared GAME_ICONS registry) — the color and life
- * against the calm ivory pane, and a concrete answer to "what can I sell here".
+ * Auto-scrolling game strip for the Founding HQ — a gentle, continuous marquee of
+ * the real game logos (from the shared GAME_ICONS registry). Deliberately
+ * "invisible": no card frame, no borders, no track — just the logos + names
+ * gliding across the ivory pane, softened at both edges so they fade in and out
+ * rather than getting clipped. The same continuous-slide feel as the website's
+ * payment-methods strip, applied to what a founder can sell.
  *
- * Uses embla-carousel with the autoplay plugin (already a dependency). Loops
- * seamlessly, slows on hover, and respects prefers-reduced-motion by rendering a
- * static row instead.
+ * Uses embla-carousel with the auto-scroll plugin (already a dependency) for a
+ * buttery, seam-free loop. Slows/pauses on hover, and respects
+ * prefers-reduced-motion by rendering a static row instead.
  */
 
 import Image from 'next/image'
@@ -27,26 +30,31 @@ function usePrefersReducedMotion(): boolean {
   return window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
 }
 
-/** One game chip — a legible logo on a soft tinted tile + the name. */
+/**
+ * One game chip — frameless. Just the logo on a soft round tile and the name,
+ * riding directly on the pane (no border/shadow) so the row reads as one clean
+ * gliding band rather than a shelf of cards.
+ */
 function GameTile({ game }: { game: MarqueeGame }) {
   return (
-    <div
-      className="flex shrink-0 items-center gap-3 rounded-xl bg-white py-2.5 pl-2.5 pr-4"
-      style={{ border: `1px solid ${PALETTE.line}`, boxShadow: '0 1px 2px rgba(20,67,42,0.04)' }}
-    >
+    <div className="flex shrink-0 select-none items-center gap-2.5 pr-2">
       <span
-        className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-lg ring-1 ring-black/[0.07]"
-        style={{ background: 'linear-gradient(180deg,#F6F7F1 0%,#EEF0E8 100%)' }}
+        className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-[13px] ring-1 ring-black/[0.06]"
+        style={{ background: 'linear-gradient(180deg,#FFFFFF 0%,#F1F3EC 100%)' }}
       >
         <Image
           src={getGameIcon(game.slug)}
           alt={game.name}
-          width={34}
-          height={34}
-          className="h-[34px] w-[34px] object-contain"
+          width={30}
+          height={30}
+          className="h-[30px] w-[30px] object-contain"
+          draggable={false}
         />
       </span>
-      <span className="whitespace-nowrap text-[13.5px] font-semibold" style={{ color: PALETTE.ink }}>
+      <span
+        className="whitespace-nowrap text-[13.5px] font-semibold tracking-tight"
+        style={{ color: PALETTE.ink }}
+      >
         {game.name}
       </span>
     </div>
@@ -58,21 +66,25 @@ export default function GameMarquee({ games }: { games: MarqueeGame[] }) {
 
   // A marquee only reads well with enough items to fill the row and loop; with a
   // handful it looks broken. Auto-scroll only past this count, else a clean row.
-  const shouldScroll = games.length > 4 && !reduced
+  const shouldScroll = games.length > 3 && !reduced
 
   const [emblaRef] = useEmblaCarousel(
     { loop: true, dragFree: true, align: 'start', containScroll: false },
-    shouldScroll ? [AutoScroll({ speed: 0.6, stopOnInteraction: false, stopOnMouseEnter: true })] : [],
+    shouldScroll ? [AutoScroll({ speed: 0.5, stopOnInteraction: false, stopOnMouseEnter: true })] : [],
   )
 
-  // Duplicate the list so the loop always has enough width to scroll smoothly.
-  const items = useMemo(() => (games.length ? [...games, ...games] : []), [games])
+  // Duplicate the list a few times so the loop always has enough width to scroll
+  // smoothly even with only 3–4 games (a short list would otherwise "snap").
+  const items = useMemo(
+    () => (games.length ? Array.from({ length: 4 }).flatMap(() => games) : []),
+    [games],
+  )
 
   if (!games.length) return null
 
   if (!shouldScroll) {
     return (
-      <div className="flex flex-wrap gap-3" aria-label="Games you can sell">
+      <div className="flex flex-wrap gap-x-6 gap-y-3" aria-label="Games you can sell">
         {games.map((g) => (
           <GameTile key={g.slug} game={g} />
         ))}
@@ -81,11 +93,25 @@ export default function GameMarquee({ games }: { games: MarqueeGame[] }) {
   }
 
   return (
-    <div ref={emblaRef} className="overflow-hidden" aria-label="Games you can sell">
-      <div className="flex gap-3" style={{ touchAction: 'pan-y' }}>
-        {items.map((g, i) => (
-          <GameTile key={`${g.slug}-${i}`} game={g} />
-        ))}
+    <div className="relative" aria-label="Games you can sell">
+      {/* Edge fades — the logos glide in/out instead of getting clipped.
+          Tuned to the ivory pane wash so the mask is invisible. */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-y-0 left-0 z-10 w-12"
+        style={{ background: 'linear-gradient(90deg,#FAFAF7 0%, rgba(250,250,247,0) 100%)' }}
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-y-0 right-0 z-10 w-12"
+        style={{ background: 'linear-gradient(270deg,#FAFAF7 0%, rgba(250,250,247,0) 100%)' }}
+      />
+      <div ref={emblaRef} className="overflow-hidden">
+        <div className="flex items-center gap-6" style={{ touchAction: 'pan-y' }}>
+          {items.map((g, i) => (
+            <GameTile key={`${g.slug}-${i}`} game={g} />
+          ))}
+        </div>
       </div>
     </div>
   )

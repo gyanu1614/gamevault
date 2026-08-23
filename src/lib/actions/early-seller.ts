@@ -14,14 +14,26 @@ import { headers } from 'next/headers'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { requireAdmin } from '@/lib/actions/admin-permissions'
 import {
-  sendEarlySellerWelcomeEmail,
+  sendEarlySellerDiscordInviteEmail,
+  sendFoundingHqInviteEmail,
   sendEarlySellerAdminNotificationEmail,
 } from '@/lib/email'
+import { foundingTokenFor } from '@/lib/founding/token'
 import {
   FOUNDING_SPOT_CAP,
   FOUNDING_CLAIMED_REVEAL_THRESHOLD,
   type FoundingProgress,
 } from '@/lib/config/founding-seller'
+
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+
+/** Build a founding applicant's personal Founding HQ magic-link (id + HMAC). */
+function hqUrlFor(id: string, email: string): string {
+  const url = new URL('/founding', APP_URL)
+  url.searchParams.set('id', id)
+  url.searchParams.set('token', foundingTokenFor(id, email))
+  return url.toString()
+}
 
 export interface EarlySellerInput {
   username: string
@@ -29,6 +41,10 @@ export interface EarlySellerInput {
   discord?: string
   sells?: string
   note?: string
+  /** Self-reported monthly $ revenue band: '0-500' | '500-1k' | '1k-5k' | '5k+'. */
+  monthlyVolume?: string
+  /** Game slugs they sell, plus any 'custom:<name>' free-text entries. */
+  games?: string[]
   /** ?src= funnel attribution (banner, footer, a game's blog sell-guide, …). */
   source?: string
 }
@@ -53,6 +69,10 @@ export interface EarlySellerSignup {
   discord: string | null
   sells: string | null
   note: string | null
+  /** Self-reported monthly $ revenue band, or null. */
+  monthly_volume: string | null
+  /** Game slugs / 'custom:<name>' entries, or null. */
+  games: string[] | null
   /** Funnel attribution — which surface the signup came through. */
   source: string | null
   status: EarlySellerStatus
@@ -145,12 +165,26 @@ export async function submitEarlySeller(
 
   try {
     const supabase = createServiceRoleClient()
+    // Monthly-volume band: only accept the four known values, else NULL.
+    const VOLUME_BANDS = ['0-500', '500-1k', '1k-5k', '5k+']
+    const monthlyVolume = VOLUME_BANDS.includes(String(input.monthlyVolume))
+      ? String(input.monthlyVolume)
+      : null
+    // Games: array of slugs / 'custom:<name>'. Cap count + each entry length.
+    const games = Array.isArray(input.games)
+      ? input.games
+          .map((g) => clean(g, 60))
+          .filter((g): g is string => Boolean(g))
+          .slice(0, 12)
+      : null
     const row = {
       username,
       email,
       discord: clean(input.discord, 80),
       sells: clean(input.sells, 300),
       note: clean(input.note, 600),
+      monthly_volume: monthlyVolume,
+      games: games && games.length ? games : null,
       // Funnel attribution — capped; NULL for direct/untagged visits.
       source: clean(input.source, 120),
       ip,
@@ -161,30 +195,46 @@ export async function submitEarlySeller(
     // (23505) rather than being silently absorbed by an upsert. That's what
     // tells us to report `alreadyOnList` — and it's race-safe: two concurrent
     // submits of the same address can't both win the insert, the loser falls
-    // through to the update below.
-    const { error: insertError } = await (supabase as any)
+    // through to the update below. We select the id back so we can build the
+    // applicant's personal Founding HQ magic-link.
+    const { data: inserted, error: insertError } = await (supabase as any)
       .from('early_seller_signups')
       .insert(row)
+      .select('id')
+      .single()
 
     if (!insertError) {
-      // Fire both emails, but never let them affect the signup: the row is
+      // Fire all three emails, but never let them affect the signup: the row is
       // already committed, so a Resend outage or a bad address must not turn a
       // successful signup into an error. Awaited (not detached) because a
       // serverless invocation can be frozen the moment the action returns,
       // which would silently drop an in-flight request. allSettled so one
-      // failing address can't reject the other.
-      const results = await Promise.allSettled([
-        sendEarlySellerWelcomeEmail({ to: email, username }),
-        sendEarlySellerAdminNotificationEmail({
+      // failing send can't reject the others.
+      //
+      // 1) Founding HQ magic-link → the primary email; opening it confirms the
+      //    address and lands them straight in their seller setup (/founding).
+      // 2) A separate Discord invite → the community door.
+      // 3) Internal admin ping.
+      const hqUrl = inserted?.id ? hqUrlFor(inserted.id, email) : null
+      const sends: Array<{ which: string; p: Promise<{ success: boolean; error?: unknown }> }> = []
+      if (hqUrl) {
+        sends.push({ which: 'hq-invite', p: sendFoundingHqInviteEmail({ to: email, username, hqUrl }) })
+      }
+      sends.push({ which: 'discord-invite', p: sendEarlySellerDiscordInviteEmail({ to: email, username }) })
+      sends.push({
+        which: 'admin-notification',
+        p: sendEarlySellerAdminNotificationEmail({
           username,
           email,
           discord: row.discord,
           sells: row.sells,
           note: row.note,
         }),
-      ])
+      })
+
+      const results = await Promise.allSettled(sends.map((s) => s.p))
       results.forEach((r, i) => {
-        const which = i === 0 ? 'welcome' : 'admin-notification'
+        const which = sends[i].which
         if (r.status === 'rejected') {
           console.error(`[early-seller] ${which} email threw:`, r.reason)
         } else if (!r.value.success) {
@@ -237,7 +287,7 @@ export async function getEarlySellerSignups(): Promise<EarlySellerListResult> {
     const supabase = createServiceRoleClient()
     const { data, error } = await (supabase as any)
       .from('early_seller_signups')
-      .select('id, username, email, discord, sells, note, source, status, created_at')
+      .select('id, username, email, discord, sells, note, monthly_volume, games, source, status, created_at')
       .order('created_at', { ascending: false })
 
     if (error) {

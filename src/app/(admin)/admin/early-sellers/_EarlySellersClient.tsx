@@ -1,29 +1,39 @@
 'use client'
 
 /**
- * Founding-seller waitlist admin table.
+ * Founding-seller waitlist admin — card grid.
  *
- * Lists every early_seller_signups row with status-filter tabs, a per-row
- * status dropdown (new → contacted → approved / rejected), copy-to-clipboard
- * on email/discord, and a CSV export of the current view. Built on the admin
- * kit (PageHeader / StatCard / StatusBadge / TABLE) to match the other admin
- * list pages.
+ * One rich card per early_seller_signups row so the owner sees everything at a
+ * glance: who they are, their status, contact (email + Discord, click-to-copy),
+ * the GAMES they sell (real logo chips), their monthly-volume band, any past
+ * selling experience / note, and when they applied. Each card carries its
+ * actions inline — a status dropdown and a "send Founding HQ invite" button.
+ * Status-filter tabs, a batch "invite all New", and CSV export sit up top.
+ *
+ * Built on the admin kit (PageHeader / StatCard / StatusBadge) to match the
+ * other admin surfaces (dark neutral, lime accent, semantic status colors).
  */
 
-import { useMemo, useState, useTransition } from 'react'
+import Image from 'next/image'
+import { useMemo, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
 import {
   Users, UserCheck, UserPlus, MailCheck, Copy, Download, Loader2, Inbox, Send,
+  MessageCircle, Gamepad2, TrendingUp, Sparkles, Clock,
 } from 'lucide-react'
 import {
-  getEarlySellerSignups,
   updateEarlySellerStatus,
   type EarlySellerSignup,
   type EarlySellerStatus,
 } from '@/lib/actions/early-seller'
 import { sendFoundingInvite, sendFoundingInvitesToNew } from '@/lib/actions/founding-invite'
-import { PageHeader, StatCard, StatusBadge, TABLE } from '../components/kit'
+import { PageHeader, StatCard, StatusBadge } from '../components/kit'
+
+export interface GameMeta {
+  name: string
+  icon: string | null
+}
 
 const STATUS_OPTIONS: EarlySellerStatus[] = ['new', 'contacted', 'approved', 'rejected']
 const STATUS_LABEL: Record<EarlySellerStatus, string> = {
@@ -31,6 +41,14 @@ const STATUS_LABEL: Record<EarlySellerStatus, string> = {
   contacted: 'Contacted',
   approved: 'Approved',
   rejected: 'Rejected',
+}
+
+/** Monthly-volume band → human label (mirrors the signup form's VOLUME_BANDS). */
+const VOLUME_LABEL: Record<string, string> = {
+  '0-500': '$0–500 / mo',
+  '500-1k': '$500–1K / mo',
+  '1k-5k': '$1K–5K / mo',
+  '5k+': '$5K+ / mo',
 }
 
 type Tab = 'all' | EarlySellerStatus
@@ -41,11 +59,26 @@ function fmtDate(iso: string) {
   })
 }
 
-function toCsv(rows: EarlySellerSignup[]): string {
-  const head = ['Username', 'Email', 'Discord', 'Sells', 'Note', 'Status', 'Date']
+/** Resolve a stored game entry (slug or 'custom:<name>') to a display chip. */
+function resolveGame(entry: string, gameMeta: Record<string, GameMeta>): { label: string; icon: string | null; custom: boolean } {
+  if (entry.startsWith('custom:')) {
+    return { label: entry.slice('custom:'.length).trim() || 'Custom', icon: null, custom: true }
+  }
+  const meta = gameMeta[entry]
+  return { label: meta?.name ?? entry, icon: meta?.icon ?? null, custom: false }
+}
+
+function toCsv(rows: EarlySellerSignup[], gameMeta: Record<string, GameMeta>): string {
+  const head = ['Username', 'Email', 'Discord', 'Games', 'Monthly Volume', 'Experience', 'Note', 'Status', 'Date']
   const esc = (v: string | null) => `"${(v ?? '').replace(/"/g, '""')}"`
+  const gamesStr = (r: EarlySellerSignup) =>
+    (r.games ?? []).map((g) => resolveGame(g, gameMeta).label).join('; ')
   const lines = rows.map((r) =>
-    [r.username, r.email, r.discord, r.sells, r.note, r.status, r.created_at]
+    [
+      r.username, r.email, r.discord, gamesStr(r),
+      r.monthly_volume ? VOLUME_LABEL[r.monthly_volume] ?? r.monthly_volume : '',
+      r.sells, r.note, r.status, r.created_at,
+    ]
       .map((v) => esc(v as string | null))
       .join(','),
   )
@@ -55,16 +88,17 @@ function toCsv(rows: EarlySellerSignup[]): string {
 export default function EarlySellersClient({
   initialSignups,
   fetchError,
+  gameMeta,
 }: {
   initialSignups: EarlySellerSignup[]
   fetchError?: string
+  gameMeta: Record<string, GameMeta>
 }) {
   const [signups, setSignups] = useState<EarlySellerSignup[]>(initialSignups)
   const [tab, setTab] = useState<Tab>('all')
   const [busyId, setBusyId] = useState<string | null>(null)
   const [invitingId, setInvitingId] = useState<string | null>(null)
   const [batchBusy, setBatchBusy] = useState(false)
-  const [, startRefresh] = useTransition()
 
   const counts = useMemo(() => ({
     all: signups.length,
@@ -81,7 +115,6 @@ export default function EarlySellersClient({
 
   async function changeStatus(id: string, status: EarlySellerStatus) {
     setBusyId(id)
-    // Optimistic update.
     const prev = signups
     setSignups((cur) => cur.map((s) => (s.id === id ? { ...s, status } : s)))
     const res = await updateEarlySellerStatus(id, status)
@@ -89,7 +122,7 @@ export default function EarlySellersClient({
     if (res.ok) {
       toast.success(`Marked as ${STATUS_LABEL[status]}`)
     } else {
-      setSignups(prev) // roll back
+      setSignups(prev)
       toast.error(res.error ?? 'Failed to update')
     }
   }
@@ -100,7 +133,6 @@ export default function EarlySellersClient({
     setInvitingId(null)
     if (res.ok) {
       toast.success('Founding HQ invite sent')
-      // The action advances 'new' → 'contacted'; reflect it locally.
       setSignups((cur) => cur.map((s) => (s.id === id && s.status === 'new' ? { ...s, status: 'contacted' } : s)))
     } else {
       toast.error(res.error ?? 'Could not send invite')
@@ -125,14 +157,6 @@ export default function EarlySellersClient({
     }
   }
 
-  function refresh() {
-    startRefresh(async () => {
-      const res = await getEarlySellerSignups()
-      if (res.ok) setSignups(res.signups ?? [])
-      else toast.error(res.error ?? 'Failed to refresh')
-    })
-  }
-
   function copy(text: string, label: string) {
     navigator.clipboard?.writeText(text).then(
       () => toast.success(`${label} copied`),
@@ -141,7 +165,7 @@ export default function EarlySellersClient({
   }
 
   function exportCsv() {
-    const csv = toCsv(visible)
+    const csv = toCsv(visible, gameMeta)
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
@@ -196,134 +220,206 @@ export default function EarlySellersClient({
         <StatCard label="Approved" value={counts.approved} icon={UserCheck} tone="success" />
       </div>
 
-      {/* Table */}
-      <section className="overflow-hidden rounded-xl border border-border-default bg-bg-raised">
-        {/* Tabs */}
-        <div className="flex flex-wrap border-b border-border-subtle">
-          {TABS.map((t) => (
-            <button
-              key={t.key}
-              onClick={() => setTab(t.key)}
-              className={`px-4 py-3 text-sm font-semibold transition-colors ${
-                tab === t.key
-                  ? 'border-b-2 border-lime text-text-primary'
-                  : 'text-text-tertiary hover:text-text-secondary'
-              }`}
-            >
-              {t.label}
-              <span className="ml-1.5 text-[11px] text-text-tertiary">
-                {counts[t.key]}
-              </span>
-            </button>
-          ))}
+      {/* Tabs */}
+      <div className="flex flex-wrap items-center gap-1 border-b border-border-subtle">
+        {TABS.map((t) => (
+          <button
+            key={t.key}
+            onClick={() => setTab(t.key)}
+            className={`px-4 py-3 text-sm font-semibold transition-colors ${
+              tab === t.key
+                ? 'border-b-2 border-lime text-text-primary'
+                : 'text-text-tertiary hover:text-text-secondary'
+            }`}
+          >
+            {t.label}
+            <span className="ml-1.5 text-[11px] text-text-tertiary">{counts[t.key]}</span>
+          </button>
+        ))}
+      </div>
+
+      {fetchError && (
+        <div className="rounded-lg border border-error/30 bg-error-bg p-4 text-sm text-error">{fetchError}</div>
+      )}
+
+      {/* Card grid */}
+      {visible.length === 0 ? (
+        <div className="flex flex-col items-center rounded-xl border border-border-default bg-bg-raised py-16 text-center">
+          <Inbox className="mb-2 h-8 w-8 text-text-tertiary" />
+          <p className="text-sm text-text-tertiary">
+            {tab === 'all' ? 'No signups yet.' : `No ${tab} signups.`}
+          </p>
         </div>
-
-        {fetchError && <div className="p-4 text-sm text-error">{fetchError}</div>}
-
-        <div className={TABLE.wrap}>
-          <table className={TABLE.table}>
-            <thead>
-              <tr>
-                {['Seller', 'Contact', 'Sells / Note', 'Date', 'Status', 'Set Status'].map((h) => (
-                  <th key={h} className={TABLE.th}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              <AnimatePresence mode="popLayout">
-                {visible.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="py-14 text-center">
-                      <Inbox className="mx-auto mb-2 h-8 w-8 text-text-tertiary" />
-                      <p className="text-sm text-text-tertiary">
-                        {tab === 'all' ? 'No signups yet.' : `No ${tab} signups.`}
-                      </p>
-                    </td>
-                  </tr>
-                ) : (
-                  visible.map((s) => (
-                    <motion.tr key={s.id} layout initial={false} exit={{ opacity: 0 }} className={TABLE.row}>
-                      {/* Seller */}
-                      <td className={TABLE.tdPrimary}>@{s.username}</td>
-
-                      {/* Contact */}
-                      <td className={TABLE.td}>
-                        <button
-                          onClick={() => copy(s.email, 'Email')}
-                          className="group inline-flex items-center gap-1.5 text-[13px] text-text-secondary hover:text-text-primary"
-                          title="Copy email"
-                        >
-                          {s.email}
-                          <Copy className="h-3 w-3 opacity-0 transition-opacity group-hover:opacity-60" />
-                        </button>
-                        {s.discord && (
-                          <button
-                            onClick={() => copy(s.discord!, 'Discord')}
-                            className="group mt-0.5 flex items-center gap-1.5 text-[12px] text-text-tertiary hover:text-text-secondary"
-                            title="Copy Discord"
-                          >
-                            {s.discord}
-                            <Copy className="h-3 w-3 opacity-0 transition-opacity group-hover:opacity-60" />
-                          </button>
-                        )}
-                      </td>
-
-                      {/* Sells / Note */}
-                      <td className={`${TABLE.td} max-w-[280px]`}>
-                        {s.sells && <p className="truncate text-[13px] text-text-secondary">{s.sells}</p>}
-                        {s.note && <p className="truncate text-[12px] text-text-tertiary">{s.note}</p>}
-                        {!s.sells && !s.note && <span className="text-text-tertiary">—</span>}
-                      </td>
-
-                      {/* Date */}
-                      <td className={`${TABLE.td} whitespace-nowrap text-[12px] text-text-tertiary`}>
-                        {fmtDate(s.created_at)}
-                      </td>
-
-                      {/* Status */}
-                      <td className={TABLE.td}>
-                        <StatusBadge status={s.status} />
-                      </td>
-
-                      {/* Set Status */}
-                      <td className={TABLE.td}>
-                        <div className="flex items-center gap-1.5">
-                          <select
-                            value={s.status}
-                            disabled={busyId === s.id}
-                            onChange={(e) => changeStatus(s.id, e.target.value as EarlySellerStatus)}
-                            className="rounded-md border border-border-default bg-bg-overlay px-2 py-1.5 text-[12px] font-medium text-text-primary focus:border-lime focus:outline-none disabled:opacity-40"
-                          >
-                            {STATUS_OPTIONS.map((opt) => (
-                              <option key={opt} value={opt}>{STATUS_LABEL[opt]}</option>
-                            ))}
-                          </select>
-                          {busyId === s.id && (
-                            <Loader2 className="h-3.5 w-3.5 animate-spin text-text-tertiary" />
-                          )}
-                          <button
-                            onClick={() => sendInvite(s.id)}
-                            disabled={invitingId === s.id}
-                            title="Send Founding HQ magic-link invite"
-                            aria-label="Send Founding HQ invite"
-                            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-border-subtle text-text-secondary transition-colors hover:bg-bg-overlay hover:text-lime-text disabled:opacity-40"
-                          >
-                            {invitingId === s.id ? (
-                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                            ) : (
-                              <Send className="h-3.5 w-3.5" />
-                            )}
-                          </button>
-                        </div>
-                      </td>
-                    </motion.tr>
-                  ))
-                )}
-              </AnimatePresence>
-            </tbody>
-          </table>
+      ) : (
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">
+          <AnimatePresence mode="popLayout">
+            {visible.map((s) => (
+              <SellerCard
+                key={s.id}
+                s={s}
+                gameMeta={gameMeta}
+                busy={busyId === s.id}
+                inviting={invitingId === s.id}
+                onCopy={copy}
+                onChangeStatus={changeStatus}
+                onInvite={sendInvite}
+              />
+            ))}
+          </AnimatePresence>
         </div>
-      </section>
+      )}
     </div>
+  )
+}
+
+/* ── One founder card ─────────────────────────────────────────────── */
+
+function SellerCard({
+  s,
+  gameMeta,
+  busy,
+  inviting,
+  onCopy,
+  onChangeStatus,
+  onInvite,
+}: {
+  s: EarlySellerSignup
+  gameMeta: Record<string, GameMeta>
+  busy: boolean
+  inviting: boolean
+  onCopy: (text: string, label: string) => void
+  onChangeStatus: (id: string, status: EarlySellerStatus) => void
+  onInvite: (id: string) => void
+}) {
+  const games = s.games ?? []
+  const volume = s.monthly_volume ? VOLUME_LABEL[s.monthly_volume] ?? s.monthly_volume : null
+  const initial = (s.username || '?').charAt(0).toUpperCase()
+
+  return (
+    <motion.div
+      layout
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.98 }}
+      transition={{ duration: 0.2 }}
+      className="flex flex-col rounded-xl border border-border-default bg-bg-raised p-4 transition-colors hover:border-border-strong"
+    >
+      {/* Header: identity + status */}
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-3">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-bg-overlay text-[15px] font-bold text-text-primary ring-1 ring-border-subtle">
+            {initial}
+          </span>
+          <div className="min-w-0">
+            <div className="truncate text-[15px] font-bold text-text-primary">@{s.username}</div>
+            <div className="mt-0.5 flex items-center gap-1 text-[11.5px] text-text-tertiary">
+              <Clock className="h-3 w-3" />
+              {fmtDate(s.created_at)}
+            </div>
+          </div>
+        </div>
+        <StatusBadge status={s.status} />
+      </div>
+
+      {/* Contact — click to copy */}
+      <div className="mt-3.5 space-y-1">
+        <button
+          onClick={() => onCopy(s.email, 'Email')}
+          className="group flex w-full items-center gap-1.5 text-left text-[13px] text-text-secondary hover:text-text-primary"
+          title="Copy email"
+        >
+          <MailCheck className="h-3.5 w-3.5 shrink-0 text-text-tertiary" />
+          <span className="truncate">{s.email}</span>
+          <Copy className="h-3 w-3 shrink-0 opacity-0 transition-opacity group-hover:opacity-60" />
+        </button>
+        {s.discord && (
+          <button
+            onClick={() => onCopy(s.discord!, 'Discord')}
+            className="group flex w-full items-center gap-1.5 text-left text-[12.5px] text-text-tertiary hover:text-text-secondary"
+            title="Copy Discord"
+          >
+            <MessageCircle className="h-3.5 w-3.5 shrink-0 text-[#5865F2]" />
+            <span className="truncate">{s.discord}</span>
+            <Copy className="h-3 w-3 shrink-0 opacity-0 transition-opacity group-hover:opacity-60" />
+          </button>
+        )}
+      </div>
+
+      {/* Games */}
+      <div className="mt-3.5">
+        <div className="mb-1.5 flex items-center gap-1.5 text-[10.5px] font-semibold uppercase tracking-wider text-text-tertiary">
+          <Gamepad2 className="h-3.5 w-3.5" /> Games
+        </div>
+        {games.length > 0 ? (
+          <div className="flex flex-wrap gap-1.5">
+            {games.map((g, i) => {
+              const { label, icon, custom } = resolveGame(g, gameMeta)
+              return (
+                <span
+                  key={`${g}-${i}`}
+                  className="inline-flex items-center gap-1.5 rounded-md border border-border-subtle bg-bg-overlay py-1 pl-1 pr-2 text-[12px] font-medium text-text-secondary"
+                >
+                  {icon ? (
+                    <Image src={icon} alt="" width={16} height={16} className="h-4 w-4 rounded object-contain" />
+                  ) : (
+                    <span className="flex h-4 w-4 items-center justify-center rounded bg-bg-overlay-2">
+                      <Sparkles className="h-2.5 w-2.5 text-lime-text" />
+                    </span>
+                  )}
+                  {label}
+                  {custom && <span className="text-[9px] uppercase tracking-wide text-text-tertiary">custom</span>}
+                </span>
+              )
+            })}
+          </div>
+        ) : (
+          <span className="text-[12.5px] text-text-tertiary">—</span>
+        )}
+      </div>
+
+      {/* Volume + experience/note */}
+      <div className="mt-3.5 grid grid-cols-1 gap-2">
+        <div className="flex items-center gap-2 rounded-lg bg-bg-overlay px-3 py-2">
+          <TrendingUp className="h-4 w-4 shrink-0 text-success" />
+          <div className="min-w-0">
+            <div className="text-[10px] font-semibold uppercase tracking-wider text-text-tertiary">Monthly Volume</div>
+            <div className="text-[13px] font-semibold text-text-primary">{volume ?? 'Not shared'}</div>
+          </div>
+        </div>
+        {(s.sells || s.note) && (
+          <div className="rounded-lg bg-bg-overlay px-3 py-2">
+            <div className="mb-0.5 text-[10px] font-semibold uppercase tracking-wider text-text-tertiary">
+              Experience / Note
+            </div>
+            {s.sells && <p className="text-[12.5px] leading-snug text-text-secondary">{s.sells}</p>}
+            {s.note && <p className="mt-0.5 text-[12px] leading-snug text-text-tertiary">{s.note}</p>}
+          </div>
+        )}
+      </div>
+
+      {/* Actions — pinned to the bottom */}
+      <div className="mt-auto flex items-center gap-2 pt-4">
+        <select
+          value={s.status}
+          disabled={busy}
+          onChange={(e) => onChangeStatus(s.id, e.target.value as EarlySellerStatus)}
+          className="flex-1 rounded-lg border border-border-default bg-bg-overlay px-2.5 py-2 text-[12.5px] font-medium text-text-primary focus:border-lime focus:outline-none disabled:opacity-40"
+        >
+          {STATUS_OPTIONS.map((opt) => (
+            <option key={opt} value={opt}>{STATUS_LABEL[opt]}</option>
+          ))}
+        </select>
+        {busy && <Loader2 className="h-4 w-4 animate-spin text-text-tertiary" />}
+        <button
+          onClick={() => onInvite(s.id)}
+          disabled={inviting}
+          title="Send Founding HQ magic-link invite"
+          className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-border-subtle bg-bg-overlay px-3 py-2 text-[12.5px] font-semibold text-text-secondary transition-colors hover:bg-bg-overlay-2 hover:text-lime-text disabled:opacity-40"
+        >
+          {inviting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+          Invite
+        </button>
+      </div>
+    </motion.div>
   )
 }

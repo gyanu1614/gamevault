@@ -1,24 +1,29 @@
 /**
- * /early-seller — beta "first 100 sellers" waitlist landing.
+ * /early-seller — Founding-seller signup (Screen 2a).
  *
- * Linked from the top BetaBanner. A short pitch (lower fees, early access,
- * founding-seller perks) above the waitlist form. Server component for the
- * SEO shell; the form itself is a client island.
+ * Full-screen forest split: left forest panel (Claim Your Spot + N/100 progress
+ * + perks), right ivory form card (email, discord, what-you-sell, monthly-volume
+ * pills, games multi-select, submit → "Submitted Successfully"). Matches the
+ * design in design-refs/founding-seller. Chrome-less (see layout-wrapper).
+ *
+ * Server component: fetches founding progress + the real game list, hands them
+ * to the client form island.
  */
 
 import type { Metadata } from 'next'
 import { Suspense } from 'react'
-import { IconPercentage, IconRocket, IconRosetteDiscountCheck, IconShieldCheck } from '@tabler/icons-react'
-import { EarlySellerForm } from './_EarlySellerForm'
 import { getFoundingProgress } from '@/lib/actions/early-seller'
-
-const AMBER = '#F5C451'
+import { getAllGames } from '@/lib/utils/games'
+import { GAME_ICONS } from '@/features/home/lib/game-icons'
+import FoundingSignupClient from './_FoundingSignupClient'
+import type { SignupGame } from './_FoundingSignupClient'
 
 export const metadata: Metadata = {
   title: 'Become a Founding Seller — First 100 Get Lower Fees',
   description:
-    'Join DropMarket as one of the first 100 sellers and lock in lower fees, early access, and a founding-seller badge. Register your interest for the beta.',
+    'Join DropMarket as one of the first 100 sellers and lock in lower fees, early access, and a founding-seller badge. Reserve your spot.',
   alternates: { canonical: '/early-seller' },
+  robots: { index: true, follow: true },
   openGraph: {
     title: 'Become a Founding Seller on DropMarket',
     description:
@@ -28,104 +33,37 @@ export const metadata: Metadata = {
   },
 }
 
-const PERKS = [
-  {
-    icon: IconPercentage,
-    title: 'A Lower Fee, Locked For Life',
-    body: 'Keep more of every sale than on the big marketplaces — a lower rate that stays with your account permanently, even after full launch, and never goes back up.',
-  },
-  {
-    icon: IconShieldCheck,
-    title: 'Paid Even If The Buyer Ghosts',
-    body: 'SafeDrop escrow holds the buyer’s payment the moment they order and releases it to you on delivery — so a buyer who disappears can’t cost you a completed sale.',
-  },
-  {
-    icon: IconRocket,
-    title: 'Early Access',
-    body: 'Start listing and building your reputation before the marketplace opens to the public.',
-  },
-  {
-    icon: IconRosetteDiscountCheck,
-    title: 'Founding-Seller Badge',
-    body: 'A permanent badge on your storefront that shows buyers you were one of the first.',
-  },
-]
+export const dynamic = 'force-dynamic'
+
+/** Real games for the multi-select — those with a logo first, in a sensible order. */
+async function signupGames(): Promise<SignupGame[]> {
+  const all = await getAllGames()
+  const withLogo = all.filter((g) => GAME_ICONS[g.slug])
+  const priority = ['steal-a-brainrot', 'grow-a-garden', 'adopt-me', 'roblox']
+  const ordered = [
+    ...priority.map((s) => withLogo.find((g) => g.slug === s)).filter(Boolean),
+    ...withLogo.filter((g) => !priority.includes(g.slug)),
+  ] as typeof withLogo
+  const list: SignupGame[] = ordered.map((g) => ({
+    slug: g.slug,
+    name: g.name,
+    logo: GAME_ICONS[g.slug],
+  }))
+  return list.length
+    ? list
+    : [
+        { slug: 'steal-a-brainrot', name: 'Steal a Brainrot', logo: GAME_ICONS['steal-a-brainrot'] },
+        { slug: 'grow-a-garden', name: 'Grow a Garden', logo: GAME_ICONS['grow-a-garden'] },
+        { slug: 'roblox', name: 'Roblox', logo: GAME_ICONS['roblox'] },
+      ]
+}
 
 export default async function EarlySellerPage() {
-  // Real founding-programme progress (waitlist momentum now, claimed bar later).
-  // Fetched server-side so the widget arrives rendered — no client flash.
-  const progress = await getFoundingProgress()
+  const [progress, games] = await Promise.all([getFoundingProgress(), signupGames()])
 
   return (
-    <main className="relative min-h-screen">
-      {/* Ambient warm glow behind the hero. */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 h-[420px] opacity-60"
-        style={{
-          background:
-            'radial-gradient(60% 100% at 50% 0%, rgba(245,196,81,0.12), transparent 70%)',
-        }}
-      />
-
-      <div className="relative mx-auto max-w-3xl px-5 pb-24 pt-14 sm:pt-20">
-        {/* Eyebrow — rectangular glyph badge + label, no pill. */}
-        <div className="flex items-center justify-center gap-2.5">
-          <span
-            className="inline-flex h-7 w-7 items-center justify-center rounded-[8px] border border-[#F5C451]/25 bg-[#F5C451]/10"
-            style={{ color: AMBER }}
-          >
-            <IconRocket className="h-4 w-4" stroke={2} />
-          </span>
-          <span
-            className="text-[11px] font-bold uppercase tracking-[0.14em]"
-            style={{ color: AMBER }}
-          >
-            Beta · First 100 Sellers
-          </span>
-        </div>
-
-        <h1 className="mt-6 text-center text-[clamp(28px,6vw,40px)] font-extrabold leading-[1.1] tracking-tight text-white text-balance">
-          Become a Founding Seller
-          <br />
-          <span style={{ color: AMBER }}>on DropMarket</span>
-        </h1>
-
-        <p className="mx-auto mt-4 max-w-xl text-center text-[15px] leading-relaxed text-text-secondary text-balance">
-          We&apos;re opening the marketplace to our first sellers. Join the first
-          100 to lock a lower fee for life, get paid even if a buyer ghosts with
-          SafeDrop escrow, and earn a permanent founding-seller badge.
-        </p>
-
-        {/* Perks — floating rows separated by hairlines, no boxed cards. */}
-        <div className="mx-auto mt-12 max-w-2xl divide-y divide-white/[0.07] border-y border-white/[0.07]">
-          {PERKS.map((p) => (
-            <div key={p.title} className="flex items-start gap-4 py-5">
-              <span
-                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] border border-[#F5C451]/20 bg-[#F5C451]/[0.08]"
-                style={{ color: AMBER }}
-              >
-                <p.icon className="h-5 w-5" stroke={1.9} />
-              </span>
-              <div>
-                <h3 className="text-[14.5px] font-bold text-white">{p.title}</h3>
-                <p className="mt-1 text-[13px] leading-relaxed text-text-tertiary">
-                  {p.body}
-                </p>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Form. Suspense boundary required: EarlySellerForm reads ?src= via
-            useSearchParams, which opts the subtree into client-side rendering
-            and would otherwise fail the build. */}
-        <div className="mt-10">
-          <Suspense fallback={null}>
-            <EarlySellerForm progress={progress} />
-          </Suspense>
-        </div>
-      </div>
-    </main>
+    <Suspense fallback={null}>
+      <FoundingSignupClient progress={progress} games={games} />
+    </Suspense>
   )
 }
