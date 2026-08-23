@@ -202,17 +202,21 @@ function buildJourney({
   appStatus: string | null
   listingCount: number
 }): SellerJourney {
-  // How far along are they? (0 = email confirmed … 3 = listing live)
-  let reached = 0 // email confirmed — always true for a founder on their HQ
-  if (hasAccount || appStatus) reached = 1 // account created / application started
-  if (appStatus === 'pending' || appStatus === 'under_review' || appStatus === 'info_requested') reached = 2
-  if (appStatus === 'approved') reached = 2 // approved → next real action is listing
-  if (listingCount > 0) reached = 3
+  // How far along are they? (1 = email confirmed … 4 = listing live)
+  // Email is ALWAYS done: a founder only reaches this HQ by opening their magic
+  // link, which confirms the address. So the minimum is 1, making step 2
+  // ("Set Up Your Store") the current, actionable step for a brand-new founder.
+  let reached = 1 // email confirmed — always true for a founder on their HQ
+  if (hasAccount || appStatus) reached = 2 // account created / application started
+  if (appStatus === 'pending' || appStatus === 'under_review' || appStatus === 'info_requested') reached = 3
+  if (appStatus === 'approved') reached = 3 // approved → next real action is listing
+  if (listingCount > 0) reached = 4
 
   // Each step's action deep-links into the real flow. Step 2 (create account) is
   // handled by the tracker as a store-name modal → the signup-to-sell funnel
   // (which sets the password safely + tags founding); step 3 → the seller wizard
-  // (ID + agreement); step 4 → the new-listing flow.
+  // (ID + agreement); step 4 → the new-listing flow. Labels are short (one line);
+  // the hint adds the single-line detail.
   const defs: Array<{
     key: JourneyStepKey
     label: string
@@ -221,25 +225,25 @@ function buildJourney({
   }> = [
     {
       key: 'email',
-      label: 'Confirm your email',
-      hint: 'Verified the moment you opened your founding link.',
+      label: 'Verify Your Email',
+      hint: 'Confirmed from your founding link.',
     },
     {
       key: 'application',
-      label: 'Create your account',
-      hint: 'Pick a store name and set a password — takes a minute.',
+      label: 'Set Up Your Store',
+      hint: 'Pick a store name and password.',
       action: { label: 'Create Account', href: '/signup-become-seller?src=founding-hq' },
     },
     {
       key: 'review',
-      label: 'Verify & sign',
-      hint: 'Confirm your ID and sign the seller agreement to get approved.',
+      label: 'Get Approved',
+      hint: 'Verify your ID and sign the agreement.',
       action: { label: 'Start Verification', href: '/account/become-seller' },
     },
     {
       key: 'listing',
-      label: 'List your first item',
-      hint: 'Post an item off live DropMarket Values and start selling.',
+      label: 'Start Selling',
+      hint: 'List your first item and go live.',
       action: { label: 'Start Listing', href: '/sell/new' },
     },
   ]

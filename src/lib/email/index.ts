@@ -1028,34 +1028,98 @@ export async function sendFoundingHqInviteEmail({
 }) {
   const safeUsername = escapeHtml(username)
   const rank = joinNumber
-    ? `you're the <strong style="color:${EMAIL_TOKENS.INK};">#${joinNumber}</strong> trader to grab a founding spot`
-    : `you're one of the very first sellers on DropMarket`
+    ? `You're founding seller <strong style="color:${EMAIL_TOKENS.INK};">#${joinNumber}</strong> — one of the first hundred on DropMarket.`
+    : `You're one of the first hundred sellers on DropMarket.`
+
+  // Point 1 — the application/HQ magic-link, framed as an approval moment.
+  const point1 =
+    emailNumberedBlock({
+      n: 1,
+      title: 'Your Founding Seller application is ready',
+      html:
+        `Everything's set on our side. Open your private setup page to pick your store name, get verified, and post your first listing — you keep 2% lower fees for life and a founding badge on your storefront.` +
+        emailButton('Open My Seller Setup', hqUrl),
+    })
+
+  // Point 2 — the Discord invite, with the blurple logo tile.
+  const point2 = emailDiscordBlock({
+    n: 2,
+    title: "Join DropMarket's Discord",
+    html: `Meet the other founding sellers, ask us anything, and get first word on drops and price news. It's the fastest way to get going.`,
+    href: DISCORD_INVITE_URL,
+  })
 
   const body =
-    emailText(`Hey ${safeUsername}, welcome in — ${rank}. That's a big deal, and it comes with perks that stick with you for good.`) +
-    emailBox({
-      accent: true,
-      title: 'Your founding perks, locked for life',
-      html: `<strong style="color:${EMAIL_TOKENS.INK};">2% lower fees on every sale</strong>, first dibs on listing before we open to the public, and a founding badge buyers can see on your storefront.`,
-    }) +
-    emailText(`Your Founding HQ is where it all lives — your status, the latest news from us, and the door to start selling. It's ready whenever you are:`) +
-    emailButton('Open Your Founding HQ', hqUrl) +
-    emailFooterNote(`Prefer to chat first? <a href="${DISCORD_INVITE_URL}" style="color:${EMAIL_TOKENS.FOREST_2};text-decoration:underline;">Join the founding-seller Discord</a>. This link is personal to you, so please don't forward it.`)
+    emailText(`Hi ${safeUsername}, thanks for putting your name in as a founding seller. ${rank} Here's how to get set up:`) +
+    point1 +
+    point2 +
+    emailFooterNote(`This setup link is personal to you — please don't forward it. Questions? Just reply to this email and a real person will help.`)
 
   const { data, error } = await resend.emails.send({
     from: FROM_EMAIL,
     replyTo: REPLY_TO,
     to,
-    subject: `Your founding spot is ready, ${username}`,
+    subject: `DropMarket — Your Founding Seller Application Is Ready`,
     html: emailShell({
-      preview: 'Your Founding HQ is ready — status, updates, and the door to start selling.',
+      preview: 'Your seller setup is ready — open it to claim your store and start selling.',
       icon: 'founding',
-      heading: `Welcome in, ${safeUsername}`,
+      heading: `You're In, ${safeUsername}`,
       body,
     }),
   })
 
   return error ? { success: false, error } : { success: true, data }
+}
+
+/**
+ * A numbered step block for the founding email — a lime number chip + a bold
+ * title + body/CTA, in a soft card. Keeps the "two clear points" layout tidy.
+ */
+function emailNumberedBlock({ n, title, html }: { n: number; title: string; html: string }): string {
+  const { FOREST, LIME, INK, INK_2, LINE, FONT } = EMAIL_TOKENS
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:2px 0 16px;"><tr>
+    <td class="dm-thumbrow" style="background:#F7F8F3;border:1px solid ${LINE};border-radius:12px;padding:18px 20px;">
+      <table role="presentation" cellpadding="0" cellspacing="0"><tr>
+        <td style="vertical-align:top;padding-right:12px;">
+          <span style="display:inline-block;width:26px;height:26px;line-height:26px;text-align:center;border-radius:50%;background:${LIME};color:${FOREST};font-family:${FONT};font-weight:800;font-size:14px;">${n}</span>
+        </td>
+        <td style="vertical-align:top;">
+          <p class="dm-strong" style="margin:2px 0 6px;font-family:${FONT};font-size:15.5px;font-weight:700;color:${INK};">${title}</p>
+          <div class="dm-body" style="font-family:${FONT};font-size:14px;line-height:1.6;color:${INK_2};">${html}</div>
+        </td>
+      </tr></table>
+    </td>
+  </tr></table>`
+}
+
+/**
+ * The Discord invite block — a blurple logo tile, title/body, and a blurple
+ * "Join" button so it reads unmistakably as Discord.
+ */
+function emailDiscordBlock({ n, title, html, href }: { n: number; title: string; html: string; href: string }): string {
+  const { INK, INK_2, LINE, LIME, FOREST, FONT, APP_URL } = EMAIL_TOKENS
+  const BLURPLE = '#5865F2'
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:2px 0 16px;"><tr>
+    <td class="dm-thumbrow" style="background:#F7F8F3;border:1px solid ${LINE};border-radius:12px;padding:18px 20px;">
+      <table role="presentation" cellpadding="0" cellspacing="0"><tr>
+        <td style="vertical-align:top;padding-right:12px;">
+          <span style="display:inline-block;width:26px;height:26px;line-height:26px;text-align:center;border-radius:50%;background:${LIME};color:${FOREST};font-family:${FONT};font-weight:800;font-size:14px;">${n}</span>
+        </td>
+        <td style="vertical-align:top;">
+          <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 8px;"><tr>
+            <td style="padding-right:10px;vertical-align:middle;">
+              <img src="${APP_URL}/email-icons/discord.png" width="34" height="34" alt="Discord" style="display:block;width:34px;height:34px;border-radius:9px;">
+            </td>
+            <td style="vertical-align:middle;">
+              <p class="dm-strong" style="margin:0;font-family:${FONT};font-size:15.5px;font-weight:700;color:${INK};">${title}</p>
+            </td>
+          </tr></table>
+          <div class="dm-body" style="font-family:${FONT};font-size:14px;line-height:1.6;color:${INK_2};margin:0 0 12px;">${html}</div>
+          <a href="${href}" style="display:inline-block;background:${BLURPLE};color:#ffffff;text-decoration:none;padding:10px 22px;border-radius:8px;font-family:${FONT};font-weight:700;font-size:13.5px;">Join the Discord</a>
+        </td>
+      </tr></table>
+    </td>
+  </tr></table>`
 }
 
 /** Internal ping so a new waitlist signup doesn't need the admin table polled. */

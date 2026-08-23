@@ -64,19 +64,20 @@ function GameTile({ game }: { game: MarqueeGame }) {
 export default function GameMarquee({ games }: { games: MarqueeGame[] }) {
   const reduced = usePrefersReducedMotion()
 
-  // A marquee only reads well with enough items to fill the row and loop; with a
-  // handful it looks broken. Auto-scroll only past this count, else a clean row.
-  const shouldScroll = games.length > 3 && !reduced
+  // Always auto-scroll (a founder's list is short — 3+ games — but we still want
+  // the continuous left→right glide). We duplicate the list enough times that
+  // even 3 games fill the row and loop seamlessly, so it never "snaps".
+  const shouldScroll = games.length >= 2 && !reduced
 
   const [emblaRef] = useEmblaCarousel(
     { loop: true, dragFree: true, align: 'start', containScroll: false },
-    shouldScroll ? [AutoScroll({ speed: 0.5, stopOnInteraction: false, stopOnMouseEnter: true })] : [],
+    shouldScroll ? [AutoScroll({ speed: 0.55, stopOnInteraction: false, stopOnMouseEnter: true })] : [],
   )
 
-  // Duplicate the list a few times so the loop always has enough width to scroll
-  // smoothly even with only 3–4 games (a short list would otherwise "snap").
+  // Duplicate the list enough times to guarantee the track is wider than the
+  // viewport (embla-auto-scroll needs overflow to loop); 6× covers a 3-game list.
   const items = useMemo(
-    () => (games.length ? Array.from({ length: 4 }).flatMap(() => games) : []),
+    () => (games.length ? Array.from({ length: 6 }).flatMap(() => games) : []),
     [games],
   )
 

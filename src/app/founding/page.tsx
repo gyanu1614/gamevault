@@ -17,7 +17,6 @@
 
 import type { Metadata } from 'next'
 import { getFoundingHqData } from '@/lib/founding/hq-data'
-import { getPublishedFoundingNotices } from '@/lib/actions/founding-notices'
 import { isAdmin } from '@/lib/actions/admin-permissions'
 import { getAllGames } from '@/lib/utils/games'
 import { GAME_ICONS } from '@/features/home/lib/game-icons'
@@ -88,9 +87,8 @@ export default async function FoundingHqPage({
   const { id, token } = await searchParams
   const admin = await isAdmin()
 
-  const [data, notices, games] = await Promise.all([
+  const [data, games] = await Promise.all([
     getFoundingHqData({ id, token, isAdmin: admin }),
-    getPublishedFoundingNotices(8),
     marqueeGames(),
   ])
 
@@ -112,7 +110,6 @@ export default async function FoundingHqPage({
         discordUrl={DISCORD_INVITE_URL}
         hasDiscord={Boolean(founder?.hasDiscord)}
         games={games}
-        notices={notices}
         journey={journey}
         user={user}
       />

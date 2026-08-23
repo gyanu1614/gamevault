@@ -41,7 +41,7 @@ export default function SellerJourneyTracker({ journey }: { journey: SellerJourn
 
   return (
     <div
-      className="overflow-hidden rounded-2xl border bg-white"
+      className="overflow-hidden rounded-lg border bg-white"
       style={{ borderColor: PALETTE.line, boxShadow: '0 4px 16px -8px rgba(20,67,42,0.10)' }}
     >
       {/* ── Progress header ── */}
@@ -51,20 +51,31 @@ export default function SellerJourneyTracker({ journey }: { journey: SellerJourn
             {doneCount} of {total} complete
           </span>
           <span
-            className="rounded-full px-2.5 py-1 text-[11px] font-semibold"
+            className="rounded-md px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide"
             style={{ backgroundColor: '#F2F4EC', color: PALETTE.forest2 }}
           >
-            Launch · Sep 30
+            Beta Launch
           </span>
         </div>
+        {/* Progress track. The fill animates to the current %, and a soft lime
+            sheen sweeps across it (subtle, infinite) so the bar feels alive. */}
         <div className="mt-2.5 h-2 w-full overflow-hidden rounded-full" style={{ backgroundColor: '#EEF0E8' }}>
           <motion.div
             initial={{ width: 0 }}
             animate={{ width: `${pct}%` }}
-            transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
-            className="h-full rounded-full"
+            transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+            className="relative h-full overflow-hidden rounded-full"
             style={{ background: `linear-gradient(90deg, ${PALETTE.forest2}, ${PALETTE.lime})` }}
-          />
+          >
+            <motion.span
+              aria-hidden
+              className="absolute inset-y-0 w-1/2"
+              style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.55), transparent)' }}
+              initial={{ x: '-120%' }}
+              animate={{ x: '260%' }}
+              transition={{ duration: 1.8, ease: 'easeInOut', repeat: Infinity, repeatDelay: 1.1 }}
+            />
+          </motion.div>
         </div>
       </div>
 
@@ -158,7 +169,7 @@ function StepRow({
       <div className="shrink-0">
         {done ? (
           <span
-            className="inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-[12.5px] font-semibold"
+            className="inline-flex items-center gap-1 rounded-md px-3 py-1.5 text-[12.5px] font-semibold"
             style={{ backgroundColor: '#EFF6EA', color: PALETTE.forest2 }}
           >
             <Check className="h-3.5 w-3.5" strokeWidth={2.5} />
@@ -169,7 +180,7 @@ function StepRow({
             <button
               type="button"
               onClick={onCreateAccount}
-              className="inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-[13px] font-semibold text-white shadow-sm transition-transform active:scale-[0.98]"
+              className="inline-flex items-center gap-1.5 rounded-md px-3.5 py-2 text-[13px] font-semibold text-white shadow-sm transition-transform active:scale-[0.98]"
               style={{ backgroundColor: PALETTE.forest }}
             >
               {step.action.label}
@@ -178,7 +189,7 @@ function StepRow({
           ) : (
             <Link
               href={step.action.href}
-              className="inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-[13px] font-semibold text-white shadow-sm transition-transform active:scale-[0.98]"
+              className="inline-flex items-center gap-1.5 rounded-md px-3.5 py-2 text-[13px] font-semibold text-white shadow-sm transition-transform active:scale-[0.98]"
               style={{ backgroundColor: PALETTE.forest }}
             >
               {step.action.label}
@@ -190,7 +201,7 @@ function StepRow({
           <span
             aria-disabled
             title="Unlocks after the previous step"
-            className="inline-flex cursor-not-allowed items-center gap-1.5 rounded-lg border px-3.5 py-2 text-[13px] font-semibold"
+            className="inline-flex cursor-not-allowed items-center gap-1.5 rounded-md border px-3.5 py-2 text-[13px] font-semibold"
             style={{ borderColor: LOCK_BORDER, backgroundColor: LOCK_BG, color: LOCK_GREY }}
           >
             <Lock className="h-3.5 w-3.5" strokeWidth={2.5} />
@@ -224,7 +235,7 @@ function CreateAccountModal({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-[440px] rounded-xl bg-white p-9"
+        className="w-full max-w-[440px] rounded-lg bg-white p-9"
         style={{ boxShadow: '0 32px 80px rgba(0,0,0,0.3)' }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -247,7 +258,7 @@ function CreateAccountModal({
           value={storeName}
           onChange={(e) => setStoreName(e.target.value)}
           placeholder="e.g. ForestPets"
-          className="w-full rounded-[10px] border px-3.5 outline-none placeholder:text-[#9AA095]"
+          className="w-full rounded-md border px-3.5 outline-none placeholder:text-[#9AA095]"
           style={{ height: 46, borderColor: PALETTE.line, fontSize: 15, color: PALETTE.ink, backgroundColor: '#FFFFFF' }}
           onFocus={(e) => (e.target.style.borderColor = PALETTE.forest)}
           onBlur={(e) => (e.target.style.borderColor = PALETTE.line)}
@@ -256,13 +267,13 @@ function CreateAccountModal({
           Buyers see this. You can change it once before launch.
         </p>
 
-        <p className="mt-4 rounded-lg p-3 text-[12.5px] leading-relaxed" style={{ backgroundColor: '#F7F8F3', color: PALETTE.ink2 }}>
+        <p className="mt-4 rounded-md p-3 text-[12.5px] leading-relaxed" style={{ backgroundColor: '#F7F8F3', color: PALETTE.ink2 }}>
           Next you&rsquo;ll set a password on the secure signup screen — that finishes creating your account.
         </p>
 
         <Link
           href={href}
-          className="mt-5 flex h-[52px] w-full items-center justify-center gap-2 rounded-[10px] text-[15px] font-bold text-white transition-colors"
+          className="mt-5 flex h-[52px] w-full items-center justify-center gap-2 rounded-md text-[15px] font-bold text-white transition-colors"
           style={{ backgroundColor: PALETTE.forest }}
         >
           Continue To Secure Signup
