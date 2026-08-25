@@ -1,35 +1,73 @@
 /**
- * Footer — compact "centered with logo" layout (aceternity-style):
- * everything stacks center-aligned — brand row, one primary nav row,
- * social icons, the compliance legal strip, and a one-line copyright.
- * Replaces the old 4-column + newsletter footer (too tall, dated, and it
- * still carried a violet glow + "G" logo tile from the GameVault era).
+ * Footer — "marketplace columns" layout (owner-picked Style A, 2026-08):
+ *   1. Brand column left — logo, blurb, socials, Trustpilot.
+ *   2. Link columns right — Marketplace / Legal / Policies / Support.
+ *      (The "Popular Games" directory is its own GameBoost-style section
+ *      ABOVE this footer — see footer-game-links.tsx + layout-wrapper.)
+ *   3. Trust strip — four proof points through SilverIcon (the site's
+ *      silver-glass 3D icon material), then the payments row.
+ *   4. Bottom bar — the legally-required UK company details as small
+ *      print (e-commerce regs + PSP onboarding: legal name, company
+ *      number, registered office, VAT, phone + email), then copyright.
+ * Motion: one-time fade-up stagger on scroll-into-view (framer-motion,
+ * respects prefers-reduced-motion), CSS hover lifts on socials/links,
+ * and a lime hairline glow along the top edge as the page→footer
+ * transition. Policies/Support columns collapse visually on phones but
+ * stay in the HTML for crawlers.
  * Hidden entirely on sidebar'd account/seller pages (see layout-wrapper).
  */
 
 'use client'
 
 import Link from 'next/link'
+import { ArrowUp, Mail, Phone } from 'lucide-react'
+import { motion, useReducedMotion } from 'framer-motion'
+import { SilverIcon } from '@/components/ui/silver-icon'
 import { TrustpilotLink } from '@/components/trust/TrustpilotLink'
 
-const NAV_LINKS: Array<{ name: string; href: string }> = [
-  { name: 'Browse Listings', href: '/browse' },
-  // Beta: the become-seller wizard is post-launch; motivated sellers should
-  // land on the founding-seller waitlist, not a dead end. Label matches the
-  // destination + the banner campaign.
-  { name: 'Become a Founding Seller', href: '/early-seller?src=footer' },
-  { name: 'SafeDrop', href: '/safedrop' },
-  { name: 'Fees', href: '/fees' },
-  { name: 'Blog', href: '/blog' },
-  { name: 'Company', href: '/company' },
-  { name: 'Contact', href: 'mailto:support@dropmarket.gg' },
+/* ── Company details (UK e-commerce law + payment-provider requirement) ── */
+
+const COMPANY = {
+  name: 'DropMarket Ltd',
+  number: '17309867',
+  jurisdiction: 'England & Wales',
+  office: '82A James Carter Road, Mildenhall, Suffolk, IP28 7DE, United Kingdom',
+  vat: '287522083',
+  phone: '+44 7476 562276',
+  email: 'support@dropmarket.gg',
+}
+
+/* ── Trust strip — SilverIcon set (not default line icons) ── */
+
+const TRUST_ITEMS: Array<{ icon: string; title: string; sub: string; href?: string }> = [
+  { icon: '/icons/set/shield-check.svg', title: 'SafeDrop Protection', sub: 'Every order covered', href: '/safedrop' },
+  { icon: '/icons/set/wallet.svg', title: 'Secure Payments', sub: 'Visa, Apple Pay, crypto' },
+  { icon: '/icons/set/verified.svg', title: 'UK Registered Company', sub: COMPANY.name, href: '/company' },
+  { icon: '/icons/set/support.svg', title: 'Real Human Support', sub: COMPANY.email, href: `mailto:${COMPANY.email}` },
 ]
 
-/**
- * Full legal pack (compliance — every published document stays linked),
- * grouped into three centered mini-columns instead of one flat strip.
- */
-const DOC_GROUPS: Array<{ title: string; links: Array<{ name: string; href: string }> }> = [
+/* ── Link columns ── */
+
+const LINK_GROUPS: Array<{
+  title: string
+  /** Policies/Support hide visually on phones (essentials-only rule) but stay
+      in the HTML so the compliance pack is linked site-wide for crawlers. */
+  desktopOnly?: boolean
+  links: Array<{ name: string; href: string }>
+}> = [
+  {
+    title: 'Marketplace',
+    links: [
+      { name: 'Browse Listings', href: '/browse' },
+      // Beta: the become-seller wizard is post-launch; motivated sellers should
+      // land on the founding-seller waitlist, not a dead end.
+      { name: 'Become a Founding Seller', href: '/early-seller?src=footer' },
+      { name: 'SafeDrop', href: '/safedrop' },
+      { name: 'Fees', href: '/fees' },
+      { name: 'Blog', href: '/blog' },
+      { name: 'Company', href: '/company' },
+    ],
+  },
   {
     title: 'Legal',
     links: [
@@ -43,6 +81,7 @@ const DOC_GROUPS: Array<{ title: string; links: Array<{ name: string; href: stri
   },
   {
     title: 'Policies',
+    desktopOnly: true,
     links: [
       { name: 'SafeDrop Protection', href: '/safedrop-policy' },
       { name: 'Refunds & Disputes', href: '/refunds' },
@@ -54,6 +93,7 @@ const DOC_GROUPS: Array<{ title: string; links: Array<{ name: string; href: stri
   },
   {
     title: 'Support',
+    desktopOnly: true,
     links: [
       { name: 'Trust & Safety', href: '/trust-safety' },
       { name: 'Chargebacks', href: '/chargebacks' },
@@ -82,220 +122,228 @@ const SOCIALS: Array<{ name: string; href: string; path: string }> = [
   },
 ]
 
-/**
- * Mobile footer (below lg) — 2-column link grid, then centered brand,
- * then a monochrome payment wordmark row. Desktop layout untouched at
- * lg+ (the original centered stack gets `hidden lg:flex`).
- */
-/* Phones get the SHORT footer — the essentials only. The full
-   compliance pack stays linked from the desktop footer and the legal
-   hub pages. */
-const MOBILE_LINK_GROUPS: Array<{ title: string; links: Array<{ name: string; href: string }> }> = [
-  {
-    title: 'Marketplace',
-    links: [
-      { name: 'Browse Listings', href: '/browse' },
-      { name: 'Become a Founding Seller', href: '/early-seller?src=footer' },
-      { name: 'SafeDrop', href: '/safedrop' },
-      { name: 'Fees', href: '/fees' },
-      { name: 'Support', href: '/support' },
-    ],
-  },
-  {
-    title: 'Legal',
-    links: [
-      // NOT /legal/* — the legal routes live in the (legal) ROUTE GROUP, which
-      // contributes no URL segment, so the real paths have no /legal prefix.
-      // These four 404'd on every mobile page view until 2026-07-25.
-      { name: 'Terms Of Use', href: '/terms' },
-      { name: 'Privacy Policy', href: '/privacy' },
-      { name: 'Refunds & Disputes', href: '/refunds' },
-      { name: 'Company Details', href: '/company' },
-    ],
-  },
-]
-
+/* Monochrome payment wordmarks — no licensed art. */
 const PAYMENT_ROW: Array<{ key: string; node: React.ReactNode }> = [
-  { key: 'visa', node: <span className="text-[13px] font-black italic tracking-wider">VISA</span> },
-  { key: 'mastercard', node: <span className="text-[12px] font-medium lowercase tracking-tight">mastercard</span> },
-  { key: 'applepay', node: <span className="text-[12.5px] font-semibold tracking-tight">&#63743; Pay</span> },
-  { key: 'gpay', node: <span className="text-[12.5px] font-semibold tracking-tight"><span className="font-bold">G</span> Pay</span> },
-  { key: 'btc', node: <span className="inline-flex items-baseline gap-0.5 text-[12.5px] font-bold lowercase"><span aria-hidden>₿</span>bitcoin</span> },
-  { key: 'klarna', node: <span className="text-[12.5px] font-black tracking-tight">Klarna.</span> },
+  { key: 'visa', node: <span className="text-[16px] font-black italic tracking-wider">VISA</span> },
+  { key: 'mastercard', node: <span className="text-[15px] font-medium lowercase tracking-tight">mastercard</span> },
+  { key: 'applepay', node: <span className="text-[15px] font-semibold tracking-tight">&#63743; Pay</span> },
+  { key: 'gpay', node: <span className="text-[15px] font-semibold tracking-tight"><span className="font-bold">G</span> Pay</span> },
+  { key: 'btc', node: <span className="inline-flex items-baseline gap-0.5 text-[15px] font-bold lowercase"><span aria-hidden>₿</span>bitcoin</span> },
+  { key: 'klarna', node: <span className="text-[15px] font-black tracking-tight">Klarna.</span> },
 ]
 
-function MobileFooter({ gameLinks }: { gameLinks?: React.ReactNode }) {
+const headingClass =
+  'text-[10px] font-semibold uppercase tracking-[0.14em] text-text-tertiary'
+
+/** Footer link — slides 2px right and brightens on hover. */
+function FooterLink({ href, children }: { href: string; children: React.ReactNode }) {
   return (
-    <div className="lg:hidden px-5 py-10">
-      {/* Game/value links — the site-wide internal-link mesh (SEO). */}
-      {gameLinks && <div className="mb-8">{gameLinks}</div>}
-      {/* 2-column link grid — full compliance pack stays linked. */}
-      <div className="grid grid-cols-2 gap-x-6 gap-y-8">
-        {MOBILE_LINK_GROUPS.map((group) => (
-          <div key={group.title}>
-            <h3 className="t-eyebrow text-text-tertiary">{group.title}</h3>
-            <ul className="mt-2.5">
-              {group.links.map((link) => (
-                <li key={link.href}>
-                  <Link
-                    href={link.href}
-                    className="inline-flex min-h-[36px] items-center text-[13px] text-text-secondary transition-colors active:brightness-95 hover:text-white"
-                  >
-                    {link.name}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-        ))}
-      </div>
-
-      {/* Centered brand */}
-      <div className="mt-10 flex flex-col items-center gap-4 border-t border-white/[0.06] pt-8 text-center">
-        <Link href="/" className="flex items-center gap-2.5">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/brand/logo-mark-lime.png"
-            alt="DropMarket"
-            width={32}
-            height={32}
-            className="h-8 w-8 object-contain"
-          />
-          <span className="text-lg font-bold tracking-tight text-white">
-            Drop<span className="text-lime-text">Market</span>
-          </span>
-        </Link>
-
-        <div className="flex items-center gap-2">
-          {SOCIALS.map((social) => (
-            <a
-              key={social.name}
-              href={social.href}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label={social.name}
-              className="grid h-9 w-9 place-items-center rounded-full border border-white/10 text-text-secondary transition-colors hover:border-white/25 hover:text-white"
-            >
-              <svg viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4" aria-hidden>
-                <path d={social.path} />
-              </svg>
-            </a>
-          ))}
-        </div>
-
-        {/* Trustpilot — our own link, NOT a TrustBox: display widgets need a
-            Plus plan, so the widget only ever rendered Trustpilot's white
-            fallback logo pointing at their homepage. See TrustpilotLink. */}
-        <TrustpilotLink className="mt-1" />
-
-        {/* Payment row — monochrome wordmarks, no licensed art. */}
-        <div
-          aria-label="Accepted payment methods"
-          className="mt-1 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-text-tertiary"
-        >
-          {PAYMENT_ROW.map((m) => (
-            <span key={m.key} className="select-none whitespace-nowrap opacity-80">
-              {m.node}
-            </span>
-          ))}
-        </div>
-
-        <p className="text-xs text-text-tertiary">
-          © {new Date().getFullYear()} DropMarket Ltd. All rights reserved.
-        </p>
-      </div>
-    </div>
+    <Link
+      href={href}
+      className="inline-flex min-h-[28px] items-center text-xs text-text-secondary transition-[color,transform] duration-200 hover:translate-x-0.5 hover:text-white sm:min-h-0"
+    >
+      {children}
+    </Link>
   )
 }
 
-export function Footer({ gameLinks }: { gameLinks?: React.ReactNode }) {
+export function Footer() {
+  const reduceMotion = useReducedMotion()
+
+  // One-time slide-up as the footer scrolls into view. TRANSFORM ONLY, no
+  // opacity: framer SSRs `initial` styles inline, and headless renderers
+  // (Googlebot included) may never fire IntersectionObserver — an opacity:0
+  // start would leave the SEO link mesh invisible in the rendered snapshot.
+  // A translated element stays fully visible/indexable no matter what.
+  // Zeroed out entirely under prefers-reduced-motion.
+  const fadeUp = {
+    hidden: reduceMotion ? { y: 0 } : { y: 18 },
+    show: { y: 0, transition: { duration: 0.5, ease: [0.21, 0.6, 0.35, 1] } },
+  }
+  const stagger = {
+    hidden: {},
+    show: { transition: { staggerChildren: reduceMotion ? 0 : 0.07 } },
+  }
+
   return (
-    <footer className="border-t border-white/[0.08] bg-[#0a0a0f]">
-      <MobileFooter gameLinks={gameLinks} />
-      <div className="mx-auto hidden max-w-4xl flex-col items-center gap-7 px-6 py-12 text-center lg:flex">
-        {/* Brand */}
-        <Link href="/" className="flex items-center gap-2.5">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/brand/logo-mark-lime.png"
-            alt="DropMarket"
-            width={32}
-            height={32}
-            className="h-8 w-8 object-contain"
-          />
-          <span className="text-lg font-bold tracking-tight text-white">
-            Drop<span className="text-lime-text">Market</span>
-          </span>
-        </Link>
+    <footer className="relative overflow-hidden bg-bg-base">
+      {/* Page→footer transition: lime hairline + soft ambient glow along
+          the top edge (replaces the old flat border-t). */}
+      <div
+        aria-hidden
+        className="absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,rgba(198,255,61,0.35)_28%,rgba(198,255,61,0.35)_72%,transparent)]"
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-0 h-40"
+        style={{
+          background:
+            'radial-gradient(48% 100% at 50% 0%, rgba(198,255,61,0.05), transparent 70%)',
+        }}
+      />
 
-        {/* Primary nav */}
-        <nav aria-label="Footer">
-          <ul className="flex flex-wrap items-center justify-center gap-x-7 gap-y-2.5">
-            {NAV_LINKS.map((link) => (
-              <li key={link.href}>
-                <Link
-                  href={link.href}
-                  className="text-sm text-text-secondary transition-colors hover:text-white"
-                >
-                  {link.name}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </nav>
-
-        {/* Socials */}
-        <div className="flex items-center gap-2">
-          {SOCIALS.map((social) => (
-            <a
-              key={social.name}
-              href={social.href}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label={social.name}
-              className="grid h-9 w-9 place-items-center rounded-full border border-white/10 text-text-secondary transition-colors hover:border-white/25 hover:text-white"
-            >
-              <svg viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4" aria-hidden>
-                <path d={social.path} />
-              </svg>
-            </a>
-          ))}
-        </div>
-
-        {/* Trustpilot — our own link (desktop footer). See TrustpilotLink. */}
-        <TrustpilotLink />
-
-        {/* Game/value links — site-wide internal-link mesh (SEO). Server-
-            rendered anchors so search engines see them on every page. */}
-        {gameLinks}
-
-        {/* Docs — the full compliance pack in three centered mini-columns */}
-        <div className="grid w-full max-w-2xl grid-cols-1 gap-8 border-t border-white/[0.06] pt-7 sm:grid-cols-3">
-          {DOC_GROUPS.map((group) => (
-            <div key={group.title}>
-              <h3 className="text-[10px] font-semibold uppercase tracking-[0.14em] text-text-tertiary">
-                {group.title}
-              </h3>
-              <ul className="mt-3 space-y-1.5">
-                {group.links.map((doc) => (
-                  <li key={doc.href}>
-                    <Link
-                      href={doc.href}
-                      className="text-xs text-text-secondary transition-colors hover:text-white"
-                    >
-                      {doc.name}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
+      <motion.div
+        variants={stagger}
+        initial="hidden"
+        whileInView="show"
+        viewport={{ once: true, margin: '0px 0px -60px 0px' }}
+        className="relative mx-auto max-w-7xl px-4 pb-10 pt-12 sm:px-6 lg:px-8"
+      >
+        {/* Brand column + link columns */}
+        <div className="grid gap-x-12 gap-y-10 lg:grid-cols-[minmax(250px,1fr)_2.2fr]">
+          <motion.div variants={fadeUp} className="max-w-sm">
+            <Link href="/" className="flex items-center gap-2.5">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/brand/logo-mark-lime.png"
+                alt="DropMarket"
+                width={32}
+                height={32}
+                className="h-8 w-8 object-contain"
+              />
+              <span className="text-lg font-bold tracking-tight text-white">
+                Drop<span className="text-lime-text">Market</span>
+              </span>
+            </Link>
+            <p className="mt-4 text-[13px] leading-relaxed text-text-tertiary">
+              The trusted UK marketplace for game accounts, items and currency —
+              every order covered by SafeDrop Buyer Protection.
+            </p>
+            {/* Direct contact — official company contact details, with the
+                small print in the bottom bar carrying the registration data. */}
+            <div className="mt-5 space-y-2">
+              <a
+                href={`tel:${COMPANY.phone.replace(/\s/g, '')}`}
+                className="flex items-center gap-2.5 text-[13px] text-text-secondary transition-colors hover:text-white"
+              >
+                <Phone aria-hidden className="h-4 w-4 text-lime" />
+                {COMPANY.phone}
+              </a>
+              <a
+                href={`mailto:${COMPANY.email}`}
+                className="flex items-center gap-2.5 text-[13px] text-text-secondary transition-colors hover:text-white"
+              >
+                <Mail aria-hidden className="h-4 w-4 text-lime" />
+                {COMPANY.email}
+              </a>
             </div>
-          ))}
+            <div className="mt-5 flex items-center gap-2">
+              {SOCIALS.map((social) => (
+                <a
+                  key={social.name}
+                  href={social.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={social.name}
+                  className="grid h-9 w-9 place-items-center rounded-lg border border-white/10 text-text-secondary transition-all duration-200 hover:-translate-y-0.5 hover:border-lime-tint-border hover:bg-lime-tint-bg hover:text-lime-text"
+                >
+                  <svg viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4" aria-hidden>
+                    <path d={social.path} />
+                  </svg>
+                </a>
+              ))}
+            </div>
+            {/* Trustpilot — our own link, NOT a TrustBox (display widgets need
+                a Plus plan; see TrustpilotLink). Self-hides until reviews land. */}
+            <TrustpilotLink className="mt-5" />
+          </motion.div>
+
+          {/* Link columns — Marketplace / Legal always; Policies / Support are
+              desktop-only visually but stay in the HTML (SEO + compliance). */}
+          <nav aria-label="Footer" className="grid grid-cols-2 gap-x-6 gap-y-8 sm:grid-cols-4">
+            {LINK_GROUPS.map((group) => (
+              <motion.div
+                key={group.title}
+                variants={fadeUp}
+                className={group.desktopOnly ? 'hidden sm:block' : undefined}
+              >
+                <h3 className={headingClass}>{group.title}</h3>
+                <ul className="mt-3.5 space-y-1.5">
+                  {group.links.map((link) => (
+                    <li key={link.href}>
+                      <FooterLink href={link.href}>{link.name}</FooterLink>
+                    </li>
+                  ))}
+                </ul>
+              </motion.div>
+            ))}
+          </nav>
         </div>
 
-        {/* Copyright */}
-        <p className="text-xs text-text-tertiary">
-          © {new Date().getFullYear()} DropMarket Ltd. All rights reserved.
-        </p>
+        {/* Trust strip — silver-glass icons, the site's premium material */}
+        <motion.div
+          variants={fadeUp}
+          className="mt-10 grid grid-cols-2 gap-x-4 gap-y-5 border-t border-border-subtle pt-7 lg:grid-cols-4 lg:gap-x-8"
+        >
+          {TRUST_ITEMS.map((item) => {
+            const body = (
+              <span className="flex items-center gap-3">
+                <SilverIcon src={item.icon} className="h-8 w-8 shrink-0" />
+                <span className="min-w-0">
+                  <span className="block truncate text-[13px] font-semibold text-white">
+                    {item.title}
+                  </span>
+                  <span className="block truncate text-xs text-text-tertiary">{item.sub}</span>
+                </span>
+              </span>
+            )
+            return item.href ? (
+              <Link
+                key={item.title}
+                href={item.href}
+                className="transition-opacity duration-200 hover:opacity-80"
+              >
+                {body}
+              </Link>
+            ) : (
+              <span key={item.title}>{body}</span>
+            )
+          })}
+        </motion.div>
+
+        {/* Payments row + back to top */}
+        <motion.div
+          variants={fadeUp}
+          className="mt-8 flex flex-col items-center gap-4 border-t border-border-subtle pt-6 sm:flex-row sm:justify-between"
+        >
+          <div
+            aria-label="Accepted payment methods"
+            className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-text-tertiary"
+          >
+            {PAYMENT_ROW.map((m) => (
+              <span
+                key={m.key}
+                className="select-none whitespace-nowrap opacity-60 transition-opacity duration-200 hover:opacity-100"
+              >
+                {m.node}
+              </span>
+            ))}
+          </div>
+          <button
+            type="button"
+            onClick={() => window.scrollTo({ top: 0, behavior: reduceMotion ? 'auto' : 'smooth' })}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-text-tertiary transition-all duration-200 hover:-translate-y-0.5 hover:border-lime-tint-border hover:text-lime-text"
+          >
+            <ArrowUp aria-hidden className="h-3.5 w-3.5" />
+            Back To Top
+          </button>
+        </motion.div>
+      </motion.div>
+
+      {/* Bottom bar — the legally-required company details (two lines,
+          left-aligned), copyright on the right. Phone/email live in the
+          brand column above. */}
+      <div className="relative border-t border-border-subtle bg-[#07070B]">
+        <div className="mx-auto flex max-w-7xl flex-col gap-2.5 px-4 py-5 text-center sm:flex-row sm:items-center sm:justify-between sm:gap-6 sm:px-6 sm:text-left lg:px-8">
+          <p className="text-xs leading-relaxed text-text-tertiary">
+            {COMPANY.name} · Company No. {COMPANY.number} · Registered in {COMPANY.jurisdiction} · VAT
+            No. {COMPANY.vat}
+            <span className="block">Registered office: {COMPANY.office}</span>
+          </p>
+          <p className="shrink-0 text-xs text-text-disabled">
+            © {new Date().getFullYear()} {COMPANY.name}. All rights reserved.
+          </p>
+        </div>
       </div>
     </footer>
   )

@@ -10,7 +10,8 @@ export function LayoutWrapper({
   footerGameLinks,
 }: {
   children: React.ReactNode
-  /** Server-rendered game/value link block, injected into the Footer. */
+  /** Server-rendered "Popular Games" directory section (GameBoost-style),
+      rendered as its own band ABOVE the Footer. */
   footerGameLinks?: React.ReactNode
 }) {
   const pathname = usePathname()
@@ -93,7 +94,12 @@ export function LayoutWrapper({
         !isCheckout &&
         !isSellerApplication &&
         !hasSidebar &&
-        !isValuesHub && <Footer gameLinks={footerGameLinks} />}
+        !isValuesHub && (
+          <>
+            {footerGameLinks}
+            <Footer />
+          </>
+        )}
     </div>
   )
 }
