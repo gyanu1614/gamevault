@@ -12,9 +12,12 @@
 
 import type { Metadata } from 'next'
 import { Suspense } from 'react'
+import { redirect } from 'next/navigation'
 import { getFoundingProgress } from '@/lib/actions/early-seller'
 import { getAllGames } from '@/lib/utils/games'
 import { GAME_ICONS } from '@/features/home/lib/game-icons'
+import { createClient } from '@/lib/supabase/server'
+import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import FoundingSignupClient from './_FoundingSignupClient'
 import type { SignupGame } from './_FoundingSignupClient'
 
@@ -58,7 +61,51 @@ async function signupGames(): Promise<SignupGame[]> {
       ]
 }
 
+/**
+ * A logged-in user who's already a founder (their email is on the waitlist, or
+ * they carry a founding flag) shouldn't see the apply form again — send them to
+ * their Founding HQ. Never throws; on any error we just render the form.
+ */
+async function loggedInFounderRedirect(): Promise<void> {
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+
+    const svc = createServiceRoleClient() as any
+    const { data: profile } = await svc
+      .from('profiles')
+      .select('email, is_founding_applicant, founding_seller')
+      .eq('id', user.id)
+      .maybeSingle()
+
+    let isFounder = Boolean(profile?.is_founding_applicant || profile?.founding_seller)
+    // Belt-and-suspenders: also match the waitlist directly, in case the flag
+    // hasn't been set yet (e.g. an account created before the backfill).
+    if (!isFounder) {
+      const email = (profile?.email as string) || user.email || ''
+      if (email) {
+        const { data: wl } = await svc
+          .from('early_seller_signups')
+          .select('id')
+          .ilike('email', email.trim())
+          .maybeSingle()
+        isFounder = Boolean(wl)
+      }
+    }
+    if (isFounder) redirect('/founding')
+  } catch (err) {
+    // `redirect()` throws a control-flow signal — re-throw it so Next handles it.
+    if (err && typeof err === 'object' && 'digest' in err && String((err as any).digest).startsWith('NEXT_REDIRECT')) {
+      throw err
+    }
+    // Any real error → fall through and render the form.
+  }
+}
+
 export default async function EarlySellerPage() {
+  await loggedInFounderRedirect()
+
   const [progress, games] = await Promise.all([getFoundingProgress(), signupGames()])
 
   return (

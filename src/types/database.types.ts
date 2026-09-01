@@ -2842,6 +2842,7 @@ export type Database = {
           referral_code: string | null
           referred_by: string | null
           founding_seller: boolean
+          is_founding_applicant: boolean
           role: string | null
           seller_balance: number
           seller_rating: number | null
@@ -2897,6 +2898,7 @@ export type Database = {
           positive_reviews?: number | null
           referral_code?: string | null
           founding_seller?: boolean
+          is_founding_applicant?: boolean
           referred_by?: string | null
           role?: string | null
           seller_balance?: number
@@ -2953,6 +2955,7 @@ export type Database = {
           positive_reviews?: number | null
           referral_code?: string | null
           founding_seller?: boolean
+          is_founding_applicant?: boolean
           referred_by?: string | null
           role?: string | null
           seller_balance?: number

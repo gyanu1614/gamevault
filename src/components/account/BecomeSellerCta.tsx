@@ -41,11 +41,13 @@ export default function BecomeSellerCta({
   // Approved sellers never see this CTA — the seller menu replaces it.
   if (user?.isApprovedSeller || status === 'approved') return null
 
-  // Founding-seller accounts (created via the magic-link flow) get their own
-  // entry pointing at the Founding HQ, instead of the generic seller CTA.
-  // `founding_seller` is a real profiles column (useAuth selects '*'), even
-  // though the Profile TS type doesn't list it yet.
-  const isFounding = Boolean((user?.profile as { founding_seller?: boolean } | null)?.founding_seller)
+  // Founding accounts get their own entry pointing at the Founding HQ, instead
+  // of the generic seller CTA. Two signals, either qualifies:
+  //   - `is_founding_applicant`: their email is on the waitlist (routing only)
+  //   - `founding_seller`: admin-granted (also carries the 2% fee perk)
+  // Both are real profiles columns (useAuth selects '*').
+  const p = user?.profile as { founding_seller?: boolean; is_founding_applicant?: boolean } | null
+  const isFounding = Boolean(p?.is_founding_applicant || p?.founding_seller)
   if (isFounding) {
     if (variant === 'menu') {
       return (

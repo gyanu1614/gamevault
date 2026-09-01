@@ -316,6 +316,18 @@ async function resolveLoggedInFounder(): Promise<{
         .select('id', { count: 'exact', head: true })
         .lte('created_at', wl.created_at)
       joinNumber = count ?? 0
+
+      // Self-heal the routing flag: this account's email is on the waitlist, so
+      // it's a founding applicant. Setting it here means the account menu shows
+      // "Founding Seller" on their next load without needing a separate job.
+      // UI/routing only — never grants the `founding_seller` fee perk.
+      if (profile?.id) {
+        await svc
+          .from('profiles')
+          .update({ is_founding_applicant: true })
+          .eq('id', profile.id)
+          .eq('is_founding_applicant', false)
+      }
     }
   }
 

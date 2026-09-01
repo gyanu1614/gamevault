@@ -10,6 +10,7 @@
  */
 
 import type { Metadata } from 'next'
+import { Suspense } from 'react'
 import { SignupToSellFlow } from './_SignupToSellFlow'
 
 export const metadata: Metadata = {
@@ -20,6 +21,12 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 }
 
+// The flow reads useSearchParams() (?src=founding-hq) — wrap in Suspense so the
+// static prerender doesn't bail out (Next 14 requirement).
 export default function SignupBecomeSellerPage() {
-  return <SignupToSellFlow />
+  return (
+    <Suspense fallback={null}>
+      <SignupToSellFlow />
+    </Suspense>
+  )
 }

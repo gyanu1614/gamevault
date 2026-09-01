@@ -29,7 +29,7 @@
  */
 
 import { useEffect, useRef, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
   Mail,
@@ -58,6 +58,10 @@ import {
 import { useAuth } from '@/hooks/use-auth'
 
 const APP_HREF = '/account/become-seller'
+/** Founding sellers arrive with ?src=founding-hq and must return to their HQ
+ *  after signup/confirm (not the generic become-seller page) — the HQ is their
+ *  hub, and it advances to the next step (Get Approved) once the account exists. */
+const FOUNDING_HREF = '/founding'
 
 /** The 3 steps for this funnel — fed to the shared rail via SellerAppLayout. */
 const STEPS = [
@@ -122,7 +126,14 @@ function writePersisted(p: Persisted | null) {
 
 export function SignupToSellFlow() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { user, loading } = useAuth()
+
+  // Where this funnel returns to after account/confirm. Founding-flow entrants
+  // (?src=founding-hq, sent by the /founding store-name modal) go back to their
+  // Founding HQ, which then shows step 2 done + step 3 (Get Approved) current.
+  // Everyone else goes to the generic seller application.
+  const appHref = searchParams.get('src') === 'founding-hq' ? FOUNDING_HREF : APP_HREF
 
   const [phase, setPhase] = useState<Phase>('loading')
   const [direction, setDirection] = useState<1 | -1>(1)
@@ -197,7 +208,7 @@ export function SignupToSellFlow() {
       if (mode === 'login') {
         const res = await login({ email, password })
         if (res?.error) return setError(res.error)
-        router.push(APP_HREF)
+        router.push(appHref)
         return
       }
 
@@ -217,7 +228,7 @@ export function SignupToSellFlow() {
       // behind the scenes (same as the auth dialog does). redirectTo makes the
       // confirmation-email link land the user straight in the seller wizard.
       const { username } = await generateUniqueGamerTag()
-      const res = await signup({ email, password, username, redirectTo: APP_HREF })
+      const res = await signup({ email, password, username, redirectTo: appHref })
       if (res?.error) return setError(res.error)
 
       if (res?.requiresEmailConfirmation) {
@@ -225,7 +236,7 @@ export function SignupToSellFlow() {
         setResendCooldown(30)
       } else {
         // Confirmation OFF → session already live → into the application.
-        router.push(APP_HREF)
+        router.push(appHref)
       }
     } catch {
       setError('Something went wrong. Please try again.')
@@ -315,7 +326,7 @@ export function SignupToSellFlow() {
             />
           )}
 
-          {phase === 'handoff' && <HandoffPane onStart={() => router.push(APP_HREF)} />}
+          {phase === 'handoff' && <HandoffPane onStart={() => router.push(appHref)} />}
           </motion.div>
         </AnimatePresence>
       </div>

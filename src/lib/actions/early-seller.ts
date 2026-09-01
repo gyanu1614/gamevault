@@ -203,6 +203,21 @@ export async function submitEarlySeller(
       .single()
 
     if (!insertError) {
+      // If an account already exists for this email, flag it as a founding
+      // applicant so the account menu + /early-seller route them to their
+      // Founding HQ. This is a UI/routing signal ONLY — it does NOT grant the
+      // `founding_seller` fee discount (that stays admin-gated). Non-fatal: a
+      // failure here must never break the signup. (New accounts get flagged at
+      // sign-up time via syncFoundingApplicant, called from the auth flow.)
+      try {
+        await (supabase as any)
+          .from('profiles')
+          .update({ is_founding_applicant: true })
+          .ilike('email', email)
+      } catch (e) {
+        console.error('[early-seller] founding-applicant flag update failed:', e)
+      }
+
       // Fire the emails, but never let them affect the signup: the row is
       // already committed, so a Resend outage or a bad address must not turn a
       // successful signup into an error. Awaited (not detached) because a
