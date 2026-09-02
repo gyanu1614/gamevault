@@ -12,7 +12,7 @@ import { SITE_URL } from '@/config/site'
 import React, { useLayoutEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { Package, Calendar, Shield, Star, Crown, Gem, Sparkles, Award, ShieldCheck } from 'lucide-react'
+import { Package, Calendar, Star, Crown, Gem, Sparkles, Award, ShieldCheck } from 'lucide-react'
 
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox'
@@ -125,7 +125,11 @@ export default function SellerStorefront({ seller }: SellerStorefrontProps) {
             shopName={seller.profile.shop_name || seller.profile.business_name}
             avatarUrl={getAvatarUrl(seller.profile.avatar_url, seller.profile.username)}
             isOnline={isOnline}
-            isVerified={true}
+            // Reflect the real profile flag — NOT a hardcoded `true`. The
+            // storefront only renders for an approved seller, so this is
+            // normally true; but a fabricated "Verified" badge on a profile
+            // that isn't is a trust tell a real seller will catch.
+            isVerified={seller.profile.is_verified === true}
             rating={seller.stats.avgRating}
             reviewsCount={seller.stats.totalReviews}
             listingsCount={seller.stats.activeListings}
@@ -220,7 +224,10 @@ export default function SellerStorefront({ seller }: SellerStorefrontProps) {
                         month: 'long',
                       })}
                     />
-                    <InfoRow icon={Shield} label="Response time" value="Within 2 hours" />
+                    {/* "Response time" removed — it was a hardcoded "Within 2
+                        hours" with no data behind it (a fabricated metric a real
+                        seller/buyer will catch). Reinstate only when we track a
+                        real median response time per seller. */}
                     <InfoRow
                       icon={Star}
                       label="Seller tier"
@@ -256,7 +263,7 @@ export default function SellerStorefront({ seller }: SellerStorefrontProps) {
                     />
                     <PolicyBlock
                       title="Support"
-                      body="Message me anytime for questions or support. I aim to respond within 2 hours during business hours."
+                      body="Message me anytime for questions or support — all communication stays on-platform, where SafeDrop covers your order."
                     />
                   </div>
                 </section>
