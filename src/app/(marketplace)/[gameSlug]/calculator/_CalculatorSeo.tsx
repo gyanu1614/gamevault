@@ -3,7 +3,7 @@ import ArrowForwardIcon from '@mui/icons-material/ArrowForward'
 import { sabCard } from '@/lib/sab/theme'
 import { formatCash } from '@/lib/sab/format'
 import { MUTATIONS, mutationVisual } from '@/lib/sab/mutations'
-import { FaqCards } from '@/components/marketplace/FaqCards'
+import { HubFaqSection } from '@/components/content/HubFaqSection'
 
 export type TopValueRow = {
   slug: string
@@ -279,13 +279,13 @@ export function CalculatorSeo({
         </div>
       </section>
 
-      {/* FAQ — neither competitor has one on their calculator page. */}
-      <section className="mt-10">
-        <h2 className="text-xl font-semibold text-[#F1F3F1]">
-          Steal a Brainrot calculator — frequently asked questions
-        </h2>
-        <FaqCards items={faqItems} defaultOpen={0} className="mt-5" square />
-      </section>
+      {/* Shared FAQ block — centered title + standard spacing (HubFaqSection),
+          consistent with the values page. Neither competitor has a calc FAQ. */}
+      <HubFaqSection
+        title="Steal a Brainrot Calculator — Frequently Asked Questions"
+        subtitle="How the WFL calculator works, what it prices, and how to read a Win, Fair, or Loss verdict."
+        items={faqItems}
+      />
     </div>
   )
 }

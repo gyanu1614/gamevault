@@ -8,6 +8,7 @@ import { HubHero } from '@/components/content/HubHero'
 import { HubGuidesStrip } from '@/components/content/HubGuidesStrip'
 import AdoptMeWflClient from './_AdoptMeWflClient'
 import { getAdoptMeCalcPets } from './_adoptMeCalcData'
+import { AdoptMeCalculatorSeo } from './_AdoptMeCalculatorSeo'
 
 export const ADOPT_ME_CALC_FAQ = [
   {
@@ -82,6 +83,10 @@ export default async function AdoptMeCalculatorPage() {
 
           <HubBuyCta gameName="Adopt Me" gameSlug="adopt-me" buyHref="/adopt-me/buy-items" />
         </div>
+
+        {/* Long-form guide — content parity with the SAB calculator; also
+            renders the FAQ that was previously schema-only. */}
+        <AdoptMeCalculatorSeo faq={ADOPT_ME_CALC_FAQ} />
 
         {/* Guides strip — routes a trader who just checked a trade into the
             guides that explain it (self-hides until the game has tagged posts). */}

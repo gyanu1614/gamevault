@@ -374,6 +374,18 @@ export default async function SabCalculatorPage({
           },
         ])}
       />
+      {/* SoftwareApplication — marks the calculator as a free web tool (parity
+          with the Adopt Me calculator, which already emits this). */}
+      <JsonLd
+        data={{
+          '@context': 'https://schema.org',
+          '@type': 'SoftwareApplication',
+          name: 'Steal a Brainrot WFL Calculator',
+          applicationCategory: 'UtilitiesApplication',
+          operatingSystem: 'Web',
+          offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+        }}
+      />
 
       <CalculatorClient
         brainrots={brainrots}
