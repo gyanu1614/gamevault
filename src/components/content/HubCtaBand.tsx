@@ -35,6 +35,9 @@ export function HubCtaBand({
       public/cta-heroes/{slug}.jpg; the seller banner passes its own folder
       (public/seller-cta/{slug}.png). Missing file falls back to the scrim. */
   bgSrc,
+  /** Background image opacity (0–1). Default 0.28 (buy banner); the seller
+      banner passes a higher value for a more visible backdrop. */
+  bgOpacity = 0.28,
 }: {
   gameSlug: string
   title: ReactNode
@@ -46,6 +49,7 @@ export function HubCtaBand({
   className?: string
   ctaWrap?: (button: ReactNode) => ReactNode
   bgSrc?: string
+  bgOpacity?: number
 }) {
   const [hasImage, setHasImage] = useState(true)
 
@@ -61,7 +65,8 @@ export function HubCtaBand({
             alt=""
             aria-hidden
             onError={() => setHasImage(false)}
-            className="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-[0.28]"
+            style={{ opacity: bgOpacity }}
+            className="pointer-events-none absolute inset-0 h-full w-full object-cover"
           />
         )}
         {/* Left-weighted scrim — keeps the copy legible and is the no-image fallback. */}
