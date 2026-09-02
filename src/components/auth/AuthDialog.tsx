@@ -32,7 +32,7 @@ import * as Dialog from '@radix-ui/react-dialog'
 
 import { login, signup, checkUsernameAvailability, checkEmailAvailability, generateUniqueGamerTag, resendConfirmationEmail } from '@/lib/actions/auth'
 import { generateGamerTag } from '@/lib/username/gamer-names'
-import { stashPendingSignupAvatar } from '@/lib/auth/pending-avatar'
+import { stashPendingSignupAvatar, downscaleAvatarDataUrl } from '@/lib/auth/pending-avatar'
 import { AvatarUpload } from '@/components/ui/avatar-upload'
 import { useAuth } from '@/hooks/use-auth'
 import { createClient } from '@/lib/supabase/client'
@@ -836,12 +836,17 @@ function SignupForm({
       // username-seeded dicebear default (handled elsewhere).
       let avatarData: string | undefined
       if (avatarFile) {
-        avatarData = await new Promise<string>((resolve, reject) => {
+        const raw = await new Promise<string>((resolve, reject) => {
           const reader = new FileReader()
           reader.onloadend = () => resolve(reader.result as string)
           reader.onerror = reject
           reader.readAsDataURL(avatarFile)
         })
+        // Downscale BEFORE it goes to the server action. A full-res photo as a
+        // base64 data-URL can blow past Next's 1MB server-action body limit,
+        // which fails the whole signup with an opaque "Server Components render"
+        // error. Shrinking to a 512px WebP keeps the payload tiny.
+        avatarData = await downscaleAvatarDataUrl(raw, 512)
       }
 
       const result = await signup({
