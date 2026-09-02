@@ -38,6 +38,10 @@ export function HubCtaBand({
   /** Background image opacity (0–1). Default 0.28 (buy banner); the seller
       banner passes a higher value for a more visible backdrop. */
   bgOpacity = 0.28,
+  /** Add an extra scrim from the RIGHT edge so a brighter backdrop doesn't
+      wash out the CTA button on the right. Off by default (buy banner); the
+      seller banner enables it. */
+  rightScrim = false,
 }: {
   gameSlug: string
   title: ReactNode
@@ -50,6 +54,7 @@ export function HubCtaBand({
   ctaWrap?: (button: ReactNode) => ReactNode
   bgSrc?: string
   bgOpacity?: number
+  rightScrim?: boolean
 }) {
   const [hasImage, setHasImage] = useState(true)
 
@@ -78,6 +83,18 @@ export function HubCtaBand({
               'linear-gradient(90deg, #0C0F0E 0%, rgba(12,15,14,0.92) 42%, rgba(12,15,14,0.55) 100%)',
           }}
         />
+        {/* Optional right-edge scrim — darkens the right third so a brighter
+            backdrop doesn't wash out the CTA button. */}
+        {rightScrim && (
+          <div
+            aria-hidden
+            className="absolute inset-0"
+            style={{
+              background:
+                'linear-gradient(90deg, transparent 55%, rgba(12,15,14,0.65) 100%)',
+            }}
+          />
+        )}
 
         <div className="relative flex flex-wrap items-center justify-between gap-6 p-6 sm:p-10">
           <div className="min-w-0">

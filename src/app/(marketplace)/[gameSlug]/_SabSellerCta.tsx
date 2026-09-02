@@ -31,6 +31,7 @@ export function SabSellerCta({ gameSlug, gameName, src }: HubSellerCtaProps) {
       gameSlug={gameSlug}
       bgSrc={`/seller-cta/${gameSlug}.png`}
       bgOpacity={0.5}
+      rightScrim
       // Match the buy banner's width — the pages wrap HubBuyCta in a
       // max-w-7xl container, but the seller CTA renders bare, so without this
       // the band would span the full page width. (className replaces the band's
