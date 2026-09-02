@@ -16,6 +16,8 @@ import { SabSellerCta } from '../../_SabSellerCta'
 import { formatDate } from '@/lib/sab/format'
 import { JsonLd, breadcrumbList, blogPosting } from '@/lib/seo/jsonld'
 import { SITE_URL } from '@/config/site'
+import { IconListDetails, IconCalculator, IconTag, IconArrowRight, IconArrowUpRight } from '@tabler/icons-react'
+import { SpotlightCard } from '@/components/ui/spotlight-card'
 import { ContentDisclaimer } from '@/components/content/ContentDisclaimer'
 import { SabHeroBackdrop } from '../../values/_SabHeroBackdrop'
 import { HubNav } from '@/components/content/HubNav'
@@ -140,6 +142,50 @@ export default async function GameBlogArticle({
   ])
   const related = tagged.filter((p) => p.slug !== slug).slice(0, 3)
 
+  // "Related tools" links — routes a reader to the money page matching their
+  // intent, keyed by post type. Gated on the game actually having that route
+  // (hubNav.tools / sellHref) so no link is ever dead; distinct keyword anchors.
+  const hasValues = hubNav.tools.includes('values')
+  const hasCalculator = hubNav.tools.includes('calculator')
+  const TOOL = {
+    values: hasValues
+      ? {
+          eyebrow: 'Value list',
+          label: `See the full ${game.name} value list`,
+          desc: `Live cash values for every ${game.name} item, updated daily.`,
+          href: `/${gameSlug}/values`,
+          icon: IconListDetails,
+        }
+      : null,
+    calculator: hasCalculator
+      ? {
+          eyebrow: 'WFL calculator',
+          label: `Check a trade — Win, Fair or Loss?`,
+          desc: `Price both sides of a trade in real money before you accept.`,
+          href: `/${gameSlug}/calculator`,
+          icon: IconCalculator,
+        }
+      : null,
+    sell: hubNav.sellHref
+      ? {
+          eyebrow: 'Sell',
+          label: `List your ${game.name} items to sell`,
+          desc: `Turn your items into cash — SafeDrop protects every payout.`,
+          href: hubNav.sellHref,
+          icon: IconTag,
+        }
+      : null,
+  }
+  const toolOrder: Array<keyof typeof TOOL> =
+    post.postType === 'seller'
+      ? ['sell', 'values']
+      : post.postType === 'value'
+        ? ['values', 'calculator']
+        : ['values', 'calculator']
+  const relatedTools = toolOrder.map((k) => TOOL[k]).filter(Boolean) as NonNullable<
+    (typeof TOOL)[keyof typeof TOOL]
+  >[]
+
   return (
     <main className="relative min-h-screen bg-[#0C0F0E]">
       <JsonLd
@@ -175,13 +221,13 @@ export default async function GameBlogArticle({
               hub scale ("Steal a Brainrot - Value" is 54px) a long title would
               run to four lines and swamp the fold, so this tops out at 38px. */}
           <div className="max-w-3xl">
-            {/* Eyebrow + read-time on one line — the tag reads as a label. */}
-            <div className="mb-3 flex flex-wrap items-center gap-2.5">
-              <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#4FB477]">
+            {/* Eyebrow + read-time — the category as a pill so it reads as a
+                real label, then the read-time in a legible (non-mono) grey. */}
+            <div className="mb-4 flex flex-wrap items-center gap-2.5">
+              <span className="inline-flex items-center rounded-full border border-[#2F6B46]/40 bg-[#2F6B46]/12 px-3 py-1 text-[12px] font-bold uppercase tracking-[0.12em] text-[#7ED39A]">
                 {kindLabel}
               </span>
-              <span aria-hidden className="text-[#3A463A]">·</span>
-              <span className="font-mono text-[11px] text-[#5E685E]">
+              <span className="text-[14px] text-[#8A968C]">
                 {post.readMinutes} min read
               </span>
             </div>
@@ -194,11 +240,30 @@ export default async function GameBlogArticle({
               {post.excerpt}
             </p>
 
-            {/* Byline — a single quiet line under the intro, left-aligned. */}
-            <p className="mt-5 font-mono text-[11px] text-[#5E685E]">
-              <span className="text-[#8FBF9C]">{post.author}</span>
-              {updatedLabel ? ` · ${dateVerb} ${updatedLabel}` : ''}
-            </p>
+            {/* Byline — the DropMarket mark + author, in the normal type scale
+                and a legible colour (the old mono #5E685E line was nearly
+                invisible on the hero photo). */}
+            <div className="mt-6 flex items-center gap-2.5">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/brand/logo-mark-white.png"
+                alt=""
+                width={26}
+                height={26}
+                className="h-[26px] w-[26px] object-contain"
+              />
+              <span className="text-[14px] font-semibold text-[#E4EAE2]">
+                {post.author}
+              </span>
+              {updatedLabel && (
+                <>
+                  <span aria-hidden className="text-[#4A554B]">·</span>
+                  <span className="text-[14px] text-[#98A398]">
+                    {dateVerb} {updatedLabel}
+                  </span>
+                </>
+              )}
+            </div>
           </div>
         </div>
       </SabHeroBackdrop>
@@ -252,21 +317,64 @@ export default async function GameBlogArticle({
                 Every order is covered by SafeDrop — the seller is paid only
                 after you confirm delivery.
               </p>
+              {/* Buy-only now — the value/calculator links moved to the
+                  dedicated "Related tools" block below, each with its own
+                  keyword-rich anchor (no duplicate value anchor on the page). */}
               <div className="flex flex-wrap gap-3">
                 <Link
                   href={buyHref}
-                  className="inline-flex items-center gap-1.5 bg-[#1B6B3F] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#1f7a48]"
+                  className="group inline-flex items-center gap-1.5 bg-[#1B6B3F] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#1f7a48]"
                 >
-                  Buy {game.name} items →
-                </Link>
-                <Link
-                  href={`/${gameSlug}/values`}
-                  className="inline-flex items-center gap-1.5 border border-[#26332C] bg-white/[0.03] px-5 py-3 text-sm font-semibold text-[#E6EAE7] transition hover:border-[#2A3A31] hover:bg-white/[0.06]"
-                >
-                  See all {game.name} values →
+                  Buy {game.name} items
+                  <IconArrowRight
+                    className="h-4 w-4 transition-transform group-hover:translate-x-0.5"
+                    stroke={2.4}
+                  />
                 </Link>
               </div>
             </div>
+
+            {/* Related tools — sends the reader to the money page matching this
+                post's intent, each with a distinct keyword-rich anchor. Uses the
+                SpotlightCard cursor-glow (from the sell choice modal). */}
+            {relatedTools.length > 0 && (
+              <section className="mt-10">
+                <h2 className="mb-4 text-[15px] font-semibold text-[#E4EAE2]">
+                  Related tools
+                </h2>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {relatedTools.map((t) => (
+                    <SpotlightCard
+                      key={t.href}
+                      glow="green"
+                      className="group flex flex-col gap-3 border border-[#1E2723] bg-[#0B0F0C] p-5 transition-colors hover:border-[#2F6B46]"
+                    >
+                      <Link href={t.href} aria-label={t.label} className="absolute inset-0 z-10" />
+                      <div className="relative z-[1] flex items-start justify-between gap-3">
+                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-[#26332C] bg-[#0E1512] text-[#8FBF9C]">
+                          <t.icon className="h-[19px] w-[19px]" stroke={1.9} />
+                        </span>
+                        <IconArrowUpRight
+                          className="mt-0.5 h-[18px] w-[18px] shrink-0 text-[#4FB477] transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
+                          stroke={2.2}
+                        />
+                      </div>
+                      <div className="relative z-[1] flex flex-col gap-1.5">
+                        <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-[#8FBF9C]">
+                          {t.eyebrow}
+                        </span>
+                        <span className="text-[14.5px] font-semibold leading-snug text-[#F1F5EF]">
+                          {t.label}
+                        </span>
+                        <span className="text-[12.5px] leading-relaxed text-[#98A398]">
+                          {t.desc}
+                        </span>
+                      </div>
+                    </SpotlightCard>
+                  ))}
+                </div>
+              </section>
+            )}
 
             {/* Sell CTA — now UNCONDITIONAL (every article, not just
                 post_type='seller'). The buy CTA above is always-on; the sell
