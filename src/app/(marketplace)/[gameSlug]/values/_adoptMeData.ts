@@ -76,9 +76,10 @@ export async function getAdoptMePets(): Promise<AdoptMePetItem[]> {
       const tradeValue = num(row.trade_value)
       const averageUsd = num(row.average_usd)
       const cheapestUsd = num(row.cheapest_usd)
-      // Headline cash = the reputable market (average) when we have it, else the
-      // legacy cash_value_usd. Cheapest is shown alongside on the pet page.
-      const cashUsd = averageUsd ?? num(row.cash_value_usd)
+      // cashUsd = REAL reputable market (average) only. We no longer fall back to
+      // the estimated cash_value_usd — a variant with no real cash shows its
+      // trade-points value instead of a fabricated dollar figure.
+      const cashUsd = averageUsd
       if (tradeValue != null && tradeValue > topTradeValue) topTradeValue = tradeValue
       values[row.variant as Variant] = {
         variant: row.variant as Variant,

@@ -13,6 +13,8 @@ import Link from 'next/link'
 import { ArrowRight } from 'lucide-react'
 import type { AdoptMePetVariant, Variant } from './_adoptMePetData'
 import { VariantAxisPicker } from '../../calculator/_VariantAxisPicker'
+import { variantColor } from './_adoptMeVariantColor'
+import { FreshnessBadge } from '@/lib/sab/FreshnessBadge'
 
 const USD = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' })
 const TRADE = new Intl.NumberFormat('en-US')
@@ -27,21 +29,6 @@ const TRADE = new Intl.NumberFormat('en-US')
  */
 const MARKET_SECONDARY_GAP = 1.25
 
-/** Per-variant accent dot — Neon/Mega tiers read "hotter". */
-const VARIANT_COLOR: Record<string, string> = {
-  N: '#9BA8A0',
-  F: '#7FE3F0',
-  R: '#7FB0F0',
-  FR: '#B07BC9',
-  NEON: '#E86FD0',
-  NFR: '#D66FE8',
-  MEGA: '#F5A742',
-  MFR: '#F5C542',
-}
-
-function variantColor(v: string) {
-  return VARIANT_COLOR[v] ?? '#B07BC9'
-}
 
 export default function AdoptMePetHero({
   name,
@@ -85,7 +72,9 @@ export default function AdoptMePetHero({
   // pairs read as one number. Mirrors SAB's _ItemHero exactly.
   const marketUsd = selected.averageUsd ?? selected.cashUsd
   const cheapestUsd = selected.cheapestUsd
-  // Headline = cheapest when we have it, else the market/estimate.
+  // Headline = cheapest when we have it, else the reputable market. Both are
+  // REAL cash (cashUsd no longer carries an estimate). When neither exists we
+  // do NOT invent a dollar figure — we fall back to the trade-points value.
   const headlineUsd = cheapestUsd ?? marketUsd
   const showMarket =
     cheapestUsd != null &&
@@ -94,6 +83,11 @@ export default function AdoptMePetHero({
   const marketSecondary = showMarket ? USD.format(marketUsd) : null
   // A reputable price exists whenever we priced an average from real listings.
   const hasReputable = selected.averageUsd != null
+  // No real cash → show the community trade-points value (real data) instead of
+  // a fabricated estimate. Only when there are no points either do we show
+  // "No data yet".
+  const hasCash = headlineUsd != null
+  const pointsValue = selected.tradeValue != null && selected.tradeValue > 0 ? selected.tradeValue : null
   // Pet name FIRST, variant as a readable suffix: "Bat Dragon - Normal",
   // "Bat Dragon - FR", "Bat Dragon - Neon Fly Ride" — never "Mega Fly Ride Bat
   // Dragon". N reads as "Normal"; the potioned forms use their full label.
@@ -152,10 +146,19 @@ export default function AdoptMePetHero({
               cheapest/market split. */}
           <div className="lg:text-right">
             <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: accent }}>
-              {hasReputable ? 'Cheapest' : `${selected.label} cash value`}
+              {hasCash ? (hasReputable ? 'Cheapest' : 'Cash value') : pointsValue ? 'Trade value' : 'Value'}
             </p>
             <p className="mt-1 text-[34px] font-bold leading-none tracking-[-0.02em] text-[#F1F3F1] tabular-nums">
-              {headlineUsd != null ? USD.format(headlineUsd) : 'No data yet'}
+              {hasCash ? (
+                USD.format(headlineUsd as number)
+              ) : pointsValue ? (
+                <>
+                  {TRADE.format(pointsValue)}
+                  <span className="ml-1.5 text-[15px] font-semibold text-[#7C8A80]">pts</span>
+                </>
+              ) : (
+                'No data yet'
+              )}
             </p>
             {/* Typical (market) price — shown only when it genuinely exceeds the
                 cheapest headline (never a duplicate number). */}
@@ -170,14 +173,14 @@ export default function AdoptMePetHero({
                   <span className="h-1.5 w-1.5 rounded-full bg-[#8FBF9C]" />
                   From verified sellers
                 </span>
-              ) : selected.isEstimated ? (
+              ) : hasCash ? (
+                <ConfidenceBadge label={selected.confidence} />
+              ) : pointsValue ? (
                 <span className="inline-flex items-center gap-1.5 border border-[#26332C] bg-white/[0.03] px-2 py-1 text-[11.5px] font-semibold text-[#9BA8A0]">
                   <span className="h-1.5 w-1.5 rounded-full bg-[#9BA8A0]" />
-                  Estimated
+                  Community trade value
                 </span>
-              ) : (
-                <ConfidenceBadge label={selected.confidence} />
-              )}
+              ) : null}
             </div>
             {/* Buy CTA is CHROME (same on every pet) → the shared forest accent,
                 not the per-variant colour. Matches SAB's Buy button across the
@@ -204,11 +207,21 @@ export default function AdoptMePetHero({
         </div>
 
         <div className="relative flex items-center justify-center border-t border-white/[0.06] px-5 py-3">
-          <span className="font-mono text-[11px] uppercase tracking-[0.1em] text-[#6D7A72]">
-            {hasReputable
-              ? 'Cheapest price from sellers with 100+ reviews'
-              : 'Cash values estimated until we hold enough real sales'}
-          </span>
+          {hasReputable && selected.lastPricedAt ? (
+            // Live-freshness cue (SEO + trust): "Updated <time> UTC" with a
+            // pulsing dot, same component SAB uses on its item page.
+            <FreshnessBadge updatedAt={selected.lastPricedAt} />
+          ) : (
+            <span className="font-mono text-[11px] uppercase tracking-[0.1em] text-[#6D7A72]">
+              {hasReputable
+                ? 'Cheapest price from sellers with 100+ reviews'
+                : hasCash
+                  ? 'Cheapest from tracked marketplace listings'
+                  : pointsValue
+                    ? 'Community trade value — no cash listings tracked yet'
+                    : 'No data tracked yet'}
+            </span>
+          )}
         </div>
       </div>
 

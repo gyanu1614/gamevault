@@ -34,6 +34,14 @@ export interface AdoptMePetVariant {
   isEstimated: boolean
   confidence: string
   listingsTracked: number
+  /** When this variant was last repriced (ISO), for the freshness badge. */
+  lastPricedAt: string | null
+}
+
+/** One daily price point for the trend chart. */
+export interface PetPricePoint {
+  date: string
+  price: number
 }
 
 export interface AdoptMePetDetail {
@@ -46,6 +54,8 @@ export interface AdoptMePetDetail {
   imageUrl: string | null
   description: string
   variants: AdoptMePetVariant[]
+  /** Daily price history keyed by variant (may be empty until it accrues). */
+  priceHistory: Record<string, PetPricePoint[]>
 }
 
 function num(v: number | string | null): number | null {
@@ -70,9 +80,24 @@ export async function getAdoptMePet(slug: string): Promise<AdoptMePetDetail | nu
   const { data: valueRows } = await (supabase as any)
     .from('adopt_me_pet_values')
     .select(
-      'variant,trade_value,cash_value_usd,cheapest_usd,average_usd,is_estimated,confidence,listings_tracked',
+      'variant,trade_value,cash_value_usd,cheapest_usd,average_usd,is_estimated,confidence,listings_tracked,last_priced_at',
     )
     .eq('pet_id', pet.id)
+
+  // Daily price history for the trend chart. Ordered oldest→newest so the chart
+  // reads left-to-right. Keyed by variant; only variants with rows appear.
+  const { data: historyRows } = await (supabase as any)
+    .from('adopt_me_price_history')
+    .select('variant,cash_value_usd,history_date')
+    .eq('pet_id', pet.id)
+    .order('history_date', { ascending: true })
+
+  const priceHistory: Record<string, PetPricePoint[]> = {}
+  for (const r of (historyRows ?? []) as any[]) {
+    const price = num(r.cash_value_usd)
+    if (price == null) continue
+    ;(priceHistory[r.variant] ??= []).push({ date: r.history_date, price })
+  }
 
   const byVariant = new Map<string, any>()
   for (const r of (valueRows ?? []) as any[]) byVariant.set(r.variant, r)
@@ -84,13 +109,16 @@ export async function getAdoptMePet(slug: string): Promise<AdoptMePetDetail | nu
       variant,
       label: VARIANT_LABEL[variant],
       tradeValue: r ? num(r.trade_value) : null,
-      // Headline = reputable market when present, else the legacy cash value.
-      cashUsd: averageUsd ?? (r ? num(r.cash_value_usd) : null),
+      // cashUsd carries ONLY a REAL reputable market price (average). We no
+      // longer fall back to the legacy estimated cash_value_usd — when there is
+      // no real cash the UI shows the trade-points value instead of a made-up $.
+      cashUsd: averageUsd,
       cheapestUsd: r ? num(r.cheapest_usd) : null,
       averageUsd,
       isEstimated: r ? Boolean(r.is_estimated) : true,
       confidence: r?.confidence ?? 'low',
       listingsTracked: r ? Number(r.listings_tracked ?? 0) : 0,
+      lastPricedAt: r?.last_priced_at ?? null,
     }
   })
 
@@ -104,6 +132,7 @@ export async function getAdoptMePet(slug: string): Promise<AdoptMePetDetail | nu
     imageUrl: pet.image_url,
     description: pet.description,
     variants,
+    priceHistory,
   }
 }
 

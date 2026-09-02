@@ -16,7 +16,8 @@
  */
 
 import type { CSSProperties } from 'react'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import ChevronRightIcon from '@mui/icons-material/ChevronRight'
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown'
 import { VariantAxisPicker } from '../calculator/_VariantAxisPicker'
@@ -84,14 +85,28 @@ const POPULAR_COUNT = 12
 const PAGE_SIZE = 25
 
 type View = 'popular' | 'all' | string
-type Sort = 'value-desc' | 'value-asc' | 'name'
+type Sort =
+  | 'value-desc'
+  | 'value-asc'
+  | 'cash-desc'
+  | 'cash-asc'
+  | 'name'
+
+const SORT_OPTIONS: { value: Sort; label: string }[] = [
+  { value: 'value-desc', label: 'Highest trade value' },
+  { value: 'value-asc', label: 'Lowest trade value' },
+  { value: 'cash-desc', label: 'Highest cash price' },
+  { value: 'cash-asc', label: 'Lowest cash price' },
+  { value: 'name', label: 'Name (A–Z)' },
+]
 
 /** Confidence → label + colour. Matches SAB's "price accuracy" treatment. */
-function ConfidenceText({ confidence, estimated }: { confidence: string; estimated: boolean }) {
-  // Until real sales exist every cash value is an estimate — say so plainly
-  // rather than borrowing SAB's "Highly Accurate" for numbers we derived.
-  if (estimated) {
-    return <span className="text-[13px] text-[#8B7BA0]">Estimated</span>
+function ConfidenceText({ confidence, hasCash }: { confidence: string; hasCash: boolean }) {
+  // No real cash price → we're showing the community trade-points value, not a
+  // derived dollar estimate. Say "Trade value only" rather than a cash-accuracy
+  // grade that doesn't apply.
+  if (!hasCash) {
+    return <span className="text-[13px] text-[#8B978F]">Trade value only</span>
   }
   const map: Record<string, { label: string; color: string }> = {
     highly_accurate: { label: 'Highly Accurate', color: '#8FBF9C' },
@@ -107,12 +122,39 @@ function ConfidenceText({ confidence, estimated }: { confidence: string; estimat
   )
 }
 
+// useSearchParams() requires a Suspense boundary; the wrapper provides it so the
+// page can render this client directly (mirrors SAB's ValuesDirectoryClient).
 export default function AdoptMeValuesClient({ pets }: { pets: AdoptMePetItem[] }) {
-  const [variant, setVariant] = useState<Variant>('FR')
-  const [query, setQuery] = useState('')
-  const [view, setView] = useState<View>('popular')
-  const [sort, setSort] = useState<Sort>('value-desc')
-  const [page, setPage] = useState(1)
+  return (
+    <Suspense fallback={null}>
+      <AdoptMeValuesClientInner pets={pets} />
+    </Suspense>
+  )
+}
+
+function AdoptMeValuesClientInner({ pets }: { pets: AdoptMePetItem[] }) {
+  // Filters live in the URL so they SURVIVE navigation: tap a pet, hit Back, and
+  // the same variant/search/view/sort/page is restored (and the view is
+  // shareable/bookmarkable). Seeded from the query params on mount; a sync effect
+  // mirrors changes back via replace(). Matches SAB's directory client exactly.
+  const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+
+  const [variant, setVariant] = useState<Variant>(
+    () => (searchParams.get('variant') as Variant) ?? 'FR',
+  )
+  const [query, setQuery] = useState(() => searchParams.get('q') ?? '')
+  const [view, setView] = useState<View>(
+    () => (searchParams.get('view') as View) ?? 'popular',
+  )
+  const [sort, setSort] = useState<Sort>(
+    () => (searchParams.get('sort') as Sort) ?? 'value-desc',
+  )
+  const [page, setPage] = useState(() => {
+    const p = Number(searchParams.get('page'))
+    return Number.isInteger(p) && p > 0 ? p : 1
+  })
 
   const popularSlugs = useMemo(
     () =>
@@ -142,6 +184,12 @@ export default function AdoptMeValuesClient({ pets }: { pets: AdoptMePetItem[] }
     })
     list = [...list].sort((a, b) => {
       if (sort === 'name') return a.name.localeCompare(b.name)
+      if (sort === 'cash-desc' || sort === 'cash-asc') {
+        // Cheapest is the buyer-facing headline; sort on it, unpriced last.
+        const ac = a.values[variant]?.cheapestUsd ?? a.values[variant]?.cashUsd ?? -1
+        const bc = b.values[variant]?.cheapestUsd ?? b.values[variant]?.cashUsd ?? -1
+        return sort === 'cash-asc' ? ac - bc : bc - ac
+      }
       const av = a.values[variant]?.tradeValue ?? -1
       const bv = b.values[variant]?.tradeValue ?? -1
       return sort === 'value-asc' ? av - bv : bv - av
@@ -153,9 +201,34 @@ export default function AdoptMeValuesClient({ pets }: { pets: AdoptMePetItem[] }
   const safePage = Math.min(page, totalPages)
   const visible = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE)
   const resetPage = () => setPage(1)
+  // Paging scrolls back to the top so the new page isn't stranded below the
+  // pagination bar. Instant for reduced-motion users.
+  const goToPage = (next: number) => {
+    setPage(next)
+    if (typeof window === 'undefined') return
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    window.scrollTo({ top: 0, behavior: reduced ? 'auto' : 'smooth' })
+  }
 
   const rangeStart = filtered.length === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1
   const rangeEnd = Math.min(safePage * PAGE_SIZE, filtered.length)
+
+  // Mirror the current variant/filter/sort/page into the URL (replace, so typing
+  // doesn't spam history). Because the state lives in the URL, tapping a pet and
+  // hitting Back restores exactly this view. Only non-default values are written,
+  // keeping the URL clean on the landing view.
+  useEffect(() => {
+    const params = new URLSearchParams()
+    if (variant !== 'FR') params.set('variant', variant)
+    if (query.trim()) params.set('q', query.trim())
+    if (view !== 'popular') params.set('view', view)
+    if (sort !== 'value-desc') params.set('sort', sort)
+    if (page > 1) params.set('page', String(page))
+    const qs = params.toString()
+    if (qs !== searchParams.toString()) {
+      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false })
+    }
+  }, [variant, query, view, sort, page, pathname, router, searchParams])
 
   return (
     <div>
@@ -175,6 +248,26 @@ export default function AdoptMeValuesClient({ pets }: { pets: AdoptMePetItem[] }
         />
         <div className="sm:w-56 sm:shrink-0">
           <VariantDropdown value={variant} onChange={(v) => setVariant(v)} />
+        </div>
+        {/* Sort — full option set (trade value, cash, name) in a native select
+            so it's accessible and reprices/reorders the whole table. */}
+        <div className="sm:w-52 sm:shrink-0">
+          <label className="sr-only" htmlFor="am-values-sort">Sort pets</label>
+          <select
+            id="am-values-sort"
+            value={sort}
+            onChange={(e) => {
+              setSort(e.target.value as Sort)
+              resetPage()
+            }}
+            className="h-full w-full cursor-pointer appearance-none border border-[#1E2723] bg-white/[0.04] px-4 py-3 text-[15px] text-[#F1F3F1] outline-none transition-colors focus:border-[#2F6B46]"
+          >
+            {SORT_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value} className="bg-[#0E1211]">
+                {o.label}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
       {/* Variant shown in the column headers below, not a static line here.
@@ -336,7 +429,7 @@ export default function AdoptMeValuesClient({ pets }: { pets: AdoptMePetItem[] }
 
                     {/* Price accuracy — desktop column */}
                     <span className="hidden text-center lg:block">
-                      {v ? <ConfidenceText confidence={v.confidence} estimated={v.isEstimated} /> : <span className="text-[13px] text-[#5E685E]">—</span>}
+                      {v ? <ConfidenceText confidence={v.confidence} hasCash={(v.cheapestUsd ?? v.cashUsd) != null} /> : <span className="text-[13px] text-[#5E685E]">—</span>}
                     </span>
 
                     {/* Trade value — desktop column */}
@@ -360,12 +453,20 @@ export default function AdoptMeValuesClient({ pets }: { pets: AdoptMePetItem[] }
                               <span className="font-mono text-[11px] tabular-nums text-[#8B978F]">
                                 typically ~{USD.format(v.averageUsd)}
                               </span>
-                            ) : v.isEstimated ? (
-                              <span className="font-mono text-[9px] uppercase tracking-[0.08em] text-[#8B7BA0]">Est.</span>
                             ) : null}
                           </>
+                        ) : v && v.tradeValue != null && v.tradeValue > 0 ? (
+                          // No real cash → show the community trade-points value
+                          // instead of a fabricated dollar estimate.
+                          <>
+                            <span className="text-[16px] font-bold tabular-nums text-[#F1F3F1] sm:text-[17.5px]">
+                              {TRADE.format(v.tradeValue)}
+                              <span className="ml-1 text-[11px] font-semibold text-[#7C8A80]">pts</span>
+                            </span>
+                            <span className="font-mono text-[9px] uppercase tracking-[0.08em] text-[#8B978F]">trade value</span>
+                          </>
                         ) : (
-                          <span className="font-mono text-[11px] uppercase tracking-[0.06em] text-[#6D7A72]">Est. pending</span>
+                          <span className="font-mono text-[11px] uppercase tracking-[0.06em] text-[#6D7A72]">No data</span>
                         )}
                       </span>
                       {/* Chevron only on real links — a static row shouldn't
@@ -389,10 +490,28 @@ export default function AdoptMeValuesClient({ pets }: { pets: AdoptMePetItem[] }
 
       {/* ── Pagination ───────────────────────────────────────────────────── */}
       {totalPages > 1 && (
-        <div className="mt-8 flex items-center justify-center gap-2">
-          <PageBtn disabled={safePage === 1} onClick={() => setPage(safePage - 1)}>Prev</PageBtn>
-          <span className="px-3 font-mono text-[13px] tabular-nums text-[#8B978F]">{safePage} / {totalPages}</span>
-          <PageBtn disabled={safePage === totalPages} onClick={() => setPage(safePage + 1)}>Next</PageBtn>
+        <div className="mt-8 flex flex-wrap items-center justify-center gap-1.5">
+          <PageBtn disabled={safePage === 1} onClick={() => goToPage(safePage - 1)}>Prev</PageBtn>
+          {pageNumbers(safePage, totalPages).map((n, i) =>
+            n === '…' ? (
+              <span key={`gap-${i}`} className="px-1.5 font-mono text-[13px] text-[#5E685E]">…</span>
+            ) : (
+              <button
+                key={n}
+                type="button"
+                onClick={() => goToPage(n)}
+                aria-current={n === safePage ? 'page' : undefined}
+                className={`min-w-[38px] border px-3 py-2 text-[13px] font-semibold tabular-nums transition ${
+                  n === safePage
+                    ? 'border-[#B07BC9] bg-[#B07BC9]/15 text-[#CBA8DA]'
+                    : 'border-[#1E2723] text-[#9BA8A0] hover:border-[#2A3A31] hover:text-[#E6EAE7]'
+                }`}
+              >
+                {n}
+              </button>
+            ),
+          )}
+          <PageBtn disabled={safePage === totalPages} onClick={() => goToPage(safePage + 1)}>Next</PageBtn>
         </div>
       )}
 
@@ -461,6 +580,20 @@ function VariantDropdown({
       )}
     </div>
   )
+}
+
+// Compact page list with ellipses, e.g. [1, …, 4, 5, 6, …, 9]. Same shape as
+// SAB's directory pagination.
+function pageNumbers(current: number, total: number): (number | '…')[] {
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1)
+  const pages: (number | '…')[] = [1]
+  const start = Math.max(2, current - 1)
+  const end = Math.min(total - 1, current + 1)
+  if (start > 2) pages.push('…')
+  for (let i = start; i <= end; i += 1) pages.push(i)
+  if (end < total - 1) pages.push('…')
+  pages.push(total)
+  return pages
 }
 
 function PageBtn({ disabled, onClick, children }: { disabled: boolean; onClick: () => void; children: React.ReactNode }) {
