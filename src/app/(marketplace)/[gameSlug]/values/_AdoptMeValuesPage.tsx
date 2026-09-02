@@ -113,7 +113,7 @@ export default async function AdoptMeValuesPage() {
         <div className="pt-12">
           <HubGuidesStrip
             gameSlug="adopt-me"
-            heading="Guides for pricing &amp; trading Adopt Me"
+            heading="Guides For Pricing &amp; Trading Adopt Me"
           />
         </div>
       </SabHeroBackdrop>

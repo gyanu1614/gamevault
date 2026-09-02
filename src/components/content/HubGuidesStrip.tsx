@@ -48,7 +48,7 @@ export async function HubGuidesStrip({
           <Link
             key={p.slug}
             href={`/${gameSlug}/blog/${p.slug}`}
-            className="group relative flex min-h-[180px] flex-col justify-end overflow-hidden rounded-lg border border-[#1E2723] bg-[#0B0F0C] p-5 transition-all duration-200 hover:-translate-y-0.5 hover:border-[#2F6B46]"
+            className="group relative flex min-h-[180px] flex-col justify-end overflow-hidden border border-[#1E2723] bg-[#0B0F0C] p-5 transition-all duration-200 hover:-translate-y-0.5 hover:border-[#2F6B46]"
           >
             {/* Cover image background + dark scrim (only when a cover exists).
                 Plain <img> to match how the article page renders covers and to
@@ -75,19 +75,15 @@ export async function HubGuidesStrip({
               </>
             )}
 
-            {/* Content — above the image + scrim. */}
+            {/* Content — above the image + scrim. Eyebrow + title only; the
+                excerpt was a smaller, mismatched face that cluttered the card. */}
             <div className="relative z-10 flex flex-col gap-2.5">
-              <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-[#8FBF9C]">
+              <span className="text-[11px] font-bold uppercase tracking-[0.12em] text-[#8FBF9C]">
                 {POST_TYPE_LABEL[p.postType] ?? 'Guide'}
               </span>
               <span className="text-[15px] font-semibold leading-snug text-[#F1F5EF]">
                 {p.title}
               </span>
-              {p.excerpt && (
-                <span className="line-clamp-2 text-[13px] leading-relaxed text-[#C2CBC2]">
-                  {p.excerpt}
-                </span>
-              )}
             </div>
           </Link>
         ))}

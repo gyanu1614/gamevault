@@ -405,7 +405,7 @@ export default async function SabCalculatorPage({
       <div className="pt-12">
         <HubGuidesStrip
           gameSlug="steal-a-brainrot"
-          heading="Trading guides that explain your result"
+          heading="Trading Guides That Explain Your Result"
         />
       </div>
 
