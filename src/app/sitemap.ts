@@ -87,9 +87,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.3,
   }))
 
-  // Blog — index + articles. publishedAt is a real date, so it's an
-  // honest lastmod; the index takes the newest post's date.
+  // Blog — the FLAT index + only the general (untagged) articles. A game-tagged
+  // post's flat /blog/{slug} URL 301-redirects to its nested /{game}/blog/{slug}
+  // home (see next.config.js), so listing it here would put a redirecting URL in
+  // the sitemap (a GSC "Page with redirect" error) AND double-list it alongside
+  // the nested entry emitted elsewhere. So keep only posts with no game tag,
+  // which genuinely live at the flat URL.
   const posts = getAllPosts()
+  const flatPosts = posts.filter((p) => p.games.length === 0)
   const newestPostDate = posts.reduce<string | null>(
     (acc, p) => (!acc || p.publishedAt > acc ? p.publishedAt : acc),
     null,
@@ -101,7 +106,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: 'weekly' as const,
       priority: 0.6,
     },
-    ...posts.map((post) => ({
+    ...flatPosts.map((post) => ({
       url: `${BASE_URL}/blog/${post.slug}`,
       lastModified: new Date(post.publishedAt),
       changeFrequency: 'monthly' as const,

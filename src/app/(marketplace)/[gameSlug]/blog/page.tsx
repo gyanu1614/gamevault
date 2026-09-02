@@ -11,7 +11,8 @@ import { cn } from '@/lib/utils'
 import { sabCard } from '@/lib/sab/theme'
 import { createClient } from '@/lib/supabase/server'
 import { getGamePosts } from '@/lib/blog/db'
-import { JsonLd, breadcrumbList } from '@/lib/seo/jsonld'
+import { JsonLd, breadcrumbList, blogCollection } from '@/lib/seo/jsonld'
+import { SITE_URL } from '@/config/site'
 import { SabHeroBackdrop } from '../values/_SabHeroBackdrop'
 import { HubNav } from '@/components/content/HubNav'
 import { HubFooter } from '@/components/content/HubFooter'
@@ -168,8 +169,24 @@ export default async function GameBlogIndex({
             { name: 'Guides', path: `/${gameSlug}/blog` },
           ])}
         />
+        {/* Blog collection — describes this hub's posts so Google discovers the
+            child article URLs from the parent markup (faster indexing). */}
+        {posts.length > 0 && (
+          <JsonLd
+            data={blogCollection({
+              name: `${game.name} Guides`,
+              url: `${SITE_URL}/${gameSlug}/blog`,
+              posts: posts.map((p) => ({
+                title: p.title,
+                path: `/${gameSlug}/blog/${p.slug}`,
+                datePublished: p.publishedAt,
+                description: p.excerpt,
+              })),
+            })}
+          />
+        )}
 
-        <BlogHubHero gameName={game.name} lead={theme.heroLead} />
+        <BlogHubHero gameName={game.name} title={theme.heroTitle} lead={theme.heroLead} />
       </SabHeroBackdrop>
 
       {/* No z-index here (matches Values): a z-10 wrapper created a stacking
