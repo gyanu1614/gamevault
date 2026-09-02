@@ -59,7 +59,15 @@ export function HubCtaBand({
   const [hasImage, setHasImage] = useState(true)
 
   return (
-    <section className={className ?? 'pt-12 sm:pt-16'}>
+    // Constrained to the standard page width by DEFAULT so every CTA (buy +
+    // sell, every game) is the same size without each caller re-wrapping it.
+    // A caller can still pass its own className to override (e.g. a narrower
+    // content column).
+    <section
+      className={
+        className ?? 'mx-auto w-full max-w-7xl px-4 pt-12 sm:px-6 sm:pt-16 lg:px-8'
+      }
+    >
       <div className="relative overflow-hidden border border-[#1E2723] bg-[#0C0F0E]">
         {/* Per-game background hero. Buy banner: public/cta-heroes/{slug}.jpg;
             seller banner passes bgSrc for its own folder. */}

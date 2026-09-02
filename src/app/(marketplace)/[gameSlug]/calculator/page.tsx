@@ -9,7 +9,7 @@ import { HubGuidesStrip } from '@/components/content/HubGuidesStrip'
 import { HubFooter } from '@/components/content/HubFooter'
 import { getHubNavData } from '@/lib/content/hubNav'
 import { asNumber } from '@/lib/sab/format'
-import { SabSellerCta } from '../_SabSellerCta'
+import { HubBuyCta } from '@/components/content/HubBuyCta'
 import CalculatorClient, {
   type CalcBrainrot,
   type CalcMutation,
@@ -409,9 +409,9 @@ export default async function SabCalculatorPage({
         />
       </div>
 
-      {/* Founding-seller pitch — below the calculator, where a price-checker
-          has self-identified as a trader. Skippable; buyer's answer came first. */}
-      <SabSellerCta gameSlug="steal-a-brainrot" gameName="Steal a Brainrot" src="sab-calculator" />
+      {/* Buy CTA — price/tool pages carry the BUY band; the seller band lives
+          on the blog surfaces. */}
+      <HubBuyCta gameName="Steal a Brainrot" gameSlug="steal-a-brainrot" buyHref="/steal-a-brainrot/buy-items" />
 
       <CalculatorSeo monthYear={monthYear} topValues={topValues} lastUpdated={lastUpdated} />
       <JsonLd data={faqPage(CALCULATOR_FAQ)} />

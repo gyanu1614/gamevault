@@ -10,7 +10,7 @@ import ValuesDirectoryClient, {
   type CardMutation,
 } from './_ValuesDirectoryClient'
 import { SabHeroBackdrop } from './_SabHeroBackdrop'
-import { SabSellerCta } from '../_SabSellerCta'
+import { HubBuyCta } from '@/components/content/HubBuyCta'
 import { HubNav } from '@/components/content/HubNav'
 import { HubFooter } from '@/components/content/HubFooter'
 import { getHubNavData, HUB_NAV_CLEAR } from '@/lib/content/hubNav'
@@ -577,10 +577,10 @@ export default async function BrainrotValuesPage({ params }: PageProps) {
         />
       </div>
 
-      {/* Seller door at the bottom of the value list — the other half of the
-          dual buy/sell intent (buyers get HubBuyCta elsewhere). */}
+      {/* Buy CTA — price/tool pages carry the BUY band (price-checkers buy);
+          the seller band lives on the blog surfaces. */}
       {brainrots.length > 0 && (
-        <SabSellerCta gameSlug="steal-a-brainrot" gameName="Steal a Brainrot" src="sab-values" />
+        <HubBuyCta gameName="Steal a Brainrot" gameSlug="steal-a-brainrot" buyHref="/steal-a-brainrot/buy-items" />
       )}
       </SabHeroBackdrop>
           <HubFooter

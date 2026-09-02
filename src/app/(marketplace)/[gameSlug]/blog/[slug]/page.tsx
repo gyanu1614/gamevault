@@ -20,7 +20,6 @@ import { IconListDetails, IconCalculator, IconTag, IconArrowUpRight } from '@tab
 import { SpotlightCard } from '@/components/ui/spotlight-card'
 import { ContentDisclaimer } from '@/components/content/ContentDisclaimer'
 import { SabHeroBackdrop } from '../../values/_SabHeroBackdrop'
-import { HubBuyCta } from '@/components/content/HubBuyCta'
 import { HubNav } from '@/components/content/HubNav'
 import { HubFooter } from '@/components/content/HubFooter'
 import { getHubNavData, HUB_NAV_CLEAR } from '@/lib/content/hubNav'
@@ -121,10 +120,6 @@ export default async function GameBlogArticle({
   // instead of being pushed right by an empty 220px rail.
   const hasToc = toc.length >= 2
 
-  // Per-game CTA banner. blog_cta_image_url is the dedicated wide asset (see
-  // the games_blog_cta_image migration); cover_url is the card art, used as a
-  // stand-in until a banner is uploaded for that game.
-  const ctaImage = game.blog_cta_image_url || game.cover_url || null
   const buyHref = `/${gameSlug}/buy-items`
   // Honest date byline: show "Updated {date}" only when the post was actually
   // edited after publishing (updatedAt > publishedAt); otherwise "Published".
@@ -293,22 +288,6 @@ export default async function GameBlogArticle({
             )}
 
             <ArticleBody body={post.body} />
-
-            {/* CTA — per-game banner behind it.
-                Prefers the purpose-made blog_cta_image_url; falls back to the
-                game's card art so every game gets a background today, and a
-                flat panel if neither exists. A scrim keeps the copy readable
-                whatever the art. */}
-            {/* Buy CTA — the shared HubCtaBand (via HubBuyCta), same band as
-                every other page. Passes the post's own CTA art as the backdrop;
-                mt-14 to sit below the article body. */}
-            <HubBuyCta
-              gameName={game.name}
-              gameSlug={gameSlug}
-              buyHref={buyHref}
-              bgSrc={ctaImage ?? undefined}
-              className="mt-14"
-            />
 
             {/* Related tools — sends the reader to the money page matching this
                 post's intent, each with a distinct keyword-rich anchor. Uses the
