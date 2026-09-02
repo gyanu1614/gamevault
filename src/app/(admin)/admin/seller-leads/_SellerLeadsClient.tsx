@@ -23,10 +23,12 @@ import {
   createSellerLead,
   updateSellerLead,
   deleteSellerLead,
+} from '@/lib/actions/seller-leads'
+import {
   SELLER_LEAD_STATUSES,
   type SellerLead,
   type SellerLeadStatus,
-} from '@/lib/actions/seller-leads'
+} from '@/lib/actions/seller-leads-types'
 import { PageHeader, StatCard, TABLE } from '../components/kit'
 
 const STATUS_LABEL: Record<SellerLeadStatus, string> = {

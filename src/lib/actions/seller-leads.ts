@@ -14,41 +14,10 @@
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { requireAdmin } from './admin-permissions'
 import { revalidatePath } from 'next/cache'
-
-export type SellerLeadStatus =
-  | 'new'
-  | 'contacted'
-  | 'replied'
-  | 'negotiating'
-  | 'signed_up'
-  | 'converted'
-  | 'passed'
-  | 'lost'
-
-export const SELLER_LEAD_STATUSES: SellerLeadStatus[] = [
-  'new',
-  'contacted',
-  'replied',
-  'negotiating',
-  'signed_up',
-  'converted',
-  'passed',
-  'lost',
-]
-
-export interface SellerLead {
-  id: string
-  handle: string
-  source: string | null
-  contact: string | null
-  game: string | null
-  status: SellerLeadStatus
-  notes: string | null
-  last_contacted: string | null
-  next_follow_up: string | null
-  created_at: string
-  updated_at: string
-}
+// Types + constants live in a plain module — a 'use server' file may only export
+// async functions, so SELLER_LEAD_STATUSES etc. can't be exported from here.
+import type { SellerLeadStatus, SellerLead } from './seller-leads-types'
+import { SELLER_LEAD_STATUSES } from './seller-leads-types'
 
 type Result = { ok: true } | { ok: false; error: string }
 type ListResult =
