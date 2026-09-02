@@ -115,8 +115,10 @@ function StepRow({
   const done = step.state === 'done'
   const current = step.state === 'current'
   const upcoming = step.state === 'upcoming'
-  // Step 2 ("create your account") opens the modal; other actions are links.
-  const isCreateAccount = step.key === 'application'
+  // The "create account" path (a logged-OUT founder) opens the store-name modal;
+  // everything else — including step 2's "Set Up Store" for a logged-IN founder,
+  // which links straight to the seller wizard — is a plain link.
+  const isCreateAccount = step.key === 'application' && step.action?.href?.startsWith('/signup-become-seller')
 
   return (
     <li

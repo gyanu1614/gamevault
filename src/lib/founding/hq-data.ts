@@ -198,25 +198,40 @@ function buildJourney({
   appStatus,
   listingCount,
 }: {
+  /** Do they already have an account? Only affects step 2's label/target, not
+   *  whether step 2 is "done" (that needs a started application). */
   hasAccount: boolean
   appStatus: string | null
   listingCount: number
 }): SellerJourney {
   // How far along are they? (1 = email confirmed … 4 = listing live)
+  //
   // Email is ALWAYS done: a founder only reaches this HQ by opening their magic
   // link, which confirms the address. So the minimum is 1, making step 2
   // ("Set Up Your Store") the current, actionable step for a brand-new founder.
+  //
+  // IMPORTANT: "Set Up Your Store" (step 2) is only DONE once they've actually
+  // STARTED the seller application (appStatus exists) — NOT merely because an
+  // account exists. Just having a login is not "setting up a store", so it must
+  // not tick step 2. (Otherwise a founder who signed up but never filled the
+  // seller application sees a false ✓.)
   let reached = 1 // email confirmed — always true for a founder on their HQ
-  if (hasAccount || appStatus) reached = 2 // account created / application started
-  if (appStatus === 'pending' || appStatus === 'under_review' || appStatus === 'info_requested') reached = 3
+  if (appStatus) reached = 2 // seller application started → store is set up
   if (appStatus === 'approved') reached = 3 // approved → next real action is listing
   if (listingCount > 0) reached = 4
 
-  // Each step's action deep-links into the real flow. Step 2 (create account) is
-  // handled by the tracker as a store-name modal → the signup-to-sell funnel
-  // (which sets the password safely + tags founding); step 3 → the seller wizard
-  // (ID + agreement); step 4 → the new-listing flow. Labels are short (one line);
-  // the hint adds the single-line detail.
+  // Step 2's action adapts to whether they already have an account:
+  //   - No account yet (magic-link founder): "Create Account" → the store-name
+  //     modal → the signup-to-sell funnel (sets the password safely + tags
+  //     founding). The tracker opens the modal for step.key === 'application'.
+  //   - Already logged in: "Set Up Store" → straight into the seller wizard
+  //     (/account/become-seller). No redundant create-account step.
+  const step2Action = hasAccount
+    ? { label: 'Set Up Store', href: '/account/become-seller' }
+    : { label: 'Create Account', href: '/signup-become-seller?src=founding-hq' }
+
+  // Steps 3 → the seller wizard (ID + agreement); step 4 → the new-listing flow.
+  // Labels are short (one line); the hint adds the single-line detail.
   const defs: Array<{
     key: JourneyStepKey
     label: string
@@ -231,8 +246,8 @@ function buildJourney({
     {
       key: 'application',
       label: 'Set Up Your Store',
-      hint: 'Pick a store name and password.',
-      action: { label: 'Create Account', href: '/signup-become-seller?src=founding-hq' },
+      hint: hasAccount ? 'Add your games and store details.' : 'Pick a store name and password.',
+      action: step2Action,
     },
     {
       key: 'review',
@@ -266,7 +281,7 @@ function buildJourney({
 /** Sample journey shown to an admin previewing /founding. */
 const PREVIEW_JOURNEY: SellerJourney = buildJourney({
   hasAccount: true,
-  appStatus: 'pending',
+  appStatus: "pending",
   listingCount: 0,
 })
 
