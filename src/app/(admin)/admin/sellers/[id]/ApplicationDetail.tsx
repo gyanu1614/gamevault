@@ -573,13 +573,21 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
     .join(', ')
 
   // ── Actions (wiring unchanged) ──
-  const handleApprove = async () => {
+  // `asFounding` grants founding-seller status (2% fee discount + badge) on
+  // approval. Even without it, approveApplication auto-grants founding to any
+  // applicant already flagged is_founding_applicant (waitlist founder), so a
+  // courted lead never loses the promised perk.
+  const handleApprove = async (asFounding = false) => {
     setIsProcessing(true)
-    const result = await approveApplication(application.id, adminNotes)
+    const result = await approveApplication(application.id, adminNotes, asFounding)
 
     if (result.success) {
       setShowApproveModal(false)
-      toast.success('Application approved successfully')
+      toast.success(
+        (result as any).founding
+          ? 'Approved as a founding seller'
+          : 'Application approved successfully',
+      )
       setTimeout(() => {
         router.push('/admin/sellers?status=approved')
         router.refresh()
@@ -1524,7 +1532,7 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
             >
               Cancel
             </button>
-            <button onClick={handleApprove} disabled={isProcessing} className={MODAL_CONFIRM_LIME}>
+            <button onClick={() => handleApprove(false)} disabled={isProcessing} className={MODAL_CONFIRM_LIME}>
               {isProcessing ? (
                 <>
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -1538,6 +1546,18 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
               )}
             </button>
           </div>
+          {/* Founding grant is otherwise a separate toggle the admin has to
+              remember; this closes the promise for a courted lead in one click.
+              (A waitlist founder is auto-granted founding by plain Approve too —
+              this button forces it for anyone.) */}
+          <button
+            onClick={() => handleApprove(true)}
+            disabled={isProcessing}
+            className="mt-2.5 flex w-full items-center justify-center gap-1.5 rounded-lg border border-[#F5C451]/40 bg-[#F5C451]/10 py-2.5 text-sm font-semibold text-[#F5C451] transition-colors hover:bg-[#F5C451]/15 disabled:opacity-50"
+          >
+            <CheckCircle className="h-3.5 w-3.5" />
+            Approve as Founding Seller
+          </button>
         </ModalShell>
       )}
 

@@ -567,7 +567,21 @@ export async function messageApplicant(applicationId: string, message: string) {
   }
 }
 
-export async function approveApplication(applicationId: string, notes?: string) {
+export async function approveApplication(
+  applicationId: string,
+  notes?: string,
+  /**
+   * Approve AND grant founding-seller status in one action. Prevents the
+   * silent-breakage where a hand-courted founding lead is approved as a normal
+   * seller and the promised perk (2% fee discount + badge) is a separate toggle
+   * the admin has to remember. When omitted, we still AUTO-GRANT founding to any
+   * applicant already flagged `is_founding_applicant` (i.e. their email is on the
+   * /early-seller waitlist — the flag the founding routing already maintains).
+   * NOTE: is_founding_applicant is a routing signal only; founding_seller is the
+   * actual fee perk. This is where the two get connected, on approval.
+   */
+  asFounding = false,
+) {
   try {
     const admin = await requireRole(['admin', 'super_admin'])
     const supabase = await createClient()
@@ -584,7 +598,8 @@ export async function approveApplication(applicationId: string, notes?: string) 
         profiles!user_id (
           email,
           full_name,
-          username
+          username,
+          is_founding_applicant
         )
       `)
       .eq('id', applicationId)
@@ -593,6 +608,13 @@ export async function approveApplication(applicationId: string, notes?: string) 
     if (!application) {
       return { success: false, error: 'Application not found' }
     }
+
+    // Grant founding when the admin explicitly asked (Approve as Founding) OR
+    // the applicant is already flagged as a waitlist founder. Only ever SET
+    // founding true — never write false, so this can't revoke an existing grant.
+    const grantFounding =
+      asFounding === true ||
+      (application.profiles as any)?.is_founding_applicant === true
 
     // WRITE ORDER MATTERS (realtime race): the client's reactive auth effect
     // resubscribes when isApprovedSeller flips, which happens on the
@@ -644,7 +666,10 @@ export async function approveApplication(applicationId: string, notes?: string) 
         role: 'seller',
         badges: newBadges,
         shop_name: shopName,
-        shop_slug: shopSlug
+        shop_slug: shopSlug,
+        // Only ever set founding true here — never false, so this can't revoke
+        // a founding status granted elsewhere.
+        ...(grantFounding ? { founding_seller: true } : {}),
       })
       .eq('id', application.user_id)
 
@@ -749,10 +774,14 @@ export async function approveApplication(applicationId: string, notes?: string) 
 
     revalidatePath('/admin/sellers')
     revalidatePath(`/admin/sellers/${applicationId}`)
+    if (grantFounding) revalidatePath('/') // storefronts render the founding badge
 
     return {
       success: true,
-      message: `Application approved. ${application.display_name} is now a verified seller.`,
+      founding: grantFounding,
+      message: grantFounding
+        ? `Application approved. ${application.display_name} is now a verified FOUNDING seller.`
+        : `Application approved. ${application.display_name} is now a verified seller.`,
     }
   } catch (error: any) {
     console.error('Error approving application:', error)
