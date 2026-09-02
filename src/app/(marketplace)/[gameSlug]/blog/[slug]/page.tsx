@@ -16,10 +16,11 @@ import { SabSellerCta } from '../../_SabSellerCta'
 import { formatDate } from '@/lib/sab/format'
 import { JsonLd, breadcrumbList, blogPosting } from '@/lib/seo/jsonld'
 import { SITE_URL } from '@/config/site'
-import { IconListDetails, IconCalculator, IconTag, IconArrowRight, IconArrowUpRight } from '@tabler/icons-react'
+import { IconListDetails, IconCalculator, IconTag, IconArrowUpRight } from '@tabler/icons-react'
 import { SpotlightCard } from '@/components/ui/spotlight-card'
 import { ContentDisclaimer } from '@/components/content/ContentDisclaimer'
 import { SabHeroBackdrop } from '../../values/_SabHeroBackdrop'
+import { HubBuyCta } from '@/components/content/HubBuyCta'
 import { HubNav } from '@/components/content/HubNav'
 import { HubFooter } from '@/components/content/HubFooter'
 import { getHubNavData, HUB_NAV_CLEAR } from '@/lib/content/hubNav'
@@ -298,41 +299,16 @@ export default async function GameBlogArticle({
                 game's card art so every game gets a background today, and a
                 flat panel if neither exists. A scrim keeps the copy readable
                 whatever the art. */}
-            <div
-              className="relative mt-14 overflow-hidden border border-[#23331F] bg-[#0D140E] p-6 sm:p-8"
-              style={
-                ctaImage
-                  ? {
-                      backgroundImage: `linear-gradient(90deg, rgba(9,14,10,0.96) 0%, rgba(9,14,10,0.88) 45%, rgba(9,14,10,0.62) 100%), url(${ctaImage})`,
-                      backgroundSize: 'cover',
-                      backgroundPosition: 'center',
-                    }
-                  : undefined
-              }
-            >
-              <h2 className="mb-3 text-[22px] font-semibold leading-tight tracking-tight text-[#F1F3F1]">
-                Skip the grind — buy the {game.name} item you want
-              </h2>
-              <p className="mb-5 max-w-md text-sm leading-relaxed text-[#98A398]">
-                Every order is covered by SafeDrop — the seller is paid only
-                after you confirm delivery.
-              </p>
-              {/* Buy-only now — the value/calculator links moved to the
-                  dedicated "Related tools" block below, each with its own
-                  keyword-rich anchor (no duplicate value anchor on the page). */}
-              <div className="flex flex-wrap gap-3">
-                <Link
-                  href={buyHref}
-                  className="group inline-flex items-center gap-1.5 bg-[#1B6B3F] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#1f7a48]"
-                >
-                  Buy {game.name} items
-                  <IconArrowRight
-                    className="h-4 w-4 transition-transform group-hover:translate-x-0.5"
-                    stroke={2.4}
-                  />
-                </Link>
-              </div>
-            </div>
+            {/* Buy CTA — the shared HubCtaBand (via HubBuyCta), same band as
+                every other page. Passes the post's own CTA art as the backdrop;
+                mt-14 to sit below the article body. */}
+            <HubBuyCta
+              gameName={game.name}
+              gameSlug={gameSlug}
+              buyHref={buyHref}
+              bgSrc={ctaImage ?? undefined}
+              className="mt-14"
+            />
 
             {/* Related tools — sends the reader to the money page matching this
                 post's intent, each with a distinct keyword-rich anchor. Uses the

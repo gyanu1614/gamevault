@@ -12,15 +12,24 @@ export function HubBuyCta({
   gameSlug,
   buyHref,
   title,
+  /** Override the background image (e.g. a blog post's own CTA art). Falls back
+      to the shared per-game public/cta-heroes/{slug}.jpg. */
+  bgSrc,
+  /** Override the section wrapper (e.g. to match a narrower content column). */
+  className,
 }: {
   gameName: string
   gameSlug: string
   buyHref: string
   title?: string
+  bgSrc?: string
+  className?: string
 }) {
   return (
     <HubCtaBand
       gameSlug={gameSlug}
+      bgSrc={bgSrc}
+      className={className}
       title={title ?? `Skip the grind — buy the ${gameName} item you want`}
       body="Every order is covered by SafeDrop — the seller is paid only after you confirm delivery."
       ctaLabel={`Buy ${gameName} items`}
