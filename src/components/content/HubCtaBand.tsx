@@ -31,6 +31,10 @@ export function HubCtaBand({
       rendered as a <button> and passed to this wrapper (e.g. a DialogTrigger).
       Takes precedence over ctaHref. */
   ctaWrap,
+  /** Override the background image path. Defaults to the buy banner's
+      public/cta-heroes/{slug}.jpg; the seller banner passes its own folder
+      (public/seller-cta/{slug}.png). Missing file falls back to the scrim. */
+  bgSrc,
 }: {
   gameSlug: string
   title: ReactNode
@@ -41,17 +45,19 @@ export function HubCtaBand({
   ctaTextColor?: string
   className?: string
   ctaWrap?: (button: ReactNode) => ReactNode
+  bgSrc?: string
 }) {
   const [hasImage, setHasImage] = useState(true)
 
   return (
     <section className={className ?? 'pt-12 sm:pt-16'}>
       <div className="relative overflow-hidden border border-[#1E2723] bg-[#0C0F0E]">
-        {/* Per-game background hero from public/cta-heroes/{slug}.jpg. */}
+        {/* Per-game background hero. Buy banner: public/cta-heroes/{slug}.jpg;
+            seller banner passes bgSrc for its own folder. */}
         {hasImage && (
           // eslint-disable-next-line @next/next/no-img-element -- static per-game bg
           <img
-            src={`/cta-heroes/${gameSlug}.jpg`}
+            src={bgSrc ?? `/cta-heroes/${gameSlug}.jpg`}
             alt=""
             aria-hidden
             onError={() => setHasImage(false)}
