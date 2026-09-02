@@ -1,5 +1,6 @@
-import { JsonLd, breadcrumbList } from '@/lib/seo/jsonld'
+import { JsonLd, breadcrumbList, faqPage } from '@/lib/seo/jsonld'
 import { SITE_URL } from '@/config/site'
+import { ValuesSeo, valuesFaq } from './_ValuesSeo'
 import { SabHeroBackdrop } from './_SabHeroBackdrop'
 import { HubNav } from '@/components/content/HubNav'
 import { HubFooter } from '@/components/content/HubFooter'
@@ -53,6 +54,12 @@ export default async function AdoptMeValuesPage() {
               })),
           }}
         />
+        {/* FAQPage — mirrors the visible FAQ rendered by ValuesSeo below. */}
+        {pets.length > 0 && (
+          <JsonLd
+            data={faqPage(valuesFaq({ gameName: 'Adopt Me', unit: 'pet' }))}
+          />
+        )}
 
         <section>
           <HubHero
@@ -84,6 +91,17 @@ export default async function AdoptMeValuesPage() {
             </div>
           ) : (
             <AdoptMeValuesClient pets={pets} />
+          )}
+
+          {/* SEO content package — intro, "how we price", rendered FAQ (schema
+              above). Depth for the "adopt me value list" head term. */}
+          {pets.length > 0 && (
+            <ValuesSeo
+              gameSlug="adopt-me"
+              gameName="Adopt Me"
+              unit="pet"
+              buyHref="/adopt-me/buy-items"
+            />
           )}
 
           {/* Shared end-of-page CTA with the per-game background hero. */}

@@ -3,7 +3,8 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getCachedGridPrices } from '@/lib/sab/priceCache'
-import { JsonLd, breadcrumbList } from '@/lib/seo/jsonld'
+import { JsonLd, breadcrumbList, itemList, faqPage } from '@/lib/seo/jsonld'
+import { ValuesSeo, valuesFaq } from './_ValuesSeo'
 import ValuesDirectoryClient, {
   type BrainrotDirectoryItem,
   type CardMutation,
@@ -434,6 +435,34 @@ export default async function BrainrotValuesPage({ params }: PageProps) {
           { name: 'Values', path: '/steal-a-brainrot/values' },
         ])}
       />
+      {/* ItemList — reads the directory as a ranked, crawlable set of value
+          pages, passing equity to the per-Brainrot [slug] pages (which carry
+          the Product schema). Only priced Brainrots, highest value first, 50. */}
+      {brainrots.length > 0 && (
+        <JsonLd
+          data={itemList(
+            brainrots
+              .filter((b) => b.display_price_usd != null)
+              .sort(
+                (a, b) =>
+                  Number(b.display_price_usd ?? 0) - Number(a.display_price_usd ?? 0),
+              )
+              .slice(0, 50)
+              .map((b) => ({
+                name: b.name,
+                path: `/steal-a-brainrot/values/${b.slug}`,
+              })),
+          )}
+        />
+      )}
+      {/* FAQPage — mirrors the visible FAQ rendered by ValuesSeo below. */}
+      {brainrots.length > 0 && (
+        <JsonLd
+          data={faqPage(
+            valuesFaq({ gameName: 'Steal a Brainrot', unit: 'Brainrot' }),
+          )}
+        />
+      )}
 
       <section>
         {/* pt clears the fixed HubNav; visible breadcrumb removed (JSON-LD
@@ -526,6 +555,18 @@ export default async function BrainrotValuesPage({ params }: PageProps) {
           <ValuesDirectoryClient brainrots={brainrots} />
         )}
       </section>
+
+      {/* SEO content package — answer-first intro, "how we price", + a rendered
+          FAQ (schema emitted above). Turns the head-term value page from
+          thin/list-only into competitor-depth content. */}
+      {brainrots.length > 0 && (
+        <ValuesSeo
+          gameSlug="steal-a-brainrot"
+          gameName="Steal a Brainrot"
+          unit="Brainrot"
+          buyHref="/steal-a-brainrot/buy-items"
+        />
+      )}
 
       {/* Guides strip — flows this high-authority page's equity into blog
           content (self-hides if the game has no tagged posts). */}
