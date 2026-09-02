@@ -5,6 +5,7 @@ import { JsonLd, breadcrumbList, faqPage } from '@/lib/seo/jsonld'
 import { CalculatorSeo, CALCULATOR_FAQ } from './_CalculatorSeo'
 import { SabHeroBackdrop } from '../values/_SabHeroBackdrop'
 import { HubNav } from '@/components/content/HubNav'
+import { HubGuidesStrip } from '@/components/content/HubGuidesStrip'
 import { HubFooter } from '@/components/content/HubFooter'
 import { getHubNavData } from '@/lib/content/hubNav'
 import { asNumber } from '@/lib/sab/format'
@@ -386,6 +387,15 @@ export default async function SabCalculatorPage({
         // longer greet everyone who lands on the calculator.
         initialTab={resolvedSearchParams.tab === 'cash' ? 'cash' : 'trade'}
       />
+
+      {/* Guides strip — routes a trader who just checked a price into the
+          guides that explain the result (self-hides with no tagged posts). */}
+      <div className="pt-12">
+        <HubGuidesStrip
+          gameSlug="steal-a-brainrot"
+          heading="Trading guides that explain your result"
+        />
+      </div>
 
       {/* Founding-seller pitch — below the calculator, where a price-checker
           has self-identified as a trader. Skippable; buyer's answer came first. */}

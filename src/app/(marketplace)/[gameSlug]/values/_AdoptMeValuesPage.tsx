@@ -8,6 +8,7 @@ import { HubHero } from '@/components/content/HubHero'
 import AdoptMeValuesClient from './_AdoptMeValuesClient'
 import { getAdoptMePets } from './_adoptMeData'
 import { HubBuyCta } from '@/components/content/HubBuyCta'
+import { HubGuidesStrip } from '@/components/content/HubGuidesStrip'
 
 /**
  * /adopt-me/values — the Adopt Me pillar page. Kept as its own component so the
@@ -88,6 +89,15 @@ export default async function AdoptMeValuesPage() {
           {/* Shared end-of-page CTA with the per-game background hero. */}
           <HubBuyCta gameName="Adopt Me" gameSlug="adopt-me" buyHref="/adopt-me/buy-items" />
         </section>
+
+        {/* Guides strip — flows value-page equity into Adopt Me blog content
+            (self-hides until the game has tagged posts). */}
+        <div className="pt-12">
+          <HubGuidesStrip
+            gameSlug="adopt-me"
+            heading="Guides for pricing &amp; trading Adopt Me"
+          />
+        </div>
       </SabHeroBackdrop>
 
       <HubFooter

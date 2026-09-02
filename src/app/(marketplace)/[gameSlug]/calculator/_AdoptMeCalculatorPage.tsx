@@ -5,6 +5,7 @@ import { HubFooter } from '@/components/content/HubFooter'
 import { getHubNavData } from '@/lib/content/hubNav'
 import { HubBuyCta } from '@/components/content/HubBuyCta'
 import { HubHero } from '@/components/content/HubHero'
+import { HubGuidesStrip } from '@/components/content/HubGuidesStrip'
 import AdoptMeWflClient from './_AdoptMeWflClient'
 import { getAdoptMeCalcPets } from './_adoptMeCalcData'
 
@@ -80,6 +81,15 @@ export default async function AdoptMeCalculatorPage() {
           )}
 
           <HubBuyCta gameName="Adopt Me" gameSlug="adopt-me" buyHref="/adopt-me/buy-items" />
+        </div>
+
+        {/* Guides strip — routes a trader who just checked a trade into the
+            guides that explain it (self-hides until the game has tagged posts). */}
+        <div className="pt-12">
+          <HubGuidesStrip
+            gameSlug="adopt-me"
+            heading="Trading guides that explain your result"
+          />
         </div>
       </SabHeroBackdrop>
 

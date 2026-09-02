@@ -14,6 +14,7 @@ import { HubNav } from '@/components/content/HubNav'
 import { HubFooter } from '@/components/content/HubFooter'
 import { getHubNavData, HUB_NAV_CLEAR } from '@/lib/content/hubNav'
 import { HubHero } from '@/components/content/HubHero'
+import { HubGuidesStrip } from '@/components/content/HubGuidesStrip'
 import AdoptMeValuesPage from './_AdoptMeValuesPage'
 
 export const revalidate = 3600
@@ -525,6 +526,15 @@ export default async function BrainrotValuesPage({ params }: PageProps) {
           <ValuesDirectoryClient brainrots={brainrots} />
         )}
       </section>
+
+      {/* Guides strip — flows this high-authority page's equity into blog
+          content (self-hides if the game has no tagged posts). */}
+      <div className="pt-12">
+        <HubGuidesStrip
+          gameSlug="steal-a-brainrot"
+          heading="Guides for pricing &amp; trading Steal a Brainrot"
+        />
+      </div>
 
       {/* Seller door at the bottom of the value list — the other half of the
           dual buy/sell intent (buyers get HubBuyCta elsewhere). */}
