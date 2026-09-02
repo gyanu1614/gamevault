@@ -14,7 +14,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getGamePost, getPostsTaggedForGame } from '@/lib/blog/db'
 import { SabSellerCta } from '../../_SabSellerCta'
 import { formatDate } from '@/lib/sab/format'
-import { JsonLd, breadcrumbList } from '@/lib/seo/jsonld'
+import { JsonLd, breadcrumbList, blogPosting } from '@/lib/seo/jsonld'
 import { SITE_URL } from '@/config/site'
 import { ContentDisclaimer } from '@/components/content/ContentDisclaimer'
 import { SabHeroBackdrop } from '../../values/_SabHeroBackdrop'
@@ -123,7 +123,14 @@ export default async function GameBlogArticle({
   // stand-in until a banner is uploaded for that game.
   const ctaImage = game.blog_cta_image_url || game.cover_url || null
   const buyHref = `/${gameSlug}/buy-items`
-  const formattedDate = post.publishedAt ? formatDate(post.publishedAt) : null
+  // Honest date byline: show "Updated {date}" only when the post was actually
+  // edited after publishing (updatedAt > publishedAt); otherwise "Published".
+  // Previously this always said "Updated" using the publish date — a soft
+  // freshness misrepresentation. `updatedAt` is trigger-maintained in the DB.
+  const wasEdited = !!post.updatedAt && post.updatedAt > post.publishedAt
+  const bylineDate = wasEdited ? post.updatedAt : post.publishedAt
+  const formattedDate = bylineDate ? formatDate(bylineDate) : null
+  const dateVerb = wasEdited ? 'Updated' : 'Published'
   const updatedLabel = formattedDate ? formattedDate.toUpperCase() : null
 
   // Related = other posts for this game, excluding the current one.
@@ -144,17 +151,15 @@ export default async function GameBlogArticle({
         ])}
       />
       <JsonLd
-        data={{
-          '@context': 'https://schema.org',
-          '@type': 'Article',
-          headline: post.title,
+        data={blogPosting({
+          title: post.title,
           description: post.excerpt,
-          author: { '@type': 'Organization', name: post.author },
-          publisher: { '@type': 'Organization', name: 'DropMarket' },
+          url: `${SITE_URL}/${gameSlug}/blog/${slug}`,
           datePublished: post.publishedAt,
-          ...(post.cover ? { image: post.cover } : {}),
-          mainEntityOfPage: `${SITE_URL}/${gameSlug}/blog/${slug}`,
-        }}
+          dateModified: post.updatedAt,
+          authorName: post.author,
+          image: post.cover,
+        })}
       />
 
       {/* Shared hub nav inside the backdrop so the scrim keeps it legible. */}
@@ -192,7 +197,7 @@ export default async function GameBlogArticle({
             {/* Byline — a single quiet line under the intro, left-aligned. */}
             <p className="mt-5 font-mono text-[11px] text-[#5E685E]">
               <span className="text-[#8FBF9C]">{post.author}</span>
-              {updatedLabel ? ` · Updated ${updatedLabel}` : ''}
+              {updatedLabel ? ` · ${dateVerb} ${updatedLabel}` : ''}
             </p>
           </div>
         </div>

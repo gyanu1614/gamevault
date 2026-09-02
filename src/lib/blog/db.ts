@@ -24,6 +24,12 @@ export interface DbBlogPost extends BlogPost {
   primaryGameSlug: string | null
   seoTitle: string | null
   seoDescription: string | null
+  /**
+   * Last-modified date (YYYY-MM-DD). Kept fresh by the blog_posts_touch_updated_at
+   * trigger. Powers the article's schema.org `dateModified` and the visible
+   * "Updated" byline. Equals publishedAt for a post that has never been edited.
+   */
+  updatedAt: string
 }
 
 interface BlogPostRow {
@@ -42,6 +48,7 @@ interface BlogPostRow {
   seo_title: string | null
   seo_description: string | null
   published_at: string
+  updated_at: string
 }
 
 function rowToPost(row: BlogPostRow): DbBlogPost {
@@ -57,6 +64,9 @@ function rowToPost(row: BlogPostRow): DbBlogPost {
     readMinutes: row.read_minutes ?? 5,
     // Keep the ISO date shape the file-based BlogPost uses (YYYY-MM-DD).
     publishedAt: (row.published_at ?? '').slice(0, 10),
+    // Fall back to publishedAt when updated_at is somehow absent, so a post
+    // never reports being modified before it was published.
+    updatedAt: (row.updated_at ?? row.published_at ?? '').slice(0, 10),
     games: row.game_slugs ?? [],
     cover: row.cover_url,
     body,
@@ -68,7 +78,7 @@ function rowToPost(row: BlogPostRow): DbBlogPost {
 }
 
 const SELECT =
-  'id,slug,title,excerpt,author,read_minutes,post_type,status,primary_game_slug,game_slugs,cover_url,body,seo_title,seo_description,published_at'
+  'id,slug,title,excerpt,author,read_minutes,post_type,status,primary_game_slug,game_slugs,cover_url,body,seo_title,seo_description,published_at,updated_at'
 
 /** All published posts scoped to a game (its nested /[game]/blog collection). */
 export async function getGamePosts(gameSlug: string): Promise<DbBlogPost[]> {

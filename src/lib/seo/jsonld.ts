@@ -37,6 +37,126 @@ export function breadcrumbList(items: { name: string; path: string }[]) {
 }
 
 /**
+ * The single canonical @id for the DropMarket publisher entity. Every page that
+ * names DropMarket as author/publisher references THIS id so Google folds them
+ * into one Organization node (E-E-A-T consolidation) instead of many anonymous
+ * "DropMarket" strings.
+ */
+export const ORGANIZATION_ID = `${SITE_URL}/#organization`
+
+/**
+ * The Organization node — emitted ONCE on the homepage. Carries the logo and
+ * real social profiles (sameAs) so the publisher entity is verifiable. Keep the
+ * sameAs list in step with the site footer's social links.
+ */
+export function organization() {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    '@id': ORGANIZATION_ID,
+    name: 'DropMarket',
+    url: SITE_URL,
+    description:
+      'Trusted gaming marketplace with SafeDrop Buyer Protection on every order',
+    logo: {
+      '@type': 'ImageObject',
+      url: `${SITE_URL}/brand/logo-mark-lime-256.png`,
+    },
+    sameAs: [
+      'https://twitter.com/dropmarket',
+      'https://discord.gg/dropmarket',
+      'https://github.com/dropmarket',
+    ],
+  }
+}
+
+/**
+ * BlogPosting — a single content-hub article. Uses ONLY real post fields (no
+ * synthesised steps/FAQ). `dateModified` is honest (the DB touch-trigger keeps
+ * updated_at fresh); it falls back to datePublished for never-edited posts. The
+ * publisher references the shared Organization @id for entity consolidation.
+ */
+export function blogPosting(post: {
+  title: string
+  description: string
+  url: string
+  datePublished: string
+  dateModified?: string
+  authorName: string
+  image?: string | null
+}) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'BlogPosting',
+    headline: post.title,
+    description: post.description,
+    url: post.url,
+    mainEntityOfPage: { '@type': 'WebPage', '@id': post.url },
+    inLanguage: 'en',
+    datePublished: post.datePublished,
+    dateModified: post.dateModified || post.datePublished,
+    author: { '@type': 'Organization', name: post.authorName, url: SITE_URL },
+    publisher: { '@id': ORGANIZATION_ID },
+    ...(post.image
+      ? { image: { '@type': 'ImageObject', url: absoluteUrl(post.image) } }
+      : {}),
+  }
+}
+
+/**
+ * ItemList — an ordered set of on-page links (e.g. the value directory, or a
+ * blog hub's posts). Describes links that literally exist on the page, so it's
+ * always penalty-safe. Items are 1-indexed automatically.
+ */
+export function itemList(items: { name: string; path: string }[]) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'ItemList',
+    itemListElement: items.map((item, index) => ({
+      '@type': 'ListItem',
+      position: index + 1,
+      name: item.name,
+      url: absoluteUrl(item.path),
+    })),
+  }
+}
+
+/**
+ * Blog — a hub page describing its post collection, so Google can discover the
+ * child article URLs directly from the parent's markup (faster indexing of new
+ * posts). Lists only posts literally shown on the page.
+ */
+export function blogCollection({
+  name,
+  url,
+  posts,
+}: {
+  name: string
+  url: string
+  posts: {
+    title: string
+    path: string
+    datePublished: string
+    description?: string
+  }[]
+}) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Blog',
+    name,
+    url,
+    publisher: { '@id': ORGANIZATION_ID },
+    blogPost: posts.map((p) => ({
+      '@type': 'BlogPosting',
+      headline: p.title,
+      url: absoluteUrl(p.path),
+      datePublished: p.datePublished,
+      ...(p.description ? { description: p.description } : {}),
+    })),
+  }
+}
+
+/**
  * Product with an AggregateOffer across live listings.
  * CALLER GUARANTEES offerCount > 0 — never call this on empty pages.
  */

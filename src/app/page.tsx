@@ -1,6 +1,7 @@
 import { SITE_URL } from '@/config/site'
 import type { Metadata } from 'next'
 import { HomePage } from '@/features/home/pages/HomePage'
+import { organization, ORGANIZATION_ID } from '@/lib/seo/jsonld'
 
 export const metadata: Metadata = {
   title: 'DropMarket | Buy & Sell Game Accounts, Items & Currency Safely',
@@ -32,19 +33,16 @@ const SCHEMAS = [
     '@type': 'WebSite',
     name: 'DropMarket',
     url: SITE_URL,
+    publisher: { '@id': ORGANIZATION_ID },
     potentialAction: {
       '@type': 'SearchAction',
       target: `${SITE_URL}/?q={search_term_string}`,
       'query-input': 'required name=search_term_string',
     },
   },
-  {
-    '@context': 'https://schema.org',
-    '@type': 'Organization',
-    name: 'DropMarket',
-    url: SITE_URL,
-    description: 'Trusted gaming marketplace with SafeDrop Buyer Protection on every order',
-  },
+  // The full Organization node — the single source of the publisher entity that
+  // every content page references by @id (see jsonld.ts ORGANIZATION_ID).
+  organization(),
 ]
 
 export default function Page() {
