@@ -31,6 +31,29 @@ export interface PaymentPageStatus {
   invoiceStatus?: string
   additionalStatus?: string
   methods?: PaymentMethodStatus[]
+  /** Chain-watch: a transfer reached the reserved address on the network,
+   *  even though the payment server hasn't registered it yet. Display-only —
+   *  lets the page say "Payment Seen On Network" within seconds. */
+  seenOnNetwork?: boolean
+}
+
+/** Direct TRON chain peek: any TRC20 transfer INTO `address` at/after `sinceMs`?
+ *  Public TronGrid (optional TRONGRID_API_KEY env raises rate limits).
+ *  Best-effort display sugar — failures just mean no early "seen" state. */
+async function tronSeenAtAddress(address: string, sinceMs: number): Promise<boolean> {
+  try {
+    const headers: Record<string, string> = {}
+    if (process.env.TRONGRID_API_KEY) headers['TRON-PRO-API-KEY'] = process.env.TRONGRID_API_KEY
+    const res = await fetch(
+      `https://api.trongrid.io/v1/accounts/${address}/transactions/trc20?limit=10&only_to=true`,
+      { headers, cache: 'no-store' }
+    )
+    if (!res.ok) return false
+    const data = await res.json()
+    return (data?.data ?? []).some((t: any) => Number(t.block_timestamp) >= sinceMs)
+  } catch {
+    return false
+  }
 }
 
 export async function getPaymentPageStatus(orderId: string): Promise<PaymentPageStatus> {
@@ -65,6 +88,7 @@ export async function getPaymentPageStatus(orderId: string): Promise<PaymentPage
     // Methods are best-effort display data (partial-payment progress); a
     // failure here must not blank the whole poll.
     let methods: PaymentMethodStatus[] = []
+    let tronDestination: string | undefined
     try {
       const raw = await btcpayFetchPaymentMethods(order.provider_charge_id)
       methods = raw.map((m) => ({
@@ -72,8 +96,23 @@ export async function getPaymentPageStatus(orderId: string): Promise<PaymentPage
         due: m.due,
         totalPaid: m.totalPaid,
       }))
+      tronDestination = raw.find(
+        (m) =>
+          m.destination &&
+          (m.paymentMethodId.toUpperCase().includes('USDT') ||
+            m.paymentMethodId.toUpperCase().includes('TRON'))
+      )?.destination
     } catch {
       // display-only; ignore
+    }
+
+    // Chain-watch: only worth checking while the processor still shows nothing
+    // (invoice New, no registered payment) — the instant-feedback window.
+    let seenOnNetwork = false
+    const nothingRegistered =
+      invoice.status === 'New' && !methods.some((m) => Number(m.totalPaid ?? 0) > 0)
+    if (nothingRegistered && tronDestination && invoice.createdTime) {
+      seenOnNetwork = await tronSeenAtAddress(tronDestination, invoice.createdTime * 1000)
     }
 
     return {
@@ -82,6 +121,7 @@ export async function getPaymentPageStatus(orderId: string): Promise<PaymentPage
       invoiceStatus: invoice.status,
       additionalStatus: invoice.additionalStatus,
       methods,
+      seenOnNetwork,
     }
   } catch (e: any) {
     return { success: false, error: e?.message ?? 'Status check failed' }

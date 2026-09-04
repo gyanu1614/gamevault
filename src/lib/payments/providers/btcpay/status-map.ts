@@ -50,6 +50,8 @@ export interface BtcpayInvoice {
   metadata?: { orderId?: string; [k: string]: unknown }
   /** Unix seconds (Greenfield convention). */
   expirationTime?: number
+  /** Unix seconds — when the invoice was created (chain-watch lower bound). */
+  createdTime?: number
   checkoutLink?: string
 }
 
