@@ -57,7 +57,7 @@ export default async function PayPage({ params }: PayPageProps) {
   const { data: order } = (await supabase
     .from('orders')
     .select(
-      'id, order_number, buyer_id, status, total_amount, currency, payment_provider, provider_charge_id, payment_expires_at, checkout_url, listing_id, listing:listing_id ( title, game:game_id ( name ) )'
+      'id, order_number, buyer_id, status, total_amount, currency, payment_provider, provider_charge_id, payment_expires_at, checkout_url, listing_id, listing:listing_id ( title, images, game:game_id ( name ) )'
     )
     .eq('id', orderId)
     .single()) as any
@@ -124,6 +124,7 @@ export default async function PayPage({ params }: PayPageProps) {
         orderId={orderId}
         orderNumber={order.order_number ?? null}
         listingTitle={order.listing?.title ?? 'Your Order'}
+        itemImage={order.listing?.images?.[0] ?? null}
         gameName={order.listing?.game?.name ?? null}
         totalAmount={Number(order.total_amount) || 0}
         currency={order.currency || 'USD'}
