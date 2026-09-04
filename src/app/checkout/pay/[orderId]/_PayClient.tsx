@@ -48,6 +48,12 @@ function fmtCountdown(ms: number): string {
   return `${m}:${String(s % 60).padStart(2, '0')}`
 }
 
+/** Fiat symbol for the order currency (USD is the platform default). */
+function fiatSymbol(currency: string): string {
+  const c = currency.toUpperCase()
+  return c === 'USD' ? '$' : c === 'EUR' ? '€' : c === 'GBP' ? '£' : `${c} `
+}
+
 /** Trim a crypto decimal string for display (drop trailing zeros, keep ≤8 dp). */
 function fmtCrypto(v: string | undefined): string {
   if (!v) return ''
@@ -203,11 +209,15 @@ export default function PayClient({
           <p className="min-w-0 truncate text-[14px] font-semibold text-white">{listingTitle}</p>
           <div className="shrink-0 text-right">
             <p className="text-[15px] font-bold text-lime-300">
-              €{invoiceAmount.toFixed(2)}{' '}
+              {fiatSymbol(currency)}
+              {invoiceAmount.toFixed(2)}{' '}
               <span className="text-[11px] font-medium text-white/40">{currency}</span>
             </p>
             {walletCredit > 0.004 && (
-              <p className="text-[11px] text-white/45">−€{walletCredit.toFixed(2)} Wallet Credit Applied</p>
+              <p className="text-[11px] text-white/45">
+                −{fiatSymbol(currency)}
+                {walletCredit.toFixed(2)} Wallet Credit Applied
+              </p>
             )}
           </div>
         </div>

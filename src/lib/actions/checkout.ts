@@ -29,7 +29,11 @@ import { fromDecimal, money } from '@/lib/money'
 
 // Order currency is the ledger base (EUR). Listing price_currency / display is
 // a separate concern handled at the UI layer; the order + charge settle EUR.
-const ORDER_CURRENCY = 'EUR'
+// USD end-to-end (decided 2026-09-04): listings, checkout totals, orders,
+// wallet ledger and BTCPay invoices all denominate in USD — matching every
+// $-labelled surface of the UI. (EUR was a leftover of the CoinGate/SEPA
+// plan; switched before any real payment existed.)
+const ORDER_CURRENCY = 'USD'
 
 export interface CreateCheckoutInput {
   listingId: string

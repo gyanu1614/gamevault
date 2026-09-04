@@ -122,7 +122,7 @@ export default async function PayPage({ params }: PayPageProps) {
         orderId={orderId}
         listingTitle={order.listing?.title ?? 'Your Order'}
         totalAmount={Number(order.total_amount) || 0}
-        currency={order.currency || 'EUR'}
+        currency={order.currency || 'USD'}
         invoiceAmount={invoiceAmount}
         initialInvoiceStatus={invoiceStatus}
         expiresAt={expiresAtIso}
