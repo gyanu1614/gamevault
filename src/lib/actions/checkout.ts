@@ -20,8 +20,10 @@
  */
 
 import { createClient } from '@/lib/supabase/server'
+import { createServiceRoleClient } from '@/lib/supabase/service'
+import { PURCHASES_ENABLED, PURCHASES_DISABLED_MESSAGE } from '@/lib/config/purchases'
 import { buyerFee, commissionAmount, protectionWindowHours, round2 } from '@/lib/fees'
-import { getProvider } from '@/lib/payments/registry'
+import { getProvider, activePaymentProviderName } from '@/lib/payments/registry'
 import { spendWallet, getWalletBalance } from '@/lib/wallet/wallet'
 import { fromDecimal, money } from '@/lib/money'
 
@@ -46,6 +48,12 @@ export interface CreateCheckoutResult {
 
 export async function createCheckout(input: CreateCheckoutInput): Promise<CreateCheckoutResult> {
   try {
+    // Marketplace-wide buying gate — the authoritative server-side block. Both
+    // callers (CheckoutForm action + /api/checkout) pass through here.
+    if (!PURCHASES_ENABLED) {
+      return { success: false, error: PURCHASES_DISABLED_MESSAGE }
+    }
+
     const supabase = await createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) return { success: false, error: 'Authentication required' }
@@ -142,7 +150,7 @@ export async function createCheckout(input: CreateCheckoutInput): Promise<Create
     // Create the order at PENDING. Confirmed only by the verified webhook.
     let orderId: string
     {
-      const insertRes = await insertPendingOrder(supabase, {
+      const insertRes = await insertPendingOrder({
         buyerId: user.id,
         sellerId: listing.seller_id,
         listingId: input.listingId,
@@ -218,12 +226,13 @@ export async function createCheckout(input: CreateCheckoutInput): Promise<Create
       return { success: true, orderId, fullyPaidByWallet: true }
     }
 
-    // Create the CoinGate charge for the remaining amount.
+    // Create the provider charge for the remaining amount.
     //  • success → the order page (paid=1 marks a payment return so the page
-    //    collapses history → the back button skips the CoinGate invoice).
+    //    collapses history → the back button skips the payment page).
     //  • cancel  → back to checkout so the buyer can retry.
     const base = publicAppUrl()
-    const provider = getProvider('coingate')
+    const providerName = activePaymentProviderName()
+    const provider = getProvider(providerName)
     const charge = await provider.createCharge({
       orderId,
       amount: chargeMoney,
@@ -231,21 +240,27 @@ export async function createCheckout(input: CreateCheckoutInput): Promise<Create
       cancelUrl: `${base}/checkout/${input.listingId}`,
       metadata: { listing_id: input.listingId },
     })
+    // BTCPay: the buyer pays on OUR native page (address/QR/status), not the
+    // provider's hosted checkout — the invoice id on the order is what the
+    // page renders from. Other providers redirect to their hosted URL.
+    const payUrl =
+      providerName === 'btcpay' ? `${base}/checkout/pay/${orderId}` : charge.checkoutUrl
 
     // Persist the charge on the order so a re-checkout can REUSE this exact
-    // invoice instead of minting a second one. Expiry mirrors CoinGate's ~2h
-    // invoice lifetime (status-map). Best-effort: a failed UPDATE only costs
-    // the reuse optimisation on a subsequent attempt (the unique index still
-    // prevents a genuine duplicate), so it never fails the checkout.
-    const expiresAt = new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString()
+    // invoice instead of minting a second one. Expiry is the provider's
+    // authoritative invoice expiry when given (BTCPay: 30 min), else the ~2h
+    // CoinGate default. Best-effort: a failed UPDATE only costs the reuse
+    // optimisation on a subsequent attempt (the unique index still prevents a
+    // genuine duplicate), so it never fails the checkout.
+    const expiresAt = charge.expiresAt ?? new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString()
     await (supabase.from('orders').update as any)({
-      payment_provider: 'coingate',
+      payment_provider: providerName,
       provider_charge_id: charge.providerChargeId,
-      checkout_url: charge.checkoutUrl,
+      checkout_url: payUrl,
       payment_expires_at: expiresAt,
     }).eq('id', orderId)
 
-    return { success: true, orderId, checkoutUrl: charge.checkoutUrl }
+    return { success: true, orderId, checkoutUrl: payUrl }
   } catch (e: any) {
     return { success: false, error: e?.message ?? 'Checkout failed' }
   }
@@ -304,10 +319,13 @@ interface InsertPendingArgs {
  * failure so the caller can recover by reusing the racing order.
  */
 async function insertPendingOrder(
-  supabase: any,
   a: InsertPendingArgs,
 ): Promise<{ orderId?: string; duplicate?: boolean; error?: string }> {
-  const { data, error } = await (supabase.from('orders').insert as any)({
+  // Service role: client-side order inserts are RLS-blocked entirely (the old
+  // permissive "Buyers can create orders" policy was a price-integrity hole) —
+  // the server, which computed the amounts above, is the only writer.
+  const service = createServiceRoleClient()
+  const { data, error } = await (service.from('orders').insert as any)({
     buyer_id: a.buyerId,
     seller_id: a.sellerId,
     listing_id: a.listingId,
@@ -347,6 +365,11 @@ export async function retryOrderPayment(orderId: string): Promise<{
   error?: string
 }> {
   try {
+    // The gate stops ALL new payment initiation, not just new orders.
+    if (!PURCHASES_ENABLED) {
+      return { success: false, error: PURCHASES_DISABLED_MESSAGE }
+    }
+
     const supabase = await createClient()
     const {
       data: { user },
@@ -388,7 +411,8 @@ export async function retryOrderPayment(orderId: string): Promise<{
     }
 
     const base = publicAppUrl()
-    const provider = getProvider('coingate')
+    const providerName = activePaymentProviderName()
+    const provider = getProvider(providerName)
     const charge = await provider.createCharge({
       orderId,
       amount: money(remainingMinor, ORDER_CURRENCY),
@@ -396,16 +420,18 @@ export async function retryOrderPayment(orderId: string): Promise<{
       cancelUrl: `${base}/account/orders/${orderId}`,
       metadata: { listing_id: order.listing_id, retry: 'true' },
     })
+    const payUrl =
+      providerName === 'btcpay' ? `${base}/checkout/pay/${orderId}` : charge.checkoutUrl
 
-    const expiresAt = new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString()
+    const expiresAt = charge.expiresAt ?? new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString()
     await (supabase.from('orders').update as any)({
-      payment_provider: 'coingate',
+      payment_provider: providerName,
       provider_charge_id: charge.providerChargeId,
-      checkout_url: charge.checkoutUrl,
+      checkout_url: payUrl,
       payment_expires_at: expiresAt,
     }).eq('id', orderId)
 
-    return { success: true, checkoutUrl: charge.checkoutUrl }
+    return { success: true, checkoutUrl: payUrl }
   } catch (e: any) {
     return { success: false, error: e?.message ?? 'Could not restart payment' }
   }

@@ -112,6 +112,41 @@ export async function dispatch(
       )
     }
 
+    // A failed/expired charge cancels the order — but CANCELLED only moves
+    // escrow_held → the platform 'refunds' account. Any WALLET credit the
+    // buyer applied at checkout (checkout_wallet:<id> → escrow_held) must
+    // come back to their wallet, exactly like createCheckout's supersede
+    // path. Idempotent on 'wallet_refund:<orderId>'; zero-hold orders no-op.
+    // Wrapped: a credit failure must never fail the webhook (retryable).
+    if (event.type === 'CHARGE_FAILED') {
+      await (async () => {
+        const { createServiceRoleClient } = await import('@/lib/supabase/service')
+        const service = createServiceRoleClient()
+        const { data: heldMinorRaw } = await (service.rpc as any)('checkout_wallet_hold_minor', {
+          p_order_id: event.orderId,
+        })
+        const heldMinor = BigInt(heldMinorRaw ?? 0)
+        if (heldMinor > 0n) {
+          const { data: order } = await service
+            .from('orders')
+            .select('buyer_id, currency')
+            .eq('id', event.orderId)
+            .single() as any
+          if (order?.buyer_id) {
+            const { refundToWallet } = await import('@/lib/wallet/wallet')
+            await refundToWallet({
+              userId: order.buyer_id,
+              amountMinor: heldMinor,
+              currency: (order.currency || 'EUR').toUpperCase(),
+              orderId: event.orderId,
+            })
+          }
+        }
+      })().catch((err) =>
+        console.error('[Dispatch] Wallet hold return on failed charge failed (retryable):', err)
+      )
+    }
+
     // Comms ride on top of an APPLIED transition only (a replayed/no-op
     // webhook must not re-email anyone). AWAITED — on serverless the function
     // freezes once the webhook response is sent, so an unawaited send would

@@ -1,6 +1,12 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import {
+  PURCHASES_ENABLED,
+  PURCHASES_DISABLED_MESSAGE,
+  WALLET_TOPUP_ENABLED,
+  WALLET_TOPUP_DISABLED_MESSAGE,
+} from '@/lib/config/purchases'
 import { revalidatePath } from 'next/cache'
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -113,6 +119,16 @@ export async function createTopUpCheckout(amount: number): Promise<{
   error?: string
 }> {
   try {
+    // Wallet top-up has its OWN gate on top of the marketplace-wide one — it
+    // stays off when purchases flip on (compliance: prepaying the ledger
+    // drifts toward e-money custody; see lib/config/purchases).
+    if (!PURCHASES_ENABLED) {
+      return { success: false, error: PURCHASES_DISABLED_MESSAGE }
+    }
+    if (!WALLET_TOPUP_ENABLED) {
+      return { success: false, error: WALLET_TOPUP_DISABLED_MESSAGE }
+    }
+
     const supabase = await createClient()
 
     const { data: { user } } = await supabase.auth.getUser()

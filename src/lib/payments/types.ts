@@ -58,6 +58,9 @@ export interface CreateChargeResult {
   providerChargeId: string
   checkoutUrl: string // hosted checkout / payment page to redirect the buyer to
   rawStatus: string
+  /** Provider-authoritative invoice expiry (ISO). Absent → caller applies its
+   *  provider-specific default window. */
+  expiresAt?: string
 }
 
 // ─── Webhook parsing result ───────────────────────────────────────

@@ -7,6 +7,7 @@ import AccountPageHeader from '@/components/account/AccountPageHeader'
 import { useSellerEarnings } from '@/hooks/use-seller-earnings'
 import { createClient } from '@/lib/supabase/client'
 import { createTopUpCheckout } from '@/lib/actions/wallet'
+import { WALLET_TOPUP_ENABLED } from '@/lib/config/purchases'
 // Ledger-backed balance (funds-flow cutover): refund credits post to the
 // ledger wallet, which the legacy wallet_balances float table never sees.
 import { getMyWalletBalance } from '@/lib/actions/wallet-ledger'
@@ -584,6 +585,9 @@ export default function WalletPage() {
                       </p>
                     )}
                   </div>
+                  {/* Top-up stays gated behind its own flag even after
+                      purchases open (compliance — lib/config/purchases). */}
+                  {WALLET_TOPUP_ENABLED && (
                   <div className="flex w-full gap-2 sm:w-auto">
                     <button
                       onClick={() => handleTopUp(25)}
@@ -614,6 +618,7 @@ export default function WalletPage() {
                       )}
                     </button>
                   </div>
+                  )}
                 </div>
 
                 {/* Rewards Row */}
