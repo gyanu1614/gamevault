@@ -19,6 +19,7 @@ type PetRow = {
   rarity: string
   image_url: string | null
   has_page: boolean
+  demand_rank: number | string | null
 }
 type ValueRow = {
   pet_id: string
@@ -43,7 +44,7 @@ export async function getAdoptMePets(): Promise<AdoptMePetItem[]> {
   const [petsRes, valuesRes] = await Promise.all([
     (supabase as any)
       .from('adopt_me_pets')
-      .select('id,slug,name,rarity,image_url,has_page')
+      .select('id,slug,name,rarity,image_url,has_page,demand_rank')
       .eq('is_active', true),
     (supabase as any)
       .from('adopt_me_pet_values')
@@ -97,6 +98,7 @@ export async function getAdoptMePets(): Promise<AdoptMePetItem[]> {
       rarity: pet.rarity,
       imageUrl: pet.image_url,
       topTradeValue,
+      demandRank: num(pet.demand_rank),
       hasPage: Boolean(pet.has_page),
       values,
     }

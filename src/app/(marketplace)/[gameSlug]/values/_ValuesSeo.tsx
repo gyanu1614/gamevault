@@ -46,7 +46,7 @@ export function valuesFaq({
     },
     {
       q: `How do I sell my ${gameName} ${u}s for money?`,
-      a: `Price your ${u} against this list, then list it for sale on DropMarket. Every order is covered by SafeDrop escrow, so you're paid on delivery with no chargebacks. Buyers find your listing through these same value pages, which rank on Google.`,
+      a: `Price your ${u} against this list, then list it for sale on DropMarket. Every order is SafeDrop protected — you're paid on delivery with no chargebacks. Buyers find your listing through these same value pages, which rank on Google.`,
     },
   ]
 }
@@ -58,6 +58,7 @@ export function ValuesSeo({
   buyHref,
   methodologyHref = `/${gameSlug}/values/methodology`,
   calculatorHref = `/${gameSlug}/calculator`,
+  intro,
 }: {
   gameSlug: string
   gameName: string
@@ -66,76 +67,90 @@ export function ValuesSeo({
   buyHref: string
   methodologyHref?: string
   calculatorHref?: string
+  /**
+   * Optional game-specific intro sections (heading + body). When omitted, the
+   * default generic three-paragraph package renders. Adopt Me passes a warmer,
+   * plain-English version; SAB keeps the default.
+   */
+  intro?: { heading: string; body: React.ReactNode }[]
 }) {
   const u = unit.toLowerCase()
   const faqItems = valuesFaq({ gameName, unit })
 
+  const defaultIntro: { heading: string; body: React.ReactNode }[] = [
+    {
+      heading: `The ${gameName} value list, in real money`,
+      body: (
+        <>
+          This is the DropMarket {gameName} value list: every {u}&apos;s worth in real US
+          dollars, sourced from live marketplace listings and completed sales and updated
+          daily. Instead of static &quot;value points&quot; that go stale within days of an
+          update, each price is a real cash value you can act on — so you never overpay, get
+          lowballed, or accept a bad trade. Search any {u} to see its current value, price
+          range, and daily trend, or check a full swap in the{' '}
+          <Link
+            href={calculatorHref}
+            className="text-[#8FBF9C] underline underline-offset-2 hover:text-[#B9DCC4]"
+          >
+            {gameName} WFL calculator
+          </Link>
+          .
+        </>
+      ),
+    },
+    {
+      heading: `How we price ${gameName} values`,
+      body: (
+        <>
+          Every value on this list comes from real marketplace data — live listings and
+          completed sales aggregated across sources, cleaned of outliers, and published as an
+          average current market price with a confidence label. We re-price every day so the
+          list keeps pace with the real market after updates and new releases. See exactly how
+          each number is sourced, dated, and quality-checked in our{' '}
+          <Link
+            href={methodologyHref}
+            className="text-[#8FBF9C] underline underline-offset-2 hover:text-[#B9DCC4]"
+          >
+            pricing methodology
+          </Link>
+          {' '}— so you can trust the value and cite it with confidence.
+        </>
+      ),
+    },
+    {
+      heading: `What drives a ${u}'s value in ${gameName}?`,
+      body: (
+        <>
+          A {u}&apos;s worth comes down to a few factors, all reflected in the prices on this
+          list: its rarity, its demand after recent updates, and — for {gameName} — the
+          variants or mutations applied to it, which can multiply its value several times over.
+          Because we price from real sales rather than a fixed multiplier, each variant shows
+          its own honest cash value. When you know what a {u} is worth, you can{' '}
+          <Link
+            href={buyHref}
+            className="text-[#8FBF9C] underline underline-offset-2 hover:text-[#B9DCC4]"
+          >
+            buy {gameName} items
+          </Link>{' '}
+          at a fair price with SafeDrop protection, or list your own to sell.
+        </>
+      ),
+    },
+  ]
+
+  const sections = intro ?? defaultIntro
+
   return (
     <div className="mx-auto w-full max-w-7xl border-t border-[#1A211A] px-4 pb-4 pt-12 sm:px-6 lg:px-8">
       {/* Answer-first intro — the extractable summary Google wants on the head
-          term. First sentence directly answers "what is this / how much".
-          space-y-8 gives each sub-section clear breathing room. */}
+          term. space-y-8 gives each sub-section clear breathing room. */}
       <section className="space-y-8">
-        <div>
-          <h2 className="text-xl font-semibold text-[#F1F3F1]">
-            The {gameName} value list, in real money
-          </h2>
-          <p className="mt-3 leading-7 text-[#9BA8A0]">
-            This is the DropMarket {gameName} value list: every {u}&apos;s worth in real US
-            dollars, sourced from live marketplace listings and completed sales and updated
-            daily. Instead of static &quot;value points&quot; that go stale within days of an
-            update, each price is a real cash value you can act on — so you never overpay, get
-            lowballed, or accept a bad trade. Search any {u} to see its current value, price
-            range, and daily trend, or check a full swap in the{' '}
-            <Link
-              href={calculatorHref}
-              className="text-[#8FBF9C] underline underline-offset-2 hover:text-[#B9DCC4]"
-            >
-              {gameName} WFL calculator
-            </Link>
-            .
-          </p>
-        </div>
-
-        <div>
-          <h2 className="text-xl font-semibold text-[#F1F3F1]">
-            How we price {gameName} values
-          </h2>
-          <p className="mt-3 leading-7 text-[#9BA8A0]">
-            Every value on this list comes from real marketplace data — live listings and
-            completed sales aggregated across sources, cleaned of outliers, and published as an
-            average current market price with a confidence label. We re-price every day so the
-            list keeps pace with the real market after updates and new releases. See exactly how
-            each number is sourced, dated, and quality-checked in our{' '}
-            <Link
-              href={methodologyHref}
-              className="text-[#8FBF9C] underline underline-offset-2 hover:text-[#B9DCC4]"
-            >
-              pricing methodology
-            </Link>
-            {' '}— so you can trust the value and cite it with confidence.
-          </p>
-        </div>
-
-        <div>
-          <h2 className="text-xl font-semibold text-[#F1F3F1]">
-            What drives a {u}&apos;s value in {gameName}?
-          </h2>
-          <p className="mt-3 leading-7 text-[#9BA8A0]">
-            A {u}&apos;s worth comes down to a few factors, all reflected in the prices on this
-            list: its rarity, its demand after recent updates, and — for {gameName} — the
-            variants or mutations applied to it, which can multiply its value several times over.
-            Because we price from real sales rather than a fixed multiplier, each variant shows
-            its own honest cash value. When you know what a {u} is worth, you can{' '}
-            <Link
-              href={buyHref}
-              className="text-[#8FBF9C] underline underline-offset-2 hover:text-[#B9DCC4]"
-            >
-              buy {gameName} items
-            </Link>{' '}
-            at a fair price with SafeDrop protection, or list your own to sell.
-          </p>
-        </div>
+        {sections.map((s, i) => (
+          <div key={i}>
+            <h2 className="text-xl font-semibold text-[#F1F3F1]">{s.heading}</h2>
+            <p className="mt-3 leading-7 text-[#9BA8A0]">{s.body}</p>
+          </div>
+        ))}
       </section>
 
       {/* Shared FAQ block — centered title, standard spacing (see HubFaqSection).

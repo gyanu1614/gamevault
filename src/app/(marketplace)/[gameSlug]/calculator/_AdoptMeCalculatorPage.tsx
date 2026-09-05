@@ -5,10 +5,10 @@ import { HubFooter } from '@/components/content/HubFooter'
 import { getHubNavData } from '@/lib/content/hubNav'
 import { HubBuyCta } from '@/components/content/HubBuyCta'
 import { HubHero } from '@/components/content/HubHero'
-import { HubGuidesStrip } from '@/components/content/HubGuidesStrip'
+import { FaqCards } from '@/components/marketplace/FaqCards'
 import AdoptMeWflClient from './_AdoptMeWflClient'
-import { getAdoptMeCalcPets } from './_adoptMeCalcData'
-import { AdoptMeCalculatorSeo } from './_AdoptMeCalculatorSeo'
+import { getAdoptMeCalcPets, getAdoptMeTopValues } from './_adoptMeCalcData'
+import { AdoptMeCalcSeo } from './_AdoptMeCalcSeo'
 
 export const ADOPT_ME_CALC_FAQ = [
   {
@@ -30,10 +30,16 @@ export const ADOPT_ME_CALC_FAQ = [
 ]
 
 export default async function AdoptMeCalculatorPage() {
-  const [pets, hubNav] = await Promise.all([
+  const [pets, hubNav, topValues] = await Promise.all([
     getAdoptMeCalcPets(),
     getHubNavData('adopt-me'),
+    getAdoptMeTopValues(20),
   ])
+  const monthYear = new Date().toLocaleDateString('en-US', {
+    month: 'long',
+    year: 'numeric',
+    timeZone: 'UTC',
+  })
 
   return (
     <main className="relative min-h-screen bg-[#0C0F0E]">
@@ -56,7 +62,7 @@ export default async function AdoptMeCalculatorPage() {
         }}
       />
 
-      <SabHeroBackdrop height={360}>
+      <SabHeroBackdrop height={280}>
         <HubNav data={hubNav} calcMode="trade" />
 
         <HubHero
@@ -69,9 +75,9 @@ export default async function AdoptMeCalculatorPage() {
             </>
           }
         />
-        {/* pb spacer between hero and calculator retained from the old pb-6. */}
-
-        <div className="relative mx-auto w-full max-w-7xl px-4 pb-10 sm:px-6 lg:px-8">
+        {/* Pull the calculator up close under the hero title so the two read as
+            one unit (the hero's own pb-6 + this -mt tightens the gap). */}
+        <div className="relative mx-auto -mt-6 w-full max-w-7xl px-4 pb-10 sm:px-6 lg:px-8">
           {pets.length === 0 ? (
             <div className="border border-[#1E2723] bg-white/[0.04] px-6 py-12 text-center">
               <h2 className="text-xl font-semibold text-[#F1F3F1]">Calculator temporarily unavailable</h2>
@@ -84,17 +90,27 @@ export default async function AdoptMeCalculatorPage() {
           <HubBuyCta gameName="Adopt Me" gameSlug="adopt-me" buyHref="/adopt-me/buy-items" />
         </div>
 
-        {/* Long-form guide — content parity with the SAB calculator; also
-            renders the FAQ that was previously schema-only. */}
-        <AdoptMeCalculatorSeo faq={ADOPT_ME_CALC_FAQ} />
+        {/* SEO content — value table + variant reference + long-form guide, the
+            same package SAB's calculator carries (competitors rank on ~1,000
+            words + a value table, not the tool). Full-bleed, outside the tool
+            container so its own max-w-7xl governs. */}
+        <AdoptMeCalcSeo monthYear={monthYear} topValues={topValues} />
 
-        {/* Guides strip — routes a trader who just checked a trade into the
-            guides that explain it (self-hides until the game has tagged posts). */}
-        <div className="pt-12">
-          <HubGuidesStrip
-            gameSlug="adopt-me"
-            heading="Adopt Me Blog & Guides"
-          />
+        <div className="relative mx-auto w-full max-w-7xl px-4 pb-10 sm:px-6 lg:px-8">
+          {/* Visible FAQ — the same Q&As that feed the FAQPage JSON-LD above, so
+              the structured data matches on-page content (Google requires this;
+              JSON-LD-only FAQ risks a manual action). Mirrors the pet page. */}
+          <section className="mt-12 border-t border-white/[0.07] pt-10">
+            <div className="mx-auto max-w-3xl text-center">
+              <h2 className="text-[26px] font-bold tracking-tight text-[#F1F3F1] sm:text-[32px]">
+                Frequently Asked Questions
+              </h2>
+              <p className="mt-2 text-[15px] text-[#9BA8A0]">
+                How the Adopt Me WFL calculator works and how we price the cash side.
+              </p>
+            </div>
+            <FaqCards items={ADOPT_ME_CALC_FAQ} square defaultOpen={0} className="mt-6" />
+          </section>
         </div>
       </SabHeroBackdrop>
 

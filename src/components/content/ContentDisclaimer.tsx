@@ -39,7 +39,7 @@ export function ContentDisclaimer({
     <aside className="mt-10 border border-white/[0.07] bg-white/[0.02] px-5 py-4 text-[12px] leading-relaxed text-[#8B978F]">
       <p>
         DropMarket is an independent player-to-player marketplace that connects buyers and sellers
-        and provides SafeDrop escrow protection — we do not own the items listed and do not buy,
+        and provides SafeDrop buyer protection — we do not own the items listed and do not buy,
         sell, or resell game content ourselves. Sellers set their own prices; buyers and sellers are
         solely responsible for reviewing and complying with the applicable game&apos;s Terms of
         Service.

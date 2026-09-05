@@ -124,9 +124,9 @@ function emptyTitleFor(gameName: string, categoryName: string): string {
 function emptyDescriptionFor(gameName: string, categoryName: string): string {
   const variants = [
     `Be the first to sell ${gameName} ${categoryName} on DropMarket — list in minutes at 5–7% fees. Every order is covered by SafeDrop Buyer Protection.`,
-    `Looking to buy or sell ${gameName} ${categoryName}? DropMarket connects verified traders with SafeDrop escrow, so you only pay once delivery is confirmed.`,
+    `Looking to buy or sell ${gameName} ${categoryName}? DropMarket connects verified traders with SafeDrop buyer protection — item guaranteed or your money back.`,
     `${gameName} ${categoryName} on DropMarket: low seller fees, fast delivery, and SafeDrop Buyer Protection on every trade. Be an early seller and set the price.`,
-    `Trade ${gameName} ${categoryName} the safe way. DropMarket holds payment in SafeDrop escrow until you get exactly what you ordered — or your money back.`,
+    `Trade ${gameName} ${categoryName} the safe way. With SafeDrop, your item is guaranteed — get exactly what you ordered, or your money back.`,
   ]
   return variants[pickVariant(`${gameName}|${categoryName}|d`, variants.length)]
 }

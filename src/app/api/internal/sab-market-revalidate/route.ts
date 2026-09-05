@@ -80,8 +80,7 @@ export async function POST(
 
   const paths = [
     '/steal-a-brainrot/values',
-    '/steal-a-brainrot/value-calculator',
-    '/steal-a-brainrot/trade-calculator',
+    '/steal-a-brainrot/calculator',
   ]
 
   for (const path of paths) {

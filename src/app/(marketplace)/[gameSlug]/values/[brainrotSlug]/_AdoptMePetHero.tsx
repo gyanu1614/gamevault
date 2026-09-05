@@ -8,11 +8,28 @@
  * FR — the trading benchmark.
  */
 
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { ArrowRight } from 'lucide-react'
 import type { AdoptMePetVariant, Variant } from './_adoptMePetData'
-import { VariantAxisPicker } from '../../calculator/_VariantAxisPicker'
+import { variantColor } from './_adoptMeVariantColor'
+import { useSelectedVariant } from './_SelectedVariantContext'
+import { FreshnessBadge } from '@/lib/sab/FreshnessBadge'
+
+/** Tier → the variant forms it contains, in ladder order. Default exposes the
+ *  full potion matrix; Neon/Mega only have the plain + Fly-Ride forms. */
+const TIER_TABS: { key: string; label: string; variants: Variant[] }[] = [
+  { key: 'default', label: 'Default', variants: ['N', 'F', 'R', 'FR'] },
+  { key: 'neon', label: 'Neon', variants: ['NEON', 'NFR'] },
+  { key: 'mega', label: 'Mega', variants: ['MEGA', 'MFR'] },
+]
+
+/** Which tier a variant code belongs to. */
+function tierOf(code: Variant): string {
+  if (code === 'MEGA' || code === 'MFR') return 'mega'
+  if (code === 'NEON' || code === 'NFR') return 'neon'
+  return 'default'
+}
 
 const USD = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' })
 const TRADE = new Intl.NumberFormat('en-US')
@@ -27,21 +44,6 @@ const TRADE = new Intl.NumberFormat('en-US')
  */
 const MARKET_SECONDARY_GAP = 1.25
 
-/** Per-variant accent dot — Neon/Mega tiers read "hotter". */
-const VARIANT_COLOR: Record<string, string> = {
-  N: '#9BA8A0',
-  F: '#7FE3F0',
-  R: '#7FB0F0',
-  FR: '#B07BC9',
-  NEON: '#E86FD0',
-  NFR: '#D66FE8',
-  MEGA: '#F5A742',
-  MFR: '#F5C542',
-}
-
-function variantColor(v: string) {
-  return VARIANT_COLOR[v] ?? '#B07BC9'
-}
 
 export default function AdoptMePetHero({
   name,
@@ -60,8 +62,15 @@ export default function AdoptMePetHero({
   buyHref: string
   variants: AdoptMePetVariant[]
 }) {
-  const defaultVariant = variants.find((v) => v.variant === 'FR') ?? variants[0]
-  const [selectedCode, setSelectedCode] = useState<Variant>(defaultVariant?.variant ?? 'FR')
+  // Selection is SHARED via context — the callout, stats strip and price chart
+  // all read it, so picking a form here reprices the whole page below.
+  const { selectedCode, setSelectedCode } = useSelectedVariant()
+  // The tier tab whose grid is shown. Follows the selection, but a user can tab
+  // to another tier to browse its forms before picking one.
+  const [activeTier, setActiveTier] = useState<string>(() => tierOf(selectedCode))
+  // Follow the tier when the selection changes elsewhere (e.g. the chart's own
+  // variant dropdown writes to the shared context).
+  useEffect(() => setActiveTier(tierOf(selectedCode)), [selectedCode])
   const heroRef = useRef<HTMLDivElement>(null)
 
   const selected = useMemo(
@@ -71,10 +80,17 @@ export default function AdoptMePetHero({
 
   function pick(code: Variant) {
     setSelectedCode(code)
+    setActiveTier(tierOf(code))
     if (typeof window !== 'undefined' && window.matchMedia('(max-width: 1023px)').matches) {
       heroRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
     }
   }
+
+  // The forms shown in the grid for the current tab, in ladder order, joined to
+  // their price data (a form with no row still renders as "—").
+  const tierVariants = (TIER_TABS.find((t) => t.key === activeTier) ?? TIER_TABS[0]).variants.map(
+    (code) => variants.find((v) => v.variant === code) ?? ({ variant: code, label: code } as AdoptMePetVariant),
+  )
 
   if (!selected) return null
 
@@ -85,7 +101,9 @@ export default function AdoptMePetHero({
   // pairs read as one number. Mirrors SAB's _ItemHero exactly.
   const marketUsd = selected.averageUsd ?? selected.cashUsd
   const cheapestUsd = selected.cheapestUsd
-  // Headline = cheapest when we have it, else the market/estimate.
+  // Headline = cheapest when we have it, else the reputable market. Both are
+  // REAL cash (cashUsd no longer carries an estimate). When neither exists we
+  // do NOT invent a dollar figure — we fall back to the trade-points value.
   const headlineUsd = cheapestUsd ?? marketUsd
   const showMarket =
     cheapestUsd != null &&
@@ -94,6 +112,11 @@ export default function AdoptMePetHero({
   const marketSecondary = showMarket ? USD.format(marketUsd) : null
   // A reputable price exists whenever we priced an average from real listings.
   const hasReputable = selected.averageUsd != null
+  // No real cash → show the community trade-points value (real data) instead of
+  // a fabricated estimate. Only when there are no points either do we show
+  // "No data yet".
+  const hasCash = headlineUsd != null
+  const pointsValue = selected.tradeValue != null && selected.tradeValue > 0 ? selected.tradeValue : null
   // Pet name FIRST, variant as a readable suffix: "Bat Dragon - Normal",
   // "Bat Dragon - FR", "Bat Dragon - Neon Fly Ride" — never "Mega Fly Ride Bat
   // Dragon". N reads as "Normal"; the potioned forms use their full label.
@@ -152,10 +175,19 @@ export default function AdoptMePetHero({
               cheapest/market split. */}
           <div className="lg:text-right">
             <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: accent }}>
-              {hasReputable ? 'Cheapest' : `${selected.label} cash value`}
+              {hasCash ? (hasReputable ? 'Cheapest' : 'Cash value') : pointsValue ? 'Trade value' : 'Value'}
             </p>
             <p className="mt-1 text-[34px] font-bold leading-none tracking-[-0.02em] text-[#F1F3F1] tabular-nums">
-              {headlineUsd != null ? USD.format(headlineUsd) : 'No data yet'}
+              {hasCash ? (
+                USD.format(headlineUsd as number)
+              ) : pointsValue ? (
+                <>
+                  {TRADE.format(pointsValue)}
+                  <span className="ml-1.5 text-[15px] font-semibold text-[#7C8A80]">pts</span>
+                </>
+              ) : (
+                'No data yet'
+              )}
             </p>
             {/* Typical (market) price — shown only when it genuinely exceeds the
                 cheapest headline (never a duplicate number). */}
@@ -170,14 +202,14 @@ export default function AdoptMePetHero({
                   <span className="h-1.5 w-1.5 rounded-full bg-[#8FBF9C]" />
                   From verified sellers
                 </span>
-              ) : selected.isEstimated ? (
+              ) : hasCash ? (
+                <ConfidenceBadge label={selected.confidence} />
+              ) : pointsValue ? (
                 <span className="inline-flex items-center gap-1.5 border border-[#26332C] bg-white/[0.03] px-2 py-1 text-[11.5px] font-semibold text-[#9BA8A0]">
                   <span className="h-1.5 w-1.5 rounded-full bg-[#9BA8A0]" />
-                  Estimated
+                  Community trade value
                 </span>
-              ) : (
-                <ConfidenceBadge label={selected.confidence} />
-              )}
+              ) : null}
             </div>
             {/* Buy CTA is CHROME (same on every pet) → the shared forest accent,
                 not the per-variant colour. Matches SAB's Buy button across the
@@ -204,68 +236,87 @@ export default function AdoptMePetHero({
         </div>
 
         <div className="relative flex items-center justify-center border-t border-white/[0.06] px-5 py-3">
-          <span className="font-mono text-[11px] uppercase tracking-[0.1em] text-[#6D7A72]">
-            {hasReputable
-              ? 'Cheapest price from sellers with 100+ reviews'
-              : 'Cash values estimated until we hold enough real sales'}
-          </span>
+          {hasReputable && selected.lastPricedAt ? (
+            // Live-freshness cue (SEO + trust): "Updated <time> UTC" with a
+            // pulsing dot, same component SAB uses on its item page.
+            <FreshnessBadge updatedAt={selected.lastPricedAt} />
+          ) : (
+            <span className="font-mono text-[11px] uppercase tracking-[0.1em] text-[#6D7A72]">
+              {hasReputable
+                ? 'Cheapest price from sellers with 100+ reviews'
+                : hasCash
+                  ? 'Cheapest from tracked marketplace listings'
+                  : pointsValue
+                    ? 'Community trade value — no cash listings tracked yet'
+                    : 'No data tracked yet'}
+            </span>
+          )}
         </div>
       </div>
 
-      {/* Two-axis picker — the primary control: tier (Default/Neon/Mega) +
-          Fly/Ride. Drives the hero price. The grid below stays as a full
-          value-by-variant reference (and still taps to reprice). Both share
-          selectedCode, so they always agree. */}
-      <div className="border border-[#1E2723] bg-[#0E1211] p-3.5">
-        <p className="mb-2.5 text-sm font-medium text-[#F1F3F1]">Choose a variant</p>
-        <VariantAxisPicker
-          variant={selectedCode}
-          onChange={pick}
-          hasCash={() => true}
-          accent={accent}
-          onAccent="#0B0810"
-        />
-      </div>
+      {/* Variant selector — one panel: tier tabs (Default / Neon / Mega) over a
+          price grid showing only that tier's forms. Tapping a form reprices the
+          hero above. Replaces the old split picker + separate grid. */}
+      <div className="overflow-hidden rounded-md border border-[#1E2723] bg-[#0E1211]">
+        {/* Tier tabs */}
+        <div className="flex gap-1 border-b border-[#1E2723] bg-white/[0.015] p-1.5">
+          {TIER_TABS.map((t) => {
+            const on = activeTier === t.key
+            return (
+              <button
+                key={t.key}
+                type="button"
+                onClick={() => setActiveTier(t.key)}
+                aria-pressed={on}
+                className={`flex-1 rounded px-3 py-2 text-body-sm font-semibold transition-colors ${
+                  on ? 'bg-[#1B6B3F] text-white' : 'text-[#9BA8A0] hover:bg-white/[0.05]'
+                }`}
+              >
+                {t.label}
+              </button>
+            )
+          })}
+        </div>
 
-      {/* Tappable variant grid — the SAB "tap to update the price above" pattern */}
-      <div>
-        <p className="px-1 text-sm font-medium text-[#F1F3F1]">
-          Value by variant <span className="font-normal text-[#6D7A72]">— tap to update the price above</span>
-        </p>
-        <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
-          {variants.map((v) => {
+        {/* Price grid for the active tier — tap to reprice. Column count follows
+            the tier size (4 forms for Default, 2 for Neon/Mega) so cells fill the
+            row instead of leaving gaps. */}
+        <div className={`grid gap-2 p-3 ${tierVariants.length > 2 ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-2'}`}>
+          {tierVariants.map((v) => {
             const active = v.variant === selected.variant
             const c = variantColor(v.variant)
+            const hasCash = v.cashUsd != null
             return (
               <button
                 key={v.variant}
                 type="button"
                 onClick={() => pick(v.variant)}
                 aria-pressed={active}
-                // Neutral SAB base (never a per-game tint); the variant colour
-                // shows ONLY on the dot + a subtle 1px accent border when active
-                // — no bright ring. Matches SAB's mutation cards.
-                className={`group flex min-h-[52px] items-center gap-2 border bg-[#111613] px-3 py-2 text-left transition hover:-translate-y-0.5 hover:border-[#2A3A31] ${active ? '' : 'border-[#1E2723]'}`}
-                style={active ? ({ borderColor: c } as React.CSSProperties) : undefined}
+                className="flex flex-col justify-between gap-2 rounded-md border px-3 py-2.5 text-left transition hover:brightness-110"
+                style={
+                  active
+                    ? { borderColor: c, backgroundColor: `color-mix(in srgb, ${c} 14%, #0E1211)` }
+                    : { borderColor: '#1E2723', backgroundColor: '#111613' }
+                }
               >
-                <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: c }} />
-                <span className="min-w-0 flex-1">
-                  {/* Full readable name + short code, one line, larger normal
-                      font (was a tiny mono code that was hard to read). */}
-                  <span className="block truncate text-[15px] font-semibold" style={{ color: active ? c : '#E6EAE7' }}>
-                    {v.label} <span className="font-normal text-[#9BA8A0]">({v.variant})</span>
+                <span className="flex items-center gap-2">
+                  <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: c }} />
+                  <span className="min-w-0 truncate text-body-sm font-semibold" style={{ color: active ? c : '#E6EAE7' }}>
+                    {v.label}
                   </span>
                 </span>
-                <span className="text-right text-xs font-medium text-[#9BA8A0]">
-                  {v.cashUsd != null ? (
+                <span className="text-body-sm font-bold tabular-nums" style={{ color: active ? '#F1F3F1' : '#C6CEC9' }}>
+                  {hasCash ? (
                     <>
-                      {USD.format(v.cashUsd)}
-                      {v.isEstimated && <span className="ml-1 text-[10px] text-[#8B7BA0]">est</span>}
+                      {USD.format(v.cashUsd as number)}
+                      {v.isEstimated && <span className="ml-1 text-caption font-medium text-[#8B7BA0]">est</span>}
                     </>
                   ) : v.tradeValue != null ? (
-                    <span className="text-[#8B7BA0]">{TRADE.format(v.tradeValue)} trade</span>
+                    <span className="text-[#9BA8A0]">
+                      {TRADE.format(v.tradeValue)} <span className="text-caption font-medium">trade</span>
+                    </span>
                   ) : (
-                    '—'
+                    <span className="text-[#6D7A72]">—</span>
                   )}
                 </span>
               </button>

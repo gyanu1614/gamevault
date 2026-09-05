@@ -46,7 +46,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   // Bare title — the root layout template appends "| DropMarket".
   const title = `Sell ${name} for Real Money — Cash Out Safely`
-  const description = `Turn your ${name} inventory into real cash. List on DropMarket, get paid through SafeDrop escrow even if a buyer ghosts, and founding sellers lock a lower fee for life. Here's how to start.`
+  const description = `Turn your ${name} inventory into real cash. List on DropMarket, get paid on delivery with SafeDrop even if a buyer ghosts, and founding sellers lock a lower fee for life. Here's how to start.`
 
   return {
     title,
@@ -75,7 +75,7 @@ export default async function SellLandingPage({ params }: PageProps) {
   const FAQ = [
     {
       q: `How do I sell ${name} for real money?`,
-      a: `Join DropMarket as a seller, complete verification, then list your ${name} items with an accurate price and delivery window. When a buyer orders, SafeDrop escrow holds their payment; you deliver in-game, they confirm, and your proceeds are credited to your Seller Balance to withdraw.`,
+      a: `Join DropMarket as a seller, complete verification, then list your ${name} items with an accurate price and delivery window. When a buyer orders, the order is SafeDrop protected; you deliver in-game, they confirm, and your proceeds are credited to your Seller Balance to withdraw.`,
     },
     {
       q: `What does it cost to sell?`,
@@ -83,7 +83,7 @@ export default async function SellLandingPage({ params }: PageProps) {
     },
     {
       q: `Is it safe to sell here?`,
-      a: `Yes. SafeDrop escrow holds the buyer's payment before you deliver and releases it to you on delivery, so you're protected from buyers who pay then vanish. Every seller is verified, and all communication and delivery stay on-platform where they're covered.`,
+      a: `Yes. With SafeDrop you're paid on delivery, so you're protected from buyers who pay then vanish. Every seller is verified, and all communication and delivery stay on-platform where they're covered.`,
     },
     {
       q: `Do I need to verify my identity?`,
@@ -164,7 +164,7 @@ export default async function SellLandingPage({ params }: PageProps) {
               icon: IconShieldCheck,
               title: 'Get Paid for Every Order You Deliver',
               points: [
-                'Every order is covered by SafeDrop escrow.',
+                'Every order is SafeDrop protected.',
                 'Deliver as described and you always get paid — no chargebacks.',
                 'Withdraw your earnings whenever you want.',
               ],

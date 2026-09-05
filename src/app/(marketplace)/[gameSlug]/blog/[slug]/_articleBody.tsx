@@ -20,9 +20,10 @@
  *   "| a | b |" rows            → table
  *   inline: [text](url) **bold** *italic* _italic_
  *
- * Live blocks (::price::, ::cta::, :::faq, ::card::) are handled by the
- * server-side renderer in page.tsx via `renderLiveBlock`; here they no-op-render
- * as plain text if they slip through (defensive).
+ * Live blocks (::price::, ::cta::, :::faq, ::card::) are NOT yet implemented —
+ * there is no server-side renderer for them. If a post body contains one it
+ * falls through to the plain-text path below (harmless no-op). Kept documented
+ * so authors know these tokens are reserved, not active.
  */
 
 import Link from 'next/link'

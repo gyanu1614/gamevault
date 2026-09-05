@@ -170,8 +170,6 @@ export async function GET(request: NextRequest) {
         '/steal-a-brainrot',
         '/steal-a-brainrot/values',
         '/steal-a-brainrot/calculator',
-        '/steal-a-brainrot/value-calculator',
-        '/steal-a-brainrot/trade-calculator',
         ...itemPaths,
       ]
       for (const path of pricePages) {

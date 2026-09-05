@@ -686,6 +686,25 @@ export default async function BrainrotValuePage({ params }: PageProps) {
         </div>
       </section>
       <JsonLd data={faqPage(faqItems)} />
+
+      {/* Cross-links — back to the list + how values are calculated (E-E-A-T:
+          every cited value links to its methodology, parity with Adopt Me). */}
+      <div className="mx-auto w-full max-w-7xl px-4 pt-10 sm:px-6 lg:px-8">
+        <div className="flex flex-wrap gap-3">
+          <Link
+            href="/steal-a-brainrot/values"
+            className="inline-flex items-center gap-2 border border-[#26332C] bg-white/[0.03] px-4 py-2.5 text-sm font-semibold text-[#C6CEC9] transition hover:border-[#2A3A31] hover:bg-white/[0.06]"
+          >
+            ← All Steal a Brainrot values
+          </Link>
+          <Link
+            href="/steal-a-brainrot/values/methodology"
+            className="inline-flex items-center gap-2 border border-[#26332C] bg-white/[0.03] px-4 py-2.5 text-sm font-semibold text-[#C6CEC9] transition hover:border-[#2A3A31] hover:bg-white/[0.06]"
+          >
+            How we value items →
+          </Link>
+        </div>
+      </div>
       </SabHeroBackdrop>
           <HubFooter
         gameName={hubNav.current.name}

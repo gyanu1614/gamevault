@@ -309,7 +309,7 @@ export function wflMessage(
   return {
     embeds: [embed],
     components: [
-      linkButton('Open Trade Calculator ↗', pageUrl('/trade-calculator')),
+      linkButton('Open Trade Calculator ↗', pageUrl('/calculator')),
     ],
   }
 }
