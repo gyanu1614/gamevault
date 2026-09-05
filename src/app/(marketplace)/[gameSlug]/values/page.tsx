@@ -573,7 +573,7 @@ export default async function BrainrotValuesPage({ params }: PageProps) {
       <div className="pt-12">
         <HubGuidesStrip
           gameSlug="steal-a-brainrot"
-          heading="Guides For Pricing &amp; Trading Steal a Brainrot"
+          heading="Steal a Brainrot Blog & Guides"
         />
       </div>
 

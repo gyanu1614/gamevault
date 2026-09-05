@@ -3,20 +3,14 @@ import {
   getActiveSellers,
   getSellerStats,
   type ActiveSeller,
+  type ActiveSellersFilters,
+  type SellerStatsOverview,
 } from '@/lib/actions/admin-active-sellers'
 
-export type SellerStatsSummary = NonNullable<
-  Awaited<ReturnType<typeof getSellerStats>>['stats']
->
+export type SellerStatsSummary = SellerStatsOverview
 
 export function useActiveSellers(
-  filters?: {
-    status?: 'active' | 'restricted' | 'banned' | 'warning' | 'suspended'
-    tier?: 'bronze' | 'silver' | 'gold' | 'platinum'
-    searchQuery?: string
-    sortBy?: 'sales' | 'earnings' | 'rating' | 'listings' | 'joined' | 'activity'
-    sortOrder?: 'asc' | 'desc'
-  },
+  filters?: ActiveSellersFilters,
   options?: {
     /**
      * V54 — Server-fetched seed for the query cache so the page arrives

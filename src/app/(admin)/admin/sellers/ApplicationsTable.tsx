@@ -16,6 +16,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { FileText, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useNow } from '@/hooks/use-now'
 import type { SellerApplication } from '@/lib/actions/admin-sellers'
 import type { GameLookupEntry } from '@/lib/admin/seller-application-enrichment'
 import { countryFlag } from '../_theme/flags'
@@ -34,10 +35,17 @@ interface ApplicationsTableProps {
   applications: SellerApplication[]
 }
 
-/** "applied 2 hours ago" / "applied Jul 15" style relative label. */
-function appliedLabel(date: string): string {
+/**
+ * "applied 2 hours ago" / "applied Jul 15" style relative label.
+ * Gated on the useNow() clock: nowMs is null during SSR + hydration so both
+ * renders emit '' — new Date() here during render made the server HTML and
+ * the hydration render disagree ("just now" vs "1m ago") and bailed the
+ * whole admin root out to client rendering.
+ */
+function appliedLabel(date: string, nowMs: number | null): string {
+  if (nowMs == null) return ''
   const d = new Date(date)
-  const now = new Date()
+  const now = new Date(nowMs)
   const minutes = Math.floor((now.getTime() - d.getTime()) / 60000)
   const hours = Math.floor(minutes / 60)
   const days = Math.floor(hours / 24)
@@ -137,6 +145,7 @@ function RowStatusChip({ app }: { app: SellerApplication }) {
 
 export default function ApplicationsTable({ applications }: ApplicationsTableProps) {
   const router = useRouter()
+  const now = useNow()
   /** Which application's games popup is open (null = closed). */
   const [gamesApp, setGamesApp] = useState<SellerApplication | null>(null)
 
@@ -306,7 +315,7 @@ export default function ApplicationsTable({ applications }: ApplicationsTablePro
             {/* Status + applied */}
             <div className="ml-auto flex w-auto shrink-0 flex-col items-end gap-1 md:ml-0 md:w-[148px]">
               <RowStatusChip app={app} />
-              <span className="text-[10px] text-white/35">{appliedLabel(app.created_at)}</span>
+              <span className="text-[10px] text-white/35">{appliedLabel(app.created_at, now)}</span>
             </div>
           </div>
         )

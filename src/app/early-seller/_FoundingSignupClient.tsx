@@ -9,9 +9,12 @@
 
 import { useMemo, useRef, useState, useTransition, useEffect } from 'react'
 import Image from 'next/image'
-import { useSearchParams } from 'next/navigation'
+import { useSearchParams, useRouter } from 'next/navigation'
 import { Percent, ArrowUp, Check, ChevronDown, X, ArrowRight, CircleCheck } from 'lucide-react'
 import { submitEarlySeller } from '@/lib/actions/early-seller'
+import { useAuth } from '@/hooks/use-auth'
+import FoundingNavbar from '@/app/founding/_components/FoundingNavbar'
+import SellerFlowLoader from '@/app/account/become-seller/_redesign/components/SellerFlowLoader'
 import type { FoundingProgress } from '@/lib/config/founding-seller'
 
 export interface SignupGame {
@@ -52,6 +55,28 @@ export default function FoundingSignupClient({
   games: SignupGame[]
 }) {
   const src = useSearchParams().get('src') || undefined
+  const router = useRouter()
+  const { user, loading: authLoading } = useAuth()
+
+  // Full-screen transition after login: someone who logs in here already has an
+  // account, so we take them straight to their Founding HQ (which resolves
+  // founder-or-not itself). We show the branded loader IMMEDIATELY on the auth
+  // transition — no blank stall while the navigation + server work happens.
+  const [transitioning, setTransitioning] = useState(false)
+  const wasLoggedOut = useRef(false)
+  useEffect(() => {
+    if (authLoading) return
+    if (!user) {
+      wasLoggedOut.current = true
+      return
+    }
+    // user just appeared after being logged out → go to HQ with a visible loader.
+    if (wasLoggedOut.current) {
+      wasLoggedOut.current = false
+      setTransitioning(true)
+      router.push('/founding')
+    }
+  }, [user, authLoading, router])
 
   // Form state
   const [email, setEmail] = useState('')
@@ -125,14 +150,22 @@ export default function FoundingSignupClient({
     })
   }
 
+  // Logged-in transition → branded full-screen loader while we navigate to HQ.
+  if (transitioning) {
+    return <SellerFlowLoader label="Opening your Founding HQ…" />
+  }
+
   return (
     <div
-      className="flex min-h-screen w-full flex-col lg:h-screen lg:flex-row lg:overflow-hidden"
+      className="relative flex min-h-screen w-full flex-col lg:h-screen lg:flex-row lg:overflow-hidden"
       style={{ backgroundColor: C.ivory }}
     >
+      {/* Full-width seamless top bar (logo left, Log in / profile right). */}
+      <FoundingNavbar />
+
       {/* ══════════ LEFT FOREST PANEL ══════════ */}
       <aside
-        className="relative flex w-full flex-col overflow-hidden px-8 py-10 lg:w-[38%] lg:p-12"
+        className="relative flex w-full flex-col overflow-hidden px-8 pb-10 pt-16 lg:w-[38%] lg:px-12 lg:pb-12 lg:pt-16"
         style={{ backgroundColor: C.forest3 }}
       >
         <Image src="/assets/heroes/sell.avif" alt="" fill priority sizes="38vw" className="object-cover" />
@@ -142,19 +175,13 @@ export default function FoundingSignupClient({
           style={{ background: `linear-gradient(105deg, ${C.forest} 42%, rgba(20,67,42,0.78))` }}
         />
         <div className="relative z-10 flex h-full flex-col justify-between gap-8">
-          {/* logo + eyebrow + heading */}
+          {/* eyebrow + heading (logo now lives in the shared FoundingNavbar) */}
           <div>
-            <div className="mb-8 flex items-center gap-2.5">
-              <span className="inline-block h-[26px] w-[26px] rotate-45 rounded-[5px]" style={{ backgroundColor: C.lime }} />
-              <span className="text-[21px] tracking-tight text-white">
-                <span className="font-extrabold">Drop</span><span className="font-medium">Market</span>
-              </span>
-            </div>
             <p className="mb-3 text-[13px] font-bold uppercase" style={{ letterSpacing: '3px', color: C.lime }}>
               Founding Seller
             </p>
             <h1 className="text-[38px] font-extrabold leading-[1.08] text-white lg:text-[46px]" style={{ letterSpacing: '-1px' }}>
-              Claim Your Spot
+              Become a Seller
             </h1>
             <p className="mt-4 max-w-[340px] text-[15px] leading-relaxed" style={{ color: 'rgba(255,255,255,0.82)' }}>
               Be one of the first 100 sellers on DropMarket — lower fees for life, early access, and a badge buyers can see.
@@ -196,8 +223,8 @@ export default function FoundingSignupClient({
       </aside>
 
       {/* ══════════ RIGHT IVORY PANEL ══════════ */}
-      <main className="flex w-full flex-1 items-center justify-center px-5 py-10 lg:w-[62%] lg:overflow-y-auto lg:px-8">
-        <div className="w-full max-w-[500px]">
+      <main className="flex w-full flex-1 items-center justify-center px-5 pb-10 pt-16 lg:w-[62%] lg:overflow-y-auto lg:px-8 lg:pb-10 lg:pt-16">
+        <div className="w-full max-w-[640px]">
           {submitted ? (
             <div
               className="rounded-xl border p-7 sm:p-8"
@@ -208,41 +235,44 @@ export default function FoundingSignupClient({
           ) : (
             <>
               {/* Heading OUTSIDE the card */}
-              <div className="mb-5">
+              <div className="mb-4">
                 <h2 className="text-[26px] font-extrabold" style={{ color: C.ink, letterSpacing: '-0.5px' }}>
                   Apply In Under A Minute
                 </h2>
-                <p className="mt-1.5 text-[14px]" style={{ color: C.ink2 }}>
+                <p className="mt-1 text-[14px]" style={{ color: C.ink2 }}>
                   We review applications daily. No card needed.
                 </p>
               </div>
 
               <div
-                className="flex flex-col gap-[18px] rounded-xl border p-6 sm:p-7"
+                className="flex flex-col gap-[14px] rounded-xl border p-5 sm:p-6"
                 style={{ backgroundColor: C.paper, borderColor: C.line, boxShadow: '0 12px 32px rgba(15,51,32,0.06)' }}
               >
-                <Field label="Email" hint="We’ll send your seller link here.">
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="you@example.com"
-                    style={inputStyle}
-                    onFocus={(e) => (e.target.style.borderColor = C.forest)}
-                    onBlur={(e) => (e.target.style.borderColor = C.line)}
-                  />
-                </Field>
+                {/* Email + Discord share a row on the wider card. */}
+                <div className="grid gap-[14px] sm:grid-cols-2">
+                  <Field label="Email" hint="We’ll send your seller link here.">
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="you@example.com"
+                      style={inputStyle}
+                      onFocus={(e) => (e.target.style.borderColor = C.forest)}
+                      onBlur={(e) => (e.target.style.borderColor = C.line)}
+                    />
+                  </Field>
 
-                <Field label="Discord" optional>
-                  <input
-                    value={discord}
-                    onChange={(e) => setDiscord(e.target.value)}
-                    placeholder="username"
-                    style={inputStyle}
-                    onFocus={(e) => (e.target.style.borderColor = C.forest)}
-                    onBlur={(e) => (e.target.style.borderColor = C.line)}
-                  />
-                </Field>
+                  <Field label="Discord" optional>
+                    <input
+                      value={discord}
+                      onChange={(e) => setDiscord(e.target.value)}
+                      placeholder="username"
+                      style={inputStyle}
+                      onFocus={(e) => (e.target.style.borderColor = C.forest)}
+                      onBlur={(e) => (e.target.style.borderColor = C.line)}
+                    />
+                  </Field>
+                </div>
 
                 <Field label="Any Past Selling Experience?" optional>
                   <input
@@ -356,7 +386,7 @@ export default function FoundingSignupClient({
                   type="button"
                   onClick={submit}
                   disabled={pending}
-                  className="group flex h-[54px] w-full items-center justify-center gap-2 rounded-[10px] text-[16px] font-bold text-white transition-colors disabled:opacity-70"
+                  className="group mb-1 mt-1.5 flex h-[54px] w-full items-center justify-center gap-2 rounded-[10px] text-[16px] font-bold text-white transition-colors disabled:opacity-70"
                   style={{ backgroundColor: C.forest, boxShadow: '0 10px 24px rgba(15,51,32,0.18)' }}
                   onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = C.forest2)}
                   onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = C.forest)}
@@ -364,6 +394,7 @@ export default function FoundingSignupClient({
                   {pending ? 'Submitting…' : 'Become a Seller'}
                   <ArrowRight className="h-[18px] w-[18px] transition-transform group-hover:translate-x-0.5" style={{ color: C.lime }} strokeWidth={2.5} />
                 </button>
+
               </div>
             </>
           )}

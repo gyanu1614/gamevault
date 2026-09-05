@@ -26,8 +26,12 @@
 
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
+
+/** localStorage key for the in-progress application draft (see draft effects). */
+const DRAFT_KEY = 'dm_seller_app_draft_v1'
 import { useRouter } from 'next/navigation'
+import { useAuth } from '@/hooks/use-auth'
 import { AnimatePresence, motion } from 'framer-motion'
 import { CheckCircle, Loader2, ArrowRight } from 'lucide-react'
 import { toast } from 'sonner'
@@ -50,11 +54,7 @@ import {
   type SectionsByGameId,
   type StepDirection,
 } from './_redesign/components'
-import { Step2PersonalInfo } from './_redesign/components/steps'
 import { StepIdentity } from './_redesign/steps'
-import PayoutSetupStep, {
-  type PayoutSetupValue,
-} from './_redesign/steps/PayoutSetupStep'
 import { ReviewSignStep } from './_redesign/screens'
 import {
   toSubmitApplicationData,
@@ -94,6 +94,11 @@ export default function SellerRegistration({
   sectionsByGameId,
 }: SellerRegistrationProps) {
   const router = useRouter()
+  const { user: authUser } = useAuth()
+  // Store name chosen at founding account creation (profile.username) — used to
+  // prefill step 1's Display Name so returning founders aren't asked twice.
+  const storeNamePrefill =
+    (authUser?.profile?.username as string) || (authUser?.profile?.full_name as string) || ''
 
   // ── Flow phase ──────────────────────────────────────────────────────────────
   // 'intro' shows the landing; 'stepper' runs the 5-step application.
@@ -116,7 +121,66 @@ export default function SellerRegistration({
   const [uploadedDocs, setUploadedDocs] = useState<UploadedDocsState>(EMPTY_DOCS)
   // Approved Didit video-verification session (waives manual ID + selfie).
   const [kycSessionId, setKycSessionId] = useState<string | null>(null)
-  const [selectedLanguages] = useState<string[]>([])
+  const [selectedLanguages, setSelectedLanguages] = useState<string[]>([])
+
+  // ── Draft persistence — a refresh must never lose progress ─────────────────
+  // Completed-step data + position + uploaded-doc paths + the Didit session are
+  // mirrored to localStorage on every change and restored on mount. Cleared on
+  // successful submit. (Fields being typed mid-step live in that step's form
+  // and are captured when the step completes.)
+  const draftRestoredRef = useRef(false)
+  useEffect(() => {
+    if (draftRestoredRef.current) return
+    draftRestoredRef.current = true
+    try {
+      const raw = localStorage.getItem(DRAFT_KEY)
+      if (!raw) return
+      const d = JSON.parse(raw)
+      if (!d || d.v !== 1) return
+      // Stale drafts (7+ days) are dropped rather than resurrected.
+      if (Date.now() - (d.savedAt ?? 0) > 7 * 24 * 3600 * 1000) {
+        localStorage.removeItem(DRAFT_KEY)
+        return
+      }
+      if (d.step1) setStep1(d.step1)
+      if (d.step2) setStep2(d.step2)
+      if (d.step3) setStep3(d.step3)
+      if (d.uploadedDocs) setUploadedDocs(d.uploadedDocs)
+      if (d.kycSessionId) setKycSessionId(d.kycSessionId)
+      if (Array.isArray(d.selectedLanguages)) setSelectedLanguages(d.selectedLanguages)
+      if (d.phase === 'stepper') {
+        setPhase('stepper')
+        setCurrentStep(Math.min(Math.max(d.currentStep ?? 1, 1), TOTAL_REDESIGN_STEPS))
+      }
+    } catch {
+      /* corrupt/blocked storage — start fresh */
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!draftRestoredRef.current) return
+    // Nothing worth saving until the wizard is actually in use.
+    if (phase !== 'stepper' && !step1) return
+    try {
+      localStorage.setItem(
+        DRAFT_KEY,
+        JSON.stringify({
+          v: 1,
+          savedAt: Date.now(),
+          phase,
+          currentStep,
+          step1,
+          step2,
+          step3,
+          uploadedDocs,
+          kycSessionId,
+          selectedLanguages,
+        }),
+      )
+    } catch {
+      /* storage full/blocked — non-fatal */
+    }
+  }, [phase, currentStep, step1, step2, step3, uploadedDocs, kycSessionId, selectedLanguages])
 
   // ── Submission ──────────────────────────────────────────────────────────────
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -255,6 +319,9 @@ export default function SellerRegistration({
     }
 
     setStep1({
+      // Name fields now live on Step 1 (Personal Info step was removed).
+      displayName: prev.display_name || '',
+      fullLegalName: prev.full_legal_name || '',
       is18OrOlder: prev.is_18_or_older ?? false,
       sellerType: prev.seller_type === 'business' ? 'business' : 'individual',
       primaryGames,
@@ -354,40 +421,46 @@ export default function SellerRegistration({
 
   const handleStep1 = (data: Step1FormData) => {
     setStep1(data)
+    // Languages now live on step 1 → carry them into the payload.
+    setSelectedLanguages(data.languages ?? [])
+    // Personal Info is gone — synthesize the minimal step2 the adapter/action
+    // still expect (display_name + country are collected on step 1; the rest is
+    // nullable now).
+    const trimmedDisplay = data.displayName?.trim() || ''
+    setStep2({
+      fullLegalName: data.fullLegalName?.trim() || '',
+      displayName: trimmedDisplay,
+      shopName: trimmedDisplay,
+      country: data.country || '',
+      countryOther: '',
+      stateProvince: '',
+      city: '',
+      phoneNumber: '',
+      alternateEmail: '',
+      companyLegalName: '',
+      businessRegistrationNumber: '',
+      taxIdVat: '',
+      companyAddress: '',
+      businessType: undefined,
+      yearEstablished: '',
+      businessEmail: '',
+      businessPhone: '',
+    } as Step2FormData)
     goForward(2)
-  }
-
-  const handleStep2 = (data: Step2FormData) => {
-    setStep2(data)
-    goForward(3)
   }
 
   const handleStep3 = (data: Step3FormData) => {
     setStep3(data)
-    goForward(4)
-  }
-
-  const handleStep4 = (value: PayoutSetupValue) => {
-    setPayout(value.payout)
-    setPayoutCurrency(value.payoutCurrency)
-    goForward(5)
+    goForward(3)
   }
 
   /** Final Review & Sign submit → assemble state, adapt, submit. */
   const handleFinalSubmit = async (reviewData: ReviewSignFormData) => {
     setReview(reviewData)
 
-    if (!step1 || !step2) {
+    if (!step1) {
       toast.error('Missing required information. Please complete all steps.')
       goToStep(1)
-      return
-    }
-
-    // Payout step must be completed — without it the adapter would spread
-    // undefined and persist a null payout method.
-    if (!payout) {
-      toast.error('Please complete your payout setup before submitting.')
-      goToStep(4)
       return
     }
 
@@ -400,7 +473,7 @@ export default function SellerRegistration({
     )
     if (missingDocs.length > 0) {
       toast.error('Required verification documents are missing. Please upload them in the Identity step.')
-      goToStep(3)
+      goToStep(2)
       return
     }
 
@@ -448,6 +521,8 @@ export default function SellerRegistration({
       if (result.success) {
         // The received/confirmation state lives ON the status page (banner
         // via ?submitted=1) — no second loader stage, no toast+timeout hop.
+        // Submitted — the draft has served its purpose.
+        try { localStorage.removeItem(DRAFT_KEY) } catch { /* non-fatal */ }
         router.push('/account/seller-status?submitted=1')
       } else {
         toast.error(result.error || 'Failed to submit application. Please try again.')
@@ -512,6 +587,8 @@ export default function SellerRegistration({
         currentStep={currentStep}
         onStepClick={goToStep}
         onWatchVideo={() => setVideoOpen(true)}
+        // Review & Sign (step 3) is dense — give its summary cards a wider column.
+        contentClassName={currentStep === 3 ? 'max-w-3xl' : 'max-w-xl'}
       >
         <AnimatePresence mode="wait" initial={false}>
           {currentStep === 1 && (
@@ -519,7 +596,12 @@ export default function SellerRegistration({
               <StepAccountGames
                 games={games}
                 sectionsByGameId={sectionsByGameId}
-                initialData={step1}
+                // Founders set their store name when creating the account —
+                // prefill it (still editable) instead of asking again.
+                initialData={
+                  step1 ??
+                  (storeNamePrefill ? { displayName: storeNamePrefill } : undefined)
+                }
                 onComplete={handleStep1}
               />
             </StepTransition>
@@ -527,17 +609,6 @@ export default function SellerRegistration({
 
           {currentStep === 2 && (
             <StepTransition key={2} stepKey={2} direction={direction}>
-              <Step2PersonalInfo
-                sellerType={step1?.sellerType}
-                initialData={step2}
-                onSubmit={handleStep2}
-                onBack={goBack}
-              />
-            </StepTransition>
-          )}
-
-          {currentStep === 3 && (
-            <StepTransition key={3} stepKey={3} direction={direction}>
               <StepIdentity
                 uploadedDocs={uploadedDocs}
                 onDocChange={handleDocChange}
@@ -545,23 +616,13 @@ export default function SellerRegistration({
                 onBack={goBack}
                 sellerType={step1?.sellerType}
                 onKycVerified={setKycSessionId}
+                initialVerifiedSessionId={kycSessionId}
               />
             </StepTransition>
           )}
 
-          {currentStep === 4 && (
-            <StepTransition key={4} stepKey={4} direction={direction}>
-              <PayoutSetupStep
-                defaultPayout={payout}
-                defaultPayoutCurrency={payoutCurrency}
-                onValidSubmit={handleStep4}
-                onBack={goBack}
-              />
-            </StepTransition>
-          )}
-
-          {currentStep === 5 && (
-            <StepTransition key={5} stepKey={5} direction={direction}>
+          {currentStep === 3 && (
+            <StepTransition key={3} stepKey={3} direction={direction}>
               <div>
                 <ReviewSignStep
                   state={reviewState}

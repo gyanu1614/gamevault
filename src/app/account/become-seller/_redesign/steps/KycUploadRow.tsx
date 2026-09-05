@@ -13,11 +13,29 @@
 'use client'
 
 import { useRef, useState } from 'react'
-import { Upload, FileText, X, Check, Loader2, RotateCcw } from 'lucide-react'
+import Image from 'next/image'
+import { Upload, FileText, X, Check, Loader2, RotateCcw, HelpCircle } from 'lucide-react'
 
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogTrigger,
+} from '@/components/ui/dialog'
 import { useImmediateUpload } from '../../hooks/useImmediateUpload'
 import type { UploadedDoc } from '../../schemas'
 import { PALETTE } from '../theme'
+
+/** A "See sample" helper shown next to a doc's label — opens a small dialog
+ *  with a picture + do/don't tips so the seller knows exactly what to upload. */
+export interface DocSample {
+  title: string
+  /** Optional image in /public showing a good example of the document. */
+  imageSrc?: string
+  tips: string[]
+}
 
 interface KycUploadRowProps {
   label: string
@@ -31,6 +49,35 @@ interface KycUploadRowProps {
   disabled?: boolean
   /** External validation error (e.g. required doc missing on Continue). */
   error?: string
+  /** When set, shows a "See sample" link that opens a helper dialog. */
+  sample?: DocSample
+}
+
+/** Compact drawn "sample document" — a little page with a letterhead, the
+ *  name/address block highlighted, body lines, and a date stamp. Used when a
+ *  sample has no real image. Pure SVG, matches the Forest Ledger palette. */
+function SampleDocGraphic() {
+  return (
+    <svg width="150" height="120" viewBox="0 0 150 120" aria-hidden="true">
+      {/* page + fold */}
+      <rect x="25" y="4" width="100" height="112" rx="5" fill="#FFFFFF" stroke={PALETTE.line} strokeWidth="1.5" />
+      {/* letterhead */}
+      <rect x="34" y="14" width="26" height="7" rx="2" fill={PALETTE.forest2} opacity="0.85" />
+      <rect x="96" y="14" width="20" height="5" rx="2" fill="#D9DCD0" />
+      {/* highlighted name + address block */}
+      <rect x="32" y="30" width="62" height="20" rx="3" fill="#EFF6EA" stroke="#BFD9A8" strokeWidth="1" />
+      <rect x="37" y="35" width="40" height="4" rx="2" fill={PALETTE.forest} opacity="0.75" />
+      <rect x="37" y="42" width="50" height="4" rx="2" fill={PALETTE.forest} opacity="0.45" />
+      {/* body lines */}
+      <rect x="34" y="60" width="82" height="4" rx="2" fill="#E3E5DB" />
+      <rect x="34" y="69" width="72" height="4" rx="2" fill="#E3E5DB" />
+      <rect x="34" y="78" width="78" height="4" rx="2" fill="#E3E5DB" />
+      <rect x="34" y="87" width="56" height="4" rx="2" fill="#E3E5DB" />
+      {/* date stamp */}
+      <rect x="88" y="96" width="28" height="12" rx="3" fill="none" stroke={PALETTE.forest2} strokeWidth="1.2" opacity="0.7" />
+      <rect x="92" y="100" width="20" height="4" rx="2" fill={PALETTE.forest2} opacity="0.55" />
+    </svg>
+  )
 }
 
 function formatFileSize(bytes: number) {
@@ -49,6 +96,7 @@ export default function KycUploadRow({
   required = false,
   disabled = false,
   error,
+  sample,
 }: KycUploadRowProps) {
   const [isDragging, setIsDragging] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -92,10 +140,64 @@ export default function KycUploadRow({
             </span>
           )}
         </label>
+        {sample && (
+          <Dialog>
+            <DialogTrigger asChild>
+              <button
+                type="button"
+                className="inline-flex shrink-0 items-center gap-1 text-[12px] font-semibold transition-opacity hover:opacity-80"
+                style={{ color: '#2C6BB0' }}
+              >
+                <HelpCircle className="h-3.5 w-3.5" />
+                See sample
+              </button>
+            </DialogTrigger>
+            <DialogContent
+              className="max-w-sm rounded-lg border p-6 sm:rounded-lg [&>button]:text-current"
+              style={{ backgroundColor: '#FFFFFF', borderColor: PALETTE.line, color: PALETTE.ink }}
+            >
+              <DialogHeader className="text-left">
+                <DialogTitle style={{ color: PALETTE.ink }}>{sample.title}</DialogTitle>
+                <DialogDescription style={{ color: PALETTE.ink2 }}>
+                  Here&rsquo;s what a good upload looks like.
+                </DialogDescription>
+              </DialogHeader>
+
+              {/* Small sample-document illustration */}
+              <div
+                className="mx-auto my-1 flex items-center justify-center rounded-lg border px-6 py-4"
+                style={{ borderColor: PALETTE.line, backgroundColor: PALETTE.ivory }}
+              >
+                {sample.imageSrc ? (
+                  <Image
+                    src={sample.imageSrc}
+                    alt={`${sample.title} sample`}
+                    width={200}
+                    height={130}
+                    className="h-auto max-h-[130px] w-auto object-contain"
+                  />
+                ) : (
+                  <SampleDocGraphic />
+                )}
+              </div>
+
+              <ul className="mt-1 space-y-2">
+                {sample.tips.map((tip, i) => (
+                  <li key={i} className="flex items-start gap-2 text-[13px]" style={{ color: PALETTE.ink2 }}>
+                    <Check className="mt-0.5 h-3.5 w-3.5 shrink-0" style={{ color: PALETTE.forest2 }} strokeWidth={2.5} />
+                    {tip}
+                  </li>
+                ))}
+              </ul>
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
-      <p className="mb-2 text-xs" style={{ color: PALETTE.ink2 }}>
-        {description}
-      </p>
+      {description && (
+        <p className="mb-2 text-xs" style={{ color: PALETTE.ink2 }}>
+          {description}
+        </p>
+      )}
 
       <input
         ref={inputRef}
@@ -111,7 +213,7 @@ export default function KycUploadRow({
       {isUploading ? (
         /* Uploading — progress bar */
         <div
-          className="rounded-xl border p-3.5"
+          className="rounded-lg border p-3.5"
           style={{ borderColor: PALETTE.line, backgroundColor: PALETTE.paper }}
         >
           <div className="flex items-center gap-3">
@@ -140,7 +242,7 @@ export default function KycUploadRow({
       ) : hasDoc ? (
         /* Uploaded — preview + lime tick */
         <div
-          className="flex items-center gap-3 rounded-xl border p-3.5"
+          className="flex items-center gap-3 rounded-lg border p-3.5"
           style={{ borderColor: PALETTE.line, backgroundColor: PALETTE.paper }}
         >
           {previewUrl ? (
@@ -189,7 +291,7 @@ export default function KycUploadRow({
         <button
           type="button"
           onClick={openPicker}
-          className="flex w-full items-center gap-3 rounded-xl border p-3.5 text-left transition-colors"
+          className="flex w-full items-center gap-3 rounded-lg border p-3.5 text-left transition-colors"
           style={{ borderColor: '#D9534F', backgroundColor: 'rgba(217,83,79,0.05)' }}
         >
           <RotateCcw className="h-4 w-4 shrink-0" style={{ color: '#B23B37' }} />
@@ -227,7 +329,7 @@ export default function KycUploadRow({
               openPicker()
             }
           }}
-          className="flex cursor-pointer items-center gap-3 rounded-xl border border-dashed p-3.5 transition-colors"
+          className="flex cursor-pointer items-center gap-3 rounded-lg border border-dashed p-3.5 transition-colors"
           style={{
             borderColor: isDragging ? PALETTE.forest2 : PALETTE.line,
             backgroundColor: isDragging ? 'rgba(20,67,42,0.04)' : PALETTE.paper,

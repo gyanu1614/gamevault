@@ -460,66 +460,151 @@ export const LEGAL_DOCS: LegalDoc[] = [
     slug: 'seller-agreement',
     title: 'Seller Agency Agreement',
     description:
-      'The commercial agency agreement between DropMarket Ltd and Sellers: the disclosed-commercial-agent appointment, delivery obligations, fees, reserves, KYC and tax reporting.',
+      'The commercial agency agreement between DropMarket Ltd and the Seller: the disclosed commercial-agent appointment, authority to conclude sales and collect payment, fees, payouts, reserves and clawbacks, delivery, KYC/AML and sanctions, tax and platform reporting, confidentiality, anti-circumvention, and termination — under the PSRs 2017 commercial-agent exclusion.',
     sections: [
       {
         blocks: [
-          p('*Parties: DropMarket Ltd and the Seller. Governing law: England & Wales.*'),
+          p(
+            '*This Seller Agency Agreement (the “**Agreement**”) is made between (1) **DropMarket Ltd**, a company registered in England & Wales (the “**Platform**” or “**DropMarket**”), and (2) the person who accepts these terms during onboarding (the “**Seller**”), together the “**Parties**”. Capitalised terms have the meaning given in the Terms of Use unless defined here. Governing law: England & Wales.*',
+          ),
         ],
       },
       {
         h: '1. Appointment as disclosed commercial agent',
         blocks: [
           p(
-            'The Seller appoints DropMarket as its **disclosed commercial agent** to (a) display Listings, (b) conclude sales with Buyers **in the name of and on behalf of the Seller**, and (c) collect Buyers’ payments on the Seller’s behalf, such that the Buyer’s payment obligation to the Seller is **fully discharged when DropMarket (or its payment processor on DropMarket’s behalf) receives the Buyer’s payment in full**. DropMarket acts for the **Seller only**, never as agent of any Buyer. Amounts collected, less DropMarket’s commission and fees and any deductions under the Policies, are owed by DropMarket to the Seller and recorded in the Seller Balance.',
+            '1.1. The Seller appoints DropMarket as its **disclosed commercial agent**, and DropMarket accepts the appointment, to: (a) display and promote the Seller’s Listings; (b) **negotiate and conclude contracts of sale with Buyers in the name of and on behalf of the Seller so as to bind the Seller**; and (c) issue confirmations of transactions and **collect Buyers’ payments on the Seller’s behalf** — in each case without prior reference to the Seller.',
+          ),
+          p(
+            '1.2. **DropMarket acts for the Seller only**, and never as agent for any Buyer, in respect of each contract of sale and each payment. The Seller acknowledges that DropMarket owes no agency duties to Buyers.',
+          ),
+          p(
+            '1.3. **Discharge of debt on receipt.** The Buyer’s payment obligation to the Seller is **fully and finally discharged at the moment DropMarket (or its payment processor on DropMarket’s behalf) receives the Buyer’s payment in full**. From that moment the amounts collected, less DropMarket’s commission, fees and any deductions under the Policies, are owed by DropMarket to the Seller as its agent and are recorded in the Seller Balance. The Seller’s recourse for payment of the Seller Balance is against DropMarket only, and not against the Buyer.',
+          ),
+          p(
+            '1.4. The contract of sale is formed directly between the Seller and the Buyer; the Seller is the actual seller and supplier of the item or service for all purposes, including consumer-law, quality and title obligations. DropMarket is not a party to that contract and assumes no liability under it.',
+          ),
+          p(
+            '1.5. The Seller remains free to market and sell the same or similar digital goods and services through other channels. The appointment is **non-exclusive**.',
           ),
         ],
       },
       {
-        h: '2. Seller obligations',
+        h: '2. Seller obligations and warranties',
+        blocks: [
+          p('2.1. The Seller warrants and undertakes, for every Listing and sale, that:'),
+          ul([
+            'it holds full legal right, title and authority to sell the item, and good title will pass to the Buyer free of third-party rights;',
+            'the item is genuine, lawfully obtained (not stolen, hacked, fraudulently obtained, or the subject of a chargeback), and accurately described;',
+            'the Listing and the sale comply with all applicable laws and, to the extent applicable, with the relevant game publisher’s terms;',
+            'it will deliver exactly as described, within the stated delivery time, and provide any proof of delivery reasonably required;',
+            'for accounts, it will fully transfer ownership, **unbind all personal identifiers** (phone, linked socials, recovery email) and provide original registration details before delivery;',
+            'it will communicate with Buyers only via Platform chat, and will comply with the Prohibited Items & Conduct Policy, the Acceptable Use Policy and the AML / KYC Policy.',
+          ]),
+        ],
+      },
+      {
+        h: '3. Fees, commission and payouts',
         blocks: [
           p(
-            'The Seller must: hold full legal right to sell the item; deliver exactly as described within the stated delivery time; keep Listings accurate; communicate only via Platform chat; and comply with the Prohibited Items & Conduct Policy, the Acceptable Use Policy and the AML / KYC Policy.',
+            '3.1. In consideration of the services, the Seller shall pay DropMarket **commission** on each contract of sale concluded on the Seller’s behalf, at the rate set out in Fees & Charges and notified to the Seller (the “**Commission Notice**”), which forms part of this Agreement. DropMarket may vary the rate on notice.',
+          ),
+          p(
+            '3.2. **Commission becomes due to DropMarket as soon as, and to the extent that, DropMarket receives the price from the Buyer**, and DropMarket is authorised to **deduct its commission and fees from the collected funds** before crediting the Seller Balance.',
+          ),
+          p(
+            '3.3. Net sale proceeds are credited to the Seller Balance in accordance with the Terms of Use and the SafeDrop Protection Terms. Payouts are made on the Seller’s request to the Seller’s verified payout method; DropMarket may set minimum payout thresholds and payout schedules.',
+          ),
+          p(
+            '3.4. DropMarket may provide the Seller with a statement showing the number and value of contracts concluded on the Seller’s behalf and the commission applied.',
           ),
         ],
       },
       {
-        h: '3. Delivery',
+        h: '4. Reserves, clawbacks and set-off',
         blocks: [
           p(
-            'Delivery must match the Listing. For accounts, the Seller must fully transfer ownership and **unbind all personal identifiers** (phone, linked socials, recovery email) and provide original registration details before delivery.',
+            '4.1. Chargeback, reversal and fraud losses arising from a Seller’s transactions are borne by the **Seller**. DropMarket may withhold, hold a **rolling reserve**, set off, or claw back amounts from the Seller Balance, from future payout entitlements, or by direct recovery, to cover refunds, chargebacks, reversals, fines, scheme fees, or losses arising from the Seller’s transactions, breach or fraud.',
+          ),
+          p(
+            '4.2. Where a refund is due to a Buyer, DropMarket may process it as the Seller’s agent and recover the amount from the Seller under clause 4.1. If the Seller Balance is insufficient, the Seller shall pay the shortfall within 14 days of notice.',
           ),
         ],
       },
       {
-        h: '4. Fees, commission and payouts',
+        h: '5. KYC, AML and sanctions',
         blocks: [
           p(
-            'DropMarket deducts commission (see Fees & Charges) from each completed sale. Net sale proceeds are credited to the Seller Balance after the Buyer confirms delivery or the Protection Window expires; payouts are made on request to the Seller’s verified payout method (see Terms of Use, Section 9).',
+            '5.1. Before listing or receiving any payout, the Seller must complete identity verification (KYC, and business verification where applicable) via DropMarket’s provider, and pass sanctions, PEP and adverse-media screening. DropMarket may re-verify at any time and may suspend Listings or withhold payout pending verification.',
+          ),
+          p(
+            '5.2. The Seller warrants it is not subject to, nor owned or controlled by any person subject to, applicable sanctions (including UK, EU, UN and OFAC), and is not located in a sanctioned territory. DropMarket may freeze, suspend or terminate on a sanctions or AML concern.',
           ),
         ],
       },
       {
-        h: '5. Reserves, clawbacks and set-off',
+        h: '6. Tax and platform reporting',
         blocks: [
           p(
-            'DropMarket may withhold, reserve, or set off amounts from the Seller Balance to cover refunds, chargebacks, fines, or losses arising from the Seller’s transactions, and may apply a **rolling reserve** for higher-risk Sellers.',
+            '6.1. The **Seller is solely responsible** for determining, invoicing (where required), reporting and paying all taxes (including VAT/sales tax) arising from the Seller’s sales, and shall inform DropMarket of its tax residency and status via the KYC questionnaire and of any change. All sums under this Agreement are inclusive of any applicable tax payable by the Seller.',
+          ),
+          p(
+            '6.2. If a tax authority enforces payment of the Seller’s tax, or imposes a fine on DropMarket, based on the Seller’s sales, DropMarket may report to the Seller and **recover those sums from amounts collected on the Seller’s behalf**.',
+          ),
+          p(
+            '6.3. **Digital-platform reporting (DAC7 / UK rules).** DropMarket is a reporting platform operator under the UK’s digital-platform reporting rules (OECD Model Reporting Rules; rules in force from 1 January 2024, annual report to HMRC due 31 January following the reportable period). The Seller shall provide the identity, tax-identification and other information DropMarket must collect, verify and report, and DropMarket will make the reported information available to the Seller.',
           ),
         ],
       },
       {
-        h: '6. KYC and tax reporting',
+        h: '7. Confidentiality and data protection',
         blocks: [
           p(
-            'Sellers must complete identity verification (KYC) via our provider and sanctions screening before payout. DropMarket may report Seller income to HMRC under the OECD/UK **digital platform reporting rules** (in force 1 January 2024; annual report due 31 January).',
+            '7.1. Each Party shall keep confidential all non-public data and documents obtained in performing this Agreement, and treat them as business secrets, both during and after the term.',
+          ),
+          p(
+            '7.2. Personal data provided in connection with this Agreement is processed in accordance with DropMarket’s Privacy Policy and applicable UK data-protection law (UK GDPR / Data Protection Act 2018).',
           ),
         ],
       },
       {
-        h: '7. Indemnity and termination',
+        h: '8. Anti-circumvention and non-solicitation',
         blocks: [
           p(
-            'The Seller indemnifies DropMarket against claims arising from the Seller’s items, delivery, or conduct. Either party may terminate; clauses on fees, refunds, chargebacks, reserves and indemnities survive.',
+            '8.1. The Seller shall not solicit, or transact off-Platform with, Buyers introduced to it directly or indirectly through DropMarket or its platforms. If the Seller, after such introduction, concludes any sale or similar arrangement with a Buyer so as to bypass DropMarket, the Seller is in material breach, and DropMarket may exercise its remedies under clause 9.',
+          ),
+        ],
+      },
+      {
+        h: '9. Suspension, breach and termination',
+        blocks: [
+          p(
+            '9.1. On a breach of this Agreement or the Policies (including a prohibited action, an anti-circumvention breach, or suspected fraud, AML or sanctions concern), DropMarket may, at its reasonable discretion and in proportion to the breach: (i) suspend Listings or the Seller’s account; (ii) **withhold or block payouts** pending investigation for a reasonable period; (iii) terminate this Agreement; and/or (iv) recover from the Seller Balance or future entitlements any amounts DropMarket or its payment processors actually incur or are liable for, plus reasonable administrative costs. DropMarket does not levy punitive fines.',
+          ),
+          p(
+            '9.2. Either Party may terminate this Agreement on notice. On termination, contracts already concluded on the Seller’s behalf, funds in transit, reserves and clawback rights are handled in accordance with clauses 3 and 4; and the clauses on fees, refunds, chargebacks, reserves, tax, confidentiality, indemnity and governing law survive.',
+          ),
+        ],
+      },
+      {
+        h: '10. Indemnity and liability',
+        blocks: [
+          p(
+            '10.1. The Seller indemnifies DropMarket against losses, claims and costs (including third-party and Buyer claims, chargebacks, IP claims, and taxes) arising from the Seller’s items, delivery, conduct, or breach of this Agreement.',
+          ),
+          p(
+            '10.2. Nothing in this Agreement limits either Party’s liability where liability cannot lawfully be limited. Subject to that, and as between the Parties (business to business), each Party’s liability is limited as set out in the Terms of Use.',
+          ),
+        ],
+      },
+      {
+        h: '11. General',
+        blocks: [
+          p(
+            '11.1. The Seller’s Guide / Partner Rules and the Policies referenced in the Terms of Use are incorporated into and form an integral part of this Agreement, as updated from time to time. This Agreement is governed by the laws of England & Wales, and the Parties submit to the courts of England & Wales. If any provision is invalid, the remainder continues in effect. DropMarket may vary this Agreement on notice; continued use after the effective date constitutes acceptance.',
+          ),
+          note(
+            '⚠️ NOT LEGAL ADVICE — solicitor sign-off pending. Open points for counsel: the interaction of the SafeDrop protection flow with the discharge-on-receipt / non-escrow requirement of the PSRs-2017 commercial-agent exclusion; the express “authority to conclude/bind” wording (clause 1.1); the Commercial Agents (Council Directive) Regulations 1993 position for the “goods” legs; and the consumer-facing cancellation/waiver mechanics in the Terms of Use.',
           ),
         ],
       },

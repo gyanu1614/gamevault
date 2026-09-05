@@ -18,12 +18,27 @@ import {
 } from '@/lib/actions/seller-application-status'
 import { AlertCircle, FileText } from 'lucide-react'
 import { toast } from 'sonner'
+import type { HqUser } from '@/lib/founding/hq-data'
 import SellerFlowLoader from '../become-seller/_redesign/components/SellerFlowLoader'
 import StatusView from './StatusView'
 
 export default function ApplicationStatusPage() {
   const router = useRouter()
-  const { user, loading: authLoading } = useAuth()
+  const { user, profile, loading: authLoading } = useAuth()
+
+  // Synthesize the shared HQ profile-chip user from the signed-in profile.
+  // full_name → username → 'Account'; isSeller mirrors the approved-seller
+  // role. Null until the profile resolves, in which case the chip is omitted.
+  const hqUser: HqUser | null = profile
+    ? {
+        username:
+          (profile.full_name as string) ||
+          (profile.username as string) ||
+          'Account',
+        avatarUrl: (profile.avatar_url as string) || null,
+        isSeller: (profile.role as string) === 'seller',
+      }
+    : null
   // Beta C — use-auth opens a realtime channel that updates
   // user.sellerApplicationStatus the instant an admin acts. We key the fetch
   // effect off it so the status card + timeline re-render without a refresh.
@@ -147,6 +162,7 @@ export default function ApplicationStatusPage() {
       onWithdraw={handleWithdraw}
       onCountdownComplete={handleCountdownComplete}
       onNavigate={(path) => router.push(path)}
+      hqUser={hqUser}
     />
   )
 }

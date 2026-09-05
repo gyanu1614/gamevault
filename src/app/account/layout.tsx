@@ -7,6 +7,7 @@ import { useEffect } from 'react'
 import { Loader2 } from 'lucide-react'
 import { HeroBackdrop, HeroBackdropPreload } from '@/components/hero-backdrop'
 import { isLoggingOut } from '@/lib/auth/logout-signal'
+import BuyingOpensSoonBanner from '@/components/seller/BuyingOpensSoonBanner'
 
 export default function AccountLayout({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
@@ -107,7 +108,10 @@ export default function AccountLayout({ children }: { children: React.ReactNode 
           starts flush under the navbar. Pages must NOT add their own
           navbar-clearance padding on top (only internal content rhythm). */}
       <HeroBackdrop name="account" className="hero-dim lg:pl-64">
-        <div className="pt-14">{children}</div>
+        <div className="pt-14">
+          <BuyingOpensSoonBanner />
+          {children}
+        </div>
       </HeroBackdrop>
       <AccountSidebar user={sidebarUser} />
     </>

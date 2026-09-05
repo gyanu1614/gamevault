@@ -11,6 +11,7 @@
 import Link from 'next/link'
 import { ArrowRight } from 'lucide-react'
 import type { HubTeaserItem } from './_hubData'
+import ValuesMarquee from './_ValuesMarquee'
 
 /* ─────────────────────────── Values teaser ─────────────────────────── */
 
@@ -44,60 +45,9 @@ export function ValuesTeaser({
           </Link>
         </div>
 
-        {/* Items — mobile rail, desktop 4-up hairline grid */}
-        <div className="flex snap-x snap-mandatory gap-3 overflow-x-auto p-3 [scrollbar-width:none] sm:grid sm:grid-cols-2 sm:gap-px sm:overflow-visible sm:bg-[#1A211A] sm:p-0 lg:grid-cols-4 [&::-webkit-scrollbar]:hidden">
-          {items.map((item) => (
-            <Link
-              key={item.slug}
-              href={`/${gameSlug}/values/${item.slug}`}
-              className="flex w-[270px] shrink-0 snap-start items-center gap-3 border border-[#1A211A] bg-[#0B0F0C] p-4 transition-colors hover:bg-[#101710] sm:w-auto sm:min-w-0 sm:border-0"
-            >
-              {item.imageUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element -- remote item art
-                <img
-                  src={item.imageUrl}
-                  alt=""
-                  className="h-11 w-11 shrink-0 border border-[#1A211A] bg-[#0E140F] object-contain"
-                />
-              ) : (
-                <span className="h-11 w-11 shrink-0 border border-[#23291F] bg-[#0E140F]" />
-              )}
-              <span className="flex min-w-0 flex-1 flex-col gap-1.5">
-                <span className="flex items-center gap-1.5">
-                  <span className="truncate text-[13px] font-semibold text-[#E4EAE2]">
-                    {item.name}
-                  </span>
-                  {item.variant && (
-                    <span className="shrink-0 border border-[#26332C] bg-white/[0.04] px-1 py-px font-mono text-[10px] font-semibold text-[#8FBF9C]">
-                      {item.variant}
-                    </span>
-                  )}
-                </span>
-                <span className="truncate text-[11px] text-[#7C8A80]">
-                  {item.qualifier}
-                </span>
-              </span>
-              {/* Price + 7-day change in a right column so a long qualifier
-                  never squeezes it. Change is coloured (green up / red down)
-                  and only appears where we hold history. */}
-              <span className="flex shrink-0 flex-col items-end gap-0.5">
-                <span className="font-mono text-[14px] font-bold tabular-nums text-[#8FBF9C]">
-                  {item.priceLabel}
-                </span>
-                {item.changePct != null && (
-                  <span
-                    className={`font-mono text-[11px] font-semibold tabular-nums ${
-                      item.changePct >= 0 ? 'text-[#5BC77E]' : 'text-[#E0736B]'
-                    }`}
-                  >
-                    {item.changePct >= 0 ? '▲' : '▼'}{' '}
-                    {Math.abs(item.changePct).toFixed(0)}%
-                  </span>
-                )}
-              </span>
-            </Link>
-          ))}
-        </div>
+        {/* Items — a continuous auto-scrolling marquee (like the Founding HQ
+            strip): glides seam-free, pauses on hover, static for reduced motion. */}
+        <ValuesMarquee items={items} gameSlug={gameSlug} />
 
         {/* Footnote — the qualifier the design (and our data rules) require.
             Figtree (text), not mono — mono is reserved for numbers/prices. */}

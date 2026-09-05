@@ -18,7 +18,6 @@ import { HubFooter } from '@/components/content/HubFooter'
 import { getHubNavData } from '@/lib/content/hubNav'
 import { getGameContentTheme } from '@/lib/content/theme'
 import { BlogHubHero } from './_BlogHubHero'
-import { HubStatStrip } from './_HubStatStrip'
 import { FeaturedGuide } from './_FeaturedGuide'
 import { ArticleGrid } from './_ArticleGrid'
 import { ValuesTeaser, CalculatorTeaser } from './_HubTeasers'
@@ -119,11 +118,14 @@ export default async function GameBlogIndex({
   const game = await getGame(gameSlug)
   if (!game) notFound()
 
-  const [posts, pricedItems, topValues, statStrip, calcExample, hubNav] =
+  const [posts, pricedItems, topValues, heroPets, statStrip, calcExample, hubNav] =
     await Promise.all([
       getGamePosts(gameSlug),
       getPricedItemCount(gameSlug),
-      getHubTopValues(gameSlug, 4),
+      // A longer list feeds the auto-scrolling "Live Values" marquee.
+      getHubTopValues(gameSlug, 10),
+      // A slightly larger set of popular priced pets for the hero's collage.
+      getHubTopValues(gameSlug, 6),
       getHubStatStrip(gameSlug),
       getHubCalcExample(gameSlug),
       getHubNavData(gameSlug),
@@ -180,19 +182,23 @@ export default async function GameBlogIndex({
           />
         )}
 
-        <BlogHubHero gameName={game.name} title={theme.heroTitle} lead={theme.heroLead} />
+        <BlogHubHero
+          gameName={game.name}
+          gameSlug={gameSlug}
+          title={theme.heroTitle}
+          lead={theme.heroLead}
+          stats={statStrip}
+          pets={heroPets}
+          hasCalculator={hubNav.tools.includes('calculator')}
+        />
       </SabHeroBackdrop>
 
       {/* No z-index here (matches Values): a z-10 wrapper created a stacking
           context that beat the fixed header — which sits in SabHeroBackdrop's
           own z-10 context earlier in the DOM — letting cards scroll over the
           navbar. Plain flow keeps the header on top. */}
-      <div className="relative mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
-        {/* Compact stat strip — real, data-backed stats (top pet, highest
-            value, pets tracked, price mover when history supports it), between
-            the title and the featured guide. Self-hides with no data. */}
-        <HubStatStrip stats={statStrip} />
-
+      <div className="relative mx-auto w-full max-w-7xl px-4 pt-4 sm:px-6 lg:px-8">
+        {/* The stat strip now lives inside the hero's Market Snapshot card. */}
         {featured && (
           <FeaturedGuide
             href={`/${gameSlug}/blog/${featured.slug}`}

@@ -27,6 +27,13 @@ function mock(status: string): ApplicationStatusResult {
     withdrawal: null,
   } as unknown as ApplicationStatusResult
 
+  // Richer mock fields so the Application Summary modal has content to show.
+  ;(base.application as any).seller_type = 'individual'
+  ;(base.application as any).display_name = 'PixelForge'
+  ;(base.application as any).shop_name = 'PixelForge Store'
+  ;(base.application as any).primary_games = ['Adopt Me', 'Steal a Brainrot']
+  ;(base.application as any).other_games = 'Grow a Garden'
+
   if (status === 'info_requested') {
     ;(base.application as any).admin_notes =
       'Your selfie photo is too blurry to match against your ID. Please re-upload a clearer selfie holding your government ID next to your face.'
@@ -77,6 +84,7 @@ export default function SellerStatusPreviewPage() {
       onWithdraw={() => setWithdrawOpen(false)}
       onCountdownComplete={() => {}}
       onNavigate={() => {}}
+      hqUser={{ username: 'Preview Seller', avatarUrl: null, isSeller: false }}
     />
   )
 }

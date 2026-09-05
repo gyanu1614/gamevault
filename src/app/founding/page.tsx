@@ -23,6 +23,7 @@ import { GAME_ICONS } from '@/features/home/lib/game-icons'
 import { DISCORD_INVITE_URL } from '@/lib/config/founding-seller'
 import FoundingRail from './_components/FoundingRail'
 import FoundingContent from './_components/FoundingContent'
+import FoundingNavbar from './_components/FoundingNavbar'
 import type { MarqueeGame } from './_components/GameMarquee'
 
 export const metadata: Metadata = {
@@ -34,31 +35,35 @@ export const metadata: Metadata = {
 export const dynamic = 'force-dynamic'
 
 /**
- * Games shown in the marquee — Roblox titles only. DropMarket's founding push is
- * a Roblox marketplace, so non-Roblox logos (Apex, CoD…) both clash visually and
- * dilute the story. We show the Roblox games that have a logo, in a fixed order.
+ * Games shown in the marquee — the full catalogue, not just Roblox: every
+ * active game with a real logo in GAME_ICONS, Roblox titles first (they lead
+ * the founding story), then the rest in catalog order. De-duped by logo file so
+ * slug variants sharing art (grow-a-garden + grow-a-garden-2) render once.
  */
 const ROBLOX_SLUGS = ['steal-a-brainrot', 'grow-a-garden', 'grow-a-garden-2', 'adopt-me', 'roblox']
 
 async function marqueeGames(): Promise<MarqueeGame[]> {
   const all = await getAllGames()
   const bySlug = new Map(all.map((g) => [g.slug, g]))
-  const ordered = ROBLOX_SLUGS
-    .filter((slug) => GAME_ICONS[slug]) // only ones with a real logo
-    .map((slug) => ({
+
+  // Roblox first, then every other catalog game — only ones with real art.
+  const orderedSlugs = [
+    ...ROBLOX_SLUGS,
+    ...all.map((g) => g.slug).filter((s) => !ROBLOX_SLUGS.includes(s)),
+  ].filter((slug) => GAME_ICONS[slug])
+
+  const seenIcon = new Set<string>()
+  const deduped: MarqueeGame[] = []
+  for (const slug of orderedSlugs) {
+    const icon = GAME_ICONS[slug]
+    if (seenIcon.has(icon)) continue
+    seenIcon.add(icon)
+    deduped.push({
       slug,
       // Prefer a clean canonical name over messy DB variants like "Grow a Garden 2".
       name: defaultRobloxName(slug) || bySlug.get(slug)?.name || slug,
-    }))
-  // De-dupe by LOGO FILE so slug variants that share art (grow-a-garden +
-  // grow-a-garden-2 → gag.png) render only once.
-  const seenIcon = new Set<string>()
-  const deduped = ordered.filter((g) => {
-    const icon = GAME_ICONS[g.slug]
-    if (seenIcon.has(icon)) return false
-    seenIcon.add(icon)
-    return true
-  })
+    })
+  }
   return deduped.length
     ? deduped
     : [
@@ -97,9 +102,11 @@ export default async function FoundingHqPage({
 
   return (
     <div
-      className="min-h-screen w-full overflow-x-hidden lg:grid lg:h-screen lg:grid-cols-[38%_62%] lg:overflow-hidden"
+      className="relative min-h-screen w-full overflow-x-hidden lg:grid lg:h-screen lg:grid-cols-[38%_62%] lg:overflow-hidden"
       style={{ backgroundColor: '#FAFAF7' }}
     >
+      {/* Full-width seamless top bar over both panels. */}
+      <FoundingNavbar user={user} />
       <FoundingRail
         name={founder?.name ?? null}
         joinNumber={founder?.joinNumber ?? null}

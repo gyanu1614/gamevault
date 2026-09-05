@@ -52,6 +52,9 @@ import {
 } from '../game-categories-shared'
 import { PALETTE } from '../theme'
 import StepHeader from './StepHeader'
+import { LightCombobox } from './fields'
+import { COUNTRIES } from '../../data/countries'
+import { LANGUAGES } from '../../constants'
 
 /**
  * The sections each catalog game supports, keyed by game id. Precomputed
@@ -99,6 +102,10 @@ export default function StepAccountGames({
   } = useForm<Step1FormData>({
     resolver: zodResolver(step1Schema),
     defaultValues: {
+      displayName: initialData?.displayName ?? '',
+      fullLegalName: initialData?.fullLegalName ?? '',
+      country: initialData?.country ?? '',
+      languages: initialData?.languages ?? [],
       is18OrOlder: initialData?.is18OrOlder ?? false,
       sellerType: initialData?.sellerType,
       primaryGames: initialData?.primaryGames ?? [],
@@ -109,6 +116,11 @@ export default function StepAccountGames({
     },
   })
 
+  const displayName = watch('displayName') ?? ''
+  const fullLegalName = watch('fullLegalName') ?? ''
+  const country = watch('country') ?? ''
+  const languages = watch('languages') ?? []
+  const [langOpen, setLangOpen] = React.useState(false)
   const is18OrOlder = watch('is18OrOlder')
   const sellerType = watch('sellerType')
   const primaryGames = watch('primaryGames') ?? []
@@ -186,6 +198,129 @@ export default function StepAccountGames({
       />
 
       <div className="space-y-8">
+        {/* ── Name / store name ───────────────────────────────────── */}
+        <Field
+          label="Display Name / Store Name"
+          required
+          error={errors.displayName?.message}
+          hint="Buyers see this on your storefront and listings."
+        >
+          <input
+            type="text"
+            value={displayName}
+            onChange={(e) =>
+              setValue('displayName', e.target.value, { shouldValidate: true })
+            }
+            placeholder="e.g. Nova Game Trades"
+            className="w-full rounded-lg border px-3.5 py-2.5 text-sm outline-none transition-colors placeholder:opacity-60"
+            style={fieldStyle}
+            onFocus={onFieldFocus}
+            onBlur={onFieldBlur}
+          />
+        </Field>
+
+        <Field
+          label="Full Legal Name"
+          hint="Optional — helps us verify payouts later."
+          error={errors.fullLegalName?.message}
+        >
+          <input
+            type="text"
+            value={fullLegalName}
+            onChange={(e) =>
+              setValue('fullLegalName', e.target.value, { shouldValidate: true })
+            }
+            placeholder="e.g. Jane Alexandra Doe"
+            className="w-full rounded-lg border px-3.5 py-2.5 text-sm outline-none transition-colors placeholder:opacity-60"
+            style={fieldStyle}
+            onFocus={onFieldFocus}
+            onBlur={onFieldBlur}
+          />
+        </Field>
+
+        {/* ── Country ─────────────────────────────────────────────── */}
+        <Field label="Country" required error={errors.country?.message}>
+          <LightCombobox
+            value={country}
+            onChange={(v) => setValue('country', v, { shouldValidate: true })}
+            placeholder="Select your country"
+            options={COUNTRIES.map((c) => ({ value: c.name, label: c.name }))}
+          />
+        </Field>
+
+        {/* ── Languages — dropdown multi-select ───────────────────── */}
+        <Field
+          label="Languages You Support"
+          required
+          hint="Which languages can you help buyers in?"
+          error={errors.languages?.message}
+        >
+          <Popover.Root open={langOpen} onOpenChange={setLangOpen}>
+            <Popover.Trigger asChild>
+              <button
+                type="button"
+                className="flex min-h-[46px] w-full flex-wrap items-center gap-1.5 rounded-lg border px-3.5 py-2 pr-9 text-left text-sm outline-none transition-colors"
+                style={{ ...fieldStyle, position: 'relative' }}
+              >
+                {languages.length === 0 ? (
+                  <span style={{ color: `${PALETTE.ink2}99` }}>Select your languages…</span>
+                ) : (
+                  languages.map((lang) => (
+                    <span
+                      key={lang}
+                      className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[12.5px] font-medium"
+                      style={{ backgroundColor: '#F2F4EC', color: PALETTE.forest }}
+                    >
+                      {lang}
+                      <X
+                        className="h-3 w-3 cursor-pointer opacity-60 hover:opacity-100"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setValue('languages', languages.filter((l) => l !== lang), { shouldValidate: true })
+                        }}
+                      />
+                    </span>
+                  ))
+                )}
+                <ChevronDown
+                  className="pointer-events-none absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2"
+                  style={{ color: PALETTE.ink2 }}
+                />
+              </button>
+            </Popover.Trigger>
+            <Popover.Portal>
+              <Popover.Content
+                align="start"
+                sideOffset={6}
+                className="z-[70] max-h-[280px] w-[var(--radix-popover-trigger-width)] overflow-y-auto rounded-lg border bg-white py-1.5 shadow-xl"
+                style={{ borderColor: PALETTE.line }}
+              >
+                {LANGUAGES.map((lang) => {
+                  const on = languages.includes(lang)
+                  return (
+                    <button
+                      key={lang}
+                      type="button"
+                      onClick={() =>
+                        setValue(
+                          'languages',
+                          on ? languages.filter((l) => l !== lang) : [...languages, lang],
+                          { shouldValidate: true },
+                        )
+                      }
+                      className="flex w-full items-center justify-between px-3.5 py-2.5 text-left text-sm transition-colors hover:bg-black/[0.03]"
+                      style={{ color: PALETTE.ink }}
+                    >
+                      {lang}
+                      {on && <Check className="h-4 w-4" style={{ color: PALETTE.forest2 }} strokeWidth={2.5} />}
+                    </button>
+                  )
+                })}
+              </Popover.Content>
+            </Popover.Portal>
+          </Popover.Root>
+        </Field>
+
         {/* ── Seller type ─────────────────────────────────────────── */}
         <Field
           label="I'm Selling As"
@@ -334,40 +469,22 @@ export default function StepAccountGames({
           required
           error={errors.expectedVolume?.message}
         >
-          <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
-            {VOLUME_OPTIONS.map((opt) => {
-              const active = expectedVolume === opt.value
-              return (
-                <button
-                  key={opt.value}
-                  type="button"
-                  onClick={() =>
-                    setValue('expectedVolume', opt.value, {
-                      shouldValidate: true,
-                    })
-                  }
-                  aria-pressed={active}
-                  className="flex flex-col items-start rounded-xl border px-4 py-3 text-left transition-colors"
-                  style={{
-                    borderColor: active ? PALETTE.forest : PALETTE.line,
-                    backgroundColor: active
-                      ? 'rgba(20,67,42,0.04)'
-                      : PALETTE.paper,
-                  }}
-                >
-                  <span
-                    className="text-sm font-semibold"
-                    style={{ color: active ? PALETTE.forest : PALETTE.ink }}
-                  >
-                    {opt.label}
-                  </span>
-                  <span className="text-xs" style={{ color: PALETTE.ink2 }}>
-                    {opt.desc}
-                  </span>
-                </button>
-              )
-            })}
-          </div>
+          <LightCombobox
+            value={expectedVolume ?? ''}
+            onChange={(v) =>
+              setValue('expectedVolume', v as Step1FormData['expectedVolume'], {
+                shouldValidate: true,
+              })
+            }
+            placeholder="Select your expected monthly volume…"
+            // Keep the natural smallest→largest band order; no search for 4 rows.
+            unsorted
+            hideSearch
+            options={VOLUME_OPTIONS.map((opt) => ({
+              value: opt.value,
+              label: `${opt.label} — ${opt.desc}`,
+            }))}
+          />
         </Field>
 
         {/* ── 18+ confirm ─────────────────────────────────────────── */}

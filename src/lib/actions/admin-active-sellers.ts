@@ -1,278 +1,332 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
+/**
+ * Admin — active sellers list.
+ *
+ * Sourced from `profiles` where role='seller' (NOT seller_applications: a
+ * seller promoted outside the application flow would be invisible there),
+ * then batch-enriched with real numbers via the service-role client using
+ * the Map pattern from moderation.ts: listings counts by status, completed
+ * revenue (SUM seller_payout) + sales counts, seller_presence
+ * (store_paused, last_active_at) and pending withdrawal counts.
+ */
+
+import { createServiceRoleClient } from '@/lib/supabase/service'
 import { requireAdmin } from './admin-permissions'
 
+/** Latest of several ISO timestamps (nulls skipped); null when all missing. */
+function latestIso(...values: (string | null | undefined)[]): string | null {
+  let best: string | null = null
+  let bestMs = -Infinity
+  for (const v of values) {
+    if (!v) continue
+    const ms = new Date(v).getTime()
+    if (Number.isFinite(ms) && ms > bestMs) {
+      bestMs = ms
+      best = v
+    }
+  }
+  return best
+}
+
+export type ActiveSellerSort =
+  | 'listings'
+  | 'sales'
+  | 'revenue'
+  | 'joined'
+  | 'last_active'
+  | 'approved'
+  | 'recent_listing'
+
 export interface ActiveSeller {
+  /** Profile id — the seller's user id (detail route param). */
   id: string
-  user_id: string
   username: string
   full_name: string | null
   email: string
   avatar_url: string | null
+  shop_name: string | null
   seller_tier: string
+  seller_status: string
+  kyc_status: string | null
   founding_seller: boolean
-  approved_at: string
-  status: 'active' | 'restricted' | 'banned' | 'warning' | 'suspended'
+  is_test: boolean
+  created_at: string
+  total_sales: number
+  seller_rating: number | null
+  total_reviews: number
   stats: {
-    total_sales: number
     active_listings: number
-    total_earnings: number
-    avg_rating: number
-    review_count: number
-    response_rate: number
-    completion_rate: number
+    pending_listings: number
+    /** Completed orders count (real, from orders). */
+    completed_sales: number
+    /** SUM(seller_payout) over completed orders. */
+    revenue: number
+    pending_withdrawals: number
   }
-  primary_games: string[]
-  seller_type: string
-  last_active: string
+  store_paused: boolean
+  last_active_at: string | null
+  approved_at: string | null
+  latest_listing_at: string | null
+}
+
+export interface ActiveSellersFilters {
+  status?: 'active' | 'restricted' | 'banned'
+  tier?: 'unverified' | 'bronze' | 'silver' | 'gold' | 'platinum' | 'diamond'
+  searchQuery?: string
+  sortBy?: ActiveSellerSort
+  sortOrder?: 'asc' | 'desc'
 }
 
 /**
- * Get all active sellers with their stats
+ * Get all sellers (profiles.role='seller') with real listing/order stats.
+ * Default sort: active listings DESC — the sellers with live inventory
+ * float to the top.
  */
-export async function getActiveSellers(filters?: {
-  status?: 'active' | 'restricted' | 'banned' | 'warning' | 'suspended'
-  tier?: 'bronze' | 'silver' | 'gold' | 'platinum'
-  searchQuery?: string
-  sortBy?: 'sales' | 'earnings' | 'rating' | 'listings' | 'joined' | 'activity'
-  sortOrder?: 'asc' | 'desc'
-}): Promise<{
+export async function getActiveSellers(filters?: ActiveSellersFilters): Promise<{
   success: boolean
   sellers?: ActiveSeller[]
   error?: string
 }> {
   try {
-    // Check admin permissions
     await requireAdmin()
 
-    const supabase = await createClient()
+    const service = createServiceRoleClient()
 
-    // Get all approved seller applications with user details
-    // Use profiles!user_id to specify which foreign key relationship to use
-    // (seller_applications has both user_id and reviewed_by referencing profiles)
-    let query = supabase
-      .from('seller_applications')
-      .select(`
-        id,
-        user_id,
-        seller_type,
-        primary_games,
-        reviewed_at,
-        profiles!user_id (
-          username,
-          full_name,
-          email,
-          avatar_url,
-          seller_tier,
-          founding_seller,
-          seller_status,
-          updated_at
-        )
-      `)
-      .eq('status', 'approved')
-
-    // Apply filters
-    if (filters?.tier) {
-      query = query.eq('profiles.seller_tier', filters.tier)
-    }
-
-    const { data: applications, error } = await query
+    const { data: profiles, error } = await (service
+      .from('profiles')
+      .select(
+        'id, username, full_name, email, avatar_url, shop_name, seller_tier, seller_status, kyc_status, founding_seller, is_test, created_at, updated_at, total_sales, seller_rating, total_reviews',
+      )
+      .eq('role', 'seller') as any)
 
     if (error) {
       console.error('Error fetching active sellers:', error)
       return { success: false, error: error.message }
     }
 
-    if (!applications || applications.length === 0) {
-      return { success: true, sellers: [] }
+    const rows: any[] = profiles || []
+    if (rows.length === 0) return { success: true, sellers: [] }
+
+    const sellerIds = rows.map((p) => p.id as string)
+
+    // ── Batch enrichment (Map pattern from moderation.ts) ──
+    const [listingsRes, ordersRes, presenceRes, withdrawalsRes, approvedAppsRes, authUsersRes] = await Promise.all([
+      service
+        .from('listings')
+        .select('seller_id, status, created_at')
+        .in('seller_id', sellerIds)
+        .in('status', ['active', 'pending_approval']) as any,
+      service
+        .from('orders')
+        .select('seller_id, seller_payout')
+        .in('seller_id', sellerIds)
+        .eq('status', 'completed') as any,
+      service
+        .from('seller_presence')
+        .select('seller_id, store_paused, last_active_at, last_seen_at')
+        .in('seller_id', sellerIds) as any,
+      (service.from('withdrawal_requests' as any) as any)
+        .select('user_id')
+        .in('user_id', sellerIds)
+        .eq('status', 'pending'),
+      // Approval date — latest approved application per seller.
+      service
+        .from('seller_applications')
+        .select('user_id, reviewed_at, created_at')
+        .in('user_id', sellerIds)
+        .eq('status', 'approved') as any,
+      // Real last sign-in from auth — one paged call covers the whole roster
+      // (revisit pagination if the platform grows past ~1000 sellers).
+      service.auth.admin.listUsers({ page: 1, perPage: 1000 }),
+    ])
+
+    const activeListings = new Map<string, number>()
+    const pendingListings = new Map<string, number>()
+    const latestListingAt = new Map<string, string>()
+    for (const l of listingsRes.data ?? []) {
+      if (l.status === 'active') {
+        activeListings.set(l.seller_id, (activeListings.get(l.seller_id) ?? 0) + 1)
+      } else if (l.status === 'pending_approval') {
+        pendingListings.set(l.seller_id, (pendingListings.get(l.seller_id) ?? 0) + 1)
+      }
+      const prev = latestListingAt.get(l.seller_id)
+      if (l.created_at && (!prev || l.created_at > prev)) {
+        latestListingAt.set(l.seller_id, l.created_at)
+      }
     }
 
-    // TODO: Fetch actual stats from orders/listings tables when they exist
-    const sellers: ActiveSeller[] = applications
-      .filter((app: any) => app.profiles) // Filter out any applications without profile data
-      .map((app: any) => {
-        const username = app.profiles?.username || 'Unknown'
-        // Use DiceBear avatar as fallback
-        const { getAvatarUrl } = require('@/lib/utils/avatar')
-        const avatar_url = getAvatarUrl(app.profiles?.avatar_url, username)
+    // Latest approved-application date per seller.
+    const approvedAt = new Map<string, string>()
+    for (const a of approvedAppsRes.data ?? []) {
+      const when = a.reviewed_at || a.created_at
+      const prev = approvedAt.get(a.user_id)
+      if (when && (!prev || when > prev)) approvedAt.set(a.user_id, when)
+    }
 
-        return {
-          id: app.id,
-          user_id: app.user_id,
-          username,
-          full_name: app.profiles?.full_name || null,
-          email: app.profiles?.email || 'No email',
-          avatar_url,
-          seller_tier: app.profiles?.seller_tier || 'bronze',
-          founding_seller: app.profiles?.founding_seller === true,
-          approved_at: app.reviewed_at || new Date().toISOString(),
-          status: app.profiles?.seller_status || 'active',
-          stats: {
-            // Real stats will come from orders/listings tables - showing 0 until implemented
-            total_sales: 0,
-            active_listings: 0,
-            total_earnings: 0,
-            avg_rating: 0,
-            review_count: 0,
-            response_rate: 0,
-            completion_rate: 0
-          },
-          primary_games: Array.isArray(app.primary_games) ? app.primary_games : [],
-          seller_type: app.seller_type || 'individual',
-          last_active: app.profiles?.updated_at || new Date().toISOString()
-        }
+    // Auth last sign-in — the truthful "last seen" signal.
+    const lastSignIn = new Map<string, string>()
+    for (const u of authUsersRes?.data?.users ?? []) {
+      if (u.last_sign_in_at) lastSignIn.set(u.id, u.last_sign_in_at)
+    }
+
+    const completedSales = new Map<string, number>()
+    const revenue = new Map<string, number>()
+    for (const o of ordersRes.data ?? []) {
+      completedSales.set(o.seller_id, (completedSales.get(o.seller_id) ?? 0) + 1)
+      revenue.set(o.seller_id, (revenue.get(o.seller_id) ?? 0) + Number(o.seller_payout ?? 0))
+    }
+
+    const presence = new Map<string, { store_paused: boolean; last_active_at: string | null }>()
+    for (const p of presenceRes.data ?? []) {
+      presence.set(p.seller_id, {
+        store_paused: !!p.store_paused,
+        last_active_at: latestIso(p.last_active_at, p.last_seen_at),
       })
+    }
 
-    // Apply search filter
-    let filteredSellers = sellers
+    const pendingWithdrawals = new Map<string, number>()
+    for (const w of withdrawalsRes.data ?? []) {
+      pendingWithdrawals.set(w.user_id, (pendingWithdrawals.get(w.user_id) ?? 0) + 1)
+    }
+
+    let sellers: ActiveSeller[] = rows.map((p) => {
+      const pres = presence.get(p.id)
+      return {
+        id: p.id,
+        username: p.username || 'unknown',
+        full_name: p.full_name ?? null,
+        email: p.email || 'No email',
+        avatar_url: p.avatar_url ?? null,
+        shop_name: p.shop_name ?? null,
+        seller_tier: p.seller_tier || 'unverified',
+        seller_status: p.seller_status || 'active',
+        kyc_status: p.kyc_status ?? null,
+        founding_seller: p.founding_seller === true,
+        is_test: p.is_test === true,
+        created_at: p.created_at,
+        total_sales: Number(p.total_sales ?? 0),
+        seller_rating: p.seller_rating != null ? Number(p.seller_rating) : null,
+        total_reviews: Number(p.total_reviews ?? 0),
+        stats: {
+          active_listings: activeListings.get(p.id) ?? 0,
+          pending_listings: pendingListings.get(p.id) ?? 0,
+          completed_sales: completedSales.get(p.id) ?? 0,
+          revenue: revenue.get(p.id) ?? 0,
+          pending_withdrawals: pendingWithdrawals.get(p.id) ?? 0,
+        },
+        store_paused: pres?.store_paused ?? false,
+        // GREATEST(presence heartbeats, auth last_sign_in_at) — same truth the
+        // detail page uses, batched via one listUsers call.
+        last_active_at: latestIso(pres?.last_active_at, lastSignIn.get(p.id) ?? null),
+        approved_at: approvedAt.get(p.id) ?? null,
+        latest_listing_at: latestListingAt.get(p.id) ?? null,
+      }
+    })
+
+    // ── Filters (also applied client-side; kept here so direct calls work) ──
+    if (filters?.tier) {
+      sellers = sellers.filter((s) => s.seller_tier === filters.tier)
+    }
+    if (filters?.status) {
+      sellers = sellers.filter((s) => s.seller_status === filters.status)
+    }
     if (filters?.searchQuery) {
-      const query = filters.searchQuery.toLowerCase()
-      filteredSellers = sellers.filter(s =>
-        s.username.toLowerCase().includes(query) ||
-        s.full_name?.toLowerCase().includes(query) ||
-        s.email.toLowerCase().includes(query) ||
-        s.primary_games.some(g => g.toLowerCase().includes(query))
+      const q = filters.searchQuery.toLowerCase()
+      sellers = sellers.filter(
+        (s) =>
+          s.username.toLowerCase().includes(q) ||
+          (s.full_name || '').toLowerCase().includes(q) ||
+          (s.shop_name || '').toLowerCase().includes(q) ||
+          s.email.toLowerCase().includes(q),
       )
     }
 
-    // Apply status filter
-    if (filters?.status) {
-      filteredSellers = filteredSellers.filter(s => s.status === filters.status)
+    // ── Sort (default: active listings DESC) ──
+    const sortBy: ActiveSellerSort = filters?.sortBy ?? 'listings'
+    const dir = filters?.sortOrder === 'asc' ? 1 : -1
+    const value = (s: ActiveSeller): number => {
+      switch (sortBy) {
+        case 'sales':
+          return s.stats.completed_sales
+        case 'revenue':
+          return s.stats.revenue
+        case 'joined':
+          return new Date(s.created_at).getTime()
+        case 'last_active':
+          return s.last_active_at ? new Date(s.last_active_at).getTime() : 0
+        case 'approved':
+          return s.approved_at ? new Date(s.approved_at).getTime() : 0
+        case 'recent_listing':
+          return s.latest_listing_at ? new Date(s.latest_listing_at).getTime() : 0
+        case 'listings':
+        default:
+          return s.stats.active_listings
+      }
     }
+    sellers.sort((a, b) => (value(a) - value(b)) * dir)
 
-    // Sort
-    if (filters?.sortBy) {
-      filteredSellers.sort((a, b) => {
-        let aValue: any
-        let bValue: any
-
-        switch (filters.sortBy) {
-          case 'sales':
-            aValue = a.stats.total_sales
-            bValue = b.stats.total_sales
-            break
-          case 'earnings':
-            aValue = a.stats.total_earnings
-            bValue = b.stats.total_earnings
-            break
-          case 'rating':
-            aValue = a.stats.avg_rating
-            bValue = b.stats.avg_rating
-            break
-          case 'listings':
-            aValue = a.stats.active_listings
-            bValue = b.stats.active_listings
-            break
-          case 'joined':
-            aValue = new Date(a.approved_at).getTime()
-            bValue = new Date(b.approved_at).getTime()
-            break
-          case 'activity':
-            aValue = new Date(a.last_active).getTime()
-            bValue = new Date(b.last_active).getTime()
-            break
-          default:
-            aValue = a.stats.total_sales
-            bValue = b.stats.total_sales
-        }
-
-        return filters.sortOrder === 'asc' ? aValue - bValue : bValue - aValue
-      })
-    }
-
-    return { success: true, sellers: filteredSellers }
+    return { success: true, sellers }
   } catch (error: any) {
     console.error('Error in getActiveSellers:', error)
     return { success: false, error: error.message || 'Failed to fetch active sellers' }
   }
 }
 
+export interface SellerStatsOverview {
+  totalSellers: number
+  totalActiveListings: number
+  totalRevenue: number
+  pendingWithdrawals: number
+}
+
 /**
- * Get seller statistics overview
+ * Real platform-wide seller numbers for the header chips.
  */
 export async function getSellerStats(): Promise<{
   success: boolean
-  stats?: {
-    total: number
-    active: number
-    warning: number
-    suspended: number
-    totalEarnings: number
-    totalSales: number
-    totalListings: number
-  }
+  stats?: SellerStatsOverview
   error?: string
 }> {
   try {
     await requireAdmin()
 
-    const supabase = await createClient()
+    const service = createServiceRoleClient()
 
-    // Get count of approved sellers
-    const { count: totalSellers, error: countError } = await supabase
-      .from('seller_applications')
-      .select('*', { count: 'exact', head: true })
-      .eq('status', 'approved')
+    const [sellersRes, listingsRes, ordersRes, withdrawalsRes] = await Promise.all([
+      service
+        .from('profiles')
+        .select('id', { count: 'exact', head: true })
+        .eq('role', 'seller') as any,
+      service
+        .from('listings')
+        .select('id', { count: 'exact', head: true })
+        .eq('status', 'active') as any,
+      service.from('orders').select('seller_payout').eq('status', 'completed') as any,
+      (service.from('withdrawal_requests' as any) as any)
+        .select('id', { count: 'exact', head: true })
+        .eq('status', 'pending'),
+    ])
 
-    if (countError) {
-      return { success: false, error: countError.message }
+    if (sellersRes.error) {
+      return { success: false, error: sellersRes.error.message }
     }
 
-    // TODO: Replace with real queries when orders/listings tables exist
+    const totalRevenue = (ordersRes.data ?? []).reduce(
+      (sum: number, o: any) => sum + Number(o.seller_payout ?? 0),
+      0,
+    )
+
     return {
       success: true,
       stats: {
-        total: totalSellers || 0,
-        active: totalSellers || 0,
-        warning: 0,
-        suspended: 0,
-        totalEarnings: 0,
-        totalSales: 0,
-        totalListings: 0
-      }
+        totalSellers: sellersRes.count ?? 0,
+        totalActiveListings: listingsRes.count ?? 0,
+        totalRevenue,
+        pendingWithdrawals: withdrawalsRes.count ?? 0,
+      },
     }
   } catch (error: any) {
     return { success: false, error: error.message || 'Failed to fetch stats' }
-  }
-}
-
-/**
- * Update seller status (active/warning/suspended)
- */
-export async function updateSellerStatus(
-  sellerId: string,
-  status: 'active' | 'warning' | 'suspended',
-  reason?: string
-): Promise<{
-  success: boolean
-  message?: string
-  error?: string
-}> {
-  try {
-    const admin = await requireAdmin()
-    const supabase = await createClient()
-
-    // TODO: Create a seller_status table to track status changes
-    // For now, we'll log this action
-    const { error: logError } = await (supabase
-      .from('seller_verification_logs')
-      .insert as any)({
-        application_id: sellerId,
-        action: `status_changed_to_${status}`,
-        performed_by: admin.userId,
-        details: { status, reason }
-      })
-
-    if (logError) {
-      console.error('Error logging status change:', logError)
-    }
-
-    return {
-      success: true,
-      message: `Seller status updated to ${status}`
-    }
-  } catch (error: any) {
-    return { success: false, error: error.message || 'Failed to update status' }
   }
 }

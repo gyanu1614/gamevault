@@ -36,24 +36,26 @@ function usePrefersReducedMotion(): boolean {
  * gliding band rather than a shelf of cards.
  */
 function GameTile({ game }: { game: MarqueeGame }) {
+  // Deliberately quiet: a small tile + muted name, so the strip reads as an
+  // ambient band under the navbar rather than a content row competing with it.
   return (
-    <div className="flex shrink-0 select-none items-center gap-2.5 pr-2">
+    <div className="flex shrink-0 select-none items-center gap-2 pr-2">
       <span
-        className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-[13px] ring-1 ring-black/[0.06]"
+        className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-[10px] ring-1 ring-black/[0.06]"
         style={{ background: 'linear-gradient(180deg,#FFFFFF 0%,#F1F3EC 100%)' }}
       >
         <Image
           src={getGameIcon(game.slug)}
           alt={game.name}
-          width={30}
-          height={30}
-          className="h-[30px] w-[30px] object-contain"
+          width={24}
+          height={24}
+          className="h-6 w-6 object-contain"
           draggable={false}
         />
       </span>
       <span
-        className="whitespace-nowrap text-[13.5px] font-semibold tracking-tight"
-        style={{ color: PALETTE.ink }}
+        className="whitespace-nowrap text-[12.5px] font-medium tracking-tight"
+        style={{ color: PALETTE.ink2 }}
       >
         {game.name}
       </span>
@@ -99,12 +101,12 @@ export default function GameMarquee({ games }: { games: MarqueeGame[] }) {
           Tuned to the ivory pane wash so the mask is invisible. */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-y-0 left-0 z-10 w-12"
+        className="pointer-events-none absolute inset-y-0 left-0 z-10 w-16 sm:w-24"
         style={{ background: 'linear-gradient(90deg,#FAFAF7 0%, rgba(250,250,247,0) 100%)' }}
       />
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-y-0 right-0 z-10 w-12"
+        className="pointer-events-none absolute inset-y-0 right-0 z-10 w-16 sm:w-24"
         style={{ background: 'linear-gradient(270deg,#FAFAF7 0%, rgba(250,250,247,0) 100%)' }}
       />
       <div ref={emblaRef} className="overflow-hidden">

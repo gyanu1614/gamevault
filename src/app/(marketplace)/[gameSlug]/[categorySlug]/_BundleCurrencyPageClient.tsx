@@ -46,6 +46,7 @@ import { PaymentsMarquee } from '@/components/marketplace/PaymentsMarquee'
 import type { CurrencyBundle, PlatformOption } from '@/lib/types/category-configs'
 import { getRegionIcon } from '@/lib/marketplace/region-platform-presets'
 import type { CurrencyFaq, CurrencyStep } from './_CurrencyMeta'
+import { BUY_CTA_LABEL } from '@/lib/config/purchases'
 
 export interface BundleOffer {
   listingId: string
@@ -888,7 +889,7 @@ function OfferPanel({
           onClick={() => onBuy(bestOffer.listingId, qty)}
           className="mt-4 h-12 w-full bg-lime text-[15px] font-bold tracking-wide text-text-inverse hover:bg-lime-hover"
         >
-          Buy Now
+          {BUY_CTA_LABEL}
         </Button>
       )}
 

@@ -1,6 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { CheckoutForm } from './CheckoutForm'
+import { PURCHASES_ENABLED } from '@/lib/config/purchases'
+import BuyingOpensSoon from './_BuyingOpensSoon'
 
 interface CheckoutPageProps {
   params: Promise<{ id: string }>
@@ -94,6 +96,30 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
   // to the edit page for currency / listing page otherwise.
   if (user && listing.seller?.id === user.id) {
     redirect(`/sell/edit/${listing.id}`)
+  }
+
+  // Buying gate: while purchases are off, the whole checkout (incl. direct
+  // URLs) renders the coming-soon panel + notify-me capture. Server actions
+  // are independently gated, so this is presentation — the hard block is in
+  // createCheckout.
+  if (!PURCHASES_ENABLED) {
+    const backHref =
+      listing.game?.slug && listing.category?.slug && listing.slug
+        ? `/${listing.game.slug}/${listing.category.slug}/${listing.slug}`
+        : '/'
+    return (
+      <main className="w-full">
+        <BuyingOpensSoon
+          listingId={listing.id}
+          listingTitle={listing.title}
+          price={Number(listing.price) || 0}
+          currency={listing.currency || 'USD'}
+          gameName={listing.game?.name ?? null}
+          gameSlug={listing.game?.slug ?? null}
+          backHref={backHref}
+        />
+      </main>
+    )
   }
 
   return (

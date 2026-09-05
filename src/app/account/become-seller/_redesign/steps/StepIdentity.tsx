@@ -31,7 +31,16 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { ShieldCheck, Video, Sparkles, Lock, ArrowRight, ArrowLeft, Loader2, CheckCircle2, RefreshCcw } from 'lucide-react'
+import { ShieldCheck, Video, Upload, Lock, ArrowRight, ArrowLeft, Loader2, CheckCircle2, RefreshCcw, Receipt, Landmark, Mail, CalendarClock } from 'lucide-react'
+
+/** Trust blue — scoped to the verification step only (identity = trust color);
+ *  everything else in the form stays on the forest palette. */
+const BLUE = {
+  tint: '#E6F1FB',
+  border: '#B5D4F4',
+  primary: '#185FA5',
+  deep: '#0C447C',
+}
 
 import { step3Schema, type Step3FormData } from '../../schemas'
 import type { KycDocKey, UploadedDocsState, UploadedDoc } from '../../types'
@@ -51,6 +60,9 @@ interface StepIdentityProps {
   /** Fired once the Didit decision comes back Approved — the orchestrator
    *  waives the manual ID/selfie requirement and records the session. */
   onKycVerified?: (sessionId: string) => void
+  /** An already-approved Didit session (e.g. restored from the saved draft
+   *  after a page refresh) — the step mounts straight into "verified". */
+  initialVerifiedSessionId?: string | null
 }
 
 /** Video-verification affordance state — wired to Didit. */
@@ -69,6 +81,7 @@ export default function StepIdentity({
   onBack,
   sellerType,
   onKycVerified,
+  initialVerifiedSessionId,
 }: StepIdentityProps) {
   // Step 3 has no free-form inputs — validation runs against the ACTUALLY
   // uploaded documents (each carries a storage path), so a required doc can
@@ -79,12 +92,11 @@ export default function StepIdentity({
   // explicitly opts out of the video path (or validation needs to show them).
   const [manualMode, setManualMode] = useState(false)
 
-  const [video, setVideo] = useState<KycVideoState>({
-    status: 'idle',
-    kycSessionUrl: null,
-    sessionId: null,
-    message: null,
-  })
+  const [video, setVideo] = useState<KycVideoState>(() =>
+    initialVerifiedSessionId
+      ? { status: 'verified', kycSessionUrl: null, sessionId: initialVerifiedSessionId, message: null }
+      : { status: 'idle', kycSessionUrl: null, sessionId: null, message: null },
+  )
   const kycVerified = video.status === 'verified'
 
   const handleDocChange = (fileType: string, doc: UploadedDoc | null) => {
@@ -93,6 +105,12 @@ export default function StepIdentity({
   }
 
   const handleVerifyWithVideo = async () => {
+    // ONE session per seller: if a session already exists, reopen the same
+    // hosted URL instead of creating a duplicate Didit session.
+    if (video.kycSessionUrl) {
+      window.open(video.kycSessionUrl, '_blank')
+      return
+    }
     setVideo((v) => ({ ...v, status: 'starting', message: null }))
     // Claim the popup SYNCHRONOUSLY (inside the click gesture) — calling
     // window.open after the await trips popup blockers, which silently
@@ -189,6 +207,32 @@ export default function StepIdentity({
     return () => window.removeEventListener('message', onMessage)
   }, [runDecisionCheck])
 
+  // Belt-and-suspenders for the postMessage: when the seller comes BACK to this
+  // tab while a session is open, silently re-check the decision — so a finished
+  // verification flips to "Identity Verified" without a manual click even if
+  // the popup's message was missed (closed tab, blocked opener, etc).
+  const videoStatusRef = useRef(video.status)
+  videoStatusRef.current = video.status
+  const checkInFlightRef = useRef(false)
+  useEffect(() => {
+    const onReturn = () => {
+      if (document.visibilityState !== 'visible') return
+      if (videoStatusRef.current !== 'ready') return
+      const sessionId = sessionIdRef.current
+      if (!sessionId || checkInFlightRef.current) return
+      checkInFlightRef.current = true
+      void Promise.resolve(runDecisionCheck(sessionId)).finally(() => {
+        checkInFlightRef.current = false
+      })
+    }
+    window.addEventListener('focus', onReturn)
+    document.addEventListener('visibilitychange', onReturn)
+    return () => {
+      window.removeEventListener('focus', onReturn)
+      document.removeEventListener('visibilitychange', onReturn)
+    }
+  }, [runDecisionCheck])
+
   const handleContinue = (e: React.FormEvent) => {
     e.preventDefault()
     if (kycVerified) {
@@ -231,10 +275,29 @@ export default function StepIdentity({
         icon={ShieldCheck}
       />
 
+      {/* ── Section 1 · Identity Check ──────────────────────────────────────── */}
+      <div className="mb-3 flex items-center gap-2.5">
+        {kycVerified ? (
+          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full" style={{ backgroundColor: '#A3E635' }}>
+            <CheckCircle2 className="h-4 w-4" style={{ color: '#0F3320' }} strokeWidth={2.5} />
+          </span>
+        ) : (
+          <span
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[13px] font-bold text-white"
+            style={{ backgroundColor: PALETTE.forest }}
+          >
+            1
+          </span>
+        )}
+        <h3 className="text-[15px] font-semibold" style={{ color: PALETTE.ink }}>
+          Identity Check
+        </h3>
+      </div>
+
       {/* ── Verified — quiet completed card replaces the whole CTA section ──── */}
       {kycVerified && (
         <section
-          className="flex items-start gap-3.5 rounded-2xl border p-5"
+          className="flex items-start gap-3.5 rounded-lg border p-5"
           style={{ borderColor: 'rgba(101,163,13,0.35)', backgroundColor: 'rgba(163,230,53,0.14)' }}
         >
           <span
@@ -255,149 +318,160 @@ export default function StepIdentity({
         </section>
       )}
 
-      {/* ── Verify With Video (Recommended) — the prominent affordance ──────── */}
+      {/* ── Mode switcher — segmented tabs (Design 1, blue trust panel).
+            Verification is BLUE on purpose: trust/identity color, scoped to
+            this step only; the rest of the form stays forest. ─────────────── */}
       {!kycVerified && (
-      <section
-        className="relative overflow-hidden rounded-2xl p-5 sm:p-6"
-        style={{
-          background: 'linear-gradient(180deg, #1B5E3A 0%, #14432A 55%, #103A22 100%)',
-          boxShadow:
-            'inset 0 1px 0 rgba(255,255,255,0.14), inset 0 -1px 0 rgba(0,0,0,0.28), 0 10px 24px -12px rgba(0,0,0,0.5)',
-        }}
-      >
-        {/* Recommended pill */}
-        <span
-          className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide"
-          style={{ backgroundColor: PALETTE.lime, color: PALETTE.forest3 }}
+        <div
+          className="inline-flex overflow-hidden rounded-lg border bg-white"
+          style={{ borderColor: BLUE.border }}
+          role="tablist"
+          aria-label="Verification method"
         >
-          <Sparkles className="h-3 w-3" />
-          Recommended
-        </span>
-
-        <div className="mt-3 flex items-start gap-3.5">
-          <span
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
-            style={{ backgroundColor: 'rgba(255,255,255,0.10)' }}
-          >
-            <Video className="h-5 w-5" style={{ color: '#FFFFFF' }} />
-          </span>
-          <div className="min-w-0">
-            <h3 className="text-base font-semibold" style={{ color: '#FFFFFF' }}>
-              Verify With Video
-            </h3>
-            <p className="mt-1 text-sm leading-relaxed" style={{ color: 'rgba(255,255,255,0.78)' }}>
-              The fastest way to get approved. Confirm your identity in a short
-              guided video check — most sellers finish in under two minutes.
-            </p>
-          </div>
-        </div>
-
-        <button
-          type="button"
-          onClick={handleVerifyWithVideo}
-          disabled={starting}
-          className="group mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold transition-transform disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto"
-          style={{
-            backgroundColor: PALETTE.paper,
-            color: PALETTE.forest,
-            boxShadow:
-              'inset 0 1px 0 rgba(255,255,255,0.45), inset 0 -2px 0 rgba(0,0,0,0.12), 0 6px 14px -6px rgba(0,0,0,0.45)',
-          }}
-        >
-          {starting ? (
-            <>
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Starting…
-            </>
-          ) : (
-            <>
-              <Video className="h-4 w-4" />
-              Verify With Video
-            </>
-          )}
-        </button>
-
-        {/* Unconfigured / graceful state */}
-        {video.status === 'unavailable' && video.message && (
-          <p
-            className="mt-3 rounded-lg px-3 py-2 text-xs"
-            style={{ backgroundColor: 'rgba(255,255,255,0.10)', color: 'rgba(255,255,255,0.85)' }}
-          >
-            {video.message}
-          </p>
-        )}
-        {(video.status === 'ready' || video.status === 'checking') && (
-          <div className="mt-3 space-y-2.5">
-            <p
-              className="rounded-lg px-3 py-2 text-xs"
-              style={{ backgroundColor: 'rgba(255,255,255,0.10)', color: 'rgba(255,255,255,0.85)' }}
-            >
-              {video.message ??
-                'Verification opened in a new tab. Finish there, then come back and check your status.'}
-            </p>
-            <div className="flex flex-wrap items-center gap-2.5">
-              <button
-                type="button"
-                onClick={handleCheckStatus}
-                disabled={video.status === 'checking'}
-                className="inline-flex min-h-[44px] items-center gap-2 rounded-lg px-4 py-2.5 text-xs font-semibold disabled:opacity-70"
-                style={{
-                  backgroundColor: PALETTE.lime,
-                  color: PALETTE.forest3,
-                  boxShadow:
-                    'inset 0 1px 0 rgba(255,255,255,0.45), inset 0 -2px 0 rgba(0,0,0,0.12), 0 6px 14px -6px rgba(163,230,53,0.4)',
-                }}
-              >
-                {video.status === 'checking' ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <RefreshCcw className="h-3.5 w-3.5" />
-                )}
-                Check Status
-              </button>
-              {video.kycSessionUrl && (
-                <button
-                  type="button"
-                  // window.open WITHOUT noopener — the verification tab needs
-                  // window.opener to post the result back and self-close.
-                  onClick={() => video.kycSessionUrl && window.open(video.kycSessionUrl, '_blank')}
-                  className="inline-flex min-h-[44px] items-center px-2 text-xs font-medium underline underline-offset-2"
-                  style={{ color: 'rgba(255,255,255,0.75)' }}
-                >
-                  Reopen Verification
-                </button>
-              )}
-            </div>
-          </div>
-        )}
-
-      </section>
-      )}
-
-      {/* Quiet escape hatch — reveals the manual ID + selfie rows */}
-      {!kycVerified && !manualMode && (
-        <div className="mt-4 flex justify-center">
           <button
             type="button"
-            onClick={() => setManualMode(true)}
-            className="inline-flex min-h-[44px] items-center rounded-lg border px-4 py-2 text-xs font-medium transition-colors hover:bg-black/[0.03]"
-            style={{ borderColor: PALETTE.line, color: PALETTE.forest2 }}
+            role="tab"
+            aria-selected={!manualMode}
+            onClick={() => setManualMode(false)}
+            className="inline-flex min-h-[40px] items-center gap-1.5 px-4 text-[13px] font-semibold transition-colors"
+            style={
+              !manualMode
+                ? { backgroundColor: BLUE.primary, color: '#FFFFFF' }
+                : { color: PALETTE.ink2 }
+            }
           >
-            Can&rsquo;t Use Video? Upload Documents Instead
+            <Video className="h-4 w-4" />
+            Video · 2 Min
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={manualMode}
+            onClick={() => setManualMode(true)}
+            className="inline-flex min-h-[40px] items-center gap-1.5 px-4 text-[13px] font-semibold transition-colors"
+            style={
+              manualMode
+                ? { backgroundColor: BLUE.primary, color: '#FFFFFF' }
+                : { color: PALETTE.ink2 }
+            }
+          >
+            <Upload className="h-4 w-4" />
+            Upload Documents
           </button>
         </div>
       )}
 
-      {/* ── Manual upload path (revealed fallback) ─────────────────────────── */}
-      {!kycVerified && manualMode && (
-        <div className="animate-fade-in">
-          <div className="my-6 flex items-center gap-3" aria-hidden>
-            <span className="h-px flex-1" style={{ backgroundColor: PALETTE.line }} />
-            <span className="text-xs font-medium" style={{ color: PALETTE.ink2 }}>
-              Or Upload Your Documents
+      {/* ── Video panel — light blue trust card ─────────────────────────────── */}
+      {!kycVerified && !manualMode && (
+        <section
+          className="mt-4 rounded-lg border p-5 sm:p-6"
+          style={{ backgroundColor: BLUE.tint, borderColor: BLUE.border }}
+        >
+          <div className="flex items-start gap-3.5">
+            <span
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg"
+              style={{ backgroundColor: BLUE.primary }}
+            >
+              <ShieldCheck className="h-5 w-5" style={{ color: '#FFFFFF' }} />
             </span>
-            <span className="h-px flex-1" style={{ backgroundColor: PALETTE.line }} />
+            <div className="min-w-0">
+              <h3 className="text-base font-semibold" style={{ color: BLUE.deep }}>
+                Verify Your Identity
+              </h3>
+              <p className="mt-1 text-sm leading-relaxed" style={{ color: BLUE.primary }}>
+                A short guided video check — most sellers finish in under two minutes.
+              </p>
+            </div>
           </div>
+
+          {/* Start only while NO session exists — once one is open, the status
+              row below (Check Status + Reopen) is the whole affordance. */}
+          {video.status !== 'ready' && video.status !== 'checking' && (
+            <div className="mt-4 flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                onClick={handleVerifyWithVideo}
+                disabled={starting}
+                className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-white transition-[filter] hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-70"
+                style={{ backgroundColor: BLUE.primary }}
+              >
+                {starting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Starting…
+                  </>
+                ) : (
+                  <>
+                    <Video className="h-4 w-4" />
+                    Start Verification
+                  </>
+                )}
+              </button>
+              <span className="inline-flex items-center gap-1.5 text-[12px]" style={{ color: BLUE.primary }}>
+                <Lock className="h-3.5 w-3.5" />
+                Encrypted · Powered By Didit
+              </span>
+            </div>
+          )}
+
+          {/* Unconfigured / graceful state */}
+          {video.status === 'unavailable' && video.message && (
+            <p
+              className="mt-3 rounded-lg px-3 py-2 text-xs"
+              style={{ backgroundColor: 'rgba(255,255,255,0.65)', color: BLUE.deep }}
+            >
+              {video.message}
+            </p>
+          )}
+          {(video.status === 'ready' || video.status === 'checking') && (
+            <div className="mt-3 space-y-2.5">
+              <p
+                className="rounded-lg px-3 py-2 text-xs"
+                style={{ backgroundColor: 'rgba(255,255,255,0.65)', color: BLUE.deep }}
+              >
+                {video.message ??
+                  'Verification opened in a new tab. Finish there, then come back and check your status.'}
+              </p>
+              <div className="flex flex-wrap items-center gap-2.5">
+                <button
+                  type="button"
+                  onClick={handleCheckStatus}
+                  disabled={video.status === 'checking'}
+                  className="inline-flex min-h-[44px] items-center gap-2 rounded-lg px-4 py-2.5 text-xs font-semibold text-white disabled:opacity-70"
+                  style={{ backgroundColor: BLUE.primary }}
+                >
+                  {video.status === 'checking' ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <RefreshCcw className="h-3.5 w-3.5" />
+                  )}
+                  Check Status
+                </button>
+                {video.kycSessionUrl && (
+                  <button
+                    type="button"
+                    // window.open WITHOUT noopener — the verification tab needs
+                    // window.opener to post the result back and self-close.
+                    onClick={() => video.kycSessionUrl && window.open(video.kycSessionUrl, '_blank')}
+                    className="inline-flex min-h-[44px] items-center px-2 text-xs font-medium underline underline-offset-2"
+                    style={{ color: BLUE.primary }}
+                  >
+                    Reopen Verification
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+        </section>
+      )}
+
+      {/* ── Documents panel — the tabs above are the only mode switch. ──────── */}
+      {!kycVerified && manualMode && (
+        <div className="animate-fade-in mt-4">
+          <p className="mb-4 text-[13px] leading-relaxed" style={{ color: PALETTE.ink2 }}>
+            Upload your ID and a selfie — our team reviews documents within one
+            business day.
+          </p>
 
           <div className="space-y-4">
             <KycUploadRow
@@ -408,6 +482,15 @@ export default function StepIdentity({
               onDocChange={handleDocChange}
               required
               error={errors.idDocument}
+              sample={{
+                title: 'Government-Issued ID',
+                tips: [
+                  'Passport photo page, national ID, or driver’s license',
+                  'All four corners visible — nothing cut off',
+                  'Text sharp and readable, no glare or blur',
+                  'The original document, not a photocopy or screenshot',
+                ],
+              }}
             />
 
             <KycUploadRow
@@ -418,29 +501,82 @@ export default function StepIdentity({
               onDocChange={handleDocChange}
               required
               error={errors.selfieWithId}
+              sample={{
+                title: 'Selfie With ID',
+                tips: [
+                  'Hold your ID next to your face, both clearly in frame',
+                  'Add a note with today’s date, also visible',
+                  'Good lighting — your face and the ID text both readable',
+                  'No filters, no sunglasses, no hats',
+                ],
+              }}
             />
           </div>
         </div>
       )}
 
-      {/* Divider — proof of address is required on BOTH paths */}
-      <div className="my-6 flex items-center gap-3" aria-hidden>
-        <span className="h-px flex-1" style={{ backgroundColor: PALETTE.line }} />
-        <span className="text-xs font-medium" style={{ color: PALETTE.ink2 }}>
-          Proof Of Address — Required For Everyone
+      {/* ── Section 2 · Proof Of Address (required on BOTH paths) ───────────── */}
+      <div className="mb-3 mt-8 flex items-center gap-2.5">
+        {uploadedDocs.proofOfAddress?.path ? (
+          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full" style={{ backgroundColor: '#A3E635' }}>
+            <CheckCircle2 className="h-4 w-4" style={{ color: '#0F3320' }} strokeWidth={2.5} />
+          </span>
+        ) : (
+          <span
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[13px] font-bold text-white"
+            style={{ backgroundColor: PALETTE.forest }}
+          >
+            2
+          </span>
+        )}
+        <h3 className="text-[15px] font-semibold" style={{ color: PALETTE.ink }}>
+          Proof Of Address
+        </h3>
+      </div>
+
+      {/* Accepted documents as visual chips — reads faster than a sentence. */}
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        {[
+          { icon: Receipt, label: 'Utility Bill' },
+          { icon: Landmark, label: 'Bank Statement' },
+          { icon: Mail, label: 'Government Letter' },
+        ].map(({ icon: Icon, label }) => (
+          <span
+            key={label}
+            className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[12.5px] font-medium"
+            style={{ borderColor: PALETTE.line, backgroundColor: PALETTE.paper, color: PALETTE.ink }}
+          >
+            <Icon className="h-3.5 w-3.5" style={{ color: PALETTE.forest2 }} />
+            {label}
+          </span>
+        ))}
+        <span
+          className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12.5px] font-semibold"
+          style={{ backgroundColor: '#FBF4E6', color: '#8A6D22' }}
+        >
+          <CalendarClock className="h-3.5 w-3.5" />
+          Under 3 Months Old
         </span>
-        <span className="h-px flex-1" style={{ backgroundColor: PALETTE.line }} />
       </div>
 
       <div className="space-y-4">
         <KycUploadRow
-          label="Proof Of Address"
-          description="Utility bill, bank statement, or government letter — under three months old."
+          label="Upload Your Document"
+          description=""
           fileType="proofOfAddress"
           doc={uploadedDocs.proofOfAddress}
           onDocChange={handleDocChange}
           required
           error={errors.proofOfAddress}
+          sample={{
+            title: 'Proof of Address',
+            tips: [
+              'A utility bill, bank statement, or official government letter',
+              'Dated within the last 3 months',
+              'Your full name and address clearly visible',
+              'All four corners in frame — no crops or glare',
+            ],
+          }}
         />
 
         {sellerType === 'business' && (
@@ -486,7 +622,7 @@ export default function StepIdentity({
 
       {/* Security reassurance */}
       <div
-        className="mt-5 flex items-start gap-2.5 rounded-xl border p-3.5"
+        className="mt-5 flex items-start gap-2.5 rounded-lg border p-3.5"
         style={{ borderColor: PALETTE.line, backgroundColor: 'rgba(20,67,42,0.03)' }}
       >
         <Lock className="mt-0.5 h-4 w-4 shrink-0" style={{ color: PALETTE.forest2 }} />
@@ -501,7 +637,7 @@ export default function StepIdentity({
         <button
           type="button"
           onClick={onBack}
-          className="inline-flex min-h-[44px] items-center gap-1.5 rounded-xl border px-4 py-3 text-sm font-medium transition-colors hover:bg-black/[0.03]"
+          className="inline-flex min-h-[44px] items-center gap-1.5 rounded-lg border px-4 py-3 text-sm font-medium transition-colors hover:bg-black/[0.03]"
           style={{ borderColor: PALETTE.line, color: PALETTE.forest }}
         >
           <ArrowLeft className="h-4 w-4" />
@@ -510,7 +646,7 @@ export default function StepIdentity({
 
         <button
           type="submit"
-          className="group inline-flex min-h-[44px] items-center gap-1.5 rounded-xl px-6 py-3 text-sm font-semibold text-white transition-colors"
+          className="group inline-flex min-h-[44px] items-center gap-1.5 rounded-lg px-6 py-3 text-sm font-semibold text-white transition-colors"
           style={{ backgroundColor: PALETTE.forest }}
           onMouseEnter={(e) => {
             e.currentTarget.style.boxShadow = `inset 0 0 0 2px ${PALETTE.lime}`

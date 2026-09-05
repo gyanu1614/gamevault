@@ -139,7 +139,7 @@ export default function IntroScreen({ onStart }: IntroScreenProps) {
             Become a Seller<span style={{ color: PALETTE.lime }}>.</span>
           </h2>
           <p className="mx-auto mt-3 text-base" style={{ color: PALETTE.ink2 }}>
-            Five quick steps. Live in minutes.
+            Three quick steps. Live in minutes.
           </p>
 
           {/* How It Works — centered, big custom icons, no body text */}

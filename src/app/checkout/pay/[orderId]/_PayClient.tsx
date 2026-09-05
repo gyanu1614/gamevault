@@ -277,6 +277,7 @@ export default function PayClient({
   initialInvoiceStatus,
   expiresAt,
   methods,
+  initialMethodId,
 }: {
   orderId: string
   orderNumber: string | null
@@ -289,6 +290,7 @@ export default function PayClient({
   initialInvoiceStatus: string
   expiresAt: string | null
   methods: PayMethod[]
+  initialMethodId?: string | null
 }) {
   const router = useRouter()
 
@@ -302,7 +304,7 @@ export default function PayClient({
           : 'expired'
 
   const [view, setView] = useState<ViewState>(initialView)
-  const [selectedId, setSelectedId] = useState(methods[0]?.id ?? '')
+  const [selectedId, setSelectedId] = useState(initialMethodId ?? methods[0]?.id ?? '')
   const [liveDue, setLiveDue] = useState<Record<string, { due?: string; totalPaid?: string }>>({})
   const [remainingMs, setRemainingMs] = useState(() =>
     expiresAt ? new Date(expiresAt).getTime() - Date.now() : 0

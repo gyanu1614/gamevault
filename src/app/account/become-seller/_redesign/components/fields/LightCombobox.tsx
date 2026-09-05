@@ -31,6 +31,8 @@ interface LightComboboxProps {
   ariaLabel?: string
   /** Skip the auto alphabetical sort (default sorted A→Z). */
   unsorted?: boolean
+  /** Hide the search row — for short, fixed lists (e.g. 4 volume bands). */
+  hideSearch?: boolean
   invalid?: boolean
   disabled?: boolean
   className?: string
@@ -44,6 +46,7 @@ export default function LightCombobox({
   emptyText = 'No matches.',
   ariaLabel,
   unsorted,
+  hideSearch,
   invalid,
   disabled,
   className,
@@ -126,20 +129,22 @@ export default function LightCombobox({
             }}
             className="flex w-full flex-col"
           >
-            <div
-              className="flex items-center gap-2 border-b px-3 py-2"
-              style={{ borderColor: PALETTE.line }}
-            >
-              <Search className="h-3.5 w-3.5 shrink-0" style={{ color: PALETTE.ink2 }} />
-              <CommandInput
-                value={query}
-                onValueChange={setQuery}
-                placeholder="Search…"
-                autoFocus
-                className="h-6 flex-1 border-0 bg-transparent text-sm outline-none focus:outline-none focus-visible:outline-none focus-visible:shadow-none focus-visible:[box-shadow:none]"
-                style={{ color: PALETTE.ink }}
-              />
-            </div>
+            {!hideSearch && (
+              <div
+                className="flex items-center gap-2 border-b px-3 py-2"
+                style={{ borderColor: PALETTE.line }}
+              >
+                <Search className="h-3.5 w-3.5 shrink-0" style={{ color: PALETTE.ink2 }} />
+                <CommandInput
+                  value={query}
+                  onValueChange={setQuery}
+                  placeholder="Search…"
+                  autoFocus
+                  className="h-6 flex-1 border-0 bg-transparent text-sm outline-none focus:outline-none focus-visible:outline-none focus-visible:shadow-none focus-visible:[box-shadow:none]"
+                  style={{ color: PALETTE.ink }}
+                />
+              </div>
+            )}
             <CommandList id={listboxId} className="max-h-72 overflow-y-auto p-1">
               <CommandEmpty className="px-3 py-2 text-xs" style={{ color: PALETTE.ink2 }}>
                 {emptyText}

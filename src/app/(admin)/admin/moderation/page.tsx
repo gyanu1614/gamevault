@@ -1,11 +1,12 @@
 /**
- * V54 — /admin/moderation server wrapper.
+ * /admin/moderation server wrapper.
  *
  * Fetches the pending-listing queue + moderation stats ON THE SERVER
  * (same server actions the client uses) and seeds the client component
  * via props. The page ships fully rendered — no client-side "Loading
- * moderation queue…" pass on refresh — while approve/reject/request-
- * changes actions keep their loadData() refresh flow.
+ * moderation queue…" pass on refresh. When either server fetch fails,
+ * `fetchFailed` tells the client to show a real error state (with a
+ * retry) instead of a fake "All Caught Up" empty queue.
  */
 
 import { getPendingListings, getModerationStats } from '@/lib/actions/moderation'
@@ -19,10 +20,13 @@ export default async function ModerationQueuePage() {
     getModerationStats(),
   ])
 
+  const fetchFailed = !listingsResult.success || !statsResult.success
+
   return (
     <ModerationPageClient
       initialListings={listingsResult.success ? listingsResult.listings ?? [] : []}
       initialStats={statsResult.success ? statsResult.stats ?? null : null}
+      fetchFailed={fetchFailed}
     />
   )
 }

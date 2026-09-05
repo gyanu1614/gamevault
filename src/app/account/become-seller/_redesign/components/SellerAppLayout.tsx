@@ -37,6 +37,12 @@ interface SellerAppLayoutProps {
     subheading?: string
     trustByStep?: Record<number, { title: string; body: string }>
   }
+  /**
+   * Max-width class for the right-pane content column. Defaults to a narrow
+   * `max-w-xl` (comfortable for single-column forms); the dense Review & Sign
+   * step widens it (e.g. `max-w-3xl`) so its summary cards have room to breathe.
+   */
+  contentClassName?: string
   children: ReactNode
 }
 
@@ -45,6 +51,7 @@ export default function SellerAppLayout({
   onStepClick,
   onWatchVideo,
   rail,
+  contentClassName = 'max-w-xl',
   children,
 }: SellerAppLayoutProps) {
   return (
@@ -94,7 +101,9 @@ export default function SellerAppLayout({
           </div>
         )}
 
-        <div className="mx-auto w-full max-w-xl flex-1 px-6 py-8 sm:px-10 sm:py-12 lg:px-14">
+        <div
+          className={`mx-auto w-full flex-1 px-6 py-8 sm:px-10 sm:py-12 lg:px-14 ${contentClassName}`}
+        >
           {children}
         </div>
       </div>

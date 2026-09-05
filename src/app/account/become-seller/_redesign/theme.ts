@@ -41,13 +41,11 @@ export const PALETTE_VARS: React.CSSProperties = {
   ['--sa-line' as string]: PALETTE.line,
 }
 
-/** The five steps, in order. Labels only — no subtext under the stepper. */
+/** The three steps, in order. Labels only — no subtext under the stepper. */
 export const REDESIGN_STEPS = [
   { id: 1, label: 'Account & Games' },
-  { id: 2, label: 'Personal Info' },
-  { id: 3, label: 'Identity' },
-  { id: 4, label: 'Payout Setup' },
-  { id: 5, label: 'Review & Sign' },
+  { id: 2, label: 'Identity' },
+  { id: 3, label: 'Review & Sign' },
 ] as const
 
 export const TOTAL_REDESIGN_STEPS = REDESIGN_STEPS.length
@@ -64,17 +62,9 @@ export const TRUST_BY_STEP: Record<number, { title: string; body: string }> = {
   },
   2: {
     title: 'Why we ask',
-    body: 'Your legal details keep payouts landing in the right account, on time.',
-  },
-  3: {
-    title: 'Why we ask',
     body: 'A quick identity check is what lets buyers trust every seller on the marketplace.',
   },
-  4: {
-    title: 'Why we ask',
-    body: 'Your payout method is where your earnings arrive — encrypted and never shared.',
-  },
-  5: {
+  3: {
     title: 'Why we ask',
     body: 'One signature confirms the agreement and gets your application into review.',
   },

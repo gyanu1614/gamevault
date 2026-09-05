@@ -21,52 +21,11 @@
 import { useEffect, useRef, useState } from 'react'
 import SignatureCanvas from 'react-signature-canvas'
 import { AnimatePresence, motion } from 'framer-motion'
-import { X, PenLine, ShieldCheck, ExternalLink, Loader2, Eraser } from 'lucide-react'
+import { X, PenLine, ExternalLink, Loader2, Eraser } from 'lucide-react'
 import { PALETTE } from '../theme'
 import { signSellerAgreement } from '../actions'
 import { type SignAgreementResult } from '../integrations'
 
-
-/**
- * Crop a signature canvas to the bounding box of its non-transparent pixels.
- * Replaces react-signature-canvas's getTrimmedCanvas(), whose trim-canvas
- * dependency fails at runtime under webpack ("trim_canvas__ is not a
- * function"). Falls back to the untrimmed canvas on any error.
- */
-function trimSignatureCanvas(source: HTMLCanvasElement): HTMLCanvasElement {
-  try {
-    const ctx = source.getContext('2d')
-    if (!ctx) return source
-    const { width, height } = source
-    const data = ctx.getImageData(0, 0, width, height).data
-    let top = height, left = width, right = 0, bottom = 0
-    for (let y = 0; y < height; y++) {
-      for (let x = 0; x < width; x++) {
-        if (data[(y * width + x) * 4 + 3] > 0) {
-          if (x < left) left = x
-          if (x > right) right = x
-          if (y < top) top = y
-          if (y > bottom) bottom = y
-        }
-      }
-    }
-    if (right <= left || bottom <= top) return source
-    const pad = 6
-    left = Math.max(0, left - pad)
-    top = Math.max(0, top - pad)
-    right = Math.min(width - 1, right + pad)
-    bottom = Math.min(height - 1, bottom + pad)
-    const out = document.createElement('canvas')
-    out.width = right - left + 1
-    out.height = bottom - top + 1
-    out.getContext('2d')?.drawImage(
-      source, left, top, out.width, out.height, 0, 0, out.width, out.height,
-    )
-    return out
-  } catch {
-    return source
-  }
-}
 
 interface SignAgreementModalProps {
   open: boolean
@@ -93,55 +52,8 @@ export default function SignAgreementModal({
   const [typedName, setTypedName] = useState(defaultName)
   const [touched, setTouched] = useState(false)
   const [padError, setPadError] = useState(false)
-  const [padWidth, setPadWidth] = useState(440)
-  const [padHeight, setPadHeight] = useState(220)
   const inputRef = useRef<HTMLInputElement>(null)
   const padRef = useRef<SignatureCanvas>(null)
-  const padBoxRef = useRef<HTMLDivElement>(null)
-  const pendingSignature = useRef<string | null>(null)
-
-  // Size the signature canvas to its container (fixed attrs avoid the
-  // classic CSS-scaled-canvas stroke-offset bug). Re-measure on container
-  // resize / window resize / orientation change so rotating a phone never
-  // leaves a stale-width (clipped or shrunken) canvas.
-  useEffect(() => {
-    if (!open) return
-    const el = padBoxRef.current
-    if (!el) return
-
-    const measure = () => {
-      setPadWidth(Math.max(260, el.clientWidth - 2))
-      // Shorter pad on short viewports so the modal rarely needs scrolling.
-      setPadHeight(window.innerHeight < 700 ? 160 : 220)
-    }
-    // Changing the canvas width/height attributes clears the drawing, so
-    // snapshot any strokes first and restore them after React re-renders.
-    const snapshotAndMeasure = () => {
-      const pad = padRef.current
-      // Always overwrite (null when empty) so a stale snapshot can never
-      // resurrect a signature the user has since cleared.
-      pendingSignature.current = pad && !pad.isEmpty() ? pad.toDataURL() : null
-      measure()
-    }
-
-    measure()
-    const ro = new ResizeObserver(snapshotAndMeasure)
-    ro.observe(el)
-    window.addEventListener('resize', snapshotAndMeasure)
-    window.addEventListener('orientationchange', snapshotAndMeasure)
-    return () => {
-      ro.disconnect()
-      window.removeEventListener('resize', snapshotAndMeasure)
-      window.removeEventListener('orientationchange', snapshotAndMeasure)
-    }
-  }, [open, loading])
-
-  // Restore the snapshotted signature once the resized canvas has rendered.
-  useEffect(() => {
-    if (!pendingSignature.current) return
-    padRef.current?.fromDataURL(pendingSignature.current)
-    pendingSignature.current = null
-  }, [padWidth, padHeight])
 
   // Fetch the (stubbed) e-sign session each time the modal opens so the env flag
   // is always respected — DocuSeal drops in later without touching this UI.
@@ -174,6 +86,8 @@ export default function SignAgreementModal({
       inputRef.current?.focus()
       return
     }
+    // A drawn signature is required too — the typed name + the drawn mark +
+    // timestamp together are the binding e-signature (embedded in the PDF).
     if (!padRef.current || padRef.current.isEmpty()) {
       setPadError(true)
       return
@@ -181,7 +95,7 @@ export default function SignAgreementModal({
     onSigned({
       name: typedName.trim(),
       signedAt: new Date().toISOString(),
-      signatureImage: trimSignatureCanvas(padRef.current.getCanvas()).toDataURL('image/png'),
+      signatureImage: padRef.current.getCanvas().toDataURL('image/png'),
     })
     onClose()
   }
@@ -208,7 +122,7 @@ export default function SignAgreementModal({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.96, y: 12 }}
             transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
-            className="relative z-10 flex max-h-[calc(100dvh-2rem)] w-full max-w-lg flex-col overflow-hidden rounded-2xl"
+            className="relative z-10 flex max-h-[calc(100dvh-2rem)] w-full max-w-md flex-col overflow-hidden rounded-lg"
             style={{
               background: 'linear-gradient(180deg, #FFFFFF 0%, #FFFFFF 55%, #FCFCFA 100%)',
               border: `1px solid ${PALETTE.line}`,
@@ -266,44 +180,29 @@ export default function SignAgreementModal({
                   }}
                 />
               ) : (
-                <div className="space-y-4">
-                  <div
-                    className="flex items-start gap-2.5 rounded-xl p-3.5"
-                    style={{ backgroundColor: 'rgba(20,67,42,0.05)' }}
-                  >
-                    <ShieldCheck
-                      className="mt-0.5 h-4 w-4 shrink-0"
-                      style={{ color: PALETTE.forest2 }}
-                    />
-                    <p className="text-xs leading-relaxed" style={{ color: PALETTE.ink2 }}>
-                      {session?.message ??
-                        'Sign by typing your full legal name below — this records a legally binding acceptance.'}
-                    </p>
-                  </div>
-
-                  <p className="text-sm leading-relaxed" style={{ color: PALETTE.ink2 }}>
+                <div className="space-y-3.5">
+                  {/* One tight line on what signing means. */}
+                  <p className="text-[13px] leading-relaxed" style={{ color: PALETTE.ink2 }}>
                     You appoint DropMarket as your disclosed commercial agent to conclude sales on
-                    your behalf. Your typed legal name and drawn signature below, together with the
-                    date and time, are recorded as your electronic signature.
+                    your behalf. Typing your full legal name below, with the date and time, is your
+                    binding electronic signature.
                   </p>
 
+                  {/* Small, tasteful "read the full agreement" link. */}
                   <a
                     href={previewHref}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex min-h-[36px] items-center gap-1.5 rounded-lg border px-3.5 py-2 text-xs font-semibold transition-colors hover:bg-black/[0.03]"
-                    style={{ borderColor: PALETTE.line, color: PALETTE.forest2 }}
+                    className="inline-flex items-center gap-1.5 text-[12.5px] font-semibold underline underline-offset-2 transition-colors hover:opacity-80"
+                    style={{ color: PALETTE.forest2 }}
                   >
-                    View The Full Agreement (PDF)
+                    Read the full agreement (PDF)
                     <ExternalLink className="h-3 w-3" />
                   </a>
 
                   <div>
-                    <label
-                      className="mb-1.5 block text-xs font-medium"
-                      style={{ color: PALETTE.ink }}
-                    >
-                      Full Legal Name
+                    <label className="mb-1.5 block text-[12.5px] font-medium" style={{ color: PALETTE.ink }}>
+                      Sign — type your full legal name
                     </label>
                     <input
                       ref={inputRef}
@@ -313,14 +212,13 @@ export default function SignAgreementModal({
                         setTouched(true)
                         setTypedName(e.target.value)
                       }}
-                      placeholder="Type your full legal name to sign"
-                      className="w-full rounded-lg px-3.5 py-2.5 text-sm outline-none transition-shadow"
+                      placeholder="Your full legal name"
+                      className="w-full rounded-md px-3.5 py-2.5 text-sm outline-none transition-shadow"
                       style={{
                         backgroundColor: PALETTE.paper,
                         border: `1px solid ${PALETTE.line}`,
                         color: PALETTE.ink,
-                        fontFamily:
-                          'ui-serif, Georgia, "Times New Roman", serif',
+                        fontFamily: 'ui-serif, Georgia, "Times New Roman", serif',
                         fontStyle: 'italic',
                         fontSize: '1.05rem',
                       }}
@@ -340,11 +238,11 @@ export default function SignAgreementModal({
                     )}
                   </div>
 
-                  {/* Drawn signature — signature_pad canvas */}
+                  {/* Compact drawn signature — fixed size, no resize gymnastics. */}
                   <div>
                     <div className="mb-1.5 flex items-center justify-between">
-                      <label className="block text-xs font-medium" style={{ color: PALETTE.ink }}>
-                        Draw Your Signature
+                      <label className="block text-[12.5px] font-medium" style={{ color: PALETTE.ink }}>
+                        Draw your signature
                       </label>
                       <button
                         type="button"
@@ -352,7 +250,7 @@ export default function SignAgreementModal({
                           padRef.current?.clear()
                           setPadError(false)
                         }}
-                        className="-m-2 inline-flex min-h-[36px] items-center gap-1 rounded-md p-2 text-xs font-semibold"
+                        className="inline-flex items-center gap-1 text-[12px] font-medium"
                         style={{ color: PALETTE.ink2 }}
                       >
                         <Eraser className="h-3 w-3" />
@@ -360,8 +258,7 @@ export default function SignAgreementModal({
                       </button>
                     </div>
                     <div
-                      ref={padBoxRef}
-                      className="overflow-hidden rounded-lg"
+                      className="overflow-hidden rounded-md"
                       style={{
                         border: `1.5px dashed ${padError ? '#B42318' : PALETTE.line}`,
                         backgroundColor: PALETTE.ivory,
@@ -372,20 +269,17 @@ export default function SignAgreementModal({
                         penColor={PALETTE.forest3}
                         onBegin={() => setPadError(false)}
                         canvasProps={{
-                          width: padWidth,
-                          height: padHeight,
+                          width: 420,
+                          height: 130,
+                          className: 'w-full',
                           style: { display: 'block', touchAction: 'none' },
                           'aria-label': 'Signature pad',
                         }}
                       />
                     </div>
-                    {padError ? (
+                    {padError && (
                       <p className="mt-1.5 text-xs" style={{ color: '#B42318' }}>
                         Draw your signature in the box to sign.
-                      </p>
-                    ) : (
-                      <p className="mt-1.5 text-xs" style={{ color: PALETTE.ink2 }}>
-                        Use your mouse or finger — it&rsquo;s embedded in your signed agreement PDF.
                       </p>
                     )}
                   </div>
@@ -393,7 +287,7 @@ export default function SignAgreementModal({
                   <button
                     type="button"
                     onClick={handleAccept}
-                    className="group flex w-full items-center justify-center gap-2 rounded-lg px-4 py-3 text-sm font-semibold text-white transition-[filter]"
+                    className="group flex w-full items-center justify-center gap-2 rounded-md px-4 py-3 text-sm font-semibold text-white transition-[filter]"
                     style={{
                       background:
                         'linear-gradient(180deg, #1B5E3A 0%, #14432A 55%, #103A22 100%)',

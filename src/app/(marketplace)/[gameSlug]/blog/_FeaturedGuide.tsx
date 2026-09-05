@@ -46,8 +46,8 @@ export function FeaturedGuide({
 
   return (
     <section className="pt-12 sm:pt-16">
-      <h2 className="mb-4 text-[20px] font-semibold tracking-tight text-[#F1F3F1] sm:text-[24px]">
-        Featured guide
+      <h2 className="mb-4 text-subheading text-[#F1F3F1] sm:text-heading">
+        Featured Guide
       </h2>
 
       <Link

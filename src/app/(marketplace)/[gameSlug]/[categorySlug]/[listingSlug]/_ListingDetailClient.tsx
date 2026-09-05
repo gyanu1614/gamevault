@@ -44,6 +44,7 @@ import { TrustBand } from '@/components/marketplace/TrustBand'
 import { TrustpilotLink } from '@/components/trust/TrustpilotLink'
 import { PaymentsMarquee } from '@/components/marketplace/PaymentsMarquee'
 import { FaqCards } from '@/components/marketplace/FaqCards'
+import { BUY_CTA_LABEL } from '@/lib/config/purchases'
 import type { TemplateField } from '@/lib/templates/types'
 
 const fmtPrice = (n: number) => {
@@ -664,7 +665,7 @@ export default function ListingDetailClient({
                     ) : (
                       <>
                         <ShoppingBag className="h-[18px] w-[18px]" />
-                        Buy Now
+                        {BUY_CTA_LABEL}
                       </>
                     )}
                   </Button>
@@ -785,7 +786,7 @@ export default function ListingDetailClient({
               >
                 {navigating ? <Loader2 className="h-4 w-4 animate-spin" /> : (
                   <>
-                    Buy now
+                    {BUY_CTA_LABEL}
                     <ShoppingBag className="h-4 w-4" />
                   </>
                 )}

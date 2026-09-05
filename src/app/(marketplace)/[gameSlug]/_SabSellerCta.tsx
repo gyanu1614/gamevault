@@ -6,9 +6,10 @@
  * the buy CTA uses — so buy and sell read as one family. Minimal, catchy copy
  * (a seller reads one line and clicks); the button is "Sell {Game}".
  *
- * Per-game backdrop: drop public/seller-cta/{gameSlug}.png to fill the band;
- * a missing file falls back to the clean forest scrim. Distinct folder from the
- * buy banner (cta-heroes) so buy/sell art can differ.
+ * Per-game backdrop: a dedicated public/seller-cta/{gameSlug}.png fills the band
+ * when present (SAB has one). Games without their own seller art reuse the buy
+ * banner (public/cta-heroes/{gameSlug}.jpg) so buy + sell read as one family;
+ * if neither exists, HubCtaBand falls back to the clean forest scrim.
  *
  * Placement rule (callers): render BELOW the price/verdict content — the
  * buyer's answer comes first; the seller ask is skippable.
@@ -25,11 +26,19 @@ interface HubSellerCtaProps {
   src: string
 }
 
+/** Games that ship their own dedicated seller-band art in public/seller-cta/.
+ *  Everyone else reuses the buy banner so buy + sell share one look. */
+const GAMES_WITH_SELLER_ART = new Set(['steal-a-brainrot'])
+
 export function SabSellerCta({ gameSlug, gameName, src }: HubSellerCtaProps) {
+  const bgSrc = GAMES_WITH_SELLER_ART.has(gameSlug)
+    ? `/seller-cta/${gameSlug}.png`
+    : `/cta-heroes/${gameSlug}.jpg`
+
   return (
     <HubCtaBand
       gameSlug={gameSlug}
-      bgSrc={`/seller-cta/${gameSlug}.png`}
+      bgSrc={bgSrc}
       bgOpacity={0.5}
       rightScrim
       title={

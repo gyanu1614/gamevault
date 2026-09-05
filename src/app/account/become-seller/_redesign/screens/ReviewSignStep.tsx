@@ -24,13 +24,10 @@
 import { useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { parsePhoneNumberFromString } from 'libphonenumber-js'
 import {
   ClipboardCheck,
   Check,
   Gamepad2,
-  UserRound,
-  Wallet,
   Store,
   ChevronLeft,
   Loader2,
@@ -46,15 +43,11 @@ import { reviewSignSchema, type ReviewSignFormData } from '../../schemas'
 import type { RedesignedSellerState } from '../adapter'
 import { SECTION_LABELS, type SellerCategorySection } from '../game-categories-shared'
 import type { WizardGame } from '../../types'
-import { OTHER_COUNTRY } from '../../data/countries'
 import {
   VOLUME_LABELS,
-  PAYOUT_METHOD_LABELS,
   SELLER_TYPE_LABELS,
-  CRYPTO_TYPE_LABELS,
   label,
 } from '@/lib/seller-application/labels'
-import { PAYOUT_FEES, PAYOUT_MIN_USD } from '@/lib/fees'
 
 interface ReviewSignStepProps {
   /** The full wizard state, used to render the read-only summary. */
@@ -187,7 +180,6 @@ export default function ReviewSignStep({
 
   const step1 = state.step1
   const step2 = state.step2
-  const payout = state.payout
 
   const consolidatedConsent = watch('consolidatedConsent')
   const marketingConsent = watch('marketingConsent')
@@ -214,14 +206,6 @@ export default function ReviewSignStep({
       }
     })
   }, [step1?.primaryGames, step1?.gamesCategories, games])
-
-  const reviewCountry =
-    step2?.country === OTHER_COUNTRY ? step2?.countryOther || 'Other' : step2?.country
-  const reviewPhone = step2?.phoneNumber
-    ? parsePhoneNumberFromString(step2.phoneNumber)?.formatInternational() ?? step2.phoneNumber
-    : undefined
-
-  const payoutRail = payout?.payoutMethod === 'crypto' ? PAYOUT_FEES.crypto : PAYOUT_FEES.fiat
 
   // ── Submit ──────────────────────────────────────────────────────────────────
 
@@ -276,49 +260,11 @@ export default function ReviewSignStep({
             )}
           </SummaryCard>
 
-          <SummaryCard title="Personal Info" icon={UserRound} step={2} goToStep={goToStep}>
-            <SummaryRow label="Legal Name" value={step2?.fullLegalName} />
+          <SummaryCard title="Storefront" icon={Store} step={1} goToStep={goToStep}>
             <SummaryRow label="Display Name" value={step2?.displayName} />
-            <SummaryRow
-              label="Location"
-              value={[step2?.city, step2?.stateProvince, reviewCountry].filter(Boolean).join(', ')}
-            />
-            <SummaryRow label="Phone" value={reviewPhone} />
-            {step2?.alternateEmail && (
-              <SummaryRow label="Alternate Email" value={step2.alternateEmail} breakAll />
-            )}
-          </SummaryCard>
-
-          <SummaryCard title="Storefront" icon={Store} step={2} goToStep={goToStep}>
             <SummaryRow label="Shop Name" value={step2?.shopName} />
-          </SummaryCard>
-
-          <SummaryCard title="Payout Setup" icon={Wallet} step={4} goToStep={goToStep}>
-            <SummaryRow
-              label="Method"
-              value={
-                payout?.payoutMethod ? (
-                  <span>
-                    {label(PAYOUT_METHOD_LABELS, payout.payoutMethod)}{' '}
-                    <span className="tabular-nums" style={{ color: PALETTE.ink2 }}>
-                      ({payoutRail.pct}% + ${payoutRail.fixed}, ${PAYOUT_MIN_USD} min)
-                    </span>
-                  </span>
-                ) : undefined
-              }
-            />
-            {payout?.payoutMethod === 'bank_transfer' && (
-              <>
-                <SummaryRow label="Bank" value={payout.bankName} />
-                <SummaryRow label="Account Holder" value={payout.accountHolderName} />
-              </>
-            )}
-            {payout?.payoutMethod === 'crypto' && (
-              <SummaryRow label="Coin" value={label(CRYPTO_TYPE_LABELS, payout.cryptoType)} />
-            )}
-            <SummaryRow label="Tax Residency" value={payout?.taxResidencyCountry} />
-            {state.payoutCurrency && (
-              <SummaryRow label="Payout Currency" value={state.payoutCurrency} />
+            {step2?.fullLegalName && (
+              <SummaryRow label="Legal Name" value={step2.fullLegalName} />
             )}
           </SummaryCard>
         </section>

@@ -27,6 +27,7 @@ import { FaqCards } from '@/components/marketplace/FaqCards'
 import { TrustBand } from '@/components/marketplace/TrustBand'
 import { PaymentsMarquee } from '@/components/marketplace/PaymentsMarquee'
 import type { CurrencyPageData, Offer } from './_currencyData'
+import { PURCHASES_ENABLED } from '@/lib/config/purchases'
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -995,7 +996,8 @@ function PurchasePanel({
             </>
           ) : (
             <>
-              Buy Now · <span className="tabular-nums">{money(total)}</span>
+              {PURCHASES_ENABLED ? 'Buy Now · ' : 'Buying Opens Soon · '}
+              <span className="tabular-nums">{money(total)}</span>
             </>
           )}
         </button>

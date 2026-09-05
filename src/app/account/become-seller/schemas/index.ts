@@ -40,6 +40,18 @@ export type GameCategorySelection = z.infer<typeof gameCategorySelectionSchema>
 // Step 1: Account & Games Schema
 export const step1Schema = z
   .object({
+    /**
+     * Store / display name — feeds the required `display_name` column (the
+     * legacy Personal Info step is gone). Kept ≥3 chars so listings always have
+     * a real storefront name.
+     */
+    displayName: z.string().min(3, 'Store name must be at least 3 characters'),
+    /** Full legal name — optional now that the DB column is nullable. */
+    fullLegalName: z.string().optional(),
+    /** Country — required (admin needs it for payouts + compliance). */
+    country: z.string().min(1, 'Please select your country'),
+    /** Languages the seller can support buyers in — at least one. */
+    languages: z.array(z.string()).min(1, 'Select at least one language'),
     is18OrOlder: z.boolean().refine((val) => val === true, {
       message: 'You must be 18 or older to become a seller',
     }),

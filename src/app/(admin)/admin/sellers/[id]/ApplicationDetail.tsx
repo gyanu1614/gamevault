@@ -39,7 +39,6 @@ import {
   getDiditSessionDetails,
   type DiditSessionDetailsResult,
 } from '@/lib/actions/admin-didit'
-import { restrictSeller, unrestrictSeller } from '@/lib/actions/admin-seller-restrictions'
 import { getAvatarUrl } from '@/lib/utils/avatar'
 import {
   VOLUME_LABELS,
@@ -76,16 +75,14 @@ import {
   CheckCircle,
   XCircle,
   Loader2,
-  Ban,
-  ShieldAlert,
   ShieldCheck,
-  History,
   MessageSquareWarning,
   X,
   Mail,
   MessageSquare,
   Send,
   Copy,
+  ArrowRight,
 } from 'lucide-react'
 
 interface ApplicationDetailProps {
@@ -446,18 +443,12 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
   const [isSendingMessage, setIsSendingMessage] = useState(false)
   const [showApproveModal, setShowApproveModal] = useState(false)
   const [showChangesModal, setShowChangesModal] = useState(false)
-  const [showRestrictModal, setShowRestrictModal] = useState(false)
   const [rejectionReason, setRejectionReason] = useState('')
   const [rejectionCategory, setRejectionCategory] = useState('other')
   const [changesMessage, setChangesMessage] = useState('')
   const [adminNotes, setAdminNotes] = useState('')
-  const [restrictionReason, setRestrictionReason] = useState('')
-  const [restrictionType, setRestrictionType] = useState<'restricted' | 'banned'>('restricted')
   const [documentUrls, setDocumentUrls] = useState<Record<string, string>>({})
   const [loadingUrls, setLoadingUrls] = useState(true)
-  const [showHistoryModal, setShowHistoryModal] = useState(false)
-  const [restrictionHistory, setRestrictionHistory] = useState<any[]>([])
-  const [loadingHistory, setLoadingHistory] = useState(false)
   const [showDiditModal, setShowDiditModal] = useState(false)
 
   // Real uploads only — the synthetic 'didit:<id>' evidence row is not a
@@ -650,69 +641,6 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
     } else {
       toast.error(result.error || 'Failed to request changes')
       setIsProcessing(false)
-    }
-  }
-
-  const handleRestrictSeller = async () => {
-    if (!restrictionReason.trim()) {
-      toast.error('Please provide a reason for restriction')
-      return
-    }
-
-    setIsProcessing(true)
-    const result = await restrictSeller({
-      userId: application.user_id,
-      status: restrictionType,
-      reason: restrictionReason,
-    })
-
-    if (result.success) {
-      setShowRestrictModal(false)
-      setRestrictionReason('')
-      toast.success(
-        `Seller has been ${restrictionType === 'banned' ? 'banned' : 'restricted'} successfully`
-      )
-      router.refresh()
-    } else {
-      toast.error(result.error || 'Failed to restrict seller')
-    }
-    setIsProcessing(false)
-  }
-
-  const handleUnrestrictSeller = async () => {
-    setIsProcessing(true)
-    const result = await unrestrictSeller(application.user_id)
-
-    if (result.success) {
-      toast.success('Seller restriction has been removed')
-      router.refresh()
-    } else {
-      toast.error(result.error || 'Failed to remove restriction')
-    }
-    setIsProcessing(false)
-  }
-
-  const handleViewHistory = async () => {
-    setLoadingHistory(true)
-    setShowHistoryModal(true)
-
-    try {
-      const { createClient } = await import('@/lib/supabase/client')
-      const supabase = createClient()
-
-      const { data, error } = await supabase
-        .from('seller_restrictions')
-        .select('*, admin:restricted_by(username, email)')
-        .eq('seller_id', application.user_id)
-        .order('created_at', { ascending: false })
-
-      if (error) throw error
-      setRestrictionHistory(data || [])
-    } catch (error) {
-      console.error('Error fetching restriction history:', error)
-      toast.error('Failed to load restriction history')
-    } finally {
-      setLoadingHistory(false)
     }
   }
 
@@ -1405,105 +1333,25 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
             />
           </Card>
 
-          {/* Seller Management (approved sellers) */}
+          {/* Seller Management → moved to the seller-management hub */}
           {application.status === 'approved' && (
             <Card
               icon={<IconShield size={20} />}
               title="Seller Management"
-              sub="Restrict or ban this seller's account"
+              sub="Tier, wallet, payouts, restrictions"
               index={cardIndex++}
             >
-              {application.user.seller_status && application.user.seller_status !== 'active' && (
-                <div
-                  className={cn(
-                    'mb-3 rounded-[11px] px-3.5 py-3',
-                    application.user.seller_status === 'banned'
-                      ? 'bg-[#B42318]/20'
-                      : 'bg-[#F59E0B]/[0.16]'
-                  )}
-                >
-                  <div
-                    className={cn(
-                      'flex items-center gap-2 text-[12.5px] font-bold',
-                      application.user.seller_status === 'banned'
-                        ? 'text-[#FCA5A5]'
-                        : 'text-[#FCD34D]'
-                    )}
-                  >
-                    {application.user.seller_status === 'banned' ? (
-                      <Ban className="h-4 w-4" />
-                    ) : (
-                      <ShieldAlert className="h-4 w-4" />
-                    )}
-                    Currently {application.user.seller_status === 'banned' ? 'Banned' : 'Restricted'}
-                  </div>
-                  {application.user.seller_restriction_reason && (
-                    <p className="mt-1.5 text-[11.5px] text-white/60">
-                      Reason: {application.user.seller_restriction_reason}
-                    </p>
-                  )}
-                  {application.user.seller_restricted_at && (
-                    <p className="mt-1 text-[11px] text-white/40">
-                      Since {fmtDate(application.user.seller_restricted_at)}
-                    </p>
-                  )}
-                </div>
-              )}
-
-              <div className="space-y-2">
-                {application.user.seller_status && application.user.seller_status !== 'active' ? (
-                  <button
-                    onClick={handleUnrestrictSeller}
-                    disabled={isProcessing}
-                    className="flex w-full items-center justify-center gap-1.5 rounded-[10px] bg-[#A3E635] px-3 py-2 text-[13px] font-bold text-[#0F3320] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    {isProcessing ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    ) : (
-                      <ShieldCheck className="h-3.5 w-3.5" />
-                    )}
-                    Remove Restriction
-                  </button>
-                ) : (
-                  <>
-                    <button
-                      onClick={() => {
-                        setRestrictionType('restricted')
-                        setShowRestrictModal(true)
-                      }}
-                      disabled={isProcessing}
-                      className="flex w-full items-center justify-center gap-1.5 rounded-[10px] bg-[#F59E0B]/[0.16] px-3 py-2 text-[13px] font-bold text-[#FCD34D] transition hover:bg-[#F59E0B]/[0.24] disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      <ShieldAlert className="h-3.5 w-3.5" />
-                      Restrict
-                    </button>
-                    <button
-                      onClick={() => {
-                        setRestrictionType('banned')
-                        setShowRestrictModal(true)
-                      }}
-                      disabled={isProcessing}
-                      className="flex w-full items-center justify-center gap-1.5 rounded-[10px] bg-[#B42318]/20 px-3 py-2 text-[13px] font-bold text-[#FCA5A5] transition hover:bg-[#B42318]/30 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      <Ban className="h-3.5 w-3.5" />
-                      Ban
-                    </button>
-                  </>
-                )}
-
-                <button
-                  onClick={handleViewHistory}
-                  className="flex w-full items-center justify-center gap-1.5 rounded-[10px] border border-white/15 px-3 py-2 text-[13px] font-semibold text-white/60 transition-colors hover:bg-white/[0.06]"
-                >
-                  <History className="h-3.5 w-3.5" />
-                  View Restriction History
-                </button>
-              </div>
-
-              <p className="mt-3 rounded-[10px] bg-white/[0.04] px-3 py-2 text-[11px] leading-relaxed text-white/40">
-                <b className="text-white/60">Restrict:</b> prevents new listings ·{' '}
-                <b className="text-white/60">Ban:</b> full restriction
+              <p className="text-[12.5px] leading-relaxed text-white/60">
+                Seller Management Has Moved — restrict/ban, tier changes, wallet and payout
+                controls now live in the seller hub.
               </p>
+              <Link
+                href={`/admin/active-sellers/${application.user_id}`}
+                className="mt-3 inline-flex items-center gap-1.5 rounded-[10px] bg-[#A3E635] px-4 py-2 text-[12.5px] font-bold text-[#0F3320] transition hover:brightness-105"
+              >
+                Open Seller Management
+                <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
             </Card>
           )}
         </div>
@@ -1716,167 +1564,6 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
               )}
             </button>
           </div>
-        </ModalShell>
-      )}
-
-      {/* Restrict / Ban */}
-      {showRestrictModal && (
-        <ModalShell
-          onClose={() => {
-            setShowRestrictModal(false)
-            setRestrictionReason('')
-          }}
-        >
-          <div className="mb-6 text-center">
-            <div
-              className={cn(
-                'mx-auto mb-4 grid h-14 w-14 place-items-center rounded-2xl',
-                restrictionType === 'banned' ? 'bg-[#B42318]/20' : 'bg-[#F59E0B]/[0.16]'
-              )}
-            >
-              {restrictionType === 'banned' ? (
-                <Ban className="h-7 w-7 text-[#FCA5A5]" />
-              ) : (
-                <ShieldAlert className="h-7 w-7 text-[#FCD34D]" />
-              )}
-            </div>
-            <h3 className="mb-2 text-xl font-extrabold text-white">
-              {restrictionType === 'banned' ? 'Ban Seller' : 'Restrict Seller'}
-            </h3>
-            <p className="text-sm text-white/60">
-              {restrictionType === 'banned'
-                ? 'This will completely ban the seller from accessing seller features.'
-                : 'This will prevent the seller from creating new listings or making existing listings live.'}
-            </p>
-          </div>
-
-          <div className="mb-4 rounded-[11px] bg-[#F59E0B]/[0.16] px-3.5 py-3">
-            <p className="text-xs text-[#FCD34D]">
-              When {restrictionType === 'banned' ? 'banned' : 'restricted'}, the seller will see
-              an error message when attempting to upload or publish listings:
-            </p>
-            <p
-              className={cn(
-                'mt-2 rounded-lg bg-white/[0.08] p-2 text-xs text-white/80',
-                FOREST_CLASSES.mono
-              )}
-            >
-              &quot;Your seller account is{' '}
-              {restrictionType === 'banned' ? 'banned' : 'under review'}. Please contact support
-              at support@dropmarket.gg&quot;
-            </p>
-          </div>
-
-          <div className="mb-6">
-            <label className={MODAL_LABEL}>Restriction Reason *</label>
-            <textarea
-              value={restrictionReason}
-              onChange={(e) => setRestrictionReason(e.target.value)}
-              className={cn(MODAL_INPUT, 'resize-none')}
-              rows={4}
-              placeholder="Enter detailed reason for restriction…"
-              required
-            />
-          </div>
-
-          <div className="flex gap-2.5">
-            <button
-              onClick={() => {
-                setShowRestrictModal(false)
-                setRestrictionReason('')
-              }}
-              disabled={isProcessing}
-              className={MODAL_CANCEL}
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleRestrictSeller}
-              disabled={!restrictionReason.trim() || isProcessing}
-              className={MODAL_CONFIRM_RED}
-            >
-              {isProcessing ? (
-                <>
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  Processing…
-                </>
-              ) : (
-                <>
-                  {restrictionType === 'banned' ? (
-                    <Ban className="h-3.5 w-3.5" />
-                  ) : (
-                    <ShieldAlert className="h-3.5 w-3.5" />
-                  )}
-                  Confirm
-                </>
-              )}
-            </button>
-          </div>
-        </ModalShell>
-      )}
-
-      {/* Restriction History */}
-      {showHistoryModal && (
-        <ModalShell onClose={() => setShowHistoryModal(false)} wide>
-          <div className="mb-4 flex items-center justify-between border-b border-white/[0.08] pb-3">
-            <div className="flex items-center gap-2">
-              <History className="h-4 w-4 text-[#A3E635]" />
-              <h3 className="text-base font-extrabold text-white">Restriction History</h3>
-            </div>
-            <button
-              onClick={() => setShowHistoryModal(false)}
-              className="rounded-lg p-1.5 transition-colors hover:bg-white/[0.06]"
-            >
-              <X className="h-4 w-4 text-white/60" />
-            </button>
-          </div>
-
-          {loadingHistory ? (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin text-[#A3E635]" />
-            </div>
-          ) : restrictionHistory.length === 0 ? (
-            <div className="py-8 text-center">
-              <p className="text-sm text-white/60">No restriction history found</p>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {restrictionHistory.map((restriction: any) => (
-                <div
-                  key={restriction.id}
-                  className="rounded-[11px] border border-white/[0.08] bg-white/[0.04] p-3"
-                >
-                  <div className="mb-2 flex items-start justify-between">
-                    <div className="flex items-center gap-2">
-                      {restriction.restriction_type === 'restricted' && (
-                        <ShieldAlert className="h-3.5 w-3.5 text-[#FCD34D]" />
-                      )}
-                      {restriction.restriction_type === 'banned' && (
-                        <Ban className="h-3.5 w-3.5 text-[#FCA5A5]" />
-                      )}
-                      {restriction.restriction_type === 'unrestricted' && (
-                        <CheckCircle className="h-3.5 w-3.5 text-[#A3E635]" />
-                      )}
-                      <span className="text-sm font-bold capitalize text-white/90">
-                        {restriction.restriction_type}
-                      </span>
-                    </div>
-                    <span className="text-xs text-white/40">
-                      {fmtDateTime(restriction.created_at)}
-                    </span>
-                  </div>
-                  {restriction.reason && (
-                    <p className="mb-2 text-xs text-white/60">{restriction.reason}</p>
-                  )}
-                  {restriction.admin && (
-                    <p className="text-xs text-white/40">
-                      By: {restriction.admin.username || restriction.admin.email}
-                    </p>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
         </ModalShell>
       )}
 

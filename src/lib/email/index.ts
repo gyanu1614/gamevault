@@ -797,6 +797,44 @@ export async function sendListingRejectedEmail({
 // PAYOUT & ACCOUNT EMAILS
 // ============================================
 
+/**
+ * Generic ad-hoc notice from the admin team to a user (seller-management
+ * hub "Send Email"). Subject and body are admin-typed free text — escaped,
+ * with newlines preserved as line breaks.
+ */
+export async function sendAdminNoticeEmail({
+  to,
+  name,
+  subject,
+  bodyText,
+}: {
+  to: string
+  name: string
+  /** Email subject line (plain text). */
+  subject: string
+  /** Plain-text body — escaped; newlines become <br>. */
+  bodyText: string
+}) {
+  const safeBody = escapeHtml(bodyText).replace(/\r?\n/g, '<br>')
+  const { data, error } = await resend.emails.send({
+    from: FROM_EMAIL,
+    replyTo: REPLY_TO,
+    to,
+    subject,
+    html: emailShell({
+      preview: `A message from the DropMarket team.`,
+      icon: 'notice',
+      heading: 'A note from DropMarket',
+      body:
+        emailText(`Hi ${escapeHtml(name)},`) +
+        emailText(`<span style="overflow-wrap:anywhere;">${safeBody}</span>`) +
+        emailFooterNote(`Questions? Just reply to this email — it reaches our support team.`),
+    }),
+  })
+
+  return error ? { success: false, error } : { success: true, data }
+}
+
 export async function sendWithdrawalProcessedEmail({
   to,
   name,

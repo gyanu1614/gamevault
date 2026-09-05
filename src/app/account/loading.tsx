@@ -5,13 +5,31 @@
  * the most representative account landing. Uses the items/currency skeleton
  * convention: `bg-white/[0.07]` pulse blocks (read clearly over the hero) and
  * `card-frost` card surfaces — no opaque bg-bg-overlay "black box" cards.
+ *
+ * ROUTE-AWARE (client): Next surfaces THIS (topmost) boundary's fallback on a
+ * fresh navigation into any /account child, so the seller-flow pages would
+ * flash the dark dashboard skeleton before their own green loader. Branching on
+ * the pathname keeps the light "Forest Ledger" pages (become-seller,
+ * seller-status) on the branded forest loader from the first frame.
  */
+
+'use client'
+
+import { usePathname } from 'next/navigation'
+import SellerFlowLoader from './become-seller/_redesign/components/SellerFlowLoader'
 
 function Block({ className = '' }: { className?: string }) {
   return <div className={`animate-pulse rounded-md bg-white/[0.07] ${className}`} />
 }
 
 export default function AccountLoading() {
+  const pathname = usePathname()
+  if (pathname?.startsWith('/account/become-seller')) {
+    return <SellerFlowLoader label="Checking your application…" />
+  }
+  if (pathname?.startsWith('/account/seller-status')) {
+    return <SellerFlowLoader label="Loading your application…" />
+  }
   return (
     <main className="mx-auto w-full max-w-7xl px-4 pb-16 pt-2 sm:px-6 lg:px-8">
       {/* Header — lime logo tile + title + subtitle (mirrors AccountPageHeader) */}

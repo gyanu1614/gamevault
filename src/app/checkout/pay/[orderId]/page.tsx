@@ -18,6 +18,31 @@ export const dynamic = 'force-dynamic'
 
 interface PayPageProps {
   params: Promise<{ orderId: string }>
+  searchParams: Promise<{ net?: string; coin?: string }>
+}
+
+/** Preselect the payment-method tab from the checkout page's coin/network
+ *  choice (?coin=usdt&net=trc20). Defensive substring matching — plugin
+ *  paymentMethodIds vary. Falls back to the first method. */
+function preferredMethodId(
+  methods: PayMethod[],
+  coin?: string,
+  net?: string
+): string | null {
+  if (!methods.length) return null
+  const find = (pred: (u: string) => boolean) =>
+    methods.find((m) => pred(m.id.toUpperCase()))?.id ?? null
+  if (coin === 'btc') return find((u) => u.startsWith('BTC')) ?? methods[0].id
+  switch (net) {
+    case 'polygon':
+      return find((u) => u.includes('POLYGON') || u.includes('MATIC')) ?? methods[0].id
+    case 'ethereum':
+      return find((u) => u.includes('ETHEREUM')) ?? methods[0].id
+    case 'trc20':
+      return find((u) => u.includes('TRON')) ?? methods[0].id
+    default:
+      return methods[0].id
+  }
 }
 
 /** Display metadata for a Greenfield paymentMethodId. Defensive: unknown ids
@@ -45,8 +70,9 @@ function methodMeta(id: string): {
   return { label: code, short: code, icon: null, network: null, networkWarning: null }
 }
 
-export default async function PayPage({ params }: PayPageProps) {
+export default async function PayPage({ params, searchParams }: PayPageProps) {
   const { orderId } = await params
+  const { net, coin } = await searchParams
   const supabase = await createClient()
 
   const {
@@ -132,6 +158,7 @@ export default async function PayPage({ params }: PayPageProps) {
         initialInvoiceStatus={invoiceStatus}
         expiresAt={expiresAtIso}
         methods={methods}
+        initialMethodId={preferredMethodId(methods, coin, net)}
       />
     </main>
   )

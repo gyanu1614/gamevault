@@ -20,6 +20,7 @@ import {
 import { motion } from 'framer-motion'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
+import { BUY_CTA_LABEL } from '@/lib/config/purchases'
 
 type ViewMode = 'grid' | 'list'
 
@@ -320,7 +321,7 @@ export default function WishlistPage() {
                       )}
                     >
                       <ShoppingBag className="inline h-4 w-4 mr-1.5" />
-                      {inStock ? 'Buy Now' : 'Out of Stock'}
+                      {inStock ? BUY_CTA_LABEL : 'Out of Stock'}
                     </button>
                   </div>
 
@@ -409,7 +410,7 @@ export default function WishlistPage() {
                       )}
                     >
                       <ShoppingBag className="inline h-4 w-4 mr-1.5" />
-                      {inStock ? 'Buy Now' : 'Out of Stock'}
+                      {inStock ? BUY_CTA_LABEL : 'Out of Stock'}
                     </button>
                   </div>
                 </div>

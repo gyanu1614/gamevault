@@ -147,8 +147,19 @@ export function toStep5(
   payout: Step5FormData | undefined,
   payoutCurrency: PayoutCurrency | null | undefined,
 ): Step5FormData & { payoutCurrency: string | null } {
+  // The Payout Setup step was removed from the wizard — payout is now always
+  // undefined at submit time. Return a minimal, valid shape so the action
+  // persists a null payout method rather than spreading `undefined` fields.
+  if (!payout) {
+    return {
+      payoutMethod: undefined as unknown as Step5FormData['payoutMethod'],
+      taxResidencyCountry: '',
+      taxForm: 'none',
+      payoutCurrency: payoutCurrency ?? null,
+    } as Step5FormData & { payoutCurrency: string | null }
+  }
   return {
-    ...(payout as Step5FormData),
+    ...payout,
     // Remove the tax-form dropdown value entirely — the redesign drops it.
     taxForm: 'none',
     payoutCurrency: payoutCurrency ?? null,

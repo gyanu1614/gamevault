@@ -1,44 +1,127 @@
 'use client'
 
-import { useState, useMemo, useTransition } from 'react'
-import Link from 'next/link'
+/**
+ * Forest Ledger — /admin/active-sellers client.
+ *
+ * ONE compact forest frame (mirrors the moderation page): gradient header
+ * band with the title + inline stat chips (real numbers), a toolbar row
+ * (search / tier / status / paused / sort), then glass seller rows. The
+ * ENTIRE row clicks through to /admin/active-sellers/{profile id} — the
+ * seller-management detail. Founding star stays as the one per-row action;
+ * Export downloads the filtered rows as CSV.
+ *
+ * Data via react-query seeded with the server wrapper's initialData;
+ * relative times gate on useNow() (hydration-safe).
+ */
+
+import React, { useMemo, useState, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
+import { useQueryClient } from '@tanstack/react-query'
 import {
   Search,
   Download,
-  MoreVertical,
   Store,
-  TrendingUp,
-  TrendingDown,
-  Star,
-  Package,
-  DollarSign,
-  CheckCircle2,
-  AlertCircle,
-  Ban,
-  Eye,
-  MessageSquare,
-  ShieldAlert,
-  Users,
-  Activity,
   Loader2,
-  Award
+  Award,
+  AlertTriangle,
+  RefreshCcw,
+  ChevronRight,
+  X,
+  ArrowDownWideNarrow,
+  ArrowUpNarrowWide,
 } from 'lucide-react'
-import { motion } from 'framer-motion'
-import { useQueryClient } from '@tanstack/react-query'
 import { cn } from '@/lib/utils'
+import { useNow } from '@/hooks/use-now'
 import { useActiveSellers, useSellerStats, type SellerStatsSummary } from '@/hooks/use-active-sellers'
-import type { ActiveSeller } from '@/lib/actions/admin-active-sellers'
+import type { ActiveSeller, ActiveSellerSort } from '@/lib/actions/admin-active-sellers'
 import { setFoundingSeller } from '@/lib/actions/admin-sellers'
-import FoundingSellerBadge from '@/components/seller/FoundingSellerBadge'
-import { PageHeader, StatCard, AdminPanel, TABLE } from '../../components/kit'
+import { FOREST_BG, FOREST_MOTION, forestStagger } from '../../_theme/forest'
 
+// ─── Types + constants ───────────────────────────────────────────────────────
 
-type FilterStatus = 'all' | 'active' | 'warning' | 'suspended'
-type FilterTier = 'all' | 'bronze' | 'silver' | 'gold' | 'platinum'
-type SortBy = 'sales' | 'earnings' | 'rating' | 'listings' | 'joined' | 'activity'
+type FilterStatus = 'all' | 'active' | 'restricted' | 'banned'
+type FilterTier =
+  | 'all'
+  | 'unverified'
+  | 'bronze'
+  | 'silver'
+  | 'gold'
+  | 'platinum'
+  | 'diamond'
 
-const INPUT_CLASSES =
-  'w-full rounded-lg border border-border-default bg-bg-base text-sm text-text-primary placeholder:text-text-tertiary focus:border-lime focus:outline-none transition-colors'
+const FOCUS_RING =
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#A3E635] focus-visible:ring-offset-0'
+
+const CHIP =
+  'inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-[3px] text-[10.5px] font-bold'
+
+const SELECT_CLASSES =
+  'h-9 rounded-[10px] border border-white/[0.12] bg-white/[0.05] px-3 text-[12.5px] font-semibold text-white transition-colors hover:border-white/25 focus:border-[#A3E635] focus:outline-none [&>option]:bg-[#0F2419]'
+
+/** Header-band gradient (top-lit) shared with the moderation frame. */
+const BAND_STYLE: React.CSSProperties = {
+  background:
+    'linear-gradient(180deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0) 42%), ' +
+    FOREST_BG.listHeader,
+  boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.12), inset 0 -1px 0 rgba(0,0,0,0.3)',
+}
+
+/** seller_tier_config badge_color → dark-surface chip classes (fallback map). */
+export const TIER_CHIP_CLASSES: Record<string, string> = {
+  zinc: 'bg-white/[0.1] text-white/85',
+  orange: 'bg-orange-500/[0.16] text-orange-300',
+  slate: 'bg-slate-400/[0.18] text-slate-200',
+  yellow: 'bg-yellow-500/[0.16] text-yellow-300',
+  cyan: 'bg-cyan-500/[0.16] text-cyan-300',
+  violet: 'bg-violet-500/[0.16] text-violet-300',
+}
+
+const TIER_BADGE_COLOR: Record<string, string> = {
+  unverified: 'zinc',
+  bronze: 'orange',
+  silver: 'slate',
+  gold: 'yellow',
+  platinum: 'cyan',
+  diamond: 'violet',
+}
+
+export function tierChipClass(tier: string, badgeColor?: string | null): string {
+  const color = badgeColor || TIER_BADGE_COLOR[tier] || 'zinc'
+  return cn(CHIP, TIER_CHIP_CLASSES[color] ?? TIER_CHIP_CLASSES.zinc)
+}
+
+function tierLabel(tier: string): string {
+  return tier.charAt(0).toUpperCase() + tier.slice(1)
+}
+
+function relativeTime(iso: string | null | undefined, now: number | null): string {
+  if (!iso || now == null) return ''
+  const then = new Date(iso).getTime()
+  if (!Number.isFinite(then)) return ''
+  const mins = Math.max(0, Math.round((now - then) / 60_000))
+  if (mins < 1) return 'just now'
+  if (mins < 60) return `${mins}m ago`
+  const hours = Math.round(mins / 60)
+  if (hours < 24) return `${hours}h ago`
+  const days = Math.round(hours / 24)
+  return `${days}d ago`
+}
+
+function money(n: number): string {
+  return `$${n.toFixed(2)}`
+}
+
+const SORT_OPTIONS: { key: ActiveSellerSort; label: string }[] = [
+  { key: 'listings', label: 'Listings' },
+  { key: 'sales', label: 'Sales' },
+  { key: 'revenue', label: 'Revenue' },
+  { key: 'joined', label: 'Joined' },
+  { key: 'last_active', label: 'Last Active' },
+  { key: 'approved', label: 'Newest Approved' },
+  { key: 'recent_listing', label: 'Recently Listed' },
+]
+
+// ─── Component ───────────────────────────────────────────────────────────────
 
 export default function ActiveSellersPageClient({
   initialSellers,
@@ -49,41 +132,32 @@ export default function ActiveSellersPageClient({
   /** Server-fetched stats overview; undefined if the server fetch failed. */
   initialStats?: SellerStatsSummary
 }) {
+  const router = useRouter()
+  const now = useNow()
+
   const [searchQuery, setSearchQuery] = useState('')
   const [filterStatus, setFilterStatus] = useState<FilterStatus>('all')
   const [filterTier, setFilterTier] = useState<FilterTier>('all')
-  const [sortBy, setSortBy] = useState<SortBy>('sales')
+  const [pausedOnly, setPausedOnly] = useState(false)
+  const [sortBy, setSortBy] = useState<ActiveSellerSort>('listings')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
-  const [selectedSeller, setSelectedSeller] = useState<string | null>(null)
 
-  // Fetch real data from database.
-  // V54 — Server-seeded via initialData: on refresh the page arrives
-  // rendered (isLoading is false from the first paint), while refetches
-  // and client-side filtering/sorting keep working unchanged.
-  const { data: fetchedSellers, isLoading, error } = useActiveSellers(undefined, {
-    initialData: initialSellers,
-  })
+  const sellersQuery = useActiveSellers(undefined, { initialData: initialSellers })
   const { data: statsData } = useSellerStats({ initialData: initialStats })
 
-  // Use only real fetched data
-  const sellers = fetchedSellers || []
+  const sellers = useMemo(() => sellersQuery.data ?? [], [sellersQuery.data])
 
-  // Founding-seller toggle. Grants/revokes profiles.founding_seller (which
-  // governs the locked commission in src/lib/fees + the storefront badge).
-  // `pendingFounding` tracks the row mid-flight so its button can spin and
-  // ignore double-clicks; on success we invalidate the list so the row's
-  // founding state and badge reflect the write.
+  // ── Founding-seller toggle (grants/revokes the locked commission) ──
   const queryClient = useQueryClient()
   const [, startFoundingTransition] = useTransition()
   const [pendingFounding, setPendingFounding] = useState<string | null>(null)
 
   function handleToggleFounding(seller: ActiveSeller) {
     if (pendingFounding) return
-    setPendingFounding(seller.user_id)
+    setPendingFounding(seller.id)
     startFoundingTransition(async () => {
-      const res = await setFoundingSeller(seller.user_id, seller.founding_seller)
+      const res = await setFoundingSeller(seller.id, seller.founding_seller)
       if (!res.success) {
-        // Non-fatal: surface it but leave the row as-is (no optimistic flip).
         console.error('[active-sellers] founding toggle failed:', res.error)
         window.alert(`Couldn't update founding status: ${res.error ?? 'unknown error'}`)
       } else {
@@ -93,457 +167,509 @@ export default function ActiveSellersPageClient({
     })
   }
 
-  // Filter and sort sellers
+  // ── Filter + sort (client-side over the unfiltered fetch) ──
   const filteredSellers = useMemo(() => {
     let filtered = sellers
 
-    // Apply status filter
     if (filterStatus !== 'all') {
-      filtered = filtered.filter(s => s.status === filterStatus)
+      filtered = filtered.filter((s) => s.seller_status === filterStatus)
     }
-
-    // Apply tier filter
     if (filterTier !== 'all') {
-      filtered = filtered.filter(s => s.seller_tier === filterTier)
+      filtered = filtered.filter((s) => s.seller_tier === filterTier)
     }
-
-    // Apply search
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase()
-      filtered = filtered.filter(s =>
-        s.username.toLowerCase().includes(query) ||
-        s.full_name?.toLowerCase().includes(query) ||
-        s.email.toLowerCase().includes(query) ||
-        s.primary_games.some(g => g.toLowerCase().includes(query))
+    if (pausedOnly) {
+      filtered = filtered.filter((s) => s.store_paused)
+    }
+    if (searchQuery.trim()) {
+      const q = searchQuery.trim().toLowerCase()
+      filtered = filtered.filter(
+        (s) =>
+          s.username.toLowerCase().includes(q) ||
+          (s.full_name || '').toLowerCase().includes(q) ||
+          (s.shop_name || '').toLowerCase().includes(q) ||
+          s.email.toLowerCase().includes(q),
       )
     }
 
-    // Sort
-    filtered.sort((a, b) => {
-      let aValue: any
-      let bValue: any
-
+    const value = (s: ActiveSeller): number => {
       switch (sortBy) {
         case 'sales':
-          aValue = a.stats.total_sales
-          bValue = b.stats.total_sales
-          break
-        case 'earnings':
-          aValue = a.stats.total_earnings
-          bValue = b.stats.total_earnings
-          break
-        case 'rating':
-          aValue = a.stats.avg_rating
-          bValue = b.stats.avg_rating
-          break
-        case 'listings':
-          aValue = a.stats.active_listings
-          bValue = b.stats.active_listings
-          break
+          return s.stats.completed_sales
+        case 'revenue':
+          return s.stats.revenue
         case 'joined':
-          aValue = new Date(a.approved_at).getTime()
-          bValue = new Date(b.approved_at).getTime()
-          break
-        case 'activity':
-          aValue = new Date(a.last_active).getTime()
-          bValue = new Date(b.last_active).getTime()
-          break
+          return new Date(s.created_at).getTime()
+        case 'last_active':
+          return s.last_active_at ? new Date(s.last_active_at).getTime() : 0
+        case 'approved':
+          return s.approved_at ? new Date(s.approved_at).getTime() : 0
+        case 'recent_listing':
+          return s.latest_listing_at ? new Date(s.latest_listing_at).getTime() : 0
+        case 'listings':
         default:
-          aValue = a.stats.total_sales
-          bValue = b.stats.total_sales
+          return s.stats.active_listings
       }
-
-      return sortOrder === 'asc' ? aValue - bValue : bValue - aValue
-    })
-
-    return filtered
-  }, [sellers, filterStatus, filterTier, searchQuery, sortBy, sortOrder])
-
-  // Calculate stats (use fetched stats if available, otherwise show zeros)
-  const stats = useMemo(() => {
-    if (statsData) {
-      return statsData
     }
-    // Return zeros for empty state
-    return {
-      total: 0,
-      active: 0,
-      warning: 0,
-      suspended: 0,
-      totalEarnings: 0,
-      totalSales: 0,
-      totalListings: 0,
+    const dir = sortOrder === 'asc' ? 1 : -1
+    return [...filtered].sort((a, b) => (value(a) - value(b)) * dir)
+  }, [sellers, filterStatus, filterTier, pausedOnly, searchQuery, sortBy, sortOrder])
+
+  // ── CSV export of the filtered rows ──
+  function handleExport() {
+    const header = [
+      'Shop Name',
+      'Username',
+      'Email',
+      'Tier',
+      'Status',
+      'Active Listings',
+      'Pending Listings',
+      'Sales',
+      'Revenue',
+      'Founding',
+      'Test',
+      'Joined',
+      'Last Active',
+    ]
+    const escapeCell = (v: string | number | boolean | null | undefined) => {
+      const s = String(v ?? '')
+      return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
     }
-  }, [statsData])
-
-  const getTierColor = (tier: string) => {
-    const colors = {
-      bronze: 'border border-orange-500/25 bg-orange-500/10 text-orange-400',
-      silver: 'border border-border-default bg-bg-overlay text-text-secondary',
-      gold: 'border border-yellow-500/25 bg-yellow-500/10 text-yellow-400',
-      platinum: 'border border-border-strong bg-bg-overlay text-text-primary'
-    }
-    return colors[tier as keyof typeof colors] || 'border border-border-default bg-bg-overlay text-text-secondary'
+    const lines = [
+      header.join(','),
+      ...filteredSellers.map((s) =>
+        [
+          s.shop_name || '',
+          s.username,
+          s.email,
+          s.seller_tier,
+          s.seller_status,
+          s.stats.active_listings,
+          s.stats.pending_listings,
+          s.stats.completed_sales,
+          s.stats.revenue.toFixed(2),
+          s.founding_seller,
+          s.is_test,
+          s.created_at,
+          s.last_active_at || '',
+        ]
+          .map(escapeCell)
+          .join(','),
+      ),
+    ]
+    const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `active-sellers-${new Date().toISOString().slice(0, 10)}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
   }
 
-  const getStatusColor = (status: string) => {
-    const colors = {
-      active: 'border border-emerald-500/25 bg-emerald-500/10 text-emerald-400',
-      restricted: 'border border-yellow-500/25 bg-yellow-500/10 text-yellow-400',
-      banned: 'border border-red-500/25 bg-red-500/10 text-red-400',
-      warning: 'border border-yellow-500/25 bg-yellow-500/10 text-yellow-400',
-      suspended: 'border border-red-500/25 bg-red-500/10 text-red-400'
-    }
-    return colors[status as keyof typeof colors] || 'border border-border-default bg-bg-overlay text-text-secondary'
-  }
+  const stats = statsData
 
-  const getTimeAgo = (date: string) => {
-    const seconds = Math.floor((new Date().getTime() - new Date(date).getTime()) / 1000)
-    if (seconds < 60) return 'Just now'
-    const minutes = Math.floor(seconds / 60)
-    if (minutes < 60) return `${minutes}m ago`
-    const hours = Math.floor(minutes / 60)
-    if (hours < 24) return `${hours}h ago`
-    const days = Math.floor(hours / 24)
-    return `${days}d ago`
-  }
-
-  // Show loading state
-  if (isLoading) {
-    return (
-      <div className="flex min-h-[60vh] items-center justify-center p-6">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="h-8 w-8 animate-spin text-lime-text" />
-          <p className="text-sm text-text-secondary">Loading active sellers...</p>
-        </div>
-      </div>
-    )
-  }
-
-  // Show error state
-  if (error) {
-    return (
-      <div className="flex min-h-[60vh] items-center justify-center p-6">
-        <div className="text-center">
-          <AlertCircle className="mx-auto h-12 w-12 text-error" />
-          <h2 className="mt-4 text-lg font-semibold text-text-primary">Error loading sellers</h2>
-          <p className="mt-1 text-sm text-text-secondary">{error.message}</p>
-        </div>
-      </div>
-    )
-  }
+  const statChips: { label: string; value: React.ReactNode; amber?: boolean }[] = [
+    { label: 'Sellers', value: stats?.totalSellers ?? '—' },
+    { label: 'Active Listings', value: stats?.totalActiveListings ?? '—' },
+    {
+      label: 'Revenue',
+      value: stats ? money(stats.totalRevenue) : '—',
+    },
+    {
+      label: 'Pending Withdrawals',
+      value: stats?.pendingWithdrawals ?? '—',
+      amber: (stats?.pendingWithdrawals ?? 0) > 0,
+    },
+  ]
 
   return (
     <div>
-      {/* Header */}
-      <PageHeader
-        title="Active Sellers"
-        description="Manage and monitor approved sellers on the platform"
-      />
+      <div className="mx-auto max-w-7xl">
+        {/* ── The single forest frame ── */}
+        <div
+          className="overflow-hidden rounded-2xl border border-white/[0.09]"
+          style={{ background: FOREST_BG.canvas }}
+        >
+          {/* Header band */}
+          <div className="px-6 py-5" style={BAND_STYLE}>
+            <div className="flex flex-wrap items-end gap-x-4 gap-y-3">
+              <div className="min-w-0">
+                <h1 className="text-[24px] font-extrabold leading-tight tracking-tight text-white">
+                  Active Sellers
+                </h1>
+                <p className="mt-0.5 text-[12px] text-white/85">
+                  Every seller account — open one to manage tier, wallet, payouts and restrictions
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleExport}
+                className={cn(
+                  'ml-auto inline-flex items-center gap-1.5 rounded-full border border-white/[0.14] px-4 py-2 text-[12px] font-bold text-white/70',
+                  'transition-[transform,border-color,color] duration-150 hover:-translate-y-px hover:border-[#A3E635]/50 hover:text-white',
+                  FOCUS_RING,
+                )}
+              >
+                <Download className="h-3.5 w-3.5" />
+                Export
+              </button>
+            </div>
 
-      {/* Stats Overview */}
-      <div className="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        <StatCard
-          label="Total Sellers"
-          value={stats.total}
-          icon={Users}
-          tone="lime"
-          sub={
-            <span className="flex items-center gap-3">
-              <span className="flex items-center gap-1.5">
-                <span className="h-1.5 w-1.5 rounded-full bg-success" />
-                <span className="font-medium text-success">{stats.active} active</span>
-              </span>
-              <span className="text-text-tertiary">•</span>
-              <span className="flex items-center gap-1.5">
-                <span className="h-1.5 w-1.5 rounded-full bg-warning" />
-                <span className="font-medium text-warning">{stats.warning} warnings</span>
-              </span>
-            </span>
-          }
-        />
-        <StatCard
-          label="Total Earnings"
-          value={`$${stats.totalEarnings > 0 ? stats.totalEarnings.toLocaleString() : '0'}`}
-          icon={DollarSign}
-          tone="success"
-          sub={
-            <span className="flex items-center gap-1 text-success">
-              <TrendingUp className="h-3 w-3" />
-              Platform revenue
-            </span>
-          }
-        />
-        <StatCard
-          label="Total Sales"
-          value={stats.totalSales > 0 ? stats.totalSales.toLocaleString() : '0'}
-          icon={TrendingUp}
-          tone="neutral"
-          sub={
-            <span className="flex items-center gap-1">
-              <Package className="h-3 w-3" />
-              {stats.totalListings} active listings
-            </span>
-          }
-        />
-      </div>
-
-      {/* Filters */}
-      <AdminPanel className="mb-6 p-4 sm:p-4">
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-          {/* Search */}
-          <div className="lg:col-span-2">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary" />
-              <input
-                type="text"
-                placeholder="Search by name, email, or game..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className={cn(INPUT_CLASSES, 'py-2 pl-10 pr-4')}
-              />
+            {/* Slim stat strip */}
+            <div className="mt-3 flex flex-wrap items-center gap-1.5">
+              {statChips.map((chip) => (
+                <span
+                  key={chip.label}
+                  className={cn(
+                    'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[12px] font-semibold',
+                    chip.amber
+                      ? 'border-[#F59E0B]/40 bg-[#F59E0B]/[0.14] text-[#FCD34D]'
+                      : 'border-white/[0.1] bg-white/[0.05] text-white/85',
+                  )}
+                >
+                  {chip.label}
+                  <span
+                    className={cn(
+                      'font-extrabold tabular-nums',
+                      chip.amber ? 'text-[#FCD34D]' : 'text-white/90',
+                    )}
+                  >
+                    {chip.value}
+                  </span>
+                </span>
+              ))}
             </div>
           </div>
 
-          {/* Status Filter */}
-          <div>
-            <select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value as FilterStatus)}
-              className={cn(INPUT_CLASSES, 'px-3 py-2')}
-            >
-              <option value="all" className="bg-bg-raised">All Status</option>
-              <option value="active" className="bg-bg-raised">Active</option>
-              <option value="warning" className="bg-bg-raised">Warning</option>
-              <option value="suspended" className="bg-bg-raised">Suspended</option>
-            </select>
-          </div>
+          {/* Toolbar */}
+          <div className="flex flex-wrap items-center gap-2.5 border-b border-white/[0.08] px-6 py-3">
+            <div className="relative min-w-[200px] flex-1 sm:max-w-[280px]">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/70" />
+              <input
+                type="text"
+                placeholder="Search name, email, shop…"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className={cn(
+                  'h-9 w-full rounded-[10px] border border-white/[0.12] bg-white/[0.05] pl-9 pr-8 text-[13px] text-white placeholder:text-white/70',
+                  'transition-colors hover:border-white/25 focus:border-[#A3E635] focus:outline-none focus:ring-1 focus:ring-[#A3E635]/40',
+                )}
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  aria-label="Clear search"
+                  onClick={() => setSearchQuery('')}
+                  className={cn(
+                    'absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-white/70 transition-colors hover:bg-white/10 hover:text-white',
+                    FOCUS_RING,
+                  )}
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
 
-          {/* Tier Filter */}
-          <div>
             <select
               value={filterTier}
               onChange={(e) => setFilterTier(e.target.value as FilterTier)}
-              className={cn(INPUT_CLASSES, 'px-3 py-2')}
+              className={cn(SELECT_CLASSES, FOCUS_RING)}
+              aria-label="Filter By Tier"
             >
-              <option value="all" className="bg-bg-raised">All Tiers</option>
-              <option value="bronze" className="bg-bg-raised">Bronze</option>
-              <option value="silver" className="bg-bg-raised">Silver</option>
-              <option value="gold" className="bg-bg-raised">Gold</option>
-              <option value="platinum" className="bg-bg-raised">Platinum</option>
+              <option value="all">All Tiers</option>
+              <option value="unverified">Unverified</option>
+              <option value="bronze">Bronze</option>
+              <option value="silver">Silver</option>
+              <option value="gold">Gold</option>
+              <option value="platinum">Platinum</option>
+              <option value="diamond">Diamond</option>
             </select>
-          </div>
 
-          {/* Sort */}
-          <div>
             <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as SortBy)}
-              className={cn(INPUT_CLASSES, 'px-3 py-2')}
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value as FilterStatus)}
+              className={cn(SELECT_CLASSES, FOCUS_RING)}
+              aria-label="Filter By Status"
             >
-              <option value="sales" className="bg-bg-raised">Sort by Sales</option>
-              <option value="earnings" className="bg-bg-raised">Sort by Earnings</option>
-              <option value="rating" className="bg-bg-raised">Sort by Rating</option>
-              <option value="listings" className="bg-bg-raised">Sort by Listings</option>
-              <option value="joined" className="bg-bg-raised">Sort by Join Date</option>
-              <option value="activity" className="bg-bg-raised">Sort by Activity</option>
+              <option value="all">All Statuses</option>
+              <option value="active">Active</option>
+              <option value="restricted">Restricted</option>
+              <option value="banned">Banned</option>
             </select>
-          </div>
-        </div>
 
-        <div className="mt-4 flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
-          <p className="text-xs text-text-secondary">
-            Showing <span className="font-semibold text-text-primary">{filteredSellers.length}</span> of{' '}
-            <span className="font-semibold text-text-primary">{sellers.length}</span> sellers
-          </p>
-          <div className="flex gap-2">
             <button
-              onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-              className="flex items-center gap-1.5 rounded-lg border border-border-default bg-bg-overlay px-3 py-1.5 text-xs font-medium text-text-secondary transition-colors hover:border-border-strong hover:text-text-primary"
+              type="button"
+              onClick={() => setPausedOnly((v) => !v)}
+              aria-pressed={pausedOnly}
+              className={cn(
+                'h-9 whitespace-nowrap rounded-[10px] border px-3 text-[12.5px] font-bold transition-colors',
+                FOCUS_RING,
+                pausedOnly
+                  ? 'border-[#F59E0B]/50 bg-[#F59E0B]/[0.16] text-[#FCD34D]'
+                  : 'border-white/[0.12] text-white/85 hover:border-white/25 hover:text-white',
+              )}
             >
-              {sortOrder === 'desc' ? <TrendingDown className="h-3.5 w-3.5" /> : <TrendingUp className="h-3.5 w-3.5" />}
-              {sortOrder === 'desc' ? 'Descending' : 'Ascending'}
+              Paused Only
             </button>
-            <button className="flex items-center gap-1.5 rounded-lg border border-border-default bg-bg-overlay px-3 py-1.5 text-xs font-medium text-text-secondary transition-colors hover:border-border-strong hover:text-text-primary">
-              <Download className="h-3.5 w-3.5" />
-              Export
-            </button>
+
+            <div className="ml-auto flex items-center gap-1.5">
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as ActiveSellerSort)}
+                className={cn(SELECT_CLASSES, FOCUS_RING)}
+                aria-label="Sort By"
+              >
+                {SORT_OPTIONS.map((o) => (
+                  <option key={o.key} value={o.key}>
+                    Sort: {o.label}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={() => setSortOrder((o) => (o === 'asc' ? 'desc' : 'asc'))}
+                aria-label={sortOrder === 'desc' ? 'Sorted Descending' : 'Sorted Ascending'}
+                className={cn(
+                  'grid h-9 w-9 place-items-center rounded-[10px] border border-white/[0.12] text-white/85 transition-colors hover:border-white/25 hover:text-white',
+                  FOCUS_RING,
+                )}
+              >
+                {sortOrder === 'desc' ? (
+                  <ArrowDownWideNarrow className="h-4 w-4" />
+                ) : (
+                  <ArrowUpNarrowWide className="h-4 w-4" />
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* Body */}
+          <div className="px-6 pb-5 pt-3">
+            {sellersQuery.isError ? (
+              <div
+                className={cn(
+                  'flex flex-col items-center rounded-[11px] border border-white/[0.08] bg-white/[0.04] px-6 py-10 text-center',
+                  FOREST_MOTION.fadeIn,
+                )}
+              >
+                <div className="grid h-12 w-12 place-items-center rounded-[14px] bg-[#F59E0B]/[0.14] ring-1 ring-[#F59E0B]/30">
+                  <AlertTriangle className="h-6 w-6 text-[#FCD34D]" />
+                </div>
+                <p className="mt-3 text-[15px] font-extrabold text-white/95">
+                  Couldn&apos;t Load Sellers
+                </p>
+                <p className="mx-auto mt-1 max-w-md text-[12.5px] text-white/85">
+                  {(sellersQuery.error as Error)?.message || 'Something went wrong fetching sellers.'}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => sellersQuery.refetch()}
+                  disabled={sellersQuery.isFetching}
+                  className={cn(
+                    'mt-4 inline-flex items-center gap-1.5 rounded-full border border-white/[0.14] px-4 py-2 text-[12px] font-bold text-white/70',
+                    'transition-colors hover:border-[#A3E635]/50 hover:text-white disabled:opacity-50',
+                    FOCUS_RING,
+                  )}
+                >
+                  {sellersQuery.isFetching ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <RefreshCcw className="h-3.5 w-3.5" />
+                  )}
+                  Retry
+                </button>
+              </div>
+            ) : sellersQuery.isPending ? (
+              <div className="px-6 py-10 text-center">
+                <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-[#A3E635] border-r-transparent" />
+                <p className="mt-4 text-[13px] text-white/85">Loading active sellers…</p>
+              </div>
+            ) : filteredSellers.length === 0 ? (
+              <div
+                className={cn(
+                  'flex flex-col items-center rounded-[11px] border border-white/[0.08] bg-white/[0.04] px-6 py-10 text-center',
+                  FOREST_MOTION.fadeIn,
+                )}
+              >
+                <div className="grid h-12 w-12 place-items-center rounded-[14px] bg-[#A3E635]/[0.12] ring-1 ring-[#A3E635]/25">
+                  <Store className="h-6 w-6 text-[#A3E635]" />
+                </div>
+                <p className="mt-3 text-[15px] font-extrabold text-white/95">No Sellers Found</p>
+                <p className="mt-1 text-[12.5px] text-white/85">
+                  {searchQuery || filterStatus !== 'all' || filterTier !== 'all' || pausedOnly
+                    ? 'Try adjusting your search or filters'
+                    : 'No seller accounts yet'}
+                </p>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-2">
+                <p className="px-1 text-[11px] font-semibold text-white/70">
+                  Showing {filteredSellers.length} of {sellers.length} sellers
+                </p>
+                {filteredSellers.map((seller, index) => (
+                  <SellerRow
+                    key={seller.id}
+                    seller={seller}
+                    index={index}
+                    now={now}
+                    foundingBusy={pendingFounding === seller.id}
+                    onToggleFounding={() => handleToggleFounding(seller)}
+                    onOpen={() => router.push(`/admin/active-sellers/${seller.id}`)}
+                  />
+                ))}
+              </div>
+            )}
           </div>
         </div>
-      </AdminPanel>
+      </div>
+    </div>
+  )
+}
 
-      {/* Sellers Table */}
-      {filteredSellers.length === 0 ? (
-        <AdminPanel className="p-8 text-center">
-          <Store className="mx-auto h-10 w-10 text-text-tertiary" />
-          <h3 className="mt-3 text-base font-semibold text-text-primary">No sellers found</h3>
-          <p className="mt-1 text-sm text-text-secondary">
-            {searchQuery ? 'Try adjusting your search or filters' : 'No active sellers yet'}
-          </p>
-        </AdminPanel>
-      ) : (
-        <AdminPanel pad={false} className="overflow-hidden">
-          <div className={TABLE.wrap}>
-            <table className={TABLE.table}>
-              <thead>
-                <tr>
-                  <th className={TABLE.th}>Seller</th>
-                  <th className={TABLE.th}>Tier</th>
-                  <th className={TABLE.th}>Performance</th>
-                  <th className={TABLE.th}>Earnings</th>
-                  <th className={TABLE.th}>Status</th>
-                  <th className={TABLE.th}>Last Active</th>
-                  <th className={cn(TABLE.th, 'text-right')}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredSellers.map((seller, index) => (
-                  <motion.tr
-                    key={seller.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.05 }}
-                    className={TABLE.row}
-                  >
-                    {/* Seller Info */}
-                    <td className={cn(TABLE.td, 'whitespace-nowrap')}>
-                      <div className="flex items-center">
-                        <img
-                          src={seller.avatar_url || '/default-avatar.png'}
-                          alt={seller.username}
-                          className="h-8 w-8 rounded-full border border-border-default bg-bg-overlay"
-                        />
-                        <div className="ml-3">
-                          <div className="text-xs font-semibold text-text-primary">{seller.username}</div>
-                          <div className="text-[10px] text-text-tertiary">{seller.full_name}</div>
-                          <div className="mt-0.5 flex items-center gap-1">
-                            {seller.primary_games.slice(0, 2).map((game, i) => (
-                              <span
-                                key={i}
-                                className="inline-flex items-center rounded border border-border-default bg-bg-overlay px-1.5 py-0.5 text-[9px] font-medium text-text-secondary"
-                              >
-                                {game}
-                              </span>
-                            ))}
-                            {seller.primary_games.length > 2 && (
-                              <span className="text-[9px] text-text-tertiary">
-                                +{seller.primary_games.length - 2}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </td>
+// ─── Seller row ──────────────────────────────────────────────────────────────
 
-                    {/* Tier */}
-                    <td className={cn(TABLE.td, 'whitespace-nowrap')}>
-                      <div className="flex flex-wrap items-center gap-1">
-                        <span className={cn('inline-flex items-center rounded-md px-2 py-0.5 text-[10px] font-semibold uppercase', getTierColor(seller.seller_tier))}>
-                          {seller.seller_tier}
-                        </span>
-                        {seller.founding_seller && <FoundingSellerBadge size="xs" />}
-                      </div>
-                    </td>
+function SellerRow({
+  seller,
+  index,
+  now,
+  foundingBusy,
+  onToggleFounding,
+  onOpen,
+}: {
+  seller: ActiveSeller
+  index: number
+  now: number | null
+  foundingBusy: boolean
+  onToggleFounding: () => void
+  onOpen: () => void
+}) {
+  const name = seller.shop_name || seller.username
+  const initial = (name.trim()[0] || 'S').toUpperCase()
+  const lastActive = relativeTime(seller.last_active_at, now)
 
-                    {/* Performance */}
-                    <td className={cn(TABLE.td, 'whitespace-nowrap')}>
-                      <div className="flex flex-col gap-0.5">
-                        <div className="flex items-center gap-1 text-xs">
-                          <Star className="h-2.5 w-2.5 fill-current text-warning" />
-                          <span className="font-semibold text-text-primary">
-                            {seller.stats.avg_rating > 0 ? seller.stats.avg_rating.toFixed(1) : 'N/A'}
-                          </span>
-                          <span className="text-[10px] text-text-tertiary">
-                            ({seller.stats.review_count > 0 ? seller.stats.review_count : '0'})
-                          </span>
-                        </div>
-                        <div className="text-[10px] text-text-secondary">
-                          {seller.stats.total_sales > 0 ? seller.stats.total_sales : '0'} sales • {seller.stats.active_listings > 0 ? seller.stats.active_listings : '0'} listings
-                        </div>
-                        <div className="text-[10px] text-text-tertiary">
-                          {seller.stats.completion_rate > 0 ? `${seller.stats.completion_rate}%` : 'N/A'} completion
-                        </div>
-                      </div>
-                    </td>
-
-                    {/* Earnings */}
-                    <td className={cn(TABLE.td, 'whitespace-nowrap')}>
-                      <div className="text-xs font-semibold tabular-nums text-text-primary">
-                        {seller.stats.total_earnings > 0 ? `$${seller.stats.total_earnings.toLocaleString()}` : '$0'}
-                      </div>
-                      <div className="text-[10px] text-text-tertiary">Total earnings</div>
-                    </td>
-
-                    {/* Status */}
-                    <td className={cn(TABLE.td, 'whitespace-nowrap')}>
-                      <span className={cn('inline-flex items-center rounded-md px-2 py-0.5 text-[10px] font-semibold capitalize', getStatusColor(seller.status))}>
-                        {seller.status === 'active' && <CheckCircle2 className="mr-1 h-2.5 w-2.5" />}
-                        {seller.status === 'restricted' && <ShieldAlert className="mr-1 h-2.5 w-2.5" />}
-                        {seller.status === 'banned' && <Ban className="mr-1 h-2.5 w-2.5" />}
-                        {seller.status === 'warning' && <AlertCircle className="mr-1 h-2.5 w-2.5" />}
-                        {seller.status === 'suspended' && <Ban className="mr-1 h-2.5 w-2.5" />}
-                        {seller.status}
-                      </span>
-                    </td>
-
-                    {/* Last Active */}
-                    <td className={cn(TABLE.td, 'whitespace-nowrap')}>
-                      <div className="flex items-center gap-1 text-xs text-text-secondary">
-                        <Activity className="h-2.5 w-2.5" />
-                        {getTimeAgo(seller.last_active)}
-                      </div>
-                      <div className="text-[10px] text-text-tertiary">
-                        Joined {new Date(seller.approved_at).toLocaleDateString()}
-                      </div>
-                    </td>
-
-                    {/* Actions */}
-                    <td className={cn(TABLE.td, 'whitespace-nowrap text-right')}>
-                      <div className="flex items-center justify-end gap-1.5">
-                        <button
-                          type="button"
-                          onClick={() => handleToggleFounding(seller)}
-                          disabled={pendingFounding === seller.user_id}
-                          title={
-                            seller.founding_seller
-                              ? 'Revoke founding-seller status'
-                              : 'Grant founding-seller status (locks a reduced commission for life)'
-                          }
-                          aria-pressed={seller.founding_seller}
-                          className={cn(
-                            'rounded-lg p-1.5 transition-colors disabled:opacity-50',
-                            seller.founding_seller
-                              ? 'text-[#F5C451] hover:bg-[#F5C451]/10'
-                              : 'text-text-tertiary hover:bg-bg-overlay hover:text-text-primary',
-                          )}
-                        >
-                          {pendingFounding === seller.user_id ? (
-                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                          ) : (
-                            <Award className="h-3.5 w-3.5" />
-                          )}
-                        </button>
-                        <Link
-                          href={`/admin/sellers/${seller.id}`}
-                          className="rounded-lg p-1.5 text-lime-text transition-colors hover:bg-lime-tint-bg"
-                        >
-                          <Eye className="h-3.5 w-3.5" />
-                        </Link>
-                        <button className="rounded-lg p-1.5 text-text-tertiary transition-colors hover:bg-bg-overlay hover:text-text-primary">
-                          <MessageSquare className="h-3.5 w-3.5" />
-                        </button>
-                        <button className="rounded-lg p-1.5 text-text-tertiary transition-colors hover:bg-bg-overlay hover:text-text-primary">
-                          <MoreVertical className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                    </td>
-                  </motion.tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </AdminPanel>
+  return (
+    <div
+      role="link"
+      tabIndex={0}
+      aria-label={`Open seller ${name}`}
+      onClick={onOpen}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          onOpen()
+        }
+      }}
+      className={cn(
+        'flex cursor-pointer flex-wrap items-center gap-3 rounded-[14px] border border-white/[0.09] bg-white/[0.05] px-3.5 py-2.5 backdrop-blur-sm',
+        'transition-[transform,box-shadow,background-color,border-color] duration-150 hover:-translate-y-[1px]',
+        'hover:border-white/[0.14] hover:bg-white/[0.08] hover:shadow-[0_12px_30px_-18px_rgba(0,0,0,0.65)]',
+        FOCUS_RING,
+        FOREST_MOTION.fadeUp,
       )}
+      style={forestStagger(Math.min(index, 10), 45)}
+    >
+      {/* Avatar / initial tile */}
+      {seller.avatar_url ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={seller.avatar_url}
+          alt={name}
+          className="h-10 w-10 shrink-0 rounded-[10px] object-cover ring-1 ring-white/10"
+        />
+      ) : (
+        <div
+          className="grid h-10 w-10 shrink-0 place-items-center rounded-[10px] text-[14px] font-black text-[#A3E635]"
+          style={{ background: FOREST_BG.storeTile }}
+        >
+          {initial}
+        </div>
+      )}
+
+      {/* Identity */}
+      <div className="min-w-[150px] flex-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="truncate text-[13.5px] font-extrabold text-white/95">{name}</p>
+          <span className={tierChipClass(seller.seller_tier)}>{tierLabel(seller.seller_tier)}</span>
+          {seller.seller_status === 'restricted' && (
+            <span className={cn(CHIP, 'bg-[#B42318]/20 text-[#FCA5A5]')}>Restricted</span>
+          )}
+          {seller.seller_status === 'banned' && (
+            <span className={cn(CHIP, 'bg-[#B42318]/25 text-[#FCA5A5]')}>Banned</span>
+          )}
+          {seller.store_paused && (
+            <span className={cn(CHIP, 'bg-[#F59E0B]/[0.16] text-[#FCD34D]')}>Paused</span>
+          )}
+          {seller.founding_seller && (
+            <span className={cn(CHIP, 'bg-[#A3E635]/[0.15] text-[#D9F99D]')}>Founding</span>
+          )}
+          {seller.is_test && (
+            <span className={cn(CHIP, 'bg-white/[0.1] text-white/85')}>Test</span>
+          )}
+        </div>
+        <p className="mt-0.5 truncate text-[11.5px] text-white/70">
+          @{seller.username} · {seller.email}
+        </p>
+      </div>
+
+      {/* Listings */}
+      <div className="hidden w-[120px] shrink-0 sm:block">
+        <p className="text-[13px] font-bold tabular-nums text-white/90">
+          {seller.stats.active_listings}{' '}
+          <span className="text-[11px] font-semibold text-white/70">active</span>
+        </p>
+        {seller.stats.pending_listings > 0 && (
+          <p className="text-[11px] font-semibold tabular-nums text-[#FCD34D]">
+            · {seller.stats.pending_listings} pending
+          </p>
+        )}
+      </div>
+
+      {/* Sales + revenue */}
+      <div className="hidden w-[130px] shrink-0 md:block">
+        <p className="text-[13px] font-bold tabular-nums text-white/90">
+          {money(seller.stats.revenue)}
+        </p>
+        <p className="text-[11px] font-semibold tabular-nums text-white/70">
+          {seller.stats.completed_sales} {seller.stats.completed_sales === 1 ? 'sale' : 'sales'}
+        </p>
+      </div>
+
+      {/* Last active */}
+      <div className="hidden w-[90px] shrink-0 lg:block">
+        <p className="truncate text-[11.5px] text-white/70">{lastActive || '—'}</p>
+      </div>
+
+      {/* Founding toggle (the one per-row action) */}
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation()
+          onToggleFounding()
+        }}
+        onKeyDown={(e) => e.stopPropagation()}
+        disabled={foundingBusy}
+        title={
+          seller.founding_seller
+            ? 'Revoke founding-seller status'
+            : 'Grant founding-seller status (locks a reduced commission for life)'
+        }
+        aria-pressed={seller.founding_seller}
+        className={cn(
+          'shrink-0 rounded-lg p-1.5 transition-colors disabled:opacity-50',
+          FOCUS_RING,
+          seller.founding_seller
+            ? 'text-[#F5C451] hover:bg-[#F5C451]/10'
+            : 'text-white/70 hover:bg-white/[0.08] hover:text-white',
+        )}
+      >
+        {foundingBusy ? (
+          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+        ) : (
+          <Award className="h-3.5 w-3.5" />
+        )}
+      </button>
+
+      <ChevronRight className="h-4 w-4 shrink-0 text-white/30" />
     </div>
   )
 }

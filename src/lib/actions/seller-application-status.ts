@@ -15,6 +15,8 @@ import { revalidatePath } from 'next/cache'
 export interface ApplicationStatusResult {
   status: 'pending' | 'under_review' | 'info_requested' | 'approved' | 'rejected' | 'withdrawn' | 'none'
   canReapply: boolean
+  /** primary_games UUIDs resolved to display data for the summary modal. */
+  games?: { id: string; name: string; image_url: string | null }[]
   rejection?: {
     reason: string
     category: string
@@ -89,6 +91,19 @@ export async function getApplicationStatus(): Promise<{
       status: application.status,
       canReapply: reapplyCheck?.can_reapply ?? true,
       application,
+    }
+
+    // Resolve primary_games UUIDs → names + icons so the summary modal never
+    // shows raw ids.
+    const gameIds: string[] = Array.isArray(application.primary_games)
+      ? application.primary_games
+      : []
+    if (gameIds.length) {
+      const { data: gameRows } = await supabase
+        .from('games')
+        .select('id, name, image_url')
+        .in('id', gameIds)
+      if (gameRows?.length) result.games = gameRows as ApplicationStatusResult['games']
     }
 
     // Add rejection details if rejected

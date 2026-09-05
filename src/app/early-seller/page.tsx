@@ -18,6 +18,7 @@ import { getAllGames } from '@/lib/utils/games'
 import { GAME_ICONS } from '@/features/home/lib/game-icons'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
+import SellerFlowLoader from '@/app/account/become-seller/_redesign/components/SellerFlowLoader'
 import FoundingSignupClient from './_FoundingSignupClient'
 import type { SignupGame } from './_FoundingSignupClient'
 
@@ -108,8 +109,11 @@ export default async function EarlySellerPage() {
 
   const [progress, games] = await Promise.all([getFoundingProgress(), signupGames()])
 
+  // The client island uses useSearchParams(), so it must sit under Suspense.
+  // The fallback is the branded loader (not null) so a hydration gap never
+  // flashes the dark root-layout body.
   return (
-    <Suspense fallback={null}>
+    <Suspense fallback={<SellerFlowLoader label="Getting your spot ready…" />}>
       <FoundingSignupClient progress={progress} games={games} />
     </Suspense>
   )

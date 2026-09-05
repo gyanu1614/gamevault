@@ -69,6 +69,13 @@ export interface JourneyStep {
    * that is purely a status, like the confirmed email).
    */
   action?: { label: string; href: string } | null
+  /**
+   * When set, the RIGHT side shows this status pill instead of the action button
+   * — used by "Get Approved" once the seller application is submitted: it's no
+   * longer an action they take, it's a state they wait on (Pending / Under
+   * Review). `tone` colors the pill.
+   */
+  statusPill?: { label: string; tone: 'pending' | 'review' | 'info' } | null
 }
 
 export interface SellerJourney {
@@ -161,6 +168,7 @@ async function resolveSellerJourney(email: string): Promise<SellerJourney> {
 
   let appStatus: string | null = null
   let listingCount = 0
+  let publishedCount = 0
 
   if (profile?.id) {
     // 2. Their latest seller application status.
@@ -173,15 +181,23 @@ async function resolveSellerJourney(email: string): Promise<SellerJourney> {
       .maybeSingle()
     appStatus = (app?.status as string) ?? null
 
-    // 3. How many listings they have.
+    // 3. Listings: total (any draft counts as "in progress") vs published
+    //    (went live at least once — that's what ticks step 4).
     const { count } = await supabase
       .from('listings')
       .select('id', { count: 'exact', head: true })
       .eq('seller_id', profile.id)
     listingCount = count ?? 0
+
+    const { count: pubCount } = await supabase
+      .from('listings')
+      .select('id', { count: 'exact', head: true })
+      .eq('seller_id', profile.id)
+      .in('status', ['active', 'sold', 'paused', 'archived'])
+    publishedCount = pubCount ?? 0
   }
 
-  return buildJourney({ hasAccount: Boolean(profile?.id), appStatus, listingCount })
+  return buildJourney({ hasAccount: Boolean(profile?.id), appStatus, listingCount, publishedCount })
 }
 
 /**
@@ -197,12 +213,17 @@ function buildJourney({
   hasAccount,
   appStatus,
   listingCount,
+  publishedCount = listingCount,
 }: {
-  /** Do they already have an account? Only affects step 2's label/target, not
-   *  whether step 2 is "done" (that needs a started application). */
+  /** Do they already have an account? An account ticks step 2 — the founding
+   *  modal collects the store name at account creation. */
   hasAccount: boolean
   appStatus: string | null
   listingCount: number
+  /** Listings that actually went live (active/sold/paused/archived). Only a
+   *  published listing ticks step 4; drafts show "In Progress" instead.
+   *  Defaults to listingCount for callers that don't distinguish. */
+  publishedCount?: number
 }): SellerJourney {
   // How far along are they? (1 = email confirmed … 4 = listing live)
   //
@@ -210,15 +231,14 @@ function buildJourney({
   // link, which confirms the address. So the minimum is 1, making step 2
   // ("Set Up Your Store") the current, actionable step for a brand-new founder.
   //
-  // IMPORTANT: "Set Up Your Store" (step 2) is only DONE once they've actually
-  // STARTED the seller application (appStatus exists) — NOT merely because an
-  // account exists. Just having a login is not "setting up a store", so it must
-  // not tick step 2. (Otherwise a founder who signed up but never filled the
-  // seller application sees a false ✓.)
   let reached = 1 // email confirmed — always true for a founder on their HQ
-  if (appStatus) reached = 2 // seller application started → store is set up
+  // Step 2 ("Set Up Your Store") is done once the account exists: the founding
+  // modal creates the account WITH the store name in one step, so an account IS
+  // a set-up store. Step 3 ("Get Approved" → the seller application/verification
+  // wizard) becomes the next action.
+  if (hasAccount || appStatus) reached = 2
   if (appStatus === 'approved') reached = 3 // approved → next real action is listing
-  if (listingCount > 0) reached = 4
+  if (publishedCount > 0) reached = 4 // only a PUBLISHED listing ticks step 4
 
   // Step 2's action adapts to whether they already have an account:
   //   - No account yet (magic-link founder): "Create Account" → the store-name
@@ -258,20 +278,42 @@ function buildJourney({
     {
       key: 'listing',
       label: 'Start Selling',
-      hint: 'List your first item and go live.',
-      action: { label: 'Start Listing', href: '/sell/new' },
+      hint: 'Create your first listing and go live.',
+      action: { label: 'Create First Listing', href: '/sell/new' },
     },
   ]
 
+  // Once the seller application is submitted, "Get Approved" (review) is a WAIT
+  // state, not an action — surface the real application status as a pill.
+  const reviewStatusPill: JourneyStep['statusPill'] =
+    appStatus === 'pending'
+      ? { label: 'Pending Review', tone: 'pending' }
+      : appStatus === 'under_review'
+        ? { label: 'Under Review', tone: 'review' }
+        : appStatus === 'info_requested'
+          ? { label: 'Info Requested', tone: 'info' }
+          : null
+
+  // Step 4: a listing exists but none has gone live yet → "In Progress" (a
+  // draft or one waiting on moderation), not Done.
+  const listingStatusPill: JourneyStep['statusPill'] =
+    listingCount > 0 && publishedCount === 0 ? { label: 'In Progress', tone: 'pending' } : null
+
   const steps: JourneyStep[] = defs.map((d, i) => {
     const state: JourneyStepState = i < reached ? 'done' : i === reached ? 'current' : 'upcoming'
+    // The review step shows a status pill (not the action) whenever an
+    // application exists and isn't approved yet; the listing step shows one
+    // while a draft is unpublished.
+    const statusPill =
+      d.key === 'review' ? reviewStatusPill : d.key === 'listing' ? listingStatusPill : null
     return {
       key: d.key,
       label: d.label,
       hint: d.hint,
       state,
-      // Action travels in every state; the card styles it by state.
-      action: d.action ?? null,
+      // A status pill replaces the action button when present.
+      action: statusPill ? null : d.action ?? null,
+      statusPill,
     }
   })
 

@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { MessageCircle, AlertCircle } from 'lucide-react'
 import { ContactSellerModal } from './contact-seller-modal'
 import { useAuth } from '@/hooks/use-auth'
+import { PURCHASES_ENABLED } from '@/lib/config/purchases'
 
 interface ListingActionButtonsProps {
   listingId: string
@@ -75,7 +76,7 @@ export function ListingActionButtons({
             className="group relative mb-2 flex h-12 w-full items-center justify-center gap-2 overflow-hidden rounded-xl bg-lime text-sm font-bold uppercase tracking-wider text-text-inverse shadow-[0_1px_0_0_rgba(255,255,255,0.4)_inset,0_-1px_0_0_rgba(0,0,0,0.15)_inset,0_4px_12px_-2px_rgba(198,255,61,0.35)] transition-all hover:bg-lime-hover hover:shadow-[0_1px_0_0_rgba(255,255,255,0.4)_inset,0_-1px_0_0_rgba(0,0,0,0.15)_inset,0_6px_20px_-4px_rgba(198,255,61,0.5)] active:translate-y-px"
           >
             <span className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/60 to-transparent opacity-50" />
-            Buy Now — ${price.toFixed(2)}
+            {PURCHASES_ENABLED ? `Buy Now — $${price.toFixed(2)}` : 'Buying Opens Soon'}
           </button>
 
           {/* Contact Seller — secondary */}

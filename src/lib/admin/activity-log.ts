@@ -7,6 +7,7 @@ export type ActionCategory =
   | 'application'
   | 'user'
   | 'seller'
+  | 'moderation'
   | 'dispute'
   | 'team'
   | 'system'

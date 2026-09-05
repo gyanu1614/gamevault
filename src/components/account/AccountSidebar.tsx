@@ -529,7 +529,7 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
       </AnimatePresence>
 
       {/* Desktop Sidebar - Modern Floating Card */}
-      <aside className="hidden lg:flex lg:flex-col lg:fixed lg:left-4 lg:top-24 lg:bottom-4 lg:w-64 card-frost border border-border-subtle rounded-lg shadow-2xl overflow-hidden">
+      <aside className="hidden lg:flex lg:flex-col lg:fixed lg:left-4 lg:top-[calc(6rem+var(--beta-banner-offset,0px))] lg:bottom-4 lg:w-64 card-frost border border-border-subtle rounded-lg shadow-2xl overflow-hidden">
         {/* V21/P7.aj — Call as a function, not <NavItems/>, so it inlines
             into this render tree. As a child component it got a fresh
             identity every parent re-render, remounting the subtree and

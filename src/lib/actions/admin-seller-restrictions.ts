@@ -1,7 +1,8 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
-import { requireAdmin } from './admin-permissions'
+import { requireRole } from './admin-permissions'
+import { logAdminActivity } from '@/lib/admin/activity-log'
 import { revalidatePath } from 'next/cache'
 
 export interface RestrictSellerParams {
@@ -15,7 +16,7 @@ export interface RestrictSellerParams {
  */
 export async function restrictSeller(params: RestrictSellerParams): Promise<{ success: boolean; error?: string }> {
   try {
-    const admin = await requireAdmin()
+    const admin = await requireRole(['admin', 'super_admin'])
     const supabase = await createClient()
 
     const { userId, status, reason } = params
@@ -23,7 +24,7 @@ export async function restrictSeller(params: RestrictSellerParams): Promise<{ su
     // Get seller info for notification
     const { data: seller } = await supabase
       .from('profiles')
-      .select('username, email, seller_status')
+      .select('username, shop_name, email, seller_status')
       .eq('id', userId)
       .single() as any
 
@@ -80,6 +81,23 @@ export async function restrictSeller(params: RestrictSellerParams): Promise<{ su
       // Don't fail the whole operation if history fails
     }
 
+    // Admin activity log (fire-and-forget — logging never fails the action)
+    await logAdminActivity({
+      action:
+        status === 'active'
+          ? 'seller_unrestricted'
+          : status === 'banned'
+            ? 'seller_banned'
+            : 'seller_restricted',
+      actionCategory: 'seller',
+      resourceType: 'profile',
+      resourceId: userId,
+      resourceName: seller.shop_name || seller.username || undefined,
+      previousState: { seller_status: seller.seller_status },
+      newState: { seller_status: status },
+      notes: reason || undefined,
+    }).catch((err) => console.error('Activity log failed:', err))
+
     // Create notification for seller
     const notificationTitle = status === 'restricted'
       ? 'Your Seller Account Has Been Restricted'
@@ -99,6 +117,9 @@ export async function restrictSeller(params: RestrictSellerParams): Promise<{ su
       ? 'seller_banned'
       : 'seller_unrestricted'
 
+    // NOTE: the notifications table has NO metadata column — passing one made
+    // this insert silently fail, so sellers were never told. Message text
+    // carries all the context they need.
     const { error: notifError } = await (supabase
       .from('notifications')
       .insert as any)({
@@ -107,12 +128,7 @@ export async function restrictSeller(params: RestrictSellerParams): Promise<{ su
         title: notificationTitle,
         message: notificationMessage,
         link: '/account/restrictions',
-        metadata: {
-          restriction_type: status,
-          reason: reason,
-          restricted_by: admin.userId,
-          restricted_at: new Date().toISOString(),
-        }
+        is_read: false,
       })
 
     if (notifError) {
@@ -123,6 +139,8 @@ export async function restrictSeller(params: RestrictSellerParams): Promise<{ su
     // Revalidate relevant paths
     revalidatePath('/admin/sellers')
     revalidatePath(`/admin/sellers/${userId}`)
+    revalidatePath('/admin/active-sellers')
+    revalidatePath(`/admin/active-sellers/${userId}`)
     revalidatePath('/seller/dashboard')
     revalidatePath('/seller/listings')
 

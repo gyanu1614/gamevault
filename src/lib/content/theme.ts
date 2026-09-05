@@ -159,7 +159,7 @@ const THEMES: Record<string, GameContentTheme> = {
     accentDeep: '#120E15',
     onAccent: '#0B0810',
     ambient: ambientFor('176,123,201', 135, 40),
-    heroTitle: 'Adopt Me pet values, neons and trading guides',
+    heroTitle: 'Adopt Me Values & Trading Guides',
     // No "completed sales" claim: at launch Adopt Me cash values are derived
     // estimates (the marketplace has no Adopt Me sales history yet). The lead
     // stays honest — trade value + an estimated cash value — until real orders

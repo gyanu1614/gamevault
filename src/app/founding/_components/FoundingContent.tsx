@@ -19,7 +19,6 @@ import { motion } from 'framer-motion'
 import { PALETTE } from '@/app/account/become-seller/_redesign/theme'
 import GameMarquee, { type MarqueeGame } from './GameMarquee'
 import SellerJourneyTracker from './SellerJourneyTracker'
-import HqProfileChip from './HqProfileChip'
 import type { SellerJourney, HqUser } from '@/lib/founding/hq-data'
 
 const PANE_BG = [
@@ -50,28 +49,23 @@ export default function FoundingContent({
 
   return (
     <div
-      className="relative flex min-h-screen flex-col px-6 py-8 sm:px-10 lg:h-screen lg:min-h-0 lg:overflow-hidden lg:px-14 lg:py-10"
+      className="relative flex min-h-screen flex-col px-6 pb-8 pt-8 sm:px-10 lg:h-screen lg:min-h-0 lg:overflow-hidden lg:px-14 lg:pb-10 lg:pt-20"
       style={{ background: PANE_BG }}
     >
-      {/* Profile chip — top-right, the way back into the account (no navbar here) */}
-      {user && (
-        <div className="absolute right-4 top-4 z-20 sm:right-6 sm:top-5 lg:right-8">
-          <HqProfileChip user={user} />
-        </div>
-      )}
+      {/* Profile chip now lives in the shared FoundingNavbar (top-right). */}
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-        className="mx-auto flex w-full max-w-lg flex-1 flex-col lg:min-h-0"
+        className="mx-auto flex w-full max-w-2xl flex-1 flex-col lg:min-h-0"
       >
         {/* ═══ ZONE 1 (fixed): game marquee + heading ═══ */}
         <div className="shrink-0">
           {games.length > 0 && (
-            <div className="mb-7">
-              <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.06em]" style={{ color: PALETTE.ink2 }}>
-                Games
-              </p>
+            // Full-bleed marquee: negative margins cancel the pane's padding so
+            // the games strip spans the FULL width of the right side, with the
+            // edge-fades doing the visual trim. (No label — just the animation.)
+            <div className="mb-7 -mx-6 sm:-mx-10 lg:-mx-14">
               <GameMarquee games={games} />
             </div>
           )}

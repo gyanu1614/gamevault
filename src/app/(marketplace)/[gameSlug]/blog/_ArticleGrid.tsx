@@ -32,8 +32,8 @@ export function ArticleGrid({
   return (
     <section className="pt-12 sm:pt-16">
       <div className="mb-4 flex items-center justify-between gap-3">
-        <h2 className="text-[20px] font-semibold tracking-tight text-[#F1F3F1] sm:text-[24px]">
-          All {gameName} guides
+        <h2 className="text-subheading text-[#F1F3F1] sm:text-heading">
+          All {gameName} Guides
         </h2>
         <span className="font-mono text-[11px] uppercase tracking-[0.1em] text-[#5E685E]">
           {posts.length} {posts.length === 1 ? 'guide' : 'guides'}

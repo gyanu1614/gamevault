@@ -15,7 +15,6 @@
  */
 
 import Image from 'next/image'
-import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { Percent, Zap, BadgeCheck } from 'lucide-react'
 import { PALETTE } from '@/app/account/become-seller/_redesign/theme'
@@ -75,24 +74,9 @@ export default function FoundingRail({ name, joinNumber, cap, claimed }: Foundin
         transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
         className="relative z-10 flex h-full flex-col justify-between gap-8"
       >
-        {/* Top: logo + greeting */}
-        <div>
-          <Link
-            href="/"
-            aria-label="DropMarket home"
-            className="mb-7 inline-flex items-center gap-2.5 transition-opacity hover:opacity-80"
-          >
-            <Image
-              src="/brand/logo-mark-white.png"
-              alt="DropMarket"
-              width={36}
-              height={36}
-              className="h-9 w-9 object-contain"
-            />
-            <span className="text-lg font-bold tracking-tight text-white">
-              Drop<span className="text-white/65">Market</span>
-            </span>
-          </Link>
+        {/* Top: greeting (logo now lives in the shared FoundingNavbar). Padded
+            down so it clears the full-width navbar. */}
+        <div className="pt-14 lg:pt-16">
           <p className="mb-2.5 text-[11px] font-semibold uppercase tracking-[0.14em]" style={{ color: PALETTE.lime }}>
             Founding Seller
           </p>
