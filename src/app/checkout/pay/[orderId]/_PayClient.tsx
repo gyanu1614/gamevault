@@ -363,7 +363,7 @@ function LedgerLive({
             >
               <Copy className="h-3 w-3" /> Copy {dueDisplay} {short}
             </button>
-            <p className="mt-1.5 font-mono text-[11px]" style={{ color: L.faint }}>
+            <p className="mt-1.5 font-mono text-[11px]" style={{ color: L.faint }} suppressHydrationWarning>
               Rate still locked · {remainingClock}
             </p>
           </motion.div>
@@ -873,7 +873,7 @@ export default function PayClient({
                   {(view === 'waiting' || view === 'seen' || view === 'partial') && (
                     <span className="text-[12px]" style={{ color: L.muted }}>
                       Rate Locked · Expires In{' '}
-                      <b className="font-mono" style={{ color: L.forest }}>
+                      <b className="font-mono" style={{ color: L.forest }} suppressHydrationWarning>
                         {fmtCountdown(remainingMs)}
                       </b>
                     </span>
