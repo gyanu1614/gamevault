@@ -84,19 +84,18 @@ function fmtUnitPrice(n: number): string {
 type Coin = 'usdt' | 'btc'
 type Net = 'trc20' | 'polygon' | 'ethereum'
 
-// Bitcoin flips to enabled once the BTC node finishes syncing and passes
-// its live $1 test — until then it can't take payment.
+// BTC node synced 2026-09-05; live per the rail-certification tests.
 const COINS: Array<{ value: Coin; label: string; icon: string; soon?: boolean }> = [
   { value: 'usdt', label: 'Tether USDT', icon: '/crypto/usdt.svg' },
-  { value: 'btc', label: 'Bitcoin', icon: '/crypto/btc.svg', soon: true },
+  { value: 'btc', label: 'Bitcoin', icon: '/crypto/btc.svg' },
 ]
 
 // Polygon/Ethereum flip to enabled once their USDt pools + RPC are
 // configured in BTCPay (the payment page grows their tabs automatically).
 const NETWORKS: Array<{ value: Net; label: string; fee: string; soon?: boolean }> = [
   { value: 'trc20', label: 'TRON · TRC20', fee: '~$0.50' },
-  { value: 'polygon', label: 'Polygon', fee: '~$0.01', soon: true },
-  { value: 'ethereum', label: 'Ethereum', fee: '$2+', soon: true },
+  { value: 'polygon', label: 'Polygon', fee: '~$0.01' },
+  { value: 'ethereum', label: 'Ethereum', fee: '$2+' },
 ]
 
 // ─── Small pieces ───────────────────────────────────────────────────────────
