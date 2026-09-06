@@ -831,7 +831,7 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
             Get exactly what you ordered — or every cent back.
           </p>
           <p className="mt-0.5 text-[12px] leading-snug" style={{ color: T.ink2 }}>
-            The seller isn’t paid until you confirm delivery.
+            Every order is covered, end to end.
           </p>
         </div>
       </div>
