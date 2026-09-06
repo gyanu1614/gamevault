@@ -831,7 +831,7 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
             Get exactly what you ordered — or a 100% refund.
           </p>
           <p className="mt-0.5 text-[12px] leading-snug" style={{ color: T.ink2 }}>
-            Every order is covered, end to end.
+            Every order is covered from purchase to delivery.
           </p>
         </div>
       </div>
