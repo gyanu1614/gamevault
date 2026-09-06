@@ -36,8 +36,10 @@ import {
   LogOut,
   Package,
   Settings,
+  Landmark,
   ShieldCheck,
   TriangleAlert,
+  Undo2,
   Wallet,
   X,
 } from 'lucide-react'
@@ -278,6 +280,61 @@ function Callout({
       <p className="text-[13px] leading-[1.5]" style={{ color: c.text }}>
         {children}
       </p>
+    </div>
+  )
+}
+
+/** A — trust chip row: honest claims only, shown at the moment of
+ *  commitment (under Pay Now). */
+function TrustChips() {
+  const chip =
+    'flex items-center gap-1.5 rounded-md border bg-white px-2.5 py-[7px] text-[11.5px] font-semibold'
+  const chipStyle = { borderColor: T.line, color: T.ink } as const
+  const ic = { color: T.forest } as const
+  return (
+    <div className="mt-4 flex flex-wrap justify-center gap-2">
+      <span className={chip} style={chipStyle}>
+        <ShieldCheck className="h-3.5 w-3.5" style={ic} /> SafeDrop Guarantee
+      </span>
+      <span className={chip} style={chipStyle}>
+        <BadgeCheck className="h-3.5 w-3.5" style={ic} /> ID-Verified Sellers
+      </span>
+      <span className={chip} style={chipStyle}>
+        <Lock className="h-3.5 w-3.5" style={ic} /> 256-Bit SSL
+      </span>
+      <Link href="/refunds" className={`${chip} transition-colors hover:border-[#14432A66]`} style={chipStyle}>
+        <Undo2 className="h-3.5 w-3.5" style={ic} /> Full Refund Policy
+      </Link>
+    </div>
+  )
+}
+
+/** C — company footer strip: the quiet corporate signal. */
+function CompanyStrip() {
+  return (
+    <div
+      className="mt-8 flex flex-col items-center justify-between gap-3 rounded-lg border bg-white px-5 py-3.5 sm:flex-row"
+      style={{ borderColor: T.line }}
+    >
+      <div className="flex flex-col items-center gap-2 sm:flex-row sm:gap-5">
+        <span className="flex items-center gap-2 text-[11.5px] font-semibold" style={{ color: T.ink2 }}>
+          <Landmark className="h-4 w-4" style={{ color: T.forest }} />
+          <span>
+            <b style={{ color: T.ink }}>DropMarket Ltd</b> · Registered In The United Kingdom
+          </span>
+        </span>
+        <span className="flex items-center gap-2 text-[11.5px] font-semibold" style={{ color: T.ink2 }}>
+          <Lock className="h-4 w-4" style={{ color: T.forest }} />
+          <span>
+            Secured By <b style={{ color: T.ink }}>DropMarket Payments</b>
+          </span>
+        </span>
+      </div>
+      <nav className="flex items-center gap-4 text-[11.5px] font-medium" style={{ color: T.ink2 }}>
+        <Link href="/terms" className="transition-colors hover:text-[#14432A]">Terms</Link>
+        <Link href="/refunds" className="transition-colors hover:text-[#14432A]">Refunds</Link>
+        <Link href="/privacy" className="transition-colors hover:text-[#14432A]">Privacy</Link>
+      </nav>
     </div>
   )
 }
@@ -810,11 +867,19 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
               </Link>
               .
             </p>
+            <div className="hidden lg:block">
+              <TrustChips />
+            </div>
           </div>
 
           {/* Desktop: summary column */}
           <div className="hidden lg:block">{summaryCard()}</div>
         </div>
+
+        <div className="lg:hidden">
+          <TrustChips />
+        </div>
+        <CompanyStrip />
       </div>
 
       {/* Mobile sticky pay bar */}
