@@ -306,15 +306,12 @@ function TrustChips() {
   const chipStyle = { borderColor: T.line, color: T.ink } as const
   const ic = { color: T.forest } as const
   return (
-    <div className="mt-4 flex flex-wrap justify-center gap-2">
+    <div className="mt-3 flex flex-wrap gap-2">
       <span className={chip} style={chipStyle}>
         <ShieldCheck className="h-3.5 w-3.5" style={ic} /> SafeDrop Guarantee
       </span>
       <span className={chip} style={chipStyle}>
         <BadgeCheck className="h-3.5 w-3.5" style={ic} /> ID-Verified Sellers
-      </span>
-      <span className={chip} style={chipStyle}>
-        <Lock className="h-3.5 w-3.5" style={ic} /> 256-Bit SSL
       </span>
       <Link href="/refunds" className={`${chip} transition-colors hover:border-[#14432A66]`} style={chipStyle}>
         <Undo2 className="h-3.5 w-3.5" style={ic} /> Full Refund Policy
@@ -835,6 +832,7 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
           </p>
         </div>
       </div>
+      <TrustChips />
     </div>
   )
 
@@ -919,18 +917,12 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
               </Link>
               .
             </p>
-            <div className="hidden lg:block">
-              <TrustChips />
-            </div>
           </div>
 
           {/* Desktop: summary column */}
           <div className="hidden lg:block">{summaryCard()}</div>
         </div>
 
-        <div className="lg:hidden">
-          <TrustChips />
-        </div>
         <CompanyStrip />
       </div>
 
