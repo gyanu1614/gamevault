@@ -917,17 +917,24 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
             >
               <ArrowLeft className="h-4 w-4" />
             </button>
-            <Lock className="h-[18px] w-[18px]" style={{ color: T.forest }} />
-            <span className="text-[20px] font-bold sm:text-[24px]" style={{ color: T.ink }}>
+            <Lock className="h-[18px] w-[18px] shrink-0" style={{ color: T.forest }} />
+            {/* Phone: smaller + nowrap so the title never breaks into two
+                lines beside the SSL chip. Desktop (sm:) unchanged. */}
+            <span
+              className="whitespace-nowrap text-[18px] font-bold sm:text-[24px]"
+              style={{ color: T.ink }}
+            >
               Secure Checkout
             </span>
           </span>
           <span
-            className="flex items-center gap-1.5 rounded-md border bg-white px-2.5 py-1.5 text-[12px] font-semibold tracking-[0.01em] sm:text-[12.5px]"
+            className="flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md border bg-white px-2.5 py-1.5 text-[12px] font-semibold tracking-[0.01em] sm:text-[12.5px]"
             style={{ borderColor: T.line, color: T.ink }}
           >
             <ShieldCheck className="h-4 w-4" style={{ color: T.forest }} />
-            256-Bit SSL Secure
+            {/* Phone: short label; desktop keeps the full one. */}
+            <span className="sm:hidden">SSL Secure</span>
+            <span className="hidden sm:inline">256-Bit SSL Secure</span>
           </span>
         </div>
 
