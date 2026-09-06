@@ -35,10 +35,10 @@ export function btcpayWebhookSecret(): string | undefined {
 
 /** Invoice payment window (minutes). Rate locks at creation; after this the
  *  invoice expires, BTCPay fires InvoiceExpired, and the webhook auto-cancels
- *  the order (returning any wallet credit). 15 min matches the industry
- *  convention (SpectroCoin et al); overridable via env for slow rails. */
+ *  the order (returning any wallet credit). 30 min gives BTC-via-exchange
+ *  withdrawals (batched, often 10-30 min) room to land; overridable via env. */
 export const BTCPAY_INVOICE_EXPIRY_MINUTES = Number(
-  process.env.BTCPAY_INVOICE_EXPIRY_MINUTES ?? 15
+  process.env.BTCPAY_INVOICE_EXPIRY_MINUTES ?? 30
 )
 
 /** How long BTCPay keeps watching an EXPIRED invoice for a late payment
