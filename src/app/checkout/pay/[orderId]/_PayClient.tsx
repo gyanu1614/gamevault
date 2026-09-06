@@ -30,10 +30,10 @@ import Link from 'next/link'
 import { Drawer } from 'vaul'
 import { AnimatePresence, motion } from 'framer-motion'
 import { toast } from 'sonner'
-import { Check, Copy, Info, Loader2, RefreshCw, Zap } from 'lucide-react'
+import { ArrowLeft, Check, Copy, Loader2, Lock, RefreshCw, ShieldCheck, Zap } from 'lucide-react'
 import { getPaymentPageStatus } from '@/lib/actions/payment-page'
 import { retryOrderPayment } from '@/lib/actions/checkout'
-import { AccountMenu } from '../../_components/AccountMenu'
+import { CheckoutNavbar } from '../../_components/CheckoutNavbar'
 
 export interface PayMethod {
   id: string
@@ -57,12 +57,12 @@ const POLL_MS = 4000
 const L = {
   ivory: '#FAFAF7',
   white: '#FFFFFF',
-  line: '#E7E5DF',
-  line2: '#EFEDE6',
+  line: '#E4E5DE',
+  line2: '#F3F3ED',
   dash: '#DDDBD1',
   conn: '#D8D6CC',
   ink: '#1A1D19',
-  muted: '#6B7066',
+  muted: '#5B6157',
   faint: '#8A8E84',
   ghost: '#A9ACA1',
   forest: '#14432A',
@@ -129,7 +129,7 @@ function CopyChip({ value, label }: { value: string; label: string }) {
           setTimeout(() => setCopied(false), 1500)
         }
       }}
-      className="inline-flex h-[30px] shrink-0 items-center gap-1.5 rounded-[5px] border bg-white px-2.5 text-[11.5px] font-semibold transition-colors hover:border-[#14432A66]"
+      className="inline-flex h-[30px] shrink-0 items-center gap-1.5 rounded-md border bg-white px-2.5 text-[11.5px] font-semibold transition-colors hover:border-[#14432A66]"
       style={{ borderColor: L.line, color: L.ink }}
     >
       {copied ? (
@@ -184,7 +184,7 @@ function StyledQr({ data, logo, scanning }: { data: string; logo: string | null;
 
   return (
     <div
-      className="relative shrink-0 overflow-hidden rounded-[6px] border bg-white p-2"
+      className="relative shrink-0 overflow-hidden rounded-md border bg-white p-2"
       style={{ borderColor: L.line }}
       aria-label="Payment QR Code"
     >
@@ -223,7 +223,7 @@ function StepIndicator({ view }: { view: ViewState }) {
             </span>
           ) : i === current ? (
             <span
-              className="rounded-[5px] px-3 py-[3px] font-semibold text-white"
+              className="rounded-md px-3 py-[3px] font-semibold text-white"
               style={{ background: L.forest }}
             >
               {label}
@@ -358,7 +358,7 @@ function LedgerLive({
             <button
               type="button"
               onClick={onCopyRemaining}
-              className="mt-2 inline-flex h-[28px] items-center gap-1.5 rounded-[5px] border bg-white px-2.5 text-[11.5px] font-semibold"
+              className="mt-2 inline-flex h-[28px] items-center gap-1.5 rounded-md border bg-white px-2.5 text-[11.5px] font-semibold"
               style={{ borderColor: L.warnLn, color: L.warnTx }}
             >
               <Copy className="h-3 w-3" /> Copy {dueDisplay} {short}
@@ -661,34 +661,39 @@ export default function PayClient({
 
   return (
     <div className="min-h-screen" style={{ background: L.ivory }}>
-      {/* ── Navbar ── */}
-      <div
-        className="flex h-[54px] items-center justify-between px-4 sm:px-8"
-        style={{ background: L.ink }}
-      >
-        <Link href="/" className="inline-flex items-center gap-2 transition-opacity hover:opacity-85">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/brand/logo-mark-lime.png" alt="" className="h-[22px] w-[22px]" />
-          <span className="text-[15px] font-semibold" style={{ color: L.ivory }}>
-            DropMarket
+      <CheckoutNavbar user={user} buyerProfile={buyerProfile} />
+
+      <div className="mx-auto w-full max-w-[1120px] px-4 pb-10 pt-8 sm:px-10">
+        <div className="flex items-center justify-between gap-3">
+          <span className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => router.back()}
+              aria-label="Go Back"
+              className="grid h-9 w-9 shrink-0 place-items-center rounded-md border bg-white/60 backdrop-blur-sm transition-colors hover:bg-white"
+              style={{ borderColor: L.line, color: L.ink }}
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </button>
+            <Lock className="h-[18px] w-[18px]" style={{ color: L.forest }} />
+            <span className="text-[20px] font-bold sm:text-[24px]" style={{ color: L.ink }}>
+              Complete Your Payment
+            </span>
           </span>
-        </Link>
-        <div className="flex items-center gap-2 sm:gap-4">
-          <Link
-            href="/support"
-            className="flex items-center gap-1.5 rounded-md px-2 py-1.5 text-[13px] font-semibold text-white/70 transition-colors hover:bg-white/10 hover:text-white"
+          <span
+            className="hidden items-center gap-1.5 rounded-md border bg-white px-2.5 py-1.5 text-[12px] font-semibold tracking-[0.01em] sm:flex sm:text-[12.5px]"
+            style={{ borderColor: L.line, color: L.ink }}
           >
-            <Info className="h-4 w-4" />
-            <span className="hidden sm:inline">Need Help?</span>
-          </Link>
-          <AccountMenu user={user} buyerProfile={buyerProfile} />
+            <ShieldCheck className="h-4 w-4" style={{ color: L.forest }} />
+            256-Bit SSL Secure
+          </span>
         </div>
-      </div>
 
-      <div className="mx-auto w-full max-w-[1180px] px-4 pb-10 pt-5 sm:px-8">
-        <StepIndicator view={view} />
+        <div className="mt-6">
+          <StepIndicator view={view} />
+        </div>
 
-        <div className="mt-5 flex flex-col gap-3 lg:grid lg:justify-center lg:gap-7 lg:[grid-template-columns:300px_520px_270px]">
+        <div className="mt-5 flex flex-col gap-3 lg:grid lg:justify-center lg:gap-7 lg:[grid-template-columns:280px_minmax(0,1fr)_260px]">
           {/* ── Mobile: live status card first ── */}
           <div
             className="rounded-lg border bg-white p-4 lg:hidden"
@@ -728,7 +733,7 @@ export default function PayClient({
                   initial={{ opacity: 0, scale: 1.4, rotate: 8 }}
                   animate={{ opacity: 1, scale: 1, rotate: 8 }}
                   transition={{ duration: 0.4, ease: 'easeOut' }}
-                  className="pointer-events-none absolute right-6 top-5 z-10 rounded-[6px] px-3 py-1 text-[18px] font-extrabold tracking-[0.12em]"
+                  className="pointer-events-none absolute right-6 top-5 z-10 rounded-md px-3 py-1 text-[18px] font-extrabold tracking-[0.12em]"
                   style={{
                     border: `2.5px solid ${L.forest}`,
                     color: L.forest,
@@ -749,7 +754,7 @@ export default function PayClient({
                   width={52}
                   height={52}
                   unoptimized
-                  className="h-[52px] w-[52px] shrink-0 rounded-[6px] object-cover"
+                  className="h-[52px] w-[52px] shrink-0 rounded-md object-cover"
                   style={{ background: L.line2 }}
                 />
               )}
@@ -789,7 +794,7 @@ export default function PayClient({
                   type="button"
                   onClick={() => void freshInvoice()}
                   disabled={retrying}
-                  className="inline-flex h-[44px] items-center gap-2 rounded-[6px] px-5 text-[13.5px] font-semibold text-white transition-[filter] hover:brightness-110 disabled:opacity-70"
+                  className="inline-flex h-[44px] items-center gap-2 rounded-md px-5 text-[13.5px] font-semibold text-white transition-[filter] hover:brightness-110 disabled:opacity-70"
                   style={{ background: L.forest }}
                 >
                   {retrying ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
@@ -826,7 +831,7 @@ export default function PayClient({
                       </p>
                       <div className="mt-1 flex items-center gap-2">
                         <code
-                          className="min-w-0 flex-1 break-all rounded-[5px] border px-2.5 py-2 font-mono text-[12px] leading-snug"
+                          className="min-w-0 flex-1 break-all rounded-md border px-2.5 py-2 font-mono text-[12px] leading-snug"
                           style={{ borderColor: L.line, background: L.ivory, color: L.ink }}
                         >
                           {selected.address}
@@ -838,7 +843,7 @@ export default function PayClient({
                       <button
                         type="button"
                         onClick={() => router.replace(`/account/orders/${orderId}?paid=1`)}
-                        className="h-[42px] w-full rounded-[6px] text-[13.5px] font-semibold text-white transition-[filter] hover:brightness-110"
+                        className="h-[42px] w-full rounded-md text-[13.5px] font-semibold text-white transition-[filter] hover:brightness-110"
                         style={{ background: L.forest }}
                       >
                         View Your Item
@@ -847,7 +852,7 @@ export default function PayClient({
                       <button
                         type="button"
                         onClick={() => void openInWallet()}
-                        className="h-[42px] w-full rounded-[6px] text-[13.5px] font-semibold text-white transition-[filter] hover:brightness-110"
+                        className="h-[42px] w-full rounded-md text-[13.5px] font-semibold text-white transition-[filter] hover:brightness-110"
                         style={{ background: L.forest }}
                       >
                         Open In Wallet App
@@ -859,7 +864,7 @@ export default function PayClient({
                 {/* Meta row */}
                 <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
                   <span
-                    className="inline-flex items-center gap-1.5 rounded-[5px] border bg-white px-2.5 py-1 text-[12px] font-semibold"
+                    className="inline-flex items-center gap-1.5 rounded-md border bg-white px-2.5 py-1 text-[12px] font-semibold"
                     style={{ borderColor: L.line, color: L.ink }}
                   >
                     <span
@@ -883,7 +888,7 @@ export default function PayClient({
                 {/* Warning callout */}
                 {view !== 'paid' && (
                   <div
-                    className="mt-3.5 rounded-[6px] border px-3.5 py-2.5 text-[12px] leading-[1.5]"
+                    className="mt-3.5 rounded-md border px-3.5 py-2.5 text-[12px] leading-[1.5]"
                     style={{ background: L.warnBg, borderColor: L.warnLn, color: L.warnTx }}
                   >
                     <b>Send Only {selected.short} On {selected.network ?? 'TRON (TRC20)'}.</b> Funds
@@ -911,7 +916,7 @@ export default function PayClient({
             <div className="rounded-lg border bg-white p-[18px]" style={{ borderColor: L.line }}>
               <div className="flex items-center gap-2.5">
                 <span
-                  className="grid h-5 w-5 place-items-center rounded-[5px]"
+                  className="grid h-5 w-5 place-items-center rounded-md"
                   style={{ background: L.limePale }}
                 >
                   <Check className="h-3 w-3" style={{ color: L.forest }} strokeWidth={3} />
