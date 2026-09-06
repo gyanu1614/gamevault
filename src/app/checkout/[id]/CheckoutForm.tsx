@@ -828,7 +828,7 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
             SafeDrop Protection
           </p>
           <p className="mt-0.5 text-[12.5px] font-medium leading-snug" style={{ color: T.ink }}>
-            Get exactly what you ordered — or a full refund.
+            Get exactly what you ordered — or a 100% refund.
           </p>
           <p className="mt-0.5 text-[12px] leading-snug" style={{ color: T.ink2 }}>
             Every order is covered, end to end.
