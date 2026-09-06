@@ -443,7 +443,7 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
       if (result.checkoutUrl) {
         // Carry the chosen network so the payment page preselects its tab.
         const sep = result.checkoutUrl.includes('?') ? '&' : '?'
-        window.location.href = `${result.checkoutUrl}${sep}net=${network}`
+        window.location.href = `${result.checkoutUrl}${sep}coin=${coin}&net=${network}`
         return
       }
       setPayError('No checkout URL returned')
@@ -518,23 +518,40 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
             Network
             <InfoDot text="Each network charges a small blockchain fee, paid by your wallet on top of the total shown here." />
           </p>
-          <LightSelect
-            ariaLabel="Network"
-            value={network}
-            onChange={(v) => setNetwork(v as Net)}
-            options={NETWORKS.map((n) => ({
-              value: n.value,
-              label: n.label,
-              hint: n.soon ? 'Soon' : `Fee ${n.fee}`,
-              disabled: n.soon,
-            }))}
-          />
+          {coin === 'btc' ? (
+            // Bitcoin has exactly one network — show it fixed, no selector.
+            <div
+              className="flex h-[42px] w-full items-center justify-between gap-2 rounded-md border px-3 text-[14px] font-medium"
+              style={{ borderColor: T.line, background: T.ivory2, color: T.ink }}
+            >
+              <span className="flex items-center gap-2">
+                <Image src="/crypto/btc.svg" alt="" width={18} height={18} unoptimized />
+                Bitcoin
+              </span>
+              <span className="text-[11.5px] font-medium" style={{ color: T.ink2 }}>
+                Fee ~$1+
+              </span>
+            </div>
+          ) : (
+            <LightSelect
+              ariaLabel="Network"
+              value={network}
+              onChange={(v) => setNetwork(v as Net)}
+              options={NETWORKS.map((n) => ({
+                value: n.value,
+                label: n.label,
+                hint: n.soon ? 'Soon' : `Fee ${n.fee}`,
+                disabled: n.soon,
+              }))}
+            />
+          )}
         </div>
       </div>
       <div className="mt-3">
         <Callout variant="warning">
-          Only send the selected coin on the selected network — funds sent on other networks
-          cannot be recovered.
+          {coin === 'btc'
+            ? 'Only send Bitcoin on the Bitcoin network — funds sent on other networks cannot be recovered.'
+            : 'Only send the selected coin on the selected network — funds sent on other networks cannot be recovered.'}
         </Callout>
       </div>
     </div>
