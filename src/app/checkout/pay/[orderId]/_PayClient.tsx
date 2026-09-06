@@ -30,9 +30,10 @@ import Link from 'next/link'
 import { Drawer } from 'vaul'
 import { AnimatePresence, motion } from 'framer-motion'
 import { toast } from 'sonner'
-import { ArrowLeft, Check, Copy, Loader2, Lock, RefreshCw, ShieldCheck, Zap } from 'lucide-react'
+import { Check, Copy, Loader2, Lock, RefreshCw, ShieldCheck, Zap } from 'lucide-react'
 import { getPaymentPageStatus } from '@/lib/actions/payment-page'
 import { retryOrderPayment } from '@/lib/actions/checkout'
+import { cancelOrder } from '@/lib/actions/orders'
 import { CheckoutNavbar } from '../../_components/CheckoutNavbar'
 
 export interface PayMethod {
@@ -109,12 +110,40 @@ function shortTx(tx?: string | null): string {
   return `${tx.slice(0, 4)}…${tx.slice(-4)}`
 }
 
+/** execCommand fallback for insecure contexts (http over LAN IP, older
+ *  webviews) where navigator.clipboard is unavailable. */
+function legacyCopy(value: string): boolean {
+  try {
+    const ta = document.createElement('textarea')
+    ta.value = value
+    ta.setAttribute('readonly', '')
+    ta.style.position = 'fixed'
+    ta.style.opacity = '0'
+    document.body.appendChild(ta)
+    ta.select()
+    ta.setSelectionRange(0, value.length)
+    const ok = document.execCommand('copy')
+    document.body.removeChild(ta)
+    return ok
+  } catch {
+    return false
+  }
+}
+
 async function copyText(value: string, label: string) {
   try {
-    await navigator.clipboard.writeText(value)
+    if (typeof navigator !== 'undefined' && navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(value)
+    } else if (!legacyCopy(value)) {
+      throw new Error('copy unavailable')
+    }
     toast.success(`${label} Copied`)
     return true
   } catch {
+    if (legacyCopy(value)) {
+      toast.success(`${label} Copied`)
+      return true
+    }
     toast.error('Copy Failed — Select The Text Manually')
     return false
   }
@@ -438,6 +467,7 @@ function HelpDrawer({ trigger }: { trigger: React.ReactNode }) {
 export default function PayClient({
   orderId,
   orderNumber,
+  listingId,
   listingTitle,
   itemImage,
   gameName,
@@ -454,6 +484,7 @@ export default function PayClient({
 }: {
   orderId: string
   orderNumber: string | null
+  listingId: string | null
   listingTitle: string
   itemImage: string | null
   gameName: string | null
@@ -487,6 +518,8 @@ export default function PayClient({
     expiresAt ? new Date(expiresAt).getTime() - Date.now() : 0
   )
   const [retrying, setRetrying] = useState(false)
+  const [confirmingCancel, setConfirmingCancel] = useState(false)
+  const [cancelling, setCancelling] = useState(false)
   const stamps = useRef<Record<string, string>>({})
   const confettiFired = useRef(false)
 
@@ -592,6 +625,28 @@ export default function PayClient({
     setView('waiting')
   }, [orderId, router])
 
+  // Cancel = "no order ever happened": the order flips to cancelled (hidden
+  // from the orders list), wallet credit returns, and the buyer lands back on
+  // the checkout page — the exact pre-order state.
+  const handleCancelOrder = useCallback(async () => {
+    setCancelling(true)
+    try {
+      const res = await cancelOrder(orderId)
+      if (res.success) {
+        toast.success('Order Cancelled — nothing was charged.')
+        router.replace(listingId ? `/checkout/${listingId}` : '/')
+        return
+      }
+      toast.error(res.error || 'Could not cancel — please try again.')
+      setCancelling(false)
+      setConfirmingCancel(false)
+    } catch {
+      toast.error('Could not cancel — please try again.')
+      setCancelling(false)
+      setConfirmingCancel(false)
+    }
+  }, [orderId, listingId, router])
+
   const openInWallet = useCallback(async () => {
     const link = selected?.paymentLink
     const coarse =
@@ -678,19 +733,15 @@ export default function PayClient({
       <CheckoutNavbar user={user} buyerProfile={buyerProfile} />
 
       <div className="mx-auto w-full max-w-[1120px] px-4 pb-10 pt-8 sm:px-10">
+        {/* No back button on the payment page — leaving is a decision, and
+            the Cancel Order control below the receipt is the honest exit. */}
         <div className="flex items-center justify-between gap-3">
           <span className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => router.back()}
-              aria-label="Go Back"
-              className="grid h-9 w-9 shrink-0 place-items-center rounded-md border bg-white/60 backdrop-blur-sm transition-colors hover:bg-white"
-              style={{ borderColor: L.line, color: L.ink }}
+            <Lock className="h-[18px] w-[18px] shrink-0" style={{ color: L.forest }} />
+            <span
+              className="whitespace-nowrap text-[18px] font-bold sm:text-[24px]"
+              style={{ color: L.ink }}
             >
-              <ArrowLeft className="h-4 w-4" />
-            </button>
-            <Lock className="h-[18px] w-[18px]" style={{ color: L.forest }} />
-            <span className="text-[20px] font-bold sm:text-[24px]" style={{ color: L.ink }}>
               Complete Your Payment
             </span>
           </span>
@@ -708,9 +759,10 @@ export default function PayClient({
         </div>
 
         <div className="mt-5 flex flex-col gap-3 lg:grid lg:justify-center lg:gap-7 lg:[grid-template-columns:280px_minmax(0,1fr)_260px]">
-          {/* ── Mobile: live status card first ── */}
+          {/* ── Mobile: receipt first, ledger card second (order-*); lg grid
+              resets to source order via lg:order-none. ── */}
           <div
-            className="rounded-lg border bg-white p-4 lg:hidden"
+            className="order-2 rounded-lg border bg-white p-4 lg:hidden"
             style={{
               borderColor:
                 view === 'seen' ? L.blueLn : view === 'partial' ? L.warnLn : view === 'paid' ? L.lime : L.line,
@@ -739,7 +791,7 @@ export default function PayClient({
           </div>
 
           {/* ── Column 2: receipt card ── */}
-          <div className="relative rounded-lg border bg-white px-5 py-5 sm:px-8 sm:py-7" style={{ borderColor: view === 'paid' ? L.lime : L.line }}>
+          <div className="relative order-1 rounded-lg border bg-white px-5 py-5 sm:px-8 sm:py-7 lg:order-none" style={{ borderColor: view === 'paid' ? L.lime : L.line }}>
             {/* PAID stamp */}
             <AnimatePresence>
               {view === 'paid' && (
@@ -832,7 +884,9 @@ export default function PayClient({
                     logo={selected.icon}
                     scanning={scanning}
                   />
-                  <div className="flex w-full min-w-0 flex-col justify-between gap-5 sm:py-1">
+                  {/* Phone: amount + pay button ABOVE the QR (order-first);
+                      sm+ keeps QR left / stack right. */}
+                  <div className="order-first flex w-full min-w-0 flex-col justify-between gap-5 sm:order-none sm:py-1">
                     <div>
                       <p
                         className="text-[11px] font-bold uppercase tracking-[0.08em]"
@@ -924,6 +978,49 @@ export default function PayClient({
                 )}
               </>
             ) : null}
+
+            {/* Cancel — only while nothing has been sent; once a payment is
+                seen/confirming, cancelling could strand the buyer's coins. */}
+            {(view === 'waiting' || view === 'unreachable') && (
+              <div
+                className="mt-5 flex flex-wrap items-center justify-center gap-3 border-t border-dashed pt-4 text-[12.5px]"
+                style={{ borderColor: L.dash }}
+              >
+                {!confirmingCancel ? (
+                  <button
+                    type="button"
+                    onClick={() => setConfirmingCancel(true)}
+                    className="font-semibold hover:underline"
+                    style={{ color: '#B42318' }}
+                  >
+                    Cancel Order
+                  </button>
+                ) : (
+                  <>
+                    <span style={{ color: L.muted }}>Cancel this order? Nothing has been charged.</span>
+                    <button
+                      type="button"
+                      onClick={() => void handleCancelOrder()}
+                      disabled={cancelling}
+                      className="inline-flex h-[30px] items-center gap-1.5 rounded-md border bg-white px-3 font-semibold disabled:opacity-60"
+                      style={{ borderColor: '#EFC7C2', color: '#B42318' }}
+                    >
+                      {cancelling && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                      Yes, Cancel It
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setConfirmingCancel(false)}
+                      disabled={cancelling}
+                      className="inline-flex h-[30px] items-center rounded-md border bg-white px-3 font-semibold disabled:opacity-60"
+                      style={{ borderColor: L.line, color: L.ink }}
+                    >
+                      Keep Waiting
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
           </div>
 
           {/* ── Column 3: assurance (desktop) ── */}
@@ -963,7 +1060,7 @@ export default function PayClient({
           </div>
 
           {/* ── Mobile footer line ── */}
-          <p className="pb-2 text-center text-[11.5px] lg:hidden" style={{ color: L.muted }}>
+          <p className="order-3 pb-2 text-center text-[11.5px] lg:hidden" style={{ color: L.muted }}>
             <Check className="mr-1 inline h-3 w-3" style={{ color: L.forest }} strokeWidth={3} />
             SafeDrop Protected ·{' '}
             <HelpDrawer

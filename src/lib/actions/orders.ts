@@ -806,6 +806,15 @@ export async function cancelOrder(orderId: string): Promise<{
       } catch (walletError: any) {
         console.error('[Cancel] CRITICAL: unpaid wallet-hold refund failed:', walletError?.message)
       }
+
+      // The "Order Incomplete" navbar nudge for this order is moot now —
+      // webhook cancels clear it in notify.ts, buyer-initiated cancels here.
+      await supabase
+        .from('notifications')
+        .delete()
+        .eq('user_id', user.id)
+        .eq('type', 'order_incomplete')
+        .like('link', `%${orderId}%`)
     }
 
     // Credit the buyer's wallet with the full amount as store credit.

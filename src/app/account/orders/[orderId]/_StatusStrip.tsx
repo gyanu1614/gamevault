@@ -112,11 +112,14 @@ const STRIPS: Record<
       caption: 'Your refund landed in your DropMarket wallet as store credit — spend it instantly or withdraw it anytime.',
       tone: 'lime',
     },
+    // 'cancelled' only ever means a NEVER-PAID order (checkout timed out or
+    // was cancelled before paying) — claiming "money in your wallet" here was
+    // false for the usual case where nothing was charged at all.
     cancelled: {
-      Icon: Wallet,
-      title: 'Money In Your Wallet',
-      caption: 'This order was cancelled and refunded to your DropMarket wallet as store credit — spend it instantly or withdraw it anytime.',
-      tone: 'lime',
+      Icon: XCircle,
+      title: 'No Payment Received',
+      caption: 'This order was cancelled because no payment arrived before the window closed. Nothing was charged — any wallet credit you applied went straight back to your wallet.',
+      tone: 'orange',
     },
   },
   seller: {
@@ -427,8 +430,10 @@ export function StatusStrip({
         </button>
       )}
       {/* Buyer's money returned to the wallet → give them a direct route
-          there so a cancel/refund never reads as "I lost my money". */}
-      {role === 'buyer' && (status === 'refunded' || status === 'cancelled') && (
+          there so a refund never reads as "I lost my money". Not for
+          'cancelled' — nothing was charged on a never-paid order, so a
+          wallet CTA would imply money that isn't there. */}
+      {role === 'buyer' && status === 'refunded' && (
         <Link href="/account/wallet" className={cn('ml-1', sCtaCls)}>
           <Wallet className={sCtaGlyph} />
           Go To Wallet

@@ -396,9 +396,11 @@ export const ordersApi = {
       // Workstream E — hide unpaid 'pending' orders from the seller's Sold
       // Orders. An order the seller can't act on (payment not confirmed) must
       // not appear in their list; it becomes visible the moment the webhook
-      // flips it to 'paid'. Buyers keep their pending (awaiting-payment) orders
-      // via the separate buyerOrdersApi below.
+      // flips it to 'paid'. 'cancelled' is likewise hidden: it only ever means
+      // an order that was NEVER paid (timed out / abandoned — paid orders that
+      // come back are 'refunded'), so the seller was never involved.
       .neq('status', 'pending')
+      .neq('status', 'cancelled')
       .order('created_at', { ascending: false })
 
     if (filters?.status) {
@@ -541,6 +543,10 @@ export const buyerOrdersApi = {
         )
       `)
       .eq('buyer_id', user.id)  // Filter by buyer_id instead of seller_id
+      // 'cancelled' only ever means never-paid (abandoned checkout timed out or
+      // the buyer cancelled before paying) — dead weight in the list, so it's
+      // hidden. Genuinely refunded orders carry status 'refunded' and stay.
+      .neq('status', 'cancelled')
       .order('created_at', { ascending: false })
 
     if (filters?.status) {

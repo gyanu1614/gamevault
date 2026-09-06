@@ -133,6 +133,15 @@ export async function createCheckout(input: CreateCheckoutInput): Promise<Create
         const { transition } = await import('@/lib/escrow/transition')
         await transition(existingPending.id, 'CANCELLED', `superseded-by-recheckout:${existingPending.id}`)
 
+        // The superseded order's "Order Incomplete" nudge points at a dead
+        // order — clear it (the new charge below mints its own).
+        await supabase
+          .from('notifications')
+          .delete()
+          .eq('user_id', user.id)
+          .eq('type', 'order_incomplete')
+          .like('link', `%${existingPending.id}%`)
+
         // How much wallet credit did that order hold? (checkout_wallet:<id>
         // credited escrow_held.) Return exactly that to the buyer's wallet,
         // idempotent on wallet_refund:<id> so a retry can't double-credit.

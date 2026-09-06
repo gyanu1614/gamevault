@@ -182,6 +182,7 @@ export default async function PayPage({ params, searchParams }: PayPageProps) {
       <PayClient
         orderId={orderId}
         orderNumber={order.order_number ?? null}
+        listingId={order.listing_id ?? null}
         listingTitle={order.listing?.title ?? 'Your Order'}
         itemImage={order.listing?.images?.[0] ?? null}
         gameName={order.listing?.game?.name ?? null}
