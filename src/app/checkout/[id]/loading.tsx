@@ -1,104 +1,137 @@
 /**
- * V80 — Checkout skeleton, shape-faithful to the handoff card shell:
- * centered 1040px radial shell, header (emblem + SSL pill), 1fr/350px
- * grid of method rows + order panel, trust strip, marquee strip. Same
- * proportions as the real page so the transition is shape-stable.
+ * Checkout skeleton — Ivory Ledger era. Shape-faithful to the live page:
+ * dark navbar strip, ivory ground, Secure Checkout header row, then the
+ * 1fr/400px grid — crypto method card + disabled rows on the left, the
+ * white order-summary card on the right. Pulses in ivory tones so the
+ * transition into the real page is colour- and shape-stable.
  */
 
+const IVORY = '#FAFAF7'
+const NAV = '#141714'
+const LINE = '#E4E5DE'
+
 function Block({ className = '' }: { className?: string }) {
-  return <div className={`animate-pulse rounded-md bg-white/[0.05] ${className}`} />
+  return <div className={`animate-pulse rounded-md bg-[#ECEBE3] ${className}`} />
+}
+
+function Card({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+  return (
+    <div className={`rounded-lg border bg-white ${className}`} style={{ borderColor: LINE }}>
+      {children}
+    </div>
+  )
 }
 
 export default function CheckoutLoading() {
   return (
-    <main className="mx-auto w-full max-w-7xl px-4 pb-12 pt-5 sm:px-6 sm:pt-7 lg:px-8">
-      <div>
-        <div className="mb-8 flex items-center justify-between sm:mb-10">
-          <div className="flex items-center gap-2.5">
-            <Block className="h-8 w-8 rounded-lg" />
-            <Block className="h-5 w-32" />
-          </div>
-          <Block className="h-8 w-40 rounded-md" />
+    <div className="min-h-screen" style={{ background: IVORY }}>
+      {/* Navbar strip */}
+      <div className="flex h-16 items-center justify-between px-4 sm:px-10" style={{ background: NAV }}>
+        <div className="flex items-center gap-2">
+          <div className="h-6 w-6 animate-pulse rounded-md bg-white/10" />
+          <div className="h-4 w-24 animate-pulse rounded bg-white/10" />
         </div>
-        <Block className="mb-6 hidden h-7 w-28 sm:block" />
+        <div className="h-7 w-7 animate-pulse rounded-full bg-white/10" />
+      </div>
 
-        <div className="grid gap-6 sm:gap-8 lg:grid-cols-[minmax(0,1fr)_400px] lg:items-start xl:grid-cols-[minmax(0,1fr)_420px] xl:gap-10">
-          {/* Left — Pay with rows */}
-          <div className="order-2 lg:order-1">
-            <Block className="mb-4 h-6 w-28 sm:mb-[18px]" />
-            <div className="flex flex-col gap-3.5">
-              {Array.from({ length: 6 }).map((_, i) => (
-                <div key={i} className="flex items-center gap-3.5 rounded-md border border-white/[0.06] bg-[#12151e] px-4 py-3">
-                  <Block className="h-[30px] w-[30px] rounded-[8px]" />
-                  <div className="flex-1 space-y-1.5">
-                    <Block className="h-4 w-40 max-w-full" />
-                    <Block className="h-3 w-52 max-w-full" />
-                  </div>
-                  <Block className="h-[22px] w-[22px] rounded-full" />
+      <div className="mx-auto w-full max-w-[1120px] px-4 pb-24 pt-8 sm:px-10">
+        {/* Header row */}
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <Block className="h-9 w-9" />
+            <Block className="h-7 w-48" />
+          </div>
+          <Block className="h-8 w-36" />
+        </div>
+
+        <div className="mt-6 grid grid-cols-1 items-start gap-6 lg:grid-cols-[1fr_400px] lg:gap-8">
+          {/* Left — payment column */}
+          <div>
+            <Block className="h-5 w-24" />
+            <Block className="mt-2 h-4 w-72" />
+
+            {/* Crypto card */}
+            <Card className="mt-4 p-4">
+              <div className="flex items-center gap-3">
+                <Block className="h-[18px] w-[18px] rounded-full" />
+                <Block className="h-4 w-16" />
+                <Block className="h-5 w-14" />
+                <Block className="h-5 w-24" />
+                <span className="ml-auto flex gap-1.5">
+                  <Block className="h-5 w-5 rounded-full" />
+                  <Block className="h-5 w-5 rounded-full" />
+                </span>
+              </div>
+              <div className="mt-4 grid grid-cols-1 gap-3 border-t pt-4 sm:grid-cols-2" style={{ borderColor: LINE }}>
+                <div>
+                  <Block className="mb-1.5 h-3.5 w-10" />
+                  <Block className="h-[42px] w-full" />
+                </div>
+                <div>
+                  <Block className="mb-1.5 h-3.5 w-16" />
+                  <Block className="h-[42px] w-full" />
+                </div>
+              </div>
+              <Block className="mt-3 h-[52px] w-full rounded-lg" />
+            </Card>
+
+            {/* Disabled method rows */}
+            {[0, 1, 2, 3].map((i) => (
+              <Card key={i} className="mt-3 flex items-center gap-3 px-4 py-3.5">
+                <Block className="h-[18px] w-[18px] rounded-full" />
+                <Block className="h-4 w-36" />
+                <Block className="ml-auto h-5 w-16" />
+              </Card>
+            ))}
+
+            <Block className="mt-5 hidden h-12 w-full lg:block" />
+            <Block className="mx-auto mt-2.5 hidden h-3.5 w-80 lg:block" />
+          </div>
+
+          {/* Right — summary card */}
+          <Card className="p-5">
+            <div className="flex items-center gap-3.5">
+              <Block className="h-14 w-14 rounded-lg" />
+              <div className="min-w-0 flex-1">
+                <Block className="h-4 w-40" />
+                <Block className="mt-1.5 h-3.5 w-24" />
+              </div>
+            </div>
+            <div className="mt-3 space-y-2 border-t pt-3" style={{ borderColor: LINE }}>
+              <div className="flex justify-between"><Block className="h-3.5 w-24" /><Block className="h-3.5 w-12" /></div>
+              <div className="flex justify-between"><Block className="h-3.5 w-16" /><Block className="h-3.5 w-8" /></div>
+            </div>
+            <div className="mt-3 flex items-center gap-3 border-t pt-3" style={{ borderColor: LINE }}>
+              <Block className="h-10 w-10 rounded-full" />
+              <div>
+                <Block className="h-4 w-32" />
+                <Block className="mt-1 h-3 w-24" />
+              </div>
+            </div>
+            <div className="mt-4 space-y-2 border-t pt-3.5" style={{ borderColor: LINE }}>
+              {[0, 1, 2].map((i) => (
+                <div key={i} className="flex justify-between">
+                  <Block className="h-3.5 w-28" />
+                  <Block className="h-3.5 w-14" />
                 </div>
               ))}
-            </div>
-            {/* SafeDrop tier */}
-            <Block className="mb-4 mt-8 h-5 w-44 sm:mt-10" />
-            <Block className="h-[52px] w-full rounded-md" />
-            <Block className="mt-2.5 h-32 w-full rounded-md" />
-          </div>
-
-          {/* Right — item card + order details card */}
-          <div className="order-1 flex flex-col gap-5 sm:gap-6 lg:order-2">
-            <div className="rounded-lg border border-white/[0.08] bg-[linear-gradient(180deg,#151a26,#0f131d)] p-4 sm:p-6">
-              <div className="mb-4 flex items-center gap-[9px]">
-                <Block className="h-7 w-7" />
-                <Block className="h-4 w-24" />
-              </div>
-              <div className="mb-4 h-px bg-white/[0.07]" />
-              <div className="mb-4 flex items-center gap-3">
-                <Block className="h-14 w-14 rounded-md" />
-                <div className="flex-1 space-y-1.5">
-                  <Block className="h-4 w-3/4" />
-                  <Block className="h-3 w-1/2" />
-                </div>
-                <Block className="h-5 w-14" />
-              </div>
-              <div className="mb-4 h-px bg-white/[0.07]" />
-              <div className="flex justify-between">
-                <Block className="h-4 w-16" />
-                <Block className="h-7 w-24 rounded-md" />
+              <div className="flex justify-between border-t pt-3" style={{ borderColor: LINE }}>
+                <Block className="h-5 w-12" />
+                <Block className="h-6 w-20" />
               </div>
             </div>
-
-            <div className="rounded-lg border border-white/[0.08] bg-[linear-gradient(180deg,#151a26,#0f131d)] p-4 sm:p-6">
-              <div className="mb-4 flex items-center gap-[9px]">
-                <Block className="h-7 w-7" />
-                <Block className="h-4 w-28" />
+            <div className="mt-4 border-t pt-3.5" style={{ borderColor: LINE }}>
+              <Block className="h-4 w-40" />
+              <Block className="mt-1.5 h-3.5 w-full" />
+              <div className="mt-3 flex gap-1.5">
+                <Block className="h-7 flex-1" />
+                <Block className="h-7 flex-1" />
+                <Block className="h-7 flex-1" />
               </div>
-              <div className="mb-4 h-px bg-white/[0.07]" />
-              <Block className="mb-4 h-4 w-44" />
-              <div className="mb-4 h-px bg-white/[0.07]" />
-              <div className="space-y-[11px]">
-                {Array.from({ length: 4 }).map((_, i) => (
-                  <div key={i} className="flex justify-between">
-                    <Block className="h-3.5 w-28" />
-                    <Block className="h-3.5 w-12" />
-                  </div>
-                ))}
-              </div>
-              <div className="my-4 h-px bg-white/[0.07]" />
-              <div className="mb-4 flex items-end justify-between">
-                <Block className="h-6 w-16" />
-                <Block className="h-8 w-24" />
-              </div>
-              <Block className="h-[54px] w-full rounded-md" />
-              <Block className="mx-auto mt-3 h-3 w-56 max-w-full" />
             </div>
-          </div>
+          </Card>
         </div>
-
-        {/* Trust strip */}
-        <Block className="mt-8 h-[110px] w-full rounded-lg sm:mt-10" />
-        {/* Marquee strip */}
-        <Block className="mt-6 h-[50px] w-full rounded-lg sm:mt-8" />
       </div>
-    </main>
+    </div>
   )
 }
