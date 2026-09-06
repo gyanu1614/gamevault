@@ -300,6 +300,30 @@ function Callout({
   )
 }
 
+/** Seller tier badge — colored chip next to the seller name. Unverified
+ *  tiers render nothing. */
+const TIER_STYLES: Record<string, { label: string; bg: string; text: string; dot: string }> = {
+  bronze: { label: 'Bronze', bg: '#FAF1E8', text: '#8C5A2B', dot: '#C08447' },
+  silver: { label: 'Silver', bg: '#F1F3F5', text: '#565E66', dot: '#9AA4AD' },
+  gold: { label: 'Gold', bg: '#FBF4DC', text: '#8A6D0B', dot: '#D5A419' },
+  platinum: { label: 'Platinum', bg: '#EBF4F7', text: '#33606F', dot: '#6FA7B8' },
+  diamond: { label: 'Diamond', bg: '#EEF0FB', text: '#3D4B9E', dot: '#7C8BE0' },
+}
+
+function TierBadge({ tier }: { tier?: string | null }) {
+  const t = tier ? TIER_STYLES[tier.toLowerCase()] : undefined
+  if (!t) return null
+  return (
+    <span
+      className="inline-flex items-center gap-1 rounded-md px-1.5 py-[2px] text-[10px] font-bold"
+      style={{ background: t.bg, color: t.text }}
+    >
+      <span className="h-[6px] w-[6px] rounded-full" style={{ background: t.dot }} />
+      {t.label}
+    </span>
+  )
+}
+
 /** A — trust chip row: honest claims only, shown at the moment of
  *  commitment (under Pay Now). */
 function TrustChips() {
@@ -688,7 +712,7 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
           className="h-7 w-7 rounded-full object-cover"
           style={{ background: T.ivory2 }}
         />
-        <span className="flex items-center gap-1 text-[14px] font-semibold" style={{ color: T.ink }}>
+        <span className="flex items-center gap-1.5 text-[14px] font-semibold" style={{ color: T.ink }}>
           {sellerName}
           {isVerifiedSeller && (
             <BadgeCheck
@@ -697,33 +721,27 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
               style={{ fill: '#1D9BF0', color: '#FFFFFF' }}
             />
           )}
+          <TierBadge tier={seller.seller_tier} />
         </span>
       </div>
+      {reviewCount > 0 && (
       <div className="mt-2.5 flex flex-wrap gap-1.5">
-        {positivePct !== null ? (
+        {positivePct !== null && (
           <span
             className="rounded-md border px-2 py-[3px] text-[11px] font-medium"
             style={{ borderColor: T.line, background: T.ivory, color: T.ink2 }}
           >
             {positivePct.toFixed(1)}% Positive
           </span>
-        ) : (
-          <span
-            className="rounded-md border px-2 py-[3px] text-[11px] font-medium"
-            style={{ borderColor: T.line, background: T.ivory, color: T.ink2 }}
-          >
-            New Seller
-          </span>
         )}
-        {reviewCount > 0 && (
-          <span
-            className="rounded-md border px-2 py-[3px] text-[11px] font-medium"
-            style={{ borderColor: T.line, background: T.ivory, color: T.ink2 }}
-          >
-            {reviewCount.toLocaleString()} Reviews
-          </span>
-        )}
+        <span
+          className="rounded-md border px-2 py-[3px] text-[11px] font-medium"
+          style={{ borderColor: T.line, background: T.ivory, color: T.ink2 }}
+        >
+          {reviewCount.toLocaleString()} Reviews
+        </span>
       </div>
+      )}
 
       {/* Discount code — collapsed behind a toggle */}
       {!compact && (
