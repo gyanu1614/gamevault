@@ -827,8 +827,11 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
           <p className="text-[13.5px] font-semibold" style={{ color: T.ink }}>
             SafeDrop Protection
           </p>
+          <p className="mt-0.5 text-[12.5px] font-medium leading-snug" style={{ color: T.ink }}>
+            Get exactly what you ordered — or every cent back.
+          </p>
           <p className="mt-0.5 text-[12px] leading-snug" style={{ color: T.ink2 }}>
-            Item guaranteed or full refund — the seller is only paid after you confirm delivery.
+            The seller isn’t paid until you confirm delivery.
           </p>
         </div>
       </div>
