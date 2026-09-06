@@ -302,19 +302,19 @@ function Callout({
  *  commitment (under Pay Now). */
 function TrustChips() {
   const chip =
-    'flex items-center gap-1.5 rounded-md border bg-white px-2.5 py-[7px] text-[11.5px] font-semibold'
+    'flex flex-1 items-center justify-center gap-1 whitespace-nowrap rounded-md border bg-white px-1.5 py-[6px] text-[10.5px] font-semibold'
   const chipStyle = { borderColor: T.line, color: T.ink } as const
   const ic = { color: T.forest } as const
   return (
-    <div className="mt-3 flex flex-wrap gap-2">
+    <div className="mt-3 flex items-center gap-1.5">
       <span className={chip} style={chipStyle}>
-        <ShieldCheck className="h-3.5 w-3.5" style={ic} /> SafeDrop Guarantee
+        <ShieldCheck className="h-3 w-3 shrink-0" style={ic} /> SafeDrop Guarantee
       </span>
       <span className={chip} style={chipStyle}>
-        <BadgeCheck className="h-3.5 w-3.5" style={ic} /> ID-Verified Sellers
+        <BadgeCheck className="h-3 w-3 shrink-0" style={ic} /> ID-Verified Sellers
       </span>
       <Link href="/refunds" className={`${chip} transition-colors hover:border-[#14432A66]`} style={chipStyle}>
-        <Undo2 className="h-3.5 w-3.5" style={ic} /> Full Refund Policy
+        <Undo2 className="h-3 w-3 shrink-0" style={ic} /> Refund Policy
       </Link>
     </div>
   )
