@@ -30,6 +30,7 @@ import {
   BadgeCheck,
   Check,
   ChevronDown,
+  Info,
   Loader2,
   Lock,
   LogOut,
@@ -48,6 +49,7 @@ import { getWalletBalance } from '@/lib/actions/wallet'
 import { cn } from '@/lib/utils'
 import { buyerFee, MARKETPLACE_FEE_LABEL, PROCESSING_FEE_LABEL } from '@/lib/fees'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { AccountMenu } from '../_components/AccountMenu'
 
 // ─── Ivory Ledger tokens (design_handoff_checkout Option 1a) ────────────────
 const T = {
@@ -188,15 +190,12 @@ function InfoDot({
         <button
           type="button"
           aria-label={title ?? text}
-          className="relative -m-[10px] inline-flex flex-none cursor-help items-center justify-center p-[10px]"
+          className="group relative -m-[10px] inline-flex flex-none items-center justify-center p-[10px]"
         >
-          <span
+          <Info
             aria-hidden
-            className="inline-flex h-[15px] w-[15px] items-center justify-center rounded-full text-[9.5px] font-bold"
-            style={{ background: T.ivory2, color: T.ink2, boxShadow: `inset 0 0 0 1px ${T.line}` }}
-          >
-            ?
-          </span>
+            className="h-[14px] w-[14px] text-[#5B6157] transition-colors group-hover:text-[#1A1D19]"
+          />
         </button>
       </TooltipTrigger>
       <TooltipContent
@@ -269,114 +268,18 @@ function Callout({
       : { bg: '#F0FDF4', border: '#BBF7D0', text: '#166534' }
   return (
     <div
-      className="flex items-start gap-3 rounded-lg border px-5 py-4"
+      className="flex items-start gap-2.5 rounded-lg border px-3.5 py-2.5"
       style={{ background: c.bg, borderColor: c.border }}
     >
       {variant === 'warning' ? (
-        <TriangleAlert className="mt-px h-5 w-5 shrink-0" style={{ color: c.text }} />
+        <TriangleAlert className="mt-[2px] h-[18px] w-[18px] shrink-0" style={{ color: c.text }} />
       ) : (
-        <Check className="mt-px h-5 w-5 shrink-0" style={{ color: c.text }} />
+        <Check className="mt-[2px] h-[18px] w-[18px] shrink-0" style={{ color: c.text }} />
       )}
-      <p className="text-[14px] leading-[1.55]" style={{ color: c.text }}>
+      <p className="text-[13px] leading-[1.5]" style={{ color: c.text }}>
         {children}
       </p>
     </div>
-  )
-}
-
-/** Navbar account dropdown — light menu on the dark strip. Sign-out follows
- *  the house pattern: navigate FIRST, then signOut, so a protected page never
- *  repaints logged-out in place. */
-function AccountMenu({
-  user,
-  buyerProfile,
-}: {
-  user: any
-  buyerProfile?: { username: string | null; avatar_url: string | null } | null
-}) {
-  const router = useRouter()
-  const [signingOut, setSigningOut] = useState(false)
-  if (!user) {
-    return (
-      <Link
-        href="/login"
-        className="rounded-md border border-white/25 px-3.5 py-1.5 text-[13px] font-semibold text-white transition-colors hover:border-white/50"
-      >
-        Log In
-      </Link>
-    )
-  }
-  const name = buyerProfile?.username || user.email?.split('@')[0] || 'Account'
-  const handleSignOut = async () => {
-    setSigningOut(true)
-    router.push('/')
-    const { createClient } = await import('@/lib/supabase/client')
-    await createClient().auth.signOut()
-  }
-  const item =
-    'flex w-full cursor-pointer items-center gap-2.5 rounded px-2.5 py-2 text-[13px] font-medium outline-none data-[highlighted]:bg-[#F3F3ED]'
-  return (
-    <Dropdown.Root>
-      <Dropdown.Trigger asChild>
-        <button
-          type="button"
-          className="flex items-center gap-2 rounded-md px-1.5 py-1 transition-colors hover:bg-white/10"
-          aria-label="Account Menu"
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={getAvatarUrl(buyerProfile?.avatar_url, name)}
-            alt=""
-            className="h-7 w-7 rounded-full object-cover ring-1 ring-white/20"
-          />
-          <span className="hidden max-w-[140px] truncate text-[13px] font-semibold text-white sm:block">
-            {name}
-          </span>
-          <ChevronDown className="h-3.5 w-3.5 text-white/60" />
-        </button>
-      </Dropdown.Trigger>
-      <Dropdown.Portal>
-        <Dropdown.Content
-          align="end"
-          sideOffset={8}
-          className="z-50 w-[220px] rounded-lg border bg-white p-1.5 shadow-[0_14px_40px_-14px_rgba(0,0,0,0.25)]"
-          style={{ borderColor: T.line, color: T.ink }}
-        >
-          <div className="px-2.5 pb-2 pt-1.5">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.06em]" style={{ color: T.ink2 }}>
-              Signed In As
-            </p>
-            <p className="truncate text-[13px] font-semibold">{user.email}</p>
-          </div>
-          <Dropdown.Separator className="mx-1 mb-1 h-px" style={{ background: T.line }} />
-          <Dropdown.Item className={item} onSelect={() => router.push('/account/orders')}>
-            <Package className="h-4 w-4" style={{ color: T.ink2 }} /> My Orders
-          </Dropdown.Item>
-          <Dropdown.Item className={item} onSelect={() => router.push('/account/wallet')}>
-            <Wallet className="h-4 w-4" style={{ color: T.ink2 }} /> Wallet
-          </Dropdown.Item>
-          <Dropdown.Item className={item} onSelect={() => router.push('/account')}>
-            <Settings className="h-4 w-4" style={{ color: T.ink2 }} /> Account Settings
-          </Dropdown.Item>
-          <Dropdown.Separator className="mx-1 my-1 h-px" style={{ background: T.line }} />
-          <Dropdown.Item
-            className={item}
-            disabled={signingOut}
-            onSelect={(e) => {
-              e.preventDefault()
-              void handleSignOut()
-            }}
-          >
-            {signingOut ? (
-              <Loader2 className="h-4 w-4 animate-spin" style={{ color: T.ink2 }} />
-            ) : (
-              <LogOut className="h-4 w-4" style={{ color: T.ink2 }} />
-            )}
-            Sign Out
-          </Dropdown.Item>
-        </Dropdown.Content>
-      </Dropdown.Portal>
-    </Dropdown.Root>
   )
 }
 
@@ -823,10 +726,15 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
 
       {/* SafeDrop line */}
       <div className="mt-3.5 flex items-center gap-2 border-t pt-3.5" style={{ borderColor: T.line }}>
-        <ShieldCheck className="h-4 w-4 shrink-0" style={{ color: T.forest }} />
-        <p className="text-[13px] font-medium" style={{ color: T.ink }}>
-          Covered By SafeDrop — Item Guaranteed Or Full Refund.
-        </p>
+        <ShieldCheck className="mt-[1px] h-[18px] w-[18px] shrink-0" style={{ color: T.forest }} />
+        <div>
+          <p className="text-[13.5px] font-semibold" style={{ color: T.ink }}>
+            SafeDrop Protection
+          </p>
+          <p className="mt-0.5 text-[12px] leading-snug" style={{ color: T.ink2 }}>
+            Item guaranteed or full refund — the seller is only paid after you confirm delivery.
+          </p>
+        </div>
       </div>
     </div>
   )
@@ -845,7 +753,16 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
             DropMarket
           </span>
         </Link>
-        <AccountMenu user={user} buyerProfile={buyerProfile} />
+        <div className="flex items-center gap-2 sm:gap-4">
+          <Link
+            href="/support"
+            className="flex items-center gap-1.5 rounded-md px-2 py-1.5 text-[13px] font-semibold text-white/70 transition-colors hover:bg-white/10 hover:text-white"
+          >
+            <Info className="h-4 w-4" />
+            <span className="hidden sm:inline">Need Help?</span>
+          </Link>
+          <AccountMenu user={user} buyerProfile={buyerProfile} />
+        </div>
       </div>
 
       <div className="mx-auto w-full max-w-[1120px] px-4 pb-24 pt-8 sm:px-10 lg:pb-[72px]">
@@ -857,9 +774,12 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
               Secure Checkout
             </span>
           </span>
-          <span className="flex items-center gap-1.5 text-[12px] sm:text-[13px]" style={{ color: T.ink2 }}>
-            <Lock className="h-3.5 w-3.5" />
-            256-bit SSL Secure
+          <span
+            className="flex items-center gap-1.5 rounded-md border bg-white px-2.5 py-1.5 text-[12px] font-semibold tracking-[0.01em] sm:text-[12.5px]"
+            style={{ borderColor: T.line, color: T.ink }}
+          >
+            <ShieldCheck className="h-4 w-4" style={{ color: T.forest }} />
+            256-Bit SSL Secure
           </span>
         </div>
 

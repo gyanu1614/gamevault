@@ -90,6 +90,13 @@ export default async function PayPage({ params, searchParams }: PayPageProps) {
 
   if (!order || order.buyer_id !== user.id) redirect('/account/orders')
 
+  // Buyer profile for the navbar account menu (username + avatar).
+  const { data: buyerProfile } = (await supabase
+    .from('profiles')
+    .select('username, avatar_url')
+    .eq('id', user.id)
+    .maybeSingle()) as any
+
   // Already paid (or otherwise terminal) → the order page owns the story.
   if (order.status !== 'pending') redirect(`/account/orders/${orderId}`)
 
@@ -111,9 +118,13 @@ export default async function PayPage({ params, searchParams }: PayPageProps) {
   // Invoice amount = the remaining charge (order total minus any wallet
   // credit applied at checkout). Falls back to the order total.
   let invoiceAmount = Number(order.total_amount) || 0
+  let invoiceCreatedIso: string | null = null
   try {
     const invoice = await btcpayFetchInvoice(order.provider_charge_id)
     invoiceStatus = invoice.status
+    if (invoice.createdTime) {
+      invoiceCreatedIso = new Date(invoice.createdTime * 1000).toISOString()
+    }
     if (invoice.amount && Number.isFinite(Number(invoice.amount))) {
       invoiceAmount = Number(invoice.amount)
     }
@@ -157,8 +168,11 @@ export default async function PayPage({ params, searchParams }: PayPageProps) {
         invoiceAmount={invoiceAmount}
         initialInvoiceStatus={invoiceStatus}
         expiresAt={expiresAtIso}
+        createdAt={invoiceCreatedIso}
         methods={methods}
         initialMethodId={preferredMethodId(methods, coin, net)}
+        user={{ email: user.email }}
+        buyerProfile={buyerProfile ?? null}
       />
     </main>
   )
