@@ -51,8 +51,9 @@ export default function PayLoading() {
             ))}
           </Card>
 
-          {/* Receipt card */}
-          <Card className="px-5 py-5 sm:px-7 sm:py-6">
+          {/* Receipt card — QR + amount/button stack, then the full-width
+              address bar and the warning callout. */}
+          <Card className="px-5 py-5 sm:px-8 sm:py-7">
             <div className="flex items-center gap-3.5">
               <Block className="h-[52px] w-[52px] rounded-md" />
               <div className="min-w-0 flex-1">
@@ -61,22 +62,21 @@ export default function PayLoading() {
               </div>
               <Block className="h-6 w-16" />
             </div>
-            <div className="my-4 border-t border-dashed" style={{ borderColor: LINE }} />
-            <div className="flex flex-col items-center gap-6 sm:flex-row sm:items-start">
-              <Block className="h-[196px] w-[196px] rounded-md" />
-              <div className="flex w-full flex-1 flex-col gap-3">
-                <Block className="h-3 w-20" />
-                <Block className="h-7 w-40" />
-                <Block className="h-3 w-28" />
-                <Block className="h-10 w-full" />
-                <Block className="h-[42px] w-full rounded-md" />
+            <div className="my-5 border-t border-dashed" style={{ borderColor: LINE }} />
+            <div className="flex flex-col items-center gap-6 sm:grid sm:grid-cols-[auto_minmax(0,1fr)] sm:gap-7">
+              <Block className="h-[218px] w-[218px] rounded-md" />
+              <div className="flex w-full flex-col justify-between gap-5 sm:py-1">
+                <div>
+                  <Block className="h-3 w-20" />
+                  <Block className="mt-2 h-7 w-44" />
+                  <Block className="mt-2.5 h-3.5 w-40" />
+                </div>
+                <Block className="h-11 w-full rounded-md" />
               </div>
             </div>
-            <div className="mt-4 flex items-center justify-between">
-              <Block className="h-6 w-44" />
-              <Block className="h-4 w-36" />
-            </div>
-            <Block className="mt-3.5 h-12 w-full rounded-md" />
+            <Block className="mt-5 h-3 w-32" />
+            <Block className="mt-2 h-11 w-full rounded-md" />
+            <Block className="mt-4 h-10 w-full rounded-md" />
           </Card>
 
           {/* Assurance column */}

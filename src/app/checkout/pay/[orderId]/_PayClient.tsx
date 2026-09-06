@@ -41,6 +41,10 @@ export interface PayMethod {
   short: string
   icon: string | null
   network: string | null
+  /** Human chain name for prose ("TRON", "Polygon") — null when unproven. */
+  networkName: string | null
+  /** Confirmation-time clause, lowercase ("usually under a minute"). */
+  confirmEta: string | null
   networkWarning: string | null
   address: string
   paymentLink: string | null
@@ -157,8 +161,8 @@ function StyledQr({ data, logo, scanning }: { data: string; logo: string | null;
       const { default: QRCodeStyling } = await import('qr-code-styling')
       if (cancelled || !ref.current) return
       const options = {
-        width: 180,
-        height: 180,
+        width: 200,
+        height: 200,
         type: 'svg' as const,
         data,
         margin: 4,
@@ -290,6 +294,8 @@ function LedgerLive({
   seenTx,
   onCopyRemaining,
   remainingClock,
+  networkName,
+  confirmEta,
 }: {
   view: ViewState
   dueDisplay: string
@@ -297,6 +303,8 @@ function LedgerLive({
   seenTx: string | null
   onCopyRemaining: () => void
   remainingClock: string
+  networkName: string | null
+  confirmEta: string | null
 }) {
   const dotColor = view === 'seen' ? L.blue : L.forest
   return (
@@ -340,7 +348,9 @@ function LedgerLive({
               />
             </div>
             <p className="mt-1.5 text-[11.5px] leading-snug" style={{ color: L.muted }}>
-              Usually under a minute on TRON. Your funds are safe either way.
+              {confirmEta
+                ? `${confirmEta.charAt(0).toUpperCase()}${confirmEta.slice(1)}${networkName ? ` on ${networkName}` : ''}. Your funds are safe either way.`
+                : 'Usually just a few minutes. Your funds are safe either way.'}
             </p>
           </motion.div>
         ) : view === 'partial' ? (
@@ -373,7 +383,9 @@ function LedgerLive({
               Waiting For Your Payment
             </p>
             <p className="mt-1 text-[11.5px] leading-snug" style={{ color: L.muted }}>
-              Watching the TRON network — updates here within seconds of your send.
+              {networkName
+                ? `Watching the ${networkName} network — your payment shows up here seconds after you send it.`
+                : 'Watching the network — your payment shows up here seconds after you send it.'}
             </p>
           </motion.div>
         )}
@@ -651,6 +663,8 @@ export default function PayClient({
             seenTx={seenTx ? shortTx(seenTx) : null}
             onCopyRemaining={() => void copyText(dueDisplay, 'Remaining Amount')}
             remainingClock={fmtCountdown(remainingMs)}
+            networkName={selected?.networkName ?? null}
+            confirmEta={selected?.confirmEta ?? null}
           />
           {view !== 'seen' && <LedgerGhost title="Payment Seen On Network" />}
           <LedgerGhost title="Confirmed" last />
@@ -725,7 +739,7 @@ export default function PayClient({
           </div>
 
           {/* ── Column 2: receipt card ── */}
-          <div className="relative rounded-lg border bg-white px-5 py-5 sm:px-7 sm:py-6" style={{ borderColor: view === 'paid' ? L.lime : L.line }}>
+          <div className="relative rounded-lg border bg-white px-5 py-5 sm:px-8 sm:py-7" style={{ borderColor: view === 'paid' ? L.lime : L.line }}>
             {/* PAID stamp */}
             <AnimatePresence>
               {view === 'paid' && (
@@ -767,17 +781,20 @@ export default function PayClient({
                 </p>
               </div>
               <div className="shrink-0 text-right">
-                <p className="text-[11px]" style={{ color: L.faint }}>
+                <p
+                  className="text-[11px] font-bold uppercase tracking-[0.08em]"
+                  style={{ color: L.faint }}
+                >
                   Amount Due
                 </p>
-                <p className="text-[16px] font-bold" style={{ color: L.ink }}>
+                <p className="mt-0.5 text-[16px] font-bold" style={{ color: L.ink }}>
                   {sym}
                   {invoiceAmount.toFixed(2)}
                 </p>
               </div>
             </div>
 
-            <div className="my-4 border-t border-dashed" style={{ borderColor: L.dash }} />
+            <div className="my-5 border-t border-dashed" style={{ borderColor: L.dash }} />
 
             {view === 'expired' || view === 'unreachable' ? (
               /* ── Expired / unreachable panel ── */
@@ -806,44 +823,46 @@ export default function PayClient({
               </div>
             ) : selected ? (
               <>
-                {/* Payment row */}
-                <div className="flex flex-col items-center gap-6 sm:flex-row sm:items-start">
+                {/* Payment row — QR beside the amount/action stack; the
+                    button bottom-aligns with the QR so the row reads as one
+                    balanced block. */}
+                <div className="flex flex-col items-center gap-6 sm:grid sm:grid-cols-[auto_minmax(0,1fr)] sm:items-stretch sm:gap-7">
                   <StyledQr
                     data={selected.paymentLink || selected.address}
                     logo={selected.icon}
                     scanning={scanning}
                   />
-                  <div className="flex w-full min-w-0 flex-1 flex-col gap-3">
+                  <div className="flex w-full min-w-0 flex-col justify-between gap-5 sm:py-1">
                     <div>
-                      <p className="text-[11px]" style={{ color: L.faint }}>
+                      <p
+                        className="text-[11px] font-bold uppercase tracking-[0.08em]"
+                        style={{ color: L.faint }}
+                      >
                         Send Exactly
                       </p>
-                      <div className="mt-1 flex items-center justify-between gap-2">
-                        <p className="text-[24px] font-extrabold leading-none" style={{ color: L.ink }}>
+                      <div className="mt-2 flex flex-wrap items-center gap-3">
+                        <p
+                          className="whitespace-nowrap text-[26px] font-extrabold leading-none"
+                          style={{ color: L.ink }}
+                        >
                           {dueDisplay} {selected.short}
                         </p>
                         <CopyChip value={dueDisplay} label="Amount" />
                       </div>
-                    </div>
-                    <div>
-                      <p className="text-[11px]" style={{ color: L.faint }}>
-                        To This TRON Address
-                      </p>
-                      <div className="mt-1 flex items-center gap-2">
-                        <code
-                          className="min-w-0 flex-1 break-all rounded-md border px-2.5 py-2 font-mono text-[12px] leading-snug"
-                          style={{ borderColor: L.line, background: L.ivory, color: L.ink }}
-                        >
-                          {selected.address}
-                        </code>
-                        <CopyChip value={selected.address} label="Address" />
-                      </div>
+                      {(view === 'waiting' || view === 'seen' || view === 'partial') && (
+                        <p className="mt-2.5 text-[12px]" style={{ color: L.muted }}>
+                          Rate Locked · Expires In{' '}
+                          <b className="font-mono" style={{ color: L.forest }} suppressHydrationWarning>
+                            {fmtCountdown(remainingMs)}
+                          </b>
+                        </p>
+                      )}
                     </div>
                     {view === 'paid' ? (
                       <button
                         type="button"
                         onClick={() => router.replace(`/account/orders/${orderId}?paid=1`)}
-                        className="h-[42px] w-full rounded-md text-[13.5px] font-semibold text-white transition-[filter] hover:brightness-110"
+                        className="h-[44px] w-full rounded-md text-[13.5px] font-semibold text-white transition-[filter] hover:brightness-110"
                         style={{ background: L.forest }}
                       >
                         View Your Item
@@ -852,7 +871,7 @@ export default function PayClient({
                       <button
                         type="button"
                         onClick={() => void openInWallet()}
-                        className="h-[42px] w-full rounded-md text-[13.5px] font-semibold text-white transition-[filter] hover:brightness-110"
+                        className="h-[44px] w-full rounded-md text-[13.5px] font-semibold text-white transition-[filter] hover:brightness-110"
                         style={{ background: L.forest }}
                       >
                         Open In Wallet App
@@ -861,54 +880,50 @@ export default function PayClient({
                   </div>
                 </div>
 
-                {/* Meta row */}
-                <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
-                  <span
-                    className="inline-flex items-center gap-1.5 rounded-md border bg-white px-2.5 py-1 text-[12px] font-semibold"
-                    style={{ borderColor: L.line, color: L.ink }}
+                {/* Address — full card width so it never folds into a tall
+                    column; network name lives in the label. */}
+                <div className="mt-5">
+                  <p
+                    className="text-[11px] font-bold uppercase tracking-[0.08em]"
+                    style={{ color: L.faint }}
                   >
-                    <span
-                      className="inline-block h-3.5 w-3.5 rounded-full text-center text-[9px] font-extrabold leading-[14px] text-white"
-                      style={{ background: L.tether }}
+                    {selected.short} Address
+                    {selected.networkName ? ` · ${selected.networkName}` : ''}
+                  </p>
+                  <div
+                    className="mt-2 flex items-center gap-1.5 rounded-md border py-1 pl-3 pr-1"
+                    style={{ borderColor: L.line, background: L.ivory }}
+                  >
+                    <code
+                      className="min-w-0 flex-1 break-all py-1.5 font-mono text-[12.5px] leading-relaxed"
+                      style={{ color: L.ink }}
                     >
-                      ₮
-                    </span>
-                    {selected.label} on {selected.network ?? 'TRON · TRC20'}
-                  </span>
-                  {(view === 'waiting' || view === 'seen' || view === 'partial') && (
-                    <span className="text-[12px]" style={{ color: L.muted }}>
-                      Rate Locked · Expires In{' '}
-                      <b className="font-mono" style={{ color: L.forest }} suppressHydrationWarning>
-                        {fmtCountdown(remainingMs)}
-                      </b>
-                    </span>
-                  )}
+                      {selected.address}
+                    </code>
+                    <CopyChip value={selected.address} label="Address" />
+                  </div>
                 </div>
 
-                {/* Warning callout */}
-                {view !== 'paid' && (
+                {/* Network warning — only when the chain is known to matter. */}
+                {view !== 'paid' && selected.networkWarning && (
                   <div
-                    className="mt-3.5 rounded-md border px-3.5 py-2.5 text-[12px] leading-[1.5]"
+                    className="mt-4 rounded-md border px-3.5 py-2.5 text-[12px] leading-[1.55]"
                     style={{ background: L.warnBg, borderColor: L.warnLn, color: L.warnTx }}
                   >
-                    <b>Send Only {selected.short} On {selected.network ?? 'TRON (TRC20)'}.</b> Funds
-                    sent on any other network cannot be recovered.
+                    {(() => {
+                      const [lead, ...rest] = selected.networkWarning.split(' — ')
+                      return rest.length ? (
+                        <>
+                          <b>{lead}</b> — {rest.join(' — ')}
+                        </>
+                      ) : (
+                        selected.networkWarning
+                      )
+                    })()}
                   </div>
                 )}
               </>
             ) : null}
-
-            {/* Receipt footer */}
-            <div className="mt-4 border-t border-dashed pt-3" style={{ borderColor: L.dash }}>
-              <div className="flex items-center justify-between font-mono text-[11px]" style={{ color: L.ghost }}>
-                <span>{orderNumber ? `#${orderNumber}` : orderId.slice(0, 8)}</span>
-                <span>{selected ? `${selected.short}-${(selected.network ?? '').replace(/[^A-Z0-9]/gi, '')}` : ''}</span>
-                <span>
-                  {sym}
-                  {invoiceAmount.toFixed(2)}
-                </span>
-              </div>
-            </div>
           </div>
 
           {/* ── Column 3: assurance (desktop) ── */}
