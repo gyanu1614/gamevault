@@ -91,10 +91,10 @@ function fmtUnitPrice(n: number): string {
 function fmtDelivery(raw: string): string {
   const m = raw.trim().match(/^(\d+)\s*(min|mins|minute|minutes|h|hr|hrs|hour|hours|d|day|days)$/i)
   if (m) {
-    const n = m[1]
+    const n = Number(m[1])
     const u = m[2].toLowerCase()
-    const unit = u.startsWith('min') ? 'Min' : u.startsWith('h') ? 'Hr' : 'Day'
-    return `${n} ${unit}`
+    const base = u.startsWith('min') ? 'Min' : u.startsWith('h') ? 'Hour' : 'Day'
+    return `${n} ${base}${n === 1 ? '' : 's'}`
   }
   return raw.charAt(0).toUpperCase() + raw.slice(1)
 }
