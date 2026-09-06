@@ -115,7 +115,11 @@ export async function createCheckout(input: CreateCheckoutInput): Promise<Create
         ? new Date(existingPending.payment_expires_at).getTime() > Date.now()
         : false
       if (sameAmount && notExpired && existingPending.checkout_url) {
-        return { success: true, orderId: existingPending.id, checkoutUrl: existingPending.checkout_url }
+        return {
+          success: true,
+          orderId: existingPending.id,
+          checkoutUrl: toRelativePayUrl(existingPending.checkout_url),
+        }
       }
       // Amounts drifted (quantity/promo/wallet changed) OR the invoice expired.
       // Supersede the stale order via CANCELLED, then RETURN any wallet credit
@@ -175,7 +179,7 @@ export async function createCheckout(input: CreateCheckoutInput): Promise<Create
         // "failed to create order".
         const raced = await findReusablePendingOrder(supabase, user.id, input.listingId)
         if (raced?.checkout_url) {
-          return { success: true, orderId: raced.id, checkoutUrl: raced.checkout_url }
+          return { success: true, orderId: raced.id, checkoutUrl: toRelativePayUrl(raced.checkout_url) }
         }
         if (raced) {
           orderId = raced.id
@@ -246,9 +250,12 @@ export async function createCheckout(input: CreateCheckoutInput): Promise<Create
     })
     // BTCPay: the buyer pays on OUR native page (address/QR/status), not the
     // provider's hosted checkout — the invoice id on the order is what the
-    // page renders from. Other providers redirect to their hosted URL.
+    // page renders from. RELATIVE on purpose: an absolute URL would pin the
+    // env's host/port (localhost:3000 vs :3001 vs LAN IP vs prod) and strand
+    // the buyer on the wrong origin. Other providers redirect to their own
+    // hosted URL, which arrives absolute from them.
     const payUrl =
-      providerName === 'btcpay' ? `${base}/checkout/pay/${orderId}` : charge.checkoutUrl
+      providerName === 'btcpay' ? `/checkout/pay/${orderId}` : charge.checkoutUrl
 
     // Persist the charge on the order so a re-checkout can REUSE this exact
     // invoice instead of minting a second one. Expiry is the provider's
@@ -436,7 +443,7 @@ export async function retryOrderPayment(orderId: string): Promise<{
     // Reuse the existing invoice while it has a comfortable validity buffer.
     const validUntil = order.payment_expires_at ? new Date(order.payment_expires_at).getTime() : 0
     if (order.checkout_url && validUntil > Date.now() + 5 * 60 * 1000) {
-      return { success: true, checkoutUrl: order.checkout_url }
+      return { success: true, checkoutUrl: toRelativePayUrl(order.checkout_url) }
     }
 
     // Remaining charge = total − wallet credit already held for this order.
@@ -466,8 +473,9 @@ export async function retryOrderPayment(orderId: string): Promise<{
       cancelUrl: `${base}/account/orders/${orderId}`,
       metadata: { listing_id: order.listing_id, retry: 'true' },
     })
+    // Relative for the same reason as createCheckout: never pin an origin.
     const payUrl =
-      providerName === 'btcpay' ? `${base}/checkout/pay/${orderId}` : charge.checkoutUrl
+      providerName === 'btcpay' ? `/checkout/pay/${orderId}` : charge.checkoutUrl
 
     const expiresAt = charge.expiresAt ?? new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString()
     await (supabase.from('orders').update as any)({
@@ -487,4 +495,13 @@ export async function retryOrderPayment(orderId: string): Promise<{
 
 function publicAppUrl(): string {
   return process.env.NEXT_PUBLIC_APP_URL ?? process.env.PUBLIC_API_URL ?? 'http://localhost:3000'
+}
+
+/** Orders created before the relative-URL change stored our pay page with an
+ *  absolute origin (whatever host/port the env pointed at). Strip it so a
+ *  reused invoice never redirects the buyer onto the wrong origin; provider-
+ *  hosted URLs (no /checkout/pay/ segment) pass through untouched. */
+function toRelativePayUrl(url: string): string {
+  const i = url.indexOf('/checkout/pay/')
+  return i >= 0 ? url.slice(i) : url
 }
