@@ -714,44 +714,39 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
       </div>
 
       {/* Seller */}
-      <div className="mt-3.5 flex items-center gap-2">
+      <div className="mt-4 flex items-center gap-3">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={getAvatarUrl(seller.avatar_url, sellerName)}
           alt={sellerName}
-          className="h-7 w-7 rounded-full object-cover"
+          className="h-10 w-10 shrink-0 rounded-full object-cover"
           style={{ background: T.ivory2 }}
         />
-        <span className="flex items-center gap-1.5 text-[14px] font-semibold" style={{ color: T.ink }}>
-          {sellerName}
-          {isVerifiedSeller && (
-            <BadgeCheck
-              aria-label="Verified Seller"
-              className="h-[17px] w-[17px] shrink-0"
-              style={{ fill: '#1D9BF0', color: '#FFFFFF' }}
-            />
-          )}
-          <TierBadge tier={seller.seller_tier} />
-        </span>
-      </div>
-      {reviewCount > 0 && (
-      <div className="mt-2.5 flex flex-wrap gap-1.5">
-        {positivePct !== null && (
-          <span
-            className="rounded-md border px-2 py-[3px] text-[11px] font-medium"
-            style={{ borderColor: T.line, background: T.ivory, color: T.ink2 }}
-          >
-            {positivePct.toFixed(1)}% Positive
+        <div className="min-w-0">
+          <span className="flex items-center gap-1.5 text-[14px] font-semibold" style={{ color: T.ink }}>
+            <span className="truncate">{sellerName}</span>
+            {isVerifiedSeller && (
+              <BadgeCheck
+                aria-label="Verified Seller"
+                className="h-[17px] w-[17px] shrink-0"
+                style={{ fill: '#1D9BF0', color: '#FFFFFF' }}
+              />
+            )}
+            <TierBadge tier={seller.seller_tier} />
           </span>
-        )}
-        <span
-          className="rounded-md border px-2 py-[3px] text-[11px] font-medium"
-          style={{ borderColor: T.line, background: T.ivory, color: T.ink2 }}
-        >
-          {reviewCount.toLocaleString()} Reviews
-        </span>
+          {(reviewCount > 0 || Number(seller.total_sales ?? 0) > 0) && (
+            <p className="mt-0.5 flex items-center gap-2 text-[12px]" style={{ color: T.ink2 }}>
+              {positivePct !== null && <span>{positivePct.toFixed(0)}% Rating</span>}
+              {positivePct !== null && Number(seller.total_sales ?? 0) > 0 && (
+                <span className="opacity-40">|</span>
+              )}
+              {Number(seller.total_sales ?? 0) > 0 && (
+                <span>{Number(seller.total_sales).toLocaleString()} Sold</span>
+              )}
+            </p>
+          )}
+        </div>
       </div>
-      )}
 
       {/* Discount code — collapsed behind a toggle */}
       {!compact && (
