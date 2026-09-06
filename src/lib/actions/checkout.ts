@@ -264,9 +264,51 @@ export async function createCheckout(input: CreateCheckoutInput): Promise<Create
       payment_expires_at: expiresAt,
     }).eq('id', orderId)
 
+    await upsertIncompleteNudge(supabase, user.id, orderId, providerName, expiresAt)
+
     return { success: true, orderId, checkoutUrl: payUrl }
   } catch (e: any) {
     return { success: false, error: e?.message ?? 'Checkout failed' }
+  }
+}
+
+/**
+ * "Order Incomplete" navbar nudge — the visible trace of an unpaid order the
+ * moment the buyer backs out of the payment page. notify.ts deletes it when
+ * the charge confirms or the order auto-cancels (both match the order id
+ * embedded in the link); a retry that mints a fresh invoice replaces rather
+ * than duplicates it. Best-effort: never fails checkout.
+ */
+async function upsertIncompleteNudge(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+  orderId: string,
+  providerName: string,
+  expiresAtIso: string,
+) {
+  try {
+    const minutes = Math.max(
+      1,
+      Math.round((new Date(expiresAtIso).getTime() - Date.now()) / 60000),
+    )
+    const link =
+      providerName === 'btcpay' ? `/checkout/pay/${orderId}` : `/account/orders/${orderId}`
+    await supabase
+      .from('notifications')
+      .delete()
+      .eq('user_id', userId)
+      .eq('type', 'order_incomplete')
+      .like('link', `%${orderId}%`)
+    await (supabase.from('notifications').insert as any)({
+      user_id: userId,
+      type: 'order_incomplete',
+      title: 'Order Incomplete',
+      message: `Your order is waiting for payment — complete it within ${minutes} minutes or it cancels automatically.`,
+      link,
+      is_read: false,
+    })
+  } catch (e) {
+    console.error('[Checkout] incomplete nudge failed (non-fatal):', e)
   }
 }
 
@@ -434,6 +476,8 @@ export async function retryOrderPayment(orderId: string): Promise<{
       checkout_url: payUrl,
       payment_expires_at: expiresAt,
     }).eq('id', orderId)
+
+    await upsertIncompleteNudge(supabase, user.id, orderId, providerName, expiresAt)
 
     return { success: true, checkoutUrl: payUrl }
   } catch (e: any) {

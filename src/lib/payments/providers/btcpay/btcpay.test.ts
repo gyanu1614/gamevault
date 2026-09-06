@@ -10,10 +10,14 @@ process.env.BTCPAY_STORE_ID ||= 'store-1'
 process.env.BTCPAY_WEBHOOK_SECRET ||= 'test-webhook-secret'
 
 const SECRET = process.env.BTCPAY_WEBHOOK_SECRET!
+// setup-env loads .env.local, so a machine with real BTCPay creds keeps its
+// own store id — the ||= above only fills a fallback. Always build payloads
+// from whatever id is actually configured, never a hardcoded one.
+const STORE = process.env.BTCPAY_STORE_ID!
 
 const inv = (status: string, extra: Partial<BtcpayInvoice> = {}): BtcpayInvoice => ({
   id: 'inv-1',
-  storeId: 'store-1',
+  storeId: STORE,
   status,
   additionalStatus: 'None',
   amount: '49.99',
@@ -94,7 +98,7 @@ describe('btcpay: parseWebhook verification chain', () => {
     makeBtcpayProvider({ fetchImpl: mockFetch(invoice) })
 
   // Webhook body claims Settled; the re-fetch is authoritative regardless.
-  const body = JSON.stringify({ invoiceId: 'inv-1', storeId: 'store-1', type: 'InvoiceSettled' })
+  const body = JSON.stringify({ invoiceId: 'inv-1', storeId: STORE, type: 'InvoiceSettled' })
   const signed = (b: string) => ({
     'btcpay-sig': 'sha256=' + createHmac('sha256', SECRET).update(b).digest('hex'),
   })
