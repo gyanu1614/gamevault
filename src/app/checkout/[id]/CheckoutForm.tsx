@@ -82,6 +82,19 @@ function fmtUnitPrice(n: number): string {
   return `$${n.toFixed(2)}`
 }
 
+/** Prettify raw delivery-time values: "30min" → "30 Min", "1h" → "1 Hr",
+ *  "instant" → "Instant". Defensive — unknown formats just get Title Case. */
+function fmtDelivery(raw: string): string {
+  const m = raw.trim().match(/^(\d+)\s*(min|mins|minute|minutes|h|hr|hrs|hour|hours|d|day|days)$/i)
+  if (m) {
+    const n = m[1]
+    const u = m[2].toLowerCase()
+    const unit = u.startsWith('min') ? 'Min' : u.startsWith('h') ? 'Hr' : 'Day'
+    return `${n} ${unit}`
+  }
+  return raw.charAt(0).toUpperCase() + raw.slice(1)
+}
+
 // ─── Coin / network choices ─────────────────────────────────────────────────
 
 type Coin = 'usdt' | 'btc'
@@ -655,7 +668,7 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
         <div className="flex items-center justify-between gap-4 py-[7px]" style={{ borderColor: '#EFEDE6' }}>
           <span style={{ color: T.ink2 }}>Delivery Time</span>
           <span className="font-medium" style={{ color: T.ink }}>
-            {deliveryTime}
+            {fmtDelivery(deliveryTime)}
           </span>
         </div>
         <div className="flex items-center justify-between gap-4 py-[7px]" style={{ borderColor: '#EFEDE6' }}>
