@@ -35,7 +35,9 @@ import {
   Info,
   Loader2,
   Lock,
+  Gem,
   LogOut,
+  Medal,
   Package,
   Settings,
   Landmark,
@@ -300,27 +302,35 @@ function Callout({
   )
 }
 
-/** Seller tier badge — colored chip next to the seller name. Unverified
- *  tiers render nothing. */
-const TIER_STYLES: Record<string, { label: string; bg: string; text: string; dot: string }> = {
-  bronze: { label: 'Bronze', bg: '#FAF1E8', text: '#8C5A2B', dot: '#C08447' },
-  silver: { label: 'Silver', bg: '#F1F3F5', text: '#565E66', dot: '#9AA4AD' },
-  gold: { label: 'Gold', bg: '#FBF4DC', text: '#8A6D0B', dot: '#D5A419' },
-  platinum: { label: 'Platinum', bg: '#EBF4F7', text: '#33606F', dot: '#6FA7B8' },
-  diamond: { label: 'Diamond', bg: '#EEF0FB', text: '#3D4B9E', dot: '#7C8BE0' },
+/** Seller tier badge — a colored medal icon next to the name (tooltip
+ *  carries the tier name). Unverified tiers render nothing. */
+const TIER_STYLES: Record<string, { label: string; color: string; kind: 'medal' | 'gem' }> = {
+  bronze: { label: 'Bronze Seller', color: '#CD7F32', kind: 'medal' },
+  silver: { label: 'Silver Seller', color: '#9AA4AD', kind: 'medal' },
+  gold: { label: 'Gold Seller', color: '#D5A419', kind: 'medal' },
+  platinum: { label: 'Platinum Seller', color: '#6FA7B8', kind: 'medal' },
+  diamond: { label: 'Diamond Seller', color: '#7C8BE0', kind: 'gem' },
 }
 
 function TierBadge({ tier }: { tier?: string | null }) {
   const t = tier ? TIER_STYLES[tier.toLowerCase()] : undefined
   if (!t) return null
+  const Icon = t.kind === 'gem' ? Gem : Medal
   return (
-    <span
-      className="inline-flex items-center gap-1 rounded-md px-1.5 py-[2px] text-[10px] font-bold"
-      style={{ background: t.bg, color: t.text }}
-    >
-      <span className="h-[6px] w-[6px] rounded-full" style={{ background: t.dot }} />
-      {t.label}
-    </span>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span aria-label={t.label} className="inline-flex">
+          <Icon
+            className="h-[16px] w-[16px] shrink-0"
+            style={{ color: t.color, fill: `${t.color}33` }}
+            strokeWidth={2.2}
+          />
+        </span>
+      </TooltipTrigger>
+      <TooltipContent side="top" className="text-[11.5px] font-semibold">
+        {t.label}
+      </TooltipContent>
+    </Tooltip>
   )
 }
 
