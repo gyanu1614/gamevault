@@ -647,20 +647,19 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
           <p className="truncate text-[15px] font-semibold" style={{ color: T.ink }}>
             {title}
           </p>
-          <div className="mt-1.5 space-y-1 text-[12.5px]" style={{ color: T.ink2 }}>
-            <p>
-              Delivery Time:{' '}
+          <div className="mt-2 divide-y text-[12.5px]" style={{ borderColor: T.line, ['--tw-divide-opacity' as any]: 1 }}>
+            <div className="flex items-center justify-between gap-4 py-[5px]" style={{ borderColor: '#EFEDE6' }}>
+              <span style={{ color: T.ink2 }}>Delivery Time</span>
               <span className="font-medium" style={{ color: T.ink }}>
                 {deliveryTime}
               </span>
-            </p>
-            <p>
-              Quantity:{' '}
+            </div>
+            <div className="flex items-center justify-between gap-4 py-[5px]" style={{ borderColor: '#EFEDE6' }}>
+              <span style={{ color: T.ink2 }}>Quantity</span>
               <span className="font-medium" style={{ color: T.ink }}>
-                {quantity}
-                {isBundle ? '' : quantity > 1 ? ` × ${fmtUnitPrice(listing.price)}` : ''}
+                {quantity.toLocaleString()}
               </span>
-            </p>
+            </div>
           </div>
         </div>
       </div>
