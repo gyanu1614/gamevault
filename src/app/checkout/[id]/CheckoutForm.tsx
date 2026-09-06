@@ -26,6 +26,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import * as Select from '@radix-ui/react-select'
 import * as Dropdown from '@radix-ui/react-dropdown-menu'
+import { AnimatePresence, motion } from 'framer-motion'
 import {
   ArrowLeft,
   BadgeCheck,
@@ -39,6 +40,7 @@ import {
   Settings,
   Landmark,
   ShieldCheck,
+  Tag,
   TriangleAlert,
   Undo2,
   Wallet,
@@ -389,6 +391,7 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
   const [promoResult, setPromoResult] = useState<PromoValidationResult | null>(null)
   const promoDiscount = promoResult?.valid ? (promoResult.discountAmount ?? 0) : 0
 
+  const [codeOpen, setCodeOpen] = useState(false)
   const [walletBalance, setWalletBalance] = useState<number>(0)
   const [useWallet, setUseWallet] = useState(false)
 
@@ -722,10 +725,34 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
         )}
       </div>
 
-      {/* Discount code */}
+      {/* Discount code — collapsed behind a toggle */}
       {!compact && (
-        <div className="mt-4 flex gap-2">
-          {promoResult?.valid ? (
+        <div className="mt-4">
+          {!promoResult?.valid && (
+            <button
+              type="button"
+              onClick={() => setCodeOpen((v) => !v)}
+              className="flex w-full items-center gap-2 text-[12.5px] font-semibold transition-opacity hover:opacity-75"
+              style={{ color: T.forest2 }}
+            >
+              <Tag className="h-3.5 w-3.5" />
+              Have A Discount Code?
+              <ChevronDown
+                className={cn('h-3.5 w-3.5 transition-transform', codeOpen && 'rotate-180')}
+              />
+            </button>
+          )}
+          <AnimatePresence initial={false}>
+            {(codeOpen || promoResult?.valid) && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.18, ease: 'easeOut' }}
+                className="overflow-hidden"
+              >
+                <div className={cn('flex gap-2', !promoResult?.valid && 'mt-2.5')}>
+                  {promoResult?.valid ? (
             <div
               className="flex w-full items-center justify-between gap-2 rounded-md border px-3 py-2 text-[13px] font-semibold"
               style={{ background: T.limeTint, borderColor: T.line, color: T.forest }}
@@ -758,6 +785,10 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
               </button>
             </>
           )}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       )}
 
