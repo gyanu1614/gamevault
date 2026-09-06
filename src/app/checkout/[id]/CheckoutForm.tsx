@@ -27,6 +27,7 @@ import Image from 'next/image'
 import * as Select from '@radix-ui/react-select'
 import * as Dropdown from '@radix-ui/react-dropdown-menu'
 import {
+  ArrowLeft,
   BadgeCheck,
   Check,
   ChevronDown,
@@ -824,7 +825,16 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
       <div className="mx-auto w-full max-w-[1120px] px-4 pb-24 pt-8 sm:px-10 lg:pb-[72px]">
         {/* Header row */}
         <div className="flex items-center justify-between gap-3">
-          <span className="flex items-center gap-2.5">
+          <span className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => router.back()}
+              aria-label="Go Back"
+              className="grid h-9 w-9 shrink-0 place-items-center rounded-md border bg-white/60 backdrop-blur-sm transition-colors hover:bg-white"
+              style={{ borderColor: T.line, color: T.ink }}
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </button>
             <Lock className="h-[18px] w-[18px]" style={{ color: T.forest }} />
             <span className="text-[20px] font-bold sm:text-[24px]" style={{ color: T.ink }}>
               Secure Checkout
