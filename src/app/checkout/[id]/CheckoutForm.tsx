@@ -694,6 +694,13 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
           <p className="truncate text-[15px] font-semibold" style={{ color: T.ink }}>
             {title}
           </p>
+          {(listing.game?.name || listing.category?.name) && (
+            <p className="mt-0.5 truncate text-[12px]" style={{ color: T.ink2 }}>
+              {listing.game?.name}
+              {listing.game?.name && listing.category?.name && ' · '}
+              {listing.category?.name}
+            </p>
+          )}
         </div>
       </div>
 
