@@ -975,9 +975,11 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
         <CompanyStrip />
       </div>
 
-      {/* Mobile sticky pay bar */}
+      {/* Mobile sticky pay bar. Bottom padding hugs the browser chrome:
+          12px base, or the home-indicator inset when the browser bar sits
+          on top (Chrome/top-bar Safari) and exposes the safe area. */}
       <div
-        className="fixed inset-x-0 bottom-0 z-40 border-t bg-white px-4 pb-5 pt-3 lg:hidden"
+        className="fixed inset-x-0 bottom-0 z-40 border-t bg-white px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 lg:hidden"
         style={{ borderColor: T.line }}
       >
         {payButton()}
