@@ -18,7 +18,7 @@ export function GamesDirectoryCollapse({ children }: { children: React.ReactNode
   return (
     <div className={`relative ${open ? 'pb-16' : ''}`}>
       <div
-        className={`overflow-hidden transition-[max-height] duration-500 ease-out ${
+        className={`relative overflow-hidden transition-[max-height] duration-500 ease-out ${
           open ? 'max-h-[4000px]' : 'max-h-[400px]'
         }`}
       >
