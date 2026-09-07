@@ -678,7 +678,7 @@ export default function WalletPage() {
         )}
 
       {/* ── Tabs ── */}
-      <div className="flex gap-2 sm:gap-3 mb-4">
+      <div className="mb-4 flex flex-nowrap gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:gap-3 sm:overflow-visible sm:pb-0">
         {tabs.map(tab => {
           const Icon = tab.icon
           const isActive = activeTab === tab.id
@@ -687,7 +687,7 @@ export default function WalletPage() {
               key={tab.id}
               onClick={() => { setActiveTab(tab.id); setSearchQuery(''); setFilterStatus('all') }}
               className={cn(
-                'flex flex-1 sm:flex-none min-w-0 items-center justify-center gap-2 px-2 sm:px-4 py-3 text-sm rounded-lg transition-all',
+                'flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-lg px-3 py-2.5 text-sm transition-all sm:px-4 sm:py-3',
                 isActive
                   ? 'font-semibold border-2 border-lime bg-gradient-to-br from-lime/20 to-lime/5 text-white shadow-elevated'
                   : 'font-medium border border-border-subtle card-frost text-text-secondary hover:border-lime-tint-border hover:bg-bg-overlay hover:text-text-secondary'

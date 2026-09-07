@@ -108,11 +108,11 @@ export default function WishlistPage() {
           icon="wishlist"
           title="Wishlist"
           subtitle="Save your favorite items and track them"
-          className="mb-8"
+          className="mb-5"
         />
 
         {/* Stats */}
-        <div className="mb-8 grid gap-4 sm:grid-cols-3">
+        <div className="mb-5 grid grid-cols-3 gap-2.5 sm:gap-4">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -160,7 +160,7 @@ export default function WishlistPage() {
         </div>
 
         {/* Filters & View Toggle */}
-        <div className="mb-6 flex flex-col gap-4 rounded-lg border border-border-subtle card-frost p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="mb-5 flex flex-row items-center gap-2 max-sm:overflow-x-auto max-sm:pb-1 max-sm:[-ms-overflow-style:none] max-sm:[scrollbar-width:none] max-sm:[&::-webkit-scrollbar]:hidden max-sm:[&>*]:shrink-0 sm:justify-between sm:gap-4 sm:rounded-lg sm:border sm:border-border-subtle sm:card-frost sm:p-4">
         {/* Search */}
         <div className="relative flex-1 sm:max-w-md">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary" />

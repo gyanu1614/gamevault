@@ -142,7 +142,7 @@ export default function ReviewsPage() {
 
         {/* Stats Overview (only for received reviews) */}
         {activeTab === 'received' && user?.isApprovedSeller && (
-          <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mb-6 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -216,7 +216,7 @@ export default function ReviewsPage() {
         </div>
 
         {/* Rating Filter */}
-        <div className="mb-6 grid gap-4 sm:grid-cols-3 lg:grid-cols-6">
+        <div className="mb-6 flex flex-nowrap gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [&>*]:shrink-0 sm:grid sm:grid-cols-3 sm:gap-4 sm:overflow-visible sm:pb-0 lg:grid-cols-6">
           {(['all', '5', '4', '3', '2', '1'] as FilterRating[]).map((rating) => (
             <motion.button
               key={rating}

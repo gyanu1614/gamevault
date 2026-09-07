@@ -1,5 +1,6 @@
 'use client'
 
+import AccountPageHeader from '@/components/account/AccountPageHeader'
 import { useState } from 'react'
 import { useAuth } from '@/hooks/use-auth'
 import { useSellerAnalytics } from '@/hooks/use-seller-analytics'
@@ -114,12 +115,9 @@ export default function AnalyticsPage() {
 
   return (
     <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 pb-6">
-      {/* Header */}
+      {/* Header — standard account title block for parity with siblings. */}
       <div className="mb-5">
-        <h1 className="text-2xl sm:text-3xl font-semibold text-white">Analytics</h1>
-        <p className="mt-0.5 text-sm text-text-tertiary">
-          Track your performance and insights
-        </p>
+        <AccountPageHeader title="Analytics" subtitle="Track your performance and insights" />
       </div>
 
       {/* Time Range Selector */}

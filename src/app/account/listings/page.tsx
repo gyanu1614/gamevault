@@ -985,7 +985,7 @@ function OffersContent() {
                   <span className="whitespace-nowrap">
                     Delivery <span className="text-text-secondary">{formatDeliveryLabel(l.delivery_time)}</span>
                   </span>
-                  <span className="whitespace-nowrap">Updated {fmtRelative(l.updated_at)}</span>
+                  <span className="whitespace-nowrap max-sm:hidden">Updated {fmtRelative(l.updated_at)}</span>
                 </div>
               </div>
             )
@@ -1010,7 +1010,7 @@ function OffersContent() {
         </div>
 
         {/* ── Pagination footer ── */}
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/[0.06] px-5 py-3.5">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/[0.06] px-5 py-3.5 max-sm:justify-center">
           <div className="flex items-center gap-5 text-[12.5px] text-text-tertiary">
             <span>
               Showing <span className="font-semibold text-text-secondary">{rangeStart}–{rangeEnd}</span> of{' '}
