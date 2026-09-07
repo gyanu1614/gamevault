@@ -573,7 +573,7 @@ function OffersContent() {
       <div className="mt-5 flex flex-wrap items-center gap-2.5">
         {/* Below sm the three triggers share one row (grid); at sm+ the
             wrapper dissolves (contents) into the original flex-wrap row. */}
-        <div className="grid w-full grid-cols-3 gap-2.5 sm:contents">
+        <div className="flex w-full flex-nowrap gap-2.5 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [&>button]:shrink-0 [&>button]:whitespace-nowrap sm:contents">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <FilterTrigger
