@@ -107,6 +107,15 @@ function OrdersContent() {
     }
   }, [openDropdown])
 
+  // Route-scoped scroll lock — the shell is the viewport; the list scrolls.
+  useEffect(() => {
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = prev
+    }
+  }, [])
+
   // Redirect to login if not authenticated
   useEffect(() => {
     if (!authLoading && !user) {
@@ -345,10 +354,12 @@ function OrdersContent() {
     : 'Purchases'
 
   return (
-    <div className="min-h-[calc(100vh-3.5rem)] pb-12">
-      <div className="mx-auto w-full max-w-full px-4 sm:px-6 md:max-w-7xl lg:px-8">
+    // Viewport-locked like /account/messages: title + filters are static,
+    // only the orders list scrolls (pinned to the navbar's bottom edge).
+    <div className="fixed inset-x-0 bottom-0 top-[var(--navbar-bottom)] z-[1] flex flex-col overflow-hidden lg:left-64">
+      <div className="mx-auto flex h-full min-h-0 w-full max-w-full flex-col px-4 pt-4 sm:px-6 md:max-w-7xl lg:px-8">
         {/* V21/P7.al — Standard account header. */}
-        <div className="mb-6">
+        <div className="mb-4 shrink-0">
           <AccountPageHeader
             icon="orders"
             title={pageTitle}
@@ -372,8 +383,8 @@ function OrdersContent() {
             status also surfaces as an active-filter chip below. */}
 
         {/* Advanced Filter Bar */}
-        <div ref={filterBarRef} className="mb-6 space-y-4">
-          <div className="flex flex-nowrap gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden max-sm:[&>div]:shrink-0 max-sm:[&_button]:whitespace-nowrap max-sm:[&_input]:w-52 sm:grid sm:grid-cols-2 sm:gap-3 sm:overflow-visible sm:pb-0 lg:grid-cols-5">
+        <div ref={filterBarRef} className="mb-4 shrink-0 space-y-3">
+          <div className="flex flex-nowrap gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden max-sm:[&>div]:shrink-0 max-sm:[&_button]:whitespace-nowrap sm:grid sm:grid-cols-2 sm:gap-3 sm:overflow-visible sm:pb-0 lg:grid-cols-4">
             {/* Status Filter */}
             <div className="relative">
               <button
@@ -608,26 +619,27 @@ function OrdersContent() {
               )}
             </div>
 
-            {/* Listing Search */}
-            <div className="relative">
-              <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-text-secondary" />
-              <input
-                type="text"
-                placeholder="Search listings..."
-                value={filters.searchQuery}
-                onChange={(e) => setFilters({ ...filters, searchQuery: e.target.value })}
-                className="w-full rounded-lg border border-border-subtle card-frost py-2.5 pl-10 pr-10 text-text-primary text-sm placeholder:text-text-tertiary focus:border-lime-tint-border focus:outline-none focus:ring-2 focus:ring-lime/20"
-              />
-              {filters.searchQuery && (
-                <button
-                  onClick={() => setFilters({ ...filters, searchQuery: '' })}
-                  className="absolute right-1 top-1/2 -translate-y-1/2 p-2 text-text-secondary hover:text-text-primary"
-                  aria-label="Clear search"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              )}
-            </div>
+          </div>
+
+          {/* Search — its own full-width row under the filter chips. */}
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary" />
+            <input
+              type="text"
+              placeholder="Search listings…"
+              value={filters.searchQuery}
+              onChange={(e) => setFilters({ ...filters, searchQuery: e.target.value })}
+              className="h-10 w-full rounded-lg border border-border-subtle card-frost pl-9 pr-10 text-[16px] text-text-primary placeholder:text-text-tertiary transition-colors focus:border-lime-tint-border focus:outline-none focus:ring-2 focus:ring-lime/20 sm:text-sm"
+            />
+            {filters.searchQuery && (
+              <button
+                onClick={() => setFilters({ ...filters, searchQuery: '' })}
+                className="absolute right-1 top-1/2 -translate-y-1/2 p-2 text-text-secondary hover:text-text-primary"
+                aria-label="Clear Search"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
           </div>
 
           {/* Active Filter Pills & Clear All */}
@@ -731,7 +743,8 @@ function OrdersContent() {
           )}
         </div>
 
-        {/* Orders List */}
+        {/* Orders List — the page's only vertical scroll area. */}
+        <div className="min-h-0 flex-1 overflow-y-auto pb-8">
         {filteredOrders.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-lg border border-border-subtle card-frost p-12">
           <ShoppingCart className="mb-4 h-16 w-16 text-lime-text/40" />
@@ -913,6 +926,7 @@ function OrdersContent() {
           })}
         </div>
         )}
+        </div>
       </div>
     </div>
   )
