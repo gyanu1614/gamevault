@@ -15,6 +15,7 @@
 
 import { sellerDisplayName } from '@/lib/seller/identity'
 import { tierByKey, DEFAULT_TIER, type SellerTier } from '@/lib/seller/tiers'
+import SellerTierBadge from '@/components/seller/tiers/SellerTierBadge'
 import React from 'react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
@@ -161,6 +162,12 @@ export default function SellerProfileBanner({
               className="absolute bottom-0.5 right-0.5 h-4 w-4 rounded-full border-2 border-bg-base bg-success shadow-elevated sm:h-5 sm:w-5"
             />
           )}
+          {/* Floating tier medallion, pinned to the avatar's top-right corner. */}
+          <SellerTierBadge
+            tier={sellerTier}
+            size={44}
+            className="pointer-events-none absolute -right-3 -top-3 drop-shadow-[0_4px_10px_rgba(0,0,0,0.4)] sm:-right-4 sm:-top-4 sm:!h-12 sm:!w-12"
+          />
         </div>
 
         {/* Info column */}

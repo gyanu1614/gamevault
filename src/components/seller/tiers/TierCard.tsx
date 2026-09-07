@@ -11,6 +11,7 @@
 import { cn } from '@/lib/utils'
 import TierBadge, { type SellerTier } from './TierBadge'
 import { tierByKey } from '@/lib/seller/tiers'
+import SellerTierBadge from './SellerTierBadge'
 import { Check, X } from 'lucide-react'
 
 export interface TierConfig {
@@ -77,6 +78,11 @@ export default function TierCard({
           You qualify
         </span>
       )}
+
+      {/* ── Medallion ──────────────────────────────────────────────────── */}
+      <div className="flex justify-center pt-1">
+        <SellerTierBadge tier={config.tier} size={64} />
+      </div>
 
       {/* ── Header ─────────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between gap-2">
