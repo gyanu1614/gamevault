@@ -520,6 +520,19 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
   const handlePay = async () => {
     setPaying(true)
     setPayError(null)
+    // Provider-hosted methods open in a NEW tab so DropMarket never
+    // disappears (some cashier pages — GCash — have no back/cancel at all).
+    // The tab must be claimed HERE, synchronously with the click, or popup
+    // blockers kill it; it shows a holding line until the charge exists.
+    let payTab: Window | null = null
+    if (payMethod !== 'crypto') {
+      payTab = window.open('', '_blank')
+      try {
+        payTab?.document.write(
+          '<title>Secure Payment</title><p style="font-family:system-ui;padding:24px;color:#1A1D19">Opening your secure payment page…</p>'
+        )
+      } catch {}
+    }
     try {
       const result = await createCheckout({
         listingId: listing.id,
@@ -530,19 +543,30 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
         paymentMethodId: payMethod === 'crypto' ? undefined : payMethod,
       })
       if (!result.success) {
+        payTab?.close()
         setPayError(result.error || 'Checkout failed')
         toast.error(result.error || 'Checkout failed')
         setPaying(false)
         return
       }
       if (result.fullyPaidByWallet && result.orderId) {
+        payTab?.close()
         toast.success('Paid From Wallet — redirecting to your order…')
         router.push(`/orders/${result.orderId}`)
         return
       }
       if (result.checkoutUrl) {
         if (payMethod !== 'crypto') {
-          // Payssion-hosted page — absolute URL, no tab params to carry.
+          if (payTab) {
+            // Payment in the new tab; THIS tab parks on the order page,
+            // which carries Resume Payment / Cancel Order / the countdown —
+            // the buyer's way back no matter what the cashier page allows.
+            payTab.location.href = result.checkoutUrl
+            if (result.orderId) router.push(`/account/orders/${result.orderId}`)
+            setPaying(false)
+            return
+          }
+          // Popup blocked → same-tab redirect (old behavior).
           window.location.href = result.checkoutUrl
           return
         }
@@ -551,9 +575,11 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
         window.location.href = `${result.checkoutUrl}${sep}coin=${coin}&net=${network}`
         return
       }
+      payTab?.close()
       setPayError('No checkout URL returned')
       setPaying(false)
     } catch (err: any) {
+      payTab?.close()
       setPayError(err?.message || 'An unexpected error occurred')
       toast.error(err?.message || 'An unexpected error occurred')
       setPaying(false)
