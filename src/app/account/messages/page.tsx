@@ -126,7 +126,7 @@ export default function MessagesPage() {
 
   if (authLoading || isLoadingConversations) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
+      <div className="flex min-h-[calc(100vh-3.5rem)] items-center justify-center">
         <div className="flex flex-col items-center gap-3">
           <Loader2 className="h-7 w-7 animate-spin text-lime-text" />
           <p className="text-sm text-text-tertiary">Loading messages…</p>

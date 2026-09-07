@@ -21,7 +21,6 @@ import {
   Save,
   Check,
   AlertCircle,
-  Trash2,
   Upload,
   Clock,
   DollarSign,
@@ -30,18 +29,20 @@ import {
   ChevronRight,
   Zap,
   ShieldCheck,
-  AlertTriangle,
 } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { getAvatarUrl } from '@/lib/utils/avatar'
+import { downscaleImageToDataUrl, ImageDecodeError } from '@/lib/utils/image-downscale'
 // V19/P21 — Library primitives: shadcn Switch / Card / Tabs replace
 // the hand-rolled Toggle / SectionCard / button-sidebar tab UI. ARIA
 // + keyboard nav for free.
 import { Switch } from '@/components/ui/switch'
-import { Card } from '@/components/ui/card'
 import AccountPageHeader from '@/components/account/AccountPageHeader'
+import TwoFactorSection from '@/components/account/settings/TwoFactorSection'
+import DataPrivacySection from '@/components/account/settings/DataPrivacySection'
+import StoreAvailabilitySection from '@/components/account/settings/StoreAvailabilitySection'
 import { Label } from '@/components/ui/label'
 // Mobile-audit — hand-rolled fixed-center modals replaced with the shared
 // dialog base (bottom sheet below sm, centered at sm+, dvh-capped scroll).
@@ -67,20 +68,22 @@ function SettingInput({
   )
 }
 
-// ── Section card (shadcn Card alias) ─────────────────────────────
+// ── Section wrapper ──────────────────────────────────────────────
+// Deliberately invisible: no surface, no border, no padding. Settings
+// content floats directly on the account hero, and sections are separated
+// by rhythm (space-y on the parent) plus their own headings rather than by
+// stacked panels. Was a shadcn <Card>, whose hard-coded `bg-card` utility
+// outranked `.card-frost` (an @layer components class) and painted an
+// opaque black box over the hero.
 function SectionCard({ children, className }: { children: React.ReactNode; className?: string }) {
-  return (
-    <Card className={cn('rounded-lg border-border-subtle card-frost shadow-none', className)}>
-      {children}
-    </Card>
-  )
+  return <div className={className}>{children}</div>
 }
 
 // V19/P21 — Input style. Replaced the violet-500 ring with the
 // project's lime-tinted ring so focus matches the rest of the site.
 // Mobile-audit — text-base (16px) below sm so iOS Safari doesn't auto-zoom
 // + pan on input focus (worst inside the email-change bottom sheet).
-const inputCls = 'w-full rounded-lg border border-border-subtle bg-bg-raised px-4 py-3 text-base sm:text-sm text-text-primary placeholder:text-text-disabled focus:border-lime focus:outline-none focus:ring-2 focus:ring-lime-tint-bg transition-all'
+const inputCls = 'w-full rounded-lg border border-border-subtle bg-bg-raised px-4 py-2.5 text-base sm:text-sm text-text-primary placeholder:text-text-disabled focus:border-lime focus:outline-none focus:ring-2 focus:ring-lime-tint-bg transition-all'
 
 const usd = (n: number) =>
   (n || 0).toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 })
@@ -275,19 +278,30 @@ export default function SettingsPage() {
     try {
       const isShopNameChanged = shopName && shopName !== profile?.shop_name
       if (isShopNameChanged) {
-        if (shopName.length < 3 || shopName.length > 50) throw new Error('Shop name must be between 3 and 50 characters')
+        if (shopName.length < 3 || shopName.length > 50) {
+          // Previously thrown into a catch that only console.error'd, so a
+          // bad shop name made the Save button do visibly nothing.
+          toast.error('Shop name must be between 3 and 50 characters')
+          return
+        }
         setShowShopNameConfirmation(true)
         return
       }
       await saveSettings()
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to save settings:', error)
+      toast.error(error?.message || 'Couldn’t save settings')
     }
   }
 
   const saveSettings = async () => {
     try {
-      const updates: any = { username, full_name: fullName, bio, avatar_url: avatar, business_name: businessName }
+      // avatar_url is deliberately NOT sent here. `avatar` holds the
+      // *rendered* avatar, which is a generated DiceBear URL when the user
+      // has none — saving it turned "no avatar" into a permanent hardcoded
+      // one seeded with their old username. The upload handler is the only
+      // thing that writes avatar_url.
+      const updates: any = { username, full_name: fullName, bio, business_name: businessName }
       if (paypalEmail?.trim()) updates.paypal_email = paypalEmail
       if (shopName && shopName !== profile?.shop_name) updates.shop_name = shopName
       await updateProfile(updates)
@@ -302,9 +316,13 @@ export default function SettingsPage() {
 
       toast.success('Settings saved', { description: 'Your changes are live' })
       setShowShopNameConfirmation(false)
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to save settings:', error)
-      toast.error('Couldn’t save settings', { description: 'Try again in a moment.' })
+      // updateProfile now throws human-readable messages (taken username,
+      // shop-name cooldown, …). Show that, not a generic retry line.
+      toast.error(error?.message || 'Couldn’t save settings', {
+        description: error?.message ? undefined : 'Try again in a moment.',
+      })
     }
   }
 
@@ -328,13 +346,12 @@ export default function SettingsPage() {
       setUploadingAvatar(true)
       setAvatarError(null)
 
-      // Convert to base64
-      const base64 = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader()
-        reader.onloadend = () => resolve(reader.result as string)
-        reader.onerror = reject
-        reader.readAsDataURL(file)
-      })
+      // Downscale BEFORE encoding. Sending the raw file as base64 blew the
+      // Server Action 1 MB body cap for anything over ~750 KB ("Body
+      // exceeded 1 MB limit"), which production reported only as an opaque
+      // Server Components digest error. 512px is 6x what the largest avatar
+      // tile renders at.
+      const base64 = await downscaleImageToDataUrl(file, { maxDimension: 512 })
 
       // Upload to server
       const result = await uploadProfileAvatar(base64)
@@ -347,11 +364,20 @@ export default function SettingsPage() {
       // Update avatar preview with new URL
       if (result.avatarUrl) {
         setAvatar(result.avatarUrl)
+        // Without this the navbar and sidebar kept serving the old avatar
+        // from the cached auth profile until a full page reload.
+        if (user?.id) invalidateAuthCache(user.id)
         toast.success('Avatar updated')
       }
     } catch (error: any) {
       console.error('Avatar upload error:', error)
-      setAvatarError(error.message || 'Failed to upload avatar')
+      // Never surface a framework message. `error.message` here used to be
+      // Next's raw body-limit / Server Components text.
+      setAvatarError(
+        error instanceof ImageDecodeError
+          ? error.message
+          : 'Couldn’t upload that image. Try a different file.',
+      )
     } finally {
       setUploadingAvatar(false)
     }
@@ -393,8 +419,8 @@ export default function SettingsPage() {
     // V22 — Transparent shell (was opaque bg-bg-base "black box") so the
     // account hero bleeds through like every other sidebar page; max-w-7xl
     // + shared AccountPageHeader to match their alignment + title size.
-    <div className="min-h-screen pb-20">
-      <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
+    <div className="min-h-[calc(100vh-3.5rem)] pb-12">
+      <div className="mx-auto w-full max-w-full px-4 sm:px-6 md:max-w-7xl lg:px-8">
         {/* V19/P21 — Success toasts now go through the global sonner
             instance (RootLayout). No more page-local AnimatePresence. */}
 
@@ -404,52 +430,57 @@ export default function SettingsPage() {
           subtitle="Manage your account preferences and configuration"
         />
 
-        <div className="mt-6 grid gap-6 lg:grid-cols-[220px_1fr]">
+        {/* Settings is a form surface, not a data table: at the page's full
+            max-w-7xl the inputs stretched to ~1900px and the eye lost the
+            label→field relationship. The PAGE container stays max-w-7xl (site
+            standard); only this column is constrained and centred. */}
+        <div className="mt-5 w-full max-w-4xl">
 
-          {/* ── Sidebar nav ── */}
-          {/* Mobile-audit — below lg the vertical tab card became a 300px+
-              wall above the content; it's now a horizontal scrollable pill
-              strip (44px targets, descriptions hidden). The vertical card
-              returns untouched at lg+, sticky at top-24 so it clears the
-              fixed navbar instead of sliding under it. */}
+          {/* ── Tab nav ── */}
+          {/* Full-bleed segmented bar above the content (was a 220px
+              vertical card to the left). Tabs share the width evenly at
+              sm+; below that the strip scrolls sideways rather than
+              wrapping to a second row. 48px targets throughout. */}
           <motion.div
-            initial={{ opacity: 0, x: -16 }}
-            animate={{ opacity: 1, x: 0 }}
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.05 }}
-            className="lg:sticky lg:top-24 h-fit min-w-0"
+            className="min-w-0"
           >
-            <div className="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:mx-0 lg:block lg:space-y-0.5 lg:overflow-visible lg:rounded-lg lg:border lg:border-border-subtle lg:card-frost lg:p-2 lg:pb-2">
-              {tabs.map((tab) => {
-                const Icon = tab.icon
-                const active = activeTab === tab.id
-                return (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
-                    className={cn(
-                      'group flex min-h-[44px] shrink-0 items-center gap-2.5 rounded-lg px-3.5 py-2 text-left transition-all duration-150 lg:w-full lg:gap-3 lg:py-3',
-                      active
-                        ? 'bg-lime/15 border border-lime-tint-border text-text-inverse'
-                        : 'border border-border-subtle bg-bg-overlay text-text-secondary hover:text-text-primary lg:border-transparent lg:bg-transparent lg:hover:bg-bg-raised'
-                    )}
-                  >
-                    <div className={cn(
-                      'hidden lg:flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border transition-all',
-                      active
-                        ? 'bg-lime/20 border-lime-tint-border text-lime-text'
-                        : 'bg-bg-raised border-border-subtle text-text-tertiary group-hover:text-text-secondary'
-                    )}>
-                      <Icon className="h-4 w-4" />
-                    </div>
-                    <Icon className={cn('h-4 w-4 shrink-0 lg:hidden', active ? 'text-lime-text' : 'text-text-tertiary')} />
-                    <div className="min-w-0">
-                      <div className={cn('text-sm font-medium leading-tight whitespace-nowrap lg:whitespace-normal', active ? 'text-text-primary' : '')}>{tab.label}</div>
-                      <div className="hidden lg:block text-[11px] text-text-disabled mt-0.5 truncate">{tab.desc}</div>
-                    </div>
-                    {active && <ChevronRight className="ml-auto hidden h-3.5 w-3.5 text-lime-text shrink-0 lg:block" />}
-                  </button>
-                )
-              })}
+            <div className="-mx-4 overflow-x-auto px-4 pb-1 sm:mx-0 sm:overflow-visible sm:px-0">
+              <div
+                role="tablist"
+                aria-label="Settings sections"
+                className="flex w-full min-w-max gap-1 rounded-lg border border-border-subtle card-frost p-1 sm:min-w-0"
+              >
+                {tabs.map((tab) => {
+                  const active = activeTab === tab.id
+                  return (
+                    <button
+                      key={tab.id}
+                      role="tab"
+                      aria-selected={active}
+                      title={tab.desc}
+                      onClick={() => setActiveTab(tab.id)}
+                      className={cn(
+                        'flex min-h-[38px] flex-1 shrink-0 items-center justify-center whitespace-nowrap rounded-lg px-4 text-sm font-medium transition-colors duration-150',
+                        // The site-wide :focus-visible ring is lime, which
+                        // painted a green box around a tab after clicking it.
+                        // Overridden to a neutral line rather than removed —
+                        // it is the only cue a keyboard user gets.
+                        'focus-visible:shadow-[0_0_0_1.5px_rgba(255,255,255,0.22)]',
+                        // Selection reads as a filled pill, not an accent:
+                        // a lime tint competed with the real lime CTAs.
+                        active
+                          ? 'bg-bg-overlay-2 text-text-primary shadow-sm'
+                          : 'text-text-secondary hover:bg-bg-overlay/60 hover:text-text-primary',
+                      )}
+                    >
+                      {tab.label}
+                    </button>
+                  )
+                })}
+              </div>
             </div>
           </motion.div>
 
@@ -459,7 +490,7 @@ export default function SettingsPage() {
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.2 }}
-            className="min-w-0 space-y-5"
+            className="mt-6 min-w-0 space-y-6"
           >
 
             {/* ── PROFILE ── */}
@@ -521,8 +552,8 @@ export default function SettingsPage() {
                 </SectionCard>
 
                 <SectionCard>
-                  <h2 className="text-sm font-semibold text-text-primary mb-5">Profile Information</h2>
-                  <div className="space-y-5">
+                  <h2 className="text-sm font-semibold text-text-primary mb-4">Profile Information</h2>
+                  <div className="space-y-4">
                     <div className="grid gap-4 sm:grid-cols-2">
                       <SettingInput label="Username" required hint="Your unique handle on DropMarket">
                         <input
@@ -591,9 +622,14 @@ export default function SettingsPage() {
             {/* ── SELLER ── */}
             {activeTab === 'seller' && (
               <>
+                {/* Vacation mode. Was only reachable from a toggle in the
+                    navbar dropdown — nobody going away for a week looks
+                    there. eBay and Etsy both put it in settings. */}
+                <StoreAvailabilitySection />
+
                 <SectionCard>
-                  <h2 className="text-sm font-semibold text-text-primary mb-5">Shop Identity</h2>
-                  <div className="space-y-5">
+                  <h2 className="text-sm font-semibold text-text-primary mb-4">Shop Identity</h2>
+                  <div className="space-y-4">
                     {/* Shop name */}
                     <div>
                       <label className="mb-2 block text-sm font-medium text-text-secondary">
@@ -679,7 +715,7 @@ export default function SettingsPage() {
                 </motion.div>
 
                 <SectionCard>
-                  <h2 className="text-sm font-semibold text-text-primary mb-5">Payout Method</h2>
+                  <h2 className="text-sm font-semibold text-text-primary mb-4">Payout Method</h2>
                   <div className="space-y-4">
                     <SettingInput label="PayPal Email" required hint="Earnings will be sent to this PayPal account">
                       <div className="relative">
@@ -803,7 +839,7 @@ export default function SettingsPage() {
             {activeTab === 'security' && (
               <>
                 <SectionCard>
-                  <h2 className="text-sm font-semibold text-text-primary mb-5">Change Password</h2>
+                  <h2 className="text-sm font-semibold text-text-primary mb-4">Change Password</h2>
                   <div className="space-y-4">
                     <SettingInput label="Current Password">
                       <div className="relative">
@@ -846,26 +882,15 @@ export default function SettingsPage() {
                   </div>
                 </SectionCard>
 
-                <div className="rounded-lg border border-error/40 bg-error-bg p-6">
-                  <div className="flex items-center gap-2 mb-1">
-                    <AlertTriangle className="h-4 w-4 text-error" />
-                    <span className="text-sm font-semibold text-error">Danger Zone</span>
-                  </div>
-                  <p className="text-xs text-text-tertiary mb-4">Want to permanently delete your account and all associated data? Our support team will verify your identity and process the request.</p>
-                  <Link
-                    href="/support"
-                    className="inline-flex items-center gap-2 rounded-lg border border-error/40 bg-error-bg px-5 py-3 text-sm font-semibold text-error transition-all hover:bg-error-bg/80 active:scale-95"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                    Contact Support To Delete
-                  </Link>
-                </div>
+                <TwoFactorSection />
+
+                <DataPrivacySection />
               </>
             )}
 
             {/* ── Save bar ── */}
             {activeTab !== 'security' && (
-              <div className="flex items-center justify-end gap-3 pt-2">
+              <div className="flex items-center justify-end gap-3 border-t border-border-subtle pt-5">
                 <button
                   onClick={handleSave}
                   disabled={isUpdating}

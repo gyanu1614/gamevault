@@ -13,6 +13,7 @@
  *   - Bottom lime hairline for finish
  */
 
+import { sellerDisplayName } from '@/lib/seller/identity'
 import React from 'react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
@@ -104,6 +105,7 @@ export default function SellerProfileBanner({
   sellerTier = 'bronze', isFoundingSeller = false, bannerConfig, currentUserId,
   onMessageClick, onFollowClick, isFollowing = false, className,
 }: SellerProfileBannerProps) {
+  const displayName = sellerDisplayName({ username, shopName })
   const tier = TIER_CONFIG[sellerTier] ?? TIER_CONFIG.bronze
   const TierIcon = tier.Icon
   const isOwnShop = currentUserId === sellerId
@@ -180,12 +182,12 @@ export default function SellerProfileBanner({
               /* eslint-disable-next-line @next/next/no-img-element */
               <img
                 src={avatarUrl}
-                alt={shopName || username}
+                alt={displayName}
                 className="h-full w-full object-cover"
               />
             ) : (
               <div className="flex h-full w-full items-center justify-center bg-lime-tint-bg text-3xl font-bold text-lime-text">
-                {(shopName || username)[0]?.toUpperCase()}
+                {displayName.charAt(0).toUpperCase()}
               </div>
             )}
           </div>
@@ -202,7 +204,7 @@ export default function SellerProfileBanner({
           {/* Name + tier + verified */}
           <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-start">
             <h1 className="truncate text-2xl font-bold text-text-primary drop-shadow-md sm:text-3xl">
-              {shopName || username}
+              {displayName}
             </h1>
             {isVerified && (
               <Popover>

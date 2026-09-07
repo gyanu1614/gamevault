@@ -5,7 +5,6 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { settingsApi, SellerProfile } from '@/lib/api/seller-compatible'
-import { toast } from 'sonner'
 
 export function useSellerSettings() {
   const queryClient = useQueryClient()
@@ -38,11 +37,11 @@ export function useSellerSettings() {
       queryClient.invalidateQueries({ queryKey: ['seller', 'settings'] })
       queryClient.invalidateQueries({ queryKey: ['seller', 'profile'] })
       queryClient.invalidateQueries({ queryKey: ['seller', 'dashboard'] })
-      toast.success('Profile updated successfully!')
     },
-    onError: (error: any) => {
-      toast.error(error.message || 'Failed to update profile')
-    },
+    // No toasts here. The only caller (account/settings) reports the
+    // outcome itself; toasting in both places produced two success toasts
+    // per save, and on failure a raw Postgres error stacked on top of a
+    // generic "Couldn't save settings".
   })
 
   return {

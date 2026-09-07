@@ -13,6 +13,7 @@
  * details / action panel; those fill in across P3–P10.
  */
 
+import { sellerDisplayName, sellerShopHref } from '@/lib/seller/identity'
 import { OrderHeader } from './_OrderHeader'
 import { DeliveryProgressBar } from './_DeliveryProgressBar'
 import { OrderCard } from './_OrderCard'
@@ -142,7 +143,7 @@ export function OrderClient(props: OrderClientProps) {
   const presenceParty =
     userRole === 'buyer'
       ? {
-          name: order.seller?.shop_name ?? order.seller?.username ?? 'Seller',
+          name: sellerDisplayName(order.seller),
           isOnline: !!order.seller?.presence?.is_online,
           avatarUrl: getAvatarUrl(order.seller?.avatar_url, order.seller?.username ?? 'seller'),
           roleLabel: 'Seller',
@@ -159,15 +160,18 @@ export function OrderClient(props: OrderClientProps) {
   const otherPartyButton =
     userRole === 'buyer'
       ? {
-          name: order.seller?.shop_name ?? order.seller?.username ?? 'Seller',
+          name: sellerDisplayName(order.seller),
           username: order.seller?.username ?? '',
           avatarUrl: getAvatarUrl(order.seller?.avatar_url, order.seller?.username ?? 'seller'),
           verified:
             !!order.seller?.is_verified ||
             (!!order.seller?.seller_tier && order.seller.seller_tier !== 'unverified'),
-          rating: Math.min(5, Math.max(0, Number(order.seller?.seller_rating ?? 0) / 20)),
+          // seller_rating is already a 0–5 star average; the card shows it as
+          // "N.NN ★" (not a percent), so use it directly. The old `/ 20` shrank
+          // a real 5★ seller to 0.25.
+          rating: Math.min(5, Math.max(0, Number(order.seller?.seller_rating ?? 0))),
           sales: Number(order.seller?.total_reviews ?? 0),
-          href: order.seller?.username ? `/shop/${order.seller.username}` : '#',
+          href: sellerShopHref(order.seller) ?? '#',
           ctaLabel: 'View store',
         }
       : {

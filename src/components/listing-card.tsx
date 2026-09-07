@@ -1,5 +1,6 @@
 'use client'
 
+import { sellerDisplayName, sellerInitial } from '@/lib/seller/identity'
 import Link from 'next/link'
 import Image from 'next/image'
 import { motion } from 'framer-motion'
@@ -155,18 +156,18 @@ export function ListingCard({ listing, index = 0 }: ListingCardProps) {
                 {listing.seller?.avatar_url ? (
                   <img
                     src={listing.seller.avatar_url}
-                    alt={listing.seller.username ?? ''}
+                    alt={sellerDisplayName(listing.seller)}
                     className="h-6 w-6 rounded-full object-cover ring-1 ring-white/10"
                   />
                 ) : (
                   <div className="h-6 w-6 rounded-full bg-lime-tint-bg ring-1 ring-lime-tint-border flex items-center justify-center text-[10px] font-bold text-lime-text">
-                    {(listing.seller?.username ?? '?')[0].toUpperCase()}
+                    {sellerInitial(listing.seller)}
                   </div>
                 )}
               </div>
-              {/* Username */}
+              {/* Seller — shop name when they trade under one. */}
               <span className="truncate text-xs text-muted-foreground">
-                {listing.seller?.username}
+                {sellerDisplayName(listing.seller)}
               </span>
               {/* Rating */}
               {listing.seller?.seller_rating > 0 && (

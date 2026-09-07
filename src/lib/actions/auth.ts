@@ -469,24 +469,39 @@ export async function uploadProfileAvatar(avatarData: string) {
       return { error: 'Not authenticated' }
     }
 
-    // Convert base64 to buffer
-    const base64Data = avatarData.split(',')[1]
+    // Read the real type off the data URI instead of assuming PNG: the
+    // client downscales to WebP (JPEG on older encoders), and storing those
+    // bytes under contentType image/png made Storage serve a mislabelled
+    // file. Only raster types the <img> tag can render are accepted.
+    const match = /^data:(image\/(png|jpeg|webp));base64,(.+)$/.exec(avatarData)
+    if (!match) {
+      return { error: 'Unsupported image format' }
+    }
+
+    const [, contentType, subtype, base64Data] = match
     const buffer = Buffer.from(base64Data, 'base64')
 
-    // File path: {user_id}/avatar.png
-    const filePath = `${user.id}/avatar.png`
+    // Defence in depth: the client downscales to ~30-80 KB, so anything
+    // this large means the client-side step was bypassed.
+    if (buffer.byteLength > 2 * 1024 * 1024) {
+      return { error: 'That image is too large. Try a smaller one.' }
+    }
+
+    // File path: {user_id}/avatar.{ext}
+    const ext = subtype === 'jpeg' ? 'jpg' : subtype
+    const filePath = `${user.id}/avatar.${ext}`
 
     // Upload to Supabase Storage with upsert (replace existing)
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from('avatars')
       .upload(filePath, buffer, {
-        contentType: 'image/png',
+        contentType,
         upsert: true, // Replace existing avatar
       })
 
     if (uploadError) {
       console.error('❌ Avatar upload error:', uploadError)
-      return { error: `Failed to upload avatar: ${uploadError.message}` }
+      return { error: 'Could not upload your avatar. Try again in a moment.' }
     }
 
     // Get public URL with cache-busting timestamp
@@ -505,7 +520,7 @@ export async function uploadProfileAvatar(avatarData: string) {
 
     if (updateError) {
       console.error('❌ Profile update error:', updateError)
-      return { error: `Failed to update profile: ${updateError.message}` }
+      return { error: 'Your avatar uploaded but the profile could not be updated. Try again.' }
     }
 
     console.log('✅ Avatar uploaded successfully:', cacheBustedUrl)
@@ -514,8 +529,10 @@ export async function uploadProfileAvatar(avatarData: string) {
     revalidatePath('/account/settings')
     return { success: true, avatarUrl: cacheBustedUrl }
   } catch (err: any) {
+    // Raw messages here reached the UI verbatim (Postgres/Storage internals,
+    // and Next's own body-limit text). Log the detail, show a plain line.
     console.error('❌ Unexpected error uploading avatar:', err)
-    return { error: `Unexpected error: ${err.message || 'Unknown error'}` }
+    return { error: 'Could not upload your avatar. Try again in a moment.' }
   }
 }
 

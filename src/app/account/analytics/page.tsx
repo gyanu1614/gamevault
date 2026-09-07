@@ -103,7 +103,7 @@ export default function AnalyticsPage() {
 
   if (authLoading || isLoading || trendLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
+      <div className="flex min-h-[calc(100vh-3.5rem)] items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
           <p className="text-text-secondary">Loading analytics...</p>

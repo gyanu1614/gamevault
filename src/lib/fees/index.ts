@@ -204,7 +204,10 @@ export function protectionWindowHours(input: CommissionInput): number {
 
 // ─── §3 Withdrawal / payout fees (mirrored into withdrawal_methods rows) ────
 
-export const PAYOUT_MIN_USD = 100
+// $50 — was $100, which sat above the whole sector (G2G/Eldorado/Gameflip
+// are $10-50) and stranded small sellers' balances. Mirrored into the
+// withdrawal_methods.min_withdrawal rows by migration.
+export const PAYOUT_MIN_USD = 50
 export const PAYOUT_FEES = {
   fiat: { pct: 1.5, fixed: 2 },
   crypto: { pct: 3, fixed: 10 },

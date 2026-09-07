@@ -12,6 +12,7 @@
 
 'use client'
 
+import { sellerDisplayName } from '@/lib/seller/identity'
 import React, { useState } from 'react'
 import { ThumbsUp, ThumbsDown, Shield, MessageCircle, ExternalLink, Edit3 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -62,7 +63,7 @@ export default function ReviewCard({
   const buyerName = review.buyer?.username || 'Anonymous'
   const anonymizedName = anonymizeName(buyerName)
   const buyerAvatar = review.buyer?.avatar_url
-  const sellerName = review.seller?.shop_name || review.seller?.username || 'Seller'
+  const sellerName = sellerDisplayName(review.seller)
 
   const isSellerOwner = currentUserId === review.seller_id
   const isReviewer = currentUserId === review.reviewer_id

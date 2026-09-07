@@ -5,6 +5,7 @@
  * SEO-friendly URL: /fortnite/accounts/rare-og-account-abc123 (no /marketplace prefix)
  */
 
+import { sellerRatingPercent, sellerShopSlug } from '@/lib/seller/identity'
 import { SITE_URL } from '@/config/site'
 import { JsonLd, breadcrumbList } from '@/lib/seo/jsonld'
 import React, { Suspense, cache } from 'react'
@@ -192,11 +193,12 @@ function shapeMini(row: any) {
     seller: {
       username: seller.username ?? 'seller',
       shopName: seller.shop_name ?? null,
+      shopSlug: sellerShopSlug(seller),
       avatarUrl: seller.avatar_url ?? null,
       verified:
         !!seller.is_verified ||
         (!!seller.seller_tier && seller.seller_tier !== 'unverified'),
-      rating: Number(seller.seller_rating ?? 100),
+      ratingPercent: sellerRatingPercent(seller),
       totalSales: Number(seller.total_sales ?? 0),
     },
     categorySlug: row.category?.slug ?? 'items',
@@ -227,7 +229,7 @@ async function getCarouselListings({
       id, slug, title, price, original_price, delivery_time, quantity,
       is_unlimited, description, images, template_data, status,
       seller:profiles!listings_seller_id_fkey(
-        id, username, shop_name, avatar_url, seller_tier,
+        id, username, shop_name, shop_slug, avatar_url, seller_tier,
         seller_rating, total_sales, total_reviews, is_verified
       ),
       category:categories!listings_category_id_fkey(slug, name)
@@ -409,12 +411,15 @@ async function ListingDetailPage({ params }: PageProps) {
       id: listing.seller.id,
       username: listing.seller.username,
       shopName: listing.seller.shop_name ?? null,
+      shopSlug: sellerShopSlug(listing.seller),
       avatarUrl: listing.seller.avatar_url ?? null,
       tier: listing.seller.seller_tier ?? null,
       verified:
         !!listing.seller.is_verified ||
         (!!listing.seller.seller_tier && listing.seller.seller_tier !== 'unverified'),
-      rating: Number(listing.seller.seller_rating ?? 95),
+      // Null when the seller has no reviews — the UI shows "New Seller"
+      // rather than a fabricated 95%. Same rule checkout already used.
+      ratingPercent: sellerRatingPercent(listing.seller),
       totalSales: sellerStats.totalSales,
       activeListings: sellerStats.activeListings,
       createdAt: listing.seller.created_at ?? null,

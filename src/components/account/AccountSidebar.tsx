@@ -1,5 +1,6 @@
 'use client'
 
+import { sellerDisplayName, sellerShopSlug } from '@/lib/seller/identity'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname, useSearchParams } from 'next/navigation'
@@ -202,7 +203,7 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
         {(() => {
           const isSeller = !!user?.isApprovedSeller
           const displayName = isSeller
-            ? (user?.shop_name || user?.username || 'Seller')
+            ? sellerDisplayName(user)
             : (user?.username || 'User')
           const joinedDate = user?.joinedAt
             ? new Date(user.joinedAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
@@ -251,7 +252,7 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
 
           return isSeller ? (
             <Link
-              href={`/shop/${user?.shop_slug || user?.username || ''}`}
+              href={`/shop/${sellerShopSlug(user) ?? ''}`}
               onClick={() => setIsMobileOpen(false)}
               className="group flex w-full items-center gap-3 rounded-lg px-1 py-1 transition-colors hover:bg-white/[0.04]"
             >

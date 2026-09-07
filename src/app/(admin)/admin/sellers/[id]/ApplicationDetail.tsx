@@ -42,13 +42,9 @@ import {
 import { getAvatarUrl } from '@/lib/utils/avatar'
 import {
   VOLUME_LABELS,
-  PAYOUT_METHOD_LABELS,
   SELLER_TYPE_LABELS,
-  BUSINESS_TYPE_LABELS,
   DOCUMENT_TYPE_LABELS,
-  CRYPTO_TYPE_LABELS,
 } from '@/lib/seller-application/labels'
-import { PAYOUT_FEES } from '@/lib/fees'
 import {
   FOREST_BG,
   FOREST_CLASSES,
@@ -61,12 +57,10 @@ import {
 import {
   IconGamepad,
   IconIdCard,
-  IconBank,
   IconSignaturePen,
   IconPerson,
   IconTimeline,
   IconNotes,
-  IconBriefcase,
   IconContract,
   IconShield,
 } from '../../_theme/SectionIcons'
@@ -108,20 +102,6 @@ function fmtDateTime(date: string | null | undefined): string {
     day: 'numeric',
     year: 'numeric',
   })} · ${d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`
-}
-
-/** "us64svbk00004821" → "US64 SV ••• 4821" style masked account/IBAN. */
-function maskAccount(value: string): string {
-  const clean = value.replace(/\s+/g, '')
-  if (clean.length <= 8) return value
-  return `${clean.slice(0, 6)} ••• ${clean.slice(-4)}`
-}
-
-/** Long crypto wallets → head…tail. */
-function maskWallet(value: string): string {
-  const clean = value.trim()
-  if (clean.length <= 16) return clean
-  return `${clean.slice(0, 8)}…${clean.slice(-6)}`
 }
 
 /** 'top-up' / 'game_coins' → 'Top Up' / 'Game Coins' (Title Case). */
@@ -541,27 +521,12 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
     { label: 'Accuracy', ok: !!application.information_accurate_confirmed },
   ]
 
-  const payoutIsCrypto =
-    application.payout_method === 'crypto' || application.payout_method === 'cryptocurrency'
-  const payoutMethodLine = (() => {
-    if (!application.payout_method) return 'Not Specified'
-    const base =
-      PAYOUT_METHOD_LABELS[application.payout_method] ??
-      titleFromSlug(application.payout_method)
-    const { pct, fixed } = PAYOUT_FEES[payoutIsCrypto ? 'crypto' : 'fiat']
-    return `${base} · ${pct}% + $${fixed}`
-  })()
-
   const volumeLabel = application.expected_monthly_volume
     ? `${VOLUME_LABELS[application.expected_monthly_volume] ?? application.expected_monthly_volume}/mo`
     : '—'
 
   const sellerTypeLabel =
     SELLER_TYPE_LABELS[application.seller_type ?? ''] ?? application.seller_type ?? 'Seller'
-
-  const location = [application.city, application.state_province, application.country]
-    .filter(Boolean)
-    .join(', ')
 
   // ── Actions (wiring unchanged) ──
   // `asFounding` grants founding-seller status (2% fee discount + badge) on
@@ -1096,83 +1061,11 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
             )}
           </Card>
 
-          {/* Payout */}
-          <Card
-            icon={<IconBank size={20} />}
-            title="Payout"
-            sub="Where their earnings go once orders complete"
-            index={cardIndex++}
-          >
-            <div className="grid grid-cols-1 gap-x-[18px] gap-y-2.5 sm:grid-cols-2">
-              <KV k="Method" v={payoutMethodLine} />
-              <KV k="Preferred Currency" v={application.payout_currency || '—'} />
-              {payoutIsCrypto ? (
-                <>
-                  <KV
-                    k="Coin"
-                    v={
-                      application.crypto_type
-                        ? CRYPTO_TYPE_LABELS[application.crypto_type] ?? application.crypto_type
-                        : '—'
-                    }
-                  />
-                  <KV
-                    k="Wallet"
-                    mono
-                    v={
-                      application.crypto_wallet_address
-                        ? maskWallet(application.crypto_wallet_address)
-                        : '—'
-                    }
-                  />
-                </>
-              ) : (
-                <>
-                  <KV k="Account Holder" v={application.bank_account_holder_name || '—'} />
-                  <KV k="Bank" v={application.bank_name || '—'} />
-                  <KV
-                    k="IBAN / Account"
-                    mono
-                    v={application.bank_iban ? maskAccount(application.bank_iban) : '—'}
-                  />
-                </>
-              )}
-              <KV k="Tax Residency" v={application.tax_residency_country || '—'} />
-            </div>
-          </Card>
-
-          {/* Business branch */}
-          {application.seller_type === 'business' && (
-            <Card
-              icon={<IconBriefcase size={20} />}
-              title="Business"
-              sub="Registered company behind the application"
-              index={cardIndex++}
-            >
-              <div className="grid grid-cols-1 gap-x-[18px] gap-y-2.5 sm:grid-cols-2">
-                <KV k="Company Legal Name" v={application.company_legal_name || '—'} />
-                <KV
-                  k="Registration Number"
-                  mono
-                  v={application.business_registration_number || '—'}
-                />
-                <KV k="Tax ID / VAT" mono v={application.tax_id_vat || '—'} />
-                <KV
-                  k="Business Type"
-                  v={
-                    application.business_type
-                      ? BUSINESS_TYPE_LABELS[application.business_type] ??
-                        titleFromSlug(application.business_type)
-                      : '—'
-                  }
-                />
-                <KV k="Year Established" v={application.year_established?.toString() || '—'} />
-                <KV k="Business Email" v={application.business_email || '—'} />
-                <KV k="Business Phone" mono v={application.business_phone || '—'} />
-                <KV k="Company Address" v={application.company_address || '—'} />
-              </div>
-            </Card>
-          )}
+          {/* NOTE: Payout and the detailed Business-entity fields were removed
+              from the seller APPLICATION (now a 3-step flow: Account & Games →
+              Identity → Review & Sign). Payout is set up later in Wallet; profile
+              details live in Settings. Business sellers still upload their
+              business documents, which appear in Identity & Documents above. */}
 
           {/* Experience & Agreement */}
           <Card
@@ -1274,10 +1167,12 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
                 )}
               </div>
             </div>
+            {/* Phone / city are no longer part of the slimmed application
+                (KYC captures identity; profile details live in Settings). We
+                show only what the 3-step flow actually collects. */}
             <div className="mt-3.5 grid grid-cols-2 gap-x-[18px] gap-y-2.5">
               <KV k="Legal Name" v={application.full_legal_name || '—'} />
-              <KV k="Phone" mono v={application.phone_number || '—'} />
-              <KV k="Location" v={location || '—'} />
+              <KV k="Country" v={application.country || '—'} />
               <KV
                 k="Languages"
                 v={

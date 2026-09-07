@@ -56,13 +56,16 @@ export function BetaBanner() {
     }
   }, [pathname])
 
-  // Mirror LayoutWrapper: no banner on full-canvas / chrome-less shells.
+  // Mirror LayoutWrapper: no banner on full-canvas / chrome-less shells,
+  // and none on sidebar'd account/seller pages — the banner recruits
+  // sellers, which is noise once you're inside your own account.
+  const isOrderDetail = /^\/account\/orders\/[^/]+$/.test(pathname)
   const hidden =
     pathname.startsWith('/admin') ||
     pathname.startsWith('/checkout') ||
     pathname.startsWith('/dev/checkout-preview') ||
-    pathname.startsWith('/account/become-seller') ||
-    pathname.startsWith('/account/seller-status') ||
+    (pathname.startsWith('/account') && !isOrderDetail) ||
+    (pathname.startsWith('/seller') && !pathname.includes('/new') && !pathname.includes('/edit')) ||
     pathname.startsWith('/kyc/complete')
 
   if (hidden) return null

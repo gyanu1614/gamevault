@@ -58,7 +58,7 @@ export default async function SellerTiersPage() {
     : null
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-[calc(100vh-3.5rem)]">
       {/* ── Header ─────────────────────────────────────────────────────────── */}
       <div className="border-b border-border-subtle bg-[rgba(10,10,15,0.6)] backdrop-blur-xl">
         <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6">

@@ -12,6 +12,7 @@
  *      by the admin's attribute slug — not random).
  */
 
+import { sellerDisplayName, sellerRatingPercent, sellerShopSlug } from '@/lib/seller/identity'
 import 'server-only'
 import type { ItemOffer, ItemsTaxonomy, TaxonomyOption } from './_itemsTypes'
 import { buildItemSlug } from '@/lib/utils/item-seo-slug'
@@ -190,6 +191,7 @@ export interface RawListing {
     id?: string | null
     username?: string | null
     shop_name?: string | null
+    shop_slug?: string | null
     avatar_url?: string | null
     seller_tier?: string | null
     seller_rating?: number | null
@@ -249,12 +251,14 @@ export function listingToOffer(
   // Seller profile.
   const seller = listing.seller ?? null
   const sellerName: string =
-    seller?.shop_name?.trim() || seller?.username || 'Seller'
+    sellerDisplayName(seller)
   const verified =
     !!seller?.is_verified ||
     (!!seller?.seller_tier && seller.seller_tier !== 'unverified')
-  const ratingRaw = seller?.seller_rating
-  const rating = ratingRaw != null ? Math.min(100, Math.max(0, Number(ratingRaw))) : 95
+  // seller_rating is a 0-5 star average; the old code printed it straight
+  // into a "%" (a 5/5 seller showed as "5%") and defaulted a missing value
+  // to a fabricated 95.
+  const ratingPercent = sellerRatingPercent(seller)
 
   // Slug used for canonical URLs.
   const slug = buildItemSlug({
@@ -294,13 +298,18 @@ export function listingToOffer(
       id: seller?.id ?? null,
       username: seller?.username ?? 'seller',
       shopName: seller?.shop_name ?? null,
+      // Canonical storefront slug — never build /shop/ URLs from the
+      // display name or the raw username.
+      shopSlug: sellerShopSlug(seller),
       avatarUrl: seller?.avatar_url ?? null,
       verified,
-      rating,
+      ratingPercent,
       sales: seller?.total_sales ?? 0,
       reviewCount: seller?.total_reviews ?? 0,
     },
-    recommended: Math.round(rating),
+    // Unrated sellers get a neutral score, not the old fabricated 95 —
+    // that ranked brand-new sellers above proven ones by default.
+    recommended: Math.round(ratingPercent ?? 75),
     sellerId: seller?.id ?? null,
     // V24 — Pretty breadcrumb of selected option labels along the taxonomy
     // chain (e.g. ["Brainrot", "Secret"] or ["Blade Ball"]).

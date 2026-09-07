@@ -1,5 +1,6 @@
 'use client'
 
+import { sellerDisplayName, sellerShopSlug } from '@/lib/seller/identity'
 import Link from 'next/link'
 import { SmartLink } from '@/components/global/SmartLink'
 import { usePathname, useRouter } from 'next/navigation'
@@ -1408,7 +1409,7 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                               <div className="flex items-center gap-2.5 w-full rounded-md bg-white/[0.04] border border-border-subtle hover:border-border-strong transition-all overflow-hidden group/card">
                                 {/* Left — shop link */}
                                 <Link
-                                  href={`/shop/${user.profile?.shop_slug || user.profile?.username || ''}`}
+                                  href={`/shop/${sellerShopSlug(user.profile) ?? ''}`}
                                   onClick={() => setUserMenuOpen(false)}
                                   className="flex items-center gap-3 flex-1 min-w-0 px-3 py-2.5 hover:bg-white/[0.04] transition-colors group/link"
                                 >
@@ -1419,7 +1420,7 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                                   />
                                   <div className="min-w-0">
                                     <div className="font-bold text-text-primary text-[15px] truncate group-hover/link:text-lime-text transition-colors leading-tight">
-                                      {user.profile?.shop_name || user.profile?.username || 'Seller'}
+                                      {sellerDisplayName(user.profile)}
                                     </div>
                                     {(() => {
                                       const tier = (user.profile?.seller_tier || 'unverified').toLowerCase()

@@ -463,7 +463,7 @@ export default function WalletPage() {
   // CRITICAL: Always show loader while auth is loading to prevent flash of buyer UI for sellers
   if (authLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="flex min-h-[calc(100vh-3.5rem)] items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-lime-text" />
       </div>
     )
@@ -475,7 +475,7 @@ export default function WalletPage() {
       // Seller: Must have both wallet and earnings loaded
       if (!walletData || earningsLoading) {
         return (
-          <div className="min-h-screen flex items-center justify-center">
+          <div className="flex min-h-[calc(100vh-3.5rem)] items-center justify-center">
             <Loader2 className="h-8 w-8 animate-spin text-lime-text" />
           </div>
         )
@@ -484,7 +484,7 @@ export default function WalletPage() {
       // Buyer: Only needs wallet data
       if (!walletData) {
         return (
-          <div className="min-h-screen flex items-center justify-center">
+          <div className="flex min-h-[calc(100vh-3.5rem)] items-center justify-center">
             <Loader2 className="h-8 w-8 animate-spin text-lime-text" />
           </div>
         )
@@ -493,7 +493,7 @@ export default function WalletPage() {
   }
 
   return (
-    <div className="min-h-screen pb-20">
+    <div className="min-h-[calc(100vh-3.5rem)] pb-12">
       <div className="mx-auto w-full max-w-full px-4 sm:px-6 md:max-w-7xl lg:px-8">
         {/* ── Header ── */}
         <div className="mb-6">

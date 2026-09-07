@@ -1,5 +1,6 @@
 'use client'
 
+import { sellerDisplayName, sellerShopHref } from '@/lib/seller/identity'
 import { useState, useMemo, useEffect, useRef, Suspense } from 'react'
 import { useAuth } from '@/hooks/use-auth'
 import AccountPageHeader from '@/components/account/AccountPageHeader'
@@ -324,7 +325,7 @@ function OrdersContent() {
 
   if (authLoading || ordersLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-bg-base">
+      <div className="flex min-h-[calc(100vh-3.5rem)] items-center justify-center bg-bg-base">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="h-8 w-8 animate-spin text-lime-text" />
           <p className="text-text-secondary">Loading orders...</p>
@@ -343,7 +344,7 @@ function OrdersContent() {
     : 'Purchases'
 
   return (
-    <div className="min-h-screen pb-20">
+    <div className="min-h-[calc(100vh-3.5rem)] pb-12">
       <div className="mx-auto w-full max-w-full px-4 sm:px-6 md:max-w-7xl lg:px-8">
         {/* V21/P7.al — Standard account header. */}
         <div className="mb-6">
@@ -845,7 +846,7 @@ function OrdersContent() {
                               onClick={(e) => {
                                 e.preventDefault()
                                 e.stopPropagation()
-                                window.location.href = `/shop/${otherParty.shop_slug || otherParty.username}`
+                                window.location.href = sellerShopHref(otherParty) ?? '#'
                               }}
                               className="group/seller flex min-w-0 items-center gap-1.5 transition-opacity hover:opacity-80"
                             >
@@ -859,7 +860,7 @@ function OrdersContent() {
                                 />
                               </span>
                               <span className="truncate font-medium text-text-secondary group-hover/seller:text-lime-text">
-                                {otherParty.shop_name || otherParty.username}
+                                {sellerDisplayName(otherParty)}
                               </span>
                             </button>
                           </>
@@ -895,7 +896,7 @@ function OrdersContent() {
                               <LeaveReviewButton
                                 orderId={order.id}
                                 orderNumber={(order.order_number || order.id.slice(0, 8).toUpperCase()).replace(/^GV-/, 'DM-')}
-                                sellerName={otherParty?.shop_name || otherParty?.username || 'Seller'}
+                                sellerName={sellerDisplayName(otherParty)}
                                 compact={true}
                                 className="inline-flex items-center gap-1 rounded-md border border-lime-tint-border bg-lime-tint-bg px-2 py-1 text-[11px] font-medium text-lime-text transition-all hover:bg-lime-tint-bg/80"
                               />

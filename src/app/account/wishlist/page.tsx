@@ -101,7 +101,7 @@ export default function WishlistPage() {
   }
 
   return (
-    <div className="min-h-screen pb-20">
+    <div className="min-h-[calc(100vh-3.5rem)] pb-12">
       <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
         {/* V21/P7.al — Standard account header. */}
         <AccountPageHeader

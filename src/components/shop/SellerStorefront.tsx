@@ -8,6 +8,7 @@
  * uses Combobox (game) and primitives across the board. Mobile-first.
  */
 
+import { sellerDisplayName, sellerShopHref } from '@/lib/seller/identity'
 import { SITE_URL } from '@/config/site'
 import React, { useLayoutEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
@@ -90,14 +91,14 @@ export default function SellerStorefront({ seller }: SellerStorefrontProps) {
   const tier = TIER_CONFIG[sellerTier] ?? TIER_CONFIG.bronze
 
   // JSON-LD
-  const businessName = seller.profile.shop_name || seller.profile.business_name || seller.profile.username
+  const businessName = sellerDisplayName(seller.profile) || seller.profile.business_name
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'Store',
     name: businessName,
     image: getAvatarUrl(seller.profile.avatar_url, seller.profile.username),
     description: `Gaming marketplace seller on DropMarket`,
-    url: `${SITE_URL}/shop/${seller.profile.shop_slug || seller.profile.username}`,
+    url: `${SITE_URL}${sellerShopHref(seller.profile) ?? ''}`,
     aggregateRating:
       seller.stats.totalReviews > 0
         ? {

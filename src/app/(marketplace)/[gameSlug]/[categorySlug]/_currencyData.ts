@@ -5,6 +5,8 @@
  * comes later — the page shape is what we're locking in now.
  */
 
+import { sellerDisplayName, sellerRatingPercent, sellerShopSlug } from '@/lib/seller/identity'
+
 // V14r — Shared delivery formatter so buyer and seller surfaces agree.
 import { formatDeliveryLabel } from '@/lib/utils/delivery-time'
 
@@ -17,6 +19,10 @@ export interface Offer {
   id: string
   /** V14m — seller user id; used to block self-purchase on the buy panel. */
   sellerId?: string | null
+  /** Canonical storefront slug for `/shop/{slug}`. `seller` is a DISPLAY
+   *  name (may be a shop name with spaces/caps) and must never be used to
+   *  build a URL. Null when the seller has no addressable shop. */
+  sellerSlug?: string | null
   seller: string
   /** Seller's uploaded avatar (profile pic). Falls back to a hue-generated
    *  initial tile when null. */
@@ -24,8 +30,8 @@ export interface Offer {
   /** 0–360 — used to generate the avatar gradient via oklch. */
   avatarHue: number
   verified: boolean
-  /** Positive review percentage, 0–100. */
-  rating: number
+  /** Positive review percentage (0–100), or null for a seller with no reviews. */
+  rating: number | null
   reviews: number
   pricePerUnit: number
   minQty: number
@@ -209,14 +215,14 @@ function hashHue(s: string): number {
  * `listing` is the raw row joined with seller profile data.
  */
 export function listingToOffer(listing: any): Offer {
-  const sellerName: string =
-    listing.seller?.username ?? listing.seller?.shop_name ?? 'Seller'
+  const sellerName: string = sellerDisplayName(listing.seller)
   const verified: boolean =
     !!listing.seller?.is_verified ||
     (!!listing.seller?.seller_tier && listing.seller.seller_tier !== 'unverified')
-  const rating: number = listing.seller?.seller_rating
-    ? Math.min(99.9, Math.max(0, Number(listing.seller.seller_rating)))
-    : 95
+  // Positive-feedback % (0–100) from the 0–5 star average, or null for a
+  // seller with no reviews (shown as "New"). The old code printed the raw
+  // star value as a percent (5★ → "5%") and defaulted missing to a fabricated 95.
+  const rating: number | null = sellerRatingPercent(listing.seller)
   const reviews: number = listing.seller?.total_reviews ?? 0
   const { min: deliveryMin, max: deliveryMax } = parseDeliveryTime(listing.delivery_time)
   const stock: number = listing.is_unlimited
@@ -225,6 +231,7 @@ export function listingToOffer(listing: any): Offer {
   return {
     id: listing.id,
     sellerId: listing.seller?.id ?? null,
+    sellerSlug: sellerShopSlug(listing.seller),
     seller: sellerName,
     avatarUrl: listing.seller?.avatar_url ?? null,
     avatarHue: hashHue(sellerName),
@@ -240,7 +247,7 @@ export function listingToOffer(listing: any): Offer {
     deliveryMax,
     deliveryLabel: formatDeliveryLabel(listing.delivery_time),
     blurb: (listing.description ?? '').trim(),
-    recommended: Math.round(rating),
+    recommended: Math.round(rating ?? 0),
   }
 }
 

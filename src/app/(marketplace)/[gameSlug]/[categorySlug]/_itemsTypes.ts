@@ -11,10 +11,14 @@ export interface ItemSeller {
   id: string | null
   username: string
   shopName?: string | null
+  /** Canonical storefront slug — the ONLY value allowed to build a
+   *  `/shop/{slug}` URL. `shopName`/`username` are display values. */
+  shopSlug?: string | null
   avatarUrl?: string | null
   verified: boolean
-  /** Approval rating as a percentage (0-100). */
-  rating: number
+  /** Positive-feedback percentage (0-100), or null when the seller has no
+   *  reviews yet. Null means "show New Seller", never a made-up number. */
+  ratingPercent: number | null
   /** Lifetime completed sales across all the seller's listings. */
   sales: number
   /** Number of reviews the rating is based on. Shown as "(1,381)". */

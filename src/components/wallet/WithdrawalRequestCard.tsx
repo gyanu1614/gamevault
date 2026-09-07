@@ -1,5 +1,6 @@
 'use client'
 
+import { CHAIN_LABELS } from '@/lib/crypto/address-validation'
 import React, { useState } from 'react'
 import { Clock, CheckCircle2, XCircle, Loader2, DollarSign, Calendar, X } from 'lucide-react'
 import { motion } from 'framer-motion'
@@ -158,6 +159,35 @@ export default function WithdrawalRequestCard({ request, onUpdate }: WithdrawalR
           <p className="text-sm font-semibold text-emerald-400 font-mono">${request.net_amount.toFixed(2)}</p>
         </div>
       </div>
+
+      {/* Destination + transaction proof.
+          No gaming marketplace surveyed (G2G, Eldorado, Gameflip, GameBoost,
+          PlayerAuctions) shows the seller a transaction hash — every crypto
+          exchange does. It costs nothing and it is the difference between
+          "we say we paid you" and "here is the proof, verify it yourself". */}
+      {(request.payment_details?.wallet_address || request.transaction_hash) && (
+        <div className="mb-3 space-y-2 rounded-lg border border-border-subtle bg-bg-overlay p-3">
+          {request.payment_details?.wallet_address && (
+            <div>
+              <p className="mb-0.5 text-xs text-text-tertiary">
+                Sent to
+                {request.payment_details?.network
+                  ? ` · ${CHAIN_LABELS[request.payment_details.network as keyof typeof CHAIN_LABELS] ?? request.payment_details.network}`
+                  : ''}
+              </p>
+              <p className="break-all font-mono text-xs text-text-secondary">
+                {request.payment_details.wallet_address}
+              </p>
+            </div>
+          )}
+          {request.transaction_hash && (
+            <div>
+              <p className="mb-0.5 text-xs text-text-tertiary">Transaction</p>
+              <p className="break-all font-mono text-xs text-lime-text">{request.transaction_hash}</p>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Admin notes */}
       {request.admin_notes && (

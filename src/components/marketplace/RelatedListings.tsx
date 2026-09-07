@@ -5,6 +5,7 @@
  * excluding the current listing. Rendered on the listing detail page.
  */
 
+import { sellerDisplayName, sellerInitial } from '@/lib/seller/identity'
 import Link from 'next/link'
 import Image from 'next/image'
 import { createClient } from '@/lib/supabase/server'
@@ -32,7 +33,7 @@ export default async function RelatedListings({
     .select(`
       id, slug, title, price, original_price, images, delivery_time,
       quantity, is_unlimited, sales,
-      seller:profiles!listings_seller_id_fkey(username, avatar_url, seller_rating)
+      seller:profiles!listings_seller_id_fkey(username, shop_name, shop_slug, avatar_url, seller_rating)
     `)
     .eq('game_id', gameId)
     .eq('category_id', categoryId)
@@ -130,16 +131,16 @@ export default async function RelatedListings({
                     {seller?.avatar_url ? (
                       <img
                         src={seller.avatar_url}
-                        alt={seller.username ?? ''}
+                        alt={sellerDisplayName(seller)}
                         className="h-4 w-4 rounded-full object-cover ring-1 ring-white/10 flex-shrink-0"
                       />
                     ) : (
                       <div className="h-4 w-4 rounded-full bg-lime/20 flex items-center justify-center text-[8px] font-bold text-lime-text flex-shrink-0">
-                        {(seller?.username ?? '?')[0].toUpperCase()}
+                        {sellerInitial(seller)}
                       </div>
                     )}
                     <span className="truncate text-[10px] text-white/40">
-                      {seller?.username}
+                      {sellerDisplayName(seller)}
                     </span>
                   </div>
                   <span className="text-[10px] text-white/30 shrink-0">

@@ -77,11 +77,19 @@ export function LayoutWrapper({
           page; the fixed navbar reads its remaining height and rides just
           below it. Self-hides on chrome-less shells (admin/checkout/seller
           application) to match the navbar rules below. */}
-      {!isAdminPage && !isCheckout && !isSellerApplication && !isValuesHub && <BetaBanner />}
+      {/* Not on sidebar'd account/seller pages: the banner recruits sellers
+          ("Sell on DropMarket … Start Earning"), which is noise once you are
+          signed in and standing in your own account area. */}
+      {!isAdminPage && !isCheckout && !isSellerApplication && !isValuesHub && !hasSidebar && (
+        <BetaBanner />
+      )}
       {/* P5 — Checkout strips the global navbar: the page carries its
           own slim header (brand left · secure badge right). */}
+      {/* Sidebar'd account pages pin the navbar to its full-width bar mode:
+          the floating pill reads as an overlay above a page that already has
+          its own left rail. */}
       {!isAdminPage && !isCheckout && !isSellerApplication && !isValuesHub && (
-        <Navbar forceScrolled={isSellWizard} />
+        <Navbar forceScrolled={isSellWizard || hasSidebar} />
       )}
       <main className="flex-1">{children}</main>
       {/* Sidebar'd account/seller pages have no marketing footer — it

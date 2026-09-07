@@ -20,6 +20,7 @@ import GameDirectory from '@/components/marketplace/GameDirectory'
 import CategoryPageLayout from '@/components/marketplace/CategoryPageLayout'
 import { buildSynonymSearchQuery } from '@/lib/utils/gaming-synonyms'
 import { ChevronLeft } from 'lucide-react'
+import { sellerDisplayName, sellerRatingPercent, sellerShopSlug } from '@/lib/seller/identity'
 import { getCurrencyShell as getCurrencyShellUncached, listingToOffer } from './_currencyData'
 import RouteSkeleton from './_RouteSkeleton'
 import CurrencyPageClient from './_CurrencyPageClient'
@@ -498,7 +499,7 @@ async function CategoryBrowsePage({ params, searchParams }: PageProps) {
             id, description, price, quantity, delivery_time, is_unlimited,
             bundle_id, region, platform,
             seller:profiles!listings_seller_id_fkey(
-              id, username, shop_name, avatar_url, seller_tier,
+              id, username, shop_name, shop_slug, avatar_url, seller_tier,
               seller_rating, total_reviews, is_verified
             )
           `)
@@ -513,13 +514,16 @@ async function CategoryBrowsePage({ params, searchParams }: PageProps) {
         bundleOffers = (listings ?? []).map((l: any) => ({
           listingId: l.id,
           sellerId: l.seller?.id ?? null,
-          sellerUsername: l.seller?.username ?? null,
-          sellerName: l.seller?.shop_name ?? l.seller?.username ?? 'Seller',
+          sellerSlug: sellerShopSlug(l.seller),
+          sellerName: sellerDisplayName(l.seller),
           sellerAvatarUrl: l.seller?.avatar_url ?? null,
           verified:
             !!l.seller?.is_verified ||
             (!!l.seller?.seller_tier && l.seller.seller_tier !== 'unverified'),
-          rating: Math.min(99.9, Math.max(0, Number(l.seller?.seller_rating ?? 95))),
+          // Positive-feedback % (0–100) from the 0–5 star average, or null for
+          // a seller with no reviews (rendered as "New"). Never the old raw-star
+          // -as-percent (5★ → "5%") or the fabricated 95 default.
+          rating: sellerRatingPercent(l.seller),
           reviews: l.seller?.total_reviews ?? 0,
           pricePerBundle: Number(l.price ?? 0),
           stock: l.is_unlimited ? 1_000_000_000 : (l.quantity ?? 0),
@@ -663,7 +667,7 @@ async function CategoryBrowsePage({ params, searchParams }: PageProps) {
             id, title, description, price, original_price, quantity,
             min_quantity, delivery_method, delivery_time, is_unlimited,
             seller:profiles!listings_seller_id_fkey(
-              id, username, shop_name, avatar_url, seller_tier,
+              id, username, shop_name, shop_slug, avatar_url, seller_tier,
               seller_rating, total_reviews, is_verified
             )
           `)
@@ -842,7 +846,7 @@ async function CategoryBrowsePage({ params, searchParams }: PageProps) {
             id, slug, title, price, original_price, delivery_time,
             quantity, is_unlimited, images, template_data, status,
             seller:profiles!listings_seller_id_fkey(
-              id, username, shop_name, avatar_url, seller_tier,
+              id, username, shop_name, shop_slug, avatar_url, seller_tier,
               seller_rating, total_reviews, total_sales, is_verified
             ),
             category:categories!listings_category_id_fkey(slug, name)

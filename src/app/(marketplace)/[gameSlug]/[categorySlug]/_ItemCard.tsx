@@ -25,6 +25,7 @@
  * per-game branching.
  */
 
+import { sellerDisplayName, sellerInitial, sellerShopSlug } from '@/lib/seller/identity'
 import Link from 'next/link'
 import { SmartLink } from '@/components/global/SmartLink'
 import { Bolt, Clock, ThumbsUp, TrendingDown } from 'lucide-react'
@@ -68,7 +69,7 @@ function VerifiedDot({ size = 14 }: { size?: number }) {
 
 /** Plain seller avatar (image or initial fallback). */
 function SellerAvatar({ seller, size = 34 }: { seller: ItemOffer['seller']; size?: number }) {
-  const initial = (seller.shopName || seller.username || 'S').charAt(0).toUpperCase()
+  const initial = sellerInitial(seller)
   if (seller.avatarUrl) {
     return (
       /* eslint-disable-next-line @next/next/no-img-element */
@@ -133,7 +134,7 @@ export default function ItemCard({
 }) {
   const stop = (e: React.MouseEvent) => e.stopPropagation()
   const href = `/${gameSlug}/${offer.detailCategorySlug}/${offer.detailSlug}`
-  const sellerName = offer.seller.shopName || offer.seller.username
+  const sellerName = sellerDisplayName(offer.seller)
 
   // Delivery: green chip + bolt for instant, neutral clock + window label
   // otherwise. parseDeliveryMinutes treats "instant" as the 5-min SLA, so
@@ -287,7 +288,7 @@ export default function ItemCard({
           </Link>
         ) : (
           <SmartLink
-            href={`/shop/${offer.seller.username}`}
+            href={`/shop/${sellerShopSlug(offer.seller) ?? ''}`}
             onClick={stop}
             className="pointer-events-auto inline-flex min-w-0 shrink items-center gap-2.5 rounded-lg py-0.5 pl-0.5 pr-1 transition-colors hover:bg-bg-overlay-2"
           >
@@ -307,7 +308,11 @@ export default function ItemCard({
               <span className="inline-flex items-center gap-1.5 text-[11.5px]">
                 <span className="inline-flex items-center gap-1 font-semibold text-success">
                   <ThumbsUp className="h-3 w-3 fill-success" aria-hidden />
-                  <span className="tabular-nums">{offer.seller.rating.toFixed(1)}%</span>
+                  <span className="tabular-nums">
+                    {offer.seller.ratingPercent != null
+                      ? `${offer.seller.ratingPercent.toFixed(0)}%`
+                      : 'New Seller'}
+                  </span>
                 </span>
                 <span className="tabular-nums text-text-tertiary">
                   · {fmtCount(offer.seller.sales)} orders

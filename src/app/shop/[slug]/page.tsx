@@ -9,10 +9,11 @@
  * - About: Seller info, policies, response time
  */
 
+import { sellerDisplayName } from '@/lib/seller/identity'
 import { SITE_URL } from '@/config/site'
 import React from 'react'
 import { Metadata } from 'next'
-import { notFound } from 'next/navigation'
+import { notFound, permanentRedirect } from 'next/navigation'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import SellerStorefront from '@/components/shop/SellerStorefront'
 
@@ -95,10 +96,12 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     ? (ratingData.reduce((sum, r) => sum + r.rating, 0) / ratingData.length).toFixed(1)
     : '0.0'
 
-  const businessName = profile.shop_name || profile.business_name || profile.username
+  const businessName = sellerDisplayName(profile) || profile.business_name
   const description = `Shop for gaming accounts, items, and services from ${businessName}. ${totalSales || 0} sales • ${avgRating}/5 rating • Trusted DropMarket seller.`
 
-  const shopUrl = `${SITE_URL}/shop/${slug}`
+  // Always advertise the canonical slug, even when reached via the legacy
+  // username URL — otherwise the two URLs self-declare as separate pages.
+  const shopUrl = `${SITE_URL}/shop/${(profile.shop_slug || '').trim() || slug}`
   const { getAvatarUrl: getAvatar } = await import('@/lib/utils/avatar')
   const avatarUrl = getAvatar(profile.avatar_url, slug)
 
@@ -217,6 +220,16 @@ export default async function SellerShopPage({ params }: PageProps) {
 
   if (error || !profile || !hasApprovedApplication) {
     notFound()
+  }
+
+  // Canonicalize the storefront URL. The lookup above still accepts a
+  // username so old links and shared URLs keep working, but a shop with a
+  // shop_slug has exactly ONE canonical address — otherwise every shop is
+  // reachable at two URLs and Google splits the ranking signal between
+  // them. 308 so the old link is not re-crawled indefinitely.
+  const canonicalSlug = (profile.shop_slug || '').trim()
+  if (canonicalSlug && canonicalSlug !== slug) {
+    permanentRedirect(`/shop/${canonicalSlug}`)
   }
 
   // Get seller's active listings

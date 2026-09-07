@@ -40,13 +40,52 @@ export interface AgreementPdfInput {
   consents: Array<{ label: string; accepted: boolean }>
 }
 
-/** Strip the tiny markdown subset used in legal docs (bold + links). */
+/**
+ * Map the handful of non-Latin-1 typographic characters our legal docs use to
+ * WinAnsi-safe equivalents, and drop anything else the standard PDF font can't
+ * encode. Without this, a single smart-quote-adjacent symbol — most notably the
+ * "⚠️" in an internal editorial note — makes pdf-lib's WinAnsi encoder throw
+ * mid-build and the whole download 500s. Transliterate what we can, strip the
+ * rest, so no future legal-copy edit can break the executed-agreement PDF.
+ */
+function toWinAnsiSafe(text: string): string {
+  const map: Record<string, string> = {
+    '“': '"', '”': '"', '‘': "'", '’': "'", '‚': ',', '„': '"',
+    '—': '-', '–': '-', '‑': '-', '−': '-',
+    '…': '...', '•': '-', '·': '-', '‣': '-', '◦': '-',
+    '→': '->', '←': '<-', '↔': '<->', '⇒': '=>',
+    '™': '(TM)', '®': '(R)', '©': '(C)',
+    // Emoji, checkmarks, and exotic spaces are dropped by the code-point
+    // filter below; the non-breaking space is normalised to a plain space.
+    '\u00A0': ' ',
+  }
+  // Iterate by code POINT (so emoji surrogate pairs are one unit): transliterate
+  // known typographic chars, keep printable Latin-1 + tab/newline, and drop
+  // everything else (emoji, other scripts) that WinAnsi cannot encode.
+  let out = ''
+  for (const ch of text) {
+    if (map[ch] !== undefined) {
+      out += map[ch]
+      continue
+    }
+    const cp = ch.codePointAt(0) ?? 0
+    if (cp === 0x09 || cp === 0x0a || cp === 0x0d || (cp >= 0x20 && cp <= 0xff)) {
+      out += ch
+    }
+  }
+  return out
+}
+
+/** Strip the tiny markdown subset used in legal docs (bold + links), then make
+ *  the text safe for the WinAnsi standard PDF font. */
 function stripMd(md: string): string {
-  return md
-    .replace(/\*\*(.+?)\*\*/g, '$1')
-    .replace(/\[(.+?)\]\((.+?)\)/g, '$1 ($2)')
-    .replace(/\s+/g, ' ')
-    .trim()
+  return toWinAnsiSafe(
+    md
+      .replace(/\*\*(.+?)\*\*/g, '$1')
+      .replace(/\[(.+?)\]\((.+?)\)/g, '$1 ($2)')
+      .replace(/\s+/g, ' ')
+      .trim(),
+  )
 }
 
 function wrap(text: string, font: PDFFont, size: number, maxWidth: number): string[] {
@@ -73,7 +112,7 @@ export async function buildSellerAgreementPdf(input: AgreementPdfInput): Promise
   const helvBold = await pdf.embedFont(StandardFonts.HelveticaBold)
   const timesItalic = await pdf.embedFont(StandardFonts.TimesRomanItalic)
 
-  pdf.setTitle(`Seller Agency Agreement — ${input.legalName}`)
+  pdf.setTitle(toWinAnsiSafe(`Seller Agency Agreement — ${input.legalName}`))
   pdf.setAuthor('DropMarket Ltd')
   pdf.setSubject('Executed Seller Agency Agreement')
   pdf.setCreationDate(new Date())
@@ -95,7 +134,9 @@ export async function buildSellerAgreementPdf(input: AgreementPdfInput): Promise
     opts: { font?: PDFFont; size?: number; color?: ReturnType<typeof rgb>; gap?: number; indent?: number } = {},
   ) => {
     const { font = helv, size = 9.5, color = INK, gap = 4, indent = 0 } = opts
-    const lines = wrap(text, font, size, CONTENT_W - indent)
+    // Sanitize at the single choke point so EVERY string — headings, table
+    // rows, and seller-supplied names alike — is safe for the WinAnsi font.
+    const lines = wrap(toWinAnsiSafe(text), font, size, CONTENT_W - indent)
     for (const line of lines) {
       ensure(size + 3)
       page.drawText(line, { x: MARGIN + indent, y: y - size, size, font, color })
@@ -198,13 +239,13 @@ export async function buildSellerAgreementPdf(input: AgreementPdfInput): Promise
       page.drawImage(png, { x: MARGIN, y: y - dims.height, width: dims.width, height: dims.height })
       y -= dims.height + 8
     } catch {
-      const sig = input.signatureName || input.legalName
+      const sig = toWinAnsiSafe(input.signatureName || input.legalName)
       ensure(60)
       page.drawText(sig, { x: MARGIN, y: y - 24, size: 24, font: timesItalic, color: BLACK })
       y -= 34
     }
   } else {
-    const sig = input.signatureName || input.legalName
+    const sig = toWinAnsiSafe(input.signatureName || input.legalName)
     ensure(60)
     page.drawText(sig, { x: MARGIN, y: y - 24, size: 24, font: timesItalic, color: BLACK })
     y -= 34
@@ -233,7 +274,9 @@ export async function buildSellerAgreementPdf(input: AgreementPdfInput): Promise
   // ── Footer on every page ────────────────────────────────────────────────
   pages.forEach((pg, i) => {
     pg.drawText(
-      `Seller Agency Agreement · ${input.legalName} · Ref ${input.applicationId.slice(0, 8)} · Page ${i + 1} of ${pages.length}`,
+      toWinAnsiSafe(
+        `Seller Agency Agreement · ${input.legalName} · Ref ${input.applicationId.slice(0, 8)} · Page ${i + 1} of ${pages.length}`,
+      ),
       { x: MARGIN, y: 30, size: 7.5, font: helv, color: INK2 },
     )
   })

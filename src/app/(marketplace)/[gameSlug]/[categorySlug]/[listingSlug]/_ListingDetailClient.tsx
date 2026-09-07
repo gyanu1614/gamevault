@@ -18,6 +18,7 @@
  * Separator). Mobile-first; sticky bottom Buy bar.
  */
 
+import { sellerDisplayName, sellerShopSlug } from '@/lib/seller/identity'
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, useTransition } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -84,10 +85,11 @@ export interface ListingForDetail {
     id: string
     username: string
     shopName: string | null
+    shopSlug?: string | null
     avatarUrl: string | null
     tier: string | null
     verified: boolean
-    rating: number
+    ratingPercent: number | null
     totalSales: number
     activeListings: number
     createdAt: string | null
@@ -103,9 +105,10 @@ export interface MiniListing {
   seller: {
     username: string
     shopName: string | null
+    shopSlug?: string | null
     avatarUrl: string | null
     verified: boolean
-    rating: number
+    ratingPercent: number | null
     totalSales: number
   }
   categorySlug: string
@@ -251,7 +254,7 @@ export default function ListingDetailClient({
 
   const tierKey = (listing.seller.tier ?? 'unverified').toLowerCase()
   const tier = TIER_BADGES[tierKey] ?? TIER_BADGES.unverified
-  const sellerName = listing.seller.shopName?.trim() || listing.seller.username
+  const sellerName = sellerDisplayName(listing.seller)
   const sellerInitial = sellerName.charAt(0).toUpperCase()
 
   const onGalleryKey = (e: React.KeyboardEvent) => {
@@ -534,7 +537,7 @@ export default function ListingDetailClient({
                 />
                 {/* 1) Seller */}
                 <Link
-                  href={`/shop/${listing.seller.username}`}
+                  href={`/shop/${sellerShopSlug(listing.seller) ?? ''}`}
                   className="group -mx-1 flex items-center gap-2.5 rounded-lg px-1 pb-4 transition-colors"
                 >
                   {listing.seller.avatarUrl ? (
@@ -559,10 +562,19 @@ export default function ListingDetailClient({
                       )}
                     </div>
                     <div className="mt-0.5 flex items-center gap-1.5 text-[11.5px] text-text-tertiary">
-                      <span className="font-semibold text-text-secondary">
-                        {listing.seller.rating.toFixed(0)}%
-                      </span>
-                      <span aria-hidden>·</span>
+                      {listing.seller.ratingPercent != null ? (
+                        <>
+                          <span className="font-semibold text-text-secondary">
+                            {listing.seller.ratingPercent.toFixed(0)}%
+                          </span>
+                          <span aria-hidden>·</span>
+                        </>
+                      ) : (
+                        <>
+                          <span className="font-semibold text-text-secondary">New Seller</span>
+                          <span aria-hidden>·</span>
+                        </>
+                      )}
                       <span>{fmtCount(listing.seller.totalSales)} sold</span>
                       <span aria-hidden>·</span>
                       <span className={cn('font-semibold', tier.color)}>{tier.label}</span>
@@ -1023,7 +1035,7 @@ function OtherSellerRow({
   open: boolean
   onOpenChange: (open: boolean) => void
 }) {
-  const sellerName = offer.seller.shopName?.trim() || offer.seller.username
+  const sellerName = sellerDisplayName(offer.seller)
   const href = `/${gameSlug}/${offer.detailCategorySlug}/${offer.detailSlug}`
   const delivery = offer.deliveryTime ? formatDeliveryLabel(offer.deliveryTime) : 'Instant'
   const stockLabel = offer.isUnlimited
@@ -1085,7 +1097,7 @@ function OtherSellerRow({
                 <span className="truncate">{sellerName}</span>
                 <span aria-hidden>·</span>
                 <span className="font-semibold text-text-secondary">
-                  {offer.seller.rating.toFixed(0)}%
+                  {offer.seller.ratingPercent != null ? `${offer.seller.ratingPercent.toFixed(0)}%` : 'New'}
                 </span>
               </div>
             </div>
@@ -1115,7 +1127,7 @@ function OtherSellerRow({
                 </span>
                 <span className="block text-[11px] text-text-tertiary">
                   <span className="font-semibold text-text-secondary">
-                    {offer.seller.rating.toFixed(0)}%
+                    {offer.seller.ratingPercent != null ? `${offer.seller.ratingPercent.toFixed(0)}%` : 'New'}
                   </span>{' '}
                   · {fmtCount(offer.seller.sales)} sold
                 </span>
@@ -1212,7 +1224,7 @@ function OtherSellerRow({
 }
 
 function MiniCard({ listing, gameSlug }: { listing: MiniListing; gameSlug: string }) {
-  const sellerName = listing.seller.shopName || listing.seller.username
+  const sellerName = sellerDisplayName(listing.seller)
   return (
     <Link
       data-mini-card
