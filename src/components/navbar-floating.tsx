@@ -6,10 +6,9 @@ import Link from 'next/link'
 import { SmartLink } from '@/components/global/SmartLink'
 import { usePathname, useRouter } from 'next/navigation'
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
-import { Search, User, LogOut, Menu, X, ChevronDown, ChevronLeft, ChevronRight, Settings, Store, Package, MessageSquare, MessagesSquare, PlusCircle, Heart, Wallet, Star, List, Bell, BellDot, LayoutDashboard, Activity, Gauge, Award, Crown, Gem, Sparkles, Shield, Coins, UserCircle2, Swords, Zap, Rocket, LifeBuoy ,
+import { Search, User, LogOut, Menu, X, ChevronDown, ChevronLeft, ChevronRight, Settings, Store, Package, MessageSquare, MessagesSquare, PlusCircle, Heart, Wallet, Star, List, Bell, BellDot, LayoutDashboard, Activity, Gauge, Sparkles, Shield, Coins, UserCircle2, Swords, Zap, Rocket, LifeBuoy ,
   ShoppingCart,
   LayoutGrid,
-  type LucideIcon,
 } from 'lucide-react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence, useMotionValue, useSpring } from 'framer-motion'
@@ -158,14 +157,6 @@ function MobileServiceRow({
 // ── Tier visual config ────────────────────────────────────────────────────────
 // Colors/bg/border come from the central gemstone ladder (@/lib/seller/tiers).
 // Only the per-tier Lucide glyph is chosen here.
-const TIER_ICONS: Record<SellerTier, LucideIcon> = {
-  quartz: Shield,
-  amethyst: Award,
-  ruby: Crown,
-  sapphire: Gem,
-  diamond: Sparkles,
-}
-
 /**
  * V19/P15.b — `forceScrolled` pins the navbar in its full-width "bar"
  * mode regardless of scroll position. Used by /sell/* and any other
@@ -1427,7 +1418,7 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                                     </div>
                                     {(() => {
                                       const def = tierByKey(user.profile?.seller_tier || DEFAULT_TIER)
-                                      const TierIcon = TIER_ICONS[def.key]
+                                      const TierIcon = def.Icon
                                       return (
                                         <div className={cn('mt-1 inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px] font-semibold', def.colors.text, def.colors.bg, def.colors.border)}>
                                           <TierIcon className="h-2.5 w-2.5" />

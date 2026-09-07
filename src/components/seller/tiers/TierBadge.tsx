@@ -30,6 +30,7 @@ export default function TierBadge({
   className,
 }: TierBadgeProps) {
   const def = tierByKey(tier)
+  const TierIcon = def.Icon
 
   return (
     <span
@@ -42,7 +43,7 @@ export default function TierBadge({
         className
       )}
     >
-      {showIcon && <span aria-hidden="true">{def.colors.icon}</span>}
+      {showIcon && <TierIcon className="h-3 w-3" aria-hidden="true" />}
       {def.label}
     </span>
   )

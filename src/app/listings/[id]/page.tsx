@@ -16,11 +16,10 @@ import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import {
   Star, Eye, ShoppingCart, Shield, Zap, ArrowLeft, Infinity,
-  Clock, Award, Crown, Gem, Sparkles, type LucideIcon,
-  CheckCircle2, MessageSquare, TrendingDown,
+  Clock, CheckCircle2, MessageSquare, TrendingDown,
 } from 'lucide-react'
 import { getListing } from '@/lib/api/listings'
-import { tierByKey, type SellerTier } from '@/lib/seller/tiers'
+import { tierByKey } from '@/lib/seller/tiers'
 import { useAuth } from '@/hooks/use-auth'
 import { useAuthDialog } from '@/components/auth/AuthDialog'
 import { Button } from '@/components/ui/button'
@@ -31,14 +30,6 @@ import { cn } from '@/lib/utils'
 
 // Tier icons — gemstone glyphs keyed to the central tier ladder. Colors/label
 // come from the shared module (@/lib/seller/tiers); only the icon lives here.
-const TIER_ICON: Record<SellerTier, LucideIcon> = {
-  quartz:   Shield,
-  amethyst: Award,
-  ruby:     Crown,
-  sapphire: Gem,
-  diamond:  Sparkles,
-}
-
 export default function ListingDetailPage() {
   const params = useParams()
   const router = useRouter()
@@ -115,7 +106,7 @@ export default function ListingDetailPage() {
   const isLowStock = !listing.is_unlimited && listing.quantity > 0 && listing.quantity <= 5
 
   const tier = tierByKey(listing.seller.seller_tier?.toLowerCase())
-  const TierIcon = TIER_ICON[tier.key]
+  const TierIcon = tier.Icon
 
   const total = listing.price * quantity
 

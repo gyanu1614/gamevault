@@ -20,7 +20,6 @@ import Link from 'next/link'
 import { motion } from 'framer-motion'
 import {
   ThumbsUp, Package, TrendingUp, MessageCircle, UserPlus, Check,
-  Shield, Crown, Gem, Sparkles, Award, type LucideIcon,
 } from 'lucide-react'
 // Mobile-audit — Popover (tap-to-open) replaces the hover-only Tooltip so
 // the verified explanation is reachable on touch devices.
@@ -58,15 +57,6 @@ interface SellerProfileBannerProps {
   className?: string
 }
 
-// Gemstone tier → Lucide icon. Colors/labels come from the central tier module;
-// only the icon is component-specific.
-const TIER_ICONS: Record<SellerTier, LucideIcon> = {
-  quartz: Shield,
-  amethyst: Award,
-  ruby: Crown,
-  sapphire: Gem,
-  diamond: Sparkles,
-}
 
 export default function SellerProfileBanner({
   sellerId, username, shopName, avatarUrl, isOnline = false,
@@ -81,7 +71,7 @@ export default function SellerProfileBanner({
     pill: cn(tierDef.colors.text, tierDef.colors.bg, tierDef.colors.border),
     ring: tierDef.colors.ring,
   }
-  const TierIcon = TIER_ICONS[tierDef.key]
+  const TierIcon = tierDef.Icon
   const isOwnShop = currentUserId === sellerId
   const positivePercentage = rating > 0 ? Math.round((rating / 5) * 100) : 0
 

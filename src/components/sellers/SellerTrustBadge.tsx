@@ -7,7 +7,7 @@
  * Tier hierarchy: quartz → amethyst → ruby → sapphire → diamond
  */
 
-import { Shield, Star, Award, Crown, Gem, Sparkles, CheckCircle2, type LucideIcon } from 'lucide-react'
+import { Star, CheckCircle2, type LucideIcon } from 'lucide-react'
 import Link from 'next/link'
 import { type SellerTier, tierByKey, TIERS } from '@/lib/seller/tiers'
 
@@ -28,14 +28,6 @@ interface SellerTrustBadgeProps {
 }
 
 /** Component-specific Lucide glyph per gemstone tier. */
-const TIER_ICONS: Record<SellerTier, LucideIcon> = {
-  quartz: Shield,
-  amethyst: Award,
-  ruby: Crown,
-  sapphire: Gem,
-  diamond: Sparkles,
-}
-
 /**
  * Per-tier style/label/description/minRating, driven from the central gemstone
  * tier module so there is one source of truth. `color` maps to the central
@@ -62,7 +54,7 @@ const TIER_CONFIG: Record<
       bg: t.colors.bg,
       border: t.colors.border,
       glow: t.colors.glow,
-      icon: TIER_ICONS[t.key],
+      icon: t.Icon,
       description: t.description,
       minRating: t.thresholds.minRating ?? 0,
     },

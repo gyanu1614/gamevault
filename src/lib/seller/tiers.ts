@@ -20,6 +20,8 @@
  * keyed in `seller_tier_config` (see migration 20260906000000_gemstone_seller_tiers).
  */
 
+import { Hexagon, Gem, Diamond, Octagon, Sparkles, type LucideIcon } from 'lucide-react'
+
 export type SellerTier = 'quartz' | 'amethyst' | 'ruby' | 'sapphire' | 'diamond'
 
 /** New sellers start here; also the fallback for any missing/legacy tier value. */
@@ -55,6 +57,8 @@ export interface TierDef {
   label: string
   description: string
   colors: TierColors
+  /** Distinct lucide icon per gemstone (colored via colors.text at render). */
+  Icon: LucideIcon
   thresholds: TierThresholds
   /** Platform commission fraction (0.089 = 8.90%). */
   commissionRate: number
@@ -91,6 +95,7 @@ export const TIERS: TierDef[] = [
       badgeColor: 'zinc',
       icon: '◇',
     },
+    Icon: Hexagon,
     thresholds: { minSales: 0, minRating: null, minAgeDays: 0, minCompletionRate: null },
     commissionRate: 0.089,
     listingLimit: 20,
@@ -113,6 +118,7 @@ export const TIERS: TierDef[] = [
       badgeColor: 'violet',
       icon: '◆',
     },
+    Icon: Gem,
     thresholds: { minSales: 10, minRating: 4.0, minAgeDays: 30, minCompletionRate: 90.0 },
     commissionRate: 0.079,
     listingLimit: 50,
@@ -135,6 +141,7 @@ export const TIERS: TierDef[] = [
       badgeColor: 'red',
       icon: '◆',
     },
+    Icon: Diamond,
     thresholds: { minSales: 50, minRating: 4.3, minAgeDays: 90, minCompletionRate: 95.0 },
     commissionRate: 0.069,
     listingLimit: 100,
@@ -157,6 +164,7 @@ export const TIERS: TierDef[] = [
       badgeColor: 'blue',
       icon: '◆',
     },
+    Icon: Octagon,
     thresholds: { minSales: 200, minRating: 4.6, minAgeDays: 180, minCompletionRate: 97.0 },
     commissionRate: 0.059,
     listingLimit: null,
@@ -181,6 +189,7 @@ export const TIERS: TierDef[] = [
       badgeColor: 'lime',
       icon: '◈',
     },
+    Icon: Sparkles,
     thresholds: { minSales: 500, minRating: 4.8, minAgeDays: 365, minCompletionRate: 99.0 },
     commissionRate: 0.049,
     listingLimit: null,
