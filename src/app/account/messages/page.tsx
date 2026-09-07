@@ -74,6 +74,17 @@ export default function MessagesPage() {
 
   useEffect(() => setIsOrderInfoCollapsed(true), [selectedConversationId])
 
+  // Route-scoped scroll lock: this page IS the viewport. Without it the
+  // global min-h-screen shell leaves an iOS dvh/vh mismatch strip under the
+  // panes and the document scrolls by exactly that amount.
+  useEffect(() => {
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = prev
+    }
+  }, [])
+
   const selectedConversation = conversations.find((c) => c.id === selectedConversationId)
 
   useEffect(() => {
