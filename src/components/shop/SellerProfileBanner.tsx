@@ -67,12 +67,7 @@ export default function SellerProfileBanner({
 }: SellerProfileBannerProps) {
   const displayName = sellerDisplayName({ username, shopName })
   const tierDef = tierByKey(sellerTier)
-  const tier = {
-    label: tierDef.label,
-    pill: cn(tierDef.colors.text, tierDef.colors.bg, tierDef.colors.border),
-    ring: tierDef.colors.ring,
-  }
-  const TierIcon = tierDef.Icon
+  const tier = { ring: tierDef.colors.ring }
   const isOwnShop = currentUserId === sellerId
   const positivePercentage = rating > 0 ? Math.round((rating / 5) * 100) : 0
 
@@ -162,17 +157,11 @@ export default function SellerProfileBanner({
               className="absolute bottom-0.5 right-0.5 h-4 w-4 rounded-full border-2 border-bg-base bg-success shadow-elevated sm:h-5 sm:w-5"
             />
           )}
-          {/* Floating tier medallion, pinned to the avatar's top-right corner. */}
-          <SellerTierBadge
-            tier={sellerTier}
-            size={44}
-            className="pointer-events-none absolute -right-3 -top-3 drop-shadow-[0_4px_10px_rgba(0,0,0,0.4)] sm:-right-4 sm:-top-4 sm:!h-12 sm:!w-12"
-          />
         </div>
 
         {/* Info column */}
         <div className="min-w-0 flex-1 text-center sm:text-left">
-          {/* Name + tier + verified */}
+          {/* Row 1 — name + blue verified badge (+ founding) */}
           <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-start">
             <h1 className="truncate text-2xl font-bold text-text-primary drop-shadow-md sm:text-3xl">
               {displayName}
@@ -180,33 +169,47 @@ export default function SellerProfileBanner({
             {isVerified && (
               <Popover>
                 <PopoverTrigger asChild>
-                  {/* 36px hit area (-m-2 cancels the visual footprint) around
-                      the 20px badge so the info opens on tap. */}
                   <button
                     type="button"
                     aria-label="Verified seller"
                     className="-m-2 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
                   >
-                    <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-lime text-text-inverse shadow-elevated">
-                      <Check className="h-3 w-3" strokeWidth={3} />
+                    <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-lime text-text-inverse shadow-elevated">
+                      <Check className="h-3.5 w-3.5" strokeWidth={3} />
                     </span>
                   </button>
                 </PopoverTrigger>
                 <PopoverContent>Verified by DropMarket</PopoverContent>
               </Popover>
             )}
-            <span
-              className={cn(
-                'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider backdrop-blur-sm',
-                tier.pill,
-              )}
-            >
-              <TierIcon className="h-3 w-3" />
-              {tier.label}
-            </span>
             {isFoundingSeller && <FoundingSellerBadge size="sm" />}
           </div>
-          <p className="mt-1 text-sm text-text-secondary">@{username}</p>
+
+          {/* Row 2 — tier chip: logo + tier name, hover shows "Tier N: Gemstone" */}
+          <div className="mt-1.5 flex items-center justify-center sm:justify-start">
+            <Popover>
+              <PopoverTrigger asChild>
+                <button
+                  type="button"
+                  aria-label={`Tier ${tierDef.tierNumber}: ${tierDef.label}`}
+                  className={cn(
+                    'inline-flex items-center gap-1.5 rounded-full border py-1 pl-1 pr-2.5 text-[13px] font-semibold backdrop-blur-sm transition-colors',
+                    tierDef.colors.bg,
+                    tierDef.colors.border,
+                    tierDef.colors.text,
+                  )}
+                >
+                  <SellerTierBadge tier={sellerTier} size={22} float={false} />
+                  {tierDef.label}
+                </button>
+              </PopoverTrigger>
+              <PopoverContent>
+                Tier {tierDef.tierNumber}: {tierDef.label}
+              </PopoverContent>
+            </Popover>
+          </div>
+
+          <p className="mt-1.5 text-sm text-text-secondary">@{username}</p>
 
           {/* Stat chips */}
           <div className="mt-3 flex flex-wrap items-center justify-center gap-1.5 sm:justify-start">

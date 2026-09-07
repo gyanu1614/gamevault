@@ -87,3 +87,4 @@ data/sab-market-feeds/*.json
 .github/agents/
 .github/hooks/
 .github/skills/
+.agents/

@@ -2,6 +2,7 @@
 
 import { sellerDisplayName, sellerShopSlug } from '@/lib/seller/identity'
 import { tierByKey, DEFAULT_TIER, type SellerTier } from '@/lib/seller/tiers'
+import SellerTierBadge from '@/components/seller/tiers/SellerTierBadge'
 import Link from 'next/link'
 import { SmartLink } from '@/components/global/SmartLink'
 import { usePathname, useRouter } from 'next/navigation'
@@ -9,6 +10,7 @@ import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import { Search, User, LogOut, Menu, X, ChevronDown, ChevronLeft, ChevronRight, Settings, Store, Package, MessageSquare, MessagesSquare, PanelLeftOpen, PanelLeftClose, PlusCircle, Heart, Wallet, Star, List, Bell, BellDot, LayoutDashboard, Activity, Gauge, Sparkles, Shield, Coins, UserCircle2, Swords, Zap, Rocket, LifeBuoy ,
   ShoppingCart,
   LayoutGrid,
+  Check,
 } from 'lucide-react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence, useMotionValue, useSpring } from 'framer-motion'
@@ -1446,17 +1448,43 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                                     className="h-10 w-10 rounded-full flex-shrink-0 object-cover ring-2 ring-white/10 group-hover/link:ring-[#C6FF3D66] transition-all"
                                   />
                                   <div className="min-w-0">
-                                    <div className="font-bold text-text-primary text-[15px] truncate group-hover/link:text-lime-text transition-colors leading-tight">
-                                      {sellerDisplayName(user.profile)}
+                                    {/* Name + blue verified badge */}
+                                    <div className="flex items-center gap-1.5">
+                                      <span className="font-bold text-text-primary text-[15px] truncate group-hover/link:text-lime-text transition-colors leading-tight">
+                                        {sellerDisplayName(user.profile)}
+                                      </span>
+                                      {user.profile?.is_verified && (
+                                        <span
+                                          aria-label="Verified seller"
+                                          className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-lime text-text-inverse"
+                                        >
+                                          <Check className="h-2.5 w-2.5" strokeWidth={3} />
+                                        </span>
+                                      )}
                                     </div>
+                                    {/* Tier — logo + "{Tier} Seller", links to the tier page.
+                                        role=link (not <a>) since this sits inside the shop Link;
+                                        stopPropagation so it navigates to tiers, not the shop. */}
                                     {(() => {
                                       const def = tierByKey(user.profile?.seller_tier || DEFAULT_TIER)
-                                      const TierIcon = def.Icon
                                       return (
-                                        <div className={cn('mt-1 inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px] font-semibold', def.colors.text, def.colors.bg, def.colors.border)}>
-                                          <TierIcon className="h-2.5 w-2.5" />
+                                        <span
+                                          role="link"
+                                          tabIndex={0}
+                                          onClick={(e) => {
+                                            e.preventDefault()
+                                            e.stopPropagation()
+                                            setUserMenuOpen(false)
+                                            router.push('/account/tiers')
+                                          }}
+                                          className={cn(
+                                            'mt-1 inline-flex cursor-pointer items-center gap-1 text-[11px] font-semibold hover:underline',
+                                            def.colors.text,
+                                          )}
+                                        >
+                                          <SellerTierBadge tier={def.key} size={16} float={false} />
                                           {def.label} Seller
-                                        </div>
+                                        </span>
                                       )
                                     })()}
                                   </div>
