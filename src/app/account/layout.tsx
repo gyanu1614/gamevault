@@ -108,7 +108,7 @@ export default function AccountLayout({ children }: { children: React.ReactNode 
           starts flush under the navbar. Pages must NOT add their own
           navbar-clearance padding on top (only internal content rhythm). */}
       <HeroBackdrop name="account" className="hero-dim lg:pl-64">
-        <div className="pt-14">
+        <div className="pt-[calc(var(--navbar-bottom,60px)+28px)]">
           <BuyingOpensSoonBanner />
           {children}
         </div>
