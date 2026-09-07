@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { requireAdmin, requireRole } from './admin-permissions'
+import { DEFAULT_TIER } from '@/lib/seller/tiers'
 import { revalidatePath } from 'next/cache'
 import {
   sendApplicationApprovedEmail,
@@ -667,6 +668,10 @@ export async function approveApplication(
         badges: newBadges,
         shop_name: shopName,
         shop_slug: shopSlug,
+        // Approval means KYC passed → mark verified (drives the blue Verified
+        // badge) and start them at the entry gemstone tier.
+        is_verified: true,
+        seller_tier: DEFAULT_TIER,
         // Only ever set founding true here — never false, so this can't revoke
         // a founding status granted elsewhere.
         ...(grantFounding ? { founding_seller: true } : {}),
