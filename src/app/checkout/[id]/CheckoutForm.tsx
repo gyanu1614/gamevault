@@ -42,6 +42,9 @@ import {
   Settings,
   Landmark,
   ShieldCheck,
+  Smartphone,
+  Store,
+  Barcode,
   Tag,
   TriangleAlert,
   Undo2,
@@ -393,6 +396,40 @@ const SOON_METHODS = [
   { name: 'Skrill', badges: ['SKRILL'] },
 ]
 
+// Payssion local methods LIVE on our app (probe-verified 2026-09-06). Adding
+// a method later = enable it at Payssion + add a row here + in the provider's
+// methods.ts registry.
+type PayMethodId = 'crypto' | 'gcash_ph' | 'oxxo_mx' | 'boleto_br'
+const LOCAL_METHODS: Array<{
+  id: Exclude<PayMethodId, 'crypto'>
+  label: string
+  region: string
+  Icon: typeof Smartphone
+  note: string
+}> = [
+  {
+    id: 'gcash_ph',
+    label: 'GCash',
+    region: 'Philippines',
+    Icon: Smartphone,
+    note: 'Pay with your GCash wallet — you’ll be redirected to a secure GCash page, and your order completes the moment the payment confirms.',
+  },
+  {
+    id: 'oxxo_mx',
+    label: 'OXXO',
+    region: 'Mexico',
+    Icon: Store,
+    note: 'You’ll get a payment voucher to pay in cash at any OXXO store. Vouchers stay valid for 48 hours; your order completes when the payment clears (usually within a day).',
+  },
+  {
+    id: 'boleto_br',
+    label: 'Boleto',
+    region: 'Brazil',
+    Icon: Barcode,
+    note: 'You’ll get a Boleto slip to pay via your bank app or in person. Slips stay valid for 48 hours; your order completes when the payment clears (1–2 business days).',
+  },
+]
+
 // ─── CheckoutForm ───────────────────────────────────────────────────────────
 
 interface CheckoutFormProps {
@@ -416,7 +453,9 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
   })()
   const [quantity] = useState(seedQty)
 
-  // Coin + network selection (crypto is the only live method).
+  // Payment method: crypto (expanded card) or a Payssion local method.
+  const [payMethod, setPayMethod] = useState<PayMethodId>('crypto')
+  // Coin + network selection (within the crypto card).
   const [coin, setCoin] = useState<Coin>('usdt')
   const [network, setNetwork] = useState<Net>('trc20')
 
@@ -475,6 +514,8 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
         quantity,
         promoDiscount,
         walletAmount,
+        // Local methods route the charge to Payssion; crypto stays default.
+        paymentMethodId: payMethod === 'crypto' ? undefined : payMethod,
       })
       if (!result.success) {
         setPayError(result.error || 'Checkout failed')
@@ -488,6 +529,11 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
         return
       }
       if (result.checkoutUrl) {
+        if (payMethod !== 'crypto') {
+          // Payssion-hosted page — absolute URL, no tab params to carry.
+          window.location.href = result.checkoutUrl
+          return
+        }
         // Carry the chosen network so the payment page preselects its tab.
         const sep = result.checkoutUrl.includes('?') ? '&' : '?'
         window.location.href = `${result.checkoutUrl}${sep}coin=${coin}&net=${network}`
@@ -604,19 +650,32 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
     </div>
   )
 
+  const radioDot = (checked: boolean) => (
+    <span
+      className="grid h-[18px] w-[18px] shrink-0 place-items-center rounded-full"
+      style={{ boxShadow: `inset 0 0 0 1.5px ${checked ? T.forest : T.disLine}` }}
+      role="radio"
+      aria-checked={checked}
+    >
+      {checked && <span className="h-[9px] w-[9px] rounded-full" style={{ background: T.forest }} />}
+    </span>
+  )
+
   const paymentList = (
     <div className="flex flex-col gap-3" role="radiogroup" aria-label="Payment Method">
-      {/* Crypto — selected + expanded */}
-      <div className="rounded-lg bg-white" style={{ boxShadow: `inset 0 0 0 1.5px ${T.forest}` }}>
-        <div className="flex items-center gap-3 p-4">
-          <span
-            className="grid h-[18px] w-[18px] shrink-0 place-items-center rounded-full"
-            style={{ boxShadow: `inset 0 0 0 1.5px ${T.forest}` }}
-            role="radio"
-            aria-checked="true"
-          >
-            <span className="h-[9px] w-[9px] rounded-full" style={{ background: T.forest }} />
-          </span>
+      {/* Crypto — expands when selected */}
+      <div
+        className="rounded-lg bg-white"
+        style={{
+          boxShadow: `inset 0 0 0 1.5px ${payMethod === 'crypto' ? T.forest : T.line}`,
+        }}
+      >
+        <button
+          type="button"
+          onClick={() => setPayMethod('crypto')}
+          className="flex w-full items-center gap-3 p-4 text-left"
+        >
+          {radioDot(payMethod === 'crypto')}
           <span className="text-[15px] font-semibold" style={{ color: T.ink }}>
             Crypto
           </span>
@@ -636,9 +695,46 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
             <Image src="/crypto/btc.svg" alt="Bitcoin" width={20} height={20} unoptimized />
             <Image src="/crypto/usdt.svg" alt="USDT" width={20} height={20} unoptimized />
           </span>
-        </div>
-        {cryptoBody}
+        </button>
+        {payMethod === 'crypto' && cryptoBody}
       </div>
+
+      {/* Payssion local methods — live, selectable */}
+      {LOCAL_METHODS.map((m) => {
+        const checked = payMethod === m.id
+        return (
+          <div
+            key={m.id}
+            className="rounded-lg bg-white"
+            style={{ boxShadow: `inset 0 0 0 1.5px ${checked ? T.forest : T.line}` }}
+          >
+            <button
+              type="button"
+              onClick={() => setPayMethod(m.id)}
+              className="flex w-full items-center gap-3 p-4 text-left"
+            >
+              {radioDot(checked)}
+              <m.Icon className="h-[18px] w-[18px] shrink-0" style={{ color: T.forest }} />
+              <span className="text-[15px] font-semibold" style={{ color: T.ink }}>
+                {m.label}
+              </span>
+              <span
+                className="ml-auto rounded-md px-[7px] py-[3px] text-[11px] font-semibold"
+                style={{ background: '#EFEFEA', color: '#6B7166' }}
+              >
+                {m.region}
+              </span>
+            </button>
+            {checked && (
+              <div className="border-t px-4 pb-4 pt-3" style={{ borderColor: T.line }}>
+                <p className="text-[12.5px] leading-relaxed" style={{ color: T.ink2 }}>
+                  {m.note}
+                </p>
+              </div>
+            )}
+          </div>
+        )
+      })}
 
       {/* Disabled methods */}
       {SOON_METHODS.map((m) => (

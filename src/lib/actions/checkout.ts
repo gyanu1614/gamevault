@@ -23,7 +23,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service'
 import { PURCHASES_ENABLED, PURCHASES_DISABLED_MESSAGE } from '@/lib/config/purchases'
 import { buyerFee, commissionAmount, protectionWindowHours, round2 } from '@/lib/fees'
-import { getProvider, activePaymentProviderName } from '@/lib/payments/registry'
+import { getProvider, activePaymentProviderName, providerNameForMethod } from '@/lib/payments/registry'
 import { spendWallet, getWalletBalance } from '@/lib/wallet/wallet'
 import { fromDecimal, money } from '@/lib/money'
 
@@ -40,6 +40,9 @@ export interface CreateCheckoutInput {
   quantity?: number
   promoDiscount?: number // major-unit amount, server-clamped
   walletAmount?: number // major-unit amount of wallet credit to apply
+  /** Fiat local-method pm_id (e.g. 'paysafecard', 'ideal_nl') → routes the
+   *  charge to Payssion. Absent/unknown → the env-active provider (crypto). */
+  paymentMethodId?: string
 }
 
 export interface CreateCheckoutResult {
@@ -248,14 +251,22 @@ export async function createCheckout(input: CreateCheckoutInput): Promise<Create
     //    collapses history → the back button skips the payment page).
     //  • cancel  → back to checkout so the buyer can retry.
     const base = publicAppUrl()
-    const providerName = activePaymentProviderName()
+    // Provider is a property of the METHOD picked: Payssion pm_ids route to
+    // 'payssion' (hosted redirect); everything else stays on the env-active
+    // crypto provider.
+    const providerName = providerNameForMethod(input.paymentMethodId)
     const provider = getProvider(providerName)
     const charge = await provider.createCharge({
       orderId,
       amount: chargeMoney,
       returnUrl: `${base}/account/orders/${orderId}?paid=1`,
       cancelUrl: `${base}/checkout/${input.listingId}`,
-      metadata: { listing_id: input.listingId },
+      metadata: {
+        listing_id: input.listingId,
+        ...(providerName === 'payssion' && input.paymentMethodId
+          ? { pm_id: input.paymentMethodId }
+          : {}),
+      },
     })
     // BTCPay: the buyer pays on OUR native page (address/QR/status), not the
     // provider's hosted checkout — the invoice id on the order is what the
@@ -307,6 +318,11 @@ async function upsertIncompleteNudge(
       1,
       Math.round((new Date(expiresAtIso).getTime() - Date.now()) / 60000),
     )
+    // Voucher rails (Payssion 48h windows) read in hours, not "2880 minutes".
+    const window =
+      minutes >= 120
+        ? `${Math.round(minutes / 60)} hours`
+        : `${minutes} minutes`
     const link =
       providerName === 'btcpay' ? `/checkout/pay/${orderId}` : `/account/orders/${orderId}`
     await supabase
@@ -319,7 +335,7 @@ async function upsertIncompleteNudge(
       user_id: userId,
       type: 'order_incomplete',
       title: 'Order Incomplete',
-      message: `Your order is waiting for payment — complete it within ${minutes} minutes or it cancels automatically.`,
+      message: `Your order is waiting for payment — complete it within ${window} or it cancels automatically.`,
       link,
       is_read: false,
     })
@@ -440,7 +456,7 @@ export async function retryOrderPayment(orderId: string): Promise<{
 
     const { data: order } = (await supabase
       .from('orders')
-      .select('id, buyer_id, listing_id, status, total_amount, checkout_url, payment_expires_at')
+      .select('id, buyer_id, listing_id, status, total_amount, checkout_url, payment_expires_at, payment_provider')
       .eq('id', orderId)
       .single()) as any
     if (!order) return { success: false, error: 'Order not found' }
@@ -453,6 +469,17 @@ export async function retryOrderPayment(orderId: string): Promise<{
     const validUntil = order.payment_expires_at ? new Date(order.payment_expires_at).getTime() : 0
     if (order.checkout_url && validUntil > Date.now() + 5 * 60 * 1000) {
       return { success: true, checkoutUrl: toRelativePayUrl(order.checkout_url) }
+    }
+
+    // Payssion orders can't mint a fresh charge here: the pm_id the buyer
+    // picked isn't persisted on the order (v1), and silently re-charging via
+    // the crypto provider would switch their payment method under them. The
+    // re-buy path (createCheckout) supersedes this stale order cleanly.
+    if (order.payment_provider === 'payssion') {
+      return {
+        success: false,
+        error: 'This payment link expired — please place the order again to get a fresh one.',
+      }
     }
 
     // Remaining charge = total − wallet credit already held for this order.
