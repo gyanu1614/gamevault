@@ -10,12 +10,14 @@ import type { PaymentProvider } from '@/lib/payments/types'
 import { fakeProvider } from '@/lib/payments/providers/fake'
 import { coinGateProvider } from '@/lib/payments/providers/coingate'
 import { btcpayProvider } from '@/lib/payments/providers/btcpay'
+import { payssionProvider } from '@/lib/payments/providers/payssion'
+import { isPayssionMethod } from '@/lib/payments/providers/payssion/methods'
 
 const REGISTRY: Record<string, PaymentProvider> = {
   [fakeProvider.name]: fakeProvider,
   [coinGateProvider.name]: coinGateProvider,
   [btcpayProvider.name]: btcpayProvider,
-  // tazapay:  tazapayProvider,    // ← Phase 7
+  [payssionProvider.name]: payssionProvider,
 }
 
 /**
@@ -26,6 +28,19 @@ const REGISTRY: Record<string, PaymentProvider> = {
  */
 export function activePaymentProviderName(): string {
   return process.env.PAYMENT_PROVIDER ?? 'coingate'
+}
+
+/**
+ * Per-METHOD provider routing — since Payssion, "which provider" is a property
+ * of the payment method the buyer picked, not one global switch:
+ *   · a Payssion pm_id (paysafecard / ideal_nl / upi_in / …) → 'payssion'
+ *   · anything else (crypto coins, no method given)          → the env-active
+ *     provider (btcpay in production)
+ * Webhooks stay on per-provider routes, so mixed providers never cross wires.
+ */
+export function providerNameForMethod(paymentMethodId?: string | null): string {
+  if (isPayssionMethod(paymentMethodId)) return 'payssion'
+  return activePaymentProviderName()
 }
 
 /** Resolve a provider by name, or throw if unknown. */

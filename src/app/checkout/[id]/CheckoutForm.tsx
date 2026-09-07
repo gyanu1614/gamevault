@@ -26,17 +26,28 @@ import Link from 'next/link'
 import Image from 'next/image'
 import * as Select from '@radix-ui/react-select'
 import * as Dropdown from '@radix-ui/react-dropdown-menu'
+import { AnimatePresence, motion } from 'framer-motion'
 import {
+  ArrowLeft,
   BadgeCheck,
   Check,
   ChevronDown,
+  Info,
   Loader2,
   Lock,
+  Gem,
   LogOut,
+  Medal,
   Package,
   Settings,
+  Landmark,
   ShieldCheck,
+  Smartphone,
+  Store,
+  Barcode,
+  Tag,
   TriangleAlert,
+  Undo2,
   Wallet,
   X,
 } from 'lucide-react'
@@ -48,6 +59,7 @@ import { getWalletBalance } from '@/lib/actions/wallet'
 import { cn } from '@/lib/utils'
 import { buyerFee, MARKETPLACE_FEE_LABEL, PROCESSING_FEE_LABEL } from '@/lib/fees'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { CheckoutNavbar } from '../_components/CheckoutNavbar'
 
 // ─── Ivory Ledger tokens (design_handoff_checkout Option 1a) ────────────────
 const T = {
@@ -77,24 +89,36 @@ function fmtUnitPrice(n: number): string {
   return `$${n.toFixed(2)}`
 }
 
+/** Prettify raw delivery-time values: "30min" → "30 Min", "1h" → "1 Hr",
+ *  "instant" → "Instant". Defensive — unknown formats just get Title Case. */
+function fmtDelivery(raw: string): string {
+  const m = raw.trim().match(/^(\d+)\s*(min|mins|minute|minutes|h|hr|hrs|hour|hours|d|day|days)$/i)
+  if (m) {
+    const n = Number(m[1])
+    const u = m[2].toLowerCase()
+    const base = u.startsWith('min') ? 'Min' : u.startsWith('h') ? 'Hour' : 'Day'
+    return `${n} ${base}${n === 1 ? '' : 's'}`
+  }
+  return raw.charAt(0).toUpperCase() + raw.slice(1)
+}
+
 // ─── Coin / network choices ─────────────────────────────────────────────────
 
 type Coin = 'usdt' | 'btc'
 type Net = 'trc20' | 'polygon' | 'ethereum'
 
-// Bitcoin flips to enabled once the BTC node finishes syncing and passes
-// its live $1 test — until then it can't take payment.
+// BTC node synced 2026-09-05; live per the rail-certification tests.
 const COINS: Array<{ value: Coin; label: string; icon: string; soon?: boolean }> = [
   { value: 'usdt', label: 'Tether USDT', icon: '/crypto/usdt.svg' },
-  { value: 'btc', label: 'Bitcoin', icon: '/crypto/btc.svg', soon: true },
+  { value: 'btc', label: 'Bitcoin', icon: '/crypto/btc.svg' },
 ]
 
 // Polygon/Ethereum flip to enabled once their USDt pools + RPC are
 // configured in BTCPay (the payment page grows their tabs automatically).
 const NETWORKS: Array<{ value: Net; label: string; fee: string; soon?: boolean }> = [
   { value: 'trc20', label: 'TRON · TRC20', fee: '~$0.50' },
-  { value: 'polygon', label: 'Polygon', fee: '~$0.01', soon: true },
-  { value: 'ethereum', label: 'Ethereum', fee: '$2+', soon: true },
+  { value: 'polygon', label: 'Polygon', fee: '~$0.01' },
+  { value: 'ethereum', label: 'Ethereum', fee: '$2+' },
 ]
 
 // ─── Small pieces ───────────────────────────────────────────────────────────
@@ -188,15 +212,12 @@ function InfoDot({
         <button
           type="button"
           aria-label={title ?? text}
-          className="relative -m-[10px] inline-flex flex-none cursor-help items-center justify-center p-[10px]"
+          className="group relative -m-[10px] inline-flex flex-none items-center justify-center p-[10px]"
         >
-          <span
+          <Info
             aria-hidden
-            className="inline-flex h-[15px] w-[15px] items-center justify-center rounded-full text-[9.5px] font-bold"
-            style={{ background: T.ivory2, color: T.ink2, boxShadow: `inset 0 0 0 1px ${T.line}` }}
-          >
-            ?
-          </span>
+            className="h-[14px] w-[14px] text-[#5B6157] transition-colors group-hover:text-[#1A1D19]"
+          />
         </button>
       </TooltipTrigger>
       <TooltipContent
@@ -269,114 +290,102 @@ function Callout({
       : { bg: '#F0FDF4', border: '#BBF7D0', text: '#166534' }
   return (
     <div
-      className="flex items-start gap-3 rounded-lg border px-5 py-4"
+      className="flex items-start gap-2.5 rounded-lg border px-3.5 py-2.5"
       style={{ background: c.bg, borderColor: c.border }}
     >
       {variant === 'warning' ? (
-        <TriangleAlert className="mt-px h-5 w-5 shrink-0" style={{ color: c.text }} />
+        <TriangleAlert className="mt-[2px] h-[18px] w-[18px] shrink-0" style={{ color: c.text }} />
       ) : (
-        <Check className="mt-px h-5 w-5 shrink-0" style={{ color: c.text }} />
+        <Check className="mt-[2px] h-[18px] w-[18px] shrink-0" style={{ color: c.text }} />
       )}
-      <p className="text-[14px] leading-[1.55]" style={{ color: c.text }}>
+      <p className="text-[13px] leading-[1.5]" style={{ color: c.text }}>
         {children}
       </p>
     </div>
   )
 }
 
-/** Navbar account dropdown — light menu on the dark strip. Sign-out follows
- *  the house pattern: navigate FIRST, then signOut, so a protected page never
- *  repaints logged-out in place. */
-function AccountMenu({
-  user,
-  buyerProfile,
-}: {
-  user: any
-  buyerProfile?: { username: string | null; avatar_url: string | null } | null
-}) {
-  const router = useRouter()
-  const [signingOut, setSigningOut] = useState(false)
-  if (!user) {
-    return (
-      <Link
-        href="/login"
-        className="rounded-md border border-white/25 px-3.5 py-1.5 text-[13px] font-semibold text-white transition-colors hover:border-white/50"
-      >
-        Log In
-      </Link>
-    )
-  }
-  const name = buyerProfile?.username || user.email?.split('@')[0] || 'Account'
-  const handleSignOut = async () => {
-    setSigningOut(true)
-    router.push('/')
-    const { createClient } = await import('@/lib/supabase/client')
-    await createClient().auth.signOut()
-  }
-  const item =
-    'flex w-full cursor-pointer items-center gap-2.5 rounded px-2.5 py-2 text-[13px] font-medium outline-none data-[highlighted]:bg-[#F3F3ED]'
+/** Seller tier badge — a colored medal icon next to the name (tooltip
+ *  carries the tier name). Unverified tiers render nothing. */
+const TIER_STYLES: Record<string, { label: string; color: string; kind: 'medal' | 'gem' }> = {
+  bronze: { label: 'Bronze Seller', color: '#CD7F32', kind: 'medal' },
+  silver: { label: 'Silver Seller', color: '#9AA4AD', kind: 'medal' },
+  gold: { label: 'Gold Seller', color: '#D5A419', kind: 'medal' },
+  platinum: { label: 'Platinum Seller', color: '#6FA7B8', kind: 'medal' },
+  diamond: { label: 'Diamond Seller', color: '#7C8BE0', kind: 'gem' },
+}
+
+function TierBadge({ tier }: { tier?: string | null }) {
+  const t = tier ? TIER_STYLES[tier.toLowerCase()] : undefined
+  if (!t) return null
+  const Icon = t.kind === 'gem' ? Gem : Medal
   return (
-    <Dropdown.Root>
-      <Dropdown.Trigger asChild>
-        <button
-          type="button"
-          className="flex items-center gap-2 rounded-md px-1.5 py-1 transition-colors hover:bg-white/10"
-          aria-label="Account Menu"
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={getAvatarUrl(buyerProfile?.avatar_url, name)}
-            alt=""
-            className="h-7 w-7 rounded-full object-cover ring-1 ring-white/20"
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span aria-label={t.label} className="inline-flex">
+          <Icon
+            className="h-[16px] w-[16px] shrink-0"
+            style={{ color: t.color, fill: `${t.color}33` }}
+            strokeWidth={2.2}
           />
-          <span className="hidden max-w-[140px] truncate text-[13px] font-semibold text-white sm:block">
-            {name}
+        </span>
+      </TooltipTrigger>
+      <TooltipContent side="top" className="text-[11.5px] font-semibold">
+        {t.label}
+      </TooltipContent>
+    </Tooltip>
+  )
+}
+
+/** A — trust chip row: honest claims only, shown at the moment of
+ *  commitment (under Pay Now). */
+function TrustChips() {
+  const chip =
+    'flex flex-1 items-center justify-center gap-1 whitespace-nowrap rounded-md border bg-white px-1.5 py-[6px] text-[10.5px] font-semibold'
+  const chipStyle = { borderColor: T.line, color: T.ink } as const
+  const ic = { color: T.forest } as const
+  return (
+    <div className="mt-3 flex items-center gap-1.5">
+      <span className={chip} style={chipStyle}>
+        <ShieldCheck className="h-3 w-3 shrink-0" style={ic} /> SafeDrop Guarantee
+      </span>
+      <span className={chip} style={chipStyle}>
+        <BadgeCheck className="h-3 w-3 shrink-0" style={ic} /> ID-Verified Sellers
+      </span>
+      <Link href="/refunds" className={`${chip} transition-colors hover:border-[#14432A66]`} style={chipStyle}>
+        <Undo2 className="h-3 w-3 shrink-0" style={ic} /> Refund Policy
+      </Link>
+    </div>
+  )
+}
+
+/** C — company footer strip: the quiet corporate signal. */
+function CompanyStrip() {
+  return (
+    <div
+      className="mt-8 flex flex-col items-center justify-between gap-3 rounded-lg border bg-white px-5 py-3.5 sm:flex-row"
+      style={{ borderColor: T.line }}
+    >
+      <div className="flex flex-col items-center gap-2 sm:flex-row sm:gap-5">
+        <span className="flex items-center gap-2 text-[11.5px] font-semibold" style={{ color: T.ink2 }}>
+          <Landmark className="h-4 w-4" style={{ color: T.forest }} />
+          <span>
+            <b style={{ color: T.ink }}>DropMarket Ltd</b> · Registered In The United Kingdom
           </span>
-          <ChevronDown className="h-3.5 w-3.5 text-white/60" />
-        </button>
-      </Dropdown.Trigger>
-      <Dropdown.Portal>
-        <Dropdown.Content
-          align="end"
-          sideOffset={8}
-          className="z-50 w-[220px] rounded-lg border bg-white p-1.5 shadow-[0_14px_40px_-14px_rgba(0,0,0,0.25)]"
-          style={{ borderColor: T.line, color: T.ink }}
-        >
-          <div className="px-2.5 pb-2 pt-1.5">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.06em]" style={{ color: T.ink2 }}>
-              Signed In As
-            </p>
-            <p className="truncate text-[13px] font-semibold">{user.email}</p>
-          </div>
-          <Dropdown.Separator className="mx-1 mb-1 h-px" style={{ background: T.line }} />
-          <Dropdown.Item className={item} onSelect={() => router.push('/account/orders')}>
-            <Package className="h-4 w-4" style={{ color: T.ink2 }} /> My Orders
-          </Dropdown.Item>
-          <Dropdown.Item className={item} onSelect={() => router.push('/account/wallet')}>
-            <Wallet className="h-4 w-4" style={{ color: T.ink2 }} /> Wallet
-          </Dropdown.Item>
-          <Dropdown.Item className={item} onSelect={() => router.push('/account')}>
-            <Settings className="h-4 w-4" style={{ color: T.ink2 }} /> Account Settings
-          </Dropdown.Item>
-          <Dropdown.Separator className="mx-1 my-1 h-px" style={{ background: T.line }} />
-          <Dropdown.Item
-            className={item}
-            disabled={signingOut}
-            onSelect={(e) => {
-              e.preventDefault()
-              void handleSignOut()
-            }}
-          >
-            {signingOut ? (
-              <Loader2 className="h-4 w-4 animate-spin" style={{ color: T.ink2 }} />
-            ) : (
-              <LogOut className="h-4 w-4" style={{ color: T.ink2 }} />
-            )}
-            Sign Out
-          </Dropdown.Item>
-        </Dropdown.Content>
-      </Dropdown.Portal>
-    </Dropdown.Root>
+        </span>
+        <span className="flex items-center gap-2 text-[11.5px] font-semibold" style={{ color: T.ink2 }}>
+          <Lock className="h-4 w-4" style={{ color: T.forest }} />
+          <span>
+            Secured By <b style={{ color: T.ink }}>DropMarket Payments</b>
+          </span>
+        </span>
+      </div>
+      <nav className="flex items-center gap-4 text-[11.5px] font-medium" style={{ color: T.ink2 }}>
+        <Link href="/terms" className="transition-colors hover:text-[#14432A]">Terms</Link>
+        <Link href="/refunds" className="transition-colors hover:text-[#14432A]">Refunds</Link>
+        <Link href="/privacy" className="transition-colors hover:text-[#14432A]">Privacy</Link>
+      </nav>
+    </div>
   )
 }
 
@@ -385,6 +394,40 @@ const SOON_METHODS = [
   { name: 'Apple Pay', badges: ['APPLE PAY'] },
   { name: 'Google Pay', badges: ['G PAY'] },
   { name: 'Skrill', badges: ['SKRILL'] },
+]
+
+// Payssion local methods LIVE on our app (probe-verified 2026-09-06). Adding
+// a method later = enable it at Payssion + add a row here + in the provider's
+// methods.ts registry.
+type PayMethodId = 'crypto' | 'gcash_ph' | 'oxxo_mx' | 'boleto_br'
+const LOCAL_METHODS: Array<{
+  id: Exclude<PayMethodId, 'crypto'>
+  label: string
+  region: string
+  Icon: typeof Smartphone
+  note: string
+}> = [
+  {
+    id: 'gcash_ph',
+    label: 'GCash',
+    region: 'Philippines',
+    Icon: Smartphone,
+    note: 'Pay with your GCash wallet — you’ll be redirected to a secure GCash page, and your order completes the moment the payment confirms.',
+  },
+  {
+    id: 'oxxo_mx',
+    label: 'OXXO',
+    region: 'Mexico',
+    Icon: Store,
+    note: 'You’ll get a payment voucher to pay in cash at any OXXO store. Vouchers stay valid for 48 hours; your order completes when the payment clears (usually within a day). Any store credit you apply stays reserved until then.',
+  },
+  {
+    id: 'boleto_br',
+    label: 'Boleto',
+    region: 'Brazil',
+    Icon: Barcode,
+    note: 'You’ll get a Boleto slip to pay via your bank app or in person. Slips stay valid for 48 hours; your order completes when the payment clears (1–2 business days). Any store credit you apply stays reserved until then.',
+  },
 ]
 
 // ─── CheckoutForm ───────────────────────────────────────────────────────────
@@ -410,7 +453,9 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
   })()
   const [quantity] = useState(seedQty)
 
-  // Coin + network selection (crypto is the only live method).
+  // Payment method: crypto (expanded card) or a Payssion local method.
+  const [payMethod, setPayMethod] = useState<PayMethodId>('crypto')
+  // Coin + network selection (within the crypto card).
   const [coin, setCoin] = useState<Coin>('usdt')
   const [network, setNetwork] = useState<Net>('trc20')
 
@@ -419,6 +464,7 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
   const [promoResult, setPromoResult] = useState<PromoValidationResult | null>(null)
   const promoDiscount = promoResult?.valid ? (promoResult.discountAmount ?? 0) : 0
 
+  const [codeOpen, setCodeOpen] = useState(false)
   const [walletBalance, setWalletBalance] = useState<number>(0)
   const [useWallet, setUseWallet] = useState(false)
 
@@ -442,6 +488,18 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
       cancelled = true
     }
   }, [user])
+
+  // Provider-return with ?cancelled=1 (buyer backed out on the hosted page):
+  // say so once, then clean the URL so refreshes don't re-toast.
+  useEffect(() => {
+    const sp = new URLSearchParams(window.location.search)
+    if (sp.get('cancelled') === '1') {
+      toast.info('Payment Cancelled — no charge was made. Pick a method whenever you’re ready.')
+      sp.delete('cancelled')
+      const qs = sp.toString()
+      window.history.replaceState(null, '', window.location.pathname + (qs ? `?${qs}` : ''))
+    }
+  }, [])
 
   const handleApplyPromo = async () => {
     if (!promoInput.trim()) return
@@ -468,6 +526,8 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
         quantity,
         promoDiscount,
         walletAmount,
+        // Local methods route the charge to Payssion; crypto stays default.
+        paymentMethodId: payMethod === 'crypto' ? undefined : payMethod,
       })
       if (!result.success) {
         setPayError(result.error || 'Checkout failed')
@@ -481,9 +541,14 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
         return
       }
       if (result.checkoutUrl) {
+        if (payMethod !== 'crypto') {
+          // Payssion-hosted page — absolute URL, no tab params to carry.
+          window.location.href = result.checkoutUrl
+          return
+        }
         // Carry the chosen network so the payment page preselects its tab.
         const sep = result.checkoutUrl.includes('?') ? '&' : '?'
-        window.location.href = `${result.checkoutUrl}${sep}net=${network}`
+        window.location.href = `${result.checkoutUrl}${sep}coin=${coin}&net=${network}`
         return
       }
       setPayError('No checkout URL returned')
@@ -558,50 +623,83 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
             Network
             <InfoDot text="Each network charges a small blockchain fee, paid by your wallet on top of the total shown here." />
           </p>
-          <LightSelect
-            ariaLabel="Network"
-            value={network}
-            onChange={(v) => setNetwork(v as Net)}
-            options={NETWORKS.map((n) => ({
-              value: n.value,
-              label: n.label,
-              hint: n.soon ? 'Soon' : `Fee ${n.fee}`,
-              disabled: n.soon,
-            }))}
-          />
+          {coin === 'btc' ? (
+            // Bitcoin has exactly one network — show it fixed, no selector.
+            <div
+              className="flex h-[42px] w-full items-center justify-between gap-2 rounded-md border px-3 text-[14px] font-medium"
+              style={{ borderColor: T.line, background: T.ivory2, color: T.ink }}
+            >
+              <span className="flex items-center gap-2">
+                <Image src="/crypto/btc.svg" alt="" width={18} height={18} unoptimized />
+                Bitcoin
+              </span>
+              <span className="text-[11.5px] font-medium" style={{ color: T.ink2 }}>
+                Fee ~$1+
+              </span>
+            </div>
+          ) : (
+            <LightSelect
+              ariaLabel="Network"
+              value={network}
+              onChange={(v) => setNetwork(v as Net)}
+              options={NETWORKS.map((n) => ({
+                value: n.value,
+                label: n.label,
+                hint: n.soon ? 'Soon' : `Fee ${n.fee}`,
+                disabled: n.soon,
+              }))}
+            />
+          )}
         </div>
       </div>
       <div className="mt-3">
         <Callout variant="warning">
-          Only send the selected coin on the selected network — funds sent on other networks
-          cannot be recovered.
+          {coin === 'btc'
+            ? 'Only send Bitcoin on the Bitcoin network — funds sent on other networks cannot be recovered.'
+            : 'Only send the selected coin on the selected network — funds sent on other networks cannot be recovered.'}
         </Callout>
       </div>
     </div>
   )
 
+  const radioDot = (checked: boolean) => (
+    <span
+      aria-hidden
+      className="grid h-[18px] w-[18px] shrink-0 place-items-center rounded-full"
+      style={{ boxShadow: `inset 0 0 0 1.5px ${checked ? T.forest : T.disLine}` }}
+    >
+      {checked && <span className="h-[9px] w-[9px] rounded-full" style={{ background: T.forest }} />}
+    </span>
+  )
+
   const paymentList = (
     <div className="flex flex-col gap-3" role="radiogroup" aria-label="Payment Method">
-      {/* Crypto — selected + expanded */}
-      <div className="rounded-lg bg-white" style={{ boxShadow: `inset 0 0 0 1.5px ${T.forest}` }}>
-        <div className="flex items-center gap-3 p-4">
-          <span
-            className="grid h-[18px] w-[18px] shrink-0 place-items-center rounded-full"
-            style={{ boxShadow: `inset 0 0 0 1.5px ${T.forest}` }}
-            role="radio"
-            aria-checked="true"
-          >
-            <span className="h-[9px] w-[9px] rounded-full" style={{ background: T.forest }} />
-          </span>
+      {/* Crypto — expands when selected */}
+      <div
+        className="rounded-lg bg-white"
+        style={{
+          boxShadow: `inset 0 0 0 1.5px ${payMethod === 'crypto' ? T.forest : T.line}`,
+        }}
+      >
+        <button
+          type="button"
+          role="radio"
+          aria-checked={payMethod === 'crypto'}
+          onClick={() => setPayMethod('crypto')}
+          className="flex w-full items-center gap-3 p-4 text-left"
+        >
+          {radioDot(payMethod === 'crypto')}
           <span className="text-[15px] font-semibold" style={{ color: T.ink }}>
             Crypto
           </span>
-          <span
-            className="rounded-md px-[7px] py-[3px] text-[11px] font-semibold"
-            style={{ background: T.limeTint, color: T.forest }}
-          >
-            No Fees
-          </span>
+          {payMethod === 'crypto' && (
+            <span
+              className="rounded-md px-[7px] py-[3px] text-[11px] font-semibold"
+              style={{ background: T.limeTint, color: T.forest }}
+            >
+              No Fees
+            </span>
+          )}
           <span
             className="rounded-md px-[7px] py-[3px] text-[11px] font-semibold text-white"
             style={{ background: T.forest }}
@@ -612,9 +710,48 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
             <Image src="/crypto/btc.svg" alt="Bitcoin" width={20} height={20} unoptimized />
             <Image src="/crypto/usdt.svg" alt="USDT" width={20} height={20} unoptimized />
           </span>
-        </div>
-        {cryptoBody}
+        </button>
+        {payMethod === 'crypto' && cryptoBody}
       </div>
+
+      {/* Payssion local methods — live, selectable */}
+      {LOCAL_METHODS.map((m) => {
+        const checked = payMethod === m.id
+        return (
+          <div
+            key={m.id}
+            className="rounded-lg bg-white"
+            style={{ boxShadow: `inset 0 0 0 1.5px ${checked ? T.forest : T.line}` }}
+          >
+            <button
+              type="button"
+              role="radio"
+              aria-checked={checked}
+              onClick={() => setPayMethod(m.id)}
+              className="flex w-full items-center gap-3 p-4 text-left"
+            >
+              {radioDot(checked)}
+              <m.Icon className="h-[18px] w-[18px] shrink-0" style={{ color: T.forest }} />
+              <span className="text-[15px] font-semibold" style={{ color: T.ink }}>
+                {m.label}
+              </span>
+              <span
+                className="ml-auto rounded-md px-[7px] py-[3px] text-[11px] font-semibold"
+                style={{ background: '#EFEFEA', color: '#6B7166' }}
+              >
+                {m.region}
+              </span>
+            </button>
+            {checked && (
+              <div className="border-t px-4 pb-4 pt-3" style={{ borderColor: T.line }}>
+                <p className="text-[12.5px] leading-relaxed" style={{ color: T.ink2 }}>
+                  {m.note}
+                </p>
+              </div>
+            )}
+          </div>
+        )
+      })}
 
       {/* Disabled methods */}
       {SOON_METHODS.map((m) => (
@@ -670,63 +807,95 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
           <p className="truncate text-[15px] font-semibold" style={{ color: T.ink }}>
             {title}
           </p>
-          <p className="mt-1 text-[13px]" style={{ color: T.ink2 }}>
-            Delivery Time: {deliveryTime} <span className="opacity-50">|</span> Quantity: {quantity}
-            {isBundle ? '' : quantity > 1 ? ` × ${fmtUnitPrice(listing.price)}` : ''}
-          </p>
+          {(listing.game?.name || listing.category?.name) && (
+            <p className="mt-0.5 truncate text-[12px]" style={{ color: T.ink2 }}>
+              {listing.game?.name}
+              {listing.game?.name && listing.category?.name && ' · '}
+              {listing.category?.name}
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* Spec rows — full card width */}
+      <div className="mt-3 divide-y text-[12.5px]">
+        <div className="flex items-center justify-between gap-4 py-[7px]" style={{ borderColor: '#EFEDE6' }}>
+          <span style={{ color: T.ink2 }}>Delivery Time</span>
+          <span className="font-medium" style={{ color: T.ink }}>
+            {fmtDelivery(deliveryTime)}
+          </span>
+        </div>
+        <div className="flex items-center justify-between gap-4 py-[7px]" style={{ borderColor: '#EFEDE6' }}>
+          <span style={{ color: T.ink2 }}>Quantity</span>
+          <span className="font-medium" style={{ color: T.ink }}>
+            {quantity.toLocaleString()}
+          </span>
         </div>
       </div>
 
       {/* Seller */}
-      <div className="mt-3.5 flex items-center gap-2">
+      <div className="mt-4 flex items-center gap-3">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={getAvatarUrl(seller.avatar_url, sellerName)}
           alt={sellerName}
-          className="h-7 w-7 rounded-full object-cover"
+          className="h-10 w-10 shrink-0 rounded-full object-cover"
           style={{ background: T.ivory2 }}
         />
-        <span className="flex items-center gap-1 text-[14px] font-semibold" style={{ color: T.ink }}>
-          {sellerName}
-          {isVerifiedSeller && (
-            <BadgeCheck
-              aria-label="Verified Seller"
-              className="h-[17px] w-[17px] shrink-0"
-              style={{ fill: '#1D9BF0', color: '#FFFFFF' }}
-            />
+        <div className="min-w-0">
+          <span className="flex items-center gap-1.5 text-[14px] font-semibold" style={{ color: T.ink }}>
+            <span className="truncate">{sellerName}</span>
+            {isVerifiedSeller && (
+              <BadgeCheck
+                aria-label="Verified Seller"
+                className="h-[17px] w-[17px] shrink-0"
+                style={{ fill: '#1D9BF0', color: '#FFFFFF' }}
+              />
+            )}
+            <TierBadge tier={seller.seller_tier} />
+          </span>
+          {(reviewCount > 0 || Number(seller.total_sales ?? 0) > 0) && (
+            <p className="mt-0.5 flex items-center gap-2 text-[12px]" style={{ color: T.ink2 }}>
+              {positivePct !== null && <span>{positivePct.toFixed(0)}% Rating</span>}
+              {positivePct !== null && Number(seller.total_sales ?? 0) > 0 && (
+                <span className="opacity-40">|</span>
+              )}
+              {Number(seller.total_sales ?? 0) > 0 && (
+                <span>{Number(seller.total_sales).toLocaleString()} Sold</span>
+              )}
+            </p>
           )}
-        </span>
-      </div>
-      <div className="mt-2.5 flex flex-wrap gap-1.5">
-        {positivePct !== null ? (
-          <span
-            className="rounded-md border px-2 py-[3px] text-[11px] font-medium"
-            style={{ borderColor: T.line, background: T.ivory, color: T.ink2 }}
-          >
-            {positivePct.toFixed(1)}% Positive
-          </span>
-        ) : (
-          <span
-            className="rounded-md border px-2 py-[3px] text-[11px] font-medium"
-            style={{ borderColor: T.line, background: T.ivory, color: T.ink2 }}
-          >
-            New Seller
-          </span>
-        )}
-        {reviewCount > 0 && (
-          <span
-            className="rounded-md border px-2 py-[3px] text-[11px] font-medium"
-            style={{ borderColor: T.line, background: T.ivory, color: T.ink2 }}
-          >
-            {reviewCount.toLocaleString()} Reviews
-          </span>
-        )}
+        </div>
       </div>
 
-      {/* Discount code */}
+      {/* Discount code — collapsed behind a toggle */}
       {!compact && (
-        <div className="mt-4 flex gap-2">
-          {promoResult?.valid ? (
+        <div className="mt-4">
+          {!promoResult?.valid && (
+            <button
+              type="button"
+              onClick={() => setCodeOpen((v) => !v)}
+              className="flex w-full items-center gap-2 text-[12.5px] font-semibold transition-opacity hover:opacity-75"
+              style={{ color: T.forest2 }}
+            >
+              <Tag className="h-3.5 w-3.5" />
+              Have A Discount Code?
+              <ChevronDown
+                className={cn('h-3.5 w-3.5 transition-transform', codeOpen && 'rotate-180')}
+              />
+            </button>
+          )}
+          <AnimatePresence initial={false}>
+            {(codeOpen || promoResult?.valid) && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.18, ease: 'easeOut' }}
+                className="overflow-hidden"
+              >
+                <div className={cn('flex gap-2', !promoResult?.valid && 'mt-2.5')}>
+                  {promoResult?.valid ? (
             <div
               className="flex w-full items-center justify-between gap-2 rounded-md border px-3 py-2 text-[13px] font-semibold"
               style={{ background: T.limeTint, borderColor: T.line, color: T.forest }}
@@ -759,6 +928,10 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
               </button>
             </>
           )}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       )}
 
@@ -823,43 +996,58 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
 
       {/* SafeDrop line */}
       <div className="mt-3.5 flex items-center gap-2 border-t pt-3.5" style={{ borderColor: T.line }}>
-        <ShieldCheck className="h-4 w-4 shrink-0" style={{ color: T.forest }} />
-        <p className="text-[13px] font-medium" style={{ color: T.ink }}>
-          Covered By SafeDrop — Item Guaranteed Or Full Refund.
-        </p>
+        <ShieldCheck className="mt-[1px] h-[18px] w-[18px] shrink-0" style={{ color: T.forest }} />
+        <div>
+          <p className="text-[13.5px] font-semibold" style={{ color: T.ink }}>
+            SafeDrop Protection
+          </p>
+          <p className="mt-0.5 text-[12.5px] font-medium leading-snug" style={{ color: T.ink }}>
+            Get exactly what you ordered — or a 100% refund.
+          </p>
+          <p className="mt-0.5 text-[12px] leading-snug" style={{ color: T.ink2 }}>
+            Every order is covered from purchase to delivery.
+          </p>
+        </div>
       </div>
+      <TrustChips />
     </div>
   )
 
   return (
     <div className="min-h-screen" style={{ background: T.ivory }}>
-      {/* Navbar strip */}
-      <div
-        className="flex h-16 items-center justify-between px-4 sm:px-10"
-        style={{ background: T.nav }}
-      >
-        <Link href="/" className="inline-flex items-center gap-2 transition-opacity hover:opacity-85">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/brand/logo-mark-lime.png" alt="" className="h-6 w-6" />
-          <span className="text-[15px] font-bold" style={{ color: T.ivory }}>
-            DropMarket
-          </span>
-        </Link>
-        <AccountMenu user={user} buyerProfile={buyerProfile} />
-      </div>
+      <CheckoutNavbar user={user} buyerProfile={buyerProfile} />
 
       <div className="mx-auto w-full max-w-[1120px] px-4 pb-24 pt-8 sm:px-10 lg:pb-[72px]">
         {/* Header row */}
         <div className="flex items-center justify-between gap-3">
-          <span className="flex items-center gap-2.5">
-            <Lock className="h-[18px] w-[18px]" style={{ color: T.forest }} />
-            <span className="text-[20px] font-bold sm:text-[24px]" style={{ color: T.ink }}>
+          <span className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => router.back()}
+              aria-label="Go Back"
+              className="grid h-9 w-9 shrink-0 place-items-center rounded-md border bg-white/60 backdrop-blur-sm transition-colors hover:bg-white"
+              style={{ borderColor: T.line, color: T.ink }}
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </button>
+            <Lock className="h-[18px] w-[18px] shrink-0" style={{ color: T.forest }} />
+            {/* Phone: smaller + nowrap so the title never breaks into two
+                lines beside the SSL chip. Desktop (sm:) unchanged. */}
+            <span
+              className="whitespace-nowrap text-[18px] font-bold sm:text-[24px]"
+              style={{ color: T.ink }}
+            >
               Secure Checkout
             </span>
           </span>
-          <span className="flex items-center gap-1.5 text-[12px] sm:text-[13px]" style={{ color: T.ink2 }}>
-            <Lock className="h-3.5 w-3.5" />
-            256-bit SSL Secure
+          <span
+            className="flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md border bg-white px-2.5 py-1.5 text-[12px] font-semibold tracking-[0.01em] sm:text-[12.5px]"
+            style={{ borderColor: T.line, color: T.ink }}
+          >
+            <ShieldCheck className="h-4 w-4" style={{ color: T.forest }} />
+            {/* Phone: short label; desktop keeps the full one. */}
+            <span className="sm:hidden">SSL Secure</span>
+            <span className="hidden sm:inline">256-Bit SSL Secure</span>
           </span>
         </div>
 
@@ -896,11 +1084,15 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
           {/* Desktop: summary column */}
           <div className="hidden lg:block">{summaryCard()}</div>
         </div>
+
+        <CompanyStrip />
       </div>
 
-      {/* Mobile sticky pay bar */}
+      {/* Mobile sticky pay bar. Bottom padding hugs the browser chrome:
+          12px base, or the home-indicator inset when the browser bar sits
+          on top (Chrome/top-bar Safari) and exposes the safe area. */}
       <div
-        className="fixed inset-x-0 bottom-0 z-40 border-t bg-white px-4 pb-5 pt-3 lg:hidden"
+        className="fixed inset-x-0 bottom-0 z-40 border-t bg-white px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 lg:hidden"
         style={{ borderColor: T.line }}
       >
         {payButton()}

@@ -277,11 +277,14 @@ export function OrderClient(props: OrderClientProps) {
               <AwaitingPaymentPanel
                 orderId={order.id}
                 role={userRole}
+                paymentExpiresAt={(order as any).payment_expires_at ?? null}
                 hasValidInvoice={Boolean(
                   (order as any).checkout_url &&
                     (order as any).payment_expires_at &&
+                    // 1-min buffer: with a ~15-min invoice window the old 5-min
+                    // buffer contradicted the countdown chip for a third of it.
                     new Date((order as any).payment_expires_at).getTime() >
-                      Date.now() + 5 * 60 * 1000,
+                      Date.now() + 60 * 1000,
                 )}
               />
             )}

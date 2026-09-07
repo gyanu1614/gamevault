@@ -69,7 +69,22 @@ export async function dispatch(
     return { applied: false }
   }
 
-  const result = await transition(event.orderId, orderEvent, providerEventId)
+  let result
+  try {
+    result = await transition(event.orderId, orderEvent, providerEventId)
+  } catch (err) {
+    // A CONFIRMED charge that can't apply means real money arrived for an
+    // order that is no longer payable (cancelled/superseded voucher paid
+    // late, buyer cancelled mid-flight). That must never die silently in a
+    // failed webhook row — page the admins, then rethrow so the event stays
+    // recorded as failed (the dedupe claim stops retry spam).
+    if (event.type === 'CHARGE_CONFIRMED') {
+      await alertAdminsPaymentForClosedOrder(event.orderId, event.providerChargeId, err).catch(
+        () => {}
+      )
+    }
+    throw err
+  }
 
   if (result.changed) {
     // Provider-completed refunds land in the buyer's WALLET as store credit
@@ -99,10 +114,18 @@ export async function dispatch(
           .eq('id', event.orderId)
           .single() as any
         if (order?.buyer_id && (order.total_amount ?? 0) > 0) {
+          // Credit what the PROVIDER actually refunded (partial refunds are
+          // real), clamped to the order total so a provider quirk can never
+          // over-credit. Falls back to the order total when the event
+          // carries no usable amount.
+          const totalMinor = BigInt(Math.round(Number(order.total_amount) * 100))
+          const eventMinor = event.amount?.amountMinor ?? 0n
+          const creditMinor =
+            eventMinor > 0n && eventMinor < totalMinor ? eventMinor : totalMinor
           const { refundToWallet } = await import('@/lib/wallet/wallet')
           await refundToWallet({
             userId: order.buyer_id,
-            amountMinor: BigInt(Math.round(Number(order.total_amount) * 100)),
+            amountMinor: creditMinor,
             currency: (order.currency || 'EUR').toUpperCase(),
             orderId: event.orderId,
           })
@@ -157,4 +180,36 @@ export async function dispatch(
   }
 
   return { applied: result.changed, orderId: result.orderId, status: result.status }
+}
+
+/**
+ * Service-role admin page for "money arrived for a non-payable order" — the
+ * one payment failure that must reach a human (webhook context has no user
+ * session, so this bypasses the session-bound notification helpers).
+ */
+async function alertAdminsPaymentForClosedOrder(
+  orderId: string,
+  providerChargeId: string,
+  err: unknown
+): Promise<void> {
+  console.error(
+    `[Dispatch] CRITICAL: confirmed payment for non-payable order ${orderId} (charge ${providerChargeId}):`,
+    err
+  )
+  const { createServiceRoleClient } = await import('@/lib/supabase/service')
+  const service = createServiceRoleClient()
+  const { data: admins } = (await service
+    .from('admin_roles')
+    .select('user_id')
+    .eq('is_active', true)
+    .limit(10)) as any
+  const rows = (admins ?? []).map((a: any) => ({
+    user_id: a.user_id,
+    type: 'payment_review',
+    title: 'Payment Needs Review',
+    message: `A confirmed payment (charge ${providerChargeId}) arrived for order ${orderId.slice(0, 8).toUpperCase()}, which is no longer payable. Check the provider dashboard and refund or credit the buyer manually.`,
+    link: `/account/orders/${orderId}`,
+    is_read: false,
+  }))
+  if (rows.length) await service.from('notifications').insert(rows)
 }

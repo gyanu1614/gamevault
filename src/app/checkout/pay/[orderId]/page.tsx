@@ -45,29 +45,51 @@ function preferredMethodId(
   }
 }
 
-/** Display metadata for a Greenfield paymentMethodId. Defensive: unknown ids
- *  fall back to the raw code with no icon. */
-function methodMeta(id: string): {
+/** Display metadata for a Greenfield paymentMethodId. The chain must be
+ *  PROVEN by the method id (or the address prefix as tiebreaker — TRON
+ *  base58 addresses start with T, EVM with 0x); a wrong network label sends
+ *  the buyer's funds to a dead address, so an unproven chain renders a
+ *  generic double-check warning instead of a guess. */
+function methodMeta(
+  id: string,
+  address: string
+): {
   label: string
   short: string
   icon: string | null
   network: string | null
+  networkName: string | null
+  confirmEta: string | null
   networkWarning: string | null
 } {
   const u = id.toUpperCase()
-  if (u.includes('USDT') || u.includes('TRON'))
+  if (u.includes('USDT')) {
+    const chain =
+      u.includes('TRON') || address.startsWith('T')
+        ? { network: 'TRON · TRC20', name: 'TRON', eta: 'usually under a minute' }
+        : u.includes('POLYGON') || u.includes('MATIC')
+          ? { network: 'Polygon', name: 'Polygon', eta: 'usually under a minute' }
+          : u.includes('ETH')
+            ? { network: 'Ethereum · ERC20', name: 'Ethereum', eta: 'usually 2–5 minutes' }
+            : null
     return {
       label: 'USDT',
       short: 'USDT',
       icon: '/crypto/usdt.svg',
-      network: 'TRON · TRC20',
-      networkWarning: 'Only send USDT on the TRON network — other networks will lose funds.',
+      network: chain?.network ?? null,
+      networkName: chain?.name ?? null,
+      confirmEta: chain?.eta ?? null,
+      networkWarning: chain
+        ? `Send only USDT on the ${chain.name} network — funds sent on any other network can’t be recovered.`
+        : 'Double-check the network in your wallet matches this address — funds sent on the wrong network can’t be recovered.',
     }
-  if (u.includes('LN')) return { label: 'Bitcoin (Lightning)', short: 'BTC ⚡', icon: '/crypto/btc.svg', network: 'Lightning', networkWarning: null }
+  }
+  if (u.includes('LN'))
+    return { label: 'Bitcoin (Lightning)', short: 'BTC ⚡', icon: '/crypto/btc.svg', network: 'Lightning', networkName: 'Lightning', confirmEta: 'usually instant', networkWarning: null }
   if (u.startsWith('BTC'))
-    return { label: 'Bitcoin', short: 'BTC', icon: '/crypto/btc.svg', network: 'Bitcoin', networkWarning: null }
+    return { label: 'Bitcoin', short: 'BTC', icon: '/crypto/btc.svg', network: 'Bitcoin', networkName: 'Bitcoin', confirmEta: 'usually 10–20 minutes', networkWarning: null }
   const code = u.split('-')[0]
-  return { label: code, short: code, icon: null, network: null, networkWarning: null }
+  return { label: code, short: code, icon: null, network: null, networkName: null, confirmEta: null, networkWarning: null }
 }
 
 export default async function PayPage({ params, searchParams }: PayPageProps) {
@@ -90,6 +112,13 @@ export default async function PayPage({ params, searchParams }: PayPageProps) {
 
   if (!order || order.buyer_id !== user.id) redirect('/account/orders')
 
+  // Buyer profile for the navbar account menu (username + avatar).
+  const { data: buyerProfile } = (await supabase
+    .from('profiles')
+    .select('username, avatar_url')
+    .eq('id', user.id)
+    .maybeSingle()) as any
+
   // Already paid (or otherwise terminal) → the order page owns the story.
   if (order.status !== 'pending') redirect(`/account/orders/${orderId}`)
 
@@ -111,9 +140,13 @@ export default async function PayPage({ params, searchParams }: PayPageProps) {
   // Invoice amount = the remaining charge (order total minus any wallet
   // credit applied at checkout). Falls back to the order total.
   let invoiceAmount = Number(order.total_amount) || 0
+  let invoiceCreatedIso: string | null = null
   try {
     const invoice = await btcpayFetchInvoice(order.provider_charge_id)
     invoiceStatus = invoice.status
+    if (invoice.createdTime) {
+      invoiceCreatedIso = new Date(invoice.createdTime * 1000).toISOString()
+    }
     if (invoice.amount && Number.isFinite(Number(invoice.amount))) {
       invoiceAmount = Number(invoice.amount)
     }
@@ -125,7 +158,7 @@ export default async function PayPage({ params, searchParams }: PayPageProps) {
       methods = raw
         .filter((m) => m.destination)
         .map((m) => {
-          const meta = methodMeta(m.paymentMethodId)
+          const meta = methodMeta(m.paymentMethodId, m.destination)
           return {
             id: m.paymentMethodId,
             ...meta,
@@ -149,6 +182,7 @@ export default async function PayPage({ params, searchParams }: PayPageProps) {
       <PayClient
         orderId={orderId}
         orderNumber={order.order_number ?? null}
+        listingId={order.listing_id ?? null}
         listingTitle={order.listing?.title ?? 'Your Order'}
         itemImage={order.listing?.images?.[0] ?? null}
         gameName={order.listing?.game?.name ?? null}
@@ -157,8 +191,11 @@ export default async function PayPage({ params, searchParams }: PayPageProps) {
         invoiceAmount={invoiceAmount}
         initialInvoiceStatus={invoiceStatus}
         expiresAt={expiresAtIso}
+        createdAt={invoiceCreatedIso}
         methods={methods}
         initialMethodId={preferredMethodId(methods, coin, net)}
+        user={{ email: user.email }}
+        buyerProfile={buyerProfile ?? null}
       />
     </main>
   )

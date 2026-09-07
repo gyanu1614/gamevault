@@ -753,7 +753,7 @@ export async function cancelOrder(orderId: string): Promise<{
     // Fetch order — must be buyer and status must be 'paid'
     const { data: orderRaw, error: fetchError } = await supabase
       .from('orders')
-      .select('id, buyer_id, seller_id, listing_id, status, escrow_status, currency, total_amount, order_number')
+      .select('id, buyer_id, seller_id, listing_id, status, escrow_status, currency, total_amount, order_number, payment_provider, provider_charge_id')
       .eq('id', orderId)
       .single() as any
     const order = orderRaw as any
@@ -805,6 +805,25 @@ export async function cancelOrder(orderId: string): Promise<{
         }
       } catch (walletError: any) {
         console.error('[Cancel] CRITICAL: unpaid wallet-hold refund failed:', walletError?.message)
+      }
+
+      // The "Order Incomplete" navbar nudge for this order is moot now —
+      // webhook cancels clear it in notify.ts, buyer-initiated cancels here.
+      await supabase
+        .from('notifications')
+        .delete()
+        .eq('user_id', user.id)
+        .eq('type', 'order_incomplete')
+        .like('link', `%${orderId}%`)
+
+      // Payssion vouchers stay payable at the provider until told otherwise —
+      // cancel there too so a cancelled order can't be paid into later.
+      // Best-effort; the expiry cron re-tries stragglers.
+      if ((order as any).payment_provider === 'payssion' && (order as any).provider_charge_id) {
+        const { payssionCancelTransaction } = await import('@/lib/payments/providers/payssion')
+        await payssionCancelTransaction((order as any).provider_charge_id).catch((e: any) =>
+          console.error('[Cancel] payssion provider cancel failed:', e)
+        )
       }
     }
 

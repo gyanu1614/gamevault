@@ -35,12 +35,15 @@ export interface PaymentPageStatus {
    *  even though the payment server hasn't registered it yet. Display-only —
    *  lets the page say "Payment Seen On Network" within seconds. */
   seenOnNetwork?: boolean
+  /** Transaction id of the first matching transfer (display meta). */
+  seenTxId?: string
 }
 
-/** Direct TRON chain peek: any TRC20 transfer INTO `address` at/after `sinceMs`?
- *  Public TronGrid (optional TRONGRID_API_KEY env raises rate limits).
- *  Best-effort display sugar — failures just mean no early "seen" state. */
-async function tronSeenAtAddress(address: string, sinceMs: number): Promise<boolean> {
+/** Direct TRON chain peek: first TRC20 transfer INTO `address` at/after
+ *  `sinceMs` (returns its tx id), or null. Public TronGrid (optional
+ *  TRONGRID_API_KEY env raises rate limits). Best-effort display sugar —
+ *  failures just mean no early "seen" state. */
+async function tronSeenAtAddress(address: string, sinceMs: number): Promise<string | null> {
   try {
     const headers: Record<string, string> = {}
     if (process.env.TRONGRID_API_KEY) headers['TRON-PRO-API-KEY'] = process.env.TRONGRID_API_KEY
@@ -48,11 +51,12 @@ async function tronSeenAtAddress(address: string, sinceMs: number): Promise<bool
       `https://api.trongrid.io/v1/accounts/${address}/transactions/trc20?limit=10&only_to=true`,
       { headers, cache: 'no-store' }
     )
-    if (!res.ok) return false
+    if (!res.ok) return null
     const data = await res.json()
-    return (data?.data ?? []).some((t: any) => Number(t.block_timestamp) >= sinceMs)
+    const hit = (data?.data ?? []).find((t: any) => Number(t.block_timestamp) >= sinceMs)
+    return hit?.transaction_id ?? null
   } catch {
-    return false
+    return null
   }
 }
 
@@ -108,11 +112,11 @@ export async function getPaymentPageStatus(orderId: string): Promise<PaymentPage
 
     // Chain-watch: only worth checking while the processor still shows nothing
     // (invoice New, no registered payment) — the instant-feedback window.
-    let seenOnNetwork = false
+    let seenTxId: string | null = null
     const nothingRegistered =
       invoice.status === 'New' && !methods.some((m) => Number(m.totalPaid ?? 0) > 0)
     if (nothingRegistered && tronDestination && invoice.createdTime) {
-      seenOnNetwork = await tronSeenAtAddress(tronDestination, invoice.createdTime * 1000)
+      seenTxId = await tronSeenAtAddress(tronDestination, invoice.createdTime * 1000)
     }
 
     return {
@@ -121,7 +125,8 @@ export async function getPaymentPageStatus(orderId: string): Promise<PaymentPage
       invoiceStatus: invoice.status,
       additionalStatus: invoice.additionalStatus,
       methods,
-      seenOnNetwork,
+      seenOnNetwork: !!seenTxId,
+      seenTxId: seenTxId ?? undefined,
     }
   } catch (e: any) {
     return { success: false, error: e?.message ?? 'Status check failed' }

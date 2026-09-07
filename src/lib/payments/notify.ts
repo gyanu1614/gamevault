@@ -85,6 +85,22 @@ async function insertNotification(input: {
 }
 
 /**
+ * Remove the buyer's "Order Incomplete" nudge for an order once it resolves
+ * (paid or cancelled). The nudge's link always embeds the order id, so a
+ * LIKE match is enough; scoped to user + type so nothing else can be swept.
+ */
+async function clearIncompleteNudge(userId: string, orderId: string) {
+  const supabase = createServiceRoleClient()
+  const { error } = await supabase
+    .from('notifications')
+    .delete()
+    .eq('user_id', userId)
+    .eq('type', 'order_incomplete')
+    .like('link', `%${orderId}%`)
+  if (error) console.error('[PaymentNotify] nudge cleanup failed:', error)
+}
+
+/**
  * Send the comms for a webhook-applied order transition. Never throws.
  * `canonical` (when provided) distinguishes a completed refund from a
  * chargeback and carries the actual refunded amount.
@@ -95,17 +111,41 @@ export async function notifyOrderTransition(
   canonical?: CanonicalEvent
 ): Promise<void> {
   try {
-    if (orderEvent !== 'CHARGE_CONFIRMED' && orderEvent !== 'REFUNDED') return
+    if (
+      orderEvent !== 'CHARGE_CONFIRMED' &&
+      orderEvent !== 'REFUNDED' &&
+      orderEvent !== 'CANCELLED'
+    )
+      return
 
     const order = await fetchOrderComms(orderId)
     if (!order) return
 
     const orderNumber = order.order_number || orderId.slice(0, 8).toUpperCase()
+
+    // Auto-cancel (expired/invalid charge): the "Order Incomplete" nudge is
+    // now stale — replace it with a closing notice. No seller comms: an
+    // unpaid order was never actionable for them.
+    if (orderEvent === 'CANCELLED') {
+      await Promise.allSettled([
+        clearIncompleteNudge(order.buyer_id, orderId),
+        insertNotification({
+          userId: order.buyer_id,
+          type: 'order_cancelled',
+          title: 'Order Cancelled',
+          message: `We didn't receive your payment in time, so order #${orderNumber} ("${order.listingTitle}") was cancelled. Any wallet credit you applied was returned to your wallet.`,
+          link: `/account/orders/${order.id}`,
+        }),
+      ])
+      return
+    }
     const { sendOrderPaidEmail, sendNewOrderNotificationEmail, sendOrderRefundedEmail } =
       await import('@/lib/email')
 
     if (orderEvent === 'CHARGE_CONFIRMED') {
       await Promise.allSettled([
+        // Payment landed — the "Order Incomplete" nudge is resolved.
+        clearIncompleteNudge(order.buyer_id, orderId),
         // Buyer purchase receipt
         order.buyer.email
           ? sendOrderPaidEmail({

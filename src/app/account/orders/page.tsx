@@ -46,7 +46,8 @@ const STATUS_OPTIONS: { value: FilterStatus; label: string }[] = [
   { value: 'pending', label: 'In Progress' },
   { value: 'completed', label: 'Completed' },
   { value: 'disputed', label: 'Disputed' },
-  { value: 'cancelled', label: 'Cancelled' },
+  // No 'cancelled' option: never-paid orders are hidden at the query level
+  // (see buyerOrdersApi/sellerOrdersApi), so the filter would always be empty.
 ]
 
 // Advanced filter state

@@ -23,7 +23,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service'
 import { PURCHASES_ENABLED, PURCHASES_DISABLED_MESSAGE } from '@/lib/config/purchases'
 import { buyerFee, commissionAmount, protectionWindowHours, round2 } from '@/lib/fees'
-import { getProvider, activePaymentProviderName } from '@/lib/payments/registry'
+import { getProvider, activePaymentProviderName, providerNameForMethod } from '@/lib/payments/registry'
 import { spendWallet, getWalletBalance } from '@/lib/wallet/wallet'
 import { fromDecimal, money } from '@/lib/money'
 
@@ -40,6 +40,9 @@ export interface CreateCheckoutInput {
   quantity?: number
   promoDiscount?: number // major-unit amount, server-clamped
   walletAmount?: number // major-unit amount of wallet credit to apply
+  /** Fiat local-method pm_id (e.g. 'paysafecard', 'ideal_nl') → routes the
+   *  charge to Payssion. Absent/unknown → the env-active provider (crypto). */
+  paymentMethodId?: string
 }
 
 export interface CreateCheckoutResult {
@@ -114,8 +117,18 @@ export async function createCheckout(input: CreateCheckoutInput): Promise<Create
       const notExpired = existingPending.payment_expires_at
         ? new Date(existingPending.payment_expires_at).getTime() > Date.now()
         : false
-      if (sameAmount && notExpired && existingPending.checkout_url) {
-        return { success: true, orderId: existingPending.id, checkoutUrl: existingPending.checkout_url }
+      // Reuse only when the stored charge belongs to the SAME provider the
+      // buyer just picked — handing a GCash buyer a crypto pay page (or
+      // vice versa) is worse than minting a fresh charge.
+      const sameProvider =
+        !existingPending.payment_provider ||
+        existingPending.payment_provider === providerNameForMethod(input.paymentMethodId)
+      if (sameAmount && notExpired && sameProvider && existingPending.checkout_url) {
+        return {
+          success: true,
+          orderId: existingPending.id,
+          checkoutUrl: toRelativePayUrl(existingPending.checkout_url),
+        }
       }
       // Amounts drifted (quantity/promo/wallet changed) OR the invoice expired.
       // Supersede the stale order via CANCELLED, then RETURN any wallet credit
@@ -128,6 +141,25 @@ export async function createCheckout(input: CreateCheckoutInput): Promise<Create
       try {
         const { transition } = await import('@/lib/escrow/transition')
         await transition(existingPending.id, 'CANCELLED', `superseded-by-recheckout:${existingPending.id}`)
+
+        // Payssion vouchers stay PAYABLE at the provider until told otherwise
+        // — cancel there too, or the buyer could pay a slip whose order no
+        // longer exists. Best-effort: the expiry cron re-tries stragglers.
+        if (existingPending.payment_provider === 'payssion' && existingPending.provider_charge_id) {
+          const { payssionCancelTransaction } = await import('@/lib/payments/providers/payssion')
+          await payssionCancelTransaction(existingPending.provider_charge_id).catch((e) =>
+            console.error('[createCheckout] payssion cancel on supersede failed:', e)
+          )
+        }
+
+        // The superseded order's "Order Incomplete" nudge points at a dead
+        // order — clear it (the new charge below mints its own).
+        await supabase
+          .from('notifications')
+          .delete()
+          .eq('user_id', user.id)
+          .eq('type', 'order_incomplete')
+          .like('link', `%${existingPending.id}%`)
 
         // How much wallet credit did that order hold? (checkout_wallet:<id>
         // credited escrow_held.) Return exactly that to the buyer's wallet,
@@ -175,7 +207,7 @@ export async function createCheckout(input: CreateCheckoutInput): Promise<Create
         // "failed to create order".
         const raced = await findReusablePendingOrder(supabase, user.id, input.listingId)
         if (raced?.checkout_url) {
-          return { success: true, orderId: raced.id, checkoutUrl: raced.checkout_url }
+          return { success: true, orderId: raced.id, checkoutUrl: toRelativePayUrl(raced.checkout_url) }
         }
         if (raced) {
           orderId = raced.id
@@ -235,20 +267,37 @@ export async function createCheckout(input: CreateCheckoutInput): Promise<Create
     //    collapses history → the back button skips the payment page).
     //  • cancel  → back to checkout so the buyer can retry.
     const base = publicAppUrl()
-    const providerName = activePaymentProviderName()
+    // Provider is a property of the METHOD picked: Payssion pm_ids route to
+    // 'payssion' (hosted redirect); everything else stays on the env-active
+    // crypto provider.
+    const providerName = providerNameForMethod(input.paymentMethodId)
     const provider = getProvider(providerName)
     const charge = await provider.createCharge({
       orderId,
       amount: chargeMoney,
-      returnUrl: `${base}/account/orders/${orderId}?paid=1`,
-      cancelUrl: `${base}/checkout/${input.listingId}`,
-      metadata: { listing_id: input.listingId },
+      // Payssion has ONE return URL for paid AND cancelled — the smart
+      // /checkout/return route inspects the outcome and lands the buyer on
+      // the order page (paid/awaiting) or back at checkout (cancelled).
+      returnUrl:
+        providerName === 'payssion'
+          ? `${base}/checkout/return/${orderId}`
+          : `${base}/account/orders/${orderId}?paid=1`,
+      cancelUrl: `${base}/checkout/${input.listingId}?qty=${quantity}`,
+      metadata: {
+        listing_id: input.listingId,
+        ...(providerName === 'payssion' && input.paymentMethodId
+          ? { pm_id: input.paymentMethodId }
+          : {}),
+      },
     })
     // BTCPay: the buyer pays on OUR native page (address/QR/status), not the
     // provider's hosted checkout — the invoice id on the order is what the
-    // page renders from. Other providers redirect to their hosted URL.
+    // page renders from. RELATIVE on purpose: an absolute URL would pin the
+    // env's host/port (localhost:3000 vs :3001 vs LAN IP vs prod) and strand
+    // the buyer on the wrong origin. Other providers redirect to their own
+    // hosted URL, which arrives absolute from them.
     const payUrl =
-      providerName === 'btcpay' ? `${base}/checkout/pay/${orderId}` : charge.checkoutUrl
+      providerName === 'btcpay' ? `/checkout/pay/${orderId}` : charge.checkoutUrl
 
     // Persist the charge on the order so a re-checkout can REUSE this exact
     // invoice instead of minting a second one. Expiry is the provider's
@@ -264,9 +313,65 @@ export async function createCheckout(input: CreateCheckoutInput): Promise<Create
       payment_expires_at: expiresAt,
     }).eq('id', orderId)
 
+    await upsertIncompleteNudge(supabase, user.id, orderId, providerName, expiresAt)
+
     return { success: true, orderId, checkoutUrl: payUrl }
   } catch (e: any) {
+    const msg = String(e?.message ?? '')
+    // Provider/config internals never reach the buyer verbatim.
+    if (msg.startsWith('[Payssion]') || msg.startsWith('payssion:')) {
+      console.error('[createCheckout] payssion charge failed:', msg)
+      return {
+        success: false,
+        error: 'The payment service is temporarily unavailable — nothing was charged. Please try again shortly.',
+      }
+    }
     return { success: false, error: e?.message ?? 'Checkout failed' }
+  }
+}
+
+/**
+ * "Order Incomplete" navbar nudge — the visible trace of an unpaid order the
+ * moment the buyer backs out of the payment page. notify.ts deletes it when
+ * the charge confirms or the order auto-cancels (both match the order id
+ * embedded in the link); a retry that mints a fresh invoice replaces rather
+ * than duplicates it. Best-effort: never fails checkout.
+ */
+async function upsertIncompleteNudge(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+  orderId: string,
+  providerName: string,
+  expiresAtIso: string,
+) {
+  try {
+    const minutes = Math.max(
+      1,
+      Math.round((new Date(expiresAtIso).getTime() - Date.now()) / 60000),
+    )
+    // Voucher rails (Payssion 48h windows) read in hours, not "2880 minutes".
+    const window =
+      minutes >= 120
+        ? `${Math.round(minutes / 60)} hours`
+        : `${minutes} minutes`
+    const link =
+      providerName === 'btcpay' ? `/checkout/pay/${orderId}` : `/account/orders/${orderId}`
+    await supabase
+      .from('notifications')
+      .delete()
+      .eq('user_id', userId)
+      .eq('type', 'order_incomplete')
+      .like('link', `%${orderId}%`)
+    await (supabase.from('notifications').insert as any)({
+      user_id: userId,
+      type: 'order_incomplete',
+      title: 'Order Incomplete',
+      message: `Your order is waiting for payment — complete it within ${window} or it cancels automatically.`,
+      link,
+      is_read: false,
+    })
+  } catch (e) {
+    console.error('[Checkout] incomplete nudge failed (non-fatal):', e)
   }
 }
 
@@ -279,6 +384,8 @@ interface ReusablePendingOrder {
   total_amount: number
   checkout_url: string | null
   payment_expires_at: string | null
+  payment_provider: string | null
+  provider_charge_id: string | null
 }
 
 /**
@@ -294,7 +401,7 @@ async function findReusablePendingOrder(
 ): Promise<ReusablePendingOrder | null> {
   const { data } = await supabase
     .from('orders')
-    .select('id, total_amount, checkout_url, payment_expires_at')
+    .select('id, total_amount, checkout_url, payment_expires_at, payment_provider, provider_charge_id')
     .eq('buyer_id', buyerId)
     .eq('listing_id', listingId)
     .eq('status', 'pending')
@@ -382,7 +489,7 @@ export async function retryOrderPayment(orderId: string): Promise<{
 
     const { data: order } = (await supabase
       .from('orders')
-      .select('id, buyer_id, listing_id, status, total_amount, checkout_url, payment_expires_at')
+      .select('id, buyer_id, listing_id, status, total_amount, checkout_url, payment_expires_at, payment_provider')
       .eq('id', orderId)
       .single()) as any
     if (!order) return { success: false, error: 'Order not found' }
@@ -391,10 +498,25 @@ export async function retryOrderPayment(orderId: string): Promise<{
       return { success: false, error: 'This order is not awaiting payment' }
     }
 
+    // Payssion: the stored hosted URL is the answer for the whole pending
+    // lifetime — their page renders its own expired state, and we can't mint
+    // a fresh charge here (pm_id isn't persisted; silently re-charging via
+    // crypto would switch the buyer's method). Only a corrupt order with no
+    // URL falls through to the re-order message.
+    if (order.payment_provider === 'payssion') {
+      if (order.checkout_url) {
+        return { success: true, checkoutUrl: order.checkout_url }
+      }
+      return {
+        success: false,
+        error: 'This payment link is no longer available — please place the order again.',
+      }
+    }
+
     // Reuse the existing invoice while it has a comfortable validity buffer.
     const validUntil = order.payment_expires_at ? new Date(order.payment_expires_at).getTime() : 0
     if (order.checkout_url && validUntil > Date.now() + 5 * 60 * 1000) {
-      return { success: true, checkoutUrl: order.checkout_url }
+      return { success: true, checkoutUrl: toRelativePayUrl(order.checkout_url) }
     }
 
     // Remaining charge = total − wallet credit already held for this order.
@@ -424,8 +546,9 @@ export async function retryOrderPayment(orderId: string): Promise<{
       cancelUrl: `${base}/account/orders/${orderId}`,
       metadata: { listing_id: order.listing_id, retry: 'true' },
     })
+    // Relative for the same reason as createCheckout: never pin an origin.
     const payUrl =
-      providerName === 'btcpay' ? `${base}/checkout/pay/${orderId}` : charge.checkoutUrl
+      providerName === 'btcpay' ? `/checkout/pay/${orderId}` : charge.checkoutUrl
 
     const expiresAt = charge.expiresAt ?? new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString()
     await (supabase.from('orders').update as any)({
@@ -435,6 +558,8 @@ export async function retryOrderPayment(orderId: string): Promise<{
       payment_expires_at: expiresAt,
     }).eq('id', orderId)
 
+    await upsertIncompleteNudge(supabase, user.id, orderId, providerName, expiresAt)
+
     return { success: true, checkoutUrl: payUrl }
   } catch (e: any) {
     return { success: false, error: e?.message ?? 'Could not restart payment' }
@@ -443,4 +568,13 @@ export async function retryOrderPayment(orderId: string): Promise<{
 
 function publicAppUrl(): string {
   return process.env.NEXT_PUBLIC_APP_URL ?? process.env.PUBLIC_API_URL ?? 'http://localhost:3000'
+}
+
+/** Orders created before the relative-URL change stored our pay page with an
+ *  absolute origin (whatever host/port the env pointed at). Strip it so a
+ *  reused invoice never redirects the buyer onto the wrong origin; provider-
+ *  hosted URLs (no /checkout/pay/ segment) pass through untouched. */
+function toRelativePayUrl(url: string): string {
+  const i = url.indexOf('/checkout/pay/')
+  return i >= 0 ? url.slice(i) : url
 }
