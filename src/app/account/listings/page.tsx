@@ -556,7 +556,7 @@ function OffersContent() {
     // Viewport-locked like Messages/Purchases: chrome static, ONLY the
     // results table scrolls. Pinned to the navbar's real bottom edge.
     <div className="fixed inset-x-0 bottom-0 top-[var(--navbar-bottom)] z-[1] flex flex-col overflow-hidden lg:left-64">
-    <div className="mx-auto flex h-full min-h-0 w-full max-w-[1400px] flex-col px-4 pt-2 sm:px-6 lg:px-10 xl:px-14">
+    <div className="mx-auto flex h-full min-h-0 w-full max-w-[1400px] flex-col px-4 pt-5 sm:px-6 lg:px-10 xl:px-14">
       {isRestricted && (
         <div className="mb-6">
           <RestrictionBanner status={sellerStatus} />
@@ -579,7 +579,7 @@ function OffersContent() {
       />
 
       {/* ── Filter row ── */}
-      <div className="mt-3 flex shrink-0 flex-wrap items-center gap-2.5">
+      <div className="mt-4 flex shrink-0 flex-wrap items-center gap-2.5">
         {/* Below sm the three triggers share one row (grid); at sm+ the
             wrapper dissolves (contents) into the original flex-wrap row. */}
         <div className="flex w-full items-center gap-2 sm:contents">

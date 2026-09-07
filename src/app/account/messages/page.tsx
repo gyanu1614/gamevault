@@ -153,14 +153,14 @@ export default function MessagesPage() {
     // FIXED shell pinned to the navbar's own bottom edge (--navbar-bottom)
     // and the true viewport bottom — no guessed heights, so there is no gap
     // under the navbar and the last row always clears iOS Safari's bar.
-    <main className="fixed inset-x-0 bottom-0 top-[var(--navbar-bottom)] z-[1] flex flex-col overflow-hidden px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2 sm:px-6 lg:left-64 lg:px-10 lg:pb-4 xl:px-14">
+    <main className="fixed inset-x-0 bottom-0 top-[var(--navbar-bottom)] z-[1] flex flex-col overflow-hidden px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-5 sm:px-6 lg:left-64 lg:px-10 lg:pb-4 xl:px-14">
       <div className="mx-auto flex h-full w-full max-w-[1400px] min-h-0 flex-col">
       {/* Compact chat chrome (reference: GameBoost). The PAGE never scrolls —
           only the conversation list and the message thread do. */}
       <h1 className="shrink-0 px-1 text-[22px] font-bold text-text-primary">Chat</h1>
 
       {/* Tabs — one horizontally scrollable row on phones, never wrapping. */}
-      <div className="mt-2.5 flex w-fit max-w-full shrink-0 flex-nowrap items-center gap-1 overflow-x-auto rounded-md border border-white/[0.08] bg-[rgba(20,20,27,0.56)] p-1 backdrop-blur-md [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div className="mt-3.5 flex w-fit max-w-full shrink-0 flex-nowrap items-center gap-1 overflow-x-auto rounded-md border border-white/[0.08] bg-[rgba(20,20,27,0.56)] p-1 backdrop-blur-md [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {CHAT_TABS.map((t) => (
           <button
             key={t.value}
