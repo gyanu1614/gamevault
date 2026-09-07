@@ -39,6 +39,9 @@ export type LedgerAccountKind =
   | 'refunds'
   | 'fx_gain_loss'
   | 'rounding'
+  | 'user_wallet'
+  | 'genesis_clearing'
+  | 'external_payout'
 
 export type LedgerDirection = 'debit' | 'credit'
 
