@@ -150,7 +150,9 @@ export default function MessagesPage() {
   }
 
   return (
-    <main className="mx-auto flex h-[calc(100dvh-3.5rem-var(--beta-banner-offset,0px))] w-full max-w-[1400px] flex-col overflow-hidden px-3 pb-3 pt-2 sm:px-6 lg:px-10 lg:pb-4 xl:px-14">
+    // svh, not dvh: the SMALL viewport unit always fits above iOS Safari's
+    // bottom bar, so the last row can never hide behind the floating pill.
+    <main className="mx-auto flex h-[calc(100svh-3.5rem-var(--beta-banner-offset,0px))] w-full max-w-[1400px] flex-col overflow-hidden px-3 pb-3 pt-2 sm:px-6 lg:px-10 lg:pb-4 xl:px-14">
       {/* Compact chat chrome (reference: GameBoost). The PAGE never scrolls —
           only the conversation list and the message thread do. */}
       <h1 className="shrink-0 px-1 text-[22px] font-bold text-text-primary">Messages</h1>

@@ -512,7 +512,7 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
             />
             <motion.aside
               aria-label="Account navigation"
-              className="fixed bottom-0 left-0 top-[var(--navbar-bottom)] z-[60] flex w-[min(72vw,300px)] flex-col overflow-hidden border-r border-white/[0.10] bg-[rgba(19,19,24,0.98)] shadow-[16px_0_40px_rgba(0,0,0,0.45)] backdrop-blur-2xl lg:hidden"
+              className="fixed bottom-0 left-0 top-[var(--navbar-bottom)] z-[60] flex w-[min(64vw,272px)] flex-col overflow-hidden border-r border-white/[0.10] bg-[rgba(19,19,24,0.98)] shadow-[16px_0_40px_rgba(0,0,0,0.45)] backdrop-blur-2xl lg:hidden"
               initial={{ x: '-100%' }}
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
