@@ -28,13 +28,34 @@ export function payssionSecretKey(): string | undefined {
   return process.env.PAYSSION_SECRET_KEY
 }
 
-/** Public origin for the notify webhook URL (same source order as CoinGate). */
+/**
+ * Public origin for the notify webhook URL (same source order as CoinGate).
+ *
+ * GUARD: in production, refuse a tunnel/localhost origin. The notify_url is
+ * baked into the Payssion charge at creation time — if a stale ngrok/localhost
+ * value slips into a prod build, EVERY payment silently 404s its webhook and
+ * orders never complete. Fail loudly at create time instead, so it's caught
+ * before a real buyer pays. (Dev is untouched — ngrok tunnels are expected there.)
+ */
 export function payssionPublicApiUrl(): string {
-  return (
+  const origin =
     process.env.PUBLIC_API_URL ??
     process.env.NEXT_PUBLIC_APP_URL ??
     'http://localhost:3000'
-  )
+
+  const isProd =
+    process.env.VERCEL_ENV === 'production' ||
+    (process.env.NODE_ENV === 'production' && process.env.VERCEL_ENV !== 'preview')
+
+  if (isProd && /ngrok|localhost|127\.0\.0\.1|\.local\b/i.test(origin)) {
+    throw new Error(
+      `[Payssion] Refusing to create a payment: notify_url origin "${origin}" is a ` +
+        `tunnel/localhost host in production. Set PUBLIC_API_URL (or NEXT_PUBLIC_APP_URL) ` +
+        `to the public domain (https://dropmarket.gg) so payment webhooks are delivered.`,
+    )
+  }
+
+  return origin
 }
 
 export function assertPayssionConfigured(): void {
