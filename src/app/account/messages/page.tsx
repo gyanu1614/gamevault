@@ -12,13 +12,13 @@
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { toast } from 'sonner'
+import { AnimatePresence, motion } from 'framer-motion'
 import {
   Send, Search, Loader2, MessageSquare, BadgeCheck, Package,
-  ExternalLink, ShoppingBag, ChevronDown, ChevronUp,
+  ExternalLink, ShoppingBag, ChevronDown, ChevronUp, ChevronLeft,
 } from 'lucide-react'
 
 import { useAuth } from '@/hooks/use-auth'
-import AccountPageHeader from '@/components/account/AccountPageHeader'
 import { useSellerMessages, useConversationMessages } from '@/hooks/use-seller-messages'
 import { getAvatarUrl } from '@/lib/utils/avatar'
 import { classifyOfferType } from '@/lib/utils/offer-type'
@@ -77,6 +77,9 @@ export default function MessagesPage() {
   const selectedConversation = conversations.find((c) => c.id === selectedConversationId)
 
   useEffect(() => {
+    // Desktop auto-opens the first conversation. Mobile stays on the LIST —
+    // auto-opening would slide the chat pane over it before the user chose.
+    if (typeof window !== 'undefined' && !window.matchMedia('(min-width: 1024px)').matches) return
     if (conversations.length > 0 && !selectedConversationId) {
       setSelectedConversationId(conversations[0].id)
     }
@@ -136,16 +139,13 @@ export default function MessagesPage() {
   }
 
   return (
-    <main className="mx-auto w-full max-w-[1400px] px-4 pb-16 pt-2 sm:px-6 lg:px-10 xl:px-14">
-      {/* Standard account title block (V33 style — same as Offers/Orders). */}
-      <AccountPageHeader
-        title="Messages"
-        subtitle="Talk to buyers and sellers — directly tied to your orders."
-        className="mb-4"
-      />
+    <main className="mx-auto flex h-[calc(100dvh-3.5rem-var(--beta-banner-offset,0px))] w-full max-w-[1400px] flex-col overflow-hidden px-3 pb-3 pt-2 sm:px-6 lg:px-10 lg:pb-4 xl:px-14">
+      {/* Compact chat chrome (reference: GameBoost). The PAGE never scrolls —
+          only the conversation list and the message thread do. */}
+      <h1 className="shrink-0 px-1 text-[22px] font-bold text-text-primary">Messages</h1>
 
-      {/* Chat tabs — segmented control (reference shape, our material). */}
-      <div className="mb-4 flex w-fit max-w-full flex-wrap items-center gap-1 overflow-x-auto rounded-md border border-white/[0.08] bg-[rgba(20,20,27,0.56)] p-1 backdrop-blur-md">
+      {/* Tabs — one horizontally scrollable row on phones, never wrapping. */}
+      <div className="mt-2.5 flex w-fit max-w-full shrink-0 flex-nowrap items-center gap-1 overflow-x-auto rounded-md border border-white/[0.08] bg-[rgba(20,20,27,0.56)] p-1 backdrop-blur-md [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {CHAT_TABS.map((t) => (
           <button
             key={t.value}
@@ -161,9 +161,15 @@ export default function MessagesPage() {
         ))}
       </div>
 
-      <div className="grid h-[calc(100vh-252px)] grid-cols-1 gap-3 lg:grid-cols-[380px_1fr]">
-        {/* ── Conversations list ────────────────────────────────────── */}
-        <aside className="relative flex flex-col overflow-hidden rounded-lg border border-border-default bg-[rgba(20,20,27,0.56)] backdrop-blur-md">
+      <div className="mt-3 grid min-h-0 flex-1 grid-cols-1 gap-3 lg:grid-cols-[380px_1fr]">
+        {/* ── Conversations list — on phones this IS the page until a chat
+            is opened (the chat pane replaces it, with a back button). ── */}
+        <aside
+          className={cn(
+            'relative flex-col overflow-hidden rounded-lg border border-border-default bg-[rgba(20,20,27,0.56)] backdrop-blur-md',
+            selectedConversationId ? 'hidden lg:flex' : 'flex',
+          )}
+        >
           <span aria-hidden className="pointer-events-none absolute inset-x-0 top-0 z-10 h-14 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.04),transparent)]" />
           <div className="border-b border-border-subtle p-3">
             <div className="relative">
@@ -173,7 +179,7 @@ export default function MessagesPage() {
                 placeholder="Search conversations…"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="h-10 w-full rounded-md border border-border-default bg-bg-overlay pl-9 pr-3 text-sm text-text-primary placeholder:text-text-tertiary transition-colors focus:border-border-strong focus:outline-none focus-visible:shadow-none"
+                className="h-10 w-full rounded-md border border-border-default bg-bg-overlay pl-9 pr-3 text-[16px] text-text-primary placeholder:text-text-tertiary transition-colors focus:border-border-strong focus:outline-none focus-visible:shadow-none sm:text-sm"
               />
             </div>
           </div>
@@ -248,14 +254,35 @@ export default function MessagesPage() {
           </div>
         </aside>
 
-        {/* ── Chat area ─────────────────────────────────────────────── */}
-        <section className="relative flex flex-col overflow-hidden rounded-lg border border-border-default bg-[rgba(20,20,27,0.56)] backdrop-blur-md">
+        {/* ── Chat area — replaces the list on phones; slides in per
+            conversation (native-chat feel, framer-motion). ── */}
+        <section
+          className={cn(
+            'relative flex-col overflow-hidden rounded-lg border border-border-default bg-[rgba(20,20,27,0.56)] backdrop-blur-md',
+            selectedConversationId ? 'flex' : 'hidden lg:flex',
+          )}
+        >
           <span aria-hidden className="pointer-events-none absolute inset-x-0 top-0 z-10 h-14 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.04),transparent)]" />
           {selectedConversation ? (
-            <>
+            <motion.div
+              key={selectedConversation.id}
+              initial={{ x: 16, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              transition={{ duration: 0.18, ease: 'easeOut' }}
+              className="flex min-h-0 flex-1 flex-col"
+            >
               {/* Header */}
               <div className="border-b border-border-subtle p-3 sm:p-4">
                 <div className="flex items-center gap-3">
+                  {/* Phones: back to the conversation list. */}
+                  <button
+                    type="button"
+                    onClick={() => setSelectedConversationId(null)}
+                    aria-label="Back To Conversations"
+                    className="grid h-9 w-9 shrink-0 place-items-center rounded-md border border-border-default bg-white/[0.04] text-text-secondary transition-colors hover:text-text-primary lg:hidden"
+                  >
+                    <ChevronLeft className="h-[18px] w-[18px]" />
+                  </button>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={getAvatarUrl(
@@ -310,7 +337,16 @@ export default function MessagesPage() {
                     )}
                   </button>
 
+                  <AnimatePresence initial={false}>
                   {!isOrderInfoCollapsed && (
+                    <motion.div
+                      key="order-info"
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.18, ease: 'easeOut' }}
+                      className="overflow-hidden"
+                    >
                     <div className="px-3 pb-3 sm:px-4 sm:pb-4">
                       <div className="flex items-start gap-3">
                         {selectedConversation.order.listing?.images?.[0] && (
@@ -358,7 +394,9 @@ export default function MessagesPage() {
                         </div>
                       </div>
                     </div>
+                    </motion.div>
                   )}
+                  </AnimatePresence>
                 </div>
               )}
 
@@ -388,7 +426,7 @@ export default function MessagesPage() {
                     onKeyPress={handleKeyPress}
                     placeholder="Type a message…"
                     rows={1}
-                    className="min-h-[42px] max-h-32 flex-1 resize-none rounded-md border border-border-default bg-bg-overlay px-3 py-2.5 text-sm text-text-primary placeholder:text-text-tertiary transition-colors focus:border-border-strong focus:outline-none focus-visible:shadow-none"
+                    className="min-h-[42px] max-h-32 flex-1 resize-none rounded-md border border-border-default bg-bg-overlay px-3 py-2.5 text-[16px] text-text-primary placeholder:text-text-tertiary transition-colors focus:border-border-strong focus:outline-none focus-visible:shadow-none sm:text-sm"
                   />
                   <button
                     type="button"
@@ -406,7 +444,7 @@ export default function MessagesPage() {
                   </button>
                 </div>
               </div>
-            </>
+            </motion.div>
           ) : (
             <div className="flex h-full flex-col items-center justify-center gap-3 p-8 text-center">
               <div className="flex h-12 w-12 items-center justify-center rounded-full border border-border-default bg-bg-overlay">
