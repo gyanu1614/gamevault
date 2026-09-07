@@ -12,6 +12,7 @@
  * changes — Steal-a-Brainrot, Adopt Me, Blox Fruits, MM2, all the same.
  */
 
+import { sellerDisplayName } from '@/lib/seller/identity'
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import * as Popover from '@radix-ui/react-popover'
@@ -196,7 +197,7 @@ export default function ItemsPageClient({
       if (o.pricePerUnit < band.min) return false
       if (band.max !== null && o.pricePerUnit > band.max) return false
       if (debouncedQ) {
-        const hay = `${o.name} ${o.seller.shopName || ''} ${o.seller.username}`.toLowerCase()
+        const hay = `${o.name} ${sellerDisplayName(o.seller)} ${o.seller.username}`.toLowerCase()
         if (!hay.includes(debouncedQ)) return false
       }
       return true
@@ -214,7 +215,7 @@ export default function ItemsPageClient({
         arr.sort((a, b) => b.pricePerUnit - a.pricePerUnit)
         break
       case 'top-rated':
-        arr.sort((a, b) => b.seller.rating - a.seller.rating)
+        arr.sort((a, b) => (b.seller.ratingPercent ?? -1) - (a.seller.ratingPercent ?? -1))
         break
       case 'best-sellers':
         arr.sort((a, b) => b.seller.sales - a.seller.sales)

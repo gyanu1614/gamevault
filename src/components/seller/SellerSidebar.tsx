@@ -1,5 +1,6 @@
 'use client'
 
+import { sellerDisplayName } from '@/lib/seller/identity'
 import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
@@ -126,7 +127,7 @@ export default function SellerSidebar({ user }: SellerSidebarProps) {
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-white truncate">
-              {user?.shop_name || user?.username || 'Seller'}
+              {sellerDisplayName(user)}
             </p>
             <p className={cn(
               'text-xs font-medium capitalize',

@@ -5,6 +5,7 @@
  * SEO-friendly URL: /fortnite (clean URL, no /marketplace prefix)
  */
 
+import { sellerDisplayName } from '@/lib/seller/identity'
 import React from 'react'
 import { Metadata } from 'next'
 import { notFound } from 'next/navigation'
@@ -229,7 +230,7 @@ async function getSabLandingOffers(gameId: string): Promise<{
         id, slug, title, price, original_price, delivery_time,
         quantity, is_unlimited, images, template_data, status,
         seller:profiles!listings_seller_id_fkey(
-          id, username, shop_name, avatar_url, seller_tier,
+          id, username, shop_name, shop_slug, avatar_url, seller_tier,
           seller_rating, total_reviews, total_sales, is_verified
         ),
         category:categories!listings_category_id_fkey(slug, name, metadata)
@@ -501,7 +502,7 @@ export default async function GameBrowsePage({ params }: PageProps) {
                   title={listing.title}
                   price={listing.price}
                   imageUrl={listing.images?.[0]}
-                  sellerUsername={listing.seller.username}
+                  sellerName={sellerDisplayName(listing.seller)}
                   sellerTier={listing.seller.seller_tier}
                 />
               ))}
@@ -588,7 +589,7 @@ interface ListingPreviewCardProps {
   title: string
   price: number
   imageUrl?: string
-  sellerUsername: string
+  sellerName: string
   sellerTier: string
 }
 
@@ -599,7 +600,7 @@ function ListingPreviewCard({
   title,
   price,
   imageUrl,
-  sellerUsername,
+  sellerName,
   sellerTier
 }: ListingPreviewCardProps) {
   const tierColors: Record<string, string> = {
@@ -637,7 +638,7 @@ function ListingPreviewCard({
 
           <div className="flex items-center justify-between text-sm">
             <span className={`font-medium ${tierColors[sellerTier] || 'text-text-secondary'}`}>
-              @{sellerUsername}
+              {sellerName}
             </span>
           </div>
         </div>

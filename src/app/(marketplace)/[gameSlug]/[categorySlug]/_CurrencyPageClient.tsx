@@ -21,6 +21,7 @@ import * as Collapsible from '@radix-ui/react-collapsible'
 import { Card } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
+import ShopLink from '@/components/seller/ShopLink'
 import HowItWorksBand from '@/components/marketplace/HowItWorksBand'
 import { SectionHeading } from '@/components/marketplace/SectionHeading'
 import { FaqCards } from '@/components/marketplace/FaqCards'
@@ -172,7 +173,11 @@ function VerifiedBadge({ size = 14 }: { size?: number }) {
   )
 }
 
-function Rating({ rating, reviews, showReviews = true }: { rating: number; reviews?: number; showReviews?: boolean }) {
+function Rating({ rating, reviews, showReviews = true }: { rating: number | null; reviews?: number; showReviews?: boolean }) {
+  // No reviews → no rating: show "New" rather than a fabricated number.
+  if (rating == null) {
+    return <span className="text-[13px] font-semibold text-text-secondary">New</span>
+  }
   return (
     <span className="inline-flex items-center gap-1 text-text-secondary">
       <Star className="h-3 w-3 fill-lime text-lime" />
@@ -683,8 +688,11 @@ function HeroCard({
             Canonical OrderCard shape: rounded-lg, border-border-default,
             bg-bg-raised, no glass/blur. */}
         <Card className="border-border-default bg-bg-overlay p-5 sm:p-6">
-          <a
-            href={`/shop/${offer.seller}`}
+          {/* `offer.seller` is a DISPLAY name ("BloxMarket"), not a slug —
+              linking to it produced /shop/BloxMarket. Use the canonical
+              sellerSlug, and degrade to a non-link when there is none. */}
+          <ShopLink
+            slug={offer.sellerSlug}
             className="group -m-1 mb-1 flex items-center gap-3 rounded-lg p-1 transition-colors hover:bg-bg-raised-hover"
           >
             <Avatar name={offer.seller} hue={offer.avatarHue} imageUrl={offer.avatarUrl} size={48} />
@@ -700,7 +708,7 @@ function HeroCard({
               </div>
             </div>
             <ArrowRight className="h-4 w-4 text-text-tertiary transition-colors group-hover:text-lime-text" />
-          </a>
+          </ShopLink>
 
           {/* V19/P24/P7.rr — Equal py-3.5 rhythm on all three rows.
               Instructions clamps to 5 lines (whichever comes first
@@ -1264,7 +1272,7 @@ function SellerRow({
                   </span>
                 </div>
                 <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3">
-                  <Fact icon={Star} label="Positive rating" value={`${offer.rating.toFixed(1)}% (${offer.reviews})`} />
+                  <Fact icon={Star} label="Positive rating" value={offer.rating != null ? `${offer.rating.toFixed(1)}% (${offer.reviews})` : 'New seller'} />
                   <Fact icon={Package} label="In stock" value={`${offer.stock.toLocaleString('en-US')} ${unitGlyph}`} />
                   <Fact icon={Clock} label="Delivery" value={offer.deliveryLabel || fmtMinutes(offer.deliveryMin, offer.deliveryMax)} />
                   <Fact

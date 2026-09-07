@@ -4,7 +4,8 @@ import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service'
 import { requireAdmin } from '@/lib/actions/admin-permissions'
 import { getMyWithdrawableBalance } from '@/lib/actions/wallet-ledger'
-import { PAYOUT_MIN_USD } from '@/lib/fees'
+import { PAYOUT_MIN_USD, round2 } from '@/lib/fees'
+import { validatePayoutAddress } from '@/lib/crypto/address-validation'
 
 // Types
 export interface WithdrawalMethod {
@@ -12,6 +13,13 @@ export interface WithdrawalMethod {
   method_name: string
   display_name: string
   method_type: 'fiat' | 'crypto'
+  /** Asset ticker — btc | eth | usdt | usdc. Null for fiat. */
+  coin?: string | null
+  /** Settlement network — bitcoin | ethereum | tron | polygon. Null for fiat.
+   *  Derived from the method, never entered by the seller. */
+  chain?: string | null
+  /** Rendered as unavailable rather than hidden (fiat, for now). */
+  coming_soon?: boolean | null
   fee_percentage: number
   fee_fixed: number
   fee_currency: string
@@ -34,6 +42,11 @@ export interface WithdrawalRequest {
   net_amount: number
   payment_details: Record<string, any>
   admin_notes?: string
+  /** On-chain proof, set when an admin marks the payout sent. */
+  transaction_hash?: string | null
+  approved_at?: string | null
+  rejected_at?: string | null
+  completed_at?: string | null
   created_at: string
   updated_at: string
 }
@@ -47,10 +60,14 @@ export async function getWithdrawalMethods(): Promise<{
   try {
     const supabase = await createClient()
 
+    // Include coming-soon rails: they render disabled with a "Coming soon"
+    // label rather than disappearing. A payout method a seller has used
+    // before silently vanishing reads as a fault, not a roadmap.
     const { data, error } = await supabase
       .from('withdrawal_methods')
       .select('*')
-      .eq('is_active', true)
+      .or('is_active.eq.true,coming_soon.eq.true')
+      .order('sort_order', { ascending: true })
       .order('method_type', { ascending: true })
 
     if (error) throw error
@@ -108,10 +125,42 @@ export async function createWithdrawalRequest(params: {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) throw new Error('Not authenticated')
 
+    // Amount must be a real, sane money value before anything else touches
+    // it — NaN/Infinity would sail through the comparisons below and reach
+    // the ledger.
+    const amount = Number(params.amount)
+    if (!Number.isFinite(amount) || amount <= 0) {
+      return { success: false, error: 'Enter a valid amount.' }
+    }
+    // "At most 2 decimal places" — compare against a 2-dp rounding, NOT
+    // `Math.round(amount*100) === amount*100`. Float multiplication makes
+    // `64.01 * 100 === 6401.0000000000001`, so the old exact-equality guard
+    // wrongly rejected ~12% of valid 2-decimal amounts.
+    if (round2(amount) !== amount) {
+      return { success: false, error: 'Amount can have at most 2 decimal places.' }
+    }
+
     // Platform-wide payout minimum (lib/fees — single source of truth; the
     // per-method min_withdrawal rows mirror it).
-    if (params.amount < PAYOUT_MIN_USD) {
+    if (amount < PAYOUT_MIN_USD) {
       return { success: false, error: `Minimum withdrawal is $${PAYOUT_MIN_USD}` }
+    }
+
+    // One open request at a time. Without this a seller can submit N requests
+    // against the same balance faster than an admin can review them; each
+    // holds funds separately, but the queue fills with duplicates and the
+    // review workload multiplies.
+    const { count: openCount } = await supabase
+      .from('withdrawal_requests')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .in('status', ['pending', 'approved', 'processing'])
+
+    if ((openCount ?? 0) > 0) {
+      return {
+        success: false,
+        error: 'You already have a withdrawal in progress. Wait for it to complete or cancel it first.',
+      }
     }
 
     // Balance check against the LEDGER (seller_available + wallet credit) —
@@ -120,7 +169,7 @@ export async function createWithdrawalRequest(params: {
     if (!balanceResult.success || !balanceResult.balance) {
       return { success: false, error: balanceResult.error || 'Failed to check balance' }
     }
-    if (balanceResult.balance.total < params.amount) {
+    if (balanceResult.balance.total < amount) {
       return { success: false, error: 'Insufficient balance' }
     }
 
@@ -133,8 +182,39 @@ export async function createWithdrawalRequest(params: {
 
     if (!method) throw new Error('Invalid withdrawal method')
 
+    const methodRow = method as any
+    if (methodRow.is_active === false) {
+      return { success: false, error: 'That withdrawal method isn’t available yet.' }
+    }
+
+    // Crypto sends are irreversible, so the destination is validated here —
+    // server-side and authoritative — not just in the browser. A live row in
+    // this table reads { method_name: "btc", network: "Trc20",
+    // wallet_address: "$sejsjsjwjh28383" }: Bitcoin over Tron, to junk. Both
+    // faults were accepted, and approving it would have destroyed the funds.
+    if (methodRow.method_type === 'crypto') {
+      const details = params.paymentDetails ?? {}
+      const address = String(details.wallet_address ?? '').trim()
+      const chain = String(details.network ?? '').trim().toLowerCase()
+      const coin = String(methodRow.coin ?? methodRow.method_name ?? '')
+        .trim()
+        .toLowerCase()
+
+      const check = validatePayoutAddress(coin, chain, address)
+      if (!check.valid) {
+        return { success: false, error: check.error || 'Invalid wallet address.' }
+      }
+
+      // Persist only the fields we validated — never the raw client object,
+      // which could otherwise smuggle extra keys into the admin's view.
+      params = {
+        ...params,
+        paymentDetails: { wallet_address: address, network: chain, coin },
+      }
+    }
+
     // Calculate fees
-    const feeCalc = await calculateWithdrawalFee(params.amount, params.methodId)
+    const feeCalc = await calculateWithdrawalFee(amount, params.methodId)
     if (!feeCalc.success) throw new Error(feeCalc.error)
 
     // Create request
@@ -143,7 +223,7 @@ export async function createWithdrawalRequest(params: {
       .from('withdrawal_requests')
       .insert({
         user_id: user.id,
-        amount: params.amount,
+        amount,
         method_id: params.methodId,
         method_name: (method as any).method_name,
         fee_amount: feeCalc.fee,
@@ -165,7 +245,7 @@ export async function createWithdrawalRequest(params: {
     // concurrent spend drained the balance), the request must not survive.
     const { error: debitError } = await (serviceClient.rpc as any)('withdrawal_debit', {
       p_user_id: user.id,
-      p_amount_minor: Math.round(params.amount * 100),
+      p_amount_minor: Math.round(amount * 100),
       p_idempotency_key: `withdrawal:${requestId}`,
     })
     if (debitError) {

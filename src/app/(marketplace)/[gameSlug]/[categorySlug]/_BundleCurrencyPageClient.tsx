@@ -51,12 +51,12 @@ import { BUY_CTA_LABEL } from '@/lib/config/purchases'
 export interface BundleOffer {
   listingId: string
   sellerId: string | null
-  /** Stable handle for the seller's public shop URL ("/shop/{username}"). */
-  sellerUsername: string | null
+  /** Canonical storefront slug for "/shop/{slug}". Never the display name. */
+  sellerSlug: string | null
   sellerName: string
   sellerAvatarUrl?: string | null
   verified: boolean
-  rating: number
+  rating: number | null
   reviews: number
   /** $ per bundle (the listing.price column). */
   pricePerBundle: number
@@ -988,24 +988,30 @@ function SellerStatsChip({ offer }: { offer: BundleOffer }) {
           )}
         </div>
         <div className="mt-0.5 flex items-center gap-1.5 text-[11.5px] text-text-tertiary">
-          <span className="font-semibold text-text-secondary">
-            {offer.rating.toFixed(1)}%
-          </span>
-          <span aria-hidden>·</span>
-          <span>
-            {offer.reviews.toLocaleString()} review{offer.reviews === 1 ? '' : 's'}
-          </span>
+          {offer.rating != null ? (
+            <>
+              <span className="font-semibold text-text-secondary">
+                {offer.rating.toFixed(1)}%
+              </span>
+              <span aria-hidden>·</span>
+              <span>
+                {offer.reviews.toLocaleString()} review{offer.reviews === 1 ? '' : 's'}
+              </span>
+            </>
+          ) : (
+            <span className="font-semibold text-text-secondary">New Seller</span>
+          )}
         </div>
       </div>
     </div>
   )
 
-  if (!offer.sellerUsername) {
+  if (!offer.sellerSlug) {
     return <div>{inner}</div>
   }
   return (
     <Link
-      href={`/shop/${offer.sellerUsername}`}
+      href={`/shop/${offer.sellerSlug}`}
       className="block rounded-xl transition-colors hover:bg-bg-overlay/40"
     >
       {inner}
@@ -1032,17 +1038,23 @@ function SellerRow({
         className="pointer-events-none absolute inset-x-0 top-0 h-1/2 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.05),transparent)]"
       />
       <div className="relative flex items-center gap-3 p-4 sm:gap-5 sm:p-5">
-        {/* Seller — leads the row, clickable chip → /shop/{username} */}
+        {/* Seller — leads the row, clickable chip → /shop/{slug} */}
         <div className="min-w-0 flex-1">
           <SellerChip offer={offer} />
           <div className="mt-1.5 flex items-center gap-2 text-[12.5px] text-text-tertiary">
-            <span className="font-semibold text-text-secondary">
-              {offer.rating.toFixed(1)}%
-            </span>
-            <span aria-hidden>·</span>
-            <span>
-              {offer.reviews.toLocaleString()} review{offer.reviews === 1 ? '' : 's'}
-            </span>
+            {offer.rating != null ? (
+              <>
+                <span className="font-semibold text-text-secondary">
+                  {offer.rating.toFixed(1)}%
+                </span>
+                <span aria-hidden>·</span>
+                <span>
+                  {offer.reviews.toLocaleString()} review{offer.reviews === 1 ? '' : 's'}
+                </span>
+              </>
+            ) : (
+              <span className="font-semibold text-text-secondary">New Seller</span>
+            )}
           </div>
         </div>
 
@@ -1187,7 +1199,7 @@ function FilterChip({
   )
 }
 
-/* ── Reusable seller chip — avatar + name + verified -> /shop/{username} ── */
+/* ── Reusable seller chip — avatar + name + verified -> /shop/{slug} ── */
 
 function SellerChip({
   offer,
@@ -1236,7 +1248,7 @@ function SellerChip({
   )
 
   // Falls back to non-link when we don't have a username (legacy data).
-  if (!offer.sellerUsername) {
+  if (!offer.sellerSlug) {
     return (
       <div className="inline-flex min-w-0 items-center gap-2">{inner}</div>
     )
@@ -1244,7 +1256,7 @@ function SellerChip({
 
   return (
     <Link
-      href={`/shop/${offer.sellerUsername}`}
+      href={`/shop/${offer.sellerSlug}`}
       className="group inline-flex min-w-0 items-center gap-2 rounded-full transition-colors hover:text-lime-text"
     >
       {inner}

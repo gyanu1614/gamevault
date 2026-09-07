@@ -9,6 +9,7 @@
  * thumbnail dock.
  */
 
+import { sellerDisplayName, sellerInitial, sellerShopSlug } from '@/lib/seller/identity'
 import { useParams, useRouter } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
 import { useMemo, useState } from 'react'
@@ -294,25 +295,25 @@ export default function ListingDetailPage() {
 
           {/* Seller card */}
           <Link
-            href={`/shop/${listing.seller.username}`}
+            href={`/shop/${sellerShopSlug(listing.seller) ?? ''}`}
             className="group flex items-center gap-3 rounded-lg border border-border-default bg-bg-raised p-4 transition-colors hover:bg-bg-raised-hover"
           >
             {listing.seller.avatar_url ? (
               /* eslint-disable-next-line @next/next/no-img-element */
               <img
                 src={listing.seller.avatar_url}
-                alt={listing.seller.username}
+                alt={sellerDisplayName(listing.seller)}
                 className="h-12 w-12 rounded-full object-cover ring-2 ring-border-default"
               />
             ) : (
               <div className="flex h-12 w-12 items-center justify-center rounded-full bg-bg-overlay text-base font-bold text-text-primary ring-2 ring-border-default">
-                {listing.seller.username[0]?.toUpperCase()}
+                {sellerInitial(listing.seller)}
               </div>
             )}
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1.5">
                 <span className="truncate text-sm font-semibold text-text-primary group-hover:text-lime-text transition-colors">
-                  {listing.seller.username}
+                  {sellerDisplayName(listing.seller)}
                 </span>
                 <Tooltip>
                   <TooltipTrigger asChild>
