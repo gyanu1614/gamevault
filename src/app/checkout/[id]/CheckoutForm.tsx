@@ -419,14 +419,14 @@ const LOCAL_METHODS: Array<{
     label: 'OXXO',
     region: 'Mexico',
     Icon: Store,
-    note: 'You’ll get a payment voucher to pay in cash at any OXXO store. Vouchers stay valid for 48 hours; your order completes when the payment clears (usually within a day).',
+    note: 'You’ll get a payment voucher to pay in cash at any OXXO store. Vouchers stay valid for 48 hours; your order completes when the payment clears (usually within a day). Any store credit you apply stays reserved until then.',
   },
   {
     id: 'boleto_br',
     label: 'Boleto',
     region: 'Brazil',
     Icon: Barcode,
-    note: 'You’ll get a Boleto slip to pay via your bank app or in person. Slips stay valid for 48 hours; your order completes when the payment clears (1–2 business days).',
+    note: 'You’ll get a Boleto slip to pay via your bank app or in person. Slips stay valid for 48 hours; your order completes when the payment clears (1–2 business days). Any store credit you apply stays reserved until then.',
   },
 ]
 
@@ -488,6 +488,18 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
       cancelled = true
     }
   }, [user])
+
+  // Provider-return with ?cancelled=1 (buyer backed out on the hosted page):
+  // say so once, then clean the URL so refreshes don't re-toast.
+  useEffect(() => {
+    const sp = new URLSearchParams(window.location.search)
+    if (sp.get('cancelled') === '1') {
+      toast.info('Payment Cancelled — no charge was made. Pick a method whenever you’re ready.')
+      sp.delete('cancelled')
+      const qs = sp.toString()
+      window.history.replaceState(null, '', window.location.pathname + (qs ? `?${qs}` : ''))
+    }
+  }, [])
 
   const handleApplyPromo = async () => {
     if (!promoInput.trim()) return
@@ -652,10 +664,9 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
 
   const radioDot = (checked: boolean) => (
     <span
+      aria-hidden
       className="grid h-[18px] w-[18px] shrink-0 place-items-center rounded-full"
       style={{ boxShadow: `inset 0 0 0 1.5px ${checked ? T.forest : T.disLine}` }}
-      role="radio"
-      aria-checked={checked}
     >
       {checked && <span className="h-[9px] w-[9px] rounded-full" style={{ background: T.forest }} />}
     </span>
@@ -672,6 +683,8 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
       >
         <button
           type="button"
+          role="radio"
+          aria-checked={payMethod === 'crypto'}
           onClick={() => setPayMethod('crypto')}
           className="flex w-full items-center gap-3 p-4 text-left"
         >
@@ -679,12 +692,14 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
           <span className="text-[15px] font-semibold" style={{ color: T.ink }}>
             Crypto
           </span>
-          <span
-            className="rounded-md px-[7px] py-[3px] text-[11px] font-semibold"
-            style={{ background: T.limeTint, color: T.forest }}
-          >
-            No Fees
-          </span>
+          {payMethod === 'crypto' && (
+            <span
+              className="rounded-md px-[7px] py-[3px] text-[11px] font-semibold"
+              style={{ background: T.limeTint, color: T.forest }}
+            >
+              No Fees
+            </span>
+          )}
           <span
             className="rounded-md px-[7px] py-[3px] text-[11px] font-semibold text-white"
             style={{ background: T.forest }}
@@ -710,6 +725,8 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
           >
             <button
               type="button"
+              role="radio"
+              aria-checked={checked}
               onClick={() => setPayMethod(m.id)}
               className="flex w-full items-center gap-3 p-4 text-left"
             >

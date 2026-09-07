@@ -61,12 +61,15 @@ function AutoCancelCountdown({ expiresAt }: { expiresAt: string }) {
       </span>
     )
   }
-  const m = Math.floor(secondsLeft / 60)
-  const s = String(secondsLeft % 60).padStart(2, '0')
+  // Voucher rails (Payssion 48h windows) read as "47h 59m", not "2879:59".
+  const label =
+    secondsLeft >= 3600
+      ? `${Math.floor(secondsLeft / 3600)}h ${Math.floor((secondsLeft % 3600) / 60)}m`
+      : `${Math.floor(secondsLeft / 60)}:${String(secondsLeft % 60).padStart(2, '0')}`
   return (
     <span className="inline-flex items-center gap-1.5 rounded-md bg-warning-bg px-2.5 py-1 text-[12.5px] font-semibold text-warning tabular-nums">
       <Clock className="h-3.5 w-3.5" />
-      Auto-Cancels In {m}:{s}
+      Auto-Cancels In {label}
     </span>
   )
 }

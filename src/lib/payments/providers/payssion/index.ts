@@ -34,7 +34,7 @@ import {
   assertPayssionConfigured,
 } from './env'
 import { isPayssionMethod, payssionExpiryIso } from './methods'
-import { createSigVariants, detailsSig, notifySigMatches, refundSig } from './sig'
+import { cancelSig, createSigVariants, detailsSig, notifySigMatches, refundSig } from './sig'
 import {
   payssionEventId,
   payssionOrderId,
@@ -196,9 +196,17 @@ export function makePayssionProvider(deps?: { fetchImpl?: typeof fetch }): Payme
 
       // STEP 2 — authoritative re-fetch; never trust the notify body's state.
       const txn = await fetchDetails(payload.transaction_id, trackId)
-      // Ensure the re-fetched txn still points at OUR order id (fills it in
-      // from the verified notify if the details response omits it).
-      if (!txn.order_id && !txn.track_id) txn.order_id = trackId
+      // STEP 3 — BIND the transaction to the notify's order id. The details
+      // response is the authority: if it names an order id, it must be the
+      // one the notify claimed (a mismatched or id-less transaction could
+      // otherwise confirm an arbitrary order). Fail closed on both.
+      const detailsOrderId = txn.order_id ?? txn.track_id
+      if (!detailsOrderId) {
+        throw new Error('payssion: details response carries no order id — refusing to bind')
+      }
+      if (detailsOrderId !== trackId) {
+        throw new Error('payssion: notify/details order id mismatch')
+      }
       payssionOrderId(txn)
 
       return {
@@ -231,3 +239,66 @@ export function makePayssionProvider(deps?: { fetchImpl?: typeof fetch }): Payme
 }
 
 export const payssionProvider: PaymentProvider = makePayssionProvider()
+
+/**
+ * Cancel a Payssion transaction and report its resulting state — used by the
+ * expiry sweep (Payssion doesn't enforce OUR per-method windows, so we close
+ * timed-out transactions ourselves). Falls back to fetching the current state
+ * when cancel is refused (e.g. the buyer paid at the last second): the caller
+ * must NOT cancel the order when the returned state is completed/paid_more.
+ */
+/**
+ * Authoritative transaction state for callers that KNOW the order id (the
+ * smart return route, the expiry sweep). Signing with the order id matches
+ * the documented details signature; retries the id-less variant on 402.
+ */
+export async function payssionTransactionState(
+  transactionId: string,
+  orderId?: string | null
+): Promise<string> {
+  assertPayssionConfigured()
+  const apiKey = payssionApiKey()!
+  const secret = payssionSecretKey()!
+  const attempt = async (sigOrderId: string | null, sendOrderId: boolean) => {
+    const res = await fetch(`${payssionBase()}/api/v1/payment/details`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        api_key: apiKey,
+        transaction_id: transactionId,
+        ...(sendOrderId && orderId ? { order_id: orderId } : {}),
+        api_sig: detailsSig({ apiKey, transactionId, orderId: sigOrderId, secret }),
+      }).toString(),
+    })
+    return res.ok ? ((await res.json()) as any) : null
+  }
+  let json = await attempt(orderId ?? null, !!orderId)
+  if (json?.result_code === 402) json = await attempt(null, false)
+  if (json?.result_code !== 200 || !json?.transaction?.state) {
+    throw new Error(`payssion: details failed (result_code ${json?.result_code})`)
+  }
+  return json.transaction.state as string
+}
+
+export async function payssionCancelTransaction(transactionId: string): Promise<string> {
+  assertPayssionConfigured()
+  const apiKey = payssionApiKey()!
+  const secret = payssionSecretKey()!
+  const res = await fetch(`${payssionBase()}/api/v1/payment/cancel`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      api_key: apiKey,
+      transaction_id: transactionId,
+      api_sig: cancelSig({ apiKey, transactionId, secret }),
+    }).toString(),
+  })
+  const json: any = res.ok ? await res.json() : null
+  if (json?.result_code === 200 && json?.transaction?.state) {
+    return json.transaction.state as string
+  }
+  // Cancel refused — surface the authoritative current state instead.
+  const { getCharge } = payssionProvider
+  const { rawStatus } = await getCharge(transactionId)
+  return rawStatus
+}

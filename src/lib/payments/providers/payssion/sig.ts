@@ -82,6 +82,16 @@ export function detailsSig(input: {
   return md5([apiKey, transactionId, orderId ?? '', secret].join('|'))
 }
 
+/** /payment/cancel signature (api_key|transaction_id|secret). */
+export function cancelSig(input: {
+  apiKey: string
+  transactionId: string
+  secret: string
+}): string {
+  const { apiKey, transactionId, secret } = input
+  return md5([apiKey, transactionId, secret].join('|'))
+}
+
 /** /refunds signature (api_key|transaction_id|amount|currency|secret). */
 export function refundSig(input: {
   apiKey: string

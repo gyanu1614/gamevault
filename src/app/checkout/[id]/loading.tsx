@@ -75,9 +75,18 @@ export default function CheckoutLoading() {
               <Block className="mt-3 h-[52px] w-full rounded-lg" />
             </Card>
 
-            {/* Disabled method rows */}
+            {/* Local method rows (GCash/OXXO/Boleto) */}
+            {[0, 1, 2].map((i) => (
+              <Card key={`m${i}`} className="mt-3 flex items-center gap-3 p-4">
+                <Block className="h-[18px] w-[18px] rounded-full" />
+                <Block className="h-[18px] w-[18px]" />
+                <Block className="h-4 w-20" />
+                <Block className="ml-auto h-5 w-20" />
+              </Card>
+            ))}
+            {/* Disabled "Soon" rows */}
             {[0, 1, 2, 3].map((i) => (
-              <Card key={i} className="mt-3 flex items-center gap-3 px-4 py-3.5">
+              <Card key={`s${i}`} className="mt-3 flex items-center gap-3 px-4 py-3.5">
                 <Block className="h-[18px] w-[18px] rounded-full" />
                 <Block className="h-4 w-36" />
                 <Block className="ml-auto h-5 w-16" />

@@ -143,7 +143,7 @@ export function PaymentReturnHandler({
           <>
             <p className="text-[15px] font-bold text-text-primary">Still Confirming Your Payment</p>
             <p className="text-[13px] leading-relaxed text-text-secondary">
-              Crypto confirmations can take a few minutes. You can keep browsing —
+              Payment confirmations can take a few minutes. You can keep browsing —
               we&apos;ll email you the moment it lands, and this order updates on
               its own.
             </p>
@@ -167,7 +167,7 @@ export function PaymentReturnHandler({
           <>
             <p className="text-[15px] font-bold text-text-primary">Confirming Your Payment…</p>
             <p className="text-[13px] leading-relaxed text-text-secondary">
-              Your crypto payment is being verified — this usually takes a few
+              Your payment is being verified — this usually takes a few
               seconds. Please keep this tab open.
             </p>
           </>

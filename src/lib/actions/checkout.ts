@@ -117,7 +117,13 @@ export async function createCheckout(input: CreateCheckoutInput): Promise<Create
       const notExpired = existingPending.payment_expires_at
         ? new Date(existingPending.payment_expires_at).getTime() > Date.now()
         : false
-      if (sameAmount && notExpired && existingPending.checkout_url) {
+      // Reuse only when the stored charge belongs to the SAME provider the
+      // buyer just picked — handing a GCash buyer a crypto pay page (or
+      // vice versa) is worse than minting a fresh charge.
+      const sameProvider =
+        !existingPending.payment_provider ||
+        existingPending.payment_provider === providerNameForMethod(input.paymentMethodId)
+      if (sameAmount && notExpired && sameProvider && existingPending.checkout_url) {
         return {
           success: true,
           orderId: existingPending.id,
@@ -135,6 +141,16 @@ export async function createCheckout(input: CreateCheckoutInput): Promise<Create
       try {
         const { transition } = await import('@/lib/escrow/transition')
         await transition(existingPending.id, 'CANCELLED', `superseded-by-recheckout:${existingPending.id}`)
+
+        // Payssion vouchers stay PAYABLE at the provider until told otherwise
+        // — cancel there too, or the buyer could pay a slip whose order no
+        // longer exists. Best-effort: the expiry cron re-tries stragglers.
+        if (existingPending.payment_provider === 'payssion' && existingPending.provider_charge_id) {
+          const { payssionCancelTransaction } = await import('@/lib/payments/providers/payssion')
+          await payssionCancelTransaction(existingPending.provider_charge_id).catch((e) =>
+            console.error('[createCheckout] payssion cancel on supersede failed:', e)
+          )
+        }
 
         // The superseded order's "Order Incomplete" nudge points at a dead
         // order — clear it (the new charge below mints its own).
@@ -259,8 +275,14 @@ export async function createCheckout(input: CreateCheckoutInput): Promise<Create
     const charge = await provider.createCharge({
       orderId,
       amount: chargeMoney,
-      returnUrl: `${base}/account/orders/${orderId}?paid=1`,
-      cancelUrl: `${base}/checkout/${input.listingId}`,
+      // Payssion has ONE return URL for paid AND cancelled — the smart
+      // /checkout/return route inspects the outcome and lands the buyer on
+      // the order page (paid/awaiting) or back at checkout (cancelled).
+      returnUrl:
+        providerName === 'payssion'
+          ? `${base}/checkout/return/${orderId}`
+          : `${base}/account/orders/${orderId}?paid=1`,
+      cancelUrl: `${base}/checkout/${input.listingId}?qty=${quantity}`,
       metadata: {
         listing_id: input.listingId,
         ...(providerName === 'payssion' && input.paymentMethodId
@@ -295,6 +317,15 @@ export async function createCheckout(input: CreateCheckoutInput): Promise<Create
 
     return { success: true, orderId, checkoutUrl: payUrl }
   } catch (e: any) {
+    const msg = String(e?.message ?? '')
+    // Provider/config internals never reach the buyer verbatim.
+    if (msg.startsWith('[Payssion]') || msg.startsWith('payssion:')) {
+      console.error('[createCheckout] payssion charge failed:', msg)
+      return {
+        success: false,
+        error: 'The payment service is temporarily unavailable — nothing was charged. Please try again shortly.',
+      }
+    }
     return { success: false, error: e?.message ?? 'Checkout failed' }
   }
 }
@@ -353,6 +384,8 @@ interface ReusablePendingOrder {
   total_amount: number
   checkout_url: string | null
   payment_expires_at: string | null
+  payment_provider: string | null
+  provider_charge_id: string | null
 }
 
 /**
@@ -368,7 +401,7 @@ async function findReusablePendingOrder(
 ): Promise<ReusablePendingOrder | null> {
   const { data } = await supabase
     .from('orders')
-    .select('id, total_amount, checkout_url, payment_expires_at')
+    .select('id, total_amount, checkout_url, payment_expires_at, payment_provider, provider_charge_id')
     .eq('buyer_id', buyerId)
     .eq('listing_id', listingId)
     .eq('status', 'pending')
@@ -465,21 +498,25 @@ export async function retryOrderPayment(orderId: string): Promise<{
       return { success: false, error: 'This order is not awaiting payment' }
     }
 
+    // Payssion: the stored hosted URL is the answer for the whole pending
+    // lifetime — their page renders its own expired state, and we can't mint
+    // a fresh charge here (pm_id isn't persisted; silently re-charging via
+    // crypto would switch the buyer's method). Only a corrupt order with no
+    // URL falls through to the re-order message.
+    if (order.payment_provider === 'payssion') {
+      if (order.checkout_url) {
+        return { success: true, checkoutUrl: order.checkout_url }
+      }
+      return {
+        success: false,
+        error: 'This payment link is no longer available — please place the order again.',
+      }
+    }
+
     // Reuse the existing invoice while it has a comfortable validity buffer.
     const validUntil = order.payment_expires_at ? new Date(order.payment_expires_at).getTime() : 0
     if (order.checkout_url && validUntil > Date.now() + 5 * 60 * 1000) {
       return { success: true, checkoutUrl: toRelativePayUrl(order.checkout_url) }
-    }
-
-    // Payssion orders can't mint a fresh charge here: the pm_id the buyer
-    // picked isn't persisted on the order (v1), and silently re-charging via
-    // the crypto provider would switch their payment method under them. The
-    // re-buy path (createCheckout) supersedes this stale order cleanly.
-    if (order.payment_provider === 'payssion') {
-      return {
-        success: false,
-        error: 'This payment link expired — please place the order again to get a fresh one.',
-      }
     }
 
     // Remaining charge = total − wallet credit already held for this order.

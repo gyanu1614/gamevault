@@ -1,5 +1,6 @@
 {
   "crons": [
+    { "path": "/api/cron/expire-pending-payments", "schedule": "*/30 * * * *" },
     { "path": "/api/cron/auto-release-escrow", "schedule": "0 0 * * *" },
     { "path": "/api/cron/mark-inactive-sellers", "schedule": "0 2 * * *" },
     { "path": "/api/cron/send-trustpilot-invitations", "schedule": "0 9 * * *" },

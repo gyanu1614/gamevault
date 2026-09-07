@@ -40,6 +40,12 @@ describe('payssion: state -> canonical', () => {
     expect(payssionToCanonical(txn('completed', { paid: '0.00' }))[0].type).toBe('CHARGE_PENDING')
   })
 
+  it('completed but UNDERPAID does not confirm; exact/over paid does', () => {
+    expect(payssionToCanonical(txn('completed', { paid: '14.00' }))[0].type).toBe('CHARGE_PENDING')
+    expect(payssionToCanonical(txn('completed', { paid: '14.98' }))[0].type).toBe('CHARGE_CONFIRMED')
+    expect(payssionToCanonical(txn('completed', { paid: '15.10' }))[0].type).toBe('CHARGE_CONFIRMED')
+  })
+
   it('paid_more confirms (overpay policy: order proceeds)', () => {
     expect(payssionToCanonical(txn('paid_more'))[0].type).toBe('CHARGE_CONFIRMED')
   })
@@ -201,5 +207,24 @@ describe('payssion: parseWebhook verification chain', () => {
 
   it('rejects when the notify is missing its ids', async () => {
     await expect(provider().parseWebhook({}, 'state=completed')).rejects.toThrow(/missing/)
+  })
+
+  it('SECURITY: rejects when the re-fetched transaction names a DIFFERENT order', async () => {
+    // Forged notify claims our expensive order, but the real transaction
+    // belongs to another (cheap) order — must fail closed.
+    await expect(
+      provider({ order_id: 'someone-elses-order' }).parseWebhook({}, notifyBody('completed'))
+    ).rejects.toThrow(/mismatch/)
+  })
+
+  it('SECURITY: rejects when the re-fetched transaction has no order id at all', async () => {
+    await expect(
+      provider({ order_id: undefined }).parseWebhook({}, notifyBody('completed'))
+    ).rejects.toThrow(/no order id/)
+  })
+
+  it('MONEY: completed but underpaid (paid < amount) does NOT confirm', async () => {
+    const { events } = await provider({ paid: '5.00' }).parseWebhook({}, notifyBody('completed'))
+    expect(events[0].type).toBe('CHARGE_PENDING')
   })
 })

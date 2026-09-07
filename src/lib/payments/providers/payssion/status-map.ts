@@ -62,8 +62,14 @@ export function payssionToCanonical(txn: PayssionTxn): CanonicalEvent[] {
   const paid = Number(txn.paid ?? 0)
 
   if (txn.state === 'completed' || txn.state === 'paid_more') {
-    if (!(paid > 0)) {
-      // "completed" with zero paid never confirms — treat as still pending.
+    // Confirm ONLY when the paid amount covers the charge (½-cent tolerance
+    // for decimal-string drift). A "completed" transaction that was underpaid
+    // (e.g. a partial OXXO payment an admin closed out) must NOT flip the
+    // order to paid — it stays pending for the admin/late-payment path.
+    if (!(paid > 0) || paid + 0.005 < Number(txn.amount)) {
+      console.warn(
+        `[Payssion] ${txn.state} but paid ${txn.paid} < amount ${txn.amount} on ${chargeId} — not confirming`
+      )
       return [{ type: 'CHARGE_PENDING', orderId, providerChargeId: chargeId }]
     }
     return [{ type: 'CHARGE_CONFIRMED', orderId, providerChargeId: chargeId, settled: amount }]
