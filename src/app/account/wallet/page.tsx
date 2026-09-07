@@ -908,13 +908,13 @@ export default function WalletPage() {
             <div className="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-4 bg-lime/5">
               <div className="flex items-center gap-2">
                 <Zap className="h-4 w-4 text-lime-text flex-shrink-0" />
-                <span className="text-xs text-text-secondary">Payouts via Stripe Connect</span>
+                <span className="text-xs text-text-secondary">Withdrawals Are Paid In Crypto</span>
               </div>
               <Link
-                href="/account/wallet/connect"
+                href="/account/wallet/withdraw"
                 className="flex items-center gap-1.5 text-xs font-medium text-lime-text hover:text-lime-text transition-colors whitespace-nowrap"
               >
-                Manage account <ExternalLink className="h-3 w-3" />
+                Request Withdrawal <ExternalLink className="h-3 w-3" />
               </Link>
             </div>
           )}

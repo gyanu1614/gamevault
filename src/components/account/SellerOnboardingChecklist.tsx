@@ -44,8 +44,8 @@ export default function SellerOnboardingChecklist({
   const steps = [
     {
       key: 'payout',
-      label: 'Connect Your Payout Method',
-      href: '/account/wallet/connect',
+      label: 'Add Your Payout Details',
+      href: '/account/wallet/withdraw',
       done: onboarding.payoutConnected,
     },
     {

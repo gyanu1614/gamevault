@@ -729,10 +729,10 @@ export default function SettingsPage() {
                       </div>
                     </SettingInput>
                     <Link
-                      href="/account/wallet/connect"
+                      href="/account/wallet/withdraw"
                       className="inline-flex items-center gap-2 text-sm font-medium text-lime-text hover:underline"
                     >
-                      Manage Payout Connection
+                      Manage Withdrawals
                       <ChevronRight className="h-3.5 w-3.5" />
                     </Link>
                   </div>

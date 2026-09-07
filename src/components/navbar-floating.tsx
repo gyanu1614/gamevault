@@ -971,7 +971,7 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
             <Button
               variant="ghost"
               size="icon"
-              className="h-11 w-11 shrink-0 rounded-full text-gray-300 transition-transform duration-[120ms] hover:bg-white/10 hover:text-white active:scale-[0.96] active:brightness-95 lg:hidden"
+              className="h-10 w-10 shrink-0 rounded-full text-gray-300 transition-transform duration-[120ms] hover:bg-white/10 hover:text-white active:scale-[0.96] active:brightness-95 lg:hidden"
               onClick={() => {
                 // Account pages use the full desktop-parity sidebar on mobile.
                 // Marketplace pages keep the two-pane category menu.
@@ -1006,9 +1006,9 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                     className="grid"
                   >
                     {accountSidebarOpen ? (
-                      <PanelLeftClose className="h-5 w-5" />
+                      <PanelLeftClose className="h-[18px] w-[18px]" />
                     ) : (
-                      <PanelLeftOpen className="h-5 w-5" />
+                      <PanelLeftOpen className="h-[18px] w-[18px]" />
                     )}
                   </motion.span>
                 </AnimatePresence>
@@ -1032,9 +1032,9 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                 alt="DropMarket"
                 width={32}
                 height={32}
-                className="h-8 w-8 shrink-0"
+                className="h-8 w-8 shrink-0 max-lg:h-7 max-lg:w-7"
               />
-              <span className="inline-block font-bold text-white">DropMarket</span>
+              <span className="inline-block font-bold text-white max-lg:text-[15px]">DropMarket</span>
             </Link>
 
             {/* V21/P7.r — Divider hides while search is expanded. */}
@@ -1129,9 +1129,9 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                   <Link
                     href="/account/messages"
                     aria-label="Messages"
-                    className="grid h-10 w-10 shrink-0 place-items-center rounded-full text-gray-100 transition-colors hover:bg-white/15 hover:text-white lg:hidden"
+                    className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-gray-100 transition-colors hover:bg-white/15 hover:text-white lg:hidden"
                   >
-                    <MessagesSquare className="h-[21px] w-[21px]" />
+                    <MessagesSquare className="h-[19px] w-[19px]" />
                   </Link>
 
                   {/* Notifications Dropdown */}
@@ -1139,7 +1139,7 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="relative h-10 w-10 rounded-full text-gray-100 hover:bg-white/15 hover:text-white"
+                      className="relative h-10 w-10 rounded-full text-gray-100 hover:bg-white/15 hover:text-white max-lg:h-9 max-lg:w-9"
                       onClick={() => {
                         setNotificationsOpen(!notificationsOpen)
                         setActivityOpen(false)
@@ -1148,9 +1148,9 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                       }}
                     >
                       {unreadNotificationCount > 0 ? (
-                        <BellDot className="h-[21px] w-[21px]" />
+                        <BellDot className="h-[21px] w-[21px] max-lg:h-[19px] max-lg:w-[19px]" />
                       ) : (
-                        <Bell className="h-[21px] w-[21px]" />
+                        <Bell className="h-[21px] w-[21px] max-lg:h-[19px] max-lg:w-[19px]" />
                       )}
                       {unreadNotificationCount > 0 && (
                         <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-lime px-1 text-[10px] font-bold text-text-inverse">
@@ -1280,9 +1280,9 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="relative h-10 w-10 rounded-full text-gray-100 hover:bg-white/15 hover:text-white"
+                      className="relative h-10 w-10 rounded-full text-gray-100 hover:bg-white/15 hover:text-white max-lg:h-9 max-lg:w-9"
                     >
-                      <MessagesSquare className="h-[21px] w-[21px]" />
+                      <MessagesSquare className="h-[19px] w-[19px]" />
                       {unreadCount > 0 && (
                         <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-lime px-1 text-[10px] font-bold text-text-inverse">
                           {unreadCount}
@@ -1297,7 +1297,7 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="relative h-10 w-10 rounded-full text-gray-100 hover:bg-white/15 hover:text-white"
+                      className="relative h-10 w-10 rounded-full text-gray-100 hover:bg-white/15 hover:text-white max-lg:h-9 max-lg:w-9"
                       onClick={() => {
                         setActivityOpen(!activityOpen)
                         setNotificationsOpen(false)
@@ -1305,7 +1305,7 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                         setMobileMenuOpen(false)
                       }}
                     >
-                      <Package className="h-[21px] w-[21px]" />
+                      <Package className="h-[21px] w-[21px] max-lg:h-[19px] max-lg:w-[19px]" />
                       {totalActiveOrders > 0 && (
                         <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-lime px-1 text-[10px] font-bold text-text-inverse">
                           {totalActiveOrders > 9 ? '9+' : totalActiveOrders}
@@ -1410,7 +1410,7 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-10 w-10 rounded-full hover:bg-white/10"
+                    className="h-10 w-10 rounded-full hover:bg-white/10 max-lg:h-9 max-lg:w-9"
                     onClick={() => {
                       setUserMenuOpen(!userMenuOpen)
                       setNotificationsOpen(false)
@@ -1421,7 +1421,7 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                     <img
                       src={getAvatarUrl(user.profile?.avatar_url, user.profile?.username || 'user')}
                       alt={user.profile?.username || 'User'}
-                      className="h-9 w-9 rounded-full ring-2 ring-primary/50"
+                      className="h-9 w-9 rounded-full ring-2 ring-primary/50 max-lg:h-8 max-lg:w-8"
                     />
                   </Button>
 
