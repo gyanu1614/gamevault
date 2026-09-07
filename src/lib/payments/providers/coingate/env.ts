@@ -35,11 +35,26 @@ export function coinGateCallbackSecret(): string | undefined {
  *  the old localhost-only fallback silently sent every CoinGate payment
  *  webhook to http://localhost:3000 (orders stuck 'pending' forever). */
 export function publicApiUrl(): string {
-  return (
+  const origin =
     process.env.PUBLIC_API_URL ??
     process.env.NEXT_PUBLIC_APP_URL ??
     'http://localhost:3000'
-  )
+
+  // GUARD: never bake a tunnel/localhost callback into a prod charge — it 404s
+  // the webhook and strands the order 'pending'. Fail loudly at create time.
+  const isProd =
+    process.env.VERCEL_ENV === 'production' ||
+    (process.env.NODE_ENV === 'production' && process.env.VERCEL_ENV !== 'preview')
+
+  if (isProd && /ngrok|localhost|127\.0\.0\.1|\.local\b/i.test(origin)) {
+    throw new Error(
+      `[CoinGate] Refusing to create a payment: callback origin "${origin}" is a ` +
+        `tunnel/localhost host in production. Set PUBLIC_API_URL (or NEXT_PUBLIC_APP_URL) ` +
+        `to the public domain (https://dropmarket.gg).`,
+    )
+  }
+
+  return origin
 }
 
 /** Settlement currency — EUR, our base/ledger currency. */
