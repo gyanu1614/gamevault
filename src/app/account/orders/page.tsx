@@ -392,7 +392,7 @@ function OrdersContent() {
               <button
                 onClick={() => setOpenDropdown(openDropdown === 'status' ? null : 'status')}
                 className={cn(
-                  "w-full flex items-center justify-between gap-2 px-4 py-2.5 rounded-lg border text-sm transition-all",
+                  "w-full flex items-center justify-between gap-2 px-4 py-2.5 rounded-md border text-sm transition-all",
                   openDropdown === 'status'
                     ? "border-lime-tint-border card-frost text-text-primary"
                     : "border-border-subtle card-frost text-text-secondary hover:border-lime-tint-border card-frost-hover"
@@ -441,7 +441,7 @@ function OrdersContent() {
               <button
                 onClick={() => setOpenDropdown(openDropdown === 'game' ? null : 'game')}
                 className={cn(
-                  "w-full flex items-center justify-between gap-2 px-4 py-2.5 rounded-lg border text-sm transition-all",
+                  "w-full flex items-center justify-between gap-2 px-4 py-2.5 rounded-md border text-sm transition-all",
                   openDropdown === 'game'
                     ? "border-lime-tint-border card-frost text-text-primary"
                     : "border-border-subtle card-frost text-text-secondary hover:border-lime-tint-border card-frost-hover"
@@ -502,7 +502,7 @@ function OrdersContent() {
               <button
                 onClick={() => setOpenDropdown(openDropdown === 'category' ? null : 'category')}
                 className={cn(
-                  "w-full flex items-center justify-between gap-2 px-4 py-2.5 rounded-lg border text-sm transition-all",
+                  "w-full flex items-center justify-between gap-2 px-4 py-2.5 rounded-md border text-sm transition-all",
                   openDropdown === 'category'
                     ? "border-lime-tint-border card-frost text-text-primary"
                     : "border-border-subtle card-frost text-text-secondary hover:border-lime-tint-border card-frost-hover"
@@ -565,7 +565,7 @@ function OrdersContent() {
               <button
                 onClick={() => setOpenDropdown(openDropdown === 'date' ? null : 'date')}
                 className={cn(
-                  "w-full flex items-center justify-between gap-2 px-4 py-2.5 rounded-lg border text-sm transition-all",
+                  "w-full flex items-center justify-between gap-2 px-4 py-2.5 rounded-md border text-sm transition-all",
                   openDropdown === 'date'
                     ? "border-lime-tint-border card-frost text-text-primary"
                     : "border-border-subtle card-frost text-text-secondary hover:border-lime-tint-border card-frost-hover"
@@ -631,7 +631,7 @@ function OrdersContent() {
               placeholder="Search listings…"
               value={filters.searchQuery}
               onChange={(e) => setFilters({ ...filters, searchQuery: e.target.value })}
-              className="h-10 w-full rounded-lg border border-border-subtle card-frost pl-9 pr-10 text-[16px] text-text-primary placeholder:text-text-tertiary transition-colors focus:border-lime-tint-border focus:outline-none focus:ring-2 focus:ring-lime/20 sm:text-sm"
+              className="h-10 w-full rounded-md border border-border-subtle card-frost pl-9 pr-10 text-[16px] text-text-primary placeholder:text-text-tertiary transition-colors focus:border-lime-tint-border focus:outline-none focus:ring-2 focus:ring-lime/20 sm:text-sm"
             />
             {filters.searchQuery && (
               <button
@@ -748,7 +748,7 @@ function OrdersContent() {
         {/* Orders — reference-style table card. Vertical list scroll +
             horizontal pan for the wide columns; never a diagonal free-scroll.
             Row click opens the order (review/dispute actions live there). */}
-        <div className="relative mb-3 flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-border-default bg-[rgba(20,20,27,0.56)] shadow-elevated backdrop-blur-md">
+        <div className="relative mb-3 flex min-h-0 flex-1 flex-col overflow-hidden rounded-md border border-border-default bg-[rgba(20,20,27,0.56)] shadow-elevated backdrop-blur-md">
           <span aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.05),transparent)]" />
           <div className="shrink-0 border-b border-white/[0.06] px-4 py-2.5 text-[12.5px] font-semibold text-text-secondary">
             {filteredOrders.length} Result{filteredOrders.length === 1 ? '' : 's'}
@@ -774,11 +774,11 @@ function OrdersContent() {
                   <thead>
                     <tr className="text-[12px] font-extrabold uppercase tracking-[0.08em] text-[#6d7488]">
                       <th className="min-w-[230px] px-4 py-3">Item</th>
-                      <th className="px-3 py-3">ID</th>
-                      <th className="px-3 py-3">Status</th>
-                      <th className="px-3 py-3">Total</th>
-                      <th className="px-3 py-3">{activeTab === 'purchases' ? 'Seller' : 'Buyer'}</th>
-                      <th className="px-3 py-3 whitespace-nowrap">Placed</th>
+                      <th className="px-3 py-2">ID</th>
+                      <th className="px-3 py-2">Status</th>
+                      <th className="px-3 py-2">Total</th>
+                      <th className="px-3 py-2">{activeTab === 'purchases' ? 'Seller' : 'Buyer'}</th>
+                      <th className="px-3 py-2 whitespace-nowrap">Placed</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -802,19 +802,19 @@ function OrdersContent() {
                           onClick={() => router.push(`/account/orders/${order.id}`)}
                           className="cursor-pointer border-t border-white/[0.06] transition-colors hover:bg-white/[0.04]"
                         >
-                          <td className="px-4 py-3">
+                          <td className="px-4 py-2">
                             <div className="flex items-center gap-3">
                               {displayImage ? (
-                                <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-md border border-border-subtle">
+                                <div className="relative h-9 w-9 shrink-0 overflow-hidden rounded-md border border-border-subtle">
                                   <Image src={displayImage} alt="" fill unoptimized className="object-cover" />
                                 </div>
                               ) : (
-                                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-border-subtle bg-bg-overlay">
+                                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-border-subtle bg-bg-overlay">
                                   <ShoppingCart className="h-4 w-4 text-text-disabled" />
                                 </div>
                               )}
                               <div className="min-w-0">
-                                <p className="max-w-[240px] truncate text-[13.5px] font-semibold text-text-primary">
+                                <p className="max-w-[240px] truncate text-[13px] font-semibold text-text-primary">
                                   {qty > 1 ? `x${qty} · ` : ''}{order.listing?.title || gameName || 'Order'}
                                 </p>
                                 {gameName && (
@@ -823,7 +823,7 @@ function OrdersContent() {
                               </div>
                             </div>
                           </td>
-                          <td className="px-3 py-3">
+                          <td className="px-3 py-2">
                             <button
                               type="button"
                               onClick={(e) => {
@@ -840,7 +840,7 @@ function OrdersContent() {
                               <CopyIcon className="h-3 w-3 opacity-60" />
                             </button>
                           </td>
-                          <td className="px-3 py-3">
+                          <td className="px-3 py-2">
                             <span className="flex flex-wrap items-center gap-1.5">
                               <span className={cn('inline-flex items-center gap-1 whitespace-nowrap rounded-full border px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide', getStatusColor(displayStatus))}>
                                 {getStatusIcon(displayStatus)}
@@ -859,10 +859,10 @@ function OrdersContent() {
                               )}
                             </span>
                           </td>
-                          <td className="whitespace-nowrap px-3 py-3 text-[13.5px] font-semibold text-text-primary">
+                          <td className="whitespace-nowrap px-3 py-2 text-[13.5px] font-semibold text-text-primary">
                             ${Number(order.total_amount ?? 0).toFixed(2)}
                           </td>
-                          <td className="px-3 py-3">
+                          <td className="px-3 py-2">
                             <span className="flex items-center gap-2">
                               {/* eslint-disable-next-line @next/next/no-img-element */}
                               <img
@@ -875,7 +875,7 @@ function OrdersContent() {
                               </span>
                             </span>
                           </td>
-                          <td className="whitespace-nowrap px-3 py-3 text-[12.5px] text-text-tertiary">
+                          <td className="whitespace-nowrap px-3 py-2 text-[12.5px] text-text-tertiary">
                             {new Date(order.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                           </td>
                         </tr>

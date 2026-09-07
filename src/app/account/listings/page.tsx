@@ -725,7 +725,7 @@ function OffersContent() {
       </div>
 
       {/* ── Results card ── */}
-      <div className="relative mt-4 mb-3 flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-border-default bg-[rgba(20,20,27,0.56)] shadow-elevated backdrop-blur-md lg:mb-4">
+      <div className="relative mt-4 mb-3 flex min-h-0 flex-1 flex-col overflow-hidden rounded-md border border-border-default bg-[rgba(20,20,27,0.56)] shadow-elevated backdrop-blur-md lg:mb-4">
         {/* Top sheen — the bundle-card light-from-above, on the card itself. */}
         <span aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.05),transparent)]" />
 
@@ -781,20 +781,20 @@ function OffersContent() {
                       selected.has(l.id) && 'bg-white/[0.03]',
                     )}
                   >
-                    <td className="py-4 pl-5 pr-2 max-sm:hidden">
+                    <td className="py-2.5 pl-5 pr-2 max-sm:hidden">
                       <Checkbox
                         checked={selected.has(l.id)}
                         onCheckedChange={() => toggleOne(l.id)}
                         aria-label={`Select ${l.title}`}
                       />
                     </td>
-                    <td className="px-3 py-4">
+                    <td className="px-3 py-2.5">
                       <span className="flex items-center gap-3">
                         {logo ? (
                           /* eslint-disable-next-line @next/next/no-img-element */
-                          <img src={logo} alt="" className="h-10 w-10 flex-none rounded-md object-cover ring-1 ring-white/10" />
+                          <img src={logo} alt="" className="h-9 w-9 flex-none rounded-md object-cover ring-1 ring-white/10" />
                         ) : (
-                          <span className="flex h-10 w-10 flex-none items-center justify-center rounded-md bg-white/[0.05] ring-1 ring-white/10">
+                          <span className="flex h-9 w-9 flex-none items-center justify-center rounded-md bg-white/[0.05] ring-1 ring-white/10">
                             <Package className="h-4 w-4 text-text-tertiary" />
                           </span>
                         )}
@@ -826,26 +826,26 @@ function OffersContent() {
                         </span>
                       </span>
                     </td>
-                    <td className="whitespace-nowrap px-3 py-4 text-[13px] text-text-secondary">
+                    <td className="whitespace-nowrap px-3 py-2.5 text-[13px] text-text-secondary">
                       {formatDeliveryLabel(l.delivery_time)}
                     </td>
-                    <td className="px-3 py-4">
+                    <td className="px-3 py-2.5">
                       <PriceField value={l.price} unit="Unit" onSave={(next) => savePrice(l, next)} />
                     </td>
-                    <td className="px-3 py-4"><StatusChip k={chip} /></td>
-                    <td className="px-3 py-4 text-[13.5px] font-bold tabular-nums text-text-primary">
+                    <td className="px-3 py-2.5"><StatusChip k={chip} /></td>
+                    <td className="px-3 py-2.5 text-[13.5px] font-bold tabular-nums text-text-primary">
                       {l.is_unlimited ? '∞' : fmtCompact(l.quantity ?? 0)}
                     </td>
-                    <td className="whitespace-nowrap px-3 py-4 text-[13px] tabular-nums text-text-secondary">
+                    <td className="whitespace-nowrap px-3 py-2.5 text-[13px] tabular-nums text-text-secondary">
                       {(l.min_quantity ?? 1).toLocaleString()} Unit
                     </td>
-                    <td className="px-3 py-4">
+                    <td className="px-3 py-2.5">
                       <span className="whitespace-nowrap rounded-md border border-white/[0.08] bg-white/[0.04] px-2 py-[3px] text-[12px] font-semibold text-text-secondary">
                         {methodLabel(l.delivery_method)}
                       </span>
                     </td>
-                    <td className="px-3 py-4"><OfferIdChip listing={l} /></td>
-                    <td className="whitespace-nowrap px-3 py-4 text-[12.5px] text-text-tertiary">
+                    <td className="px-3 py-2.5"><OfferIdChip listing={l} /></td>
+                    <td className="whitespace-nowrap px-3 py-2.5 text-[12.5px] text-text-tertiary">
                       {fmtRelative(l.updated_at)}
                     </td>
                     <td className="sticky right-0 z-10 bg-[linear-gradient(to_right,rgba(16,17,23,0)_0%,rgba(16,17,23,0.92)_42%,rgba(16,17,23,0.99)_68%)] py-4 pl-10 pr-5">
@@ -926,9 +926,9 @@ function OffersContent() {
                   </label>
                   {logo ? (
                     /* eslint-disable-next-line @next/next/no-img-element */
-                    <img src={logo} alt="" className="h-10 w-10 flex-none rounded-md object-cover ring-1 ring-white/10" />
+                    <img src={logo} alt="" className="h-9 w-9 flex-none rounded-md object-cover ring-1 ring-white/10" />
                   ) : (
-                    <span className="flex h-10 w-10 flex-none items-center justify-center rounded-md bg-white/[0.05] ring-1 ring-white/10">
+                    <span className="flex h-9 w-9 flex-none items-center justify-center rounded-md bg-white/[0.05] ring-1 ring-white/10">
                       <Package className="h-4 w-4 text-text-tertiary" />
                     </span>
                   )}
@@ -1052,7 +1052,7 @@ function OffersContent() {
 
       {/* ── Archive confirm ── */}
       <Dialog open={archiveTarget != null} onOpenChange={(o) => !o && setArchiveTarget(null)}>
-        <DialogContent className="rounded-lg">
+        <DialogContent className="rounded-md">
           <DialogHeader>
             <DialogTitle>Archive This Offer?</DialogTitle>
             <DialogDescription>
@@ -1079,7 +1079,7 @@ function OffersContent() {
 
       {/* ── Delete confirm (single offer) ── */}
       <Dialog open={deleteTarget != null} onOpenChange={(o) => !o && setDeleteTarget(null)}>
-        <DialogContent className="rounded-lg">
+        <DialogContent className="rounded-md">
           <DialogHeader>
             <DialogTitle>Delete This Offer?</DialogTitle>
             <DialogDescription>
@@ -1107,7 +1107,7 @@ function OffersContent() {
 
       {/* ── Bulk delete confirm ── */}
       <Dialog open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen}>
-        <DialogContent className="rounded-lg">
+        <DialogContent className="rounded-md">
           <DialogHeader>
             <DialogTitle>Delete {selected.size} {selected.size === 1 ? 'Offer' : 'Offers'}?</DialogTitle>
             <DialogDescription>
@@ -1134,7 +1134,7 @@ function OffersContent() {
 
       {/* ── Bulk delivery time ── */}
       <Dialog open={bulkDeliveryOpen} onOpenChange={setBulkDeliveryOpen}>
-        <DialogContent className="rounded-lg">
+        <DialogContent className="rounded-md">
           <DialogHeader>
             <DialogTitle>Change Delivery Time</DialogTitle>
             <DialogDescription>
