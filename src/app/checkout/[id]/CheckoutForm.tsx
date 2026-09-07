@@ -55,7 +55,7 @@ import {
 import { createCheckout } from '@/lib/actions/checkout'
 import { getAvatarUrl } from '@/lib/utils/avatar'
 import { validatePromoCode, type PromoValidationResult } from '@/lib/actions/promo'
-import { getWalletBalance } from '@/lib/actions/wallet'
+import { getMyWalletBalance } from '@/lib/actions/wallet-ledger'
 import { cn } from '@/lib/utils'
 import { buyerFee, MARKETPLACE_FEE_LABEL, PROCESSING_FEE_LABEL } from '@/lib/fees'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
@@ -479,7 +479,9 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
     if (!user) return
     let cancelled = false
     ;(async () => {
-      const result = await getWalletBalance()
+      // Ledger-backed balance (wallet_balances is archived); matches the
+      // server-side debit in createCheckout.
+      const result = await getMyWalletBalance()
       if (!cancelled && result.success && result.balance) {
         setWalletBalance(result.balance.available_balance)
       }

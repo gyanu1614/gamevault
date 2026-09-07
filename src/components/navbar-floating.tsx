@@ -26,7 +26,7 @@ import { getAvatarUrl } from '@/lib/utils/avatar'
 import { getGameIcon } from '@/features/home/lib/game-icons'
 import { useSpotlightGames } from '@/features/home/hooks/useSpotlightGames'
 import { useScrollDirection } from '@/hooks/useScrollDirection'
-import { getWalletBalance } from '@/lib/actions/wallet'
+import { getMyWalletBalance } from '@/lib/actions/wallet-ledger'
 import { searchAttributeOptions, type AttrOptionHit } from '@/lib/actions/search'
 import { setStorePaused, getMyStorePaused } from '@/lib/actions/seller-presence'
 import { toast } from 'sonner'
@@ -629,10 +629,12 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
     refetchInterval: 30000,
   })
   // V63 — Wallet balance for the profile-menu Wallet row (sellers).
+  // Ledger-backed store credit (wallet-ledger); the legacy wallet_balances
+  // float table is archived and must not be read.
   const { data: navWalletBalance } = useQuery({
     queryKey: ['wallet-balance-navbar', user?.id],
     queryFn: async () => {
-      const result = await getWalletBalance()
+      const result = await getMyWalletBalance()
       return result.success ? result.balance : null
     },
     enabled: !!user?.isApprovedSeller,
