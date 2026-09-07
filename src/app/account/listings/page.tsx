@@ -709,8 +709,10 @@ function OffersContent() {
         {/* Top sheen — the bundle-card light-from-above, on the card itself. */}
         <span aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.05),transparent)]" />
 
-        {/* md+ keeps the full table; below md the stacked card list renders instead. */}
-        <div className="hidden overflow-x-auto md:block">
+        {/* The table renders at EVERY width (owner call 2026-09-07 — the
+            reference app ships the same row look on phones, horizontally
+            scrollable). The old below-md stacked-card list is retired. */}
+        <div className="overflow-x-auto">
           <table className="w-full min-w-[1160px] border-collapse text-left">
             <thead>
               <tr className="text-[12px] font-extrabold uppercase tracking-[0.08em] text-[#6d7488]">
@@ -859,7 +861,7 @@ function OffersContent() {
 
         {/* ── Card list (below md) — same rows, data and actions as the
             table, stacked so nothing hides off-screen on phones. ── */}
-        <div className="md:hidden">
+        <div className="hidden">
           <div className="flex items-center justify-between gap-3 px-4 py-1">
             <label className="-ml-2 flex min-h-11 cursor-pointer items-center gap-2.5 px-2 text-[12px] font-extrabold uppercase tracking-[0.08em] text-[#6d7488]">
               <Checkbox checked={allSelected} onCheckedChange={toggleAll} aria-label="Select all offers" />
