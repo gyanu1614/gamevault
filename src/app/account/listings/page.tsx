@@ -555,10 +555,10 @@ function OffersContent() {
   return (
     // Viewport-locked like Messages/Purchases: chrome static, ONLY the
     // results table scrolls. Pinned to the navbar's real bottom edge.
-    <div className="fixed inset-x-0 bottom-0 top-[var(--navbar-bottom)] z-[1] flex flex-col overflow-hidden lg:left-64">
+    <div className="fixed inset-x-0 bottom-0 top-[var(--navbar-bottom)] z-[1] flex flex-col overflow-hidden lg:left-72">
     <div className="mx-auto flex h-full min-h-0 w-full max-w-[1400px] flex-col px-4 pt-7 sm:px-6 lg:px-10 xl:px-14">
       {isRestricted && (
-        <div className="mb-6">
+        <div className="mb-3 shrink-0">
           <RestrictionBanner status={sellerStatus} />
         </div>
       )}
@@ -732,14 +732,15 @@ function OffersContent() {
         {/* The table renders at EVERY width (owner call 2026-09-07 — the
             reference app ships the same row look on phones, horizontally
             scrollable). The old below-md stacked-card list is retired. */}
-        <div className="min-h-0 flex-1 overflow-auto">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+          <div className="overflow-x-auto overscroll-x-contain">
           <table className="w-full min-w-[1160px] border-collapse text-left">
             <thead>
               <tr className="text-[12px] font-extrabold uppercase tracking-[0.08em] text-[#6d7488]">
-                <th className="w-12 py-3 pl-5 pr-2">
+                <th className="w-12 py-3 pl-5 pr-2 max-sm:hidden">
                   <Checkbox checked={allSelected} onCheckedChange={toggleAll} aria-label="Select all offers" />
                 </th>
-                <th className="min-w-[220px] px-3 py-3">Offer</th>
+                <th className="min-w-[220px] px-3 py-3 max-sm:pl-4">Offer</th>
                 <th className="px-3 py-3 whitespace-nowrap">Delivery Time</th>
                 <th className="px-3 py-3">Price</th>
                 <th className="px-3 py-3">Status</th>
@@ -780,7 +781,7 @@ function OffersContent() {
                       selected.has(l.id) && 'bg-white/[0.03]',
                     )}
                   >
-                    <td className="py-4 pl-5 pr-2">
+                    <td className="py-4 pl-5 pr-2 max-sm:hidden">
                       <Checkbox
                         checked={selected.has(l.id)}
                         onCheckedChange={() => toggleOne(l.id)}
@@ -877,6 +878,7 @@ function OffersContent() {
               )}
             </tbody>
           </table>
+          </div>
         </div>
 
         {/* ── Card list (below md) — same rows, data and actions as the

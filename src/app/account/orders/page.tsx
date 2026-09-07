@@ -356,7 +356,7 @@ function OrdersContent() {
   return (
     // Viewport-locked like /account/messages: title + filters are static,
     // only the orders list scrolls (pinned to the navbar's bottom edge).
-    <div className="fixed inset-x-0 bottom-0 top-[var(--navbar-bottom)] z-[1] flex flex-col overflow-hidden lg:left-64">
+    <div className="fixed inset-x-0 bottom-0 top-[var(--navbar-bottom)] z-[1] flex flex-col overflow-hidden pb-[env(safe-area-inset-bottom)] lg:left-72">
       <div className="mx-auto flex h-full min-h-0 w-full max-w-full flex-col px-4 pt-7 sm:px-6 md:max-w-7xl lg:px-8">
         {/* V21/P7.al — Standard account header. */}
         <div className="mb-4 shrink-0">
@@ -405,7 +405,7 @@ function OrdersContent() {
 
               {/* Status Dropdown Panel */}
               {openDropdown === 'status' && (
-                <div className="absolute z-50 mt-2 w-full max-sm:fixed max-sm:inset-x-4 max-sm:top-44 max-sm:mt-0 max-sm:w-auto min-w-[220px] rounded-lg border border-border-subtle bg-bg-overlay shadow-2xl shadow-black/50 overflow-hidden">
+                <div className="absolute z-50 mt-2 w-full max-sm:fixed max-sm:inset-x-4 max-sm:top-[calc(var(--navbar-bottom)+8.5rem)] max-sm:mt-0 max-sm:w-auto min-w-[220px] rounded-lg border border-border-subtle bg-bg-overlay shadow-2xl shadow-black/50 overflow-hidden">
                   <div className="p-2 space-y-1">
                     {STATUS_OPTIONS.map((s) => {
                       const isSelected = filters.status === s.value
@@ -454,7 +454,7 @@ function OrdersContent() {
 
               {/* Game Dropdown Panel */}
               {openDropdown === 'game' && availableGames.length > 0 && (
-                <div className="absolute z-50 mt-2 w-full max-sm:fixed max-sm:inset-x-4 max-sm:top-44 max-sm:mt-0 max-sm:w-auto min-w-[280px] rounded-lg border border-border-subtle bg-bg-overlay shadow-2xl shadow-black/50 max-h-[320px] overflow-y-auto">
+                <div className="absolute z-50 mt-2 w-full max-sm:fixed max-sm:inset-x-4 max-sm:top-[calc(var(--navbar-bottom)+8.5rem)] max-sm:mt-0 max-sm:w-auto min-w-[280px] rounded-lg border border-border-subtle bg-bg-overlay shadow-2xl shadow-black/50 max-h-[320px] overflow-y-auto">
                   <div className="p-2 space-y-1">
                     {availableGames.map((game) => {
                       const isSelected = filters.games.includes(game.id)
@@ -515,7 +515,7 @@ function OrdersContent() {
 
               {/* Category Dropdown Panel */}
               {openDropdown === 'category' && availableCategories.length > 0 && (
-                <div className="absolute z-50 mt-2 w-full max-sm:fixed max-sm:inset-x-4 max-sm:top-44 max-sm:mt-0 max-sm:w-auto min-w-[240px] rounded-lg border border-border-subtle bg-bg-overlay shadow-2xl shadow-black/50 max-h-[280px] overflow-y-auto">
+                <div className="absolute z-50 mt-2 w-full max-sm:fixed max-sm:inset-x-4 max-sm:top-[calc(var(--navbar-bottom)+8.5rem)] max-sm:mt-0 max-sm:w-auto min-w-[240px] rounded-lg border border-border-subtle bg-bg-overlay shadow-2xl shadow-black/50 max-h-[280px] overflow-y-auto">
                   <div className="p-2 space-y-1">
                     <button
                       onClick={() => {
@@ -585,7 +585,7 @@ function OrdersContent() {
 
               {/* Date Range Dropdown Panel */}
               {openDropdown === 'date' && (
-                <div className="absolute z-50 mt-2 w-full max-sm:fixed max-sm:inset-x-4 max-sm:top-44 max-sm:mt-0 max-sm:w-auto min-w-[200px] rounded-lg border border-border-subtle bg-bg-overlay shadow-2xl shadow-black/50">
+                <div className="absolute z-50 mt-2 w-full max-sm:fixed max-sm:inset-x-4 max-sm:top-[calc(var(--navbar-bottom)+8.5rem)] max-sm:mt-0 max-sm:w-auto min-w-[200px] rounded-lg border border-border-subtle bg-bg-overlay shadow-2xl shadow-black/50">
                   <div className="p-2 space-y-1">
                     {[
                       { label: 'All Time', value: 'all' as const },
@@ -744,7 +744,7 @@ function OrdersContent() {
         </div>
 
         {/* Orders List — the page's only vertical scroll area. */}
-        <div className="min-h-0 flex-1 overflow-y-auto pb-8">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-4">
         {filteredOrders.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-lg border border-border-subtle card-frost p-12">
           <ShoppingCart className="mb-4 h-16 w-16 text-lime-text/40" />

@@ -120,7 +120,7 @@ export default function ReviewsPage() {
 
   if (isLoading) {
     return (
-      <div className="flex min-h-[calc(100vh-3.5rem)] items-center justify-center">
+      <div className="flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
           <p className="text-text-secondary">Loading reviews...</p>
@@ -130,7 +130,7 @@ export default function ReviewsPage() {
   }
 
   return (
-    <div className="min-h-[calc(100vh-3.5rem)] pb-12">
+    <div className="pb-12">
       <div className="mx-auto w-full max-w-full px-4 sm:px-6 md:max-w-7xl lg:px-8">
         {/* V21/P7.al — Standard account header. */}
         <AccountPageHeader

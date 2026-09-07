@@ -428,7 +428,7 @@ export default function SettingsPage() {
     // V22 — Transparent shell (was opaque bg-bg-base "black box") so the
     // account hero bleeds through like every other sidebar page; max-w-7xl
     // + shared AccountPageHeader to match their alignment + title size.
-    <div className="min-h-[calc(100vh-3.5rem)] pb-12">
+    <div className="pb-12">
       <div className="mx-auto w-full max-w-full px-4 sm:px-6 md:max-w-7xl lg:px-8">
         {/* V19/P21 — Success toasts now go through the global sonner
             instance (RootLayout). No more page-local AnimatePresence. */}

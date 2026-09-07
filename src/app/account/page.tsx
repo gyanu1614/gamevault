@@ -123,7 +123,7 @@ export default async function AccountPage() {
   const username = (user as any).user_metadata?.username ?? user.email?.split('@')[0] ?? 'there'
 
   return (
-    <main className="mx-auto w-full max-w-7xl px-4 pb-16 pt-8 sm:px-6 lg:px-8">
+    <main className="mx-auto w-full max-w-7xl px-4 pb-8 pt-0 sm:px-6 lg:px-8">
       <header className="mb-6">
         <h1 className="text-2xl font-bold text-text-primary sm:text-3xl">
           Welcome back, {username}

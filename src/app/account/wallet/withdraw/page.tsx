@@ -236,7 +236,7 @@ export default function WithdrawPage() {
 
   if (availableBalance === null) {
     return (
-      <div className="flex min-h-[calc(100vh-3.5rem)] items-center justify-center">
+      <div className="flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-lime-text" />
       </div>
     )
@@ -337,12 +337,12 @@ export default function WithdrawPage() {
   )
 
   return (
-    <div className="min-h-[calc(100vh-3.5rem)] pb-12">
+    <div className="pb-12">
       {/* Same container as /account/wallet — this is a sub-page of it, so the
           heading lands on the same x as "Wallet". */}
       <div className="mx-auto w-full max-w-full px-4 sm:px-6 md:max-w-7xl lg:px-8">
         {/* Header */}
-        <div className="mb-5 pt-2">
+        <div className="mb-5">
           <Link
             href="/account/wallet"
             className="mb-3 inline-flex items-center gap-1.5 text-sm text-text-secondary transition-colors hover:text-text-primary"
