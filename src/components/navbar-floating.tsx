@@ -1162,14 +1162,14 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                         <div
                           aria-hidden
                           onClick={() => setNotificationsOpen(false)}
-                          className="animate-fade-in fixed inset-0 top-[var(--navbar-bottom)] bg-black/60 sm:hidden"
+                          className="animate-fade-in fixed left-0 right-0 top-full h-[100dvh] bg-black/60 sm:hidden"
                         />
-                        <div className="fixed inset-x-0 top-[var(--navbar-bottom)] sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-[27px] sm:w-[480px] sm:max-w-[92vw] animate-in fade-in-0 sm:zoom-in-95 slide-in-from-top-2 duration-200 max-sm:duration-[250ms]">
+                        <div className="fixed inset-x-0 top-full sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-[27px] sm:w-[480px] sm:max-w-[92vw] animate-in fade-in-0 sm:zoom-in-95 slide-in-from-top-2 duration-200 max-sm:duration-[250ms]">
                           {/* V61 — Marketplace glass panel (was flat black):
                               near-opaque dark surface + top sheen, roomier
                               type and spacing. Capped to the dynamic viewport
                               so short phones scroll the list internally. */}
-                          <div className="relative flex max-h-[calc(100dvh-7rem)] flex-col overflow-hidden rounded-lg border border-[#A3E635]/[0.12] bg-[linear-gradient(180deg,#14241A_0%,#0E1611_100%)] shadow-[0_24px_48px_-12px_rgba(0,0,0,0.85)] p-5 max-sm:rounded-none max-sm:rounded-b-2xl max-sm:border-x-0 max-sm:border-t-0 max-sm:max-h-[calc(100dvh-60px-env(safe-area-inset-bottom)-16px)]">
+                          <div className="relative flex max-h-[calc(100dvh-7rem)] flex-col overflow-hidden rounded-lg border border-[#A3E635]/[0.12] bg-[linear-gradient(180deg,#14241A_0%,#0E1611_100%)] shadow-[0_24px_48px_-12px_rgba(0,0,0,0.85)] p-5 max-sm:rounded-none max-sm:rounded-b-lg max-sm:border-x-0 max-sm:border-t-0 max-sm:max-h-[calc(100dvh-60px-env(safe-area-inset-bottom)-16px)]">
                             <span aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-16 bg-[linear-gradient(to_bottom,rgba(163,230,53,0.06),transparent)]" />
                             {/* Header - hairline separator spans the full panel width */}
                             <div className="relative -mx-5 mb-4 flex shrink-0 items-center justify-between border-b border-border-subtle px-5 pb-3.5">
@@ -1310,11 +1310,11 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                         <div
                           aria-hidden
                           onClick={() => setActivityOpen(false)}
-                          className="animate-fade-in fixed inset-0 top-[var(--navbar-bottom)] bg-black/60 sm:hidden"
+                          className="animate-fade-in fixed left-0 right-0 top-full h-[100dvh] bg-black/60 sm:hidden"
                         />
-                        <div className="fixed inset-x-0 top-[var(--navbar-bottom)] sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-[27px] sm:w-[480px] sm:max-w-[92vw] animate-in fade-in-0 sm:zoom-in-95 slide-in-from-top-2 duration-200 max-sm:duration-[250ms]">
+                        <div className="fixed inset-x-0 top-full sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-[27px] sm:w-[480px] sm:max-w-[92vw] animate-in fade-in-0 sm:zoom-in-95 slide-in-from-top-2 duration-200 max-sm:duration-[250ms]">
                           {/* V61 — Same glass panel as Notifications. */}
-                          <div className="relative flex max-h-[calc(100dvh-7rem)] flex-col overflow-hidden rounded-lg border border-[#A3E635]/[0.12] bg-[linear-gradient(180deg,#14241A_0%,#0E1611_100%)] shadow-[0_24px_48px_-12px_rgba(0,0,0,0.85)] p-5 max-sm:rounded-none max-sm:rounded-b-2xl max-sm:border-x-0 max-sm:border-t-0 max-sm:max-h-[calc(100dvh-60px-env(safe-area-inset-bottom)-16px)]">
+                          <div className="relative flex max-h-[calc(100dvh-7rem)] flex-col overflow-hidden rounded-lg border border-[#A3E635]/[0.12] bg-[linear-gradient(180deg,#14241A_0%,#0E1611_100%)] shadow-[0_24px_48px_-12px_rgba(0,0,0,0.85)] p-5 max-sm:rounded-none max-sm:rounded-b-lg max-sm:border-x-0 max-sm:border-t-0 max-sm:max-h-[calc(100dvh-60px-env(safe-area-inset-bottom)-16px)]">
                             <span aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-16 bg-[linear-gradient(to_bottom,rgba(163,230,53,0.06),transparent)]" />
                             {/* Header - hairline separator spans the full panel width */}
                             <div className="relative -mx-5 mb-4 flex shrink-0 items-center justify-between border-b border-border-subtle px-5 pb-3.5">
@@ -1424,16 +1424,16 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                       <div
                         aria-hidden
                         onClick={() => setUserMenuOpen(false)}
-                        className="animate-fade-in fixed inset-0 top-[var(--navbar-bottom)] bg-black/60 sm:hidden"
+                        className="animate-fade-in fixed left-0 right-0 top-full h-[100dvh] bg-black/60 sm:hidden"
                       />
-                      <div className="fixed inset-x-0 top-[var(--navbar-bottom)] sm:absolute sm:inset-x-auto sm:-right-6 sm:top-full sm:mt-[25px] sm:w-[360px] sm:max-w-[92vw] animate-in fade-in-0 sm:zoom-in-95 slide-in-from-top-2 duration-200 max-sm:duration-[250ms]">
+                      <div className="fixed inset-x-0 top-full sm:absolute sm:inset-x-auto sm:-right-6 sm:top-full sm:mt-[25px] sm:w-[360px] sm:max-w-[92vw] animate-in fade-in-0 sm:zoom-in-95 slide-in-from-top-2 duration-200 max-sm:duration-[250ms]">
                         {/* V61 — Marketplace glass panel: near-opaque dark
                             surface + top sheen, wider (360px) with roomier
                             rows so the menu reads as a proper panel, not a
                             cramped context menu. dvh (not vh) cap so the
                             bottom rows never hide behind iOS Safari's
                             toolbar. */}
-                        <div className="relative overflow-hidden rounded-lg border border-border-default bg-[#17171F] p-2 shadow-[0_24px_48px_-12px_rgba(0,0,0,0.85)] max-h-[calc(100dvh-110px)] overflow-y-auto overscroll-contain max-sm:rounded-none max-sm:rounded-b-2xl max-sm:border-x-0 max-sm:border-t-0 max-sm:max-h-[calc(100dvh-60px-env(safe-area-inset-bottom)-16px)]">
+                        <div className="relative overflow-hidden rounded-lg border border-border-default bg-[#17171F] p-2 shadow-[0_24px_48px_-12px_rgba(0,0,0,0.85)] max-h-[calc(100dvh-110px)] overflow-y-auto overscroll-contain max-sm:rounded-none max-sm:rounded-b-lg max-sm:border-x-0 max-sm:border-t-0 max-sm:max-h-[calc(100dvh-60px-env(safe-area-inset-bottom)-16px)]">
                           <span aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-16 bg-[linear-gradient(to_bottom,rgba(163,230,53,0.06),transparent)]" />
                           {/* User Info card */}
                           <div className="relative border-b border-border-subtle p-2 pb-2">
