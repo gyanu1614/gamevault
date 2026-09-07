@@ -84,10 +84,18 @@ describe('state machine: events map to legal targets', () => {
 // ─── THE drift guard: TS map must equal the SQL migration map ──────
 describe('state machine: TS map agrees with the SQL trigger (no drift)', () => {
   it('parses is_valid_order_transition and matches ALLOWED_TRANSITIONS', () => {
-    const sql = readFileSync(
-      resolve(process.cwd(), 'supabase/migrations/20260628_fix_refunded_transition.sql'),
+    const baseline = readFileSync(
+      resolve(process.cwd(), 'supabase/migrations/20260101000000_baseline_live_schema.sql'),
       'utf8'
     )
+
+    // The baseline holds the whole schema; isolate is_valid_order_transition's
+    // dollar-quoted body so the regexes below can't match unrelated statements.
+    const fnMatch = baseline.match(
+      /CREATE\s+OR\s+REPLACE\s+FUNCTION\s+"?public"?\."?is_valid_order_transition"?[\s\S]*?\$\$([\s\S]*?)\$\$;/i
+    )
+    expect(fnMatch, 'is_valid_order_transition not found in baseline migration').not.toBeNull()
+    const sql = fnMatch![1]
 
     // Parse lines like:  WHEN 'paid' THEN new_status IN ('delivering', 'delivered', ...)
     const sqlMap: Record<string, string[]> = {}
