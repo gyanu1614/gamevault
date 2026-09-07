@@ -357,7 +357,7 @@ function OrdersContent() {
     // Viewport-locked like /account/messages: title + filters are static,
     // only the orders list scrolls (pinned to the navbar's bottom edge).
     <div className="fixed inset-x-0 bottom-0 top-[var(--navbar-bottom)] z-[1] flex flex-col overflow-hidden lg:left-64">
-      <div className="mx-auto flex h-full min-h-0 w-full max-w-full flex-col px-4 pt-5 sm:px-6 md:max-w-7xl lg:px-8">
+      <div className="mx-auto flex h-full min-h-0 w-full max-w-full flex-col px-4 pt-7 sm:px-6 md:max-w-7xl lg:px-8">
         {/* V21/P7.al — Standard account header. */}
         <div className="mb-4 shrink-0">
           <AccountPageHeader

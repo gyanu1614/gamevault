@@ -556,7 +556,7 @@ function OffersContent() {
     // Viewport-locked like Messages/Purchases: chrome static, ONLY the
     // results table scrolls. Pinned to the navbar's real bottom edge.
     <div className="fixed inset-x-0 bottom-0 top-[var(--navbar-bottom)] z-[1] flex flex-col overflow-hidden lg:left-64">
-    <div className="mx-auto flex h-full min-h-0 w-full max-w-[1400px] flex-col px-4 pt-5 sm:px-6 lg:px-10 xl:px-14">
+    <div className="mx-auto flex h-full min-h-0 w-full max-w-[1400px] flex-col px-4 pt-7 sm:px-6 lg:px-10 xl:px-14">
       {isRestricted && (
         <div className="mb-6">
           <RestrictionBanner status={sellerStatus} />
