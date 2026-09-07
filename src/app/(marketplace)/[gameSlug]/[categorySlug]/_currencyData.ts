@@ -216,9 +216,8 @@ function hashHue(s: string): number {
  */
 export function listingToOffer(listing: any): Offer {
   const sellerName: string = sellerDisplayName(listing.seller)
-  const verified: boolean =
-    !!listing.seller?.is_verified ||
-    (!!listing.seller?.seller_tier && listing.seller.seller_tier !== 'unverified')
+  // Every seller is KYC-verified; the blue badge keys purely on is_verified.
+  const verified: boolean = !!listing.seller?.is_verified
   // Positive-feedback % (0–100) from the 0–5 star average, or null for a
   // seller with no reviews (shown as "New"). The old code printed the raw
   // star value as a percent (5★ → "5%") and defaulted missing to a fabricated 95.

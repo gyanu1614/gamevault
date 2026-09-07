@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
+import { TIERS, DEFAULT_TIER } from '@/lib/seller/tiers'
 
 function getServiceClient() {
   return createServiceClient(
@@ -10,28 +11,23 @@ function getServiceClient() {
   )
 }
 
-// ─── Hardcoded fallback (used when migration not yet applied) ─────────────────
+// ─── Hardcoded fallback (used when the config table is empty / unreadable) ────
+// Derived from the single tier source of truth so it never drifts from the DB.
 
-const FALLBACK_TIER_CONFIGS = [
-  { tier: 'unverified', display_name: 'Unverified', description: 'New seller awaiting first sale',
-    min_sales: 0,   min_rating: null, min_age_days: 0,   min_completion_rate: null,
-    commission_rate: 0.0990, listing_limit: 5,    banner_access: false, badge_color: 'zinc',   sort_order: 0 },
-  { tier: 'bronze',     display_name: 'Bronze',     description: 'Getting started — first sale completed',
-    min_sales: 1,   min_rating: 3.5,  min_age_days: 7,   min_completion_rate: 80.0,
-    commission_rate: 0.0890, listing_limit: 20,   banner_access: false, badge_color: 'orange', sort_order: 1 },
-  { tier: 'silver',     display_name: 'Silver',     description: 'Established seller',
-    min_sales: 10,  min_rating: 4.0,  min_age_days: 30,  min_completion_rate: 90.0,
-    commission_rate: 0.0790, listing_limit: 50,   banner_access: true,  badge_color: 'slate',  sort_order: 2 },
-  { tier: 'gold',       display_name: 'Gold',       description: 'Trusted & reliable seller',
-    min_sales: 50,  min_rating: 4.3,  min_age_days: 90,  min_completion_rate: 95.0,
-    commission_rate: 0.0690, listing_limit: 100,  banner_access: true,  badge_color: 'yellow', sort_order: 3 },
-  { tier: 'platinum',   display_name: 'Platinum',   description: 'Top-tier seller with proven track record',
-    min_sales: 200, min_rating: 4.6,  min_age_days: 180, min_completion_rate: 97.0,
-    commission_rate: 0.0590, listing_limit: null, banner_access: true,  badge_color: 'cyan',   sort_order: 4 },
-  { tier: 'diamond',    display_name: 'Diamond',    description: 'Elite seller — the best of the best',
-    min_sales: 500, min_rating: 4.8,  min_age_days: 365, min_completion_rate: 99.0,
-    commission_rate: 0.0490, listing_limit: null, banner_access: true,  badge_color: 'violet', sort_order: 5 },
-]
+const FALLBACK_TIER_CONFIGS = TIERS.map((t) => ({
+  tier: t.key,
+  display_name: t.label,
+  description: t.description,
+  min_sales: t.thresholds.minSales,
+  min_rating: t.thresholds.minRating,
+  min_age_days: t.thresholds.minAgeDays,
+  min_completion_rate: t.thresholds.minCompletionRate,
+  commission_rate: t.commissionRate,
+  listing_limit: t.listingLimit,
+  banner_access: t.bannerAccess,
+  badge_color: t.colors.badgeColor,
+  sort_order: t.sortOrder,
+}))
 
 // ─── All tier configs (public, no auth needed) ────────────────────────────────
 
@@ -128,7 +124,7 @@ export async function getMyTierInfo() {
 
   // RPC not available — build fallback from profile + hardcoded config
   console.warn('[getMyTierInfo] RPC unavailable, using fallback tier config')
-  const currentTier = profileResult.data?.seller_tier ?? 'unverified'
+  const currentTier = profileResult.data?.seller_tier ?? DEFAULT_TIER
   const tierConfig = FALLBACK_TIER_CONFIGS.find(t => t.tier === currentTier)
     ?? FALLBACK_TIER_CONFIGS[0]
   const nextConfig = FALLBACK_TIER_CONFIGS.find(t => t.sort_order === tierConfig.sort_order + 1) ?? null

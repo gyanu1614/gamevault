@@ -10,6 +10,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service'
+import { DEFAULT_TIER } from '@/lib/seller/tiers'
 import { logAdminActivity } from '@/lib/admin/activity-log'
 import { revalidatePath } from 'next/cache'
 
@@ -163,7 +164,7 @@ export async function getPendingListings(): Promise<{
       for (const l of rows) {
         const sid = l.seller_id as string | undefined
         if (!sid) continue
-        const tier = (l.seller?.seller_tier as string | null) || 'unverified'
+        const tier = (l.seller?.seller_tier as string | null) || DEFAULT_TIER
         l.sellerContext = {
           approvedCount: approvedCounts.get(sid) ?? 0,
           threshold: thresholds.get(tier) ?? 3,

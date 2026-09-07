@@ -5,6 +5,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { settingsApi, SellerProfile } from '@/lib/api/seller-compatible'
+import { DEFAULT_TIER } from '@/lib/seller/tiers'
 
 export function useSellerSettings() {
   const queryClient = useQueryClient()
@@ -48,7 +49,7 @@ export function useSellerSettings() {
     profile: profile || {
       id: '',
       username: '',
-      seller_tier: 'bronze',
+      seller_tier: DEFAULT_TIER,
       total_sales: 0,
       seller_rating: 0,
       total_reviews: 0,

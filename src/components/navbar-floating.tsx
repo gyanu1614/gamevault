@@ -1,13 +1,15 @@
 'use client'
 
 import { sellerDisplayName, sellerShopSlug } from '@/lib/seller/identity'
+import { tierByKey, DEFAULT_TIER, type SellerTier } from '@/lib/seller/tiers'
 import Link from 'next/link'
 import { SmartLink } from '@/components/global/SmartLink'
 import { usePathname, useRouter } from 'next/navigation'
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
-import { Search, User, LogOut, Menu, X, ChevronDown, ChevronLeft, ChevronRight, Settings, Store, Package, MessageSquare, MessagesSquare, PlusCircle, Heart, Wallet, Star, List, Bell, BellDot, LayoutDashboard, Activity, Gauge, Award, Crown, Gem, Sparkles, Shield, ShieldCheck, Coins, UserCircle2, Swords, Zap, Rocket, LifeBuoy ,
+import { Search, User, LogOut, Menu, X, ChevronDown, ChevronLeft, ChevronRight, Settings, Store, Package, MessageSquare, MessagesSquare, PlusCircle, Heart, Wallet, Star, List, Bell, BellDot, LayoutDashboard, Activity, Gauge, Award, Crown, Gem, Sparkles, Shield, Coins, UserCircle2, Swords, Zap, Rocket, LifeBuoy ,
   ShoppingCart,
   LayoutGrid,
+  type LucideIcon,
 } from 'lucide-react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence, useMotionValue, useSpring } from 'framer-motion'
@@ -154,13 +156,14 @@ function MobileServiceRow({
 }
 
 // ── Tier visual config ────────────────────────────────────────────────────────
-const TIER_CONFIG: Record<string, { icon: React.ElementType; color: string; bg: string; border: string }> = {
-  unverified: { icon: Shield,       color: 'text-zinc-400',   bg: 'bg-zinc-500/10',   border: 'border-zinc-500/20' },
-  bronze:     { icon: Award,        color: 'text-orange-400', bg: 'bg-orange-500/10', border: 'border-orange-500/20' },
-  silver:     { icon: ShieldCheck,  color: 'text-slate-300',  bg: 'bg-slate-500/10',  border: 'border-slate-500/20' },
-  gold:       { icon: Crown,        color: 'text-yellow-400', bg: 'bg-yellow-500/10', border: 'border-yellow-500/20' },
-  platinum:   { icon: Gem,          color: 'text-cyan-400',   bg: 'bg-cyan-500/10',   border: 'border-cyan-500/20' },
-  diamond:    { icon: Sparkles,     color: 'text-lime-text', bg: 'bg-lime/10', border: 'border-lime-tint-border' },
+// Colors/bg/border come from the central gemstone ladder (@/lib/seller/tiers).
+// Only the per-tier Lucide glyph is chosen here.
+const TIER_ICONS: Record<SellerTier, LucideIcon> = {
+  quartz: Shield,
+  amethyst: Award,
+  ruby: Crown,
+  sapphire: Gem,
+  diamond: Sparkles,
 }
 
 /**
@@ -1423,13 +1426,12 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                                       {sellerDisplayName(user.profile)}
                                     </div>
                                     {(() => {
-                                      const tier = (user.profile?.seller_tier || 'unverified').toLowerCase()
-                                      const cfg = TIER_CONFIG[tier] ?? TIER_CONFIG.unverified
-                                      const TierIcon = cfg.icon
+                                      const def = tierByKey(user.profile?.seller_tier || DEFAULT_TIER)
+                                      const TierIcon = TIER_ICONS[def.key]
                                       return (
-                                        <div className={cn('mt-1 inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px] font-semibold capitalize', cfg.color, cfg.bg, cfg.border)}>
+                                        <div className={cn('mt-1 inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px] font-semibold', def.colors.text, def.colors.bg, def.colors.border)}>
                                           <TierIcon className="h-2.5 w-2.5" />
-                                          {tier} Seller
+                                          {def.label} Seller
                                         </div>
                                       )
                                     })()}

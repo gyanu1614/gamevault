@@ -14,12 +14,13 @@
  */
 
 import { sellerDisplayName } from '@/lib/seller/identity'
+import { tierByKey, DEFAULT_TIER, type SellerTier } from '@/lib/seller/tiers'
 import React from 'react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import {
   ThumbsUp, Package, TrendingUp, MessageCircle, UserPlus, Check,
-  Shield, Crown, Gem, Sparkles, Award, ShieldCheck, type LucideIcon,
+  Shield, Crown, Gem, Sparkles, Award, type LucideIcon,
 } from 'lucide-react'
 // Mobile-audit — Popover (tap-to-open) replaces the hover-only Tooltip so
 // the verified explanation is reachable on touch devices.
@@ -46,7 +47,7 @@ interface SellerProfileBannerProps {
   reviewsCount: number
   listingsCount: number
   totalSales: number
-  sellerTier: 'bronze' | 'silver' | 'gold' | 'platinum' | 'diamond'
+  sellerTier: SellerTier | string
   /** Founding seller (first 100) — renders a permanent founding badge. */
   isFoundingSeller?: boolean
   bannerConfig?: BannerConfig
@@ -57,57 +58,30 @@ interface SellerProfileBannerProps {
   className?: string
 }
 
-const TIER_CONFIG: Record<
-  string,
-  { label: string; Icon: LucideIcon; pill: string; ring: string }
-> = {
-  unverified: {
-    label: 'Unverified',
-    Icon: Shield,
-    pill: 'text-zinc-300 bg-zinc-500/15 border-zinc-500/30',
-    ring: 'ring-zinc-500/40',
-  },
-  bronze: {
-    label: 'Bronze',
-    Icon: Award,
-    pill: 'text-orange-300 bg-orange-500/15 border-orange-500/30',
-    ring: 'ring-orange-500/40',
-  },
-  silver: {
-    label: 'Silver',
-    Icon: ShieldCheck,
-    pill: 'text-slate-200 bg-slate-500/15 border-slate-500/30',
-    ring: 'ring-slate-400/40',
-  },
-  gold: {
-    label: 'Gold',
-    Icon: Crown,
-    pill: 'text-yellow-300 bg-yellow-500/15 border-yellow-500/30',
-    ring: 'ring-yellow-500/40',
-  },
-  platinum: {
-    label: 'Platinum',
-    Icon: Gem,
-    pill: 'text-cyan-300 bg-cyan-500/15 border-cyan-500/30',
-    ring: 'ring-cyan-500/40',
-  },
-  diamond: {
-    label: 'Diamond',
-    Icon: Sparkles,
-    pill: 'text-lime-text bg-lime-tint-bg border-lime-tint-border',
-    ring: 'ring-lime/40',
-  },
+// Gemstone tier → Lucide icon. Colors/labels come from the central tier module;
+// only the icon is component-specific.
+const TIER_ICONS: Record<SellerTier, LucideIcon> = {
+  quartz: Shield,
+  amethyst: Award,
+  ruby: Crown,
+  sapphire: Gem,
+  diamond: Sparkles,
 }
 
 export default function SellerProfileBanner({
   sellerId, username, shopName, avatarUrl, isOnline = false,
   isVerified = false, rating, reviewsCount, listingsCount, totalSales,
-  sellerTier = 'bronze', isFoundingSeller = false, bannerConfig, currentUserId,
+  sellerTier = DEFAULT_TIER, isFoundingSeller = false, bannerConfig, currentUserId,
   onMessageClick, onFollowClick, isFollowing = false, className,
 }: SellerProfileBannerProps) {
   const displayName = sellerDisplayName({ username, shopName })
-  const tier = TIER_CONFIG[sellerTier] ?? TIER_CONFIG.bronze
-  const TierIcon = tier.Icon
+  const tierDef = tierByKey(sellerTier)
+  const tier = {
+    label: tierDef.label,
+    pill: cn(tierDef.colors.text, tierDef.colors.bg, tierDef.colors.border),
+    ring: tierDef.colors.ring,
+  }
+  const TierIcon = TIER_ICONS[tierDef.key]
   const isOwnShop = currentUserId === sellerId
   const positivePercentage = rating > 0 ? Math.round((rating / 5) * 100) : 0
 

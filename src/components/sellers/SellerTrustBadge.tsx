@@ -4,14 +4,14 @@
  * Displays a seller's tier, rating, and verification status
  * Used on seller profile pages, listing cards, and shop headers
  *
- * Tier hierarchy: bronze → silver → gold → platinum → diamond
+ * Tier hierarchy: quartz → amethyst → ruby → sapphire → diamond
  */
 
-import React from 'react'
-import { Shield, Star, Award, Zap, CheckCircle2 } from 'lucide-react'
+import { Shield, Star, Award, Crown, Gem, Sparkles, CheckCircle2, type LucideIcon } from 'lucide-react'
 import Link from 'next/link'
+import { type SellerTier, tierByKey, TIERS } from '@/lib/seller/tiers'
 
-export type SellerTier = 'bronze' | 'silver' | 'gold' | 'platinum' | 'diamond'
+export type { SellerTier }
 
 interface SellerTrustBadgeProps {
   tier: SellerTier
@@ -27,6 +27,20 @@ interface SellerTrustBadgeProps {
   shopUrl?: string
 }
 
+/** Component-specific Lucide glyph per gemstone tier. */
+const TIER_ICONS: Record<SellerTier, LucideIcon> = {
+  quartz: Shield,
+  amethyst: Award,
+  ruby: Crown,
+  sapphire: Gem,
+  diamond: Sparkles,
+}
+
+/**
+ * Per-tier style/label/description/minRating, driven from the central gemstone
+ * tier module so there is one source of truth. `color` maps to the central
+ * `colors.text` token; the Lucide icon stays component-specific.
+ */
 const TIER_CONFIG: Record<
   SellerTier,
   {
@@ -35,62 +49,34 @@ const TIER_CONFIG: Record<
     bg: string
     border: string
     glow: string
-    icon: React.ElementType
+    icon: LucideIcon
     description: string
     minRating: number
   }
-> = {
-  bronze: {
-    label: 'Bronze',
-    color: 'text-orange-400',
-    bg: 'bg-orange-500/10',
-    border: 'border-orange-500/30',
-    glow: 'shadow-orange-500/20',
-    icon: Shield,
-    description: 'New seller',
-    minRating: 0,
-  },
-  silver: {
-    label: 'Silver',
-    color: 'text-text-secondary',
-    bg: 'bg-gray-400/10',
-    border: 'border-gray-400/30',
-    glow: 'shadow-gray-400/20',
-    icon: Shield,
-    description: 'Established seller',
-    minRating: 4.0,
-  },
-  gold: {
-    label: 'Gold',
-    color: 'text-warning',
-    bg: 'bg-warning-bg',
-    border: 'border-warning/40',
-    glow: 'shadow-yellow-500/20',
-    icon: Award,
-    description: 'Top rated seller',
-    minRating: 4.5,
-  },
-  platinum: {
-    label: 'Platinum',
-    color: 'text-cyan-400',
-    bg: 'bg-cyan-500/10',
-    border: 'border-cyan-500/30',
-    glow: 'shadow-cyan-500/20',
-    icon: Zap,
-    description: 'Elite seller',
-    minRating: 4.7,
-  },
-  diamond: {
-    label: 'Diamond',
-    color: 'text-lime-text',
-    bg: 'bg-lime/10',
-    border: 'border-lime-tint-border',
-    glow: 'shadow-violet-500/20',
-    icon: Zap,
-    description: 'Diamond elite',
-    minRating: 4.9,
-  },
-}
+> = Object.fromEntries(
+  TIERS.map((t) => [
+    t.key,
+    {
+      label: t.label,
+      color: t.colors.text,
+      bg: t.colors.bg,
+      border: t.colors.border,
+      glow: t.colors.glow,
+      icon: TIER_ICONS[t.key],
+      description: t.description,
+      minRating: t.thresholds.minRating ?? 0,
+    },
+  ]),
+) as Record<SellerTier, {
+  label: string
+  color: string
+  bg: string
+  border: string
+  glow: string
+  icon: LucideIcon
+  description: string
+  minRating: number
+}>
 
 const SIZE_CONFIG = {
   xs: { pill: 'px-1.5 py-0.5 text-xs gap-1', icon: 'w-3 h-3', dot: 'w-1.5 h-1.5' },
@@ -111,7 +97,7 @@ function TierPill({
   size?: SellerTrustBadgeProps['size']
   isOnline?: boolean
 }) {
-  const config = TIER_CONFIG[tier]
+  const config = TIER_CONFIG[tierByKey(tier).key]
   const TierIcon = config.icon
   const sizes = SIZE_CONFIG[size || 'sm']
 
@@ -142,7 +128,7 @@ function InlineBadge({
   isOnline,
   size = 'sm',
 }: SellerTrustBadgeProps) {
-  const config = TIER_CONFIG[tier]
+  const config = TIER_CONFIG[tierByKey(tier).key]
   const TierIcon = config.icon
   const sizes = SIZE_CONFIG[size || 'sm']
 
@@ -192,7 +178,7 @@ function InlineBadge({
  * Card variant - full trust card with all stats
  */
 function TrustCard({ tier, rating, totalSales, isVerified, isOnline, username, shopUrl }: SellerTrustBadgeProps) {
-  const config = TIER_CONFIG[tier]
+  const config = TIER_CONFIG[tierByKey(tier).key]
   const TierIcon = config.icon
 
   const cardContent = (

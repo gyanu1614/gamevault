@@ -25,13 +25,13 @@ import { createClient } from '@supabase/supabase-js'
 let _cache: Map<string, number> | null = null
 let _cacheExpiry = 0
 
-// Hardcoded fallback rates (used before the migration is applied or if DB is down)
+// Hardcoded fallback rates (used before the migration is applied or if DB is down).
+// Keyed by gemstone tier, matching seller_tier_config's commission_rate * 100.
 const FALLBACK_RATES: Record<string, number> = {
-  unverified: 9.9,
-  bronze: 8.9,
-  silver: 7.9,
-  gold: 6.9,
-  platinum: 5.9,
+  quartz: 8.9,
+  amethyst: 7.9,
+  ruby: 6.9,
+  sapphire: 5.9,
   diamond: 4.9,
 }
 
@@ -72,16 +72,16 @@ async function loadRates(): Promise<Map<string, number>> {
 
 /**
  * Returns the commission rate as a PERCENTAGE for the given tier.
- * e.g. "bronze" → 8.9, "gold" → 6.9, "unverified" → 9.9
+ * e.g. "quartz" → 8.9, "ruby" → 6.9, "diamond" → 4.9
  *
- * Falls back to 9.9 (unverified rate) if the tier is unknown or the
+ * Falls back to 8.9 (Quartz entry rate) if the tier is unknown or the
  * DB is unreachable.
  */
 export async function getCommissionRate(tier: string | null | undefined): Promise<number> {
   const rates = await loadRates()
-  const key = (tier ?? 'unverified').toLowerCase()
-  // Direct match → else fall through to 'unverified' → else hardcoded default
-  return rates.get(key) ?? rates.get('unverified') ?? 9.9
+  const key = (tier ?? 'quartz').toLowerCase()
+  // Direct match → else fall through to 'quartz' → else hardcoded default
+  return rates.get(key) ?? rates.get('quartz') ?? 8.9
 }
 
 /** Invalidate the in-process cache (call after running the seed migration). */

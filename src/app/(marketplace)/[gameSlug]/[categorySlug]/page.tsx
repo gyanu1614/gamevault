@@ -21,6 +21,7 @@ import CategoryPageLayout from '@/components/marketplace/CategoryPageLayout'
 import { buildSynonymSearchQuery } from '@/lib/utils/gaming-synonyms'
 import { ChevronLeft } from 'lucide-react'
 import { sellerDisplayName, sellerRatingPercent, sellerShopSlug } from '@/lib/seller/identity'
+import { tierByKey } from '@/lib/seller/tiers'
 import { getCurrencyShell as getCurrencyShellUncached, listingToOffer } from './_currencyData'
 import RouteSkeleton from './_RouteSkeleton'
 import CurrencyPageClient from './_CurrencyPageClient'
@@ -517,9 +518,7 @@ async function CategoryBrowsePage({ params, searchParams }: PageProps) {
           sellerSlug: sellerShopSlug(l.seller),
           sellerName: sellerDisplayName(l.seller),
           sellerAvatarUrl: l.seller?.avatar_url ?? null,
-          verified:
-            !!l.seller?.is_verified ||
-            (!!l.seller?.seller_tier && l.seller.seller_tier !== 'unverified'),
+          verified: !!l.seller?.is_verified,
           // Positive-feedback % (0–100) from the 0–5 star average, or null for
           // a seller with no reviews (rendered as "New"). Never the old raw-star
           // -as-percent (5★ → "5%") or the fabricated 95 default.
@@ -1186,13 +1185,6 @@ function EmptyState({
 
 // ─── Listing Card ──────────────────────────────────────────────────────────────
 
-const TIER_COLORS: Record<string, string> = {
-  bronze:   'text-orange-400',
-  silver:   'text-text-tertiary',
-  gold:     'text-warning',
-  platinum: 'text-cyan-400',
-}
-
 function ListingCard({
   gameSlug,
   categorySlug,
@@ -1203,7 +1195,7 @@ function ListingCard({
   listing: any
 }) {
   const imageUrl = listing.images?.[0] || null
-  const tierColor = TIER_COLORS[listing.seller?.seller_tier] || 'text-text-tertiary'
+  const tierColor = tierByKey(listing.seller?.seller_tier).colors.text
   const hasPriceDrop = listing.original_price && listing.original_price > listing.price
   const discountPct = hasPriceDrop
     ? Math.round(((listing.original_price - listing.price) / listing.original_price) * 100)

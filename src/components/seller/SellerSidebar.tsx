@@ -1,6 +1,7 @@
 'use client'
 
 import { sellerDisplayName } from '@/lib/seller/identity'
+import { tierByKey, DEFAULT_TIER } from '@/lib/seller/tiers'
 import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
@@ -107,12 +108,7 @@ export default function SellerSidebar({ user }: SellerSidebarProps) {
     return pathname === href || pathname.startsWith(href + '/')
   }
 
-  const tierColors: Record<string, string> = {
-    bronze: 'text-orange-400',
-    silver: 'text-text-secondary',
-    gold: 'text-warning',
-    platinum: 'text-cyan-400',
-  }
+  const tier = tierByKey(user?.seller_tier || DEFAULT_TIER)
 
   const NavItems = () => (
     <>
@@ -130,10 +126,10 @@ export default function SellerSidebar({ user }: SellerSidebarProps) {
               {sellerDisplayName(user)}
             </p>
             <p className={cn(
-              'text-xs font-medium capitalize',
-              tierColors[user?.seller_tier || 'bronze']
+              'text-xs font-medium',
+              tier.colors.text
             )}>
-              {user?.seller_tier || 'Bronze'}
+              {tier.label}
             </p>
           </div>
         </div>

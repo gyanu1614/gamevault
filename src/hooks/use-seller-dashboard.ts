@@ -5,6 +5,7 @@
 
 import { useQuery } from '@tanstack/react-query'
 import { analyticsApi, settingsApi, DashboardStats, SellerProfile } from '@/lib/api/seller-compatible'
+import { DEFAULT_TIER } from '@/lib/seller/tiers'
 
 export function useSellerDashboard() {
   // Fetch dashboard stats
@@ -57,7 +58,7 @@ export function useSellerDashboard() {
     profile: profile || {
       id: '',
       username: '',
-      seller_tier: 'bronze',
+      seller_tier: DEFAULT_TIER,
       total_sales: 0,
       seller_rating: 0,
       total_reviews: 0,

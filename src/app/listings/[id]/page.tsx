@@ -16,10 +16,11 @@ import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import {
   Star, Eye, ShoppingCart, Shield, Zap, ArrowLeft, Infinity,
-  Clock, Award, ShieldCheck, Crown, Gem, Sparkles, type LucideIcon,
+  Clock, Award, Crown, Gem, Sparkles, type LucideIcon,
   CheckCircle2, MessageSquare, TrendingDown,
 } from 'lucide-react'
 import { getListing } from '@/lib/api/listings'
+import { tierByKey, type SellerTier } from '@/lib/seller/tiers'
 import { useAuth } from '@/hooks/use-auth'
 import { useAuthDialog } from '@/components/auth/AuthDialog'
 import { Button } from '@/components/ui/button'
@@ -28,14 +29,14 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 
-// Tier visuals — mirror navbar-floating so badges feel cohesive.
-const TIER_CONFIG: Record<string, { Icon: LucideIcon; label: string; cls: string }> = {
-  unverified: { Icon: Shield,      label: 'Unverified', cls: 'text-zinc-400 bg-zinc-500/10 border-zinc-500/20' },
-  bronze:     { Icon: Award,       label: 'Bronze',     cls: 'text-orange-400 bg-orange-500/10 border-orange-500/20' },
-  silver:     { Icon: ShieldCheck, label: 'Silver',     cls: 'text-slate-300 bg-slate-500/10 border-slate-500/20' },
-  gold:       { Icon: Crown,       label: 'Gold',       cls: 'text-yellow-400 bg-yellow-500/10 border-yellow-500/20' },
-  platinum:   { Icon: Gem,         label: 'Platinum',   cls: 'text-cyan-400 bg-cyan-500/10 border-cyan-500/20' },
-  diamond:    { Icon: Sparkles,    label: 'Diamond',    cls: 'text-lime-text bg-lime/10 border-lime-tint-border' },
+// Tier icons — gemstone glyphs keyed to the central tier ladder. Colors/label
+// come from the shared module (@/lib/seller/tiers); only the icon lives here.
+const TIER_ICON: Record<SellerTier, LucideIcon> = {
+  quartz:   Shield,
+  amethyst: Award,
+  ruby:     Crown,
+  sapphire: Gem,
+  diamond:  Sparkles,
 }
 
 export default function ListingDetailPage() {
@@ -113,8 +114,8 @@ export default function ListingDetailPage() {
   const isSoldOut = !listing.is_unlimited && listing.quantity === 0
   const isLowStock = !listing.is_unlimited && listing.quantity > 0 && listing.quantity <= 5
 
-  const tierKey = (listing.seller.seller_tier ?? 'unverified').toLowerCase()
-  const tier = TIER_CONFIG[tierKey] ?? TIER_CONFIG.unverified
+  const tier = tierByKey(listing.seller.seller_tier?.toLowerCase())
+  const TierIcon = TIER_ICON[tier.key]
 
   const total = listing.price * quantity
 
@@ -320,10 +321,12 @@ export default function ListingDetailPage() {
                     <span
                       className={cn(
                         'inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider',
-                        tier.cls,
+                        tier.colors.text,
+                        tier.colors.bg,
+                        tier.colors.border,
                       )}
                     >
-                      <tier.Icon className="h-2.5 w-2.5" />
+                      <TierIcon className="h-2.5 w-2.5" />
                       {tier.label}
                     </span>
                   </TooltipTrigger>

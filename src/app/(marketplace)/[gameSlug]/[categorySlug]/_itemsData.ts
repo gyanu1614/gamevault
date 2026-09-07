@@ -252,9 +252,8 @@ export function listingToOffer(
   const seller = listing.seller ?? null
   const sellerName: string =
     sellerDisplayName(seller)
-  const verified =
-    !!seller?.is_verified ||
-    (!!seller?.seller_tier && seller.seller_tier !== 'unverified')
+  // Every seller is KYC-verified; the blue badge keys purely on is_verified.
+  const verified = !!seller?.is_verified
   // seller_rating is a 0-5 star average; the old code printed it straight
   // into a "%" (a 5/5 seller showed as "5%") and defaulted a missing value
   // to a fabricated 95.

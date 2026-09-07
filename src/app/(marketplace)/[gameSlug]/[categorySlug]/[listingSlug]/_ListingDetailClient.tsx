@@ -19,6 +19,7 @@
  */
 
 import { sellerDisplayName, sellerShopSlug } from '@/lib/seller/identity'
+import { tierByKey } from '@/lib/seller/tiers'
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, useTransition } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -138,15 +139,6 @@ interface Props {
   blogRail?: React.ReactNode
 }
 
-const TIER_BADGES: Record<string, { label: string; color: string }> = {
-  unverified: { label: 'Unverified', color: 'text-text-tertiary' },
-  bronze: { label: 'Bronze', color: 'text-orange-300' },
-  silver: { label: 'Silver', color: 'text-text-secondary' },
-  gold: { label: 'Gold', color: 'text-warning' },
-  platinum: { label: 'Platinum', color: 'text-cyan-300' },
-  diamond: { label: 'Diamond', color: 'text-lime-text' },
-}
-
 const PREVIEW_STATUS_LABELS: Record<string, string> = {
   pending_approval: 'Under Review',
   changes_requested: 'Changes Requested',
@@ -252,8 +244,9 @@ export default function ListingDetailClient({
   // seller's available quantity. Instant-delivery listings are single-unit.
   const maxQty = listing.isUnlimited ? 99 : Math.max(1, listing.quantity ?? 1)
 
-  const tierKey = (listing.seller.tier ?? 'unverified').toLowerCase()
-  const tier = TIER_BADGES[tierKey] ?? TIER_BADGES.unverified
+  // Gemstone tier badge — driven by the central ladder. tierByKey tolerates
+  // unknown/legacy tier strings by falling back to Quartz.
+  const tierDef = tierByKey(listing.seller.tier?.toLowerCase())
   const sellerName = sellerDisplayName(listing.seller)
   const sellerInitial = sellerName.charAt(0).toUpperCase()
 
@@ -577,7 +570,7 @@ export default function ListingDetailClient({
                       )}
                       <span>{fmtCount(listing.seller.totalSales)} sold</span>
                       <span aria-hidden>·</span>
-                      <span className={cn('font-semibold', tier.color)}>{tier.label}</span>
+                      <span className={cn('font-semibold', tierDef.colors.text)}>{tierDef.label}</span>
                     </div>
                   </div>
                   <ArrowUpRight className="h-4 w-4 shrink-0 text-text-tertiary group-hover:text-lime-text" />

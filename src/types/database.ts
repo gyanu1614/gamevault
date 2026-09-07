@@ -1,6 +1,8 @@
 // Database Types
 // Generated from Supabase schema
 
+import type { SellerTier } from '@/lib/seller/tiers'
+
 export type Json =
   | string
   | number
@@ -24,7 +26,7 @@ export interface Database {
           is_verified: boolean
           created_at: string
           updated_at: string
-          seller_tier: 'bronze' | 'silver' | 'gold' | 'platinum'
+          seller_tier: SellerTier
           total_sales: number
           seller_rating: number
           total_reviews: number
@@ -68,7 +70,7 @@ export interface Database {
           is_verified?: boolean
           created_at?: string
           updated_at?: string
-          seller_tier?: 'bronze' | 'silver' | 'gold' | 'platinum'
+          seller_tier?: SellerTier
           total_sales?: number
           seller_rating?: number
           total_reviews?: number
@@ -108,7 +110,7 @@ export interface Database {
           is_verified?: boolean
           created_at?: string
           updated_at?: string
-          seller_tier?: 'bronze' | 'silver' | 'gold' | 'platinum'
+          seller_tier?: SellerTier
           total_sales?: number
           seller_rating?: number
           total_reviews?: number

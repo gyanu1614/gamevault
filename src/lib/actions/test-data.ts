@@ -141,17 +141,18 @@ export async function createTestListings() {
       originalTier = profile?.seller_tier
     }
 
-    // Temporarily upgrade seller to 'bronze' tier to bypass pre-moderation
-    console.log('⬆️ Temporarily upgrading seller tier to bronze to bypass pre-moderation...')
+    // Temporarily upgrade seller to 'amethyst' tier to bypass pre-moderation
+    // (only quartz, the entry tier, is pre-moderated)
+    console.log('⬆️ Temporarily upgrading seller tier to amethyst to bypass pre-moderation...')
     const { error: tierError } = await (supabase
       .from('profiles')
-      .update as any)({ seller_tier: 'bronze' })
+      .update as any)({ seller_tier: 'amethyst' })
       .eq('id', sellerId)
 
     if (tierError) {
       console.error('⚠️ Failed to upgrade tier:', tierError)
     } else {
-      console.log('✅ Seller tier upgraded to bronze')
+      console.log('✅ Seller tier upgraded to amethyst')
     }
 
     // STEP 3: Get games and categories
@@ -278,7 +279,7 @@ export async function createTestListings() {
       },
     ]
 
-    console.log('📝 Step 3: Inserting listings with ACTIVE status (bronze tier bypasses pre-moderation)...')
+    console.log('📝 Step 3: Inserting listings with ACTIVE status (amethyst tier bypasses pre-moderation)...')
 
     const { data: createdListings, error } = await (supabase
       .from('listings')

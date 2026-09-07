@@ -195,9 +195,7 @@ function shapeMini(row: any) {
       shopName: seller.shop_name ?? null,
       shopSlug: sellerShopSlug(seller),
       avatarUrl: seller.avatar_url ?? null,
-      verified:
-        !!seller.is_verified ||
-        (!!seller.seller_tier && seller.seller_tier !== 'unverified'),
+      verified: !!seller.is_verified,
       ratingPercent: sellerRatingPercent(seller),
       totalSales: Number(seller.total_sales ?? 0),
     },
@@ -414,9 +412,7 @@ async function ListingDetailPage({ params }: PageProps) {
       shopSlug: sellerShopSlug(listing.seller),
       avatarUrl: listing.seller.avatar_url ?? null,
       tier: listing.seller.seller_tier ?? null,
-      verified:
-        !!listing.seller.is_verified ||
-        (!!listing.seller.seller_tier && listing.seller.seller_tier !== 'unverified'),
+      verified: !!listing.seller.is_verified,
       // Null when the seller has no reviews — the UI shows "New Seller"
       // rather than a fabricated 95%. Same rule checkout already used.
       ratingPercent: sellerRatingPercent(listing.seller),
