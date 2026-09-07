@@ -90,6 +90,16 @@ export function AwaitingPaymentPanel({
     try {
       const res = await retryOrderPayment(orderId)
       if (res.success && res.checkoutUrl) {
+        // Provider-hosted pages (absolute URLs) open in a new tab so this
+        // panel — the buyer's controls — stays put; blocked popups fall back
+        // to the same tab. Our own (relative) pay page keeps the same tab.
+        if (/^https?:/i.test(res.checkoutUrl)) {
+          const payTab = window.open(res.checkoutUrl, '_blank')
+          if (payTab) {
+            setPaying(false)
+            return
+          }
+        }
         window.location.href = res.checkoutUrl
         return
       }
