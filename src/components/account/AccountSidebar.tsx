@@ -74,6 +74,12 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
     return () => window.removeEventListener('dm:toggle-account-sidebar', toggle)
   }, [])
 
+  // Tell the navbar trigger about the drawer state so its icon morphs
+  // open ⇄ close in sync (see navbar-floating's panel toggle).
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent('dm:account-sidebar-state', { detail: isMobileOpen }))
+  }, [isMobileOpen])
+
   useEffect(() => {
     if (!isMobileOpen) return
     const onKeyDown = (event: KeyboardEvent) => {
@@ -498,7 +504,7 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
             <motion.button
               type="button"
               aria-label="Close account navigation"
-              className="fixed inset-0 top-[var(--navbar-bottom)] z-[55] cursor-default bg-black/60 backdrop-blur-[2px] lg:hidden"
+              className="fixed inset-0 top-[var(--navbar-bottom)] z-[55] cursor-default bg-black/45 backdrop-blur-md lg:hidden"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -506,23 +512,14 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
             />
             <motion.aside
               aria-label="Account navigation"
-              className="fixed bottom-0 left-0 top-[var(--navbar-bottom)] z-[60] flex w-[min(88vw,360px)] flex-col overflow-hidden border-r border-white/[0.10] bg-[rgba(19,19,24,0.98)] shadow-[16px_0_40px_rgba(0,0,0,0.45)] backdrop-blur-2xl lg:hidden"
+              className="fixed bottom-0 left-0 top-[var(--navbar-bottom)] z-[60] flex w-[min(72vw,300px)] flex-col overflow-hidden border-r border-white/[0.10] bg-[rgba(19,19,24,0.98)] shadow-[16px_0_40px_rgba(0,0,0,0.45)] backdrop-blur-2xl lg:hidden"
               initial={{ x: '-100%' }}
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
               transition={{ type: 'spring', stiffness: 420, damping: 38 }}
             >
-              <div className="flex h-12 shrink-0 items-center justify-between border-b border-border-subtle px-4">
-                <span className="text-sm font-semibold text-text-primary">My Account</span>
-                <button
-                  type="button"
-                  aria-label="Close account navigation"
-                  onClick={() => setIsMobileOpen(false)}
-                  className="grid h-9 w-9 place-items-center rounded-full text-text-tertiary transition-colors hover:bg-white/[0.06] hover:text-white"
-                >
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
+              {/* No header row — the navbar's panel toggle and the backdrop
+                  both close the drawer; content starts straight at the nav. */}
               {NavItems()}
             </motion.aside>
           </>

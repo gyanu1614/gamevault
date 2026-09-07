@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { SmartLink } from '@/components/global/SmartLink'
 import { usePathname, useRouter } from 'next/navigation'
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
-import { Search, User, LogOut, Menu, X, ChevronDown, ChevronLeft, ChevronRight, Settings, Store, Package, MessageSquare, MessagesSquare, PlusCircle, Heart, Wallet, Star, List, Bell, BellDot, LayoutDashboard, Activity, Gauge, Award, Crown, Gem, Sparkles, Shield, ShieldCheck, Coins, UserCircle2, Swords, Zap, Rocket, LifeBuoy ,
+import { Search, User, LogOut, Menu, X, ChevronDown, ChevronLeft, ChevronRight, Settings, Store, Package, MessageSquare, MessagesSquare, PanelLeftOpen, PanelLeftClose, PlusCircle, Heart, Wallet, Star, List, Bell, BellDot, LayoutDashboard, Activity, Gauge, Award, Crown, Gem, Sparkles, Shield, ShieldCheck, Coins, UserCircle2, Swords, Zap, Rocket, LifeBuoy ,
   ShoppingCart,
   LayoutGrid,
 } from 'lucide-react'
@@ -238,6 +238,15 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
   // categories). menuRoot 'browse' is reachable via an in-menu row.
   const inAccountArea = pathname?.startsWith('/account') ?? false
   const accountSidebarAvailable = inAccountArea && !/^\/account\/orders\/[^/]+$/.test(pathname || '')
+
+  // Mirror of the account drawer's open state (AccountSidebar broadcasts it)
+  // so the trigger icon can morph open ⇄ close like a real panel toggle.
+  const [accountSidebarOpen, setAccountSidebarOpen] = useState(false)
+  useEffect(() => {
+    const onState = (e: Event) => setAccountSidebarOpen(!!(e as CustomEvent<boolean>).detail)
+    window.addEventListener('dm:account-sidebar-state', onState)
+    return () => window.removeEventListener('dm:account-sidebar-state', onState)
+  }, [])
   // Mobile: the bar floats transparent over the hero at the very top ONLY
   // on the homepage. Marketplace/category pages (which have a sub-navbar)
   // keep the solid bar so the two-bar unit reads as one solid block.
@@ -984,7 +993,30 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                 setActivityOpen(false)
               }}
             >
-              {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+              {accountSidebarAvailable && user ? (
+                // Account pages: a real panel toggle that morphs with the
+                // drawer state (GameBoost-style), animated via framer.
+                <AnimatePresence mode="wait" initial={false}>
+                  <motion.span
+                    key={accountSidebarOpen ? 'panel-close' : 'panel-open'}
+                    initial={{ rotate: -90, opacity: 0, scale: 0.7 }}
+                    animate={{ rotate: 0, opacity: 1, scale: 1 }}
+                    exit={{ rotate: 90, opacity: 0, scale: 0.7 }}
+                    transition={{ duration: 0.15, ease: 'easeOut' }}
+                    className="grid"
+                  >
+                    {accountSidebarOpen ? (
+                      <PanelLeftClose className="h-5 w-5" />
+                    ) : (
+                      <PanelLeftOpen className="h-5 w-5" />
+                    )}
+                  </motion.span>
+                </AnimatePresence>
+              ) : mobileMenuOpen ? (
+                <X className="h-5 w-5" />
+              ) : (
+                <Menu className="h-5 w-5" />
+              )}
             </Button>
 
             {/* Logo — max-lg:mr-auto packs [hamburger][logo] to the left
@@ -1091,6 +1123,17 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
 
               {user && (
                 <>
+                  {/* Mobile chat shortcut — straight to Messages (parity with
+                      the reference top bar); desktop keeps its existing entry
+                      points, so lg:hidden. */}
+                  <Link
+                    href="/account/messages"
+                    aria-label="Messages"
+                    className="grid h-10 w-10 shrink-0 place-items-center rounded-full text-gray-100 transition-colors hover:bg-white/15 hover:text-white lg:hidden"
+                  >
+                    <MessagesSquare className="h-[21px] w-[21px]" />
+                  </Link>
+
                   {/* Notifications Dropdown */}
                   <div className="relative" data-dropdown>
                     <Button
