@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { readFileSync } from 'node:fs'
+import { readdirSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import {
   type OrderStatus,
@@ -82,12 +82,26 @@ describe('state machine: events map to legal targets', () => {
 })
 
 // ─── THE drift guard: TS map must equal the SQL migration map ──────
+// The function lives in whichever migration (re)defined it last — today the
+// 20260101 baseline; a later migration that redefines it wins automatically.
+function latestSqlDefinitionOfTransitionFn(): string {
+  const dir = resolve(process.cwd(), 'supabase/migrations')
+  const defRe =
+    /CREATE\s+OR\s+REPLACE\s+FUNCTION\s+(?:"?public"?\.)?"?is_valid_order_transition"?[\s\S]*?\$\$([\s\S]*?)\$\$/i
+  let body: string | null = null
+  for (const file of readdirSync(dir).filter((f) => f.endsWith('.sql')).sort()) {
+    const m = readFileSync(resolve(dir, file), 'utf8').match(defRe)
+    if (m) body = m[1]
+  }
+  if (!body) {
+    throw new Error('is_valid_order_transition not defined in any file under supabase/migrations')
+  }
+  return body
+}
+
 describe('state machine: TS map agrees with the SQL trigger (no drift)', () => {
   it('parses is_valid_order_transition and matches ALLOWED_TRANSITIONS', () => {
-    const sql = readFileSync(
-      resolve(process.cwd(), 'supabase/migrations/20260628_fix_refunded_transition.sql'),
-      'utf8'
-    )
+    const sql = latestSqlDefinitionOfTransitionFn()
 
     // Parse lines like:  WHEN 'paid' THEN new_status IN ('delivering', 'delivered', ...)
     const sqlMap: Record<string, string[]> = {}

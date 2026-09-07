@@ -8,13 +8,14 @@
  *   • seller balance      = sum of `seller_available` entries
  *     (seller_available_balance, 20260715_ledger_payout_cutover.sql)
  *
- * The legacy src/lib/actions/wallet.ts reads the wallet_balances float table,
- * whose writes were revoked in the ledger cutover — refund credits never show
- * there. These actions are the ONLY balance source UI should use.
+ * These actions are the ONLY balance source UI may use. The legacy
+ * wallet_balances/wallet_transactions float tables were moved to the
+ * `archive` schema by 20260904000000_financial_cleanup_dummy_era.sql and
+ * must never be read again.
  *
- * Currency note: orders settle EUR; legacy genesis wallet balances are USD.
- * The UI displays a single "$" figure, so balances are summed across both
- * currencies at par (beta simplification — revisit with real FX).
+ * Currency: the platform is single-currency USD. The one real pre-switch EUR
+ * balance was FX-converted to USD in the cleanup migration, so every nonzero
+ * ledger balance is USD; EUR entries remain only as immutable history.
  *
  * Session is derived server-side; the service-role client only ever reads the
  * CURRENT user's balances.
@@ -24,7 +25,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service'
 import { getWalletBalance as getLedgerWalletBalance } from '@/lib/wallet/wallet'
 
-const WALLET_CURRENCIES = ['EUR', 'USD'] as const
+const WALLET_CURRENCIES = ['USD'] as const
 
 async function sessionUserId(): Promise<string | null> {
   const supabase = await createClient()
@@ -32,7 +33,7 @@ async function sessionUserId(): Promise<string | null> {
   return user?.id ?? null
 }
 
-/** Sum a user's ledger wallet (store credit) across currencies, in major units. */
+/** A user's ledger wallet (store credit) in major units. */
 async function walletTotalMajor(userId: string): Promise<number> {
   let totalMinor = 0n
   for (const currency of WALLET_CURRENCIES) {
@@ -41,7 +42,7 @@ async function walletTotalMajor(userId: string): Promise<number> {
   return Number(totalMinor) / 100
 }
 
-/** Sum a user's seller_available ledger balance across currencies, major units. */
+/** A user's seller_available ledger balance in major units. */
 async function sellerAvailableTotalMajor(userId: string): Promise<number> {
   const service = createServiceRoleClient()
   let totalMinor = 0n
@@ -68,9 +69,10 @@ export interface LedgerWalletBalance {
 
 /**
  * getMyWalletBalance — the session user's store-credit balance from the
- * ledger, plus the legacy stat fields (cashback/referrals) the wallet page
- * still renders, read from the old wallet_balances row (per-user SELECT RLS
- * remains). Missing legacy row → zeros.
+ * ledger, plus the stat tiles the wallet page renders: cashback from
+ * profiles.lifetime_cashback_earned (maintained by loyalty.ts) and referral
+ * earnings from the referral_earnings table. Nothing reads the archived
+ * wallet_balances float table.
  */
 export async function getMyWalletBalance(): Promise<{
   success: boolean
@@ -81,25 +83,37 @@ export async function getMyWalletBalance(): Promise<{
     const userId = await sessionUserId()
     if (!userId) return { success: false, error: 'Not authenticated' }
 
-    const supabase = await createClient()
-    const [available, { data: legacy }] = await Promise.all([
+    const service = createServiceRoleClient()
+    const [available, profileRes, referralRes] = await Promise.all([
       walletTotalMajor(userId),
-      supabase
-        .from('wallet_balances')
-        .select('pending_balance, lifetime_earned, lifetime_spent, total_cashback, referral_earnings')
-        .eq('user_id', userId)
-        .maybeSingle() as any,
+      service
+        .from('profiles')
+        .select('lifetime_cashback_earned')
+        .eq('id', userId)
+        .maybeSingle(),
+      service
+        .from('referral_earnings')
+        .select('amount, status')
+        .eq('referrer_id', userId),
     ])
+
+    // Casts: Supabase narrow-select inference returns `never` for columns
+    // missing from the handwritten Database type (same pattern as loyalty.ts).
+    const referralRows = (referralRes.data ?? []) as any[]
+    const referralPaid = referralRows
+      .filter((e) => e.status === 'paid')
+      .reduce((sum, e) => sum + Number(e.amount ?? 0), 0)
+    const profileRow = profileRes.data as any
 
     return {
       success: true,
       balance: {
         available_balance: available,
-        pending_balance: Number(legacy?.pending_balance ?? 0),
-        lifetime_earned: Number(legacy?.lifetime_earned ?? 0),
-        lifetime_spent: Number(legacy?.lifetime_spent ?? 0),
-        total_cashback: Number(legacy?.total_cashback ?? 0),
-        referral_earnings: Number(legacy?.referral_earnings ?? 0),
+        pending_balance: 0,
+        lifetime_earned: 0,
+        lifetime_spent: 0,
+        total_cashback: Number(profileRow?.lifetime_cashback_earned ?? 0),
+        referral_earnings: referralPaid,
       },
     }
   } catch (err: any) {
