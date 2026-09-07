@@ -10,6 +10,7 @@
 
 import { cn } from '@/lib/utils'
 import TierBadge, { type SellerTier } from './TierBadge'
+import { tierByKey } from '@/lib/seller/tiers'
 import { Check, X } from 'lucide-react'
 
 export interface TierConfig {
@@ -34,24 +35,6 @@ interface TierCardProps {
   className?: string
 }
 
-const TIER_RING: Record<string, string> = {
-  unverified: 'ring-zinc-500/30',
-  bronze:     'ring-orange-500/30',
-  silver:     'ring-slate-400/30',
-  gold:       'ring-yellow-400/30',
-  platinum:   'ring-cyan-400/30',
-  diamond:    'ring-violet-500/40',
-}
-
-const TIER_GLOW: Record<string, string> = {
-  unverified: '',
-  bronze:     '',
-  silver:     '',
-  gold:       'shadow-yellow-500/5',
-  platinum:   'shadow-cyan-500/5',
-  diamond:    'shadow-violet-500/10',
-}
-
 function Perk({ met, label }: { met: boolean; label: string }) {
   return (
     <li className="flex items-center gap-2 text-xs text-zinc-400">
@@ -71,13 +54,14 @@ export default function TierCard({
   className,
 }: TierCardProps) {
   const commissionPct = (config.commission_rate * 100).toFixed(1)
+  const { ring, glow } = tierByKey(config.tier).colors
 
   return (
     <div
       className={cn(
         'relative flex flex-col gap-4 rounded-2xl border bg-[#0e0e0e] p-5 transition-all',
         isCurrent
-          ? `ring-1 border-white/[0.12] ${TIER_RING[config.tier]} shadow-xl ${TIER_GLOW[config.tier]}`
+          ? `ring-1 border-white/[0.12] ${ring} shadow-xl ${glow}`
           : 'border-border-subtle',
         className
       )}

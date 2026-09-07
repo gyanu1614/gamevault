@@ -35,19 +35,13 @@ import { useNow } from '@/hooks/use-now'
 import { useActiveSellers, useSellerStats, type SellerStatsSummary } from '@/hooks/use-active-sellers'
 import type { ActiveSeller, ActiveSellerSort } from '@/lib/actions/admin-active-sellers'
 import { setFoundingSeller } from '@/lib/actions/admin-sellers'
+import { TIERS, TIER_KEYS, type SellerTier } from '@/lib/seller/tiers'
 import { FOREST_BG, FOREST_MOTION, forestStagger } from '../../_theme/forest'
 
 // ─── Types + constants ───────────────────────────────────────────────────────
 
 type FilterStatus = 'all' | 'active' | 'restricted' | 'banned'
-type FilterTier =
-  | 'all'
-  | 'unverified'
-  | 'bronze'
-  | 'silver'
-  | 'gold'
-  | 'platinum'
-  | 'diamond'
+type FilterTier = 'all' | SellerTier
 
 const FOCUS_RING =
   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#A3E635] focus-visible:ring-offset-0'
@@ -66,24 +60,18 @@ const BAND_STYLE: React.CSSProperties = {
   boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.12), inset 0 -1px 0 rgba(0,0,0,0.3)',
 }
 
-/** seller_tier_config badge_color → dark-surface chip classes (fallback map). */
+/** seller_tier_config badge_color → dark-surface chip classes (gemstone tokens). */
 export const TIER_CHIP_CLASSES: Record<string, string> = {
   zinc: 'bg-white/[0.1] text-white/85',
-  orange: 'bg-orange-500/[0.16] text-orange-300',
-  slate: 'bg-slate-400/[0.18] text-slate-200',
-  yellow: 'bg-yellow-500/[0.16] text-yellow-300',
-  cyan: 'bg-cyan-500/[0.16] text-cyan-300',
   violet: 'bg-violet-500/[0.16] text-violet-300',
+  red: 'bg-red-500/[0.16] text-red-300',
+  blue: 'bg-blue-500/[0.16] text-blue-300',
+  lime: 'bg-lime-500/[0.16] text-lime-300',
 }
 
-const TIER_BADGE_COLOR: Record<string, string> = {
-  unverified: 'zinc',
-  bronze: 'orange',
-  silver: 'slate',
-  gold: 'yellow',
-  platinum: 'cyan',
-  diamond: 'violet',
-}
+const TIER_BADGE_COLOR: Record<string, string> = Object.fromEntries(
+  TIERS.map((t) => [t.key, t.colors.badgeColor]),
+)
 
 export function tierChipClass(tier: string, badgeColor?: string | null): string {
   const color = badgeColor || TIER_BADGE_COLOR[tier] || 'zinc'
@@ -372,17 +360,21 @@ export default function ActiveSellersPageClient({
 
             <select
               value={filterTier}
-              onChange={(e) => setFilterTier(e.target.value as FilterTier)}
+              onChange={(e) => {
+                const v = e.target.value
+                setFilterTier(
+                  v === 'all' || TIER_KEYS.includes(v as SellerTier) ? (v as FilterTier) : 'all',
+                )
+              }}
               className={cn(SELECT_CLASSES, FOCUS_RING)}
               aria-label="Filter By Tier"
             >
               <option value="all">All Tiers</option>
-              <option value="unverified">Unverified</option>
-              <option value="bronze">Bronze</option>
-              <option value="silver">Silver</option>
-              <option value="gold">Gold</option>
-              <option value="platinum">Platinum</option>
-              <option value="diamond">Diamond</option>
+              {TIERS.map((t) => (
+                <option key={t.key} value={t.key}>
+                  {t.label}
+                </option>
+              ))}
             </select>
 
             <select

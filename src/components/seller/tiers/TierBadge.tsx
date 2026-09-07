@@ -6,59 +6,15 @@
  */
 
 import { cn } from '@/lib/utils'
+import { tierByKey, type SellerTier } from '@/lib/seller/tiers'
 
-export type SellerTier = 'unverified' | 'bronze' | 'silver' | 'gold' | 'platinum' | 'diamond'
+export type { SellerTier }
 
 interface TierBadgeProps {
   tier: SellerTier | string
   size?: 'xs' | 'sm' | 'md'
   showIcon?: boolean
   className?: string
-}
-
-const TIER_STYLES: Record<string, { label: string; text: string; bg: string; border: string; icon: string }> = {
-  unverified: {
-    label: 'New Seller',
-    text: 'text-zinc-400',
-    bg: 'bg-zinc-500/10',
-    border: 'border-zinc-500/20',
-    icon: '○',
-  },
-  bronze: {
-    label: 'Bronze',
-    text: 'text-orange-400',
-    bg: 'bg-orange-500/10',
-    border: 'border-orange-500/20',
-    icon: '◆',
-  },
-  silver: {
-    label: 'Silver',
-    text: 'text-slate-300',
-    bg: 'bg-slate-500/10',
-    border: 'border-slate-500/20',
-    icon: '◆',
-  },
-  gold: {
-    label: 'Gold',
-    text: 'text-warning',
-    bg: 'bg-warning-bg',
-    border: 'border-yellow-500/20',
-    icon: '◆',
-  },
-  platinum: {
-    label: 'Platinum',
-    text: 'text-cyan-400',
-    bg: 'bg-cyan-500/10',
-    border: 'border-cyan-500/20',
-    icon: '◆',
-  },
-  diamond: {
-    label: 'Diamond',
-    text: 'text-lime-text',
-    bg: 'bg-lime/10',
-    border: 'border-lime-tint-border',
-    icon: '◈',
-  },
 }
 
 const SIZE_CLASSES = {
@@ -73,21 +29,22 @@ export default function TierBadge({
   showIcon = true,
   className,
 }: TierBadgeProps) {
-  const style = TIER_STYLES[tier] ?? TIER_STYLES.unverified
+  const def = tierByKey(tier)
+  const TierIcon = def.Icon
 
   return (
     <span
       className={cn(
         'inline-flex items-center font-semibold rounded-full border',
-        style.text,
-        style.bg,
-        style.border,
+        def.colors.text,
+        def.colors.bg,
+        def.colors.border,
         SIZE_CLASSES[size],
         className
       )}
     >
-      {showIcon && <span aria-hidden="true">{style.icon}</span>}
-      {style.label}
+      {showIcon && <TierIcon className="h-3 w-3" aria-hidden="true" />}
+      {def.label}
     </span>
   )
 }

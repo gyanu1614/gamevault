@@ -163,9 +163,7 @@ export function OrderClient(props: OrderClientProps) {
           name: sellerDisplayName(order.seller),
           username: order.seller?.username ?? '',
           avatarUrl: getAvatarUrl(order.seller?.avatar_url, order.seller?.username ?? 'seller'),
-          verified:
-            !!order.seller?.is_verified ||
-            (!!order.seller?.seller_tier && order.seller.seller_tier !== 'unverified'),
+          verified: !!order.seller?.is_verified,
           // seller_rating is already a 0–5 star average; the card shows it as
           // "N.NN ★" (not a percent), so use it directly. The old `/ 20` shrank
           // a real 5★ seller to 0.25.

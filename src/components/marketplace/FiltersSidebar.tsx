@@ -7,6 +7,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
 import { X, SlidersHorizontal } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { TIERS } from '@/lib/seller/tiers'
 
 interface FiltersSidebarProps {
   minPrice?: number
@@ -37,13 +38,12 @@ export default function FiltersSidebar({ minPrice = 0, maxPrice = 1000, classNam
   const [onlineOnly, setOnlineOnly] = useState(searchParams.get('online') === 'true')
   const [showMobile, setShowMobile] = useState(false)
 
-  // Available options
-  const tierOptions = [
-    { value: 'bronze', label: 'Bronze', color: 'text-orange-400' },
-    { value: 'silver', label: 'Silver', color: 'text-text-secondary' },
-    { value: 'gold', label: 'Gold', color: 'text-warning' },
-    { value: 'platinum', label: 'Platinum', color: 'text-cyan-400' }
-  ]
+  // Available options — gemstone tiers from the central ladder
+  const tierOptions = TIERS.map((t) => ({
+    value: t.key,
+    label: t.label,
+    color: t.colors.text
+  }))
 
   const deliveryOptions = [
     { value: 'instant', label: 'Instant (< 5 min)' },

@@ -6,6 +6,7 @@
  */
 
 import { sellerDisplayName } from '@/lib/seller/identity'
+import { tierByKey } from '@/lib/seller/tiers'
 import React from 'react'
 import { Metadata } from 'next'
 import { notFound } from 'next/navigation'
@@ -603,12 +604,7 @@ function ListingPreviewCard({
   sellerName,
   sellerTier
 }: ListingPreviewCardProps) {
-  const tierColors: Record<string, string> = {
-    bronze: 'text-orange-400',
-    silver: 'text-text-secondary',
-    gold: 'text-warning',
-    platinum: 'text-cyan-400'
-  }
+  const tierColors = tierByKey(sellerTier).colors
 
   return (
     <Link href={`/${gameSlug}/${categorySlug}/${listingSlug}`}>
@@ -637,7 +633,7 @@ function ListingPreviewCard({
           </h3>
 
           <div className="flex items-center justify-between text-sm">
-            <span className={`font-medium ${tierColors[sellerTier] || 'text-text-secondary'}`}>
+            <span className={`font-medium ${tierColors.text}`}>
               {sellerName}
             </span>
           </div>

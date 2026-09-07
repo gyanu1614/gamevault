@@ -24,7 +24,7 @@ const MOCK_LISTING = {
     username: 'NebulaTrader',
     shop_name: 'Nebula Traders',
     avatar_url: null,
-    seller_tier: 'gold',
+    seller_tier: 'ruby',
     seller_rating: 4.9,
     total_reviews: 214,
     total_sales: 1382,

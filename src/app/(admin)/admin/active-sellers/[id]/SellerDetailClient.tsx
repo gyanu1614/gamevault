@@ -51,6 +51,7 @@ import {
   rejectWithdrawalRequest,
 } from '@/lib/actions/withdrawals'
 import { getAvatarUrl } from '@/lib/utils/avatar'
+import { TIERS, TIER_KEYS, tierByKey } from '@/lib/seller/tiers'
 import {
   FOREST_BG,
   FOREST_CLASSES,
@@ -59,8 +60,8 @@ import {
 } from '../../_theme/forest'
 import { tierChipClass } from '../_components/ActiveSellersPageClient'
 
-/** Client copy of the tier ladder (the 'use server' module can't export it). */
-const SELLER_TIERS = ['unverified', 'bronze', 'silver', 'gold', 'platinum', 'diamond'] as const
+/** Gemstone tier ladder, low → high, from the central module. */
+const SELLER_TIERS = TIER_KEYS
 
 // ─── Formatting helpers ──────────────────────────────────────────────────────
 
@@ -460,8 +461,13 @@ export default function SellerDetailClient({
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-[11px]">
               <h1 className="text-[26px] font-extrabold tracking-[-0.01em] text-white">{shopName}</h1>
-              <span className={tierChipClass(profile.seller_tier, currentConfig?.badge_color)}>
-                {titleCase(profile.seller_tier)}
+              <span
+                className={tierChipClass(
+                  profile.seller_tier,
+                  currentConfig?.badge_color ?? tierByKey(profile.seller_tier).colors.badgeColor,
+                )}
+              >
+                {tierByKey(profile.seller_tier).label}
               </span>
               {profile.kyc_status && (
                 <span className={statusChipClass(profile.kyc_status)}>
@@ -556,8 +562,13 @@ export default function SellerDetailClient({
           index={cardIndex++}
         >
           <div className="flex flex-wrap items-center gap-3">
-            <span className={tierChipClass(profile.seller_tier, currentConfig?.badge_color)}>
-              {currentConfig?.display_name || titleCase(profile.seller_tier)}
+            <span
+              className={tierChipClass(
+                profile.seller_tier,
+                currentConfig?.badge_color ?? tierByKey(profile.seller_tier).colors.badgeColor,
+              )}
+            >
+              {currentConfig?.display_name || tierByKey(profile.seller_tier).label}
             </span>
             {currentConfig && (
               <span className="text-[12px] text-white/85">
@@ -1045,10 +1056,10 @@ export default function SellerDetailClient({
               onChange={(e) => setTierChoice(e.target.value)}
               className={cn(MODAL_INPUT, '[&>option]:bg-[#0F2419]')}
             >
-              {SELLER_TIERS.map((t) => (
-                <option key={t} value={t}>
-                  {titleCase(t)}
-                  {t === profile.seller_tier ? ' (Current)' : ''}
+              {TIERS.map((t) => (
+                <option key={t.key} value={t.key}>
+                  {t.label}
+                  {t.key === profile.seller_tier ? ' (Current)' : ''}
                 </option>
               ))}
             </select>

@@ -17,18 +17,13 @@ import { logAdminActivity } from '@/lib/admin/activity-log'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-// NOTE: 'use server' files may only export async functions — the tier list
-// lives here as a private const (client copies live beside their UI).
-const SELLER_TIERS = [
-  'unverified',
-  'bronze',
-  'silver',
-  'gold',
-  'platinum',
-  'diamond',
-] as const
+// Tier ladder comes from the single source of truth. ('use server' files may
+// only export async functions, so re-export the type but keep the array local.)
+import { TIER_KEYS, DEFAULT_TIER, type SellerTier } from '@/lib/seller/tiers'
 
-export type SellerTier = (typeof SELLER_TIERS)[number]
+const SELLER_TIERS = TIER_KEYS
+
+export type { SellerTier }
 
 export interface SellerDetailProfile {
   id: string
@@ -360,7 +355,7 @@ export async function getSellerDetail(userId: string): Promise<{
         shop_name: profile.shop_name ?? null,
         shop_slug: profile.shop_slug ?? null,
         role: profile.role ?? null,
-        seller_tier: profile.seller_tier || 'unverified',
+        seller_tier: profile.seller_tier || DEFAULT_TIER,
         seller_status: profile.seller_status || 'active',
         seller_restriction_reason: profile.seller_restriction_reason ?? null,
         seller_restricted_at: profile.seller_restricted_at ?? null,
@@ -533,7 +528,7 @@ export async function changeSellerTier(params: {
       return { success: false, error: 'Seller not found' }
     }
 
-    const previousTier: string = profile.seller_tier || 'unverified'
+    const previousTier: string = profile.seller_tier || DEFAULT_TIER
     if (previousTier === newTier) {
       return { success: true, previousTier, newTier }
     }

@@ -12,6 +12,7 @@
  */
 
 import { createServiceRoleClient } from '@/lib/supabase/service'
+import { DEFAULT_TIER, type SellerTier } from '@/lib/seller/tiers'
 import { requireAdmin } from './admin-permissions'
 
 /** Latest of several ISO timestamps (nulls skipped); null when all missing. */
@@ -72,7 +73,7 @@ export interface ActiveSeller {
 
 export interface ActiveSellersFilters {
   status?: 'active' | 'restricted' | 'banned'
-  tier?: 'unverified' | 'bronze' | 'silver' | 'gold' | 'platinum' | 'diamond'
+  tier?: SellerTier
   searchQuery?: string
   sortBy?: ActiveSellerSort
   sortOrder?: 'asc' | 'desc'
@@ -199,7 +200,7 @@ export async function getActiveSellers(filters?: ActiveSellersFilters): Promise<
         email: p.email || 'No email',
         avatar_url: p.avatar_url ?? null,
         shop_name: p.shop_name ?? null,
-        seller_tier: p.seller_tier || 'unverified',
+        seller_tier: p.seller_tier || DEFAULT_TIER,
         seller_status: p.seller_status || 'active',
         kyc_status: p.kyc_status ?? null,
         founding_seller: p.founding_seller === true,

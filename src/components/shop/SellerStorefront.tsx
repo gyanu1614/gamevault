@@ -13,7 +13,7 @@ import { SITE_URL } from '@/config/site'
 import React, { useLayoutEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { Package, Calendar, Star, Crown, Gem, Sparkles, Award, ShieldCheck } from 'lucide-react'
+import { Package, Calendar, Star } from 'lucide-react'
 
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox'
@@ -21,6 +21,7 @@ import SellerProfileBanner from '@/components/shop/SellerProfileBanner'
 import ReviewsList from '@/components/reviews/ReviewsList'
 import { cn } from '@/lib/utils'
 import { getAvatarUrl } from '@/lib/utils/avatar'
+import { tierByKey, DEFAULT_TIER, type SellerTier } from '@/lib/seller/tiers'
 
 interface SellerStorefrontProps {
   seller: {
@@ -35,15 +36,6 @@ interface SellerStorefrontProps {
       activeListings: number
     }
   }
-}
-
-const TIER_CONFIG: Record<string, { label: string; cls: string }> = {
-  unverified: { label: 'Unverified', cls: 'text-zinc-300' },
-  bronze:     { label: 'Bronze',     cls: 'text-orange-300' },
-  silver:     { label: 'Silver',     cls: 'text-slate-200' },
-  gold:       { label: 'Gold',       cls: 'text-yellow-300' },
-  platinum:   { label: 'Platinum',   cls: 'text-cyan-300' },
-  diamond:    { label: 'Diamond',    cls: 'text-lime-text' },
 }
 
 export default function SellerStorefront({ seller }: SellerStorefrontProps) {
@@ -87,8 +79,8 @@ export default function SellerStorefront({ seller }: SellerStorefrontProps) {
     selectedGame === 'all' ? seller.listings : listingsByGame[selectedGame] || []
 
   const isOnline = false
-  const sellerTier = (seller.profile.seller_tier || 'bronze') as keyof typeof TIER_CONFIG
-  const tier = TIER_CONFIG[sellerTier] ?? TIER_CONFIG.bronze
+  const sellerTier = (seller.profile.seller_tier || DEFAULT_TIER) as SellerTier
+  const tier = tierByKey(sellerTier)
 
   // JSON-LD
   const businessName = sellerDisplayName(seller.profile) || seller.profile.business_name
@@ -135,7 +127,7 @@ export default function SellerStorefront({ seller }: SellerStorefrontProps) {
             reviewsCount={seller.stats.totalReviews}
             listingsCount={seller.stats.activeListings}
             totalSales={seller.stats.totalSales}
-            sellerTier={sellerTier as 'bronze' | 'silver' | 'gold' | 'platinum' | 'diamond'}
+            sellerTier={sellerTier}
             isFoundingSeller={seller.profile.founding_seller === true}
             bannerConfig={
               seller.profile.banner_url
@@ -233,7 +225,7 @@ export default function SellerStorefront({ seller }: SellerStorefrontProps) {
                       icon={Star}
                       label="Seller tier"
                       value={
-                        <span className={cn('font-semibold uppercase', tier.cls)}>
+                        <span className={cn('font-semibold uppercase', tier.colors.text)}>
                           {tier.label}
                         </span>
                       }

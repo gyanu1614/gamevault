@@ -594,11 +594,8 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
   const seller = listing.seller ?? {}
   const sellerName = seller.shop_name || seller.username || 'Seller'
   const reviewCount = Number(seller.total_reviews ?? 0)
-  // Verified badge: the manual is_verified flag OR any tier above
-  // 'unverified' — every listing seller has passed KYC, and tier bronze+
-  // is the DB signal for that.
-  const isVerifiedSeller =
-    !!seller.is_verified || (!!seller.seller_tier && seller.seller_tier !== 'unverified')
+  // Every seller is KYC-verified; the blue badge keys purely on is_verified.
+  const isVerifiedSeller = !!seller.is_verified
   const positivePct = reviewCount > 0 ? Math.min(100, (Number(seller.seller_rating ?? 0) / 5) * 100) : null
   const deliveryTime = listing.delivery_time || 'Instant'
 

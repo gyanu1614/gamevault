@@ -13,6 +13,7 @@ import { redirect } from 'next/navigation'
 import { ArrowLeft, TrendingUp, Shield, Zap } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { getAllTierConfigs, getMyTierInfo } from '@/lib/actions/seller-tiers'
+import { DEFAULT_TIER, tierByKey } from '@/lib/seller/tiers'
 import TierBadge from '@/components/seller/tiers/TierBadge'
 import TierCard, { type TierConfig } from '@/components/seller/tiers/TierCard'
 import TierProgressBar from '@/components/seller/tiers/TierProgressBar'
@@ -34,12 +35,12 @@ export default async function SellerTiersPage() {
     getMyTierInfo(),
   ])
 
-  const currentTier = (myData?.tierInfo.current_tier ?? 'unverified') as string
+  const currentTier = (myData?.tierInfo.current_tier ?? DEFAULT_TIER) as string
   const eligibleTier = (myData?.tierInfo.eligible_tier ?? currentTier) as string
   const commissionPct = myData
     ? (myData.tierInfo.commission_rate * 100).toFixed(1)
-    : '9.9'
-  const listingLimit = myData?.tierInfo.listing_limit ?? 5
+    : (tierByKey('quartz').commissionRate * 100).toFixed(2)
+  const listingLimit = myData?.tierInfo.listing_limit ?? tierByKey('quartz').listingLimit
 
   // Build next-tier requirement object for TierProgressBar
   const nextTierConfig = myData?.tierInfo.next_tier

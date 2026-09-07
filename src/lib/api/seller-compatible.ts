@@ -6,6 +6,7 @@
 
 import { createClient } from '@/lib/supabase/client'
 import { slugify } from '@/lib/utils'
+import { type SellerTier, DEFAULT_TIER } from '@/lib/seller/tiers'
 
 const supabase = createClient()
 
@@ -17,7 +18,9 @@ export type ListingStatus =
   | 'draft' | 'active' | 'sold' | 'archived' | 'suspended' | 'paused'
   | 'pending_approval' | 'changes_requested' | 'rejected'
 export type OrderStatus = 'pending' | 'paid' | 'processing' | 'completed' | 'disputed' | 'refunded' | 'cancelled'
-export type SellerTier = 'bronze' | 'silver' | 'gold' | 'platinum'
+// Seller tiers now come from the central gemstone ladder — re-exported so
+// existing importers of `SellerTier` from this module keep working.
+export type { SellerTier }
 
 export interface Listing {
   id: string
@@ -1000,7 +1003,8 @@ export const settingsApi = {
       .single() as any
 
     if (error) throw error
-    return data
+    // Null/legacy tier values fall back to the entry gemstone tier (Quartz).
+    return { ...data, seller_tier: (data?.seller_tier as SellerTier) || DEFAULT_TIER }
   },
 }
 

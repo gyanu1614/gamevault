@@ -60,6 +60,7 @@ import Image from 'next/image'
 import { toast } from 'sonner'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
+import { DEFAULT_TIER } from '@/lib/seller/tiers'
 import { useNow } from '@/hooks/use-now'
 import {
   FOREST_BG,
@@ -97,7 +98,7 @@ interface QueueData {
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function titleCaseTier(tier: string | null | undefined): string {
-  const t = (tier || 'unverified').replace(/[-_]/g, ' ')
+  const t = (tier || DEFAULT_TIER).replace(/[-_]/g, ' ')
   return t.replace(/\b\w/g, (c) => c.toUpperCase())
 }
 

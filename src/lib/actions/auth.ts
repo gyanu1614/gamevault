@@ -8,6 +8,7 @@ import { redirect } from 'next/navigation'
 import type { z } from 'zod'
 import { applyReferralAtSignup } from '@/lib/actions/referral'
 import { generateDiceBearAvatar } from '@/lib/utils/avatar'
+import { DEFAULT_TIER } from '@/lib/seller/tiers'
 
 // Signup with username
 export async function signup(formData: {
@@ -555,7 +556,7 @@ export async function registerAsSeller(formData: {
     // Check if user is already a seller
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('seller_tier')
+      .select('role, is_seller')
       .eq('id', user.id)
       .maybeSingle() as any
 
@@ -568,15 +569,17 @@ export async function registerAsSeller(formData: {
       return { error: 'Profile not found. Please try logging out and back in.' }
     }
 
-    if (profile.seller_tier) {
+    // "Already a seller" must key on role/is_seller — NOT seller_tier, which now
+    // defaults to the entry tier ('quartz') on every profile, seller or not.
+    if (profile.role === 'seller' || profile.is_seller) {
       return { error: 'You are already a seller' }
     }
 
-    // Update profile to make user a seller (bronze tier by default)
+    // Update profile to make user a seller (entry tier by default)
     const { data, error } = await (supabase
       .from('profiles')
       .update as any)({
-        seller_tier: 'bronze',
+        seller_tier: DEFAULT_TIER,
         ...(formData.businessName && { business_name: formData.businessName }),
         ...(formData.paypalEmail && { paypal_email: formData.paypalEmail }),
       })
