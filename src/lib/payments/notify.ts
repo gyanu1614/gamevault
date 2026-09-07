@@ -133,7 +133,7 @@ export async function notifyOrderTransition(
           userId: order.buyer_id,
           type: 'order_cancelled',
           title: 'Order Cancelled',
-          message: `We didn't receive your payment in time, so order #${orderNumber} ("${order.listingTitle}") was cancelled. Any wallet credit you applied was returned to your wallet.`,
+          message: `${order.listingTitle} · #${orderNumber} — no payment received. Any store credit was returned.`,
           link: `/account/orders/${order.id}`,
         }),
       ])
@@ -178,7 +178,7 @@ export async function notifyOrderTransition(
           userId: order.seller_id,
           type: 'new_order',
           title: 'New Order Received',
-          message: `${order.buyer.name} bought "${order.listingTitle}" — order #${orderNumber}. Start delivery now.`,
+          message: `${order.listingTitle} · #${orderNumber} · ${order.buyer.name}`,
           link: `/account/orders/${order.id}`,
         }),
       ])
@@ -194,14 +194,14 @@ export async function notifyOrderTransition(
           userId: order.seller_id,
           type: 'chargeback_opened',
           title: 'Payment Dispute Opened',
-          message: `The payment provider opened a dispute on order #${orderNumber} ("${order.listingTitle}"). Our team is handling it.`,
+          message: `${order.listingTitle} · #${orderNumber} — our team is handling it.`,
           link: `/account/orders/${order.id}`,
         }),
         insertNotification({
           userId: order.buyer_id,
           type: 'chargeback_opened',
           title: 'Payment Dispute Opened',
-          message: `Your payment provider opened a dispute on order #${orderNumber}. No action is needed unless support contacts you.`,
+          message: `#${orderNumber} — no action needed unless support contacts you.`,
           link: `/account/orders/${order.id}`,
         }),
       ])
@@ -231,14 +231,14 @@ export async function notifyOrderTransition(
         userId: order.buyer_id,
         type: 'order_refunded',
         title: 'Money In Your Wallet',
-        message: `Order #${orderNumber} was refunded — $${refundedAmount.toFixed(2)} was added to your DropMarket wallet as store credit. Spend it instantly or withdraw it.`,
+        message: `$${refundedAmount.toFixed(2)} store credit added · #${orderNumber}`,
         link: '/account/wallet',
       }),
       insertNotification({
         userId: order.seller_id,
         type: 'order_refunded',
         title: 'Order Refunded',
-        message: `Order #${orderNumber} ("${order.listingTitle}") was refunded to the buyer.`,
+        message: `${order.listingTitle} · #${orderNumber} — refunded to the buyer.`,
         link: `/account/orders/${order.id}`,
       }),
     ])

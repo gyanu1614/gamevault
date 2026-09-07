@@ -62,7 +62,7 @@ export default async function SellerTiersPage() {
     <div className="min-h-[calc(100vh-3.5rem)]">
       {/* ── Header ─────────────────────────────────────────────────────────── */}
       <div className="border-b border-border-subtle bg-[rgba(10,10,15,0.6)] backdrop-blur-xl">
-        <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
+        <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
           <Link
             href="/account/dashboard"
             className="mb-4 inline-flex items-center gap-2 text-sm text-zinc-500 hover:text-white transition-colors"
@@ -77,7 +77,7 @@ export default async function SellerTiersPage() {
         </div>
       </div>
 
-      <div className="mx-auto max-w-5xl px-4 pb-10 sm:px-6 space-y-10">
+      <div className="mx-auto max-w-7xl px-4 pb-10 sm:px-6 space-y-10">
 
         {/* ── Hero: current tier ──────────────────────────────────────────── */}
         <div className="rounded-lg border border-border-subtle card-frost p-6 sm:p-8">

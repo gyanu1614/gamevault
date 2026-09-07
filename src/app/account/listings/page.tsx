@@ -544,12 +544,21 @@ function OffersContent() {
     </DropdownMenu>
   )
 
+  useEffect(() => {
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = prev
+    }
+  }, [])
+
   return (
-    // Navbar clearance comes from the account layout (pt-14 — V21/P7.ak);
-    // this wrapper only adds internal rhythm.
-    <div className="mx-auto w-full max-w-[1400px] px-4 pb-20 pt-2 sm:px-6 lg:px-10 xl:px-14">
+    // Viewport-locked like Messages/Purchases: chrome static, ONLY the
+    // results table scrolls. Pinned to the navbar's real bottom edge.
+    <div className="fixed inset-x-0 bottom-0 top-[var(--navbar-bottom)] z-[1] flex flex-col overflow-hidden lg:left-72">
+    <div className="mx-auto flex h-full min-h-0 w-full max-w-[1400px] flex-col px-4 pt-7 sm:px-6 lg:px-10 xl:px-14">
       {isRestricted && (
-        <div className="mb-6">
+        <div className="mb-3 shrink-0">
           <RestrictionBanner status={sellerStatus} />
         </div>
       )}
@@ -561,7 +570,7 @@ function OffersContent() {
         actions={
           <Link
             href="/sell/new"
-            className="flex h-10 items-center gap-2 rounded-md bg-lime px-4 text-[13.5px] font-bold text-text-inverse shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] transition-colors hover:bg-lime-hover"
+            className="hidden h-10 items-center gap-2 rounded-md bg-lime px-4 text-[13.5px] font-bold text-text-inverse shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] transition-colors hover:bg-lime-hover sm:flex"
           >
             <Plus className="h-4 w-4" strokeWidth={2.75} />
             Add New Offer
@@ -570,10 +579,11 @@ function OffersContent() {
       />
 
       {/* ── Filter row ── */}
-      <div className="mt-5 flex flex-wrap items-center gap-2.5">
+      <div className="mt-4 flex shrink-0 flex-wrap items-center gap-2.5">
         {/* Below sm the three triggers share one row (grid); at sm+ the
             wrapper dissolves (contents) into the original flex-wrap row. */}
-        <div className="grid w-full grid-cols-3 gap-2.5 sm:contents">
+        <div className="flex w-full items-center gap-2 sm:contents">
+        <div className="flex min-w-0 flex-1 flex-nowrap gap-2.5 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [&>*]:shrink-0 [&>button]:whitespace-nowrap sm:contents">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <FilterTrigger
@@ -669,6 +679,16 @@ function OffersContent() {
           </DropdownMenuContent>
         </DropdownMenu>
         </div>
+        {/* Phones: Add New Offer pinned at the row's RIGHT edge — the chips
+            scroll underneath it. */}
+        <Link
+          href="/sell/new"
+          className="flex h-10 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md bg-lime px-3 text-[13px] font-bold text-text-inverse shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] transition-colors hover:bg-lime-hover sm:hidden"
+        >
+          <Plus className="h-4 w-4" strokeWidth={2.75} />
+          Add Offer
+        </Link>
+        </div>
 
         <div className="relative min-w-0 flex-1 sm:min-w-[220px] sm:max-w-[320px]">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary" />
@@ -705,19 +725,22 @@ function OffersContent() {
       </div>
 
       {/* ── Results card ── */}
-      <div className="relative mt-4 overflow-hidden rounded-lg border border-border-default bg-[rgba(20,20,27,0.56)] shadow-elevated backdrop-blur-md">
+      <div className="relative mt-4 mb-3 flex min-h-0 flex-1 flex-col overflow-hidden rounded-md border border-border-default bg-[rgba(20,20,27,0.56)] shadow-elevated backdrop-blur-md lg:mb-4">
         {/* Top sheen — the bundle-card light-from-above, on the card itself. */}
         <span aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.05),transparent)]" />
 
-        {/* md+ keeps the full table; below md the stacked card list renders instead. */}
-        <div className="hidden overflow-x-auto md:block">
+        {/* The table renders at EVERY width (owner call 2026-09-07 — the
+            reference app ships the same row look on phones, horizontally
+            scrollable). The old below-md stacked-card list is retired. */}
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+          <div className="overflow-x-auto overscroll-x-contain">
           <table className="w-full min-w-[1160px] border-collapse text-left">
             <thead>
               <tr className="text-[12px] font-extrabold uppercase tracking-[0.08em] text-[#6d7488]">
-                <th className="w-12 py-3 pl-5 pr-2">
+                <th className="w-12 py-3 pl-5 pr-2 max-sm:hidden">
                   <Checkbox checked={allSelected} onCheckedChange={toggleAll} aria-label="Select all offers" />
                 </th>
-                <th className="min-w-[220px] px-3 py-3">Offer</th>
+                <th className="min-w-[220px] px-3 py-3 max-sm:pl-4">Offer</th>
                 <th className="px-3 py-3 whitespace-nowrap">Delivery Time</th>
                 <th className="px-3 py-3">Price</th>
                 <th className="px-3 py-3">Status</th>
@@ -758,20 +781,20 @@ function OffersContent() {
                       selected.has(l.id) && 'bg-white/[0.03]',
                     )}
                   >
-                    <td className="py-4 pl-5 pr-2">
+                    <td className="py-2.5 pl-5 pr-2 max-sm:hidden">
                       <Checkbox
                         checked={selected.has(l.id)}
                         onCheckedChange={() => toggleOne(l.id)}
                         aria-label={`Select ${l.title}`}
                       />
                     </td>
-                    <td className="px-3 py-4">
+                    <td className="px-3 py-2.5">
                       <span className="flex items-center gap-3">
                         {logo ? (
                           /* eslint-disable-next-line @next/next/no-img-element */
-                          <img src={logo} alt="" className="h-10 w-10 flex-none rounded-md object-cover ring-1 ring-white/10" />
+                          <img src={logo} alt="" className="h-9 w-9 flex-none rounded-md object-cover ring-1 ring-white/10" />
                         ) : (
-                          <span className="flex h-10 w-10 flex-none items-center justify-center rounded-md bg-white/[0.05] ring-1 ring-white/10">
+                          <span className="flex h-9 w-9 flex-none items-center justify-center rounded-md bg-white/[0.05] ring-1 ring-white/10">
                             <Package className="h-4 w-4 text-text-tertiary" />
                           </span>
                         )}
@@ -803,26 +826,26 @@ function OffersContent() {
                         </span>
                       </span>
                     </td>
-                    <td className="whitespace-nowrap px-3 py-4 text-[13px] text-text-secondary">
+                    <td className="whitespace-nowrap px-3 py-2.5 text-[13px] text-text-secondary">
                       {formatDeliveryLabel(l.delivery_time)}
                     </td>
-                    <td className="px-3 py-4">
+                    <td className="px-3 py-2.5">
                       <PriceField value={l.price} unit="Unit" onSave={(next) => savePrice(l, next)} />
                     </td>
-                    <td className="px-3 py-4"><StatusChip k={chip} /></td>
-                    <td className="px-3 py-4 text-[13.5px] font-bold tabular-nums text-text-primary">
+                    <td className="px-3 py-2.5"><StatusChip k={chip} /></td>
+                    <td className="px-3 py-2.5 text-[13.5px] font-bold tabular-nums text-text-primary">
                       {l.is_unlimited ? '∞' : fmtCompact(l.quantity ?? 0)}
                     </td>
-                    <td className="whitespace-nowrap px-3 py-4 text-[13px] tabular-nums text-text-secondary">
+                    <td className="whitespace-nowrap px-3 py-2.5 text-[13px] tabular-nums text-text-secondary">
                       {(l.min_quantity ?? 1).toLocaleString()} Unit
                     </td>
-                    <td className="px-3 py-4">
+                    <td className="px-3 py-2.5">
                       <span className="whitespace-nowrap rounded-md border border-white/[0.08] bg-white/[0.04] px-2 py-[3px] text-[12px] font-semibold text-text-secondary">
                         {methodLabel(l.delivery_method)}
                       </span>
                     </td>
-                    <td className="px-3 py-4"><OfferIdChip listing={l} /></td>
-                    <td className="whitespace-nowrap px-3 py-4 text-[12.5px] text-text-tertiary">
+                    <td className="px-3 py-2.5"><OfferIdChip listing={l} /></td>
+                    <td className="whitespace-nowrap px-3 py-2.5 text-[12.5px] text-text-tertiary">
                       {fmtRelative(l.updated_at)}
                     </td>
                     <td className="sticky right-0 z-10 bg-[linear-gradient(to_right,rgba(16,17,23,0)_0%,rgba(16,17,23,0.92)_42%,rgba(16,17,23,0.99)_68%)] py-4 pl-10 pr-5">
@@ -855,11 +878,12 @@ function OffersContent() {
               )}
             </tbody>
           </table>
+          </div>
         </div>
 
         {/* ── Card list (below md) — same rows, data and actions as the
             table, stacked so nothing hides off-screen on phones. ── */}
-        <div className="md:hidden">
+        <div className="hidden">
           <div className="flex items-center justify-between gap-3 px-4 py-1">
             <label className="-ml-2 flex min-h-11 cursor-pointer items-center gap-2.5 px-2 text-[12px] font-extrabold uppercase tracking-[0.08em] text-[#6d7488]">
               <Checkbox checked={allSelected} onCheckedChange={toggleAll} aria-label="Select all offers" />
@@ -902,9 +926,9 @@ function OffersContent() {
                   </label>
                   {logo ? (
                     /* eslint-disable-next-line @next/next/no-img-element */
-                    <img src={logo} alt="" className="h-10 w-10 flex-none rounded-md object-cover ring-1 ring-white/10" />
+                    <img src={logo} alt="" className="h-9 w-9 flex-none rounded-md object-cover ring-1 ring-white/10" />
                   ) : (
-                    <span className="flex h-10 w-10 flex-none items-center justify-center rounded-md bg-white/[0.05] ring-1 ring-white/10">
+                    <span className="flex h-9 w-9 flex-none items-center justify-center rounded-md bg-white/[0.05] ring-1 ring-white/10">
                       <Package className="h-4 w-4 text-text-tertiary" />
                     </span>
                   )}
@@ -961,7 +985,7 @@ function OffersContent() {
                   <span className="whitespace-nowrap">
                     Delivery <span className="text-text-secondary">{formatDeliveryLabel(l.delivery_time)}</span>
                   </span>
-                  <span className="whitespace-nowrap">Updated {fmtRelative(l.updated_at)}</span>
+                  <span className="whitespace-nowrap max-sm:hidden">Updated {fmtRelative(l.updated_at)}</span>
                 </div>
               </div>
             )
@@ -986,7 +1010,7 @@ function OffersContent() {
         </div>
 
         {/* ── Pagination footer ── */}
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/[0.06] px-5 py-3.5">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/[0.06] px-5 py-3.5 max-sm:justify-center">
           <div className="flex items-center gap-5 text-[12.5px] text-text-tertiary">
             <span>
               Showing <span className="font-semibold text-text-secondary">{rangeStart}–{rangeEnd}</span> of{' '}
@@ -1028,7 +1052,7 @@ function OffersContent() {
 
       {/* ── Archive confirm ── */}
       <Dialog open={archiveTarget != null} onOpenChange={(o) => !o && setArchiveTarget(null)}>
-        <DialogContent className="rounded-lg">
+        <DialogContent className="rounded-md">
           <DialogHeader>
             <DialogTitle>Archive This Offer?</DialogTitle>
             <DialogDescription>
@@ -1055,7 +1079,7 @@ function OffersContent() {
 
       {/* ── Delete confirm (single offer) ── */}
       <Dialog open={deleteTarget != null} onOpenChange={(o) => !o && setDeleteTarget(null)}>
-        <DialogContent className="rounded-lg">
+        <DialogContent className="rounded-md">
           <DialogHeader>
             <DialogTitle>Delete This Offer?</DialogTitle>
             <DialogDescription>
@@ -1083,7 +1107,7 @@ function OffersContent() {
 
       {/* ── Bulk delete confirm ── */}
       <Dialog open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen}>
-        <DialogContent className="rounded-lg">
+        <DialogContent className="rounded-md">
           <DialogHeader>
             <DialogTitle>Delete {selected.size} {selected.size === 1 ? 'Offer' : 'Offers'}?</DialogTitle>
             <DialogDescription>
@@ -1110,7 +1134,7 @@ function OffersContent() {
 
       {/* ── Bulk delivery time ── */}
       <Dialog open={bulkDeliveryOpen} onOpenChange={setBulkDeliveryOpen}>
-        <DialogContent className="rounded-lg">
+        <DialogContent className="rounded-md">
           <DialogHeader>
             <DialogTitle>Change Delivery Time</DialogTitle>
             <DialogDescription>
@@ -1132,6 +1156,7 @@ function OffersContent() {
           </div>
         </DialogContent>
       </Dialog>
+    </div>
     </div>
   )
 }

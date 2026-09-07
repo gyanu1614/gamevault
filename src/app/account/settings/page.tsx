@@ -93,6 +93,15 @@ export default function SettingsPage() {
   const { profile, isLoading: profileLoading, updateProfile, isUpdating } = useSellerSettings()
   const { stats: earnings, payouts, isLoadingStats, isLoadingPayouts } = useSellerEarnings()
   const [activeTab, setActiveTab] = useState<SettingsTab>('profile')
+
+  // Deep link: /account/settings?tab=payouts (dashboard checklist, wallet
+  // links). Window-read on mount keeps this Suspense-free.
+  useEffect(() => {
+    const t = new URLSearchParams(window.location.search).get('tab')
+    if (t === 'profile' || t === 'seller' || t === 'payouts' || t === 'notifications' || t === 'security') {
+      setActiveTab(t)
+    }
+  }, [])
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
   const [avatarError, setAvatarError] = useState<string | null>(null)
 
@@ -419,7 +428,7 @@ export default function SettingsPage() {
     // V22 — Transparent shell (was opaque bg-bg-base "black box") so the
     // account hero bleeds through like every other sidebar page; max-w-7xl
     // + shared AccountPageHeader to match their alignment + title size.
-    <div className="min-h-[calc(100vh-3.5rem)] pb-12">
+    <div className="pb-12">
       <div className="mx-auto w-full max-w-full px-4 sm:px-6 md:max-w-7xl lg:px-8">
         {/* V19/P21 — Success toasts now go through the global sonner
             instance (RootLayout). No more page-local AnimatePresence. */}
@@ -717,7 +726,13 @@ export default function SettingsPage() {
                 <SectionCard>
                   <h2 className="text-sm font-semibold text-text-primary mb-4">Payout Method</h2>
                   <div className="space-y-4">
-                    <SettingInput label="PayPal Email" required hint="Earnings will be sent to this PayPal account">
+                    <p className="text-[13px] leading-relaxed text-text-secondary">
+                      Withdrawals are currently paid in crypto — BTC, ETH, USDT and USDC
+                      (TRON, Ethereum and Polygon networks). You enter your wallet address
+                      when you request a withdrawal. Bank transfer, PayPal and Payoneer are
+                      coming soon.
+                    </p>
+                    <SettingInput label="PayPal Email (Coming Soon)" hint="Saved now, used once PayPal payouts go live">
                       <div className="relative">
                         <Mail className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary" />
                         <input
@@ -729,10 +744,10 @@ export default function SettingsPage() {
                       </div>
                     </SettingInput>
                     <Link
-                      href="/account/wallet/connect"
+                      href="/account/wallet/withdraw"
                       className="inline-flex items-center gap-2 text-sm font-medium text-lime-text hover:underline"
                     >
-                      Manage Payout Connection
+                      Manage Withdrawals
                       <ChevronRight className="h-3.5 w-3.5" />
                     </Link>
                   </div>

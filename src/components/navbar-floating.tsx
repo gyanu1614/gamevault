@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { SmartLink } from '@/components/global/SmartLink'
 import { usePathname, useRouter } from 'next/navigation'
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
-import { Search, User, LogOut, Menu, X, ChevronDown, ChevronLeft, ChevronRight, Settings, Store, Package, MessageSquare, MessagesSquare, PlusCircle, Heart, Wallet, Star, List, Bell, BellDot, LayoutDashboard, Activity, Gauge, Sparkles, Shield, Coins, UserCircle2, Swords, Zap, Rocket, LifeBuoy ,
+import { Search, User, LogOut, Menu, X, ChevronDown, ChevronLeft, ChevronRight, Settings, Store, Package, MessageSquare, MessagesSquare, PanelLeftOpen, PanelLeftClose, PlusCircle, Heart, Wallet, Star, List, Bell, BellDot, LayoutDashboard, Activity, Gauge, Sparkles, Shield, Coins, UserCircle2, Swords, Zap, Rocket, LifeBuoy ,
   ShoppingCart,
   LayoutGrid,
 } from 'lucide-react'
@@ -232,6 +232,15 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
   // categories). menuRoot 'browse' is reachable via an in-menu row.
   const inAccountArea = pathname?.startsWith('/account') ?? false
   const accountSidebarAvailable = inAccountArea && !/^\/account\/orders\/[^/]+$/.test(pathname || '')
+
+  // Mirror of the account drawer's open state (AccountSidebar broadcasts it)
+  // so the trigger icon can morph open ⇄ close like a real panel toggle.
+  const [accountSidebarOpen, setAccountSidebarOpen] = useState(false)
+  useEffect(() => {
+    const onState = (e: Event) => setAccountSidebarOpen(!!(e as CustomEvent<boolean>).detail)
+    window.addEventListener('dm:account-sidebar-state', onState)
+    return () => window.removeEventListener('dm:account-sidebar-state', onState)
+  }, [])
   // Mobile: the bar floats transparent over the hero at the very top ONLY
   // on the homepage. Marketplace/category pages (which have a sub-navbar)
   // keep the solid bar so the two-bar unit reads as one solid block.
@@ -347,10 +356,10 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
   // navbar is permanent — it still morphs to the full-width bar via `scrolled`,
   // it just never leaves. The hide is a Framer inline transform, so this can't
   // be expressed as a `max-lg:` utility; it has to be gated in JS.
-  const { hidden: scrollHidden, scrolled: scrolledNative } = useScrollDirection({
-    revealAt: 40,
-    hideBelow: 1024,
-  })
+  // Hide-on-scroll is retired (owner call 2026-09-07): the navbar stays
+  // pinned at every width. Only the beta banner scrolls away — the bar
+  // rides up under it via --beta-banner-offset and sticks to the top.
+  const { scrolled: scrolledNative } = useScrollDirection({ revealAt: 40 })
   // V19/P15.b — `forceScrolled` short-circuits the scroll listener so
   // pages like /sell/* can lock the navbar in its full-width bar mode
   // even at scrollY=0. Everywhere else falls through to live scroll.
@@ -867,18 +876,8 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
           // it's visible, then slides to the true top as the banner scrolls
           // away. Falls back to 0px when no banner is mounted.
           ['--nav-top' as string]: scrolled ? '0px' : '12px',
-          // Hide-on-scroll: slide the whole bar up when scrolling down.
-          // Never hide while a menu/dropdown/search is open, or at the top.
-          y:
-            scrollHidden &&
-            !mobileMenuOpen &&
-            !notificationsOpen &&
-            !activityOpen &&
-            !userMenuOpen &&
-            !searchExpanded &&
-            !activeDropdown
-              ? '-120%'
-              : '0%',
+          // The bar never hides — it stays pinned while the page scrolls.
+          y: '0%',
         }}
         transition={{ type: 'spring', stiffness: 420, damping: 40, mass: 0.8 }}
         style={{
@@ -956,7 +955,7 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
             <Button
               variant="ghost"
               size="icon"
-              className="h-11 w-11 shrink-0 rounded-full text-gray-300 transition-transform duration-[120ms] hover:bg-white/10 hover:text-white active:scale-[0.96] active:brightness-95 lg:hidden"
+              className="h-10 w-10 shrink-0 rounded-full text-gray-300 transition-transform duration-[120ms] hover:bg-white/10 hover:text-white active:scale-[0.96] active:brightness-95 lg:hidden"
               onClick={() => {
                 // Account pages use the full desktop-parity sidebar on mobile.
                 // Marketplace pages keep the two-pane category menu.
@@ -978,7 +977,30 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                 setActivityOpen(false)
               }}
             >
-              {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+              {accountSidebarAvailable && user ? (
+                // Account pages: a real panel toggle that morphs with the
+                // drawer state (GameBoost-style), animated via framer.
+                <AnimatePresence mode="wait" initial={false}>
+                  <motion.span
+                    key={accountSidebarOpen ? 'panel-close' : 'panel-open'}
+                    initial={{ rotate: -90, opacity: 0, scale: 0.7 }}
+                    animate={{ rotate: 0, opacity: 1, scale: 1 }}
+                    exit={{ rotate: 90, opacity: 0, scale: 0.7 }}
+                    transition={{ duration: 0.15, ease: 'easeOut' }}
+                    className="grid"
+                  >
+                    {accountSidebarOpen ? (
+                      <PanelLeftClose className="h-[18px] w-[18px]" />
+                    ) : (
+                      <PanelLeftOpen className="h-[18px] w-[18px]" />
+                    )}
+                  </motion.span>
+                </AnimatePresence>
+              ) : mobileMenuOpen ? (
+                <X className="h-5 w-5" />
+              ) : (
+                <Menu className="h-5 w-5" />
+              )}
             </Button>
 
             {/* Logo — max-lg:mr-auto packs [hamburger][logo] to the left
@@ -994,9 +1016,9 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                 alt="DropMarket"
                 width={32}
                 height={32}
-                className="h-8 w-8 shrink-0"
+                className="h-8 w-8 shrink-0 max-lg:h-7 max-lg:w-7"
               />
-              <span className="inline-block font-bold text-white">DropMarket</span>
+              <span className="inline-block font-bold text-white max-lg:text-[15px]">DropMarket</span>
             </Link>
 
             {/* V21/P7.r — Divider hides while search is expanded. */}
@@ -1085,12 +1107,23 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
 
               {user && (
                 <>
+                  {/* Mobile chat shortcut — straight to Messages (parity with
+                      the reference top bar); desktop keeps its existing entry
+                      points, so lg:hidden. */}
+                  <Link
+                    href="/account/messages"
+                    aria-label="Messages"
+                    className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-gray-100 transition-colors hover:bg-white/15 hover:text-white lg:hidden"
+                  >
+                    <MessagesSquare className="h-[19px] w-[19px]" />
+                  </Link>
+
                   {/* Notifications Dropdown */}
                   <div className="relative" data-dropdown>
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="relative h-10 w-10 rounded-full text-gray-100 hover:bg-white/15 hover:text-white"
+                      className="relative h-10 w-10 rounded-full text-gray-100 hover:bg-white/15 hover:text-white max-lg:h-9 max-lg:w-9"
                       onClick={() => {
                         setNotificationsOpen(!notificationsOpen)
                         setActivityOpen(false)
@@ -1099,9 +1132,9 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                       }}
                     >
                       {unreadNotificationCount > 0 ? (
-                        <BellDot className="h-[21px] w-[21px]" />
+                        <BellDot className="h-[21px] w-[21px] max-lg:h-[19px] max-lg:w-[19px]" />
                       ) : (
-                        <Bell className="h-[21px] w-[21px]" />
+                        <Bell className="h-[21px] w-[21px] max-lg:h-[19px] max-lg:w-[19px]" />
                       )}
                       {unreadNotificationCount > 0 && (
                         <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-lime px-1 text-[10px] font-bold text-text-inverse">
@@ -1123,14 +1156,14 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                         <div
                           aria-hidden
                           onClick={() => setNotificationsOpen(false)}
-                          className="animate-fade-in fixed inset-0 top-[var(--navbar-bottom)] bg-black/60 sm:hidden"
+                          className="animate-fade-in fixed left-0 right-0 top-full h-[100dvh] bg-black/60 sm:hidden"
                         />
-                        <div className="fixed inset-x-0 top-[var(--navbar-bottom)] sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-[27px] sm:w-[480px] sm:max-w-[92vw] animate-in fade-in-0 sm:zoom-in-95 slide-in-from-top-2 duration-200 max-sm:duration-[250ms]">
+                        <div className="fixed inset-x-0 top-full sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-[27px] sm:w-[480px] sm:max-w-[92vw] animate-in fade-in-0 sm:zoom-in-95 slide-in-from-top-2 duration-200 max-sm:duration-[250ms]">
                           {/* V61 — Marketplace glass panel (was flat black):
                               near-opaque dark surface + top sheen, roomier
                               type and spacing. Capped to the dynamic viewport
                               so short phones scroll the list internally. */}
-                          <div className="relative flex max-h-[calc(100dvh-7rem)] flex-col overflow-hidden rounded-lg border border-[#A3E635]/[0.12] bg-[linear-gradient(180deg,#14241A_0%,#0E1611_100%)] shadow-[0_24px_48px_-12px_rgba(0,0,0,0.85)] p-5 max-sm:rounded-none max-sm:rounded-b-2xl max-sm:border-x-0 max-sm:border-t-0 max-sm:max-h-[calc(100dvh-60px-env(safe-area-inset-bottom)-16px)]">
+                          <div className="relative flex max-h-[calc(100dvh-7rem)] flex-col overflow-hidden rounded-lg border border-border-default bg-[#17171F] shadow-[0_24px_48px_-12px_rgba(0,0,0,0.85)] p-5 before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:h-14 before:bg-[linear-gradient(to_bottom,rgba(255,255,255,0.045),transparent)] before:content-[''] max-sm:rounded-none max-sm:rounded-b-lg max-sm:border-x-0 max-sm:border-t-0 max-sm:max-h-[calc(100dvh-60px-env(safe-area-inset-bottom)-16px)]">
                             <span aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-16 bg-[linear-gradient(to_bottom,rgba(163,230,53,0.06),transparent)]" />
                             {/* Header - hairline separator spans the full panel width */}
                             <div className="relative -mx-5 mb-4 flex shrink-0 items-center justify-between border-b border-border-subtle px-5 pb-3.5">
@@ -1231,9 +1264,9 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="relative h-10 w-10 rounded-full text-gray-100 hover:bg-white/15 hover:text-white"
+                      className="relative h-10 w-10 rounded-full text-gray-100 hover:bg-white/15 hover:text-white max-lg:h-9 max-lg:w-9"
                     >
-                      <MessagesSquare className="h-[21px] w-[21px]" />
+                      <MessagesSquare className="h-[19px] w-[19px]" />
                       {unreadCount > 0 && (
                         <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-lime px-1 text-[10px] font-bold text-text-inverse">
                           {unreadCount}
@@ -1248,7 +1281,7 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="relative h-10 w-10 rounded-full text-gray-100 hover:bg-white/15 hover:text-white"
+                      className="relative h-10 w-10 rounded-full text-gray-100 hover:bg-white/15 hover:text-white max-lg:h-9 max-lg:w-9"
                       onClick={() => {
                         setActivityOpen(!activityOpen)
                         setNotificationsOpen(false)
@@ -1256,7 +1289,7 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                         setMobileMenuOpen(false)
                       }}
                     >
-                      <Package className="h-[21px] w-[21px]" />
+                      <Package className="h-[21px] w-[21px] max-lg:h-[19px] max-lg:w-[19px]" />
                       {totalActiveOrders > 0 && (
                         <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-lime px-1 text-[10px] font-bold text-text-inverse">
                           {totalActiveOrders > 9 ? '9+' : totalActiveOrders}
@@ -1271,11 +1304,11 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                         <div
                           aria-hidden
                           onClick={() => setActivityOpen(false)}
-                          className="animate-fade-in fixed inset-0 top-[var(--navbar-bottom)] bg-black/60 sm:hidden"
+                          className="animate-fade-in fixed left-0 right-0 top-full h-[100dvh] bg-black/60 sm:hidden"
                         />
-                        <div className="fixed inset-x-0 top-[var(--navbar-bottom)] sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-[27px] sm:w-[480px] sm:max-w-[92vw] animate-in fade-in-0 sm:zoom-in-95 slide-in-from-top-2 duration-200 max-sm:duration-[250ms]">
+                        <div className="fixed inset-x-0 top-full sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-[27px] sm:w-[480px] sm:max-w-[92vw] animate-in fade-in-0 sm:zoom-in-95 slide-in-from-top-2 duration-200 max-sm:duration-[250ms]">
                           {/* V61 — Same glass panel as Notifications. */}
-                          <div className="relative flex max-h-[calc(100dvh-7rem)] flex-col overflow-hidden rounded-lg border border-[#A3E635]/[0.12] bg-[linear-gradient(180deg,#14241A_0%,#0E1611_100%)] shadow-[0_24px_48px_-12px_rgba(0,0,0,0.85)] p-5 max-sm:rounded-none max-sm:rounded-b-2xl max-sm:border-x-0 max-sm:border-t-0 max-sm:max-h-[calc(100dvh-60px-env(safe-area-inset-bottom)-16px)]">
+                          <div className="relative flex max-h-[calc(100dvh-7rem)] flex-col overflow-hidden rounded-lg border border-border-default bg-[#17171F] shadow-[0_24px_48px_-12px_rgba(0,0,0,0.85)] p-5 before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:h-14 before:bg-[linear-gradient(to_bottom,rgba(255,255,255,0.045),transparent)] before:content-[''] max-sm:rounded-none max-sm:rounded-b-lg max-sm:border-x-0 max-sm:border-t-0 max-sm:max-h-[calc(100dvh-60px-env(safe-area-inset-bottom)-16px)]">
                             <span aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-16 bg-[linear-gradient(to_bottom,rgba(163,230,53,0.06),transparent)]" />
                             {/* Header - hairline separator spans the full panel width */}
                             <div className="relative -mx-5 mb-4 flex shrink-0 items-center justify-between border-b border-border-subtle px-5 pb-3.5">
@@ -1361,7 +1394,7 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-10 w-10 rounded-full hover:bg-white/10"
+                    className="h-10 w-10 rounded-full hover:bg-white/10 max-lg:h-9 max-lg:w-9"
                     onClick={() => {
                       setUserMenuOpen(!userMenuOpen)
                       setNotificationsOpen(false)
@@ -1372,7 +1405,7 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                     <img
                       src={getAvatarUrl(user.profile?.avatar_url, user.profile?.username || 'user')}
                       alt={user.profile?.username || 'User'}
-                      className="h-9 w-9 rounded-full ring-2 ring-primary/50"
+                      className="h-9 w-9 rounded-full ring-2 ring-primary/50 max-lg:h-8 max-lg:w-8"
                     />
                   </Button>
 
@@ -1385,16 +1418,16 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                       <div
                         aria-hidden
                         onClick={() => setUserMenuOpen(false)}
-                        className="animate-fade-in fixed inset-0 top-[var(--navbar-bottom)] bg-black/60 sm:hidden"
+                        className="animate-fade-in fixed left-0 right-0 top-full h-[100dvh] bg-black/60 sm:hidden"
                       />
-                      <div className="fixed inset-x-0 top-[var(--navbar-bottom)] sm:absolute sm:inset-x-auto sm:-right-6 sm:top-full sm:mt-[25px] sm:w-[360px] sm:max-w-[92vw] animate-in fade-in-0 sm:zoom-in-95 slide-in-from-top-2 duration-200 max-sm:duration-[250ms]">
+                      <div className="fixed inset-x-0 top-full sm:absolute sm:inset-x-auto sm:-right-6 sm:top-full sm:mt-[25px] sm:w-[360px] sm:max-w-[92vw] animate-in fade-in-0 sm:zoom-in-95 slide-in-from-top-2 duration-200 max-sm:duration-[250ms]">
                         {/* V61 — Marketplace glass panel: near-opaque dark
                             surface + top sheen, wider (360px) with roomier
                             rows so the menu reads as a proper panel, not a
                             cramped context menu. dvh (not vh) cap so the
                             bottom rows never hide behind iOS Safari's
                             toolbar. */}
-                        <div className="relative overflow-hidden rounded-lg border border-border-default bg-[#17171F] p-2 shadow-[0_24px_48px_-12px_rgba(0,0,0,0.85)] max-h-[calc(100dvh-110px)] overflow-y-auto overscroll-contain max-sm:rounded-none max-sm:rounded-b-2xl max-sm:border-x-0 max-sm:border-t-0 max-sm:max-h-[calc(100dvh-60px-env(safe-area-inset-bottom)-16px)]">
+                        <div className="relative overflow-hidden rounded-lg border border-border-default bg-[#17171F] p-2 shadow-[0_24px_48px_-12px_rgba(0,0,0,0.85)] before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:h-14 before:bg-[linear-gradient(to_bottom,rgba(255,255,255,0.045),transparent)] before:content-[''] max-h-[calc(100dvh-110px)] overflow-y-auto overscroll-contain max-sm:rounded-none max-sm:rounded-b-lg max-sm:border-x-0 max-sm:border-t-0 max-sm:max-h-[calc(100dvh-60px-env(safe-area-inset-bottom)-16px)]">
                           <span aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-16 bg-[linear-gradient(to_bottom,rgba(163,230,53,0.06),transparent)]" />
                           {/* User Info card */}
                           <div className="relative border-b border-border-subtle p-2 pb-2">

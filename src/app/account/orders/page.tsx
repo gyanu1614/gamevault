@@ -31,10 +31,12 @@ import {
   Folder,
   Calendar,
   ChevronDown,
+  Copy as CopyIcon,
   Filter as FilterIcon
 } from 'lucide-react'
 import LeaveReviewButton from '@/components/reviews/LeaveReviewButton'
 import { motion } from 'framer-motion'
+import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
 
@@ -106,6 +108,15 @@ function OrdersContent() {
       return () => document.removeEventListener('click', handleClickOutside)
     }
   }, [openDropdown])
+
+  // Route-scoped scroll lock — the shell is the viewport; the list scrolls.
+  useEffect(() => {
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = prev
+    }
+  }, [])
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -345,10 +356,12 @@ function OrdersContent() {
     : 'Purchases'
 
   return (
-    <div className="min-h-[calc(100vh-3.5rem)] pb-12">
-      <div className="mx-auto w-full max-w-full px-4 sm:px-6 md:max-w-7xl lg:px-8">
+    // Viewport-locked like /account/messages: title + filters are static,
+    // only the orders list scrolls (pinned to the navbar's bottom edge).
+    <div className="fixed inset-x-0 bottom-0 top-[var(--navbar-bottom)] z-[1] flex flex-col overflow-hidden pb-[env(safe-area-inset-bottom)] lg:left-72">
+      <div className="mx-auto flex h-full min-h-0 w-full max-w-full flex-col px-4 pt-7 sm:px-6 md:max-w-7xl lg:px-8">
         {/* V21/P7.al — Standard account header. */}
-        <div className="mb-6">
+        <div className="mb-4 shrink-0">
           <AccountPageHeader
             icon="orders"
             title={pageTitle}
@@ -372,14 +385,14 @@ function OrdersContent() {
             status also surfaces as an active-filter chip below. */}
 
         {/* Advanced Filter Bar */}
-        <div ref={filterBarRef} className="mb-6 space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+        <div ref={filterBarRef} className="mb-4 shrink-0 space-y-3">
+          <div className="flex flex-nowrap gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden max-sm:[&>div]:shrink-0 max-sm:[&_button]:whitespace-nowrap sm:grid sm:grid-cols-2 sm:gap-3 sm:overflow-visible sm:pb-0 lg:grid-cols-4">
             {/* Status Filter */}
             <div className="relative">
               <button
                 onClick={() => setOpenDropdown(openDropdown === 'status' ? null : 'status')}
                 className={cn(
-                  "w-full flex items-center justify-between gap-2 px-4 py-2.5 rounded-lg border text-sm transition-all",
+                  "w-full flex items-center justify-between gap-2 px-4 py-2.5 rounded-md border text-sm transition-all",
                   openDropdown === 'status'
                     ? "border-lime-tint-border card-frost text-text-primary"
                     : "border-border-subtle card-frost text-text-secondary hover:border-lime-tint-border card-frost-hover"
@@ -394,7 +407,7 @@ function OrdersContent() {
 
               {/* Status Dropdown Panel */}
               {openDropdown === 'status' && (
-                <div className="absolute z-50 mt-2 w-full min-w-[220px] rounded-lg border border-border-subtle bg-bg-overlay shadow-2xl shadow-black/50 overflow-hidden">
+                <div className="absolute z-50 mt-2 w-full max-sm:fixed max-sm:inset-x-4 max-sm:top-[calc(var(--navbar-bottom)+8.5rem)] max-sm:mt-0 max-sm:w-auto min-w-[220px] rounded-lg border border-border-subtle bg-bg-overlay shadow-2xl shadow-black/50 overflow-hidden">
                   <div className="p-2 space-y-1">
                     {STATUS_OPTIONS.map((s) => {
                       const isSelected = filters.status === s.value
@@ -428,7 +441,7 @@ function OrdersContent() {
               <button
                 onClick={() => setOpenDropdown(openDropdown === 'game' ? null : 'game')}
                 className={cn(
-                  "w-full flex items-center justify-between gap-2 px-4 py-2.5 rounded-lg border text-sm transition-all",
+                  "w-full flex items-center justify-between gap-2 px-4 py-2.5 rounded-md border text-sm transition-all",
                   openDropdown === 'game'
                     ? "border-lime-tint-border card-frost text-text-primary"
                     : "border-border-subtle card-frost text-text-secondary hover:border-lime-tint-border card-frost-hover"
@@ -443,7 +456,7 @@ function OrdersContent() {
 
               {/* Game Dropdown Panel */}
               {openDropdown === 'game' && availableGames.length > 0 && (
-                <div className="absolute z-50 mt-2 w-full min-w-[280px] rounded-lg border border-border-subtle bg-bg-overlay shadow-2xl shadow-black/50 max-h-[320px] overflow-y-auto">
+                <div className="absolute z-50 mt-2 w-full max-sm:fixed max-sm:inset-x-4 max-sm:top-[calc(var(--navbar-bottom)+8.5rem)] max-sm:mt-0 max-sm:w-auto min-w-[280px] rounded-lg border border-border-subtle bg-bg-overlay shadow-2xl shadow-black/50 max-h-[320px] overflow-y-auto">
                   <div className="p-2 space-y-1">
                     {availableGames.map((game) => {
                       const isSelected = filters.games.includes(game.id)
@@ -489,7 +502,7 @@ function OrdersContent() {
               <button
                 onClick={() => setOpenDropdown(openDropdown === 'category' ? null : 'category')}
                 className={cn(
-                  "w-full flex items-center justify-between gap-2 px-4 py-2.5 rounded-lg border text-sm transition-all",
+                  "w-full flex items-center justify-between gap-2 px-4 py-2.5 rounded-md border text-sm transition-all",
                   openDropdown === 'category'
                     ? "border-lime-tint-border card-frost text-text-primary"
                     : "border-border-subtle card-frost text-text-secondary hover:border-lime-tint-border card-frost-hover"
@@ -504,7 +517,7 @@ function OrdersContent() {
 
               {/* Category Dropdown Panel */}
               {openDropdown === 'category' && availableCategories.length > 0 && (
-                <div className="absolute z-50 mt-2 w-full min-w-[240px] rounded-lg border border-border-subtle bg-bg-overlay shadow-2xl shadow-black/50 max-h-[280px] overflow-y-auto">
+                <div className="absolute z-50 mt-2 w-full max-sm:fixed max-sm:inset-x-4 max-sm:top-[calc(var(--navbar-bottom)+8.5rem)] max-sm:mt-0 max-sm:w-auto min-w-[240px] rounded-lg border border-border-subtle bg-bg-overlay shadow-2xl shadow-black/50 max-h-[280px] overflow-y-auto">
                   <div className="p-2 space-y-1">
                     <button
                       onClick={() => {
@@ -552,7 +565,7 @@ function OrdersContent() {
               <button
                 onClick={() => setOpenDropdown(openDropdown === 'date' ? null : 'date')}
                 className={cn(
-                  "w-full flex items-center justify-between gap-2 px-4 py-2.5 rounded-lg border text-sm transition-all",
+                  "w-full flex items-center justify-between gap-2 px-4 py-2.5 rounded-md border text-sm transition-all",
                   openDropdown === 'date'
                     ? "border-lime-tint-border card-frost text-text-primary"
                     : "border-border-subtle card-frost text-text-secondary hover:border-lime-tint-border card-frost-hover"
@@ -574,7 +587,7 @@ function OrdersContent() {
 
               {/* Date Range Dropdown Panel */}
               {openDropdown === 'date' && (
-                <div className="absolute z-50 mt-2 w-full min-w-[200px] rounded-lg border border-border-subtle bg-bg-overlay shadow-2xl shadow-black/50">
+                <div className="absolute z-50 mt-2 w-full max-sm:fixed max-sm:inset-x-4 max-sm:top-[calc(var(--navbar-bottom)+8.5rem)] max-sm:mt-0 max-sm:w-auto min-w-[200px] rounded-lg border border-border-subtle bg-bg-overlay shadow-2xl shadow-black/50">
                   <div className="p-2 space-y-1">
                     {[
                       { label: 'All Time', value: 'all' as const },
@@ -608,26 +621,27 @@ function OrdersContent() {
               )}
             </div>
 
-            {/* Listing Search */}
-            <div className="relative">
-              <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-text-secondary" />
-              <input
-                type="text"
-                placeholder="Search listings..."
-                value={filters.searchQuery}
-                onChange={(e) => setFilters({ ...filters, searchQuery: e.target.value })}
-                className="w-full rounded-lg border border-border-subtle card-frost py-2.5 pl-10 pr-10 text-text-primary text-sm placeholder:text-text-tertiary focus:border-lime-tint-border focus:outline-none focus:ring-2 focus:ring-lime/20"
-              />
-              {filters.searchQuery && (
-                <button
-                  onClick={() => setFilters({ ...filters, searchQuery: '' })}
-                  className="absolute right-1 top-1/2 -translate-y-1/2 p-2 text-text-secondary hover:text-text-primary"
-                  aria-label="Clear search"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              )}
-            </div>
+          </div>
+
+          {/* Search — its own full-width row under the filter chips. */}
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary" />
+            <input
+              type="text"
+              placeholder="Search listings…"
+              value={filters.searchQuery}
+              onChange={(e) => setFilters({ ...filters, searchQuery: e.target.value })}
+              className="h-10 w-full rounded-md border border-border-subtle card-frost pl-9 pr-10 text-[16px] text-text-primary placeholder:text-text-tertiary transition-colors focus:border-lime-tint-border focus:outline-none focus:ring-2 focus:ring-lime/20 sm:text-sm"
+            />
+            {filters.searchQuery && (
+              <button
+                onClick={() => setFilters({ ...filters, searchQuery: '' })}
+                className="absolute right-1 top-1/2 -translate-y-1/2 p-2 text-text-secondary hover:text-text-primary"
+                aria-label="Clear Search"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
           </div>
 
           {/* Active Filter Pills & Clear All */}
@@ -731,188 +745,148 @@ function OrdersContent() {
           )}
         </div>
 
-        {/* Orders List */}
-        {filteredOrders.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-lg border border-border-subtle card-frost p-12">
-          <ShoppingCart className="mb-4 h-16 w-16 text-lime-text/40" />
-          <h3 className="mb-2 text-xl font-bold text-text-primary">
-            {activeTab === 'purchases' ? 'No purchases found' : 'No sales found'}
-          </h3>
-          <p className="text-text-secondary">
-            {filters.searchQuery
-              ? 'Try adjusting your search'
-              : activeTab === 'purchases'
-              ? 'Start shopping to see your purchases here'
-              : 'Your sales will appear here once customers place orders'
-            }
-          </p>
-        </div>
-        ) : (
-        <div className="flex flex-col gap-3">
-          {filteredOrders.map((order, index) => {
-            const otherParty = activeTab === 'purchases' ? (order as any).seller : (order as any).buyer
-            const gameData = order.listing?.game || (order as any).game
-            const listingImage = order.listing?.images?.[0]
-            const gameImage = gameData?.image_url
-            const displayImage = listingImage || gameImage
-            const gameName = gameData?.name
-            const hasReview = (order as any).has_review || false
-            const disputeResolution = disputeResolutions[order.id]
-            const hasDisputeResolution = order.status === 'completed' && disputeResolution
-
-            // Determine if user won or lost dispute
-            const userWonDispute = hasDisputeResolution && (
-              (activeTab === 'purchases' && disputeResolution.favored_party === 'buyer') ||
-              (activeTab === 'sales' && disputeResolution.favored_party === 'seller')
-            )
-
-            return (
-              <Link key={order.id} href={`/account/orders/${order.id}`} className="block">
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.03 }}
-                  className="group cursor-pointer rounded-lg border border-border-subtle p-4 transition-colors card-frost card-frost-hover"
-                >
-                  <div className="flex items-center gap-4">
-                    {/* Listing Image (fallback to Game Logo) */}
-                    {displayImage ? (
-                      <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-lg border border-border-subtle">
-                        <Image
-                          src={displayImage}
-                          alt={order.listing?.title || gameName || 'Order'}
-                          fill
-                          className="object-cover"
-                          unoptimized
-                        />
-                      </div>
-                    ) : (
-                      <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg border border-border-subtle bg-bg-overlay">
-                        <ShoppingCart className="h-6 w-6 text-text-disabled" />
-                      </div>
-                    )}
-
-                    {/* Main Content */}
-                    <div className="flex-1 min-w-0">
-                      {/* Order # + status — wraps on narrow screens so chips
-                          drop below the order number instead of overflowing
-                          into the price column. */}
-                      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                        <span className="font-mono text-[11px] font-semibold uppercase tracking-wider text-text-tertiary">
-                          {(order.order_number || order.id.slice(0, 8).toUpperCase()).replace(/^GV-/, 'DM-')}
-                        </span>
-                        {(() => {
-                          const displayStatus = (order.status === 'disputed' && disputeResolutions[order.id])
-                            ? 'resolved'
-                            : order.status
-                          return (
-                            <span className={cn('inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide', getStatusColor(displayStatus))}>
-                              {getStatusIcon(displayStatus)}
-                              {STATUS_TEXT[displayStatus] ?? displayStatus}
-                            </span>
-                          )
-                        })()}
-                        {hasDisputeResolution && (
-                          <span className={cn(
-                            'inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-bold uppercase',
-                            userWonDispute
-                              ? 'border border-success/30 bg-green-500/15 text-success'
-                              : 'border border-error/40 bg-red-500/15 text-error',
-                          )}>
-                            {userWonDispute ? <ShieldCheck className="h-2.5 w-2.5" /> : <ShieldX className="h-2.5 w-2.5" />}
-                            {userWonDispute ? 'Won' : 'Lost'}
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Item name */}
-                      <h3 className="mt-1.5 truncate text-base font-bold text-text-primary">
-                        {order.listing?.title || 'Unknown Listing'}
-                      </h3>
-
-                      {/* Game · Category · party — one compact meta line */}
-                      <div className="mt-1 flex items-center gap-1.5 text-xs text-text-secondary">
-                        <span className="truncate">{gameName || 'Unknown Game'}</span>
-                        {order.listing?.category?.name && (
-                          <>
-                            <span className="text-text-tertiary">·</span>
-                            <span className="truncate">{order.listing.category.name}</span>
-                          </>
-                        )}
-                        {otherParty && (
-                          <>
-                            <span className="text-text-tertiary">·</span>
+        {/* Orders — reference-style table card. Vertical list scroll +
+            horizontal pan for the wide columns; never a diagonal free-scroll.
+            Row click opens the order (review/dispute actions live there). */}
+        <div className="relative mb-3 flex min-h-0 flex-1 flex-col overflow-hidden rounded-md border border-border-default bg-[rgba(20,20,27,0.56)] shadow-elevated backdrop-blur-md">
+          <span aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.05),transparent)]" />
+          <div className="shrink-0 border-b border-white/[0.06] px-4 py-2.5 text-[12.5px] font-semibold text-text-secondary">
+            {filteredOrders.length} Result{filteredOrders.length === 1 ? '' : 's'}
+          </div>
+          {filteredOrders.length === 0 ? (
+            <div className="flex flex-1 flex-col items-center justify-center p-10 text-center">
+              <ShoppingCart className="mb-4 h-14 w-14 text-lime-text/40" />
+              <h3 className="mb-1.5 text-lg font-bold text-text-primary">
+                {activeTab === 'purchases' ? 'No purchases found' : 'No sales found'}
+              </h3>
+              <p className="text-sm text-text-secondary">
+                {filters.searchQuery
+                  ? 'Try adjusting your search'
+                  : activeTab === 'purchases'
+                  ? 'Start shopping to see your purchases here'
+                  : 'Your sales will appear here once customers place orders'}
+              </p>
+            </div>
+          ) : (
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+              <div className="overflow-x-auto overscroll-x-contain">
+                <table className="w-full min-w-[860px] border-collapse text-left">
+                  <thead>
+                    <tr className="text-[12px] font-extrabold uppercase tracking-[0.08em] text-[#6d7488]">
+                      <th className="min-w-[230px] px-4 py-3">Item</th>
+                      <th className="px-3 py-2">ID</th>
+                      <th className="px-3 py-2">Status</th>
+                      <th className="px-3 py-2">Total</th>
+                      <th className="px-3 py-2">{activeTab === 'purchases' ? 'Seller' : 'Buyer'}</th>
+                      <th className="px-3 py-2 whitespace-nowrap">Placed</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredOrders.map((order) => {
+                      const otherParty = activeTab === 'purchases' ? (order as any).seller : (order as any).buyer
+                      const gameData = order.listing?.game || (order as any).game
+                      const displayImage = order.listing?.images?.[0] || gameData?.image_url
+                      const gameName = gameData?.name
+                      const disputeResolution = disputeResolutions[order.id]
+                      const hasDisputeResolution = order.status === 'completed' && disputeResolution
+                      const userWonDispute = hasDisputeResolution && (
+                        (activeTab === 'purchases' && disputeResolution.favored_party === 'buyer') ||
+                        (activeTab === 'sales' && disputeResolution.favored_party === 'seller')
+                      )
+                      const displayStatus = (order.status === 'disputed' && disputeResolution) ? 'resolved' : order.status
+                      const orderNo = (order.order_number || order.id.slice(0, 8).toUpperCase()).replace(/^GV-/, 'DM-')
+                      const qty = (order as any).quantity ?? 1
+                      return (
+                        <tr
+                          key={order.id}
+                          onClick={() => router.push(`/account/orders/${order.id}`)}
+                          className="cursor-pointer border-t border-white/[0.06] transition-colors hover:bg-white/[0.04]"
+                        >
+                          <td className="px-4 py-2">
+                            <div className="flex items-center gap-3">
+                              {displayImage ? (
+                                <div className="relative h-9 w-9 shrink-0 overflow-hidden rounded-md border border-border-subtle">
+                                  <Image src={displayImage} alt="" fill unoptimized className="object-cover" />
+                                </div>
+                              ) : (
+                                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-border-subtle bg-bg-overlay">
+                                  <ShoppingCart className="h-4 w-4 text-text-disabled" />
+                                </div>
+                              )}
+                              <div className="min-w-0">
+                                <p className="max-w-[240px] truncate text-[13px] font-semibold text-text-primary">
+                                  {qty > 1 ? `x${qty} · ` : ''}{order.listing?.title || gameName || 'Order'}
+                                </p>
+                                {gameName && (
+                                  <p className="max-w-[240px] truncate text-[12px] text-text-tertiary">{gameName}</p>
+                                )}
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-3 py-2">
                             <button
                               type="button"
                               onClick={(e) => {
-                                e.preventDefault()
                                 e.stopPropagation()
-                                window.location.href = sellerShopHref(otherParty) ?? '#'
+                                navigator.clipboard?.writeText(orderNo).then(
+                                  () => toast.success('Order ID Copied'),
+                                  () => toast.error('Copy Failed'),
+                                )
                               }}
-                              className="group/seller flex min-w-0 items-center gap-1.5 transition-opacity hover:opacity-80"
+                              className="inline-flex items-center gap-1.5 rounded-md border border-border-subtle bg-white/[0.03] px-2 py-1 font-mono text-[12px] font-semibold text-text-secondary transition-colors hover:border-border-strong hover:text-text-primary"
+                              aria-label={`Copy order id ${orderNo}`}
                             >
-                              <span className="relative h-4 w-4 shrink-0">
-                                <Image
-                                  src={getAvatarUrl(otherParty.avatar_url, otherParty.username)}
-                                  alt={otherParty.username}
-                                  fill
-                                  className="rounded-full ring-1 ring-white/10"
-                                  unoptimized
-                                />
-                              </span>
-                              <span className="truncate font-medium text-text-secondary group-hover/seller:text-lime-text">
-                                {sellerDisplayName(otherParty)}
-                              </span>
+                              #{orderNo.replace(/^DM-/, '')}
+                              <CopyIcon className="h-3 w-3 opacity-60" />
                             </button>
-                          </>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Right Side: Price + review */}
-                    <div className="flex shrink-0 flex-col items-end gap-2">
-                      <div className="text-right leading-tight">
-                        <div className="text-xl font-bold text-text-primary">
-                          ${order.total_amount?.toFixed(2) || '0.00'}
-                        </div>
-                        <div className="text-[11px] uppercase tracking-wider text-text-tertiary">Total</div>
-                      </div>
-
-                      {order.status === 'completed' && (
-                        <div onClick={(e) => e.stopPropagation()}>
-                          {activeTab === 'sales' ? (
-                            hasReview ? (
-                              <span className="inline-flex items-center gap-1 rounded-md border border-success/25 bg-green-500/10 px-2 py-0.5 text-[11px] font-medium text-success">
-                                <Star className="h-3 w-3 fill-current" />
-                                Reviewed
+                          </td>
+                          <td className="px-3 py-2">
+                            <span className="flex flex-wrap items-center gap-1.5">
+                              <span className={cn('inline-flex items-center gap-1 whitespace-nowrap rounded-full border px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide', getStatusColor(displayStatus))}>
+                                {getStatusIcon(displayStatus)}
+                                {STATUS_TEXT[displayStatus] ?? displayStatus}
                               </span>
-                            ) : (
-                              <span className="inline-flex items-center gap-1 rounded-md border border-border-subtle px-2 py-0.5 text-[11px] font-medium text-text-tertiary">
-                                <Star className="h-3 w-3" />
-                                No review
-                              </span>
-                            )
-                          ) : (
-                            !hasReview && (
-                              <LeaveReviewButton
-                                orderId={order.id}
-                                orderNumber={(order.order_number || order.id.slice(0, 8).toUpperCase()).replace(/^GV-/, 'DM-')}
-                                sellerName={sellerDisplayName(otherParty)}
-                                compact={true}
-                                className="inline-flex items-center gap-1 rounded-md border border-lime-tint-border bg-lime-tint-bg px-2 py-1 text-[11px] font-medium text-lime-text transition-all hover:bg-lime-tint-bg/80"
+                              {hasDisputeResolution && (
+                                <span className={cn(
+                                  'inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-bold uppercase',
+                                  userWonDispute
+                                    ? 'border border-success/30 bg-green-500/15 text-success'
+                                    : 'border border-error/40 bg-red-500/15 text-error',
+                                )}>
+                                  {userWonDispute ? <ShieldCheck className="h-2.5 w-2.5" /> : <ShieldX className="h-2.5 w-2.5" />}
+                                  {userWonDispute ? 'Won' : 'Lost'}
+                                </span>
+                              )}
+                            </span>
+                          </td>
+                          <td className="whitespace-nowrap px-3 py-2 text-[13.5px] font-semibold text-text-primary">
+                            ${Number(order.total_amount ?? 0).toFixed(2)}
+                          </td>
+                          <td className="px-3 py-2">
+                            <span className="flex items-center gap-2">
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src={getAvatarUrl(otherParty?.avatar_url, otherParty?.username || 'user')}
+                                alt=""
+                                className="h-6 w-6 shrink-0 rounded-full object-cover ring-1 ring-white/10"
                               />
-                            )
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </motion.div>
-              </Link>
-            )
-          })}
+                              <span className="max-w-[140px] truncate text-[13px] text-text-secondary">
+                                {otherParty?.username || '—'}
+                              </span>
+                            </span>
+                          </td>
+                          <td className="whitespace-nowrap px-3 py-2 text-[12.5px] text-text-tertiary">
+                            {new Date(order.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </div>
-        )}
       </div>
     </div>
   )

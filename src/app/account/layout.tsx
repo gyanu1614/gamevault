@@ -104,11 +104,9 @@ export default function AccountLayout({ children }: { children: React.ReactNode 
           contexts under `<>...</>` — last-written wins). Otherwise
           the wrapper covers the sidebar entirely. */}
       {/* V21/P7.ak — Single source of navbar clearance for ALL sidebar
-          account pages: pt-20 = the 80px fixed navbar height, so content
-          starts flush under the navbar. Pages must NOT add their own
-          navbar-clearance padding on top (only internal content rhythm). */}
+          account pages: the navbar already emits its own in-flow spacer (60px mobile / 84px desktop), so this padding is PURELY the uniform 28px navbar-to-content gap. Pages must NOT add their own top padding. */}
       <HeroBackdrop name="account" className="hero-dim lg:pl-64">
-        <div className="pt-14">
+        <div className="pt-7">
           <BuyingOpensSoonBanner />
           {children}
         </div>

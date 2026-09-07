@@ -72,7 +72,7 @@ export async function createDisputeNotifications({
     userId: sellerId,
     type: 'dispute_opened',
     title: 'Dispute Opened',
-    message: `A dispute has been opened for order #${orderRef}. Please respond promptly.`,
+    message: `#${orderRef} — please respond promptly.`,
     link: `/account/orders/${orderId}`,
   })
 
@@ -81,7 +81,7 @@ export async function createDisputeNotifications({
     userId: buyerId,
     type: 'dispute_opened',
     title: 'Dispute Submitted',
-    message: `Your dispute has been submitted for order #${orderRef}`,
+    message: `#${orderRef} — we’ll keep you posted.`,
     link: `/account/orders/${orderId}`,
   })
 }
