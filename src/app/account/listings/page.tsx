@@ -544,10 +544,19 @@ function OffersContent() {
     </DropdownMenu>
   )
 
+  useEffect(() => {
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = prev
+    }
+  }, [])
+
   return (
-    // Navbar clearance comes from the account layout (pt-14 — V21/P7.ak);
-    // this wrapper only adds internal rhythm.
-    <div className="mx-auto w-full max-w-[1400px] px-4 pb-20 pt-2 sm:px-6 lg:px-10 xl:px-14">
+    // Viewport-locked like Messages/Purchases: chrome static, ONLY the
+    // results table scrolls. Pinned to the navbar's real bottom edge.
+    <div className="fixed inset-x-0 bottom-0 top-[var(--navbar-bottom)] z-[1] flex flex-col overflow-hidden lg:left-64">
+    <div className="mx-auto flex h-full min-h-0 w-full max-w-[1400px] flex-col px-4 pt-2 sm:px-6 lg:px-10 xl:px-14">
       {isRestricted && (
         <div className="mb-6">
           <RestrictionBanner status={sellerStatus} />
@@ -561,7 +570,7 @@ function OffersContent() {
         actions={
           <Link
             href="/sell/new"
-            className="flex h-10 items-center gap-2 rounded-md bg-lime px-4 text-[13.5px] font-bold text-text-inverse shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] transition-colors hover:bg-lime-hover"
+            className="hidden h-10 items-center gap-2 rounded-md bg-lime px-4 text-[13.5px] font-bold text-text-inverse shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] transition-colors hover:bg-lime-hover sm:flex"
           >
             <Plus className="h-4 w-4" strokeWidth={2.75} />
             Add New Offer
@@ -570,10 +579,18 @@ function OffersContent() {
       />
 
       {/* ── Filter row ── */}
-      <div className="mt-5 flex flex-wrap items-center gap-2.5">
+      <div className="mt-3 flex shrink-0 flex-wrap items-center gap-2.5">
         {/* Below sm the three triggers share one row (grid); at sm+ the
             wrapper dissolves (contents) into the original flex-wrap row. */}
-        <div className="flex w-full flex-nowrap gap-2.5 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [&>button]:shrink-0 [&>button]:whitespace-nowrap sm:contents">
+        <div className="flex w-full flex-nowrap gap-2.5 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [&>*]:shrink-0 [&>button]:whitespace-nowrap sm:contents">
+        {/* Phones: Add New Offer rides the same row as the filter chips. */}
+        <Link
+          href="/sell/new"
+          className="flex h-10 items-center gap-1.5 whitespace-nowrap rounded-md bg-lime px-3 text-[13px] font-bold text-text-inverse shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] transition-colors hover:bg-lime-hover sm:hidden"
+        >
+          <Plus className="h-4 w-4" strokeWidth={2.75} />
+          Add Offer
+        </Link>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <FilterTrigger
@@ -705,14 +722,14 @@ function OffersContent() {
       </div>
 
       {/* ── Results card ── */}
-      <div className="relative mt-4 overflow-hidden rounded-lg border border-border-default bg-[rgba(20,20,27,0.56)] shadow-elevated backdrop-blur-md">
+      <div className="relative mt-4 mb-3 flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-border-default bg-[rgba(20,20,27,0.56)] shadow-elevated backdrop-blur-md lg:mb-4">
         {/* Top sheen — the bundle-card light-from-above, on the card itself. */}
         <span aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.05),transparent)]" />
 
         {/* The table renders at EVERY width (owner call 2026-09-07 — the
             reference app ships the same row look on phones, horizontally
             scrollable). The old below-md stacked-card list is retired. */}
-        <div className="overflow-x-auto">
+        <div className="min-h-0 flex-1 overflow-auto">
           <table className="w-full min-w-[1160px] border-collapse text-left">
             <thead>
               <tr className="text-[12px] font-extrabold uppercase tracking-[0.08em] text-[#6d7488]">
@@ -1134,6 +1151,7 @@ function OffersContent() {
           </div>
         </DialogContent>
       </Dialog>
+    </div>
     </div>
   )
 }
