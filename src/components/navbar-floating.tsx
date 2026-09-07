@@ -362,10 +362,10 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
   // navbar is permanent — it still morphs to the full-width bar via `scrolled`,
   // it just never leaves. The hide is a Framer inline transform, so this can't
   // be expressed as a `max-lg:` utility; it has to be gated in JS.
-  const { hidden: scrollHidden, scrolled: scrolledNative } = useScrollDirection({
-    revealAt: 40,
-    hideBelow: 1024,
-  })
+  // Hide-on-scroll is retired (owner call 2026-09-07): the navbar stays
+  // pinned at every width. Only the beta banner scrolls away — the bar
+  // rides up under it via --beta-banner-offset and sticks to the top.
+  const { scrolled: scrolledNative } = useScrollDirection({ revealAt: 40 })
   // V19/P15.b — `forceScrolled` short-circuits the scroll listener so
   // pages like /sell/* can lock the navbar in its full-width bar mode
   // even at scrollY=0. Everywhere else falls through to live scroll.
@@ -882,18 +882,8 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
           // it's visible, then slides to the true top as the banner scrolls
           // away. Falls back to 0px when no banner is mounted.
           ['--nav-top' as string]: scrolled ? '0px' : '12px',
-          // Hide-on-scroll: slide the whole bar up when scrolling down.
-          // Never hide while a menu/dropdown/search is open, or at the top.
-          y:
-            scrollHidden &&
-            !mobileMenuOpen &&
-            !notificationsOpen &&
-            !activityOpen &&
-            !userMenuOpen &&
-            !searchExpanded &&
-            !activeDropdown
-              ? '-120%'
-              : '0%',
+          // The bar never hides — it stays pinned while the page scrolls.
+          y: '0%',
         }}
         transition={{ type: 'spring', stiffness: 420, damping: 40, mass: 0.8 }}
         style={{
