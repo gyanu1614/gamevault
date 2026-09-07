@@ -207,7 +207,7 @@ async function alertAdminsPaymentForClosedOrder(
     user_id: a.user_id,
     type: 'payment_review',
     title: 'Payment Needs Review',
-    message: `A confirmed payment (charge ${providerChargeId}) arrived for order ${orderId.slice(0, 8).toUpperCase()}, which is no longer payable. Check the provider dashboard and refund or credit the buyer manually.`,
+    message: `Charge ${providerChargeId} paid a closed order (${orderId.slice(0, 8).toUpperCase()}) — refund or credit manually.`,
     link: `/account/orders/${orderId}`,
     is_read: false,
   }))

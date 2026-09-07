@@ -113,7 +113,7 @@ export async function notifyNewMessage(conversationId: string): Promise<void> {
           user_id: recipientId,
           type: 'order_message',
           title: 'Seller Replied On Your Order',
-          message: `${senderName} sent you a message about order #${orderRef}`,
+          message: `${senderName} · #${orderRef}`,
           link: `/account/orders/${convo.order_id}`,
           is_read: false,
         })

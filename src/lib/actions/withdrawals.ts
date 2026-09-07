@@ -434,7 +434,7 @@ export async function approveWithdrawalRequest(params: {
             user_id: request.user_id,
             type: 'withdrawal_approved',
             title: 'Withdrawal Approved',
-            message: `Your $${amount.toFixed(2)} withdrawal was approved and is being processed to ${methodName}.`,
+            message: `$${amount.toFixed(2)} → ${methodName} — processing.`,
             link: '/account/wallet',
             is_read: false,
           })
@@ -531,7 +531,7 @@ export async function rejectWithdrawalRequest(params: {
             user_id: request.user_id,
             type: 'withdrawal_rejected',
             title: 'Withdrawal Declined',
-            message: `Your $${amount.toFixed(2)} withdrawal was declined: ${params.reason}. The funds remain in your wallet balance.`,
+            message: `$${amount.toFixed(2)} — ${params.reason}. Funds stay in your wallet.`,
             link: '/account/wallet',
             is_read: false,
           })

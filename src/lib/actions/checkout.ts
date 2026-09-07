@@ -366,7 +366,7 @@ async function upsertIncompleteNudge(
       user_id: userId,
       type: 'order_incomplete',
       title: 'Order Incomplete',
-      message: `Your order is waiting for payment — complete it within ${window} or it cancels automatically.`,
+      message: `Complete payment within ${window} or the order cancels.`,
       link,
       is_read: false,
     })

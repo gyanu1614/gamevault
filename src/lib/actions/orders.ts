@@ -686,7 +686,7 @@ export async function markOrderAsDelivered(
         userId: (order as any).buyer_id,
         type: 'order_delivered',
         title: 'Order Delivered',
-        message: `Your order #${orderRef} has been marked as delivered. Please review it and confirm delivery within your protection window.`,
+        message: `#${orderRef} — review it and confirm receipt.`,
         link: `/account/orders/${orderId}`,
       })
     } catch (notifError) {
@@ -891,7 +891,7 @@ export async function cancelOrder(orderId: string): Promise<{
           userId: order.seller_id,
           type: 'order_cancelled',
           title: 'Order Cancelled',
-          message: `The buyer cancelled order #${orderRef} before delivery started.`,
+          message: `#${orderRef} — cancelled by the buyer before delivery.`,
           link: `/account/orders/${orderId}`,
         }),
       ])
@@ -1084,7 +1084,7 @@ export async function confirmOrderReceipt(orderId: string): Promise<{
         userId: order.seller_id,
         type: 'order_completed',
         title: 'Order Completed',
-        message: `Buyer confirmed delivery on order #${orderRef} — $${(order.seller_payout ?? 0).toFixed(2)} was added to your seller balance. Withdraw any time from your wallet.`,
+        message: `$${(order.seller_payout ?? 0).toFixed(2)} added to your balance · #${orderRef}`,
         link: `/account/orders/${orderId}`,
       })
       if (seller?.email) {
