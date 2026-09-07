@@ -582,15 +582,8 @@ function OffersContent() {
       <div className="mt-3 flex shrink-0 flex-wrap items-center gap-2.5">
         {/* Below sm the three triggers share one row (grid); at sm+ the
             wrapper dissolves (contents) into the original flex-wrap row. */}
-        <div className="flex w-full flex-nowrap gap-2.5 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [&>*]:shrink-0 [&>button]:whitespace-nowrap sm:contents">
-        {/* Phones: Add New Offer rides the same row as the filter chips. */}
-        <Link
-          href="/sell/new"
-          className="flex h-10 items-center gap-1.5 whitespace-nowrap rounded-md bg-lime px-3 text-[13px] font-bold text-text-inverse shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] transition-colors hover:bg-lime-hover sm:hidden"
-        >
-          <Plus className="h-4 w-4" strokeWidth={2.75} />
-          Add Offer
-        </Link>
+        <div className="flex w-full items-center gap-2 sm:contents">
+        <div className="flex min-w-0 flex-1 flex-nowrap gap-2.5 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [&>*]:shrink-0 [&>button]:whitespace-nowrap sm:contents">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <FilterTrigger
@@ -685,6 +678,16 @@ function OffersContent() {
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+        </div>
+        {/* Phones: Add New Offer pinned at the row's RIGHT edge — the chips
+            scroll underneath it. */}
+        <Link
+          href="/sell/new"
+          className="flex h-10 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md bg-lime px-3 text-[13px] font-bold text-text-inverse shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] transition-colors hover:bg-lime-hover sm:hidden"
+        >
+          <Plus className="h-4 w-4" strokeWidth={2.75} />
+          Add Offer
+        </Link>
         </div>
 
         <div className="relative min-w-0 flex-1 sm:min-w-[220px] sm:max-w-[320px]">
