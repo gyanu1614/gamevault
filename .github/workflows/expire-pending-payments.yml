@@ -1,0 +1,20 @@
+# Every-30-min sweep for timed-out Payssion orders. Lives here because
+# Vercel Hobby only allows once-daily cron schedules — the vercel.json
+# entry (daily) is the backstop; this is the real cadence. GH Actions
+# schedules are best-effort (can drift a few minutes), which is fine.
+name: Expire Pending Payments
+on:
+  schedule:
+    - cron: '*/30 * * * *'
+  workflow_dispatch: {}
+jobs:
+  sweep:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call sweep endpoint
+        run: |
+          code=$(curl -s -o /tmp/out -w "%{http_code}" -m 60 \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            https://dropmarket.gg/api/cron/expire-pending-payments)
+          cat /tmp/out
+          [ "$code" = "200" ] || exit 1
