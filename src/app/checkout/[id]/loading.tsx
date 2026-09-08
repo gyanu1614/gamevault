@@ -75,8 +75,9 @@ export default function CheckoutLoading() {
               <Block className="mt-3 h-[52px] w-full rounded-lg" />
             </Card>
 
-            {/* Local method rows (10 Payssion methods) */}
-            {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((i) => (
+            {/* Local method rows — region-filtered, typically crypto + a few
+                local rails + the More Payment Methods fold */}
+            {[0, 1, 2, 3].map((i) => (
               <Card key={`m${i}`} className="mt-3 flex items-center gap-3 p-4">
                 <Block className="h-[18px] w-[18px] rounded-full" />
                 <Block className="h-[18px] w-[18px]" />

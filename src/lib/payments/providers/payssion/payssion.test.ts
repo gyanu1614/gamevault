@@ -4,7 +4,7 @@ import { payssionToCanonical, payssionEventId, type PayssionTxn } from './status
 import { createSigVariants, notifySigMatches, refundSig, detailsSig } from './sig'
 import { makePayssionProvider } from './index'
 import { providerNameForMethod } from '@/lib/payments/registry'
-import { payssionExpiryIso } from './methods'
+import { payssionExpiryIso, splitPayssionMethodsByCountry } from './methods'
 import { fromDecimal } from '@/lib/money'
 
 // Configure the adapter for pure/mocked tests. ||= only fills fallbacks —
@@ -146,6 +146,37 @@ describe('payssion: routing + per-method expiry', () => {
     for (const pm of ['gcash_ph', 'pix_br', 'maya_ph', 'qr_ph', 'qris_id', 'spei_mx', 'pse_co', 'webpay_cl']) {
       expect(new Date(payssionExpiryIso(pm, now)).getTime() - now).toBe(60 * 60_000)
     }
+  })
+})
+
+describe('payssion: checkout region filter', () => {
+  const ids = (ms: Array<{ pmId: string }>) => ms.map((m) => m.pmId)
+
+  it('matches the buyer country (case-insensitive) and folds the rest', () => {
+    const br = splitPayssionMethodsByCountry('br')
+    expect(ids(br.matched)).toEqual(['pix_br', 'boleto_br'])
+    expect(ids(br.other)).not.toContain('pix_br')
+    const ph = splitPayssionMethodsByCountry('PH')
+    expect(ids(ph.matched)).toEqual(['gcash_ph', 'maya_ph', 'qr_ph'])
+  })
+
+  it('a country with no local rail matches nothing (crypto still renders)', () => {
+    const us = splitPayssionMethodsByCountry('US')
+    expect(us.matched).toEqual([])
+    expect(us.other.length).toBeGreaterThan(0)
+  })
+
+  it('unknown/garbage country shows everything up front — never strand a buyer', () => {
+    for (const c of [null, undefined, '', 'XXL', '1F']) {
+      const s = splitPayssionMethodsByCountry(c)
+      expect(s.other).toEqual([])
+      expect(s.matched.length).toBeGreaterThanOrEqual(10)
+    }
+  })
+
+  it('the sandbox simulator never renders as a selector row', () => {
+    const s = splitPayssionMethodsByCountry(null)
+    expect(ids(s.matched)).not.toContain('payssion_test')
   })
 })
 

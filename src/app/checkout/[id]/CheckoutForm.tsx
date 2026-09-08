@@ -36,6 +36,7 @@ import {
   Loader2,
   Lock,
   Gem,
+  Globe,
   LogOut,
   Medal,
   Package,
@@ -55,6 +56,10 @@ import {
 } from 'lucide-react'
 
 import { createCheckout } from '@/lib/actions/checkout'
+import {
+  splitPayssionMethodsByCountry,
+  type PayssionMethodMeta,
+} from '@/lib/payments/providers/payssion/methods'
 import { getAvatarUrl } from '@/lib/utils/avatar'
 import { validatePromoCode, type PromoValidationResult } from '@/lib/actions/promo'
 import { getMyWalletBalance } from '@/lib/actions/wallet-ledger'
@@ -398,103 +403,71 @@ const SOON_METHODS = [
   { name: 'Skrill', badges: ['SKRILL'] },
 ]
 
-// Payssion local methods on our app. Rows are ordered by buyer-traffic
-// priority (EU → BR → PH → ID → MX → CO → CL). Adding a method later =
-// enable it at Payssion + add a row here + in the provider's methods.ts
-// registry. gcash/oxxo/boleto probe-verified 2026-09-06; the 2026-09-07
-// additions must pass the enable probe before deploy (491 = pull the row).
-// paysafecard: pulled 2026-09-08 — account manager says enabled, live probe
-// still 491; re-add the row (and its registry entry) once a probe returns 200.
-type PayMethodId =
-  | 'crypto'
-  | 'pix_br'
-  | 'gcash_ph'
-  | 'maya_ph'
-  | 'qr_ph'
-  | 'qris_id'
-  | 'oxxo_mx'
-  | 'spei_mx'
-  | 'boleto_br'
-  | 'pse_co'
-  | 'webpay_cl'
-const LOCAL_METHODS: Array<{
-  id: Exclude<PayMethodId, 'crypto'>
+// Payssion local methods come FROM THE PROVIDER REGISTRY (methods.ts) —
+// pm_ids, labels, region chips, display order and country tags all live
+// there. This map only adds what the registry shouldn't know: the icon and
+// the buyer-facing note. Adding a method later = registry entry + one line
+// here (a missing line still renders, with the fallback icon/note).
+type PayMethodId = 'crypto' | (string & {})
+const METHOD_UI: Record<string, { Icon: typeof Smartphone; note: string }> = {
+  pix_br: {
+    Icon: Zap,
+    note: 'Pay instantly with Pix — scan the QR code on the secure payment page with your bank app, and your order completes the moment the payment confirms.',
+  },
+  gcash_ph: {
+    Icon: Smartphone,
+    note: 'Pay with your GCash wallet — you’ll be redirected to a secure GCash page, and your order completes the moment the payment confirms.',
+  },
+  maya_ph: {
+    Icon: Smartphone,
+    note: 'Pay with your Maya wallet — you’ll be redirected to a secure Maya page, and your order completes the moment the payment confirms.',
+  },
+  qr_ph: {
+    Icon: QrCode,
+    note: 'Scan the QR Ph code with any Philippine bank or e-wallet app — your order completes the moment the payment confirms.',
+  },
+  qris_id: {
+    Icon: QrCode,
+    note: 'Scan the QRIS code with any Indonesian bank or e-wallet app — GoPay, OVO, DANA, ShopeePay and more. Your order completes the moment the payment confirms.',
+  },
+  oxxo_mx: {
+    Icon: Store,
+    note: 'You’ll get a payment voucher to pay in cash at any OXXO store. Vouchers stay valid for 48 hours; your order completes when the payment clears (usually within a day). Any store credit you apply stays reserved until then.',
+  },
+  spei_mx: {
+    Icon: Landmark,
+    note: 'Pay by SPEI transfer from your Mexican bank app — you’ll get the transfer details on the secure payment page, and your order completes when the transfer confirms (usually within minutes).',
+  },
+  boleto_br: {
+    Icon: Barcode,
+    note: 'You’ll get a Boleto slip to pay via your bank app or in person. Slips stay valid for 48 hours; your order completes when the payment clears (1–2 business days). Any store credit you apply stays reserved until then.',
+  },
+  pse_co: {
+    Icon: Landmark,
+    note: 'Pay directly from your Colombian bank account via PSE — you’ll be redirected to your bank to approve the payment, and your order completes the moment it confirms.',
+  },
+  webpay_cl: {
+    Icon: Landmark,
+    note: 'Pay through WebPay Plus — you’ll be redirected to the secure WebPay page, and your order completes the moment the payment confirms.',
+  },
+}
+const FALLBACK_UI = {
+  Icon: Landmark,
+  note: 'You’ll be redirected to a secure payment page — your order completes the moment the payment confirms.',
+}
+
+interface LocalMethodRow {
+  id: string
   label: string
   region: string
   Icon: typeof Smartphone
   note: string
-}> = [
-  {
-    id: 'pix_br',
-    label: 'Pix',
-    region: 'Brazil',
-    Icon: Zap,
-    note: 'Pay instantly with Pix — scan the QR code on the secure payment page with your bank app, and your order completes the moment the payment confirms.',
-  },
-  {
-    id: 'gcash_ph',
-    label: 'GCash',
-    region: 'Philippines',
-    Icon: Smartphone,
-    note: 'Pay with your GCash wallet — you’ll be redirected to a secure GCash page, and your order completes the moment the payment confirms.',
-  },
-  {
-    id: 'maya_ph',
-    label: 'Maya',
-    region: 'Philippines',
-    Icon: Smartphone,
-    note: 'Pay with your Maya wallet — you’ll be redirected to a secure Maya page, and your order completes the moment the payment confirms.',
-  },
-  {
-    id: 'qr_ph',
-    label: 'QR Ph',
-    region: 'Philippines',
-    Icon: QrCode,
-    note: 'Scan the QR Ph code with any Philippine bank or e-wallet app — your order completes the moment the payment confirms.',
-  },
-  {
-    id: 'qris_id',
-    label: 'QRIS',
-    region: 'Indonesia',
-    Icon: QrCode,
-    note: 'Scan the QRIS code with any Indonesian bank or e-wallet app — GoPay, OVO, DANA, ShopeePay and more. Your order completes the moment the payment confirms.',
-  },
-  {
-    id: 'oxxo_mx',
-    label: 'OXXO',
-    region: 'Mexico',
-    Icon: Store,
-    note: 'You’ll get a payment voucher to pay in cash at any OXXO store. Vouchers stay valid for 48 hours; your order completes when the payment clears (usually within a day). Any store credit you apply stays reserved until then.',
-  },
-  {
-    id: 'spei_mx',
-    label: 'SPEI',
-    region: 'Mexico',
-    Icon: Landmark,
-    note: 'Pay by SPEI transfer from your Mexican bank app — you’ll get the transfer details on the secure payment page, and your order completes when the transfer confirms (usually within minutes).',
-  },
-  {
-    id: 'boleto_br',
-    label: 'Boleto',
-    region: 'Brazil',
-    Icon: Barcode,
-    note: 'You’ll get a Boleto slip to pay via your bank app or in person. Slips stay valid for 48 hours; your order completes when the payment clears (1–2 business days). Any store credit you apply stays reserved until then.',
-  },
-  {
-    id: 'pse_co',
-    label: 'PSE',
-    region: 'Colombia',
-    Icon: Landmark,
-    note: 'Pay directly from your Colombian bank account via PSE — you’ll be redirected to your bank to approve the payment, and your order completes the moment it confirms.',
-  },
-  {
-    id: 'webpay_cl',
-    label: 'WebPay',
-    region: 'Chile',
-    Icon: Landmark,
-    note: 'Pay through WebPay Plus — you’ll be redirected to the secure WebPay page, and your order completes the moment the payment confirms.',
-  },
-]
+}
+
+function toRow(m: PayssionMethodMeta): LocalMethodRow {
+  const ui = METHOD_UI[m.pmId] ?? FALLBACK_UI
+  return { id: m.pmId, label: m.label, region: m.coverage, Icon: ui.Icon, note: ui.note }
+}
 
 // ─── CheckoutForm ───────────────────────────────────────────────────────────
 
@@ -505,10 +478,20 @@ interface CheckoutFormProps {
   sellerReviews?: any[]
   initialQty?: number
   bundleSummary?: { name: string; iconUrl: string | null } | null
+  /** ISO-3166 alpha-2 from the Vercel geo header; null/undefined → show all. */
+  buyerCountry?: string | null
 }
 
-export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], initialQty, bundleSummary }: CheckoutFormProps) {
+export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], initialQty, bundleSummary, buyerCountry }: CheckoutFormProps) {
   const router = useRouter()
+
+  // Region filter: local methods matching the buyer's country render up
+  // front; the rest sit behind the "More Payment Methods" fold. Unknown
+  // country (localhost, missing geo header) → everything up front.
+  const { matched: geoMethods, other: foldedMethods } = splitPayssionMethodsByCountry(buyerCountry)
+  const matchedRows = geoMethods.map(toRow)
+  const foldedRows = foldedMethods.map(toRow)
+  const [moreOpen, setMoreOpen] = useState(false)
 
   // Quantity comes clamped from the ?qty deep-link (chosen on the item page).
   const seedQty = (() => {
@@ -763,6 +746,48 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
     </span>
   )
 
+  // Keep the fold open while a folded method is selected — collapsing it
+  // must never hide the buyer's active choice.
+  const moreExpanded = moreOpen || foldedRows.some((m) => m.id === payMethod)
+
+  const renderLocalRow = (m: LocalMethodRow) => {
+    const checked = payMethod === m.id
+    return (
+      <div
+        key={m.id}
+        className="rounded-lg bg-white"
+        style={{ boxShadow: `inset 0 0 0 1.5px ${checked ? T.forest : T.line}` }}
+      >
+        <button
+          type="button"
+          role="radio"
+          aria-checked={checked}
+          onClick={() => setPayMethod(m.id)}
+          className="flex w-full items-center gap-3 p-4 text-left"
+        >
+          {radioDot(checked)}
+          <m.Icon className="h-[18px] w-[18px] shrink-0" style={{ color: T.forest }} />
+          <span className="text-[15px] font-semibold" style={{ color: T.ink }}>
+            {m.label}
+          </span>
+          <span
+            className="ml-auto rounded-md px-[7px] py-[3px] text-[11px] font-semibold"
+            style={{ background: '#EFEFEA', color: '#6B7166' }}
+          >
+            {m.region}
+          </span>
+        </button>
+        {checked && (
+          <div className="border-t px-4 pb-4 pt-3" style={{ borderColor: T.line }}>
+            <p className="text-[12.5px] leading-relaxed" style={{ color: T.ink2 }}>
+              {m.note}
+            </p>
+          </div>
+        )}
+      </div>
+    )
+  }
+
   const paymentList = (
     <div className="flex flex-col gap-3" role="radiogroup" aria-label="Payment Method">
       {/* Crypto — expands when selected */}
@@ -805,44 +830,51 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
         {payMethod === 'crypto' && cryptoBody}
       </div>
 
-      {/* Payssion local methods — live, selectable */}
-      {LOCAL_METHODS.map((m) => {
-        const checked = payMethod === m.id
-        return (
-          <div
-            key={m.id}
-            className="rounded-lg bg-white"
-            style={{ boxShadow: `inset 0 0 0 1.5px ${checked ? T.forest : T.line}` }}
+      {/* Payssion local methods matching the buyer's region — live, selectable */}
+      {matchedRows.map(renderLocalRow)}
+
+      {/* Region fold: every other local method, one tap away (VPNs,
+          travelers, wrong geo guess). Stays open while a folded method is
+          selected so the choice never vanishes. */}
+      {foldedRows.length > 0 && (
+        <div>
+          <button
+            type="button"
+            aria-expanded={moreExpanded}
+            onClick={() => setMoreOpen((v) => !v)}
+            className="flex w-full items-center gap-3 rounded-lg border px-4 py-3.5 text-left transition-colors hover:bg-white"
+            style={{ background: T.row, borderColor: T.line }}
           >
-            <button
-              type="button"
-              role="radio"
-              aria-checked={checked}
-              onClick={() => setPayMethod(m.id)}
-              className="flex w-full items-center gap-3 p-4 text-left"
+            <Globe className="h-[18px] w-[18px] shrink-0" style={{ color: T.ink2 }} />
+            <span className="text-[14px] font-semibold" style={{ color: T.ink2 }}>
+              More Payment Methods
+            </span>
+            <span
+              className="rounded-md px-[7px] py-[3px] text-[11px] font-semibold"
+              style={{ background: '#EFEFEA', color: '#8A9086' }}
             >
-              {radioDot(checked)}
-              <m.Icon className="h-[18px] w-[18px] shrink-0" style={{ color: T.forest }} />
-              <span className="text-[15px] font-semibold" style={{ color: T.ink }}>
-                {m.label}
-              </span>
-              <span
-                className="ml-auto rounded-md px-[7px] py-[3px] text-[11px] font-semibold"
-                style={{ background: '#EFEFEA', color: '#6B7166' }}
+              {foldedRows.length}
+            </span>
+            <ChevronDown
+              className={cn('ml-auto h-4 w-4 transition-transform', moreExpanded && 'rotate-180')}
+              style={{ color: T.ink2 }}
+            />
+          </button>
+          <AnimatePresence initial={false}>
+            {moreExpanded && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.22, ease: 'easeOut' }}
+                className="overflow-hidden"
               >
-                {m.region}
-              </span>
-            </button>
-            {checked && (
-              <div className="border-t px-4 pb-4 pt-3" style={{ borderColor: T.line }}>
-                <p className="text-[12.5px] leading-relaxed" style={{ color: T.ink2 }}>
-                  {m.note}
-                </p>
-              </div>
+                <div className="flex flex-col gap-3 pt-3">{foldedRows.map(renderLocalRow)}</div>
+              </motion.div>
             )}
-          </div>
-        )
-      })}
+          </AnimatePresence>
+        </div>
+      )}
 
       {/* Disabled methods */}
       {SOON_METHODS.map((m) => (

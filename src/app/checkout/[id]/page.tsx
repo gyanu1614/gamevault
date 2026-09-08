@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { CheckoutForm } from './CheckoutForm'
 import { PURCHASES_ENABLED } from '@/lib/config/purchases'
@@ -38,6 +39,11 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
   }
 
   const { data: { user } } = await supabase.auth.getUser()
+
+  // Buyer country from Vercel's geo header (absent on localhost → the
+  // selector shows every local method). Drives the region filter only —
+  // never blocks a method.
+  const buyerCountry = (await headers()).get('x-vercel-ip-country')
 
   // V73 — Buyer profile for the checkout identity strip (username +
   // avatar; the auth user alone has only the email).
@@ -134,6 +140,7 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
         sellerReviews={sellerReviews}
         initialQty={parsedQty}
         bundleSummary={bundleSummary}
+        buyerCountry={buyerCountry}
       />
     </main>
   )
