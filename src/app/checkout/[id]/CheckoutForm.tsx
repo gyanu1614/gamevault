@@ -41,10 +41,12 @@ import {
   Package,
   Settings,
   Landmark,
+  QrCode,
   ShieldCheck,
   Smartphone,
   Store,
   Barcode,
+  Zap,
   Tag,
   TriangleAlert,
   Undo2,
@@ -396,10 +398,25 @@ const SOON_METHODS = [
   { name: 'Skrill', badges: ['SKRILL'] },
 ]
 
-// Payssion local methods LIVE on our app (probe-verified 2026-09-06). Adding
-// a method later = enable it at Payssion + add a row here + in the provider's
-// methods.ts registry.
-type PayMethodId = 'crypto' | 'gcash_ph' | 'oxxo_mx' | 'boleto_br'
+// Payssion local methods on our app. Rows are ordered by buyer-traffic
+// priority (EU → BR → PH → ID → MX → CO → CL). Adding a method later =
+// enable it at Payssion + add a row here + in the provider's methods.ts
+// registry. gcash/oxxo/boleto probe-verified 2026-09-06; the 2026-09-07
+// additions must pass the enable probe before deploy (491 = pull the row).
+// paysafecard: pulled 2026-09-08 — account manager says enabled, live probe
+// still 491; re-add the row (and its registry entry) once a probe returns 200.
+type PayMethodId =
+  | 'crypto'
+  | 'pix_br'
+  | 'gcash_ph'
+  | 'maya_ph'
+  | 'qr_ph'
+  | 'qris_id'
+  | 'oxxo_mx'
+  | 'spei_mx'
+  | 'boleto_br'
+  | 'pse_co'
+  | 'webpay_cl'
 const LOCAL_METHODS: Array<{
   id: Exclude<PayMethodId, 'crypto'>
   label: string
@@ -408,11 +425,39 @@ const LOCAL_METHODS: Array<{
   note: string
 }> = [
   {
+    id: 'pix_br',
+    label: 'Pix',
+    region: 'Brazil',
+    Icon: Zap,
+    note: 'Pay instantly with Pix — scan the QR code on the secure payment page with your bank app, and your order completes the moment the payment confirms.',
+  },
+  {
     id: 'gcash_ph',
     label: 'GCash',
     region: 'Philippines',
     Icon: Smartphone,
     note: 'Pay with your GCash wallet — you’ll be redirected to a secure GCash page, and your order completes the moment the payment confirms.',
+  },
+  {
+    id: 'maya_ph',
+    label: 'Maya',
+    region: 'Philippines',
+    Icon: Smartphone,
+    note: 'Pay with your Maya wallet — you’ll be redirected to a secure Maya page, and your order completes the moment the payment confirms.',
+  },
+  {
+    id: 'qr_ph',
+    label: 'QR Ph',
+    region: 'Philippines',
+    Icon: QrCode,
+    note: 'Scan the QR Ph code with any Philippine bank or e-wallet app — your order completes the moment the payment confirms.',
+  },
+  {
+    id: 'qris_id',
+    label: 'QRIS',
+    region: 'Indonesia',
+    Icon: QrCode,
+    note: 'Scan the QRIS code with any Indonesian bank or e-wallet app — GoPay, OVO, DANA, ShopeePay and more. Your order completes the moment the payment confirms.',
   },
   {
     id: 'oxxo_mx',
@@ -422,11 +467,32 @@ const LOCAL_METHODS: Array<{
     note: 'You’ll get a payment voucher to pay in cash at any OXXO store. Vouchers stay valid for 48 hours; your order completes when the payment clears (usually within a day). Any store credit you apply stays reserved until then.',
   },
   {
+    id: 'spei_mx',
+    label: 'SPEI',
+    region: 'Mexico',
+    Icon: Landmark,
+    note: 'Pay by SPEI transfer from your Mexican bank app — you’ll get the transfer details on the secure payment page, and your order completes when the transfer confirms (usually within minutes).',
+  },
+  {
     id: 'boleto_br',
     label: 'Boleto',
     region: 'Brazil',
     Icon: Barcode,
     note: 'You’ll get a Boleto slip to pay via your bank app or in person. Slips stay valid for 48 hours; your order completes when the payment clears (1–2 business days). Any store credit you apply stays reserved until then.',
+  },
+  {
+    id: 'pse_co',
+    label: 'PSE',
+    region: 'Colombia',
+    Icon: Landmark,
+    note: 'Pay directly from your Colombian bank account via PSE — you’ll be redirected to your bank to approve the payment, and your order completes the moment it confirms.',
+  },
+  {
+    id: 'webpay_cl',
+    label: 'WebPay',
+    region: 'Chile',
+    Icon: Landmark,
+    note: 'Pay through WebPay Plus — you’ll be redirected to the secure WebPay page, and your order completes the moment the payment confirms.',
   },
 ]
 

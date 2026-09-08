@@ -123,11 +123,18 @@ describe('payssion: MD5 signatures', () => {
 // ─── provider routing + expiry policy ─────────────────────────────
 describe('payssion: routing + per-method expiry', () => {
   it('enabled pm_ids route to payssion; unknown/un-enabled methods fall back', () => {
-    expect(providerNameForMethod('boleto_br')).toBe('payssion')
-    expect(providerNameForMethod('oxxo_mx')).toBe('payssion')
-    expect(providerNameForMethod('gcash_ph')).toBe('payssion')
+    for (const pm of [
+      'boleto_br', 'oxxo_mx', 'gcash_ph',
+      // 2026-09-07 expansion: direct rate-sheet methods (probe-verified 200).
+      'pix_br', 'maya_ph', 'qr_ph', 'qris_id',
+      'spei_mx', 'pse_co', 'webpay_cl',
+    ]) {
+      expect(providerNameForMethod(pm)).toBe('payssion')
+    }
     // Not in the registry (not enabled on the app) → never routed to payssion.
+    // paysafecard: still 491 live despite the account manager's email.
     expect(providerNameForMethod('paysafecard')).not.toBe('payssion')
+    expect(providerNameForMethod('p24_pl')).not.toBe('payssion')
     expect(providerNameForMethod('BTC-CHAIN')).not.toBe('payssion')
     expect(providerNameForMethod(undefined)).not.toBe('payssion')
   })
@@ -136,7 +143,9 @@ describe('payssion: routing + per-method expiry', () => {
     const now = Date.now()
     expect(new Date(payssionExpiryIso('boleto_br', now)).getTime() - now).toBe(48 * 60 * 60_000)
     expect(new Date(payssionExpiryIso('oxxo_mx', now)).getTime() - now).toBe(48 * 60 * 60_000)
-    expect(new Date(payssionExpiryIso('gcash_ph', now)).getTime() - now).toBe(60 * 60_000)
+    for (const pm of ['gcash_ph', 'pix_br', 'maya_ph', 'qr_ph', 'qris_id', 'spei_mx', 'pse_co', 'webpay_cl']) {
+      expect(new Date(payssionExpiryIso(pm, now)).getTime() - now).toBe(60 * 60_000)
+    }
   })
 })
 
