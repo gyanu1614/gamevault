@@ -7,7 +7,7 @@ import BuyingOpensSoon from './_BuyingOpensSoon'
 
 interface CheckoutPageProps {
   params: Promise<{ id: string }>
-  searchParams: Promise<{ qty?: string }>
+  searchParams: Promise<{ qty?: string; country?: string }>
 }
 
 export default async function CheckoutPage({ params, searchParams }: CheckoutPageProps) {
@@ -15,7 +15,7 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
   // V14j — Read qty hint from URL so deep-linked Buy now (e.g. from the
   // currency page) pre-fills the buyer's chosen quantity. Falls back to
   // the listing's min_quantity inside CheckoutForm if absent or invalid.
-  const { qty } = await searchParams
+  const { qty, country: countryOverride } = await searchParams
   const parsedQty = qty ? Math.max(1, parseInt(qty, 10) || 0) : undefined
   const supabase = await createClient()
 
@@ -42,8 +42,9 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
 
   // Buyer country from Vercel's geo header (absent on localhost → the
   // selector shows every local method). Drives the region filter only —
-  // never blocks a method.
-  const buyerCountry = (await headers()).get('x-vercel-ip-country')
+  // never blocks a method. ?country=XX overrides the header so the filter
+  // is testable on localhost and debuggable anywhere (UI-only, harmless).
+  const buyerCountry = countryOverride ?? (await headers()).get('x-vercel-ip-country')
 
   // V73 — Buyer profile for the checkout identity strip (username +
   // avatar; the auth user alone has only the email).

@@ -50,49 +50,21 @@ export default function CheckoutLoading() {
             <Block className="h-5 w-24" />
             <Block className="mt-2 h-4 w-72" />
 
-            {/* Crypto card */}
-            <Card className="mt-4 p-4">
-              <div className="flex items-center gap-3">
-                <Block className="h-[18px] w-[18px] rounded-full" />
-                <Block className="h-4 w-16" />
-                <Block className="h-5 w-14" />
-                <Block className="h-5 w-24" />
-                <span className="ml-auto flex gap-1.5">
-                  <Block className="h-5 w-5 rounded-full" />
-                  <Block className="h-5 w-5 rounded-full" />
-                </span>
-              </div>
-              <div className="mt-4 grid grid-cols-1 gap-3 border-t pt-4 sm:grid-cols-2" style={{ borderColor: LINE }}>
-                <div>
-                  <Block className="mb-1.5 h-3.5 w-10" />
-                  <Block className="h-[42px] w-full" />
-                </div>
-                <div>
-                  <Block className="mb-1.5 h-3.5 w-16" />
-                  <Block className="h-[42px] w-full" />
-                </div>
-              </div>
-              <Block className="mt-3 h-[52px] w-full rounded-lg" />
-            </Card>
+            {/* Category tabs: Crypto | E-Wallet | Card */}
+            <div className="mt-4 grid grid-cols-3 gap-2">
+              <Block className="h-11 w-full rounded-full" />
+              <Block className="h-11 w-full rounded-full" />
+              <Block className="h-11 w-full rounded-full" />
+            </div>
 
-            {/* Local method rows — region-filtered, typically crypto + a few
-                local rails + the More Payment Methods fold */}
-            {[0, 1, 2, 3].map((i) => (
-              <Card key={`m${i}`} className="mt-3 flex items-center gap-3 p-4">
-                <Block className="h-[18px] w-[18px] rounded-full" />
-                <Block className="h-[18px] w-[18px]" />
-                <Block className="h-4 w-20" />
-                <Block className="ml-auto h-5 w-20" />
-              </Card>
-            ))}
-            {/* Disabled "Soon" rows */}
-            {[0, 1, 2, 3].map((i) => (
-              <Card key={`s${i}`} className="mt-3 flex items-center gap-3 px-4 py-3.5">
-                <Block className="h-[18px] w-[18px] rounded-full" />
-                <Block className="h-4 w-36" />
-                <Block className="ml-auto h-5 w-16" />
-              </Card>
-            ))}
+            {/* Crypto panel: coin tiles + network + warning */}
+            <Card className="mt-3 p-4">
+              <Block className="h-3.5 w-24" />
+              <div className="mt-2 grid grid-cols-2 gap-3">
+                <Block className="h-[46px] w-full" />
+                <Block className="h-[46px] w-full" />
+              </div>
+            </Card>
 
             <Block className="mt-5 hidden h-12 w-full lg:block" />
             <Block className="mx-auto mt-2.5 hidden h-3.5 w-80 lg:block" />
