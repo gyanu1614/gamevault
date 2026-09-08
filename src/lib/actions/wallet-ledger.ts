@@ -68,9 +68,11 @@ export interface LedgerWalletBalance {
 
 /**
  * getMyWalletBalance — the session user's store-credit balance from the
- * ledger, plus the legacy stat fields (cashback/referrals) the wallet page
- * still renders, read from the old wallet_balances row (per-user SELECT RLS
- * remains). Missing legacy row → zeros.
+ * ledger, plus the legacy stat fields (referrals etc.) the wallet page still
+ * renders, read from the old wallet_balances row (per-user SELECT RLS
+ * remains). total_cashback comes from loyalty_credits — the cashback history
+ * table the ledger awards write to — not the dead legacy float column.
+ * Missing rows → zeros.
  */
 export async function getMyWalletBalance(): Promise<{
   success: boolean
@@ -82,14 +84,25 @@ export async function getMyWalletBalance(): Promise<{
     if (!userId) return { success: false, error: 'Not authenticated' }
 
     const supabase = await createClient()
-    const [available, { data: legacy }] = await Promise.all([
+    const [available, { data: legacy }, { data: cashbackRows }] = await Promise.all([
       walletTotalMajor(userId),
       supabase
         .from('wallet_balances')
-        .select('pending_balance, lifetime_earned, lifetime_spent, total_cashback, referral_earnings')
+        .select('pending_balance, lifetime_earned, lifetime_spent, referral_earnings')
         .eq('user_id', userId)
         .maybeSingle() as any,
+      supabase
+        .from('loyalty_credits')
+        .select('amount')
+        .eq('user_id', userId)
+        .eq('type', 'earned') as any,
     ])
+
+    const totalCashback = parseFloat(
+      ((cashbackRows as any[] | null) ?? [])
+        .reduce((sum, r) => sum + (r.amount ?? 0), 0)
+        .toFixed(2)
+    )
 
     return {
       success: true,
@@ -98,7 +111,7 @@ export async function getMyWalletBalance(): Promise<{
         pending_balance: Number(legacy?.pending_balance ?? 0),
         lifetime_earned: Number(legacy?.lifetime_earned ?? 0),
         lifetime_spent: Number(legacy?.lifetime_spent ?? 0),
-        total_cashback: Number(legacy?.total_cashback ?? 0),
+        total_cashback: totalCashback,
         referral_earnings: Number(legacy?.referral_earnings ?? 0),
       },
     }

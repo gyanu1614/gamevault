@@ -16,7 +16,7 @@ import { getTierFeeRate, TIER_WARRANTY_HOURS } from '@/lib/utils/safedrop-tiers'
 import type { SafeDropTier } from '@/lib/utils/safedrop-tiers'
 
 // P5.2 — Loyalty cashback
-import { awardCashback } from '@/lib/actions/loyalty'
+import { awardCashback } from '@/lib/loyalty/award'
 // P5.3 — Promo code usage
 import { recordPromoUsage } from '@/lib/actions/promo'
 
@@ -1103,11 +1103,9 @@ export async function confirmOrderReceipt(orderId: string): Promise<{
     // P5.2 — Award cashback to buyer (fire-and-forget, non-blocking)
     // Guest orders don't get loyalty credits (no persistent account)
     if (!order.is_guest_order) {
-      awardCashback({
-        userId:   user.id,
-        orderId:  orderId,
-        subtotal: order.subtotal ?? 0,
-      }).catch(() => {})
+      // Only the id crosses the seam — awardCashback re-fetches and verifies
+      // the order itself (it mints spendable credit; no trusted payload).
+      awardCashback({ orderId }).catch(() => {})
     }
 
     // Revalidate both seller and buyer paths for real-time updates

@@ -1,21 +1,31 @@
 'use server'
 
 /**
- * P5.2 — Buyer Loyalty & Cashback
+ * P5.2 — Buyer Loyalty & Cashback (read side)
  *
- * Every completed order earns the buyer 2% of their order subtotal as store
- * credits (loyalty_balance on their profile). Credits are tracked in the
- * loyalty_credits ledger.
+ * Cashback lives on the double-entry ledger: src/lib/loyalty/award.ts posts a
+ * wallet_credit (platform_commission → user_wallet) keyed `cashback:<orderId>`,
+ * so cashback is spendable at checkout like any other wallet credit. The
+ * award function is intentionally NOT exported from this 'use server' module
+ * — every export here is a client-invocable endpoint, and awarding mints
+ * money. loyalty_credits is the display/history table; the old
+ * profiles.loyalty_balance counters are dead (lost-update race, never
+ * spendable).
  *
  * Rate is configurable via LOYALTY_CASHBACK_RATE env var (default 0.02 = 2%).
  */
 
 import { createClient } from '@/lib/supabase/server'
+import { getWalletBalance } from '@/lib/wallet/wallet'
 import type { LoyaltyCredit } from '@/types/database'
 
 const LOYALTY_CASHBACK_RATE = parseFloat(
   process.env.LOYALTY_CASHBACK_RATE || '0.02'
 )
+
+// Ledger is USD end-to-end (decided 2026-09-04); EUR only holds pre-switch
+// legacy balances, summed at par like wallet-ledger.ts does.
+const WALLET_CURRENCIES = ['USD', 'EUR'] as const
 
 export interface LoyaltyStats {
   balance: number
@@ -25,71 +35,13 @@ export interface LoyaltyStats {
   recentCredits: LoyaltyCredit[]
 }
 
-// ── Internal: award cashback on order completion ──────────────────────────────
-
-/**
- * Award cashback to a buyer when their order completes.
- * Called fire-and-forget from confirmOrderReceipt().
- * Safe to call multiple times — idempotent per order_id.
- */
-export async function awardCashback(params: {
-  userId: string
-  orderId: string
-  subtotal: number
-}): Promise<void> {
-  const { userId, orderId, subtotal } = params
-
-  if (subtotal <= 0) return
-
-  try {
-    const supabase = await createClient()
-
-    // Idempotency: skip if an 'earned' credit already exists for this order
-    const { data: existing } = await supabase
-      .from('loyalty_credits')
-      .select('id')
-      .eq('order_id', orderId)
-      .eq('type', 'earned')
-      .maybeSingle()
-
-    if (existing) return   // already awarded
-
-    const cashbackAmount = parseFloat((subtotal * LOYALTY_CASHBACK_RATE).toFixed(2))
-    if (cashbackAmount <= 0) return
-
-    // Fetch current balance
-    const { data: profileRaw } = await supabase
-      .from('profiles')
-      .select('loyalty_balance, lifetime_cashback_earned')
-      .eq('id', userId)
-      .single()
-    const profile = profileRaw as any
-
-    const currentBalance      = profile?.loyalty_balance          ?? 0
-    const currentLifetime     = profile?.lifetime_cashback_earned ?? 0
-    const newBalance          = parseFloat((currentBalance + cashbackAmount).toFixed(2))
-    const newLifetime         = parseFloat((currentLifetime + cashbackAmount).toFixed(2))
-
-    // Insert ledger entry (cast: Supabase narrow-select inference returns `never`)
-    await supabase.from('loyalty_credits').insert({
-      user_id:      userId,
-      order_id:     orderId,
-      type:         'earned',
-      amount:       cashbackAmount,
-      balance_after: newBalance,
-      description:  `${(LOYALTY_CASHBACK_RATE * 100).toFixed(0)}% cashback on order`,
-    } as any)
-
-    // Update profile balance (cast: Supabase narrow-select inference returns `never`)
-    await (supabase.from('profiles') as any)
-      .update({
-        loyalty_balance:          newBalance,
-        lifetime_cashback_earned: newLifetime,
-      })
-      .eq('id', userId)
-  } catch (err) {
-    console.error('[loyalty] awardCashback error:', err)
+/** Spendable store credit (ledger user_wallet) in major units. */
+async function walletTotalMajor(userId: string): Promise<number> {
+  let totalMinor = 0n
+  for (const currency of WALLET_CURRENCIES) {
+    totalMinor += await getWalletBalance(userId, currency)
   }
+  return Number(totalMinor) / 100
 }
 
 // ── Public: fetch stats for the dashboard page ────────────────────────────────
@@ -105,32 +57,31 @@ export async function getLoyaltyStats(): Promise<{
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return { success: false, error: 'Not authenticated' }
 
-    // Profile balance
-    const { data: profileRaw } = await supabase
-      .from('profiles')
-      .select('loyalty_balance, lifetime_cashback_earned')
-      .eq('id', user.id)
-      .single()
-    const profile = profileRaw as any
+    // Spendable balance comes from the ledger — cashback lands in the same
+    // user_wallet as refund credits, so this is what checkout can spend.
+    const balance = await walletTotalMajor(user.id)
 
-    const balance               = profile?.loyalty_balance          ?? 0
-    const lifetimeCashbackEarned = profile?.lifetime_cashback_earned ?? 0
-
-    // This-month earned (type = 'earned', created_at >= start of current month)
+    // Lifetime + this-month earned from the history table.
     const startOfMonth = new Date()
     startOfMonth.setDate(1)
     startOfMonth.setHours(0, 0, 0, 0)
 
-    const { data: monthRaw } = await supabase
+    const { data: earnedRaw } = await supabase
       .from('loyalty_credits')
-      .select('amount')
+      .select('amount, created_at')
       .eq('user_id', user.id)
       .eq('type', 'earned')
-      .gte('created_at', startOfMonth.toISOString())
 
-    const thisMonthEarned = (monthRaw as any[] | null)?.reduce(
-      (sum, r) => sum + (r.amount ?? 0), 0
-    ) ?? 0
+    const earned = (earnedRaw as any[] | null) ?? []
+    const lifetimeCashbackEarned = parseFloat(
+      earned.reduce((sum, r) => sum + (r.amount ?? 0), 0).toFixed(2)
+    )
+    const thisMonthEarned = parseFloat(
+      earned
+        .filter((r) => r.created_at && new Date(r.created_at) >= startOfMonth)
+        .reduce((sum, r) => sum + (r.amount ?? 0), 0)
+        .toFixed(2)
+    )
 
     // Pending: orders in status 'paid'/'delivering' for this buyer (not yet confirmed → cashback not yet awarded)
     const { data: pendingOrdersRaw } = await supabase
@@ -167,24 +118,5 @@ export async function getLoyaltyStats(): Promise<{
   } catch (err: any) {
     console.error('[loyalty] getLoyaltyStats error:', err)
     return { success: false, error: err.message || 'Failed to load loyalty data' }
-  }
-}
-
-// ── Public: get just the balance (lightweight, for checkout display) ──────────
-
-export async function getLoyaltyBalance(): Promise<number> {
-  try {
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return 0
-
-    const { data: profileRaw } = await supabase
-      .from('profiles')
-      .select('loyalty_balance')
-      .eq('id', user.id)
-      .single()
-    return (profileRaw as any)?.loyalty_balance ?? 0
-  } catch {
-    return 0
   }
 }

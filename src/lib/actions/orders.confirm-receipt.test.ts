@@ -27,7 +27,7 @@ vi.mock('@/lib/audit', () => ({
   logFailure: vi.fn(),
 }))
 vi.mock('@/lib/utils/rate-limit', () => ({ rateLimitCreateOrder: vi.fn() }))
-vi.mock('@/lib/actions/loyalty', () => ({ awardCashback: h.awardCashback }))
+vi.mock('@/lib/loyalty/award', () => ({ awardCashback: h.awardCashback }))
 vi.mock('@/lib/actions/promo', () => ({ recordPromoUsage: vi.fn() }))
 vi.mock('@/lib/escrow/transition', () => ({ transition: h.transition }))
 vi.mock('@/lib/wallet/wallet', () => ({ refundToWallet: h.refundToWallet }))
@@ -115,6 +115,17 @@ describe('confirmOrderReceipt ledger transition', () => {
       undefined,
       'buyer_confirmed'
     )
+  })
+
+  it('hands cashback only the orderId — award verifies the order itself', async () => {
+    const readBuilder = createBuilder({ data: { ...baseOrder }, error: null })
+    h.createClient.mockResolvedValue(createSupabaseMock([readBuilder]))
+
+    await confirmOrderReceipt(ORDER_ID)
+
+    // No caller-supplied user/amount/currency: awardCashback derives them
+    // from the order row it re-fetches (mintable-money hardening).
+    expect(h.awardCashback).toHaveBeenCalledWith({ orderId: ORDER_ID })
   })
 
   it('lost race: changed=false returns success with no comms or cashback', async () => {
