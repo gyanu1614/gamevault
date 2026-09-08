@@ -4,7 +4,7 @@ import { payssionToCanonical, payssionEventId, type PayssionTxn } from './status
 import { createSigVariants, notifySigMatches, refundSig, detailsSig } from './sig'
 import { makePayssionProvider } from './index'
 import { providerNameForMethod } from '@/lib/payments/registry'
-import { payssionExpiryIso } from './methods'
+import { payssionExpiryIso, splitPayssionMethodsByCountry } from './methods'
 import { fromDecimal } from '@/lib/money'
 
 // Configure the adapter for pure/mocked tests. ||= only fills fallbacks —
@@ -123,11 +123,18 @@ describe('payssion: MD5 signatures', () => {
 // ─── provider routing + expiry policy ─────────────────────────────
 describe('payssion: routing + per-method expiry', () => {
   it('enabled pm_ids route to payssion; unknown/un-enabled methods fall back', () => {
-    expect(providerNameForMethod('boleto_br')).toBe('payssion')
-    expect(providerNameForMethod('oxxo_mx')).toBe('payssion')
-    expect(providerNameForMethod('gcash_ph')).toBe('payssion')
+    for (const pm of [
+      'boleto_br', 'oxxo_mx', 'gcash_ph',
+      // 2026-09-07 expansion: direct rate-sheet methods (probe-verified 200).
+      'pix_br', 'maya_ph', 'qr_ph', 'qris_id',
+      'spei_mx', 'pse_co', 'webpay_cl',
+    ]) {
+      expect(providerNameForMethod(pm)).toBe('payssion')
+    }
     // Not in the registry (not enabled on the app) → never routed to payssion.
+    // paysafecard: still 491 live despite the account manager's email.
     expect(providerNameForMethod('paysafecard')).not.toBe('payssion')
+    expect(providerNameForMethod('p24_pl')).not.toBe('payssion')
     expect(providerNameForMethod('BTC-CHAIN')).not.toBe('payssion')
     expect(providerNameForMethod(undefined)).not.toBe('payssion')
   })
@@ -136,7 +143,40 @@ describe('payssion: routing + per-method expiry', () => {
     const now = Date.now()
     expect(new Date(payssionExpiryIso('boleto_br', now)).getTime() - now).toBe(48 * 60 * 60_000)
     expect(new Date(payssionExpiryIso('oxxo_mx', now)).getTime() - now).toBe(48 * 60 * 60_000)
-    expect(new Date(payssionExpiryIso('gcash_ph', now)).getTime() - now).toBe(60 * 60_000)
+    for (const pm of ['gcash_ph', 'pix_br', 'maya_ph', 'qr_ph', 'qris_id', 'spei_mx', 'pse_co', 'webpay_cl']) {
+      expect(new Date(payssionExpiryIso(pm, now)).getTime() - now).toBe(60 * 60_000)
+    }
+  })
+})
+
+describe('payssion: checkout region filter', () => {
+  const ids = (ms: Array<{ pmId: string }>) => ms.map((m) => m.pmId)
+
+  it('matches the buyer country (case-insensitive) and folds the rest', () => {
+    const br = splitPayssionMethodsByCountry('br')
+    expect(ids(br.matched)).toEqual(['pix_br', 'boleto_br'])
+    expect(ids(br.other)).not.toContain('pix_br')
+    const ph = splitPayssionMethodsByCountry('PH')
+    expect(ids(ph.matched)).toEqual(['gcash_ph', 'maya_ph', 'qr_ph'])
+  })
+
+  it('a country with no local rail matches nothing (crypto still renders)', () => {
+    const us = splitPayssionMethodsByCountry('US')
+    expect(us.matched).toEqual([])
+    expect(us.other.length).toBeGreaterThan(0)
+  })
+
+  it('unknown/garbage country shows everything up front — never strand a buyer', () => {
+    for (const c of [null, undefined, '', 'XXL', '1F']) {
+      const s = splitPayssionMethodsByCountry(c)
+      expect(s.other).toEqual([])
+      expect(s.matched.length).toBeGreaterThanOrEqual(10)
+    }
+  })
+
+  it('the sandbox simulator never renders as a selector row', () => {
+    const s = splitPayssionMethodsByCountry(null)
+    expect(ids(s.matched)).not.toContain('payssion_test')
   })
 })
 

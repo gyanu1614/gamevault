@@ -842,41 +842,62 @@ export async function sendWithdrawalProcessedEmail({
   method,
   status,
   reason,
+  txReference,
 }: {
   to: string
   name: string
   amount: number
   /** Display name of the withdrawal method, e.g. 'Bank Transfer'. */
   method: string
-  status: 'approved' | 'rejected'
+  status: 'approved' | 'rejected' | 'completed'
   /** Rejection reason (required when status is 'rejected'). */
   reason?: string
+  /** On-chain tx hash / bank reference (shown when status is 'completed'). */
+  txReference?: string
 }) {
   const approved = status === 'approved'
+  const completed = status === 'completed'
   const { data, error } = await resend.emails.send({
     from: FROM_EMAIL,
     replyTo: REPLY_TO,
     to,
-    subject: approved
-      ? `Withdrawal approved — $${amount.toFixed(2)} on the way`
-      : `Withdrawal request declined`,
+    subject: completed
+      ? `Withdrawal sent — $${amount.toFixed(2)} paid out`
+      : approved
+        ? `Withdrawal approved — $${amount.toFixed(2)} on the way`
+        : `Withdrawal request declined`,
     html: emailShell({
-      preview: approved ? `$${amount.toFixed(2)} is on the way to your ${method}.` : `We couldn't process your withdrawal this time.`,
-      icon: approved ? 'payout' : 'rejected',
-      heading: approved ? 'Withdrawal approved' : 'Withdrawal declined',
+      preview: completed
+        ? `$${amount.toFixed(2)} has been sent to your ${method}.`
+        : approved
+          ? `$${amount.toFixed(2)} is on the way to your ${method}.`
+          : `We couldn't process your withdrawal this time.`,
+      icon: completed || approved ? 'payout' : 'rejected',
+      heading: completed ? 'Withdrawal sent' : approved ? 'Withdrawal approved' : 'Withdrawal declined',
       body:
         emailText(
-          approved
-            ? `Hi ${escapeHtml(name)} — your withdrawal is approved and on its way to your payout method.`
-            : `Hi ${escapeHtml(name)} — we couldn't process your withdrawal this time. Your funds stay safe in your seller balance.`,
+          completed
+            ? `Hi ${escapeHtml(name)} — your withdrawal has been sent to your payout method. Depending on the method, it can take a little while to land.`
+            : approved
+              ? `Hi ${escapeHtml(name)} — your withdrawal is approved and on its way to your payout method.`
+              : `Hi ${escapeHtml(name)} — we couldn't process your withdrawal this time. Your funds stay safe in your seller balance.`,
         ) +
         emailOrderSummary([
           ['Amount', `$${amount.toFixed(2)}`],
           ['Method', escapeHtml(method)],
+          ...(completed && txReference
+            ? ([['Reference', escapeHtml(txReference)]] as [string, string][])
+            : []),
         ]) +
-        (!approved && reason ? emailBox({ title: 'Why', html: `<span style="overflow-wrap:anywhere;">${escapeHtml(reason)}</span>` }) : '') +
+        (!approved && !completed && reason ? emailBox({ title: 'Why', html: `<span style="overflow-wrap:anywhere;">${escapeHtml(reason)}</span>` }) : '') +
         emailButton('View Your Wallet', `${APP_URL}/account/wallet`) +
-        emailFooterNote(approved ? `Arrival depends on your payout method — usually 1&ndash;5 business days.` : `Questions? Just reply to this email.`),
+        emailFooterNote(
+          completed
+            ? `Sent from our side — arrival depends on your payout method, usually within 1&ndash;5 business days.`
+            : approved
+              ? `Arrival depends on your payout method — usually 1&ndash;5 business days.`
+              : `Questions? Just reply to this email.`,
+        ),
     }),
   })
 

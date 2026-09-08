@@ -13,7 +13,7 @@ import 'server-only'
  * Ledger posting: platform_commission debit → user_wallet credit, idempotency
  * key `cashback:<orderId>` — replays dedupe in post_journal. loyalty_credits
  * stays as the display/history table (service-role writes only; the
- * authenticated INSERT grant was revoked in 20260907010000).
+ * authenticated INSERT grant was revoked in 20260908000000).
  *
  * Rate is configurable via LOYALTY_CASHBACK_RATE env var (default 0.02 = 2%).
  */

@@ -23,9 +23,10 @@ const LOYALTY_CASHBACK_RATE = parseFloat(
   process.env.LOYALTY_CASHBACK_RATE || '0.02'
 )
 
-// Ledger is USD end-to-end (decided 2026-09-04); EUR only holds pre-switch
-// legacy balances, summed at par like wallet-ledger.ts does.
-const WALLET_CURRENCIES = ['USD', 'EUR'] as const
+// Ledger is USD end-to-end (decided 2026-09-04); the one pre-switch EUR
+// balance was FX-converted in the cleanup, so USD is the only live currency
+// (matches wallet-ledger.ts).
+const WALLET_CURRENCIES = ['USD'] as const
 
 export interface LoyaltyStats {
   balance: number

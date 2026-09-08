@@ -68,15 +68,13 @@ describe('getLoyaltyStats ledger-derived tiles', () => {
       orders: [createBuilder({ data: [{ subtotal: 50 }], error: null })],
     })
     h.createClient.mockResolvedValue(supabase)
-    // Spendable store credit: $2.50 USD + $0.75 legacy USD-at-par
-    h.getWalletBalance.mockImplementation(async (_uid: string, currency: string) =>
-      currency === 'USD' ? 250n : 75n
-    )
+    // Spendable store credit: $2.50 in the ledger user_wallet (USD-only)
+    h.getWalletBalance.mockResolvedValue(250n)
 
     const result = await loyaltyActions.getLoyaltyStats()
 
     expect(result.success).toBe(true)
-    expect(result.data?.balance).toBe(3.25)
+    expect(result.data?.balance).toBe(2.5)
     expect(result.data?.lifetimeCashbackEarned).toBe(2.5)
     expect(result.data?.thisMonthEarned).toBe(1.9)
     expect(result.data?.pendingFromOrders).toBe(1) // 2% of $50

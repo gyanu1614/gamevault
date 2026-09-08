@@ -2,7 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service'
-import { requireAdmin } from '@/lib/actions/admin-permissions'
+import { requireAdmin, requireRole } from '@/lib/actions/admin-permissions'
 import { getMyWithdrawableBalance } from '@/lib/actions/wallet-ledger'
 import { PAYOUT_MIN_USD, round2 } from '@/lib/fees'
 import { validatePayoutAddress } from '@/lib/crypto/address-validation'
@@ -390,8 +390,8 @@ export async function approveWithdrawalRequest(params: {
 
     // Ledger note: the funds were already moved into payout_clearing when
     // the request was created (withdrawal_debit). Approval flips status only;
-    // the payout_clearing → external journal posts when ops actually sends
-    // the money (marking the request completed — separate flow).
+    // the payout_clearing → external_payout journal posts when ops actually
+    // sends the money (markWithdrawalPaid, below).
     const serviceClient = createServiceRoleClient()
     const { data: updatedRows, error } = await (serviceClient as any)
       .from('withdrawal_requests')
@@ -459,7 +459,138 @@ export async function approveWithdrawalRequest(params: {
   }
 }
 
-// 8. Reject withdrawal request (admin)
+// 8. Mark approved withdrawal as paid (admin)
+export async function markWithdrawalPaid(params: {
+  requestId: string
+  /** On-chain tx hash / bank reference — proof of the send. */
+  transactionHash?: string
+  adminNotes?: string
+}): Promise<{
+  success: boolean
+  error?: string
+}> {
+  try {
+    // SECURITY: settles real money movement, so this is tighter than
+    // approve/reject — support/moderator roles pass requireAdmin but must not
+    // be able to record payouts. Checked BEFORE any service-role work.
+    const admin = await requireRole(['admin', 'super_admin'])
+
+    const serviceClient = createServiceRoleClient()
+    const { data: request, error: loadError } = await (serviceClient as any)
+      .from('withdrawal_requests')
+      .select('id, status, user_id, amount, method_id, method_name')
+      .eq('id', params.requestId)
+      .single()
+
+    if (loadError || !request) {
+      return { success: false, error: 'Withdrawal request not found' }
+    }
+
+    // Replay of a finished payout: the journal already posted (it posts
+    // before the status flip), so there is nothing left to do.
+    if (request.status === 'completed') {
+      return { success: true }
+    }
+    if (request.status !== 'approved' && request.status !== 'processing') {
+      return {
+        success: false,
+        error: `Only an approved withdrawal can be marked paid — this one is ${request.status}.`,
+      }
+    }
+
+    // 1) Settle the ledger FIRST: payout_clearing → external_payout, sized
+    // from the hold journal itself, idempotent on 'payout:<requestId>'. If
+    // this fails the request stays approved and the action is retryable; the
+    // reverse order could mark a request completed with the money still
+    // showing in-flight — exactly the gap this action closes.
+    const { error: journalError } = await (serviceClient.rpc as any)('withdrawal_payout', {
+      p_request_id: params.requestId,
+    })
+    if (journalError) {
+      console.error(
+        `[Withdrawals] payout journal failed for request ${params.requestId}:`,
+        journalError
+      )
+      return { success: false, error: `Payout journal failed: ${journalError.message}` }
+    }
+
+    // 2) Flip to the terminal paid state. Status-gated so a concurrent
+    // double-click can't clobber audit fields; the journal above is shared
+    // and idempotent either way.
+    const txHash = params.transactionHash?.trim() || null
+    const { error: updateError } = await (serviceClient as any)
+      .from('withdrawal_requests')
+      .update({
+        status: 'completed',
+        completed_at: new Date().toISOString(),
+        processed_by: admin.userId,
+        transaction_hash: txHash,
+        ...(params.adminNotes ? { admin_notes: params.adminNotes } : {}),
+      })
+      .eq('id', params.requestId)
+      .in('status', ['approved', 'processing'])
+
+    if (updateError) {
+      // Journal posted but the flip failed — surface loudly; a retry is safe
+      // (journal replays idempotently) and completes the flip.
+      console.error(
+        `[Withdrawals] CRITICAL: status flip failed for paid request ${params.requestId}:`,
+        updateError
+      )
+      return { success: false, error: 'Payout recorded but status update failed — retry.' }
+    }
+
+    // 3) Tell the seller the money was sent (in-app + email).
+    // Awaited but isolated: comms failures must never fail the settlement.
+    await (async () => {
+      const [{ data: profile }, { data: method }] = await Promise.all([
+        serviceClient
+          .from('profiles')
+          .select('email, username, full_name')
+          .eq('id', request.user_id)
+          .single() as any,
+        (serviceClient as any)
+          .from('withdrawal_methods')
+          .select('display_name')
+          .eq('id', request.method_id)
+          .single(),
+      ])
+      const methodName =
+        method?.display_name || request.method_name || 'your withdrawal method'
+      const amount = Number(request.amount) || 0
+
+      const { error: notifError } = await (serviceClient as any)
+        .from('notifications')
+        .insert({
+          user_id: request.user_id,
+          type: 'withdrawal_completed',
+          title: 'Withdrawal Sent',
+          message: `$${amount.toFixed(2)} → ${methodName} — sent.`,
+          link: '/account/wallet',
+          is_read: false,
+        })
+      if (notifError) throw notifError
+
+      if (profile?.email) {
+        const { sendWithdrawalProcessedEmail } = await import('@/lib/email')
+        await sendWithdrawalProcessedEmail({
+          to: profile.email,
+          name: profile.full_name || profile.username || 'Gamer',
+          amount,
+          method: methodName,
+          status: 'completed',
+          txReference: txHash ?? undefined,
+        })
+      }
+    })().catch((err) => console.error('[Withdrawals] Payout comms failed:', err))
+
+    return { success: true }
+  } catch (error: any) {
+    return { success: false, error: error.message }
+  }
+}
+
+// 9. Reject withdrawal request (admin)
 export async function rejectWithdrawalRequest(params: {
   requestId: string
   reason: string
