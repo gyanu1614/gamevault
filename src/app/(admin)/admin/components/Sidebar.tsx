@@ -32,6 +32,7 @@ import {
   IconDeviceGamepad2,
   IconShoppingCart,
   IconTicket,
+  IconCash,
   IconRocket,
   IconTargetArrow,
   IconSpeakerphone,
@@ -58,6 +59,7 @@ interface SidebarProps {
 const LINKS = [
   { label: 'Dashboard',           href: '/admin',                icon: IconLayoutDashboard, roles: ['admin', 'moderator', 'support', 'super_admin'] },
   { label: 'Orders',              href: '/admin/orders',         icon: IconShoppingCart,    roles: ['admin', 'support', 'super_admin'] },
+  { label: 'Withdrawals',         href: '/admin/withdrawals',    icon: IconCash,            roles: ['admin', 'super_admin'] },
   { label: 'Seller Applications', href: '/admin/sellers',        icon: IconFileText,        roles: ['admin', 'moderator', 'super_admin'] },
   { label: 'Active Sellers',      href: '/admin/active-sellers', icon: IconBuildingStore,   roles: ['admin', 'moderator', 'support', 'super_admin'] },
   { label: 'Founding Sellers',    href: '/admin/early-sellers',  icon: IconRocket,          roles: ['admin', 'super_admin'] },
