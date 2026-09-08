@@ -460,13 +460,45 @@ interface LocalMethodRow {
   id: string
   label: string
   region: string
+  /** Emoji flag for the region chip: country flag, or 🌍 for multi-country. */
+  flag: string
+  countries: string[]
   Icon: typeof Smartphone
   note: string
 }
 
+/** ISO-3166 alpha-2 → emoji flag (regional-indicator pair). */
+function ccFlag(cc: string): string {
+  if (!/^[A-Za-z]{2}$/.test(cc)) return '🌍'
+  return String.fromCodePoint(
+    ...[...cc.toUpperCase()].map((ch) => 0x1f1e6 + ch.charCodeAt(0) - 65)
+  )
+}
+
+/** ISO code → English country name (Intl built-in; falls back to the code). */
+const regionNames =
+  typeof Intl !== 'undefined' && 'DisplayNames' in Intl
+    ? new Intl.DisplayNames(['en'], { type: 'region' })
+    : null
+function countryName(cc: string): string {
+  try {
+    return regionNames?.of(cc.toUpperCase()) ?? cc.toUpperCase()
+  } catch {
+    return cc.toUpperCase()
+  }
+}
+
 function toRow(m: PayssionMethodMeta): LocalMethodRow {
   const ui = METHOD_UI[m.pmId] ?? FALLBACK_UI
-  return { id: m.pmId, label: m.label, region: m.coverage, Icon: ui.Icon, note: ui.note }
+  return {
+    id: m.pmId,
+    label: m.label,
+    region: m.coverage,
+    flag: m.countries.length === 1 ? ccFlag(m.countries[0]) : '🌍',
+    countries: m.countries,
+    Icon: ui.Icon,
+    note: ui.note,
+  }
 }
 
 // ─── CheckoutForm ───────────────────────────────────────────────────────────
@@ -493,6 +525,18 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
   const foldedRows = foldedMethods.map(toRow)
   const [moreOpen, setMoreOpen] = useState(false)
 
+  // G2A-style country picker inside the fold: countries derived from the
+  // folded methods (registry order), so new methods surface automatically.
+  const foldCountries: Array<{ cc: string; count: number }> = []
+  for (const row of foldedRows) {
+    for (const cc of row.countries) {
+      const hit = foldCountries.find((c) => c.cc === cc)
+      if (hit) hit.count += 1
+      else foldCountries.push({ cc, count: 1 })
+    }
+  }
+  const [foldCountry, setFoldCountry] = useState<string>('all')
+
   // Quantity comes clamped from the ?qty deep-link (chosen on the item page).
   const seedQty = (() => {
     if (!initialQty) return 1
@@ -504,6 +548,14 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
 
   // Payment method: crypto (expanded card) or a Payssion local method.
   const [payMethod, setPayMethod] = useState<PayMethodId>('crypto')
+  const visibleFoldedRows =
+    foldCountry === 'all'
+      ? foldedRows
+      : foldedRows.filter(
+          // The selected method never disappears when the country filter
+          // changes — the buyer's active choice must stay visible.
+          (r) => r.countries.includes(foldCountry) || r.id === payMethod
+        )
   // Coin + network selection (within the crypto card).
   const [coin, setCoin] = useState<Coin>('usdt')
   const [network, setNetwork] = useState<Net>('trc20')
@@ -774,7 +826,7 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
             className="ml-auto rounded-md px-[7px] py-[3px] text-[11px] font-semibold"
             style={{ background: '#EFEFEA', color: '#6B7166' }}
           >
-            {m.region}
+            {m.flag} {m.region}
           </span>
         </button>
         {checked && (
@@ -869,7 +921,46 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
                 transition={{ duration: 0.22, ease: 'easeOut' }}
                 className="overflow-hidden"
               >
-                <div className="flex flex-col gap-3 pt-3">{foldedRows.map(renderLocalRow)}</div>
+                <div className="flex flex-col gap-3 pt-3">
+                  {/* Country picker — G2A pattern: pick where you're paying
+                      from, see that country's rails. */}
+                  <div className="flex flex-col gap-2">
+                    <span className="text-[12px] font-semibold" style={{ color: T.ink2 }}>
+                      Paying From Another Country?
+                    </span>
+                    <LightSelect
+                      ariaLabel="Country"
+                      value={foldCountry}
+                      onChange={setFoldCountry}
+                      options={[
+                        {
+                          value: 'all',
+                          label: '🌍 All Countries',
+                          hint: `${foldedRows.length} Methods`,
+                        },
+                        ...foldCountries.map((c) => ({
+                          value: c.cc,
+                          label: `${ccFlag(c.cc)} ${countryName(c.cc)}`,
+                          hint: `${c.count} ${c.count === 1 ? 'Method' : 'Methods'}`,
+                        })),
+                      ]}
+                    />
+                  </div>
+                  <AnimatePresence initial={false} mode="popLayout">
+                    {visibleFoldedRows.map((m) => (
+                      <motion.div
+                        key={m.id}
+                        layout
+                        initial={{ opacity: 0, y: 6 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -6 }}
+                        transition={{ duration: 0.16, ease: 'easeOut' }}
+                      >
+                        {renderLocalRow(m)}
+                      </motion.div>
+                    ))}
+                  </AnimatePresence>
+                </div>
               </motion.div>
             )}
           </AnimatePresence>
