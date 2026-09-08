@@ -64,17 +64,21 @@ BEGIN
   END IF;
 
   FOR r IN
-    SELECT lc.user_id, lc.order_id, lc.amount, o.currency
+    SELECT lc.user_id, lc.order_id, lc.amount
     FROM loyalty_credits lc
     JOIN orders o ON o.id = lc.order_id
     WHERE lc.type = 'earned'
   LOOP
     v_minor := ROUND(r.amount * 100)::bigint;
     IF v_minor <= 0 THEN CONTINUE; END IF;
+    -- Always USD: the platform is single-currency and the wallet read-model
+    -- sums USD only (post-cleanup FX). One legacy order row still says EUR;
+    -- a EUR-denominated credit would be invisible and unspendable, and the
+    -- profile counters these amounts came from were always summed at par.
     PERFORM wallet_credit(
       r.user_id,
       v_minor,
-      UPPER(COALESCE(r.currency, 'USD'))::character(3),
+      'USD'::character(3),
       'platform_commission'::ledger_account_kind,
       'cashback:' || r.order_id,
       'CASHBACK',
