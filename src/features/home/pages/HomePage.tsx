@@ -15,6 +15,7 @@ import {
 } from 'lucide-react'
 
 import { HeroCarousel } from '../components/HeroCarousel'
+import { PreFooterCtaBand } from '../components/PreFooterCtaBand'
 import { RowHeader } from '../components/RowHeader'
 import { TopUpsBanner } from '../components/TopUpsBanner'
 import { HorizontalScroller } from '../components/HorizontalScroller'
@@ -27,6 +28,7 @@ import { RecentlySoldTicker } from '../components/RecentlySoldTicker'
 import { PaymentsMarquee } from '@/components/marketplace/PaymentsMarquee'
 import { TrustpilotLink } from '@/components/trust/TrustpilotLink'
 import {
+  MobileEarlyAccessBar,
   MobileHero,
   MobilePopularGames,
   MobileProtectionStrip,
@@ -130,29 +132,29 @@ function completeMarketplaceRail(
 const WHY_CARDS = [
   {
     icon: ShieldCheck,
-    title: 'SafeDrop on Every Order',
-    body: 'The seller is only paid after you confirm delivery. Not delivered or not as described? You get your money back — and real humans review anything off.',
+    title: '100% Refund if Not Delivered',
+    body: "Item didn't arrive or wasn't as described? You get every penny back — guaranteed, no questions.",
     tone: 'lime',
     img: '/icons/trust/money-back.png',
   },
   {
     icon: ShieldCheck,
-    title: 'Sellers earn their spot',
-    body: 'ID checks, payment verification, live ratings and full trade history on every storefront. The sketchy ones never make it in.',
+    title: 'KYC-Verified Sellers Only',
+    body: 'Every seller is ID-checked and approved before they can list. No fakes, no scammers — just legit traders.',
     tone: 'success',
     img: '/icons/safedrop-emblem.png',
   },
   {
     icon: Coins,
-    title: "Fees that don't sting",
-    body: 'Sellers pay 5–10% — not the 17–26% the big marketplaces skim — so listings start cheaper here and stay cheaper.',
+    title: 'Lowest Fees = Cheaper Prices',
+    body: 'We charge sellers less so they can price lower. You get better deals than anywhere else.',
     tone: 'warning',
     img: '/how-it-works/step-2.png',
   },
   {
     icon: Headset,
-    title: 'Humans, around the clock',
-    body: 'Stuck mid-trade at 4 AM? Support and dispute resolution never close — real people, around the clock.',
+    title: 'Real Support, In Minutes',
+    body: 'Issue at 3 AM? Real humans are on it. No bots, no wait days — fast help when you need it.',
     tone: 'info',
     img: '/icons/trust/support.png',
   },
@@ -490,6 +492,10 @@ export function HomePage() {
           3-step protection strip. Desktop sections below carry
           max-lg:hidden so lg+ stays byte-identical. */}
       <div className="lg:hidden">
+        {/* Early Access bar — fixed strip attached directly below the mobile navbar */}
+        <MobileEarlyAccessBar />
+        {/* Push hero content below the fixed early-access bar (36px) */}
+        <div className="h-9" aria-hidden />
         <MobileHero />
         <MobilePopularGames games={popularGames} />
         <MobileProtectionStrip />
@@ -499,6 +505,17 @@ export function HomePage() {
 
         {/* Headline — vertically centered in the space above the carousel */}
         <div className="mx-auto text-center flex flex-col items-center justify-center relative z-10 flex-[1.5_1_0%] min-h-0">
+          {/* Beta eyebrow — replaces the top banner */}
+          <a
+            href="/early-seller?src=hero"
+            className="mb-4 inline-flex items-center gap-2 rounded border border-[#F5C451]/30 bg-[#F5C451]/[0.08] px-3 py-1.5 transition-colors hover:border-[#F5C451]/50 hover:bg-[#F5C451]/[0.14]"
+          >
+            <span className="h-1.5 w-1.5 rounded-full bg-[#F5C451] shadow-[0_0_6px_rgba(245,196,81,0.7)]" aria-hidden />
+            <span className="text-[11.5px] font-semibold uppercase tracking-[0.08em] text-[#F5C451]">Early Access</span>
+            <span className="text-[12px] text-white/50">·</span>
+            <span className="text-[12px] font-medium text-white/70">Sell on DropMarket — founding partner rates</span>
+            <svg className="h-3 w-3 text-[#F5C451]/60" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </a>
           <h1 className="font-display text-[clamp(22px,7vw,28px)] md:text-display lg:text-display-lg md:whitespace-nowrap">
             <span
               className="block bg-clip-text text-transparent bg-[length:400%_auto] animate-gradient-x"
@@ -528,11 +545,11 @@ export function HomePage() {
               removed so the body's ambient glows continue through. */}
           <div className="mb-10 flex flex-col items-center text-center">
             <div className="mb-3 inline-flex items-center gap-2">
-              <span className="h-px w-10 bg-gradient-to-l from-[#C6FF3D80] to-transparent" aria-hidden />
+              <span className="h-px w-10 bg-gradient-to-l from-[#56B87F80] to-transparent" aria-hidden />
               <span className="text-[11.5px] font-bold uppercase tracking-[0.14em] text-lime-text">
                 Trending now
               </span>
-              <span className="h-px w-10 bg-gradient-to-r from-[#C6FF3D80] to-transparent" aria-hidden />
+              <span className="h-px w-10 bg-gradient-to-r from-[#56B87F80] to-transparent" aria-hidden />
             </div>
             {/* App-shell — `t-section` supplies the 20px phone size; the
                 existing sm/lg utilities restore 44/56px so md+ desktop is
@@ -580,7 +597,7 @@ export function HomePage() {
           className="pointer-events-none absolute inset-0 z-0"
           style={{
             background:
-              'radial-gradient(80% 60% at 15% 20%, rgba(198,255,61,0.05), transparent 55%),' +
+              'radial-gradient(80% 60% at 15% 20%, rgba(86,184,127,0.05), transparent 55%),' +
               'radial-gradient(70% 50% at 85% 85%, rgba(120,168,255,0.04), transparent 60%)',
           }}
         />
@@ -639,7 +656,7 @@ export function HomePage() {
           className="pointer-events-none absolute -top-1/4 -left-1/4 w-[60%] h-[120%] z-0 blur-3xl opacity-60 animate-aurora-drift-a"
           style={{
             background:
-              'radial-gradient(ellipse at center, rgba(198,255,61,0.18), transparent 60%)',
+              'radial-gradient(ellipse at center, rgba(86,184,127,0.18), transparent 60%)',
           }}
         />
         <div
@@ -665,22 +682,10 @@ export function HomePage() {
           className="pointer-events-none absolute -right-16 top-1/2 z-0 hidden w-[560px] -translate-y-1/2 select-none object-contain opacity-[0.22] [mask-image:radial-gradient(ellipse_62%_62%_at_center,black_28%,transparent_78%)] lg:block"
         />
         <div className="mx-auto max-w-[1200px] px-6 relative z-10">
-          <div className="mx-auto max-w-2xl text-center mb-12 max-lg:mb-6">
-            <div className="mb-2 flex items-center justify-center gap-2">
-              <span className="h-px w-8 bg-gradient-to-l from-[#C6FF3D66] to-transparent" aria-hidden />
-              <span className="text-[11.5px] font-bold uppercase tracking-[0.14em] text-lime-text">
-                Why Choose DropMarket
-              </span>
-              <span className="h-px w-8 bg-gradient-to-r from-[#C6FF3D66] to-transparent" aria-hidden />
-            </div>
-            {/* App-shell — t-section on phones, md:text-display restores 38px. */}
-            <h2 className="t-section font-display md:text-display">
-              Built so you can&apos;t get <span className="text-lime-text">burned</span>.
+          <div className="mx-auto max-w-2xl text-center mb-12 max-lg:mb-8">
+            <h2 className="font-display text-[clamp(32px,5vw,52px)] font-black leading-[1.05] tracking-[-0.02em]">
+              Why <span className="text-lime-text">Buy</span> Here?
             </h2>
-            <p className="mt-3 text-body-lg text-text-secondary">
-              Every order runs through the same armor — SafeDrop Buyer Protection, vetted
-              sellers, honest fees, and support that actually answers.
-            </p>
           </div>
           {/* Desktop — the 4 illustrated WhyCards, untouched at lg+. */}
           <div className="max-lg:hidden grid grid-cols-1 lg:grid-cols-2 gap-5">
@@ -697,9 +702,7 @@ export function HomePage() {
               count on one line). Stays tidy even with few/no reviews, unlike
               the carousel which renders a big empty box. Lazy-loaded; renders
               nothing until the env var is set. */}
-          <div className="mt-8 flex justify-center sm:mt-10">
-            {/* Our own link, not a TrustBox — display widgets need Plus and
-                only ever rendered Trustpilot's white fallback logo. */}
+          <div className="mt-8 flex justify-center sm:mt-10 max-lg:hidden">
             <TrustpilotLink />
           </div>
         </div>
@@ -710,7 +713,7 @@ export function HomePage() {
           DYNAMIC: from /api/recent-sales, WebSocket for real-time updates
           ================================================================ */}
       {recentSales.length > 0 && (
-      <section className="relative py-12 max-lg:py-8 border-t border-border-subtle overflow-hidden">
+      <section className="relative py-12 max-lg:pt-4 max-lg:pb-8 max-lg:border-t-0 border-t border-border-subtle overflow-hidden">
         {/* V17i — Subtle pulse-glow behind the ticker so the "live"
             beat is felt in the background, not just on the dot. */}
         <div
@@ -749,6 +752,9 @@ export function HomePage() {
       </section>
       )}
 
+      {/* Pre-footer CTA band — spec: design_handoff_cta_band/README.md */}
+      <PreFooterCtaBand />
+
       {/* ================================================================
           CLOSING CTA — V57. Full-bleed: the Fortnite trio stands at
           center behind the headline, fading CIRCULARLY outward (radial
@@ -768,7 +774,7 @@ export function HomePage() {
           className="pointer-events-none absolute inset-0 z-0"
           style={{
             background:
-              'radial-gradient(55% 65% at 50% 42%, rgba(198,255,61,0.07), transparent 65%),' +
+              'radial-gradient(55% 65% at 50% 42%, rgba(86,184,127,0.07), transparent 65%),' +
               'radial-gradient(70% 80% at 50% 45%, rgba(120,168,255,0.05), transparent 70%)',
           }}
         />
