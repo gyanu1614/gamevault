@@ -11,6 +11,7 @@
  */
 
 import { redirect } from 'next/navigation'
+import { isUuid } from '@/lib/ids'
 import { createClient } from '@/lib/supabase/server'
 import PayClient, { type PayMethod } from './_PayClient'
 
@@ -95,6 +96,9 @@ function methodMeta(
 export default async function PayPage({ params, searchParams }: PayPageProps) {
   const { orderId } = await params
   const { net, coin } = await searchParams
+  // ROUTE-009 — short-circuit a malformed id before the query, matching this
+  // route's own miss behaviour below (redirect to the orders list).
+  if (!isUuid(orderId)) redirect('/account/orders')
   const supabase = await createClient()
 
   const {

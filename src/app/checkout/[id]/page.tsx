@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
+import { isUuid } from '@/lib/ids'
 import { CheckoutForm } from './CheckoutForm'
 import { PURCHASES_ENABLED } from '@/lib/config/purchases'
 import BuyingOpensSoon from './_BuyingOpensSoon'
@@ -17,6 +18,12 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
   // the listing's min_quantity inside CheckoutForm if absent or invalid.
   const { qty, country: countryOverride } = await searchParams
   const parsedQty = qty ? Math.max(1, parseInt(qty, 10) || 0) : undefined
+  // ROUTE-009 — a malformed id is a guaranteed miss, so short-circuit before
+  // the query rather than relying on Postgres rejecting the cast. Mirrors this
+  // route's existing miss behaviour (redirect to /browse) so a malformed id
+  // and an absent one stay indistinguishable to the visitor.
+  if (!isUuid(id)) redirect('/browse')
+
   const supabase = await createClient()
 
   const { data: listing, error } = await supabase

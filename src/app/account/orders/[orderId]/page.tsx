@@ -5,6 +5,7 @@
 import React from 'react'
 import { Metadata } from 'next'
 import { notFound, redirect } from 'next/navigation'
+import { isUuid } from '@/lib/ids'
 import Link from 'next/link'
 import Image from 'next/image'
 import { createClient } from '@/lib/supabase/server'
@@ -117,6 +118,10 @@ export default async function OrderDetailPage({ params }: PageProps) {
 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
+
+  // ROUTE-009 — a malformed id can never match a row; 404 before querying,
+  // matching this route's miss behaviour below.
+  if (!isUuid(orderId)) notFound()
 
   const orderResult = await getOrder(orderId)
   if (!orderResult.success || !orderResult.order) notFound()

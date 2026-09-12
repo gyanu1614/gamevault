@@ -7,7 +7,9 @@
  * in-product links keep working.
  */
 
-import { permanentRedirect } from 'next/navigation'
+import { notFound, permanentRedirect } from 'next/navigation'
+
+import { isUuid } from '@/lib/ids'
 
 export default async function LegacyEditRedirect({
   params,
@@ -15,5 +17,7 @@ export default async function LegacyEditRedirect({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
+  // ROUTE-009 — don't 301 a malformed id onward; 404 here.
+  if (!isUuid(id)) notFound()
   permanentRedirect(`/sell/edit/${id}`)
 }
