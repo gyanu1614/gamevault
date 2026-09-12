@@ -34,6 +34,39 @@ function getAdminSupabase() {
 
 type Result<T> = { success: true; data: T } | { success: false; error: string }
 
+/**
+ * AUTH-009 — only an ACTIVE seller (profiles.role = 'seller' AND
+ * seller_status = 'active') or an active admin/super_admin may publish.
+ * Mirrors the surviving listings INSERT policy so the app and the DB agree;
+ * KYC-before-listing is an explicit owner decision. Returns an error string
+ * or null. Reads the caller's own rows with the session client.
+ */
+async function publishDenialFor(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+): Promise<string | null> {
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role, seller_status')
+    .eq('id', userId)
+    .maybeSingle()
+  const p = profile as { role: string | null; seller_status: string | null } | null
+  const blocked = p?.seller_status === 'restricted' || p?.seller_status === 'banned'
+  if (!blocked && p?.role === 'seller') return null
+
+  if (!blocked) {
+    const { data: admin } = await supabase
+      .from('admin_roles')
+      .select('role')
+      .eq('user_id', userId)
+      .eq('is_active', true)
+      .in('role', ['admin', 'super_admin'])
+      .maybeSingle()
+    if (admin) return null
+  }
+  return 'Only approved, active sellers can publish listings.'
+}
+
 // ─── D1: publish policy (moderation + caps) ──────────────────────────────────
 
 /**
@@ -533,6 +566,10 @@ export async function publishListing(input: PublishListingInput): Promise<Result
     const supabase = await createClient()
     const { data: { user }, error: authErr } = await supabase.auth.getUser()
     if (authErr || !user) return { success: false, error: 'Not signed in' }
+
+    // AUTH-009 — seller gate before anything else runs.
+    const denied = await publishDenialFor(supabase, user.id)
+    if (denied) return { success: false, error: denied }
 
     // Validate the slug is one we know about. (Boosting may legitimately
     // map to 'service' here but should be gated upstream — we still want a
@@ -1065,6 +1102,10 @@ export async function bulkPublishListings(
     const supabase = await createClient()
     const { data: { user }, error: authErr } = await supabase.auth.getUser()
     if (authErr || !user) return { success: false, error: 'Not signed in' }
+
+    // AUTH-009 — seller gate before anything else runs.
+    const denied = await publishDenialFor(supabase, user.id)
+    if (denied) return { success: false, error: denied }
 
     const policyRes = await (supabase.rpc as any)(
       'get_seller_publish_policy',
