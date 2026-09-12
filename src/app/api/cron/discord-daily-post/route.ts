@@ -6,7 +6,7 @@
  * reason to return, and the wedge against the big competitors who don't publish
  * good daily price data.
  *
- * Runs at 10:30 UTC (see vercel.json) — after correct-sab-prices (10:00) so the
+ * Runs at 10:30 UTC (see vercel.json) — after correct-prices (10:00) so the
  * post reflects the freshly-corrected, fake-filtered values.
  *
  * No gateway, no bot presence: just an authenticated cron making one HTTP POST.

@@ -1,9 +1,9 @@
 /**
  * SAB correction — DB read/write around the SAB accuracy layer.
  *
- * Extracted verbatim from the old correct-sab-prices route so both the unified
- * correct-prices cron and the legacy /api/cron/correct-sab-prices route can run
- * the exact same logic. Behaviour is unchanged.
+ * Extracted verbatim from the old correct-sab-prices route, which is gone; the
+ * unified /api/cron/correct-prices cron is now the only caller. Behaviour is
+ * unchanged.
  *
  * Recomputes: minimum-evidence suppression, cohort anchoring for thin samples,
  * empirically measured mutation multipliers, and the reputable cheapest/average

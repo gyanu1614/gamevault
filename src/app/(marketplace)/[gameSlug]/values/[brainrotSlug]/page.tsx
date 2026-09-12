@@ -231,7 +231,7 @@ async function getMutations(brainrotId: string): Promise<MutationOption[]> {
    * 2.5-3.5x however high income scales (Rainbow is 10x income but ~3.0x
    * price). A Rainbow estimate was therefore roughly threefold too high.
    *
-   * The table is refreshed daily by /api/cron/correct-sab-prices. If it hasn't
+   * The table is refreshed daily by /api/cron/correct-prices. If it hasn't
    * been populated yet we fall back to the old income-multiplier behaviour
    * rather than showing nothing.
    */
