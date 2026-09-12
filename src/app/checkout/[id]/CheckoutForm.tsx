@@ -640,7 +640,8 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
       const result = await createCheckout({
         listingId: listing.id,
         quantity,
-        promoDiscount,
+        // AUTH-003 — send the CODE; the server derives the discount.
+        promoCode: promoResult?.valid ? promoResult.code : undefined,
         walletAmount,
         // Local methods route the charge to Payssion; crypto stays default.
         paymentMethodId: payMethod === 'crypto' ? undefined : payMethod,

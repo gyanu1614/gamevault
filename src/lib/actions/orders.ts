@@ -18,7 +18,8 @@ import type { SafeDropTier } from '@/lib/utils/safedrop-tiers'
 // P5.2 — Loyalty cashback
 import { awardCashback } from '@/lib/loyalty/award'
 // P5.3 — Promo code usage
-import { recordPromoUsage } from '@/lib/actions/promo'
+import { recordPromoUsage, validatePromoCode } from '@/lib/actions/promo'
+import { resolveCheckoutPromo } from '@/lib/checkout/promo'
 
 interface CreateOrderData {
   paymentIntentId: string
@@ -27,8 +28,8 @@ interface CreateOrderData {
   safedropTier?: SafeDropTier   // P4.1 — buyer-chosen tier (default: 'standard')
   isGuest?: boolean
   guestEmail?: string
-  promoCodeId?: string                // P5.3 — promo code applied
-  promoDiscount?: number              // P5.3 — discount amount (already applied to Stripe charge)
+  /** Promo CODE only — discount derived server-side (AUTH-003). */
+  promoCode?: string
 }
 
 /**
@@ -158,7 +159,11 @@ export async function createOrder(data: CreateOrderData): Promise<{
     const tierFee = round2(subtotal * (tierFeeRate / 100))
 
     // P5.3 — Promo discount (already deducted from charge; reflect in order total)
-    const promoDiscount = Math.min(data.promoDiscount ?? 0, subtotal)
+    // AUTH-003 — derive the discount from the validated promo row, never from the client.
+    const promo = await resolveCheckoutPromo(data.promoCode, subtotal, validatePromoCode)
+    if (!promo.ok) return { success: false, error: promo.error }
+    const promoDiscount = promo.discount
+    const promoCodeId   = promo.promoCodeId
     const totalAmount   = round2(subtotal + fee.amount + tierFee - promoDiscount)
     const sellerPayout  = round2(subtotal - commission) // seller unaffected by promo
 
@@ -202,7 +207,7 @@ export async function createOrder(data: CreateOrderData): Promise<{
         warranty_expires_at:        warrantyExpiresAt.toISOString(),
         is_guest_order:             data.isGuest || false,
         // P5.3 — promo code
-        promo_code_id:  data.promoCodeId  ?? null,
+        promo_code_id:  promoCodeId,
         promo_discount: promoDiscount,
       } as any)
       .select()
@@ -236,9 +241,9 @@ export async function createOrder(data: CreateOrderData): Promise<{
     })
 
     // P5.3 — Record promo usage (fire-and-forget)
-    if (data.promoCodeId && promoDiscount > 0) {
+    if (promoCodeId && promoDiscount > 0) {
       recordPromoUsage({
-        promoCodeId:    data.promoCodeId,
+        promoCodeId,
         orderId:        order.id,
         discountAmount: promoDiscount,
         userId:         buyerId,
