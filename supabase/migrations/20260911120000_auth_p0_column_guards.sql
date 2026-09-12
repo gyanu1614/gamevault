@@ -56,24 +56,24 @@ BEGIN
   IF public.guarded_write_allowed() THEN
     RETURN NEW;
   END IF;
-  IF NEW.seller_payout IS DISTINCT FROM OLD.seller_payout THEN changed := changed || 'seller_payout'; END IF;
-  IF NEW.total_amount IS DISTINCT FROM OLD.total_amount THEN changed := changed || 'total_amount'; END IF;
-  IF NEW.subtotal IS DISTINCT FROM OLD.subtotal THEN changed := changed || 'subtotal'; END IF;
-  IF NEW.unit_price IS DISTINCT FROM OLD.unit_price THEN changed := changed || 'unit_price'; END IF;
-  IF NEW.quantity IS DISTINCT FROM OLD.quantity THEN changed := changed || 'quantity'; END IF;
-  IF NEW.platform_fee IS DISTINCT FROM OLD.platform_fee THEN changed := changed || 'platform_fee'; END IF;
-  IF NEW.platform_fee_rate IS DISTINCT FROM OLD.platform_fee_rate THEN changed := changed || 'platform_fee_rate'; END IF;
-  IF NEW.payment_processing_fee IS DISTINCT FROM OLD.payment_processing_fee THEN changed := changed || 'payment_processing_fee'; END IF;
-  IF NEW.payment_processing_fee_rate IS DISTINCT FROM OLD.payment_processing_fee_rate THEN changed := changed || 'payment_processing_fee_rate'; END IF;
-  IF NEW.vaultshield_tier_fee IS DISTINCT FROM OLD.vaultshield_tier_fee THEN changed := changed || 'vaultshield_tier_fee'; END IF;
-  IF NEW.vaultshield_tier_fee_rate IS DISTINCT FROM OLD.vaultshield_tier_fee_rate THEN changed := changed || 'vaultshield_tier_fee_rate'; END IF;
-  IF NEW.promo_discount IS DISTINCT FROM OLD.promo_discount THEN changed := changed || 'promo_discount'; END IF;
-  IF NEW.promo_code_id IS DISTINCT FROM OLD.promo_code_id THEN changed := changed || 'promo_code_id'; END IF;
-  IF NEW.currency IS DISTINCT FROM OLD.currency THEN changed := changed || 'currency'; END IF;
-  IF NEW.buyer_id IS DISTINCT FROM OLD.buyer_id THEN changed := changed || 'buyer_id'; END IF;
-  IF NEW.seller_id IS DISTINCT FROM OLD.seller_id THEN changed := changed || 'seller_id'; END IF;
-  IF NEW.listing_id IS DISTINCT FROM OLD.listing_id THEN changed := changed || 'listing_id'; END IF;
-  IF NEW.escrow_status IS DISTINCT FROM OLD.escrow_status THEN changed := changed || 'escrow_status'; END IF;
+  IF NEW.seller_payout IS DISTINCT FROM OLD.seller_payout THEN changed := array_append(changed, 'seller_payout'); END IF;
+  IF NEW.total_amount IS DISTINCT FROM OLD.total_amount THEN changed := array_append(changed, 'total_amount'); END IF;
+  IF NEW.subtotal IS DISTINCT FROM OLD.subtotal THEN changed := array_append(changed, 'subtotal'); END IF;
+  IF NEW.unit_price IS DISTINCT FROM OLD.unit_price THEN changed := array_append(changed, 'unit_price'); END IF;
+  IF NEW.quantity IS DISTINCT FROM OLD.quantity THEN changed := array_append(changed, 'quantity'); END IF;
+  IF NEW.platform_fee IS DISTINCT FROM OLD.platform_fee THEN changed := array_append(changed, 'platform_fee'); END IF;
+  IF NEW.platform_fee_rate IS DISTINCT FROM OLD.platform_fee_rate THEN changed := array_append(changed, 'platform_fee_rate'); END IF;
+  IF NEW.payment_processing_fee IS DISTINCT FROM OLD.payment_processing_fee THEN changed := array_append(changed, 'payment_processing_fee'); END IF;
+  IF NEW.payment_processing_fee_rate IS DISTINCT FROM OLD.payment_processing_fee_rate THEN changed := array_append(changed, 'payment_processing_fee_rate'); END IF;
+  IF NEW.vaultshield_tier_fee IS DISTINCT FROM OLD.vaultshield_tier_fee THEN changed := array_append(changed, 'vaultshield_tier_fee'); END IF;
+  IF NEW.vaultshield_tier_fee_rate IS DISTINCT FROM OLD.vaultshield_tier_fee_rate THEN changed := array_append(changed, 'vaultshield_tier_fee_rate'); END IF;
+  IF NEW.promo_discount IS DISTINCT FROM OLD.promo_discount THEN changed := array_append(changed, 'promo_discount'); END IF;
+  IF NEW.promo_code_id IS DISTINCT FROM OLD.promo_code_id THEN changed := array_append(changed, 'promo_code_id'); END IF;
+  IF NEW.currency IS DISTINCT FROM OLD.currency THEN changed := array_append(changed, 'currency'); END IF;
+  IF NEW.buyer_id IS DISTINCT FROM OLD.buyer_id THEN changed := array_append(changed, 'buyer_id'); END IF;
+  IF NEW.seller_id IS DISTINCT FROM OLD.seller_id THEN changed := array_append(changed, 'seller_id'); END IF;
+  IF NEW.listing_id IS DISTINCT FROM OLD.listing_id THEN changed := array_append(changed, 'listing_id'); END IF;
+  IF NEW.escrow_status IS DISTINCT FROM OLD.escrow_status THEN changed := array_append(changed, 'escrow_status'); END IF;
   IF array_length(changed, 1) > 0 THEN
     RAISE EXCEPTION 'orders: column(s) % are protected and cannot be changed by this caller',
       array_to_string(changed, ', ')
@@ -472,35 +472,35 @@ BEGIN
   IF public.guarded_write_allowed() THEN
     RETURN NEW;
   END IF;
-  IF NEW.seller_status IS DISTINCT FROM OLD.seller_status THEN changed := changed || 'seller_status'; END IF;
-  IF NEW.seller_restriction_reason IS DISTINCT FROM OLD.seller_restriction_reason THEN changed := changed || 'seller_restriction_reason'; END IF;
-  IF NEW.seller_restricted_at IS DISTINCT FROM OLD.seller_restricted_at THEN changed := changed || 'seller_restricted_at'; END IF;
-  IF NEW.seller_restricted_by IS DISTINCT FROM OLD.seller_restricted_by THEN changed := changed || 'seller_restricted_by'; END IF;
-  IF NEW.kyc_status IS DISTINCT FROM OLD.kyc_status THEN changed := changed || 'kyc_status'; END IF;
-  IF NEW.kyc_submitted_at IS DISTINCT FROM OLD.kyc_submitted_at THEN changed := changed || 'kyc_submitted_at'; END IF;
-  IF NEW.badges IS DISTINCT FROM OLD.badges THEN changed := changed || 'badges'; END IF;
-  IF NEW.total_sales IS DISTINCT FROM OLD.total_sales THEN changed := changed || 'total_sales'; END IF;
-  IF NEW.seller_rating IS DISTINCT FROM OLD.seller_rating THEN changed := changed || 'seller_rating'; END IF;
-  IF NEW.total_reviews IS DISTINCT FROM OLD.total_reviews THEN changed := changed || 'total_reviews'; END IF;
-  IF NEW.positive_reviews IS DISTINCT FROM OLD.positive_reviews THEN changed := changed || 'positive_reviews'; END IF;
-  IF NEW.founding_seller IS DISTINCT FROM OLD.founding_seller THEN changed := changed || 'founding_seller'; END IF;
-  IF NEW.is_test IS DISTINCT FROM OLD.is_test THEN changed := changed || 'is_test'; END IF;
-  IF NEW.is_guest IS DISTINCT FROM OLD.is_guest THEN changed := changed || 'is_guest'; END IF;
-  IF NEW.payout_enabled IS DISTINCT FROM OLD.payout_enabled THEN changed := changed || 'payout_enabled'; END IF;
-  IF NEW.email IS DISTINCT FROM OLD.email THEN changed := changed || 'email'; END IF;
-  IF NEW.paypal_email IS DISTINCT FROM OLD.paypal_email THEN changed := changed || 'paypal_email'; END IF;
-  IF NEW.stripe_account_id IS DISTINCT FROM OLD.stripe_account_id THEN changed := changed || 'stripe_account_id'; END IF;
-  IF NEW.stripe_connect_account_id IS DISTINCT FROM OLD.stripe_connect_account_id THEN changed := changed || 'stripe_connect_account_id'; END IF;
-  IF NEW.stripe_connect_status IS DISTINCT FROM OLD.stripe_connect_status THEN changed := changed || 'stripe_connect_status'; END IF;
-  IF NEW.stripe_connect_charges_enabled IS DISTINCT FROM OLD.stripe_connect_charges_enabled THEN changed := changed || 'stripe_connect_charges_enabled'; END IF;
-  IF NEW.stripe_connect_payouts_enabled IS DISTINCT FROM OLD.stripe_connect_payouts_enabled THEN changed := changed || 'stripe_connect_payouts_enabled'; END IF;
-  IF NEW.stripe_connect_onboarding_url IS DISTINCT FROM OLD.stripe_connect_onboarding_url THEN changed := changed || 'stripe_connect_onboarding_url'; END IF;
-  IF NEW.stripe_connect_connected_at IS DISTINCT FROM OLD.stripe_connect_connected_at THEN changed := changed || 'stripe_connect_connected_at'; END IF;
-  IF NEW.seller_balance IS DISTINCT FROM OLD.seller_balance THEN changed := changed || 'seller_balance'; END IF;
-  IF NEW.pending_balance IS DISTINCT FROM OLD.pending_balance THEN changed := changed || 'pending_balance'; END IF;
-  IF NEW.lifetime_earnings IS DISTINCT FROM OLD.lifetime_earnings THEN changed := changed || 'lifetime_earnings'; END IF;
-  IF NEW.loyalty_balance IS DISTINCT FROM OLD.loyalty_balance THEN changed := changed || 'loyalty_balance'; END IF;
-  IF NEW.lifetime_cashback_earned IS DISTINCT FROM OLD.lifetime_cashback_earned THEN changed := changed || 'lifetime_cashback_earned'; END IF;
+  IF NEW.seller_status IS DISTINCT FROM OLD.seller_status THEN changed := array_append(changed, 'seller_status'); END IF;
+  IF NEW.seller_restriction_reason IS DISTINCT FROM OLD.seller_restriction_reason THEN changed := array_append(changed, 'seller_restriction_reason'); END IF;
+  IF NEW.seller_restricted_at IS DISTINCT FROM OLD.seller_restricted_at THEN changed := array_append(changed, 'seller_restricted_at'); END IF;
+  IF NEW.seller_restricted_by IS DISTINCT FROM OLD.seller_restricted_by THEN changed := array_append(changed, 'seller_restricted_by'); END IF;
+  IF NEW.kyc_status IS DISTINCT FROM OLD.kyc_status THEN changed := array_append(changed, 'kyc_status'); END IF;
+  IF NEW.kyc_submitted_at IS DISTINCT FROM OLD.kyc_submitted_at THEN changed := array_append(changed, 'kyc_submitted_at'); END IF;
+  IF NEW.badges IS DISTINCT FROM OLD.badges THEN changed := array_append(changed, 'badges'); END IF;
+  IF NEW.total_sales IS DISTINCT FROM OLD.total_sales THEN changed := array_append(changed, 'total_sales'); END IF;
+  IF NEW.seller_rating IS DISTINCT FROM OLD.seller_rating THEN changed := array_append(changed, 'seller_rating'); END IF;
+  IF NEW.total_reviews IS DISTINCT FROM OLD.total_reviews THEN changed := array_append(changed, 'total_reviews'); END IF;
+  IF NEW.positive_reviews IS DISTINCT FROM OLD.positive_reviews THEN changed := array_append(changed, 'positive_reviews'); END IF;
+  IF NEW.founding_seller IS DISTINCT FROM OLD.founding_seller THEN changed := array_append(changed, 'founding_seller'); END IF;
+  IF NEW.is_test IS DISTINCT FROM OLD.is_test THEN changed := array_append(changed, 'is_test'); END IF;
+  IF NEW.is_guest IS DISTINCT FROM OLD.is_guest THEN changed := array_append(changed, 'is_guest'); END IF;
+  IF NEW.payout_enabled IS DISTINCT FROM OLD.payout_enabled THEN changed := array_append(changed, 'payout_enabled'); END IF;
+  IF NEW.email IS DISTINCT FROM OLD.email THEN changed := array_append(changed, 'email'); END IF;
+  IF NEW.paypal_email IS DISTINCT FROM OLD.paypal_email THEN changed := array_append(changed, 'paypal_email'); END IF;
+  IF NEW.stripe_account_id IS DISTINCT FROM OLD.stripe_account_id THEN changed := array_append(changed, 'stripe_account_id'); END IF;
+  IF NEW.stripe_connect_account_id IS DISTINCT FROM OLD.stripe_connect_account_id THEN changed := array_append(changed, 'stripe_connect_account_id'); END IF;
+  IF NEW.stripe_connect_status IS DISTINCT FROM OLD.stripe_connect_status THEN changed := array_append(changed, 'stripe_connect_status'); END IF;
+  IF NEW.stripe_connect_charges_enabled IS DISTINCT FROM OLD.stripe_connect_charges_enabled THEN changed := array_append(changed, 'stripe_connect_charges_enabled'); END IF;
+  IF NEW.stripe_connect_payouts_enabled IS DISTINCT FROM OLD.stripe_connect_payouts_enabled THEN changed := array_append(changed, 'stripe_connect_payouts_enabled'); END IF;
+  IF NEW.stripe_connect_onboarding_url IS DISTINCT FROM OLD.stripe_connect_onboarding_url THEN changed := array_append(changed, 'stripe_connect_onboarding_url'); END IF;
+  IF NEW.stripe_connect_connected_at IS DISTINCT FROM OLD.stripe_connect_connected_at THEN changed := array_append(changed, 'stripe_connect_connected_at'); END IF;
+  IF NEW.seller_balance IS DISTINCT FROM OLD.seller_balance THEN changed := array_append(changed, 'seller_balance'); END IF;
+  IF NEW.pending_balance IS DISTINCT FROM OLD.pending_balance THEN changed := array_append(changed, 'pending_balance'); END IF;
+  IF NEW.lifetime_earnings IS DISTINCT FROM OLD.lifetime_earnings THEN changed := array_append(changed, 'lifetime_earnings'); END IF;
+  IF NEW.loyalty_balance IS DISTINCT FROM OLD.loyalty_balance THEN changed := array_append(changed, 'loyalty_balance'); END IF;
+  IF NEW.lifetime_cashback_earned IS DISTINCT FROM OLD.lifetime_cashback_earned THEN changed := array_append(changed, 'lifetime_cashback_earned'); END IF;
   IF array_length(changed, 1) > 0 THEN
     RAISE EXCEPTION 'profiles: column(s) % are protected and cannot be changed by this caller',
       array_to_string(changed, ', ')
@@ -625,14 +625,14 @@ BEGIN
   IF public.guarded_write_allowed() THEN
     RETURN NEW;
   END IF;
-  IF NEW.approved_by IS DISTINCT FROM OLD.approved_by THEN changed := changed || 'approved_by'; END IF;
-  IF NEW.approved_at IS DISTINCT FROM OLD.approved_at THEN changed := changed || 'approved_at'; END IF;
-  IF NEW.rejected_by IS DISTINCT FROM OLD.rejected_by THEN changed := changed || 'rejected_by'; END IF;
-  IF NEW.rejected_at IS DISTINCT FROM OLD.rejected_at THEN changed := changed || 'rejected_at'; END IF;
-  IF NEW.rejection_reason IS DISTINCT FROM OLD.rejection_reason THEN changed := changed || 'rejection_reason'; END IF;
-  IF NEW.moderation_notes IS DISTINCT FROM OLD.moderation_notes THEN changed := changed || 'moderation_notes'; END IF;
-  IF NEW.seller_id IS DISTINCT FROM OLD.seller_id THEN changed := changed || 'seller_id'; END IF;
-  IF NEW.sales IS DISTINCT FROM OLD.sales THEN changed := changed || 'sales'; END IF;
+  IF NEW.approved_by IS DISTINCT FROM OLD.approved_by THEN changed := array_append(changed, 'approved_by'); END IF;
+  IF NEW.approved_at IS DISTINCT FROM OLD.approved_at THEN changed := array_append(changed, 'approved_at'); END IF;
+  IF NEW.rejected_by IS DISTINCT FROM OLD.rejected_by THEN changed := array_append(changed, 'rejected_by'); END IF;
+  IF NEW.rejected_at IS DISTINCT FROM OLD.rejected_at THEN changed := array_append(changed, 'rejected_at'); END IF;
+  IF NEW.rejection_reason IS DISTINCT FROM OLD.rejection_reason THEN changed := array_append(changed, 'rejection_reason'); END IF;
+  IF NEW.moderation_notes IS DISTINCT FROM OLD.moderation_notes THEN changed := array_append(changed, 'moderation_notes'); END IF;
+  IF NEW.seller_id IS DISTINCT FROM OLD.seller_id THEN changed := array_append(changed, 'seller_id'); END IF;
+  IF NEW.sales IS DISTINCT FROM OLD.sales THEN changed := array_append(changed, 'sales'); END IF;
   IF array_length(changed, 1) > 0 THEN
     RAISE EXCEPTION 'listings: column(s) % are protected and cannot be changed by this caller',
       array_to_string(changed, ', ')

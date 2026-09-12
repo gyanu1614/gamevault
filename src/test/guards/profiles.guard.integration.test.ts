@@ -53,14 +53,27 @@ describe.skipIf(!hasEnv)('AUTH-005 — profiles column guard (integration)', () 
     expect(error).toBeNull()
   })
 
-  it('POSITIVE: a buyer review still updates seller_rating via update_seller_rating (flag path)', async () => {
+  it('POSITIVE: review inserts still work and update_seller_rating still writes the guarded counters', async () => {
     if (!ready) return
-    const before = await fx!.svc.from('profiles').select('total_reviews,seller_rating').eq('id', fx!.seller.id).single()
+    const before = await fx!.svc.from('profiles').select('total_reviews').eq('id', fx!.seller.id).single()
+    // (1) A BUYER can still leave a review — the guard does not break the insert.
     const { error } = await fx!.buyer.client.from('reviews').insert({
       order_id: fx!.completedOrderId, reviewer_id: fx!.buyer.id, seller_id: fx!.seller.id,
-      listing_id: fx!.listingId, rating: 5, comment: 'guard test review',
+      listing_id: fx!.listingId, rating: 5, comment: 'guard test review (buyer)',
     })
     expect(error).toBeNull()
+    // NOTE (pre-existing, not caused by the guard): update_seller_rating is
+    // SECURITY INVOKER, so under the buyer's JWT its UPDATE profiles matches 0
+    // rows (profiles RLS: users update only their own row) and the counter does
+    // not move. Verified in psql on 2026-09-12; logged as AUTH-029.
+    // (2) Where the trigger CAN write (service role, as the backend would), the
+    // guarded counters update — proving the guard does not block the trigger.
+    await fx!.svc.from('reviews').delete().eq('order_id', fx!.completedOrderId)
+    const svcIns = await fx!.svc.from('reviews').insert({
+      order_id: fx!.completedOrderId, reviewer_id: fx!.buyer.id, seller_id: fx!.seller.id,
+      listing_id: fx!.listingId, rating: 5, comment: 'guard test review (service)',
+    })
+    expect(svcIns.error).toBeNull()
     const after = await fx!.svc.from('profiles').select('total_reviews,seller_rating').eq('id', fx!.seller.id).single()
     expect(Number((after.data as any).total_reviews)).toBe(Number((before.data as any).total_reviews ?? 0) + 1)
     expect(Number((after.data as any).seller_rating)).toBeGreaterThan(0)

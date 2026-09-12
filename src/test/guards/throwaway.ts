@@ -40,6 +40,7 @@ export async function makeFixture(): Promise<Fixture> {
   // Short tag: profiles.username has a length CHECK.
   const tag = Math.random().toString(36).slice(2, 8)
   const created: string[] = []
+  let createdGameId: string | null = null
 
   async function mkUser(label: string): Promise<Actor> {
     const email = `guardtest-${label}-${tag}@example.com`
@@ -65,6 +66,7 @@ export async function makeFixture(): Promise<Fixture> {
       await svc.from('admin_roles').delete().eq('user_id', id)
       await svc.auth.admin.deleteUser(id).catch(() => {})
     }
+    if (createdGameId) await svc.from('games').delete().eq('id', createdGameId) // categories cascade
   }
 
   try {
@@ -74,9 +76,24 @@ export async function makeFixture(): Promise<Fixture> {
     const { error: ae } = await svc.from('admin_roles').insert({ user_id: admin.id, role: 'admin', is_active: true })
     if (ae) throw new Error(`admin_roles insert: ${ae.message}`)
 
-    const { data: game } = await svc.from('games').select('id').limit(1).single()
+    // A fresh local DB (supabase db reset, no seed.sql) has no catalogue rows —
+    // create a throwaway game + category when none exist; cleanup removes them.
+    let { data: game } = await svc.from('games').select('id').limit(1).maybeSingle()
+    if (!game) {
+      const { data: g, error: ge } = await svc.from('games')
+        .insert({ name: `Guard Test Game ${tag}`, slug: `guard-test-${tag}` }).select('id').single()
+      if (ge) throw new Error(`game insert: ${ge.message}`)
+      game = g; createdGameId = (g as any).id
+    }
     let { data: cat } = await svc.from('categories').select('id').eq('game_id', (game as any).id).limit(1).maybeSingle()
-    if (!cat) ({ data: cat } = await svc.from('categories').select('id').limit(1).single())
+    if (!cat) ({ data: cat } = await svc.from('categories').select('id').limit(1).maybeSingle())
+    if (!cat) {
+      const { data: c, error: ce } = await svc.from('categories')
+        .insert({ name: 'Guard Test Items', slug: `guard-test-items-${tag}`, game_id: (game as any).id, metadata: { type: 'items' } })
+        .select('id').single()
+      if (ce) throw new Error(`category insert: ${ce.message}`)
+      cat = c
+    }
 
     const { data: listing, error: le } = await svc.from('listings').insert({
       seller_id: seller.id, game_id: (game as any).id, category_id: (cat as any).id,
