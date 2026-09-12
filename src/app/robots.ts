@@ -32,7 +32,6 @@ export default function robots(): MetadataRoute.Robots {
           // the index as junk pages under the brand.
           '/dev/',
           '/test',
-          '/test-connection',
           // Parameterized duplicates: sorted views and campaign-tagged
           // URLs render the same content as the canonical page.
           '/*?sort=',
