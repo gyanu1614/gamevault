@@ -7,6 +7,7 @@ import { motion } from 'framer-motion'
 import { Star, Eye, ShoppingBag, Clock, Zap, Infinity, TrendingDown } from 'lucide-react'
 import type { ListingWithRelations } from '@/types/database'
 import { cn } from '@/lib/utils'
+import { listingUrl } from '@/lib/listings/url'
 import WishlistButton from '@/components/wishlist/WishlistButton'
 
 interface ListingCardProps {
@@ -33,7 +34,7 @@ export function ListingCard({ listing, index = 0 }: ListingCardProps) {
       whileHover={{ y: -4 }}
     >
       <Link
-        href={`/listings/${listing.id}`}
+        href={listingUrl(listing)}
         className={cn(
           'group relative flex flex-col overflow-hidden rounded-2xl',
           'bg-bg-raised border border-border-subtle',
