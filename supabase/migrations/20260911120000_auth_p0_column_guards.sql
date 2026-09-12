@@ -615,3 +615,105 @@ BEGIN
   );
 END;
 $$;
+
+-- ── listings: BEFORE UPDATE guard ─────────────────────────────────────────────
+CREATE OR REPLACE FUNCTION public.guard_listings_protected_columns() RETURNS trigger
+  LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+  changed text[] := '{}';
+BEGIN
+  IF public.guarded_write_allowed() THEN
+    RETURN NEW;
+  END IF;
+  IF NEW.approved_by IS DISTINCT FROM OLD.approved_by THEN changed := changed || 'approved_by'; END IF;
+  IF NEW.approved_at IS DISTINCT FROM OLD.approved_at THEN changed := changed || 'approved_at'; END IF;
+  IF NEW.rejected_by IS DISTINCT FROM OLD.rejected_by THEN changed := changed || 'rejected_by'; END IF;
+  IF NEW.rejected_at IS DISTINCT FROM OLD.rejected_at THEN changed := changed || 'rejected_at'; END IF;
+  IF NEW.rejection_reason IS DISTINCT FROM OLD.rejection_reason THEN changed := changed || 'rejection_reason'; END IF;
+  IF NEW.moderation_notes IS DISTINCT FROM OLD.moderation_notes THEN changed := changed || 'moderation_notes'; END IF;
+  IF NEW.seller_id IS DISTINCT FROM OLD.seller_id THEN changed := changed || 'seller_id'; END IF;
+  IF NEW.sales IS DISTINCT FROM OLD.sales THEN changed := changed || 'sales'; END IF;
+  IF array_length(changed, 1) > 0 THEN
+    RAISE EXCEPTION 'listings: column(s) % are protected and cannot be changed by this caller',
+      array_to_string(changed, ', ')
+      USING ERRCODE = '42501';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+DROP TRIGGER IF EXISTS trg_guard_listings_protected_columns ON public.listings;
+CREATE TRIGGER trg_guard_listings_protected_columns
+  BEFORE UPDATE ON public.listings
+  FOR EACH ROW EXECUTE FUNCTION public.guard_listings_protected_columns();
+
+
+-- (AUTH-006) moderation RPCs writing listings.approved_* / moderation_notes
+-- ── approve_listing — writes listings.approved_by/approved_at/rejected_* (moderator RPC, runs under the moderator JWT)
+-- Re-created verbatim from 20260903010000_lock_moderation_rpcs.sql with the flag as the first statement.
+CREATE OR REPLACE FUNCTION public.approve_listing(listing_id uuid, admin_id uuid) RETURNS void
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+DECLARE
+  seller_id_var uuid;
+BEGIN
+  PERFORM set_config('app.guarded_write', 'on', true);
+  PERFORM public.assert_moderator();
+
+  SELECT seller_id INTO seller_id_var
+  FROM public.listings
+  WHERE id = listing_id;
+
+  UPDATE public.listings
+  SET
+    status = 'active',
+    approved_by = admin_id,
+    approved_at = now(),
+    rejected_by = NULL,
+    rejected_at = NULL,
+    rejection_reason = NULL
+  WHERE id = listing_id;
+END;
+$$;
+
+-- ── reject_listing — writes listings.rejected_*/approved_* (moderator RPC)
+-- Re-created verbatim from 20260903010000_lock_moderation_rpcs.sql with the flag as the first statement.
+CREATE OR REPLACE FUNCTION public.reject_listing(listing_id uuid, admin_id uuid, reason text) RETURNS void
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+BEGIN
+  PERFORM set_config('app.guarded_write', 'on', true);
+  PERFORM public.assert_moderator();
+
+  UPDATE public.listings
+  SET
+    status = 'rejected',
+    rejected_by = admin_id,
+    rejected_at = now(),
+    rejection_reason = reason,
+    approved_by = NULL,
+    approved_at = NULL
+  WHERE id = listing_id;
+END;
+$$;
+
+-- ── request_listing_changes — writes listings.moderation_notes/approved_* (moderator RPC)
+-- Re-created verbatim from 20260903010000_lock_moderation_rpcs.sql with the flag as the first statement.
+CREATE OR REPLACE FUNCTION public.request_listing_changes(listing_id uuid, admin_id uuid, changes text) RETURNS void
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+BEGIN
+  PERFORM set_config('app.guarded_write', 'on', true);
+  PERFORM public.assert_moderator();
+
+  UPDATE public.listings
+  SET
+    status = 'changes_requested',
+    moderation_notes = changes,
+    changes_requested_by = admin_id,
+    changes_requested_at = now(),
+    approved_by = NULL,
+    approved_at = NULL,
+    updated_at = now()
+  WHERE id = listing_id;
+END;
+$$;

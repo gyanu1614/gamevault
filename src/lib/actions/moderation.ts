@@ -213,7 +213,9 @@ export async function approveListing(
 
     // Update moderation notes if provided
     if (notes) {
-      await (supabase
+      // AUTH-006: moderation_notes is trigger-protected; the moderator session
+      // (gated by requireModerator above) writes it via the service role.
+      await (createServiceRoleClient()
         .from('listings')
         .update as any)({ moderation_notes: notes })
         .eq('id', listingId)
