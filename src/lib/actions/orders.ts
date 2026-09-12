@@ -1187,8 +1187,11 @@ export async function openDispute(
       }
     }
 
-    // Update order to disputed status
-    const { error: updateError } = await (supabase
+    // Update order to disputed status. AUTH-002: escrow_status is
+    // trigger-protected; the buyer session cannot set it through PostgREST, so
+    // write via the service role — scoped to the order AND the buyer verified
+    // by the RLS read above.
+    const { error: updateError } = await (createServiceRoleClient()
       .from('orders')
       .update as any)({
         status: 'disputed',
@@ -1197,6 +1200,7 @@ export async function openDispute(
         dispute_reason: reason,
       })
       .eq('id', orderId)
+      .eq('buyer_id', user.id)
 
     if (updateError) {
       console.error('Database error opening dispute:', updateError)
