@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { createServiceRoleClient } from '@/lib/supabase/service'
 import { requireRole } from './admin-permissions'
 import { logAdminActivity } from '@/lib/admin/activity-log'
 import { revalidatePath } from 'next/cache'
@@ -32,8 +33,11 @@ export async function restrictSeller(params: RestrictSellerParams): Promise<{ su
       return { success: false, error: 'Seller not found' }
     }
 
-    // Update seller status
-    const { error: updateError } = await (supabase
+    // Update seller status. AUTH-005: seller_status / seller_restriction_* are
+    // trigger-protected columns; the admin session (already gated by
+    // requireRole above) cannot set them through PostgREST, so write via the
+    // service role.
+    const { error: updateError } = await (createServiceRoleClient()
       .from('profiles')
       .update as any)({
         seller_status: status,

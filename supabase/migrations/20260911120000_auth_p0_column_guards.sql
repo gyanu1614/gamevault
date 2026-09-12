@@ -462,3 +462,156 @@ BEGIN
   );
 END;
 $$;
+
+-- ── profiles: BEFORE UPDATE guard ─────────────────────────────────────────────
+CREATE OR REPLACE FUNCTION public.guard_profiles_protected_columns() RETURNS trigger
+  LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+  changed text[] := '{}';
+BEGIN
+  IF public.guarded_write_allowed() THEN
+    RETURN NEW;
+  END IF;
+  IF NEW.seller_status IS DISTINCT FROM OLD.seller_status THEN changed := changed || 'seller_status'; END IF;
+  IF NEW.seller_restriction_reason IS DISTINCT FROM OLD.seller_restriction_reason THEN changed := changed || 'seller_restriction_reason'; END IF;
+  IF NEW.seller_restricted_at IS DISTINCT FROM OLD.seller_restricted_at THEN changed := changed || 'seller_restricted_at'; END IF;
+  IF NEW.seller_restricted_by IS DISTINCT FROM OLD.seller_restricted_by THEN changed := changed || 'seller_restricted_by'; END IF;
+  IF NEW.kyc_status IS DISTINCT FROM OLD.kyc_status THEN changed := changed || 'kyc_status'; END IF;
+  IF NEW.kyc_submitted_at IS DISTINCT FROM OLD.kyc_submitted_at THEN changed := changed || 'kyc_submitted_at'; END IF;
+  IF NEW.badges IS DISTINCT FROM OLD.badges THEN changed := changed || 'badges'; END IF;
+  IF NEW.total_sales IS DISTINCT FROM OLD.total_sales THEN changed := changed || 'total_sales'; END IF;
+  IF NEW.seller_rating IS DISTINCT FROM OLD.seller_rating THEN changed := changed || 'seller_rating'; END IF;
+  IF NEW.total_reviews IS DISTINCT FROM OLD.total_reviews THEN changed := changed || 'total_reviews'; END IF;
+  IF NEW.positive_reviews IS DISTINCT FROM OLD.positive_reviews THEN changed := changed || 'positive_reviews'; END IF;
+  IF NEW.founding_seller IS DISTINCT FROM OLD.founding_seller THEN changed := changed || 'founding_seller'; END IF;
+  IF NEW.is_test IS DISTINCT FROM OLD.is_test THEN changed := changed || 'is_test'; END IF;
+  IF NEW.is_guest IS DISTINCT FROM OLD.is_guest THEN changed := changed || 'is_guest'; END IF;
+  IF NEW.payout_enabled IS DISTINCT FROM OLD.payout_enabled THEN changed := changed || 'payout_enabled'; END IF;
+  IF NEW.email IS DISTINCT FROM OLD.email THEN changed := changed || 'email'; END IF;
+  IF NEW.paypal_email IS DISTINCT FROM OLD.paypal_email THEN changed := changed || 'paypal_email'; END IF;
+  IF NEW.stripe_account_id IS DISTINCT FROM OLD.stripe_account_id THEN changed := changed || 'stripe_account_id'; END IF;
+  IF NEW.stripe_connect_account_id IS DISTINCT FROM OLD.stripe_connect_account_id THEN changed := changed || 'stripe_connect_account_id'; END IF;
+  IF NEW.stripe_connect_status IS DISTINCT FROM OLD.stripe_connect_status THEN changed := changed || 'stripe_connect_status'; END IF;
+  IF NEW.stripe_connect_charges_enabled IS DISTINCT FROM OLD.stripe_connect_charges_enabled THEN changed := changed || 'stripe_connect_charges_enabled'; END IF;
+  IF NEW.stripe_connect_payouts_enabled IS DISTINCT FROM OLD.stripe_connect_payouts_enabled THEN changed := changed || 'stripe_connect_payouts_enabled'; END IF;
+  IF NEW.stripe_connect_onboarding_url IS DISTINCT FROM OLD.stripe_connect_onboarding_url THEN changed := changed || 'stripe_connect_onboarding_url'; END IF;
+  IF NEW.stripe_connect_connected_at IS DISTINCT FROM OLD.stripe_connect_connected_at THEN changed := changed || 'stripe_connect_connected_at'; END IF;
+  IF NEW.seller_balance IS DISTINCT FROM OLD.seller_balance THEN changed := changed || 'seller_balance'; END IF;
+  IF NEW.pending_balance IS DISTINCT FROM OLD.pending_balance THEN changed := changed || 'pending_balance'; END IF;
+  IF NEW.lifetime_earnings IS DISTINCT FROM OLD.lifetime_earnings THEN changed := changed || 'lifetime_earnings'; END IF;
+  IF NEW.loyalty_balance IS DISTINCT FROM OLD.loyalty_balance THEN changed := changed || 'loyalty_balance'; END IF;
+  IF NEW.lifetime_cashback_earned IS DISTINCT FROM OLD.lifetime_cashback_earned THEN changed := changed || 'lifetime_cashback_earned'; END IF;
+  IF array_length(changed, 1) > 0 THEN
+    RAISE EXCEPTION 'profiles: column(s) % are protected and cannot be changed by this caller',
+      array_to_string(changed, ', ')
+      USING ERRCODE = '42501';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+DROP TRIGGER IF EXISTS trg_guard_profiles_protected_columns ON public.profiles;
+CREATE TRIGGER trg_guard_profiles_protected_columns
+  BEFORE UPDATE ON public.profiles
+  FOR EACH ROW EXECUTE FUNCTION public.guard_profiles_protected_columns();
+
+
+-- (AUTH-005) writers of profiles counters / balances
+-- ── update_listing_quantity — writes profiles.total_sales + listings.sales (AFTER UPDATE trigger on orders; fires under whichever JWT completed the order)
+-- Re-created verbatim from 20260101000000_baseline_live_schema.sql with the flag as the first statement.
+CREATE OR REPLACE FUNCTION "public"."update_listing_quantity"() RETURNS "trigger"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    AS $$
+BEGIN
+  PERFORM set_config('app.guarded_write', 'on', true);
+  IF NEW.status = 'completed' AND OLD.status != 'completed' THEN
+    UPDATE public.listings
+    SET
+      quantity = CASE
+        WHEN is_unlimited THEN quantity
+        ELSE GREATEST(0, quantity - NEW.quantity)
+      END,
+      sales = sales + 1,
+      status = CASE
+        WHEN NOT is_unlimited AND quantity - NEW.quantity <= 0 THEN 'sold'
+        ELSE status
+      END
+    WHERE id = NEW.listing_id;
+
+    UPDATE public.profiles
+    SET total_sales = total_sales + 1
+    WHERE id = NEW.seller_id;
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+-- ── update_seller_rating — writes profiles.seller_rating/total_reviews/positive_reviews (trigger on reviews; fires under the buyer JWT)
+-- Re-created verbatim from 20260101000000_baseline_live_schema.sql with the flag as the first statement.
+CREATE OR REPLACE FUNCTION "public"."update_seller_rating"() RETURNS "trigger"
+    LANGUAGE "plpgsql"
+    AS $$
+DECLARE
+  seller_uuid UUID;
+  avg_rating DECIMAL(2,1);
+  review_count INTEGER;
+  positive_count INTEGER;
+BEGIN
+  PERFORM set_config('app.guarded_write', 'on', true);
+  -- Determine which seller_id to update
+  IF TG_OP = 'DELETE' THEN
+    seller_uuid := OLD.seller_id;
+  ELSE
+    seller_uuid := NEW.seller_id;
+  END IF;
+
+  -- Calculate new rating statistics
+  SELECT
+    COALESCE(ROUND(AVG(rating)::NUMERIC, 1), 0.0)::DECIMAL(2,1),
+    COUNT(*),
+    COUNT(*) FILTER (WHERE rating >= 4)
+  INTO avg_rating, review_count, positive_count
+  FROM reviews
+  WHERE seller_id = seller_uuid
+    AND is_visible = true;
+
+  -- Update profiles table
+  UPDATE profiles
+  SET
+    seller_rating = avg_rating,
+    total_reviews = review_count,
+    positive_reviews = positive_count,
+    updated_at = now()
+  WHERE id = seller_uuid;
+
+  RETURN COALESCE(NEW, OLD);
+END;
+$$;
+
+-- ── release_escrow_to_seller_balance — writes profiles.seller_balance/pending_balance/lifetime_earnings
+-- Re-created verbatim from 20260101000000_baseline_live_schema.sql with the flag as the first statement.
+CREATE OR REPLACE FUNCTION "public"."release_escrow_to_seller_balance"("p_order_id" "uuid", "p_seller_id" "uuid", "p_amount" numeric) RETURNS "void"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+BEGIN
+  PERFORM set_config('app.guarded_write', 'on', true);
+  -- Increment seller's available balance
+  UPDATE profiles
+  SET
+    seller_balance   = seller_balance + p_amount,
+    pending_balance  = GREATEST(0, pending_balance - p_amount),
+    lifetime_earnings = lifetime_earnings + p_amount
+  WHERE id = p_seller_id;
+
+  -- Log to audit
+  INSERT INTO audit_logs (action, table_name, record_id, new_data, performed_by, created_at)
+  VALUES (
+    'ESCROW_RELEASED_TO_BALANCE',
+    'orders',
+    p_order_id::TEXT,
+    jsonb_build_object('seller_id', p_seller_id, 'amount', p_amount),
+    NULL,  -- system action
+    NOW()
+  );
+END;
+$$;
