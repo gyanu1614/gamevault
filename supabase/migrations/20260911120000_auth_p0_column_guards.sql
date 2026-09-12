@@ -547,8 +547,14 @@ $$;
 
 -- ── update_seller_rating — writes profiles.seller_rating/total_reviews/positive_reviews (trigger on reviews; fires under the buyer JWT)
 -- Re-created verbatim from 20260101000000_baseline_live_schema.sql with the flag as the first statement.
+-- AUTH-029 — was SECURITY INVOKER. Buyers insert reviews with the browser client,
+-- so this AFTER INSERT trigger ran as `authenticated` and its UPDATE profiles was
+-- silently reduced to 0 rows by "Users can update own profile" RLS: seller
+-- counters never updated from real reviews. DEFINER lets it write the seller's
+-- row; the app.guarded_write flag above admits it through the profiles guard.
 CREATE OR REPLACE FUNCTION "public"."update_seller_rating"() RETURNS "trigger"
-    LANGUAGE "plpgsql"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
     AS $$
 DECLARE
   seller_uuid UUID;
@@ -586,6 +592,29 @@ BEGIN
   RETURN COALESCE(NEW, OLD);
 END;
 $$;
+
+-- AUTH-029 backfill — recompute the three counters from VISIBLE reviews for every
+-- profile (same expressions as update_seller_rating). Profiles with no visible
+-- reviews are reset to 0 / 0.0 so stale counters (e.g. from deleted dummy-era
+-- reviews) do not linger. Runs as the migration role → admitted by the guard.
+UPDATE public.profiles p
+SET seller_rating    = COALESCE(r.avg_rating, 0.0),
+    total_reviews    = COALESCE(r.review_count, 0),
+    positive_reviews = COALESCE(r.positive_count, 0)
+FROM public.profiles q
+LEFT JOIN (
+  SELECT seller_id,
+         ROUND(AVG(rating)::numeric, 1)::decimal(2,1) AS avg_rating,
+         COUNT(*)::integer                            AS review_count,
+         COUNT(*) FILTER (WHERE rating >= 4)::integer AS positive_count
+  FROM public.reviews
+  WHERE is_visible = true
+  GROUP BY seller_id
+) r ON r.seller_id = q.id
+WHERE p.id = q.id
+  AND (p.seller_rating    IS DISTINCT FROM COALESCE(r.avg_rating, 0.0)
+    OR p.total_reviews    IS DISTINCT FROM COALESCE(r.review_count, 0)
+    OR p.positive_reviews IS DISTINCT FROM COALESCE(r.positive_count, 0));
 
 -- ── release_escrow_to_seller_balance — writes profiles.seller_balance/pending_balance/lifetime_earnings
 -- Re-created verbatim from 20260101000000_baseline_live_schema.sql with the flag as the first statement.

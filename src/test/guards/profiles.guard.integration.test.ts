@@ -53,29 +53,20 @@ describe.skipIf(!hasEnv)('AUTH-005 — profiles column guard (integration)', () 
     expect(error).toBeNull()
   })
 
-  it('POSITIVE: review inserts still work and update_seller_rating still writes the guarded counters', async () => {
+  it('AUTH-029: a browser-client (anon key + buyer JWT) review insert updates the seller rating', async () => {
     if (!ready) return
-    const before = await fx!.svc.from('profiles').select('total_reviews').eq('id', fx!.seller.id).single()
-    // (1) A BUYER can still leave a review — the guard does not break the insert.
+    const before = await fx!.svc.from('profiles').select('total_reviews,positive_reviews').eq('id', fx!.seller.id).single()
+    // Exactly what LeaveReviewButton does: insert with the PUBLIC anon key as the buyer.
     const { error } = await fx!.buyer.client.from('reviews').insert({
       order_id: fx!.completedOrderId, reviewer_id: fx!.buyer.id, seller_id: fx!.seller.id,
-      listing_id: fx!.listingId, rating: 5, comment: 'guard test review (buyer)',
+      listing_id: fx!.listingId, rating: 5, comment: 'guard test review (browser client)',
     })
     expect(error).toBeNull()
-    // NOTE (pre-existing, not caused by the guard): update_seller_rating is
-    // SECURITY INVOKER, so under the buyer's JWT its UPDATE profiles matches 0
-    // rows (profiles RLS: users update only their own row) and the counter does
-    // not move. Verified in psql on 2026-09-12; logged as AUTH-029.
-    // (2) Where the trigger CAN write (service role, as the backend would), the
-    // guarded counters update — proving the guard does not block the trigger.
-    await fx!.svc.from('reviews').delete().eq('order_id', fx!.completedOrderId)
-    const svcIns = await fx!.svc.from('reviews').insert({
-      order_id: fx!.completedOrderId, reviewer_id: fx!.buyer.id, seller_id: fx!.seller.id,
-      listing_id: fx!.listingId, rating: 5, comment: 'guard test review (service)',
-    })
-    expect(svcIns.error).toBeNull()
-    const after = await fx!.svc.from('profiles').select('total_reviews,seller_rating').eq('id', fx!.seller.id).single()
+    // update_seller_rating (now SECURITY DEFINER, flag set) must have written the
+    // seller's guarded counters despite running under the buyer's JWT.
+    const after = await fx!.svc.from('profiles').select('total_reviews,positive_reviews,seller_rating').eq('id', fx!.seller.id).single()
     expect(Number((after.data as any).total_reviews)).toBe(Number((before.data as any).total_reviews ?? 0) + 1)
-    expect(Number((after.data as any).seller_rating)).toBeGreaterThan(0)
+    expect(Number((after.data as any).positive_reviews)).toBe(Number((before.data as any).positive_reviews ?? 0) + 1)
+    expect(Number((after.data as any).seller_rating)).toBe(5)
   })
 })
