@@ -1,4 +1,6 @@
 import { Resend } from 'resend'
+
+import { assertEmailTransportAllowed } from './transport-guard'
 import { DISCORD_INVITE_URL } from '@/lib/config/founding-seller'
 import {
   emailShell,
@@ -31,6 +33,14 @@ function getResendClient(): Resend | null {
 const resend = {
   emails: {
     async send(payload: Parameters<Resend['emails']['send']>[0]) {
+      // Never let a test run reach the real provider. Throws rather than
+      // no-ops so a test can't silently "pass" while asserting nothing.
+      assertEmailTransportAllowed(
+        process.env,
+        typeof (payload as { subject?: unknown }).subject === 'string'
+          ? ((payload as { subject?: string }).subject as string)
+          : undefined,
+      )
       const client = getResendClient()
       if (!client) {
         console.warn('[email] RESEND_API_KEY not set — skipping email send.')
