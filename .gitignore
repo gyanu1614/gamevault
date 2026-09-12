@@ -28,6 +28,11 @@ yarn-error.log*
 # local env files
 .env*.local
 .env
+# Test environment: real file is gitignored, .env.test.example IS committed.
+# Keeping the real one out of git is what stops a live key being restored into
+# the default test environment (see src/test/setup-env.ts).
+.env.test
+!.env.test.example
 
 # vercel
 .vercel

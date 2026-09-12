@@ -18,6 +18,8 @@
  */
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 
+import { supabaseReachable } from '../supabase-reachable'
+
 export const URL = process.env.NEXT_PUBLIC_SUPABASE_URL
 export const SVC = process.env.SUPABASE_SERVICE_ROLE_KEY
 export const ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -130,6 +132,16 @@ export async function verifyNoGuardTestResidue(svc: SupabaseClient, priorFailure
 
 export async function makeFixture(): Promise<Fixture> {
   assertGuardTargetAllowed(URL, process.env)
+  // Credentials can be present and valid while nothing is listening — the
+  // default .env.test points at a local stack that may not be started. Fail
+  // with a clear instruction instead of an undici "fetch failed" stack.
+  if (!(await supabaseReachable(URL))) {
+    throw new Error(
+      `guard tests: no Supabase reachable at ${JSON.stringify(URL ?? '')}. ` +
+        'Start the local stack with `npx supabase start`, or run with ' +
+        'ALLOW_REMOTE_GUARD_TESTS=1 to target .env.local deliberately.',
+    )
+  }
   const svc = createClient(URL!, SVC!, { auth: { persistSession: false } })
   // Short tag: profiles.username has a length CHECK.
   const tag = Math.random().toString(36).slice(2, 8)
