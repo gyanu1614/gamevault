@@ -23,6 +23,25 @@ export const SVC = process.env.SUPABASE_SERVICE_ROLE_KEY
 export const ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 export const hasEnv = Boolean(URL && SVC && ANON)
 
+/**
+ * Guard fixtures create real auth users and rows. Refuse anything but a local
+ * Supabase stack unless ALLOW_REMOTE_GUARD_TESTS=1 is set explicitly — a run
+ * with .env.local unshadowed leaked a fixture into production on 2026-09-12.
+ */
+export function assertGuardTargetAllowed(url: string | undefined, env: Record<string, string | undefined>): void {
+  if (env.ALLOW_REMOTE_GUARD_TESTS === '1') return
+  let host = ''
+  try { host = new globalThis.URL(url ?? '').hostname } catch { host = '' }
+  const local = host === '127.0.0.1' || host === 'localhost' || host === '[::1]' || host === '::1'
+  if (!local) {
+    throw new Error(
+      `guard tests refuse to run against non-local Supabase URL ${JSON.stringify(url ?? '')}: ` +
+      'they create real users and rows. Point NEXT_PUBLIC_SUPABASE_URL at the local stack, ' +
+      'or set ALLOW_REMOTE_GUARD_TESTS=1 deliberately.',
+    )
+  }
+}
+
 export type Actor = { id: string; client: SupabaseClient }
 export type Fixture = {
   svc: SupabaseClient
@@ -86,6 +105,7 @@ export async function verifyNoGuardTestResidue(svc: SupabaseClient, priorFailure
 }
 
 export async function makeFixture(): Promise<Fixture> {
+  assertGuardTargetAllowed(URL, process.env)
   const svc = createClient(URL!, SVC!, { auth: { persistSession: false } })
   // Short tag: profiles.username has a length CHECK.
   const tag = Math.random().toString(36).slice(2, 8)

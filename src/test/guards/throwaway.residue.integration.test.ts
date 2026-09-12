@@ -6,10 +6,11 @@
  */
 import { describe, it, expect } from 'vitest'
 import { createClient } from '@supabase/supabase-js'
-import { hasEnv, verifyNoGuardTestResidue, URL, SVC } from './throwaway'
+import { hasEnv, verifyNoGuardTestResidue, assertGuardTargetAllowed, URL, SVC } from './throwaway'
 
 describe.skipIf(!hasEnv)('guard fixture teardown — leaked fixtures fail the run', () => {
   it('verifyNoGuardTestResidue throws on a leaked fixture user and passes once it is gone', async () => {
+    assertGuardTargetAllowed(URL, process.env)
     const svc = createClient(URL!, SVC!, { auth: { persistSession: false } })
     const tag = Math.random().toString(36).slice(2, 8)
     const email = `guardtest-leak-${tag}@example.com`
