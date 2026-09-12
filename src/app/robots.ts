@@ -27,11 +27,11 @@ export default function robots(): MetadataRoute.Robots {
           '/wallet/',
           '/wishlist/',
           '/checkout/',
-          // Internal preview/scratch routes. They return 200 to anyone who
-          // finds them and have no metadata, so left crawlable they'd land in
-          // the index as junk pages under the brand.
+          // Internal design previews. ROUTE-002 gated them server-side (they
+          // 404 on the live site via src/app/dev/layout.tsx), but the disallow
+          // stays: it governs crawling on preview deployments, where the pages
+          // do render, and the two are not substitutes for one another.
           '/dev/',
-          '/test',
           // Parameterized duplicates: sorted views and campaign-tagged
           // URLs render the same content as the canonical page.
           '/*?sort=',
