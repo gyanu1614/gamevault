@@ -9,6 +9,7 @@
  */
 
 import { createServiceRoleClient } from '@/lib/supabase/service'
+import { isInternalPath } from '@/lib/utils/safe-link'
 import type { OrderEvent } from '@/lib/escrow/state-machine'
 import type { CanonicalEvent } from '@/lib/payments/types'
 import { toDecimal } from '@/lib/money'
@@ -72,6 +73,11 @@ async function insertNotification(input: {
   message: string
   link?: string
 }) {
+  // AUTH-013 — links are filtered at write time as well as at render time.
+  if (input.link !== undefined && !isInternalPath(input.link)) {
+    console.error('[PaymentNotify] refused non-internal notification link:', input.link)
+    return
+  }
   const supabase = createServiceRoleClient()
   const { error } = await (supabase.from('notifications').insert as any)({
     user_id: input.userId,

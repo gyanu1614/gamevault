@@ -148,3 +148,12 @@ DROP TRIGGER IF EXISTS trg_guard_reviews_moderation_columns ON public.reviews;
 CREATE TRIGGER trg_guard_reviews_moderation_columns
   BEFORE UPDATE ON public.reviews
   FOR EACH ROW EXECUTE FUNCTION public.guard_reviews_moderation_columns();
+
+-- ── AUTH-013: notifications — backend inserts only ───────────────────────────
+-- "System can create notifications" was `FOR INSERT TO authenticated WITH
+-- CHECK (true)`: any user could push a notification with an arbitrary
+-- title/link to ANY user_id (in-app phishing). Every app writer now uses the
+-- service role (utils/notifications.ts, payments/notify.ts, checkout nudge,
+-- all admin/moderation paths) and filters `link` to an internal path at write
+-- time. SELECT/UPDATE/DELETE own-row policies are unchanged.
+DROP POLICY IF EXISTS "System can create notifications" ON public.notifications;

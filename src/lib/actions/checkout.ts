@@ -327,7 +327,7 @@ export async function createCheckout(input: CreateCheckoutInput): Promise<Create
       payment_expires_at: expiresAt,
     }).eq('id', orderId)
 
-    await upsertIncompleteNudge(supabase, user.id, orderId, providerName, expiresAt)
+    await upsertIncompleteNudge(user.id, orderId, providerName, expiresAt)
 
     return { success: true, orderId, checkoutUrl: payUrl }
   } catch (e: any) {
@@ -352,13 +352,14 @@ export async function createCheckout(input: CreateCheckoutInput): Promise<Create
  * than duplicates it. Best-effort: never fails checkout.
  */
 async function upsertIncompleteNudge(
-  supabase: Awaited<ReturnType<typeof createClient>>,
   userId: string,
   orderId: string,
   providerName: string,
   expiresAtIso: string,
 ) {
   try {
+    // AUTH-013 — notifications has no user INSERT policy; write as the backend.
+    const supabase = createServiceRoleClient()
     const minutes = Math.max(
       1,
       Math.round((new Date(expiresAtIso).getTime() - Date.now()) / 60000),
@@ -574,7 +575,7 @@ export async function retryOrderPayment(orderId: string): Promise<{
       payment_expires_at: expiresAt,
     }).eq('id', orderId)
 
-    await upsertIncompleteNudge(supabase, user.id, orderId, providerName, expiresAt)
+    await upsertIncompleteNudge(user.id, orderId, providerName, expiresAt)
 
     return { success: true, checkoutUrl: payUrl }
   } catch (e: any) {

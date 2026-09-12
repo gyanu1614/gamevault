@@ -1,4 +1,11 @@
-import { createClient } from '@/lib/supabase/server'
+import { createServiceRoleClient } from '@/lib/supabase/service-role'
+import { isInternalPath } from '@/lib/utils/safe-link'
+
+/**
+ * AUTH-013 — every notification insert goes through the service role (the
+ * table has no user INSERT policy any more) and a non-internal `link` is
+ * refused at write time, not just hidden at render time.
+ */
 
 /**
  * Create a navbar notification for a user
@@ -22,15 +29,19 @@ export async function createNotification({
   message: string
   link?: string
 }) {
-  const supabase = await createClient()
+  if (link !== undefined && link !== null && !isInternalPath(link)) {
+    console.error('[Notifications] refused non-internal link:', link)
+    return { success: false, error: 'Notification link must be an internal path' }
+  }
 
   try {
+    const supabase = createServiceRoleClient()
     const { error } = await (supabase.from('notifications').insert as any)({
       user_id: userId,
       type,
       title,
       message,
-      link,
+      link: link ?? null,
       is_read: false,
     })
 
@@ -93,7 +104,9 @@ export async function createDisputeNotifications({
  * @returns Array of admin user IDs
  */
 export async function getAdminUserIdsWithPermission(permission: string): Promise<string[]> {
-  const supabase = await createClient()
+  // Internal lookup (callers have already authorised); service role so the
+  // result does not depend on the current session's RLS view.
+  const supabase = createServiceRoleClient()
 
   try {
     // Get all roles that have this permission

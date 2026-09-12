@@ -20,6 +20,7 @@ import { useAuth } from '@/hooks/use-auth'
 import { useAuthDialog } from '@/components/auth/AuthDialog'
 import BecomeSellerCta from '@/components/account/BecomeSellerCta'
 import { cn } from '@/lib/utils'
+import { safeInternalPath } from '@/lib/utils/safe-link'
 import { isProtectedPath } from '@/lib/auth/protected-routes'
 import { beginLogout } from '@/lib/auth/logout-signal'
 import { getAvatarUrl } from '@/lib/utils/avatar'
@@ -1197,7 +1198,7 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                                 {recentNotifications.map((notification: any) => (
                                   <Link
                                     key={notification.id}
-                                    href={notification.link || '#'}
+                                    href={safeInternalPath(notification.link)}
                                     onClick={() => {
                                       markAsRead(notification.id)
                                       setNotificationsOpen(false)

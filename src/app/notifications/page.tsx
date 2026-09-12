@@ -15,6 +15,7 @@ import { Bell, Check, CheckCheck, Trash2, ArrowLeft, Loader2 } from 'lucide-reac
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/hooks/use-auth'
 import { cn } from '@/lib/utils'
+import { safeInternalPath } from '@/lib/utils/safe-link'
 import { Button } from '@/components/ui/button'
 import { HeroBackdrop } from '@/components/hero-backdrop'
 
@@ -210,7 +211,7 @@ export default function NotificationsPage() {
             {notifications.map((notification: any) => (
               <div key={notification.id} className="animate-in fade-in-0 slide-in-from-top-1 duration-200">
                 <Link
-                  href={notification.link || '#'}
+                  href={safeInternalPath(notification.link)}
                   onClick={() => {
                     if (!notification.is_read) markAsRead(notification.id)
                   }}
