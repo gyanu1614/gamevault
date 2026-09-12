@@ -23,13 +23,14 @@ const describeLive = hasCredentials ? describe : describe.skip
 
 describeLive('discord bot against live data', () => {
   let catalogValue: number | null = null
-  // This suite asserts against SEEDED catalog rows, so it needs a reachable
-  // stack that actually has them — not just credentials. Skips otherwise.
+  // This suite asserts against a SEEDED catalogue, so credentials alone are
+  // not enough: a reachable-but-empty stack (a fresh `supabase db reset`, which
+  // has no seed.sql) would fail every assertion on missing data rather than on
+  // a real regression. Gate on the probe row this suite actually depends on.
   let live = false
 
   beforeAll(async () => {
-    live = await supabaseReachable()
-    if (!live) return
+    if (!(await supabaseReachable())) return
     const { data } = await botSupabase()
       .from('sab_price_display')
       .select('market_value_usd')
@@ -39,6 +40,8 @@ describeLive('discord bot against live data', () => {
 
     catalogValue =
       data?.market_value_usd == null ? null : Number(data.market_value_usd)
+    // No catalogue → nothing meaningful to assert against.
+    live = catalogValue != null
   })
 
   it('quotes the corrected catalog value, not the raw listing', async () => {
