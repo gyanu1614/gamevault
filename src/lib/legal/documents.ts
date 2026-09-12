@@ -1195,12 +1195,15 @@ export const LEGAL_DOCS: LegalDoc[] = [
         h: 'Seller commissions',
         blocks: [
           ul([
-            '**In-game currency:** 5% (select promotional games 0%; Roblox in-game economies 10%) — 48-hour payout hold.',
-            '**In-game items:** 7% — 72-hour payout hold.',
+            '**In-game currency:** 10% (select promotional games 0%) — 48-hour payout hold.',
+            '**In-game items:** 10% — 72-hour payout hold.',
             '**Top-ups / gift cards:** 5% — 48-hour payout hold.',
-            '**Boosting / coaching:** 7% — payout hold of 72 hours after completion.',
-            '**Game accounts:** 12% / 15% / 20% by risk band, carrying 5-day / 7-day / 14-day Protection Windows respectively.',
+            '**Boosting / coaching:** 10% — payout hold of 72 hours after completion.',
+            '**Game accounts:** 15% base; certain games carry a higher published per-game rate (e.g. GTA accounts 20%). Protection Windows of 5–14 days apply by risk.',
           ]),
+          p(
+            '**Seller-rank discount:** your seller rank reduces commission on currency, items, boosting and accounts — Silver 5% off, Gold 10% off, Diamond 15% off, Legendary 20% off the applicable rate (e.g. items: 10% → 8% at Legendary). Top-ups are always the flat rate. Rank criteria are shown on your Seller Ranks page.',
+          ),
           p(
             'Commission applies to the **item price only** — never to the buyer fee. Your exact commission and estimated net proceeds are shown on the listing form before you publish.',
           ),

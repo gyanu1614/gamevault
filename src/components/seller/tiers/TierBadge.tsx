@@ -2,7 +2,7 @@
  * TierBadge — inline pill showing a seller's tier with the correct colour.
  *
  * badge_color values from seller_tier_config:
- *   zinc | orange | slate | yellow | cyan | violet
+ *   orange | zinc | yellow | cyan | lime
  */
 
 import { cn } from '@/lib/utils'

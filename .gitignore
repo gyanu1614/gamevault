@@ -93,3 +93,7 @@ data/sab-market-feeds/*.json
 .github/hooks/
 .github/skills/
 .agents/
+.ds-sync/
+ds-bundle/
+.design-sync/
+private/tmp/

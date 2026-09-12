@@ -105,7 +105,15 @@ export default function AccountLayout({ children }: { children: React.ReactNode 
           the wrapper covers the sidebar entirely. */}
       {/* V21/P7.ak — Single source of navbar clearance for ALL sidebar
           account pages: the navbar already emits its own in-flow spacer (60px mobile / 84px desktop), so this padding is PURELY the uniform 28px navbar-to-content gap. Pages must NOT add their own top padding. */}
-      <HeroBackdrop name="account" className="hero-dim lg:pl-64">
+      {/* min-h override: HeroBackdrop defaults to min-h-screen, but it sits
+          BELOW the navbar's in-flow spacer, so full-viewport min-height
+          guarantees ~84-112px of dead scroll on every short page. Subtracting
+          --navbar-bottom makes short pages end exactly at the fold (cn/twMerge
+          drops the component's own min-h-screen). */}
+      <HeroBackdrop
+        name="account"
+        className="hero-dim lg:pl-64 min-h-[calc(100dvh-var(--navbar-bottom))]"
+      >
         <div className="pt-7">
           <BuyingOpensSoonBanner />
           {children}

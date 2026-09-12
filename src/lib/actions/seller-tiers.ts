@@ -18,10 +18,11 @@ const FALLBACK_TIER_CONFIGS = TIERS.map((t) => ({
   tier: t.key,
   display_name: t.label,
   description: t.description,
-  min_sales: t.thresholds.minSales,
-  min_rating: t.thresholds.minRating,
-  min_age_days: t.thresholds.minAgeDays,
-  min_completion_rate: t.thresholds.minCompletionRate,
+  gmv_90d_min: t.thresholds.gmv90d,
+  orders_90d_min: t.thresholds.orders90d,
+  positive_rating_min: t.thresholds.positivePct,
+  min_completion_rate: t.thresholds.completionPct,
+  fee_multiplier: t.feeMultiplier,
   commission_rate: t.commissionRate,
   listing_limit: t.listingLimit,
   banner_access: t.bannerAccess,
@@ -49,9 +50,29 @@ export async function getAllTierConfigs() {
   }
 }
 
-// ─── Current seller's tier info + stats ───────────────────────────────────────
+// ─── Current seller's tier info + trailing-90-day window stats ────────────────
 
-export async function getMyTierInfo() {
+export interface MyTierInfo {
+  current_tier: string
+  eligible_tier: string
+  tier_strikes: number
+  commission_rate: number
+  fee_multiplier: number
+  banner_access: boolean
+  /** Trailing-90-day window facts (what promotion/demotion actually uses). */
+  window_gmv: number
+  window_orders: number
+  window_positive_pct: number | null
+  window_completion_pct: number
+  next_tier: string | null
+  next_fee_multiplier: number | null
+  next_gmv_90d_min: number | null
+  next_orders_90d_min: number | null
+  next_positive_rating_min: number | null
+  next_completion_min: number | null
+}
+
+export async function getMyTierInfo(): Promise<{ tierInfo: MyTierInfo } | null> {
   const supabase = await createClient()
 
   const { data: { user } } = await supabase.auth.getUser()
@@ -59,72 +80,28 @@ export async function getMyTierInfo() {
 
   const service = getServiceClient()
 
-  // Get live seller stats (always available regardless of migration)
-  const [salesResult, profileResult, completionResult] = await Promise.all([
-    service
-      .from('orders')
-      .select('id', { count: 'exact', head: true })
-      .eq('seller_id', user.id)
-      .eq('status', 'completed'),
-
-    service
-      .from('profiles')
-      .select('seller_rating, created_at, seller_tier')
-      .eq('id', user.id)
-      .single(),
-
-    service
-      .from('orders')
-      .select('status')
-      .eq('seller_id', user.id)
-      .not('status', 'in', '(cancelled,refunded)'),
-  ])
-
-  const totalSales = salesResult.count ?? 0
-  const rating = profileResult.data?.seller_rating ?? null
-  const createdAt = profileResult.data?.created_at
-  const accountAgeDays = createdAt
-    ? Math.floor((Date.now() - new Date(createdAt).getTime()) / 86_400_000)
-    : 0
-  const orders = completionResult.data ?? []
-  const completionRate =
-    orders.length === 0
-      ? 100
-      : (orders.filter((o: any) => o.status === 'completed').length / orders.length) * 100
-
-  const stats = {
-    totalSales,
-    rating,
-    accountAgeDays,
-    completionRate: Math.round(completionRate * 10) / 10,
-  }
-
-  // Try the RPC first (requires migration to be applied)
+  // The RPC computes the same trailing-90-day window facts the rank engine
+  // uses (counted GMV with the single-buyer cap, orders, % positive,
+  // completion), so the page shows exactly what promotions are judged on.
   const { data: tierInfo, error: tierError } = await service.rpc(
     'get_seller_tier_info',
     { p_user_id: user.id }
   )
 
-  if (!tierError && tierInfo) {
-    return {
-      tierInfo: tierInfo as {
-        current_tier: string
-        eligible_tier: string
-        commission_rate: number
-        listing_limit: number | null
-        banner_access: boolean
-        next_tier: string | null
-        next_commission_rate: number | null
-        next_min_sales: number | null
-        next_min_rating: number | null
-      },
-      stats,
-    }
+  if (!tierError && tierInfo && (tierInfo as any).window_gmv !== undefined) {
+    return { tierInfo: tierInfo as unknown as MyTierInfo }
   }
 
-  // RPC not available — build fallback from profile + hardcoded config
-  console.warn('[getMyTierInfo] RPC unavailable, using fallback tier config')
-  const currentTier = profileResult.data?.seller_tier ?? DEFAULT_TIER
+  // RPC (new shape) not available — migration not applied yet. Fall back to
+  // the profile tier + static config with an empty window.
+  console.warn('[getMyTierInfo] RPC unavailable/stale, using fallback tier config')
+  const { data: profile } = await service
+    .from('profiles')
+    .select('seller_tier, tier_strikes')
+    .eq('id', user.id)
+    .single()
+
+  const currentTier = (profile?.seller_tier as string) ?? DEFAULT_TIER
   const tierConfig = FALLBACK_TIER_CONFIGS.find(t => t.tier === currentTier)
     ?? FALLBACK_TIER_CONFIGS[0]
   const nextConfig = FALLBACK_TIER_CONFIGS.find(t => t.sort_order === tierConfig.sort_order + 1) ?? null
@@ -133,14 +110,20 @@ export async function getMyTierInfo() {
     tierInfo: {
       current_tier: currentTier,
       eligible_tier: currentTier, // can't compute without SQL function
+      tier_strikes: (profile as any)?.tier_strikes ?? 0,
       commission_rate: tierConfig.commission_rate,
-      listing_limit: tierConfig.listing_limit,
+      fee_multiplier: tierConfig.fee_multiplier,
       banner_access: tierConfig.banner_access,
+      window_gmv: 0,
+      window_orders: 0,
+      window_positive_pct: null,
+      window_completion_pct: 100,
       next_tier: nextConfig?.tier ?? null,
-      next_commission_rate: nextConfig?.commission_rate ?? null,
-      next_min_sales: nextConfig?.min_sales ?? null,
-      next_min_rating: nextConfig?.min_rating ?? null,
+      next_fee_multiplier: nextConfig?.fee_multiplier ?? null,
+      next_gmv_90d_min: nextConfig?.gmv_90d_min ?? null,
+      next_orders_90d_min: nextConfig?.orders_90d_min ?? null,
+      next_positive_rating_min: nextConfig?.positive_rating_min ?? null,
+      next_completion_min: nextConfig?.min_completion_rate ?? null,
     },
-    stats,
   }
 }

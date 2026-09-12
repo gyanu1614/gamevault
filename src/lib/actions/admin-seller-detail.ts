@@ -45,6 +45,11 @@ export interface SellerDetailProfile {
   total_sales: number
   seller_rating: number | null
   total_reviews: number
+  /** Rank-engine state (fee_engine_and_rank_system migration). */
+  tier_strikes: number
+  tier_pinned: boolean
+  fee_override_pct: number | null
+  fee_override_expires_at: string | null
 }
 
 export interface SellerListingRow {
@@ -110,6 +115,7 @@ export interface SellerTierConfigRow {
   tier: string
   display_name: string | null
   commission_rate: number | null
+  fee_multiplier: number | null
   listing_limit: number | null
   pre_moderation_listings: number | null
   badge_color: string | null
@@ -224,7 +230,7 @@ export async function getSellerDetail(userId: string): Promise<{
       service
         .from('profiles')
         .select(
-          'id, username, full_name, email, avatar_url, shop_name, shop_slug, role, seller_tier, seller_status, seller_restriction_reason, seller_restricted_at, kyc_status, founding_seller, is_test, created_at, total_sales, seller_rating, total_reviews',
+          'id, username, full_name, email, avatar_url, shop_name, shop_slug, role, seller_tier, seller_status, seller_restriction_reason, seller_restricted_at, kyc_status, founding_seller, is_test, created_at, total_sales, seller_rating, total_reviews, tier_strikes, tier_pinned, fee_override_pct, fee_override_expires_at',
         )
         .eq('id', userId)
         .maybeSingle() as any,
@@ -310,7 +316,7 @@ export async function getSellerDetail(userId: string): Promise<{
         .limit(10),
       service
         .from('seller_tier_config')
-        .select('tier, display_name, commission_rate, listing_limit, pre_moderation_listings, badge_color, sort_order')
+        .select('tier, display_name, commission_rate, fee_multiplier, listing_limit, pre_moderation_listings, badge_color, sort_order')
         .order('sort_order', { ascending: true }) as any,
       (service.rpc as any)('get_seller_tier_info', { p_user_id: userId }),
       service
@@ -384,6 +390,11 @@ export async function getSellerDetail(userId: string): Promise<{
         total_sales: Number(profile.total_sales ?? 0),
         seller_rating: profile.seller_rating != null ? Number(profile.seller_rating) : null,
         total_reviews: Number(profile.total_reviews ?? 0),
+        tier_strikes: Number(profile.tier_strikes ?? 0),
+        tier_pinned: profile.tier_pinned === true,
+        fee_override_pct:
+          profile.fee_override_pct != null ? Number(profile.fee_override_pct) : null,
+        fee_override_expires_at: profile.fee_override_expires_at ?? null,
       },
       presence: {
         store_paused: !!presenceRes.data?.store_paused,

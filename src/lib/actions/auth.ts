@@ -573,7 +573,7 @@ export async function registerAsSeller(formData: {
     }
 
     // "Already a seller" must key on role/is_seller — NOT seller_tier, which now
-    // defaults to the entry tier ('quartz') on every profile, seller or not.
+    // defaults to the entry rank ('bronze') on every profile, seller or not.
     if (profile.role === 'seller' || profile.is_seller) {
       return { error: 'You are already a seller' }
     }

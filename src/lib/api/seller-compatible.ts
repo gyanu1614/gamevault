@@ -18,7 +18,7 @@ export type ListingStatus =
   | 'draft' | 'active' | 'sold' | 'archived' | 'suspended' | 'paused'
   | 'pending_approval' | 'changes_requested' | 'rejected'
 export type OrderStatus = 'pending' | 'paid' | 'processing' | 'completed' | 'disputed' | 'refunded' | 'cancelled'
-// Seller tiers now come from the central gemstone ladder — re-exported so
+// Seller tiers now come from the central rank ladder — re-exported so
 // existing importers of `SellerTier` from this module keep working.
 export type { SellerTier }
 
@@ -1003,7 +1003,7 @@ export const settingsApi = {
       .single() as any
 
     if (error) throw error
-    // Null/legacy tier values fall back to the entry gemstone tier (Quartz).
+    // Null/legacy tier values fall back to the entry rank (Bronze).
     return { ...data, seller_tier: (data?.seller_tier as SellerTier) || DEFAULT_TIER }
   },
 }

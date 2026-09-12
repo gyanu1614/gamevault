@@ -22,7 +22,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service'
 import { PURCHASES_ENABLED, PURCHASES_DISABLED_MESSAGE } from '@/lib/config/purchases'
-import { buyerFee, commissionAmount, protectionWindowHours, round2 } from '@/lib/fees'
+import { buyerFee, commissionAmount, protectionWindowHours, round2, sellerFeeFields } from '@/lib/fees'
+import { loadFeeConfig } from '@/lib/fees/config'
 import { getProvider, activePaymentProviderName, providerNameForMethod } from '@/lib/payments/registry'
 import { spendWallet, getWalletBalance } from '@/lib/wallet/wallet'
 import { validatePromoCode, recordPromoUsage } from '@/lib/actions/promo'
@@ -74,7 +75,7 @@ export async function createCheckout(input: CreateCheckoutInput): Promise<Create
     // Listing + seller tier (server-side; never trust client amounts).
     const { data: listingRaw, error: listingError } = await supabase
       .from('listings')
-      .select('*, seller:seller_id ( id, seller_tier, founding_seller, username ), game:game_id ( slug ), category:category_id ( slug, metadata )')
+      .select('*, seller:seller_id ( id, seller_tier, founding_seller, fee_override_pct, fee_override_expires_at, username ), game:game_id ( slug ), category:category_id ( slug, metadata )')
       .eq('id', input.listingId)
       .single() as any
     const listing = listingRaw as any
@@ -91,15 +92,17 @@ export async function createCheckout(input: CreateCheckoutInput): Promise<Create
     // item price only — never both fees (lib/fees is the single source).
     const subtotal = round2(listing.price * quantity)
     const fee = buyerFee(subtotal)
+    // Admin-tuned fee config (category bases, game overrides, rank multipliers);
+    // seller-side inputs (rank / founding / per-seller override) come straight
+    // off the listing's seller join — no extra round-trip.
+    const feeConfig = await loadFeeConfig()
     const feeInput = {
       categoryMetaType: listing.category?.metadata?.type as string | undefined,
       categorySlug: listing.category?.slug as string | undefined,
       gameSlug: listing.game?.slug as string | undefined,
-      // Founding sellers pay a permanently reduced commission (lib/fees).
-      // Read straight off the listing's seller join — no extra round-trip.
-      isFounding: listing.seller?.founding_seller === true,
+      ...sellerFeeFields(listing.seller),
     }
-    const commission = commissionAmount(subtotal, feeInput)
+    const commission = commissionAmount(subtotal, feeInput, feeConfig)
     // AUTH-003 — never trust a client amount: validate the CODE and derive the
     // discount from the promo row, clamped to the subtotal.
     const promo = await resolveCheckoutPromo(input.promoCode, subtotal, validatePromoCode)

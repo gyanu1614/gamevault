@@ -1,144 +1,142 @@
 /**
- * TierProgressBar
- *
- * Shows how close a seller is to the NEXT tier across four metrics:
- *   • Completed sales
- *   • Average rating
- *   • Account age (days)
- *   • Completion rate
- *
- * All data comes from get_seller_tier_info() via the parent page.
+ * TierProgressBar — compact horizontal strip showing progress to the next
+ * rank across the four trailing-90-day metrics the rank engine judges.
+ * Rectangular checkout-modal language: one bordered panel, 4-up metric grid.
  */
 
+'use client'
+
+import { motion, useReducedMotion } from 'framer-motion'
 import { cn } from '@/lib/utils'
-
-interface SellerStats {
-  totalSales: number
-  rating: number | null
-  accountAgeDays: number
-  completionRate: number
-}
-
-interface NextTierRequirements {
-  tier: string
-  displayName: string
-  minSales: number
-  minRating: number | null
-  minAgeDays: number
-  minCompletionRate: number | null
-}
+import { tierLabel } from '@/lib/seller/tiers'
+import type { MyTierInfo } from '@/lib/actions/seller-tiers'
 
 interface TierProgressBarProps {
-  stats: SellerStats
-  nextTier: NextTierRequirements | null
+  tierInfo: MyTierInfo
   className?: string
 }
 
-interface MetricBarProps {
+function Metric({
+  label,
+  current,
+  required,
+  format,
+  met,
+  index,
+}: {
   label: string
   current: number
   required: number
   format?: (v: number) => string
   met: boolean
-}
-
-function MetricBar({ label, current, required, format, met }: MetricBarProps) {
-  const pct = Math.min((current / required) * 100, 100)
-  const fmt = format ?? ((v) => String(v))
+  index: number
+}) {
+  const reduce = useReducedMotion()
+  const pct = required <= 0 ? 100 : Math.min((current / required) * 100, 100)
+  const fmt = format ?? ((v: number) => String(v))
 
   return (
-    <div className="space-y-1.5">
-      <div className="flex items-center justify-between text-xs">
-        <span className="text-zinc-400">{label}</span>
-        <span className={cn('font-medium tabular-nums', met ? 'text-emerald-400' : 'text-white')}>
-          {fmt(current)}{' '}
-          <span className="text-zinc-500">/ {fmt(required)}</span>
-          {met && <span className="ml-1 text-emerald-400">✓</span>}
+    <div className="min-w-0 space-y-2">
+      <div className="flex items-baseline justify-between gap-2">
+        <span className="truncate text-[12px] font-medium text-zinc-300">{label}</span>
+        <span
+          className={cn(
+            'whitespace-nowrap text-[12px] font-semibold tabular-nums',
+            met ? 'text-emerald-400' : 'text-white',
+          )}
+        >
+          {fmt(current)} <span className="font-normal text-zinc-400">/ {fmt(required)}</span>
         </span>
       </div>
-      <div className="h-1.5 w-full rounded-full bg-bg-raised-hover overflow-hidden">
-        <div
+      <div className="h-1.5 overflow-hidden rounded-sm bg-white/[0.08]">
+        <motion.div
+          initial={reduce ? false : { width: 0 }}
+          animate={{ width: `${pct}%` }}
+          transition={{ type: 'spring', stiffness: 90, damping: 22, delay: 0.35 + index * 0.08 }}
           className={cn(
-            'h-full rounded-full transition-all duration-700',
-            met ? 'bg-emerald-500' : 'bg-lime'
+            'h-full',
+            met
+              ? 'bg-emerald-400 shadow-[0_0_12px_rgba(52,211,153,0.45)]'
+              : 'bg-lime shadow-[0_0_12px_rgba(198,255,61,0.4)]',
           )}
-          style={{ width: `${pct}%` }}
+          style={reduce ? { width: `${pct}%` } : undefined}
         />
       </div>
     </div>
   )
 }
 
-export default function TierProgressBar({
-  stats,
-  nextTier,
-  className,
-}: TierProgressBarProps) {
-  if (!nextTier) {
+const money = (v: number) => `$${Math.round(v).toLocaleString()}`
+const pctFmt = (v: number) => `${v}%`
+
+export default function TierProgressBar({ tierInfo, className }: TierProgressBarProps) {
+  if (!tierInfo.next_tier) {
     return (
-      <div className={cn('rounded-xl border border-lime-tint-border bg-lime/5 p-4 text-center', className)}>
-        <p className="text-sm font-semibold text-lime-text">Diamond Tier</p>
-        <p className="mt-1 text-xs text-zinc-500">You have reached the highest tier</p>
+      <div className={cn('flex flex-wrap items-baseline gap-x-3 gap-y-1', className)}>
+        <span className="text-[13px] font-semibold text-white">
+          {tierLabel(tierInfo.current_tier)} is the top rank.
+        </span>
+        <span className="text-[12px] text-zinc-400">Stay above its bar to keep it.</span>
       </div>
     )
   }
 
-  const metrics = [
-    {
-      label: 'Completed Sales',
-      current: stats.totalSales,
-      required: nextTier.minSales,
-      met: stats.totalSales >= nextTier.minSales,
-    },
-    ...(nextTier.minRating !== null
-      ? [
-          {
-            label: 'Average Rating',
-            current: stats.rating ?? 0,
-            required: nextTier.minRating,
-            format: (v: number) => v.toFixed(1),
-            met: (stats.rating ?? 0) >= nextTier.minRating,
-          },
-        ]
-      : []),
-    {
-      label: 'Account Age (days)',
-      current: stats.accountAgeDays,
-      required: nextTier.minAgeDays,
-      met: stats.accountAgeDays >= nextTier.minAgeDays,
-    },
-    ...(nextTier.minCompletionRate !== null
-      ? [
-          {
-            label: 'Completion Rate',
-            current: stats.completionRate,
-            required: nextTier.minCompletionRate,
-            format: (v: number) => `${v.toFixed(1)}%`,
-            met: stats.completionRate >= nextTier.minCompletionRate,
-          },
-        ]
-      : []),
-  ]
-
-  const allMet = metrics.every((m) => m.met)
+  // No reviews in the window counts as passing the rating bar.
+  const positiveCurrent = tierInfo.window_positive_pct
+  const positiveRequired = tierInfo.next_positive_rating_min
+  const positiveMet =
+    positiveRequired == null || positiveCurrent == null || positiveCurrent >= positiveRequired
 
   return (
     <div className={cn('space-y-3', className)}>
-      <div className="flex items-center justify-between">
-        <p className="text-xs font-medium text-zinc-400 uppercase tracking-wider">
-          Progress to {nextTier.displayName}
-        </p>
-        {allMet && (
-          <span className="text-xs font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-full px-2 py-0.5">
-            Eligible — upgrade pending daily cron
-          </span>
+      <div className="flex items-baseline justify-between gap-3">
+        <h2 className="text-[14px] font-semibold text-white">
+          Next Rank: {tierLabel(tierInfo.next_tier)}
+        </h2>
+        <span className="text-[10.5px] uppercase tracking-wider text-zinc-400">Last 90 Days</span>
+      </div>
+
+      <div className="grid grid-cols-2 gap-x-6 gap-y-3 lg:grid-cols-4">
+        <Metric
+          index={0}
+          label="Sales"
+          current={tierInfo.window_gmv}
+          required={tierInfo.next_gmv_90d_min ?? 0}
+          format={money}
+          met={tierInfo.window_gmv >= (tierInfo.next_gmv_90d_min ?? 0)}
+        />
+        <Metric
+          index={1}
+          label="Orders"
+          current={tierInfo.window_orders}
+          required={tierInfo.next_orders_90d_min ?? 0}
+          met={tierInfo.window_orders >= (tierInfo.next_orders_90d_min ?? 0)}
+        />
+        {positiveRequired != null && (
+          <Metric
+            index={2}
+            label="Rating"
+            current={positiveCurrent ?? 100}
+            required={positiveRequired}
+            format={pctFmt}
+            met={positiveMet}
+          />
+        )}
+        {tierInfo.next_completion_min != null && (
+          <Metric
+            index={3}
+            label="Completion"
+            current={tierInfo.window_completion_pct}
+            required={tierInfo.next_completion_min}
+            format={pctFmt}
+            met={tierInfo.window_completion_pct >= tierInfo.next_completion_min}
+          />
         )}
       </div>
-      <div className="space-y-3">
-        {metrics.map((m) => (
-          <MetricBar key={m.label} {...m} />
-        ))}
-      </div>
+
+      {positiveRequired != null && positiveCurrent == null && (
+        <p className="text-[11px] text-zinc-400">No reviews yet. Counts as passed.</p>
+      )}
     </div>
   )
 }

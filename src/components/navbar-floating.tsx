@@ -158,7 +158,7 @@ function MobileServiceRow({
 }
 
 // ── Tier visual config ────────────────────────────────────────────────────────
-// Colors/bg/border come from the central gemstone ladder (@/lib/seller/tiers).
+// Colors/bg/border come from the central rank ladder (@/lib/seller/tiers).
 // Only the per-tier Lucide glyph is chosen here.
 /**
  * V19/P15.b — `forceScrolled` pins the navbar in its full-width "bar"

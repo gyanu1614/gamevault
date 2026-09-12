@@ -63,31 +63,55 @@ export function buyerFee(subtotal: number, actualPspPct?: number): BuyerFee {
 }
 
 // ─── §1 Seller commission (deducted from ITEM PRICE at completion) ──────────
+//
+// Fee grid (approved 8 Sep 2026): DB-driven via category_fee_config /
+// game_fee_overrides / seller_tier_config.fee_multiplier, edited in the admin
+// panel. The DEFAULT_FEE_CONFIG below mirrors the seeded DB values and is the
+// fallback when the DB is unreachable (and the sync default for previews).
+// Effective % = (game override ?? category base)
+//               × rank multiplier      (categories with rankDiscount only)
+//               − founding discount    (pts, floored at 0)
+// …all replaced by an unexpired per-seller admin override when present.
+// The rate is snapshotted on the order at purchase (orders.platform_fee_rate);
+// later config/rank changes never touch existing orders.
 
-export type AccountRiskBand = 'low' | 'mid' | 'high'
+export type FeeCategory = OfferType // 'currency' | 'items' | 'accounts' | 'top-up'
 
-export const COMMISSION_PCT = {
-  currencyStandard: 5,
-  currencyRobloxEconomy: 10,
-  currencyPromo: 0,
-  items: 7,
-  topUp: 5,
-  boosting: 7,
-  accounts: { low: 12, mid: 15, high: 20 } as Record<AccountRiskBand, number>,
-} as const
+export interface CategoryFeeDef {
+  basePct: number
+  /** Whether the seller-rank fee multiplier applies (top-up: false). */
+  rankDiscount: boolean
+}
 
-/**
- * Roblox in-game economies (10% commission) — catalog config by game
- * slug; extend as games are added (spec names SAB / GAG / GAG2 “etc.”).
- */
-export const ROBLOX_ECONOMY_GAMES: string[] = [
-  'steal-a-brainrot',
-  'grow-a-garden',
-  'grow-a-garden-2',
-]
+export interface FeeConfigSnapshot {
+  categories: Record<FeeCategory, CategoryFeeDef>
+  /** `${gameSlug}:${category}` → pct, active overrides only. */
+  gameOverrides: Record<string, number>
+  /** seller_tier → fee multiplier (bronze 1.00 … legendary 0.80). */
+  multipliers: Record<string, number>
+}
+
+/** Mirrors the migration-seeded DB rows — keep the two in sync. */
+export const DEFAULT_FEE_CONFIG: FeeConfigSnapshot = {
+  categories: {
+    currency: { basePct: 10, rankDiscount: true },
+    items: { basePct: 10, rankDiscount: true },
+    accounts: { basePct: 15, rankDiscount: true },
+    'top-up': { basePct: 5, rankDiscount: false },
+  },
+  gameOverrides: {
+    'gta-v:accounts': 20,
+    'gta-6:accounts': 20,
+    'gtavi:accounts': 20,
+  },
+  multipliers: { bronze: 1.0, silver: 0.95, gold: 0.9, diamond: 0.85, legendary: 0.8 },
+}
 
 /** Promo/launch games at 0% currency commission — default EMPTY (spec §1). */
 export const PROMO_ZERO_FEE_GAMES: string[] = []
+
+/** Kept for protection-window mapping only (fees now use game_fee_overrides). */
+export type AccountRiskBand = 'low' | 'mid' | 'high'
 
 /**
  * Founding-seller commission discount, in PERCENTAGE POINTS off the seller's
@@ -130,54 +154,105 @@ export interface CommissionInput {
    * before computing commission). Omitted/false = today’s behaviour exactly.
    */
   isFounding?: boolean
+  /** Seller rank (profiles.seller_tier) — applies the rank fee multiplier. */
+  sellerTier?: string | null
+  /**
+   * Unexpired per-seller admin override % (profiles.fee_override_pct) —
+   * REPLACES every other fee rule. Callers should pass it through
+   * sellerFeeFields() so expiry is enforced in one place.
+   */
+  feeOverridePct?: number | null
 }
 
 /**
- * Category commission %, BEFORE the founding-seller discount. This is the raw
- * spec §1 table lookup; founding logic lives in commissionPct so this stays a
- * pure category→rate map (also what the public Fees page quotes).
+ * Extract the fee-relevant fields off a seller profile row, enforcing the
+ * override expiry. Works with the loose profile shapes used across the app.
  */
-function categoryCommissionPct(input: CommissionInput): number {
+export function sellerFeeFields(
+  seller:
+    | {
+        seller_tier?: string | null
+        founding_seller?: boolean | null
+        fee_override_pct?: number | string | null
+        fee_override_expires_at?: string | null
+      }
+    | null
+    | undefined,
+): Pick<CommissionInput, 'sellerTier' | 'isFounding' | 'feeOverridePct'> {
+  const rawOverride = seller?.fee_override_pct
+  const overridePct = rawOverride == null ? null : Number(rawOverride)
+  const expiry = seller?.fee_override_expires_at
+  const overrideActive =
+    overridePct != null &&
+    Number.isFinite(overridePct) &&
+    (!expiry || new Date(expiry).getTime() > Date.now())
+  return {
+    sellerTier: seller?.seller_tier ?? null,
+    isFounding: seller?.founding_seller === true,
+    feeOverridePct: overrideActive ? overridePct : null,
+  }
+}
+
+/**
+ * Category commission % from a config snapshot, BEFORE rank/founding
+ * adjustments: game override wins over the category base; promo games are 0%.
+ */
+function categoryCommissionPct(input: CommissionInput, cfg: FeeConfigSnapshot): number {
   const type: OfferType = classifyOfferType(
     input.categoryMetaType ?? undefined,
     input.categorySlug ?? undefined,
   )
   const game = (input.gameSlug || '').toLowerCase()
-  switch (type) {
-    case 'currency':
-      if (PROMO_ZERO_FEE_GAMES.includes(game)) return COMMISSION_PCT.currencyPromo
-      if (ROBLOX_ECONOMY_GAMES.includes(game)) return COMMISSION_PCT.currencyRobloxEconomy
-      return COMMISSION_PCT.currencyStandard
-    case 'top-up':
-      return COMMISSION_PCT.topUp
-    case 'accounts':
-      return COMMISSION_PCT.accounts[accountRiskBand(game)]
-    case 'items':
-    default:
-      // Boosting classifies as items today; both are 7% (spec §1).
-      return COMMISSION_PCT.items
-  }
+  if (type === 'currency' && PROMO_ZERO_FEE_GAMES.includes(game)) return 0
+  const override = cfg.gameOverrides[`${game}:${type}`]
+  return override ?? cfg.categories[type].basePct
+}
+
+/** Whether the rank multiplier applies to this listing's category. */
+function rankDiscountApplies(input: CommissionInput, cfg: FeeConfigSnapshot): boolean {
+  const type: OfferType = classifyOfferType(
+    input.categoryMetaType ?? undefined,
+    input.categorySlug ?? undefined,
+  )
+  return cfg.categories[type].rankDiscount
 }
 
 /**
- * Effective commission % for a listing (spec §1 table), after the
- * founding-seller discount when `input.isFounding` is set. Founding sellers pay
- * `max(0, categoryPct − FOUNDING_DISCOUNT_PTS)`.
+ * Effective commission % for a listing:
+ * per-seller override, else (game override ?? category base) × rank
+ * multiplier (where the category allows it) − founding discount, floored at 0.
+ * Pass the DB-loaded snapshot (loadFeeConfig) server-side; the default
+ * snapshot keeps sync preview callers working.
  */
-export function commissionPct(input: CommissionInput): number {
-  const base = categoryCommissionPct(input)
-  if (input.isFounding) return Math.max(0, base - FOUNDING_DISCOUNT_PTS)
-  return base
+export function commissionPct(
+  input: CommissionInput,
+  cfg: FeeConfigSnapshot = DEFAULT_FEE_CONFIG,
+): number {
+  if (input.feeOverridePct != null) return round2(input.feeOverridePct)
+  let pct = categoryCommissionPct(input, cfg)
+  if (input.sellerTier && rankDiscountApplies(input, cfg)) {
+    pct *= cfg.multipliers[input.sellerTier] ?? 1
+  }
+  if (input.isFounding) pct = Math.max(0, pct - FOUNDING_DISCOUNT_PTS)
+  return round2(pct)
 }
 
 /** Commission amount on the item price (never on the buyer fee). */
-export function commissionAmount(itemPrice: number, input: CommissionInput): number {
-  return round2((itemPrice * commissionPct(input)) / 100)
+export function commissionAmount(
+  itemPrice: number,
+  input: CommissionInput,
+  cfg: FeeConfigSnapshot = DEFAULT_FEE_CONFIG,
+): number {
+  return round2((itemPrice * commissionPct(input, cfg)) / 100)
 }
 
 /** “You’ll receive $X after Y% fee” — net proceeds = price − commission. */
-export function netProceeds(itemPrice: number, input: CommissionInput): number {
-  return round2(itemPrice - commissionAmount(itemPrice, input))
+export function netProceeds(
+  itemPrice: number,
+  input: CommissionInput,
+  cfg: FeeConfigSnapshot = DEFAULT_FEE_CONFIG,
+): number {
+  return round2(itemPrice - commissionAmount(itemPrice, input, cfg))
 }
 
 // ─── §1 Protection windows / payout holds (hours) ───────────────────────────

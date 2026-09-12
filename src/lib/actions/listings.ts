@@ -302,12 +302,12 @@ export async function checkListingSpam(
     const sellerTier = profile?.seller_tier || DEFAULT_TIER
     const totalSales = profile?.total_sales || 0
 
-    // Rate limits by gemstone tier (quartz 5/hr → diamond 100/hr).
-    let maxListingsPerHour = 5
-    if (sellerTier === 'amethyst' || totalSales >= 10) maxListingsPerHour = 10
-    if (sellerTier === 'ruby' || totalSales >= 50) maxListingsPerHour = 20
-    if (sellerTier === 'sapphire' || totalSales >= 100) maxListingsPerHour = 50
-    if (sellerTier === 'diamond') maxListingsPerHour = 100
+    // Flat anti-spam guard — rank no longer gates listings (approved 8 Sep
+    // 2026). 20/hr is generous for hand-created listings; bulk upload has its
+    // own daily cap via seller_tier_config.bulk_daily_cap.
+    void sellerTier
+    void totalSales
+    const maxListingsPerHour = 20
 
     if ((recentCount || 0) >= maxListingsPerHour) {
       return {
@@ -543,8 +543,8 @@ export async function checkSellerNeedsModeration(): Promise<{
     const sellerTier = profile?.seller_tier || DEFAULT_TIER
 
     // Pre-moderation applies only while the seller has fewer approved listings
-    // than their tier's pre_moderation_listings. Only the entry tier (quartz)
-    // carries any (3); every higher gemstone tier is 0 → auto-approve. Mirrors
+    // than their tier's pre_moderation_listings. Only the entry rank (bronze)
+    // carries any (3); every higher rank is 0 → auto-approve. Mirrors
     // the DB's check_seller_needs_moderation / seller_tier_config.
     const requiredCount = tierByKey(sellerTier).preModerationListings
     if (requiredCount === 0) {

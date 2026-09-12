@@ -1283,6 +1283,7 @@ export default function SellWizard({
                   unitLabelLoading={currencyConfigLoading}
                   granularity={currencyConfig?.quantity_granularity ?? 'unit'}
                   platformFields={currencyConfig?.platform_fields ?? null}
+                  sellerTier={policy?.tier ?? null}
                   region={region} onRegion={setRegion}
                   platform={platform} onPlatform={setPlatform}
                   device={device} onDevice={setDevice}
@@ -2132,6 +2133,12 @@ interface Step4Props {
    * fields for this game.
    */
   platformFields?: PlatformFields | null
+  /**
+   * Seller rank (publish policy) — the fee preview applies the rank fee
+   * multiplier so "you'll receive" matches what checkout will charge.
+   * (Preview uses the default fee grid; orders resolve the DB-tuned grid.)
+   */
+  sellerTier?: string | null
   region: string; onRegion: (v: string) => void
   platform: string; onPlatform: (v: string) => void
   device: string; onDevice: (v: string) => void
@@ -2518,10 +2525,10 @@ function Step4Publish(p: Step4Props) {
                     <p className="text-[12px] text-text-tertiary">
                       You’ll receive{' '}
                       <span className="font-semibold text-lime-text">
-                        ${netProceeds(Number(p.price), { categorySlug: p.categorySlug, gameSlug: p.gameSlug }).toFixed(2)}
+                        ${netProceeds(Number(p.price), { categorySlug: p.categorySlug, gameSlug: p.gameSlug, sellerTier: p.sellerTier }).toFixed(2)}
                       </span>
                       {isCurrency ? ` per ${suffix}` : ''} after the{' '}
-                      {commissionPct({ categorySlug: p.categorySlug, gameSlug: p.gameSlug })}% commission.
+                      {commissionPct({ categorySlug: p.categorySlug, gameSlug: p.gameSlug, sellerTier: p.sellerTier })}% commission.
                     </p>
                   )}
                 </div>

@@ -669,7 +669,7 @@ export async function approveApplication(
         shop_name: shopName,
         shop_slug: shopSlug,
         // Approval means KYC passed → mark verified (drives the blue Verified
-        // badge) and start them at the entry gemstone tier.
+        // badge) and start them at the entry rank.
         is_verified: true,
         seller_tier: DEFAULT_TIER,
         // Only ever set founding true here — never false, so this can't revoke

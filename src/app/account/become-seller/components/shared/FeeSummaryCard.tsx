@@ -8,17 +8,15 @@
 
 import Link from 'next/link'
 import { ArrowUpRight, Percent } from 'lucide-react'
-import { COMMISSION_PCT, PAYOUT_FEES, PAYOUT_MIN_USD } from '@/lib/fees'
+import { DEFAULT_FEE_CONFIG, PAYOUT_FEES, PAYOUT_MIN_USD } from '@/lib/fees'
 
+const { categories } = DEFAULT_FEE_CONFIG
 const CATEGORY_ROWS: Array<{ label: string; value: string }> = [
-  { label: 'Game Currency', value: `${COMMISSION_PCT.currencyStandard}%` },
-  { label: 'Roblox Game Economies', value: `${COMMISSION_PCT.currencyRobloxEconomy}%` },
-  { label: 'Items & Boosting', value: `${COMMISSION_PCT.items}%` },
-  { label: 'Top-Ups', value: `${COMMISSION_PCT.topUp}%` },
-  {
-    label: 'Accounts (By Risk)',
-    value: `${COMMISSION_PCT.accounts.low}–${COMMISSION_PCT.accounts.high}%`,
-  },
+  { label: 'Game Currency', value: `${categories.currency.basePct}%` },
+  { label: 'Items & Boosting', value: `${categories.items.basePct}%` },
+  { label: 'Top-Ups', value: `${categories['top-up'].basePct}%` },
+  { label: 'Accounts (Per Game)', value: `From ${categories.accounts.basePct}%` },
+  { label: 'Rank Discount', value: 'Up to 20% off' },
 ]
 
 export default function FeeSummaryCard({ compact = false }: { compact?: boolean }) {

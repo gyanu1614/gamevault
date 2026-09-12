@@ -5,7 +5,8 @@ import { createServiceRoleClient } from '@/lib/supabase/service'
 import { revalidatePath } from 'next/cache'
 import { logOrderAction, logUnauthorizedAccess, logFailure } from '@/lib/audit'
 import { rateLimitCreateOrder } from '@/lib/utils/rate-limit'
-import { buyerFee, commissionAmount, protectionWindowHours, round2, WARRANTY_ENABLED } from '@/lib/fees'
+import { buyerFee, commissionAmount, protectionWindowHours, round2, sellerFeeFields, WARRANTY_ENABLED } from '@/lib/fees'
+import { loadFeeConfig } from '@/lib/fees/config'
 // Funds-flow cutover: order money moves go through the atomic ledger
 // transition; buyer refunds land in their wallet as store credit.
 import { transition } from '@/lib/escrow/transition'
@@ -90,6 +91,8 @@ export async function createOrder(data: CreateOrderData): Promise<{
           id,
           seller_tier,
           founding_seller,
+          fee_override_pct,
+          fee_override_expires_at,
           username
         ),
         game:game_id ( slug ),
@@ -143,15 +146,17 @@ export async function createOrder(data: CreateOrderData): Promise<{
     // item price only.
     const subtotal = round2(listing.price * data.quantity)
     const fee = buyerFee(subtotal)
+    // Admin-tuned fee config (category bases, game overrides, rank multipliers);
+    // seller-side inputs (rank / founding / per-seller override) come straight
+    // off the listing's seller join — no extra round-trip.
+    const feeConfig = await loadFeeConfig()
     const feeInput = {
       categoryMetaType: listing.category?.metadata?.type as string | undefined,
       categorySlug: listing.category?.slug as string | undefined,
       gameSlug: listing.game?.slug as string | undefined,
-      // Founding sellers pay a permanently reduced commission (lib/fees).
-      // Read straight off the listing's seller join — no extra round-trip.
-      isFounding: listing.seller?.founding_seller === true,
+      ...sellerFeeFields(listing.seller),
     }
-    const commission = commissionAmount(subtotal, feeInput)
+    const commission = commissionAmount(subtotal, feeInput, feeConfig)
 
     // P4.1 — Tier fee (recalculated server-side; warranty upsells are
     // feature-flagged OFF until payout caps are configured — spec §4)

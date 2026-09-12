@@ -33,6 +33,7 @@ import {
   IconShoppingCart,
   IconTicket,
   IconCash,
+  IconPercentage,
   IconRocket,
   IconTargetArrow,
   IconSpeakerphone,
@@ -72,6 +73,7 @@ const LINKS = [
   { label: 'Blog & Content',      href: '/admin/blog',           icon: IconArticle,         roles: ['admin', 'super_admin'] },
   { label: 'Moderation',          href: '/admin/moderation',     icon: IconClipboardCheck,  roles: ['admin', 'moderator', 'super_admin'] },
   { label: 'Promo Codes',         href: '/admin/promos',         icon: IconTicket,          roles: ['admin', 'super_admin'] },
+  { label: 'Fees',                href: '/admin/fees',           icon: IconPercentage,      roles: ['admin', 'super_admin'] },
   { label: 'Utilities',           href: '/admin/utils',          icon: IconTool,            roles: ['admin', 'super_admin'] },
   { label: 'Settings',            href: '/admin/settings',       icon: IconSettings,        roles: ['super_admin'] },
 ]

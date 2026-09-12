@@ -46,6 +46,7 @@ import {
   type SellerDetail,
 } from '@/lib/actions/admin-seller-detail'
 import { restrictSeller, unrestrictSeller } from '@/lib/actions/admin-seller-restrictions'
+import { updateSellerFeeOverride, updateSellerRankPin } from '@/lib/actions/admin-fees'
 import {
   approveWithdrawalRequest,
   rejectWithdrawalRequest,
@@ -60,7 +61,7 @@ import {
 } from '../../_theme/forest'
 import { tierChipClass } from '../_components/ActiveSellersPageClient'
 
-/** Gemstone tier ladder, low → high, from the central module. */
+/** Rank tier ladder, low → high, from the central module. */
 const SELLER_TIERS = TIER_KEYS
 
 // ─── Formatting helpers ──────────────────────────────────────────────────────
@@ -271,6 +272,13 @@ export default function SellerDetailClient({
   const [emailBody, setEmailBody] = useState('')
   const [rejectReason, setRejectReason] = useState('')
   const [showAllListings, setShowAllListings] = useState(false)
+  const [overrideEditing, setOverrideEditing] = useState(false)
+  const [overridePct, setOverridePct] = useState(
+    profile.fee_override_pct != null ? String(profile.fee_override_pct) : '',
+  )
+  const [overrideExpiry, setOverrideExpiry] = useState(
+    profile.fee_override_expires_at ? profile.fee_override_expires_at.slice(0, 10) : '',
+  )
 
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ['seller-detail', userId] })
@@ -282,6 +290,37 @@ export default function SellerDetailClient({
   const restrictedish = profile.seller_status === 'restricted' || profile.seller_status === 'banned'
 
   // ── Mutations ──────────────────────────────────────────────────────────────
+
+  const pinMutation = useMutation({
+    mutationFn: async (pinned: boolean) => {
+      const result = await updateSellerRankPin({ sellerId: userId, pinned })
+      if (!result.success) throw new Error(result.error || 'Failed to update rank pin')
+      return pinned
+    },
+    onSuccess: (pinned) => {
+      toast.success(pinned ? 'Rank pinned — cron will skip this seller' : 'Rank unpinned')
+      invalidate()
+    },
+    onError: (e: Error) => toast.error(e.message),
+  })
+
+  const overrideMutation = useMutation({
+    mutationFn: async (input: { pct: number | null; expiresAt: string | null }) => {
+      const result = await updateSellerFeeOverride({
+        sellerId: userId,
+        pct: input.pct,
+        expiresAt: input.expiresAt,
+      })
+      if (!result.success) throw new Error(result.error || 'Failed to save fee override')
+      return input
+    },
+    onSuccess: (input) => {
+      toast.success(input.pct === null ? 'Fee override cleared' : `Fee override set to ${input.pct}%`)
+      setOverrideEditing(false)
+      invalidate()
+    },
+    onError: (e: Error) => toast.error(e.message),
+  })
 
   const tierMutation = useMutation({
     mutationFn: async () => {
@@ -557,8 +596,8 @@ export default function SellerDetailClient({
       <div className="mt-5 flex min-w-0 flex-col gap-3.5">
         {/* ── Tier card ── */}
         <Card
-          title="Seller Tier"
-          sub="Sets commission, listing limits and moderation."
+          title="Seller Rank"
+          sub="Sets the fee discount, badge and recommendations — earned on the last 90 days."
           index={cardIndex++}
         >
           <div className="flex flex-wrap items-center gap-3">
@@ -570,18 +609,26 @@ export default function SellerDetailClient({
             >
               {currentConfig?.display_name || tierByKey(profile.seller_tier).label}
             </span>
+            {profile.tier_pinned && (
+              <span className={cn(CHIP, 'bg-white/[0.1] text-white/85')}>Pinned</span>
+            )}
+            {profile.tier_strikes > 0 && (
+              <span className={cn(CHIP, 'bg-[#F59E0B]/[0.16] text-[#FCD34D]')}>
+                {profile.tier_strikes} Strike{profile.tier_strikes === 1 ? '' : 's'}
+              </span>
+            )}
+            {profile.fee_override_pct != null && (
+              <span className={cn(CHIP, 'bg-[#A3E635]/[0.15] text-[#D9F99D]')}>
+                Fee Override {profile.fee_override_pct}%
+              </span>
+            )}
             {currentConfig && (
               <span className="text-[12px] text-white/85">
-                {currentConfig.commission_rate != null && (
-                  <>Commission{' '}
-                    <b className="font-semibold tabular-nums text-white/85">
-                      {(currentConfig.commission_rate * 100).toFixed(2)}%
-                    </b>
-                  </>
-                )}
-                {' · '}Listing Limit{' '}
+                Fee Discount{' '}
                 <b className="font-semibold tabular-nums text-white/85">
-                  {currentConfig.listing_limit ?? 'Unlimited'}
+                  {currentConfig.fee_multiplier != null
+                    ? `${Math.round((1 - Number(currentConfig.fee_multiplier)) * 100)}% Off`
+                    : '—'}
                 </b>
                 {currentConfig.pre_moderation_listings != null && (
                   <>
@@ -593,17 +640,108 @@ export default function SellerDetailClient({
                 )}
               </span>
             )}
-            <button
-              type="button"
-              onClick={() => {
-                setTierChoice(profile.seller_tier)
-                setTierNotes('')
-                setDialog({ kind: 'tier' })
-              }}
-              className="ml-auto rounded-[10px] bg-white/[0.12] px-4 py-2 text-[12.5px] font-bold text-white transition-colors hover:bg-white/[0.18]"
-            >
-              Change Tier
-            </button>
+            <div className="ml-auto flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                disabled={pinMutation.isPending}
+                onClick={() => pinMutation.mutate(!profile.tier_pinned)}
+                className="rounded-[10px] bg-white/[0.12] px-4 py-2 text-[12.5px] font-bold text-white transition-colors hover:bg-white/[0.18] disabled:opacity-50"
+              >
+                {profile.tier_pinned ? 'Unpin Rank' : 'Pin Rank'}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setTierChoice(profile.seller_tier)
+                  setTierNotes('')
+                  setDialog({ kind: 'tier' })
+                }}
+                className="rounded-[10px] bg-white/[0.12] px-4 py-2 text-[12.5px] font-bold text-white transition-colors hover:bg-white/[0.18]"
+              >
+                Change Rank
+              </button>
+            </div>
+          </div>
+
+          {/* ── Per-seller fee override (concierge deals) ── */}
+          <div className="mt-3 flex flex-wrap items-center gap-2 text-[12px] text-white/85">
+            {overrideEditing ? (
+              <>
+                <span className="font-semibold text-white/85">Fee Override</span>
+                <input
+                  type="number"
+                  min={0}
+                  max={50}
+                  step={0.5}
+                  value={overridePct}
+                  onChange={(e) => setOverridePct(e.target.value)}
+                  placeholder="%"
+                  className="w-20 rounded-[8px] border border-white/[0.14] bg-white/[0.06] px-2 py-1.5 tabular-nums text-white focus:border-[#A3E635]/50 focus:outline-none"
+                />
+                <input
+                  type="date"
+                  value={overrideExpiry}
+                  onChange={(e) => setOverrideExpiry(e.target.value)}
+                  className="rounded-[8px] border border-white/[0.14] bg-white/[0.06] px-2 py-1.5 text-white focus:border-[#A3E635]/50 focus:outline-none"
+                />
+                <span className="text-white/70">(blank date = no expiry)</span>
+                <button
+                  type="button"
+                  disabled={overrideMutation.isPending || overridePct.trim() === ''}
+                  onClick={() =>
+                    overrideMutation.mutate({
+                      pct: Number(overridePct),
+                      expiresAt: overrideExpiry
+                        ? new Date(`${overrideExpiry}T23:59:59Z`).toISOString()
+                        : null,
+                    })
+                  }
+                  className="rounded-[8px] bg-[#A3E635] px-3 py-1.5 text-[12px] font-bold text-black disabled:opacity-50"
+                >
+                  Save
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setOverrideEditing(false)}
+                  className="rounded-[8px] bg-white/[0.1] px-3 py-1.5 text-[12px] font-bold text-white/85"
+                >
+                  Cancel
+                </button>
+              </>
+            ) : (
+              <>
+                <span className="text-white/70">
+                  {profile.fee_override_pct != null ? (
+                    <>
+                      Custom fee <b className="font-semibold text-white/85">{profile.fee_override_pct}%</b>{' '}
+                      {profile.fee_override_expires_at
+                        ? `until ${fmtDate(profile.fee_override_expires_at)}`
+                        : 'with no expiry'}{' '}
+                      — replaces category, rank and founding rules.
+                    </>
+                  ) : (
+                    'No custom fee override — standard category × rank fees apply.'
+                  )}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setOverrideEditing(true)}
+                  className="font-bold text-[#A3E635] transition hover:brightness-110"
+                >
+                  {profile.fee_override_pct != null ? 'Edit' : 'Set Override'}
+                </button>
+                {profile.fee_override_pct != null && (
+                  <button
+                    type="button"
+                    disabled={overrideMutation.isPending}
+                    onClick={() => overrideMutation.mutate({ pct: null, expiresAt: null })}
+                    className="font-bold text-[#FCA5A5] transition hover:brightness-110 disabled:opacity-50"
+                  >
+                    Clear
+                  </button>
+                )}
+              </>
+            )}
           </div>
 
           {eligibleHigher && (

@@ -185,7 +185,7 @@ export default function SellerProfileBanner({
             {isFoundingSeller && <FoundingSellerBadge size="sm" />}
           </div>
 
-          {/* Row 2 — tier chip: logo + tier name, hover shows "Tier N: Gemstone" */}
+          {/* Row 2 — tier chip: logo + tier name, hover shows "Rank N: Name" */}
           <div className="mt-1.5 flex items-center justify-center sm:justify-start">
             <Popover>
               <PopoverTrigger asChild>
