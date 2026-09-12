@@ -233,6 +233,24 @@ export function getAllPosts(): BlogPost[] {
   return [...BLOG_POSTS].sort(byDateDesc)
 }
 
+/**
+ * Posts that still live at a flat /blog/{slug} URL.
+ *
+ * ROUTE-008. Every game-tagged post was migrated to the DB-backed nested hub
+ * at /{game}/blog/{slug} and 301s there from next.config.js; only the
+ * general (untagged) posts still answer at /blog/{slug}. The tag is the
+ * migration criterion, so `games.length === 0` is exactly the set of
+ * still-flat posts — which is the predicate sitemap.ts already uses to decide
+ * what to emit.
+ *
+ * Use this for anything that must not name a redirected URL: sitemap entries
+ * and generateStaticParams. Prerendering a redirected slug builds an HTML
+ * artifact that the redirect means nobody can ever be served.
+ */
+export function getFlatPosts(): BlogPost[] {
+  return getAllPosts().filter((p) => p.games.length === 0)
+}
+
 export function getPost(slug: string): BlogPost | null {
   return BLOG_POSTS.find((p) => p.slug === slug) ?? null
 }

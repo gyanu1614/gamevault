@@ -15,7 +15,7 @@ import { createClient } from '@/lib/supabase/server'
 import { LANDING_PAGES } from '@/lib/seo/landingPages'
 import { isLandingPageIndexable } from '@/lib/seo/landingPageInventory'
 import { LEGAL_DOCS } from '@/lib/legal/documents'
-import { getAllPosts } from '@/lib/blog/posts'
+import { getAllPosts, getFlatPosts } from '@/lib/blog/posts'
 
 import { SITE_URL } from '@/config/site'
 
@@ -94,7 +94,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // the nested entry emitted elsewhere. So keep only posts with no game tag,
   // which genuinely live at the flat URL.
   const posts = getAllPosts()
-  const flatPosts = posts.filter((p) => p.games.length === 0)
+  // ROUTE-008 — shared with generateStaticParams in /blog/[slug] so the
+  // "still lives at the flat URL" rule has exactly one definition.
+  const flatPosts = getFlatPosts()
   const newestPostDate = posts.reduce<string | null>(
     (acc, p) => (!acc || p.publishedAt > acc ? p.publishedAt : acc),
     null,
