@@ -157,3 +157,62 @@ CREATE TRIGGER trg_guard_reviews_moderation_columns
 -- all admin/moderation paths) and filters `link` to an internal path at write
 -- time. SELECT/UPDATE/DELETE own-row policies are unchanged.
 DROP POLICY IF EXISTS "System can create notifications" ON public.notifications;
+
+-- ── AUTH-014: seller_applications — applicants cannot review themselves ──────
+-- Nuance found while verifying: "Users can update own pending applications"
+-- had no WITH CHECK, and Postgres then reuses USING, so status='approved' was
+-- already refused. What WAS open: every review column — reviewed_by /
+-- reviewed_at / admin_notes / rejection_* / *_verified — because the policy is
+-- column-blind. The policy is re-created with explicit, identical USING and
+-- WITH CHECK status sets (+ 'withdrawn' in WITH CHECK, matching the separate
+-- withdraw policy), and a trigger pins the review columns.
+DROP POLICY IF EXISTS "Users can update own pending applications" ON public.seller_applications;
+CREATE POLICY "Users can update own pending applications" ON public.seller_applications
+  FOR UPDATE TO authenticated
+  USING      (auth.uid() = user_id AND status IN ('pending', 'info_requested'))
+  WITH CHECK (auth.uid() = user_id AND status IN ('pending', 'info_requested', 'withdrawn'));
+
+-- Trusted writers: guarded_write_allowed() OR has_permission('applications.review').
+-- The permission door is kept (owner decision 2026-09-12) because admin review
+-- writes go through the session client in TWO files (admin-seller-review.ts,
+-- admin-sellers.ts) under the existing "Admins can update seller applications"
+-- policy. has_permission() is SECURITY DEFINER, search_path=public, and reads
+-- only admin_roles + role_permissions.
+-- Untrusted (applicant) writers may set admin_notes / reviewed_at / reviewed_by
+-- to NULL ONLY when the row is being resubmitted (NEW.status = 'pending') —
+-- that is what seller-application.ts does when an info_requested applicant
+-- addresses the admin's note. Every other change to a review column → 42501.
+CREATE OR REPLACE FUNCTION public.guard_seller_applications_review_columns() RETURNS trigger
+  LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+  changed text[] := '{}';
+  resubmit boolean := (NEW.status = 'pending');
+BEGIN
+  IF public.guarded_write_allowed() OR public.has_permission('applications.review') THEN
+    RETURN NEW;
+  END IF;
+  -- clearable on resubmit only
+  IF NEW.admin_notes IS DISTINCT FROM OLD.admin_notes AND NOT (resubmit AND NEW.admin_notes IS NULL) THEN changed := array_append(changed, 'admin_notes'); END IF;
+  IF NEW.reviewed_at IS DISTINCT FROM OLD.reviewed_at AND NOT (resubmit AND NEW.reviewed_at IS NULL) THEN changed := array_append(changed, 'reviewed_at'); END IF;
+  IF NEW.reviewed_by IS DISTINCT FROM OLD.reviewed_by AND NOT (resubmit AND NEW.reviewed_by IS NULL) THEN changed := array_append(changed, 'reviewed_by'); END IF;
+  -- never applicant-writable
+  IF NEW.rejection_reason IS DISTINCT FROM OLD.rejection_reason THEN changed := array_append(changed, 'rejection_reason'); END IF;
+  IF NEW.rejection_category IS DISTINCT FROM OLD.rejection_category THEN changed := array_append(changed, 'rejection_category'); END IF;
+  IF NEW.rejected_at IS DISTINCT FROM OLD.rejected_at THEN changed := array_append(changed, 'rejected_at'); END IF;
+  IF NEW.rejected_by IS DISTINCT FROM OLD.rejected_by THEN changed := array_append(changed, 'rejected_by'); END IF;
+  IF NEW.identity_verified IS DISTINCT FROM OLD.identity_verified THEN changed := array_append(changed, 'identity_verified'); END IF;
+  IF NEW.address_verified IS DISTINCT FROM OLD.address_verified THEN changed := array_append(changed, 'address_verified'); END IF;
+  IF NEW.business_verified IS DISTINCT FROM OLD.business_verified THEN changed := array_append(changed, 'business_verified'); END IF;
+  IF NEW.tax_verified IS DISTINCT FROM OLD.tax_verified THEN changed := array_append(changed, 'tax_verified'); END IF;
+  IF array_length(changed, 1) > 0 THEN
+    RAISE EXCEPTION 'seller_applications: column(s) % are protected and cannot be changed by this caller',
+      array_to_string(changed, ', ')
+      USING ERRCODE = '42501';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+DROP TRIGGER IF EXISTS trg_guard_seller_applications_review_columns ON public.seller_applications;
+CREATE TRIGGER trg_guard_seller_applications_review_columns
+  BEFORE UPDATE ON public.seller_applications
+  FOR EACH ROW EXECUTE FUNCTION public.guard_seller_applications_review_columns();
