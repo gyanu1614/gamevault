@@ -11,9 +11,11 @@ export async function middleware(request: NextRequest) {
 
   // Routes requiring authentication — single source of truth shared with the
   // logout handler (src/lib/auth/protected-routes.ts). Broadened from the old
-  // narrow list to cover all of /account, /checkout, /cart, /sell, /seller,
-  // /wallet, /admin — closing the audit's coverage gaps (e.g. /account/wallet,
-  // /account/settings were previously unprotected).
+  // narrow list to cover all of /account, /checkout, /sell, /seller, /wallet,
+  // /admin — closing the audit's coverage gaps (e.g. /account/wallet,
+  // /account/settings were previously unprotected). /cart was dropped in
+  // ROUTE-007: it is a bare redirect to /browse, so gating it only bought a
+  // pointless auth round-trip.
   const isProtectedRoute = isProtectedPath(pathname)
 
   // Public seller/account routes (registration, status, etc.)

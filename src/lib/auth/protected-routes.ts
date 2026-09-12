@@ -22,7 +22,6 @@ export const PROTECTED_ROUTE_PREFIXES = [
   '/orders',
   '/purchases',
   '/checkout',
-  '/cart',
   '/sell',
   '/seller',
   '/wallet',
