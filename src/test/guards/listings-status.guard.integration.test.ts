@@ -8,7 +8,7 @@
  * guarded approve_listing RPC still work.
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
-import { hasEnv, p1GuardsApplied, makeFixture, expectGuardRejection, type Fixture } from './throwaway'
+import { hasEnv, p1GuardsApplied, makeFixture, expectGuardRejection, promoteToEstablishedSeller, type Fixture } from './throwaway'
 
 let fx: Fixture | null = null
 let ready = false
@@ -34,8 +34,8 @@ describe.skipIf(!hasEnv)('AUTH-034 — listings status transition guard (integra
     ready = await p1GuardsApplied(fx.svc)
     const { data: l } = await fx.svc.from('listings').select('game_id, category_id').eq('id', fx.listingId).single()
     gameId = (l as any).game_id; catId = (l as any).category_id
-    // past the entry tier: pre-moderation does not apply, only the guard can stop it
-    await fx.svc.from('profiles').update({ role: 'seller', seller_tier: 'ruby' }).eq('id', fx.seller.id)
+    // past the entry tier (read from the live config): pre-moderation does not apply, only the guard can stop it
+    await promoteToEstablishedSeller(fx.svc, fx.seller.id)
   }, 60_000)
   afterAll(async () => { await fx?.cleanup() }, 60_000)
 

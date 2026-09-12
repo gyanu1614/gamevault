@@ -7,12 +7,13 @@
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import { createClient } from '@supabase/supabase-js'
-import { hasEnv, p1GuardsApplied, makeFixture, expectGuardRejection, URL, ANON, type Fixture } from './throwaway'
+import { hasEnv, p1GuardsApplied, makeFixture, expectGuardRejection, promoteToEstablishedSeller, URL, ANON, type Fixture } from './throwaway'
 
 let fx: Fixture | null = null
 let ready = false
 let gameId = ''
 let catId = ''
+let sellerTier = ''
 
 describe.skipIf(!hasEnv)('AUTH-009 — listings INSERT + publish policy RPC (integration)', () => {
   beforeAll(async () => {
@@ -20,9 +21,9 @@ describe.skipIf(!hasEnv)('AUTH-009 — listings INSERT + publish policy RPC (int
     ready = await p1GuardsApplied(fx.svc)
     const { data: l } = await fx.svc.from('listings').select('game_id, category_id').eq('id', fx.listingId).single()
     gameId = (l as any).game_id; catId = (l as any).category_id
-    // Fixture users are role='user'. Promote the seller (service role; guarded column) and
-    // give them a distinctive tier so the RPC scoping test can tell the two apart.
-    await fx.svc.from('profiles').update({ role: 'seller', seller_tier: 'ruby' }).eq('id', fx.seller.id)
+    // Fixture users are role='user'. Promote the seller (service role; guarded columns) to a
+    // tier read from the LIVE config so the RPC scoping test can tell the two apart.
+    sellerTier = (await promoteToEstablishedSeller(fx.svc, fx.seller.id)).tier
   }, 60_000)
   afterAll(async () => { await fx?.cleanup() }, 60_000)
 
@@ -58,7 +59,7 @@ describe.skipIf(!hasEnv)('AUTH-009 — listings INSERT + publish policy RPC (int
   it("a user asking for someone else's publish policy gets their OWN", async () => {
     const { data, error } = await fx!.buyer.client.rpc('get_seller_publish_policy', { p_user_id: fx!.seller.id })
     expect(error).toBeNull()
-    expect((data as any).tier).not.toBe('ruby') // seller is ruby; buyer is the default tier
+    expect((data as any).tier).not.toBe(sellerTier) // seller is on the established tier; buyer on the default
   })
 
   it('an unknown / tier-less user falls back to the entry tier of the LIVE config, not a hard-coded name', async () => {
@@ -73,6 +74,6 @@ describe.skipIf(!hasEnv)('AUTH-009 — listings INSERT + publish policy RPC (int
   it('the service role can still read any user\'s policy (admin/cron paths)', async () => {
     const { data, error } = await fx!.svc.rpc('get_seller_publish_policy', { p_user_id: fx!.seller.id })
     expect(error).toBeNull()
-    expect((data as any).tier).toBe('ruby')
+    expect((data as any).tier).toBe(sellerTier)
   })
 })

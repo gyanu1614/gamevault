@@ -65,6 +65,30 @@ export async function p1GuardsApplied(svc: SupabaseClient): Promise<boolean> {
   return !error
 }
 
+/**
+ * A tier ABOVE the entry tier, read from the live seller_tier_config: the
+ * lowest sort_order with pre_moderation_listings = 0 (gemstone → amethyst,
+ * metal → silver). Never hard-code a tier name in a fixture — the local stack
+ * and prod carry different tier sets, and an invalid tier makes the whole
+ * profiles UPDATE fail, leaving the fixture seller as role='user'.
+ */
+export async function establishedTier(svc: SupabaseClient): Promise<{ tier: string; entry: string }> {
+  const { data, error } = await svc.from('seller_tier_config').select('tier, sort_order, pre_moderation_listings').order('sort_order', { ascending: true })
+  if (error || !data?.length) throw new Error(`seller_tier_config unreadable: ${error?.message ?? 'no rows'}`)
+  const rows = data as Array<{ tier: string; pre_moderation_listings: number | null }>
+  const entry = rows[0].tier
+  const established = rows.find((r) => Number(r.pre_moderation_listings ?? 0) === 0 && r.tier !== entry) ?? rows[rows.length - 1]
+  return { tier: established.tier, entry }
+}
+
+/** Promote a fixture user to an active seller on the established tier; throws if the write fails. */
+export async function promoteToEstablishedSeller(svc: SupabaseClient, userId: string): Promise<{ tier: string; entry: string }> {
+  const t = await establishedTier(svc)
+  const { error } = await svc.from('profiles').update({ role: 'seller', seller_tier: t.tier, seller_status: 'active' }).eq('id', userId)
+  if (error) throw new Error(`promote seller (${t.tier}): ${error.message}`)
+  return t
+}
+
 /** Every table that references a fixture user, with the referencing columns. */
 export const DEPENDENT_TABLES: ReadonlyArray<readonly [string, readonly string[]]> = [
   ['reviews', ['reviewer_id', 'seller_id']],
