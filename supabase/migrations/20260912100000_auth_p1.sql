@@ -232,3 +232,64 @@ CREATE TRIGGER trg_guard_seller_applications_review_columns
 -- SELECT policies (own row; active admins visible for chat) are unchanged.
 DROP POLICY IF EXISTS "Users can access own admin role" ON public.admin_roles;
 DROP POLICY IF EXISTS "Only super_admin can manage admin roles" ON public.admin_roles;
+
+-- ── AUTH-031: listings — INSERT cannot be born approved / live ──────────────
+-- check_listing_moderation_trigger is BEFORE INSERT OR UPDATE and returns early
+-- whenever NEW.approved_by IS NOT NULL; the AUTH-006 guard was UPDATE-only. A
+-- role='seller' account could INSERT (status='active', approved_by=<self>) and
+-- be live with zero moderation (reproduced locally 2026-09-12 for entry and
+-- higher tiers). The guard is re-created BEFORE INSERT OR UPDATE: on an
+-- untrusted INSERT every moderation column is forced NULL, `sales` to 0, and
+-- an 'active' status is coerced to 'pending_approval' (drafts stay drafts).
+-- Trusted callers (service role / flag) are untouched — the app's publish
+-- paths now insert through the service role AFTER the seller gate and the
+-- publish-policy decision, so auto-approve tiers keep working. The UPDATE
+-- branch is unchanged from 20260911120000.
+-- Trigger order note: `check_listing_moderation_trigger` sorts before
+-- `trg_guard_…`, so the moderation trigger runs first; the coercion below is
+-- therefore the final word for untrusted inserts.
+CREATE OR REPLACE FUNCTION public.guard_listings_protected_columns() RETURNS trigger
+  LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+  changed text[] := '{}';
+BEGIN
+  IF public.guarded_write_allowed() THEN
+    RETURN NEW;
+  END IF;
+
+  IF TG_OP = 'INSERT' THEN
+    NEW.approved_by := NULL;
+    NEW.approved_at := NULL;
+    NEW.rejected_by := NULL;
+    NEW.rejected_at := NULL;
+    NEW.rejection_reason := NULL;
+    NEW.moderation_notes := NULL;
+    NEW.changes_requested_by := NULL;
+    NEW.changes_requested_at := NULL;
+    NEW.sales := 0;
+    IF NEW.status = 'active' THEN
+      NEW.status := 'pending_approval';
+    END IF;
+    RETURN NEW;
+  END IF;
+
+  IF NEW.approved_by IS DISTINCT FROM OLD.approved_by THEN changed := array_append(changed, 'approved_by'); END IF;
+  IF NEW.approved_at IS DISTINCT FROM OLD.approved_at THEN changed := array_append(changed, 'approved_at'); END IF;
+  IF NEW.rejected_by IS DISTINCT FROM OLD.rejected_by THEN changed := array_append(changed, 'rejected_by'); END IF;
+  IF NEW.rejected_at IS DISTINCT FROM OLD.rejected_at THEN changed := array_append(changed, 'rejected_at'); END IF;
+  IF NEW.rejection_reason IS DISTINCT FROM OLD.rejection_reason THEN changed := array_append(changed, 'rejection_reason'); END IF;
+  IF NEW.moderation_notes IS DISTINCT FROM OLD.moderation_notes THEN changed := array_append(changed, 'moderation_notes'); END IF;
+  IF NEW.seller_id IS DISTINCT FROM OLD.seller_id THEN changed := array_append(changed, 'seller_id'); END IF;
+  IF NEW.sales IS DISTINCT FROM OLD.sales THEN changed := array_append(changed, 'sales'); END IF;
+  IF array_length(changed, 1) > 0 THEN
+    RAISE EXCEPTION 'listings: column(s) % are protected and cannot be changed by this caller',
+      array_to_string(changed, ', ')
+      USING ERRCODE = '42501';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+DROP TRIGGER IF EXISTS trg_guard_listings_protected_columns ON public.listings;
+CREATE TRIGGER trg_guard_listings_protected_columns
+  BEFORE INSERT OR UPDATE ON public.listings
+  FOR EACH ROW EXECUTE FUNCTION public.guard_listings_protected_columns();

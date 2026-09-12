@@ -9,6 +9,13 @@
  * seller (profiles.role = 'seller' AND seller_status = 'active') or an active
  * admin, mirroring the surviving listings INSERT policy. KYC-before-listing is
  * an explicit owner decision.
+ *
+ * AUTH-031 — the DB now coerces every non-guarded listings INSERT to
+ * pending_approval with NULL moderation columns. The app's publish paths
+ * therefore insert through the SERVICE ROLE (after the seller gate + the
+ * publish-policy decision above), with seller_id pinned to the session user
+ * and no moderation columns in the payload — so auto-approve tiers keep
+ * working while a raw PostgREST insert cannot go live.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
@@ -104,16 +111,19 @@ describe('AUTH-010 — publish paths require an admin-enabled (game, category) p
       profiles: [{ data: { role: 'seller', seller_status: 'active' }, error: null }],
       global_categories: [{ data: { id: 'gc-items' }, error: null }],
       game_categories: [{ data: { id: 'pair-1' }, error: null }],
-      listings: [{ data: { id: 'l-1', slug: 'sword' }, error: null }],
     })
     h.admin = mockClient({
       games: [{ data: { slug: 'fortnite' }, error: null }],
       categories: [{ data: [{ id: 'cat-1', is_active: true, slug: 'buy-items' }], error: null }],
+      listings: [{ data: { id: 'l-1', slug: 'sword' }, error: null }],
     })
     const res = await publishListing({ ...INPUT, status: 'draft' })
     expect(res).toEqual({ success: true, data: { id: 'l-1', status: 'draft' } })
-    expect(h.admin.calls).toEqual([])            // read-only against the catalogue
-    expect(h.session.calls.filter((c: any) => c.table === 'listings' && c.op === 'insert')).toHaveLength(1)
+    // catalogue untouched; the ONLY service-role write is the listing itself (AUTH-031)
+    expect(h.admin.calls.filter((c: any) => c.table !== 'listings')).toEqual([])
+    const ins = h.admin.calls.filter((c: any) => c.table === 'listings' && c.op === 'insert')
+    expect(ins).toHaveLength(1)
+    expect(h.session.calls.filter((c: any) => c.table === 'listings')).toHaveLength(0)
   })
 })
 
@@ -160,13 +170,57 @@ describe('AUTH-009 — publish paths refuse non-sellers before touching anything
       admin_roles: [{ data: { role: 'admin' }, error: null }],
       global_categories: [{ data: { id: 'gc-items' }, error: null }],
       game_categories: [{ data: { id: 'pair-1' }, error: null }],
+    })
+    h.admin = mockClient({
+      games: [{ data: { slug: 'fortnite' }, error: null }],
+      categories: [{ data: [{ id: 'cat-1', is_active: true, slug: 'buy-items' }], error: null }],
       listings: [{ data: { id: 'l-2', slug: 'x' }, error: null }],
+    })
+    const res = await publishListing({ ...INPUT, status: 'draft' })
+    expect(res.success).toBe(true)
+  })
+})
+
+describe('AUTH-031 — the service-role listing insert is pinned to the session user and carries no moderation columns', () => {
+  it('publishListing payload: seller_id = session user, no approved_by / approved_at', async () => {
+    h.session = sessionWith({
+      profiles: [{ data: { role: 'seller', seller_status: 'active' }, error: null }],
+      global_categories: [{ data: { id: 'gc-items' }, error: null }],
+      game_categories: [{ data: { id: 'pair-1' }, error: null }],
+    })
+    h.admin = mockClient({
+      games: [{ data: { slug: 'fortnite' }, error: null }],
+      categories: [{ data: [{ id: 'cat-1', is_active: true, slug: 'buy-items' }], error: null }],
+      listings: [{ data: { id: 'l-3', slug: 'y' }, error: null }],
+    })
+    // a hostile client cannot smuggle moderation columns through the typed input
+    const res = await publishListing({ ...INPUT, ...({ approved_by: 'seller-1', approved_at: 'now', seller_id: 'someone-else' } as object) })
+    expect(res.success).toBe(true)
+    const ins = h.admin.calls.find((c: any) => c.table === 'listings' && c.op === 'insert')!
+    const payload = ins.args[0] as Record<string, unknown>
+    expect(payload.seller_id).toBe(USER.id)
+    expect(payload).not.toHaveProperty('approved_by')
+    expect(payload).not.toHaveProperty('approved_at')
+  })
+
+  it('bulkPublishListings inserts every row through the service role with seller_id = session user', async () => {
+    h.session = sessionWith({
+      profiles: [{ data: { role: 'seller', seller_status: 'active' }, error: null }],
+      global_categories: [{ data: { id: 'gc-items' }, error: null }],
+      game_categories: [{ data: { id: 'pair-1' }, error: null }],
     })
     h.admin = mockClient({
       games: [{ data: { slug: 'fortnite' }, error: null }],
       categories: [{ data: [{ id: 'cat-1', is_active: true, slug: 'buy-items' }], error: null }],
     })
-    const res = await publishListing({ ...INPUT, status: 'draft' })
+    const res = await bulkPublishListings('game-1', 'items', [
+      { line: 1, title: 'A', price: 1, quantity: 1, delivery_method: 'manual', images: [], template_data: {} } as any,
+      { line: 2, title: 'B', price: 2, quantity: 1, delivery_method: 'manual', images: [], template_data: {} } as any,
+    ])
     expect(res.success).toBe(true)
+    const ins = h.admin.calls.filter((c: any) => c.table === 'listings' && c.op === 'insert')
+    expect(ins).toHaveLength(2)
+    for (const c of ins) expect((c.args[0] as any).seller_id).toBe(USER.id)
+    expect(h.session.calls.filter((c: any) => c.table === 'listings')).toHaveLength(0)
   })
 })

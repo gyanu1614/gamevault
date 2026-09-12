@@ -760,7 +760,13 @@ export async function publishListing(input: PublishListingInput): Promise<Result
       status: finalStatus,
     }
 
-    const { data, error } = await (supabase
+    // AUTH-031 — the DB coerces every non-guarded listings INSERT to
+    // pending_approval with NULL moderation columns (so a raw PostgREST insert
+    // can never go live). This path has already passed the seller gate and
+    // the publish-policy decision above, so it inserts as the backend;
+    // seller_id is pinned to the session user and the payload carries no
+    // moderation columns.
+    const { data, error } = await (getAdminSupabase()
       .from('listings') as any)
       .insert(insertPayload)
       // slug is DB-generated (set_listing_slug trigger) — read it back
@@ -1155,6 +1161,10 @@ export async function bulkPublishListings(
     const failed: Array<{ line: number; error: string }> = []
     let ok = 0
 
+    // AUTH-031 — see publishListing: rows insert as the backend after the
+    // gate + policy decision; seller_id is pinned to the session user.
+    const listingsWriter = getAdminSupabase()
+
     for (const r of rows) {
       try {
         if (!r.title?.trim()) {
@@ -1188,7 +1198,7 @@ export async function bulkPublishListings(
           status,
           metadata: { source: 'bulk' },
         }
-        const { error } = await (supabase.from('listings') as any).insert(payload)
+        const { error } = await (listingsWriter.from('listings') as any).insert(payload)
         if (error) {
           failed.push({ line: r.line, error: error.message })
           continue
