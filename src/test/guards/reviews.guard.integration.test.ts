@@ -27,7 +27,7 @@ describe.skipIf(!hasEnv)('AUTH-011 — reviews moderation column guard (integrat
     if (error) throw new Error(`review insert: ${error.message}`)
     reviewId = (data as any).id
   }, 60_000)
-  afterAll(async () => { await fx?.cleanup() })
+  afterAll(async () => { await fx?.cleanup() }, 60_000)
 
   it('20260912100000_auth_p1.sql is applied to the target DB', () => {
     expect(ready).toBe(true)

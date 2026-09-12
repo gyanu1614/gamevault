@@ -14,7 +14,7 @@ describe.skipIf(!hasEnv)('AUTH-002 — orders column guard (integration)', () =>
     ready = await guardsApplied(fx.svc)
     if (!ready) console.warn('[orders guard] skipping — 20260911120000_auth_p0_column_guards.sql not applied')
   }, 60_000)
-  afterAll(async () => { await fx?.cleanup() })
+  afterAll(async () => { await fx?.cleanup() }, 60_000)
 
   it('seller cannot inflate seller_payout / total_amount on their own order', async () => {
     if (!ready) return

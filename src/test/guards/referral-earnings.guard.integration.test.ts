@@ -15,7 +15,7 @@ describe.skipIf(!hasEnv)('AUTH-008 — referral_earnings write lock (integration
     fx = await makeFixture()
     ready = await p1GuardsApplied(fx.svc)
   }, 60_000)
-  afterAll(async () => { await fx?.cleanup() })
+  afterAll(async () => { await fx?.cleanup() }, 60_000)
 
   it('20260912100000_auth_p1.sql is applied to the target DB', () => {
     expect(ready).toBe(true)

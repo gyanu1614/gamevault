@@ -24,7 +24,7 @@ describe.skipIf(!hasEnv)('AUTH-009 — listings INSERT + publish policy RPC (int
     // give them a distinctive tier so the RPC scoping test can tell the two apart.
     await fx.svc.from('profiles').update({ role: 'seller', seller_tier: 'ruby' }).eq('id', fx.seller.id)
   }, 60_000)
-  afterAll(async () => { await fx?.cleanup() })
+  afterAll(async () => { await fx?.cleanup() }, 60_000)
 
   it('20260912100000_auth_p1.sql is applied to the target DB', () => {
     expect(ready).toBe(true)

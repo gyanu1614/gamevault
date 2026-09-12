@@ -37,7 +37,7 @@ describe.skipIf(!hasEnv)('AUTH-031 — listings INSERT moderation guard (integra
     // seller past the entry tier: no pre-moderation applies, so only the guard can stop it
     await fx.svc.from('profiles').update({ role: 'seller', seller_tier: 'ruby' }).eq('id', fx.seller.id)
   }, 60_000)
-  afterAll(async () => { await fx?.cleanup() })
+  afterAll(async () => { await fx?.cleanup() }, 60_000)
 
   it('20260912100000_auth_p1.sql is applied to the target DB', () => {
     expect(ready).toBe(true)

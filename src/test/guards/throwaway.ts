@@ -9,7 +9,12 @@
  * Self-skips when env is absent or the guard migration is not applied
  * (probed via `auth_p0_guards_version()`).
  *
- * Cleanup deletes the auth users; profiles → listings/orders/reviews cascade.
+ * Cleanup (call from afterAll) deletes every dependent row for the fixture's
+ * users explicitly, then the auth users (profiles cascade), and FINALLY
+ * verifies that no `guardtest-%@example.com` profile or auth user remains —
+ * a leaked fixture fails the run instead of quietly surviving. (One did on
+ * 2026-09-12: a swallowed deleteUser error left a fixture seller + an active
+ * "GUARD-TEST-…" listing behind.)
  */
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 
@@ -41,6 +46,45 @@ export async function p1GuardsApplied(svc: SupabaseClient): Promise<boolean> {
   return !error
 }
 
+/** Every table that references a fixture user, with the referencing columns. */
+export const DEPENDENT_TABLES: ReadonlyArray<readonly [string, readonly string[]]> = [
+  ['reviews', ['reviewer_id', 'seller_id']],
+  ['orders', ['buyer_id', 'seller_id']],
+  ['listings', ['seller_id']],
+  ['seller_applications', ['user_id']],
+  ['referral_earnings', ['referrer_id', 'referred_user_id']],
+  ['notifications', ['user_id']],
+  ['admin_roles', ['user_id']],
+]
+
+export const GUARD_EMAIL_LIKE = 'guardtest-%@example.com'
+export const GUARD_EMAIL_RE = /^guardtest-[a-z]+-[a-z0-9]+@example\.com$/
+
+/**
+ * Throws when ANY guard-test fixture residue exists in the target database —
+ * profiles or auth users matching the fixture email pattern, or listings
+ * titled GUARD-TEST-… . Called from cleanup()'s finally block, so a leaked
+ * fixture (this run's or an earlier one's) fails the run loudly.
+ */
+export async function verifyNoGuardTestResidue(svc: SupabaseClient, priorFailures: string[] = []): Promise<void> {
+  const problems = [...priorFailures]
+  const { data: profs, error: pe } = await svc.from('profiles').select('id').like('email', GUARD_EMAIL_LIKE)
+  if (pe) problems.push(`residue check (profiles): ${pe.message}`)
+  else if ((profs ?? []).length) problems.push(`${(profs ?? []).length} guard-test profile(s) remain: ${(profs ?? []).map((p: any) => p.id).join(', ')}`)
+  const { data: lst, error: le } = await svc.from('listings').select('id').like('title', 'GUARD-TEST-%')
+  if (le) problems.push(`residue check (listings): ${le.message}`)
+  else if ((lst ?? []).length) problems.push(`${(lst ?? []).length} GUARD-TEST listing(s) remain: ${(lst ?? []).map((l: any) => l.id).join(', ')}`)
+  const { data: au, error: ae } = await svc.auth.admin.listUsers({ page: 1, perPage: 1000 })
+  if (ae) problems.push(`residue check (auth.users): ${ae.message}`)
+  else {
+    const leaked = (au?.users ?? []).filter((u) => GUARD_EMAIL_RE.test(u.email ?? ''))
+    if (leaked.length) problems.push(`${leaked.length} guard-test auth user(s) remain: ${leaked.map((u) => u.id).join(', ')}`)
+  }
+  if (problems.length) {
+    throw new Error(`guard-test fixture teardown left residue in ${URL}:\n  - ${problems.join('\n  - ')}`)
+  }
+}
+
 export async function makeFixture(): Promise<Fixture> {
   const svc = createClient(URL!, SVC!, { auth: { persistSession: false } })
   // Short tag: profiles.username has a length CHECK.
@@ -68,11 +112,34 @@ export async function makeFixture(): Promise<Fixture> {
   }
 
   const cleanup = async () => {
-    for (const id of created) {
-      await svc.from('admin_roles').delete().eq('user_id', id)
-      await svc.auth.admin.deleteUser(id).catch(() => {})
+    const failures: string[] = []
+    try {
+      if (created.length) {
+        // Dependents first, explicitly — never rely on cascades that may differ
+        // between environments. Errors are collected, never swallowed.
+        for (const [table, cols] of DEPENDENT_TABLES) {
+          for (const col of cols) {
+            const { error } = await svc.from(table).delete().in(col, created)
+            if (error) failures.push(`${table}.${col}: ${error.message}`)
+          }
+        }
+        for (const id of created) {
+          const { error } = await svc.auth.admin.deleteUser(id)
+          if (error) {
+            failures.push(`auth.admin.deleteUser(${id}): ${error.message}`)
+            const { error: pe } = await svc.from('profiles').delete().eq('id', id)
+            if (pe) failures.push(`profiles.delete(${id}): ${pe.message}`)
+          }
+        }
+      }
+      if (createdGameId) {
+        const { error } = await svc.from('games').delete().eq('id', createdGameId) // categories cascade
+        if (error) failures.push(`games.delete: ${error.message}`)
+      }
+    } finally {
+      // Runs even if a delete threw: a leaked fixture must fail the run.
+      await verifyNoGuardTestResidue(svc, failures)
     }
-    if (createdGameId) await svc.from('games').delete().eq('id', createdGameId) // categories cascade
   }
 
   try {

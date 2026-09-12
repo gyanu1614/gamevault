@@ -15,7 +15,7 @@ describe.skipIf(!hasEnv)('AUTH-006 — listings column guard (integration)', () 
     ready = await guardsApplied(fx.svc)
     if (!ready) console.warn('[listings guard] skipping — 20260911120000_auth_p0_column_guards.sql not applied')
   }, 60_000)
-  afterAll(async () => { await fx?.cleanup() })
+  afterAll(async () => { await fx?.cleanup() }, 60_000)
 
   it('seller cannot self-approve (approved_by = self, status = active)', async () => {
     if (!ready) return

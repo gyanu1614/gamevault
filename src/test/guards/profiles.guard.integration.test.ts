@@ -16,7 +16,7 @@ describe.skipIf(!hasEnv)('AUTH-005 — profiles column guard (integration)', () 
     ready = await guardsApplied(fx.svc)
     if (!ready) console.warn('[profiles guard] skipping — 20260911120000_auth_p0_column_guards.sql not applied')
   }, 60_000)
-  afterAll(async () => { await fx?.cleanup() })
+  afterAll(async () => { await fx?.cleanup() }, 60_000)
 
   it('seller cannot self-set seller_status / kyc_status / badges / total_sales', async () => {
     if (!ready) return

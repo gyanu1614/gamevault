@@ -44,7 +44,7 @@ describe.skipIf(!hasEnv)('AUTH-032 — seller application RPCs are self-scoped (
   afterAll(async () => {
     if (createdPermission) await fx?.svc.from('role_permissions').delete().eq('role', 'admin').eq('permission', 'applications.review')
     await fx?.cleanup()
-  })
+  }, 60_000)
 
   it('20260912100000_auth_p1.sql is applied to the target DB', () => {
     expect(ready).toBe(true)
