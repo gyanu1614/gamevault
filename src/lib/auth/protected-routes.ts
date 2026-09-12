@@ -18,6 +18,7 @@
  */
 export const PROTECTED_ROUTE_PREFIXES = [
   '/account',
+  '/notifications',
   '/orders',
   '/purchases',
   '/checkout',
