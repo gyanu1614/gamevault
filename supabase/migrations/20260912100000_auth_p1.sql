@@ -293,3 +293,119 @@ DROP TRIGGER IF EXISTS trg_guard_listings_protected_columns ON public.listings;
 CREATE TRIGGER trg_guard_listings_protected_columns
   BEFORE INSERT OR UPDATE ON public.listings
   FOR EACH ROW EXECUTE FUNCTION public.guard_listings_protected_columns();
+
+-- ── AUTH-032: seller-application RPCs take the actor from auth.uid() ────────
+-- withdraw_seller_application(app, user_id_param) and
+-- reject_seller_application(app, admin_id_param, …) were SECURITY DEFINER,
+-- EXECUTE-granted to anon + authenticated, and trusted the id PARAMETER.
+-- Reproduced locally 2026-09-12: the ANON key withdrew another user's pending
+-- application. Both are re-created verbatim from the baseline with:
+--   · SET search_path = public
+--   · a JWT caller's id parameter is IGNORED — auth.uid() is the actor
+--   · withdraw: the row must belong to auth.uid() (service role exempt)
+--   · reject: caller must hold has_permission('applications.review')
+--     (service role exempt); rejected_by is the caller
+--   · EXECUTE revoked from anon / PUBLIC
+CREATE OR REPLACE FUNCTION "public"."withdraw_seller_application"("application_id_param" "uuid", "user_id_param" "uuid") RETURNS "jsonb"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+DECLARE
+  current_withdrawal_count integer;
+  result jsonb;
+BEGIN
+  -- AUTH-032: a JWT caller can only act as themselves.
+  IF auth.role() IS DISTINCT FROM 'service_role' THEN
+    IF auth.uid() IS NULL THEN
+      RAISE EXCEPTION 'withdraw_seller_application: authentication required' USING ERRCODE = '42501';
+    END IF;
+    user_id_param := auth.uid();
+  END IF;
+
+  -- Get current withdrawal count
+  SELECT withdrawal_count INTO current_withdrawal_count
+  FROM public.seller_applications
+  WHERE id = application_id_param AND user_id = user_id_param;
+
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Application not found or unauthorized');
+  END IF;
+
+  -- Increment withdrawal count
+  current_withdrawal_count := COALESCE(current_withdrawal_count, 0) + 1;
+
+  -- Update application
+  UPDATE public.seller_applications
+  SET
+    status = 'withdrawn',
+    withdrawn_at = now(),
+    withdrawal_count = current_withdrawal_count,
+    updated_at = now()
+  WHERE id = application_id_param;
+
+  -- Check for spam (5+ withdrawals in 30 days)
+  result := jsonb_build_object(
+    'success', true,
+    'withdrawal_count', current_withdrawal_count,
+    'flagged_for_spam', current_withdrawal_count >= 5
+  );
+
+  RETURN result;
+END;
+$$;
+REVOKE ALL ON FUNCTION "public"."withdraw_seller_application"("uuid", "uuid") FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION "public"."withdraw_seller_application"("uuid", "uuid") TO authenticated, service_role;
+
+CREATE OR REPLACE FUNCTION "public"."reject_seller_application"("application_id_param" "uuid", "admin_id_param" "uuid", "rejection_reason_param" "text", "rejection_category_param" "text") RETURNS "jsonb"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+DECLARE
+  current_rejection_count integer;
+  cooldown_period interval;
+  result jsonb;
+BEGIN
+  -- AUTH-032: only a reviewer may reject, and the reviewer is the caller.
+  IF auth.role() IS DISTINCT FROM 'service_role' THEN
+    IF auth.uid() IS NULL OR NOT public.has_permission('applications.review') THEN
+      RAISE EXCEPTION 'reject_seller_application: applications.review permission required' USING ERRCODE = '42501';
+    END IF;
+    admin_id_param := auth.uid();
+  END IF;
+
+  -- Get current rejection count
+  SELECT rejection_count INTO current_rejection_count
+  FROM public.seller_applications
+  WHERE id = application_id_param;
+
+  -- Calculate new rejection count and cooldown
+  current_rejection_count := COALESCE(current_rejection_count, 0) + 1;
+  cooldown_period := calculate_reapply_cooldown(current_rejection_count - 1);
+
+  -- Update application
+  UPDATE public.seller_applications
+  SET
+    status = 'rejected',
+    rejected_at = now(),
+    rejected_by = admin_id_param,
+    rejection_reason = rejection_reason_param,
+    rejection_category = rejection_category_param,
+    rejection_count = current_rejection_count,
+    can_reapply_at = now() + cooldown_period,
+    updated_at = now()
+  WHERE id = application_id_param;
+
+  -- Build result
+  result := jsonb_build_object(
+    'success', true,
+    'rejection_count', current_rejection_count,
+    'can_reapply_at', now() + cooldown_period,
+    'cooldown_days', EXTRACT(day FROM cooldown_period),
+    'is_permanent_ban', current_rejection_count >= 4
+  );
+
+  RETURN result;
+END;
+$$;
+REVOKE ALL ON FUNCTION "public"."reject_seller_application"("uuid", "uuid", "text", "text") FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION "public"."reject_seller_application"("uuid", "uuid", "text", "text") TO authenticated, service_role;
