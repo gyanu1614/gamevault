@@ -25,6 +25,8 @@ import { PURCHASES_ENABLED, PURCHASES_DISABLED_MESSAGE } from '@/lib/config/purc
 import { buyerFee, commissionAmount, protectionWindowHours, round2 } from '@/lib/fees'
 import { getProvider, activePaymentProviderName, providerNameForMethod } from '@/lib/payments/registry'
 import { spendWallet, getWalletBalance } from '@/lib/wallet/wallet'
+import { validatePromoCode, recordPromoUsage } from '@/lib/actions/promo'
+import { resolveCheckoutPromo } from '@/lib/checkout/promo'
 import { fromDecimal, money } from '@/lib/money'
 
 // Order currency is the ledger base (EUR). Listing price_currency / display is
@@ -38,7 +40,9 @@ const ORDER_CURRENCY = 'USD'
 export interface CreateCheckoutInput {
   listingId: string
   quantity?: number
-  promoDiscount?: number // major-unit amount, server-clamped
+  /** Promo CODE only. The discount is derived server-side from the promo row
+   *  (AUTH-003) — a client-supplied amount is never accepted. */
+  promoCode?: string
   walletAmount?: number // major-unit amount of wallet credit to apply
   /** Fiat local-method pm_id (e.g. 'paysafecard', 'ideal_nl') → routes the
    *  charge to Payssion. Absent/unknown → the env-active provider (crypto). */
@@ -96,7 +100,12 @@ export async function createCheckout(input: CreateCheckoutInput): Promise<Create
       isFounding: listing.seller?.founding_seller === true,
     }
     const commission = commissionAmount(subtotal, feeInput)
-    const promoDiscount = Math.min(Math.max(input.promoDiscount ?? 0, 0), subtotal)
+    // AUTH-003 — never trust a client amount: validate the CODE and derive the
+    // discount from the promo row, clamped to the subtotal.
+    const promo = await resolveCheckoutPromo(input.promoCode, subtotal, validatePromoCode)
+    if (!promo.ok) return { success: false, error: promo.error }
+    const promoDiscount = promo.discount
+    const promoCodeId = promo.promoCodeId
     const totalAmount = round2(subtotal + fee.amount - promoDiscount)
     const sellerPayout = round2(subtotal - commission)
     // Per-category protection window (hours) — consumed at delivery time to
@@ -197,9 +206,14 @@ export async function createCheckout(input: CreateCheckoutInput): Promise<Create
         totalAmount,
         sellerPayout,
         promoDiscount,
+        promoCodeId,
       })
       if (insertRes.orderId) {
         orderId = insertRes.orderId
+        // AUTH-003 — usage is recorded so per-user / total limits bind.
+        if (promoCodeId && promoDiscount > 0) {
+          recordPromoUsage({ promoCodeId, orderId, discountAmount: promoDiscount, userId: user.id }).catch(() => {})
+        }
       } else if (insertRes.duplicate) {
         // 23505 on the partial unique index — a concurrent double-submit won the
         // race and created the pending order between our lookup and insert.
@@ -422,6 +436,7 @@ interface InsertPendingArgs {
   totalAmount: number
   sellerPayout: number
   promoDiscount: number
+  promoCodeId: string | null
 }
 
 /**
@@ -453,6 +468,7 @@ async function insertPendingOrder(
     status: 'pending',
     escrow_status: 'pending',
     promo_discount: a.promoDiscount,
+    promo_code_id: a.promoCodeId,
   })
     .select('id')
     .single()

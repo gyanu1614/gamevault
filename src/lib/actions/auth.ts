@@ -411,7 +411,10 @@ export async function syncProfileEmail() {
 
   if (!user?.email) return { error: null }
 
-  const { error } = await (supabase
+  // AUTH-005: profiles.email is trigger-protected (it mirrors auth.users); the
+  // user's own session cannot write it, so mirror via the service role, scoped
+  // to the verified session user.
+  const { error } = await (createServiceRoleClient()
     .from('profiles')
     .update as any)({ email: user.email })
     .eq('id', user.id)

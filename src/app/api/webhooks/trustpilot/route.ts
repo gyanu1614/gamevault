@@ -10,7 +10,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createServiceRoleClient } from '@/lib/supabase/service'
 
 // Trustpilot signs webhooks with HMAC-SHA256 - verify for security
 const TRUSTPILOT_WEBHOOK_SECRET = process.env.TRUSTPILOT_WEBHOOK_SECRET
@@ -41,19 +41,21 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.text()
 
-    // Verify webhook signature if secret is configured
-    if (TRUSTPILOT_WEBHOOK_SECRET) {
-      const signature = request.headers.get('x-trustpilot-signature')
-      if (!signature) {
-        console.warn('Trustpilot webhook: missing signature header')
-        return NextResponse.json({ error: 'Missing signature' }, { status: 401 })
-      }
-
-      const isValid = await verifyTrustpilotSignature(body, signature, TRUSTPILOT_WEBHOOK_SECRET)
-      if (!isValid) {
-        console.warn('Trustpilot webhook: invalid signature')
-        return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })
-      }
+    // AUTH-015 — fail CLOSED. An unset secret must refuse the webhook, never skip
+    // verification (every other webhook in this codebase throws/503s here).
+    if (!TRUSTPILOT_WEBHOOK_SECRET) {
+      console.error('Trustpilot webhook: TRUSTPILOT_WEBHOOK_SECRET is not set — rejecting')
+      return NextResponse.json({ error: 'Webhook not configured' }, { status: 503 })
+    }
+    const signature = request.headers.get('x-trustpilot-signature')
+    if (!signature) {
+      console.warn('Trustpilot webhook: missing signature header')
+      return NextResponse.json({ error: 'Missing signature' }, { status: 401 })
+    }
+    const isValid = await verifyTrustpilotSignature(body, signature, TRUSTPILOT_WEBHOOK_SECRET)
+    if (!isValid) {
+      console.warn('Trustpilot webhook: invalid signature')
+      return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })
     }
 
     let payload: TrustpilotWebhookPayload
@@ -79,7 +81,9 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ received: true, note: 'No reference ID provided' })
       }
 
-      const supabase = await createClient()
+      // AUTH-015 — trustpilot_invitations is service-role-only under RLS; a webhook
+      // has no user session, so the anon/session client could never write here.
+      const supabase = createServiceRoleClient()
 
       // Build the review URL from the review links if available
       const reviewUrl =
