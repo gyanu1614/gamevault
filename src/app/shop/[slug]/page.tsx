@@ -10,6 +10,7 @@
  */
 
 import { sellerDisplayName } from '@/lib/seller/identity'
+import { PUBLIC_SELLER_PROFILE_SELECT, PUBLIC_REVIEW_SELECT } from '@/lib/shop/public-profile'
 import { SITE_URL } from '@/config/site'
 import React from 'react'
 import { Metadata } from 'next'
@@ -40,12 +41,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   const shopSlugQuery = await supabase
     .from('profiles')
-    .select(`
-      *,
-      seller_applications!seller_applications_user_id_fkey (
-        status
-      )
-    `)
+    // AUTH-001 — explicit allowlist; this row is serialized to anonymous visitors.
+    .select(PUBLIC_SELLER_PROFILE_SELECT)
     .eq('shop_slug', slug)
     .single()
 
@@ -54,12 +51,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   } else {
     const usernameQuery = await supabase
       .from('profiles')
-      .select(`
-        *,
-        seller_applications!seller_applications_user_id_fkey (
-          status
-        )
-      `)
+        .select(PUBLIC_SELLER_PROFILE_SELECT)
       .eq('username', slug)
       .single()
 
@@ -91,6 +83,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     .from('reviews')
     .select('rating')
     .eq('seller_id', profile.id)
+    .eq('is_visible', true)
 
   const avgRating = ratingData && ratingData.length > 0
     ? (ratingData.reduce((sum, r) => sum + r.rating, 0) / ratingData.length).toFixed(1)
@@ -182,12 +175,8 @@ export default async function SellerShopPage({ params }: PageProps) {
   // Try by shop_slug first
   const shopSlugQuery = await supabase
     .from('profiles')
-    .select(`
-      *,
-      seller_applications!seller_applications_user_id_fkey (
-        status
-      )
-    `)
+    // AUTH-001 — explicit allowlist; this row is serialized to anonymous visitors.
+    .select(PUBLIC_SELLER_PROFILE_SELECT)
     .eq('shop_slug', slug)
     .single()
 
@@ -197,12 +186,7 @@ export default async function SellerShopPage({ params }: PageProps) {
     // Fallback: try by username for backward compatibility
     const usernameQuery = await supabase
       .from('profiles')
-      .select(`
-        *,
-        seller_applications!seller_applications_user_id_fkey (
-          status
-        )
-      `)
+        .select(PUBLIC_SELLER_PROFILE_SELECT)
       .eq('username', slug)
       .single()
 
@@ -247,12 +231,9 @@ export default async function SellerShopPage({ params }: PageProps) {
   // Get seller's reviews
   const { data: reviews } = await supabase
     .from('reviews')
-    .select(`
-      *,
-      buyer:profiles!reviews_buyer_id_fkey(username, avatar_url),
-      order:orders(order_number)
-    `)
+    .select(PUBLIC_REVIEW_SELECT)
     .eq('seller_id', profile.id)
+    .eq('is_visible', true)
     .order('created_at', { ascending: false })
     .limit(20)
 
@@ -267,6 +248,7 @@ export default async function SellerShopPage({ params }: PageProps) {
     .from('reviews')
     .select('rating')
     .eq('seller_id', profile.id)
+    .eq('is_visible', true)
 
   const avgRating = ratingData && ratingData.length > 0
     ? ratingData.reduce((sum, r) => sum + r.rating, 0) / ratingData.length
