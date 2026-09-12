@@ -216,3 +216,19 @@ DROP TRIGGER IF EXISTS trg_guard_seller_applications_review_columns ON public.se
 CREATE TRIGGER trg_guard_seller_applications_review_columns
   BEFORE UPDATE ON public.seller_applications
   FOR EACH ROW EXECUTE FUNCTION public.guard_seller_applications_review_columns();
+
+-- ── AUTH-030: admin_roles — backend writes only ─────────────────────────────
+-- "Users can access own admin role" had NO FOR clause (= ALL commands) with
+-- USING/WITH CHECK (uid = user_id): any signed-in user could INSERT their own
+-- super_admin row. Reproduced locally 2026-09-12: insert ACCEPTED, is_admin()
+-- and is_super_admin_safe() → true. is_admin() / is_super_admin_safe() /
+-- has_permission() (the RLS + requireAdmin() sources of truth) read ONLY
+-- admin_roles and role_permissions; role_permissions has a SELECT policy only
+-- (INSERT verified denied under RLS), and profiles.role is reverted by
+-- prevent_profile_privilege_escalation — so admin_roles was the only
+-- user-writable input. Drop BOTH write-capable policies: grants/revocations
+-- happen through the service role (no super_admin team UI writes this table);
+-- the two app-side `last_active_at` touches moved to the service role.
+-- SELECT policies (own row; active admins visible for chat) are unchanged.
+DROP POLICY IF EXISTS "Users can access own admin role" ON public.admin_roles;
+DROP POLICY IF EXISTS "Only super_admin can manage admin roles" ON public.admin_roles;

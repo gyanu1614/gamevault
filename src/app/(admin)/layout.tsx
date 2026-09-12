@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import AdminChrome from './admin/components/AdminChrome'
 import { ADMIN_FOREST, FOREST_BG } from './admin/_theme/forest'
 
@@ -38,8 +39,9 @@ export default async function AdminLayout({
     redirect('/')
   }
 
-  // Update last active
-  await (supabase as any)
+  // Update last active. AUTH-030: admin_roles has no user write policy any
+  // more — touch it as the backend, scoped to the verified user.
+  await (createServiceRoleClient() as any)
     .from('admin_roles')
     .update({ last_active_at: new Date().toISOString() })
     .eq('user_id', user.id)
