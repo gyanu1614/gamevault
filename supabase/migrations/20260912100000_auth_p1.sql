@@ -409,3 +409,62 @@ END;
 $$;
 REVOKE ALL ON FUNCTION "public"."reject_seller_application"("uuid", "uuid", "text", "text") FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION "public"."reject_seller_application"("uuid", "uuid", "text", "text") TO authenticated, service_role;
+
+-- ── AUTH-034: listings — no self-reactivation out of moderation ─────────────
+-- After reject_listing / request_listing_changes (approved_by NULL) the seller
+-- could `UPDATE listings SET status='active'`: check_listing_moderation only
+-- pre-moderates entry-tier sellers, so for everyone else the rejected listing
+-- was live again (reproduced locally 2026-09-12, ruby tier). Final
+-- re-creation of the guard (INSERT branch from AUTH-031 kept): an untrusted
+-- UPDATE may not move 'rejected' / 'changes_requested' / 'pending_approval'
+-- to 'active'. paused↔active, sold→active (restock) and rejected→draft stay
+-- seller-editable; approve_listing (flag) is the only way back to active.
+CREATE OR REPLACE FUNCTION public.guard_listings_protected_columns() RETURNS trigger
+  LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+  changed text[] := '{}';
+BEGIN
+  IF public.guarded_write_allowed() THEN
+    RETURN NEW;
+  END IF;
+
+  IF TG_OP = 'INSERT' THEN
+    NEW.approved_by := NULL;
+    NEW.approved_at := NULL;
+    NEW.rejected_by := NULL;
+    NEW.rejected_at := NULL;
+    NEW.rejection_reason := NULL;
+    NEW.moderation_notes := NULL;
+    NEW.changes_requested_by := NULL;
+    NEW.changes_requested_at := NULL;
+    NEW.sales := 0;
+    IF NEW.status = 'active' THEN
+      NEW.status := 'pending_approval';
+    END IF;
+    RETURN NEW;
+  END IF;
+
+  -- AUTH-034: moderation decisions are only undone by the moderation RPCs.
+  IF OLD.status IN ('rejected', 'changes_requested', 'pending_approval')
+     AND NEW.status = 'active' THEN
+    RAISE EXCEPTION 'listings: status % → active is protected; a moderated listing is re-activated only through review',
+      OLD.status
+      USING ERRCODE = '42501';
+  END IF;
+
+  IF NEW.approved_by IS DISTINCT FROM OLD.approved_by THEN changed := array_append(changed, 'approved_by'); END IF;
+  IF NEW.approved_at IS DISTINCT FROM OLD.approved_at THEN changed := array_append(changed, 'approved_at'); END IF;
+  IF NEW.rejected_by IS DISTINCT FROM OLD.rejected_by THEN changed := array_append(changed, 'rejected_by'); END IF;
+  IF NEW.rejected_at IS DISTINCT FROM OLD.rejected_at THEN changed := array_append(changed, 'rejected_at'); END IF;
+  IF NEW.rejection_reason IS DISTINCT FROM OLD.rejection_reason THEN changed := array_append(changed, 'rejection_reason'); END IF;
+  IF NEW.moderation_notes IS DISTINCT FROM OLD.moderation_notes THEN changed := array_append(changed, 'moderation_notes'); END IF;
+  IF NEW.seller_id IS DISTINCT FROM OLD.seller_id THEN changed := array_append(changed, 'seller_id'); END IF;
+  IF NEW.sales IS DISTINCT FROM OLD.sales THEN changed := array_append(changed, 'sales'); END IF;
+  IF array_length(changed, 1) > 0 THEN
+    RAISE EXCEPTION 'listings: column(s) % are protected and cannot be changed by this caller',
+      array_to_string(changed, ', ')
+      USING ERRCODE = '42501';
+  END IF;
+  RETURN NEW;
+END;
+$$;

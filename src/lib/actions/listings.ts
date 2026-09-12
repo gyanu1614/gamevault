@@ -696,7 +696,7 @@ export async function updateListing(
     // Verify ownership before updating
     const { data: listing } = await supabase
       .from('listings')
-      .select('seller_id')
+      .select('seller_id, status')
       .eq('id', listingId)
       .single() as any
 
@@ -706,6 +706,18 @@ export async function updateListing(
 
     if (listing.seller_id !== user.id) {
       return { success: false, error: 'Unauthorized - not your listing' }
+    }
+
+    // AUTH-034 — a moderation decision is only undone by review. The DB guard
+    // rejects this transition too (42501); refusing here gives a clear message.
+    if (
+      input.status === 'active' &&
+      ['rejected', 'changes_requested', 'pending_approval'].includes(listing.status)
+    ) {
+      return {
+        success: false,
+        error: 'This listing is under review or was rejected — resubmit it for moderation instead of re-activating it.',
+      }
     }
 
     // Prepare update data
