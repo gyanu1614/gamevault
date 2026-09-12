@@ -7,7 +7,23 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { createServiceRoleClient } from '@/lib/supabase/service-role'
+import { requireRole } from '@/lib/actions/admin-permissions'
 import { revalidatePath } from 'next/cache'
+
+/**
+ * AUTH-011 — the three moderation mutations below had no in-code authz and
+ * wrote with the session client, so only RLS stood between a review author and
+ * un-moderating their own review. Now: an active admin/moderator role is
+ * required FIRST (admin_roles-based, same roles as the "Admins can manage all
+ * reviews" policy), and the write goes through the service role so the DB
+ * guard trigger on is_visible / flagged_for_moderation / moderation_reason
+ * (which has no admin shortcut) sees a trusted caller.
+ */
+const REVIEW_MODERATOR_ROLES = ['super_admin', 'admin', 'moderator'] as const
+async function requireReviewModerator() {
+  return requireRole([...REVIEW_MODERATOR_ROLES])
+}
 
 export interface AdminReviewFilters {
   status?: string[] // flagged, hidden, visible
@@ -201,9 +217,9 @@ export async function toggleReviewVisibility(
   isVisible: boolean,
   reason?: string
 ) {
-  const supabase = await createClient()
-
   try {
+    await requireReviewModerator()
+    const supabase = createServiceRoleClient()
     const { error } = await (supabase
       .from('reviews')
       .update as any)({
@@ -234,9 +250,9 @@ export async function toggleReviewFlag(
   flagged: boolean,
   reason?: string
 ) {
-  const supabase = await createClient()
-
   try {
+    await requireReviewModerator()
+    const supabase = createServiceRoleClient()
     const { error } = await (supabase
       .from('reviews')
       .update as any)({
@@ -263,10 +279,10 @@ export async function toggleReviewFlag(
  * Delete review (admin)
  */
 export async function deleteReview(reviewId: string) {
-  const supabase = await createClient()
-
   try {
-    const { error} = await supabase
+    await requireReviewModerator()
+    const supabase = createServiceRoleClient()
+    const { error } = await supabase
       .from('reviews')
       .delete()
       .eq('id', reviewId)

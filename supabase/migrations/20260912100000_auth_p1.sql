@@ -119,3 +119,32 @@ $$;
 REVOKE ALL ON FUNCTION "public"."get_seller_publish_policy"("uuid") FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION "public"."get_seller_publish_policy"("uuid") TO authenticated, service_role;
 
+-- ── AUTH-011: reviews — moderation columns are admin/backend only ────────────
+-- "Reviewers can update own reviews within 30 days" re-asserts only
+-- reviewer_id + created_at, so the author could clear flagged_for_moderation /
+-- moderation_reason on a visible flagged review (a hidden review is already
+-- unreachable to them via the SELECT policy). Pin the three moderation columns
+-- to trusted writers; admin actions now write through the service role.
+CREATE OR REPLACE FUNCTION public.guard_reviews_moderation_columns() RETURNS trigger
+  LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+  changed text[] := '{}';
+BEGIN
+  IF public.guarded_write_allowed() THEN
+    RETURN NEW;
+  END IF;
+  IF NEW.is_visible IS DISTINCT FROM OLD.is_visible THEN changed := array_append(changed, 'is_visible'); END IF;
+  IF NEW.flagged_for_moderation IS DISTINCT FROM OLD.flagged_for_moderation THEN changed := array_append(changed, 'flagged_for_moderation'); END IF;
+  IF NEW.moderation_reason IS DISTINCT FROM OLD.moderation_reason THEN changed := array_append(changed, 'moderation_reason'); END IF;
+  IF array_length(changed, 1) > 0 THEN
+    RAISE EXCEPTION 'reviews: column(s) % are protected and cannot be changed by this caller',
+      array_to_string(changed, ', ')
+      USING ERRCODE = '42501';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+DROP TRIGGER IF EXISTS trg_guard_reviews_moderation_columns ON public.reviews;
+CREATE TRIGGER trg_guard_reviews_moderation_columns
+  BEFORE UPDATE ON public.reviews
+  FOR EACH ROW EXECUTE FUNCTION public.guard_reviews_moderation_columns();
