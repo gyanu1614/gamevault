@@ -4,8 +4,15 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
+// AUTH-015 — the webhook must write through the SERVICE-ROLE client:
+// trustpilot_invitations is service-role-only under RLS and a webhook has no
+// user session. The session client is mocked to explode if touched.
+const serviceEq = vi.fn(async () => ({ error: null }))
+const serviceUpdate = vi.fn(() => ({ eq: serviceEq }))
+const serviceFrom = vi.fn(() => ({ update: serviceUpdate }))
+vi.mock('@/lib/supabase/service', () => ({ createServiceRoleClient: () => ({ from: serviceFrom }) }))
 vi.mock('@/lib/supabase/server', () => ({
-  createClient: async () => ({ from: () => ({ update: () => ({ eq: async () => ({ error: null }) }) }) }),
+  createClient: async () => ({ from: () => { throw new Error('session client must not be used by a webhook') } }),
 }))
 
 async function post(body: string, headers: Record<string, string> = {}) {
@@ -22,7 +29,7 @@ async function hmacHex(secret: string, body: string) {
   return Array.from(new Uint8Array(sig)).map((b) => b.toString(16).padStart(2, '0')).join('')
 }
 
-const BODY = JSON.stringify({ eventName: 'service-review-created', reviewId: 'r1', referenceId: 'order-1', businessUnitId: 'bu' })
+const BODY = JSON.stringify({ eventType: 'review-created', reviewId: 'r1', referenceId: 'order-1', businessUnitId: 'bu', review: { stars: 5 } })
 
 describe('Trustpilot webhook — AUTH-015 fail-closed', () => {
   beforeEach(() => { delete process.env.TRUSTPILOT_WEBHOOK_SECRET })
@@ -43,10 +50,13 @@ describe('Trustpilot webhook — AUTH-015 fail-closed', () => {
     expect((await post(BODY, { 'x-trustpilot-signature': `sha256=${forged}` })).status).toBe(401)
   })
 
-  it('secret set, genuine signature → passes verification', async () => {
+  it('secret set, genuine signature → passes verification and writes via the service role', async () => {
     process.env.TRUSTPILOT_WEBHOOK_SECRET = 'test-secret'
+    serviceFrom.mockClear(); serviceEq.mockClear()
     const good = await hmacHex('test-secret', BODY)
     const res = await post(BODY, { 'x-trustpilot-signature': `sha256=${good}` })
-    expect([401, 503]).not.toContain(res.status)
+    expect(res.status).toBe(200)
+    expect(serviceFrom).toHaveBeenCalledWith('trustpilot_invitations')
+    expect(serviceEq).toHaveBeenCalledWith('order_id', 'order-1')
   })
 })

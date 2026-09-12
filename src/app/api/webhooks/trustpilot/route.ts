@@ -10,7 +10,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createServiceRoleClient } from '@/lib/supabase/service'
 
 // Trustpilot signs webhooks with HMAC-SHA256 - verify for security
 const TRUSTPILOT_WEBHOOK_SECRET = process.env.TRUSTPILOT_WEBHOOK_SECRET
@@ -81,7 +81,9 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ received: true, note: 'No reference ID provided' })
       }
 
-      const supabase = await createClient()
+      // AUTH-015 — trustpilot_invitations is service-role-only under RLS; a webhook
+      // has no user session, so the anon/session client could never write here.
+      const supabase = createServiceRoleClient()
 
       // Build the review URL from the review links if available
       const reviewUrl =
