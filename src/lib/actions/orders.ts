@@ -765,7 +765,7 @@ export async function cancelOrder(orderId: string): Promise<{
 
     if (fetchError || !order) return { success: false, error: 'Order not found' }
     if (order.buyer_id !== user.id) {
-      await logUnauthorizedAccess(user.id, 'cancel_order', orderId)
+      await logUnauthorizedAccess('cancel_order', 'orders', orderId)
       return { success: false, error: 'Unauthorized' }
     }
     if (order.status !== 'paid' && order.status !== 'pending') {
