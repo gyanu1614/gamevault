@@ -593,7 +593,7 @@ export async function upsertGameCategory(
       const slug = (gc as { slug: string } | null)?.slug
       if (slug) {
         if (input.is_enabled) {
-          await ensureLegacyCategoryRow(supabase, input.game_id, slug)
+          await ensureLegacyCategoryRow(supabase, input.game_id, slug, { reactivate: true })
         } else {
           await deactivateLegacyCategoryRow(supabase, input.game_id, slug)
         }

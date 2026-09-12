@@ -51,17 +51,56 @@ const GLOBAL_SLUG_DEFAULTS: Record<string, { name: string; icon: string; descrip
 // ─── Operations ──────────────────────────────────────────────────────────────
 
 /**
+ * AUTH-010 — is (game_id, global_category_slug) an admin-enabled pair?
+ *
+ * Reads `game_categories` (public SELECT policy already restricts to
+ * `is_enabled = true`) joined by slug to an active `global_categories` row.
+ * Seller-facing publish paths call this with the SESSION client before any
+ * service-role catalogue access, so a signed-in user can only make the
+ * bridge act on pairs an admin has explicitly switched on.
+ */
+export async function isEnabledGameCategory(
+  // Accepts both the typed session client and the untyped service client.
+  supabase: SupabaseClient<any, any, any, any, any>,
+  gameId: string,
+  globalCategorySlug: string,
+): Promise<boolean> {
+  const { data: gc } = await supabase
+    .from('global_categories')
+    .select('id')
+    .eq('slug', globalCategorySlug)
+    .eq('is_active', true)
+    .maybeSingle()
+  const gcId = (gc as { id: string } | null)?.id
+  if (!gcId) return false
+
+  const { data: pair } = await supabase
+    .from('game_categories')
+    .select('id')
+    .eq('game_id', gameId)
+    .eq('global_category_id', gcId)
+    .eq('is_enabled', true)
+    .maybeSingle()
+  return Boolean((pair as { id: string } | null)?.id)
+}
+
+/**
  * Look up the legacy categories.id for a (game_id, global_category_slug)
  * pair, creating the row if it doesn't exist. Returns the id or null on
  * failure (caller decides whether that's a hard error).
  *
  * Pass a service-role supabase client for write access — the categories
  * table is RLS-protected and only admins can insert via the user client.
+ *
+ * AUTH-010: because this runs under the service role, every non-admin caller
+ * MUST first pass `isEnabledGameCategory` for the same (game, slug) pair, and
+ * must NOT pass `reactivate` — see publishListing / bulkPublishListings.
  */
 export async function ensureLegacyCategoryRow(
   supabase: SupabaseClient<any>,
   gameId: string,
   globalCategorySlug: string,
+  opts: { reactivate?: boolean } = {},
 ): Promise<string | null> {
   const legacyType = GLOBAL_SLUG_TO_LEGACY_TYPE[globalCategorySlug]
   if (!legacyType) return null
@@ -101,9 +140,12 @@ export async function ensureLegacyCategoryRow(
       rows.find((r) => r.slug === canonicalSlug) ??
       rows.find((r) => r.is_active) ??
       rows[0]
-    // If the chosen row is inactive, flip it back on — admin enabling the
-    // (game, category) pair in the new wizard is the source of truth now.
+    // AUTH-010 — only the admin wizard (opts.reactivate) may flip an
+    // admin-deactivated row back on. A seller publish path that lands on an
+    // inactive-only row gets null and a "contact support" error instead of
+    // silently undoing the admin's deactivateLegacyCategoryRow.
     if (!chosen.is_active) {
+      if (!opts.reactivate) return null
       await supabase.from('categories').update({ is_active: true }).eq('id', chosen.id)
     }
     return chosen.id

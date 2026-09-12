@@ -17,7 +17,7 @@ import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { revalidatePath } from 'next/cache'
 import { getGlobalCategories, getGamesForGlobalCategory, getAttributeTemplateFull } from '@/lib/actions/new-schema'
 import type { GlobalCategory, GameCategory, AttributeTemplateFull, Attribute } from '@/lib/actions/new-schema'
-import { ensureLegacyCategoryRow, GLOBAL_SLUG_TO_LEGACY_TYPE } from '@/lib/actions/_category-bridge'
+import { ensureLegacyCategoryRow, isEnabledGameCategory, GLOBAL_SLUG_TO_LEGACY_TYPE } from '@/lib/actions/_category-bridge'
 import { pingIndexNow } from '@/lib/seo/indexnow'
 
 /** Service-role supabase client — bypasses RLS so we can self-heal a missing
@@ -564,6 +564,13 @@ export async function publishListing(input: PublishListingInput): Promise<Result
       }
     }
 
+    // AUTH-010 — the bridge below runs under the SERVICE ROLE and can create
+    // public catalogue rows. Only proceed for a (game, category) pair an
+    // admin has enabled in game_categories; a seller path never reactivates.
+    if (!(await isEnabledGameCategory(supabase, input.game_id, input.category_slug))) {
+      return { success: false, error: 'This category is not enabled for this game.' }
+    }
+
     // Self-healing: look up the legacy categories row for this (game, slug)
     // pair, creating it via the service-role client if missing. This handles
     // games enabled via the new admin (which only writes game_categories)
@@ -1081,6 +1088,14 @@ export async function bulkPublishListings(
         success: false,
         error: `You can only bulk-upload ${remainingDaily} more today (cap ${policy.bulk_daily_cap}). Trim your CSV and try again.`,
       }
+    }
+
+    // AUTH-010 — same gate as publishListing: admin-enabled pair or nothing.
+    if (!GLOBAL_SLUG_TO_LEGACY_TYPE[categorySlug]) {
+      return { success: false, error: 'Unknown category' }
+    }
+    if (!(await isEnabledGameCategory(supabase, gameId, categorySlug))) {
+      return { success: false, error: 'This category is not enabled for this game.' }
     }
 
     // Resolve legacy category once.
