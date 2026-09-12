@@ -31,8 +31,12 @@ DROP POLICY IF EXISTS "referral_earnings_update_service" ON public.referral_earn
 -- admin) dead. Drop it. KYC-before-listing is an explicit owner decision.
 DROP POLICY IF EXISTS "Sellers can create listings" ON public.listings;
 
--- get_seller_publish_policy — re-created verbatim from its latest definition
--- on main (20260906000000_gemstone_seller_tiers.sql) with:
+-- get_seller_publish_policy — re-created from its latest definition on main
+-- (20260906000000_gemstone_seller_tiers.sql; the metal-rank variant differs
+-- ONLY in the hard-coded entry-tier name) with:
+--   · the entry-tier fallback read from seller_tier_config (lowest sort_order)
+--     instead of a hard-coded 'quartz'/'bronze', so the same body is correct
+--     whichever tier set a database carries (prod already has the metal set)
 --   · SET search_path = public (SECURITY DEFINER hygiene)
 --   · non-service callers are pinned to auth.uid(): p_user_id is ignored, so a
 --     user can no longer read another user's tier/limits/counts (AUTH-022 too)
@@ -54,19 +58,27 @@ DECLARE
   v_active_count       INTEGER;
   v_approved_count     INTEGER;
   v_bulk_today_count   INTEGER;
+  v_entry_tier         TEXT;
 BEGIN
   -- AUTH-009/022: a JWT caller only ever sees their own policy.
   IF auth.role() IS DISTINCT FROM 'service_role' AND auth.uid() IS NOT NULL THEN
     p_user_id := auth.uid();
   END IF;
 
-  SELECT COALESCE(seller_tier, 'quartz'), COALESCE(is_verified, FALSE)
+  -- Entry tier = lowest sort_order in the live config (gemstone: quartz,
+  -- metal: bronze). Never hard-code a tier name here.
+  SELECT tier INTO v_entry_tier
+  FROM public.seller_tier_config
+  ORDER BY sort_order ASC NULLS LAST, tier ASC
+  LIMIT 1;
+
+  SELECT COALESCE(seller_tier, v_entry_tier), COALESCE(is_verified, FALSE)
   INTO v_tier, v_is_verified
   FROM public.profiles
   WHERE id = p_user_id;
 
   IF v_tier IS NULL THEN
-    v_tier := 'quartz';
+    v_tier := v_entry_tier;
     v_is_verified := FALSE;
   END IF;
 

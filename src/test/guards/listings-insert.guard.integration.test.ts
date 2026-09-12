@@ -61,6 +61,15 @@ describe.skipIf(!hasEnv)('AUTH-009 — listings INSERT + publish policy RPC (int
     expect((data as any).tier).not.toBe('ruby') // seller is ruby; buyer is the default tier
   })
 
+  it('an unknown / tier-less user falls back to the entry tier of the LIVE config, not a hard-coded name', async () => {
+    const { data: cfg } = await fx!.svc.from('seller_tier_config').select('tier, sort_order').order('sort_order', { ascending: true }).limit(1)
+    const entry = (cfg as any[])[0].tier
+    const { data, error } = await fx!.svc.rpc('get_seller_publish_policy', { p_user_id: '00000000-0000-0000-0000-000000000000' })
+    expect(error).toBeNull()
+    expect((data as any).tier).toBe(entry)
+    expect((data as any).listing_limit === null || typeof (data as any).listing_limit === 'number').toBe(true)
+  })
+
   it('the service role can still read any user\'s policy (admin/cron paths)', async () => {
     const { data, error } = await fx!.svc.rpc('get_seller_publish_policy', { p_user_id: fx!.seller.id })
     expect(error).toBeNull()
