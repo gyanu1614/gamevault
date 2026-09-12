@@ -35,6 +35,12 @@ export async function guardsApplied(svc: SupabaseClient): Promise<boolean> {
   return !error
 }
 
+/** 20260912100000_auth_p1.sql applied? (AUTH-008/009/011/013/014) */
+export async function p1GuardsApplied(svc: SupabaseClient): Promise<boolean> {
+  const { error } = await svc.rpc('auth_p1_guards_version')
+  return !error
+}
+
 export async function makeFixture(): Promise<Fixture> {
   const svc = createClient(URL!, SVC!, { auth: { persistSession: false } })
   // Short tag: profiles.username has a length CHECK.

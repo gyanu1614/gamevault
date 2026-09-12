@@ -6,7 +6,7 @@ import { generateGamerTagCandidates } from '@/lib/username/gamer-names'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import type { z } from 'zod'
-import { applyReferralAtSignup } from '@/lib/actions/referral'
+import { applyReferralAtSignup } from '@/lib/referral/commission'
 import { generateDiceBearAvatar } from '@/lib/utils/avatar'
 import { DEFAULT_TIER } from '@/lib/seller/tiers'
 
@@ -145,10 +145,10 @@ export async function signup(formData: {
       }
     }
 
-    // Apply referral code if provided (non-critical). It writes to the new
-    // user's profiles row + referral_earnings through the cookie client, so
-    // it also needs the session — skipped in email-confirmation mode.
-    if (data.session && data.user?.id && formData.referralCode) {
+    // Apply referral code if provided (non-critical). Runs under the service
+    // role (AUTH-008) so it no longer needs the session; the new user's id is
+    // the only input. Deduped + self-referral-safe inside.
+    if (data.user?.id && formData.referralCode) {
       await applyReferralAtSignup(data.user.id, formData.referralCode).catch((err) => {
         // Non-critical — don't block signup if referral fails
         console.error('❌ Referral apply failed:', err)

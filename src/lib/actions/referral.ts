@@ -3,11 +3,6 @@
 import { createClient } from '@/lib/supabase/server'
 import type { ReferralEarning } from '@/types/database'
 
-// ── Commission config ────────────────────────────────────────────────────────
-// Referrer earns this % of the platform fee when a referred user completes an order
-const REFERRAL_COMMISSION_RATE = 0.10   // 10% of platform fee
-const REFERRAL_SIGNUP_BONUS    = 0       // $0 signup bonus (can enable later)
-
 // ── Types ────────────────────────────────────────────────────────────────────
 export interface ReferralStats {
   referralCode:     string
@@ -75,87 +70,11 @@ export async function validateReferralCode(code: string): Promise<{
   return { valid: true, referrerId: data.id, referrerUsername: (data as any).username }
 }
 
-// ── Apply referral at signup — set referred_by on the new user's profile ────
-export async function applyReferralAtSignup(
-  newUserId:  string,
-  referralCode: string
-): Promise<void> {
-  if (!referralCode?.trim()) return
-
-  const supabase = await createClient()
-
-  // Look up referrer
-  const { data: referrer } = await supabase
-    .from('profiles')
-    .select('id')
-    .eq('referral_code', referralCode.trim().toUpperCase())
-    .single() as any
-
-  if (!referrer || referrer.id === newUserId) return  // invalid or self-referral
-
-  // Set referred_by on the new user's profile
-  await (supabase
-    .from('profiles')
-    .update as any)({ referred_by: referrer.id })
-    .eq('id', newUserId)
-
-  // If signup bonus is configured, credit referrer immediately
-  if (REFERRAL_SIGNUP_BONUS > 0) {
-    await (supabase.from('referral_earnings').insert as any)({
-      referrer_id:      referrer.id,
-      referred_user_id: newUserId,
-      type:             'signup_bonus',
-      amount:           REFERRAL_SIGNUP_BONUS,
-      status:           'paid',
-      paid_at:          new Date().toISOString(),
-    })
-  }
-}
-
-// ── Record a purchase commission when a referred user completes an order ─────
-// Called from the order completion webhook / server action
-export async function recordReferralCommission(params: {
-  referredUserId: string
-  orderId:        string
-  platformFee:    number
-}): Promise<void> {
-  const { referredUserId, orderId, platformFee } = params
-  if (!referredUserId || platformFee <= 0) return
-
-  const supabase = await createClient()
-
-  // Check if this user was referred
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('referred_by')
-    .eq('id', referredUserId)
-    .single() as any
-
-  const referrerId = (profile as any)?.referred_by
-  if (!referrerId) return
-
-  // Don't double-credit the same order
-  const { data: existing } = await supabase
-    .from('referral_earnings')
-    .select('id')
-    .eq('order_id', orderId)
-    .eq('type', 'purchase_commission')
-    .single()
-
-  if (existing) return  // already recorded
-
-  const commission = parseFloat((platformFee * REFERRAL_COMMISSION_RATE).toFixed(2))
-  if (commission <= 0) return
-
-  await (supabase.from('referral_earnings').insert as any)({
-    referrer_id:      referrerId,
-    referred_user_id: referredUserId,
-    order_id:         orderId,
-    type:             'purchase_commission',
-    amount:           commission,
-    status:           'pending',
-  })
-}
+// ── Money paths moved (AUTH-008) ─────────────────────────────────────────────
+// applyReferralAtSignup / recordReferralCommission live in
+// `@/lib/referral/commission` (server-only, service role, amounts read from
+// the orders row). They are deliberately NOT exported from this 'use server'
+// module — every export here is a publicly invokable action.
 
 // ── Get referral stats for the current user ──────────────────────────────────
 export async function getReferralStats(): Promise<{
