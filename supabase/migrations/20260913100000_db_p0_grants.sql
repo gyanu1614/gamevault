@@ -260,3 +260,60 @@ CREATE OR REPLACE FUNCTION public.db_p0_posture() RETURNS jsonb
 $$;
 REVOKE ALL ON FUNCTION public.db_p0_posture() FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.db_p0_posture() TO service_role;
+
+-- ── DB-005 (P1): upgrade_all_seller_tiers() selected a column that does not exist
+-- Body (20260908110000:239, introduced 20260906000000:329) filtered
+-- `WHERE is_seller = true`; profiles has no is_seller column (role /
+-- seller_tier / tier_pinned exist), so the daily /api/cron/upgrade-seller-tiers
+-- has failed on every run since 2026-09-06 and no seller auto-upgraded.
+-- Re-created from the live body with `role = 'seller'`, the entry-tier
+-- fallback read from seller_tier_config (never hard-code a tier name — prod
+-- carries the metal set), SET search_path, and the service-only grant.
+-- apply_rank_strikes() has the same bug but no caller (ROUTE-005); it is
+-- closed above and left for the P3 drop.
+CREATE OR REPLACE FUNCTION public.upgrade_all_seller_tiers() RETURNS integer
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path = public
+    AS $$
+DECLARE
+  v_seller        RECORD;
+  v_new_tier      TEXT;
+  v_entry_tier    TEXT;
+  v_current_order INTEGER;
+  v_new_order     INTEGER;
+  v_count         INTEGER := 0;
+BEGIN
+  SELECT tier INTO v_entry_tier FROM public.seller_tier_config ORDER BY sort_order ASC LIMIT 1;
+
+  FOR v_seller IN
+    SELECT id, seller_tier FROM public.profiles
+    WHERE role = 'seller' AND tier_pinned = false
+  LOOP
+    v_new_tier := check_seller_tier_eligibility(v_seller.id);
+
+    SELECT COALESCE(sort_order, 0) INTO v_current_order
+    FROM public.seller_tier_config
+    WHERE tier = COALESCE(v_seller.seller_tier, v_entry_tier);
+
+    SELECT COALESCE(sort_order, 0) INTO v_new_order
+    FROM public.seller_tier_config
+    WHERE tier = v_new_tier;
+
+    IF v_new_order > v_current_order THEN
+      UPDATE public.profiles
+      SET seller_tier = v_new_tier, tier_strikes = 0
+      WHERE id = v_seller.id;
+
+      INSERT INTO public.seller_tier_history (user_id, previous_tier, new_tier, reason)
+      VALUES (v_seller.id, v_seller.seller_tier, v_new_tier, 'auto_upgrade_90d_window');
+
+      v_count := v_count + 1;
+    END IF;
+  END LOOP;
+
+  RETURN v_count;
+END;
+$$;
+SELECT pg_temp.db_p0_set_exec('public.upgrade_all_seller_tiers()', ARRAY['service_role']);
+
+DROP FUNCTION pg_temp.db_p0_set_exec(text, text[]);
