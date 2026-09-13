@@ -21,7 +21,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { ArrowRight } from 'lucide-react'
 import { getAllPublishedPosts } from '@/lib/blog/db'
-import { createClient } from '@/lib/supabase/server'
+import { createAnonClient } from '@/lib/supabase/anon'
 import { BlogCard } from '@/components/blog/BlogCard'
 
 export const revalidate = 3600
@@ -47,7 +47,7 @@ interface GameRow {
 /** Names + art for the games that actually have posts. */
 async function getGames(slugs: string[]): Promise<Map<string, GameRow>> {
   if (slugs.length === 0) return new Map()
-  const supabase = await createClient()
+  const supabase = createAnonClient()
   const { data } = await (supabase as any)
     .from('games')
     .select('name, slug, image_url')

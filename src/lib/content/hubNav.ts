@@ -1,5 +1,7 @@
 import 'server-only'
-import { createClient } from '@/lib/supabase/server'
+import { unstable_cache } from 'next/cache'
+import { createAnonClient } from '@/lib/supabase/anon'
+import { GAME_DIRECTORY_TAG } from '@/lib/marketplace/gameDirectoryCache'
 import { getAllGames } from '@/lib/utils/games'
 import { hasGameContentTheme } from '@/lib/content/theme'
 
@@ -38,6 +40,25 @@ const GAME_TOOLS: Record<string, Array<'values' | 'calculator'>> = {
   'adopt-me': ['values', 'calculator'],
 }
 
+/**
+ * A game's active categories. Cookie-free + unstable_cache so the content-hub
+ * nav (rendered on every hub page) does not force those routes dynamic; tagged
+ * with GAME_DIRECTORY_TAG so admin category edits invalidate it immediately.
+ */
+const getCachedGameCategories = unstable_cache(
+  async (gameId: string): Promise<Array<{ slug: string; metadata: { type?: string } | null }>> => {
+    const supabase = createAnonClient()
+    const { data } = await (supabase as any)
+      .from('categories')
+      .select('slug, metadata')
+      .eq('game_id', gameId)
+      .eq('is_active', true)
+    return (data ?? []) as Array<{ slug: string; metadata: { type?: string } | null }>
+  },
+  ['hub-nav-game-categories'],
+  { tags: [GAME_DIRECTORY_TAG], revalidate: 3600 },
+)
+
 export async function getHubNavData(gameSlug: string): Promise<HubNavData> {
   const games = await getAllGames()
   const current = games.find((g) => g.slug === gameSlug)
@@ -46,16 +67,7 @@ export async function getHubNavData(gameSlug: string): Promise<HubNavData> {
   let itemsHref: string | null = null
   let accountsHref: string | null = null
   if (current) {
-    const supabase = await createClient()
-    const { data } = await (supabase as any)
-      .from('categories')
-      .select('slug, metadata')
-      .eq('game_id', current.id)
-      .eq('is_active', true)
-    const rows = (data ?? []) as Array<{
-      slug: string
-      metadata: { type?: string } | null
-    }>
+    const rows = await getCachedGameCategories(current.id)
     const hasItems = rows.some(
       (r) => r.slug === 'buy-items' || r.metadata?.type === 'items',
     )

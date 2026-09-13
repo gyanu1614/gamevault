@@ -8,7 +8,7 @@ import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { sabCard } from '@/lib/sab/theme'
-import { createClient } from '@/lib/supabase/server'
+import { createAnonClient } from '@/lib/supabase/anon'
 import { getGamePosts } from '@/lib/blog/db'
 import { JsonLd, breadcrumbList, blogCollection } from '@/lib/seo/jsonld'
 import { SITE_URL } from '@/config/site'
@@ -23,8 +23,17 @@ import { ArticleGrid } from './_ArticleGrid'
 import { ValuesTeaser, CalculatorTeaser } from './_HubTeasers'
 import { SabSellerCta } from '../_SabSellerCta'
 import { getHubTopValues, getHubStatStrip, getHubCalcExample } from './_hubData'
+import { CONTENT_HUB_GAME_SLUGS } from '@/lib/content/theme'
 
 export const revalidate = 3600
+
+/**
+ * Prerender the content-hub games; any other slug fails the getGame() lookup
+ * below and 404s, so there is nothing else to build.
+ */
+export function generateStaticParams() {
+  return CONTENT_HUB_GAME_SLUGS.map((gameSlug) => ({ gameSlug }))
+}
 
 interface HubGame {
   name: string
@@ -35,7 +44,7 @@ interface HubGame {
 }
 
 async function getGame(gameSlug: string): Promise<HubGame | null> {
-  const supabase = await createClient()
+  const supabase = createAnonClient()
   const { data } = await (supabase as any)
     .from('games')
     .select('name, slug, image_url, seo_h1, seo_intro, is_active')
@@ -52,7 +61,7 @@ async function getGame(gameSlug: string): Promise<HubGame | null> {
  */
 async function getPricedItemCount(gameSlug: string): Promise<number> {
   if (gameSlug !== 'steal-a-brainrot') return 0
-  const supabase = await createClient()
+  const supabase = createAnonClient()
   const { count, error } = await (supabase as any)
     .from('sab_price_display')
     .select('brainrot_id', { count: 'exact', head: true })

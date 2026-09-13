@@ -1,5 +1,5 @@
 import 'server-only'
-import { createClient } from '@/lib/supabase/server'
+import { createAnonClient } from '@/lib/supabase/anon'
 
 /**
  * Per-pet data for /adopt-me/values/{slug}. A pet is only servable when
@@ -66,7 +66,7 @@ function num(v: number | string | null): number | null {
 
 /** Full detail for one pet, or null if it isn't publishable (has_page=false). */
 export async function getAdoptMePet(slug: string): Promise<AdoptMePetDetail | null> {
-  const supabase = await createClient()
+  const supabase = createAnonClient()
 
   const { data: pet, error } = await (supabase as any)
     .from('adopt_me_pets')
@@ -138,7 +138,7 @@ export async function getAdoptMePet(slug: string): Promise<AdoptMePetDetail | nu
 
 /** Slugs of all publishable pets — for generateStaticParams + similar-pets. */
 export async function getPublishablePetSlugs(): Promise<string[]> {
-  const supabase = await createClient()
+  const supabase = createAnonClient()
   const { data } = await (supabase as any)
     .from('adopt_me_pets')
     .select('slug')
@@ -178,7 +178,7 @@ export async function getSimilarPets(
   refFrUsd: number | null,
   limit = 14,
 ): Promise<SimilarPet[]> {
-  const supabase = await createClient()
+  const supabase = createAnonClient()
 
   // Pull every page-having pet once (the catalog is small — ~60 rows), with its
   // FR cash, so we can rank in memory by rarity + value proximity.

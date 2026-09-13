@@ -11,7 +11,7 @@ import React from 'react'
 import { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
+import { createAnonClient } from '@/lib/supabase/anon'
 import { ArrowRight, Calculator, Package, TrendingUp } from 'lucide-react'
 import Image from 'next/image'
 import { JsonLd, breadcrumbList, faqPage } from '@/lib/seo/jsonld'
@@ -29,9 +29,26 @@ interface PageProps {
   }>
 }
 
+/**
+ * Game storefront. Carries listing counts + featured listings, so it wants a
+ * shorter window than the content hub; 15 min balances freshness against
+ * rendering this route dynamically on every request.
+ */
+export const revalidate = 900
+
+/**
+ * Prerender every active game's storefront. Cookie-free read; games added
+ * later still render on demand and are picked up by the window above.
+ */
+export async function generateStaticParams() {
+  const supabase = createAnonClient()
+  const { data } = await supabase.from('games').select('slug').eq('is_active', true)
+  return ((data ?? []) as { slug: string }[]).map((g) => ({ gameSlug: g.slug }))
+}
+
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { gameSlug } = await params
-  const supabase = await createClient()
+  const supabase = createAnonClient()
 
   const { data: game } = await supabase
     .from('games')
@@ -106,7 +123,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 async function getGameData(gameSlug: string) {
-  const supabase = await createClient()
+  const supabase = createAnonClient()
 
   const { data: game, error: gameError } = await supabase
     .from('games')
@@ -138,7 +155,7 @@ async function getGameData(gameSlug: string) {
 }
 
 async function getCategoryListingCounts(gameId: string) {
-  const supabase = await createClient()
+  const supabase = createAnonClient()
 
   const { data: counts, error } = await supabase
     .from('listings')
@@ -161,7 +178,7 @@ async function getCategoryListingCounts(gameId: string) {
 }
 
 async function getFeaturedListings(gameId: string, limit: number = 6) {
-  const supabase = await createClient()
+  const supabase = createAnonClient()
 
   const { data: listings } = await supabase
     .from('listings')
@@ -189,7 +206,7 @@ export type SabTopValue = {
 
 // Top brainrots by live default cash value, for the SAB landing carousel.
 async function getSabTopValues(): Promise<SabTopValue[]> {
-  const supabase = await createClient()
+  const supabase = createAnonClient()
   const { data: rows } = await (supabase as any)
     .from('sab_price_display')
     .select('brainrot_slug,brainrot_name,rarity,image_url,market_value_usd,mutation_slug')
@@ -219,7 +236,7 @@ async function getSabLandingOffers(gameId: string): Promise<{
   accountOffers: ItemOffer[]
   minPriceUsd: number | null
 }> {
-  const supabase = await createClient()
+  const supabase = createAnonClient()
 
   // Same select shape as the buy-items page's RawListing so listingToOffer()
   // gets everything it needs (seller rating/reviews/sales, category, template).

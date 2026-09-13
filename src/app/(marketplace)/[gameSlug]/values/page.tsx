@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { createAnonClient } from '@/lib/supabase/anon'
 import { getCachedGridPrices } from '@/lib/sab/priceCache'
 import { JsonLd, breadcrumbList, itemList, faqPage } from '@/lib/seo/jsonld'
 import { ValuesSeo, valuesFaq } from './_ValuesSeo'
@@ -19,6 +19,14 @@ import { HubGuidesStrip } from '@/components/content/HubGuidesStrip'
 import AdoptMeValuesPage from './_AdoptMeValuesPage'
 
 export const revalidate = 3600
+
+/**
+ * Prerender the game slug(s) this route serves; every other slug notFound()s
+ * below, so there is nothing else to build.
+ */
+export function generateStaticParams() {
+  return ['steal-a-brainrot'].map((gameSlug) => ({ gameSlug }))
+}
 
 interface PageProps {
   params: Promise<{ gameSlug: string }>
@@ -157,7 +165,7 @@ export interface MoverItem {
  * the section self-hides rather than inventing movement.
  */
 async function getBiggestMovers(limit = 3): Promise<MoverItem[]> {
-  const supabase = await createClient()
+  const supabase = createAnonClient()
 
   const since = new Date()
   since.setUTCDate(since.getUTCDate() - 8)
@@ -221,7 +229,7 @@ async function getBiggestMovers(limit = 3): Promise<MoverItem[]> {
 }
 
 async function getBrainrots(): Promise<BrainrotDirectoryItem[]> {
-  const supabase = await createClient()
+  const supabase = createAnonClient()
 
   // Default-mutation prices + all priced mutations come from the cached, tagged
   // reader (sab_price_display, indexed → ~5ms). Tagged so the whole grid

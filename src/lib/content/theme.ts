@@ -193,6 +193,13 @@ export function hasGameContentTheme(gameSlug: string): boolean {
 }
 
 /**
+ * Every game slug with a content hub — the prerender set for the hub routes'
+ * generateStaticParams. Compile-time constant, so it stays in sync with the
+ * hasGameContentTheme() gate those pages use to notFound() everything else.
+ */
+export const CONTENT_HUB_GAME_SLUGS = Object.keys(THEMES)
+
+/**
  * The theme as CSS custom properties, to spread onto a wrapper's `style`.
  * Neutrals are included so a content page never depends on a global that some
  * other surface might change.

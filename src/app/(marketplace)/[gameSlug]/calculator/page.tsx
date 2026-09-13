@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { createAnonClient } from '@/lib/supabase/anon'
 import { JsonLd, breadcrumbList, faqPage } from '@/lib/seo/jsonld'
 import { CalculatorSeo, CALCULATOR_FAQ } from './_CalculatorSeo'
 import { SabHeroBackdrop } from '../values/_SabHeroBackdrop'
@@ -18,6 +18,14 @@ import CalculatorClient, {
 import AdoptMeCalculatorPage from './_AdoptMeCalculatorPage'
 
 export const revalidate = 3600
+
+/**
+ * Prerender the game slug(s) this route serves; every other slug notFound()s
+ * below, so there is nothing else to build.
+ */
+export function generateStaticParams() {
+  return ['steal-a-brainrot'].map((gameSlug) => ({ gameSlug }))
+}
 
 interface PageProps {
   params: Promise<{ gameSlug: string }>
@@ -130,7 +138,7 @@ export async function generateMetadata({
 }
 
 async function getAllCashPrices(
-  supabase: Awaited<ReturnType<typeof createClient>>,
+  supabase: ReturnType<typeof createAnonClient>,
 ): Promise<CashPriceRow[]> {
   const pageSize = 1000
   const rows: CashPriceRow[] = []
@@ -163,7 +171,7 @@ async function getAllCashPrices(
 }
 
 async function getAllTradePrices(
-  supabase: Awaited<ReturnType<typeof createClient>>,
+  supabase: ReturnType<typeof createAnonClient>,
 ): Promise<TradePriceRow[]> {
   const pageSize = 1000
   const rows: TradePriceRow[] = []
@@ -203,7 +211,7 @@ async function getCalculatorData(): Promise<{
   tradePrices: CalcPrice[]
   lastUpdated: string | null
 }> {
-  const supabase = await createClient()
+  const supabase = createAnonClient()
 
   const [
     brainrotResult,

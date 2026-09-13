@@ -164,6 +164,16 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 // ISR Configuration - Revalidate every 60 seconds
 export const revalidate = 60
 
+/**
+ * Seller storefronts are an open-ended, constantly growing set, so none are
+ * prerendered at build time. Declaring generateStaticParams still opts the
+ * route into ISR: each shop is rendered once on first request and then served
+ * from the cache for the 60s window above, instead of on every request.
+ */
+export function generateStaticParams() {
+  return []
+}
+
 export default async function SellerShopPage({ params }: PageProps) {
   const { slug } = await params
   const supabase = getServiceClient()

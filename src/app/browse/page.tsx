@@ -11,11 +11,17 @@
 
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
+import { createAnonClient } from '@/lib/supabase/anon'
 import { getGameIcon } from '@/features/home/lib/game-icons'
 import { JsonLd, breadcrumbList, faqPage } from '@/lib/seo/jsonld'
 import { SITE_URL } from '@/config/site'
 import BrowseClient from './_BrowseClient'
+
+/**
+ * The server shell is a static game/category directory; the live listing grid
+ * is client-fetched by _BrowseClient, so the shell itself can cache.
+ */
+export const revalidate = 900
 
 export const metadata: Metadata = {
   title: 'Browse the Marketplace — Accounts, Currency, Items & Boosts',
@@ -78,7 +84,7 @@ interface GameRow {
 }
 
 async function getBrowseDirectory() {
-  const supabase = await createClient()
+  const supabase = createAnonClient()
 
   const { data: games } = (await supabase
     .from('games')

@@ -23,7 +23,7 @@ import { HubNav } from '@/components/content/HubNav'
 import { HubFooter } from '@/components/content/HubFooter'
 import { HubHero } from '@/components/content/HubHero'
 import { getHubNavData } from '@/lib/content/hubNav'
-import { getGameContentTheme, hasGameContentTheme } from '@/lib/content/theme'
+import { getGameContentTheme, hasGameContentTheme, CONTENT_HUB_GAME_SLUGS } from '@/lib/content/theme'
 import { getHubTopValues } from '../blog/_hubData'
 import { SabHeroBackdrop } from '../values/_SabHeroBackdrop'
 import { FaqCards } from '@/components/marketplace/FaqCards'
@@ -34,6 +34,14 @@ import { SpotlightCard } from '@/components/ui/spotlight-card'
 const AMBER = '#F5C451'
 
 export const revalidate = 3600
+
+/**
+ * Prerender the game slug(s) this route serves; every other slug notFound()s
+ * below, so there is nothing else to build.
+ */
+export function generateStaticParams() {
+  return CONTENT_HUB_GAME_SLUGS.map((gameSlug) => ({ gameSlug }))
+}
 
 interface PageProps {
   params: Promise<{ gameSlug: string }>

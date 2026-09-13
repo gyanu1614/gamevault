@@ -12,6 +12,14 @@ import AdoptMeNeonClient from './_AdoptMeNeonClient'
 
 export const revalidate = 3600
 
+/**
+ * Prerender the game slug(s) this route serves; every other slug notFound()s
+ * below, so there is nothing else to build.
+ */
+export function generateStaticParams() {
+  return ['adopt-me'].map((gameSlug) => ({ gameSlug }))
+}
+
 interface PageProps {
   params: Promise<{ gameSlug: string }>
 }

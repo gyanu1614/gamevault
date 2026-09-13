@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { ChevronRight, ExternalLink, ShieldCheck, TrendingUp } from 'lucide-react'
-import { createClient } from '@/lib/supabase/server'
+import { createAnonClient } from '@/lib/supabase/anon'
 import { JsonLd, breadcrumbList, productAggregate, faqPage } from '@/lib/seo/jsonld'
 import { FaqCards } from '@/components/marketplace/FaqCards'
 import { buildBrainrotFaq } from '@/lib/sab/faq'
@@ -15,9 +15,29 @@ import { getHubNavData, HUB_NAV_CLEAR } from '@/lib/content/hubNav'
 import { cn } from '@/lib/utils'
 import { sabCard } from '@/lib/sab/theme'
 import AdoptMePetPage from './_AdoptMePetPage'
-import { getAdoptMePet } from './_adoptMePetData'
+import { getAdoptMePet, getPublishablePetSlugs } from './_adoptMePetData'
 
 export const revalidate = 3600
+
+/**
+ * Prerender every value page: SAB's market catalog plus Adopt Me's publishable
+ * pets — the largest static surface on the site. Both reads are cookie-free.
+ * Unknown slugs still 404 through the gates below.
+ */
+export async function generateStaticParams() {
+  const supabase = createAnonClient()
+  const [{ data: brainrots }, petSlugs] = await Promise.all([
+    (supabase as any).from('sab_brainrot_market_catalog').select('slug'),
+    getPublishablePetSlugs(),
+  ])
+  return [
+    ...(((brainrots ?? []) as { slug: string }[]).map((r) => ({
+      gameSlug: 'steal-a-brainrot',
+      brainrotSlug: r.slug,
+    }))),
+    ...petSlugs.map((slug) => ({ gameSlug: 'adopt-me', brainrotSlug: slug })),
+  ]
+}
 
 interface PageProps {
   params: Promise<{
@@ -143,7 +163,7 @@ function formatDate(value: string | null): string | null {
 }
 
 async function getBrainrot(slug: string): Promise<BrainrotRow | null> {
-  const supabase = await createClient()
+  const supabase = createAnonClient()
   const { data, error } = await (supabase as any)
     .from('sab_brainrot_market_catalog')
     .select('*')
@@ -161,7 +181,7 @@ async function getBrainrot(slug: string): Promise<BrainrotRow | null> {
 async function getDefaultTradePrice(
   brainrotId: string,
 ): Promise<TradePriceRow | null> {
-  const supabase = await createClient()
+  const supabase = createAnonClient()
   const { data, error } = await (supabase as any)
     .from('sab_price_display')
     .select(
@@ -180,7 +200,7 @@ async function getDefaultTradePrice(
 }
 
 async function getMutations(brainrotId: string): Promise<MutationOption[]> {
-  const supabase = await createClient()
+  const supabase = createAnonClient()
 
   // Fetch mutation income data, per-mutation market prices, and the measured
   // mutation price premiums in parallel, then merge so each mutation carries
@@ -295,7 +315,7 @@ async function getMutations(brainrotId: string): Promise<MutationOption[]> {
 async function getPriceHistory(
   brainrotId: string,
 ): Promise<Record<string, { date: string; median: number }[]>> {
-  const supabase = await createClient()
+  const supabase = createAnonClient()
   const { data, error } = await (supabase as any)
     .from('sab_price_history')
     .select('mutation_slug:mutation_id,history_date,median_usd,sab_mutations(slug)')
@@ -315,7 +335,7 @@ async function getPriceHistory(
 }
 
 async function getRelatedBrainrots(brainrot: BrainrotRow): Promise<BrainrotRow[]> {
-  const supabase = await createClient()
+  const supabase = createAnonClient()
   const { data } = await (supabase as any)
     .from('sab_brainrot_market_catalog')
     .select('id,name,slug,rarity,image_url,display_price_usd,display_price_label')

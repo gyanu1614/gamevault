@@ -23,6 +23,14 @@ import AdoptMeMethodology from './_AdoptMeMethodology'
 
 export const revalidate = 86400
 
+/**
+ * Prerender the game slug(s) this route serves; every other slug notFound()s
+ * below, so there is nothing else to build.
+ */
+export function generateStaticParams() {
+  return ['steal-a-brainrot'].map((gameSlug) => ({ gameSlug }))
+}
+
 export async function generateMetadata({
   params,
 }: {

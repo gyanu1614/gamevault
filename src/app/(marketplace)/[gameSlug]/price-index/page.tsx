@@ -15,7 +15,7 @@ import { notFound } from 'next/navigation'
 import { ArrowRight, TrendingUp, TrendingDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { sabCard } from '@/lib/sab/theme'
-import { createClient } from '@/lib/supabase/server'
+import { createAnonClient } from '@/lib/supabase/anon'
 import { formatCash } from '@/lib/sab/format'
 import { JsonLd, breadcrumbList } from '@/lib/seo/jsonld'
 import { ContentDisclaimer } from '@/components/content/ContentDisclaimer'
@@ -26,11 +26,19 @@ import { getHubNavData, HUB_NAV_CLEAR } from '@/lib/content/hubNav'
 
 export const revalidate = 3600
 
+/**
+ * Prerender the game slug(s) this route serves; every other slug notFound()s
+ * below, so there is nothing else to build.
+ */
+export function generateStaticParams() {
+  return ['steal-a-brainrot'].map((gameSlug) => ({ gameSlug }))
+}
+
 type TopValue = { slug: string; name: string; rarity: string; priceUsd: number }
 type Mover = { slug: string; name: string; from: number; to: number; pct: number }
 
 async function getTopValues(): Promise<TopValue[]> {
-  const supabase = await createClient()
+  const supabase = createAnonClient()
   const { data } = await (supabase as any)
     .from('sab_price_display')
     .select('brainrot_slug,brainrot_name,rarity,market_value_usd,mutation_slug')
@@ -53,7 +61,7 @@ async function getTopValues(): Promise<TopValue[]> {
  * Returns [] when there's <2 distinct dates (page shows a "collecting" note).
  */
 async function getMovers(): Promise<{ gainers: Mover[]; losers: Mover[]; days: number }> {
-  const supabase = await createClient()
+  const supabase = createAnonClient()
   const { data: mut } = await supabase
     .from('sab_mutations')
     .select('id')

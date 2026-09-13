@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createAnonClient } from '@/lib/supabase/anon'
 
 // Game mapping type
 export interface Game {
@@ -26,7 +26,8 @@ export async function getAllGames(): Promise<Game[]> {
   }
 
   try {
-    const supabase = await createClient()
+    // Public, read-only data — cookie-free so callers can render statically.
+    const supabase = createAnonClient()
     const { data, error } = await supabase
       .from('games')
       .select('id, name, slug, emoji, image_url')
