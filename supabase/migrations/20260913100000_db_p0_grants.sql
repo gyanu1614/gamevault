@@ -94,3 +94,15 @@ SELECT pg_temp.db_p0_set_exec('public.release_escrow_to_seller_balance(uuid, uui
 SELECT pg_temp.db_p0_set_exec('public.cleanup_old_audit_logs(integer)', ARRAY['service_role']);
 SELECT pg_temp.db_p0_set_exec('public.release_with_reserve(uuid, text, numeric, bigint, text)', ARRAY['service_role']);
 SELECT pg_temp.db_p0_set_exec('public.release_due_reserves(integer)', ARRAY['service_role']);
+
+-- ── DB-004: whole-row definer getters are service-role only ─────────────────
+-- get_orders_ready_for_auto_release() RETURNS SETOF orders (delivered
+-- credentials: instant_delivery_code, delivery_details),
+-- get_pending_trustpilot_invitations() (buyer email + invitation_token) and
+-- get_listings_pending_moderation() (unmoderated listings) had no caller check
+-- and anon EXECUTE. Only the first is used by the app — from the auto-release
+-- cron and the admin trigger route, which this hotfix moves onto the
+-- service-role client (they used the session client, i.e. ran as anon).
+SELECT pg_temp.db_p0_set_exec('public.get_orders_ready_for_auto_release()', ARRAY['service_role']);
+SELECT pg_temp.db_p0_set_exec('public.get_pending_trustpilot_invitations()', ARRAY['service_role']);
+SELECT pg_temp.db_p0_set_exec('public.get_listings_pending_moderation()', ARRAY['service_role']);
