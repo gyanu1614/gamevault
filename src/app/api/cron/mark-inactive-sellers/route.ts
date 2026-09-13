@@ -6,7 +6,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createServiceRoleClient } from '@/lib/supabase/service'
 
 // Must be set in environment variables. No fallback — fail closed if unset
 // so a missing CRON_SECRET can never be triggered with a known default token.
@@ -20,7 +20,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const supabase = await createClient()
+    // Service role: mark_inactive_sellers_offline() is service-only (DB-006).
+    // The session client used before had no cookies on a cron request, so
+    // the RPC ran as anon.
+    const supabase = createServiceRoleClient()
 
     // Call the database function to mark inactive sellers offline
     const { error } = await supabase.rpc('mark_inactive_sellers_offline')

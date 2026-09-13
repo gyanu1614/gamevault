@@ -18,6 +18,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createServiceRoleClient } from '@/lib/supabase/service'
 import { releaseDueOrder } from '@/lib/escrow/auto-release'
 
 export async function POST(request: NextRequest) {
@@ -44,7 +45,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Get orders ready for auto-release
-    const { data: orders, error: fetchError } = await supabase.rpc(
+    // Admin verified above; the getter itself is service-only (DB-004).
+    const { data: orders, error: fetchError } = await createServiceRoleClient().rpc(
       'get_orders_ready_for_auto_release'
     ) as any
 

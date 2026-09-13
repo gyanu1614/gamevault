@@ -269,12 +269,30 @@ export async function getSellerDetail(userId: string): Promise<{
           return { currency, amount: Number(data ?? 0) / 100 }
         }),
       ),
-      service
-        .from('wallet_transactions')
-        .select('id, type, amount, description, status, created_at')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false })
-        .limit(15) as any,
+      // Wallet activity comes from the ledger (DB-010): wallet_transactions
+      // was archived on 2026-09-05 and this read silently returned nothing.
+      (async () => {
+        const { data: accounts, error: accErr } = await service
+          .from('ledger_accounts')
+          .select('id, currency')
+          .eq('owner_type', 'buyer')
+          .eq('owner_id', userId)
+          .eq('kind', 'user_wallet')
+        if (accErr) {
+          console.error('ledger_accounts (user_wallet) read failed:', accErr.message)
+          return { data: [], error: accErr }
+        }
+        const accountIds = (accounts ?? []).map((a: any) => a.id as string)
+        if (accountIds.length === 0) return { data: [], error: null }
+        const { data, error } = await service
+          .from('ledger_entries')
+          .select('id, direction, amount_minor, currency, created_at, transaction:ledger_transactions!inner(event_ref, order_id)')
+          .in('account_id', accountIds)
+          .order('created_at', { ascending: false })
+          .limit(15)
+        if (error) console.error('ledger_entries (user_wallet) read failed:', error.message)
+        return { data: data ?? [], error }
+      })(),
       (service.from('withdrawal_requests' as any) as any)
         .select('id, amount, net_amount, method_name, status, created_at')
         .eq('user_id', userId)
@@ -405,14 +423,19 @@ export async function getSellerDetail(userId: string): Promise<{
       wallet: {
         sellerBalances: sellerBalancesRes as SellerBalance[],
         storeCreditBalances: walletBalancesRes as SellerBalance[],
-        transactions: (walletTxRes.data ?? []).map((t: any) => ({
-          id: t.id,
-          type: t.type,
-          amount: Number(t.amount ?? 0),
-          description: t.description ?? null,
-          status: t.status ?? null,
-          created_at: t.created_at,
-        })),
+        transactions: (walletTxRes.data ?? []).map((e: any) => {
+          const minor = Number(e.amount_minor ?? 0)
+          const tx = e.transaction ?? {}
+          const parts = [tx.event_ref, tx.order_id ? `order ${tx.order_id}` : null].filter(Boolean)
+          return {
+            id: e.id,
+            type: e.direction,
+            amount: (e.direction === 'debit' ? -minor : minor) / 100,
+            description: parts.length ? `${parts.join(' · ')} (${e.currency})` : e.currency ?? null,
+            status: 'posted',
+            created_at: e.created_at,
+          }
+        }),
       },
       withdrawals: (withdrawalsRes.data ?? []).map((w: any) => ({
         id: w.id,
