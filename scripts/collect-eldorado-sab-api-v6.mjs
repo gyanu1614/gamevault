@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { pathToFileURL } from "node:url";
 import { existsSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
@@ -184,6 +185,156 @@ async function supabaseRows(table, select, order) {
   return all;
 }
 
+/**
+ * ROUTE-012: newest MATCHED raw listing per brainrot — the collector's real
+ * "when did we last actually look at this item" signal.
+ *
+ * Why this exists: neither price table carries a per-item timestamp.
+ * sab_price_corrections.computed_at and sab_price_display.price_updated_at are
+ * both batch stamps, identical across every row of a run (verified on prod:
+ * 1 distinct value across 356 default rows). Sorting by either makes the
+ * staleness key a constant for every item, so the sort collapses to its
+ * name.localeCompare() tiebreaker and the queue becomes strictly alphabetical —
+ * the first `--max-brainrots` names are re-crawled forever and everything past
+ * the cutoff is never reached. That is exactly what happened: the crawl stopped
+ * at "M" and ~145 tradeable items had not been looked at in a month.
+ *
+ * observed_at on the listings themselves IS per item, so it rotates.
+ *
+ * The `parse_status=matched` filter is not cosmetic — it makes the query use
+ * the partial index (brainrot_id, mutation_id, observed_at DESC)
+ * WHERE parse_status = 'matched'. Without it the same query intermittently
+ * exceeds the statement timeout; with it, 355 items resolve in ~6s at
+ * concurrency 8 with zero failures.
+ *
+ * Requires the service role: anon is denied sab_market_raw_listings. The
+ * workflow already provides SUPABASE_SERVICE_ROLE_KEY. When it is absent (local
+ * runs on the anon key) this degrades to an empty map and the caller falls back
+ * to the previous behaviour rather than failing the crawl.
+ */
+/**
+ * A never-crawled Brainrot is the stalest thing there is, but it must stay a
+ * FINITE number: Infinity * rarity_weight is Infinity for every rarity, which
+ * silently collapses the weighting and sorts the never-crawled block
+ * alphabetically — so Epics would be collected ahead of Secrets, the exact
+ * opposite of the priority we want.
+ */
+export const NEVER_PRICED_STALENESS_HOURS = 24 * 365;
+
+/** Hours since we last observed this item, capped. `now` is injectable for tests. */
+export function stalenessHours(row, now = Date.now()) {
+  const lastPriced = Date.parse(row.last_priced_at ?? "");
+  if (!Number.isFinite(lastPriced)) return NEVER_PRICED_STALENESS_HOURS;
+  return Math.min(
+    NEVER_PRICED_STALENESS_HOURS,
+    (now - lastPriced) / (60 * 60 * 1000),
+  );
+}
+
+/**
+ * ROUTE-012: the queue's eligibility + ordering, extracted so it can be tested
+ * directly. Stalest first, weighted by rarity so high-value Secrets/OGs come due
+ * sooner than commons. A flat staleness sort would refresh the whole catalog
+ * evenly and starve the items buyers actually convert on; a flat priority sort
+ * would re-crawl the same head every run and never rotate.
+ *
+ * The rotation only works when `last_priced_at` genuinely differs between items.
+ * When it is the same value for everything (or null everywhere, as it was before
+ * this fix) the primary sort key is constant and the comparator falls through to
+ * its name tiebreaker, making the order alphabetical and permanently starving
+ * everything past `--max-brainrots`.
+ */
+export function selectEligible(
+  queue,
+  { usePanelRefresh, refreshAfterMs, progress, collectorVersion, now = Date.now() },
+) {
+  const eligible = queue.filter((row) => {
+    if (usePanelRefresh) {
+      const lastPriced = Date.parse(row.last_priced_at ?? "");
+      // Never crawled, or not crawled recently enough — either way, go look.
+      return !Number.isFinite(lastPriced) || now - lastPriced >= refreshAfterMs;
+    }
+
+    const attempt = progress?.attempts?.[row.id];
+    if (!attempt) return true;
+
+    // Retry old empty results once because v6 adds Eldorado Search Items
+    // fallback. Collected rows and v6 empties remain completed.
+    return (
+      attempt.status === "empty" &&
+      attempt.collector_version !== collectorVersion
+    );
+  });
+
+  if (usePanelRefresh) {
+    eligible.sort(
+      (left, right) =>
+        stalenessHours(right, now) * right.rarity_weight -
+          stalenessHours(left, now) * left.rarity_weight ||
+        left.name.localeCompare(right.name, "en", { sensitivity: "base" }),
+    );
+  }
+
+  return eligible;
+}
+
+async function fetchNewestListingByBrainrot(brainrotIds) {
+  const base = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+  const newest = new Map();
+
+  if (!base || !serviceKey || !brainrotIds.length) return newest;
+
+  const CONCURRENCY = 8;
+  let failures = 0;
+
+  for (let index = 0; index < brainrotIds.length; index += CONCURRENCY) {
+    const batch = brainrotIds.slice(index, index + CONCURRENCY);
+
+    await Promise.all(
+      batch.map(async (brainrotId) => {
+        const url = new URL("/rest/v1/sab_market_raw_listings", base);
+        url.searchParams.set("select", "observed_at");
+        url.searchParams.set("brainrot_id", `eq.${brainrotId}`);
+        url.searchParams.set("parse_status", "eq.matched");
+        url.searchParams.set("order", "observed_at.desc");
+        url.searchParams.set("limit", "1");
+
+        for (let attempt = 1; attempt <= 3; attempt += 1) {
+          try {
+            const response = await fetch(url, {
+              headers: {
+                apikey: serviceKey,
+                authorization: `Bearer ${serviceKey}`,
+                accept: "application/json",
+              },
+            });
+            if (response.ok) {
+              const rows = await response.json();
+              const observedAt = rows?.[0]?.observed_at ?? null;
+              if (observedAt) newest.set(brainrotId, observedAt);
+              return;
+            }
+          } catch {
+            // fall through to the retry
+          }
+          if (attempt < 3) await sleep(400 * attempt);
+        }
+        failures += 1;
+      }),
+    );
+  }
+
+  if (failures) {
+    console.warn(
+      `  listing-freshness lookup failed for ${failures} brainrot(s); ` +
+        `they are treated as never-crawled (max staleness).`,
+    );
+  }
+
+  return newest;
+}
+
 async function buildQueue(requestedName) {
   const [brainrots, correctionRows, mutations, calculatorRows, tradeableRows] =
     await Promise.all([
@@ -206,7 +357,13 @@ async function buildQueue(requestedName) {
       // 1000-row cap; degrade to empty coverage (crawl everything) if it fails.
       supabaseRows(
         "sab_price_corrections",
-        "brainrot_id,mutation_id,value_usd,confidence_label,is_publishable",
+        // ROUTE-012: `computed_at` was missing here, so `last_priced_at` below was
+        // ALWAYS null and the staleness sort collapsed to its alphabetical
+        // tiebreaker. Select it. NOTE it is a batch stamp (identical across every
+        // row of a correction run), so it dates the last CORRECTION, not this
+        // item's last crawl — which is why the raw-listing fallback below is the
+        // signal that actually rotates the queue.
+        "brainrot_id,mutation_id,value_usd,confidence_label,is_publishable,computed_at",
         "brainrot_id.asc,mutation_id.asc",
       ).catch((error) => {
         console.warn(
@@ -242,6 +399,7 @@ async function buildQueue(requestedName) {
       mutation_slug: mutationSlugById.get(row.mutation_id),
       confidence_label: row.confidence_label,
       market_value_usd: row.value_usd,
+      price_updated_at: row.computed_at ?? null,
     }));
 
   // Set of tradeable brainrot ids. If the column doesn't exist yet (migration
@@ -283,6 +441,13 @@ async function buildQueue(requestedName) {
     return 1;
   };
 
+  // ROUTE-012: per-item "when did we last actually crawl this" — the only
+  // signal in the system that differs between items, and therefore the only one
+  // that can make the staleness sort rotate. See fetchNewestListingByBrainrot.
+  const newestListingAt = await fetchNewestListingByBrainrot(
+    brainrots.map((brainrot) => brainrot.id),
+  );
+
   let queue = brainrots.map((brainrot) => {
     const price = defaultPrices.get(brainrot.id);
     const confidence = price?.confidence_label ?? "missing";
@@ -305,11 +470,18 @@ async function buildQueue(requestedName) {
       priority_score: priorityScore,
       priority: confidence === "missing" ? 0 : confidence === "low" ? 1 : 2,
 
-      // When this Brainrot's price last moved. The collector runs on the anon
-      // key, which is denied sab_market_raw_listings, so this is the only
-      // last-touched signal available to it — and unlike the progress file it
-      // is real shared state, so CI and local runs agree.
-      last_priced_at: price?.price_updated_at ?? null,
+      // When we last actually LOOKED at this Brainrot.
+      //
+      // ROUTE-012: prefer the newest matched raw listing, which is genuinely
+      // per-item. The correction/display timestamps are batch stamps shared by
+      // every row, so using them makes this field identical everywhere and the
+      // staleness sort degenerates into alphabetical order. They stay as a
+      // fallback for the case where the service-role lookup is unavailable
+      // (local runs on the anon key), where the previous behaviour is no worse
+      // than before. Null here means "never crawled" → maximum staleness, so a
+      // brand-new item is picked up on the very next run.
+      last_priced_at:
+        newestListingAt.get(brainrot.id) ?? price?.price_updated_at ?? null,
       rarity_weight: rarityWeight(brainrot.rarity),
     };
   });
@@ -1544,49 +1716,12 @@ async function main() {
   // silently collapses the weighting and sorts the never-priced block
   // alphabetically — so Epics would be collected ahead of Secrets, the exact
   // opposite of the priority we want.
-  const NEVER_PRICED_STALENESS_HOURS = 24 * 365;
-
-  const stalenessHours = (row) => {
-    const lastPriced = Date.parse(row.last_priced_at ?? "");
-    if (!Number.isFinite(lastPriced)) return NEVER_PRICED_STALENESS_HOURS;
-    return Math.min(
-      NEVER_PRICED_STALENESS_HOURS,
-      (Date.now() - lastPriced) / (60 * 60 * 1000),
-    );
-  };
-
-  const eligible = queue.filter((row) => {
-    if (usePanelRefresh) {
-      const lastPriced = Date.parse(row.last_priced_at ?? "");
-      // Never priced, or not priced recently enough — either way, go look.
-      return (
-        !Number.isFinite(lastPriced) || Date.now() - lastPriced >= refreshAfterMs
-      );
-    }
-
-    const attempt = progress.attempts[row.id];
-    if (!attempt) return true;
-
-    // Retry old empty results once because v6 adds Eldorado Search Items
-    // fallback. Collected rows and v6 empties remain completed.
-    return (
-      attempt.status === "empty" &&
-      attempt.collector_version !== COLLECTOR_VERSION
-    );
+  const eligible = selectEligible(queue, {
+    usePanelRefresh,
+    refreshAfterMs,
+    progress,
+    collectorVersion: COLLECTOR_VERSION,
   });
-
-  if (usePanelRefresh) {
-    // Stalest first, but weighted by rarity so high-value Secrets/OGs come due
-    // sooner than commons. A flat staleness sort would refresh the whole
-    // catalog evenly and starve the items buyers actually convert on; a flat
-    // priority sort would re-crawl the same head every day and never rotate.
-    eligible.sort(
-      (left, right) =>
-        stalenessHours(right) * right.rarity_weight -
-          stalenessHours(left) * left.rarity_weight ||
-        left.name.localeCompare(right.name, "en", { sensitivity: "base" }),
-    );
-  }
 
   const targets = eligible.slice(0, options.maxBrainrots);
 
@@ -1799,7 +1934,15 @@ async function triggerCron(label, url, method, secret) {
   }
 }
 
-main().catch((error) => {
-  console.error(`\nEldorado collection failed: ${error.message}`);
-  process.exitCode = 1;
-});
+// ROUTE-012: only run when invoked as a script, so the queue-ordering helpers
+// above can be unit-tested by importing this module without starting a crawl.
+const invokedDirectly =
+  process.argv[1] &&
+  import.meta.url === pathToFileURL(process.argv[1]).href;
+
+if (invokedDirectly) {
+  main().catch((error) => {
+    console.error(`\nEldorado collection failed: ${error.message}`);
+    process.exitCode = 1;
+  });
+}
