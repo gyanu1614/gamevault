@@ -350,6 +350,42 @@ Deno.serve(async (request) => {
       );
     }
 
+    // ROUTE-010: materialize sab_price_display from the freshly published
+    // estimates. Every price page reads that table for its values AND for the
+    // "Updated …" timestamp, and until now its ONLY writer was the daily
+    // correct-prices cron (runSabCorrection). A crawl could publish estimates
+    // perfectly and still never reach the page, which is exactly why the values
+    // pages sat at "Aug 13" while crawls kept passing. Refreshing here closes
+    // that gap so a successful crawl is visible without waiting for the cron.
+    const {
+      data: displayRows,
+      error: displayError,
+    } = await supabaseAdmin.rpc(
+      "sab_refresh_price_display",
+    );
+
+    if (displayError) {
+      console.error(
+        "Estimates published but sab_price_display refresh failed:",
+        displayError,
+      );
+
+      return jsonResponse(
+        {
+          ok: false,
+          error:
+            "Listings imported but price display refresh failed",
+          details: displayError.message,
+          result: importResult,
+          publication: {
+            ok: true,
+            published_rows: publishedRows ?? 0,
+          },
+        },
+        500,
+      );
+    }
+
     const revalidation =
       await revalidateMarketPages();
 
@@ -367,6 +403,7 @@ Deno.serve(async (request) => {
         ok: true,
         published_rows: publishedRows ?? 0,
       },
+      display_refreshed: Number(displayRows ?? 0),
       revalidation,
     });
   } catch (error) {
