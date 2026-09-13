@@ -18,11 +18,12 @@
 
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { requireAdmin } from '@/lib/actions/admin-permissions'
-import { revalidatePath } from 'next/cache'
+import { revalidatePath, revalidateTag } from 'next/cache'
 import {
   ensureLegacyCategoryRow,
   deactivateLegacyCategoryRow,
 } from '@/lib/actions/_category-bridge'
+import { GAME_DIRECTORY_TAG } from '@/lib/marketplace/gameDirectoryCache'
 
 // ─── Service-role client (matches admin-games.ts) ─────────────────────────────
 
@@ -287,6 +288,8 @@ export async function saveGameIdentity(
       revalidatePath('/admin/games')
       revalidatePath('/admin/games')
       revalidatePath(`/admin/games/${input.id}/edit`)
+      // Footer game directory renders on every route (unstable_cache).
+      revalidateTag(GAME_DIRECTORY_TAG)
       return { success: true, data: { id: input.id } }
     } else {
       // Insert — slug uniqueness will throw a 23505 error from Postgres
@@ -303,6 +306,8 @@ export async function saveGameIdentity(
       }
       revalidatePath('/admin/games')
       revalidatePath('/admin/games')
+      // Footer game directory renders on every route (unstable_cache).
+      revalidateTag(GAME_DIRECTORY_TAG)
       return { success: true, data: { id: (data as any).id } }
     }
   } catch (e: any) {
@@ -384,6 +389,8 @@ export async function uploadGameLogoV2(
     revalidatePath('/admin/games')
     revalidatePath('/admin/games')
     revalidatePath(`/admin/games/${gameId}/edit`)
+    // Footer game directory renders on every route (unstable_cache).
+    revalidateTag(GAME_DIRECTORY_TAG)
     return { success: true, data: { url: publicUrl } }
   } catch (e: any) {
     return { success: false, error: e?.message ?? 'Upload failed' }
@@ -450,6 +457,8 @@ export async function uploadGameCoverV2(
 
     revalidatePath('/admin/games')
     revalidatePath(`/admin/games/${gameId}/edit`)
+    // Footer game directory renders on every route (unstable_cache).
+    revalidateTag(GAME_DIRECTORY_TAG)
     return { success: true, data: { url: publicUrl } }
   } catch (e: any) {
     return { success: false, error: e?.message ?? 'Upload failed' }
@@ -486,6 +495,8 @@ export async function deleteGameCoverV2(gameId: string): Promise<Result<{ id: st
 
     revalidatePath('/admin/games')
     revalidatePath(`/admin/games/${gameId}/edit`)
+    // Footer game directory renders on every route (unstable_cache).
+    revalidateTag(GAME_DIRECTORY_TAG)
     return { success: true, data: { id: gameId } }
   } catch (e: any) {
     return { success: false, error: e?.message ?? 'Delete failed' }
@@ -523,6 +534,8 @@ export async function deleteGameLogoV2(gameId: string): Promise<Result<{ id: str
     revalidatePath('/admin/games')
     revalidatePath('/admin/games')
     revalidatePath(`/admin/games/${gameId}/edit`)
+    // Footer game directory renders on every route (unstable_cache).
+    revalidateTag(GAME_DIRECTORY_TAG)
     return { success: true, data: { id: gameId } }
   } catch (e: any) {
     return { success: false, error: e?.message ?? 'Delete failed' }
@@ -603,6 +616,8 @@ export async function upsertGameCategory(
     }
 
     revalidatePath('/admin/games')
+    // Footer game directory renders on every route (unstable_cache).
+    revalidateTag(GAME_DIRECTORY_TAG)
     return { success: true, data: { id: gameCategoryRowId } }
   } catch (e: any) {
     return { success: false, error: e?.message ?? 'Unknown error' }
@@ -695,6 +710,8 @@ export async function uploadGameBlogCtaImage(
 
     revalidatePath('/admin/games')
     revalidatePath(`/admin/games/${gameId}/edit`)
+    // Footer game directory renders on every route (unstable_cache).
+    revalidateTag(GAME_DIRECTORY_TAG)
     return { success: true, data: { url: publicUrl } }
   } catch (e: any) {
     return { success: false, error: e?.message ?? 'Upload failed' }

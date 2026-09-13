@@ -3,7 +3,8 @@
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/server'
 import { requireAdmin } from '@/lib/actions/admin-permissions'
-import { revalidatePath } from 'next/cache'
+import { revalidatePath, revalidateTag } from 'next/cache'
+import { GAME_DIRECTORY_TAG } from '@/lib/marketplace/gameDirectoryCache'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -80,6 +81,8 @@ export async function deleteCategory(id: string) {
 
   if (error) return { success: false, error: error.message }
   revalidatePath('/admin/categories')
+  // Footer game directory renders on every route (unstable_cache).
+  revalidateTag(GAME_DIRECTORY_TAG)
   return { success: true }
 }
 
@@ -105,6 +108,8 @@ export async function updateCategory(id: string, data: CategoryData) {
   if (error) return { success: false, error: error.message }
   revalidatePath('/admin/categories')
   revalidatePath('/admin/games')
+  // Footer game directory renders on every route (unstable_cache).
+  revalidateTag(GAME_DIRECTORY_TAG)
   return { success: true }
 }
 
@@ -127,6 +132,8 @@ export async function insertCategory(data: CategoryData) {
   if (error) return { success: false, error: error.message }
   revalidatePath('/admin/categories')
   revalidatePath('/admin/games')
+  // Footer game directory renders on every route (unstable_cache).
+  revalidateTag(GAME_DIRECTORY_TAG)
   return { success: true }
 }
 
@@ -141,6 +148,8 @@ export async function toggleCategoryActive(id: string, isActive: boolean) {
 
   if (error) return { success: false, error: error.message }
   revalidatePath('/admin/categories')
+  // Footer game directory renders on every route (unstable_cache).
+  revalidateTag(GAME_DIRECTORY_TAG)
   return { success: true }
 }
 
@@ -218,6 +227,8 @@ export async function uploadCategoryIcon(
     }
 
     revalidatePath('/admin/categories')
+    // Footer game directory renders on every route (unstable_cache).
+    revalidateTag(GAME_DIRECTORY_TAG)
     return { success: true, url: iconUrl }
   } catch (error: any) {
     return { success: false, error: error.message || 'Upload failed' }
@@ -256,6 +267,8 @@ export async function deleteCategoryIcon(categoryId: string) {
     if (error) return { success: false, error: error.message }
 
     revalidatePath('/admin/categories')
+    // Footer game directory renders on every route (unstable_cache).
+    revalidateTag(GAME_DIRECTORY_TAG)
     return { success: true }
   } catch (error: any) {
     return { success: false, error: error.message || 'Delete failed' }
