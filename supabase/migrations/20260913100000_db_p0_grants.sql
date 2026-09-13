@@ -106,3 +106,157 @@ SELECT pg_temp.db_p0_set_exec('public.release_due_reserves(integer)', ARRAY['ser
 SELECT pg_temp.db_p0_set_exec('public.get_orders_ready_for_auto_release()', ARRAY['service_role']);
 SELECT pg_temp.db_p0_set_exec('public.get_pending_trustpilot_invitations()', ARRAY['service_role']);
 SELECT pg_temp.db_p0_set_exec('public.get_listings_pending_moderation()', ARRAY['service_role']);
+
+-- ── DB-006: the default EXECUTE grant is the root cause — revoke it ─────────
+-- Baseline 20260101000000:15110-15111 set ALTER DEFAULT PRIVILEGES … GRANT ALL
+-- ON FUNCTIONS TO anon, authenticated for role postgres (the role the CLI runs
+-- migrations as), so every function ships anon-callable unless its migration
+-- remembers to REVOKE. After this the default ACL is {postgres=X,
+-- service_role=X}: a new function is service-only until granted. (The
+-- parallel supabase_admin default ACL is platform-owned; not touchable here.)
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public
+  REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC, anon, authenticated;
+
+-- Sweep: every remaining SECURITY DEFINER function gets an explicit grant set.
+-- Buckets (see docs/audit/2026-09-11/db-p0-grants-plan.md, owner-approved):
+--   service_role only      — no user-facing caller, or called only through the
+--                            service client (cron bodies, tier stats, crypto,
+--                            banner/inventory/category helpers, ledger, SAB).
+--   authenticated + service — body reads auth.uid() or PERFORMs
+--                            assert_moderator(); check_seller_needs_moderation
+--                            is called by the SECURITY INVOKER listings trigger
+--                            as the inserting user, so users must keep it.
+--   anon + authenticated + service — is_admin()/has_permission() are evaluated
+--                            inside RLS policies as the calling role;
+--                            sab_public_price_catalog_rows() backs the public
+--                            security_invoker view sab_public_price_catalog.
+--   trigger functions      — PostgREST cannot call them and Postgres does not
+--                            check EXECUTE at fire time (verified on the local
+--                            stack); closed for hygiene.
+-- Dead functions (DB-007/DB-009: mark_trustpilot_invitation_sent,
+-- increment_listing_views, get_user_role, has_role, apply_rank_strikes) are
+-- closed here; dropping them is a P3 follow-up.
+
+-- service_role only
+SELECT pg_temp.db_p0_set_exec('public.mark_trustpilot_invitation_sent(uuid)', ARRAY['service_role']);
+SELECT pg_temp.db_p0_set_exec('public.increment_listing_views(uuid)', ARRAY['service_role']);
+SELECT pg_temp.db_p0_set_exec('public.get_user_role(uuid)', ARRAY['service_role']);
+SELECT pg_temp.db_p0_set_exec('public.has_role(text, uuid)', ARRAY['service_role']);
+SELECT pg_temp.db_p0_set_exec('public.apply_rank_strikes()', ARRAY['service_role']);
+SELECT pg_temp.db_p0_set_exec('public.mark_inactive_sellers_offline()', ARRAY['service_role']);
+SELECT pg_temp.db_p0_set_exec('public.upgrade_all_seller_tiers()', ARRAY['service_role']);
+SELECT pg_temp.db_p0_set_exec('public.can_seller_reapply(uuid)', ARRAY['service_role']);
+SELECT pg_temp.db_p0_set_exec('public.get_seller_tier_info(uuid)', ARRAY['service_role']);
+SELECT pg_temp.db_p0_set_exec('public.check_seller_tier_eligibility(uuid)', ARRAY['service_role']);
+SELECT pg_temp.db_p0_set_exec('public.sab_recompute_tradeable()', ARRAY['service_role']);
+SELECT pg_temp.db_p0_set_exec('public.seller_is_in_payout_hold(uuid)', ARRAY['service_role']);
+SELECT pg_temp.db_p0_set_exec('public.assert_moderator()', ARRAY['service_role']);
+SELECT pg_temp.db_p0_set_exec('public.cleanup_expired_idempotency_keys()', ARRAY['service_role']);
+SELECT pg_temp.db_p0_set_exec('public.generate_referral_code(text)', ARRAY['service_role']);
+SELECT pg_temp.db_p0_set_exec('public.encrypt_delivery_data(text, text)', ARRAY['service_role']);
+SELECT pg_temp.db_p0_set_exec('public.decrypt_delivery_data(text, text)', ARRAY['service_role']);
+SELECT pg_temp.db_p0_set_exec('public.can_upload_custom_banner(uuid)', ARRAY['service_role']);
+SELECT pg_temp.db_p0_set_exec('public.get_user_banner(uuid)', ARRAY['service_role']);
+SELECT pg_temp.db_p0_set_exec('public.get_available_inventory_count(uuid)', ARRAY['service_role']);
+SELECT pg_temp.db_p0_set_exec('public.get_category_icon(uuid)', ARRAY['service_role']);
+-- already service-role only on prod, restated
+SELECT pg_temp.db_p0_set_exec('public.ledger_balance(ledger_owner_type, uuid, ledger_account_kind, character)', ARRAY['service_role']);
+SELECT pg_temp.db_p0_set_exec('public.ledger_integrity_check()', ARRAY['service_role']);
+SELECT pg_temp.db_p0_set_exec('public.ledger_resolve_account(ledger_owner_type, uuid, ledger_account_kind, character)', ARRAY['service_role']);
+SELECT pg_temp.db_p0_set_exec('public.ledger_test_cleanup(text)', ARRAY['service_role']);
+SELECT pg_temp.db_p0_set_exec('public.ledger_test_cleanup_by_order(uuid)', ARRAY['service_role']);
+SELECT pg_temp.db_p0_set_exec('public.post_journal(text, jsonb, text, uuid)', ARRAY['service_role']);
+SELECT pg_temp.db_p0_set_exec('public.sab_capture_price_history(date)', ARRAY['service_role']);
+SELECT pg_temp.db_p0_set_exec('public.sab_import_market_listings(text, jsonb)', ARRAY['service_role']);
+SELECT pg_temp.db_p0_set_exec('public.sab_publish_market_estimates()', ARRAY['service_role']);
+SELECT pg_temp.db_p0_set_exec('public.sab_refresh_price_display()', ARRAY['service_role']);
+SELECT pg_temp.db_p0_set_exec('public.sab_refresh_price_snapshots(timestamp with time zone)', ARRAY['service_role']);
+SELECT pg_temp.db_p0_set_exec('public.sab_reparse_market_listings(integer)', ARRAY['service_role']);
+SELECT pg_temp.db_p0_set_exec('public.sab_sync_dropmarket_market_observations(timestamp with time zone)', ARRAY['service_role']);
+SELECT pg_temp.db_p0_set_exec('public.safedrop_transition(uuid, text, text, text, bigint)', ARRAY['service_role']);
+SELECT pg_temp.db_p0_set_exec('public.seller_available_balance(uuid, character)', ARRAY['service_role']);
+SELECT pg_temp.db_p0_set_exec('public.user_wallet_balance(uuid, character)', ARRAY['service_role']);
+SELECT pg_temp.db_p0_set_exec('public.wallet_credit(uuid, bigint, character, ledger_account_kind, text, text, uuid)', ARRAY['service_role']);
+SELECT pg_temp.db_p0_set_exec('public.wallet_spend(uuid, bigint, character, ledger_account_kind, text, text, uuid)', ARRAY['service_role']);
+SELECT pg_temp.db_p0_set_exec('public.webhook_event_claim(text, text, text)', ARRAY['service_role']);
+SELECT pg_temp.db_p0_set_exec('public.webhook_event_mark(text, text, webhook_event_status, jsonb)', ARRAY['service_role']);
+SELECT pg_temp.db_p0_set_exec('public.withdrawal_debit(uuid, bigint, text, text)', ARRAY['service_role']);
+SELECT pg_temp.db_p0_set_exec('public.withdrawal_payout(uuid)', ARRAY['service_role']);
+SELECT pg_temp.db_p0_set_exec('public.withdrawal_reversal(uuid)', ARRAY['service_role']);
+-- authenticated + service_role
+SELECT pg_temp.db_p0_set_exec('public.approve_listing(uuid, uuid)', ARRAY['authenticated','service_role']);
+SELECT pg_temp.db_p0_set_exec('public.reject_listing(uuid, uuid, text)', ARRAY['authenticated','service_role']);
+SELECT pg_temp.db_p0_set_exec('public.request_listing_changes(uuid, uuid, text)', ARRAY['authenticated','service_role']);
+SELECT pg_temp.db_p0_set_exec('public.get_my_permissions()', ARRAY['authenticated','service_role']);
+SELECT pg_temp.db_p0_set_exec('public.get_admin_role()', ARRAY['authenticated','service_role']);
+SELECT pg_temp.db_p0_set_exec('public.is_super_admin_safe()', ARRAY['authenticated','service_role']);
+SELECT pg_temp.db_p0_set_exec('public.can_edit_review(uuid)', ARRAY['authenticated','service_role']);
+SELECT pg_temp.db_p0_set_exec('public.check_seller_needs_moderation(uuid)', ARRAY['authenticated','service_role']);
+SELECT pg_temp.db_p0_set_exec('public.get_seller_publish_policy(uuid)', ARRAY['authenticated','service_role']);
+SELECT pg_temp.db_p0_set_exec('public.withdraw_seller_application(uuid, uuid)', ARRAY['authenticated','service_role']);
+SELECT pg_temp.db_p0_set_exec('public.reject_seller_application(uuid, uuid, text, text)', ARRAY['authenticated','service_role']);
+SELECT pg_temp.db_p0_set_exec('public.checkout_wallet_hold_minor(uuid)', ARRAY['authenticated','service_role']);
+-- anon + authenticated + service_role
+SELECT pg_temp.db_p0_set_exec('public.is_admin()', ARRAY['anon','authenticated','service_role']);
+SELECT pg_temp.db_p0_set_exec('public.has_permission(text)', ARRAY['anon','authenticated','service_role']);
+SELECT pg_temp.db_p0_set_exec('public.sab_public_price_catalog_rows()', ARRAY['anon','authenticated','service_role']);
+-- SECURITY DEFINER trigger functions
+SELECT pg_temp.db_p0_set_exec('public.generate_referral_code_for_new_user()', ARRAY['service_role']);
+SELECT pg_temp.db_p0_set_exec('public.guard_listings_protected_columns()', ARRAY['service_role']);
+SELECT pg_temp.db_p0_set_exec('public.guard_orders_protected_columns()', ARRAY['service_role']);
+SELECT pg_temp.db_p0_set_exec('public.guard_profiles_protected_columns()', ARRAY['service_role']);
+SELECT pg_temp.db_p0_set_exec('public.guard_reviews_moderation_columns()', ARRAY['service_role']);
+SELECT pg_temp.db_p0_set_exec('public.guard_seller_applications_review_columns()', ARRAY['service_role']);
+SELECT pg_temp.db_p0_set_exec('public.handle_new_user()', ARRAY['service_role']);
+SELECT pg_temp.db_p0_set_exec('public.initialize_seller_presence()', ARRAY['service_role']);
+SELECT pg_temp.db_p0_set_exec('public.log_profile_privilege_changes()', ARRAY['service_role']);
+SELECT pg_temp.db_p0_set_exec('public.prevent_audit_log_modification()', ARRAY['service_role']);
+SELECT pg_temp.db_p0_set_exec('public.prevent_profile_privilege_escalation()', ARRAY['service_role']);
+SELECT pg_temp.db_p0_set_exec('public.schedule_trustpilot_invitation()', ARRAY['service_role']);
+SELECT pg_temp.db_p0_set_exec('public.sync_listing_quantity_with_inventory()', ARRAY['service_role']);
+SELECT pg_temp.db_p0_set_exec('public.track_listing_price_change()', ARRAY['service_role']);
+SELECT pg_temp.db_p0_set_exec('public.track_seller_activity()', ARRAY['service_role']);
+SELECT pg_temp.db_p0_set_exec('public.update_conversation_last_message()', ARRAY['service_role']);
+SELECT pg_temp.db_p0_set_exec('public.update_listing_quantity()', ARRAY['service_role']);
+SELECT pg_temp.db_p0_set_exec('public.update_review_edit_tracking()', ARRAY['service_role']);
+SELECT pg_temp.db_p0_set_exec('public.update_seller_rating()', ARRAY['service_role']);
+SELECT pg_temp.db_p0_set_exec('public.update_wallet_balance()', ARRAY['service_role']);
+SELECT pg_temp.db_p0_set_exec('public.validate_banner_update()', ARRAY['service_role']);
+SELECT pg_temp.db_p0_set_exec('public.validate_order_status_transition()', ARRAY['service_role']);
+
+-- Posture probe (service-role only) — what the guard test and a prod
+-- verification read back: is the default ACL closed, which views still run
+-- as owner, which SECURITY DEFINER functions anon / authenticated can execute.
+CREATE OR REPLACE FUNCTION public.db_p0_posture() RETURNS jsonb
+  LANGUAGE sql STABLE SET search_path = pg_catalog, public AS $$
+  SELECT jsonb_build_object(
+    'default_acl_grants_anon_or_authenticated',
+      COALESCE((SELECT d.defaclacl::text ~ '(^\{|,)(anon|authenticated)?='
+                FROM pg_default_acl d
+                WHERE d.defaclrole = 'postgres'::regrole
+                  AND d.defaclnamespace = 'public'::regnamespace
+                  AND d.defaclobjtype = 'f'), true),
+    'views_without_security_invoker',
+      COALESCE((SELECT jsonb_agg(c.relname ORDER BY c.relname)
+                FROM pg_class c
+                WHERE c.relnamespace = 'public'::regnamespace AND c.relkind = 'v'
+                  AND NOT COALESCE((SELECT o.option_value IN ('on','true')
+                                    FROM pg_options_to_table(c.reloptions) o
+                                    WHERE o.option_name = 'security_invoker'), false)),
+               '[]'::jsonb),
+    'anon_executable_definers',
+      COALESCE((SELECT jsonb_agg(p.proname ORDER BY p.proname)
+                FROM pg_proc p
+                WHERE p.pronamespace = 'public'::regnamespace AND p.prosecdef
+                  AND p.prorettype <> 'trigger'::regtype
+                  AND has_function_privilege('anon', p.oid, 'EXECUTE')), '[]'::jsonb),
+    'authenticated_executable_definers',
+      COALESCE((SELECT jsonb_agg(p.proname ORDER BY p.proname)
+                FROM pg_proc p
+                WHERE p.pronamespace = 'public'::regnamespace AND p.prosecdef
+                  AND p.prorettype <> 'trigger'::regtype
+                  AND has_function_privilege('authenticated', p.oid, 'EXECUTE')), '[]'::jsonb)
+  );
+$$;
+REVOKE ALL ON FUNCTION public.db_p0_posture() FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.db_p0_posture() TO service_role;
