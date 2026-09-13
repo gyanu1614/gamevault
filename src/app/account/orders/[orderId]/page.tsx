@@ -40,16 +40,14 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 type OrderRole = 'buyer' | 'seller' | 'admin'
 
-async function checkOrderAccess(
-  orderId: string,
+/**
+ * STATE-004 — reads buyer_id/seller_id off the order the page already fetched
+ * instead of re-querying the same row for the same two columns.
+ */
+function checkOrderAccess(
+  order: { buyer_id?: string | null; seller_id?: string | null } | null,
   userId: string,
-): Promise<{ hasAccess: boolean; userRole: OrderRole | null }> {
-  const supabase = await createClient()
-  const { data: order } = await supabase
-    .from('orders')
-    .select('buyer_id, seller_id')
-    .eq('id', orderId)
-    .single() as any
+): { hasAccess: boolean; userRole: OrderRole | null } {
   if (!order) return { hasAccess: false, userRole: null }
   const isBuyer  = order.buyer_id  === userId
   const isSeller = order.seller_id === userId
@@ -127,7 +125,7 @@ export default async function OrderDetailPage({ params }: PageProps) {
   if (!orderResult.success || !orderResult.order) notFound()
 
   const order = orderResult.order
-  const { hasAccess, userRole } = await checkOrderAccess(orderId, user.id)
+  const { hasAccess, userRole } = checkOrderAccess(order, user.id)
   if (!hasAccess || !userRole) notFound()
 
   // Workstream E — pending orders are the buyer's "awaiting payment" surface

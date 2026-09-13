@@ -19,6 +19,7 @@
 import 'server-only'
 import { createAnonClient } from '@/lib/supabase/anon'
 import type { BlogPost } from './posts'
+import { cache } from 'react'
 
 export type BlogPostType = 'guide' | 'value' | 'seller'
 
@@ -99,7 +100,9 @@ export async function getGamePosts(gameSlug: string): Promise<DbBlogPost[]> {
 }
 
 /** A single published post by game + slug (the nested article URL). */
-export async function getGamePost(
+// STATE-004 — called from generateMetadata and the page body; cache() makes
+// the two runs of one request share a single query.
+export const getGamePost = cache(async function getGamePost(
   gameSlug: string,
   slug: string,
 ): Promise<DbBlogPost | null> {
@@ -113,7 +116,7 @@ export async function getGamePost(
     .maybeSingle()
   if (error || !data) return null
   return rowToPost(data as unknown as BlogPostRow)
-}
+})
 
 /**
  * Game-relevant rail: published posts tagged for the game (via game_slugs),

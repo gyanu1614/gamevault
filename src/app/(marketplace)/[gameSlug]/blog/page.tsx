@@ -24,6 +24,7 @@ import { ValuesTeaser, CalculatorTeaser } from './_HubTeasers'
 import { SabSellerCta } from '../_SabSellerCta'
 import { getHubTopValues, getHubStatStrip, getHubCalcExample } from './_hubData'
 import { CONTENT_HUB_GAME_SLUGS } from '@/lib/content/theme'
+import { cache } from 'react'
 
 export const revalidate = 3600
 
@@ -43,7 +44,9 @@ interface HubGame {
   seo_intro: string | null
 }
 
-async function getGame(gameSlug: string): Promise<HubGame | null> {
+// STATE-004 — called from generateMetadata and the page body; cache() makes
+// the two runs of one request share a single query.
+const getGame = cache(async function getGame(gameSlug: string): Promise<HubGame | null> {
   const supabase = createAnonClient()
   const { data } = await (supabase as any)
     .from('games')
@@ -52,7 +55,7 @@ async function getGame(gameSlug: string): Promise<HubGame | null> {
     .eq('is_active', true)
     .maybeSingle()
   return (data as HubGame | null) ?? null
-}
+})
 
 /**
  * How many items we hold a public price for. Drives the "Items priced" stat,

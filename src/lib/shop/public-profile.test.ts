@@ -60,7 +60,17 @@ describe('AUTH-001 — public storefront allowlist', () => {
   it('page never selects * from profiles or reviews and uses the allowlist', () => {
     expect(PAGE).not.toMatch(/from\('profiles'\)[\s\S]{0,120}select\(\s*[`'"]\s*\*/)
     expect(PAGE).not.toMatch(/from\('reviews'\)[\s\S]{0,120}select\(\s*[`'"]\s*\*/)
-    expect((PAGE.match(/\.select\(PUBLIC_SELLER_PROFILE_SELECT\)/g) ?? []).length).toBe(4)
+    // Invariant: EVERY profiles/reviews select on this page goes through the
+    // allowlist — asserted as a ratio rather than a fixed count, so that
+    // de-duplicating a query (STATE-004 collapsed the metadata + body profile
+    // lookups into one cached fetcher) cannot be mistaken for a regression.
+    const profileSelects = (PAGE.match(/\.from\('profiles'\)[\s\S]{0,160}?\.select\(/g) ?? []).length
+    const profileAllowlisted = (PAGE.match(/\.select\(PUBLIC_SELLER_PROFILE_SELECT\)/g) ?? []).length
+    expect(profileSelects).toBeGreaterThan(0)
+    expect(profileAllowlisted).toBe(profileSelects)
+
+    // Reviews: the storefront list is the only full-row read (the other two
+    // select just 'rating' for the average), so the allowlist count is fixed.
     expect((PAGE.match(/\.select\(PUBLIC_REVIEW_SELECT\)/g) ?? []).length).toBe(1)
   })
 

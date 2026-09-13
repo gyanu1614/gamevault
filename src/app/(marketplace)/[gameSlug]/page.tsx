@@ -22,6 +22,7 @@ import { SabLanding } from './values/_SabLanding'
 import { SabNavExtras } from './values/_SabNavExtras'
 import { loadItemsTaxonomy, listingToOffer } from './[categorySlug]/_itemsData'
 import type { ItemOffer } from './[categorySlug]/_itemsTypes'
+import { cache } from 'react'
 
 interface PageProps {
   params: Promise<{
@@ -46,15 +47,47 @@ export async function generateStaticParams() {
   return ((data ?? []) as { slug: string }[]).map((g) => ({ gameSlug: g.slug }))
 }
 
+// STATE-004 — generateMetadata and the page body both need this row; cache()
+// makes the two runs of one request share a single query.
+const getGameData = cache(async function getGameData(gameSlug: string) {
+  const supabase = createAnonClient()
+
+  const { data: game, error: gameError } = await supabase
+    .from('games')
+    .select('*')
+    .eq('slug', gameSlug)
+    .eq('is_active', true)
+    .single() as any
+
+  if (gameError || !game) {
+    return null
+  }
+
+  const { data: categories, error: categoriesError } = await supabase
+    .from('categories')
+    .select('id, name, slug, description, icon, metadata')
+    .eq('game_id', game.id)
+    .eq('is_active', true)
+    .order('display_order', { ascending: true })
+    .order('name', { ascending: true }) as any
+
+  if (categoriesError) {
+    console.error('Error fetching categories:', categoriesError)
+  }
+
+  return {
+    ...game,
+    categories: categories || []
+  }
+})
+
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { gameSlug } = await params
   const supabase = createAnonClient()
 
-  const { data: game } = await supabase
-    .from('games')
-    .select('id, name, description, ecosystem, seo_title, seo_description, seo_h1, seo_intro, seo_indexable')
-    .eq('slug', gameSlug)
-    .single() as any
+  // STATE-004 — shares one cached read with the page body, instead of querying
+  // games + categories a second time here with a different column set.
+  const game = await getGameData(gameSlug)
 
   // 404 from metadata so the status is decided before anything streams —
   // consistent with the category/listing routes, where a Suspense boundary
@@ -62,16 +95,11 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   if (!game) notFound()
 
   // Category labels the game has enabled (for template copy + accounts flag).
-  const { data: gameCats } = (await supabase
-    .from('categories')
-    .select('name, slug, metadata')
-    .eq('game_id', game.id)
-    .eq('is_active', true)
-    .order('display_order', { ascending: true })) as any
-  const categoryLabels: string[] = (gameCats ?? []).map(
+  const gameCats = (game.categories ?? []) as any[]
+  const categoryLabels: string[] = gameCats.map(
     (c: any) => c.name || (c.metadata?.label ?? c.slug),
   )
-  const hasAccounts = (gameCats ?? []).some((c: any) => c.metadata?.type === 'account')
+  const hasAccounts = gameCats.some((c: any) => c.metadata?.type === 'account')
 
   // Index bar (mirrors sitemap.ts): an empty hub — no active listings
   // and no curated currency config — stays out of the index until it
@@ -122,37 +150,6 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   }
 }
 
-async function getGameData(gameSlug: string) {
-  const supabase = createAnonClient()
-
-  const { data: game, error: gameError } = await supabase
-    .from('games')
-    .select('*')
-    .eq('slug', gameSlug)
-    .eq('is_active', true)
-    .single() as any
-
-  if (gameError || !game) {
-    return null
-  }
-
-  const { data: categories, error: categoriesError } = await supabase
-    .from('categories')
-    .select('id, name, slug, description, icon, metadata')
-    .eq('game_id', game.id)
-    .eq('is_active', true)
-    .order('display_order', { ascending: true })
-    .order('name', { ascending: true }) as any
-
-  if (categoriesError) {
-    console.error('Error fetching categories:', categoriesError)
-  }
-
-  return {
-    ...game,
-    categories: categories || []
-  }
-}
 
 async function getCategoryListingCounts(gameId: string) {
   const supabase = createAnonClient()

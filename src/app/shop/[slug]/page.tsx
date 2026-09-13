@@ -12,7 +12,7 @@
 import { sellerDisplayName } from '@/lib/seller/identity'
 import { PUBLIC_SELLER_PROFILE_SELECT, PUBLIC_REVIEW_SELECT } from '@/lib/shop/public-profile'
 import { SITE_URL } from '@/config/site'
-import React from 'react'
+import React, { cache } from 'react'
 import { Metadata } from 'next'
 import { notFound, permanentRedirect } from 'next/navigation'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
@@ -26,6 +26,36 @@ function getServiceClient() {
   )
 }
 
+/**
+ * STATE-004 — the seller profile, by shop_slug with a username fallback for
+ * backward compatibility. generateMetadata and the page body both need it, and
+ * each ran the primary + fallback pair separately (up to 4 profiles reads per
+ * render). cache() makes the two runs of one request share a single lookup.
+ */
+const getSellerProfile = cache(async function getSellerProfile(slug: string) {
+  const supabase = getServiceClient()
+
+  const shopSlugQuery = await supabase
+    .from('profiles')
+    // AUTH-001 — explicit allowlist; this row is serialized to anonymous visitors.
+    .select(PUBLIC_SELLER_PROFILE_SELECT)
+    .eq('shop_slug', slug)
+    .single()
+
+  if (shopSlugQuery.data) return { profile: shopSlugQuery.data as any, error: null }
+
+  // Fallback: try by username for backward compatibility
+  const usernameQuery = await supabase
+    .from('profiles')
+    .select(PUBLIC_SELLER_PROFILE_SELECT)
+    .eq('username', slug)
+    .single()
+
+  if (usernameQuery.data) return { profile: usernameQuery.data as any, error: null }
+
+  return { profile: null, error: shopSlugQuery.error || usernameQuery.error }
+})
+
 interface PageProps {
   params: Promise<{
     slug: string
@@ -36,29 +66,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const { slug } = await params
   const supabase = getServiceClient()
 
-  // Fetch seller data for rich metadata - try shop_slug first, then username
-  let profile = null
-
-  const shopSlugQuery = await supabase
-    .from('profiles')
-    // AUTH-001 — explicit allowlist; this row is serialized to anonymous visitors.
-    .select(PUBLIC_SELLER_PROFILE_SELECT)
-    .eq('shop_slug', slug)
-    .single()
-
-  if (shopSlugQuery.data) {
-    profile = shopSlugQuery.data
-  } else {
-    const usernameQuery = await supabase
-      .from('profiles')
-        .select(PUBLIC_SELLER_PROFILE_SELECT)
-      .eq('username', slug)
-      .single()
-
-    if (usernameQuery.data) {
-      profile = usernameQuery.data
-    }
-  }
+  // Fetch seller data for rich metadata — shared with the page body via cache().
+  const { profile } = await getSellerProfile(slug)
 
   // Check if seller is approved
   const hasApprovedApplication = profile?.seller_applications?.some(
@@ -178,34 +187,7 @@ export default async function SellerShopPage({ params }: PageProps) {
   const { slug } = await params
   const supabase = getServiceClient()
 
-  // Get seller profile by shop_slug or username (for backward compatibility)
-  let profile = null
-  let error = null
-
-  // Try by shop_slug first
-  const shopSlugQuery = await supabase
-    .from('profiles')
-    // AUTH-001 — explicit allowlist; this row is serialized to anonymous visitors.
-    .select(PUBLIC_SELLER_PROFILE_SELECT)
-    .eq('shop_slug', slug)
-    .single()
-
-  if (shopSlugQuery.data) {
-    profile = shopSlugQuery.data
-  } else {
-    // Fallback: try by username for backward compatibility
-    const usernameQuery = await supabase
-      .from('profiles')
-        .select(PUBLIC_SELLER_PROFILE_SELECT)
-      .eq('username', slug)
-      .single()
-
-    if (usernameQuery.data) {
-      profile = usernameQuery.data
-    } else {
-      error = shopSlugQuery.error || usernameQuery.error
-    }
-  }
+  const { profile, error } = await getSellerProfile(slug)
 
   // Check if seller is approved (has at least one approved application)
   const hasApprovedApplication = profile?.seller_applications?.some(
