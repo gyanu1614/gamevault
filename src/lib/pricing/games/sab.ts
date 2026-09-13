@@ -127,6 +127,68 @@ function toNumber(value: number | string | null | undefined): number | null {
  * shifting page boundary and was sometimes read, sometimes lost. Ordering by a
  * unique key makes every page a clean, gap-free, duplicate-free slice.
  */
+/**
+ * ROUTE-011: how many times to attempt a single page before giving up. Deep
+ * pages over large tables intermittently exceed the Postgres statement timeout
+ * (57014) depending on cache warmth; a page that fails is very likely to succeed
+ * moments later. Mirrors the collector's supabasePage() backoff
+ * (scripts/collect-eldorado-sab-api-v6.mjs), which has carried the crawl's READ
+ * path for months — the correction's read path never got the same treatment, so
+ * one unlucky page aborted the entire run and left sab_price_display unrefreshed.
+ */
+const PAGE_MAX_ATTEMPTS = 4
+
+/** Transient classes worth retrying: statement timeout + upstream 5xx. */
+export function isRetryableReadError(error: {
+  message?: string
+  code?: string
+}): boolean {
+  const code = error.code ?? ''
+  const message = error.message ?? ''
+  return (
+    code === '57014' ||
+    message.includes('57014') ||
+    /statement timeout/i.test(message) ||
+    /timeout|fetch failed|socket|ECONNRESET|EAI_AGAIN/i.test(message)
+  )
+}
+
+const delay = (ms: number) => new Promise((done) => setTimeout(done, ms))
+
+/**
+ * Read one bounded page, retrying the transient failures with linear backoff.
+ * Anything non-transient (a bad column, a missing relation) still throws
+ * immediately — a retry could not help and would only delay the real error.
+ */
+async function selectPage<T>(
+  client: ReturnType<typeof createServiceRoleClient>,
+  table: string,
+  columns: string,
+  orderBy: string[],
+  from: number,
+): Promise<T[]> {
+  let lastError: { message?: string; code?: string } | null = null
+
+  for (let attempt = 1; attempt <= PAGE_MAX_ATTEMPTS; attempt += 1) {
+    let query = (client as any).from(table).select(columns)
+    for (const col of orderBy) query = query.order(col, { ascending: true })
+    const { data, error } = await query.range(from, from + PAGE_SIZE - 1)
+
+    if (!error) return (data ?? []) as T[]
+
+    lastError = error
+    if (!isRetryableReadError(error) || attempt === PAGE_MAX_ATTEMPTS) break
+
+    console.warn(
+      `${table}: page ${from}+ failed (attempt ${attempt}/${PAGE_MAX_ATTEMPTS}: ` +
+        `${error.message}) — retrying…`,
+    )
+    await delay(1000 * attempt)
+  }
+
+  throw new Error(`${table}: ${lastError?.message ?? 'unknown read error'}`)
+}
+
 async function selectAll<T>(
   client: ReturnType<typeof createServiceRoleClient>,
   table: string,
@@ -135,13 +197,15 @@ async function selectAll<T>(
 ): Promise<T[]> {
   const rows: T[] = []
   for (let page = 0; ; page += 1) {
-    const from = page * PAGE_SIZE
-    let query = (client as any).from(table).select(columns)
-    for (const col of orderBy) query = query.order(col, { ascending: true })
-    const { data, error } = await query.range(from, from + PAGE_SIZE - 1)
-    if (error) throw new Error(`${table}: ${error.message}`)
-    if (!data?.length) break
-    rows.push(...(data as T[]))
+    const data = await selectPage<T>(
+      client,
+      table,
+      columns,
+      orderBy,
+      page * PAGE_SIZE,
+    )
+    if (!data.length) break
+    rows.push(...data)
     if (data.length < PAGE_SIZE) break
   }
   return rows
