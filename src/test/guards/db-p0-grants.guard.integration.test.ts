@@ -16,7 +16,7 @@
  * drives the crons, the listings trigger chain still runs for user inserts.
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
-import { createClient } from '@supabase/supabase-js'
+import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { hasEnv, makeFixture, promoteToEstablishedSeller, URL, ANON, type Fixture } from './throwaway'
 
 let fx: Fixture | null = null
@@ -25,7 +25,7 @@ let heldOrderId = ''
 let applicationId = ''
 let taxId = ''
 /** A signed-in user who is party to nothing in the fixture — the audience seller_dashboard_stats leaked to. */
-let stranger: { id: string; client: ReturnType<typeof createClient> } | null = null
+let stranger: { id: string; client: SupabaseClient } | null = null
 const anon = () => createClient(URL!, ANON!, { auth: { persistSession: false } })
 
 const VIEWS = [
