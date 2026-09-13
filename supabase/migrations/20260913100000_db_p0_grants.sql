@@ -76,3 +76,21 @@ BEGIN
   END LOOP;
 END;
 $$;
+
+-- ── DB-003: escrow writers are service-role only ────────────────────────────
+-- release_escrow / refund_escrow / freeze_escrow (and the DB-009 pair
+-- release_escrow_to_seller_balance / cleanup_old_audit_logs) are SECURITY
+-- DEFINER, set app.guarded_write themselves, check no caller, and were
+-- EXECUTE-granted to anon: the anon key froze a held order, then released it
+-- (status=completed, escrow_status=released, no journal — seller never paid).
+-- Zero app callers; superseded by safedrop_transition. Dropping them is a P3
+-- follow-up — here they close. release_with_reserve / release_due_reserves
+-- ARE called (src/lib/escrow/reserve.ts) and were already service-only;
+-- restated so this file is the single source of truth.
+SELECT pg_temp.db_p0_set_exec('public.release_escrow(uuid, text)', ARRAY['service_role']);
+SELECT pg_temp.db_p0_set_exec('public.refund_escrow(uuid)', ARRAY['service_role']);
+SELECT pg_temp.db_p0_set_exec('public.freeze_escrow(uuid)', ARRAY['service_role']);
+SELECT pg_temp.db_p0_set_exec('public.release_escrow_to_seller_balance(uuid, uuid, numeric)', ARRAY['service_role']);
+SELECT pg_temp.db_p0_set_exec('public.cleanup_old_audit_logs(integer)', ARRAY['service_role']);
+SELECT pg_temp.db_p0_set_exec('public.release_with_reserve(uuid, text, numeric, bigint, text)', ARRAY['service_role']);
+SELECT pg_temp.db_p0_set_exec('public.release_due_reserves(integer)', ARRAY['service_role']);
