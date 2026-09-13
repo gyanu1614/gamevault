@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 
 const DEFAULT_ENDPOINT =
   "https://cserfvellsliylifjkos.supabase.co/functions/v1/sab-market-import";
@@ -368,6 +369,61 @@ function groupBySource(records) {
   return groups;
 }
 
+// ROUTE-011: the publish:true call re-aggregates the WHOLE dataset server-side
+// (sab_publish_market_estimates), so it is by far the heaviest request in the
+// import and the one that intermittently exceeds the Postgres statement timeout
+// (57014) or the gateway's budget. It runs exactly once per crawl, at the very
+// end, so failing it discards a crawl that has already succeeded — three of the
+// last 25 scheduled runs died precisely here. The upsert is idempotent, so a
+// retry is safe for intermediate batches too.
+const SEND_MAX_ATTEMPTS = 4;
+
+export function isRetryableImportError(error) {
+  const status = Number(error?.status ?? 0);
+  const text = `${error?.details ?? ""} ${error?.message ?? ""}`;
+  return (
+    status >= 500 ||
+    status === 408 ||
+    status === 429 ||
+    text.includes("57014") ||
+    /statement timeout/i.test(text) ||
+    /gateway timeout|timeout|fetch failed|socket|ECONNRESET|EAI_AGAIN/i.test(text)
+  );
+}
+
+const pause = (milliseconds) =>
+  new Promise((done) => setTimeout(done, milliseconds));
+
+async function sendBatchWithRetry(options, label) {
+  let lastError = null;
+
+  for (
+    let attempt = 1;
+    attempt <= SEND_MAX_ATTEMPTS;
+    attempt += 1
+  ) {
+    try {
+      return await sendBatch(options);
+    } catch (error) {
+      lastError = error;
+      if (
+        !isRetryableImportError(error) ||
+        attempt === SEND_MAX_ATTEMPTS
+      ) {
+        break;
+      }
+      const backoffMs = 2000 * attempt;
+      console.warn(
+        `\n${label} failed (attempt ${attempt}/${SEND_MAX_ATTEMPTS}: ` +
+          `${error.message}) — retrying in ${backoffMs}ms…`,
+      );
+      await pause(backoffMs);
+    }
+  }
+
+  throw lastError;
+}
+
 async function sendBatch({
   endpoint,
   secret,
@@ -408,13 +464,18 @@ async function sendBatch({
     !response.ok ||
     responseBody.ok !== true
   ) {
-    throw new Error(
+    const failure = new Error(
       `${sourceSlug} import failed: ${
         responseBody.details ??
         responseBody.error ??
         `HTTP ${response.status}`
       }`,
     );
+    // ROUTE-011: let the caller decide whether this is worth retrying.
+    failure.status = response.status;
+    failure.details =
+      responseBody.details ?? responseBody.error ?? "";
+    throw failure;
   }
 
   return responseBody;
@@ -538,13 +599,16 @@ async function main() {
     // Publish only on the very last batch of the whole import.
     const isFinal = i === batchPlan.length - 1;
 
-    const response = await sendBatch({
-      endpoint,
-      secret,
-      sourceSlug,
-      listings: batch,
-      publish: isFinal,
-    });
+    const response = await sendBatchWithRetry(
+      {
+        endpoint,
+        secret,
+        sourceSlug,
+        listings: batch,
+        publish: isFinal,
+      },
+      label,
+    );
 
     console.log(`\n${label}${isFinal ? " (final — publishing)" : ""}:`);
     console.log(JSON.stringify(response.result, null, 2));
@@ -569,9 +633,17 @@ async function main() {
   );
 }
 
-main().catch((error) => {
-  console.error(
-    `\nBulk import failed: ${error.message}`,
-  );
-  process.exitCode = 1;
-});
+// ROUTE-011: only run when invoked as a script, so the retry predicate above can
+// be unit-tested by importing this module without kicking off a real import.
+const invokedDirectly =
+  process.argv[1] &&
+  import.meta.url === pathToFileURL(process.argv[1]).href;
+
+if (invokedDirectly) {
+  main().catch((error) => {
+    console.error(
+      `\nBulk import failed: ${error.message}`,
+    );
+    process.exitCode = 1;
+  });
+}
