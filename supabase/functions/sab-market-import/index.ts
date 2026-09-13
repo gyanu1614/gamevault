@@ -8,17 +8,15 @@ type ImportRequest = {
 type RevalidationResult =
   | {
       ok: true;
-      skipped: true;
-      reason: string;
-    }
-  | {
-      ok: true;
       skipped: false;
       status: number;
     }
   | {
+      // ROUTE-010: every non-ok shape carries an `error`, including the
+      // "not configured" case, which previously reported ok:true and hid a
+      // pipeline that was never revalidating anything.
       ok: false;
-      skipped: false;
+      skipped: boolean;
       status?: number;
       error: string;
     };
@@ -78,12 +76,15 @@ async function revalidateMarketPages():
     "VERCEL_AUTOMATION_BYPASS_SECRET",
   );
 
+  // ROUTE-010: missing configuration used to report ok:true/skipped, so a
+  // pipeline that never revalidated anything looked healthy. Treat it as the
+  // misconfiguration it is.
   if (!revalidateUrl || !revalidateSecret) {
     return {
-      ok: true,
+      ok: false,
       skipped: true,
-      reason:
-        "Revalidation URL or secret is not configured",
+      error:
+        "SAB_MARKET_REVALIDATE_URL or SAB_MARKET_REVALIDATE_SECRET is not configured",
     };
   }
 
@@ -389,10 +390,33 @@ Deno.serve(async (request) => {
     const revalidation =
       await revalidateMarketPages();
 
+    // ROUTE-010: a failed revalidation means fresh prices are in the database
+    // but the public pages keep serving the cached old ones — silent staleness,
+    // which is the failure mode that hid a stale deployment URL (HTTP 410 GONE)
+    // for weeks. Surface it as a hard failure so the workflow goes red.
     if (!revalidation.ok) {
-      console.warn(
+      console.error(
         "Market pages were not revalidated:",
         revalidation,
+      );
+
+      return jsonResponse(
+        {
+          ok: false,
+          error:
+            "Prices published but market pages were not revalidated",
+          details:
+            revalidation.error ??
+            `Revalidation failed with HTTP ${revalidation.status ?? "unknown"}`,
+          result: importResult,
+          publication: {
+            ok: true,
+            published_rows: publishedRows ?? 0,
+          },
+          display_refreshed: Number(displayRows ?? 0),
+          revalidation,
+        },
+        502,
       );
     }
 
