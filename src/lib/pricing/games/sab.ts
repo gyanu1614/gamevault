@@ -66,17 +66,28 @@ type ReputableRow = {
   brainrot_id: string
   mutation_id: string
   unit_price_usd: number | string | null
-  raw_payload: {
-    seller_sales_count?: number | string | null
-    title?: string | null
-    /** False when the collector tagged the listing OUTSIDE the item's canonical
-     * income tier. Kept for when the import preserves it, but the correction ALSO
-     * derives the tier itself from income_band below (import currently strips it). */
-    is_canonical_band?: boolean | null
-    /** The listing's income tier, e.g. {label:'750-999.99 M/s', upper: 999990000}.
-     * Compared against the mutation's canonical income to gate cheapest. */
-    income_band?: { label?: string | null; lower?: number | null; upper?: number | null } | null
-  } | null
+  /**
+   * ROUTE-010: these four arrive as server-side JSONB extractions of raw_payload
+   * rather than the whole blob (see the select in runSabCorrection). raw_payload
+   * is a large document per row; shipping 110k of them repeatedly tripped the
+   * Postgres statement timeout (57014) and killed the correction run, which is
+   * the ONLY writer of sab_price_display. `->>` always yields text, so every one
+   * of these is a string (or null) even when the underlying JSON value is a
+   * number or a boolean — parse accordingly, never compare identity.
+   */
+  /** raw_payload->>'seller_sales_count' */
+  payload_sales: string | null
+  /** raw_payload->>'title' */
+  payload_title: string | null
+  /** False when the collector tagged the listing OUTSIDE the item's canonical
+   * income tier. Kept for when the import preserves it, but the correction ALSO
+   * derives the tier itself from income_band below (import currently strips it).
+   * raw_payload->>'is_canonical_band' — the TEXT 'false', not a boolean. */
+  payload_canonical_band: string | null
+  /** The listing's income tier upper bound, compared against the mutation's
+   * canonical income to gate cheapest.
+   * raw_payload->'income_band'->>'upper' */
+  payload_band_upper: string | null
   listing_status: string | null
   parse_status: string | null
   is_bundle: boolean | null
@@ -177,7 +188,18 @@ export async function runSabCorrection(): Promise<Record<string, unknown>> {
       selectAll<ReputableRow>(
         admin,
         'sab_market_raw_listings',
-        'brainrot_id,mutation_id,unit_price_usd,raw_payload,listing_status,parse_status,is_bundle,is_account_listing,is_inventory_listing,is_duplicate,is_outlier,rejection_reason',
+        // ROUTE-010: extract ONLY the four raw_payload fields this function reads,
+        // server-side, instead of transferring the entire JSONB document. Reading
+        // the whole blob for all ~110k rows made deep pages take 8s+ and fail
+        // ~40% of the time with statement timeout (57014); selectAll then threw
+        // and aborted the run, so sab_price_display stopped being refreshed.
+        'brainrot_id,mutation_id,unit_price_usd,listing_status,parse_status,' +
+          'is_bundle,is_account_listing,is_inventory_listing,is_duplicate,' +
+          'is_outlier,rejection_reason,' +
+          'payload_title:raw_payload->>title,' +
+          'payload_sales:raw_payload->>seller_sales_count,' +
+          'payload_canonical_band:raw_payload->>is_canonical_band,' +
+          'payload_band_upper:raw_payload->income_band->>upper',
         ['id'],
       ),
     ])
@@ -238,7 +260,7 @@ export async function runSabCorrection(): Promise<Record<string, unknown>> {
     }
     // Skip negative-cosmetic-trait listings (Taco): a cheaper, uglier item that
     // must not set the clean pet's cheapest. Kept in raw data, just not priced.
-    if (COSMETIC_TRAIT_RE.test(row.raw_payload?.title ?? '')) continue
+    if (COSMETIC_TRAIT_RE.test(row.payload_title ?? '')) continue
     // Skip listings OUTSIDE the item's canonical income tier — a genuinely weaker
     // item mislabeled under this mutation (a 0.75 B/s "Cyber" Dragon at $17 under
     // the real 2.6 B/s $34 Cyber). Prefer the collector's flag when the import
@@ -247,11 +269,11 @@ export async function runSabCorrection(): Promise<Record<string, unknown>> {
     // actually protects cheapest). Only a KNOWN below-tier listing is excluded;
     // when we can't judge (no canonical income, no band) the listing still counts,
     // so we never silently drop legitimate data.
-    if (row.raw_payload?.is_canonical_band === false) continue
+    if (row.payload_canonical_band === 'false') continue
     const expectedIncome = expectedIncomeByVariant.get(
       `${row.brainrot_id}:${row.mutation_id}`,
     )
-    const bandUpper = toNumber(row.raw_payload?.income_band?.upper)
+    const bandUpper = toNumber(row.payload_band_upper)
     if (
       expectedIncome != null &&
       bandUpper != null &&
@@ -261,7 +283,7 @@ export async function runSabCorrection(): Promise<Record<string, unknown>> {
     }
     const price = toNumber(row.unit_price_usd)
     if (price == null || price <= 0) continue
-    const reviews = toNumber(row.raw_payload?.seller_sales_count)
+    const reviews = toNumber(row.payload_sales)
     if (reviews == null || !Number.isFinite(reviews)) continue
 
     const key = `${row.brainrot_id}:${row.mutation_id}`
