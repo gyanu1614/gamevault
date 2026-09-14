@@ -17,6 +17,8 @@
  * also built to survive Gmail's own forced-dark inversion.
  */
 
+import { SITE_URL } from '@/config/site'
+
 const FOREST = '#14432A'
 const FOREST_2 = '#1B5E3A'
 const LIME = '#A3E635'
@@ -27,6 +29,19 @@ const LINE = '#E4E5DE'
 const IVORY = '#FAFAF7'
 const CARD = '#FFFFFF'
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+
+/**
+ * ASSET_URL — the host every <img> in an email is loaded from.
+ *
+ * Deliberately NOT APP_URL. APP_URL is deployment-specific (localhost in dev,
+ * an ngrok tunnel, a preview deploy) and is right for *links*, which must hit
+ * the running deployment. An <img> is different: it is fetched later, by the
+ * recipient's mail client (or by Gmail's image proxy) from the public internet,
+ * where a localhost/tunnel/preview host is unreachable — so every image renders
+ * broken. Brand art is identical on every deployment, so images are pinned to
+ * the canonical public domain instead.
+ */
+const ASSET_URL = SITE_URL.replace(/\/$/, '')
 
 const FONT =
   "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif"
@@ -77,8 +92,8 @@ const DARK_STYLE = `
 /** Wrap content in the full branded email. */
 export function emailShell({ preview, icon, heading, body }: EmailShellOptions): string {
   const iconHtml = icon
-    ? `<img src="${APP_URL}/email-icons/${icon}.png" width="26" height="26" alt="" class="dm-icon-light" style="width:26px;height:26px;vertical-align:middle;margin-right:11px;">` +
-      `<img src="${APP_URL}/email-icons/${icon}-dark.png" width="26" height="26" alt="" class="dm-icon-dark" style="width:26px;height:26px;vertical-align:middle;margin-right:11px;display:none;">`
+    ? `<img src="${ASSET_URL}/email-icons/${icon}.png" width="26" height="26" alt="" class="dm-icon-light" style="width:26px;height:26px;vertical-align:middle;margin-right:11px;">` +
+      `<img src="${ASSET_URL}/email-icons/${icon}-dark.png" width="26" height="26" alt="" class="dm-icon-dark" style="width:26px;height:26px;vertical-align:middle;margin-right:11px;display:none;">`
     : ''
 
   return `<!DOCTYPE html>
@@ -95,8 +110,8 @@ export function emailShell({ preview, icon, heading, body }: EmailShellOptions):
 
   <!-- Logo OUTSIDE the card -->
   <div style="max-width:560px;margin:0 auto 20px;text-align:center;">
-    <img src="${APP_URL}/brand/logo-mark-ink.png" width="30" height="30" alt="" class="dm-logo-dark" style="width:30px;height:30px;vertical-align:middle;margin-right:8px;">
-    <img src="${APP_URL}/brand/logo-mark-lime.png" width="30" height="30" alt="" class="dm-logo-light" style="width:30px;height:30px;vertical-align:middle;margin-right:8px;display:none;">
+    <img src="${ASSET_URL}/brand/logo-mark-ink.png" width="30" height="30" alt="" class="dm-logo-dark" style="width:30px;height:30px;vertical-align:middle;margin-right:8px;">
+    <img src="${ASSET_URL}/brand/logo-mark-lime.png" width="30" height="30" alt="" class="dm-logo-light" style="width:30px;height:30px;vertical-align:middle;margin-right:8px;display:none;">
     <span class="dm-brand" style="font-size:21px;font-weight:800;letter-spacing:-0.02em;color:${FOREST};vertical-align:middle;">Drop<span class="dm-brand-2" style="color:${FOREST_2};">Market</span></span>
   </div>
 
@@ -193,7 +208,7 @@ export function gameLogoUrl(slug: string | null | undefined): string {
     'escape-from-tarkov': 'escapefromtarkov', 'rainbow-six-siege': 'r6', fc25: 'fc25',
   }
   const file = (slug && map[slug]) || 'roblox' // neutral fallback
-  return `${APP_URL}/games/${file}.png`
+  return `${ASSET_URL}/games/${file}.png`
 }
 
 // ── Back-compat aliases (kept so existing emails compile after the redesign) ──
@@ -228,4 +243,4 @@ export function emailOrderSummary(rows: Array<[string, string]>, highlightLast =
   return emailBox({ html: `<table role="presentation" width="100%" cellpadding="0" cellspacing="0">${inner}</table>` })
 }
 
-export const EMAIL_TOKENS = { FOREST, FOREST_2, LIME, INK, INK_2, MUTED, LINE, IVORY, FONT, APP_URL }
+export const EMAIL_TOKENS = { FOREST, FOREST_2, LIME, INK, INK_2, MUTED, LINE, IVORY, FONT, APP_URL, ASSET_URL }

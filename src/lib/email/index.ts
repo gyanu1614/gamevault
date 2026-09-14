@@ -1177,7 +1177,7 @@ function emailDiscordBlock({ n, title, html, href }: { n: number; title: string;
         <td style="vertical-align:top;">
           <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 8px;"><tr>
             <td style="padding-right:10px;vertical-align:middle;">
-              <img src="${APP_URL}/email-icons/discord.png" width="34" height="34" alt="Discord" style="display:block;width:34px;height:34px;border-radius:9px;">
+              <img src="${EMAIL_TOKENS.ASSET_URL}/email-icons/discord.png" width="34" height="34" alt="Discord" style="display:block;width:34px;height:34px;border-radius:9px;">
             </td>
             <td style="vertical-align:middle;">
               <p class="dm-strong" style="margin:0;font-family:${FONT};font-size:15.5px;font-weight:700;color:${INK};">${title}</p>
