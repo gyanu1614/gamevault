@@ -9,10 +9,9 @@
  * i.e. when the directive is gone and every caller passes session-derived ids.
  */
 import { describe, it, expect } from 'vitest'
-import { readFileSync } from 'node:fs'
+import { readFileSync, existsSync } from 'node:fs'
 
 const LIB = readFileSync('src/lib/stripe/connect.ts', 'utf8')
-const ACTIONS = readFileSync('src/lib/actions/stripe-connect.ts', 'utf8')
 const ROUTES = ['dashboard', 'onboard', 'status'].map((r) => [r, readFileSync(`src/app/api/stripe/connect/${r}/route.ts`, 'utf8')] as const)
 
 describe('AUTH-004 — connect.ts is a library, not an action file', () => {
@@ -20,14 +19,13 @@ describe('AUTH-004 — connect.ts is a library, not an action file', () => {
     expect(LIB).not.toMatch(/^\s*['"]use server['"]\s*$/m)
   })
 
-  it('the action entry points take NO parameters — ids come from the session', () => {
-    const exported = [...ACTIONS.matchAll(/^export async function (\w+)\s*\(([^)]*)\)/gm)]
-    expect(exported.length).toBeGreaterThan(0)
-    for (const [, name, params] of exported) {
-      expect(params.trim(), `${name} must not accept caller-supplied ids`).toBe('')
-    }
-    expect(ACTIONS).toMatch(/createConnectAccount\(user\.id\)/)
-    expect(ACTIONS).toMatch(/getConnectAccountStatus\(user\.id\)/)
+  // QUAL-008 removed src/lib/actions/stripe-connect.ts: it was a parallel,
+  // unreferenced implementation (the live /api/stripe/connect/* handlers import
+  // @/lib/stripe/connect directly). Deleting it removes the action surface this
+  // assertion used to constrain, so the invariant is now "it must not come back"
+  // — a re-added 'use server' wrapper is exactly the AUTH-004 exploit shape.
+  it('the parallel server-action wrapper stays deleted', () => {
+    expect(existsSync('src/lib/actions/stripe-connect.ts')).toBe(false)
   })
 
   it('API routes authenticate and never read an account/seller id from the request', () => {
