@@ -182,7 +182,10 @@ async function getBrainrot(slug: string): Promise<BrainrotRow | null> {
   const supabase = createAnonClient()
   const { data, error } = await (supabase as any)
     .from('sab_brainrot_market_catalog')
-    .select('*')
+    // STATE-012 — explicit columns, exactly the BrainrotRow contract above.
+    .select(
+      'id,name,slug,rarity,obtainability,base_income_per_second,ingame_cost,image_url,image_alt,source_url,cheapest_active_price_usd,market_value_usd,quick_sale_usd,patient_sale_usd,active_listing_count,completed_sale_count,unique_seller_count,confidence_label,display_price_usd,display_price_label,display_price_source,price_updated_at',
+    )
     .eq('slug', slug)
     .maybeSingle()
 

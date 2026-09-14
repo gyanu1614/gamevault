@@ -54,7 +54,11 @@ const getGameData = cache(async function getGameData(gameSlug: string) {
 
   const { data: game, error: gameError } = await supabase
     .from('games')
-    .select('*')
+    // STATE-012 — explicit columns. The 7 read directly off `game` in this
+    // file, plus the 4 seo_* overrides resolveGameSeo() reads via `overrides`.
+    .select(
+      'id, name, slug, description, ecosystem, image_url, seo_indexable, seo_title, seo_description, seo_h1, seo_intro',
+    )
     .eq('slug', gameSlug)
     .eq('is_active', true)
     .single() as any

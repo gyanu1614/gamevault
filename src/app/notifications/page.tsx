@@ -71,7 +71,9 @@ export default function NotificationsPage() {
       const supabase = createClient()
       let query = supabase
         .from('notifications')
-        .select('*')
+        // STATE-012 — explicit columns: this is a client query, so every
+        // unused column would cross the network into the browser.
+        .select('id, title, message, type, link, is_read, created_at')
         .eq('user_id', user.id)
         // Workstream E — chat messages live under the Messages badge, not the
         // notifications inbox. Filter out legacy 'new_message' rows here too.

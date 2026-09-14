@@ -268,9 +268,12 @@ const getGameAndCategory = cache(async function getGameAndCategory(
 ) {
   const supabase = await createClient()
 
+  // STATE-012 — explicit columns instead of select('*'). Only game.id/name and
+  // the category fields below are read anywhere in this route; the seo_* set
+  // mirrors the sibling query at :157 so template resolution has what it needs.
   const gameResult = await supabase
     .from('games')
-    .select('*')
+    .select('id, name, slug, image_url, ecosystem')
     .eq('slug', gameSlug)
     .eq('is_active', true)
     .single() as any
@@ -279,7 +282,7 @@ const getGameAndCategory = cache(async function getGameAndCategory(
 
   const categoryResult = await supabase
     .from('categories')
-    .select('*')
+    .select('id, name, slug, description, icon, metadata, seo_title, seo_description, seo_h1, seo_intro')
     .eq('slug', categorySlug)
     .eq('game_id', gameResult.data.id)
     .eq('is_active', true)

@@ -154,7 +154,9 @@ export default function SettingsPage() {
         const supabase = createClient()
         const { data: freshProfile, error } = await supabase
           .from('profiles')
-          .select('*')
+          // STATE-012 — explicit columns: client query, so unused profile
+          // columns would cross the network into the browser.
+          .select('username, full_name, business_name, bio, avatar_url, paypal_email')
           .eq('id', user.id)
           .single() as any
 
