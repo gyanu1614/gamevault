@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createMiddlewareClient } from '@/lib/supabase/middleware'
 import { isProtectedPath } from '@/lib/auth/protected-routes'
 
 export async function middleware(request: NextRequest) {
@@ -27,7 +27,10 @@ export async function middleware(request: NextRequest) {
 
   if (isProtectedRoute && !isPublicSellerRoute) {
     try {
-      const supabase = await createClient()
+      // Edge-safe client built from the request's cookies. The server client
+      // (@/lib/supabase/server) is cache()-wrapped and uses next/headers —
+      // importing it here crashes the edge bundle at module scope.
+      const { supabase, response: authResponse } = createMiddlewareClient(request)
       const { data: { user }, error } = await supabase.auth.getUser()
 
       if (error || !user) {
@@ -79,6 +82,14 @@ export async function middleware(request: NextRequest) {
           return NextResponse.redirect(new URL('/account/restrictions', request.url))
         }
       }
+
+      // Carry any cookies Supabase rotated during getUser() onto the response
+      // we hand back, alongside the x-pathname header.
+      const passThrough = NextResponse.next({ request: { headers: requestHeaders } })
+      authResponse.cookies.getAll().forEach((cookie) => {
+        passThrough.cookies.set(cookie)
+      })
+      return passThrough
     } catch (error) {
       console.error('Middleware auth error:', error)
       const redirectUrl = new URL('/login', request.url)
