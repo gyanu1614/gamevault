@@ -67,7 +67,7 @@ export function GuideCard({
   return (
     <Link
       href={`/${gameSlug}/blog/${post.slug}`}
-      className="group flex h-full flex-col overflow-hidden border border-[#1E2723] bg-[#121613] transition-colors duration-200 hover:border-[#33453A] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#8FBF9C]"
+      className="group flex h-full flex-col overflow-hidden border border-[rgba(255,255,255,0.08)] bg-[#1F242C] transition-colors duration-200 hover:border-[#33453A] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#8FBF9C]"
     >
       {/* Cover — fixed 16:9 so every card is the same height. */}
       <div className="relative aspect-[16/9] w-full shrink-0 overflow-hidden">

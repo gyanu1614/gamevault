@@ -121,7 +121,7 @@ export function AdoptMePriceTrend({
   const enoughData = data.length >= 2
 
   return (
-    <section className="rounded-lg border border-[#1E2723] bg-[#0E1211] p-5 sm:p-6">
+    <section className="rounded-lg border border-[rgba(255,255,255,0.08)] bg-[#171B21] p-5 sm:p-6">
       {/* Header — variant dropdown + current price + change on the left, range
           tabs on the right. One focused line below. */}
       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -154,7 +154,7 @@ export function AdoptMePriceTrend({
         </div>
 
         {/* Range tabs */}
-        <div className="flex gap-0.5 rounded-md border border-[#1E2723] bg-white/[0.02] p-1">
+        <div className="flex gap-0.5 rounded-md border border-[rgba(255,255,255,0.08)] bg-white/[0.02] p-1">
           {RANGES.map((r) => {
             const on = range === r.key
             return (
@@ -196,7 +196,7 @@ export function AdoptMePriceTrend({
                 dataKey="label"
                 tick={{ fill: '#6D7A72', fontSize: 11 }}
                 tickLine={false}
-                axisLine={{ stroke: '#1E2723' }}
+                axisLine={{ stroke: 'rgba(255,255,255,0.08)' }}
                 minTickGap={28}
               />
               <YAxis
@@ -210,8 +210,8 @@ export function AdoptMePriceTrend({
               />
               <Tooltip
                 contentStyle={{
-                  background: '#0E1211',
-                  border: '1px solid #1E2723',
+                  background: '#171B21',
+                  border: '1px solid rgba(255,255,255,0.08)',
                   borderRadius: 8,
                   fontSize: 12,
                 }}
@@ -226,7 +226,7 @@ export function AdoptMePriceTrend({
                 strokeWidth={2.25}
                 fill="url(#am-trend-fill)"
                 dot={false}
-                activeDot={{ r: 4, fill: accent, stroke: '#0E1211', strokeWidth: 2 }}
+                activeDot={{ r: 4, fill: accent, stroke: '#171B21', strokeWidth: 2 }}
                 connectNulls
               />
             </ComposedChart>
@@ -272,7 +272,7 @@ function TrendVariantDropdown({
         aria-haspopup="listbox"
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
-        className="flex items-center gap-2 rounded-md border border-[#1E2723] bg-white/[0.04] px-3 py-1.5 text-body-sm font-semibold text-[#F1F3F1] outline-none transition hover:bg-white/[0.06] focus:border-[#2F6B46]"
+        className="flex items-center gap-2 rounded-md border border-[rgba(255,255,255,0.08)] bg-white/[0.04] px-3 py-1.5 text-body-sm font-semibold text-[#F1F3F1] outline-none transition hover:bg-white/[0.06] focus:border-[rgba(86,184,127,0.25)]"
       >
         <span className="h-2.5 w-2.5 rounded-full" style={{ background: accent }} />
         {name}
@@ -281,7 +281,7 @@ function TrendVariantDropdown({
       {open && (
         <div
           role="listbox"
-          className="absolute left-0 z-30 mt-1.5 min-w-[13rem] overflow-hidden rounded-md border border-[#232A2F] bg-[#0E1211] p-1 shadow-[0_16px_40px_-16px_rgba(0,0,0,0.9)]"
+          className="absolute left-0 z-30 mt-1.5 min-w-[13rem] overflow-hidden rounded-md border border-[#232A2F] bg-[#171B21] p-1 shadow-[0_16px_40px_-16px_rgba(0,0,0,0.9)]"
         >
           {options.map((o) => {
             const on = o.variant === value

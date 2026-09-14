@@ -6,7 +6,7 @@
  * declares display:flex), no CSS grid, no custom font files — the
  * default bundled font keeps the route bundle small.
  *
- * Design: 1200×630, dark slate (#0c0e14) with a lime (#C6FF3D) accent
+ * Design: 1200×630, dark slate (#171B21) with a green (#56B87F) accent
  * bar + corner glyph, DropMarket wordmark (Drop white / Market lime),
  * big title, optional live-data sub-line, and a SafeDrop Buyer
  * Protection badge chip (outcome language only).
@@ -20,7 +20,7 @@ export const OG_SIZE = { width: 1200, height: 630 }
 
 const BG = '#0c0e14'
 const BG_LIFT = '#12151f'
-const LIME = '#C6FF3D'
+const LIME = '#56B87F'
 const WHITE = '#f8fafc'
 const SLATE = '#94a3b8'
 
@@ -253,8 +253,8 @@ export function OgCard({ eyebrow, title, subtitle, price }: OgCardProps) {
               alignItems: 'center',
               padding: '16px 30px',
               borderRadius: 999,
-              backgroundColor: 'rgba(198, 255, 61, 0.10)',
-              border: '1px solid rgba(198, 255, 61, 0.35)',
+              backgroundColor: 'rgba(86, 184, 127, 0.10)',
+              border: '1px solid rgba(86, 184, 127, 0.35)',
             }}
           >
             <div

@@ -44,6 +44,7 @@ export const GAME_CURRENCY_SLUGS: Record<string, string> = {
   minecraft: 'minecoins',
   'league-of-legends': 'rp',
   fc25: 'coins',
+  fc26: 'coins',
   'escape-from-tarkov': 'roubles',
   'r6-siege': 'credits',
   'grow-a-garden': 'sheckles',

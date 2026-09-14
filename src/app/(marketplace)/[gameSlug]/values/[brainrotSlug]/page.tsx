@@ -517,7 +517,7 @@ export default async function BrainrotValuePage({ params }: PageProps) {
   const canonicalPath = `/steal-a-brainrot/values/${brainrot.slug}`
 
   return (
-    <main className="relative min-h-screen bg-[#0C0F0E]">
+    <main className="relative min-h-screen bg-[#171B21]">
       <SabHeroBackdrop height={560}>
       <JsonLd
         data={breadcrumbList([
@@ -693,13 +693,13 @@ export default async function BrainrotValuePage({ params }: PageProps) {
         <div className="flex flex-wrap gap-3">
           <Link
             href="/steal-a-brainrot/values"
-            className="inline-flex items-center gap-2 border border-[#26332C] bg-white/[0.03] px-4 py-2.5 text-sm font-semibold text-[#C6CEC9] transition hover:border-[#2A3A31] hover:bg-white/[0.06]"
+            className="inline-flex items-center gap-2 border border-[#26332C] bg-white/[0.03] px-4 py-2.5 text-sm font-semibold text-[#C6CEC9] transition hover:border-[rgba(255,255,255,0.12)] hover:bg-white/[0.06]"
           >
             ← All Steal a Brainrot values
           </Link>
           <Link
             href="/steal-a-brainrot/values/methodology"
-            className="inline-flex items-center gap-2 border border-[#26332C] bg-white/[0.03] px-4 py-2.5 text-sm font-semibold text-[#C6CEC9] transition hover:border-[#2A3A31] hover:bg-white/[0.06]"
+            className="inline-flex items-center gap-2 border border-[#26332C] bg-white/[0.03] px-4 py-2.5 text-sm font-semibold text-[#C6CEC9] transition hover:border-[rgba(255,255,255,0.12)] hover:bg-white/[0.06]"
           >
             How we value items →
           </Link>

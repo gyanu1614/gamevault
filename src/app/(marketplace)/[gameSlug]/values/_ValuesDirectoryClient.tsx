@@ -28,7 +28,7 @@ const RARITY_COLORS: Record<string, string> = {
   Legendary: '#F5C542',
   Epic: '#7FE3F0',
   Rare: '#4FB477',
-  Common: '#9BA8A0',
+  Common: '#9AA6B3',
   OG: '#E7C6FF',
 }
 
@@ -91,18 +91,18 @@ function Dropdown({
         aria-haspopup="listbox"
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
-        className="flex h-11 w-full items-center justify-between gap-2 border border-[#1E2723] bg-[#111613] px-3.5 text-sm text-[#F1F3F1] outline-none transition hover:border-[#2A3A31] focus:border-[#2E5B44]"
+        className="flex h-11 w-full items-center justify-between gap-2 border border-[rgba(255,255,255,0.08)] bg-[#1F242C] px-3.5 text-sm text-[#E9EDF2] outline-none transition hover:border-[rgba(255,255,255,0.12)] focus:border-[rgba(86,184,127,0.30)]"
       >
         <span className="truncate">{current}</span>
         <KeyboardArrowDownIcon
           sx={{ fontSize: 18 }}
-          className={`shrink-0 text-[#6D7A72] transition ${open ? 'rotate-180' : ''}`}
+          className={`shrink-0 text-[#9AA6B3] transition ${open ? 'rotate-180' : ''}`}
         />
       </button>
       {open && (
         <div
           role="listbox"
-          className="absolute z-30 mt-1.5 max-h-72 w-full overflow-auto border border-[#1E2723] bg-[#0E1211] p-1 shadow-[0_16px_40px_-16px_rgba(0,0,0,0.9)]"
+          className="absolute z-30 mt-1.5 max-h-72 w-full overflow-auto border border-[rgba(255,255,255,0.08)] bg-[#171B21] p-1 shadow-[0_16px_40px_-16px_rgba(0,0,0,0.9)]"
         >
           {options.map((o) => {
             const active = o.value === value
@@ -119,7 +119,7 @@ function Dropdown({
                 className={`flex w-full items-center justify-between gap-2 px-2.5 py-2 text-left text-sm transition ${
                   active
                     ? 'bg-[#15402A] text-[#EDF3E9]'
-                    : 'text-[#C6CEC9] hover:bg-white/[0.04]'
+                    : 'text-[#9AA6B3] hover:bg-white/[0.04]'
                 }`}
               >
                 <span className="truncate">{o.label}</span>
@@ -451,12 +451,12 @@ function ValuesDirectoryClientInner({
       <div className="grid gap-3 sm:grid-cols-[minmax(240px,1fr)_200px_190px]">
         <label className="relative block">
           <span className="sr-only">Search Brainrots</span>
-          <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#6D7A72]" />
+          <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9AA6B3]" />
           <input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Search Brainrot name, rarity..."
-            className="h-11 w-full border border-[#1E2723] bg-[#111613] pl-10 pr-4 text-base text-[#F1F3F1] outline-none transition placeholder:text-[#6D7A72] focus:border-[#2E5B44] sm:text-sm"
+            className="h-11 w-full border border-[rgba(255,255,255,0.08)] bg-[#1F242C] pl-10 pr-4 text-base text-[#E9EDF2] outline-none transition placeholder:text-[#9AA6B3] focus:border-[rgba(86,184,127,0.30)] sm:text-sm"
           />
         </label>
 
@@ -488,7 +488,7 @@ function ValuesDirectoryClientInner({
           /* Desktop only: on a phone this note landed as its own orphan line
              between the filters and the chips, and the Popular chip already
              says what the ordering is. */
-          <p className="hidden h-11 items-center text-[12.5px] leading-snug text-[#6D7A72] sm:flex">
+          <p className="hidden h-11 items-center text-[12.5px] leading-snug text-[#9AA6B3] sm:flex">
             Popular blends marketplace demand with cash value
           </p>
         )}
@@ -508,7 +508,7 @@ function ValuesDirectoryClientInner({
           className={`flex shrink-0 items-center justify-center gap-1.5 whitespace-nowrap px-3.5 py-2.5 text-[13px] font-semibold transition sm:flex-1 sm:shrink ${
             view === 'popular'
               ? 'bg-[#3FA35C] text-[#08110B]'
-              : 'border border-[#2F6B46] text-[#8FBF9C] hover:bg-[#4FB477]/10'
+              : 'border border-[rgba(86,184,127,0.25)] text-[#8FBF9C] hover:bg-[#4FB477]/10'
           }`}
         >
           <span
@@ -524,8 +524,8 @@ function ValuesDirectoryClientInner({
           aria-pressed={view === 'all'}
           className={`shrink-0 whitespace-nowrap px-3.5 py-2.5 text-[13px] font-semibold transition sm:flex-1 sm:shrink ${
             view === 'all'
-              ? 'bg-[#E8EDE9] text-[#0C0F0E]'
-              : 'border border-[#26332C] text-[#C6CEC9] hover:border-[#3A4A40]'
+              ? 'bg-[#E9EDF2] text-[#171B21]'
+              : 'border border-[#26332C] text-[#9AA6B3] hover:border-[#3A4A40]'
           }`}
         >
           All {brainrots.length}
@@ -544,7 +544,7 @@ function ValuesDirectoryClientInner({
               // hairline + coloured label when not.
               style={
                 active
-                  ? { backgroundColor: rc, color: '#0B0F0C', borderColor: rc }
+                  ? { backgroundColor: rc, color: 'var(--color-bg-base)', borderColor: rc }
                   : { borderColor: `${rc}59`, color: rc }
               }
               className="shrink-0 whitespace-nowrap border px-3.5 py-2.5 text-[13px] font-semibold transition hover:brightness-110 sm:flex-1 sm:shrink"
@@ -556,9 +556,9 @@ function ValuesDirectoryClientInner({
       </div>
 
       <div className="mt-3 flex flex-wrap items-center justify-between gap-3 text-sm">
-        <p className="text-[#9BA8A0]">
+        <p className="text-[#9AA6B3]">
           Showing{' '}
-          <span className="font-semibold tabular-nums text-[#F1F3F1]">
+          <span className="font-semibold tabular-nums text-[#E9EDF2]">
             {filteredBrainrots.length === 0
               ? '0'
               : `${((currentPage - 1) * PAGE_SIZE + 1).toLocaleString()}–${Math.min(
@@ -590,13 +590,13 @@ function ValuesDirectoryClientInner({
       </div>
 
       {visibleBrainrots.length === 0 ? (
-        <div className="mt-6 border border-[#1E2723] bg-[#121613] px-6 py-12 text-center">
-          <h2 className="text-xl font-semibold text-[#F1F3F1]">No Brainrots found</h2>
-          <p className="mt-2 text-[#9BA8A0]">Try changing the search or filters.</p>
+        <div className="mt-6 border border-[rgba(255,255,255,0.08)] bg-[#1F242C] px-6 py-12 text-center">
+          <h2 className="text-xl font-semibold text-[#E9EDF2]">No Brainrots found</h2>
+          <p className="mt-2 text-[#9AA6B3]">Try changing the search or filters.</p>
           <button
             type="button"
             onClick={resetFilters}
-            className="mt-5 bg-[#1B6B3F] px-5 py-2.5 text-sm font-bold text-white transition hover:bg-[#1f7a48]"
+            className="mt-5 bg-[#2A7A50] px-5 py-2.5 text-sm font-bold text-white transition hover:bg-[#338F5D]"
           >
             Clear filters
           </button>
@@ -619,14 +619,14 @@ function ValuesDirectoryClientInner({
             type="button"
             onClick={() => goToPage(Math.max(1, currentPage - 1))}
             disabled={currentPage === 1}
-            className="flex h-9 items-center gap-1 border border-[#26332C] bg-white/[0.03] px-3 text-sm font-semibold text-[#C6CEC9] transition enabled:hover:border-[#2A3A31] enabled:hover:bg-white/[0.06] disabled:opacity-40"
+            className="flex h-9 items-center gap-1 border border-[#26332C] bg-white/[0.03] px-3 text-sm font-semibold text-[#9AA6B3] transition enabled:hover:border-[rgba(255,255,255,0.12)] enabled:hover:bg-white/[0.06] disabled:opacity-40"
           >
             <ChevronLeftIcon sx={{ fontSize: 18 }} />
             Prev
           </button>
           {pageNumbers(currentPage, totalPages).map((n, i) =>
             n === '…' ? (
-              <span key={`gap-${i}`} className="px-1.5 text-sm text-[#6D7A72]">
+              <span key={`gap-${i}`} className="px-1.5 text-sm text-[#9AA6B3]">
                 …
               </span>
             ) : (
@@ -637,8 +637,8 @@ function ValuesDirectoryClientInner({
                 aria-current={n === currentPage ? 'page' : undefined}
                 className={`h-9 min-w-9 px-2 text-sm font-semibold tabular-nums transition ${
                   n === currentPage
-                    ? 'bg-[#1B6B3F] text-white'
-                    : 'border border-[#26332C] bg-white/[0.03] text-[#C6CEC9] hover:border-[#2A3A31] hover:bg-white/[0.06]'
+                    ? 'bg-[#2A7A50] text-white'
+                    : 'border border-[#26332C] bg-white/[0.03] text-[#9AA6B3] hover:border-[rgba(255,255,255,0.12)] hover:bg-white/[0.06]'
                 }`}
               >
                 {n}
@@ -649,7 +649,7 @@ function ValuesDirectoryClientInner({
             type="button"
             onClick={() => goToPage(Math.min(totalPages, currentPage + 1))}
             disabled={currentPage === totalPages}
-            className="flex h-9 items-center gap-1 border border-[#26332C] bg-white/[0.03] px-3 text-sm font-semibold text-[#C6CEC9] transition enabled:hover:border-[#2A3A31] enabled:hover:bg-white/[0.06] disabled:opacity-40"
+            className="flex h-9 items-center gap-1 border border-[#26332C] bg-white/[0.03] px-3 text-sm font-semibold text-[#9AA6B3] transition enabled:hover:border-[rgba(255,255,255,0.12)] enabled:hover:bg-white/[0.06] disabled:opacity-40"
           >
             Next
             <ChevronRightIcon sx={{ fontSize: 18 }} />
@@ -720,12 +720,12 @@ function BrainrotCard({ brainrot }: { brainrot: BrainrotDirectoryItem }) {
   return (
     <div
       style={{ ['--rc' as string]: rc } as CSSProperties}
-      className="group relative flex flex-col overflow-hidden border border-[#1E2723] bg-gradient-to-b from-[#14181A] to-[#0B0D0E] transition-colors hover:border-[#2C3A31]"
+      className="group relative flex flex-col overflow-hidden border border-[rgba(255,255,255,0.08)] bg-gradient-to-b from-[#1F242C] to-[#171B21] transition-colors hover:border-[rgba(255,255,255,0.12)]"
     >
       {/* ── Top row: mutation chip (left) · rarity (right), then a grey divider.
           No colored fill — a defined header band on the plain card surface, with
           a hairline separating it from the art below. ── */}
-      <div className="flex items-center justify-between gap-2 border-b border-[#1E2723] px-2.5 py-2">
+      <div className="flex items-center justify-between gap-2 border-b border-[rgba(255,255,255,0.08)] px-2.5 py-2">
         {hasMutations ? (
           <button
             type="button"
@@ -784,7 +784,7 @@ function BrainrotCard({ brainrot }: { brainrot: BrainrotDirectoryItem }) {
 
         {/* Name + income (M/s). */}
         <div className="px-2.5 pb-2.5 pt-1 text-center">
-          <div className="truncate text-[14px] font-bold leading-tight text-[#F1F3F1] transition-colors group-hover:text-white">
+          <div className="truncate text-[14px] font-bold leading-tight text-[#E9EDF2] transition-colors group-hover:text-white">
             {brainrot.name}
           </div>
           {income && (
@@ -799,8 +799,8 @@ function BrainrotCard({ brainrot }: { brainrot: BrainrotDirectoryItem }) {
           the design. Recomputes with the selected mutation. ── */}
       <Link href={href} className="mt-auto block">
         {headline ? (
-          <div className="flex border-t border-[#1A211A]">
-            <div className="flex-1 border-r border-[#1A211A] px-1.5 py-2.5 text-center">
+          <div className="flex border-t border-[rgba(255,255,255,0.08)]">
+            <div className="flex-1 border-r border-[rgba(255,255,255,0.08)] px-1.5 py-2.5 text-center">
               <div className="font-mono text-[9px] uppercase tracking-[0.12em] text-[#5D6670]">
                 Market
               </div>
@@ -818,7 +818,7 @@ function BrainrotCard({ brainrot }: { brainrot: BrainrotDirectoryItem }) {
             </div>
           </div>
         ) : (
-          <div className="border-t border-[#1A211A] px-1.5 py-3.5 text-center">
+          <div className="border-t border-[rgba(255,255,255,0.08)] px-1.5 py-3.5 text-center">
             <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-[#5E685E]">
               {isDefault ? 'No price yet' : 'No Sales'}
             </div>
@@ -864,7 +864,7 @@ function BrainrotCard({ brainrot }: { brainrot: BrainrotDirectoryItem }) {
                   style={
                     active
                       ? { backgroundColor: mv.soft, borderColor: mv.color }
-                      : { backgroundColor: '#12171A', borderColor: '#232A2F' }
+                      : { backgroundColor: '#12171A', borderColor: 'rgba(255,255,255,0.10)' }
                   }
                 >
                   <MutationDot visual={mv} size={9} />

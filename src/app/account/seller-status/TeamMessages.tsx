@@ -23,7 +23,7 @@ const P = {
   paper: '#FFFFFF',
   ivory: '#FAFAF7',
   forest: '#14432A',
-  forest2: '#1B5E3A',
+  forest2: 'var(--color-accent-default)',
   forest3: '#0F3320',
   lime: '#A3E635',
   ink: '#1A1D19',

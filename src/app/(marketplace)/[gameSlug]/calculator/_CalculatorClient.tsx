@@ -328,8 +328,8 @@ function CashTab({
     // Stacks to one column on mobile (list above panel).
     <div className="grid gap-5 lg:grid-cols-[380px_minmax(0,1fr)] lg:items-start">
       {/* ── Search + results ── */}
-      <div className="border border-[#1A211A] bg-[#0B0F0C]">
-        <div className="border-b border-[#1A211A] p-4">
+      <div className="border border-[rgba(255,255,255,0.08)] bg-[var(--color-bg-base)]">
+        <div className="border-b border-[rgba(255,255,255,0.08)] p-4">
           <div className="flex items-center gap-2.5 border border-[#1E251E] bg-[#0A0D0B] px-3.5">
             <SearchIcon sx={{ fontSize: 16 }} className="shrink-0 text-[#5E685E]" />
             <input
@@ -361,7 +361,7 @@ function CashTab({
         </div>
 
         {visibleBrainrots.length > 0 ? (
-          <div className="flex max-h-[520px] flex-col gap-px overflow-auto border-t border-[#151B15] bg-[#151B15]">
+          <div className="flex max-h-[520px] flex-col gap-px overflow-auto border-t border-[#1F242C] bg-[#1F242C]">
             {visibleBrainrots.map((brainrot) => {
               const active = brainrot.id === selectedBrainrotId
               const price = defaultPriceByBrainrot.get(brainrot.id)
@@ -377,11 +377,11 @@ function CashTab({
                   className={cn(
                     'flex items-center gap-3.5 px-4 py-3 text-left transition-colors hover:bg-[#111710]',
                     active
-                      ? 'border-l-2 border-[#3FA35C] bg-[#0E140F]'
-                      : 'border-l-2 border-transparent bg-[#0B0F0C]',
+                      ? 'border-l-2 border-[#3FA35C] bg-[#171B21]'
+                      : 'border-l-2 border-transparent bg-[var(--color-bg-base)]',
                   )}
                 >
-                  <span className="flex h-[46px] w-[46px] shrink-0 items-center justify-center border border-[#1A211A] bg-[#0E140F]">
+                  <span className="flex h-[46px] w-[46px] shrink-0 items-center justify-center border border-[rgba(255,255,255,0.08)] bg-[#171B21]">
                     {brainrot.imageUrl && (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
@@ -408,7 +408,7 @@ function CashTab({
             })}
           </div>
         ) : (
-          <div className="bg-[#0B0F0C] px-5 py-11 text-center">
+          <div className="bg-[var(--color-bg-base)] px-5 py-11 text-center">
             <p className="mb-2 text-[14px] font-semibold text-[#D7DED4]">
               Nothing matched that
             </p>
@@ -420,7 +420,7 @@ function CashTab({
       </div>
 
       {/* ── Insight panel ── */}
-      <div className="border border-[#1A211A] bg-[#0B0F0C]">
+      <div className="border border-[rgba(255,255,255,0.08)] bg-[var(--color-bg-base)]">
         {!selectedBrainrot || !selectedMutation ? (
           <div className="flex min-h-[420px] flex-col items-center justify-center px-10 py-24 text-center">
             <SearchIcon sx={{ fontSize: 32 }} className="mb-5 text-[#3FA35C]" />
@@ -485,7 +485,7 @@ function CashResult({
       {/* Headline: art tile + price/chips/buy. Stacks on mobile. */}
       <div className="grid lg:grid-cols-[0.85fr_1.15fr]">
         <div
-          className="relative flex items-center justify-center border-b border-[#1A211A] p-7 lg:border-b-0 lg:border-r"
+          className="relative flex items-center justify-center border-b border-[rgba(255,255,255,0.08)] p-7 lg:border-b-0 lg:border-r"
           style={{
             background: 'linear-gradient(165deg,#111A12,#0A0D0B)',
           }}
@@ -522,7 +522,7 @@ function CashResult({
           </div>
           <div className="mb-5 flex flex-wrap items-center gap-2.5">
             {range && (
-              <span className="border border-[#263026] px-2.5 py-1.5 font-mono text-[11px] font-medium text-[#7C877C]">
+              <span className="border border-[rgba(255,255,255,0.08)] px-2.5 py-1.5 font-mono text-[11px] font-medium text-[#7C877C]">
                 RANGE {range}
               </span>
             )}
@@ -554,14 +554,14 @@ function CashResult({
       </div>
 
       {/* 4-stat strip */}
-      <div className="grid grid-cols-2 gap-px border-y border-[#1A211A] bg-[#151B15] sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-px border-y border-[rgba(255,255,255,0.08)] bg-[#1F242C] sm:grid-cols-4">
         {[
           { label: 'Income', value: income },
           { label: 'Multiplier', value: formatMultiplier(mutation.multiplier) },
           { label: 'Rarity', value: brainrot.rarity },
           { label: 'Listings', value: listings },
         ].map((stat) => (
-          <div key={stat.label} className="bg-[#0B0F0C] p-[18px]">
+          <div key={stat.label} className="bg-[var(--color-bg-base)] p-[18px]">
             <div className="mb-2.5 font-mono text-[10px] font-medium uppercase tracking-[0.11em] text-[#5E685E]">
               {stat.label}
             </div>
@@ -582,7 +582,7 @@ function CashResult({
             TAP ONE TO PRICE IT
           </span>
         </div>
-        <div className="grid grid-cols-2 gap-px border border-[#1A211A] bg-[#151B15] lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-px border border-[rgba(255,255,255,0.08)] bg-[#1F242C] lg:grid-cols-4">
           {orderedMutations.map((option) => {
             const mv = mutationVisual(option.slug)
             const active = option.id === mutation.id
@@ -597,7 +597,7 @@ function CashResult({
                 aria-pressed={active}
                 className="flex flex-col gap-2 p-3.5 text-left transition-colors hover:bg-[#111710]"
                 style={{
-                  background: active ? mv.soft : '#0B0F0C',
+                  background: active ? mv.soft : 'var(--color-bg-base)',
                 }}
               >
                 <span
@@ -693,7 +693,7 @@ function VerdictBar({
 
   return (
     <div
-      className="border-t border-[#1A211A] px-5 py-6 text-center sm:px-8 sm:py-7"
+      className="border-t border-[rgba(255,255,255,0.08)] px-5 py-6 text-center sm:px-8 sm:py-7"
       style={{
         background: `radial-gradient(120% 120% at 50% 0%, ${accent}14, transparent 60%)`,
       }}
@@ -702,7 +702,7 @@ function VerdictBar({
       <div className="flex flex-col items-center gap-2">
         <span
           className="text-[34px] font-black leading-none tracking-[-0.03em] sm:text-[40px]"
-          style={{ color: noData ? '#6D7A72' : accent }}
+          style={{ color: noData ? '#9AA6B3' : accent }}
         >
           {noData ? <LockOutlinedIcon sx={{ fontSize: 34 }} /> : verdict.label}
         </span>
@@ -721,11 +721,11 @@ function VerdictBar({
       {/* The fairness bar — full, wide. */}
       <div className="mx-auto mt-5 w-full max-w-[520px]">
         <div className="mb-1.5 flex items-center justify-between text-[9.5px] font-bold uppercase tracking-[0.1em]">
-          <span style={{ color: isLoss ? '#E23B4E' : '#6D6664' }}>You lose</span>
-          <span style={{ color: isFair ? '#E0B155' : '#6D6664' }}>Fair</span>
-          <span style={{ color: isWin ? '#4FB477' : '#6D6664' }}>You win</span>
+          <span style={{ color: isLoss ? '#E23B4E' : '#6C7684' }}>You lose</span>
+          <span style={{ color: isFair ? '#E0B155' : '#6C7684' }}>Fair</span>
+          <span style={{ color: isWin ? '#4FB477' : '#6C7684' }}>You win</span>
         </div>
-        <div className="relative h-4 overflow-hidden border border-[#1E2723] bg-[#0E1512]">
+        <div className="relative h-4 overflow-hidden border border-[rgba(255,255,255,0.08)] bg-[#0E1512]">
           <div
             aria-hidden
             className="absolute inset-0 opacity-45"
@@ -744,7 +744,7 @@ function VerdictBar({
           )}
           {!noData && (
             <div
-              className="absolute top-1/2 h-5 w-5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-[#0B0F0C]"
+              className="absolute top-1/2 h-5 w-5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-[var(--color-bg-base)]"
               style={{ left: `${markerPos}%`, backgroundColor: accent, boxShadow: `0 0 12px ${accent}b3` }}
             />
           )}
@@ -752,7 +752,7 @@ function VerdictBar({
       </div>
 
       {/* Caption + gain line */}
-      <p className="mx-auto mt-5 max-w-[440px] text-[13px] font-medium leading-6 text-[#9BA8A0]">
+      <p className="mx-auto mt-5 max-w-[440px] text-[13px] font-medium leading-6 text-[#9AA6B3]">
         {verdict.caption}
       </p>
       {ready && (
@@ -930,9 +930,9 @@ function TradeTab({
       return {
         label: '?',
         caption: 'Add priced variants to both sides',
-        border: 'border-[#1E2723]',
+        border: 'border-[rgba(255,255,255,0.08)]',
         background: 'bg-white/[0.04]',
-        text: 'text-[#9BA8A0]',
+        text: 'text-[#9AA6B3]',
       }
     }
 
@@ -1016,7 +1016,7 @@ function TradeTab({
       spread: 70,
       startVelocity: 38,
       origin: { y: 0.35 },
-      colors: ['#4FB477', '#8FD86F', '#C6FF3D', '#F1F3F1'],
+      colors: ['#4FB477', '#8FD86F', '#3FB08C', '#F1F3F1'],
       scalar: 0.9,
       disableForReducedMotion: true,
     })
@@ -1119,7 +1119,7 @@ function TradeTab({
 
   return (
     <>
-      <div className="overflow-hidden border border-[#1A211A] bg-[#0B0F0C]">
+      <div className="overflow-hidden border border-[rgba(255,255,255,0.08)] bg-[var(--color-bg-base)]">
         {/* ── Two trade sides on top, side by side. Your side gets a faint green
             wash, their side a faint red wash — a subtle "win on mine / loss on
             theirs" cue without a separate tag. ── */}
@@ -1156,7 +1156,7 @@ function TradeTab({
             so the verdict band always reads as the final answer. */}
         {(giveSummary.unknown > 0 ||
           receiveSummary.unknown > 0) && (
-          <div className="border-t border-[#1A211A] bg-[#E0B155]/10 px-5 py-3 text-center text-[12.5px] text-[#E0B155] sm:px-8">
+          <div className="border-t border-[rgba(255,255,255,0.08)] bg-[#E0B155]/10 px-5 py-3 text-center text-[12.5px] text-[#E0B155] sm:px-8">
             The verdict is paused because one or more selected
             mutation variants has no cash-market estimate.
           </div>
@@ -1166,7 +1166,7 @@ function TradeTab({
           receiveSummary.lowConfidence > 0) &&
           giveSummary.unknown === 0 &&
           receiveSummary.unknown === 0 && (
-            <div className="border-t border-[#1A211A] bg-white/[0.03] px-5 py-3 text-center text-[12.5px] text-[#9BA8A0] sm:px-8">
+            <div className="border-t border-[rgba(255,255,255,0.08)] bg-white/[0.03] px-5 py-3 text-center text-[12.5px] text-[#9AA6B3] sm:px-8">
               Low-confidence evidence is included. The verdict
               uses the full low-to-high market range rather than
               only the midpoint.
@@ -1183,7 +1183,7 @@ function TradeTab({
           ready={ready}
         />
 
-        <div className="grid gap-3 border-t border-[#1A211A] bg-black/20 p-5 sm:grid-cols-2 sm:px-8">
+        <div className="grid gap-3 border-t border-[rgba(255,255,255,0.08)] bg-black/20 p-5 sm:grid-cols-2 sm:px-8">
           <button
             type="button"
             onClick={clearTrade}
@@ -1208,8 +1208,8 @@ function TradeTab({
           "their side is worth more" into something you can act on. Only
           rendered once something is on the table. */}
       {tradeItems.length > 0 && (
-        <div className="mt-6 border border-[#1E2723] bg-[#101410]">
-          <div className="border-b border-[#1E2723] px-4 py-3">
+        <div className="mt-6 border border-[rgba(255,255,255,0.08)] bg-[#101410]">
+          <div className="border-b border-[rgba(255,255,255,0.08)] px-4 py-3">
             <h3 className="text-[15px] font-semibold text-[#F1F3F1]">
               Brainrots in this trade
             </h3>
@@ -1218,14 +1218,14 @@ function TradeTab({
             </p>
           </div>
 
-          <ul className="divide-y divide-[#1A211A]">
+          <ul className="divide-y divide-[rgba(255,255,255,0.08)]">
             {tradeItems.map((item) => (
               <li key={item.key}>
                 <Link
                   href={`/steal-a-brainrot/buy-items?search=${encodeURIComponent(item.name)}`}
                   className="group grid grid-cols-[44px_minmax(0,1fr)_auto] items-center gap-3 px-4 py-3 transition-colors hover:bg-[#161C16]"
                 >
-                  <span className="flex h-11 w-11 items-center justify-center overflow-hidden bg-[#0B0F0C]">
+                  <span className="flex h-11 w-11 items-center justify-center overflow-hidden bg-[var(--color-bg-base)]">
                     {item.imageUrl && (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
@@ -1282,7 +1282,7 @@ function TradeTab({
             }
           }}
         >
-          <div className="max-h-[86vh] w-full max-w-lg overflow-y-auto border border-[#263026] bg-[#0B0F0C] p-5 shadow-2xl sm:p-6">
+          <div className="max-h-[86vh] w-full max-w-lg overflow-y-auto border border-[rgba(255,255,255,0.08)] bg-[var(--color-bg-base)] p-5 shadow-2xl sm:p-6">
             <div className="flex items-center justify-between gap-4">
               <div>
                 <h3 className="text-lg font-bold text-[#F1F3F1]">
@@ -1303,7 +1303,7 @@ function TradeTab({
                   setEditor(null)
                   setPendingBrainrotId(null)
                 }}
-                className="flex h-8 w-8 items-center justify-center border border-[#263026] text-[#6D7A72] transition hover:text-[#F1F3F1]"
+                className="flex h-8 w-8 items-center justify-center border border-[rgba(255,255,255,0.08)] text-[#9AA6B3] transition hover:text-[#F1F3F1]"
               >
                 <CloseIcon sx={{ fontSize: 20 }} />
               </button>
@@ -1344,7 +1344,7 @@ function TradeTab({
                           ← Back to Brainrots
                         </button>
 
-                        <div className="flex items-center gap-3 border border-[#1E2723] bg-white/[0.02] p-3">
+                        <div className="flex items-center gap-3 border border-[rgba(255,255,255,0.08)] bg-white/[0.02] p-3">
                           <div className="h-12 w-12 shrink-0 overflow-hidden bg-white/[0.03] p-1.5">
                             {picked.imageUrl && (
                               // eslint-disable-next-line @next/next/no-img-element
@@ -1359,7 +1359,7 @@ function TradeTab({
                             <p className="truncate text-sm font-semibold text-[#F1F3F1]">
                               {picked.name}
                             </p>
-                            <p className="mt-0.5 text-xs text-[#6D7A72]">{picked.rarity}</p>
+                            <p className="mt-0.5 text-xs text-[#9AA6B3]">{picked.rarity}</p>
                           </div>
                         </div>
 
@@ -1382,7 +1382,7 @@ function TradeTab({
                                 className={cn(
                                   'flex items-center gap-2 border px-3 py-2.5 text-left text-[13px] font-semibold transition',
                                   priced
-                                    ? 'border-[#1E2723] bg-white/[0.03] text-[#F1F3F1] hover:border-[#2F6B46] hover:bg-white/[0.06]'
+                                    ? 'border-[rgba(255,255,255,0.08)] bg-white/[0.03] text-[#F1F3F1] hover:border-[#2F6B46] hover:bg-white/[0.06]'
                                     : 'cursor-not-allowed border-[#161d19] text-[#4A544C]',
                                 )}
                               >
@@ -1393,7 +1393,7 @@ function TradeTab({
                           })}
                         </div>
 
-                        <p className="mt-4 text-[12px] leading-5 text-[#6D7A72]">
+                        <p className="mt-4 text-[12px] leading-5 text-[#9AA6B3]">
                           Greyed-out mutations have no verified sale or listing for this
                           Brainrot yet, so we can&apos;t price them.
                         </p>
@@ -1405,14 +1405,14 @@ function TradeTab({
                     <div className="relative mt-5">
                       <SearchIcon
                         sx={{ fontSize: 18 }}
-                        className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#6D7A72]"
+                        className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#9AA6B3]"
                       />
                       <input
                         autoFocus
                         value={search}
                         onChange={(event) => setSearch(event.target.value)}
                         placeholder="Search Brainrots..."
-                        className="h-11 w-full border border-[#1E2723] bg-white/[0.03] pl-10 pr-4 text-base text-[#F1F3F1] outline-none placeholder:text-[#6D7A72] focus:border-[#2A3A31]"
+                        className="h-11 w-full border border-[rgba(255,255,255,0.08)] bg-white/[0.03] pl-10 pr-4 text-base text-[#F1F3F1] outline-none placeholder:text-[#9AA6B3] focus:border-[#2A3A31]"
                       />
                     </div>
 
@@ -1443,7 +1443,7 @@ function TradeTab({
                             </p>
                             {/* Rarity only — the price is deliberately withheld
                                 until the verdict. */}
-                            <p className="mt-0.5 text-xs text-[#6D7A72]">{brainrot.rarity}</p>
+                            <p className="mt-0.5 text-xs text-[#9AA6B3]">{brainrot.rarity}</p>
                           </div>
                           <AddIcon sx={{ fontSize: 20 }} className="text-[#4FB477]" />
                         </button>
@@ -1484,7 +1484,7 @@ function TradeSide({
   return (
     <div>
       <div className="mb-4 text-center">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#6D7A72]">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#9AA6B3]">
           {label}
         </p>
         <p className="mt-1 text-[15px] font-semibold tabular-nums text-[#F1F3F1]">
@@ -1492,7 +1492,7 @@ function TradeSide({
         </p>
         {summary.unknown === 0 &&
           Math.abs(summary.high - summary.low) > 0.01 && (
-            <p className="mt-0.5 text-[11px] tabular-nums text-[#6D7A72]">
+            <p className="mt-0.5 text-[11px] tabular-nums text-[#9AA6B3]">
               {formatCash(summary.low)}–
               {formatCash(summary.high)}
             </p>
@@ -1537,7 +1537,7 @@ function TradeSide({
               onClick={() =>
                 onEntryClick(side, entry.instanceId)
               }
-              className="group relative aspect-square overflow-hidden border border-[#1E2723] bg-white/[0.03] p-2 transition hover:-translate-y-0.5 hover:border-[#2A3A31]"
+              className="group relative aspect-square overflow-hidden border border-[rgba(255,255,255,0.08)] bg-white/[0.03] p-2 transition hover:-translate-y-0.5 hover:border-[#2A3A31]"
             >
               {brainrot?.imageUrl && (
                 // eslint-disable-next-line @next/next/no-img-element
@@ -1576,7 +1576,7 @@ function TradeSide({
         })}
       </div>
 
-      <p className="mt-3 text-center text-[11px] text-[#6D7A72]">
+      <p className="mt-3 text-center text-[11px] text-[#9AA6B3]">
         {entries.length}/9 slots used
       </p>
     </div>
@@ -1632,7 +1632,7 @@ function EntryEditor({
           <p className="font-semibold text-[#F1F3F1]">
             {brainrot?.name ?? 'Unknown Brainrot'}
           </p>
-          <p className="mt-1 text-xs text-[#6D7A72]">
+          <p className="mt-1 text-xs text-[#9AA6B3]">
             {brainrot?.rarity}
           </p>
           <p
@@ -1646,7 +1646,7 @@ function EntryEditor({
               : 'No cash-market estimate'}
           </p>
           {price && (
-            <p className="mt-1 text-[11px] text-[#6D7A72]">
+            <p className="mt-1 text-[11px] text-[#9AA6B3]">
               {formatConfidence(price.confidenceLabel)}
             </p>
           )}
@@ -1654,7 +1654,7 @@ function EntryEditor({
       </div>
 
       <label className="mt-5 block">
-        <span className="text-[11px] font-semibold uppercase tracking-wide text-[#6D7A72]">
+        <span className="text-[11px] font-semibold uppercase tracking-wide text-[#9AA6B3]">
           Mutation
         </span>
         <select
@@ -1662,7 +1662,7 @@ function EntryEditor({
           onChange={(event) =>
             onUpdate({ mutationId: event.target.value })
           }
-          className="mt-2 h-11 w-full border border-[#1E2723] bg-white/[0.03] px-3 text-base text-[#F1F3F1] outline-none focus:border-[#2A3A31]"
+          className="mt-2 h-11 w-full border border-[rgba(255,255,255,0.08)] bg-white/[0.03] px-3 text-base text-[#F1F3F1] outline-none focus:border-[#2A3A31]"
         >
           {mutations.map((mutation) => {
             const mutationPrice =
@@ -1688,7 +1688,7 @@ function EntryEditor({
       </label>
 
       <label className="mt-4 block">
-        <span className="text-[11px] font-semibold uppercase tracking-wide text-[#6D7A72]">
+        <span className="text-[11px] font-semibold uppercase tracking-wide text-[#9AA6B3]">
           Quantity
         </span>
         <input
@@ -1707,7 +1707,7 @@ function EntryEditor({
                 : 1,
             })
           }}
-          className="mt-2 h-11 w-full border border-[#1E2723] bg-white/[0.03] px-3 text-base text-[#F1F3F1] outline-none focus:border-[#2A3A31]"
+          className="mt-2 h-11 w-full border border-[rgba(255,255,255,0.08)] bg-white/[0.03] px-3 text-base text-[#F1F3F1] outline-none focus:border-[#2A3A31]"
         />
       </label>
 

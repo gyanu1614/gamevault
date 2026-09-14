@@ -208,7 +208,7 @@ export function StatusStrip({
   const sCtaCls = cn(
     'inline-flex flex-shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-[10px] font-bold transition-all',
     'bg-lime text-text-inverse hover:-translate-y-[1px] hover:bg-lime-hover',
-    'shadow-[0_6px_18px_rgba(198,255,61,0.18)]',
+    'shadow-[0_6px_18px_rgba(86,184,127,0.18)]',
     promoted ? 'px-5 py-2.5 text-[13.5px]' : 'px-3 py-1.5 text-[12px]',
     // Below sm the CTA drops to its own full-width row (parent rows are
     // flex-wrap) and grows to a comfortable >=44px touch target.

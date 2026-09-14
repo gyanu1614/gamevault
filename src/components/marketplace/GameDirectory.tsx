@@ -98,7 +98,7 @@ export default function GameDirectory({
         </div>
 
         {collapsible && !expanded && (
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 flex h-32 items-end justify-center bg-gradient-to-t from-[var(--color-bg-base,#0A0A0F)] via-[var(--color-bg-base,#0A0A0F)]/80 to-transparent">
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 flex h-32 items-end justify-center bg-gradient-to-t from-[var(--color-bg-base,#171B21)] via-[var(--color-bg-base,#171B21)]/80 to-transparent">
             <button
               type="button"
               onClick={() => setExpanded(true)}

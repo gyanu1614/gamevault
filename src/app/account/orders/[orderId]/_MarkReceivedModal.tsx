@@ -295,7 +295,7 @@ export function MarkReceivedModal({
             disabled={!canSubmit}
             className={cn(
               'h-12 bg-lime px-6 text-[15px] font-bold text-text-inverse hover:bg-lime-hover',
-              'shadow-[0_6px_18px_rgba(198,255,61,0.22)] disabled:opacity-50',
+              'shadow-[0_6px_18px_rgba(86,184,127,0.22)] disabled:opacity-50',
             )}
           >
             {submitting ? (

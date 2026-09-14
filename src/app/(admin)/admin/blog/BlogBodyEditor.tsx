@@ -204,7 +204,7 @@ export function BlogBodyEditor({
           </button>
         </div>
         {showPreview && (
-          <div className="border border-[#1E2723] bg-[#0B0F0C] px-4 py-6 sm:px-8">
+          <div className="border border-[rgba(255,255,255,0.08)] bg-[#171B21] px-4 py-6 sm:px-8">
             {/* Match the real article's reading column (max-w-[760px] on the live
                 page) so line lengths/layout are identical, not squished. */}
             <div className="mx-auto w-full max-w-[760px]">

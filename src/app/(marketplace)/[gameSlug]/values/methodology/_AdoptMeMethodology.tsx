@@ -50,7 +50,7 @@ export default async function AdoptMeMethodology() {
   const hubNav = await getHubNavData('adopt-me')
 
   return (
-    <main className="relative min-h-screen bg-[#0C0F0E]">
+    <main className="relative min-h-screen bg-[#171B21]">
       <JsonLd
         data={breadcrumbList([
           { name: 'Home', path: '/' },
@@ -161,7 +161,7 @@ export default async function AdoptMeMethodology() {
         <div className="flex flex-wrap gap-3 pt-2">
           <Link
             href="/adopt-me/values"
-            className="inline-flex items-center gap-2 bg-[#1B6B3F] px-4 py-2.5 text-sm font-bold text-white shadow-[0_6px_16px_-8px_rgba(27,107,63,0.6)] transition hover:bg-[#1f7a48]"
+            className="inline-flex items-center gap-2 bg-[#2A7A50] px-4 py-2.5 text-sm font-bold text-white shadow-[0_6px_16px_-8px_rgba(27,107,63,0.6)] transition hover:bg-[#338F5D]"
           >
             Browse all Adopt Me values
             <ArrowRight className="h-4 w-4" />

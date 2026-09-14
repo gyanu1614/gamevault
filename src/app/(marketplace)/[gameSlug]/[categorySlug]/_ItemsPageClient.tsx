@@ -288,14 +288,17 @@ export default function ItemsPageClient({
               </span>
             )}
             <div className="min-w-0 flex-1">
-              <h1 className="text-[26px] font-black leading-tight tracking-tight text-text-primary sm:text-[30px] lg:text-[34px]">
+              <h1
+                className="font-black leading-tight tracking-tight text-text-primary"
+                style={{ fontSize: 'var(--fs-page-title)', lineHeight: 'var(--lh-page-title)', fontWeight: 'var(--fw-heading)', letterSpacing: '-0.02em' }}
+              >
                 {gameName} {categoryLabel}
               </h1>
 
               {/* Stats — floating text with dot separators (no cards).
                   Scannable + keyword-rich; full introLine stays in the HTML
                   (sr-only) for the crawler. */}
-              <div className="mt-3 flex flex-wrap items-center justify-center gap-x-2.5 gap-y-1.5 text-[13.5px] text-text-tertiary md:justify-start">
+              <div className="mt-3 flex flex-wrap items-center justify-center gap-x-2.5 gap-y-1.5 text-text-tertiary md:justify-start" style={{ fontSize: 'var(--fs-meta)' }}>
                 <span>
                   <span className="font-bold tabular-nums text-text-primary">
                     {sorted.length.toLocaleString('en-US')}
@@ -329,12 +332,27 @@ export default function ItemsPageClient({
             </div>
           </div>
 
-          {/* Filters — horizontal scroll slider (left→right reveals more).
-              One line, doesn't stack; scrolls on narrow phones. */}
-          <div
-            className="-mx-4 mb-3 flex items-center gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-            style={{ WebkitOverflowScrolling: 'touch' }}
-          >
+          {/* Single-row filter bar: search | filter chips | sort — all inline.
+              Scrolls horizontally on narrow viewports; search stays pinned left. */}
+          <div className="-mx-4 flex items-center gap-2.5 overflow-x-auto px-4 pb-0.5 sm:mx-0 sm:px-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {/* Search — wider anchor on the left */}
+            <div className="relative shrink-0 min-w-[220px] sm:min-w-[300px]">
+              <Search
+                className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary"
+                aria-hidden
+              />
+              <input
+                type="search"
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder="Search items or sellers…"
+                aria-label="Search items"
+                className="w-full rounded border border-border-default bg-bg-overlay pl-10 pr-3 text-text-primary outline-none transition-colors placeholder:text-text-tertiary focus:border-lime focus:ring-2 focus:ring-lime-tint-bg"
+                style={{ height: 'var(--h-input)', fontSize: 'var(--fs-body)' }}
+              />
+            </div>
+
+            {/* Filter chips */}
             {visibleFilters.map((f) => (
               <FilterSelect
                 key={f.slug}
@@ -355,35 +373,21 @@ export default function ItemsPageClient({
               options={priceOptions}
               onChange={setFilterPrice}
             />
-            <button
-              type="button"
-              onClick={clearFilters}
-              className="h-9 shrink-0 whitespace-nowrap px-2 text-[12.5px] font-semibold text-text-tertiary underline decoration-border-default underline-offset-[3px] transition-colors hover:text-text-primary"
-            >
-              Clear filters
-            </button>
-          </div>
 
-          {/* Search + Filter on one line — search fills the left, compact
-              Filter pill pinned right. */}
-          <div className="flex items-center gap-2">
-            <div className="relative min-w-0 flex-1">
-              <Search
-                className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary"
-                aria-hidden
-              />
-              <input
-                type="search"
-                value={q}
-                onChange={(e) => setQ(e.target.value)}
-                placeholder="Search items or sellers…"
-                aria-label="Search items"
-                className="h-11 w-full rounded-lg border border-border-default bg-bg-overlay px-4 pl-11 text-[14.5px] text-text-primary outline-none transition-colors placeholder:text-text-tertiary focus:border-lime focus:ring-2 focus:ring-lime-tint-bg sm:h-12 sm:text-[15px]"
-              />
-            </div>
+            {/* Sort */}
             <div className="shrink-0">
               <SortSelect value={sort} onChange={setSort} />
             </div>
+
+            {/* Clear — far right, unobtrusive */}
+            <button
+              type="button"
+              onClick={clearFilters}
+              className="shrink-0 whitespace-nowrap px-1.5 font-semibold text-text-tertiary underline decoration-border-default underline-offset-[3px] transition-colors hover:text-text-primary"
+              style={{ minHeight: 'var(--h-btn-secondary)', fontSize: 'var(--fs-micro)' }}
+            >
+              Clear
+            </button>
           </div>
         </div>
       </section>
@@ -401,7 +405,7 @@ export default function ItemsPageClient({
                 made adjacent landscape cards touch their hover shadows
                 and felt cramped. Now: gap-5 on mobile, gap-6 on sm+ so
                 each card has breathing room horizontally AND vertically. */}
-            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-6 xl:grid-cols-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3" style={{ gap: 'var(--gap-grid)' }}>
               {visible.map((o) => (
                 <ItemCard
                   key={o.id}
@@ -418,7 +422,8 @@ export default function ItemsPageClient({
                 <button
                   type="button"
                   onClick={() => setPage((p) => p + 1)}
-                  className="inline-flex items-center gap-2 rounded-lg border border-border-default bg-bg-raised px-6 py-3 text-[14px] font-bold text-text-primary transition-colors hover:border-lime-tint-border hover:bg-lime-tint-bg/30 hover:text-lime-text"
+                  className="inline-flex items-center gap-2 rounded border border-border-default bg-bg-raised px-6 font-bold text-text-primary transition-colors hover:border-lime-tint-border hover:bg-lime-tint-bg/30 hover:text-lime-text"
+                  style={{ minHeight: 'var(--h-btn-primary)', fontSize: 'var(--fs-meta)' }}
                 >
                   Load more items
                   <span aria-hidden className="text-text-tertiary">·</span>
@@ -533,7 +538,7 @@ function SearchableFilterChip({
       }}
     >
       <Popover.Anchor asChild>
-        <div className="relative inline-flex h-11 w-full sm:w-auto sm:min-w-[170px]">
+        <div className="relative inline-flex shrink-0 min-w-[148px]" style={{ height: 'var(--h-btn-secondary)' }}>
           {/* The input IS the trigger. Clicking it sets open=true via the
               onClick handler; Radix's Popover.Trigger is intentionally NOT
               used here so the input retains focus naturally. */}
@@ -549,8 +554,9 @@ function SearchableFilterChip({
             aria-label={`Filter by ${label}`}
             aria-expanded={open}
             aria-haspopup="listbox"
+            style={{ height: 'var(--h-btn-secondary)', fontSize: 'var(--fs-body)' }}
             className={cn(
-              'h-11 w-full rounded-lg border border-border-default bg-bg-overlay pl-3.5 text-[14px] font-medium text-text-primary outline-none transition-colors',
+              'w-full rounded border border-border-default bg-bg-overlay pl-4 font-medium text-text-primary outline-none transition-colors',
               'hover:border-border-strong',
               'focus:border-lime focus:bg-bg-base focus:ring-2 focus:ring-lime-tint-bg',
               // V15x — Cursor: pointer when closed (acts as a button),
@@ -560,7 +566,7 @@ function SearchableFilterChip({
                 ? 'placeholder:text-text-primary placeholder:font-medium'
                 : 'placeholder:text-text-tertiary',
               isActive && !open && 'border-lime-tint-border bg-lime-tint-bg/30',
-              isActive && !open ? 'pl-7' : 'pl-3.5',
+              isActive && !open ? 'pl-7' : 'pl-4',
               'pr-9',
             )}
           />
@@ -623,15 +629,15 @@ function SearchableFilterChip({
             // z-[60] guarantees the panel paints above sticky nav, sticky
             // sub-nav, and any z-50 sibling. Portal already takes it out
             // of the cards' stacking context.
-            'z-[60] overflow-hidden rounded-lg border border-border-default bg-bg-overlay shadow-[0_16px_40px_rgba(0,0,0,0.5)]',
+            'z-[60] overflow-hidden rounded border border-border-default bg-bg-overlay shadow-[0_16px_40px_rgba(0,0,0,0.5)]',
             'min-w-[var(--radix-popover-trigger-width,220px)]',
             'data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95',
             'data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95',
           )}
         >
-          <div className="max-h-[280px] overflow-y-auto p-1.5">
+          <div className="max-h-[280px] overflow-y-auto p-1.5" style={{ fontSize: 'var(--fs-meta)' }}>
             {filtered.length === 0 ? (
-              <div className="px-3 py-4 text-center text-[12px] text-text-tertiary">
+              <div className="px-3 py-4 text-center text-text-tertiary" style={{ fontSize: 'var(--fs-micro)' }}>
                 No matches for &quot;{query}&quot;
               </div>
             ) : (
@@ -644,7 +650,7 @@ function SearchableFilterChip({
                       type="button"
                       onClick={() => pick(o.slug)}
                       className={cn(
-                        'flex w-full items-center justify-between gap-3 rounded-lg px-2.5 py-2 text-left text-[13.5px] font-medium transition-colors',
+                        'flex w-full items-center justify-between gap-3 rounded px-2.5 py-1.5 text-left font-medium transition-colors',
                         selected
                           ? 'bg-bg-raised-hover text-text-primary'
                           : 'text-text-secondary hover:bg-bg-raised-hover hover:text-text-primary',
@@ -684,7 +690,8 @@ function SortSelect({
         <button
           type="button"
           aria-label="Sort and filter"
-          className="inline-flex h-11 shrink-0 items-center gap-1.5 rounded-lg border border-border-default bg-bg-overlay px-3 text-[13.5px] font-semibold text-text-primary transition-colors hover:border-border-strong sm:h-12"
+          className="inline-flex shrink-0 items-center gap-1.5 rounded border border-border-default bg-bg-overlay px-3 font-semibold text-text-primary transition-colors hover:border-border-strong"
+          style={{ minHeight: 'var(--h-btn-secondary)', fontSize: 'var(--fs-meta)' }}
         >
           <SlidersHorizontal className={cn('h-4 w-4', isDefault ? 'text-text-tertiary' : 'text-lime-text')} aria-hidden />
           <span className="max-sm:sr-only">Filter</span>
@@ -696,12 +703,12 @@ function SortSelect({
           sideOffset={6}
           align="end"
           className={cn(
-            'z-50 min-w-[210px] rounded-lg border border-border-default bg-bg-overlay p-1.5 shadow-[0_16px_40px_rgba(0,0,0,0.5)]',
+            'z-50 min-w-[210px] rounded border border-border-default bg-bg-overlay p-1.5 shadow-[0_16px_40px_rgba(0,0,0,0.5)]',
             'data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95',
             'data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95',
           )}
         >
-          <div className="flex flex-col gap-0.5">
+          <div className="flex flex-col gap-0.5" style={{ fontSize: 'var(--fs-meta)' }}>
             {SORT_OPTIONS.map((o) => {
               const selected = o.slug === value
               return (
@@ -710,7 +717,7 @@ function SortSelect({
                     type="button"
                     onClick={() => onChange(o.slug)}
                     className={cn(
-                      'flex w-full items-center justify-between gap-3 rounded-lg px-2.5 py-2 text-left text-[13.5px] font-medium transition-colors',
+                      'flex w-full items-center justify-between gap-3 rounded px-2.5 py-1.5 text-left font-medium transition-colors',
                       selected
                         ? 'bg-bg-raised-hover text-text-primary'
                         : 'text-text-secondary hover:bg-bg-raised-hover hover:text-text-primary',
@@ -735,16 +742,17 @@ function EmptyState({ onClear }: { onClear: () => void }) {
       <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-border-default bg-bg-overlay text-text-secondary">
         <Search className="h-5 w-5" />
       </div>
-      <h3 className="text-[17px] font-bold text-text-primary">
+      <h3 className="font-bold text-text-primary" style={{ fontSize: 'var(--fs-section)', lineHeight: 'var(--lh-section)' }}>
         No items match your filters
       </h3>
-      <p className="mt-2 max-w-sm text-[13.5px] leading-relaxed text-text-secondary">
+      <p className="mt-2 max-w-sm leading-relaxed text-text-secondary" style={{ fontSize: 'var(--fs-meta)', lineHeight: 'var(--lh-body)' }}>
         Try a different search, category, or type — or clear everything to see the full catalog.
       </p>
       <button
         type="button"
         onClick={onClear}
-        className="mt-5 inline-flex h-10 items-center gap-1.5 rounded-lg border border-border-default bg-bg-overlay px-4 text-[13.5px] font-semibold text-text-primary transition-colors hover:border-lime-tint-border hover:bg-lime-tint-bg/30 hover:text-lime-text"
+        className="mt-5 inline-flex items-center gap-1.5 rounded border border-border-default bg-bg-overlay px-4 font-semibold text-text-primary transition-colors hover:border-lime-tint-border hover:bg-lime-tint-bg/30 hover:text-lime-text"
+        style={{ minHeight: 'var(--h-btn-primary)', fontSize: 'var(--fs-meta)' }}
       >
         Clear filters
       </button>

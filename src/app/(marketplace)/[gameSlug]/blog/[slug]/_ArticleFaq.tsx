@@ -20,14 +20,14 @@ export function ArticleFaq({ items }: { items: FaqItem[] }) {
 
   return (
     <section id="faq" className="mt-12 scroll-mt-28">
-      <h2 className="mb-2 border-t border-[#1A211A] pt-8 text-[22px] font-bold tracking-tight text-[#F2F6F0] sm:text-[26px]">
+      <h2 className="mb-2 border-t border-[rgba(255,255,255,0.08)] pt-8 text-[22px] font-bold tracking-tight text-[#F2F6F0] sm:text-[26px]">
         Questions
       </h2>
       <div>
         {items.map((item, i) => {
           const isOpen = open[i] ?? false
           return (
-            <div key={i} className="border-b border-[#1A211A]">
+            <div key={i} className="border-b border-[rgba(255,255,255,0.08)]">
               <button
                 type="button"
                 onClick={() => setOpen((o) => ({ ...o, [i]: !o[i] }))}

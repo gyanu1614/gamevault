@@ -361,11 +361,16 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
   // Hide-on-scroll is retired (owner call 2026-09-07): the navbar stays
   // pinned at every width. Only the beta banner scrolls away — the bar
   // rides up under it via --beta-banner-offset and sticks to the top.
+  // The navbar geometry is ALWAYS the full-width bar — the floating pill is
+  // retired. `scrolled` now drives one thing only: whether the bar paints a
+  // fill. Over the homepage hero it starts transparent so the art reads
+  // behind it, then fills once the page moves. Everywhere else it is filled
+  // from the start (`overHero` is false, so the transparent branch is skipped).
   const { scrolled: scrolledNative } = useScrollDirection({ revealAt: 40 })
-  // V19/P15.b — `forceScrolled` short-circuits the scroll listener so
-  // pages like /sell/* can lock the navbar in its full-width bar mode
-  // even at scrollY=0. Everywhere else falls through to live scroll.
   const scrolled = forceScrolled || scrolledNative
+  // The one case where the bar paints nothing: sitting over the homepage
+  // hero art, before the page has moved.
+  const transparentOverHero = overHero && !scrolled
 
   // V14u — Force-close every navbar dropdown on route change. Catches
   // cases where the user navigates via the browser back button, a
@@ -871,82 +876,39 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
           as inline styles, so the mobile overrides use `max-lg:!…`
           (!important) utilities to beat them; at lg+ none of these
           classes apply and the desktop pill/bar morph is untouched. */}
-      <motion.nav
-        initial={false}
-        animate={{
-          // Framer drives the resting/scrolled offset via a CSS var so the
-          // static `top` below can add the beta banner's remaining height
-          // (--beta-banner-offset) — the navbar rides under the banner while
-          // it's visible, then slides to the true top as the banner scrolls
-          // away. Falls back to 0px when no banner is mounted.
-          ['--nav-top' as string]: scrolled ? '0px' : '12px',
-          // The bar never hides — it stays pinned while the page scrolls.
-          y: '0%',
-        }}
-        transition={{ type: 'spring', stiffness: 420, damping: 40, mass: 0.8 }}
-        style={{
-          top: 'calc(var(--nav-top, 12px) + var(--beta-banner-offset, 0px))',
-        }}
-        className="fixed left-0 right-0 z-50 flex justify-center max-lg:!top-[var(--beta-banner-offset,0px)]"
+      <nav
+        style={{ top: 'var(--beta-banner-offset, 0px)' }}
+        className="fixed left-0 right-0 z-50 flex justify-center"
       >
-        <motion.div
-          initial={false}
-          animate={{
-            maxWidth: scrolled ? 1920 : 1400,
-            paddingLeft: scrolled ? 0 : 16,
-            paddingRight: scrolled ? 0 : 16,
-          }}
-          className="w-full max-lg:!max-w-none max-lg:!px-0"
-        >
-          <motion.div
+        <div className="w-full">
+          <div
             ref={navBarRef}
-            initial={false}
-            animate={{
-              borderRadius: scrolled ? 0 : 9999,
-              borderBottomWidth: scrolled ? 1 : 1,
-              borderLeftWidth: scrolled ? 0 : 1,
-              borderRightWidth: scrolled ? 0 : 1,
-              borderTopWidth: scrolled ? 0 : 1,
-            }}
-            style={{
-              borderColor: scrolled ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.10)',
-              // V22 — Navbar bar uses the same frosted grey as the sidebar
-              // (`card-frost`). Slightly higher alpha than the cards (0.66/0.56)
-              // so the bar stays readable over bright hero areas. Dropdowns are
-              // intentionally left on their own darker surfaces.
-              backgroundColor: scrolled
-                ? 'rgba(20, 20, 27, 0.66)'
-                : 'rgba(20, 20, 27, 0.56)',
-            }}
             className={cn(
-              'flex items-center justify-between gap-2 px-3 py-3 backdrop-blur-2xl backdrop-saturate-150 sm:gap-3 sm:px-6',
-              // App-shell mobile bar: 60px tall, square, edge-to-edge.
-              // !important beats framer's inline pill styles.
-              'max-lg:h-[60px] max-lg:!py-0 max-lg:!rounded-none max-lg:!border-x-0 max-lg:!border-t-0',
-              // Homepage top: float transparent (no fill/blur/hairline) so the
-              // chrome sits on the hero art. Otherwise: solid bar. On pages
-              // with a sub-navbar (marketplace/category) we DROP the navbar's
-              // bottom hairline so the navbar + sub-nav read as one solid
-              // block with a single bottom edge (the sub-nav's).
-              overHero && !scrolled
-                ? // Transparent over hero: kill fill/blur/border AND the
-                  // drop-shadow — the shadow was drawing a visible line/edge
-                  // under the "floating" navbar. max-lg:!shadow-none removes it.
-                  'max-lg:!border-b-transparent max-lg:!bg-transparent max-lg:!backdrop-blur-none max-lg:!shadow-none'
-                : hasSubNav
-                  ? 'max-lg:!border-b-0 max-lg:!bg-[#0b0f0c]'
-                  : 'max-lg:!border-b max-lg:!border-b-[rgba(163,230,53,0.10)] max-lg:!bg-[#0b0f0c]',
-              scrolled
-                ? 'shadow-[0_1px_0_0_rgba(255,255,255,0.04),0_8px_24px_-12px_rgba(0,0,0,0.7)]'
-                : 'shadow-[0_4px_24px_-12px_rgba(0,0,0,0.5)]',
+              'relative flex items-center justify-between gap-2 border-x-0 border-t-0 px-3 py-2 sm:gap-3 sm:px-6',
+              'transition-[background-color,border-color,box-shadow,backdrop-filter] duration-300 ease-out',
+              // App-shell mobile bar: fixed 60px, square, edge-to-edge.
+              'max-lg:h-[60px] max-lg:py-0',
+              // Transparent over the homepage hero until the page moves, so
+              // the art reads behind the chrome. A scrim below keeps the
+              // logo and icons legible on bright art.
+              transparentOverHero
+                ? 'border-b border-b-transparent bg-transparent shadow-none'
+                : cn(
+                    'border-b backdrop-blur-2xl backdrop-saturate-150',
+                    // Pages with a sub-navbar drop the hairline so navbar +
+                    // sub-nav read as one block with a single bottom edge.
+                    hasSubNav ? 'border-b-transparent' : 'border-b-[rgba(255,255,255,0.08)]',
+                    'bg-[var(--navbar-bg,rgba(31,36,44,0.78))]',
+                    'shadow-[0_1px_0_0_rgba(255,255,255,0.04),0_8px_24px_-12px_rgba(0,0,0,0.7)]',
+                  ),
             )}
           >
-            {/* Legibility scrim — only when the mobile bar is transparent
-                over the hero. Keeps the icons/logo readable on bright art. */}
-            {overHero && !scrolled && (
+            {/* Legibility scrim — only while the bar is transparent over the
+                hero. Keeps the logo and icons readable on bright art. */}
+            {transparentOverHero && (
               <span
                 aria-hidden
-                className="pointer-events-none absolute inset-x-0 top-0 h-[110%] bg-[linear-gradient(to_bottom,rgba(0,0,0,0.42),transparent)] lg:hidden"
+                className="pointer-events-none absolute inset-x-0 top-0 h-[140%] bg-[linear-gradient(to_bottom,rgba(0,0,0,0.45),transparent)]"
               />
             )}
 
@@ -1167,7 +1129,7 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                               near-opaque dark surface + top sheen, roomier
                               type and spacing. Capped to the dynamic viewport
                               so short phones scroll the list internally. */}
-                          <div className="relative flex max-h-[calc(100dvh-7rem)] flex-col overflow-hidden rounded-lg border border-border-default bg-[#17171F] shadow-[0_24px_48px_-12px_rgba(0,0,0,0.85)] p-5 before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:h-14 before:bg-[linear-gradient(to_bottom,rgba(255,255,255,0.045),transparent)] before:content-[''] max-sm:rounded-none max-sm:rounded-b-lg max-sm:border-x-0 max-sm:border-t-0 max-sm:max-h-[calc(100dvh-60px-env(safe-area-inset-bottom)-16px)]">
+                          <div className="relative flex max-h-[calc(100dvh-7rem)] flex-col overflow-hidden rounded-lg border border-border-default bg-[#1F242C] shadow-[0_24px_48px_-12px_rgba(0,0,0,0.85)] p-5 before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:h-14 before:bg-[linear-gradient(to_bottom,rgba(255,255,255,0.045),transparent)] before:content-[''] max-sm:rounded-none max-sm:rounded-b-lg max-sm:border-x-0 max-sm:border-t-0 max-sm:max-h-[calc(100dvh-60px-env(safe-area-inset-bottom)-16px)]">
                             <span aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-16 bg-[linear-gradient(to_bottom,rgba(163,230,53,0.06),transparent)]" />
                             {/* Header - hairline separator spans the full panel width */}
                             <div className="relative -mx-5 mb-4 flex shrink-0 items-center justify-between border-b border-border-subtle px-5 pb-3.5">
@@ -1202,11 +1164,11 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                                       markAsRead(notification.id)
                                       setNotificationsOpen(false)
                                     }}
-                                    className="block rounded-md border border-white/[0.06] bg-white/[0.03] p-3.5 transition-colors hover:border-[#A3E635]/[0.2] hover:bg-[#1B5E3A]/[0.12]"
+                                    className="block rounded-md border border-white/[0.06] bg-white/[0.03] p-3.5 transition-colors hover:border-[rgba(86,184,127,0.20)] hover:bg-[rgba(86,184,127,0.10)]"
                                   >
                                     <div className="flex items-start gap-3">
                                       <div className="flex-shrink-0">
-                                        <div className="grid h-9 w-9 place-items-center rounded-md border border-[#A3E635]/[0.14] bg-[#1B5E3A]/[0.16]">
+                                        <div className="grid h-9 w-9 place-items-center rounded-md border border-[rgba(86,184,127,0.18)] bg-[rgba(86,184,127,0.12)]">
                                           <Bell className="h-4 w-4 text-lime-text" />
                                         </div>
                                       </div>
@@ -1240,7 +1202,7 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                                         >
                                           <X className="h-4 w-4" />
                                         </button>
-                                        <span aria-hidden className="mr-2 h-2 w-2 rounded-full bg-lime shadow-[0_0_8px_rgba(198,255,61,0.8)]" />
+                                        <span aria-hidden className="mr-2 h-2 w-2 rounded-full bg-lime shadow-[0_0_8px_rgba(86,184,127,0.8)]" />
                                       </div>
                                     </div>
                                   </Link>
@@ -1312,7 +1274,7 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                         />
                         <div className="fixed inset-x-0 top-full sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-[27px] sm:w-[480px] sm:max-w-[92vw] animate-in fade-in-0 sm:zoom-in-95 slide-in-from-top-2 duration-200 max-sm:duration-[250ms]">
                           {/* V61 — Same glass panel as Notifications. */}
-                          <div className="relative flex max-h-[calc(100dvh-7rem)] flex-col overflow-hidden rounded-lg border border-border-default bg-[#17171F] shadow-[0_24px_48px_-12px_rgba(0,0,0,0.85)] p-5 before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:h-14 before:bg-[linear-gradient(to_bottom,rgba(255,255,255,0.045),transparent)] before:content-[''] max-sm:rounded-none max-sm:rounded-b-lg max-sm:border-x-0 max-sm:border-t-0 max-sm:max-h-[calc(100dvh-60px-env(safe-area-inset-bottom)-16px)]">
+                          <div className="relative flex max-h-[calc(100dvh-7rem)] flex-col overflow-hidden rounded-lg border border-border-default bg-[#1F242C] shadow-[0_24px_48px_-12px_rgba(0,0,0,0.85)] p-5 before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:h-14 before:bg-[linear-gradient(to_bottom,rgba(255,255,255,0.045),transparent)] before:content-[''] max-sm:rounded-none max-sm:rounded-b-lg max-sm:border-x-0 max-sm:border-t-0 max-sm:max-h-[calc(100dvh-60px-env(safe-area-inset-bottom)-16px)]">
                             <span aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-16 bg-[linear-gradient(to_bottom,rgba(163,230,53,0.06),transparent)]" />
                             {/* Header - hairline separator spans the full panel width */}
                             <div className="relative -mx-5 mb-4 flex shrink-0 items-center justify-between border-b border-border-subtle px-5 pb-3.5">
@@ -1431,7 +1393,7 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                             cramped context menu. dvh (not vh) cap so the
                             bottom rows never hide behind iOS Safari's
                             toolbar. */}
-                        <div className="relative overflow-hidden rounded-lg border border-border-default bg-[#17171F] p-2 shadow-[0_24px_48px_-12px_rgba(0,0,0,0.85)] before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:h-14 before:bg-[linear-gradient(to_bottom,rgba(255,255,255,0.045),transparent)] before:content-[''] max-h-[calc(100dvh-110px)] overflow-y-auto overscroll-contain max-sm:rounded-none max-sm:rounded-b-lg max-sm:border-x-0 max-sm:border-t-0 max-sm:max-h-[calc(100dvh-60px-env(safe-area-inset-bottom)-16px)]">
+                        <div className="relative overflow-hidden rounded-lg border border-border-default bg-[#1F242C] p-2 shadow-[0_24px_48px_-12px_rgba(0,0,0,0.85)] before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:h-14 before:bg-[linear-gradient(to_bottom,rgba(255,255,255,0.045),transparent)] before:content-[''] max-h-[calc(100dvh-110px)] overflow-y-auto overscroll-contain max-sm:rounded-none max-sm:rounded-b-lg max-sm:border-x-0 max-sm:border-t-0 max-sm:max-h-[calc(100dvh-60px-env(safe-area-inset-bottom)-16px)]">
                           <span aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-16 bg-[linear-gradient(to_bottom,rgba(163,230,53,0.06),transparent)]" />
                           {/* User Info card */}
                           <div className="relative border-b border-border-subtle p-2 pb-2">
@@ -1447,7 +1409,7 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                                   <img
                                     src={getAvatarUrl(user.profile?.avatar_url, user.profile?.username || 'user')}
                                     alt={user.profile?.username || 'User'}
-                                    className="h-10 w-10 rounded-full flex-shrink-0 object-cover ring-2 ring-white/10 group-hover/link:ring-[#C6FF3D66] transition-all"
+                                    className="h-10 w-10 rounded-full flex-shrink-0 object-cover ring-2 ring-white/10 group-hover/link:ring-[#56B87F66] transition-all"
                                   />
                                   <div className="min-w-0">
                                     {/* Name + blue verified badge */}
@@ -1917,9 +1879,9 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                   the bar (before the logo, above) for the
                   [hamburger][logo]……[bell][avatar] mobile order. */}
             </div>
-          </motion.div>
-        </motion.div>
-      </motion.nav>
+          </div>
+        </div>
+      </nav>
 
       {/* Mobile marketplace sheet — a full-screen editorial menu on phones.
           The panel owns the whole viewport so the hamburger never leaves a
@@ -1952,10 +1914,10 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
               transition={{ duration: 0.36, ease: [0.22, 1, 0.36, 1] }}
               className="fixed inset-0 z-[70] lg:hidden"
             >
-              <div className="relative flex h-full flex-col overflow-hidden bg-[linear-gradient(180deg,#100C18_0%,#0A0A0F_46%,#08080C_100%)] shadow-[0_28px_80px_-24px_rgba(0,0,0,0.9)]">
+              <div className="relative flex h-full flex-col overflow-hidden bg-[var(--color-bg-base)] shadow-[0_28px_80px_-24px_rgba(0,0,0,0.9)]">
                 <span
                   aria-hidden
-                  className="pointer-events-none absolute inset-x-0 top-0 h-36 bg-[radial-gradient(ellipse_at_18%_-20%,rgba(198,255,61,0.10),transparent_68%),linear-gradient(to_bottom,rgba(255,255,255,0.03),transparent)]"
+                  className="pointer-events-none absolute inset-x-0 top-0 h-36 bg-[radial-gradient(ellipse_at_18%_-20%,rgba(86,184,127,0.10),transparent_68%),linear-gradient(to_bottom,rgba(255,255,255,0.03),transparent)]"
                 />
 
                 {/* Full-modal header — brand at left, unboxed X at right. */}
@@ -2204,7 +2166,7 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                       <div
                         aria-hidden={mobileMenuTab === null}
                         className={cn(
-                          'absolute inset-0 flex flex-col bg-[linear-gradient(180deg,#100C18_0%,#0A0A0F_46%,#08080C_100%)] transition-transform duration-[320ms] ease-gv',
+                          'absolute inset-0 flex flex-col bg-[var(--color-bg-base)] transition-transform duration-[320ms] ease-gv',
                           mobileMenuTab === null && 'pointer-events-none translate-x-full',
                         )}
                       >
@@ -2275,10 +2237,10 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
         )}
       </AnimatePresence>
 
-      {/* Spacer — sized to the navbar's real extent. Below lg the mobile
-          header is a solid 60px strip at top-0; desktop keeps the original
-          pill math (top 12px + ~66px bar ≈ 78px). */}
-      <div className="h-[60px] lg:h-[84px]" />
+      {/* Spacer — clears the fixed bar so page content starts below it.
+          The homepage skips it on purpose: there the bar is a transparent
+          overlay and the hero art runs up behind it to the top of the page. */}
+      {!overHero && <div className="h-[60px] lg:h-[84px]" />}
     </>
   )
 }
@@ -2356,7 +2318,7 @@ function CategoryDropdown({
           onClick={() => (isActive ? onSelect() : onHoverStart())}
           className={cn(
             'flex items-center gap-1 rounded-full px-4 py-2 text-sm font-medium transition-colors hover:bg-white/10 hover:text-white whitespace-nowrap',
-            isCurrent ? 'bg-white/[0.08] text-white' : 'text-gray-300',
+            isCurrent ? 'bg-white/[0.08] text-white' : 'text-white',
           )}
         >
           {tab.label}
@@ -2437,7 +2399,7 @@ function CategoryDropdown({
               // (the touch counterpart of the mouseleave debounce).
               data-dropdown
               className="w-[min(960px,92vw)] overflow-hidden rounded-2xl border border-white/10 shadow-2xl"
-              style={{ backgroundColor: '#0B0B11' }}
+              style={{ backgroundColor: 'var(--navbar-dropdown-bg, #1F242C)' }}
             >
               {/* V21/P7.aa — min-h on the GRID (not the card) so the left
                   "Popular" column's background + right border stretch the
@@ -2972,7 +2934,7 @@ function GlobalSearch({
               'animate-fade-in absolute top-full mt-2 overflow-hidden rounded-xl border border-white/[0.12] shadow-[0_16px_50px_rgba(0,0,0,0.6)]',
               expanded ? 'inset-x-0' : 'right-0 w-[440px]',
             )}
-            style={{ backgroundColor: '#0B0B11' }}
+            style={{ backgroundColor: 'var(--navbar-dropdown-bg, #1F242C)' }}
           >
             <div className="max-h-[420px] overflow-y-auto p-1.5">
               {searching && !hasResults ? (

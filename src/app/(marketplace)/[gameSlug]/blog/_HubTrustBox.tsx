@@ -54,7 +54,7 @@ export function HubTrustBox({ stats }: { stats: HubTrustStat[] }) {
           return (
             <div
               key={stat.label}
-              className="flex flex-col gap-2 bg-[#0B0F0C]/70 p-5 backdrop-blur-md sm:p-6"
+              className="flex flex-col gap-2 bg-[#171B21]/70 p-5 backdrop-blur-md sm:p-6"
             >
               <span className="flex items-center gap-2">
                 <Icon sx={{ fontSize: 15 }} className="text-[#8FBF9C]" />

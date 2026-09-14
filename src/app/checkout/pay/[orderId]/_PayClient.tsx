@@ -608,7 +608,7 @@ export default function PayClient({
         particleCount: 110,
         spread: 75,
         origin: { y: 0.45 },
-        colors: [L.lime, '#1B5E3A', '#ffffff', L.forest],
+        colors: [L.lime, 'var(--color-accent-default)', '#ffffff', L.forest],
       })
     })()
   }, [view])

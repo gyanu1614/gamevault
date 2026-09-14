@@ -73,7 +73,7 @@ export default function SupportPage() {
             href={href}
             className="flex items-start gap-3.5 rounded-2xl border border-[#A3E635]/[0.10] bg-[linear-gradient(180deg,#14241A_0%,#0E1611_100%)] p-4 transition-colors hover:border-[#A3E635]/[0.2] active:scale-[0.99]"
           >
-            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-[#A3E635]/[0.14] bg-[#1B5E3A]/[0.16]">
+            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-[rgba(86,184,127,0.20)] bg-[rgba(86,184,127,0.12)]">
               <Icon className="h-4 w-4 text-lime-text" />
             </span>
             <span className="min-w-0">

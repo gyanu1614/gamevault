@@ -93,6 +93,7 @@ const config: Config = {
 
         // ── GameVault v2 Design Tokens (lime-accent system) ──
         bg: {
+          well:           'var(--color-bg-well)',
           base:           'var(--color-bg-base)',
           raised:         'var(--color-bg-raised)',
           'raised-hover': 'var(--color-bg-raised-hover)',

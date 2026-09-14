@@ -981,7 +981,7 @@ async function CategoryBrowsePage({ params, searchParams }: PageProps) {
             className="pointer-events-none absolute inset-0"
             style={{
               background:
-                'radial-gradient(ellipse 60% 50% at 10% 0%, rgba(198,255,61,0.14), transparent 60%)',
+                'radial-gradient(ellipse 60% 50% at 10% 0%, rgba(86,184,127,0.14), transparent 60%)',
             }}
           />
           <div className="relative flex flex-col items-center gap-4 text-center sm:flex-row sm:items-center sm:gap-5 sm:text-left">

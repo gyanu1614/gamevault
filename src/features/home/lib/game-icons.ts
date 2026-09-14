@@ -31,6 +31,8 @@ export const GAME_ICONS: Record<string, string> = {
   'grow-a-garden': '/games/gag.png',
   'grow-a-garden-2': '/games/gag.png',
   fc25: '/games/fc25.png',
+  // FC 26 reuses the FC icon until its own is supplied.
+  fc26: '/games/fc25.png',
 }
 
 const FALLBACK_ICON = '/placeholder/game-fallback.svg'
@@ -41,4 +43,39 @@ const FALLBACK_ICON = '/placeholder/game-fallback.svg'
  */
 export function getGameIcon(slug: string): string {
   return GAME_ICONS[slug] ?? FALLBACK_ICON
+}
+
+/**
+ * Per-game accent used for the soft glow along the bottom edge of a listing
+ * card — the only colour on an otherwise neutral card.
+ *
+ * A code-side map rather than a `games` column: these are brand colours that
+ * change roughly never, they're easier to tune when you can see all of them
+ * at once, and adding one needs no migration.
+ */
+const GAME_GLOW: Record<string, string> = {
+  roblox: '#E8342A',
+  'adopt-me': '#F5B8D0',
+  'steal-a-brainrot': '#8B5CF6',
+  'blade-ball': '#22D3EE',
+  'grow-a-garden-2': '#4ADE80',
+  fortnite: '#8B5CF6',
+  valorant: '#FF4655',
+  cs2: '#F0A500',
+  'apex-legends': '#DA292A',
+  'r6-siege': '#5B9BD5',
+  'gta-vi': '#E85D9E',
+  fc26: '#00D46A',
+}
+
+/**
+ * Neutral fallback so a game with no mapped colour still gets a soft edge.
+ * A warm grey on purpose: white reads as a blown highlight, and a cool grey
+ * picks up the page's blue cast and looks pink-grey against it.
+ */
+const FALLBACK_GLOW = '#7A736B'
+
+/** Resolve a game's glow colour by slug. */
+export function getGameGlow(slug: string): string {
+  return GAME_GLOW[slug] ?? FALLBACK_GLOW
 }

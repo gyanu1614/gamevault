@@ -24,7 +24,7 @@ export function HubCtaBand({
   ctaLabel,
   ctaHref,
   /** 'green' = forest buy button (default); 'accent' passes a custom bg color. */
-  ctaColor = '#1B6B3F',
+  ctaColor = '#2A7A50',
   ctaTextColor = '#ffffff',
   className,
   /** When set, the CTA opens a modal instead of navigating: the button is
@@ -68,7 +68,7 @@ export function HubCtaBand({
         className ?? 'mx-auto w-full max-w-7xl px-4 pt-12 sm:px-6 sm:pt-16 lg:px-8'
       }
     >
-      <div className="relative overflow-hidden border border-[#1E2723] bg-[#0C0F0E]">
+      <div className="relative overflow-hidden border border-[rgba(255,255,255,0.08)] bg-[#171B21]">
         {/* Per-game background hero. Buy banner: public/cta-heroes/{slug}.jpg;
             seller banner passes bgSrc for its own folder. */}
         {hasImage && (
@@ -88,7 +88,7 @@ export function HubCtaBand({
           className="absolute inset-0"
           style={{
             background:
-              'linear-gradient(90deg, #0C0F0E 0%, rgba(12,15,14,0.92) 42%, rgba(12,15,14,0.55) 100%)',
+              'linear-gradient(90deg, #171B21 0%, rgba(12,15,14,0.92) 42%, rgba(12,15,14,0.55) 100%)',
           }}
         />
         {/* Optional right-edge scrim — darkens the right third so a brighter

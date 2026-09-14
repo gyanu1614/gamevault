@@ -137,7 +137,7 @@ export default function SignAgreementModal({
             <div
               className="flex shrink-0 items-center justify-between px-6 py-4"
               style={{
-                background: 'linear-gradient(180deg, #1B5E3A 0%, #14432A 55%, #103A22 100%)',
+                background: 'linear-gradient(180deg, var(--color-accent-default) 0%, var(--color-accent-pressed) 55%, #1A3D2C 100%)',
                 boxShadow:
                   'inset 0 1px 0 rgba(255,255,255,0.14), inset 0 -1px 0 rgba(0,0,0,0.28)',
               }}
@@ -290,7 +290,7 @@ export default function SignAgreementModal({
                     className="group flex w-full items-center justify-center gap-2 rounded-md px-4 py-3 text-sm font-semibold text-white transition-[filter]"
                     style={{
                       background:
-                        'linear-gradient(180deg, #1B5E3A 0%, #14432A 55%, #103A22 100%)',
+                        'linear-gradient(180deg, var(--color-accent-default) 0%, var(--color-accent-pressed) 55%, #1A3D2C 100%)',
                       boxShadow:
                         'inset 0 1px 0 rgba(255,255,255,0.18), inset 0 -2px 0 rgba(0,0,0,0.25), 0 6px 14px -6px rgba(20,67,42,0.5)',
                     }}

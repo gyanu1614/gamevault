@@ -124,7 +124,7 @@ export default async function AdoptMePetPage({ pet }: { pet: AdoptMePetDetail })
   const faq = petFaq(pet)
 
   return (
-    <main className="relative min-h-screen bg-[#0C0F0E]">
+    <main className="relative min-h-screen bg-[#171B21]">
       <JsonLd
         data={breadcrumbList([
           { name: 'Home', path: '/' },
@@ -236,7 +236,7 @@ export default async function AdoptMePetPage({ pet }: { pet: AdoptMePetDetail })
             back to the whole list on the left, the methodology page on the right
             (E-E-A-T: every cited value links to how we calculate it). Each side
             is a labelled two-line link with an icon that slides on hover. */}
-        <nav className="grid grid-cols-1 overflow-hidden rounded-lg border border-[#1E2723] sm:grid-cols-2">
+        <nav className="grid grid-cols-1 overflow-hidden rounded-lg border border-[rgba(255,255,255,0.08)] sm:grid-cols-2">
           <Link
             href="/adopt-me/values"
             className="group flex items-center gap-3 px-5 py-4 transition-colors hover:bg-white/[0.03]"
@@ -249,7 +249,7 @@ export default async function AdoptMePetPage({ pet }: { pet: AdoptMePetDetail })
           </Link>
           <Link
             href="/adopt-me/values/methodology"
-            className="group flex items-center justify-between gap-3 border-t border-[#1E2723] px-5 py-4 transition-colors hover:bg-white/[0.03] sm:border-l sm:border-t-0"
+            className="group flex items-center justify-between gap-3 border-t border-[rgba(255,255,255,0.08)] px-5 py-4 transition-colors hover:bg-white/[0.03] sm:border-l sm:border-t-0"
           >
             <span>
               <span className="block text-caption font-semibold uppercase tracking-[0.1em] text-[#6D7A72]">Our Method</span>

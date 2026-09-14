@@ -24,7 +24,7 @@ export const ADMIN_FOREST = {
 
   /** Core forest greens (hero bands, headers, dark surfaces). */
   forest: '#14432A',
-  forest2: '#1B5E3A',
+  forest2: 'var(--color-accent-default)',
   forest3: '#0F3320',
   /** Bright end of the hero gradient (105deg forest3 → forest → forestHi). */
   forestHi: '#1A5434',

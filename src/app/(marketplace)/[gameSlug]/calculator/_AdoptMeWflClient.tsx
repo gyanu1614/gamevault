@@ -156,7 +156,7 @@ export default function AdoptMeWflClient({ pets }: { pets: CalcPet[] }) {
                 <button
                   type="button"
                   onClick={() => setEditing(false)}
-                  className="inline-flex items-center gap-1.5 rounded-md border border-[#2F6B46] bg-[#1B6B3F] px-4 py-2 text-body-sm font-semibold text-white transition hover:bg-[#1f7a48]"
+                  className="inline-flex items-center gap-1.5 rounded-md border border-[rgba(86,184,127,0.25)] bg-[#2A7A50] px-4 py-2 text-body-sm font-semibold text-white transition hover:bg-[#338F5D]"
                 >
                   Done editing
                 </button>
@@ -205,28 +205,28 @@ function Side({
   onVariant: (side: 'give' | 'receive', id: string, v: Variant) => void
 }) {
   return (
-    <div className="border border-[#1E2723] bg-[#0F1311]">
-      <div className="flex items-center justify-between border-b border-[#1E2723] px-4 py-3">
-        <span className="text-[14px] font-semibold text-[#F1F3F1]">{title}</span>
+    <div className="border border-[rgba(255,255,255,0.08)] bg-[#171B21]">
+      <div className="flex items-center justify-between border-b border-[rgba(255,255,255,0.08)] px-4 py-3">
+        <span className="text-[14px] font-semibold text-[#E9EDF2]">{title}</span>
         <span className="text-[12px] text-[#8B978F]">{entries.length} item{entries.length === 1 ? '' : 's'}</span>
       </div>
 
       <div className="space-y-2 p-3">
         {entries.length === 0 ? (
-          <div className="px-1 py-6 text-center text-[13px] text-[#6D7A72]">No pets added yet.</div>
+          <div className="px-1 py-6 text-center text-[13px] text-[#9AA6B3]">No pets added yet.</div>
         ) : (
           entries.map((e) => {
             const pet = petBySlug.get(e.slug)
             if (!pet) return null
             const v = pet.values[e.variant]
             return (
-              <div key={e.id} className="animate-row-in border border-[#1E2723] bg-[#0E1211] p-3">
+              <div key={e.id} className="animate-row-in border border-[rgba(255,255,255,0.08)] bg-[#171B21] p-3">
                 <div className="mb-2.5 flex items-center gap-3">
                   {pet.imageUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element -- remote pet art
                     <img src={pet.imageUrl} alt="" className="h-10 w-10 shrink-0 object-contain" />
                   ) : (
-                    <span className="h-10 w-10 shrink-0 border border-[#1E2723] bg-black/20" />
+                    <span className="h-10 w-10 shrink-0 border border-[rgba(255,255,255,0.08)] bg-black/20" />
                   )}
                   <p className="min-w-0 flex-1 truncate text-[15px] font-semibold text-[#E6EAE7]">{pet.name}</p>
                   <div className="text-right">
@@ -237,7 +237,7 @@ function Side({
                       {v?.tradeValue != null ? `${TRADE.format(v.tradeValue)} trade` : 'no cash'}
                     </p>
                   </div>
-                  <button type="button" onClick={() => onRemove(side, e.id)} aria-label="Remove" className="shrink-0 text-[#6D7A72] transition hover:text-[#C97B6B]">
+                  <button type="button" onClick={() => onRemove(side, e.id)} aria-label="Remove" className="shrink-0 text-[#9AA6B3] transition hover:text-[#C97B6B]">
                     <X className="h-4 w-4" />
                   </button>
                 </div>
@@ -249,7 +249,7 @@ function Side({
                   hasCash={(code) => pet.values[code]?.cashUsd != null}
                   disableUnpriced
                 />
-                <p className="mt-1.5 text-[11px] text-[#6D7A72]">
+                <p className="mt-1.5 text-[11px] text-[#9AA6B3]">
                   {VARIANT_LABEL[e.variant]}
                 </p>
               </div>
@@ -258,7 +258,7 @@ function Side({
         )}
       </div>
 
-      <div className="flex items-center justify-between border-t border-[#1E2723] px-4 py-3">
+      <div className="flex items-center justify-between border-t border-[rgba(255,255,255,0.08)] px-4 py-3">
         <button type="button" onClick={onAdd} className="inline-flex items-center gap-1.5 border border-[#26332C] bg-white/[0.03] px-3 py-2 text-[13px] font-semibold text-[#C6CEC9] transition hover:border-[#2A3A31] hover:bg-white/[0.06]">
           <Plus className="h-4 w-4" /> Add pet
         </button>
@@ -268,7 +268,7 @@ function Side({
             <p className="mt-0.5 text-[12px] text-[#8B978F]"><span className="font-mono tabular-nums">{TRADE.format(total.trade)}</span> trade</p>
           </div>
         ) : (
-          <span className="text-[12px] text-[#6D7A72]">Total shows here</span>
+          <span className="text-[12px] text-[#9AA6B3]">Total shows here</span>
         )}
       </div>
     </div>
@@ -302,14 +302,14 @@ function PetLines({
           // eslint-disable-next-line @next/next/no-img-element -- remote pet art
           <img src={pet.imageUrl} alt="" className="h-9 w-9 shrink-0 object-contain" />
         ) : (
-          <span className="h-9 w-9 shrink-0 border border-[#1E2723] bg-black/20" />
+          <span className="h-9 w-9 shrink-0 border border-[rgba(255,255,255,0.08)] bg-black/20" />
         )
         return (
           <li key={e.id} className={`flex items-center gap-2.5 ${right ? 'flex-row-reverse text-right' : ''}`}>
             {art}
             <div className="min-w-0 flex-1">
               <p className="truncate text-body-sm font-semibold text-[#E6EAE7]">{pet.name}</p>
-              <p className="truncate text-caption text-[#6D7A72]">{VARIANT_LABEL[e.variant]}</p>
+              <p className="truncate text-caption text-[#9AA6B3]">{VARIANT_LABEL[e.variant]}</p>
             </div>
             {price}
           </li>
@@ -362,8 +362,8 @@ function Verdict({
           ? 'Add what you give to see the verdict.'
           : 'Add what they offer to see the verdict.'
     return (
-      <div className="flex flex-col items-center gap-3 border border-dashed border-[#26332C] bg-[#0E1211] px-6 py-10 text-center">
-        <span className="flex h-11 w-11 items-center justify-center rounded-full border border-[#2C3A31] text-[#6D7A72]">
+      <div className="flex flex-col items-center gap-3 border border-dashed border-[#26332C] bg-[#171B21] px-6 py-10 text-center">
+        <span className="flex h-11 w-11 items-center justify-center rounded-full border border-[rgba(255,255,255,0.12)] text-[#9AA6B3]">
           <ArrowLeftRight className="h-5 w-5" />
         </span>
         <div>
@@ -378,8 +378,8 @@ function Verdict({
   const head = cash ?? trade
   if (!head) {
     return (
-      <div className="border border-[#1E2723] bg-[#0E1211] p-6 text-center">
-        <p className="text-[15px] text-[#6D7A72]">No cash or trade data on these pets yet.</p>
+      <div className="border border-[rgba(255,255,255,0.08)] bg-[#171B21] p-6 text-center">
+        <p className="text-[15px] text-[#9AA6B3]">No cash or trade data on these pets yet.</p>
       </div>
     )
   }
@@ -409,7 +409,7 @@ function Verdict({
   const getShare = total > 0 ? rv / total : 0.5
 
   return (
-    <div key={`${cash?.label}-${cash?.diff}`} className="animate-verdict overflow-hidden rounded-lg border border-[#1E2723] bg-[#0E1211] p-5 sm:p-6">
+    <div key={`${cash?.label}-${cash?.diff}`} className="animate-verdict overflow-hidden rounded-lg border border-[rgba(255,255,255,0.08)] bg-[#171B21] p-5 sm:p-6">
       {/* Edit — top-right, reopens the full pickers (collapsed view only). */}
       {onEdit && (
         <div className="mb-3 flex justify-end">
@@ -427,12 +427,12 @@ function Verdict({
           heavier side; the verdict word pops in. ─────────────────────────── */}
       <div className="grid grid-cols-[1fr_auto_1fr] items-stretch gap-3">
         <BalanceSide label="You give" accent="#5AC8FA" cash={USD.format(cashGive)} pts={`${TRADE.format(tradeGive)} trade`} lines={giveLines} />
-        <div className="flex items-center justify-center text-caption font-extrabold text-[#6D7A72]">VS</div>
+        <div className="flex items-center justify-center text-caption font-extrabold text-[#9AA6B3]">VS</div>
         <BalanceSide label="They offer" accent="#B07BC9" cash={USD.format(cashRec)} pts={`${TRADE.format(tradeRec)} trade`} align="right" lines={recLines} />
       </div>
 
       {/* Weighted balance bar */}
-      <div className="relative mt-5 h-3.5 overflow-hidden rounded-full border border-[#1E2723] bg-[#0B0F0D]">
+      <div className="relative mt-5 h-3.5 overflow-hidden rounded-full border border-[rgba(255,255,255,0.08)] bg-[#171B21]">
         <div
           className="amwfl-fill absolute inset-0 rounded-full"
           style={{
@@ -443,7 +443,7 @@ function Verdict({
         {/* center "fair" tick */}
         <div className="absolute -top-1 bottom-[-4px] left-1/2 w-0.5 -translate-x-1/2 bg-[#3A423C]" />
       </div>
-      <div className="mt-1.5 flex justify-between text-[10px] font-semibold uppercase tracking-[0.1em] text-[#6D7A72]">
+      <div className="mt-1.5 flex justify-between text-[10px] font-semibold uppercase tracking-[0.1em] text-[#9AA6B3]">
         <span style={{ color: '#5AC8FA' }}>Your side</span>
         <span>Fair</span>
         <span style={{ color: '#B07BC9' }}>Their side</span>
@@ -464,7 +464,7 @@ function Verdict({
       </div>
 
       {/* Detail axes — real money + trade value, quieter, below the fold. */}
-      <div className="mt-6 grid overflow-hidden rounded-md border border-[#1A211A] sm:grid-cols-2">
+      <div className="mt-6 grid overflow-hidden rounded-md border border-[rgba(255,255,255,0.08)] sm:grid-cols-2">
         <Axis label="Real money" hint="DropMarket cash value" verdict={cash} give={USD.format(cashGive)} rec={USD.format(cashRec)} bordered />
         <Axis label="Trade value" hint="Community consensus" verdict={trade} give={TRADE.format(tradeGive)} rec={TRADE.format(tradeRec)} />
       </div>
@@ -498,10 +498,10 @@ function BalanceSide({
   // With pet lines (collapsed): compact label + total on top, pets listed below.
   if (lines) {
     return (
-      <div className="rounded-md border bg-[#0E1211] px-4 py-3" style={{ borderColor: `${accent}44` }}>
+      <div className="rounded-md border bg-[#171B21] px-4 py-3" style={{ borderColor: `${accent}44` }}>
         <div className={`flex items-baseline justify-between gap-2 ${align === 'right' ? 'flex-row-reverse' : ''}`}>
           <span className="text-[11px] font-bold uppercase tracking-[0.1em]" style={{ color: accent }}>{label}</span>
-          <span className="text-[18px] font-extrabold tabular-nums text-[#F1F3F1]">{cash}</span>
+          <span className="text-[18px] font-extrabold tabular-nums text-[#E9EDF2]">{cash}</span>
         </div>
         <div className="mt-3">{lines}</div>
       </div>
@@ -510,11 +510,11 @@ function BalanceSide({
   // Without lines: just the label + total (used before pets exist).
   return (
     <div
-      className={`rounded-md border bg-[#0E1211] px-4 py-3 ${align === 'right' ? 'text-right' : ''}`}
+      className={`rounded-md border bg-[#171B21] px-4 py-3 ${align === 'right' ? 'text-right' : ''}`}
       style={{ borderColor: `${accent}44` }}
     >
       <span className="text-[11px] font-bold uppercase tracking-[0.1em]" style={{ color: accent }}>{label}</span>
-      <p className="mt-1 text-[22px] font-extrabold tabular-nums text-[#F1F3F1]">{cash}</p>
+      <p className="mt-1 text-[22px] font-extrabold tabular-nums text-[#E9EDF2]">{cash}</p>
       <p className="mt-0.5 text-caption tabular-nums text-[#8B978F]">{pts}</p>
     </div>
   )
@@ -536,7 +536,7 @@ function Axis({
   bordered?: boolean
 }) {
   return (
-    <div className={`px-5 py-4 ${bordered ? 'border-b border-[#1A211A] sm:border-b-0 sm:border-r' : ''}`}>
+    <div className={`px-5 py-4 ${bordered ? 'border-b border-[rgba(255,255,255,0.08)] sm:border-b-0 sm:border-r' : ''}`}>
       <div className="flex items-baseline justify-between">
         <span className="text-[13px] font-medium text-[#C6CEC9]">{label}</span>
         {verdict && (
@@ -545,10 +545,10 @@ function Axis({
           </span>
         )}
       </div>
-      <p className="text-[12px] text-[#6D7A72]">{hint}</p>
+      <p className="text-[12px] text-[#9AA6B3]">{hint}</p>
       <div className="mt-2.5 flex items-center justify-between text-[14px] text-[#9BA8A0]">
         <span>you give <span className="font-mono font-semibold text-[#E6EAE7]">{give}</span></span>
-        <span className="text-[#6D7A72]">→</span>
+        <span className="text-[#9AA6B3]">→</span>
         <span>get <span className="font-mono font-semibold text-[#E6EAE7]">{rec}</span></span>
       </div>
     </div>
@@ -609,36 +609,36 @@ function PetPicker({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-3 backdrop-blur-sm sm:p-6" onClick={onClose}>
       <div
-        className={`animate-verdict flex flex-col overflow-hidden rounded-lg border border-[#1E2723] bg-[#0C0F0E] shadow-[0_28px_60px_-20px_rgba(0,0,0,0.9)] ${
+        className={`animate-verdict flex flex-col overflow-hidden rounded-lg border border-[rgba(255,255,255,0.08)] bg-[#171B21] shadow-[0_28px_60px_-20px_rgba(0,0,0,0.9)] ${
           chosen ? 'w-full max-w-md' : 'h-[82vh] w-full max-w-5xl'
         }`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* ── Header: title + search (grid) OR back + name (variant step) ─── */}
-        <div className="flex items-center gap-3 border-b border-[#1E2723] px-4 py-3 sm:px-5">
+        <div className="flex items-center gap-3 border-b border-[rgba(255,255,255,0.08)] px-4 py-3 sm:px-5">
           {chosen ? (
             <>
-              <button type="button" onClick={() => setChosen(null)} aria-label="Back" className="text-[#8B978F] transition hover:text-[#F1F3F1]">
+              <button type="button" onClick={() => setChosen(null)} aria-label="Back" className="text-[#8B978F] transition hover:text-[#E9EDF2]">
                 <ArrowLeft className="h-5 w-5" />
               </button>
-              <span className="flex-1 text-body font-bold text-[#F1F3F1]">Choose A Variant</span>
+              <span className="flex-1 text-body font-bold text-[#E9EDF2]">Choose A Variant</span>
             </>
           ) : (
             <>
-              <span className="text-body font-bold text-[#F1F3F1]">Choose A Pet</span>
+              <span className="text-body font-bold text-[#E9EDF2]">Choose A Pet</span>
               <div className="relative ml-auto w-full max-w-xs">
-                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#6D7A72]" />
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9AA6B3]" />
                 <input
                   autoFocus
                   value={q}
                   onChange={(e) => setQ(e.target.value)}
                   placeholder="Search pets…"
-                  className="h-10 w-full rounded-md border border-[#1E2723] bg-white/[0.04] pl-9 pr-3 text-body-sm text-[#F1F3F1] outline-none transition-colors placeholder:text-[#6D7A72] focus:border-[#2F6B46]"
+                  className="h-10 w-full rounded-md border border-[rgba(255,255,255,0.08)] bg-white/[0.04] pl-9 pr-3 text-body-sm text-[#E9EDF2] outline-none transition-colors placeholder:text-[#9AA6B3] focus:border-[rgba(86,184,127,0.25)]"
                 />
               </div>
             </>
           )}
-          <button type="button" onClick={onClose} aria-label="Close" className="shrink-0 text-[#6D7A72] transition hover:text-[#F1F3F1]">
+          <button type="button" onClick={onClose} aria-label="Close" className="shrink-0 text-[#9AA6B3] transition hover:text-[#E9EDF2]">
             <X className="h-5 w-5" />
           </button>
         </div>
@@ -647,7 +647,7 @@ function PetPicker({
         {!chosen ? (
           <div className="flex min-h-0 flex-1">
             {/* Sidebar — rarity filters */}
-            <nav className="hidden w-40 shrink-0 flex-col gap-1 overflow-y-auto border-r border-[#1E2723] p-3 sm:flex">
+            <nav className="hidden w-40 shrink-0 flex-col gap-1 overflow-y-auto border-r border-[rgba(255,255,255,0.08)] p-3 sm:flex">
               {sidebar.map((r) => {
                 const on = rarity === r.key
                 return (
@@ -681,7 +681,7 @@ function PetPicker({
                       type="button"
                       onClick={() => setRarity(r.key)}
                       className="shrink-0 rounded-full border px-3 py-1.5 text-caption font-semibold transition"
-                      style={on ? { backgroundColor: r.color, borderColor: r.color, color: '#0B0810' } : { borderColor: '#2C3A31', color: '#9BA8A0' }}
+                      style={on ? { backgroundColor: r.color, borderColor: r.color, color: '#0B0810' } : { borderColor: 'rgba(255,255,255,0.12)', color: '#9BA8A0' }}
                     >
                       {r.label}
                     </button>
@@ -690,7 +690,7 @@ function PetPicker({
               </div>
 
               {filtered.length === 0 ? (
-                <div className="flex h-full items-center justify-center text-body-sm text-[#6D7A72]">No pets match.</div>
+                <div className="flex h-full items-center justify-center text-body-sm text-[#9AA6B3]">No pets match.</div>
               ) : (
                 <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-4 lg:grid-cols-6">
                   {filtered.map((p) => (
@@ -698,7 +698,7 @@ function PetPicker({
                       key={p.slug}
                       type="button"
                       onClick={() => choosePet(p)}
-                      className="group flex flex-col items-center gap-1.5 rounded-md border border-[#1E2723] bg-[#0E1211] p-2.5 text-center transition hover:border-[#2C3A31] hover:bg-white/[0.03]"
+                      className="group flex flex-col items-center gap-1.5 rounded-md border border-[rgba(255,255,255,0.08)] bg-[#171B21] p-2.5 text-center transition hover:border-[rgba(255,255,255,0.12)] hover:bg-white/[0.03]"
                     >
                       <span className="flex aspect-square w-full items-center justify-center overflow-hidden rounded bg-black/20">
                         {p.imageUrl ? (
@@ -725,7 +725,7 @@ function PetPicker({
             return (
               <div className="overflow-y-auto p-5">
                 {/* Pet preview — compact: small art + name + rarity + live value. */}
-                <div className="flex items-center gap-4 rounded-lg border border-[#1E2723] bg-[#0E1211] px-4 py-3.5">
+                <div className="flex items-center gap-4 rounded-lg border border-[rgba(255,255,255,0.08)] bg-[#171B21] px-4 py-3.5">
                   <span className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden">
                     {chosen.imageUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element -- remote pet art
@@ -735,7 +735,7 @@ function PetPicker({
                     )}
                   </span>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-body font-bold text-[#F1F3F1]">{chosen.name}</p>
+                    <p className="truncate text-body font-bold text-[#E9EDF2]">{chosen.name}</p>
                     {rMeta && (
                       <span className="mt-0.5 inline-flex items-center gap-1.5 text-caption font-semibold" style={{ color: rMeta.color }}>
                         <span className="h-1.5 w-1.5 rounded-full" style={{ background: rMeta.color }} />
@@ -745,7 +745,7 @@ function PetPicker({
                   </div>
                   <div className="shrink-0 text-right">
                     <p className="text-[20px] font-extrabold tabular-nums text-[#8FBF9C]">
-                      {priced ? USD.format(v!.cashUsd!) : <span className="text-body-sm text-[#6D7A72]">No price</span>}
+                      {priced ? USD.format(v!.cashUsd!) : <span className="text-body-sm text-[#9AA6B3]">No price</span>}
                     </p>
                     <p className="text-caption tabular-nums text-[#8B978F]">
                       {v?.tradeValue != null ? `${TRADE.format(v.tradeValue)} trade` : VARIANT_LABEL[draft]}
@@ -768,7 +768,7 @@ function PetPicker({
                   type="button"
                   onClick={() => onPick(chosen.slug, draft)}
                   disabled={chosen.values[draft]?.cashUsd == null}
-                  className="mt-5 w-full rounded-md bg-[#1B6B3F] py-3 text-body-sm font-semibold text-white transition hover:bg-[#1f7a48] disabled:cursor-not-allowed disabled:bg-[#1E2723] disabled:text-[#6D7A72]"
+                  className="mt-5 w-full rounded-md bg-[#2A7A50] py-3 text-body-sm font-semibold text-white transition hover:bg-[#338F5D] disabled:cursor-not-allowed disabled:bg-[rgba(255,255,255,0.08)] disabled:text-[#9AA6B3]"
                 >
                   Add {chosen.name}
                 </button>

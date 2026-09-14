@@ -32,7 +32,7 @@ const RARITY_META: Record<string, { label: string; color: string }> = {
   ultra_rare: { label: 'Ultra-Rare', color: '#B07BC9' },
   rare: { label: 'Rare', color: '#4FB477' },
   uncommon: { label: 'Uncommon', color: '#7FE3F0' },
-  common: { label: 'Common', color: '#9BA8A0' },
+  common: { label: 'Common', color: '#9AA6B3' },
 }
 const RARITY_ORDER = ['legendary', 'ultra_rare', 'rare', 'uncommon', 'common']
 
@@ -85,7 +85,7 @@ const TRADE = new Intl.NumberFormat('en-US')
 const MARKET_SECONDARY_GAP = 1.25
 
 function rarityMeta(r: string) {
-  return RARITY_META[r] ?? { label: r, color: '#9BA8A0' }
+  return RARITY_META[r] ?? { label: r, color: '#9AA6B3' }
 }
 
 /** #RRGGBB → an rgba() glow colour for the card's subtle hover bloom + shadow. */
@@ -155,7 +155,7 @@ function ConfidenceText({ confidence, hasCash }: { confidence: string; hasCash: 
     highly_accurate: { label: 'Highly Accurate', color: '#8FBF9C' },
     high: { label: 'High Confidence', color: '#8FBF9C' },
     medium: { label: 'Medium Confidence', color: '#E0B155' },
-    low: { label: 'Low Confidence', color: '#9BA8A0' },
+    low: { label: 'Low Confidence', color: '#9AA6B3' },
   }
   const c = map[confidence] ?? map.low
   return (
@@ -208,7 +208,7 @@ function SegBtn({
 
 /** Count beside a segment label — dims within the tile (ink on active fill). */
 function Count({ active, children }: { active: boolean; children: React.ReactNode }) {
-  return <span className={active ? 'text-[#0C0F0E]/55' : 'opacity-60'}>{children}</span>
+  return <span className={active ? 'text-[#171B21]/55' : 'opacity-60'}>{children}</span>
 }
 
 // useSearchParams() requires a Suspense boundary; the wrapper provides it so the
@@ -357,7 +357,7 @@ function AdoptMeValuesClientInner({ pets }: { pets: AdoptMePetItem[] }) {
             value={query}
             onChange={(e) => { setQuery(e.target.value); resetPage() }}
             placeholder="Search a pet by name…"
-            className="h-12 w-full rounded-md border border-[#1E2723] bg-white/[0.04] pl-11 pr-3 text-body text-[#F1F3F1] outline-none transition-colors placeholder:text-[#6D7A72] focus:border-[#2F6B46]"
+            className="h-12 w-full rounded-md border border-[rgba(255,255,255,0.08)] bg-white/[0.04] pl-11 pr-3 text-body text-[#E9EDF2] outline-none transition-colors placeholder:text-[#9AA6B3] focus:border-[rgba(86,184,127,0.25)]"
           />
         </div>
         <div className="h-12 w-full shrink-0 sm:w-48">
@@ -372,7 +372,7 @@ function AdoptMeValuesClientInner({ pets }: { pets: AdoptMePetItem[] }) {
           to match the search row (each segment flex-1, equal share). Each is a
           DIMMED tile in its rarity colour; selecting one fills it solid with
           dark text. One bordered unit, hairline dividers, scrolls on mobile. */}
-      <div className="mt-3 flex w-full overflow-x-auto rounded-md border border-[#1E2723] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div className="mt-3 flex w-full overflow-x-auto rounded-md border border-[rgba(255,255,255,0.08)] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <SegBtn active={view === 'popular'} color="#4FB477" first onClick={() => { setView('popular'); resetPage() }}>
           Popular
         </SegBtn>
@@ -403,9 +403,9 @@ function AdoptMeValuesClientInner({ pets }: { pets: AdoptMePetItem[] }) {
 
       {/* ── Result count ─────────────────────────────────────────────────── */}
       <div className="mt-3 flex flex-wrap items-center justify-between gap-3 text-sm">
-        <p className="text-[#9BA8A0]">
+        <p className="text-[#9AA6B3]">
           Showing{' '}
-          <span className="font-semibold tabular-nums text-[#F1F3F1]">
+          <span className="font-semibold tabular-nums text-[#E9EDF2]">
             {filtered.length === 0 ? '0' : `${rangeStart.toLocaleString()}–${rangeEnd.toLocaleString()}`}
           </span>{' '}
           of <span className="tabular-nums">{filtered.length.toLocaleString()}</span> pets
@@ -415,8 +415,8 @@ function AdoptMeValuesClientInner({ pets }: { pets: AdoptMePetItem[] }) {
       {/* ── Card grid ────────────────────────────────────────────────────── */}
       {visible.length === 0 ? (
         <div className="mt-6 border border-[#2E2338] bg-[#120E15] px-6 py-12 text-center">
-          <h2 className="text-xl font-semibold text-[#F1F3F1]">No pets found</h2>
-          <p className="mt-2 text-[#9BA8A0]">Try changing the search or filters.</p>
+          <h2 className="text-xl font-semibold text-[#E9EDF2]">No pets found</h2>
+          <p className="mt-2 text-[#9AA6B3]">Try changing the search or filters.</p>
         </div>
       ) : (
         // SAB-style card grid (2→6 across), Adopt-Me-tinted. Each card carries a
@@ -453,7 +453,7 @@ function AdoptMeValuesClientInner({ pets }: { pets: AdoptMePetItem[] }) {
                 className={`min-w-[38px] border px-3 py-2 text-[13px] font-semibold tabular-nums transition ${
                   n === safePage
                     ? 'border-[#B07BC9] bg-[#B07BC9]/15 text-[#CBA8DA]'
-                    : 'border-[#1E2723] text-[#9BA8A0] hover:border-[#2A3A31] hover:text-[#E6EAE7]'
+                    : 'border-[rgba(255,255,255,0.08)] text-[#9AA6B3] hover:border-[rgba(255,255,255,0.12)] hover:text-[#E6EAE7]'
                 }`}
               >
                 {n}
@@ -465,7 +465,7 @@ function AdoptMeValuesClientInner({ pets }: { pets: AdoptMePetItem[] }) {
       )}
 
       {/* ── Disclaimer (structure the brief + data rules require) ─────────── */}
-      <p className="mt-8 border-t border-[#1A1420] pt-5 font-mono text-[11px] leading-relaxed text-[#6D7A72]">
+      <p className="mt-8 border-t border-[#1A1420] pt-5 font-mono text-[11px] leading-relaxed text-[#9AA6B3]">
         Prices are medians of completed sales and active listings. Bundles, account
         sales and disputed orders are excluded. Cash values marked “Est.” are derived
         from the variant ladder until we hold enough real sales; change indicators
@@ -539,7 +539,7 @@ function PetCard({
           ['--vglow' as string]: glow,
         } as CSSProperties
       }
-      className="am-card group relative isolate flex flex-col overflow-hidden border border-[#1E2723] transition-[transform,box-shadow,border-color] duration-200 hover:border-[#2C3A31]"
+      className="am-card group relative isolate flex flex-col overflow-hidden border border-[rgba(255,255,255,0.08)] transition-[transform,box-shadow,border-color] duration-200 hover:border-[rgba(255,255,255,0.12)]"
     >
       {/* Header: rarity only (the variant lives in the bar below). */}
       <div className="relative z-[1] flex items-center justify-end px-3.5 pt-3">
@@ -690,10 +690,10 @@ function SortDropdown({
         aria-haspopup="listbox"
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
-        className="flex h-full w-full items-center justify-between gap-2 rounded-md border border-[#1E2723] bg-white/[0.04] px-3.5 text-body-sm text-[#C6CEC9] outline-none transition hover:bg-white/[0.06] focus:border-[#2F6B46]"
+        className="flex h-full w-full items-center justify-between gap-2 rounded-md border border-[rgba(255,255,255,0.08)] bg-white/[0.04] px-3.5 text-body-sm text-[#9AA6B3] outline-none transition hover:bg-white/[0.06] focus:border-[rgba(86,184,127,0.25)]"
       >
         <span className="flex items-center gap-2 truncate">
-          <SwapVertIcon sx={{ fontSize: 17 }} className="shrink-0 text-[#6D7A72]" />
+          <SwapVertIcon sx={{ fontSize: 17 }} className="shrink-0 text-[#9AA6B3]" />
           <span className="truncate">{current.label}</span>
         </span>
         <KeyboardArrowDownIcon sx={{ fontSize: 18 }} className={`shrink-0 text-[#8B978F] transition ${open ? 'rotate-180' : ''}`} />
@@ -701,7 +701,7 @@ function SortDropdown({
       {open && (
         <div
           role="listbox"
-          className="absolute right-0 z-30 mt-1.5 w-full min-w-[13rem] overflow-hidden rounded-md border border-[#232A2F] bg-[#0E1211] p-1 shadow-[0_16px_40px_-16px_rgba(0,0,0,0.9)]"
+          className="absolute right-0 z-30 mt-1.5 w-full min-w-[13rem] overflow-hidden rounded-md border border-[rgba(255,255,255,0.10)] bg-[#171B21] p-1 shadow-[0_16px_40px_-16px_rgba(0,0,0,0.9)]"
         >
           {SORT_OPTIONS.map((o) => {
             const active = o.value === value
@@ -713,7 +713,7 @@ function SortDropdown({
                 aria-selected={active}
                 onClick={() => { onChange(o.value); setOpen(false) }}
                 className={`flex w-full items-center justify-between gap-2 rounded px-3 py-2 text-left text-body-sm transition ${
-                  active ? 'bg-white/[0.06] font-semibold text-[#F1F3F1]' : 'text-[#9BA8A0] hover:bg-white/[0.04] hover:text-[#E6EAE7]'
+                  active ? 'bg-white/[0.06] font-semibold text-[#E9EDF2]' : 'text-[#9AA6B3] hover:bg-white/[0.04] hover:text-[#E6EAE7]'
                 }`}
               >
                 {o.label}
@@ -759,7 +759,7 @@ function VariantDropdown({
         aria-haspopup="listbox"
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
-        className="flex h-full w-full items-center justify-between gap-2 rounded-md border border-[#1E2723] bg-white/[0.04] px-3.5 text-body-sm text-[#F1F3F1] outline-none transition hover:bg-white/[0.06] focus:border-[#2F6B46]"
+        className="flex h-full w-full items-center justify-between gap-2 rounded-md border border-[rgba(255,255,255,0.08)] bg-white/[0.04] px-3.5 text-body-sm text-[#E9EDF2] outline-none transition hover:bg-white/[0.06] focus:border-[rgba(86,184,127,0.25)]"
       >
         <span className="flex items-center gap-2">
           <span className="border border-[#26332C] bg-white/[0.05] px-1.5 py-0.5 text-[11px] font-semibold text-[#E6EAE7]">{value}</span>
@@ -768,7 +768,7 @@ function VariantDropdown({
         <KeyboardArrowDownIcon sx={{ fontSize: 18 }} className={`shrink-0 text-[#8B978F] transition ${open ? 'rotate-180' : ''}`} />
       </button>
       {open && (
-        <div className="absolute right-0 z-30 mt-1.5 w-full min-w-[16rem] rounded-md border border-[#232A2F] bg-[#0E1211] p-3.5 shadow-[0_16px_40px_-16px_rgba(0,0,0,0.9)]">
+        <div className="absolute right-0 z-30 mt-1.5 w-full min-w-[16rem] rounded-md border border-[rgba(255,255,255,0.10)] bg-[#171B21] p-3.5 shadow-[0_16px_40px_-16px_rgba(0,0,0,0.9)]">
           {/* Two-axis picker: tier (Default/Neon/Mega) + Fly/Ride, forest accent.
               Every form is a valid whole-list view (unpriced forms fall back to
               trade value), so nothing is disabled. */}

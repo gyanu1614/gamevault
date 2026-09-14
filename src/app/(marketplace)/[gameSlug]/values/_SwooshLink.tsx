@@ -68,8 +68,8 @@ export function SwooshLink({
   // Values-bound cover leans forest-green; marketplace-bound stays near-black.
   const background =
     to === 'values'
-      ? 'linear-gradient(120deg, #0C0F0E 0%, #10231A 48%, #1B6B3F 100%)'
-      : 'linear-gradient(120deg, #060807 0%, #0C0F0E 55%, #141a17 100%)'
+      ? 'linear-gradient(120deg, #171B21 0%, #1F242C 48%, #2A7A50 100%)'
+      : 'linear-gradient(120deg, #171B21 0%, #171B21 55%, #141a17 100%)'
 
   return (
     <>

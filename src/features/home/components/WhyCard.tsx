@@ -18,7 +18,7 @@ export interface WhyCardProps {
 }
 
 const TONE = {
-  lime: { glyph: 'text-lime-text', glow: 'rgba(198,255,61,0.28)' },
+  lime: { glyph: 'text-lime-text', glow: 'rgba(86,184,127,0.28)' },
   success: { glyph: 'text-success', glow: 'rgba(74,222,128,0.30)' },
   info: { glyph: 'text-info', glow: 'rgba(96,165,250,0.32)' },
   warning: { glyph: 'text-warning', glow: 'rgba(251,191,36,0.28)' },

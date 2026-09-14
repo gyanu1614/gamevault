@@ -176,7 +176,7 @@ export function LegalPage({ doc }: { doc: LegalDoc }) {
           </a>
         </p>
 
-        <div aria-hidden className="mt-6 h-px w-full bg-[linear-gradient(to_right,#C6FF3D66,transparent_40%)]" />
+        <div aria-hidden className="mt-6 h-px w-full bg-[linear-gradient(to_right,#56B87F66,transparent_40%)]" />
 
         {/* Body */}
         <div className="mt-8 space-y-8">

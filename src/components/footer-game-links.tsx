@@ -146,7 +146,7 @@ export async function FooterGameLinks() {
   )
 
   return (
-    <section aria-label="Popular games" className="border-t border-border-subtle bg-bg-base">
+    <section aria-label="Popular games" className="border-t border-border-subtle" style={{ backgroundColor: 'var(--footer-bg, var(--color-bg-base))' }}>
       <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
         <div className="mb-7 flex items-baseline justify-between gap-4">
           <h2 className="text-[15px] font-bold tracking-tight text-white">Popular Games</h2>

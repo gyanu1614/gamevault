@@ -83,7 +83,7 @@ const OFFER_META: Record<OfferType, { title: string }> = {
 type ChipKey = 'active' | 'paused' | 'draft' | 'closed' | 'suspended' | 'pending' | 'offline' | 'changes'
 
 const STATUS_CHIP: Record<ChipKey, { label: string; cls: string }> = {
-  active: { label: 'Active', cls: 'border-[rgba(198,255,61,0.22)] bg-[rgba(198,255,61,0.10)] text-lime-text' },
+  active: { label: 'Active', cls: 'border-[rgba(86,184,127,0.22)] bg-[rgba(86,184,127,0.10)] text-lime-text' },
   offline: { label: 'Offline', cls: 'border-amber-400/25 bg-amber-400/10 text-amber-300' },
   paused: { label: 'Paused', cls: 'border-amber-400/25 bg-amber-400/10 text-amber-300' },
   draft: { label: 'Draft', cls: 'border-white/[0.12] bg-white/[0.05] text-text-secondary' },

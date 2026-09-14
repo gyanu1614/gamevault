@@ -405,7 +405,7 @@ export default function BundleCurrencyPageClient({
                         className={cn(
                           'group relative cursor-pointer overflow-hidden border-2 bg-[rgba(20,20,27,0.56)] p-3 backdrop-blur-md transition-all duration-200',
                           on
-                            ? 'border-[#ABE52BB3] shadow-[0_10px_26px_-10px_rgba(171,229,43,0.22)]'
+                            ? 'border-[#2A7A5099] shadow-[0_10px_26px_-10px_rgba(86,184,127,0.22)]'
                             : 'border-border-default hover:-translate-y-0.5 hover:border-border-strong hover:bg-[rgba(26,26,35,0.70)] hover:shadow-[0_12px_24px_-12px_rgba(0,0,0,0.6)]',
                         )}
                       >
@@ -420,7 +420,7 @@ export default function BundleCurrencyPageClient({
                           aria-hidden
                           className={cn(
                             'pointer-events-none absolute left-1/2 top-2 h-14 w-24 -translate-x-1/2 rounded-full blur-xl transition-colors duration-200',
-                            on ? 'bg-[#C6FF3D24]' : 'bg-white/[0.07]',
+                            on ? 'bg-[#56B87F24]' : 'bg-white/[0.07]',
                           )}
                         />
                         {isPopular && (
@@ -552,7 +552,7 @@ export default function BundleCurrencyPageClient({
           </div>
           <div
             aria-hidden
-            className="mt-4 h-px w-full bg-[linear-gradient(to_right,#C6FF3D66,transparent_40%)]"
+            className="mt-4 h-px w-full bg-[linear-gradient(to_right,#56B87F66,transparent_40%)]"
           />
 
           {/* V19/P24/P7.oo — Outer "box-in-box" wrapper removed.
@@ -696,7 +696,7 @@ function OptionTiles({
                       'h-[52px] items-center gap-2.5 px-3.5 py-0'
                     : 'h-[76px] flex-col items-center justify-center gap-1.5 p-2',
                   on
-                    ? 'border-[#ABE52BB3] shadow-[0_8px_22px_-8px_rgba(171,229,43,0.22)]'
+                    ? 'border-[#2A7A5099] shadow-[0_8px_22px_-8px_rgba(86,184,127,0.22)]'
                     : 'border-border-default hover:-translate-y-0.5 hover:border-border-strong hover:bg-[rgba(26,26,35,0.70)] hover:shadow-[0_10px_22px_-10px_rgba(0,0,0,0.6)]',
                 )}
               >

@@ -1478,7 +1478,7 @@ function Step1Category({
               'basis-full sm:basis-[calc(50%-0.3125rem)] lg:basis-[calc(33.333%-0.4167rem)]',
               disabled && 'cursor-not-allowed opacity-50',
               active
-                ? 'border-lime bg-lime-tint-bg shadow-[0_0_0_2px_rgba(198,255,61,0.18)]'
+                ? 'border-lime bg-lime-tint-bg shadow-[0_0_0_2px_rgba(86,184,127,0.18)]'
                 : cn('border-border-subtle bg-bg-overlay hover:border-border-strong hover:bg-bg-raised-hover', theme.ring),
             )}
           >
@@ -1637,7 +1637,7 @@ function Step2Game({
                 className={cn(
                   'group relative overflow-hidden rounded-xl border text-left transition-all',
                   active
-                    ? 'border-lime shadow-[0_0_0_2px_rgba(198,255,61,0.18)]'
+                    ? 'border-lime shadow-[0_0_0_2px_rgba(86,184,127,0.18)]'
                     : 'border-border-default hover:border-border-strong hover:bg-bg-base'
                 )}
               >

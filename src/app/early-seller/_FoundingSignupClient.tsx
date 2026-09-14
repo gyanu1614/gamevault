@@ -28,7 +28,7 @@ const C = {
   ivory: '#FAFAF7',
   paper: '#FFFFFF',
   forest: '#14432A',
-  forest2: '#1B5E3A',
+  forest2: 'var(--color-accent-default)',
   forest3: '#0F3320',
   lime: '#A3E635',
   tint: '#F0F4EC',

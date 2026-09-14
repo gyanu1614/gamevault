@@ -185,7 +185,7 @@ export const TIERS: TierDef[] = [
       bg: 'bg-lime/10',
       border: 'border-lime-tint-border',
       ring: 'ring-lime/30',
-      glow: 'shadow-[0_0_26px_-8px_rgba(198,255,61,0.6)]',
+      glow: 'shadow-[0_0_26px_-8px_rgba(86,184,127,0.6)]',
       badgeColor: 'lime',
       icon: '◈',
     },

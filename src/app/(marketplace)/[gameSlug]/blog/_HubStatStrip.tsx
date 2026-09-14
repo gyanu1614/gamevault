@@ -30,7 +30,7 @@ export function HubStatStrip({ stats }: { stats: HubStat[] }) {
                 <img
                   src={stat.imageUrl}
                   alt=""
-                  className="h-9 w-9 shrink-0 rounded-md border border-[#22302A] bg-[#0E140F] object-contain"
+                  className="h-9 w-9 shrink-0 rounded-md border border-[#22302A] bg-[#171B21] object-contain"
                 />
               )}
               <span className="flex flex-col gap-0.5">

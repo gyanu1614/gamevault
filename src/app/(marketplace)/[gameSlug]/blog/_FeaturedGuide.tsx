@@ -6,7 +6,7 @@
  * Below ~lg it stacks: image becomes a 16:9 band fading down into the panel.
  *
  * Palette is mapped onto our forest tokens per the handoff's token contract:
- * block #0C0F0E, hairline #1E2723, accent #3FA35C (hover #4CBB6B), mint
+ * block #171B21, hairline rgba(255,255,255,0.08), accent #3FA35C (hover #4CBB6B), mint
  * #8FBF9C, on-green #08110B. Fade end stops MUST equal the block background.
  */
 
@@ -53,9 +53,9 @@ export function FeaturedGuide({
       <Link
         href={href}
         // No hover background here: the photo dissolve's end stops are pinned
-        // to #0C0F0E, so shifting the block's bg would open a visible seam in
+        // to #171B21, so shifting the block's bg would open a visible seam in
         // the gradient. Border + CTA carry the hover state instead.
-        className="group relative block overflow-hidden border border-[#1E2723] bg-[#0C0F0E] transition-colors duration-200 hover:border-[#33453A] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#3FA35C] lg:h-[300px]"
+        className="group relative block overflow-hidden border border-[rgba(255,255,255,0.08)] bg-[#171B21] transition-colors duration-200 hover:border-[#33453A] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#3FA35C] lg:h-[300px]"
       >
         {/* ── Image layer ── */}
         {/* Mobile: full-width 16:9 band. Desktop: absolute left half. */}
@@ -80,7 +80,7 @@ export function FeaturedGuide({
             className="pointer-events-none absolute inset-0 hidden lg:block"
             style={{
               background:
-                'linear-gradient(90deg, rgba(12,15,14,.55) 0%, rgba(12,15,14,.15) 34%, rgba(12,15,14,.45) 58%, rgba(12,15,14,.85) 78%, #0C0F0E 94%)',
+                'linear-gradient(90deg, rgba(12,15,14,.55) 0%, rgba(12,15,14,.15) 34%, rgba(12,15,14,.45) 58%, rgba(12,15,14,.85) 78%, #171B21 94%)',
             }}
           />
           {/* Vertical fade — subtle on desktop, the dissolve on mobile. */}
@@ -89,7 +89,7 @@ export function FeaturedGuide({
             className="pointer-events-none absolute inset-0"
             style={{
               background:
-                'linear-gradient(180deg, rgba(12,15,14,.5) 0%, rgba(12,15,14,0) 30%, rgba(12,15,14,.55) 78%, #0C0F0E 100%)',
+                'linear-gradient(180deg, rgba(12,15,14,.5) 0%, rgba(12,15,14,0) 30%, rgba(12,15,14,.55) 78%, #171B21 100%)',
             }}
           />
           {/* Overlay label — no solid green box; just the word in Figtree over

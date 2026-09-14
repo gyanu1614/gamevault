@@ -70,7 +70,7 @@ export function VariantAxisPicker({
     // the two axes keeps them legible without stacking onto a second line.
     <div className="flex flex-wrap items-stretch gap-2 sm:flex-nowrap">
       {/* ── Tier axis ── */}
-      <div className="flex min-w-0 flex-[3] border border-[#1E2723]">
+      <div className="flex min-w-0 flex-[3] border border-[rgba(255,255,255,0.08)]">
         {TIERS.map((t, i) => {
           const active = axes.tier === t.value
           const plainCode = axesToVariant(retierAxes(axes, t.value))
@@ -85,13 +85,13 @@ export function VariantAxisPicker({
               onClick={() => setTier(t.value)}
               disabled={dim}
               className={`flex-1 px-2 py-2.5 text-[13px] font-semibold transition ${
-                i > 0 ? 'border-l border-[#1E2723]' : ''
+                i > 0 ? 'border-l border-[rgba(255,255,255,0.08)]' : ''
               } ${
                 active
                   ? 'text-[color:var(--accent-on)]'
                   : dim
                     ? 'cursor-not-allowed text-[#4A574F]'
-                    : 'text-[#9BA8A0] hover:bg-white/[0.04]'
+                    : 'text-[#9AA6B3] hover:bg-white/[0.04]'
               }`}
               style={
                 active
@@ -173,7 +173,7 @@ function PotionToggle({
           ? 'text-[color:var(--accent-on)]'
           : dim
             ? 'cursor-not-allowed border-[#161C18] text-[#4A574F]'
-            : 'border-[#1E2723] text-[#9BA8A0] hover:bg-white/[0.04]'
+            : 'border-[rgba(255,255,255,0.08)] text-[#9AA6B3] hover:bg-white/[0.04]'
       }`}
       style={
         on

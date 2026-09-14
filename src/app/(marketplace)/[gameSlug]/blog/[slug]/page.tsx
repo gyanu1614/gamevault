@@ -183,7 +183,7 @@ export default async function GameBlogArticle({
   >[]
 
   return (
-    <main className="relative min-h-screen bg-[#0C0F0E]">
+    <main className="relative min-h-screen bg-[#171B21]">
       <JsonLd
         data={breadcrumbList([
           { name: 'Home', path: '/' },
@@ -220,7 +220,7 @@ export default async function GameBlogArticle({
             {/* Eyebrow + read-time — the category as a pill so it reads as a
                 real label, then the read-time in a legible (non-mono) grey. */}
             <div className="mb-4 flex flex-wrap items-center gap-2.5">
-              <span className="inline-flex items-center rounded-full border border-[#2F6B46]/40 bg-[#2F6B46]/12 px-3 py-1 text-[12px] font-bold uppercase tracking-[0.12em] text-[#7ED39A]">
+              <span className="inline-flex items-center rounded-full border border-[rgba(86,184,127,0.25)]/40 bg-[rgba(86,184,127,0.25)]/12 px-3 py-1 text-[12px] font-bold uppercase tracking-[0.12em] text-[#7ED39A]">
                 {kindLabel}
               </span>
               <span className="text-[14px] text-[#8A968C]">
@@ -281,7 +281,7 @@ export default async function GameBlogArticle({
 
           <div className="mx-auto w-full max-w-[760px]">
             {post.cover && (
-              <div className="mb-10 overflow-hidden border border-[#1E2723]">
+              <div className="mb-10 overflow-hidden border border-[rgba(255,255,255,0.08)]">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={post.cover} alt="" className="w-full object-cover" />
               </div>
@@ -302,7 +302,7 @@ export default async function GameBlogArticle({
                     <SpotlightCard
                       key={t.href}
                       glow="green"
-                      className="group flex flex-col gap-3 border border-[#1E2723] bg-[#0B0F0C] p-5 transition-colors hover:border-[#2F6B46]"
+                      className="group flex flex-col gap-3 border border-[rgba(255,255,255,0.08)] bg-[#171B21] p-5 transition-colors hover:border-[rgba(86,184,127,0.25)]"
                     >
                       <Link href={t.href} aria-label={t.label} className="absolute inset-0 z-10" />
                       <div className="relative z-[1] flex items-start justify-between gap-3">
@@ -340,15 +340,15 @@ export default async function GameBlogArticle({
             {/* Related guides */}
             {related.length > 0 && (
               <section className="mt-14">
-                <h2 className="mb-4 border-t border-[#1A211A] pt-8 text-[22px] font-bold tracking-tight text-[#F2F6F0]">
+                <h2 className="mb-4 border-t border-[rgba(255,255,255,0.08)] pt-8 text-[22px] font-bold tracking-tight text-[#F2F6F0]">
                   Related guides
                 </h2>
-                <div className="grid gap-px overflow-hidden border border-[#1A211A] bg-[#1A211A] sm:grid-cols-3">
+                <div className="grid gap-px overflow-hidden border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.08)] sm:grid-cols-3">
                   {related.map((r) => (
                     <Link
                       key={r.slug}
                       href={`/${gameSlug}/blog/${r.slug}`}
-                      className="flex flex-col gap-2.5 bg-[#0B0F0C] p-5 transition-colors hover:bg-[#101710]"
+                      className="flex flex-col gap-2.5 bg-[#171B21] p-5 transition-colors hover:bg-[#101710]"
                     >
                       <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-[#8FBF9C]">
                         {POST_TYPE_LABEL[r.postType] ?? 'Guide'}

@@ -142,7 +142,7 @@ export default function ApplicationStatusPage() {
   if (!applicationStatus || applicationStatus.status === 'none') {
     return (
       <CenteredNotice
-        icon={<FileText className="mx-auto h-10 w-10" style={{ color: '#1B5E3A' }} />}
+        icon={<FileText className="mx-auto h-10 w-10" style={{ color: 'var(--color-accent-default)' }} />}
         title="No Application Found"
         body="You haven't submitted a seller application yet."
         ctaLabel="Start Application"

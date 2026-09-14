@@ -92,8 +92,8 @@ export function DeliveryProgressBar({
 
   const TIER_VISUALS = {
     'on-track': {
-      fill: 'linear-gradient(90deg,#86d600,#C6FF3D)',
-      knobBg: '#C6FF3D',
+      fill: 'linear-gradient(90deg,#3FB08C,#56B87F)',
+      knobBg: '#56B87F',
       labelClass: 'text-lime-text',
       borderTint: '',
       label: `Expected in ${formatRemaining(remainingSec)}`,

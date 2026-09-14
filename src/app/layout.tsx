@@ -1,6 +1,6 @@
 import { SITE_URL } from '@/config/site'
 import type { Metadata } from 'next'
-import { Inter, Figtree, JetBrains_Mono } from 'next/font/google'
+import { Inter, Figtree, JetBrains_Mono, Archivo } from 'next/font/google'
 import './globals.css'
 import { Providers } from '@/components/providers'
 import { LayoutWrapper } from '@/components/layout-wrapper'
@@ -39,6 +39,21 @@ const jetbrainsMono = JetBrains_Mono({
   weight: ['400', '500'],
   variable: '--font-mono',
   display: 'swap',
+})
+
+// Archivo — display face under evaluation for the seller-program card titles.
+// Variable width axis, so `font-variation-settings: 'wdth' N` actually moves.
+// Its own variable, NOT --font-display: that one is bound to Inter on <body>
+// and is read across the whole site.
+const archivo = Archivo({
+  // No explicit `weight`: next/font rejects `axes` alongside pinned weights
+  // ("Axes can only be defined for variable fonts") because listing weights
+  // requests static instances. Omitting it loads the full variable range,
+  // which covers 400-800 AND keeps the wdth axis live.
+  axes: ['wdth'],
+  display: 'swap',
+  subsets: ['latin'],
+  variable: '--font-archivo',
 })
 
 export const metadata: Metadata = {
@@ -95,7 +110,7 @@ export default function RootLayout({
             page. */}
         <AllHeroesPreload />
       </head>
-      <body className={`${inter.variable} ${figtree.variable} ${jetbrainsMono.variable} font-sans antialiased`} style={{ '--font-display': 'var(--font-inter)', '--font-body': 'var(--font-inter)' } as React.CSSProperties}>
+      <body className={`${inter.variable} ${figtree.variable} ${jetbrainsMono.variable} ${archivo.variable} font-sans antialiased`} style={{ '--font-display': 'var(--font-inter)', '--font-body': 'var(--font-inter)' } as React.CSSProperties}>
         <Providers>
           <LayoutWrapper footerGameLinks={<FooterGameLinks />}>
             {children}

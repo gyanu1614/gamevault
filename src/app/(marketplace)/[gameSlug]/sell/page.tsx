@@ -92,7 +92,7 @@ export default async function SellLandingPage({ params }: PageProps) {
   ]
 
   return (
-    <main className="relative min-h-screen bg-[#0C0F0E]">
+    <main className="relative min-h-screen bg-bg-base">
       <SabHeroBackdrop height={760}>
         <HubNav data={hubNav} />
 
@@ -182,12 +182,12 @@ export default async function SellLandingPage({ params }: PageProps) {
             <SpotlightCard
               key={c.title}
               glow="green"
-              className="border border-[#1A211A] bg-[#0B0F0C]/60 p-5 backdrop-blur-md transition-colors hover:border-[#24352A] sm:p-6"
+              className="border border-[rgba(255,255,255,0.08)] bg-[#171B21]/60 p-5 backdrop-blur-md transition-colors hover:border-[rgba(255,255,255,0.14)] sm:p-6"
             >
               {/* Icon (neutral, in a forest chip) beside the title. min-h keeps
                   all three headers the same height even when a title wraps. */}
               <div className="relative flex min-h-[40px] items-center gap-3">
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] border border-[#1E2723] bg-[#10160F] text-[#E4EAE2]">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] border border-[rgba(255,255,255,0.08)] bg-[#10160F] text-[#E4EAE2]">
                   <c.icon className="h-[18px] w-[18px]" stroke={1.9} />
                 </span>
                 <h2 className="text-body-sm font-bold leading-tight text-[#F1F3F1]">{c.title}</h2>
@@ -212,12 +212,12 @@ export default async function SellLandingPage({ params }: PageProps) {
           <h2 className="text-center text-heading font-bold tracking-tight text-[#F2F6F0]">
             How It Works
           </h2>
-          <div className="mt-6 space-y-6 border border-[#1A211A] bg-[#0B0F0C]/60 p-6 backdrop-blur-md sm:p-8">
+          <div className="mt-6 space-y-6 border border-[rgba(255,255,255,0.08)] bg-[#171B21]/60 p-6 backdrop-blur-md sm:p-8">
             {/* Step 1 — sign up + apply, with both routes as in-text links.
                 Marker: meaningful icon in a rectangular chip, aligned to the
                 heading via a matched-height flex line-box (no magic margin). */}
             <div className="flex items-start gap-4">
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center border border-[#1E2723] bg-[#0E1310] text-[#8FBF9C]">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center border border-[rgba(255,255,255,0.08)] bg-[#0E1310] text-[#8FBF9C]">
                 <IconUserPlus className="h-[16px] w-[16px]" stroke={1.75} />
               </span>
               <div className="min-w-0 flex-1">
@@ -244,7 +244,7 @@ export default async function SellLandingPage({ params }: PageProps) {
 
             {/* Step 2 — list your pets, with a real top-pets grid (listing table look). */}
             <div className="flex items-start gap-4">
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center border border-[#1E2723] bg-[#0E1310] text-[#8FBF9C]">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center border border-[rgba(255,255,255,0.08)] bg-[#0E1310] text-[#8FBF9C]">
                 <IconListDetails className="h-[16px] w-[16px]" stroke={1.75} />
               </span>
               <div className="min-w-0 flex-1">
@@ -258,7 +258,7 @@ export default async function SellLandingPage({ params }: PageProps) {
                     {topPets.map((pet) => (
                       <div
                         key={pet.slug}
-                        className="flex flex-col items-center border border-[#1A211A] bg-[#0E1310] p-3 text-center"
+                        className="flex flex-col items-center border border-[rgba(255,255,255,0.08)] bg-[#0E1310] p-3 text-center"
                       >
                         {pet.imageUrl ? (
                           // eslint-disable-next-line @next/next/no-img-element
@@ -269,7 +269,7 @@ export default async function SellLandingPage({ params }: PageProps) {
                             className="h-14 w-14 object-contain sm:h-16 sm:w-16"
                           />
                         ) : (
-                          <div className="h-14 w-14 bg-[#151B15] sm:h-16 sm:w-16" />
+                          <div className="h-14 w-14 bg-[#1F242C] sm:h-16 sm:w-16" />
                         )}
                         <p className="mt-2 line-clamp-1 w-full text-[12px] font-semibold text-[#E4EAE2]">
                           {pet.name}
@@ -286,7 +286,7 @@ export default async function SellLandingPage({ params }: PageProps) {
 
             {/* Step 3 — deliver + get paid + withdraw. */}
             <div className="flex items-start gap-4">
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center border border-[#1E2723] bg-[#0E1310] text-[#8FBF9C]">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center border border-[rgba(255,255,255,0.08)] bg-[#0E1310] text-[#8FBF9C]">
                 <IconCash className="h-[16px] w-[16px]" stroke={1.75} />
               </span>
               <div className="min-w-0 flex-1">

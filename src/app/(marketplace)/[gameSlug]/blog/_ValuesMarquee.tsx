@@ -24,18 +24,18 @@ function ValueCard({ item, gameSlug }: { item: HubTeaserItem; gameSlug: string }
   return (
     <Link
       href={`/${gameSlug}/values/${item.slug}`}
-      className="flex w-[268px] shrink-0 select-none items-center gap-3 border border-[#1A211A] bg-[#0B0F0C] p-4 transition-colors hover:bg-[#101710]"
+      className="flex w-[268px] shrink-0 select-none items-center gap-3 border border-[rgba(255,255,255,0.08)] bg-[#171B21] p-4 transition-colors hover:bg-[#171B21]"
     >
       {item.imageUrl ? (
         // eslint-disable-next-line @next/next/no-img-element -- remote item art
         <img
           src={item.imageUrl}
           alt=""
-          className="h-11 w-11 shrink-0 border border-[#1A211A] bg-[#0E140F] object-contain"
+          className="h-11 w-11 shrink-0 border border-[rgba(255,255,255,0.08)] bg-[#171B21] object-contain"
           draggable={false}
         />
       ) : (
-        <span className="h-11 w-11 shrink-0 border border-[#23291F] bg-[#0E140F]" />
+        <span className="h-11 w-11 shrink-0 border border-[#23291F] bg-[#171B21]" />
       )}
       <span className="flex min-w-0 flex-1 flex-col gap-1.5">
         <span className="flex items-center gap-1.5">
@@ -112,14 +112,14 @@ export default function ValuesMarquee({
         aria-hidden
         className="pointer-events-none absolute inset-y-0 left-0 z-10 w-12 sm:w-20"
         style={{
-          background: 'linear-gradient(90deg,#0B0F0C 0%, rgba(11,15,12,0) 100%)',
+          background: 'linear-gradient(90deg,#171B21 0%, rgba(11,15,12,0) 100%)',
         }}
       />
       <div
         aria-hidden
         className="pointer-events-none absolute inset-y-0 right-0 z-10 w-12 sm:w-20"
         style={{
-          background: 'linear-gradient(270deg,#0B0F0C 0%, rgba(11,15,12,0) 100%)',
+          background: 'linear-gradient(270deg,#171B21 0%, rgba(11,15,12,0) 100%)',
         }}
       />
       <div ref={emblaRef} className="overflow-hidden p-3">

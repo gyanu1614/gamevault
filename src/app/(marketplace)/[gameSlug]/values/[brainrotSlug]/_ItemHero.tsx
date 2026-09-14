@@ -122,7 +122,7 @@ export default function ItemHero({
     <div className="space-y-4">
       {/* Hero — near-black card with a FLOWING mutation-tinted glow. The shared
           SAB backdrop image lives at the PAGE level (see page.tsx), not here. */}
-      <div ref={heroRef} className={cn(sabHero, 'scroll-mt-20 bg-[#0E1211]/[0.94] backdrop-blur-sm')}>
+      <div ref={heroRef} className={cn(sabHero, 'scroll-mt-20 bg-[#171B21]/[0.94] backdrop-blur-sm')}>
         <motion.div
           aria-hidden
           className="pointer-events-none absolute -left-1/4 -top-1/2 h-[150%] w-[80%] rounded-full blur-3xl"

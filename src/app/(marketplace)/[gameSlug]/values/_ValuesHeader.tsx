@@ -32,7 +32,7 @@ export function ValuesHeader({
     <header
       className={`fixed inset-x-0 top-0 z-50 transition-colors duration-200 ${
         scrolled
-          ? 'border-b border-[#1E2723] bg-[#0C0F0E]/95 backdrop-blur-md'
+          ? 'border-b border-[rgba(255,255,255,0.08)] bg-[#171B21]/95 backdrop-blur-md'
           : 'border-b border-transparent bg-transparent'
       }`}
     >
@@ -58,7 +58,7 @@ export function ValuesHeader({
           href={buyHref}
           to="marketplace"
           ariaLabel={`Buy ${gameName} Items`}
-          className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg bg-[#1B6B3F] px-3 py-2 text-[13px] font-semibold text-white shadow-[0_4px_12px_-4px_rgba(27,107,63,0.6)] transition hover:bg-[#1f7a48] sm:px-4 sm:py-2.5 sm:text-sm"
+          className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg bg-[#2A7A50] px-3 py-2 text-[13px] font-semibold text-white shadow-[0_4px_12px_-4px_rgba(27,107,63,0.6)] transition hover:bg-[#338F5D] sm:px-4 sm:py-2.5 sm:text-sm"
         >
           {/* Full label on desktop, compact on mobile so the header stays one line. */}
           <span className="hidden sm:inline">Buy {gameName} Items</span>

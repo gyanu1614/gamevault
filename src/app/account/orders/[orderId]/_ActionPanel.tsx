@@ -153,7 +153,7 @@ function FlipPrimary({
         <button
           type="button"
           onClick={() => setFlipped(true)}
-          className="absolute inset-0 inline-flex items-center justify-center gap-2 rounded-[12px] bg-lime text-[14px] font-bold text-text-inverse shadow-[0_6px_22px_rgba(198,255,61,0.18)] transition-transform [backface-visibility:hidden] hover:-translate-y-[1px]"
+          className="absolute inset-0 inline-flex items-center justify-center gap-2 rounded-[12px] bg-lime text-[14px] font-bold text-text-inverse shadow-[0_6px_22px_rgba(86,184,127,0.18)] transition-transform [backface-visibility:hidden] hover:-translate-y-[1px]"
         >
           <Icon className="h-4 w-4" />
           {label}
@@ -165,7 +165,7 @@ function FlipPrimary({
             // TODO V21/P4.b — wire to confirmReceipt / markAsDelivered server action
             setFlipped(false)
           }}
-          className="absolute inset-0 inline-flex items-center justify-center gap-2 rounded-[12px] bg-[#dff58a] text-[13px] font-bold text-text-inverse shadow-[0_6px_22px_rgba(198,255,61,0.18)] transition-transform [backface-visibility:hidden] [transform:rotateY(180deg)] hover:-translate-y-[1px]"
+          className="absolute inset-0 inline-flex items-center justify-center gap-2 rounded-[12px] bg-[#56B87F] text-[13px] font-bold text-text-inverse shadow-[0_6px_22px_rgba(86,184,127,0.18)] transition-transform [backface-visibility:hidden] [transform:rotateY(180deg)] hover:-translate-y-[1px]"
         >
           {confirmLabel}
           <ChevronRight className="h-4 w-4" />

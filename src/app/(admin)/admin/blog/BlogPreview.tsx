@@ -70,9 +70,9 @@ export function BlogPreview({
         if (e.target === e.currentTarget) onClose()
       }}
     >
-      <div className="w-full max-w-4xl border border-[#263026] bg-[#0B0F0C]">
+      <div className="w-full max-w-4xl border border-[rgba(255,255,255,0.08)] bg-[#171B21]">
         {/* Header */}
-        <div className="flex items-center justify-between gap-4 border-b border-[#1A211A] px-5 py-4">
+        <div className="flex items-center justify-between gap-4 border-b border-[rgba(255,255,255,0.08)] px-5 py-4">
           <div className="flex items-center gap-2">
             {(['card', 'article'] as const).map((t) => (
               <button
@@ -82,7 +82,7 @@ export function BlogPreview({
                 className={`px-3.5 py-2 text-[13px] font-semibold transition ${
                   tab === t
                     ? 'bg-[#3FA35C] text-[#08110B]'
-                    : 'border border-[#263026] text-[#9BA8A0] hover:text-[#F1F3F1]'
+                    : 'border border-[rgba(255,255,255,0.08)] text-[#9BA8A0] hover:text-[#F1F3F1]'
                 }`}
               >
                 {t === 'card' ? 'Card' : 'Article'}
@@ -96,7 +96,7 @@ export function BlogPreview({
             type="button"
             onClick={onClose}
             aria-label="Close preview"
-            className="flex h-8 w-8 items-center justify-center border border-[#263026] text-[#9BA8A0] transition hover:text-[#F1F3F1]"
+            className="flex h-8 w-8 items-center justify-center border border-[rgba(255,255,255,0.08)] text-[#9BA8A0] transition hover:text-[#F1F3F1]"
           >
             ✕
           </button>
@@ -146,7 +146,7 @@ export function BlogPreview({
                 </span>
               </div>
               {coverUrl && (
-                <div className="mt-8 overflow-hidden border border-[#1E2723]">
+                <div className="mt-8 overflow-hidden border border-[rgba(255,255,255,0.08)]">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={coverUrl} alt="" className="w-full object-cover" />
                 </div>

@@ -175,7 +175,7 @@ export default function HowItWorksBand({
                 <div className="absolute inset-0 overflow-hidden rounded-full">
                   <motion.div
                     style={{ left: fill, x: '-100%' }}
-                    className="absolute inset-y-0 w-48 bg-[linear-gradient(to_right,transparent,#C6FF3D)]"
+                    className="absolute inset-y-0 w-48 bg-[linear-gradient(to_right,transparent,#56B87F)]"
                   />
                 </div>
                 {STEP_NUMS.map((num, i) => (
@@ -185,7 +185,7 @@ export default function HowItWorksBand({
                     className={cn(
                       'absolute top-full mt-2.5 -translate-x-1/2 text-[15px] font-extrabold tabular-nums tracking-wide transition-all duration-300',
                       active >= i
-                        ? 'text-lime-text opacity-100 drop-shadow-[0_0_8px_rgba(198,255,61,0.45)]'
+                        ? 'text-lime-text opacity-100 drop-shadow-[0_0_8px_rgba(86,184,127,0.45)]'
                         : 'text-text-tertiary opacity-60',
                     )}
                   >

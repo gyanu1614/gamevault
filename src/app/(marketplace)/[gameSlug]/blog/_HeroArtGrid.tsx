@@ -28,12 +28,12 @@ export function HeroArtGrid({
   const tiles = withArt.slice(0, 4)
 
   return (
-    <div className="hidden w-full max-w-[420px] grid-cols-2 gap-px overflow-hidden border border-[#1E2723] bg-[#1E2723] lg:grid">
+    <div className="hidden w-full max-w-[420px] grid-cols-2 gap-px overflow-hidden border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.08)] lg:grid">
       {tiles.map((item) => (
         <Link
           key={item.slug}
           href={`/${gameSlug}/values/${item.slug}`}
-          className="group relative flex aspect-square flex-col items-center justify-center bg-[#0B0F0C] p-5 transition-colors hover:bg-[#101710]"
+          className="group relative flex aspect-square flex-col items-center justify-center bg-[#171B21] p-5 transition-colors hover:bg-[#171B21]"
         >
           {/* Soft radial glow behind the render. */}
           <span

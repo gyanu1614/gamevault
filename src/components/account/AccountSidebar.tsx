@@ -351,7 +351,7 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
                 className={cn(
                   'flex items-center justify-between gap-2.5 px-2.5 py-2 rounded-lg text-[14.5px] font-medium transition-all duration-200',
                   active
-                    ? 'bg-[rgba(198,255,61,0.13)] text-lime-text'
+                    ? 'bg-[rgba(86,184,127,0.13)] text-lime-text'
                     : 'text-text-secondary hover:text-white hover:bg-bg-raised-hover'
                 )}
               >
@@ -402,7 +402,7 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
                             className={cn(
                               'rounded-lg px-3 py-2 text-[13.5px] font-medium transition-colors',
                               subActive
-                                ? 'bg-[rgba(198,255,61,0.13)] text-lime-text'
+                                ? 'bg-[rgba(86,184,127,0.13)] text-lime-text'
                                 : 'text-text-tertiary hover:bg-bg-raised-hover hover:text-text-secondary'
                             )}
                           >
@@ -437,7 +437,7 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
               className={cn(
                 'flex items-center justify-between gap-2.5 px-2.5 py-2 rounded-lg text-[14.5px] font-medium transition-all duration-200',
                 active
-                  ? 'bg-[rgba(198,255,61,0.13)] text-lime-text'
+                  ? 'bg-[rgba(86,184,127,0.13)] text-lime-text'
                   : 'text-text-secondary hover:text-white hover:bg-bg-raised-hover'
               )}
             >
@@ -473,7 +473,7 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
               className={cn(
                 'flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-[14.5px] font-medium transition-all duration-200',
                 active
-                  ? 'bg-[rgba(198,255,61,0.13)] text-lime-text'
+                  ? 'bg-[rgba(86,184,127,0.13)] text-lime-text'
                   : 'text-text-secondary hover:text-white hover:bg-bg-raised-hover'
               )}
             >

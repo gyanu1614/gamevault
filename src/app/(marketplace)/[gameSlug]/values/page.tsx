@@ -425,7 +425,7 @@ export default async function BrainrotValuesPage({ params }: PageProps) {
   ])
 
   return (
-    <main className="relative min-h-screen bg-[#0C0F0E]">
+    <main className="relative min-h-screen bg-[#171B21]">
       <SabHeroBackdrop>
       <HubNav data={hubNav} />
       <JsonLd
@@ -495,14 +495,14 @@ export default async function BrainrotValuesPage({ params }: PageProps) {
               Based on completed sales · 7d
             </span>
           </div>
-          <div className="grid gap-px border border-[#1A211A] bg-[#1A211A] sm:grid-cols-3">
+          <div className="grid gap-px border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.08)] sm:grid-cols-3">
             {movers.map((m) => {
               const up = m.changePct >= 0
               return (
                 <Link
                   key={m.slug}
                   href={`/steal-a-brainrot/values/${m.slug}`}
-                  className="flex items-center gap-4 bg-[#0B0F0C] p-5 transition-colors hover:bg-[#111A12] sm:gap-5 sm:p-6"
+                  className="flex items-center gap-4 bg-[#171B21] p-5 transition-colors hover:bg-[#171B21] sm:gap-5 sm:p-6"
                 >
                   {m.imageUrl && (
                     // eslint-disable-next-line @next/next/no-img-element
@@ -542,7 +542,7 @@ export default async function BrainrotValuesPage({ params }: PageProps) {
 
       <section className="mx-auto w-full max-w-7xl px-4 pb-10 pt-10 sm:px-6 lg:px-8">
         {brainrots.length === 0 ? (
-          <div className="border border-[#1E2723] bg-[#121613] px-6 py-12 text-center">
+          <div className="border border-[rgba(255,255,255,0.08)] bg-[#1F242C] px-6 py-12 text-center">
             <h2 className="text-xl font-semibold text-[#F1F3F1]">
               Values are temporarily unavailable
             </h2>

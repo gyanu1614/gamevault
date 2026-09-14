@@ -76,7 +76,7 @@ export function BlogHubHero({
           <div className="mt-6 flex flex-wrap gap-3">
             <Link
               href={`/${gameSlug}/values`}
-              className="inline-flex items-center gap-2 rounded-md bg-[#1B6B3F] px-5 py-3 text-body-sm font-bold text-white transition hover:bg-[#1f7a48]"
+              className="inline-flex items-center gap-2 rounded-md bg-[#2A7A50] px-5 py-3 text-body-sm font-bold text-white transition hover:bg-[#338F5D]"
             >
               Value List
               <ArrowForwardIcon sx={{ fontSize: 18 }} />
@@ -84,7 +84,7 @@ export function BlogHubHero({
             {hasCalculator && (
               <Link
                 href={`/${gameSlug}/calculator`}
-                className="inline-flex items-center gap-2 rounded-md border border-[#2C3A31] bg-white/[0.03] px-5 py-3 text-body-sm font-semibold text-[#E6EAE7] transition hover:border-[#3A4A40] hover:bg-white/[0.06]"
+                className="inline-flex items-center gap-2 rounded-md border border-[rgba(255,255,255,0.12)] bg-white/[0.03] px-5 py-3 text-body-sm font-semibold text-[#E6EAE7] transition hover:border-[#3A4A40] hover:bg-white/[0.06]"
               >
                 WFL Calculator
               </Link>

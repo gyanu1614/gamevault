@@ -166,19 +166,19 @@ export function Footer() {
   }
 
   return (
-    <footer className="relative overflow-hidden bg-bg-base">
+    <footer className="relative overflow-hidden" style={{ backgroundColor: 'var(--footer-bg, var(--color-bg-base))' }}>
       {/* Page→footer transition: lime hairline + soft ambient glow along
           the top edge (replaces the old flat border-t). */}
       <div
         aria-hidden
-        className="absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,rgba(198,255,61,0.35)_28%,rgba(198,255,61,0.35)_72%,transparent)]"
+        className="absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,rgba(86,184,127,0.35)_28%,rgba(86,184,127,0.35)_72%,transparent)]"
       />
       <div
         aria-hidden
         className="pointer-events-none absolute inset-x-0 top-0 h-40"
         style={{
           background:
-            'radial-gradient(48% 100% at 50% 0%, rgba(198,255,61,0.05), transparent 70%)',
+            'var(--footer-top-glow, radial-gradient(48% 100% at 50% 0%, rgba(86,184,127,0.05), transparent 70%))',
         }}
       />
 
@@ -333,8 +333,8 @@ export function Footer() {
       {/* Bottom bar — the legally-required company details (two lines,
           left-aligned), copyright on the right. Phone/email live in the
           brand column above. */}
-      <div className="relative border-t border-border-subtle bg-[#07070B]">
-        <div className="mx-auto flex max-w-7xl flex-col gap-2.5 px-4 py-5 text-center sm:flex-row sm:items-center sm:justify-between sm:gap-6 sm:px-6 sm:text-left lg:px-8">
+      <div className="relative">
+        <div className="mx-auto flex max-w-7xl flex-col gap-2.5 px-4 pb-8 pt-0 text-center sm:flex-row sm:items-center sm:justify-between sm:gap-6 sm:px-6 sm:text-left lg:px-8">
           <p className="text-xs leading-relaxed text-text-tertiary">
             {COMPANY.name} · Company No. {COMPANY.number} · Registered in {COMPANY.jurisdiction} · VAT
             No. {COMPANY.vat}

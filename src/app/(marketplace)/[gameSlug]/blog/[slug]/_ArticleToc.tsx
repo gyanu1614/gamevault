@@ -46,13 +46,13 @@ export function ArticleToc({
   return (
     <>
       {/* Mobile: sticky chip rail */}
-      <nav className="sticky top-[60px] z-30 -mx-4 mb-6 border-b border-[#1A211A] bg-[#080B09] px-4 py-2.5 lg:hidden">
+      <nav className="sticky top-[60px] z-30 -mx-4 mb-6 border-b border-[rgba(255,255,255,0.08)] bg-[#080B09] px-4 py-2.5 lg:hidden">
         <div className="flex gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {entries.map((e) => (
             <a
               key={e.id}
               href={`#${e.id}`}
-              className="shrink-0 whitespace-nowrap border border-[#263026] px-3 py-2 font-mono text-[11px] text-[#98A398] transition-colors hover:text-[#F1F3F1]"
+              className="shrink-0 whitespace-nowrap border border-[rgba(255,255,255,0.08)] px-3 py-2 font-mono text-[11px] text-[#98A398] transition-colors hover:text-[#F1F3F1]"
             >
               {e.label}
             </a>
@@ -88,7 +88,7 @@ export function ArticleToc({
                 className={`border-l-2 py-2.5 pl-4 text-[14.5px] leading-snug transition-colors ${
                   isActive
                     ? 'border-[#4FB477] font-semibold text-[#FFFFFF]'
-                    : 'border-[#1A211A] text-[#B7C0BA] hover:text-[#F1F3F1]'
+                    : 'border-[rgba(255,255,255,0.08)] text-[#B7C0BA] hover:text-[#F1F3F1]'
                 }`}
               >
                 {e.label}
@@ -100,7 +100,7 @@ export function ArticleToc({
               here competed with the article's own CTA. */}
           <a
             href={buyHref}
-            className="mt-6 flex items-center justify-center whitespace-nowrap border border-[#2F6B46] px-4 py-3.5 text-center text-[13.5px] font-semibold transition hover:border-[#3FA35C]"
+            className="mt-6 flex items-center justify-center whitespace-nowrap border border-[rgba(86,184,127,0.25)] px-4 py-3.5 text-center text-[13.5px] font-semibold transition hover:border-[#3FA35C]"
           >
             <span className="animate-text-flow bg-[linear-gradient(110deg,#7Cd39a_0%,#F1F3F1_35%,#4FB477_60%,#7Cd39a_100%)] bg-[length:200%_100%] bg-clip-text text-transparent motion-reduce:animate-none motion-reduce:text-[#8FBF9C]">
               {buyLabel}

@@ -136,7 +136,7 @@ export function PriceTrendChart({
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <ShowChartIcon sx={{ fontSize: 18 }} style={{ color: selectedColor }} />
-          <h2 className="text-sm font-semibold text-[#F1F3F1]">Price trend</h2>
+          <h2 className="text-sm font-semibold text-[#E9EDF2]">Price trend</h2>
         </div>
         {stats && (
           <span
@@ -153,14 +153,14 @@ export function PriceTrendChart({
       {/* Select all / Clear — quick bulk toggles for the legend below. */}
       {legend.length > 1 && (
         <div className="mt-3 flex items-center justify-between gap-2">
-          <p className="text-[11px] font-medium text-[#6D7A72]">
+          <p className="text-[11px] font-medium text-[#9AA6B3]">
             {visible.size} of {legend.length} mutations shown
           </p>
           <div className="flex gap-1.5">
             <button
               type="button"
               onClick={() => setVisible(new Set(allSlugs))}
-              className="border border-[#26332C] px-2.5 py-1 text-[11px] font-semibold text-[#C6CEC9] transition hover:border-[#3A4A40]"
+              className="border border-[#26332C] px-2.5 py-1 text-[11px] font-semibold text-[#9AA6B3] transition hover:border-[#3A4A40]"
             >
               Select all
             </button>
@@ -168,7 +168,7 @@ export function PriceTrendChart({
               type="button"
               // Clear leaves the hero-selected line on, so the chart never empties.
               onClick={() => setVisible(new Set([selectedSlug]))}
-              className="border border-[#26332C] px-2.5 py-1 text-[11px] font-semibold text-[#C6CEC9] transition hover:border-[#3A4A40]"
+              className="border border-[#26332C] px-2.5 py-1 text-[11px] font-semibold text-[#9AA6B3] transition hover:border-[#3A4A40]"
             >
               Clear
             </button>
@@ -192,7 +192,7 @@ export function PriceTrendChart({
                 style={
                   on
                     ? { backgroundColor: mv.soft, borderColor: mv.color, color: mv.color }
-                    : { backgroundColor: 'transparent', borderColor: '#232A2F', color: '#5E685E' }
+                    : { backgroundColor: 'transparent', borderColor: 'rgba(255,255,255,0.10)', color: '#5E685E' }
                 }
               >
                 <span
@@ -208,8 +208,8 @@ export function PriceTrendChart({
 
       {!enoughData ? (
         <div className="mt-4 flex h-[160px] flex-col items-center justify-center border border-dashed border-[#254B38] bg-white/[0.02] text-center">
-          <p className="text-sm font-medium text-[#9BA8A0]">Collecting price history</p>
-          <p className="mt-1 max-w-[280px] text-xs text-[#6D7A72]">
+          <p className="text-sm font-medium text-[#9AA6B3]">Collecting price history</p>
+          <p className="mt-1 max-w-[280px] text-xs text-[#9AA6B3]">
             We snapshot each mutation&apos;s price every day. Trend lines appear once we have a few
             days of data.
           </p>
@@ -231,13 +231,13 @@ export function PriceTrendChart({
               </defs>
               <XAxis
                 dataKey="label"
-                tick={{ fill: '#6D7A72', fontSize: 11 }}
+                tick={{ fill: '#9AA6B3', fontSize: 11 }}
                 tickLine={false}
-                axisLine={{ stroke: '#1E2723' }}
+                axisLine={{ stroke: 'rgba(255,255,255,0.08)' }}
                 minTickGap={24}
               />
               <YAxis
-                tick={{ fill: '#6D7A72', fontSize: 11 }}
+                tick={{ fill: '#9AA6B3', fontSize: 11 }}
                 tickLine={false}
                 axisLine={false}
                 width={54}
@@ -247,13 +247,13 @@ export function PriceTrendChart({
               />
               <Tooltip
                 contentStyle={{
-                  background: '#0E1211',
-                  border: '1px solid #1E2723',
+                  background: '#171B21',
+                  border: '1px solid rgba(255,255,255,0.08)',
                   borderRadius: 8,
                   fontSize: 12,
                 }}
-                labelStyle={{ color: '#9BA8A0' }}
-                itemStyle={{ color: '#F1F3F1' }}
+                labelStyle={{ color: '#9AA6B3' }}
+                itemStyle={{ color: '#E9EDF2' }}
                 formatter={(value, name) => {
                   const slug = String(name)
                   const label = legend.find((m) => m.slug === slug)?.name ?? slug

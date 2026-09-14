@@ -110,7 +110,7 @@ export default function SellerProfileBanner({
             className="absolute inset-0"
             style={{
               background:
-                'radial-gradient(ellipse 80% 60% at 15% 0%, rgba(198,255,61,0.18), transparent 70%)',
+                'radial-gradient(ellipse 80% 60% at 15% 0%, rgba(86,184,127,0.18), transparent 70%)',
             }}
           />
           {/* Soft dotted pattern */}

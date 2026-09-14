@@ -358,7 +358,7 @@ export default async function SabCalculatorPage({
   const hubNav = await getHubNavData('steal-a-brainrot')
 
   return (
-    <main className="relative min-h-screen bg-[#0C0F0E]">
+    <main className="relative min-h-screen bg-bg-base">
       <SabHeroBackdrop height={420}>
       <HubNav data={hubNav} calcMode={resolvedSearchParams.tab === 'cash' ? 'cash' : 'trade'} />
       <JsonLd

@@ -26,7 +26,7 @@ export function HubFaqSection({
   footer?: ReactNode
 }) {
   return (
-    <section className="mt-16 border-t border-[#1A211A] pt-12">
+    <section className="mt-16 border-t border-[rgba(255,255,255,0.08)] pt-12">
       <h2 className="text-center text-heading font-bold tracking-tight text-[#F2F6F0]">
         {title}
       </h2>

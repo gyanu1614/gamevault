@@ -75,7 +75,7 @@ const ITEM_ROWS: MockOffer[] = [
 // ─── Status chips ────────────────────────────────────────────────────────────
 
 const STATUS_CHIP: Record<OfferStatus, { label: string; cls: string }> = {
-  active: { label: 'Active', cls: 'border-[rgba(198,255,61,0.22)] bg-[rgba(198,255,61,0.10)] text-lime-text' },
+  active: { label: 'Active', cls: 'border-[rgba(86,184,127,0.22)] bg-[rgba(86,184,127,0.10)] text-lime-text' },
   paused: { label: 'Paused', cls: 'border-amber-400/25 bg-amber-400/10 text-amber-300' },
   draft: { label: 'Draft', cls: 'border-white/[0.12] bg-white/[0.05] text-text-secondary' },
   closed: { label: 'Closed', cls: 'border-white/[0.08] bg-white/[0.03] text-text-tertiary' },

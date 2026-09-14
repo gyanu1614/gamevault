@@ -48,7 +48,7 @@ export async function HubGuidesStrip({
           <Link
             key={p.slug}
             href={`/${gameSlug}/blog/${p.slug}`}
-            className="group relative flex min-h-[180px] flex-col justify-end overflow-hidden border border-[#1E2723] bg-[#0B0F0C] p-5 transition-all duration-200 hover:-translate-y-0.5 hover:border-[#2F6B46]"
+            className="group relative flex min-h-[180px] flex-col justify-end overflow-hidden border border-[rgba(255,255,255,0.08)] bg-[#171B21] p-5 transition-all duration-200 hover:-translate-y-0.5 hover:border-[rgba(86,184,127,0.25)]"
           >
             {/* Cover image background + dark scrim (only when a cover exists).
                 Plain <img> to match how the article page renders covers and to

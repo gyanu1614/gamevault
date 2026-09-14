@@ -89,7 +89,7 @@ export default async function AdoptMeValuesPage() {
   ])
 
   return (
-    <main className="relative min-h-screen bg-[#0C0F0E]">
+    <main className="relative min-h-screen bg-[#171B21]">
       <SabHeroBackdrop>
         <HubNav data={hubNav} />
         <JsonLd
@@ -146,10 +146,10 @@ export default async function AdoptMeValuesPage() {
         <section className="mx-auto w-full max-w-7xl px-4 pb-10 pt-6 sm:px-6 lg:px-8">
           {pets.length === 0 ? (
             <div className="border border-[#2E2338] bg-[#120E15] px-6 py-12 text-center">
-              <h2 className="text-xl font-semibold text-[#F1F3F1]">
+              <h2 className="text-xl font-semibold text-[#E9EDF2]">
                 Values are temporarily unavailable
               </h2>
-              <p className="mt-2 text-[#9BA8A0]">
+              <p className="mt-2 text-[#9AA6B3]">
                 The Adopt Me pet database could not be loaded. Please check again
                 shortly.
               </p>

@@ -71,18 +71,20 @@ export function LayoutWrapper({
 
   const hasSidebar = isSellerPageWithSidebar || isAccountPage
 
+  // TEMPORARY — homepage rebuild. The homepage is being rebuilt section by
+  // section against the layout contract in CLAUDE.md; it renders as an empty
+  // scroll surface with only the navbar until sections are added back. The
+  // footer (incl. the game-links matrix) is suppressed here so the empty
+  // page can be verified on its own. Remove this flag when the rebuild lands.
+  const isHomepageRebuild = pathname === '/'
+
   return (
     <div className={`flex min-h-screen flex-col${isValuesHub ? ' hub-chrome' : ''}`}>
       {/* Beta announcement bar — normal-flow so it scrolls away with the
           page; the fixed navbar reads its remaining height and rides just
           below it. Self-hides on chrome-less shells (admin/checkout/seller
           application) to match the navbar rules below. */}
-      {/* Not on sidebar'd account/seller pages: the banner recruits sellers
-          ("Sell on DropMarket … Start Earning"), which is noise once you are
-          signed in and standing in your own account area. */}
-      {!isAdminPage && !isCheckout && !isSellerApplication && !isValuesHub && !hasSidebar && (
-        <BetaBanner />
-      )}
+      {/* BetaBanner removed — beta signal now lives in the homepage hero eyebrow */}
       {/* P5 — Checkout strips the global navbar: the page carries its
           own slim header (brand left · secure badge right). */}
       {/* Sidebar'd account pages pin the navbar to its full-width bar mode:
@@ -102,7 +104,8 @@ export function LayoutWrapper({
         !isCheckout &&
         !isSellerApplication &&
         !hasSidebar &&
-        !isValuesHub && (
+        !isValuesHub &&
+        !isHomepageRebuild && (
           <>
             {footerGameLinks}
             <Footer />

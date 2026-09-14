@@ -11,6 +11,10 @@ const nextConfig = {
   ignoreDuringBuilds: true,
 },
   images: {
+    // AVIF first, WebP fallback, for images Next DOES optimize (Supabase
+    // uploads, avatars). Hero art is served as pre-compressed AVIF with
+    // `unoptimized`, so it bypasses this entirely.
+    formats: ['image/avif', 'image/webp'],
     dangerouslyAllowSVG: true,
     contentDispositionType: 'attachment',
     contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",

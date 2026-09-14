@@ -63,7 +63,7 @@ export function BetaBanner() {
   const hidden =
     pathname.startsWith('/admin') ||
     pathname.startsWith('/checkout') ||
-    pathname.startsWith('/dev/checkout-preview') ||
+    pathname.startsWith('/dev/') ||
     (pathname.startsWith('/account') && !isOrderDetail) ||
     (pathname.startsWith('/seller') && !pathname.includes('/new') && !pathname.includes('/edit')) ||
     pathname.startsWith('/kyc/complete')

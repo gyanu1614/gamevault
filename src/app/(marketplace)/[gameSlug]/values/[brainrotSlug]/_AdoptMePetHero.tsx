@@ -130,7 +130,7 @@ export default function AdoptMePetHero({
       {/* Hero stat-card */}
       <div
         ref={heroRef}
-        className="relative scroll-mt-20 overflow-hidden border border-[#1E2723] bg-[#101512]/[0.94] backdrop-blur-sm"
+        className="relative scroll-mt-20 overflow-hidden border border-[rgba(255,255,255,0.08)] bg-[#101512]/[0.94] backdrop-blur-sm"
       >
         <div
           aria-hidden
@@ -217,7 +217,7 @@ export default function AdoptMePetHero({
             <Link
               href={buyHref}
               aria-label={`Buy ${displayName}`}
-              className="group mt-4 inline-flex w-full items-center justify-center gap-1.5 bg-[#1B6B3F] px-5 py-3 text-sm font-bold text-white shadow-[0_6px_16px_-8px_rgba(27,107,63,0.6)] transition hover:bg-[#1f7a48] lg:w-auto"
+              className="group mt-4 inline-flex w-full items-center justify-center gap-1.5 bg-[#2A7A50] px-5 py-3 text-sm font-bold text-white shadow-[0_6px_16px_-8px_rgba(27,107,63,0.6)] transition hover:bg-[#338F5D] lg:w-auto"
             >
               Buy {name}
               <ArrowRight className="h-4 w-4" />
@@ -227,7 +227,7 @@ export default function AdoptMePetHero({
             <Link
               href="/adopt-me/sell?src=am-item-page"
               aria-label={`Sell your ${name}`}
-              className="mt-2.5 inline-flex w-full items-center justify-center gap-1.5 border border-[#2F6B46] px-5 py-2.5 text-[13px] font-semibold text-[#8FBF9C] transition hover:border-[#3FA35C] hover:text-[#A6D9B6] lg:w-auto"
+              className="mt-2.5 inline-flex w-full items-center justify-center gap-1.5 border border-[rgba(86,184,127,0.25)] px-5 py-2.5 text-[13px] font-semibold text-[#8FBF9C] transition hover:border-[#3FA35C] hover:text-[#A6D9B6] lg:w-auto"
             >
               Sell {name} For Cash
               <ArrowRight className="h-4 w-4" />
@@ -257,9 +257,9 @@ export default function AdoptMePetHero({
       {/* Variant selector — one panel: tier tabs (Default / Neon / Mega) over a
           price grid showing only that tier's forms. Tapping a form reprices the
           hero above. Replaces the old split picker + separate grid. */}
-      <div className="overflow-hidden rounded-md border border-[#1E2723] bg-[#0E1211]">
+      <div className="overflow-hidden rounded-md border border-[rgba(255,255,255,0.08)] bg-[#171B21]">
         {/* Tier tabs */}
-        <div className="flex gap-1 border-b border-[#1E2723] bg-white/[0.015] p-1.5">
+        <div className="flex gap-1 border-b border-[rgba(255,255,255,0.08)] bg-white/[0.015] p-1.5">
           {TIER_TABS.map((t) => {
             const on = activeTier === t.key
             return (
@@ -269,7 +269,7 @@ export default function AdoptMePetHero({
                 onClick={() => setActiveTier(t.key)}
                 aria-pressed={on}
                 className={`flex-1 rounded px-3 py-2 text-body-sm font-semibold transition-colors ${
-                  on ? 'bg-[#1B6B3F] text-white' : 'text-[#9BA8A0] hover:bg-white/[0.05]'
+                  on ? 'bg-[#2A7A50] text-white' : 'text-[#9BA8A0] hover:bg-white/[0.05]'
                 }`}
               >
                 {t.label}
@@ -295,8 +295,8 @@ export default function AdoptMePetHero({
                 className="flex flex-col justify-between gap-2 rounded-md border px-3 py-2.5 text-left transition hover:brightness-110"
                 style={
                   active
-                    ? { borderColor: c, backgroundColor: `color-mix(in srgb, ${c} 14%, #0E1211)` }
-                    : { borderColor: '#1E2723', backgroundColor: '#111613' }
+                    ? { borderColor: c, backgroundColor: `color-mix(in srgb, ${c} 14%, #171B21)` }
+                    : { borderColor: 'rgba(255,255,255,0.08)', backgroundColor: '#1F242C' }
                 }
               >
                 <span className="flex items-center gap-2">

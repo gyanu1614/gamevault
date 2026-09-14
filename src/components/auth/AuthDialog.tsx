@@ -52,7 +52,7 @@ const PALETTE = {
   ivory: '#FAFAF7', // canvas
   paper: '#FFFFFF', // cards / inputs
   forest: '#14432A', // primary
-  forest2: '#1B5E3A', // hover / focus
+  forest2: 'var(--color-accent-default)', // hover / focus
   forest3: '#0F3320', // deepest shade
   lime: '#A3E635', // tiny accents ONLY
   ink: '#1A1D19', // primary text
@@ -63,14 +63,14 @@ const PALETTE = {
 /* Shared light-world class recipes (all literal for Tailwind JIT). */
 const inputCls =
   // text-base below sm keeps iOS from zooming the page on focus (16px rule).
-  'h-11 rounded-xl border-[#E4E5DE] bg-white px-4 text-base text-[#1A1D19] placeholder:text-[#5B6157]/55 transition-[border-color,box-shadow] duration-150 focus-visible:border-[#1B5E3A] focus-visible:ring-2 focus-visible:ring-[#1B5E3A]/[0.18] focus-visible:ring-offset-0 sm:text-sm'
+  'h-11 rounded-xl border-[#E4E5DE] bg-white px-4 text-base text-[#1A1D19] placeholder:text-[#5B6157]/55 transition-[border-color,box-shadow] duration-150 focus-visible:border-[var(--color-accent-default)] focus-visible:ring-2 focus-visible:ring-[var(--color-accent-default)]/[0.18] focus-visible:ring-offset-0 sm:text-sm'
 const labelCls = 'text-[13px] font-medium text-[#1A1D19]'
-const eyebrowCls = 'text-[11.5px] font-semibold uppercase tracking-[0.14em] text-[#1B5E3A]'
+const eyebrowCls = 'text-[11.5px] font-semibold uppercase tracking-[0.14em] text-[var(--color-accent-default)]'
 const headingCls = 'text-[26px] font-bold leading-tight tracking-tight text-[#1A1D19]'
 const fieldErrorCls = 'text-[12px] text-[#B91C1C]'
 const errorBoxCls =
   'rounded-xl border border-[#FCA5A5] bg-[#FEF2F2] px-3 py-2.5 text-[13px] text-[#B91C1C]'
-const linkCls = 'font-semibold text-[#1B5E3A] transition-colors hover:text-[#14432A]'
+const linkCls = 'font-semibold text-[var(--color-accent-default)] transition-colors hover:text-[#14432A]'
 const switchLineCls = 'text-center text-[13px] text-[#5B6157]'
 const eyeBtnCls =
   'absolute right-1.5 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-lg text-[#5B6157] transition-colors hover:text-[#1A1D19]'
@@ -967,7 +967,7 @@ function SignupForm({
                     <Loader2 className="h-4 w-4 animate-spin text-[#5B6157]" />
                   )}
                   {usernameStatus === 'available' && (
-                    <Check className="h-4 w-4 text-[#1B5E3A]" />
+                    <Check className="h-4 w-4 text-[var(--color-accent-default)]" />
                   )}
                   {usernameStatus === 'taken' && (
                     <XCircle className="h-4 w-4 text-[#B91C1C]" />
@@ -991,7 +991,7 @@ function SignupForm({
           ) : usernameStatus === 'taken' ? (
             <p className={fieldErrorCls}>Already taken</p>
           ) : usernameStatus === 'available' ? (
-            <p className="text-[12px] text-[#1B5E3A]">Available</p>
+            <p className="text-[12px] text-[var(--color-accent-default)]">Available</p>
           ) : null}
           </div>
 
@@ -1114,7 +1114,7 @@ function SignupForm({
           <button
             type="button"
             onClick={() => setShowReferral(true)}
-            className="auth-reveal auth-reveal-3 text-[12.5px] font-medium text-[#1B5E3A] underline-offset-2 transition-colors hover:text-[#14432A] hover:underline"
+            className="auth-reveal auth-reveal-3 text-[12.5px] font-medium text-[var(--color-accent-default)] underline-offset-2 transition-colors hover:text-[#14432A] hover:underline"
           >
             Have a Referral Code?
           </button>
@@ -1156,11 +1156,11 @@ function SignupForm({
 
         <p className="auth-reveal auth-reveal-3 text-center text-[12px] leading-relaxed text-[#5B6157]">
           By creating an account you agree to our{' '}
-          <a href="/legal/terms" className="text-[#1B5E3A] underline transition-colors hover:text-[#14432A]">
+          <a href="/legal/terms" className="text-[var(--color-accent-default)] underline transition-colors hover:text-[#14432A]">
             Terms
           </a>{' '}
           and{' '}
-          <a href="/legal/privacy" className="text-[#1B5E3A] underline transition-colors hover:text-[#14432A]">
+          <a href="/legal/privacy" className="text-[var(--color-accent-default)] underline transition-colors hover:text-[#14432A]">
             Privacy Policy
           </a>
           .
@@ -1201,7 +1201,7 @@ function VerifyEmailView({
         className="auth-reveal flex h-12 w-12 items-center justify-center rounded-full"
         style={{ backgroundColor: 'rgba(27,94,58,0.08)' }}
       >
-        <MailCheck className="h-5 w-5 text-[#1B5E3A]" />
+        <MailCheck className="h-5 w-5 text-[var(--color-accent-default)]" />
       </div>
 
       <header className="auth-reveal auth-reveal-1 space-y-1.5">

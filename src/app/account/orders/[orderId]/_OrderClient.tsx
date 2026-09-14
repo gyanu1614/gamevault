@@ -229,7 +229,7 @@ export function OrderClient(props: OrderClientProps) {
         style={{
           top: 'calc(var(--hero-offset, 0px) * -1)',
           background:
-            'radial-gradient(680px circle at 8% -6%, rgba(198,255,61,0.10), transparent 44%),' +
+            'radial-gradient(680px circle at 8% -6%, rgba(86,184,127,0.10), transparent 44%),' +
             'radial-gradient(820px circle at 104% 108%, rgba(167,139,250,0.10), transparent 50%)',
         }}
       />

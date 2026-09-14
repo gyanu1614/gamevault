@@ -446,7 +446,7 @@ export default function CurrencyPageClient({
           </div>
           <div
             aria-hidden
-            className="mt-4 h-px w-full bg-[linear-gradient(to_right,#C6FF3D66,transparent_40%)]"
+            className="mt-4 h-px w-full bg-[linear-gradient(to_right,#56B87F66,transparent_40%)]"
           />
           <div className="mt-4 space-y-2">
             {otherSellers.length === 0 ? (
@@ -987,8 +987,8 @@ function PurchasePanel({
           disabled={buying}
           className={cn(
             'group mt-4 flex h-12 w-full items-center justify-center gap-2 rounded-lg text-[14.5px] font-bold uppercase tracking-wider',
-            // V24 — Muted lime (pressed shade, #ABE52B) instead of the bright
-            // neon #C6FF3D, and a neutral drop shadow instead of the lime glow,
+            // V24 — Muted lime (pressed shade, #2A7A50) instead of the bright
+            // neon #56B87F, and a neutral drop shadow instead of the lime glow,
             // so the CTA reads as premium/solid rather than eye-searing. Still
             // clearly the primary action.
             'bg-lime-pressed text-text-inverse hover:bg-lime',

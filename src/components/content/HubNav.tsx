@@ -114,9 +114,9 @@ export function HubNav({
 
   return (
     // Always solid — no transparent state at the top of the page. A hair
-    // lighter than the page base (#0C0F0E) so the bar reads as its own surface
+    // lighter than the page base (#171B21) so the bar reads as its own surface
     // rather than a black void.
-    <header className="fixed inset-x-0 top-0 z-50 border-b border-[#1E2723] bg-[#121714]">
+    <header className="fixed inset-x-0 top-0 z-50 border-b border-[rgba(255,255,255,0.08)] bg-[#121714]">
       {/* Full-bleed row: no max-width cap, so the brand sits at the true left
           edge of the page and the storefront buttons at the true right edge.
           Only the page gutter insets them. The tab group stays centred on the
@@ -172,7 +172,7 @@ export function HubNav({
             ) : (
               <span
                 aria-hidden
-                className="flex h-[28px] w-[28px] shrink-0 items-center justify-center bg-[#1B6B3F] font-mono text-[10px] font-bold text-white sm:h-[34px] sm:w-[34px] sm:text-[11px]"
+                className="flex h-[28px] w-[28px] shrink-0 items-center justify-center bg-[#2A7A50] font-mono text-[10px] font-bold text-white sm:h-[34px] sm:w-[34px] sm:text-[11px]"
               >
                 {current.name.slice(0, 3).toUpperCase()}
               </span>
@@ -225,7 +225,7 @@ export function HubNav({
                     ) : (
                       <span
                         aria-hidden
-                        className="flex h-[26px] w-[26px] shrink-0 items-center justify-center bg-[#1B6B3F] font-mono text-[9px] font-bold text-white"
+                        className="flex h-[26px] w-[26px] shrink-0 items-center justify-center bg-[#2A7A50] font-mono text-[9px] font-bold text-white"
                       >
                         {g.name.slice(0, 2).toUpperCase()}
                       </span>
@@ -312,7 +312,7 @@ export function HubNav({
           row stays uncluttered. Left-aligned + horizontally scrollable so a long
           set (Guides · Values · WFL Calculator · Cash Price) never clips the way
           the old single-row bar did. */}
-      <nav className="flex items-center gap-6 overflow-x-auto border-t border-[#1E2723] px-4 [scrollbar-width:none] md:hidden [&::-webkit-scrollbar]:hidden">
+      <nav className="flex items-center gap-6 overflow-x-auto border-t border-[rgba(255,255,255,0.08)] px-4 [scrollbar-width:none] md:hidden [&::-webkit-scrollbar]:hidden">
         {tabs.map((tab) => {
           const active = isTabActive(tab)
           return (

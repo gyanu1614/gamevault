@@ -25,8 +25,8 @@ const CONFIDENCE_LABEL: Record<string, string> = {
 
 function ActivityCell({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
   return (
-    <div className={`px-4 py-3.5 ${accent ? 'bg-[#4FB477]/[0.07]' : 'bg-[#0E1211]'}`}>
-      <dt className="text-caption font-semibold uppercase tracking-[0.1em] text-[#6D7A72]">{label}</dt>
+    <div className={`px-4 py-3.5 ${accent ? 'bg-[#4FB477]/[0.07]' : 'bg-[#171B21]'}`}>
+      <dt className="text-caption font-semibold uppercase tracking-[0.1em] text-[#9AA6B3]">{label}</dt>
       <dd className={`mt-1 text-subheading font-bold tabular-nums ${accent ? 'text-[#8FBF9C]' : 'text-[#E6EAE7]'}`}>
         {value}
       </dd>
@@ -58,14 +58,14 @@ export function AdoptMeAboutStats({
     <>
       {/* Quick-answer callout — reprices to the selected variant. */}
       {headlineUsd != null && (
-        <div className="mb-6 flex flex-col gap-5 border border-[#1E2723] bg-[#0E1211] px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
+        <div className="mb-6 flex flex-col gap-5 border border-[rgba(255,255,255,0.08)] bg-[#171B21] px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
           <div className="min-w-0">
             <p className="flex items-center gap-2 text-caption font-semibold uppercase tracking-[0.1em]">
               <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-[#4FB477]" />
               <span className="text-[#E6EAE7]">{name}</span>
-              <span className="text-[#6D7A72]">· {shortLabel} · Starting From</span>
+              <span className="text-[#9AA6B3]">· {shortLabel} · Starting From</span>
             </p>
-            <p className="mt-1 text-[30px] font-bold leading-none tracking-[-0.02em] text-[#F1F3F1] tabular-nums">
+            <p className="mt-1 text-[30px] font-bold leading-none tracking-[-0.02em] text-[#E9EDF2] tabular-nums">
               {USD.format(headlineUsd)}
               {v.isEstimated && <span className="ml-2 align-middle text-body-sm font-medium text-[#8B7BA0]">est.</span>}
             </p>
@@ -77,13 +77,13 @@ export function AdoptMeAboutStats({
           <div className="flex shrink-0 items-center gap-5">
             {v.tradeValue != null && (
               <div className="text-right">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#6D7A72]">Trade Value</p>
-                <p className="mt-0.5 text-body font-semibold text-[#C6CEC9] tabular-nums">{TRADE.format(v.tradeValue)}</p>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#9AA6B3]">Trade Value</p>
+                <p className="mt-0.5 text-body font-semibold text-[#9AA6B3] tabular-nums">{TRADE.format(v.tradeValue)}</p>
               </div>
             )}
             <Link
               href={`/adopt-me/buy-items?pet=${slug}`}
-              className="inline-flex items-center justify-center gap-1.5 border border-[#2F6B46] bg-[#1B6B3F] px-4 py-2.5 text-body-sm font-semibold text-white transition hover:bg-[#1f7a48]"
+              className="inline-flex items-center justify-center gap-1.5 border border-[rgba(86,184,127,0.25)] bg-[#2A7A50] px-4 py-2.5 text-body-sm font-semibold text-white transition hover:bg-[#338F5D]"
             >
               Buy {name}
               <ChevronRightIcon sx={{ fontSize: 18 }} />
@@ -93,7 +93,7 @@ export function AdoptMeAboutStats({
       )}
 
       {/* Stats strip — labels carry the selected variant code. */}
-      <dl className="mt-6 grid grid-cols-2 gap-px overflow-hidden rounded-md border border-[#1E2723] bg-[#1E2723] sm:grid-cols-4">
+      <dl className="mt-6 grid grid-cols-2 gap-px overflow-hidden rounded-md border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.08)] sm:grid-cols-4">
         <ActivityCell label={`Cheapest (${code})`} value={v.cheapestUsd != null ? USD.format(v.cheapestUsd) : '—'} accent />
         <ActivityCell label={`Trade value (${code})`} value={v.tradeValue != null ? TRADE.format(v.tradeValue) : '—'} />
         <ActivityCell label="Listings tracked" value={v.listingsTracked > 0 ? String(v.listingsTracked) : 'None yet'} />

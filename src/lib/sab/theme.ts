@@ -13,18 +13,18 @@
  * `sabTile` (borderless faint fill) for sub-items — never border-in-border.
  *
  * Palette:
- *   base   #0C0F0E  page (near-black, faint green warmth)
- *   raise  #121613  card surface
- *   line   #1E2723  hairline border
- *   forest #1B6B3F / #14432A  accent (button, active)
+ *   base   #171B21  page (near-black, faint green warmth)
+ *   raise  #1F242C  card surface
+ *   line   rgba(255,255,255,0.08)  hairline border
+ *   forest #2A7A50 / #14432A  accent (button, active)
  *   text   #F1F3F1 / #9BA8A0 / #6D7A72  primary / secondary / tertiary
  */
 
-export const SAB_BASE = '#0C0F0E'
+export const SAB_BASE = '#171B21'
 
 /** Group container card — near-black raised surface, hairline border. */
 export const sabCard =
-  'border border-[#1E2723] bg-[#121613] ' +
+  'border border-[rgba(255,255,255,0.08)] bg-[#1F242C] ' +
   'shadow-[0_8px_20px_-16px_rgba(0,0,0,0.8)]'
 
 /** Floating sub-item inside a card — no border, faint fill (avoids nesting). */
@@ -32,20 +32,20 @@ export const sabTile = 'bg-white/[0.025]'
 
 /** Hero surface — same near-black family, one hairline border, soft lift. */
 export const sabHero =
-  'relative overflow-hidden border border-[#1E2723] bg-[#101512] ' +
+  'relative overflow-hidden border border-[rgba(255,255,255,0.08)] bg-[#101512] ' +
   'shadow-[0_16px_40px_-24px_rgba(0,0,0,0.85)]'
 
 /** Interactive tile (hover lift) — clickable chips/cards. */
 export const sabInteractive =
-  'border border-[#1E2723] bg-[#111613] transition ' +
-  'hover:-translate-y-0.5 hover:border-[#2A3A31] ' +
+  'border border-[rgba(255,255,255,0.08)] bg-[#1F242C] transition ' +
+  'hover:-translate-y-0.5 hover:border-[rgba(255,255,255,0.12)] ' +
   'hover:shadow-[0_12px_24px_-14px_rgba(0,0,0,0.7)]'
 
 /** Primary "Buy Now" button — forest accent, the one strong green. */
 export const sabPrimaryBtn =
   'inline-flex items-center justify-center gap-1.5 ' +
-  'bg-[#1B6B3F] px-4 py-2.5 text-sm font-bold text-white ' +
-  'shadow-[0_6px_16px_-8px_rgba(27,107,63,0.6)] transition hover:bg-[#1f7a48]'
+  'bg-[#2A7A50] px-4 py-2.5 text-sm font-bold text-white ' +
+  'shadow-[0_6px_16px_-8px_rgba(27,107,63,0.6)] transition hover:bg-[#338F5D]'
 
 /** Muted pill/badge. */
 export const sabPill =

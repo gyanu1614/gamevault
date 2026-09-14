@@ -232,7 +232,7 @@ export default function NotificationsPage() {
                         <p className={cn('text-[14.5px] font-semibold leading-snug', notification.is_read ? 'text-text-secondary' : 'text-text-primary')}>
                           {notification.title}
                           {!notification.is_read && (
-                            <span aria-hidden className="ml-2 inline-block h-2 w-2 rounded-full bg-lime align-middle shadow-[0_0_8px_rgba(198,255,61,0.8)]" />
+                            <span aria-hidden className="ml-2 inline-block h-2 w-2 rounded-full bg-lime align-middle shadow-[0_0_8px_rgba(86,184,127,0.8)]" />
                           )}
                         </p>
                         <div className="flex flex-shrink-0 items-center gap-2">

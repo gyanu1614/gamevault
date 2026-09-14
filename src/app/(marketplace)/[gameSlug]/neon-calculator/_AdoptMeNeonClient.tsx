@@ -39,14 +39,14 @@ export default function AdoptMeNeonClient({ pets }: { pets: CalcPet[] }) {
       <button
         type="button"
         onClick={() => setPicking(true)}
-        className="flex w-full items-center justify-between gap-3 border border-[#1E2723] bg-[#0F1311] px-4 py-3.5 text-left transition hover:border-[#2A3A31]"
+        className="flex w-full items-center justify-between gap-3 border border-[rgba(255,255,255,0.08)] bg-[#171B21] px-4 py-3.5 text-left transition hover:border-[rgba(255,255,255,0.12)]"
       >
         <span className="flex items-center gap-3">
           {pet?.imageUrl ? (
             // eslint-disable-next-line @next/next/no-img-element -- remote pet art
             <img src={pet.imageUrl} alt="" className="h-9 w-9 object-contain" />
           ) : (
-            <span className="flex h-9 w-9 items-center justify-center border border-[#1E2723] bg-black/20 text-[#6D7A72]"><Search className="h-4 w-4" /></span>
+            <span className="flex h-9 w-9 items-center justify-center border border-[rgba(255,255,255,0.08)] bg-black/20 text-[#6D7A72]"><Search className="h-4 w-4" /></span>
           )}
           <span className="text-[15px] font-semibold text-[#E6EAE7]">{pet ? pet.name : 'Choose a pet'}</span>
         </span>
@@ -56,7 +56,7 @@ export default function AdoptMeNeonClient({ pets }: { pets: CalcPet[] }) {
       {pet && (
         <>
           {/* The Neon math, stated plainly. */}
-          <div className="border border-[#1E2723] bg-[#0F1311] p-4">
+          <div className="border border-[rgba(255,255,255,0.08)] bg-[#171B21] p-4">
             <p className="text-[13px] leading-relaxed text-[#C6CEC9]">
               To make a <span className="font-semibold text-[#F1F3F1]">Neon {pet.name}</span> you merge{' '}
               <span className="font-semibold text-[#F1F3F1]">4 full-grown</span> copies. A{' '}
@@ -117,8 +117,8 @@ function CostCard({
     buildCost != null && buyCost != null ? Math.abs(buildCost - buyCost) : null
 
   return (
-    <div className="border border-[#1E2723] bg-[#0F1311]">
-      <div className="flex items-center justify-between border-b border-[#1E2723] px-4 py-2.5">
+    <div className="border border-[rgba(255,255,255,0.08)] bg-[#171B21]">
+      <div className="flex items-center justify-between border-b border-[rgba(255,255,255,0.08)] px-4 py-2.5">
         <span className="text-[14px] font-semibold text-[#F1F3F1]">{title}</span>
         <span className="text-[12px] text-[#8B978F]">needs {need}</span>
       </div>
@@ -138,7 +138,7 @@ function CostCard({
         />
       </div>
       {cheaper && saving != null && (
-        <p className="border-t border-[#1A211A] px-4 py-2.5 text-[13px] text-[#C6CEC9]">
+        <p className="border-t border-[rgba(255,255,255,0.08)] px-4 py-2.5 text-[13px] text-[#C6CEC9]">
           <span className="font-semibold text-[#8FBF9C]">{cheaper === 'buy' ? 'Buying' : 'Building'}</span>{' '}
           is cheaper by <span className="font-mono font-semibold text-[#F1F3F1]">{USD.format(saving)}</span>.
         </p>
@@ -161,7 +161,7 @@ function Path({
   bordered?: boolean
 }) {
   return (
-    <div className={`px-4 py-3.5 ${bordered ? 'border-b border-[#1A211A] sm:border-b-0 sm:border-r' : ''} ${highlight ? 'bg-[#0E1611]' : ''}`}>
+    <div className={`px-4 py-3.5 ${bordered ? 'border-b border-[rgba(255,255,255,0.08)] sm:border-b-0 sm:border-r' : ''} ${highlight ? 'bg-[#0E1611]' : ''}`}>
       <div className="flex items-center gap-2">
         <span className="text-[13px] font-medium text-[#C6CEC9]">{label}</span>
         {highlight && <span className="bg-[#14432A] px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.06em] text-[#8FBF9C]">cheaper</span>}
@@ -191,9 +191,9 @@ function PetPicker({
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/70 p-4 pt-[10vh] backdrop-blur-sm" onClick={onClose}>
-      <div className="animate-verdict w-full max-w-lg border border-[#1E2723] bg-[#0E1211] shadow-[0_28px_60px_-20px_rgba(0,0,0,0.9)]" onClick={(e) => e.stopPropagation()}>
+      <div className="animate-verdict w-full max-w-lg border border-[rgba(255,255,255,0.08)] bg-[#171B21] shadow-[0_28px_60px_-20px_rgba(0,0,0,0.9)]" onClick={(e) => e.stopPropagation()}>
         <style>{`@keyframes amwfl-in { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:none; } } .animate-verdict { animation: amwfl-in 240ms cubic-bezier(0.16,1,0.3,1); }`}</style>
-        <div className="flex items-center gap-2 border-b border-[#1E2723] px-4 py-3">
+        <div className="flex items-center gap-2 border-b border-[rgba(255,255,255,0.08)] px-4 py-3">
           <Search className="h-4 w-4 text-[#6D7A72]" />
           <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search a pet…" className="w-full bg-transparent text-[16px] text-[#F1F3F1] outline-none placeholder:text-[#6D7A72]" />
           <button type="button" onClick={onClose} aria-label="Close" className="text-[#6D7A72] hover:text-[#F1F3F1]"><X className="h-5 w-5" /></button>
@@ -205,7 +205,7 @@ function PetPicker({
                 // eslint-disable-next-line @next/next/no-img-element -- remote pet art
                 <img src={p.imageUrl} alt="" className="h-8 w-8 shrink-0 object-contain" />
               ) : (
-                <span className="h-8 w-8 shrink-0 border border-[#1E2723] bg-black/20" />
+                <span className="h-8 w-8 shrink-0 border border-[rgba(255,255,255,0.08)] bg-black/20" />
               )}
               <span className="text-[14px] text-[#E6EAE7]">{p.name}</span>
             </button>

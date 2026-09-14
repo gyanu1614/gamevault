@@ -2,44 +2,29 @@
 
 /**
  * PreFooterCtaBand
- * Full-bleed pre-footer CTA band per handoff spec (design_handoff_cta_band/README.md).
  *
- * Layer stack (back → front):
- *   1. Game key art — darkened via CSS filter
- *   2. Grade layers: color-blend radial + flat dark + green cast
- *   3. Falloff radial (slow light drift animation)
- *   4. Top fade → page background
- *   5. Bottom fade → page background
- *   6. Text scrim (behind copy only)
- *   7. Content (h2, p, button)
+ * Layer stack (back → front), all position:absolute siblings on <section>:
+ *   1. Art drift wrapper — breathing keyframe, cursor parallax via spring
+ *   2. Grade A — color-blend radial (tints art toward page base)
+ *   3. Grade B — flat dark at 20% opacity
+ *   4. Grade C — faint green cast
+ *   5. Falloff radial — slow light-drift keyframe, centre-bright vignette
+ *   6. Top fade  — linear to page bg, kills the hard edge under navbar
+ *   7. Bottom fade — linear to page bg, kills the hard edge above footer
+ *   8. Text scrim — tight radial behind copy only
+ *   9. Content — z-index:2
  *
- * Motion:
- *   - Art breathes: CSS keyframe dm-breathe 25s
- *   - Light drifts: CSS keyframe dm-lightdrift 40s
- *   - Cursor parallax: framer-motion useSpring, fine pointer only
- *   - Button press: scale(0.97) on pointerdown, spring release
- *   - prefers-reduced-motion: all ambient motion disabled via CSS
- *
- * Artwork:
- *   Default: /hero/roblox.jpg (1920×1080). Supply any 16:9 image at
- *   ≥1600px wide. Place at /public/hero/{name}.jpg and pass as `artSrc`.
- *
- * Hardcoded values (not in token layer):
- *   - #18804B / #1D9459 / #13683C — deep green button (palette lift, not stock lime)
- *   - rgba(24,128,75,.09) — green cast overlay
- *   - rgba(14,17,21,.8) — text scrim ink
- *   - clamp(158px,19vw,264px) — section vertical padding (spec value)
- *   - clamp(20px,5vw,64px)   — section horizontal padding (spec value)
- *   These are spec-exact values that sit outside the DropMarket token set.
+ * Height: min 320px mobile / 420px desktop, max 520px — never full-viewport.
+ * Vertical padding replaces fixed padding with flex centering.
  */
 
-import { useRef, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useMotionValue, useSpring, motion } from 'framer-motion'
 import Image from 'next/image'
 import Link from 'next/link'
 
 interface PreFooterCtaBandProps {
-  /** 16:9 game key art. Default: /hero/roblox.jpg */
+  /** Clean in-game screenshot, 16:9, ≥1600px wide. No baked-in text or logos. */
   artSrc?: string
   artWidth?: number
   artHeight?: number
@@ -58,10 +43,8 @@ export function PreFooterCtaBand({
   buttonLabel = 'Browse Marketplace',
   buttonHref = '/browse',
 }: PreFooterCtaBandProps) {
-  const sectionRef = useRef<HTMLElement>(null)
   const [pressed, setPressed] = useState(false)
 
-  // Cursor parallax — framer-motion damped springs, fine pointer only
   const rawX = useMotionValue(0)
   const rawY = useMotionValue(0)
   const springConfig = { damping: 80, stiffness: 60, mass: 1.4 }
@@ -71,16 +54,10 @@ export function PreFooterCtaBand({
   useEffect(() => {
     const mq = window.matchMedia('(hover: hover) and (pointer: fine)')
     if (!mq.matches) return
-
     const onMove = (e: MouseEvent) => {
-      const vw = window.innerWidth
-      const vh = window.innerHeight
-      const nx = (e.clientX / vw) * 2 - 1  // -1..1
-      const ny = (e.clientY / vh) * 2 - 1
-      rawX.set(nx * -7)
-      rawY.set(ny * -4)
+      rawX.set((e.clientX / window.innerWidth) * 2 - 1)
+      rawY.set((e.clientY / window.innerHeight) * 2 - 1)
     }
-
     window.addEventListener('mousemove', onMove, { passive: true })
     return () => window.removeEventListener('mousemove', onMove)
   }, [rawX, rawY])
@@ -106,15 +83,26 @@ export function PreFooterCtaBand({
       `}</style>
 
       <section
-        ref={sectionRef}
         style={{
           position: 'relative',
           overflow: 'hidden',
-          padding: 'clamp(158px,19vw,264px) clamp(20px,5vw,64px)',
           background: '#171B21',
+          /* Height: clamp between mobile-min and desktop-max, never full-viewport */
+          minHeight: 'clamp(320px, 36vw, 520px)',
+          maxHeight: 'clamp(320px, 36vw, 520px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '0 clamp(20px, 5vw, 64px)',
         }}
       >
-        {/* ── Layer 1-2: Art + grade stack ──────────────────────── */}
+
+        {/* ── Layer 1: Art — breathing drift, cursor parallax ─────── */}
+        {/*
+          Isolation is NOT set here so the grade layers above can blend
+          against the art via mix-blend-mode. The art wrapper sits in its
+          own overflow:hidden clip so the 9% bleed doesn't show.
+        */}
         <div style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
           <motion.div
             data-band-art=""
@@ -127,43 +115,61 @@ export function PreFooterCtaBand({
               translateY: springY,
             }}
           >
-            {/* Art — darkened first per spec */}
-            <div style={{ position: 'absolute', inset: 0, filter: 'brightness(.66) saturate(.75) contrast(1.02)' }}>
-              <Image
-                src={artSrc}
-                alt=""
-                aria-hidden
-                fill
-                sizes="100vw"
-                priority={false}
-                style={{ objectFit: 'cover', objectPosition: 'center' }}
-              />
-            </div>
-
-            {/* Grade 1: color-blend radial — tints toward base, never drains */}
-            <div
-              aria-hidden="true"
+            <Image
+              src={artSrc}
+              alt=""
+              aria-hidden
+              fill
+              sizes="100vw"
+              priority={false}
               style={{
-                position: 'absolute', inset: 0, pointerEvents: 'none',
-                background: 'radial-gradient(closest-side at 50% 54%, rgba(23,27,33,0) 0%, rgba(23,27,33,.5) 52%, rgba(23,27,33,1) 88%)',
-                mixBlendMode: 'color',
-                opacity: 0.25,
+                objectFit: 'cover',
+                objectPosition: 'center',
+                /* Darken first — art should sit well back */
+                filter: 'brightness(.55) saturate(.70) contrast(1.05)',
               }}
-            />
-            {/* Grade 2: flat dark */}
-            <div
-              aria-hidden="true"
-              style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: '#171B21', opacity: 0.2 }}
-            />
-            {/* Grade 3: faint green cast */}
-            <div
-              aria-hidden="true"
-              style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'rgba(24,128,75,.09)' }}
             />
           </motion.div>
         </div>
 
-        {/* ── Layer 3: Falloff radial — slow light drift ─────────── */}
+        {/* ── Layer 2: Grade A — color-blend radial ───────────────── */}
+        {/*
+          Tints the art toward the page base tone progressively from
+          centre to edge. mix-blend-mode:color works here because this
+          div is a SIBLING of the art container (same stacking context as
+          <section>), not a child of the motion.div (which creates its own
+          stacking context via will-change:transform, breaking blend modes).
+        */}
+        <div
+          aria-hidden="true"
+          style={{
+            position: 'absolute', inset: 0, pointerEvents: 'none',
+            background: 'radial-gradient(closest-side at 50% 54%, rgba(23,27,33,0) 0%, rgba(23,27,33,.5) 52%, rgba(23,27,33,1) 88%)',
+            mixBlendMode: 'color',
+            opacity: 0.3,
+          }}
+        />
+
+        {/* ── Layer 3: Grade B — flat dark ────────────────────────── */}
+        <div
+          aria-hidden="true"
+          style={{
+            position: 'absolute', inset: 0, pointerEvents: 'none',
+            background: '#171B21',
+            opacity: 0.25,
+          }}
+        />
+
+        {/* ── Layer 4: Grade C — faint green cast ─────────────────── */}
+        <div
+          aria-hidden="true"
+          style={{
+            position: 'absolute', inset: 0, pointerEvents: 'none',
+            background: 'rgba(24,128,75,.09)',
+          }}
+        />
+
+        {/* ── Layer 5: Falloff radial — slow light drift ───────────── */}
         <div
           data-light-drift=""
           aria-hidden="true"
@@ -175,47 +181,50 @@ export function PreFooterCtaBand({
           }}
         />
 
-        {/* ── Layer 4: Top fade ──────────────────────────────────── */}
+        {/* ── Layer 6: Top fade — resolves to exact page bg token ── */}
         <div
           aria-hidden="true"
           style={{
-            position: 'absolute', top: 0, left: 0, right: 0, height: '44%', pointerEvents: 'none',
-            background: 'linear-gradient(180deg, #171B21 0%, rgba(23,27,33,.82) 34%, rgba(23,27,33,0) 100%)',
+            position: 'absolute', top: 0, left: 0, right: 0, height: '52%',
+            pointerEvents: 'none',
+            background: 'linear-gradient(180deg, var(--color-bg-base) 0%, var(--color-bg-base) 4%, rgba(23,27,33,.92) 22%, rgba(23,27,33,.6) 48%, rgba(23,27,33,0) 100%)',
           }}
         />
 
-        {/* ── Layer 5: Bottom fade ───────────────────────────────── */}
+        {/* ── Layer 7: Bottom fade — resolves to exact page bg token ─ */}
         <div
           aria-hidden="true"
           style={{
-            position: 'absolute', bottom: 0, left: 0, right: 0, height: '34%', pointerEvents: 'none',
-            background: 'linear-gradient(0deg, #171B21 0%, rgba(23,27,33,.8) 38%, rgba(23,27,33,0) 100%)',
+            position: 'absolute', bottom: 0, left: 0, right: 0, height: '52%',
+            pointerEvents: 'none',
+            background: 'linear-gradient(0deg, var(--color-bg-base) 0%, var(--color-bg-base) 4%, rgba(23,27,33,.92) 22%, rgba(23,27,33,.6) 48%, rgba(23,27,33,0) 100%)',
           }}
         />
 
-        {/* ── Layer 6: Text scrim (behind copy only) ─────────────── */}
+        {/* ── Layer 8: Text scrim ──────────────────────────────────── */}
         <div
           aria-hidden="true"
           style={{
-            position: 'absolute', top: '50%', left: '50%', pointerEvents: 'none',
+            position: 'absolute', top: '50%', left: '50%',
             translate: '-50% -50%',
             width: 'min(1000px, 124%)', height: '400px',
-            background: 'radial-gradient(closest-side, rgba(14,17,21,.8), rgba(14,17,21,.42) 46%, rgba(14,17,21,0) 78%)',
+            pointerEvents: 'none',
+            background: 'radial-gradient(closest-side, rgba(14,17,21,.82), rgba(14,17,21,.44) 46%, rgba(14,17,21,0) 78%)',
           }}
         />
 
-        {/* ── Layer 7: Content ───────────────────────────────────── */}
+        {/* ── Layer 9: Content ─────────────────────────────────────── */}
         <div
           style={{
             position: 'relative', zIndex: 2,
-            maxWidth: '680px', margin: '0 auto',
+            maxWidth: '680px', width: '100%',
             textAlign: 'center', pointerEvents: 'none',
           }}
         >
           <h2
             style={{
               margin: 0,
-              fontSize: 'clamp(28px, 3.4vw, 42px)',
+              fontSize: 'clamp(26px, 3.4vw, 36px)',
               fontWeight: 800,
               lineHeight: 1.14,
               letterSpacing: '-.025em',
@@ -228,8 +237,8 @@ export function PreFooterCtaBand({
 
           <p
             style={{
-              margin: '16px auto 0',
-              fontSize: 'clamp(15px, 1.15vw, 17px)',
+              margin: '14px auto 0',
+              fontSize: '16px',
               fontWeight: 400,
               lineHeight: 1.6,
               color: 'var(--color-text-secondary)',
@@ -239,7 +248,7 @@ export function PreFooterCtaBand({
             {support}
           </p>
 
-          <div style={{ marginTop: '32px', display: 'flex', justifyContent: 'center' }}>
+          <div style={{ marginTop: '28px', display: 'flex', justifyContent: 'center' }}>
             <Link
               href={buttonHref}
               onPointerDown={() => setPressed(true)}

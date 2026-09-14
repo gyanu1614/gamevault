@@ -103,8 +103,8 @@ export function TopUpsBanner() {
              now on the right (where the mascot will land) so the lit
              side of the composition follows the flipped art. */
           background:
-            radial-gradient(140% 180% at 88% 50%, #15243f 0%, #0c1526 38%, #070b15 70%, #04060c 100%),
-            radial-gradient(120% 160% at 12% 50%, #1a1b2e 0%, transparent 55%);
+            radial-gradient(140% 180% at 88% 50%, #1f242c 0%, #171b21 38%, #111418 70%, #0d1013 100%),
+            radial-gradient(120% 160% at 12% 50%, #242a34 0%, transparent 55%);
         }
         /* V17m-b — Text shield. Subtle dark wash on the left so the
            heading reads well over the prop fan, without blacking out
@@ -119,8 +119,8 @@ export function TopUpsBanner() {
           pointer-events: none;
           background: linear-gradient(
             90deg,
-            rgba(4, 6, 12, 0.55) 0%,
-            rgba(4, 6, 12, 0.25) 22%,
+            rgba(23, 27, 33, 0.55) 0%,
+            rgba(23, 27, 33, 0.25) 22%,
             transparent 42%
           );
         }
@@ -157,8 +157,8 @@ export function TopUpsBanner() {
           border-radius: 50%;
           background: radial-gradient(
             circle,
-            rgba(56, 132, 255, 0.3) 0%,
-            rgba(56, 132, 255, 0.1) 38%,
+            rgba(86, 184, 127, 0.12) 0%,
+            rgba(86, 184, 127, 0.04) 38%,
             transparent 68%
           );
           filter: blur(8px);
@@ -173,8 +173,8 @@ export function TopUpsBanner() {
           border-radius: 50%;
           background: radial-gradient(
             circle,
-            rgba(255, 196, 84, 0.16) 0%,
-            rgba(74, 120, 255, 0.12) 40%,
+            rgba(120, 168, 255, 0.08) 0%,
+            rgba(86, 184, 127, 0.05) 40%,
             transparent 70%
           );
           filter: blur(10px);
@@ -184,28 +184,33 @@ export function TopUpsBanner() {
           inset: 0;
           background: radial-gradient(
             70% 120% at 50% 50%,
-            rgba(4, 6, 12, 0.8) 0%,
-            rgba(4, 6, 12, 0.45) 30%,
+            rgba(23, 27, 33, 0.8) 0%,
+            rgba(23, 27, 33, 0.45) 30%,
             transparent 60%
           );
         }
+        /* Resolves the banner art to the exact page ground at both
+           horizontal edges so the band has no perceptible boundary
+           against the sections above and below. */
         .tu-topbot {
           position: absolute;
           inset: 0;
           background: linear-gradient(
             180deg,
-            rgba(4, 6, 12, 0.55) 0%,
-            transparent 22%,
-            transparent 78%,
-            rgba(4, 6, 12, 0.65) 100%
+            #171b21 0%,
+            rgba(23, 27, 33, 0.72) 12%,
+            transparent 30%,
+            transparent 70%,
+            rgba(23, 27, 33, 0.78) 88%,
+            #171b21 100%
           );
         }
         .tu-edges {
           position: absolute;
           inset: 0;
           box-shadow:
-            inset 90px 0 120px -40px #04060c,
-            inset -90px 0 120px -40px #04060c;
+            inset 90px 0 120px -40px #0d1013,
+            inset -90px 0 120px -40px #0d1013;
         }
         .tu-cluster {
           position: absolute;

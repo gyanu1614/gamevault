@@ -1,7 +1,7 @@
 /* ============================================================
    GAMEVAULT — DESIGN TOKENS
    Source of truth for the entire product.
-   Direction 01: Premium dark + signature lime
+   Direction 02: Quiet Trust — slate surfaces, green accents
    Fonts loaded via next/font/local in layout.tsx —
    --font-display, --font-body, --font-mono are injected there.
    ============================================================ */
@@ -9,38 +9,60 @@
 /* ── CSS Custom Properties ──────────────────────────────────── */
 :root {
   /* ── Background / Elevation ── */
-  --color-bg-base:         #0A0A0F;
-  --color-bg-raised:       #121218;
-  --color-bg-raised-hover: #17171F;
-  --color-bg-overlay:      #1C1C25;
-  --color-bg-overlay-2:    #23232E;
-  --color-bg-inset:        #0C0C12;
+  /* L0.5: recessed surface for wells and inset cards.
+     Deliberately a touch ABOVE the page ground, not below it — the recess
+     reads from the inset shadow and the border, not from a dark fill. A
+     genuinely darker fill (#12161C, 2 lightness points under base) turns
+     the card into a hole and drags the artwork down with it. */
+  --color-bg-well:         #181D25;
+  --color-bg-base:         #171B21;   /* L0: page ground */
+  /* Same colour as an rgb triplet, for gradients that need to vary alpha
+     per stop (hero art fades). Keep in sync with --color-bg-base. */
+  --color-bg-base-rgb:     23, 27, 33;
+  --color-bg-raised:       #1F242C;   /* L1: card, navbar pill */
+  /* rgb triplet for surfaces that need per-use alpha (sticky game bar).
+     Keep in sync with --color-bg-raised. */
+  --color-bg-raised-rgb:   31, 36, 44;
+  --color-bg-raised-hover: #252B34;   /* L1 hover */
+  --color-bg-overlay:      #252B34;   /* L2: inputs, filter pills */
+  --color-bg-overlay-2:    #252B34;
+  --color-bg-inset:        #2C333F;   /* L3: avatar well, popovers */
 
   /* ── Borders ── */
-  --color-border-subtle:   rgba(255,255,255,0.06);
-  --color-border-default:  rgba(255,255,255,0.10);
-  --color-border-strong:   rgba(255,255,255,0.17);
+  --color-border-subtle:   rgba(255,255,255,0.08);
+  --color-border-default:  rgba(255,255,255,0.14);
+  --color-border-strong:   rgba(255,255,255,0.22);
 
   /* ── Text ── */
-  --color-text-primary:    #F3F3F6;
-  --color-text-secondary:  #C8CAD2;
-  --color-text-tertiary:   #9698A2;
-  --color-text-disabled:   #6E6F78;
-  --color-text-inverse:    #0A0A0F;
-  --color-text-footer:     #E2E3E8;
+  --color-text-primary:    #E9EDF2;
+  --color-text-secondary:  #9AA6B3;
+  --color-text-tertiary:   #6C7684;
+  --color-text-disabled:   #6C7684;
+  --color-text-inverse:    #F2F8F3;   /* ink on green fill */
+  --color-text-footer:     #9AA6B3;
 
-  /* ── Accent — Lime ── */
-  --color-accent-default:  #C6FF3D;
-  --color-accent-hover:    #D6FF6E;
-  --color-accent-pressed:  #ABE52B;
-  --color-accent-tint-bg:  rgba(198,255,61,0.11);
-  --color-accent-tint-border: rgba(198,255,61,0.26);
-  --color-accent-text:     #D2FF63;
+  /* ── Accent — Green ── */
+  --color-accent-default:  #2A7A50;   /* button fill */
+  --color-accent-hover:    #338F5D;
+  --color-accent-pressed:  #226343;
+  --color-accent-tint-bg:  rgba(86,184,127,0.12);
+  --color-accent-tint-border: rgba(86,184,127,0.30);
+  --color-accent-default-rgb: 42, 122, 80;  /* keep in sync with the hex above */
+  --color-accent-text:     #56B87F;   /* green as text/icon/link */
+  /* rgb triplet for gradients that vary alpha per stop (hero bloom).
+     Keep in sync with --color-accent-text. */
+  --color-accent-text-rgb: 86, 184, 127;
 
   /* ── System / Semantic ── */
   --color-success:         #3FD986;
   --color-success-bg:      rgba(63,217,134,0.12);
   --color-warning:         #FFB23E;
+  --color-warning-rgb:     255, 178, 62;  /* keep in sync with the hex above */
+  /* Neutral slate accent — carries a surface without reading as a hue.
+     Used where a card needs to differ from its neighbours without claiming
+     a semantic colour. */
+  --color-accent-slate:     #3A4658;
+  --color-accent-slate-rgb: 58, 70, 88;
   --color-warning-bg:      rgba(255,178,62,0.12);
   --color-error:           #FF5C5C;
   --color-error-bg:        rgba(255,92,92,0.12);
@@ -48,10 +70,10 @@
   --color-info-bg:         rgba(88,155,255,0.12);
 
   /* ── Interaction States ── */
-  --color-state-hover:     rgba(255,255,255,0.045);
-  --color-state-pressed:   rgba(255,255,255,0.085);
-  --color-state-selected:  rgba(198,255,61,0.10);
-  --color-focus-ring:      rgba(198,255,61,0.55);
+  --color-state-hover:     rgba(255,255,255,0.04);
+  --color-state-pressed:   rgba(255,255,255,0.07);
+  --color-state-selected:  rgba(86,184,127,0.12);
+  --color-focus-ring:      rgba(86,184,127,0.55);
 
   /* ── Typography — Families (vars injected by next/font/local in layout.tsx) ── */
   /* --font-display = Inter 800/900 (headings), --font-body = Inter 400/500/600 (body/UI), --font-mono = JetBrains Mono */
@@ -71,6 +93,49 @@
   --text-mono-size:   13px;  --text-mono-weight:    400;  --text-mono-lh:    1.45; --text-mono-ls:    0;
   --text-overline-size: 12px; --text-overline-weight: 600; --text-overline-lh: 1.35; --text-overline-ls: 0.14em;
 
+  /* ── Dense marketplace type scale (v2) ── */
+  /* page-title only gets a narrow vw clamp; everything else is fixed px */
+  --fs-page-title: clamp(24px, 22px + 0.4vw, 30px); /* w 600, lh 1.25, ls -0.02em */
+  --fs-section:    18px;  /* w 600, lh 1.4,  ls -0.01em */
+  --fs-card-title: 15px;  /* w 600, lh 1.4 */
+  --fs-price:      20px;  /* w 600, mono, tabular-nums, lh 1.2 */
+  --fs-body:       14px;  /* w 400, lh 1.5 */
+  --fs-meta:       13px;  /* w 400, lh 1.4 */
+  --fs-caption:    12px;  /* w 400, lh 1.35 — breadcrumb, chip labels */
+  --fs-micro:      11px;  /* w 500, ls 0.04em, uppercase labels only */
+
+  /* Companion weights — 400/500/600 only, never 700+ */
+  --fw-heading: 600;  /* page-title, section, card-title, price */
+  --fw-ui:      500;  /* buttons, nav links, labels */
+  --fw-body:    400;  /* body, meta */
+
+  /* Companion line-heights */
+  --lh-page-title: 1.25;
+  --lh-section:    1.4;
+  --lh-card-title: 1.4;
+  --lh-price:      1.2;
+  --lh-body:       1.5;
+  --lh-meta:       1.4;
+  --lh-caption:    1.35;
+
+  /* Spacing — 4px base, all fixed px */
+  --gap-card:    16px;   /* card internal padding (12px on mobile) */
+  --gap-grid:    16px;   /* grid gutter (12px on mobile) */
+  --gap-section: 32px;   /* between sections */
+
+  /* Control heights */
+  --h-btn-primary:   38px;  /* primary CTA */
+  --h-btn-secondary: 36px;  /* filter chips, sort — same row as search */
+  --h-btn-tertiary:  28px;  /* ghost/text actions */
+  --h-input:         36px;  /* search input — matches filter row */
+  --h-chip:          24px;  /* display-only meta chips, not interactive */
+
+  /* Radius — Ledger shape system */
+  --radius-btn:   4px;   /* buttons, filter chips, dropdowns */
+  --radius-input: 4px;   /* inputs */
+  --radius-card:  8px;   /* listing cards */
+  --radius-modal: 0px;   /* modal bands are full-bleed, no corners */
+
   /* ── Spacing — 4px base grid ── */
   --space-1:  4px;   --space-2:  8px;   --space-3:  12px;  --space-4:  16px;
   --space-5:  20px;  --space-6:  24px;  --space-8:  32px;  --space-10: 40px;
@@ -88,7 +153,7 @@
   --shadow-subtle:   0 1px 2px rgba(0,0,0,0.40);
   --shadow-raised:   0 4px 14px rgba(0,0,0,0.45);
   --shadow-elevated: 0 18px 44px rgba(0,0,0,0.60);
-  --shadow-glow:     0 0 0 1px rgba(198,255,61,0.45), 0 10px 30px rgba(198,255,61,0.16);
+  --shadow-glow:     0 0 0 1px rgba(86,184,127,0.45), 0 10px 30px rgba(86,184,127,0.16);
 
   /* ── Layout ── */
   --container-default: 1280px;
@@ -107,8 +172,8 @@
      violet bloom — single-hue washes look flat, dual-hue corners
      give the page real depth (the move every premium marketplace
      uses: GameBoost, 2Game, Eldorado). */
-  --glow-tl:   rgba(198, 255, 61, 0.06);
-  --glow-br:   rgba(124, 108, 255, 0.06);
+  --glow-tl:   transparent;
+  --glow-br:   transparent;
   --glow-size: 56vmax;
 
   /* Per-page hero art band. Override --page-hero-image at the route
@@ -135,16 +200,16 @@
      vignette treatment. Tune via these stops, not per-page overrides. */
   --hero-scrim: linear-gradient(
     to bottom,
-    rgba(10, 10, 15, 0.90) 0%,
-    rgba(10, 10, 15, 0.86) 18%,
-    rgba(10, 10, 15, 0.92) 55%,
-    rgba(10, 10, 15, 0.97) 78%,
+    rgba(23, 27, 33, 0.90) 0%,
+    rgba(23, 27, 33, 0.86) 18%,
+    rgba(23, 27, 33, 0.92) 55%,
+    rgba(23, 27, 33, 0.97) 78%,
     var(--color-bg-base)   100%
   );
 
   --hero-vignette: radial-gradient(
     110% 90% at 50% 35%,
-    transparent          25%,
-    rgba(10, 10, 15, 0.82) 100%
+    transparent            25%,
+    rgba(23, 27, 33, 0.82) 100%
   );
 }

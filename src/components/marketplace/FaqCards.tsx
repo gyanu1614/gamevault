@@ -45,7 +45,7 @@ export function FaqCards({
             key={i}
             className={cn(
               'overflow-hidden transition-colors',
-              square ? 'border border-[#1E2723]' : 'rounded-[20px]',
+              square ? 'border border-[rgba(255,255,255,0.08)]' : 'rounded-[20px]',
               open ? 'bg-white/[0.06]' : 'bg-white/[0.04] hover:bg-white/[0.06]',
             )}
           >
@@ -66,7 +66,7 @@ export function FaqCards({
                     square ? '' : 'rounded-[10px]',
                     open
                       ? square
-                        ? 'bg-[#1B6B3F] text-white'
+                        ? 'bg-[#2A7A50] text-white'
                         : 'bg-lime text-text-inverse'
                       : 'bg-white/[0.05] text-text-secondary',
                   )}

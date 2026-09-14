@@ -153,7 +153,7 @@ export default function MutationCalculator({
 
             <Link
               href={selectedListingsHref}
-              className="mt-4 inline-flex items-center gap-1.5 bg-[#1B5E3A] px-4 py-2.5 text-sm font-bold text-white transition hover:bg-[#227446]"
+              className="mt-4 inline-flex items-center gap-1.5 bg-[var(--color-accent-default)] px-4 py-2.5 text-sm font-bold text-white transition hover:bg-[var(--color-accent-hover)]"
             >
               View {selected.name} listings
               <ArrowRight className="h-4 w-4" />

@@ -38,7 +38,7 @@ export function ShopCard({ href, name, game, iconSrc, fromPrice, chips = [] }: S
         'max-lg:rounded-[10px] max-lg:border max-lg:p-3 max-lg:pb-3',
         'transition-all duration-200 ease-gv',
         'hover:-translate-y-1 hover:border-border-strong hover:bg-[rgba(26,26,35,0.70)]',
-        'hover:shadow-[0_18px_36px_-14px_rgba(0,0,0,0.7),0_10px_30px_-12px_rgba(198,255,61,0.14)]',
+        'hover:shadow-[0_18px_36px_-14px_rgba(0,0,0,0.7),0_10px_30px_-12px_rgba(86,184,127,0.14)]',
       )}
     >
       {/* Top sheen — light falling from above. */}
@@ -49,7 +49,7 @@ export function ShopCard({ href, name, game, iconSrc, fromPrice, chips = [] }: S
       {/* Icon spotlight — neutral pool that warms to lime on hover. */}
       <span
         aria-hidden
-        className="pointer-events-none absolute left-1/2 top-6 h-16 w-28 -translate-x-1/2 rounded-full bg-white/[0.07] blur-xl transition-colors duration-300 group-hover:bg-[#C6FF3D1F]"
+        className="pointer-events-none absolute left-1/2 top-6 h-16 w-28 -translate-x-1/2 rounded-full bg-white/[0.07] blur-xl transition-colors duration-300 group-hover:bg-[#56B87F1F]"
       />
 
       {/* Floating art — letter tile when there's no artwork yet (beats

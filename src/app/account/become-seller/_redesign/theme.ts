@@ -14,7 +14,7 @@ export const PALETTE = {
   ivory: '#FAFAF7', // canvas (right pane)
   paper: '#FFFFFF', // cards / inputs
   forest: '#14432A', // primary / left panel
-  forest2: '#1B5E3A', // focus / hover
+  forest2: 'var(--color-accent-default)', // focus / hover
   forest3: '#0F3320', // deepest shade
   lime: '#A3E635', // active dot · completed checks · CTA hover accent ONLY
   ink: '#1A1D19', // primary text

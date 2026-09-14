@@ -85,7 +85,7 @@ export function AdoptMeSimilar({
               onClick={() => emblaApi?.scrollPrev()}
               disabled={!canPrev}
               aria-label="Previous pets"
-              className="flex h-8 w-8 items-center justify-center rounded-md border border-[#1E2723] bg-white/[0.03] text-[#C6CEC9] transition hover:border-[#2C3A31] hover:bg-white/[0.06] disabled:cursor-not-allowed disabled:opacity-35"
+              className="flex h-8 w-8 items-center justify-center rounded-md border border-[rgba(255,255,255,0.08)] bg-white/[0.03] text-[#C6CEC9] transition hover:border-[rgba(255,255,255,0.12)] hover:bg-white/[0.06] disabled:cursor-not-allowed disabled:opacity-35"
             >
               <ChevronLeftIcon sx={{ fontSize: 20 }} />
             </button>
@@ -94,7 +94,7 @@ export function AdoptMeSimilar({
               onClick={() => emblaApi?.scrollNext()}
               disabled={!canNext}
               aria-label="Next pets"
-              className="flex h-8 w-8 items-center justify-center rounded-md border border-[#1E2723] bg-white/[0.03] text-[#C6CEC9] transition hover:border-[#2C3A31] hover:bg-white/[0.06] disabled:cursor-not-allowed disabled:opacity-35"
+              className="flex h-8 w-8 items-center justify-center rounded-md border border-[rgba(255,255,255,0.08)] bg-white/[0.03] text-[#C6CEC9] transition hover:border-[rgba(255,255,255,0.12)] hover:bg-white/[0.06] disabled:cursor-not-allowed disabled:opacity-35"
             >
               <ChevronRightIcon sx={{ fontSize: 20 }} />
             </button>
@@ -113,7 +113,7 @@ export function AdoptMeSimilar({
               key={item.slug}
               href={`/adopt-me/values/${item.slug}`}
               style={{ '--sg': glow(rarityColor, 0.5) } as React.CSSProperties}
-              className="am-sim group relative isolate flex min-w-0 shrink-0 basis-[46%] flex-col overflow-hidden border border-[#1E2723] transition-colors duration-200 hover:border-[#2C3A31] sm:basis-[31%] lg:basis-[23%] xl:basis-[15.5%]"
+              className="am-sim group relative isolate flex min-w-0 shrink-0 basis-[46%] flex-col overflow-hidden border border-[rgba(255,255,255,0.08)] transition-colors duration-200 hover:border-[rgba(255,255,255,0.12)] sm:basis-[31%] lg:basis-[23%] xl:basis-[15.5%]"
             >
               <div className="relative z-10 aspect-square bg-black/20 p-3">
                 {item.imageUrl && (

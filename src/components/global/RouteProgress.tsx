@@ -228,13 +228,13 @@ export default function RouteProgress() {
         className="relative h-[3px]"
         style={{
           width: `${progress}%`,
-          background: 'linear-gradient(90deg, #B2E835 0%, #C6FF3D 60%, #DEFF8A 100%)',
+          background: 'linear-gradient(90deg, #3FA86E 0%, #56B87F 60%, #7DD9AA 100%)',
           transition: visible
             ? 'width 240ms cubic-bezier(0.4, 0, 0.2, 1)'
             : 'none',
           boxShadow:
             visible && progress > 0
-              ? '0 0 12px rgba(198, 255, 61, 0.75), 0 0 2px rgba(198, 255, 61, 0.95)'
+              ? '0 0 12px rgba(86, 184, 127, 0.75), 0 0 2px rgba(86, 184, 127, 0.95)'
               : 'none',
         }}
       >

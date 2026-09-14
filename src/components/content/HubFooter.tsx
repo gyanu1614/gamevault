@@ -135,7 +135,7 @@ export function HubFooter({
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label={s.name}
-                  className="flex h-9 w-9 items-center justify-center rounded-md border border-[#1E2723] bg-white/[0.03] text-[#9BA8A0] transition hover:border-[#2C3A31] hover:bg-white/[0.06] hover:text-[#8FBF9C]"
+                  className="flex h-9 w-9 items-center justify-center rounded-md border border-[rgba(255,255,255,0.08)] bg-white/[0.03] text-[#9BA8A0] transition hover:border-[rgba(255,255,255,0.12)] hover:bg-white/[0.06] hover:text-[#8FBF9C]"
                 >
                   <svg viewBox="0 0 24 24" fill="currentColor" className="h-[18px] w-[18px]">
                     <path d={s.path} />
@@ -144,7 +144,7 @@ export function HubFooter({
               ))}
               <a
                 href={`mailto:${SUPPORT_EMAIL}`}
-                className="flex h-9 items-center gap-2 rounded-md border border-[#1E2723] bg-white/[0.03] px-3 text-[13px] font-semibold text-[#9BA8A0] transition hover:border-[#2C3A31] hover:bg-white/[0.06] hover:text-[#8FBF9C]"
+                className="flex h-9 items-center gap-2 rounded-md border border-[rgba(255,255,255,0.08)] bg-white/[0.03] px-3 text-[13px] font-semibold text-[#9BA8A0] transition hover:border-[rgba(255,255,255,0.12)] hover:bg-white/[0.06] hover:text-[#8FBF9C]"
               >
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
                   <rect x="3" y="5" width="18" height="14" rx="2" />

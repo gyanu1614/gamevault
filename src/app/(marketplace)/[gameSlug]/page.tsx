@@ -353,7 +353,7 @@ export default async function GameBrowsePage({ params }: PageProps) {
       <JsonLd data={faqPage(seo.faq.map((f) => ({ q: f.q, a: f.a })))} />
       {/* Hero Section */}
       <section className="relative pt-24 pb-16 px-4 sm:px-6 lg:px-8">
-        <div className="absolute inset-0 bg-gradient-to-b from-[rgba(198,255,61,0.05)] via-transparent to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-b from-[rgba(86,184,127,0.05)] via-transparent to-transparent" />
 
         <div className="max-w-7xl mx-auto relative">
           {/* Breadcrumb */}
@@ -611,7 +611,7 @@ function ListingPreviewCard({
       {/* Mobile-audit — same swap as CategoryCard: lift, not scale. */}
       <div className="group bg-bg-overlay border border-border-subtle hover:border-lime rounded-xl overflow-hidden transition-all duration-300 hover:-translate-y-0.5">
         {/* Image */}
-        <div className="relative h-48 bg-gradient-to-br from-[rgba(198,255,61,0.12)] to-[rgba(255,255,255,0.05)]">
+        <div className="relative h-48 bg-gradient-to-br from-[rgba(86,184,127,0.12)] to-[rgba(255,255,255,0.05)]">
           {imageUrl ? (
             <Image src={imageUrl} alt={title} fill className="object-cover" />
           ) : (

@@ -38,7 +38,7 @@ export function SellChoiceModal({
   return (
     <Dialog>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="rounded-none border-[#1E2723] bg-[#0E1310] sm:max-w-[680px] sm:rounded-none">
+      <DialogContent className="rounded-none border-[rgba(255,255,255,0.08)] bg-[#0E1310] sm:max-w-[680px] sm:rounded-none">
         <div className="pr-6">
           <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[#F5C451]">
             Two ways in
@@ -60,7 +60,7 @@ export function SellChoiceModal({
           {/* Founding waitlist */}
           <SpotlightCard
             glow="amber"
-            className="group relative border border-[#1A211A] bg-[#0B0F0C] p-6 transition-colors hover:border-[#24352A]"
+            className="group relative border border-[rgba(255,255,255,0.08)] bg-[#171B21] p-6 transition-colors hover:border-[rgba(255,255,255,0.14)]"
           >
             <Link
               href={`/early-seller?src=${gameSlug}-sell-modal`}
@@ -68,7 +68,7 @@ export function SellChoiceModal({
               className="absolute inset-0 z-10"
             />
             <div className="relative z-[1] flex flex-col gap-2.5">
-              <span className="flex h-8 w-8 items-center justify-center border border-[#1E2723] bg-[#10160F] text-[#C7D0C7]">
+              <span className="flex h-8 w-8 items-center justify-center border border-[rgba(255,255,255,0.08)] bg-[#10160F] text-[#C7D0C7]">
                 <IconRosetteDiscountCheck className="h-[17px] w-[17px]" stroke={2} />
               </span>
               <span className="text-[14px] font-semibold text-[#F1F3F1]">
@@ -80,7 +80,7 @@ export function SellChoiceModal({
               <span className="inline-flex items-center gap-1.5 text-[11px] text-[#7E8A7E]">
                 <IconClock className="h-3.5 w-3.5" stroke={2} /> Around 1 week
               </span>
-              <span className="mt-2 inline-flex items-center gap-1.5 border-t border-[#1A211A] pt-3 text-[12.5px] font-semibold text-[#E6C878]">
+              <span className="mt-2 inline-flex items-center gap-1.5 border-t border-[rgba(255,255,255,0.08)] pt-3 text-[12.5px] font-semibold text-[#E6C878]">
                 Join the waitlist
                 <IconArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" stroke={2.2} />
               </span>
@@ -90,7 +90,7 @@ export function SellChoiceModal({
           {/* Sign up & apply */}
           <SpotlightCard
             glow="green"
-            className="group relative border border-[#1A211A] bg-[#0B0F0C] p-6 transition-colors hover:border-[#24352A]"
+            className="group relative border border-[rgba(255,255,255,0.08)] bg-[#171B21] p-6 transition-colors hover:border-[rgba(255,255,255,0.14)]"
           >
             <Link
               href="/signup-become-seller"
@@ -98,7 +98,7 @@ export function SellChoiceModal({
               className="absolute inset-0 z-10"
             />
             <div className="relative z-[1] flex flex-col gap-2.5">
-              <span className="flex h-8 w-8 items-center justify-center border border-[#1E2723] bg-[#10160F] text-[#C7D0C7]">
+              <span className="flex h-8 w-8 items-center justify-center border border-[rgba(255,255,255,0.08)] bg-[#10160F] text-[#C7D0C7]">
                 <IconBolt className="h-[17px] w-[17px]" stroke={2} />
               </span>
               <span className="text-[14px] font-semibold text-[#F1F3F1]">
@@ -110,7 +110,7 @@ export function SellChoiceModal({
               <span className="inline-flex items-center gap-1.5 text-[11px] text-[#7E8A7E]">
                 <IconClock className="h-3.5 w-3.5" stroke={2} /> Around 12 hours
               </span>
-              <span className="mt-2 inline-flex items-center gap-1.5 border-t border-[#1A211A] pt-3 text-[12.5px] font-semibold text-[#9FD3B0]">
+              <span className="mt-2 inline-flex items-center gap-1.5 border-t border-[rgba(255,255,255,0.08)] pt-3 text-[12.5px] font-semibold text-[#9FD3B0]">
                 Sign up to sell
                 <IconArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" stroke={2.2} />
               </span>

@@ -147,7 +147,7 @@ function Steps({ lines, keyId }: { lines: string[]; keyId: number }) {
         const l = raw.replace(ORDERED_RE, '').replace(BULLET_RE, '')
         return (
           <li key={i} className="flex items-start gap-3">
-            <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center border border-[#2F6B46] text-[12px] font-bold text-[#8FBF9C]">
+            <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center border border-[rgba(86,184,127,0.25)] text-[12px] font-bold text-[#8FBF9C]">
               {i + 1}
             </span>
             <span className="text-[15px] leading-7 text-[#A7B1A5] sm:text-[16px]">{renderInline(l)}</span>
@@ -166,10 +166,10 @@ function Table({ rows, keyId }: { rows: string[]; keyId: number }) {
   // Skip the |---|---| separator row if present.
   const bodyRows = rows.slice(/^[\s|:-]+$/.test(rows[1] ?? '') ? 2 : 1).map(cells)
   return (
-    <div key={keyId} className="my-7 overflow-x-auto border border-[#1E2723]">
+    <div key={keyId} className="my-7 overflow-x-auto border border-[rgba(255,255,255,0.08)]">
       <table className="w-full text-[14px]">
         <thead>
-          <tr className="border-b border-[#1E2723] bg-white/[0.02] text-left text-[12px] uppercase tracking-wide text-[#6D7A72]">
+          <tr className="border-b border-[rgba(255,255,255,0.08)] bg-white/[0.02] text-left text-[12px] uppercase tracking-wide text-[#6D7A72]">
             {header.map((h, i) => (
               <th key={i} className="px-4 py-2.5 font-semibold">{renderInline(h)}</th>
             ))}
@@ -209,7 +209,7 @@ function Figure({ alt, src, keyId }: { alt: string; src: string; keyId: number }
         src={src}
         alt={showCaption ? caption : ''}
         loading="lazy"
-        className={`border border-[#1E2723] bg-[#0E1A11] object-contain ${center && !wide ? 'max-w-[520px]' : 'w-full'}`}
+        className={`border border-[rgba(255,255,255,0.08)] bg-[#0E1A11] object-contain ${center && !wide ? 'max-w-[520px]' : 'w-full'}`}
       />
       {showCaption && (
         <figcaption className="mt-2.5 font-mono text-[11px] leading-relaxed text-[#5E685E]">
@@ -315,7 +315,7 @@ export function ArticleBody({ body }: { body: string[] }) {
 
     // ── Divider
     if (/^(-{3,}|\*{3,}|_{3,})$/.test(trimmed)) {
-      blocks.push(<hr key={key++} className="my-10 border-t border-[#1E2723]" />)
+      blocks.push(<hr key={key++} className="my-10 border-t border-[rgba(255,255,255,0.08)]" />)
       i += 1
       continue
     }

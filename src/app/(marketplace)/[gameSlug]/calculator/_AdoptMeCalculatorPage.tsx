@@ -42,7 +42,7 @@ export default async function AdoptMeCalculatorPage() {
   })
 
   return (
-    <main className="relative min-h-screen bg-[#0C0F0E]">
+    <main className="relative min-h-screen bg-[#171B21]">
       <JsonLd
         data={breadcrumbList([
           { name: 'Home', path: '/' },
@@ -79,9 +79,9 @@ export default async function AdoptMeCalculatorPage() {
             one unit (the hero's own pb-6 + this -mt tightens the gap). */}
         <div className="relative mx-auto -mt-6 w-full max-w-7xl px-4 pb-10 sm:px-6 lg:px-8">
           {pets.length === 0 ? (
-            <div className="border border-[#1E2723] bg-white/[0.04] px-6 py-12 text-center">
+            <div className="border border-[rgba(255,255,255,0.08)] bg-white/[0.04] px-6 py-12 text-center">
               <h2 className="text-xl font-semibold text-[#F1F3F1]">Calculator temporarily unavailable</h2>
-              <p className="mt-2 text-[#9BA8A0]">The pet database could not be loaded. Please check again shortly.</p>
+              <p className="mt-2 text-[#9AA6B3]">The pet database could not be loaded. Please check again shortly.</p>
             </div>
           ) : (
             <AdoptMeWflClient pets={pets} />
@@ -105,7 +105,7 @@ export default async function AdoptMeCalculatorPage() {
               <h2 className="text-[26px] font-bold tracking-tight text-[#F1F3F1] sm:text-[32px]">
                 Frequently Asked Questions
               </h2>
-              <p className="mt-2 text-[15px] text-[#9BA8A0]">
+              <p className="mt-2 text-[15px] text-[#9AA6B3]">
                 How the Adopt Me WFL calculator works and how we price the cash side.
               </p>
             </div>

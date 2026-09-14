@@ -77,12 +77,12 @@ export function SabSubNav({
   const TABS = buildTabs(gameSlug, buyHref ?? `/${gameSlug}/buy-items`)
 
   return (
-    <div className="border-b border-[#161d19] bg-[#0C0F0E]/60 pt-[60px]">
+    <div className="border-b border-[rgba(255,255,255,0.08)] bg-[#171B21]/60 pt-[60px]">
       <nav className="mx-auto flex w-full max-w-7xl items-center justify-center gap-1 overflow-x-auto px-4 sm:gap-2 sm:px-6 lg:px-8 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {TABS.map((tab) => {
           const active = tab.match ? tab.match(pathname) : pathname === tab.href
           const cls = `relative flex shrink-0 items-center gap-2 whitespace-nowrap px-4 py-4 text-[14.5px] font-semibold transition sm:px-5 ${
-            active ? 'text-[#F1F3F1]' : 'text-[#8B978F] hover:text-[#C6CEC9]'
+            active ? 'text-[#E9EDF2]' : 'text-[#8B978F] hover:text-[#9AA6B3]'
           }`
           const inner = (
             <>
@@ -93,7 +93,7 @@ export function SabSubNav({
               {tab.exits ? (
                 // Flowing animated gradient text — marks the tabs that leave
                 // the Values hub for the storefront. Subtle, always-on sweep.
-                <span className="bg-[linear-gradient(110deg,#7Cd39a_0%,#F1F3F1_35%,#4FB477_60%,#7Cd39a_100%)] bg-[length:200%_100%] bg-clip-text text-transparent animate-text-flow motion-reduce:animate-none motion-reduce:text-[#9fe0b6]">
+                <span className="bg-[linear-gradient(110deg,#7Cd39a_0%,#E9EDF2_35%,#4FB477_60%,#7Cd39a_100%)] bg-[length:200%_100%] bg-clip-text text-transparent animate-text-flow motion-reduce:animate-none motion-reduce:text-[#9fe0b6]">
                   {tab.label}
                 </span>
               ) : (

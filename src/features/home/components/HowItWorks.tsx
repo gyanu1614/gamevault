@@ -210,7 +210,7 @@ function Stage({ scrollYProgress }: { scrollYProgress: MotionValue<number> }) {
         className="pointer-events-none absolute inset-0 -z-10 rounded-full blur-3xl"
         style={{
           background:
-            'radial-gradient(closest-side, rgba(198,255,61,0.15), transparent 70%)',
+            'radial-gradient(closest-side, rgba(86,184,127,0.15), transparent 70%)',
         }}
       />
       {[1, 2, 3, 4].map((n, i) => (

@@ -90,7 +90,7 @@ export function MarketSnapshotBento({
         )}
         <Link
           href={valuesHref}
-          className="group/see ml-auto inline-flex items-center gap-2 self-center border border-[#2C3A31] bg-white/[0.03] px-4 py-2.5 text-body-sm font-semibold text-[#CFE0D6] transition hover:border-[#2F6B46] hover:bg-white/[0.06] hover:text-white"
+          className="group/see ml-auto inline-flex items-center gap-2 self-center border border-[rgba(255,255,255,0.12)] bg-white/[0.03] px-4 py-2.5 text-body-sm font-semibold text-[#CFE0D6] transition hover:border-[rgba(86,184,127,0.25)] hover:bg-white/[0.06] hover:text-white"
         >
           See The Full Value List
           <ArrowForwardIcon
@@ -127,7 +127,7 @@ function PetCell({
   return (
     <Link
       href={href}
-      className={`group/cell relative overflow-hidden border border-white/10 bg-[#0E1211]/55 backdrop-blur-md transition-colors duration-300 hover:border-[#2F6B46] ${span}`}
+      className={`group/cell relative overflow-hidden border border-white/10 bg-[#171B21]/55 backdrop-blur-md transition-colors duration-300 hover:border-[rgba(86,184,127,0.25)] ${span}`}
       onMouseMove={(e) => {
         const r = e.currentTarget.getBoundingClientRect()
         tx.set(e.clientX - r.left)
@@ -282,7 +282,7 @@ function StatChip({
     </>
   )
   const cls =
-    'min-w-[140px] flex-1 border border-white/10 bg-[#0E1211]/55 backdrop-blur-md px-4 py-3 transition-colors duration-300 hover:border-[#2F6B46]'
+    'min-w-[140px] flex-1 border border-white/10 bg-[#171B21]/55 backdrop-blur-md px-4 py-3 transition-colors duration-300 hover:border-[rgba(86,184,127,0.25)]'
   return href ? (
     <Link href={href} className={cls}>
       {body}

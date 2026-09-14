@@ -187,7 +187,7 @@ export function BlogEditor({
   return (
     <div className="pb-24">
       {/* ── Sticky action bar: tabs (left) · status + actions (right) ── */}
-      <div className="sticky top-0 z-30 -mx-4 mb-5 flex flex-wrap items-center justify-between gap-3 border-b border-white/10 bg-[#0B0F0C]/95 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6">
+      <div className="sticky top-0 z-30 -mx-4 mb-5 flex flex-wrap items-center justify-between gap-3 border-b border-white/10 bg-[#171B21]/95 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6">
         <div className="flex gap-1 rounded-lg border border-white/10 bg-white/[0.03] p-1">
           {TABS.map((t) => (
             <button
@@ -396,7 +396,7 @@ export function BlogEditor({
 
       {/* Save confirmation toast — stays on the editor, no redirect. */}
       {toast && (
-        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2 rounded-lg border border-lime/40 bg-[#0E1211] px-4 py-3 text-sm font-semibold text-lime-text shadow-[0_16px_40px_-12px_rgba(0,0,0,0.8)]">
+        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2 rounded-lg border border-lime/40 bg-[#171B21] px-4 py-3 text-sm font-semibold text-lime-text shadow-[0_16px_40px_-12px_rgba(0,0,0,0.8)]">
           <span aria-hidden className="h-2 w-2 rounded-full bg-lime" />
           {toast}
         </div>

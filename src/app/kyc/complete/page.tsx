@@ -64,9 +64,9 @@ export default function KycCompletePage() {
           style={{ backgroundColor: 'rgba(163,230,53,0.3)' }}
         >
           {selfClosing ? (
-            <Loader2 className="h-6 w-6 animate-spin" style={{ color: '#1B5E3A' }} />
+            <Loader2 className="h-6 w-6 animate-spin" style={{ color: 'var(--color-accent-default)' }} />
           ) : (
-            <CheckCircle2 className="h-6 w-6" style={{ color: '#1B5E3A' }} />
+            <CheckCircle2 className="h-6 w-6" style={{ color: 'var(--color-accent-default)' }} />
           )}
         </div>
         <h1 className="text-xl font-semibold" style={{ color: '#14432A' }}>

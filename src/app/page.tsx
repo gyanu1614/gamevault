@@ -1,6 +1,8 @@
 import { SITE_URL } from '@/config/site'
 import type { Metadata } from 'next'
 import { HomePage } from '@/features/home/pages/HomePage'
+import { PopularGames } from '@/features/home/components/PopularGames'
+import { LatestListings } from '@/features/home/components/LatestListings'
 import { organization, ORGANIZATION_ID } from '@/lib/seo/jsonld'
 
 export const metadata: Metadata = {
@@ -72,7 +74,9 @@ export default function Page() {
         />
       ))}
 
-      <HomePage />
+      {/* Popular Games fetches on the server and is handed to the client
+          page as a child — see the note in HomePage. */}
+      <HomePage popularGames={<PopularGames />} latestListings={<LatestListings />} />
     </>
   )
 }

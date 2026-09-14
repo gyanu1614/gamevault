@@ -67,7 +67,7 @@ export function SabHeroBackdrop({
           className="absolute inset-0 h-full w-full object-cover opacity-[0.07] [filter:grayscale(0.45)]"
         />
         {/* Near-black wash so text stays crisp over any part of the image. */}
-        <div className="absolute inset-0 bg-[#0C0F0E]/[0.80]" />
+        <div className="absolute inset-0 bg-[#171B21]/[0.80]" />
       </div>
 
       {/* ── Top hero band — the original treatment, slightly more visible at the
@@ -86,7 +86,7 @@ export function SabHeroBackdrop({
         />
         {/* Near-black scrim, lighter at the top so the image shows through, then
             deepening to solid so content stays crisp and it fades into the page. */}
-        <div className="absolute inset-0 bg-gradient-to-b from-[#0C0F0E]/[0.45] via-[#0C0F0E]/[0.78] to-[#0C0F0E]" />
+        <div className="absolute inset-0 bg-gradient-to-b from-[#171B21]/[0.45] via-[#171B21]/[0.78] to-[#171B21]" />
         {/* Soft edge vignette. */}
         <div
           className="absolute inset-0"

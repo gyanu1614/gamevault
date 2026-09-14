@@ -18,7 +18,7 @@
  */
 
 const FOREST = '#14432A'
-const FOREST_2 = '#1B5E3A'
+const FOREST_2 = 'var(--color-accent-default)'
 const LIME = '#A3E635'
 const INK = '#1A1D19'
 const INK_2 = '#5B6157'
@@ -191,6 +191,7 @@ export function gameLogoUrl(slug: string | null | undefined): string {
     'call-of-duty': 'cod', 'gta-v': 'gta-v', 'gta-vi': 'gtavi', minecraft: 'minecraft',
     'apex-legends': 'apexlegends', pubg: 'pubg', 'free-fire': 'freefire',
     'escape-from-tarkov': 'escapefromtarkov', 'rainbow-six-siege': 'r6', fc25: 'fc25',
+    fc26: 'fc25',
   }
   const file = (slug && map[slug]) || 'roblox' // neutral fallback
   return `${APP_URL}/games/${file}.png`

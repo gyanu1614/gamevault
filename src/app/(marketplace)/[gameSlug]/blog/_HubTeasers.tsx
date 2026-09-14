@@ -28,9 +28,9 @@ export function ValuesTeaser({
 
   return (
     <section className="pt-12 sm:pt-16">
-      <div className="border border-[#1A211A] bg-[#0B0F0C]">
+      <div className="border border-[rgba(255,255,255,0.08)] bg-[#171B21]">
         {/* Header row */}
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#1A211A] bg-[#0E130F] px-4 py-4 sm:px-5">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[rgba(255,255,255,0.08)] bg-[#0E130F] px-4 py-4 sm:px-5">
           <span className="flex items-center gap-2.5">
             <span className="h-2 w-2 animate-pulse rounded-full bg-[#4FB477]" />
             <span className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[#8FBF9C]">
@@ -51,7 +51,7 @@ export function ValuesTeaser({
 
         {/* Footnote — the qualifier the design (and our data rules) require.
             Figtree (text), not mono — mono is reserved for numbers/prices. */}
-        <div className="border-t border-[#1A211A] bg-[#0A0D0B] px-4 py-3.5 sm:px-5">
+        <div className="border-t border-[rgba(255,255,255,0.08)] bg-[#0A0D0B] px-4 py-3.5 sm:px-5">
           <p className="text-[12px] leading-relaxed text-[#7C8A80]">
             {footnote}
           </p>
@@ -88,7 +88,7 @@ const VERDICT_STYLE: Record<
   { fg: string; border: string; bg: string; label: string }
 > = {
   WIN: { fg: '#6FE39A', border: '#2C6B44', bg: '#0E1B12', label: 'You gain value' },
-  FAIR: { fg: '#8FBF9C', border: '#2A3A31', bg: '#0E140F', label: 'Balanced trade' },
+  FAIR: { fg: '#8FBF9C', border: 'rgba(255,255,255,0.12)', bg: '#171B21', label: 'Balanced trade' },
   LOSE: { fg: '#E0736B', border: '#5A2E2B', bg: '#1A0F0E', label: 'You lose value' },
 }
 
@@ -107,7 +107,7 @@ function TradePet({
   pet: CalcRealExample['give']
 }) {
   return (
-    <div className="flex flex-1 flex-col items-center gap-2.5 border border-[#1E2723] bg-[#0C110D] p-4 text-center">
+    <div className="flex flex-1 flex-col items-center gap-2.5 border border-[rgba(255,255,255,0.08)] bg-[#0C110D] p-4 text-center">
       <span className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[#7C8A80]">
         {side}
       </span>
@@ -119,7 +119,7 @@ function TradePet({
           className="h-16 w-16 shrink-0 object-contain drop-shadow-[0_4px_10px_rgba(0,0,0,0.5)]"
         />
       ) : (
-        <span className="h-16 w-16 shrink-0 border border-[#22302A] bg-[#0E140F]" />
+        <span className="h-16 w-16 shrink-0 border border-[#22302A] bg-[#171B21]" />
       )}
       <span className="text-[14px] font-bold leading-tight text-[#F2F6F0]">
         {pet.name}
@@ -142,9 +142,9 @@ export function CalculatorTeaser({
 }) {
   return (
     <section className="pt-12 sm:pt-16">
-      <div className="grid gap-px overflow-hidden border border-[#1A211A] bg-[#1A211A] lg:grid-cols-[1fr_1fr]">
+      <div className="grid gap-px overflow-hidden border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.08)] lg:grid-cols-[1fr_1fr]">
         {/* Copy side — all Figtree, white, readable. */}
-        <div className="bg-[#0B0F0C] p-5 sm:p-8">
+        <div className="bg-[#171B21] p-5 sm:p-8">
           <div className="mb-3 flex items-center gap-2.5 sm:mb-4">
             <span className="text-[12px] font-bold uppercase tracking-[0.1em] text-[#8FBF9C]">
               Trade Calculator
@@ -158,7 +158,7 @@ export function CalculatorTeaser({
           </p>
           <Link
             href={`/${gameSlug}/calculator`}
-            className="group inline-flex items-center gap-1.5 bg-[#1B6B3F] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#1f7a48]"
+            className="group inline-flex items-center gap-1.5 bg-[#2A7A50] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#338F5D]"
           >
             Open the calculator
             <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
@@ -210,7 +210,7 @@ export function CalculatorTeaser({
           ) : (
             // Text fallback (games with no priced pets yet) — now white + Figtree.
             <div className="flex flex-col gap-2">
-              <div className="flex items-center justify-between gap-3 border border-[#1E2723] bg-[#0C110D] px-4 py-3.5">
+              <div className="flex items-center justify-between gap-3 border border-[rgba(255,255,255,0.08)] bg-[#0C110D] px-4 py-3.5">
                 <span className="text-[12px] font-semibold uppercase tracking-[0.08em] text-[#7C8A80]">
                   They offer
                 </span>
@@ -218,7 +218,7 @@ export function CalculatorTeaser({
                   {example.offer}
                 </span>
               </div>
-              <div className="flex items-center justify-between gap-3 border border-[#1E2723] bg-[#0C110D] px-4 py-3.5">
+              <div className="flex items-center justify-between gap-3 border border-[rgba(255,255,255,0.08)] bg-[#0C110D] px-4 py-3.5">
                 <span className="text-[12px] font-semibold uppercase tracking-[0.08em] text-[#7C8A80]">
                   You give
                 </span>

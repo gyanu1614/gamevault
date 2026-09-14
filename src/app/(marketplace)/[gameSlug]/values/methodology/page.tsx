@@ -112,7 +112,7 @@ export default async function MethodologyPage({
   const hubNav = await getHubNavData(gameSlug)
 
   return (
-    <main className="relative min-h-screen bg-[#0C0F0E]">
+    <main className="relative min-h-screen bg-[#171B21]">
       <JsonLd
         data={breadcrumbList([
           { name: 'Home', path: '/' },
@@ -222,14 +222,14 @@ export default async function MethodologyPage({
         <div className="flex flex-wrap gap-3 pt-2">
           <Link
             href="/steal-a-brainrot/values"
-            className="inline-flex items-center gap-2 bg-[#1B6B3F] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#1f7a48]"
+            className="inline-flex items-center gap-2 bg-[#2A7A50] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#338F5D]"
           >
             Browse all Brainrot values
             <ArrowRight className="h-4 w-4" />
           </Link>
           <Link
             href="/steal-a-brainrot/calculator"
-            className="inline-flex items-center gap-2 border border-[#26332C] bg-white/[0.03] px-4 py-2.5 text-sm font-semibold text-[#F1F3F1] transition hover:border-[#2A3A31] hover:bg-white/[0.06]"
+            className="inline-flex items-center gap-2 border border-[#26332C] bg-white/[0.03] px-4 py-2.5 text-sm font-semibold text-[#F1F3F1] transition hover:border-[rgba(255,255,255,0.12)] hover:bg-white/[0.06]"
           >
             Open the value calculator
             <ArrowRight className="h-4 w-4" />

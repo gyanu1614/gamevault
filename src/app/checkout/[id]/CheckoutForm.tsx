@@ -78,7 +78,7 @@ const T = {
   ink2: '#5B6157',
   dis: '#9AA096',
   forest: '#14432A',
-  forest2: '#1B5E3A',
+  forest2: 'var(--color-accent-default)',
   lime: '#A3E635',
   limeTint: '#EDFBD3',
   success: '#3F7D22',

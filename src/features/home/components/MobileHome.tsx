@@ -45,6 +45,7 @@ import { SmartLink } from '@/components/global/SmartLink'
 import type { PopularGame } from '../hooks/usePopularGames'
 import type { SoldItem } from '../hooks/useRecentSales'
 import { getGameIcon } from '../lib/game-icons'
+import { useScrollDirection } from '@/hooks/useScrollDirection'
 
 /* ────────────────────────────────────────────────────────────
    Shared forest-glass recipe (house style)
@@ -288,7 +289,7 @@ function MobileHeroSearch() {
         {/* Recessed dark field to match the engraved category tiles (F):
             deep inner shadow, hairline, quiet lime focus ring. */}
         <div
-          className="relative flex h-[50px] items-center overflow-hidden rounded-[14px] border border-white/[0.09] bg-[radial-gradient(circle_at_50%_0%,rgba(30,32,38,0.92),rgba(11,12,15,0.96))] shadow-[inset_0_1px_0_rgba(255,255,255,0.08),inset_0_-8px_16px_-10px_rgba(0,0,0,0.8),0_10px_24px_-16px_rgba(0,0,0,0.9)] transition-colors focus-within:border-[rgba(198,255,61,0.35)] focus-within:shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_0_0_3px_rgba(198,255,61,0.10),0_10px_24px_-16px_rgba(0,0,0,0.9)]"
+          className="relative flex h-[50px] items-center overflow-hidden rounded-[14px] border border-white/[0.09] bg-[radial-gradient(circle_at_50%_0%,rgba(30,32,38,0.92),rgba(11,12,15,0.96))] shadow-[inset_0_1px_0_rgba(255,255,255,0.08),inset_0_-8px_16px_-10px_rgba(0,0,0,0.8),0_10px_24px_-16px_rgba(0,0,0,0.9)] transition-colors focus-within:border-[rgba(86,184,127,0.35)] focus-within:shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_0_0_3px_rgba(86,184,127,0.10),0_10px_24px_-16px_rgba(0,0,0,0.9)]"
         >
           <span
             aria-hidden
@@ -486,26 +487,32 @@ function CategoryTile({
   )
 }
 
+export function MobileEarlyAccessBar() {
+  const { hidden } = useScrollDirection({ revealAt: 20, delta: 6 })
+  return (
+    <a
+      href="/early-seller?src=hero-mobile"
+      className="fixed inset-x-0 z-[44] flex h-9 items-center justify-center gap-2 border-b border-[#F5C451]/20 bg-[#F5C451]/[0.06] backdrop-blur-xl transition-[transform,opacity] duration-300 ease-in-out hover:bg-[#F5C451]/[0.10] lg:hidden"
+      style={{
+        top: 'var(--navbar-bottom, 60px)',
+        transform: hidden ? 'translateY(-100%)' : 'translateY(0)',
+        opacity: hidden ? 0 : 1,
+      }}
+    >
+      <span className="relative flex h-1.5 w-1.5 shrink-0" aria-hidden>
+        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#F5C451] opacity-50" />
+        <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[#F5C451]" />
+      </span>
+      <span className="text-[12px] font-semibold text-[#F5C451]">Early Access</span>
+      <span className="text-[12px] text-white/45">· Founding seller rates</span>
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-[#F5C451]/50" aria-hidden><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+    </a>
+  )
+}
+
 export function MobileHero() {
   return (
-    <section className={`relative z-30 ${MOBILE_GUTTER} pb-1 pt-6 text-center`}>
-      {/* Trust pill — honest pre-launch signal only (no invented order
-          counts, matching the StatsMarquee copy rule). */}
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-        className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/[0.1] bg-white/[0.04] px-3.5 py-1.5 backdrop-blur-md"
-      >
-        <span className="relative flex h-1.5 w-1.5" aria-hidden>
-          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success opacity-75" />
-          <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-success" />
-        </span>
-        <span className="text-[11.5px] font-semibold tracking-[-0.01em] text-white/75">
-          SafeDrop Buyer Protection on Every Order
-        </span>
-      </motion.div>
-
+    <section className={`relative z-30 ${MOBILE_GUTTER} text-center`}>
       {/* Hero title — restrained, standard size (≈30px on phones, matching
           GameBoost/Eldorado) so it doesn't dwarf the category icons. Clean:
           one soft shadow for legibility over the hero image, no 3D stack. */}
@@ -520,9 +527,8 @@ export function MobileHero() {
           to Level Up.
         </span>
       </motion.h1>
-      <p className="mx-auto mt-3 max-w-[30ch] text-[15px] font-medium leading-snug text-white/65 [text-shadow:0_1px_12px_rgba(0,0,0,0.7)]">
-        Buy accounts, currency and items — held in escrow until you say it&apos;s
-        delivered.
+      <p className="mx-auto mt-3 max-w-[28ch] text-[16px] font-bold leading-snug text-white [text-shadow:0_1px_12px_rgba(0,0,0,0.7)]">
+        Cheap Coins, Items, Accounts &amp; More.
       </p>
 
       <div className="mt-4">
@@ -594,7 +600,7 @@ function GamePills({ game }: { game: PopularGame }) {
 
 export function MobilePopularGames({ games }: { games: PopularGame[] }) {
   return (
-    <section className="relative z-10 pt-8">
+    <section className="relative z-10">
       <MobileSectionHeader title="Popular Games" href="/browse" gutterClass={POPULAR_GAMES_GUTTER} />
       <div className={`flex snap-x gap-3 overflow-x-auto ${POPULAR_GAMES_GUTTER} [scroll-padding-inline:0.75rem] pb-1 scrollbar-hide sm:[scroll-padding-inline:2rem]`}>
         {games.length === 0
@@ -647,7 +653,7 @@ const PROTECTION_STEPS = [
 
 export function MobileProtectionStrip() {
   return (
-    <section className="relative z-10 pt-8">
+    <section className="relative z-10">
       <MobileSectionHeader title="How You're Protected" href="/safedrop" linkLabel="SafeDrop" />
       <div className={`-mb-1 flex snap-x gap-3 overflow-x-auto ${MOBILE_GUTTER} [scroll-padding-inline:1.5rem] pb-2 scrollbar-hide sm:[scroll-padding-inline:2rem]`}>
         {PROTECTION_STEPS.map(({ num, title, copy, Icon, glow }) => (
@@ -686,20 +692,20 @@ export function MobileProtectionStrip() {
 
 const TRUST_ROWS = [
   {
-    claim: 'SafeDrop on Every Order',
-    proof: 'Sellers are paid only after you confirm delivery.',
+    claim: '100% Refund if Not Delivered',
+    proof: "Item didn't show? Get every penny back — guaranteed.",
   },
   {
-    claim: 'Sellers Earn Their Spot',
-    proof: 'ID checks, payment verification and live ratings.',
+    claim: 'KYC-Verified Sellers Only',
+    proof: 'Every seller is ID-checked. No fakes, no scammers.',
   },
   {
-    claim: "Fees That Don't Sting",
-    proof: 'Sellers pay 5–10%, not the 17–26% others skim.',
+    claim: 'Lowest Fees = Cheaper Prices',
+    proof: 'Less fees for sellers means better deals for you.',
   },
   {
-    claim: 'Humans, Around the Clock',
-    proof: 'Support and dispute resolution never close.',
+    claim: 'Real Support, In Minutes',
+    proof: 'Real humans on it — no bots, no waiting days.',
   },
 ] as const
 
@@ -707,41 +713,43 @@ const TRUST_ROWS = [
    watermark, the 3D trust art with its tone glow — the look the user
    asked to keep, at 2-up phone size. */
 const TRUST_CARDS = [
-  { claim: 'SafeDrop On Every Order', proof: 'Sellers are paid only after you confirm delivery.', img: '/icons/trust/money-back.png', Ghost: ShieldCheck, glow: 'rgba(198,255,61,0.28)' },
-  { claim: 'Sellers Earn Their Spot', proof: 'ID checks, payment verification and live ratings.', img: '/icons/safedrop-emblem.png', Ghost: ShieldCheck, glow: 'rgba(74,222,128,0.30)' },
-  { claim: "Fees That Don't Sting", proof: 'Sellers pay 5\u201310%, not the 17\u201326% others skim.', img: '/how-it-works/step-2.png', Ghost: Coins, glow: 'rgba(251,191,36,0.28)' },
-  { claim: 'Humans, Around The Clock', proof: 'Support and dispute resolution never close.', img: '/icons/trust/support.png', Ghost: Headset, glow: 'rgba(96,165,250,0.32)' },
+  { claim: '100% Refund if Not Delivered', proof: "Item didn't show? Get every penny back \u2014 guaranteed.", img: '/icons/trust/money-back.png', Ghost: ShieldCheck, glow: 'rgba(86,184,127,0.28)' },
+  { claim: 'KYC-Verified Sellers Only', proof: 'Every seller is ID-checked. No fakes, no scammers.', img: '/icons/safedrop-emblem.png', Ghost: ShieldCheck, glow: 'rgba(74,222,128,0.30)' },
+  { claim: 'Lowest Fees = Cheaper Prices', proof: 'Less fees for sellers means better deals for you.', img: '/how-it-works/step-2.png', Ghost: Coins, glow: 'rgba(251,191,36,0.28)' },
+  { claim: 'Real Support, In Minutes', proof: 'Real humans on it \u2014 no bots, no waiting days.', img: '/icons/trust/support.png', Ghost: Headset, glow: 'rgba(96,165,250,0.32)' },
 ] as const
 
 export function MobileTrustRows() {
   return (
-    <div className="grid grid-cols-2 gap-2.5">
+    <div className="flex flex-col gap-3">
       {TRUST_CARDS.map(({ claim, proof, img, Ghost, glow }) => (
         <div
           key={claim}
-          className="relative overflow-hidden rounded-xl border border-border-default bg-[rgba(20,20,27,0.56)] p-3.5 backdrop-blur-md"
+          className="relative flex items-center gap-4 overflow-hidden rounded-xl border border-border-default bg-[rgba(20,20,27,0.56)] px-4 py-3.5 backdrop-blur-md"
         >
           {/* Top sheen */}
           <span
             aria-hidden
             className="pointer-events-none absolute inset-x-0 top-0 h-1/2 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.05),transparent)]"
           />
-          {/* Ghost icon watermark, corner-anchored like desktop */}
+          {/* Ghost icon watermark */}
           <Ghost
             aria-hidden
-            className="pointer-events-none absolute -bottom-4 -right-3 h-20 w-20 rotate-12 text-white opacity-[0.05]"
+            className="pointer-events-none absolute -bottom-3 -right-2 h-16 w-16 rotate-12 text-white opacity-[0.05]"
           />
-          {/* 3D trust art with its tone glow */}
+          {/* 3D trust art */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={img}
             alt=""
             aria-hidden
             style={{ ['--icon-glow' as string]: glow } as React.CSSProperties}
-            className="relative h-10 w-10 object-contain [filter:drop-shadow(0_6px_8px_rgba(0,0,0,0.55))_drop-shadow(0_0_12px_var(--icon-glow))]"
+            className="relative h-11 w-11 shrink-0 object-contain [filter:drop-shadow(0_6px_8px_rgba(0,0,0,0.55))_drop-shadow(0_0_12px_var(--icon-glow))]"
           />
-          <span className="t-card relative mt-2.5 block text-text-primary">{claim}</span>
-          <span className="t-cap relative mt-1 block leading-snug text-text-secondary">{proof}</span>
+          <span className="relative min-w-0 flex-1">
+            <span className="t-card block text-text-primary">{claim}</span>
+            <span className="t-cap mt-0.5 block leading-snug text-text-secondary">{proof}</span>
+          </span>
         </div>
       ))}
     </div>

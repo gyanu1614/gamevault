@@ -141,14 +141,14 @@ export function ValuesSeo({
   const sections = intro ?? defaultIntro
 
   return (
-    <div className="mx-auto w-full max-w-7xl border-t border-[#1A211A] px-4 pb-4 pt-12 sm:px-6 lg:px-8">
+    <div className="mx-auto w-full max-w-7xl border-t border-[rgba(255,255,255,0.08)] px-4 pb-4 pt-12 sm:px-6 lg:px-8">
       {/* Answer-first intro — the extractable summary Google wants on the head
           term. space-y-8 gives each sub-section clear breathing room. */}
       <section className="space-y-8">
         {sections.map((s, i) => (
           <div key={i}>
-            <h2 className="text-xl font-semibold text-[#F1F3F1]">{s.heading}</h2>
-            <p className="mt-3 leading-7 text-[#9BA8A0]">{s.body}</p>
+            <h2 className="text-xl font-semibold text-[#E9EDF2]">{s.heading}</h2>
+            <p className="mt-3 leading-7 text-[#9AA6B3]">{s.body}</p>
           </div>
         ))}
       </section>
