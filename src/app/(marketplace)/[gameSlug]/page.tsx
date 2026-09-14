@@ -291,8 +291,12 @@ export default async function GameBrowsePage({ params }: PageProps) {
     notFound()
   }
 
-  const listingCounts = await getCategoryListingCounts(game.id)
-  const featuredListings = await getFeaturedListings(game.id)
+  // STATE-007 — both take only game.id and neither consumes the other, so they
+  // fan out together (matching the Promise.all in the very next block).
+  const [listingCounts, featuredListings] = await Promise.all([
+    getCategoryListingCounts(game.id),
+    getFeaturedListings(game.id),
+  ])
   const categories = game.categories || []
 
   // Top brainrot values for the SAB landing carousel (marketplace inventory is

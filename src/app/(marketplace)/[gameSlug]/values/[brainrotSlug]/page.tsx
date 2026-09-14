@@ -20,14 +20,28 @@ import { getAdoptMePet, getPublishablePetSlugs } from './_adoptMePetData'
 export const revalidate = 3600
 
 /**
- * Prerender every value page: SAB's market catalog plus Adopt Me's publishable
- * pets — the largest static surface on the site. Both reads are cookie-free.
- * Unknown slugs still 404 through the gates below.
+ * Prerender the highest-value pages at build time; the long tail renders on
+ * demand and lands in the same ISR cache (dynamicParams defaults to true), so
+ * every slug is still cached — the only difference is who pays for the first
+ * render.
+ *
+ * Deliberately capped. Building all ~500 value pages against the remote DB
+ * took the build past Next's 60s-per-page limit intermittently
+ * (static-page-generation-timeout on a single slow page fails the whole build).
+ * SAB pages are ordered by market value so the pages that actually get traffic
+ * are the ones built ahead of time. Unknown slugs still 404 through the gates
+ * below.
  */
+const PRERENDER_LIMIT = 100
+
 export async function generateStaticParams() {
   const supabase = createAnonClient()
   const [{ data: brainrots }, petSlugs] = await Promise.all([
-    (supabase as any).from('sab_brainrot_market_catalog').select('slug'),
+    (supabase as any)
+      .from('sab_brainrot_market_catalog')
+      .select('slug')
+      .order('market_value_usd', { ascending: false, nullsFirst: false })
+      .limit(PRERENDER_LIMIT),
     getPublishablePetSlugs(),
   ])
   return [
@@ -35,7 +49,9 @@ export async function generateStaticParams() {
       gameSlug: 'steal-a-brainrot',
       brainrotSlug: r.slug,
     }))),
-    ...petSlugs.map((slug) => ({ gameSlug: 'adopt-me', brainrotSlug: slug })),
+    ...petSlugs
+      .slice(0, PRERENDER_LIMIT)
+      .map((slug) => ({ gameSlug: 'adopt-me', brainrotSlug: slug })),
   ]
 }
 

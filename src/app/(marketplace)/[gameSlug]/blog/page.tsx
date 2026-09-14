@@ -127,11 +127,13 @@ export default async function GameBlogIndex({
   params: Promise<{ gameSlug: string }>
 }) {
   const { gameSlug } = await params
-  const game = await getGame(gameSlug)
-  if (!game) notFound()
 
-  const [posts, pricedItems, topValues, heroPets, statStrip, calcExample, hubNav] =
+  // STATE-007 — every member below takes gameSlug (not game), so getGame does
+  // not gate them; it joins the fan-out instead of running ahead of it. The
+  // 404 guard still runs before anything is rendered.
+  const [game, posts, pricedItems, topValues, heroPets, statStrip, calcExample, hubNav] =
     await Promise.all([
+      getGame(gameSlug),
       getGamePosts(gameSlug),
       getPricedItemCount(gameSlug),
       // A longer list feeds the auto-scrolling "Live Values" marquee.
@@ -142,6 +144,8 @@ export default async function GameBlogIndex({
       getHubCalcExample(gameSlug),
       getHubNavData(gameSlug),
     ])
+
+  if (!game) notFound()
 
   const theme = getGameContentTheme(gameSlug)
 

@@ -135,27 +135,30 @@ export default async function OrderDetailPage({ params }: PageProps) {
   // here). Admins keep full visibility.
   if (order.status === 'pending' && userRole === 'seller') notFound()
 
-  // Fetch game and category data separately (nested joins not supported without explicit FK)
-  let game: { id: string; name: string; slug: string; image_url: string | null } | null = null
-  let category: { id: string; name: string; slug: string } | null = null
+  // Fetch game and category data separately (nested joins not supported without
+  // explicit FK). STATE-007 — both key off the already-loaded order.listing and
+  // neither consumes the other, so they fan out instead of running serially.
+  const [gameRes, categoryRes] = await Promise.all([
+    order.listing?.game_id
+      ? (supabase
+          .from('games')
+          .select('id, name, slug, image_url')
+          .eq('id', order.listing.game_id)
+          .single() as any)
+      : Promise.resolve({ data: null }),
+    order.listing?.category_id
+      ? (supabase
+          .from('categories')
+          .select('id, name, slug')
+          .eq('id', order.listing.category_id)
+          .single() as any)
+      : Promise.resolve({ data: null }),
+  ])
 
-  if (order.listing?.game_id) {
-    const { data: gameData } = await supabase
-      .from('games')
-      .select('id, name, slug, image_url')
-      .eq('id', order.listing.game_id)
-      .single() as any
-    game = gameData
-  }
-
-  if (order.listing?.category_id) {
-    const { data: categoryData } = await supabase
-      .from('categories')
-      .select('id, name, slug')
-      .eq('id', order.listing.category_id)
-      .single() as any
-    category = categoryData
-  }
+  const game = (gameRes as any).data as
+    | { id: string; name: string; slug: string; image_url: string | null }
+    | null
+  const category = (categoryRes as any).data as { id: string; name: string; slug: string } | null
 
   // Attach game and category to order.listing for downstream components
   if (order.listing) {

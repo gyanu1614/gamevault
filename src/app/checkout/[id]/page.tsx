@@ -53,17 +53,40 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
   // is testable on localhost and debuggable anywhere (UI-only, harmless).
   const buyerCountry = countryOverride ?? (await headers()).get('x-vercel-ip-country')
 
+  // STATE-007 — the buyer profile, the bundle's category_config and the seller's
+  // reviews are mutually independent and each only needs data already loaded, so
+  // the three guarded reads are hoisted into one fan-out rather than three
+  // serial round-trips. A guard that does not apply resolves to { data: null }.
+  const [profileRes, configRes, reviewsRes] = await Promise.all([
+    user
+      ? (supabase
+          .from('profiles')
+          .select('username, avatar_url')
+          .eq('id', user.id)
+          .maybeSingle() as any)
+      : Promise.resolve({ data: null }),
+    listing.bundle_id
+      ? (supabase
+          .from('category_configs')
+          .select('config')
+          .eq('game_id', listing.game.id)
+          .eq('category_type', 'currency')
+          .maybeSingle() as any)
+      : Promise.resolve({ data: null }),
+    listing.seller?.id
+      ? (supabase
+          .from('reviews')
+          .select('id, rating, comment, created_at, buyer:profiles!reviews_reviewer_id_fkey (username, avatar_url)')
+          .eq('seller_id', listing.seller.id)
+          .order('created_at', { ascending: false })
+          .limit(5) as any)
+      : Promise.resolve({ data: null }),
+  ])
+
   // V73 — Buyer profile for the checkout identity strip (username +
   // avatar; the auth user alone has only the email).
-  let buyerProfile: { username: string | null; avatar_url: string | null } | null = null
-  if (user) {
-    const { data: prof } = await supabase
-      .from('profiles')
-      .select('username, avatar_url')
-      .eq('id', user.id)
-      .maybeSingle() as any
-    buyerProfile = prof ?? null
-  }
+  const buyerProfile: { username: string | null; avatar_url: string | null } | null =
+    (profileRes as any).data ?? null
 
   // V19/P24/P7.l — Bundle currency: pull the matching bundle row out
   // of the game's currency category_config so the checkout summary
@@ -73,14 +96,8 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
     name: string
     iconUrl: string | null
   } | null = null
-  if (listing.bundle_id) {
-    const { data: configRow } = await supabase
-      .from('category_configs')
-      .select('config')
-      .eq('game_id', listing.game.id)
-      .eq('category_type', 'currency')
-      .maybeSingle() as any
-    const bundles = configRow?.config?.bundles as
+  {
+    const bundles = (configRes as any).data?.config?.bundles as
       | Array<{ id: string; name: string; icon_url?: string | null }>
       | undefined
     const match = bundles?.find((b) => b.id === listing.bundle_id)
@@ -94,16 +111,7 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
 
   // V75 — Last 5 reviews for the seller peek dialog (no profile
   // navigation from checkout — the reviews come to the buyer).
-  let sellerReviews: any[] = []
-  if (listing.seller?.id) {
-    const { data: revs } = await supabase
-      .from('reviews')
-      .select('id, rating, comment, created_at, buyer:profiles!reviews_reviewer_id_fkey (username, avatar_url)')
-      .eq('seller_id', listing.seller.id)
-      .order('created_at', { ascending: false })
-      .limit(5) as any
-    sellerReviews = revs ?? []
-  }
+  const sellerReviews: any[] = (reviewsRes as any).data ?? []
 
   // V14m — Block self-purchase. Sellers can't buy their own listings,
   // and the order/refund flow would loop on the same account. Bounce back

@@ -87,40 +87,41 @@ export default async function AdminOrderDetailPage({ params }: PageProps) {
 
   const order = orderResult.order
 
-  // Fetch buyer and seller profiles
-  const { data: buyer } = await supabase
-    .from('profiles')
-    .select('id, username, email, avatar_url')
-    .eq('id', order.buyer_id)
-    .single() as any
+  // STATE-007 — buyer, seller, game and category all key off the already-loaded
+  // order and none consumes another, so they run as one fan-out instead of
+  // four serial round-trips. The two conditional reads resolve to null when
+  // the listing carries no game/category.
+  const [{ data: buyer }, { data: seller }, gameRes, categoryRes] = await Promise.all([
+    supabase
+      .from('profiles')
+      .select('id, username, email, avatar_url')
+      .eq('id', order.buyer_id)
+      .single() as any,
+    supabase
+      .from('profiles')
+      .select('id, username, email, avatar_url, shop_name')
+      .eq('id', order.seller_id)
+      .single() as any,
+    order.listing?.game_id
+      ? (supabase
+          .from('games')
+          .select('id, name, slug, image_url, emoji')
+          .eq('id', order.listing.game_id)
+          .single() as any)
+      : Promise.resolve({ data: null }),
+    order.listing?.category_id
+      ? (supabase
+          .from('categories')
+          .select('id, name, slug')
+          .eq('id', order.listing.category_id)
+          .single() as any)
+      : Promise.resolve({ data: null }),
+  ])
 
-  const { data: seller } = await supabase
-    .from('profiles')
-    .select('id, username, email, avatar_url, shop_name')
-    .eq('id', order.seller_id)
-    .single() as any
-
-  // Fetch game and category
-  let game: { id: string; name: string; slug: string; image_url: string | null; emoji: string } | null = null
-  let category: { id: string; name: string; slug: string } | null = null
-
-  if (order.listing?.game_id) {
-    const { data: gameData } = await supabase
-      .from('games')
-      .select('id, name, slug, image_url, emoji')
-      .eq('id', order.listing.game_id)
-      .single() as any
-    game = gameData
-  }
-
-  if (order.listing?.category_id) {
-    const { data: categoryData } = await supabase
-      .from('categories')
-      .select('id, name, slug')
-      .eq('id', order.listing.category_id)
-      .single() as any
-    category = categoryData
-  }
+  const game = (gameRes as any).data as
+    | { id: string; name: string; slug: string; image_url: string | null; emoji: string }
+    | null
+  const category = (categoryRes as any).data as { id: string; name: string; slug: string } | null
 
   return (
     <div className="space-y-5">
