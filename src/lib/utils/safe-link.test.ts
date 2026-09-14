@@ -42,7 +42,13 @@ describe('AUTH-013 — isInternalPath / safeInternalPath', () => {
 
 describe('AUTH-013 — every render and write site goes through the filter', () => {
   it('notifications page + navbar render href via safeInternalPath, never the raw column', () => {
-    for (const f of ['src/app/notifications/page.tsx', 'src/components/navbar-floating.tsx']) {
+    // The notifications render lives in the client island: STATE-008 split the
+    // route into a server shell (page.tsx: auth gate + prefetch) and
+    // _NotificationsClient.tsx, which is where the href is actually rendered.
+    for (const f of [
+      'src/app/notifications/_NotificationsClient.tsx',
+      'src/components/navbar-floating.tsx',
+    ]) {
       const src = readFileSync(f, 'utf8')
       expect(src, f).toMatch(/href=\{safeInternalPath\(notification\.link\)\}/)
       expect(src, f).not.toMatch(/href=\{notification\.link/)
