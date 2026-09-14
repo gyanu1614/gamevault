@@ -88,3 +88,6 @@ data/sab-market-feeds/*.json
 .github/hooks/
 .github/skills/
 .agents/
+
+# Blender sources for the CS2 weapon render (26MB) — build inputs, not app code
+art/cs2/
