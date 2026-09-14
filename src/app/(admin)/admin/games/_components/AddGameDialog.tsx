@@ -18,6 +18,7 @@
  *   • Mobile-friendly: Radix Dialog handles focus + scroll lock.
  */
 
+import { slugify } from '@/lib/utils'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
@@ -29,14 +30,6 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { saveGameIdentity } from '@/lib/actions/admin-game-wizard'
-
-function slugify(raw: string) {
-  return raw
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 48)
-}
 
 export function AddGameDialog() {
   const [open, setOpen] = useState(false)
