@@ -204,6 +204,12 @@ describe.skipIf(!hasEnv)('DB-P0 — function grants, view security_invoker, defa
       ['mark_inactive_sellers_offline', () => ({})],
       ['upgrade_all_seller_tiers', () => ({})],
       ['sab_recompute_tradeable', () => ({})],
+      // ROUTE-014: the two SAB snapshot refreshes. Both are service-role-only —
+      // they are cron/crawl machinery, and sab_refresh_evidence_display() runs
+      // with a 180s statement_timeout, so an anon caller could hold a
+      // long-running DELETE+INSERT over the whole evidence set.
+      ['sab_refresh_evidence_display', () => ({})],
+      ['sab_refresh_price_display', () => ({})],
       ['cleanup_expired_idempotency_keys', () => ({})],
       ['get_user_role', () => ({ user_id: fx!.seller.id })],
       ['increment_listing_views', () => ({ listing_uuid: fx!.listingId })],
@@ -248,6 +254,25 @@ describe.skipIf(!hasEnv)('DB-P0 — function grants, view security_invoker, defa
     it('a moderator session still runs the listing-moderation RPCs', async () => {
       const { error } = await fx!.admin.client.rpc('request_listing_changes', { listing_id: fx!.listingId, admin_id: fx!.admin.id, changes: 'guard probe' })
       expect(error).toBeNull()
+    })
+  })
+
+  // ── ROUTE-014: the SAB snapshot refreshes ─────────────────────────────────
+  describe('ROUTE-014 — sab_refresh_evidence_display() is service-role-only and works', () => {
+    // The revoke is asserted in the anon sweep above. This is the other half:
+    // a REVOKE that also broke the legitimate caller would fail the crawl and
+    // the correction cron, which is the failure this materialization exists to
+    // prevent. A signed-in user must not reach it either — it is crawl
+    // machinery with a 180s statement_timeout.
+    it('a plain signed-in user cannot call it', async () => {
+      expectRevoked(await fx!.seller.client.rpc('sab_refresh_evidence_display'), 'sab_refresh_evidence_display')
+    })
+
+    it('the service role executes it and gets a row count back', async () => {
+      const { data, error } = await fx!.svc.rpc('sab_refresh_evidence_display')
+      expect(error, error?.message).toBeNull()
+      expect(typeof data).toBe('number')
+      expect(data as number).toBeGreaterThanOrEqual(0)
     })
   })
 
