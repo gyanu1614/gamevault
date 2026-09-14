@@ -72,6 +72,25 @@ function expectRevoked(res: { error: { code?: string; message: string } | null; 
   expect(res.error.code, `${what}: ${res.error.message}`).toBe('42501')
 }
 
+/**
+ * DB-022: the bucket-A functions were dropped, not just revoked, so PostgREST
+ * can no longer resolve them — the schema cache returns PGRST202 instead of a
+ * 42501 from the executor. Asserting on that code pins the drop: were one of
+ * them re-created by a later migration, this fails rather than passing quietly.
+ */
+function expectDropped(res: { error: { code?: string; message: string } | null; data: unknown }, what: string) {
+  if (!res.error) throw new Error(`${what}: expected it to be dropped, but the call succeeded: ${JSON.stringify(res.data).slice(0, 200)}`)
+  expect(res.error.code, `${what} should no longer exist: ${res.error.message}`).toBe('PGRST202')
+}
+
+/** DB-022 — bucket A of db-p0-grants-plan.md, dropped by 20260914110000. */
+const DROPPED_DEFINERS = [
+  'release_escrow', 'refund_escrow', 'freeze_escrow', 'release_escrow_to_seller_balance',
+  'cleanup_old_audit_logs', 'get_pending_trustpilot_invitations', 'get_listings_pending_moderation',
+  'mark_trustpilot_invitation_sent', 'increment_listing_views', 'get_user_role', 'has_role',
+  'apply_rank_strikes',
+]
+
 describe.skipIf(!hasEnv)('DB-P0 — function grants, view security_invoker, default privileges (integration)', () => {
   beforeAll(async () => {
     fx = await makeFixture()
@@ -154,28 +173,26 @@ describe.skipIf(!hasEnv)('DB-P0 — function grants, view security_invoker, defa
     })
   })
 
-  // ── DB-003: escrow writers ─────────────────────────────────────────────────
-  describe('DB-003 — escrow definers are service-role only', () => {
-    it('the anon key cannot freeze a held order', async () => {
-      expectRevoked(await anon().rpc('freeze_escrow', { order_id: heldOrderId }), 'freeze_escrow')
+  // ── DB-003 / DB-022: escrow writers ────────────────────────────────────────
+  describe('DB-003 — the escrow definers are gone (DB-022)', () => {
+    it('the anon key cannot freeze a held order — freeze_escrow no longer exists', async () => {
+      expectDropped(await anon().rpc('freeze_escrow', { order_id: heldOrderId }), 'freeze_escrow')
       expect((await heldStatus()).escrow_status).toBe('held')
-      await reHold()
     })
-    it('a signed-in user cannot freeze a held order', async () => {
-      expectRevoked(await fx!.buyer.client.rpc('freeze_escrow', { order_id: heldOrderId }), 'freeze_escrow')
+    it('a signed-in user cannot freeze a held order either', async () => {
+      expectDropped(await fx!.buyer.client.rpc('freeze_escrow', { order_id: heldOrderId }), 'freeze_escrow')
       expect((await heldStatus()).escrow_status).toBe('held')
-      await reHold()
     })
-    it('the anon key cannot release a held order', async () => {
-      expectRevoked(await anon().rpc('release_escrow', { order_id: heldOrderId, method: 'auto' }), 'release_escrow')
+    it('the anon key cannot release a held order — release_escrow no longer exists', async () => {
+      expectDropped(await anon().rpc('release_escrow', { order_id: heldOrderId, method: 'auto' }), 'release_escrow')
       expect(await heldStatus()).toMatchObject({ status: 'delivered', escrow_status: 'held' })
     })
-    it('the anon key cannot refund a held order', async () => {
-      expectRevoked(await anon().rpc('refund_escrow', { order_id: heldOrderId }), 'refund_escrow')
+    it('the anon key cannot refund a held order — refund_escrow no longer exists', async () => {
+      expectDropped(await anon().rpc('refund_escrow', { order_id: heldOrderId }), 'refund_escrow')
       expect(await heldStatus()).toMatchObject({ status: 'delivered', escrow_status: 'held' })
     })
-    it('the anon key cannot call release_escrow_to_seller_balance', async () => {
-      expectRevoked(await anon().rpc('release_escrow_to_seller_balance', { p_order_id: heldOrderId, p_seller_id: fx!.seller.id, p_amount: 1 }), 'release_escrow_to_seller_balance')
+    it('release_escrow_to_seller_balance no longer exists', async () => {
+      expectDropped(await anon().rpc('release_escrow_to_seller_balance', { p_order_id: heldOrderId, p_seller_id: fx!.seller.id, p_amount: 1 }), 'release_escrow_to_seller_balance')
     })
   })
 
@@ -192,8 +209,19 @@ describe.skipIf(!hasEnv)('DB-P0 — function grants, view security_invoker, defa
       expect(error).toBeNull()
       expect((data as any[]).map((o) => o.id)).toContain(heldOrderId)
     })
-    it.each(['get_pending_trustpilot_invitations', 'get_listings_pending_moderation'])('the anon key cannot call %s', async (fn) => {
-      expectRevoked(await anon().rpc(fn), fn)
+    it.each(['get_pending_trustpilot_invitations', 'get_listings_pending_moderation'])('%s no longer exists (DB-022)', async (fn) => {
+      expectDropped(await anon().rpc(fn), fn)
+    })
+  })
+
+  // ── DB-022: the dead definers are dropped, not merely revoked ──────────────
+  describe('DB-022 — bucket-A definers no longer exist', () => {
+    it.each(DROPPED_DEFINERS)('%s is gone from the schema, for the anon key and the service role alike', async (fn) => {
+      // PostgREST resolves RPC names through the schema cache, so a dropped
+      // function is PGRST202 for every role — including the service role,
+      // which the revoke left able to call these.
+      expectDropped(await anon().rpc(fn as never, {} as never), fn)
+      expectDropped(await fx!.svc.rpc(fn as never, {} as never), fn)
     })
   })
 
@@ -227,8 +255,6 @@ describe.skipIf(!hasEnv)('DB-P0 — function grants, view security_invoker, defa
       ['sab_refresh_evidence_display', () => ({})],
       ['sab_refresh_price_display', () => ({})],
       ['cleanup_expired_idempotency_keys', () => ({})],
-      ['get_user_role', () => ({ user_id: fx!.seller.id })],
-      ['increment_listing_views', () => ({ listing_uuid: fx!.listingId })],
       ['assert_moderator', () => ({})],
     ] as const)('the anon key cannot call %s', async (fn, args) => {
       expectRevoked(await anon().rpc(fn, args()), fn)

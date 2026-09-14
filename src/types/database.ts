@@ -925,10 +925,6 @@ export interface Database {
     }
     Functions: {
       // Added via 20260217_stripe_connect.sql
-      release_escrow_to_seller_balance: {
-        Args: { p_order_id: string; p_seller_id: string; p_amount: number }
-        Returns: Json
-      }
       seller_is_in_payout_hold: {
         Args: { p_seller_id: string }
         Returns: boolean
