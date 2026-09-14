@@ -411,6 +411,13 @@ export function isRetryableImportError(error) {
   // constraint failure is permanent even when it surfaces as a 500.
   if (NON_RETRYABLE_SQLSTATES.some((code) => text.includes(code))) return false;
   if (/requires a where clause/i.test(text)) return false;
+  // ROUTE-017: a malformed listing_url throws the bare `TypeError: Invalid URL`
+  // from new URL() — no status, no SQLSTATE — so it reached the final
+  // `status >= 500` and was rejected only by luck (0 >= 500 is false). Wrapped
+  // in a 5xx, or under 408/429, the same unparseable row would be re-sent 4x.
+  // Keyed on the phrase, not on "url": a statement timeout whose text happens
+  // to contain a URL must still retry.
+  if (/invalid url/i.test(text)) return false;
 
   // Transient by identity, whatever the status.
   if (
