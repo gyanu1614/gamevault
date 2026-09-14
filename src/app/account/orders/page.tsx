@@ -10,6 +10,7 @@ import { OrderStatus } from '@/lib/api/seller-compatible'
 import { getAvatarUrl } from '@/lib/utils/avatar'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { useUrlFilters } from '@/hooks/use-url-filters'
 import Image from 'next/image'
 import {
   Search,
@@ -64,6 +65,18 @@ interface AdvancedFilters {
   searchQuery: string
 }
 
+/**
+ * URL-backed filter defaults. A dimension at its default is dropped from the
+ * query string, so the common view stays at a clean /account/orders.
+ */
+const ORDER_FILTER_DEFAULTS = {
+  status: 'all',
+  games: '',
+  category: '',
+  dateRange: 'all',
+  searchQuery: '',
+}
+
 function OrdersContent() {
   const { user, loading: authLoading } = useAuth()
   const router = useRouter()
@@ -81,16 +94,47 @@ function OrdersContent() {
   const setActiveTab = (t: ViewTab) =>
     router.push(`/account/orders?type=${t === 'sales' ? 'sold' : 'purchases'}`)
 
-  // Combined filter state
-  const [filters, setFilters] = useState<AdvancedFilters>({
-    status: 'all',
-    games: [],
-    category: null,
-    dateRange: 'all',
-    customDateStart: null,
-    customDateEnd: null,
-    searchQuery: ''
-  })
+  // Combined filter state.
+  // STATE-011 — the filter dimensions live in the URL so a filtered view can be
+  // linked, bookmarked and restored by back/forward, matching `type` above.
+  // `games` is a multi-select, so it round-trips as a comma-joined list.
+  // The custom date pair stays in local state: it is only meaningful while
+  // dateRange === 'custom', and Date objects do not belong in a query string.
+  const { values: urlFilters, setValues: setUrlFilters } = useUrlFilters(
+    ORDER_FILTER_DEFAULTS,
+  )
+  const [customDates, setCustomDates] = useState<{
+    customDateStart: Date | null
+    customDateEnd: Date | null
+  }>({ customDateStart: null, customDateEnd: null })
+
+  const filters: AdvancedFilters = useMemo(
+    () => ({
+      status: urlFilters.status as FilterStatus,
+      games: urlFilters.games ? urlFilters.games.split(',').filter(Boolean) : [],
+      category: urlFilters.category || null,
+      dateRange: urlFilters.dateRange as AdvancedFilters['dateRange'],
+      customDateStart: customDates.customDateStart,
+      customDateEnd: customDates.customDateEnd,
+      searchQuery: urlFilters.searchQuery,
+    }),
+    [urlFilters, customDates],
+  )
+
+  /** Accepts the same object the old useState setter took. */
+  const setFilters = (next: AdvancedFilters) => {
+    setCustomDates({
+      customDateStart: next.customDateStart,
+      customDateEnd: next.customDateEnd,
+    })
+    setUrlFilters({
+      status: next.status,
+      games: next.games.join(','),
+      category: next.category ?? '',
+      dateRange: next.dateRange,
+      searchQuery: next.searchQuery,
+    })
+  }
 
   // Dropdown open state
   const [openDropdown, setOpenDropdown] = useState<'status' | 'game' | 'category' | 'date' | null>(null)
@@ -166,7 +210,9 @@ function OrdersContent() {
       const disputeIds = disputes.map((d: any) => d.id)
       const { data: resolutions } = await supabase
         .from('dispute_resolutions')
-        .select('*')
+        // STATE-012 — explicit columns: client query, so unused columns would
+        // be shipped to the browser. Only favored_party is read (plus the join key).
+        .select('dispute_id, favored_party')
         .in('dispute_id', disputeIds) as any
 
       if (!resolutions) return

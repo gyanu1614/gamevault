@@ -35,6 +35,7 @@ import * as React from 'react'
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { useUrlFilters } from '@/hooks/use-url-filters'
 import { toast } from 'sonner'
 import {
   Archive, ArrowUpDown, Check, ChevronDown, ChevronLeft, ChevronRight,
@@ -313,6 +314,19 @@ export default function ListingsPage() {
   )
 }
 
+/**
+ * URL-backed filter defaults. A dimension sitting at its default is dropped
+ * from the query string, so the common view stays at a clean /account/listings.
+ */
+const LISTING_FILTER_DEFAULTS = {
+  game: 'all',
+  status: 'all',
+  q: '',
+  sort: 'newest',
+  perPage: 15,
+  page: 1,
+}
+
 function OffersContent() {
   const router = useRouter()
   const { user } = useAuth()
@@ -336,12 +350,29 @@ function OffersContent() {
   }, [])
 
   // ── Filters / sort / pagination state ──
-  const [gameId, setGameId] = useState<string>('all')
-  const [statusFilter, setStatusFilter] = useState<FilterStatus>('all')
-  const [search, setSearch] = useState('')
-  const [sort, setSort] = useState<SortKey>('newest')
-  const [perPage, setPerPage] = useState(15)
-  const [page, setPage] = useState(1)
+  // STATE-011 — these live in the URL, so a filtered view can be linked and
+  // bookmarked, back/forward restores it, and a refresh no longer silently
+  // resets to page 1 with the filters cleared. `type` was already URL-backed
+  // above; this applies the same pattern to the other six dimensions.
+  const { values: filters, setValue: setFilter, setValues: setFilters } = useUrlFilters(
+    LISTING_FILTER_DEFAULTS,
+  )
+  const gameId = filters.game
+  const statusFilter = filters.status as FilterStatus
+  const search = filters.q
+  const sort = filters.sort as SortKey
+  const perPage = filters.perPage
+  const page = filters.page
+
+  // Every filter change returns to page 1 — the old code did this with a
+  // useEffect that re-synced two pieces of state; here it is just part of the
+  // same single URL write.
+  const setGameId = (v: string) => setFilters({ game: v, page: 1 })
+  const setStatusFilter = (v: FilterStatus) => setFilters({ status: v, page: 1 })
+  const setSearch = (v: string) => setFilters({ q: v, page: 1 })
+  const setSort = (v: SortKey) => setFilters({ sort: v, page: 1 })
+  const setPerPage = (v: number) => setFilters({ perPage: v, page: 1 })
+  const setPage = (v: number) => setFilter('page', v)
   const [selected, setSelected] = useState<Set<string>>(new Set())
 
   // Section rows + the games represented in them (for the Game filter).
@@ -383,9 +414,11 @@ function OffersContent() {
   const safePage = Math.min(page, pageCount)
   const paged = visible.slice((safePage - 1) * perPage, safePage * perPage)
 
-  // Reset page + selection when the view changes underneath them.
-  useEffect(() => { setPage(1) }, [type, gameId, statusFilter, search, perPage, sort])
-  useEffect(() => { setSelected(new Set()); setGameId('all'); setSearch('') }, [type])
+  // Reset selection when the sub-page changes. The page-reset that used to sit
+  // here is gone: the filter setters above carry `page: 1` themselves, and
+  // safePage already clamps a stale page to the available range, so there is
+  // no longer a state pair to keep manually in sync (STATE-011).
+  useEffect(() => { setSelected(new Set()) }, [type])
 
   const allSelected = paged.length > 0 && paged.every((l) => selected.has(l.id))
   const toggleAll = () =>
