@@ -6,11 +6,19 @@ name: SAB G2G Daily Market Collection
 # variant returns dozens of independent sellers, which is what lets the blend's
 # median discard outliers instead of averaging two sources into their midpoint.
 #
-# Runs at 05:20 UTC — after Eldorado (05:00) and before the price snapshot
-# (06:00), so the day's snapshot captures the freshly-blended 3-source values.
+# Runs at 05:20 UTC. Eldorado is 3-hourly (`0 */3 * * *`) and the price snapshot
+# is `15 10 * * *`, so this is NOT sequenced between them — an earlier comment
+# here claimed "after Eldorado (05:00) and before the price snapshot (06:00)",
+# which was never true of these schedules. Blending does not depend on ordering:
+# the importer upserts and the publish step re-reads whatever evidence exists.
 #
-# DB-driven panel refresh (--refresh-after-hours) mirrors the Eldorado job, so
-# daily runs re-crawl the same Brainrots rather than only backfilling new ones.
+# DB-driven panel refresh (--refresh-after-hours). ROUTE-016: this genuinely is
+# DB-driven now. It previously read the COMMITTED progress file's `attempted_at`,
+# and since this workflow never commits that file back, every run started from
+# the same frozen snapshot and took the same rarity-ordered head — 265 of 385
+# Brainrots were unreachable. Eligibility and ordering now come from the newest
+# matched G2G raw listing per Brainrot (SUPABASE_SERVICE_ROLE_KEY below is
+# required for that; without it every item reads as never-crawled).
 
 on:
   workflow_dispatch:
@@ -50,6 +58,10 @@ jobs:
       SAB_MARKET_IMPORT_SECRET: ${{ secrets.SAB_MARKET_IMPORT_SECRET }}
       NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
       NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+      # ROUTE-016: the per-item crawl-freshness lookup reads
+      # sab_market_raw_listings, which anon is denied. Without this the collector
+      # degrades to rarity order and the queue stops rotating.
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
 
     steps:
       - name: Check out repository
