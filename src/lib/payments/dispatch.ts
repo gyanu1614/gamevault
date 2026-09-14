@@ -69,9 +69,38 @@ export async function dispatch(
     return { applied: false }
   }
 
+  // DB-015: the two money-bearing events that also touch the buyer's wallet
+  // run transition + wallet leg in ONE DB transaction. A failure throws out of
+  // dispatch → the router marks the event failed and answers 500, so the
+  // provider retries; both RPCs are idempotent, so the retry converges.
+  //   REFUND_COMPLETED → order_refund_to_wallet: escrow_held → refunds (gross)
+  //     + refunds → user_wallet for what the PROVIDER refunded, clamped to the
+  //     order total (partial refunds are real; a quirk can never over-credit).
+  //     Store-credit refunds are 100% (Refund & Dispute Policy). NOT for
+  //     CHARGEBACK_OPENED — a chargeback claws the cash back through the
+  //     provider, no wallet credit.
+  //   CHARGE_FAILED → order_cancel_return_wallet: CANCELLED + exact mirror of
+  //     the checkout wallet hold (checkout_wallet:<id>) back to user_wallet.
+  //
+  // SUPPORT RUNBOOK — manual external refunds: no code path calls the
+  // provider's refund() (CoinGate's throws 'not yet implemented'), so a
+  // REFUND_COMPLETED event only arrives after someone refunds manually in the
+  // provider dashboard. If the buyer was ALREADY given store credit (ledger
+  // txn keyed 'wallet_refund:<orderId>' — or
+  // 'wallet_refund:<orderId>:partial:<disputeId>' from a partial dispute), a
+  // manual external refund on top is DOUBLE compensation. Always check
+  // ledger_transactions for those keys before refunding at the provider.
   let result
   try {
-    result = await transition(event.orderId, orderEvent, providerEventId)
+    if (event.type === 'REFUND_COMPLETED') {
+      const { refundOrderToWallet } = await import('@/lib/wallet/order-money')
+      result = await refundOrderToWallet(event.orderId, providerEventId, event.amount?.amountMinor)
+    } else if (event.type === 'CHARGE_FAILED') {
+      const { cancelOrderReturnWallet } = await import('@/lib/wallet/order-money')
+      result = await cancelOrderReturnWallet(event.orderId, providerEventId)
+    } else {
+      result = await transition(event.orderId, orderEvent, providerEventId)
+    }
   } catch (err) {
     // A CONFIRMED charge that can't apply means real money arrived for an
     // order that is no longer payable (cancelled/superseded voucher paid
@@ -87,89 +116,6 @@ export async function dispatch(
   }
 
   if (result.changed) {
-    // Provider-completed refunds land in the buyer's WALLET as store credit
-    // (Refund & Dispute Policy: store-credit refunds are 100%): the REFUNDED
-    // transition moved escrow_held → refunds; this credit completes the chain
-    // refunds → user_wallet. Idempotent on 'wallet_refund:<orderId>', so a
-    // replayed webhook can't double-credit. NOT for CHARGEBACK_OPENED — a
-    // chargeback claws the cash back through the provider, no wallet credit.
-    //
-    // SUPPORT RUNBOOK — manual external refunds: no code path calls the
-    // provider's refund() (CoinGate's throws 'not yet implemented'), so a
-    // REFUND_COMPLETED event only arrives after someone refunds manually in
-    // the provider dashboard. If the buyer was ALREADY given store credit
-    // (ledger txn keyed 'wallet_refund:<orderId>' — or
-    // 'wallet_refund:<orderId>:partial:<disputeId>' from a partial dispute),
-    // a manual external refund on top is DOUBLE compensation. Always check
-    // ledger_transactions for those keys before refunding at the provider.
-    // AWAITED but wrapped: a credit failure must never fail the webhook (the
-    // idempotent key makes it safely retryable).
-    if (event.type === 'REFUND_COMPLETED') {
-      await (async () => {
-        const { createServiceRoleClient } = await import('@/lib/supabase/service')
-        const service = createServiceRoleClient()
-        const { data: order } = await service
-          .from('orders')
-          .select('buyer_id, total_amount, currency')
-          .eq('id', event.orderId)
-          .single() as any
-        if (order?.buyer_id && (order.total_amount ?? 0) > 0) {
-          // Credit what the PROVIDER actually refunded (partial refunds are
-          // real), clamped to the order total so a provider quirk can never
-          // over-credit. Falls back to the order total when the event
-          // carries no usable amount.
-          const totalMinor = BigInt(Math.round(Number(order.total_amount) * 100))
-          const eventMinor = event.amount?.amountMinor ?? 0n
-          const creditMinor =
-            eventMinor > 0n && eventMinor < totalMinor ? eventMinor : totalMinor
-          const { refundToWallet } = await import('@/lib/wallet/wallet')
-          await refundToWallet({
-            userId: order.buyer_id,
-            amountMinor: creditMinor,
-            currency: (order.currency || 'EUR').toUpperCase(),
-            orderId: event.orderId,
-          })
-        }
-      })().catch((err) =>
-        console.error('[Dispatch] Wallet refund credit failed (retryable):', err)
-      )
-    }
-
-    // A failed/expired charge cancels the order — but CANCELLED only moves
-    // escrow_held → the platform 'refunds' account. Any WALLET credit the
-    // buyer applied at checkout (checkout_wallet:<id> → escrow_held) must
-    // come back to their wallet, exactly like createCheckout's supersede
-    // path. Idempotent on 'wallet_refund:<orderId>'; zero-hold orders no-op.
-    // Wrapped: a credit failure must never fail the webhook (retryable).
-    if (event.type === 'CHARGE_FAILED') {
-      await (async () => {
-        const { createServiceRoleClient } = await import('@/lib/supabase/service')
-        const service = createServiceRoleClient()
-        const { data: heldMinorRaw } = await (service.rpc as any)('checkout_wallet_hold_minor', {
-          p_order_id: event.orderId,
-        })
-        const heldMinor = BigInt(heldMinorRaw ?? 0)
-        if (heldMinor > 0n) {
-          const { data: order } = await service
-            .from('orders')
-            .select('buyer_id, currency')
-            .eq('id', event.orderId)
-            .single() as any
-          if (order?.buyer_id) {
-            const { refundToWallet } = await import('@/lib/wallet/wallet')
-            await refundToWallet({
-              userId: order.buyer_id,
-              amountMinor: heldMinor,
-              currency: (order.currency || 'EUR').toUpperCase(),
-              orderId: event.orderId,
-            })
-          }
-        }
-      })().catch((err) =>
-        console.error('[Dispatch] Wallet hold return on failed charge failed (retryable):', err)
-      )
-    }
-
     // Comms ride on top of an APPLIED transition only (a replayed/no-op
     // webhook must not re-email anyone). AWAITED — on serverless the function
     // freezes once the webhook response is sent, so an unawaited send would

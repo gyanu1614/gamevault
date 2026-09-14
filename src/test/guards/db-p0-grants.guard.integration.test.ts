@@ -44,6 +44,18 @@ const AUTHENTICATED_DEFINER_ALLOWLIST = [
   'reject_listing', 'reject_seller_application', 'request_listing_changes', 'withdraw_seller_application',
 ].sort()
 
+/**
+ * 20260914100000_money_atomicity.sql (DB-015/016/017): every function is
+ * service_role only — none may ever appear in the anon/authenticated lists.
+ * Listed here so the posture test names the culprit if a later migration
+ * opens one instead of just showing a list diff.
+ */
+const MONEY_ATOMICITY_SERVICE_ONLY = [
+  'order_cancel_return_wallet', 'order_refund_to_wallet', 'withdrawal_cancel', 'withdrawal_reject',
+  'inventory_claim_for_order', 'promo_usage_record', 'money_fault_hook', 'ledger_test_cleanup_by_withdrawal',
+  'money_atomicity_version', 'webhook_event_claim',
+]
+
 async function dbP0Applied(): Promise<boolean> {
   const { error } = await fx!.svc.rpc('db_p0_guards_version')
   return !error
@@ -195,6 +207,10 @@ describe.skipIf(!hasEnv)('DB-P0 — function grants, view security_invoker, defa
       expect(p.views_without_security_invoker).toEqual([])
       expect([...p.anon_executable_definers].sort()).toEqual([...ANON_DEFINER_ALLOWLIST].sort())
       expect([...p.authenticated_executable_definers].sort()).toEqual(AUTHENTICATED_DEFINER_ALLOWLIST)
+      for (const fn of MONEY_ATOMICITY_SERVICE_ONLY) {
+        expect(p.anon_executable_definers, `${fn} must not be anon-executable`).not.toContain(fn)
+        expect(p.authenticated_executable_definers, `${fn} must not be authenticated-executable`).not.toContain(fn)
+      }
     })
 
     it.each([

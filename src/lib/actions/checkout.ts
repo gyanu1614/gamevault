@@ -140,16 +140,16 @@ export async function createCheckout(input: CreateCheckoutInput): Promise<Create
         }
       }
       // Amounts drifted (quantity/promo/wallet changed) OR the invoice expired.
-      // Supersede the stale order via CANCELLED, then RETURN any wallet credit
-      // the buyer applied to it. CANCELLED only moves escrow_held → the
-      // platform 'refunds' account; the refunds → buyer-wallet leg is a
-      // separate wallet_credit every other cancel path performs. Without it,
-      // a buyer who wallet-funded a pending order and re-checks-out loses that
-      // credit into 'refunds'. Tolerate an already-terminal order (webhook
-      // raced us): treat any failure as "already gone" and fall through.
+      // Supersede the stale order: CANCELLED + the exact mirror of any wallet
+      // hold the buyer applied to it (checkout_wallet:<id>, escrow_held →
+      // user_wallet) run in ONE DB transaction (DB-015: the old two-RPC
+      // sequence stranded the hold when the wallet RPC failed after the
+      // transition). Idempotent on both keys. A failure here changes nothing:
+      // the stale order stays pending and the unique index below hands the
+      // buyer back that same order instead of minting a second one.
       try {
-        const { transition } = await import('@/lib/escrow/transition')
-        await transition(existingPending.id, 'CANCELLED', `superseded-by-recheckout:${existingPending.id}`)
+        const { cancelOrderReturnWallet } = await import('@/lib/wallet/order-money')
+        await cancelOrderReturnWallet(existingPending.id, `superseded-by-recheckout:${existingPending.id}`)
 
         // Payssion vouchers stay PAYABLE at the provider until told otherwise
         // — cancel there too, or the buyer could pay a slip whose order no
@@ -169,26 +169,8 @@ export async function createCheckout(input: CreateCheckoutInput): Promise<Create
           .eq('user_id', user.id)
           .eq('type', 'order_incomplete')
           .like('link', `%${existingPending.id}%`)
-
-        // How much wallet credit did that order hold? (checkout_wallet:<id>
-        // credited escrow_held.) Return exactly that to the buyer's wallet,
-        // idempotent on wallet_refund:<id> so a retry can't double-credit.
-        const { data: heldMinorRaw } = await (supabase.rpc as any)(
-          'checkout_wallet_hold_minor',
-          { p_order_id: existingPending.id },
-        )
-        const heldMinor = BigInt(heldMinorRaw ?? 0)
-        if (heldMinor > 0n) {
-          const { refundToWallet } = await import('@/lib/wallet/wallet')
-          await refundToWallet({
-            userId: user.id,
-            amountMinor: heldMinor,
-            currency: ORDER_CURRENCY,
-            orderId: existingPending.id,
-          })
-        }
       } catch (superErr) {
-        console.error('[createCheckout] supersede pending order failed (continuing):', superErr)
+        console.error('[createCheckout] supersede pending order failed (nothing changed, continuing):', superErr)
       }
     }
 

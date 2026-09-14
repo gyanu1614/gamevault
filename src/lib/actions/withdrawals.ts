@@ -297,34 +297,23 @@ export async function cancelWithdrawalRequest(requestId: string): Promise<{
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) throw new Error('Not authenticated')
 
-    const { data: cancelled, error } = await (supabase as any)
-      .from('withdrawal_requests')
-      .update({ status: 'cancelled' })
-      .eq('id', requestId)
-      .eq('user_id', user.id)
-      .eq('status', 'pending')
-      .select('id')
-
-    if (error) throw error
-
-    // Release the ledger hold (payout_clearing → original sources) so the
-    // funds are spendable again. Idempotent per request; only when this call
-    // actually flipped pending → cancelled (a replay must not double-post —
-    // the RPC's idempotency key guarantees it regardless).
-    if (cancelled?.length) {
-      const serviceClient = createServiceRoleClient()
-      const { error: reversalError } = await (serviceClient.rpc as any)(
-        'withdrawal_reversal',
-        { p_request_id: requestId }
-      )
-      if (reversalError) {
-        // The request is cancelled but the hold is still standing — surface
-        // loudly; the reversal is idempotent and can be re-run by support.
-        console.error(
-          `[Withdrawals] CRITICAL: hold reversal failed for cancelled request ${requestId}:`,
-          reversalError
-        )
-      }
+    // DB-015: reversal FIRST, then the status flip — in ONE DB transaction.
+    // The RPC locks the row, mirrors the hold back (payout_clearing → the
+    // original sources), then flips pending → cancelled. If the ledger refuses
+    // the reversal (hold already paid out) nothing changes and the user sees
+    // the error instead of a "cancelled" row with the money gone. Ownership
+    // (user_id) and the pending gate are enforced inside the RPC.
+    const serviceClient = createServiceRoleClient()
+    const { data, error } = await (serviceClient.rpc as any)('withdrawal_cancel', {
+      p_request_id: requestId,
+      p_user_id: user.id,
+    })
+    if (error) {
+      console.error(`[Withdrawals] cancel failed for request ${requestId}:`, error)
+      return { success: false, error: `Could not cancel this withdrawal: ${error.message}` }
+    }
+    if (data?.changed !== true && data?.reason === 'not_found') {
+      return { success: false, error: 'Withdrawal request not found' }
     }
 
     return { success: true }
@@ -604,36 +593,23 @@ export async function rejectWithdrawalRequest(params: {
     // "is logged in", letting any user grief others' pending withdrawals.
     const admin = await requireAdmin()
 
+    // DB-015: reversal FIRST, then the status flip — in ONE DB transaction
+    // (withdrawal_reject RPC). A refused reversal (hold already paid out)
+    // leaves the row pending and surfaces the error, so the "Funds stay in
+    // your wallet" message below is only ever sent when it is TRUE.
     const serviceClient = createServiceRoleClient()
-    const { data: updatedRows, error } = await (serviceClient as any)
-      .from('withdrawal_requests')
-      .update({
-        status: 'rejected',
-        rejected_at: new Date().toISOString(),
-        processed_by: admin.userId,
-        admin_notes: params.reason
-      })
-      .eq('id', params.requestId)
-      .eq('status', 'pending')
-      .select('user_id, amount, method_id, method_name')
-
-    if (error) throw error
-
-    // Release the ledger hold (payout_clearing → original sources) so the
-    // ":funds remain in your wallet" message below is TRUE. Idempotent per
-    // request ('withdrawal_reversal:<requestId>').
-    if (updatedRows?.length) {
-      const { error: reversalError } = await (serviceClient.rpc as any)(
-        'withdrawal_reversal',
-        { p_request_id: params.requestId }
-      )
-      if (reversalError) {
-        console.error(
-          `[Withdrawals] CRITICAL: hold reversal failed for rejected request ${params.requestId}:`,
-          reversalError
-        )
-      }
+    const { data: rejected, error } = await (serviceClient.rpc as any)('withdrawal_reject', {
+      p_request_id: params.requestId,
+      p_admin_id: admin.userId,
+      p_reason: params.reason,
+    })
+    if (error) {
+      console.error(`[Withdrawals] reject failed for request ${params.requestId}:`, error)
+      return { success: false, error: `Could not reject this withdrawal: ${error.message}` }
     }
+    const updatedRows = rejected?.changed === true
+      ? [{ user_id: rejected.user_id, amount: rejected.amount, method_id: rejected.method_id, method_name: rejected.method_name }]
+      : []
 
     // Tell the user their withdrawal was declined (in-app + email).
     // Awaited but isolated: comms failures must never fail the decision.

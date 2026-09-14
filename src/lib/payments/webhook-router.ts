@@ -93,8 +93,9 @@ export async function handleWebhook(
     })
     return { ok: true, status: 200, processed }
   } catch (e: any) {
-    // Mark failed so the replay worker (Phase 6) can retry; return 500 so the
-    // provider retries too.
+    // Mark failed and return 500 so the provider retries; webhook_event_claim
+    // re-claims a 'failed' row (DB-015d), so that retry re-runs dispatch — every
+    // transition it drives is idempotent. There is no separate replay worker.
     await (supabase.rpc as any)('webhook_event_mark', {
       p_provider: providerName,
       p_provider_event_id: parsed.providerEventId,

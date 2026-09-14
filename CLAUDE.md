@@ -22,3 +22,9 @@
 - Every `SECURITY DEFINER` function pins `SET search_path = public`. Views are created `WITH (security_invoker = true)`.
 - Cron/admin routes must call RPCs through `createServiceRoleClient()`; the session client has no cookies on a Vercel cron request and runs as anon.
 - Why: on 2026-09-11 the audit found 39 definer functions and 10 views open to the anon key (tax ids, delivery codes, order state) because the baseline granted `EXECUTE` by default.
+
+## Money seams are single SQL functions (from migration 20260914100000)
+- Order cancel + wallet-hold return, order refund + wallet credit, withdrawal cancel/reject, inventory claim, promo usage: each is ONE service-role RPC (`order_cancel_return_wallet`, `order_refund_to_wallet`, `withdrawal_cancel`, `withdrawal_reject`, `inventory_claim_for_order`, `promo_usage_record`). Never re-compose these as two calls from TypeScript; call the RPC (TS seam: `src/lib/wallet/order-money.ts`).
+- `money_fault_hook(point)` exists ONLY for tests: it raises when the transaction-local GUC `app.money_fault` equals `point`. PostgREST callers cannot set that GUC, so it is inert in the app; the GREEN tests set it from a psql transaction (`src/test/guards/money-atomicity.guard.integration.test.ts`, `withFault`) to prove a failure inside an atomic function leaves no partial state. Keep every new money function's interior steps behind a `PERFORM money_fault_hook('<fn>:<point>')` so the same proof can be written for it.
+- A `failed` webhook event is re-claimed by `webhook_event_claim` on the provider's retry; there is no replay worker. A dispatch failure must throw (router → 500), never be swallowed.
+- Why: on 2026-09-11 the audit (DB-015/016/017) found every money seam composed two atomic RPCs with no compensation; reproduced on the local stack 2026-09-14: stranded wallet holds, lost refund credits, "Funds stay in your wallet" on a paid-out hold, one code sold to two buyers.

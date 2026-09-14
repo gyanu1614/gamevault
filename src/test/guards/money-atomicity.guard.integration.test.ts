@@ -1,30 +1,39 @@
 /**
  * DB-015 / DB-016 / DB-017 — fix/money-atomicity (audit 2026-09-11).
  *
- * Every money path below composes 2+ atomic RPCs / statements in app code
- * with nothing in between that compensates or retries. These tests drive the
- * REAL app functions against the local stack and inject one fault between
- * the steps (a thrown wallet RPC, a failing UPDATE, a hold that was already
- * paid out, N concurrent callers). Each RED case asserts the BAD end state
- * the audit describes; after the fix the same fault must leave balances
- * consistent (the GREEN assertions replace the RED ones in the same file).
+ * Every money path below used to compose 2+ atomic RPCs / statements in app
+ * code with nothing in between that compensated or retried. The RED commit
+ * ("DB-015/016/017 RED") drove the REAL app functions against the local
+ * stack with one fault injected between the steps and asserted the bad end
+ * state the audit describes. Since 20260914100000_money_atomicity.sql each
+ * seam is ONE SQL function; this file keeps the same drivers and faults and
+ * now asserts the balances stay consistent:
  *
- * Money invariants asserted throughout (all in minor units, from the ledger):
+ *   · app-level faults (a thrown seam module, a failing UPDATE, a hold that
+ *     was already paid out, N concurrent callers);
+ *   · in-RPC faults through money_fault_hook: a psql transaction sets the
+ *     GUC app.money_fault to an interior point, calls the atomic function and
+ *     proves nothing partial survives the rollback (PostgREST callers cannot
+ *     set that GUC, so on prod the hook is inert).
+ *
+ * Money invariants asserted throughout (minor units, from the ledger):
  *   buyer wallet = user_wallet_balance(buyer)            (derived, never stored)
  *   seller avail = seller_available_balance(seller)
  *   hold(order)  = checkout_wallet_hold_minor(order)     (escrow_held credit at checkout)
  *
  * All rows are fixture-owned and removed in afterAll — including the rows the
- * driven code writes as side effects (notifications, loyalty_credits,
- * ledger journals, webhook_events, promo usages, inventory).
+ * driven code writes as side effects (notifications, loyalty_credits, ledger
+ * journals, webhook_events, promo usages, inventory, withdrawals).
  */
 import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest'
+import { execFileSync } from 'node:child_process'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { hasEnv, makeFixture, promoteToEstablishedSeller, type Fixture } from './throwaway'
 
 // ── fault switches (set by each test, read by the mocks) ──────────────────
 let sessionClient: SupabaseClient | null = null
-let failRefundToWallet = false
+/** Throw from the order↔wallet seam module once (simulates the RPC being unreachable). */
+let failOrderMoneyOnce = false
 
 vi.mock('@/lib/supabase/server', () => ({
   createClient: async () => {
@@ -34,28 +43,46 @@ vi.mock('@/lib/supabase/server', () => ({
 }))
 vi.mock('next/cache', () => ({ revalidatePath: () => undefined }))
 vi.mock('server-only', () => ({}))
-// Every test that touches email must mock the transport (CLAUDE.md).
+// Every test that touches email must mock the transport (CLAUDE.md). Stub
+// every real export by name (a Proxy that answers `then` makes the module a
+// thenable and hangs `await import()`).
 vi.mock('@/lib/email', async (importOriginal) => {
-  // Stub every real export by name (a Proxy that answers `then` makes the
-  // module a thenable and hangs `await import()`).
   const real = await importOriginal<Record<string, unknown>>()
   return Object.fromEntries(Object.keys(real).map((k) => [k, async () => undefined]))
 })
-vi.mock('@/lib/wallet/wallet', async (importOriginal) => {
-  const real = await importOriginal<typeof import('@/lib/wallet/wallet')>()
+vi.mock('@/lib/wallet/order-money', async (importOriginal) => {
+  const real = await importOriginal<typeof import('@/lib/wallet/order-money')>()
+  const gate = () => {
+    if (failOrderMoneyOnce) { failOrderMoneyOnce = false; throw new Error('injected: order-money RPC unreachable') }
+  }
   return {
     ...real,
-    refundToWallet: async (args: Parameters<typeof real.refundToWallet>[0]) => {
-      if (failRefundToWallet) throw new Error('injected: wallet RPC unreachable')
-      return real.refundToWallet(args)
-    },
+    cancelOrderReturnWallet: async (...a: Parameters<typeof real.cancelOrderReturnWallet>) => { gate(); return real.cancelOrderReturnWallet(...a) },
+    refundOrderToWallet: async (...a: Parameters<typeof real.refundOrderToWallet>) => { gate(); return real.refundOrderToWallet(...a) },
   }
 })
 
 let fx: Fixture | null = null
+let ready = false
 const CUR = 'USD'
 const tag = () => Math.random().toString(36).slice(2, 8)
 const RUN = `test:ledger:money-atomicity:${tag()}`
+const DB_URL = process.env.SUPABASE_DB_URL ?? 'postgresql://postgres:postgres@127.0.0.1:54322/postgres'
+
+/**
+ * Run `sql` inside one psql transaction with app.money_fault = point. Returns
+ * the error text psql printed (the transaction rolled back) or '' on commit.
+ * Direct DB session on purpose: that is the only way to set the GUC.
+ */
+function withFault(point: string, sql: string): string {
+  const script = `BEGIN;\nSET LOCAL app.money_fault = '${point}';\n${sql};\nCOMMIT;`
+  try {
+    execFileSync('psql', [DB_URL, '-v', 'ON_ERROR_STOP=1', '-q', '-c', script], { stdio: 'pipe' })
+    return ''
+  } catch (e: any) {
+    return e?.stderr?.toString() ?? String(e)
+  }
+}
 
 async function walletMinor(userId: string): Promise<bigint> {
   const { data, error } = await fx!.svc.rpc('user_wallet_balance', { p_user_id: userId, p_currency: CUR } as any)
@@ -69,7 +96,7 @@ async function sellerAvailMinor(userId: string): Promise<bigint> {
 }
 async function platformMinor(kind: string): Promise<bigint> {
   const { data, error } = await fx!.svc.rpc('ledger_balance', {
-    p_owner_type: kind === 'external_payout' ? 'external' : 'platform', p_owner_id: null, p_kind: kind, p_currency: CUR,
+    p_owner_type: 'platform', p_owner_id: null, p_kind: kind, p_currency: CUR,
   } as any)
   if (error) throw new Error(`ledger_balance(${kind}): ${error.message}`)
   return BigInt(data ?? 0)
@@ -83,11 +110,18 @@ async function txnByKey(key: string) {
   const { data } = await fx!.svc.from('ledger_transactions').select('id').eq('idempotency_key', key).maybeSingle()
   return data as { id: string } | null
 }
+/** owner.kind:direction:amount of every entry on a journal, sorted. */
+async function entriesOf(txnId: string) {
+  const { data } = await fx!.svc.from('ledger_entries')
+    .select('direction, amount_minor, account:account_id ( kind, owner_type )').eq('transaction_id', txnId)
+  return ((data ?? []) as any[])
+    .map((e) => `${e.account.owner_type}.${e.account.kind}:${e.direction}:${e.amount_minor}`)
+    .sort()
+}
 async function orderRow(orderId: string) {
   const { data } = await fx!.svc.from('orders').select('*').eq('id', orderId).single()
   return data as any
 }
-/** Fund a buyer wallet from the platform refunds account (test journal, RUN-prefixed key). */
 async function fundWallet(userId: string, minor: bigint, suffix: string) {
   const { error } = await fx!.svc.rpc('post_journal', {
     p_idempotency_key: `${RUN}:fund:${suffix}`,
@@ -99,7 +133,6 @@ async function fundWallet(userId: string, minor: bigint, suffix: string) {
   } as any)
   if (error) throw new Error(`fundWallet: ${error.message}`)
 }
-/** Give a seller an available balance (test journal). */
 async function fundSeller(userId: string, minor: bigint, suffix: string) {
   const { error } = await fx!.svc.rpc('post_journal', {
     p_idempotency_key: `${RUN}:fundseller:${suffix}`,
@@ -111,41 +144,37 @@ async function fundSeller(userId: string, minor: bigint, suffix: string) {
   } as any)
   if (error) throw new Error(`fundSeller: ${error.message}`)
 }
-
-/**
- * Remove the three journals a withdrawal request can own. Uses the RPC from
- * 20260914100000_money_atomicity.sql when present; before that migration is
- * applied (RED phase) falls back to psql against the local stack.
- */
-async function cleanupWithdrawalLedger(svc: SupabaseClient, requestId: string): Promise<{ error: { message: string } | null }> {
-  const rpc = await svc.rpc('ledger_test_cleanup_by_withdrawal', { p_request_id: requestId } as any)
-  if (!rpc.error) return { error: null }
-  if (!/Could not find the function/.test(rpc.error.message)) return { error: rpc.error }
-  const { execFileSync } = await import('node:child_process')
-  const db = process.env.SUPABASE_DB_URL ?? 'postgresql://postgres:postgres@127.0.0.1:54322/postgres'
-  const keys = ['withdrawal', 'withdrawal_reversal', 'payout'].map((k) => `'${k}:${requestId}'`).join(',')
-  const sql = `ALTER TABLE ledger_entries DISABLE TRIGGER trg_ledger_entries_immutable; ALTER TABLE ledger_transactions DISABLE TRIGGER trg_ledger_transactions_immutable;
-DELETE FROM ledger_entries WHERE transaction_id IN (SELECT id FROM ledger_transactions WHERE idempotency_key IN (${keys}));
-DELETE FROM ledger_transactions WHERE idempotency_key IN (${keys});
-ALTER TABLE ledger_entries ENABLE TRIGGER trg_ledger_entries_immutable; ALTER TABLE ledger_transactions ENABLE TRIGGER trg_ledger_transactions_immutable;`
-  try { execFileSync('psql', [db, '-v', 'ON_ERROR_STOP=1', '-q', '-c', sql], { stdio: 'pipe' }); return { error: null } }
-  catch (e: any) { return { error: { message: `psql fallback: ${e?.stderr?.toString() ?? e}` } } }
-}
-
 const createdOrderIds: string[] = []
 const createdWithdrawalIds: string[] = []
 const createdPromoIds: string[] = []
+async function insertOrder(over: Record<string, unknown>) {
+  const { data, error } = await fx!.svc.from('orders').insert({
+    buyer_id: fx!.buyer.id, seller_id: fx!.seller.id, listing_id: fx!.listingId, quantity: 1,
+    unit_price: 1, subtotal: 1, platform_fee_rate: 0, payment_processing_fee_rate: 0,
+    platform_fee: 0, payment_processing_fee: 0, total_amount: 1, seller_payout: 1, currency: CUR,
+    ...over,
+  }).select('id').single()
+  if (error) throw new Error(`order insert: ${error.message}`)
+  createdOrderIds.push((data as any).id)
+  return (data as any).id as string
+}
+/** one_pending_order_per_buyer_listing: park whatever pending order an earlier test left. */
+async function parkPendingOrders() {
+  await fx!.svc.from('orders').update({ status: 'cancelled' })
+    .eq('buyer_id', fx!.buyer.id).eq('listing_id', fx!.listingId).eq('status', 'pending')
+}
+
 let methodId = ''
 let methodCreated = false
 
-describe.skipIf(!hasEnv)('DB-015/016/017 — money-path seams (integration)', () => {
+describe.skipIf(!hasEnv)('DB-015/016/017 — money-path seams are atomic (integration)', () => {
   beforeAll(async () => {
     process.env.NEXT_PUBLIC_PURCHASES_ENABLED = 'true'
     process.env.PAYMENT_PROVIDER = 'fake'
     fx = await makeFixture()
+    ready = !(await fx.svc.rpc('money_atomicity_version')).error
     await promoteToEstablishedSeller(fx.svc, fx.seller.id)
     await fx.svc.from('listings').update({ status: 'active' }).eq('id', fx.listingId)
-    // A withdrawal method row for withdrawal_requests.method_id (FK).
     const { data: m } = await fx.svc.from('withdrawal_methods').select('id').limit(1).maybeSingle()
     if (m) methodId = (m as any).id
     else {
@@ -167,7 +196,6 @@ describe.skipIf(!hasEnv)('DB-015/016/017 — money-path seams (integration)', ()
       const { error } = await p
       if (error) failures.push(`${label}: ${error.message}`)
     }
-    // Side-effect rows first (they reference orders / users).
     const { data: allOrders } = await svc.from('orders').select('id').or(`buyer_id.in.(${users.join(',')}),seller_id.in.(${users.join(',')})`)
     const orderIds = Array.from(new Set([...(allOrders ?? []).map((o: any) => o.id), ...createdOrderIds]))
     for (const id of orderIds) {
@@ -176,9 +204,7 @@ describe.skipIf(!hasEnv)('DB-015/016/017 — money-path seams (integration)', ()
     }
     await del('ledger_test_cleanup(run)', svc.rpc('ledger_test_cleanup', { p_prefix: `${RUN}%` } as any))
     for (const wid of createdWithdrawalIds) {
-      // withdrawal_* journals carry fixed keys (withdrawal:<id>, payout:<id>,
-      // withdrawal_reversal:<id>) that ledger_test_cleanup's prefix rail refuses.
-      await del(`ledger_test_cleanup_by_withdrawal(${wid})`, cleanupWithdrawalLedger(svc, wid))
+      await del(`ledger_test_cleanup_by_withdrawal(${wid})`, svc.rpc('ledger_test_cleanup_by_withdrawal', { p_request_id: wid } as any))
     }
     await del('loyalty_credits', svc.from('loyalty_credits').delete().in('user_id', users))
     await del('promo_code_usages', svc.from('promo_code_usages').delete().in('user_id', users))
@@ -190,20 +216,21 @@ describe.skipIf(!hasEnv)('DB-015/016/017 — money-path seams (integration)', ()
     await del('withdrawal_requests', svc.from('withdrawal_requests').delete().in('user_id', users))
     if (methodCreated) await del('withdrawal_methods', svc.from('withdrawal_methods').delete().eq('id', methodId))
     await del('audit_logs', svc.from('audit_logs').delete().in('user_id', users))
-    // makeFixture's cleanup removes orders, notifications, referral_earnings, users; it throws on residue.
     try { await fx.cleanup() } catch (e: any) { failures.push(String(e?.message ?? e)) }
     if (failures.length) throw new Error(`money-atomicity cleanup left residue:\n  - ${failures.join('\n  - ')}`)
   }, 120_000)
 
-  // ── DB-015 (a): checkout supersede ───────────────────────────────────────
-  describe('DB-015a — createCheckout supersede: transition(CANCELLED) then a separate wallet return', () => {
-    it('a wallet RPC failure after the transition strands the buyer\'s wallet credit on a terminal order', async () => {
+  it('20260914100000_money_atomicity.sql is applied to the target DB', () => {
+    expect(ready).toBe(true)
+  })
+
+  // ── DB-015a: checkout supersede ───────────────────────────────────────────
+  describe('DB-015a — createCheckout supersede runs CANCELLED + hold return as one RPC', () => {
+    it('supersede returns the exact hold (escrow_held → user_wallet) under wallet_refund:<id>', async () => {
       sessionClient = fx!.buyer.client
       await fundWallet(fx!.buyer.id, 10_00n, 'supersede')
       const { createCheckout } = await import('@/lib/actions/checkout')
 
-      // 1. First checkout: 1 unit ($1.07 total), $0.50 of wallet applied →
-      //    pending order holding 50 minor; the rest goes to the fake provider.
       const first = await createCheckout({ listingId: fx!.listingId, quantity: 1, walletAmount: 0.5 })
       expect(first.success, first.error).toBe(true)
       const firstId = first.orderId!
@@ -211,75 +238,150 @@ describe.skipIf(!hasEnv)('DB-015/016/017 — money-path seams (integration)', ()
       expect(await holdMinor(firstId)).toBe(50n)
       expect(await walletMinor(fx!.buyer.id)).toBe(950n)
 
-      // 2. Re-checkout with a different quantity → amounts drift → supersede path.
-      //    FAULT: the wallet return RPC throws after the CANCELLED transition.
-      failRefundToWallet = true
       const second = await createCheckout({ listingId: fx!.listingId, quantity: 2 })
-      failRefundToWallet = false
       expect(second.success, second.error).toBe(true)
-      if (second.orderId && second.orderId !== firstId) createdOrderIds.push(second.orderId)
+      expect(second.orderId).not.toBe(firstId)
+      createdOrderIds.push(second.orderId!)
 
-      const superseded = await orderRow(firstId)
-      const wallet = await walletMinor(fx!.buyer.id)
+      expect((await orderRow(firstId)).status).toBe('cancelled')
       const returned = await txnByKey(`wallet_refund:${firstId}`)
+      expect(returned).not.toBeNull()
+      // Exact mirror of checkout_wallet:<id> (user_wallet debit 50 / escrow_held credit 50).
+      expect(await entriesOf(returned!.id)).toEqual(['buyer.user_wallet:credit:50', 'platform.escrow_held:debit:50'])
+      expect(await walletMinor(fx!.buyer.id)).toBe(1000n)
+    }, 60_000)
 
-      // Bad end state (audit): the order is terminal, the return never posted,
-      // and no later path will — the buyer is $2 short forever.
-      expect(superseded.status).toBe('cancelled')
-      expect(returned).toBeNull()
-      expect(wallet).toBe(950n) // should be 1000n — the 50 hold is stranded
+    it('seam module unreachable → nothing changes and the buyer gets the SAME pending order back', async () => {
+      sessionClient = fx!.buyer.client
+      const { createCheckout } = await import('@/lib/actions/checkout')
+      const a = await createCheckout({ listingId: fx!.listingId, quantity: 1, walletAmount: 0.5 })
+      expect(a.success, a.error).toBe(true)
+      createdOrderIds.push(a.orderId!)
+      const walletBefore = await walletMinor(fx!.buyer.id)
+
+      failOrderMoneyOnce = true
+      const b = await createCheckout({ listingId: fx!.listingId, quantity: 3 })
+      failOrderMoneyOnce = false
+
+      // The stale order stayed pending (nothing was cancelled), so the unique
+      // index handed the buyer that order instead of minting a second one.
+      expect(b.success, b.error).toBe(true)
+      expect(b.orderId).toBe(a.orderId)
+      expect((await orderRow(a.orderId!)).status).toBe('pending')
+      expect(await holdMinor(a.orderId!)).toBe(50n)
+      expect(await walletMinor(fx!.buyer.id)).toBe(walletBefore)
+    }, 60_000)
+
+    it('in-RPC fault after the transition rolls back the cancel too; the retry converges', async () => {
+      sessionClient = fx!.buyer.client
+      const { createCheckout } = await import('@/lib/actions/checkout')
+      const { data: pend } = await fx!.svc.from('orders').select('id').eq('buyer_id', fx!.buyer.id)
+        .eq('listing_id', fx!.listingId).eq('status', 'pending').maybeSingle()
+      let orderId = (pend as any)?.id as string | undefined
+      if (!orderId) {
+        const r = await createCheckout({ listingId: fx!.listingId, quantity: 1, walletAmount: 0.5 })
+        expect(r.success, r.error).toBe(true)
+        orderId = r.orderId!
+        createdOrderIds.push(orderId)
+      }
+      expect(await holdMinor(orderId)).toBe(50n)
+      const walletBefore = await walletMinor(fx!.buyer.id)
+
+      const err = withFault('order_cancel_return_wallet:after_transition',
+        `SELECT public.order_cancel_return_wallet('${orderId}'::uuid, 'fault-test')`)
+      expect(err).toMatch(/injected fault at order_cancel_return_wallet:after_transition/)
+
+      expect((await orderRow(orderId)).status).toBe('pending')
+      expect(await txnByKey(`order:${orderId}:CANCELLED:fault-test`)).toBeNull()
+      expect(await txnByKey(`wallet_refund:${orderId}`)).toBeNull()
+      expect(await walletMinor(fx!.buyer.id)).toBe(walletBefore)
+
+      const { cancelOrderReturnWallet } = await import('@/lib/wallet/order-money')
+      const ok = await cancelOrderReturnWallet(orderId, 'fault-test')
+      expect(ok.changed).toBe(true)
+      expect(ok.walletTxnId).not.toBeNull()
+      expect((await orderRow(orderId)).status).toBe('cancelled')
+      expect(await walletMinor(fx!.buyer.id)).toBe(walletBefore + 50n)
+      // Idempotent replay: same journals, no double credit.
+      const again = await cancelOrderReturnWallet(orderId, 'fault-test')
+      expect(again.changed).toBe(false)
+      expect(await walletMinor(fx!.buyer.id)).toBe(walletBefore + 50n)
     }, 60_000)
   })
 
-  // ── DB-015 (b): webhook refund credit ────────────────────────────────────
-  describe('DB-015b — REFUND_COMPLETED webhook: transition(REFUNDED) then a swallowed wallet credit', () => {
-    it('a wallet RPC failure loses the buyer credit while the event is marked processed (provider never retries)', async () => {
+  // ── DB-015b: webhook refund credit ───────────────────────────────────────
+  describe('DB-015b — REFUND_COMPLETED runs REFUNDED + wallet credit as one RPC; a failure is retried by the provider', () => {
+    const sig = { 'x-fake-signature': process.env.FAKE_WEBHOOK_SECRET ?? 'fake-secret' }
+
+    it('seam failure → event failed + 500, order still paid; the provider replay is re-claimed and converges', async () => {
       const { handleWebhook } = await import('@/lib/payments/webhook-router')
-      const sig = { 'x-fake-signature': process.env.FAKE_WEBHOOK_SECRET ?? 'fake-secret' }
-      // one_pending_order_per_buyer_listing: park the pending order DB-015a left behind.
-      await fx!.svc.from('orders').update({ status: 'cancelled' }).eq('buyer_id', fx!.buyer.id).eq('listing_id', fx!.listingId).eq('status', 'pending')
-      const { data: o, error } = await fx!.svc.from('orders').insert({
-        buyer_id: fx!.buyer.id, seller_id: fx!.seller.id, listing_id: fx!.listingId, quantity: 1,
-        unit_price: 50, subtotal: 50, platform_fee_rate: 8, payment_processing_fee_rate: 0,
-        platform_fee: 4, payment_processing_fee: 0, total_amount: 50, seller_payout: 46, currency: CUR,
+      await parkPendingOrders()
+      const orderId = await insertOrder({
+        unit_price: 50, subtotal: 50, platform_fee_rate: 8, platform_fee: 4, total_amount: 50, seller_payout: 46,
         status: 'pending', escrow_status: 'pending',
-      }).select('id').single()
-      if (error) throw new Error(`order insert: ${error.message}`)
-      const orderId = (o as any).id as string
-      createdOrderIds.push(orderId)
+      })
       const chargeId = `fake_${orderId}`
       const body = (status: string) => JSON.stringify({ chargeId, orderId, status, amountMinor: '5000', currency: CUR })
+      const eventStatus = async () => (await fx!.svc.from('webhook_events').select('status')
+        .eq('provider', 'fake').eq('provider_event_id', `${chargeId}:refunded`).single()).data as any
 
       const paid = await handleWebhook('fake', sig, body('paid'))
       expect(paid.ok, JSON.stringify(paid)).toBe(true)
-      expect((await orderRow(orderId)).status).toBe('paid')
       const walletBefore = await walletMinor(fx!.buyer.id)
 
-      failRefundToWallet = true
-      const refunded = await handleWebhook('fake', sig, body('refunded'))
-      failRefundToWallet = false
+      failOrderMoneyOnce = true
+      const failed = await handleWebhook('fake', sig, body('refunded'))
+      failOrderMoneyOnce = false
+      expect(failed.ok).toBe(false)
+      expect(failed.status).toBe(500)
+      expect((await eventStatus()).status).toBe('failed')
+      expect((await orderRow(orderId)).status).toBe('paid')
+      expect(await walletMinor(fx!.buyer.id)).toBe(walletBefore)
 
-      const { data: ev } = await fx!.svc.from('webhook_events').select('status')
-        .eq('provider', 'fake').eq('provider_event_id', `${chargeId}:refunded`).single()
-      const order = await orderRow(orderId)
-      const credit = await txnByKey(`wallet_refund:${orderId}`)
-      const walletAfter = await walletMinor(fx!.buyer.id)
-
-      // Provider retry is deduped, so the lost credit is permanent.
+      // The provider retries on 500. A failed event is claimed again (DB-015d).
       const replay = await handleWebhook('fake', sig, body('refunded'))
+      expect(replay.ok, JSON.stringify(replay)).toBe(true)
+      expect((replay as any).deduped).toBeUndefined()
+      expect((await eventStatus()).status).toBe('processed')
+      expect((await orderRow(orderId)).status).toBe('refunded')
+      expect(await txnByKey(`wallet_refund:${orderId}`)).not.toBeNull()
+      expect(await walletMinor(fx!.buyer.id)).toBe(walletBefore + 5000n)
 
-      expect(refunded.ok).toBe(true)
-      expect((ev as any).status).toBe('processed')
-      expect(order.status).toBe('refunded')
-      expect(credit).toBeNull()
-      expect(walletAfter).toBe(walletBefore) // buyer never got the 5000 back
-      expect((replay as any).deduped).toBe(true)
+      // A processed event still dedupes.
+      const dup = await handleWebhook('fake', sig, body('refunded'))
+      expect((dup as any).deduped).toBe(true)
+      expect(await walletMinor(fx!.buyer.id)).toBe(walletBefore + 5000n)
+    }, 60_000)
+
+    it('in-RPC fault after the REFUNDED transition leaves the order paid, escrow untouched, no credit', async () => {
+      const { handleWebhook } = await import('@/lib/payments/webhook-router')
+      await parkPendingOrders()
+      const orderId = await insertOrder({
+        unit_price: 30, subtotal: 30, platform_fee_rate: 8, platform_fee: 2.4, total_amount: 30, seller_payout: 27.6,
+        status: 'pending', escrow_status: 'pending',
+      })
+      const chargeId = `fake_${orderId}`
+      const paid = await handleWebhook('fake', sig, JSON.stringify({ chargeId, orderId, status: 'paid', amountMinor: '3000', currency: CUR }))
+      expect(paid.ok).toBe(true)
+      const walletBefore = await walletMinor(fx!.buyer.id)
+      const refundsBefore = await platformMinor('refunds')
+
+      const err = withFault('order_refund_to_wallet:after_transition',
+        `SELECT public.order_refund_to_wallet('${orderId}'::uuid, 'fault', 3000)`)
+      expect(err).toMatch(/injected fault at order_refund_to_wallet:after_transition/)
+
+      const o = await orderRow(orderId)
+      expect(o.status).toBe('paid')
+      expect(o.escrow_status).toBe('held')
+      expect(await txnByKey(`order:${orderId}:REFUNDED:fault`)).toBeNull()
       expect(await txnByKey(`wallet_refund:${orderId}`)).toBeNull()
+      expect(await platformMinor('refunds')).toBe(refundsBefore)
+      expect(await walletMinor(fx!.buyer.id)).toBe(walletBefore)
     }, 60_000)
   })
 
-  // ── DB-015 (c): withdrawal cancel / reject ───────────────────────────────
-  describe('DB-015c — withdrawal cancel/reject flip status BEFORE the ledger reversal', () => {
+  // ── DB-015c: withdrawal cancel / reject ──────────────────────────────────
+  describe('DB-015c — withdrawal cancel/reject reverse the hold FIRST, in the same transaction', () => {
     async function makeHeldRequest(amountMinor: bigint, suffix: string) {
       await fundSeller(fx!.seller.id, amountMinor, suffix)
       const { data: req, error } = await fx!.svc.from('withdrawal_requests').insert({
@@ -300,10 +402,8 @@ describe.skipIf(!hasEnv)('DB-015/016/017 — money-path seams (integration)', ()
       return (data as any).status as string
     }
 
-    it('cancelWithdrawalRequest: reversal refused (hold already paid out) but the row still flips to cancelled', async () => {
-      const id = await makeHeldRequest(30_00n, 'cancel')
-      // FAULT: the hold was settled out of band (ops paid it) — the ledger
-      // refuses the reversal. The app flips status first and only then asks.
+    it('cancel: hold already paid out → refused, row stays pending, balance untouched', async () => {
+      const id = await makeHeldRequest(30_00n, 'cancel-refused')
       const { error: pe } = await fx!.svc.rpc('withdrawal_payout', { p_request_id: id } as any)
       if (pe) throw new Error(`withdrawal_payout: ${pe.message}`)
       const availBefore = await sellerAvailMinor(fx!.seller.id)
@@ -312,37 +412,95 @@ describe.skipIf(!hasEnv)('DB-015/016/017 — money-path seams (integration)', ()
       const { cancelWithdrawalRequest } = await import('@/lib/actions/withdrawals')
       const res = await cancelWithdrawalRequest(id)
 
-      // Bad end state: "cancelled" (UI: funds stay in your wallet) while the
-      // money is in external_payout and nothing came back.
-      expect(res.success).toBe(true)
-      expect(await requestStatus(id)).toBe('cancelled')
+      expect(res.success).toBe(false)
+      expect(res.error).toMatch(/already paid out/)
+      expect(await requestStatus(id)).toBe('pending')
       expect(await txnByKey(`withdrawal_reversal:${id}`)).toBeNull()
       expect(await sellerAvailMinor(fx!.seller.id)).toBe(availBefore)
     }, 60_000)
 
-    it('rejectWithdrawalRequest: same ordering — rejected + "Funds stay in your wallet" with nothing returned', async () => {
-      const id = await makeHeldRequest(20_00n, 'reject')
+    it('cancel: normal path returns the hold and flips to cancelled; a replay is a no-op', async () => {
+      const id = await makeHeldRequest(25_00n, 'cancel-ok')
+      const availBefore = await sellerAvailMinor(fx!.seller.id)
+      sessionClient = fx!.seller.client
+      const { cancelWithdrawalRequest } = await import('@/lib/actions/withdrawals')
+      const res = await cancelWithdrawalRequest(id)
+      expect(res.success, res.error).toBe(true)
+      expect(await requestStatus(id)).toBe('cancelled')
+      expect(await txnByKey(`withdrawal_reversal:${id}`)).not.toBeNull()
+      expect(await sellerAvailMinor(fx!.seller.id)).toBe(availBefore + 2500n)
+      const again = await cancelWithdrawalRequest(id)
+      expect(again.success).toBe(true)
+      expect(await sellerAvailMinor(fx!.seller.id)).toBe(availBefore + 2500n)
+    }, 60_000)
+
+    it('cancel: a stranger cannot cancel someone else\'s request through the RPC', async () => {
+      const id = await makeHeldRequest(10_00n, 'cancel-stranger')
+      sessionClient = fx!.buyer.client
+      const { cancelWithdrawalRequest } = await import('@/lib/actions/withdrawals')
+      const res = await cancelWithdrawalRequest(id)
+      expect(res.success).toBe(false)
+      expect(await requestStatus(id)).toBe('pending')
+      expect(await txnByKey(`withdrawal_reversal:${id}`)).toBeNull()
+    }, 60_000)
+
+    it('reject: hold already paid out → refused, no "Funds stay in your wallet" notification', async () => {
+      const id = await makeHeldRequest(20_00n, 'reject-refused')
       const { error: pe } = await fx!.svc.rpc('withdrawal_payout', { p_request_id: id } as any)
       if (pe) throw new Error(`withdrawal_payout: ${pe.message}`)
       const availBefore = await sellerAvailMinor(fx!.seller.id)
+      const { count: notifBefore } = await fx!.svc.from('notifications').select('id', { count: 'exact', head: true })
+        .eq('user_id', fx!.seller.id).eq('type', 'withdrawal_rejected')
 
       sessionClient = fx!.admin.client
       const { rejectWithdrawalRequest } = await import('@/lib/actions/withdrawals')
       const res = await rejectWithdrawalRequest({ requestId: id, reason: 'guard test' })
 
-      const { data: notif } = await fx!.svc.from('notifications').select('message')
-        .eq('user_id', fx!.seller.id).eq('type', 'withdrawal_rejected').order('created_at', { ascending: false }).limit(1).maybeSingle()
-
-      expect(res.success).toBe(true)
-      expect(await requestStatus(id)).toBe('rejected')
+      const { count: notifAfter } = await fx!.svc.from('notifications').select('id', { count: 'exact', head: true })
+        .eq('user_id', fx!.seller.id).eq('type', 'withdrawal_rejected')
+      expect(res.success).toBe(false)
+      expect(await requestStatus(id)).toBe('pending')
       expect(await txnByKey(`withdrawal_reversal:${id}`)).toBeNull()
       expect(await sellerAvailMinor(fx!.seller.id)).toBe(availBefore)
-      expect((notif as any)?.message ?? '').toMatch(/Funds stay in your wallet/)
+      expect(notifAfter).toBe(notifBefore)
+    }, 60_000)
+
+    it('reject: normal path returns the hold, flips to rejected and notifies truthfully', async () => {
+      const id = await makeHeldRequest(15_00n, 'reject-ok')
+      const availBefore = await sellerAvailMinor(fx!.seller.id)
+      sessionClient = fx!.admin.client
+      const { rejectWithdrawalRequest } = await import('@/lib/actions/withdrawals')
+      const res = await rejectWithdrawalRequest({ requestId: id, reason: 'guard test ok' })
+      expect(res.success, res.error).toBe(true)
+      expect(await requestStatus(id)).toBe('rejected')
+      expect(await txnByKey(`withdrawal_reversal:${id}`)).not.toBeNull()
+      expect(await sellerAvailMinor(fx!.seller.id)).toBe(availBefore + 1500n)
+      const { data: notif } = await fx!.svc.from('notifications').select('message').eq('user_id', fx!.seller.id)
+        .eq('type', 'withdrawal_rejected').order('created_at', { ascending: false }).limit(1).maybeSingle()
+      expect((notif as any)?.message ?? '').toMatch(/guard test ok\. Funds stay in your wallet/)
+    }, 60_000)
+
+    it('in-RPC fault after the reversal rolls the reversal back with the flip', async () => {
+      const id = await makeHeldRequest(12_00n, 'cancel-fault')
+      const availBefore = await sellerAvailMinor(fx!.seller.id)
+      const err = withFault('withdrawal_cancel:after_reversal',
+        `SELECT public.withdrawal_cancel('${id}'::uuid, '${fx!.seller.id}'::uuid)`)
+      expect(err).toMatch(/injected fault at withdrawal_cancel:after_reversal/)
+      expect(await requestStatus(id)).toBe('pending')
+      expect(await txnByKey(`withdrawal_reversal:${id}`)).toBeNull()
+      expect(await sellerAvailMinor(fx!.seller.id)).toBe(availBefore)
+
+      const err2 = withFault('withdrawal_reject:after_reversal',
+        `SELECT public.withdrawal_reject('${id}'::uuid, '${fx!.admin.id}'::uuid, 'x')`)
+      expect(err2).toMatch(/injected fault at withdrawal_reject:after_reversal/)
+      expect(await requestStatus(id)).toBe('pending')
+      expect(await txnByKey(`withdrawal_reversal:${id}`)).toBeNull()
+      expect(await sellerAvailMinor(fx!.seller.id)).toBe(availBefore)
     }, 60_000)
   })
 
-  // ── DB-016 (a): instant-delivery inventory ───────────────────────────────
-  describe('DB-016a — deliverCodeToBuyer: unlocked select, then two separate UPDATEs', () => {
+  // ── DB-016a: instant-delivery inventory ──────────────────────────────────
+  describe('DB-016a — deliverCodeToBuyer claims one code atomically (FOR UPDATE SKIP LOCKED)', () => {
     async function addCodes(n: number, prefix: string) {
       const { encryptDeliveryData } = await import('@/lib/crypto/delivery-encryption')
       const rows = Array.from({ length: n }, (_, i) => ({
@@ -352,32 +510,23 @@ describe.skipIf(!hasEnv)('DB-015/016/017 — money-path seams (integration)', ()
       const { error } = await fx!.svc.from('instant_delivery_inventory').insert(rows)
       if (error) throw new Error(`inventory insert: ${error.message}`)
     }
-    async function paidOrder(suffix: string) {
-      const { data, error } = await fx!.svc.from('orders').insert({
-        buyer_id: fx!.buyer.id, seller_id: fx!.seller.id, listing_id: fx!.listingId, quantity: 1,
-        unit_price: 1, subtotal: 1, platform_fee_rate: 0, payment_processing_fee_rate: 0,
-        platform_fee: 0, payment_processing_fee: 0, total_amount: 1, seller_payout: 1, currency: CUR,
-        status: 'paid', escrow_status: 'held', order_number: `GT-ID-${suffix}-${tag()}`,
-      }).select('id').single()
-      if (error) throw new Error(`paid order insert: ${error.message}`)
-      createdOrderIds.push((data as any).id)
-      return (data as any).id as string
+    async function resetInventory() {
+      await fx!.svc.from('orders').update({ instant_delivery_inventory_id: null, instant_delivery_code: null })
+        .eq('listing_id', fx!.listingId).not('instant_delivery_inventory_id', 'is', null)
+      await fx!.svc.from('instant_delivery_inventory').delete().eq('listing_id', fx!.listingId)
     }
+    const paidOrder = (suffix: string) => insertOrder({ status: 'paid', escrow_status: 'held', order_number: `GT-ID-${suffix}-${tag()}` })
     async function soldCount() {
       const { count } = await fx!.svc.from('instant_delivery_inventory').select('id', { count: 'exact', head: true })
         .eq('listing_id', fx!.listingId).eq('status', 'sold')
       return count ?? 0
     }
-
-    it('a failed order UPDATE after the inventory UPDATE burns the code, and the retry consumes a second one', async () => {
-      await addCodes(2, 'burn')
-      const orderId = await paidOrder('burn')
-      // The action runs on the session client; give it the service client so
-      // RLS is not what we are measuring, then FAULT the orders UPDATE once.
+    /** Session client whose orders UPDATE fails once (the plaintext stamp). */
+    function failingOrdersUpdateOnce() {
       const svc = fx!.svc
       const realFrom = svc.from.bind(svc)
       let failOnce = true
-      sessionClient = new Proxy(svc, {
+      return new Proxy(svc, {
         get(target, prop, recv) {
           if (prop !== 'from') return Reflect.get(target, prop, recv)
           return (table: string) => {
@@ -386,124 +535,142 @@ describe.skipIf(!hasEnv)('DB-015/016/017 — money-path seams (integration)', ()
             return new Proxy(q, {
               get(qt, qp, qr) {
                 if (qp !== 'update') return Reflect.get(qt, qp, qr)
-                return () => { failOnce = false; return { eq: async () => ({ error: { message: 'injected: orders update failed' } }) } }
+                return () => { failOnce = false; return { eq: () => ({ is: async () => ({ error: { message: 'injected: orders update failed' } }) }) } }
               },
             })
           }
         },
       }) as any
+    }
+
+    it('a failed order UPDATE after the claim no longer burns a code; the retry returns the same code', async () => {
+      await resetInventory()
+      await addCodes(2, 'burn')
+      const orderId = await paidOrder('burn')
+      sessionClient = failingOrdersUpdateOnce()
       const { deliverCodeToBuyer } = await import('@/lib/actions/instant-delivery')
 
       const first = await deliverCodeToBuyer(orderId, fx!.buyer.id)
       const afterFirst = await orderRow(orderId)
       const second = await deliverCodeToBuyer(orderId, fx!.buyer.id)
 
-      // Bad end state: two codes sold for one order; the first is orphaned.
-      expect(first.success).toBe(true)
-      expect(afterFirst.instant_delivery_inventory_id).toBeNull()
+      expect(first.success, first.error).toBe(true)
+      expect(afterFirst.instant_delivery_inventory_id).not.toBeNull() // stamped inside the claim
       expect(second.success).toBe(true)
-      expect(second.code).not.toBe(first.code)
-      expect(await soldCount()).toBe(2)
+      expect(second.code).toBe(first.code)
+      expect(await soldCount()).toBe(1)
     }, 60_000)
 
-    it('two concurrent orders can be handed the SAME code (no row lock between select and update)', async () => {
-      await fx!.svc.from('instant_delivery_inventory').delete().eq('listing_id', fx!.listingId)
+    it('two concurrent orders receive DIFFERENT codes', async () => {
+      await resetInventory()
       await addCodes(2, 'race')
       const a = await paidOrder('race-a')
       const b = await paidOrder('race-b')
-      // Deterministic interleaving: both callers finish their unlocked
-      // `select … limit(1).single()` before either issues its UPDATE (a
-      // barrier on the inventory read). Any real two-request race is this.
-      const svc = fx!.svc
-      const realFrom = svc.from.bind(svc)
-      let arrived = 0
-      let release!: () => void
-      const gate = new Promise<void>((r) => { release = r })
-      sessionClient = new Proxy(svc, {
-        get(target, prop, recv) {
-          if (prop !== 'from') return Reflect.get(target, prop, recv)
-          return (table: string) => {
-            const q = realFrom(table as any)
-            if (table !== 'instant_delivery_inventory') return q
-            return new Proxy(q, {
-              get(qt, qp, qr) {
-                const v = Reflect.get(qt, qp, qr)
-                if (qp !== 'select') return typeof v === 'function' ? v.bind(qt) : v
-                return (...a: any[]) => {
-                  const sel = v.apply(qt, a)
-                  const realSingle = sel.single.bind(sel)
-                  sel.single = async () => {
-                    const row = await realSingle()
-                    if (++arrived >= 2) release()
-                    await Promise.race([gate, new Promise((r) => setTimeout(r, 3000))])
-                    return row
-                  }
-                  return sel
-                }
-              },
-            })
-          }
-        },
-      }) as any
+      sessionClient = fx!.svc
       const { deliverCodeToBuyer } = await import('@/lib/actions/instant-delivery')
       const [ra, rb] = await Promise.all([deliverCodeToBuyer(a, fx!.buyer.id), deliverCodeToBuyer(b, fx!.buyer.id)])
       expect(ra.success && rb.success, `${ra.error} / ${rb.error}`).toBe(true)
-      // RED: the two buyers received the same code.
-      expect(ra.code).toBe(rb.code)
+      expect(ra.code).not.toBe(rb.code)
+      expect(await soldCount()).toBe(2)
+      const { data: inv } = await fx!.svc.from('instant_delivery_inventory').select('sold_to_order_id').eq('listing_id', fx!.listingId).eq('status', 'sold')
+      expect((inv ?? []).map((r: any) => r.sold_to_order_id).sort()).toEqual([a, b].sort())
+    }, 60_000)
+
+    it('in-RPC fault after the inventory UPDATE leaves the code available and the order unstamped', async () => {
+      await resetInventory()
+      await addCodes(1, 'fault')
+      const orderId = await paidOrder('fault')
+      const err = withFault('inventory_claim_for_order:after_inventory',
+        `SELECT public.inventory_claim_for_order('${orderId}'::uuid)`)
+      expect(err).toMatch(/injected fault at inventory_claim_for_order:after_inventory/)
+      expect(await soldCount()).toBe(0)
+      expect((await orderRow(orderId)).instant_delivery_inventory_id).toBeNull()
+
+      sessionClient = fx!.svc
+      const { deliverCodeToBuyer } = await import('@/lib/actions/instant-delivery')
+      const ok = await deliverCodeToBuyer(orderId, fx!.buyer.id)
+      expect(ok.success).toBe(true)
+      expect(ok.code).toBe('fault-0')
+      const other = await paidOrder('fault-none')
+      const none = await deliverCodeToBuyer(other, fx!.buyer.id)
+      expect(none.success).toBe(false)
+      expect(none.error).toMatch(/No codes available/)
+      expect(await soldCount()).toBe(1)
     }, 60_000)
   })
 
-  // ── DB-016 (b): promo usage counter ──────────────────────────────────────
-  describe('DB-016b — recordPromoUsage: SELECT total_used then UPDATE n+1', () => {
-    it('N concurrent redemptions undercount total_used while N usage rows exist', async () => {
+  // ── DB-016b: promo usage counter ─────────────────────────────────────────
+  describe('DB-016b — recordPromoUsage is one RPC under the promo row lock', () => {
+    async function makePromo() {
       const { data: promo, error } = await fx!.svc.from('promo_codes').insert({
         code: `GT${tag().toUpperCase()}`, type: 'flat', value: 1, usage_limit: 100, per_user_limit: 100, is_active: true,
       }).select('id').single()
       if (error) throw new Error(`promo insert: ${error.message}`)
-      const promoId = (promo as any).id as string
-      createdPromoIds.push(promoId)
-      sessionClient = fx!.svc
+      createdPromoIds.push((promo as any).id)
+      return (promo as any).id as string
+    }
+    const totalUsed = async (id: string) => ((await fx!.svc.from('promo_codes').select('total_used').eq('id', id).single()).data as any).total_used as number
+    const usages = async (id: string) => (await fx!.svc.from('promo_code_usages').select('id', { count: 'exact', head: true }).eq('promo_code_id', id)).count ?? 0
+
+    it('N concurrent redemptions on N orders → N usage rows and total_used = N; a replay does not double-count', async () => {
+      const promoId = await makePromo()
+      sessionClient = fx!.buyer.client // the write no longer runs on the session client
       const { recordPromoUsage } = await import('@/lib/actions/promo')
       const N = 12
-      await Promise.all(Array.from({ length: N }, () =>
-        recordPromoUsage({ promoCodeId: promoId, orderId: fx!.completedOrderId, discountAmount: 1, userId: fx!.buyer.id })))
-      const { count } = await fx!.svc.from('promo_code_usages').select('id', { count: 'exact', head: true }).eq('promo_code_id', promoId)
-      const { data: after } = await fx!.svc.from('promo_codes').select('total_used').eq('id', promoId).single()
-      expect(count).toBe(N)
-      // RED: lost updates — the counter is below the number of usages.
-      expect((after as any).total_used).toBeLessThan(N)
+      await parkPendingOrders()
+      const orderIds: string[] = []
+      for (let i = 0; i < N; i++) orderIds.push(await insertOrder({ status: 'paid', escrow_status: 'held', order_number: `GT-PR-${i}-${tag()}` }))
+      await Promise.all(orderIds.map((orderId) =>
+        recordPromoUsage({ promoCodeId: promoId, orderId, discountAmount: 1, userId: fx!.buyer.id })))
+      expect(await usages(promoId)).toBe(N)
+      expect(await totalUsed(promoId)).toBe(N)
+      await recordPromoUsage({ promoCodeId: promoId, orderId: orderIds[0], discountAmount: 1, userId: fx!.buyer.id })
+      expect(await usages(promoId)).toBe(N)
+      expect(await totalUsed(promoId)).toBe(N)
+    }, 60_000)
+
+    it('in-RPC fault after the usage insert leaves no row and no increment', async () => {
+      const promoId = await makePromo()
+      const err = withFault('promo_usage_record:after_usage',
+        `SELECT public.promo_usage_record('${promoId}'::uuid, '${fx!.completedOrderId}'::uuid, '${fx!.buyer.id}'::uuid, 1)`)
+      expect(err).toMatch(/injected fault at promo_usage_record:after_usage/)
+      expect(await usages(promoId)).toBe(0)
+      expect(await totalUsed(promoId)).toBe(0)
     }, 60_000)
   })
 
-  // ── DB-017: referral commission never recorded ───────────────────────────
-  describe('DB-017 — confirmOrderReceipt records cashback but no referral commission', () => {
-    it('a referred buyer completing an order leaves referral_earnings empty', async () => {
-      // admin referred the buyer.
+  // ── DB-017: referral commission ──────────────────────────────────────────
+  describe('DB-017 — confirmOrderReceipt records the referrer\'s commission next to cashback', () => {
+    it('a referred buyer completing an order writes one purchase_commission row (10% of platform_fee)', async () => {
       const { error: re } = await fx!.svc.from('profiles').update({ referred_by: fx!.admin.id }).eq('id', fx!.buyer.id)
       if (re) throw new Error(`profiles.referred_by: ${re.message}`)
-      const { data: o, error } = await fx!.svc.from('orders').insert({
-        buyer_id: fx!.buyer.id, seller_id: fx!.seller.id, listing_id: fx!.listingId, quantity: 1,
+      const orderId = await insertOrder({
         unit_price: 100, subtotal: 100, platform_fee_rate: 2, payment_processing_fee_rate: 5,
-        platform_fee: 2, payment_processing_fee: 5, total_amount: 107, seller_payout: 92, currency: CUR,
+        platform_fee: 2, payment_processing_fee: 5, total_amount: 107, seller_payout: 92,
         status: 'delivered', escrow_status: 'held', delivered_at: new Date().toISOString(),
-      }).select('id').single()
-      if (error) throw new Error(`order insert: ${error.message}`)
-      const orderId = (o as any).id as string
-      createdOrderIds.push(orderId)
-
+      })
       sessionClient = fx!.buyer.client
       const { confirmOrderReceipt } = await import('@/lib/actions/orders')
       const res = await confirmOrderReceipt(orderId)
       expect(res.success, res.error).toBe(true)
       expect((await orderRow(orderId)).status).toBe('completed')
-      // fire-and-forget cashback needs a tick
-      await new Promise((r) => setTimeout(r, 1500))
+      await new Promise((r) => setTimeout(r, 1500)) // fire-and-forget cashback + commission
 
       const { data: cashback } = await fx!.svc.from('loyalty_credits').select('id').eq('order_id', orderId)
-      const { data: commission } = await fx!.svc.from('referral_earnings').select('id, amount').eq('order_id', orderId)
+      const { data: commission } = await fx!.svc.from('referral_earnings')
+        .select('referrer_id, referred_user_id, amount, status, type').eq('order_id', orderId)
       expect((cashback ?? []).length).toBe(1)
-      // RED: no commission row for the referrer.
-      expect((commission ?? []).length).toBe(0)
+      expect(commission).toHaveLength(1)
+      expect((commission as any)[0]).toMatchObject({
+        referrer_id: fx!.admin.id, referred_user_id: fx!.buyer.id, type: 'purchase_commission', status: 'pending',
+      })
+      expect(Number((commission as any)[0].amount)).toBe(0.2)
+
+      // Once per order: a second recorder run (replayed confirm / auto-release) is a no-op.
+      const { recordReferralCommission } = await import('@/lib/referral/commission')
+      await recordReferralCommission(orderId)
+      const { count } = await fx!.svc.from('referral_earnings').select('id', { count: 'exact', head: true }).eq('order_id', orderId)
+      expect(count).toBe(1)
     }, 60_000)
   })
 })
