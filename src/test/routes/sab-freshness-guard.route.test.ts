@@ -56,14 +56,14 @@ vi.mock('@/lib/supabase/service', () => ({
 
 import { NextRequest } from 'next/server'
 
+import { GET } from '@/app/api/cron/check-sab-freshness/route'
 import {
-  GET,
   evaluate,
   buildAlertBody,
   FRESHNESS_CHECKS,
   FRESHNESS_ALERT_EMAIL,
   type FreshnessCheck,
-} from '@/app/api/cron/check-sab-freshness/route'
+} from '@/app/api/cron/check-sab-freshness/freshness-checks'
 import { sendAdminNoticeEmail } from '@/lib/email'
 
 const SECRET = 'test-cron-secret'
