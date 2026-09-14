@@ -13,7 +13,7 @@
  */
 
 import { sellerDisplayName } from '@/lib/seller/identity'
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import * as Popover from '@radix-ui/react-popover'
 import { Check, ChevronDown, Search, SlidersHorizontal, Gamepad2, X, ShieldCheck } from 'lucide-react'
@@ -516,6 +516,9 @@ function SearchableFilterChip({
     }
   }
 
+  // Stable id linking the combobox input to the listbox it controls.
+  const listboxId = useId()
+
   return (
     // V15w — Use Radix Popover.Root with Portal so the dropdown panel
     // renders at <body> root, escaping any parent stacking context that
@@ -547,6 +550,13 @@ function SearchableFilterChip({
             onKeyDown={onKeyDown}
             placeholder={placeholder}
             aria-label={`Filter by ${label}`}
+            // role=combobox: aria-expanded/aria-haspopup are not valid on the
+            // input's implicit `textbox` role, which is what eslint-plugin-jsx-a11y
+            // was reporting. This input IS the combobox trigger (see the comment
+            // above), so declaring the role is the accurate fix, not dropping the
+            // attributes.
+            role="combobox"
+            aria-controls={listboxId}
             aria-expanded={open}
             aria-haspopup="listbox"
             className={cn(
@@ -598,6 +608,8 @@ function SearchableFilterChip({
 
       <Popover.Portal>
         <Popover.Content
+          id={listboxId}
+          role="listbox"
           sideOffset={6}
           align="start"
           // Don't steal focus from the input on open/close.

@@ -179,7 +179,7 @@ export default function EditReviewModal({
             <div className="mx-6 mt-4 p-3 bg-warning-bg border border-yellow-500/20 rounded-lg flex items-start gap-2">
               <AlertCircle className="w-4 h-4 text-warning flex-shrink-0 mt-0.5" />
               <p className="text-xs text-yellow-200">
-                Edited reviews will display an "Edited" badge. You can edit once per 24 hours.
+                Edited reviews will display an &quot;Edited&quot; badge. You can edit once per 24 hours.
               </p>
             </div>
 

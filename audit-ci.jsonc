@@ -1,0 +1,65 @@
+// npm audit triage — DropMarket
+//
+// Reviewed 2026-09-13 on branch fix/perf-quality, following the reachability
+// analysis in docs/audit/2026-09-11/05-performance-quality.md §4.
+//
+// FIXED in that pass (no longer listed by `npm audit`):
+//   ws              8.19.0 -> 8.21.3 via the "overrides" block in package.json.
+//                   The only genuinely runtime-resident vulnerability: pulled by
+//                   @supabase/realtime-js and @vercel/functions, both live server
+//                   paths. GHSA-96hv-2xvq-fx4p (memory-exhaustion DoS) +
+//                   GHSA-58qx-3vcg-4xpx (uninitialized memory disclosure).
+//                   An override rather than a dependency bump because nothing
+//                   declares ws directly.
+//   @dicebear/*     9.3.1 -> 9.4.3. GHSA-gcr2-9v8m-gq45 / GHSA-mr9r-mww3-v6gv,
+//                   SVG injection through unescaped rotate / fontSize /
+//                   fontWeight options. Our single createAvatar call
+//                   (src/components/ui/avatar-upload.tsx) passes only seed and
+//                   size, so it was never exposed — but 9.4.3 is a patch bump
+//                   with no API change, so there is no reason to carry it.
+//                   NOTE: `npm audit fix` proposes @dicebear/core@10, which
+//                   requires Node >=22 and has no matching @dicebear/collection
+//                   release. Do not take it.
+//
+// The advisories below are ALLOWLISTED as not reachable in this deployment.
+// Each line records why. Re-triage whenever the reason stops holding — the
+// trigger conditions are written out so that is checkable, not a judgement call.
+{
+  "$schema": "https://github.com/IBM/audit-ci/raw/main/docs/schema.json",
+
+  // Fail CI on anything high or above that is NOT allowlisted below.
+  "high": true,
+  "allowlist": [
+    // ── Dev / build-only. Never in a deployed bundle. ────────────────────────
+    // vitest's critical (GHSA-5xrq-8626-4rwp, arbitrary file read/exec) needs
+    // the Vitest UI server listening; this repo never runs `vitest --ui`.
+    "vitest", "@vitest/mocker", "vite", "vite-node", "esbuild",
+    "eslint-config-next", "@next/eslint-plugin-next",
+    "glob", "minimatch", "brace-expansion", "picomatch", "js-yaml", "flatted",
+    "browserslist", "baseline-browser-mapping", "ajv", "nanoid",
+    // postcss processes only first-party CSS at build time (Tailwind/Next).
+    "postcss", "postcss-selector-parser", "qs",
+
+    // ── Reachable in the dependency tree, vulnerable code path never called ──
+    // mailparser is a hard runtime dep of resend, but resend only calls
+    // simpleParser in its raw-email download/forward helper. We call
+    // .emails.send() and nothing else. nodemailer and linkify-it are reached
+    // only THROUGH mailparser; neither is imported anywhere in src/.
+    // RE-TRIAGE IMMEDIATELY if any resend inbound/forward API is adopted.
+    "mailparser", "nodemailer", "linkify-it",
+
+    // ── next@14.2.35: 23 advisories, both criticals structurally N/A ─────────
+    // GHSA-p293-qw3h-jr36  RCE on Windows-hosted servers — we deploy Linux.
+    // GHSA-2xp9-vwfh-vxw4  RCE in Image Optimization when AVIF is used —
+    //                      images.formats is unset, so only WebP is emitted.
+    // Also N/A by configuration: rewrite SSRF and request smuggling (no
+    // rewrites()), Pages-Router i18n bypass (no Pages Router), CSP-nonce XSS
+    // (no nonce), beforeInteractive XSS (unused), custom-server SSRF (none).
+    // GENUINELY APPLICABLE and NOT closed by this allowlist entry: the
+    // Server-Components / Server-Actions DoS family (GHSA-q4gf-8mx6-v5v3,
+    // GHSA-8h8q-6873-q5fj, GHSA-m99w-x7hq-7vfj) across 83 'use server' files.
+    // Tracked as PERF-001: take the latest 14.2.x patch deliberately, with a
+    // test pass. Do NOT accept npm audit fix's next@16 (two majors).
+    "next"
+  ]
+}

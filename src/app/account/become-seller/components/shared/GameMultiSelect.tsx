@@ -44,12 +44,16 @@ export default function GameMultiSelect({
 
   const selectedGames = games.filter((g) => selected.includes(g.id))
 
+  // Stable id linking this combobox to the listbox panel it controls.
+  const listboxId = React.useId()
+
   return (
     <div>
       <Popover.Root open={open} onOpenChange={setOpen}>
         <Popover.Trigger asChild>
           <div
             role="combobox"
+            aria-controls={listboxId}
             aria-expanded={open}
             aria-invalid={invalid || undefined}
             aria-label="Select the games you will sell"
@@ -80,6 +84,8 @@ export default function GameMultiSelect({
 
         <Popover.Portal>
           <Popover.Content
+          id={listboxId}
+          role="listbox"
             align="start"
             sideOffset={6}
             style={{ width: 'var(--radix-popover-trigger-width)' }}

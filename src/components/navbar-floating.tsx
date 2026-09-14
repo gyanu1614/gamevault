@@ -6,7 +6,7 @@ import SellerTierBadge from '@/components/seller/tiers/SellerTierBadge'
 import Link from 'next/link'
 import { SmartLink } from '@/components/global/SmartLink'
 import { usePathname, useRouter } from 'next/navigation'
-import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { Search, User, LogOut, Menu, X, ChevronDown, ChevronLeft, ChevronRight, Settings, Store, Package, MessageSquare, MessagesSquare, PanelLeftOpen, PanelLeftClose, PlusCircle, Heart, Wallet, Star, List, Bell, BellDot, LayoutDashboard, Activity, Gauge, Sparkles, Shield, Coins, UserCircle2, Swords, Zap, Rocket, LifeBuoy ,
   ShoppingCart,
   LayoutGrid,
@@ -960,7 +960,7 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
             <Button
               variant="ghost"
               size="icon"
-              className="h-10 w-10 shrink-0 rounded-full text-gray-300 transition-transform duration-[120ms] hover:bg-white/10 hover:text-white active:scale-[0.96] active:brightness-95 lg:hidden"
+              className="h-10 w-10 shrink-0 rounded-full text-gray-300 transition-transform transition-duration-[120ms] hover:bg-white/10 hover:text-white active:scale-[0.96] active:brightness-95 lg:hidden"
               onClick={() => {
                 // Account pages use the full desktop-parity sidebar on mobile.
                 // Marketplace pages keep the two-pane category menu.
@@ -1163,7 +1163,7 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                           onClick={() => setNotificationsOpen(false)}
                           className="animate-fade-in fixed left-0 right-0 top-full h-[100dvh] bg-black/60 sm:hidden"
                         />
-                        <div className="fixed inset-x-0 top-full sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-[27px] sm:w-[480px] sm:max-w-[92vw] animate-in fade-in-0 sm:zoom-in-95 slide-in-from-top-2 duration-200 max-sm:duration-[250ms]">
+                        <div className="fixed inset-x-0 top-full sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-[27px] sm:w-[480px] sm:max-w-[92vw] animate-in fade-in-0 sm:zoom-in-95 slide-in-from-top-2 duration-200 max-sm:animation-duration-[250ms]">
                           {/* V61 — Marketplace glass panel (was flat black):
                               near-opaque dark surface + top sheen, roomier
                               type and spacing. Capped to the dynamic viewport
@@ -1311,7 +1311,7 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                           onClick={() => setActivityOpen(false)}
                           className="animate-fade-in fixed left-0 right-0 top-full h-[100dvh] bg-black/60 sm:hidden"
                         />
-                        <div className="fixed inset-x-0 top-full sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-[27px] sm:w-[480px] sm:max-w-[92vw] animate-in fade-in-0 sm:zoom-in-95 slide-in-from-top-2 duration-200 max-sm:duration-[250ms]">
+                        <div className="fixed inset-x-0 top-full sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-[27px] sm:w-[480px] sm:max-w-[92vw] animate-in fade-in-0 sm:zoom-in-95 slide-in-from-top-2 duration-200 max-sm:animation-duration-[250ms]">
                           {/* V61 — Same glass panel as Notifications. */}
                           <div className="relative flex max-h-[calc(100dvh-7rem)] flex-col overflow-hidden rounded-lg border border-border-default bg-[#17171F] shadow-[0_24px_48px_-12px_rgba(0,0,0,0.85)] p-5 before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:h-14 before:bg-[linear-gradient(to_bottom,rgba(255,255,255,0.045),transparent)] before:content-[''] max-sm:rounded-none max-sm:rounded-b-lg max-sm:border-x-0 max-sm:border-t-0 max-sm:max-h-[calc(100dvh-60px-env(safe-area-inset-bottom)-16px)]">
                             <span aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-16 bg-[linear-gradient(to_bottom,rgba(163,230,53,0.06),transparent)]" />
@@ -1425,7 +1425,7 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                         onClick={() => setUserMenuOpen(false)}
                         className="animate-fade-in fixed left-0 right-0 top-full h-[100dvh] bg-black/60 sm:hidden"
                       />
-                      <div className="fixed inset-x-0 top-full sm:absolute sm:inset-x-auto sm:-right-6 sm:top-full sm:mt-[25px] sm:w-[360px] sm:max-w-[92vw] animate-in fade-in-0 sm:zoom-in-95 slide-in-from-top-2 duration-200 max-sm:duration-[250ms]">
+                      <div className="fixed inset-x-0 top-full sm:absolute sm:inset-x-auto sm:-right-6 sm:top-full sm:mt-[25px] sm:w-[360px] sm:max-w-[92vw] animate-in fade-in-0 sm:zoom-in-95 slide-in-from-top-2 duration-200 max-sm:animation-duration-[250ms]">
                         {/* V61 — Marketplace glass panel: near-opaque dark
                             surface + top sheen, wider (360px) with roomier
                             rows so the menu reads as a proper panel, not a
@@ -1993,7 +1993,7 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                   <div
                     aria-hidden={mobileMenuTab !== null}
                     className={cn(
-                      'absolute inset-0 overflow-y-auto overscroll-contain px-4 pb-8 pt-6 transition-transform duration-[320ms] ease-gv [-webkit-overflow-scrolling:touch]',
+                      'absolute inset-0 overflow-y-auto overscroll-contain px-4 pb-8 pt-6 transition-transform transition-duration-[320ms] ease-gv [-webkit-overflow-scrolling:touch]',
                       mobileMenuTab !== null && 'pointer-events-none -translate-x-full',
                     )}
                   >
@@ -2205,7 +2205,7 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                       <div
                         aria-hidden={mobileMenuTab === null}
                         className={cn(
-                          'absolute inset-0 flex flex-col bg-[linear-gradient(180deg,#100C18_0%,#0A0A0F_46%,#08080C_100%)] transition-transform duration-[320ms] ease-gv',
+                          'absolute inset-0 flex flex-col bg-[linear-gradient(180deg,#100C18_0%,#0A0A0F_46%,#08080C_100%)] transition-transform transition-duration-[320ms] ease-gv',
                           mobileMenuTab === null && 'pointer-events-none translate-x-full',
                         )}
                       >
@@ -2893,6 +2893,9 @@ function GlobalSearch({
   const hasResults = matches.length > 0 || optionHits.length > 0
   const open = focused && (hasResults || trimmed.length > 0)
 
+  // Stable id linking the search combobox to the results listbox it controls.
+  const listboxId = useId()
+
   return (
     <motion.div
       ref={containerRef}
@@ -2912,6 +2915,11 @@ function GlobalSearch({
           onKeyDown={onKeyDown}
           placeholder={expanded ? 'Type to search — e.g. Fortnite, Roblox, Garama…' : 'Type to search…'}
           aria-label="Search games"
+          // role=combobox: aria-expanded/aria-autocomplete are not valid on the
+          // input's implicit `textbox` role. This input is the search combobox
+          // trigger, so declaring the role is the accurate fix.
+          role="combobox"
+          aria-controls={listboxId}
           aria-autocomplete="list"
           aria-expanded={open}
           // V21/P7.s — Both states are rounded-full bordered pills. The
@@ -2963,6 +2971,8 @@ function GlobalSearch({
       <AnimatePresence>
         {open && (
           <div
+            id={listboxId}
+            role="listbox"
             // CSS entrance, not framer (rAF-stall class).
             // V53 — Opaque, matching the mega-menu fix above: this sits in the
             // same transformed navbar subtree, so its backdrop-blur doesn't

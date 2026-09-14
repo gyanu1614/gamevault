@@ -13,6 +13,7 @@
 
 'use server'
 
+import { slugify } from '@/lib/utils'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { requireAdmin } from '@/lib/actions/admin-permissions'
 import { revalidatePath } from 'next/cache'
@@ -88,15 +89,6 @@ export interface BuilderState {
 type Result<T> = { success: true; data: T } | { success: false; error: string }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
-
-function slugify(s: string) {
-  return s
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9-]+/g, '-')
-    .replace(/-+/g, '-')
-    .replace(/^-|-$/g, '')
-}
 
 // ─── READS ────────────────────────────────────────────────────────────────────
 

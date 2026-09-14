@@ -80,7 +80,7 @@ function StatusBanner({ status, rejectionReason }: { status: string; rejectionRe
         <div>
           <p className="text-sm font-semibold text-warning">Under Review</p>
           <p className="text-xs text-text-secondary mt-0.5">
-            We've received your disclosure and are verifying the information. This typically takes 1-3 business days.
+            We&apos;ve received your disclosure and are verifying the information. This typically takes 1-3 business days.
           </p>
         </div>
       </div>
@@ -188,7 +188,7 @@ export default function InformDisclosureClient({
                 <li><ChevronRight className="w-3.5 h-3.5 inline mr-1 text-text-tertiary" />${revenueThreshold.toLocaleString()}+ in gross sales</li>
               </ul>
               <p className="mt-3 text-sm text-text-tertiary">
-                You have not yet reached these thresholds. We'll notify you if this changes.
+                You have not yet reached these thresholds. We&apos;ll notify you if this changes.
               </p>
             </div>
           </div>
@@ -240,7 +240,7 @@ export default function InformDisclosureClient({
           INFORM Act Disclosure Required
         </h1>
         <p className="text-text-tertiary text-sm">
-          You've reached the high-volume seller threshold. US law requires us to collect and verify
+          You&apos;ve reached the high-volume seller threshold. US law requires us to collect and verify
           the following information. This data is kept confidential and used solely for regulatory compliance.
         </p>
       </motion.div>
@@ -319,7 +319,7 @@ export default function InformDisclosureClient({
             </div>
             <p className="text-xs text-text-secondary">
               I certify that the information provided above is accurate and complete to the best of my knowledge.
-              I understand that providing false information is a violation of DropMarket's Terms of Service and
+              I understand that providing false information is a violation of DropMarket&apos;s Terms of Service and
               may be subject to legal penalties under applicable law.
             </p>
           </div>

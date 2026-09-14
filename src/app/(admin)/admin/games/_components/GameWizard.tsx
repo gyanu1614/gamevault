@@ -25,7 +25,7 @@ import {
   ArrowLeft, ArrowRight, Check, Loader2, Upload, Image as ImageIcon,
   Trash2, AlertCircle, Globe2, Monitor, Zap, Clock, Sparkles, Save,
 } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { cn, slugify } from '@/lib/utils'
 import { GlassCard } from '@/components/ui/glass-card'
 import {
   saveGameIdentity,
@@ -82,15 +82,6 @@ function defaultsForCategory(slug: string): {
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function slugify(s: string) {
-  return s
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9-]+/g, '-')
-    .replace(/-+/g, '-')
-    .replace(/^-|-$/g, '')
-}
 
 const STEPS = [
   { id: 1, label: 'Identity',    description: 'Name, slug, display' },
@@ -879,7 +870,7 @@ export default function GameWizard({ mode, game, globalCategories, initialGameCa
                           )}
                           {!gameId && (
                             <p className="text-[10px] text-text-disabled">
-                              Save identity step first, then come back here to edit this category's attribute template.
+                              Save identity step first, then come back here to edit this category&apos;s attribute template.
                             </p>
                           )}
                         </div>

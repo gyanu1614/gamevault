@@ -1,6 +1,0 @@
-export { default as TierBadge } from './TierBadge'
-export { default as SellerTierBadge } from './SellerTierBadge'
-export type { SellerTier } from './TierBadge'
-export { default as TierProgressBar } from './TierProgressBar'
-export { default as TierCard } from './TierCard'
-export type { TierConfig } from './TierCard'

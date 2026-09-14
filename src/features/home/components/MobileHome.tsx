@@ -61,7 +61,7 @@ const RAISED =
   'border border-white/[0.08] bg-white/[0.045]'
 
 const PRESSED =
-  'transition-all duration-[120ms] ease-out active:scale-[0.98] active:brightness-95'
+  'transition-all transition-duration-[120ms] ease-out active:scale-[0.98] active:brightness-95'
 
 // One mobile content gutter keeps section headers, sliders, cards and lists
 // aligned to the same vertical rails instead of each block choosing its own
