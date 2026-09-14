@@ -36,6 +36,13 @@ on:
         description: Re-crawl anything not priced within this many hours (0 = backfill only)
         required: false
         default: "6"
+      publish_only_run_id:
+        description: >-
+          Recovery: re-publish a FAILED run's feed instead of crawling. Paste that
+          run's id (the number in its URL); its uploaded feed artifact is
+          downloaded and only the final batch is re-sent with publish:true.
+        required: false
+        default: ""
   schedule:
     # Every 3h over the CURATED tradeable set (~300 items, not all 498). The
     # collector's staleness queue (--refresh-after-hours 6) makes each 3h run
@@ -58,6 +65,9 @@ jobs:
 
     permissions:
       contents: read
+      # ROUTE-017: publish_only_run_id downloads a PRIOR run's feed artifact,
+      # which actions/download-artifact can only do with the Actions API.
+      actions: read
 
     env:
       SAB_MARKET_IMPORT_SECRET: ${{ secrets.SAB_MARKET_IMPORT_SECRET }}
@@ -84,7 +94,31 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # ROUTE-017 recovery path. The publish step (publish:true →
+      # sab_publish_market_estimates → sab_refresh_evidence_display →
+      # sab_refresh_price_display) is seconds of work at the tail of a 30-40
+      # minute scrape, and it is the most failure-prone call in the pipeline —
+      # it is what trips the statement timeout (ROUTE-011) and what tripped the
+      # safe-update guard (ROUTE-013). Recovering it used to mean re-scraping
+      # Eldorado for rows already sitting in sab_market_raw_listings. Instead we
+      # pull the failed run's own feed artifact and re-send just its final batch.
+      - name: Download the failed run's feed (publish-only recovery)
+        if: inputs.publish_only_run_id != ''
+        uses: actions/download-artifact@v5
+        with:
+          name: eldorado-sab-market-${{ inputs.publish_only_run_id }}
+          path: data/sab-market-feeds
+          run-id: ${{ inputs.publish_only_run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Re-publish without crawling
+        if: inputs.publish_only_run_id != ''
+        run: >-
+          npm run sab:import:publish-only --
+          data/sab-market-feeds/eldorado-api-latest.json
+
       - name: Collect and import Eldorado market data (priority queue)
+        if: inputs.publish_only_run_id == ''
         run: >-
           npm run sab:eldorado:send --
           --max-brainrots ${{ inputs.max_brainrots || '210' }}
@@ -98,6 +132,7 @@ jobs:
       # (usePopularItems). Runs after the market collect so the freshest catalog
       # is in place. Non-fatal: a failure here must not fail the price import.
       - name: Refresh Popular ranking
+        if: inputs.publish_only_run_id == ''
         continue-on-error: true
         run: npm run sab:eldorado:popularity
 
@@ -120,7 +155,7 @@ jobs:
           [ "$code" = "200" ] || { echo "::error::freshness check failed (HTTP $code)"; exit 1; }
 
       - name: Upload collection report
-        if: always()
+        if: always() && inputs.publish_only_run_id == ''
         uses: actions/upload-artifact@v5
         with:
           name: eldorado-sab-market-${{ github.run_id }}
