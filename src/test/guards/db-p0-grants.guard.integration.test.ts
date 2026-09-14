@@ -289,7 +289,8 @@ describe.skipIf(!hasEnv)('DB-P0 — function grants, view security_invoker, defa
       expect(error, error?.message).toBeNull()
       expect(typeof data).toBe('number')
       expect(data as number).toBeGreaterThanOrEqual(0)
-    })
+      // ~9s against prod (real evidence volume) — well over vitest's 5s default.
+    }, 30_000)
   })
 
   // ── DB-005: tier cron body ────────────────────────────────────────────────

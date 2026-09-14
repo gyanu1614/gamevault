@@ -70,6 +70,19 @@ const RUN = `test:ledger:money-atomicity:${tag()}`
 const DB_URL = process.env.SUPABASE_DB_URL ?? 'postgresql://postgres:postgres@127.0.0.1:54322/postgres'
 
 /**
+ * The in-RPC fault tests need a direct psql session on the target database
+ * (SET LOCAL app.money_fault), which only the local stack offers. Against a
+ * remote target (ALLOW_REMOTE_GUARD_TESTS=1) they self-skip with this reason;
+ * every app-level fault test still runs there.
+ */
+const targetHost = (() => { try { return new globalThis.URL(process.env.NEXT_PUBLIC_SUPABASE_URL ?? '').hostname } catch { return '' } })()
+const TARGET_IS_LOCAL = ['127.0.0.1', 'localhost', '[::1]', '::1'].includes(targetHost)
+const FAULT_SKIP_REASON = `in-RPC fault tests skipped: psql fault injection (app.money_fault) needs a direct DB session, only available on the local stack — target is ${targetHost || 'unset'}`
+const itFault = it.skipIf(!TARGET_IS_LOCAL)
+// eslint-disable-next-line no-console
+if (hasEnv && !TARGET_IS_LOCAL) console.warn(`[money-atomicity] ${FAULT_SKIP_REASON}`)
+
+/**
  * Run `sql` inside one psql transaction with app.money_fault = point. Returns
  * the error text psql printed (the transaction rolled back) or '' on commit.
  * Direct DB session on purpose: that is the only way to set the GUC.
@@ -272,7 +285,7 @@ describe.skipIf(!hasEnv)('DB-015/016/017 — money-path seams are atomic (integr
       expect(await walletMinor(fx!.buyer.id)).toBe(walletBefore)
     }, 60_000)
 
-    it('in-RPC fault after the transition rolls back the cancel too; the retry converges', async () => {
+    itFault('in-RPC fault after the transition rolls back the cancel too; the retry converges', async () => {
       sessionClient = fx!.buyer.client
       const { createCheckout } = await import('@/lib/actions/checkout')
       const { data: pend } = await fx!.svc.from('orders').select('id').eq('buyer_id', fx!.buyer.id)
@@ -353,7 +366,7 @@ describe.skipIf(!hasEnv)('DB-015/016/017 — money-path seams are atomic (integr
       expect(await walletMinor(fx!.buyer.id)).toBe(walletBefore + 5000n)
     }, 60_000)
 
-    it('in-RPC fault after the REFUNDED transition leaves the order paid, escrow untouched, no credit', async () => {
+    itFault('in-RPC fault after the REFUNDED transition leaves the order paid, escrow untouched, no credit', async () => {
       const { handleWebhook } = await import('@/lib/payments/webhook-router')
       await parkPendingOrders()
       const orderId = await insertOrder({
@@ -480,7 +493,7 @@ describe.skipIf(!hasEnv)('DB-015/016/017 — money-path seams are atomic (integr
       expect((notif as any)?.message ?? '').toMatch(/guard test ok\. Funds stay in your wallet/)
     }, 60_000)
 
-    it('in-RPC fault after the reversal rolls the reversal back with the flip', async () => {
+    itFault('in-RPC fault after the reversal rolls the reversal back with the flip', async () => {
       const id = await makeHeldRequest(12_00n, 'cancel-fault')
       const availBefore = await sellerAvailMinor(fx!.seller.id)
       const err = withFault('withdrawal_cancel:after_reversal',
@@ -576,7 +589,7 @@ describe.skipIf(!hasEnv)('DB-015/016/017 — money-path seams are atomic (integr
       expect((inv ?? []).map((r: any) => r.sold_to_order_id).sort()).toEqual([a, b].sort())
     }, 60_000)
 
-    it('in-RPC fault after the inventory UPDATE leaves the code available and the order unstamped', async () => {
+    itFault('in-RPC fault after the inventory UPDATE leaves the code available and the order unstamped', async () => {
       await resetInventory()
       await addCodes(1, 'fault')
       const orderId = await paidOrder('fault')
@@ -629,7 +642,7 @@ describe.skipIf(!hasEnv)('DB-015/016/017 — money-path seams are atomic (integr
       expect(await totalUsed(promoId)).toBe(N)
     }, 60_000)
 
-    it('in-RPC fault after the usage insert leaves no row and no increment', async () => {
+    itFault('in-RPC fault after the usage insert leaves no row and no increment', async () => {
       const promoId = await makePromo()
       const err = withFault('promo_usage_record:after_usage',
         `SELECT public.promo_usage_record('${promoId}'::uuid, '${fx!.completedOrderId}'::uuid, '${fx!.buyer.id}'::uuid, 1)`)
