@@ -13,8 +13,12 @@ const SUPPORTED_SOURCES = new Set([
   "zeusx",
 ]);
 
-function parseArgs(argv) {
-  const send = argv.includes("--send");
+export function parseArgs(argv) {
+  // ROUTE-017: --publish-only re-sends only the final batch with publish:true,
+  // to recover a crawl whose rows landed but whose publish step failed. It is
+  // meaningless as a dry run, so it implies --send.
+  const publishOnly = argv.includes("--publish-only");
+  const send = publishOnly || argv.includes("--send");
   const input = argv.find(
     (argument) => !argument.startsWith("--"),
   );
@@ -25,6 +29,7 @@ function parseArgs(argv) {
 
   return {
     send,
+    publishOnly,
     inputPath: resolve(process.cwd(), input),
   };
 }
@@ -411,6 +416,13 @@ export function isRetryableImportError(error) {
   // constraint failure is permanent even when it surfaces as a 500.
   if (NON_RETRYABLE_SQLSTATES.some((code) => text.includes(code))) return false;
   if (/requires a where clause/i.test(text)) return false;
+  // ROUTE-017: a malformed listing_url throws the bare `TypeError: Invalid URL`
+  // from new URL() — no status, no SQLSTATE — so it reached the final
+  // `status >= 500` and was rejected only by luck (0 >= 500 is false). Wrapped
+  // in a 5xx, or under 408/429, the same unparseable row would be re-sent 4x.
+  // Keyed on the phrase, not on "url": a statement timeout whose text happens
+  // to contain a URL must still retry.
+  if (/invalid url/i.test(text)) return false;
 
   // Transient by identity, whatever the status.
   if (
@@ -523,8 +535,58 @@ async function sendBatch({
   return responseBody;
 }
 
+/**
+ * ROUTE-011 + ROUTE-017. Plan the import's requests.
+ *
+ * ROUTE-011: insert every batch WITHOUT publishing — the server's publish step
+ * re-runs a full-dataset aggregation, so publishing on each 500-row batch means
+ * dozens of full recomputes per crawl and intermittently trips the Postgres
+ * statement timeout (57014). We insert everything first, then publish ONCE by
+ * re-sending the final batch with publish:true (an idempotent upsert), because
+ * an empty final publish would be a wasted recompute — and the edge function
+ * rejects an empty `listings` array with a 400 anyway.
+ *
+ * ROUTE-017 (publishOnly): the publish step is seconds of work at the tail of a
+ * 30-40 minute scrape and the most failure-prone call in the pipeline. Keeping
+ * only the final batch lets a failed publish be retried in one request against
+ * rows already in sab_market_raw_listings, instead of re-scraping Eldorado.
+ * It is deliberately the SAME batch a full --send would have published on, so
+ * the recovery path exercises the identical request.
+ */
+export function buildBatchPlan(groups, { publishOnly = false } = {}) {
+  const batchPlan = [];
+
+  for (const [sourceSlug, listings] of groups) {
+    for (
+      let batchStart = 0;
+      batchStart < listings.length;
+      batchStart += 500
+    ) {
+      batchPlan.push({
+        sourceSlug,
+        batch: listings.slice(batchStart, batchStart + 500),
+        label: `${sourceSlug} batch ${Math.floor(batchStart / 500) + 1}`,
+        publish: false,
+      });
+    }
+  }
+
+  if (!batchPlan.length) return batchPlan;
+
+  // Publish on the very last batch of the whole import.
+  const final = batchPlan[batchPlan.length - 1];
+  final.publish = true;
+
+  if (publishOnly) {
+    final.label = `${final.label} (publish-only)`;
+    return [final];
+  }
+
+  return batchPlan;
+}
+
 async function main() {
-  const { send, inputPath } = parseArgs(
+  const { send, publishOnly, inputPath } = parseArgs(
     process.argv.slice(2),
   );
 
@@ -614,32 +676,30 @@ async function main() {
     process.env.SAB_MARKET_IMPORT_URL ??
     DEFAULT_ENDPOINT;
 
-  // Insert every batch WITHOUT publishing — the server's publish step re-runs a
-  // full-dataset aggregation, so publishing on each 500-row batch means dozens
-  // of full recomputes per crawl and intermittently trips the Postgres
-  // statement timeout (57014). We insert everything first, then publish ONCE at
-  // the end. We still track the last (source, listings) batch to publish on:
-  // an empty final publish would be a wasted recompute, so we publish by
-  // re-sending the final batch with publish:true (idempotent upsert).
-  const batchPlan = [];
-  for (const [sourceSlug, listings] of groups) {
-    for (
-      let batchStart = 0;
-      batchStart < listings.length;
-      batchStart += 500
-    ) {
-      batchPlan.push({
-        sourceSlug,
-        batch: listings.slice(batchStart, batchStart + 500),
-        label: `${sourceSlug} batch ${Math.floor(batchStart / 500) + 1}`,
-      });
-    }
+  // See buildBatchPlan for why publishing happens once, on the final batch.
+  const batchPlan = buildBatchPlan(groups, {
+    publishOnly,
+  });
+
+  if (publishOnly && !batchPlan.length) {
+    // ROUTE-017: an empty feed has no final batch to re-send, and the edge
+    // function rejects an empty `listings` array with a 400. Nothing to do.
+    console.log(
+      "\nNothing to publish: the feed contains no listings for any source.",
+    );
+    return;
+  }
+
+  if (publishOnly) {
+    console.log(
+      `\nPublish-only: re-sending the final batch (${batchPlan[0].batch.length} listing(s)) ` +
+      "with publish:true. The upsert is idempotent on (source, external_listing_id), " +
+      "so already-imported rows are a no-op; this runs the publish → evidence → display chain.",
+    );
   }
 
   for (let i = 0; i < batchPlan.length; i += 1) {
-    const { sourceSlug, batch, label } = batchPlan[i];
-    // Publish only on the very last batch of the whole import.
-    const isFinal = i === batchPlan.length - 1;
+    const { sourceSlug, batch, label, publish } = batchPlan[i];
 
     const response = await sendBatchWithRetry(
       {
@@ -647,12 +707,12 @@ async function main() {
         secret,
         sourceSlug,
         listings: batch,
-        publish: isFinal,
+        publish,
       },
       label,
     );
 
-    console.log(`\n${label}${isFinal ? " (final — publishing)" : ""}:`);
+    console.log(`\n${label}${publish ? " (publishing)" : ""}:`);
     console.log(JSON.stringify(response.result, null, 2));
 
     if (response.publication) {

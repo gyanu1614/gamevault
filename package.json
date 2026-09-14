@@ -15,6 +15,7 @@
     "sab:eldorado:send": "node scripts/collect-eldorado-sab-api-v6.mjs --send",
     "sab:eldorado:panel": "node scripts/collect-eldorado-sab-api-v6.mjs --send --refresh-after-hours 20",
     "sab:eldorado:popularity": "node scripts/collect-eldorado-popularity.mjs",
+    "sab:import:publish-only": "node scripts/import-sab-market-json.mjs --publish-only",
     "sab:price:drift": "tsx scripts/check-sab-price-drift.mjs",
     "sab:g2g:collect": "node scripts/collect-g2g-sab.mjs",
     "sab:g2g:send": "node scripts/collect-g2g-sab.mjs --send",
