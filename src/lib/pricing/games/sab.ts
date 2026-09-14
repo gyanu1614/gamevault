@@ -215,6 +215,30 @@ export async function runSabCorrection(): Promise<Record<string, unknown>> {
   const admin = createServiceRoleClient()
   const startedAt = new Date().toISOString()
 
+  // ROUTE-014: refresh the evidence snapshot BEFORE reading it. The crawl
+  // refreshes it at the end of every run, so this is the backstop for the case
+  // where the last crawl failed or never ran — the same role the 10:00 UTC
+  // reprice plays for sab_price_display. Refreshing first also means this cron
+  // corrects against current evidence rather than whatever the last successful
+  // crawl left behind.
+  //
+  // Hard failure, deliberately: correcting prices from a stale snapshot would
+  // publish wrong numbers silently, which is the exact failure mode that let the
+  // values pages serve an Aug 13 snapshot for a month (ROUTE-010). Better to
+  // fail the run and leave the previous corrections in place.
+  const { data: evidenceRows, error: evidenceRefreshError } = await (
+    admin as any
+  ).rpc('sab_refresh_evidence_display')
+
+  if (evidenceRefreshError) {
+    throw new Error(
+      `sab_refresh_evidence_display failed: ${evidenceRefreshError.message}`,
+    )
+  }
+
+  const evidenceRefreshed = Number(evidenceRows ?? 0)
+  console.log(`✅ sab_market_evidence_display refreshed: ${evidenceRefreshed} rows`)
+
   const [catalog, mutations, calculator, brainrots, evidence, rawListings] =
     await Promise.all([
       // The catalog is a VIEW without an `id`; (brainrot_id, mutation_id) is its
@@ -243,9 +267,17 @@ export async function runSabCorrection(): Promise<Record<string, unknown>> {
         'id,rarity,ingame_cost,base_income_per_second,obtainability',
         ['id'],
       ),
+      // ROUTE-014: read the materialized snapshot, not the live view. The view
+      // Seq Scans every raw listing twice (rows + the quartile `bounds` CTE) and
+      // spills to disk; at the projected 6-month size that is 2.65s and climbing,
+      // which is what pushed this run past the statement timeout. The snapshot is
+      // the same rows from an indexed table — measured 2654ms -> 332ms with an
+      // identical 653,704-row result. It is refreshed at the end of every crawl
+      // and again by this cron before the correction runs, so it is at most one
+      // crawl cycle (~3h) behind.
       selectAll<EvidenceRow>(
         admin,
-        'sab_market_clean_listing_evidence',
+        'sab_market_evidence_display',
         'brainrot_id,mutation_id,unit_price_usd,source_slug',
         ['id'],
       ),
@@ -513,6 +545,7 @@ export async function runSabCorrection(): Promise<Record<string, unknown>> {
   }
 
   return {
+    evidence_refreshed: evidenceRefreshed,
     corrected: corrections.length,
     anchored,
     suppressed,

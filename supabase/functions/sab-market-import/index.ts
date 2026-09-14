@@ -351,6 +351,46 @@ Deno.serve(async (request) => {
       );
     }
 
+    // ROUTE-014: refresh the evidence snapshot FIRST. sab_price_display is
+    // derived from the estimates chain, which now reads
+    // sab_market_evidence_display — so refreshing the display table before the
+    // evidence would materialize prices from the PREVIOUS crawl's evidence.
+    // Order here is load-bearing: publish -> evidence -> display.
+    //
+    // Hard failure: publishing estimates that the correction pipeline will then
+    // read from a stale snapshot is the silent-staleness failure mode that hid a
+    // month of frozen prices (ROUTE-010). A failed refresh leaves the previous
+    // snapshot intact, so returning 500 keeps the last good state rather than a
+    // half-updated one.
+    const {
+      data: evidenceRows,
+      error: evidenceError,
+    } = await supabaseAdmin.rpc(
+      "sab_refresh_evidence_display",
+    );
+
+    if (evidenceError) {
+      console.error(
+        "Estimates published but sab_market_evidence_display refresh failed:",
+        evidenceError,
+      );
+
+      return jsonResponse(
+        {
+          ok: false,
+          error:
+            "Listings imported but evidence snapshot refresh failed",
+          details: evidenceError.message,
+          result: importResult,
+          publication: {
+            ok: true,
+            published_rows: publishedRows ?? 0,
+          },
+        },
+        500,
+      );
+    }
+
     // ROUTE-010: materialize sab_price_display from the freshly published
     // estimates. Every price page reads that table for its values AND for the
     // "Updated …" timestamp, and until now its ONLY writer was the daily
@@ -427,6 +467,7 @@ Deno.serve(async (request) => {
         ok: true,
         published_rows: publishedRows ?? 0,
       },
+      evidence_refreshed: Number(evidenceRows ?? 0),
       display_refreshed: Number(displayRows ?? 0),
       revalidation,
     });
