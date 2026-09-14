@@ -101,6 +101,24 @@ jobs:
         continue-on-error: true
         run: npm run sab:eldorado:popularity
 
+      # Freshness guard (ROUTE-014). The vercel.json cron is daily-only —
+      # Vercel Hobby rejects sub-daily schedules — so the real 3-hourly cadence
+      # lives here, same pattern as expire-pending-payments.yml. Runs LAST, after
+      # the crawl and its repricing have landed, so it checks the state this run
+      # actually produced rather than the previous run's snapshot.
+      #
+      # Deliberately NOT continue-on-error: a stale hop must fail the run. A
+      # silent staleness is exactly what ROUTE-014 exists to catch (prices sat on
+      # an Aug 13 snapshot for a month while every layer reported success).
+      - name: Check SAB pipeline freshness
+        run: |
+          code=$(curl -s -o /tmp/freshness.json -w "%{http_code}" -m 60 \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "${{ secrets.PUBLIC_API_URL }}/api/cron/check-sab-freshness")
+          cat /tmp/freshness.json
+          echo
+          [ "$code" = "200" ] || { echo "::error::freshness check failed (HTTP $code)"; exit 1; }
+
       - name: Upload collection report
         if: always()
         uses: actions/upload-artifact@v4
