@@ -1680,6 +1680,54 @@ function runImporter(outputPath) {
   });
 }
 
+/**
+ * ROUTE-017. Classify a crawl that produced no listings.
+ *
+ * Both outcomes below are SUCCESS — the workflow runs every 3h against a 6h
+ * staleness filter, so a tick that finds nothing due is the filter doing its
+ * job, and there is nothing to import either way (the edge function rejects an
+ * empty `listings` array with a 400). Failing on them made routine quiet ticks
+ * red, which is precisely how a genuinely broken run hides in a wall of red.
+ *
+ * But they are NOT the same event, and the message has to say which:
+ *   - no_eligible_targets — the queue filtered everything out; nothing was due.
+ *   - no_listings_parsed  — we DID crawl targets and they yielded zero offers.
+ * The second means the mappings or the upstream API are suspect and deserves a
+ * look; the first does not.
+ */
+export function classifyEmptyRun({
+  targetCount,
+  listingCount,
+  usePanelRefresh,
+  refreshAfterHours,
+}) {
+  if (listingCount > 0) {
+    return { ok: true, empty: false, reason: null, message: null };
+  }
+
+  if (!targetCount) {
+    return {
+      ok: true,
+      empty: true,
+      reason: "no_eligible_targets",
+      message: usePanelRefresh
+        ? `Nothing to do: no eligible targets — every Brainrot has been priced within ${refreshAfterHours}h. ` +
+          "This is the staleness filter working; the next tick past the window will pick them up."
+        : "Nothing to do: no eligible targets — backfill mode has attempted every Brainrot already. " +
+          "Use --reset-progress to retry prior attempts, or --refresh-after-hours to rotate by staleness.",
+    };
+  }
+
+  return {
+    ok: true,
+    empty: true,
+    reason: "no_listings_parsed",
+    message:
+      `Nothing to do: ${targetCount} target(s) were crawled but no listings parsed. ` +
+      "Review target_summaries in the feed for skipped or unavailable Eldorado mappings.",
+  };
+}
+
 async function main() {
   const options = parseArgs(process.argv.slice(2));
   const observedAt = new Date().toISOString();
@@ -1740,7 +1788,17 @@ async function main() {
   console.log(`  selected this run: ${targets.length}`);
 
   if (!targets.length) {
-    console.log("No eligible targets remain. Use --reset-progress to retry prior attempts.");
+    // ROUTE-017: exit 0. Nothing due is the staleness filter working, not a fault.
+    console.log(
+      `\n${
+        classifyEmptyRun({
+          targetCount: 0,
+          listingCount: 0,
+          usePanelRefresh,
+          refreshAfterHours: options.refreshAfterHours,
+        }).message
+      }`,
+    );
     return;
   }
 
@@ -1863,10 +1921,16 @@ async function main() {
   console.log(`Progress saved to ${options.progressPath}`);
 
   if (!listings.length) {
-    if (options.send) {
-      throw new Error("No Eldorado listings parsed; nothing was imported.");
-    }
-    console.log("\nNo listings collected. Review target_summaries for skipped or unavailable Eldorado mappings.");
+    // ROUTE-017: exit 0 under --send too. There is nothing to import (the edge
+    // function 400s on an empty `listings` array), so throwing only turned a
+    // recoverable, often routine state into a red run.
+    const empty = classifyEmptyRun({
+      targetCount: targets.length,
+      listingCount: 0,
+      usePanelRefresh,
+      refreshAfterHours: options.refreshAfterHours,
+    });
+    console.log(`\n${empty.message}`);
     return;
   }
   if (!options.send) {
