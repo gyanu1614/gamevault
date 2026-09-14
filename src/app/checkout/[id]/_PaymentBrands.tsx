@@ -1,5 +1,3 @@
-'use client'
-
 /**
  * V19/P24/P7.s — Payment provider brand marks.
  *

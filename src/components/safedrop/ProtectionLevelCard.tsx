@@ -5,8 +5,6 @@
  * Used on checkout and order detail pages
  */
 
-'use client'
-
 import React from 'react'
 import { Shield, ShieldCheck, ShieldAlert, Check, Clock, FileText } from 'lucide-react'
 import { cn } from '@/lib/utils'

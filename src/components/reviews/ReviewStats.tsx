@@ -8,8 +8,6 @@
  * - Rating distribution bar chart (simplified labels)
  */
 
-'use client'
-
 import React from 'react'
 import { ThumbsUp, ThumbsDown, TrendingUp } from 'lucide-react'
 import { cn } from '@/lib/utils'

@@ -5,8 +5,6 @@
  * Shows on listings and order pages
  */
 
-'use client'
-
 import React from 'react'
 import { Shield, ShieldCheck, ShieldAlert, Info } from 'lucide-react'
 import { cn } from '@/lib/utils'

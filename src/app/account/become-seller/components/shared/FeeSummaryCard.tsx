@@ -6,8 +6,6 @@
  * public fee schedule at /fees.
  */
 
-'use client'
-
 import Link from 'next/link'
 import { ArrowUpRight, Percent } from 'lucide-react'
 import { COMMISSION_PCT, PAYOUT_FEES, PAYOUT_MIN_USD } from '@/lib/fees'

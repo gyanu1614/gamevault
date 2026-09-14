@@ -10,8 +10,6 @@
  * All data comes from get_seller_tier_info() via the parent page.
  */
 
-'use client'
-
 import { cn } from '@/lib/utils'
 
 interface SellerStats {

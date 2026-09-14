@@ -1,5 +1,3 @@
-'use client'
-
 /**
  * V17m — Top-Ups & Gift Cards backdrop banner.
  *

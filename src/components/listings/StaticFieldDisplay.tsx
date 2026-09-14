@@ -4,8 +4,6 @@
  * Displays template data in read-only mode without needing onChange handlers
  */
 
-'use client'
-
 import React from 'react'
 import type { TemplateField, TemplateData } from '@/lib/templates'
 

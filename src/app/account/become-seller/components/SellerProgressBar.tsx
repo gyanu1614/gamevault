@@ -12,8 +12,6 @@
  * - Responsive design
  */
 
-'use client'
-
 import { CheckCircle2 } from 'lucide-react'
 import { STEPS } from '../constants'
 

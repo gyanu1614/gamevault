@@ -8,8 +8,6 @@
  * CSS-only animation — no framer (rAF stalls would freeze a blocking screen).
  */
 
-'use client'
-
 import Image from 'next/image'
 import { Loader2 } from 'lucide-react'
 import { PALETTE } from '../theme'

@@ -5,8 +5,6 @@
  * sits in a soft forest-tinted chip so the explainer reads as guidance.
  */
 
-'use client'
-
 import type { LucideIcon } from 'lucide-react'
 import { PALETTE } from '../theme'
 

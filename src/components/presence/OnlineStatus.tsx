@@ -4,8 +4,6 @@
  * Shows seller online/offline status with realtime updates
  */
 
-'use client'
-
 import React from 'react'
 import { Circle } from 'lucide-react'
 import { useSellerPresence, formatLastSeen } from '@/hooks/use-seller-presence'

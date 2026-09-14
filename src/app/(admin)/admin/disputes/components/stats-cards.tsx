@@ -1,5 +1,3 @@
-'use client'
-
 import { AlertTriangle, Clock, CheckCircle, AlertOctagon } from 'lucide-react'
 import { StatCard } from '../../components/kit'
 
