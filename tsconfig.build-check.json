@@ -1,0 +1,30 @@
+{
+  // QUAL-003 — tsconfig for verification builds (`NEXT_DIST_DIR=.next-check next build`).
+  //
+  // Next's `writeConfigurationDefaults` appends `<distDir>/types/**/*.ts` to the
+  // `include` of whichever tsconfig the build uses, whenever that exact string is
+  // absent. The check is `rawConfig.include.includes(...)` against `include` ONLY —
+  // `exclude` is never consulted — so listing `.next-check` in `exclude` cannot
+  // prevent the write (node_modules/next/dist/lib/typescript/writeConfigurationDefaults.js:222-237).
+  //
+  // Rather than let it dirty the real tsconfig.json, verification builds are pointed
+  // here via `typescript.tsconfigPath` in next.config.js. The dist-dir glob is
+  // pre-registered below, so the check short-circuits and nothing is ever rewritten.
+  //
+  // tsconfig.json itself keeps only `.next/types/**/*.ts` in `include` — ROUTE-005:
+  // including alternate dist dirs makes `tsc --noEmit` compile orphaned route shims
+  // left behind by deleted routes and fail with TS2307.
+  //
+  // If a new NEXT_DIST_DIR value is ever introduced, add its types glob here in the
+  // same commit.
+  "extends": "./tsconfig.json",
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts",
+    ".next-check/types/**/*.ts",
+    ".next-check2/types/**/*.ts"
+  ],
+  "exclude": ["node_modules", "supabase/functions"]
+}

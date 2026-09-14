@@ -6,6 +6,13 @@ const nextConfig = {
   distDir: process.env.NEXT_DIST_DIR || '.next',
   typescript: {
     ignoreBuildErrors: false,
+    // QUAL-003 — a verification build (NEXT_DIST_DIR set) type-checks against a
+    // dedicated tsconfig that already lists `<distDir>/types/**/*.ts` in `include`,
+    // so Next's writeConfigurationDefaults short-circuits instead of appending that
+    // glob to the real tsconfig.json and dirtying the working tree on every build.
+    tsconfigPath: process.env.NEXT_DIST_DIR
+      ? 'tsconfig.build-check.json'
+      : 'tsconfig.json',
   },
   eslint: {
   ignoreDuringBuilds: true,
