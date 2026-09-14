@@ -5,6 +5,7 @@
  * Apple/Spotify-inspired minimal dark theme with game vibe.
  */
 
+import dynamic from 'next/dynamic'
 import React, { Suspense, cache } from 'react'
 import { Metadata } from 'next'
 import { notFound, redirect } from 'next/navigation'
@@ -24,10 +25,22 @@ import { sellerDisplayName, sellerRatingPercent, sellerShopSlug } from '@/lib/se
 import { tierByKey } from '@/lib/seller/tiers'
 import { getCurrencyShell as getCurrencyShellUncached, listingToOffer } from './_currencyData'
 import RouteSkeleton from './_RouteSkeleton'
-import CurrencyPageClient from './_CurrencyPageClient'
-import BundleCurrencyPageClient, {
-  type BundleCurrencyPageData,
-  type BundleOffer,
+// PERF-004 — the three page variants below are mutually exclusive: a category
+// resolves to exactly one of them at render time. Statically importing all
+// three made every visitor download all three (60.4 + 50.5 + 30.5 kB of source
+// plus their dependency closures) in order to use one. next/dynamic gives each
+// its own chunk so only the variant actually rendered is fetched.
+//
+// This is a server component, so these are server-side dynamic imports: the
+// chosen variant is still server-rendered in the same pass (no ssr:false, no
+// loading flash) — only the client bundles are split.
+const CurrencyPageClient = dynamic(() => import('./_CurrencyPageClient'))
+const BundleCurrencyPageClient = dynamic(
+  () => import('./_BundleCurrencyPageClient'),
+)
+import type {
+  BundleCurrencyPageData,
+  BundleOffer,
 } from './_BundleCurrencyPageClient'
 import { BlogRail } from '@/components/blog/BlogRail'
 import { fetchCategoryConfigBySlug } from '@/lib/actions/admin-category-configs'
@@ -54,7 +67,7 @@ function formatBundleDelivery(raw: string | null | undefined): string {
 // V15 — Items page dispatch + SEO slug resolver.
 import { getPausedSellerIds } from '@/lib/actions/seller-presence'
 import { loadItemsTaxonomy, listingToOffer as listingToItemOffer } from './_itemsData'
-import ItemsPageClient from './_ItemsPageClient'
+const ItemsPageClient = dynamic(() => import('./_ItemsPageClient'))
 import { resolveItemBySlug } from './_itemResolver'
 import { SabNavExtras } from '../values/_SabNavExtras'
 
