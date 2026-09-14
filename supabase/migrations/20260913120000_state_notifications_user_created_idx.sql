@@ -1,0 +1,37 @@
+-- ============================================================
+-- STATE-013 — composite index for the /notifications read path
+-- Created: 2026-09-13
+--
+-- The page query (src/app/notifications/page.tsx, a server component since
+-- STATE-008) is:
+--
+--   SELECT id, title, message, type, link, is_read, created_at
+--   FROM notifications
+--   WHERE user_id = $1 AND type <> 'new_message'
+--   ORDER BY created_at DESC
+--   LIMIT 50
+--
+-- Existing indexes could not serve this:
+--   - idx_notifications_created_at (created_at DESC) satisfies the ORDER BY,
+--     so the planner picked it and left user_id as a row Filter — walking the
+--     global newest-first timeline and discarding everyone else's rows.
+--   - idx_notifications_user_id (user_id) satisfies the equality but not the
+--     sort, so it loses to the above and goes unused for this query.
+--
+-- Measured locally on 50k notifications / 200 users (EXPLAIN ANALYZE, BUFFERS):
+--   before: Rows Removed by Filter 13098, shared hit=166, 1.150 ms
+--   after:  Rows Removed by Filter    16, shared hit= 69, 0.214 ms  (~5.4x)
+-- user_id becomes an Index Cond; the residual 16 are the `new_message` rows
+-- excluded inside the user's own slice, which is the correct small cost.
+--
+-- The cost of the discarded-row scan grows with TOTAL table size, not with the
+-- user's own notification count, so this gets worse over time without the index.
+-- `type` is deliberately left out of the index: it is a low-selectivity
+-- inequality that filters cheaply once the slice is already narrowed.
+--
+-- CONCURRENTLY so the index build never locks the table in production, which
+-- is why this file must be pushed OUTSIDE a transaction (see deploy notes).
+-- ============================================================
+
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_notifications_user_created
+  ON public.notifications (user_id, created_at DESC);
