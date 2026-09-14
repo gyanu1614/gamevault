@@ -221,7 +221,7 @@ export default function GamesPageClient({
             <div className="px-5 py-16 text-center text-sm text-text-tertiary">Loading games…</div>
           ) : filtered.length === 0 ? (
             <div className="px-5 py-16 text-center text-sm text-text-tertiary">
-              No games match "{filter}"
+              No games match &quot;{filter}&quot;
             </div>
           ) : (
             filtered.map((game) => {
@@ -421,7 +421,7 @@ export default function GamesPageClient({
             <DialogTitle>Delete {pendingDelete?.name}?</DialogTitle>
             <DialogDescription>
               This permanently removes the game and unlinks its categories. Active listings
-              will be cascaded to deleted state. There's no undo.
+              will be cascaded to deleted state. There&apos;s no undo.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

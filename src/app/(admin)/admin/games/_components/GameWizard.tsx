@@ -870,7 +870,7 @@ export default function GameWizard({ mode, game, globalCategories, initialGameCa
                           )}
                           {!gameId && (
                             <p className="text-[10px] text-text-disabled">
-                              Save identity step first, then come back here to edit this category's attribute template.
+                              Save identity step first, then come back here to edit this category&apos;s attribute template.
                             </p>
                           )}
                         </div>

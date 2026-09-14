@@ -343,7 +343,7 @@ function FieldTree(props: FieldTreeProps) {
         {topLevel.length === 0 && !props.addingTopLevel ? (
           <div className="px-4 py-10 text-center text-xs text-text-tertiary">
             No fields yet. Click <span className="font-semibold text-text-secondary">Add field</span> to start —
-            e.g. a <em>Dropdown</em> called "Item Type".
+            e.g. a <em>Dropdown</em> called &quot;Item Type&quot;.
           </div>
         ) : (
           <ul className="space-y-0.5">
@@ -692,7 +692,7 @@ function AttributeDetail({
           <li>
             <span className="font-semibold text-text-primary">{supportsOptions ? '3.' : '2.'}</span>{' '}
             {supportsOptions
-              ? <>Optional — back in the tree, click "+ Add sub-field shown when <em>X</em> is chosen" to add a field that only appears for that choice.</>
+              ? <>Optional — back in the tree, click &quot;+ Add sub-field shown when <em>X</em> is chosen&quot; to add a field that only appears for that choice.</>
               : <>Use <span className="text-text-primary">Advanced</span> below for placeholder, help text, and validation.</>}
           </li>
         </ol>
@@ -1272,7 +1272,7 @@ function RulesEditor({
         {attribute.rules.length === 0 && !adding ? (
           <p className="rounded-lg border border-dashed border-border-default bg-bg-base px-3 py-4 text-center text-xs text-text-tertiary">
             This field is always shown. Tip: easier way to make a sub-field is via the
-            "+ Add sub-field shown when X is chosen" link in the tree on the left.
+            &quot;+ Add sub-field shown when X is chosen&quot; link in the tree on the left.
           </p>
         ) : (
           attribute.rules.map((r) => {

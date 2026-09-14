@@ -256,7 +256,11 @@ export async function processGdprRequest(
     if (action === 'completed' && (req as any).type === 'deletion') {
       // Hard-delete the auth user (cascades to profiles and all FK data)
       // This requires the service-role key — the createClient() above uses it.
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      // QUAL-006: no eslint-disable for @typescript-eslint/no-explicit-any here.
+      // That rule is not enabled in this config, so the disable comment was
+      // itself reported as an error ("Definition for rule ... was not found"),
+      // and it guarded nothing — the (req as any) casts either side of it are
+      // unannotated regardless.
       const { error: authErr } = await (supabase.auth as any).admin.deleteUser(
         (req as any).user_id
       )

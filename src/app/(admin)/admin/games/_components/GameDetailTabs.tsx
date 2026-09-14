@@ -170,10 +170,10 @@ function CategoryEmptyHint({
     return (
       <div className="rounded-2xl border border-dashed border-border-default bg-bg-raised/60 p-8 text-center">
         <p className="text-[14px] font-semibold text-text-primary">
-          {type} isn't enabled for this game.
+          {type} isn&apos;t enabled for this game.
         </p>
         <p className="mt-1.5 text-[12.5px] text-text-secondary">
-          Enable it in the Setup tab's Categories step, then come back here to configure.
+          Enable it in the Setup tab&apos;s Categories step, then come back here to configure.
         </p>
       </div>
     )

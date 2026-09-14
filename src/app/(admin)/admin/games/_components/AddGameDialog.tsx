@@ -99,7 +99,7 @@ export function AddGameDialog() {
         <DialogHeader>
           <DialogTitle>Add game</DialogTitle>
           <DialogDescription>
-            Start with the basics. You'll set categories, branding, and pricing on the next screen.
+            Start with the basics. You&apos;ll set categories, branding, and pricing on the next screen.
           </DialogDescription>
         </DialogHeader>
 

@@ -84,12 +84,16 @@ export function Combobox({
     if (!open) setQuery('')
   }, [open])
 
+  // Stable id linking this combobox to the listbox panel it controls.
+  const listboxId = React.useId()
+
   return (
     <Popover.Root open={open} onOpenChange={setOpen}>
       <Popover.Trigger asChild>
         <div
           ref={triggerRef}
           role="combobox"
+          aria-controls={listboxId}
           aria-label={ariaLabel}
           aria-expanded={open}
           aria-invalid={invalid || undefined}
@@ -132,6 +136,8 @@ export function Combobox({
 
       <Popover.Portal>
         <Popover.Content
+          id={listboxId}
+          role="listbox"
           align="start"
           sideOffset={6}
           // Match the trigger's width so the panel is the same size as the box
