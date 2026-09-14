@@ -17,6 +17,7 @@ import type { SafeDropTier } from '@/lib/utils/safedrop-tiers'
 
 // P5.2 — Loyalty cashback
 import { awardCashback } from '@/lib/loyalty/award'
+import { recordReferralCommission } from '@/lib/referral/commission'
 // P5.3 — Promo code usage
 import { recordPromoUsage, validatePromoCode } from '@/lib/actions/promo'
 import { resolveCheckoutPromo } from '@/lib/checkout/promo'
@@ -1112,6 +1113,14 @@ export async function confirmOrderReceipt(orderId: string): Promise<{
       // the order itself (it mints spendable credit; no trusted payload).
       awardCashback({ orderId }).catch(() => {})
     }
+
+    // DB-017 — the referrer's commission (10% of the platform fee, read from
+    // the order row) was never recorded: recordReferralCommission had no
+    // caller. Fire-and-forget like cashback; once per order (partial unique
+    // index referral_earnings_one_commission_per_order).
+    recordReferralCommission(orderId).catch((err) =>
+      console.error('[Orders] referral commission failed (retryable):', err)
+    )
 
     // Revalidate both seller and buyer paths for real-time updates
     revalidatePath(`/account/orders/${orderId}`)

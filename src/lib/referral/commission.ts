@@ -104,7 +104,7 @@ export async function recordReferralCommission(orderId: string): Promise<void> {
   const commission = Number((platformFee * REFERRAL_COMMISSION_RATE).toFixed(2))
   if (commission <= 0) return
 
-  await (svc.from('referral_earnings').insert as any)({
+  const { error } = await (svc.from('referral_earnings').insert as any)({
     referrer_id: referrerId,
     referred_user_id: o.buyer_id,
     order_id: orderId,
@@ -112,4 +112,8 @@ export async function recordReferralCommission(orderId: string): Promise<void> {
     amount: commission,
     status: 'pending',
   })
+  // 23505 on referral_earnings_one_commission_per_order: a concurrent
+  // confirm / auto-release already recorded it — that is the idempotent
+  // outcome, not an error.
+  if (error && error.code !== '23505') throw new Error(`referral_earnings insert: ${error.message}`)
 }
