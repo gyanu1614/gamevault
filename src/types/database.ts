@@ -30,7 +30,13 @@ export type Database = {
         }
         Returns: Json
       }
-      // Added via 20260916100000_rate_limits.sql
+      // Added via 20260916100000_rate_limits.sql.
+      // NOTE: inert today — this hand-written schema's tables have no
+      // `Relationships` key, so it fails postgrest-js' GenericSchema
+      // constraint and every .rpc() through it degrades to `undefined` args.
+      // Kept because the signatures are correct and become load-bearing the
+      // moment that schema is widened; src/lib/security/rate-limit.ts types
+      // the call locally in the meantime.
       rate_limit_hit: {
         Args: { p_key: string; p_limit: number; p_window_seconds: number }
         Returns: boolean
