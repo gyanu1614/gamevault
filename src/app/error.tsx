@@ -5,8 +5,10 @@
  * footer intact) instead of Next's unstyled default error screen.
  */
 
+import { useEffect } from 'react'
 import Link from 'next/link'
 import { AlertCircle } from 'lucide-react'
+import * as Sentry from '@sentry/nextjs'
 
 export default function Error({
   error,
@@ -15,6 +17,19 @@ export default function Error({
   error: Error & { digest?: string }
   reset: () => void
 }) {
+  // Next's error boundary swallows the error once it renders this component,
+  // so nothing reports it unless we do it here explicitly. `digest` is the
+  // same id shown to the user below, which makes a support ticket findable
+  // in Sentry by that one string.
+  useEffect(() => {
+    Sentry.captureException(error, {
+      tags: { boundary: 'app/error' },
+      contexts: error?.digest
+        ? { nextjs: { digest: error.digest } }
+        : undefined,
+    })
+  }, [error])
+
   return (
     <main className="flex min-h-[70vh] flex-col items-center justify-center px-4 py-20 text-center sm:px-6">
       <div className="inline-flex rounded-2xl border border-warning/30 bg-warning-bg/30 p-4">
