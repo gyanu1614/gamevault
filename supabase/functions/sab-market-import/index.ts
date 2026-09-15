@@ -1,4 +1,22 @@
+import * as Sentry from "npm:@sentry/deno";
 import { createClient } from "npm:@supabase/supabase-js@2";
+
+// Sentry must be initialized before anything else runs so its instrumentation
+// is in place for the whole module. The DSN comes from a function secret:
+//
+//   npx supabase secrets set SENTRY_DSN="https://...ingest.sentry.io/..."
+//
+// Absent secret => enabled:false => the SDK is inert. That is the intended
+// state locally and in `supabase functions serve`; it must never throw here,
+// because a crash at module scope takes the whole function down.
+Sentry.init({
+  dsn: Deno.env.get("SENTRY_DSN"),
+  enabled: Boolean(Deno.env.get("SENTRY_DSN")),
+  tracesSampleRate: 0.1,
+  initialScope: {
+    tags: { edge_function: "sab-market-import" },
+  },
+});
 
 type ImportRequest = {
   source_slug?: unknown;
@@ -476,6 +494,14 @@ Deno.serve(async (request) => {
       "Unexpected market import error:",
       error,
     );
+
+    // This catch is the only thing standing between a thrown error and a bare
+    // 500, so it is where the error has to be reported — the response body
+    // deliberately says nothing useful to the caller. flush() before returning:
+    // the isolate can be torn down the moment the response is sent, which
+    // would drop an in-flight event.
+    Sentry.captureException(error);
+    await Sentry.flush(2000);
 
     return jsonResponse(
       {
