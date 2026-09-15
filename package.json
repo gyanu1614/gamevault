@@ -2,6 +2,7 @@
   "name": "gamevault",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "pnpm@12.4.1",
   "scripts": {
     "dev": "NODE_OPTIONS='--max-http-header-size=32768' next dev",
     "dev:clean": "rm -rf .next && NODE_OPTIONS='--max-http-header-size=32768' next dev",
@@ -112,8 +113,5 @@
     "tailwindcss": "^3.4.17",
     "typescript": "^5.7.3",
     "vitest": "^2.1.9"
-  },
-  "overrides": {
-    "ws": "^8.21.3"
   }
 }

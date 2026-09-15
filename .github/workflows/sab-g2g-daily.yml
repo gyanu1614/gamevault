@@ -67,18 +67,21 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v5
 
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+
       - name: Set up Node.js
         uses: actions/setup-node@v5
         with:
           node-version: "22"
-          cache: npm
+          cache: pnpm
 
       - name: Install dependencies
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       - name: Collect and import G2G market data
         run: >-
-          npm run sab:g2g:send --
+          pnpm sab:g2g:send
           --max-brainrots ${{ inputs.max_brainrots || '120' }}
           --max-pages ${{ inputs.max_pages || '3' }}
           --delay-ms 1500
