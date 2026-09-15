@@ -217,7 +217,7 @@ const nextConfig = {
   },
 }
 
-const { withSentryConfig } = require('@sentry/nextjs')
+const { withSentryConfig } = require('@sentry/nextjs/config')
 
 // Sentry build-time instrumentation.
 //
@@ -241,6 +241,6 @@ module.exports = withSentryConfig(nextConfig, {
   // requests to *.sentry.io outright) don't silently drop client errors.
   tunnelRoute: '/monitoring',
 
-  // Strips the Sentry SDK's own console logging from the client bundle.
-  disableLogger: true,
+  // Strips the Sentry SDK's own debug logging from the client bundle.
+  webpack: { treeshake: { removeDebugLogging: true } },
 })
