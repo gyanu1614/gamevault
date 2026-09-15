@@ -85,14 +85,17 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v5
 
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+
       - name: Set up Node.js
         uses: actions/setup-node@v5
         with:
           node-version: "22"
-          cache: npm
+          cache: pnpm
 
       - name: Install dependencies
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       # ROUTE-017 recovery path. The publish step (publish:true →
       # sab_publish_market_estimates → sab_refresh_evidence_display →
@@ -114,13 +117,13 @@ jobs:
       - name: Re-publish without crawling
         if: inputs.publish_only_run_id != ''
         run: >-
-          npm run sab:import:publish-only --
+          pnpm sab:import:publish-only
           data/sab-market-feeds/eldorado-api-latest.json
 
       - name: Collect and import Eldorado market data (priority queue)
         if: inputs.publish_only_run_id == ''
         run: >-
-          npm run sab:eldorado:send --
+          pnpm sab:eldorado:send
           --max-brainrots ${{ inputs.max_brainrots || '210' }}
           --max-pages ${{ inputs.max_pages || '10' }}
           --samples-per-variant 25
@@ -134,7 +137,7 @@ jobs:
       - name: Refresh Popular ranking
         if: inputs.publish_only_run_id == ''
         continue-on-error: true
-        run: npm run sab:eldorado:popularity
+        run: pnpm sab:eldorado:popularity
 
       # Freshness guard (ROUTE-014). The vercel.json cron is daily-only —
       # Vercel Hobby rejects sub-daily schedules — so the real 3-hourly cadence

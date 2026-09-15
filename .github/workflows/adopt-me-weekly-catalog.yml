@@ -31,17 +31,20 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v5
 
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+
       - name: Set up Node.js
         uses: actions/setup-node@v5
         with:
           node-version: "22"
-          cache: npm
+          cache: pnpm
 
       - name: Install dependencies
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       - name: Collect + upsert catalog (new pets auto-added by slug)
-        run: npm run adoptme:catalog
+        run: pnpm adoptme:catalog
 
       - name: Upload catalog feed (debug artifact)
         if: always()
