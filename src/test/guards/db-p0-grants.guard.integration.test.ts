@@ -56,6 +56,17 @@ const MONEY_ATOMICITY_SERVICE_ONLY = [
   'money_atomicity_version', 'webhook_event_claim',
 ]
 
+/**
+ * 20260916100000_rate_limits.sql: the limiter is service-role only. If the
+ * browser could call rate_limit_hit() it could burn any IP's budget (a
+ * denial-of-service against another user by key), or probe the counters to
+ * learn which keys are close to their limit. Named here so the posture test
+ * says which function regressed rather than just printing a list diff.
+ */
+const RATE_LIMIT_SERVICE_ONLY = [
+  'rate_limit_hit', 'rate_limits_cleanup', 'rate_limits_version',
+]
+
 async function dbP0Applied(): Promise<boolean> {
   const { error } = await fx!.svc.rpc('db_p0_guards_version')
   return !error
@@ -235,7 +246,7 @@ describe.skipIf(!hasEnv)('DB-P0 — function grants, view security_invoker, defa
       expect(p.views_without_security_invoker).toEqual([])
       expect([...p.anon_executable_definers].sort()).toEqual([...ANON_DEFINER_ALLOWLIST].sort())
       expect([...p.authenticated_executable_definers].sort()).toEqual(AUTHENTICATED_DEFINER_ALLOWLIST)
-      for (const fn of MONEY_ATOMICITY_SERVICE_ONLY) {
+      for (const fn of [...MONEY_ATOMICITY_SERVICE_ONLY, ...RATE_LIMIT_SERVICE_ONLY]) {
         expect(p.anon_executable_definers, `${fn} must not be anon-executable`).not.toContain(fn)
         expect(p.authenticated_executable_definers, `${fn} must not be authenticated-executable`).not.toContain(fn)
       }
