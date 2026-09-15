@@ -1,0 +1,19 @@
+# pnpm settings live here, not in package.json — pnpm 11+ no longer reads the
+# "pnpm" field of package.json (nor npm's top-level "overrides").
+
+# Was npm's `overrides` in package.json.
+overrides:
+  ws: ^8.21.3
+
+# pnpm blocks dependency install scripts by default. These three ship real
+# build-time binaries that npm used to build on install:
+#   esbuild       - vitest's bundler; tests cannot run without its binary
+#   @sentry/cli   - source-map upload during `next build`
+#   unrs-resolver - native resolver used by eslint-plugin-import
+allowBuilds:
+  "@sentry/cli": true
+  esbuild: true
+  unrs-resolver: true
+
+minimumReleaseAgeExclude:
+  - webpack@5.111.0
