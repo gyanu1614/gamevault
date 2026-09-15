@@ -9,8 +9,17 @@
 - Pages, metadata, listings → seo (router) and its sub-skills
 - Be concise. Prefer grep/glob over reading whole files. Show evidence, not claims.
 
+## Package manager: pnpm (never npm)
+- This repo uses **pnpm**. `pnpm-lock.yaml` is the only lockfile; there is no `package-lock.json`. Never run `npm install`/`npm ci` — it writes a second lockfile and a flat `node_modules` that hides the strictness bugs pnpm catches.
+- **Every worktree runs `pnpm install`** before anything else. A fresh worktree has no `node_modules`, and pnpm's is a symlink farm — it cannot be copied or shared from another worktree.
+- CI installs with `pnpm install --frozen-lockfile`: if `package.json` and the lockfile disagree the run fails instead of silently resolving. Commit `pnpm-lock.yaml` with any dependency change.
+- pnpm settings live in **`pnpm-workspace.yaml`**, not `package.json` — pnpm 11+ ignores the `pnpm` field and npm's top-level `overrides`. The `ws` pin and the `allowBuilds` list are there.
+- pnpm **blocks dependency install scripts by default**. A new dep that needs a postinstall (native binary, CLI download) must be added to `allowBuilds` in `pnpm-workspace.yaml` or it installs silently broken.
+- pnpm forwards script args natively: `pnpm sab:eldorado:send --max-pages 10`, **not** `pnpm ... -- --max-pages 10` (the `--` is passed through as a literal argument).
+- Vercel: set the Install Command to `pnpm install --frozen-lockfile` in the dashboard (Settings → General → Build & Development Settings).
+
 ## Tests & environment (never bypass)
-- `vitest` loads **`.env.test`** by default: local Supabase, **no `RESEND_API_KEY`**, dummy provider keys. Set it up once: `cp .env.test.example .env.test` then `npx supabase start`.
+- `vitest` loads **`.env.test`** by default: local Supabase, **no `RESEND_API_KEY`**, dummy provider keys. Set it up once: `cp .env.test.example .env.test` then `pnpm supabase start`.
 - `.env.test` is gitignored; **`.env.test.example` is committed**. Never put a real secret in either.
 - `ALLOW_REMOTE_GUARD_TESTS=1` is the ONLY way to load `.env.local` (production Supabase + live keys) into a test run. Use it deliberately, never to "make a failing test pass".
 - A test that touches email **must** `vi.mock('@/lib/email')`. Real sends throw from a test run (`src/lib/email/transport-guard.ts`).

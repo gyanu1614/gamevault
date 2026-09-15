@@ -24,7 +24,7 @@ top-ups). Three audiences share one app:
 | Concern | Choice |
 |---|---|
 | Framework | **Next.js 14** App Router (`^14.2`), React 18 |
-| Language | TypeScript (strict; `npx tsc --noEmit` must pass before any change is "done") |
+| Language | TypeScript (strict; `pnpm type-check` must pass before any change is "done") |
 | Styling | **Tailwind** + design tokens in CSS vars (`src/styles/tokens.css`) |
 | UI primitives | **Radix UI** (dialog, popover, select, tabs, switch, checkbox, radio, tooltip, collapsible) |
 | Component layer | **shadcn/ui** pattern in `src/components/ui/*` (built on Radix) |
@@ -205,7 +205,7 @@ Tailwind `ring-0` can't override a raw `box-shadow` — kill it with
    no `temp`, `test2`, `foo` names in committed code.
 5. **Universal typography / tokens** — never hardcode hex; use the token.
 6. **Mobile-first responsive.**
-7. **Always `npx tsc --noEmit` before declaring done.** Remove dead code you orphan.
+7. **Always `pnpm type-check` before declaring done.** Remove dead code you orphan.
 8. **Check memory + this doc before building anything new.** Don't re-invent a pattern
    that already exists (Combobox, AccountPageHeader, HeroBackdrop, StatusBadge, etc.).
 
@@ -313,7 +313,7 @@ are hidden from buyers until toggled back on.
 - **Confirm scope on big/ambiguous asks** (use a quick question with a recommended
   default) — but when scope is clear, act; don't over-survey options.
 - **Screenshots** from the user are the spec — match what's shown.
-- After a change: `npx tsc --noEmit`, remove dead code, report honestly (if a step was
+- After a change: `pnpm type-check`, remove dead code, report honestly (if a step was
   skipped or a check failed, say so).
 - The persistent memory lives at
   `~/.claude/projects/-Users-gyanendra-gamevault-admin-redesign/memory/` (index in
