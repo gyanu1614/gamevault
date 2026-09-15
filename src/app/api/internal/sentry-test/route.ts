@@ -6,15 +6,19 @@ export const dynamic = 'force-dynamic'
 /**
  * Hidden Sentry verification endpoint.
  *
- * Throws on purpose so a real error travels the whole path — thrown in a route
- * handler, picked up by instrumentation.ts's onRequestError, tagged with route
- * segment + deploy id, delivered to Sentry. Use it once after a deploy to
- * confirm the wiring, e.g.
+ * Captures a real error and reports whether it was delivered — so a deploy can
+ * be checked without reading logs. Returns 200 with the event id rather than
+ * throwing: a 500 tells you nothing about whether Sentry received anything.
+ * Use it once after a deploy, e.g.
  *
  *   curl -X POST https://<host>/api/internal/sentry-test \
  *     -H "Authorization: Bearer $CRON_SECRET"
  *
- * Gated on CRON_SECRET so it is not a public 500 generator. Unauthenticated
+ * A `captured: true` with `flushed: true` and a non-null eventId means the
+ * event left the process. `sdkInitialized: false` means the instrumentation
+ * hook never loaded and nothing is being reported anywhere.
+ *
+ * Gated on CRON_SECRET so it is not a public error generator. Unauthenticated
  * callers get a 404, not a 401 — an unauthorized caller should not be able to
  * confirm the route exists at all.
  */
@@ -57,16 +61,37 @@ async function handle(request: Request): Promise<Response> {
     'Sentry verification error from /api/internal/sentry-test (thrown deliberately)',
   )
 
-  // Captured explicitly as well as thrown: the throw alone relies on
-  // onRequestError, and capturing here means the check still proves delivery
-  // if that hook ever regresses. flush() matters on serverless — the lambda
-  // can freeze before the background send completes.
-  Sentry.captureException(error, {
+  // Capture explicitly rather than relying on the throw. A thrown error goes
+  // through onRequestError, which reports it too — but then the only signal
+  // the caller gets is a bare 500, indistinguishable from the route being
+  // broken for some unrelated reason. That is precisely what the first deploy
+  // looked like. Returning the event id turns "did it work?" into something
+  // the response answers directly: paste the id into Sentry's search.
+  const eventId = Sentry.captureException(error, {
     tags: { boundary: 'api/internal/sentry-test', deliberate: 'true' },
   })
-  await Sentry.flush(2000)
 
-  throw error
+  // The event is queued, not sent, until this resolves. On serverless the
+  // isolate can freeze the instant the response goes out, discarding anything
+  // still in flight — so the flush must be awaited BEFORE returning. Bounded
+  // at 2s so an unreachable ingest endpoint costs a lost event, not a hung
+  // request. `false` means the queue did not drain in time.
+  const flushed = await Sentry.flush(2000)
+
+  return Response.json(
+    {
+      captured: true,
+      eventId,
+      flushed,
+      dsnConfigured: Boolean(
+        process.env.SENTRY_DSN ?? process.env.NEXT_PUBLIC_SENTRY_DSN,
+      ),
+      // Confirms Sentry.init() actually ran. Without the instrumentation hook
+      // loading, this is false and every capture is a silent no-op.
+      sdkInitialized: Boolean(Sentry.getClient()),
+    },
+    { status: 200, headers: { 'cache-control': 'no-store' } },
+  )
 }
 
 export async function GET(request: Request): Promise<Response> {

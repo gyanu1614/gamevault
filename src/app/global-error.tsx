@@ -25,6 +25,14 @@ export default function GlobalError({
         ? { nextjs: { digest: error.digest } }
         : undefined,
     })
+
+    // An error boundary is very often the last thing that renders before the
+    // user hits reload or leaves, which kills the page and any send still in
+    // flight. Flushing pushes the event out now instead of hoping the tab
+    // survives long enough. Not awaited — useEffect must stay synchronous,
+    // and the flush itself is what matters, not its result. Bounded at 2s;
+    // void marks the dangling promise as deliberate.
+    void Sentry.flush(2000)
   }, [error])
 
   return (

@@ -23,5 +23,5 @@ Sentry.init({
 
   initialScope: { tags: deployTags() },
 
-  debug: false,
+  debug: Boolean(process.env.SENTRY_DEBUG),
 })

@@ -1,5 +1,12 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  experimental: {
+    // Next 14 only loads src/instrumentation.ts when this is on. Sentry's
+    // withSentryConfig sets it automatically for Next < 15, but it is written
+    // out explicitly here so the requirement is visible at the call site and
+    // survives a future change to the Sentry plugin's defaults.
+    instrumentationHook: true,
+  },
   // Verification builds (agent/CI) set NEXT_DIST_DIR to keep their output OUT
   // of .next — a `next build` racing the running `next dev` corrupts the dev
   // chunk cache (ChunkLoadError / "missing required error components").
