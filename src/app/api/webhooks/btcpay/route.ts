@@ -14,11 +14,19 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { handleWebhook } from '@/lib/payments/webhook-router'
+import { checkRateLimit, rateLimitResponse } from '@/lib/security/rate-limit'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 export async function POST(req: NextRequest) {
+  // Per-provider budget (not per-IP): a provider's callbacks arrive from many
+  // IPs, and one noisy provider must not throttle another's. Charged before
+  // signature verification so a flood of forged callbacks cannot pin the CPU
+  // on HMAC work.
+  const limit = await checkRateLimit('webhook', 'provider:btcpay')
+  if (limit.limited) return rateLimitResponse(limit)
+
   // Raw body — do NOT JSON.parse here; the adapter verifies the HMAC over it.
   const rawBody = await req.text()
 

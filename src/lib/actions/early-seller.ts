@@ -11,6 +11,7 @@
  */
 
 import { headers } from 'next/headers'
+import { rateLimitAction } from '@/lib/security/rate-limit'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { requireAdmin } from '@/lib/actions/admin-permissions'
 import {
@@ -150,6 +151,11 @@ export async function submitEarlySeller(
   if (!email || !EMAIL_RE.test(email)) {
     return { ok: false, error: 'Please enter a valid email address.' }
   }
+
+  // Public, unauthenticated form — budget it so it cannot be scripted into a
+  // signup-spam firehose. Mapped onto this action's { ok, error } shape.
+  const limited = await rateLimitAction('contact')
+  if (limited) return { ok: false, error: limited.error }
 
   // Light request context for abuse review — never shown publicly.
   let ip: string | null = null

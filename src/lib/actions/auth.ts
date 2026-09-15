@@ -9,6 +9,7 @@ import type { z } from 'zod'
 import { applyReferralAtSignup } from '@/lib/referral/commission'
 import { generateDiceBearAvatar } from '@/lib/utils/avatar'
 import { getEntryTier } from '@/lib/seller/entry-tier'
+import { rateLimitAction } from '@/lib/security/rate-limit'
 
 // Signup with username
 export async function signup(formData: {
@@ -29,6 +30,13 @@ export async function signup(formData: {
   redirectTo?: string
 }) {
   try {
+    // Credential-stuffing / mass-signup budget. Charged before any Supabase
+    // call so a flood never reaches the auth provider. Returned in this
+    // action's own { error } shape so callers that read
+    // `requiresEmailConfirmation` keep narrowing cleanly.
+    const limited = await rateLimitAction('auth')
+    if (limited) return { error: limited.error }
+
     const supabase = await createClient()
 
     // Build the confirmation-link destination. A caller-supplied redirectTo is
@@ -174,6 +182,10 @@ export async function signup(formData: {
 // Login
 export async function login(formData: { email: string; password: string }) {
   try {
+    // Password-guessing budget, per IP.
+    const limited = await rateLimitAction('auth')
+    if (limited) return limited
+
     const supabase = await createClient()
 
     console.log('🔍 Attempting login for:', formData.email)
@@ -209,6 +221,11 @@ export async function login(formData: { email: string; password: string }) {
 // Resend the signup confirmation email (email-confirmation mode)
 export async function resendConfirmationEmail(email: string) {
   try {
+    // Unauthenticated and sends mail — without a budget this is a free
+    // mail-bomb aimed at any address the caller names.
+    const limited = await rateLimitAction('auth')
+    if (limited) return limited
+
     const supabase = await createClient()
 
     const { error } = await supabase.auth.resend({
@@ -331,6 +348,10 @@ export async function updateProfile(formData: {
 
 // Request password reset
 export async function resetPassword(email: string) {
+  // Unauthenticated and sends mail — same mail-bomb exposure as the resend.
+  const limited = await rateLimitAction('auth')
+  if (limited) return limited
+
   const supabase = await createClient()
 
   const { error } = await supabase.auth.resetPasswordForEmail(email, {

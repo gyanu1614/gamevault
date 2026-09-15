@@ -75,6 +75,12 @@ export function rateLimitKey(name: RateLimitName, identifier: string): string {
   return `${name}:${identifier}`
 }
 
+/** The shape of the `rate_limit_hit` RPC — see the note inside checkRateLimit. */
+type RateLimitRpc = (
+  fn: 'rate_limit_hit',
+  args: { p_key: string; p_limit: number; p_window_seconds: number },
+) => PromiseLike<{ data: boolean | null; error: { message: string } | null }>
+
 /**
  * Charge one hit against a budget.
  *
@@ -91,7 +97,12 @@ export async function checkRateLimit(
 
   try {
     const supabase = createServiceRoleClient()
-    const { data, error } = await supabase.rpc('rate_limit_hit', {
+    // Typed locally rather than through Database['public']['Functions']: the
+    // hand-written schema in src/types/database.ts has no `Relationships` key
+    // on its tables, so it fails postgrest-js' GenericSchema constraint and
+    // every .rpc() there degrades to accepting `undefined` args. Widening that
+    // schema is a separate change; this keeps the call site honestly typed.
+    const { data, error } = await (supabase.rpc as RateLimitRpc)('rate_limit_hit', {
       p_key: key,
       p_limit: budget.limit,
       p_window_seconds: budget.windowSeconds,
@@ -143,4 +154,34 @@ export function rateLimitResponse(result: RateLimitResult, message?: string): Re
       },
     },
   )
+}
+
+/**
+ * Server-action variant: charges the caller's IP and, when over budget,
+ * returns a plain `{ error }` object instead of a Response.
+ *
+ * Server actions return values to the client component rather than HTTP
+ * responses, so a 429 would be invisible; callers surface `error` in the form
+ * exactly as they already surface a validation failure. `retryAfter` carries
+ * the same seconds value the Retry-After header would.
+ *
+ * Returns null when the caller is within budget, so the call site reads:
+ *   const limited = await rateLimitAction('auth')
+ *   if (limited) return limited
+ */
+export async function rateLimitAction(
+  name: RateLimitName,
+  message?: string,
+): Promise<{ error: string; rateLimited: true; retryAfter: number } | null> {
+  // Imported lazily: next/headers is only resolvable inside a request scope,
+  // and keeping it out of module scope lets this file stay unit-testable.
+  const { headers } = await import('next/headers')
+  const result = await checkRateLimitByIp(name, await headers())
+  if (!result.limited) return null
+  return {
+    error:
+      message ?? 'Too many attempts. Please wait a minute before trying again.',
+    rateLimited: true,
+    retryAfter: result.retryAfter,
+  }
 }
