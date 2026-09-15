@@ -30,6 +30,15 @@ export type Database = {
         }
         Returns: Json
       }
+      // Added via 20260916100000_rate_limits.sql
+      rate_limit_hit: {
+        Args: { p_key: string; p_limit: number; p_window_seconds: number }
+        Returns: boolean
+      }
+      rate_limits_cleanup: {
+        Args: { p_retain_seconds?: number }
+        Returns: number
+      }
     }
     Enums: {
       [_ in never]: never
