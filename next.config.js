@@ -217,4 +217,30 @@ const nextConfig = {
   },
 }
 
-module.exports = nextConfig
+const { withSentryConfig } = require('@sentry/nextjs')
+
+// Sentry build-time instrumentation.
+//
+// SOURCE MAPS: uploaded by the Sentry **Vercel integration**, not from this
+// build. That is why there is no authToken here and why sourcemaps.disable is
+// set — with the plugin's uploader live it would also try to upload, need a
+// SENTRY_AUTH_TOKEN, and fail the build on every machine that hasn't got one
+// (local, CI, the tsc/next build gate). The integration does the upload from
+// Vercel's side using its own credentials.
+module.exports = withSentryConfig(nextConfig, {
+  org: 'dropmarket-ltd',
+  project: 'javascript-nextjs',
+
+  // Build-time source map upload is the Vercel integration's job.
+  sourcemaps: { disable: true },
+
+  // Keep build output quiet outside CI.
+  silent: !process.env.CI,
+
+  // Routes browser events through our own origin so ad-blockers (which block
+  // requests to *.sentry.io outright) don't silently drop client errors.
+  tunnelRoute: '/monitoring',
+
+  // Strips the Sentry SDK's own console logging from the client bundle.
+  disableLogger: true,
+})
