@@ -139,22 +139,42 @@ for (const rec of records) {
 // ── diff against the database ──────────────────────────────────────────────
 const { data: existingRows, error: readErr } = await supabase
   .from('games')
-  .select('id, slug, name, ecosystem, content_tier, source, is_active')
+  .select('id, slug, name, ecosystem, content_tier, source, is_active, description, image_url')
 if (readErr) {
   console.error(`✗ Could not read games: ${readErr.message}`)
   process.exit(1)
 }
 const existing = new Map((existingRows ?? []).map((g) => [g.slug, g]))
 
+/**
+ * The exact row the seeder would write for a CSV record. Built ONCE here so
+ * the dry-run diff and the real apply compare/write the same thing — the two
+ * previously disagreed (the diff ignored description, the apply UPDATEd every
+ * row unconditionally), which with the updated_at trigger would have bumped
+ * <lastmod> on all 233 games on every run.
+ */
+function rowFor(v) {
+  return {
+    name: v.name,
+    slug: v.slug,
+    ecosystem: v.ecosystem,
+    content_tier: v.content_tier,
+    source: v.raw.source || 'seed-2026-09',
+    description: v.raw.short_description || null,
+    ...(v.raw.icon_url ? { image_url: v.raw.icon_url } : {}),
+  }
+}
+
+/** True when at least one seeded column differs from what the DB holds. */
+function hasChanges(v, e) {
+  const r = rowFor(v)
+  return Object.keys(r).some((k) => (e[k] ?? null) !== (r[k] ?? null))
+}
+
 const toInsert = valid.filter((v) => !existing.has(v.slug))
 const toUpdate = valid.filter((v) => {
   const e = existing.get(v.slug)
-  if (!e) return false
-  return (
-    e.name !== v.name ||
-    e.ecosystem !== v.ecosystem ||
-    e.content_tier !== v.content_tier
-  )
+  return e ? hasChanges(v, e) : false
 })
 const unchanged = valid.length - toInsert.length - toUpdate.length
 
@@ -176,7 +196,9 @@ if (toUpdate.length) {
   console.log('   UPDATE');
   for (const v of toUpdate.slice(0, 15)) {
     const e = existing.get(v.slug)
-    console.log(`     ~ ${v.slug.padEnd(38)} ${e.content_tier}→${v.content_tier} ${e.ecosystem ?? '-'}→${v.ecosystem ?? '-'}`)
+    const r = rowFor(v)
+    const changed = Object.keys(r).filter((k) => (e[k] ?? null) !== (r[k] ?? null))
+    console.log(`     ~ ${v.slug.padEnd(38)} [${changed.join(', ')}]`)
   }
   if (toUpdate.length > 15) console.log(`     … and ${toUpdate.length - 15} more`)
   console.log('')
@@ -226,24 +248,20 @@ const { data: globalCats } = await supabase
   .eq('is_active', true)
 const globalBySlug = new Map((globalCats ?? []).map((c) => [c.slug, c.id]))
 
-let inserted = 0, updated = 0, catsLinked = 0, failed = 0
+let inserted = 0, updated = 0, skipped = 0, catsLinked = 0, failed = 0
 const failures = []
 
 for (const v of valid) {
-  const payload = {
-    name: v.name,
-    slug: v.slug,
-    ecosystem: v.ecosystem,
-    content_tier: v.content_tier,
-    source: v.raw.source || 'seed-2026-09',
-    description: v.raw.short_description || null,
-    ...(v.raw.icon_url ? { image_url: v.raw.icon_url } : {}),
-  }
-
+  const payload = rowFor(v)
   const prior = existing.get(v.slug)
   let gameId = prior?.id
 
-  if (!prior) {
+  if (prior && !hasChanges(v, prior)) {
+    // Nothing to write. Skipping the UPDATE matters: the set_games_updated_at
+    // trigger would otherwise stamp updated_at — and therefore the sitemap's
+    // <lastmod> — on every game, every run.
+    skipped++
+  } else if (!prior) {
     const { data, error } = await supabase
       .from('games')
       .insert({ ...payload, is_active: true })
@@ -303,7 +321,7 @@ for (const v of valid) {
   }
 }
 
-console.log(`   ✓ inserted ${inserted}, updated ${updated}, categories created ${catsLinked}`)
+console.log(`   ✓ inserted ${inserted}, updated ${updated}, unchanged ${skipped}, categories created ${catsLinked}`)
 if (failed) {
   console.log(`   ✗ ${failed} failed:`)
   for (const f of failures.slice(0, 10)) console.log(`     - ${f}`)
