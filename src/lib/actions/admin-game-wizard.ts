@@ -24,6 +24,11 @@ import {
   deactivateLegacyCategoryRow,
 } from '@/lib/actions/_category-bridge'
 import { GAME_DIRECTORY_TAG } from '@/lib/marketplace/gameDirectoryCache'
+import {
+  validateGameIdentity,
+  type GameContentTier,
+  type GameEcosystem,
+} from '@/lib/games/validate-game'
 
 // ─── Service-role client (matches admin-games.ts) ─────────────────────────────
 
@@ -42,6 +47,10 @@ export interface GameDetail {
   id: string
   name: string
   slug: string
+  /** listed = marketplace-only; data = carries a values/content hub. */
+  content_tier: string
+  /** roblox | pc | console | mobile | mmo | sports | other */
+  ecosystem: string | null
   emoji: string | null
   image_url: string | null   // logo URL (existing column)
   cover_url: string | null   // portrait cover (added in 20260611_games_cover_url.sql)
@@ -92,6 +101,10 @@ export interface SaveGameIdentityInput {
   emoji?: string | null
   sort_order?: number
   is_active?: boolean
+  /** listed = marketplace-only; data = carries a values/content hub. */
+  content_tier?: GameContentTier
+  /** Platform bucket; drives SEO templates and seed category defaults. */
+  ecosystem?: GameEcosystem | null
 }
 
 type Result<T> =
@@ -105,8 +118,11 @@ export async function fetchGameById(id: string): Promise<GameDetail | null> {
   await requireAdmin()
   const supabase = getAdminSupabase()
 
+  // content_tier/ecosystem come from 20260915100000. Kept in `base` (not the
+  // optional tail) because that migration is part of this change set; if it is
+  // ever un-applied the same fallback below still keeps the editor up.
   const base =
-    'id, name, slug, emoji, image_url, cover_url, display_name, sort_order, is_active'
+    'id, name, slug, emoji, image_url, cover_url, display_name, sort_order, is_active, content_tier, ecosystem'
 
   // blog_cta_image_url arrives in a hand-applied migration. Selecting a column
   // that doesn't exist fails the WHOLE query, which would take the game editor
@@ -266,11 +282,23 @@ export async function saveGameIdentity(
     await requireAdmin()
     const supabase = getAdminSupabase()
 
-    // Validate
-    const name = input.name.trim()
-    const slug = input.slug.trim().toLowerCase()
-    if (name.length < 2)  return { success: false, error: 'Name must be at least 2 characters' }
-    if (!/^[a-z0-9-]+$/.test(slug)) return { success: false, error: 'Slug must be lowercase letters, numbers, and dashes only' }
+    // Validate through the SHARED validator (lib/games/validate-game.ts) so the
+    // wizard and the bulk seeder (scripts/seed-games.mjs) can never disagree
+    // about what a valid game is. It also rejects slugs that would be shadowed
+    // by a top-level route, which this action never used to check.
+    //
+    // `categories` is not part of the identity step — category enablement is a
+    // separate wizard step (upsertGameCategory) — so a single placeholder is
+    // passed to satisfy the shared "at least one category" rule.
+    const validated = validateGameIdentity({
+      name: input.name,
+      slug: input.slug,
+      ecosystem: input.ecosystem ?? null,
+      content_tier: input.content_tier ?? 'listed',
+      categories: ['items'],
+    })
+    if (!validated.ok) return { success: false, error: validated.error }
+    const { name, slug } = validated.value
 
     const payload = {
       name,
@@ -278,6 +306,8 @@ export async function saveGameIdentity(
       display_name: input.display_name?.trim() || null,
       emoji: input.emoji?.trim() || null,
       sort_order: input.sort_order ?? 99,
+      ...(input.content_tier !== undefined ? { content_tier: validated.value.content_tier } : {}),
+      ...(input.ecosystem !== undefined ? { ecosystem: validated.value.ecosystem } : {}),
       ...(input.is_active !== undefined ? { is_active: input.is_active } : {}),
     }
 
