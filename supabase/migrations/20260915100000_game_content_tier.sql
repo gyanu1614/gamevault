@@ -50,3 +50,26 @@ UPDATE "public"."games"
 CREATE INDEX IF NOT EXISTS "idx_games_content_tier"
   ON "public"."games" ("content_tier")
   WHERE "is_active" = true;
+
+-- `updated_at` so the sitemap can emit a truthful <lastmod> for game hubs
+-- and /[game]/sell (Step 1 deliverable 6). The baseline games table only
+-- carried created_at, so a sitemap select of updated_at errored and silently
+-- emptied the games section entirely.
+--
+-- Backfilled from created_at rather than now(): a row nobody has touched has
+-- not changed, and stamping every game with the migration time would tell
+-- Google 233 pages changed on the same day.
+ALTER TABLE "public"."games"
+  ADD COLUMN IF NOT EXISTS "updated_at" timestamp with time zone;
+
+UPDATE "public"."games" SET "updated_at" = "created_at" WHERE "updated_at" IS NULL;
+
+ALTER TABLE "public"."games"
+  ALTER COLUMN "updated_at" SET DEFAULT "now"();
+
+-- Reuses the baseline's shared trigger function (SECURITY DEFINER with a
+-- pinned search_path there), so no new function is introduced.
+DROP TRIGGER IF EXISTS "set_games_updated_at" ON "public"."games";
+CREATE TRIGGER "set_games_updated_at"
+  BEFORE UPDATE ON "public"."games"
+  FOR EACH ROW EXECUTE FUNCTION "public"."update_updated_at_column"();

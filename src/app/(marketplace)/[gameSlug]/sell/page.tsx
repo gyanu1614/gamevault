@@ -8,10 +8,14 @@
  * listing flow — this page is the top-of-funnel that ranks and that we can DM
  * a lead. Public + works logged-out (no auth).
  *
- * Game-agnostic: renders for any game with a content hub (hasGameContentTheme),
- * so SAB and Adopt Me both get one from the same file. Forest hub chrome; the
- * per-game accent comes from the content theme. Cash claims stay honest per
- * game (SAB = completed sales; Adopt Me = estimated until sales land).
+ * Game-agnostic: renders for EVERY active game, not just the two with a
+ * content hub. Phase 1 · Step 1 — the seeded `listed` catalogue's hubs stay
+ * noindex until they have inventory, so this seller-intent page is what
+ * carries their SEO; it is complete with zero listings because it targets
+ * sellers, not buyers. Games with a content theme keep their per-game accent
+ * and top-values teaser; everything else renders on DEFAULT_THEME with the
+ * teaser absent (getHubTopValues returns [] for them). Cash claims stay honest
+ * per game (SAB = completed sales; Adopt Me = estimated until sales land).
  */
 
 import type { Metadata } from 'next'
@@ -19,11 +23,15 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { IconRosetteDiscountCheck, IconShieldCheck, IconSearch, IconArrowRight, IconCheck, IconUserPlus, IconListDetails, IconCash } from '@tabler/icons-react'
 import { JsonLd, breadcrumbList, faqPage } from '@/lib/seo/jsonld'
+import { isGameSellPageIndexable } from '@/lib/games/indexability'
+import { commissionPct } from '@/lib/fees'
 import { HubNav } from '@/components/content/HubNav'
 import { HubFooter } from '@/components/content/HubFooter'
 import { HubHero } from '@/components/content/HubHero'
 import { getHubNavData } from '@/lib/content/hubNav'
-import { getGameContentTheme, hasGameContentTheme, CONTENT_HUB_GAME_SLUGS } from '@/lib/content/theme'
+import { getGameContentTheme, CONTENT_HUB_GAME_SLUGS } from '@/lib/content/theme'
+import { createAnonClient } from '@/lib/supabase/anon'
+import { cache } from 'react'
 import { getHubTopValues } from '../blog/_hubData'
 import { SabHeroBackdrop } from '../values/_SabHeroBackdrop'
 import { FaqCards } from '@/components/marketplace/FaqCards'
@@ -36,12 +44,58 @@ const AMBER = '#F5C451'
 export const revalidate = 3600
 
 /**
- * Prerender the game slug(s) this route serves; every other slug notFound()s
- * below, so there is nothing else to build.
+ * Prerender only the content-hub games. Every other active game renders on
+ * demand and is then cached by `revalidate` — prerendering 230+ seller pages
+ * at build time would cost build minutes for pages that are mostly crawled,
+ * not browsed.
  */
 export function generateStaticParams() {
   return CONTENT_HUB_GAME_SLUGS.map((gameSlug) => ({ gameSlug }))
 }
+
+/**
+ * The game row behind this page. Cached per request so generateMetadata and
+ * the page body share ONE query. Also supplies the sell page's indexability
+ * inputs (enabled category count).
+ */
+const getSellPageGame = cache(async (gameSlug: string) => {
+  const supabase = createAnonClient()
+  const { data: game } = (await supabase
+    .from('games')
+    .select('id, name, slug, seo_indexable')
+    .eq('slug', gameSlug)
+    .eq('is_active', true)
+    .maybeSingle()) as unknown as {
+    data: { id: string; name: string; slug: string; seo_indexable: boolean | null } | null
+  }
+  if (!game) return null
+
+  const { data: cats } = (await supabase
+    .from('categories')
+    .select('slug, metadata')
+    .eq('game_id', game.id)
+    .eq('is_active', true)
+    .order('display_order', { ascending: true })) as unknown as {
+    data: { slug: string; metadata: { type?: string } | null }[] | null
+  }
+  const categories = cats ?? []
+
+  return {
+    ...game,
+    enabledCategoryCount: categories.length,
+    // The category the title advertises. Currency first, then items, then
+    // accounts: a game that trades currency is searched as "sell <game> gold",
+    // not "sell <game> accounts", and accounts are the fallback rather than
+    // the default (they also carry the highest fee, so leading with them
+    // quotes sellers the worst rate the game offers).
+    primaryCategory:
+      categories.find((c) => c.metadata?.type === 'currency') ??
+      categories.find((c) => c.metadata?.type === 'items') ??
+      categories.find((c) => c.metadata?.type === 'account') ??
+      categories[0] ??
+      null,
+  }
+})
 
 interface PageProps {
   params: Promise<{ gameSlug: string }>
@@ -49,16 +103,42 @@ interface PageProps {
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { gameSlug } = await params
-  if (!hasGameContentTheme(gameSlug)) return { title: 'Not Found' }
-  const { name } = getGameContentTheme(gameSlug)
+  const game = await getSellPageGame(gameSlug)
+  if (!game) return { title: 'Not Found' }
+  // A themed game keeps its curated display name; everything else uses the
+  // games row, so the copy reads naturally for all 233 seeded titles.
+  const theme = getGameContentTheme(gameSlug)
+  const name = CONTENT_HUB_GAME_SLUGS.includes(gameSlug) ? theme.name : game.name
+
+  const indexable = isGameSellPageIndexable({
+    enabledCategoryCount: game.enabledCategoryCount,
+    seoIndexable: game.seo_indexable,
+  })
 
   // Bare title — the root layout template appends "| DropMarket".
-  const title = `Sell ${name} for Real Money — Cash Out Safely`
+  // Step 1 deliverable 5 title pattern: "Sell {Game} {Category} — {rate}% fee".
+  // The rate is READ from the live fee table (no fee changes in this step), so
+  // a rate edit can never leave the title quoting a stale number.
+  const primary = game.primaryCategory
+  const categoryWord = primary
+    ? ({ account: 'Accounts', items: 'Items', currency: 'Currency', top_up: 'Top-Ups' } as Record<string, string>)[
+        primary.metadata?.type ?? ''
+      ] ?? 'Items'
+    : 'Items'
+  const rate = commissionPct({
+    categoryMetaType: primary?.metadata?.type ?? null,
+    categorySlug: primary?.slug ?? null,
+    gameSlug,
+  })
+  const title = `Sell ${name} ${categoryWord} — ${rate}% fee`
   const description = `Turn your ${name} inventory into real cash. List on DropMarket, get paid on delivery with SafeDrop even if a buyer ghosts, and founding sellers lock a lower fee for life. Here's how to start.`
 
   return {
     title,
     description,
+    // A game with no enabled category has nothing to sell, so the page has
+    // no reason to rank; it still renders for anyone who lands on it.
+    robots: indexable ? undefined : { index: false, follow: true },
     alternates: { canonical: `/${gameSlug}/sell` },
     openGraph: {
       title: `Sell ${name} for Real Money`,
@@ -71,14 +151,17 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default async function SellLandingPage({ params }: PageProps) {
   const { gameSlug } = await params
-  if (!hasGameContentTheme(gameSlug)) notFound()
+  const game = await getSellPageGame(gameSlug)
+  if (!game) notFound()
 
   const theme = getGameContentTheme(gameSlug)
   const [hubNav, topPets] = await Promise.all([
     getHubNavData(gameSlug),
+    // Returns [] for any game without a values hub, so the teaser section
+    // below simply doesn't render for the seeded `listed` catalogue.
     getHubTopValues(gameSlug, 3),
   ])
-  const name = theme.name
+  const name = CONTENT_HUB_GAME_SLUGS.includes(gameSlug) ? theme.name : game.name
 
   const FAQ = [
     {

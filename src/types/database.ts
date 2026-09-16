@@ -2319,6 +2319,7 @@ export type Database = {
           slug: string
           sort_order: number | null
           source: string | null
+          updated_at: string | null
         }
         Insert: {
           blog_cta_image_url?: string | null
@@ -2344,6 +2345,7 @@ export type Database = {
           slug: string
           sort_order?: number | null
           source?: string | null
+          updated_at?: string | null
         }
         Update: {
           blog_cta_image_url?: string | null
@@ -2369,6 +2371,7 @@ export type Database = {
           slug?: string
           sort_order?: number | null
           source?: string | null
+          updated_at?: string | null
         }
         Relationships: []
       }

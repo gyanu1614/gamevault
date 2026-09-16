@@ -13,6 +13,10 @@
 import { MetadataRoute } from 'next'
 import { createClient } from '@/lib/supabase/server'
 import { LANDING_PAGES } from '@/lib/seo/landingPages'
+import {
+  isGameHubIndexable,
+  isGameSellPageIndexable,
+} from '@/lib/games/indexability'
 import { isLandingPageIndexable } from '@/lib/seo/landingPageInventory'
 import { LEGAL_DOCS } from '@/lib/legal/documents'
 import { getAllPosts, getFlatPosts } from '@/lib/blog/posts'
@@ -148,9 +152,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     await Promise.all([
       supabase
         .from('games')
-        .select('id, slug')
+        .select('id, slug, content_tier, updated_at')
         .eq('is_active', true) as unknown as Promise<{
-        data: { id: string; slug: string }[] | null
+        data: {
+          id: string
+          slug: string
+          content_tier: string | null
+          updated_at: string | null
+        }[] | null
       }>,
       supabase
         .from('listings')
@@ -190,6 +199,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     data: { slug: string; game_id: string; game: { slug: string } | null }[] | null
   }
 
+  // Which games have at least one enabled category — the sell page's
+  // indexability input. Reads the legacy `categories` table because that is
+  // what the marketplace surfaces render from; see the step-1 report on
+  // unifying it with game_categories.
+  const { data: gameCategoryCounts } = (await supabase2
+    .from('categories')
+    .select('game_id')
+    .eq('is_active', true)) as unknown as {
+    data: { game_id: string }[] | null
+  }
+
   // Unique game+category pairs + max listing updated_at per pair/game
   // (cheap — derived from the listings we already fetched). ISO strings
   // compare lexicographically, so string max is date max.
@@ -219,11 +239,21 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     currencyConfigs?.map((c) => c.game_id) ?? [],
   )
 
-  // Game hubs — only games with ≥1 active listing OR a curated currency
-  // config. Empty hubs with neither stay out of the sitemap (they
-  // self-mark noindex on the page).
+  // Game hubs — the SAME rule the page's robots meta uses, imported from
+  // lib/games/indexability.ts so the two can never drift. A seeded
+  // zero-inventory `listed` hub renders 200 but stays out of the index and
+  // out of this sitemap until it has real inventory.
   const gamePages: MetadataRoute.Sitemap = (games ?? [])
-    .filter((game) => activeGameSlugs.has(game.slug) || curatedGameIds.has(game.id))
+    .filter((game) =>
+      isGameHubIndexable({
+        contentTier: game.content_tier,
+        activeListingCount: activeGameSlugs.has(game.slug) ? 1 : 0,
+        hasCuratedCurrencyConfig: curatedGameIds.has(game.id),
+        // sitemap.ts reads no seo_indexable override: the page is the
+        // authority on a forced value, and a sitemap entry for a noindex
+        // page is a contradictory signal. Left undefined = "no opinion".
+      }),
+    )
     .map((game) => {
       const lastmod = gameLastmod.get(game.slug)
       return {
@@ -233,6 +263,26 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         priority: 0.8,
       }
     })
+
+  // Seller-acquisition pages — indexable for every active game with at least
+  // one enabled category, inventory or not: the page targets sellers, so it
+  // is complete with zero listings. This is what carries the seeded
+  // catalogue's SEO while the hubs wait for inventory.
+  const gamesWithCategories = new Set(
+    (gameCategoryCounts ?? []).map((c: { game_id: string }) => c.game_id),
+  )
+  const sellPages: MetadataRoute.Sitemap = (games ?? [])
+    .filter((game) =>
+      isGameSellPageIndexable({
+        enabledCategoryCount: gamesWithCategories.has(game.id) ? 1 : 0,
+      }),
+    )
+    .map((game) => ({
+      url: `${BASE_URL}/${game.slug}/sell`,
+      ...(game.updated_at ? { lastModified: new Date(game.updated_at) } : {}),
+      changeFrequency: 'weekly' as const,
+      priority: 0.7,
+    }))
 
   // Add curated currency pairs that have no listings yet.
   const curatedConfigGameIds = new Set(currencyConfigs?.map((c) => c.game_id) ?? [])
@@ -373,6 +423,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...sabPages,
     ...adoptMePages,
     ...gamePages,
+    ...sellPages,
     ...categoryPages,
     ...listingPages,
   ]
