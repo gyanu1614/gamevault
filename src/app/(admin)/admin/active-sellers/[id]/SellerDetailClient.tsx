@@ -60,7 +60,7 @@ import {
 } from '../../_theme/forest'
 import { tierChipClass } from '../_components/ActiveSellersPageClient'
 
-/** Gemstone tier ladder, low → high, from the central module. */
+/** Seller rank ladder, low → high, from the central module. */
 const SELLER_TIERS = TIER_KEYS
 
 // ─── Formatting helpers ──────────────────────────────────────────────────────

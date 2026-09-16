@@ -39,8 +39,8 @@ export default async function SellerTiersPage() {
   const eligibleTier = (myData?.tierInfo.eligible_tier ?? currentTier) as string
   const commissionPct = myData
     ? (myData.tierInfo.commission_rate * 100).toFixed(1)
-    : (tierByKey('quartz').commissionRate * 100).toFixed(2)
-  const listingLimit = myData?.tierInfo.listing_limit ?? tierByKey('quartz').listingLimit
+    : (tierByKey(DEFAULT_TIER).commissionRate * 100).toFixed(2)
+  const listingLimit = myData?.tierInfo.listing_limit ?? tierByKey(DEFAULT_TIER).listingLimit
 
   // Build next-tier requirement object for TierProgressBar
   const nextTierConfig = myData?.tierInfo.next_tier

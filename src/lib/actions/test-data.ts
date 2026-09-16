@@ -141,18 +141,32 @@ export async function createTestListings() {
       originalTier = profile?.seller_tier
     }
 
-    // Temporarily upgrade seller to 'amethyst' tier to bypass pre-moderation
-    // (only quartz, the entry tier, is pre-moderated)
-    console.log('⬆️ Temporarily upgrading seller tier to amethyst to bypass pre-moderation...')
-    const { error: tierError } = await (supabase
-      .from('profiles')
-      .update as any)({ seller_tier: 'amethyst' })
-      .eq('id', sellerId)
+    // Temporarily upgrade the seller to the first rank ABOVE the entry rank to
+    // bypass pre-moderation (only the entry rank is pre-moderated). Read live
+    // from seller_tier_config so this never writes a stale rank literal.
+    const { data: rankRows } = await (supabase
+      .from('seller_tier_config')
+      .select('tier, pre_moderation_listings')
+      .order('sort_order', { ascending: true }) as any)
 
-    if (tierError) {
-      console.error('⚠️ Failed to upgrade tier:', tierError)
+    const bypassTier =
+      (rankRows ?? []).find((r: any) => (r?.pre_moderation_listings ?? 0) === 0)?.tier
+      ?? (rankRows ?? [])[1]?.tier
+
+    if (!bypassTier) {
+      console.error('⚠️ No non-pre-moderated rank found in seller_tier_config; leaving tier as-is')
     } else {
-      console.log('✅ Seller tier upgraded to amethyst')
+      console.log(`⬆️ Temporarily upgrading seller tier to ${bypassTier} to bypass pre-moderation...`)
+      const { error: tierError } = await (supabase
+        .from('profiles')
+        .update as any)({ seller_tier: bypassTier })
+        .eq('id', sellerId)
+
+      if (tierError) {
+        console.error('⚠️ Failed to upgrade tier:', tierError)
+      } else {
+        console.log(`✅ Seller tier upgraded to ${bypassTier}`)
+      }
     }
 
     // STEP 3: Get games and categories
@@ -279,7 +293,7 @@ export async function createTestListings() {
       },
     ]
 
-    console.log('📝 Step 3: Inserting listings with ACTIVE status (amethyst tier bypasses pre-moderation)...')
+    console.log('📝 Step 3: Inserting listings with ACTIVE status (bypass rank skips pre-moderation)...')
 
     const { data: createdListings, error } = await (supabase
       .from('listings')

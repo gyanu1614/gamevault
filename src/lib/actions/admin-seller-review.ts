@@ -3,7 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { requireAdmin, requireRole } from './admin-permissions'
-import { DEFAULT_TIER } from '@/lib/seller/tiers'
+import { getEntryTier } from '@/lib/seller/entry-tier'
 import { revalidatePath } from 'next/cache'
 import {
   sendApplicationApprovedEmail,
@@ -661,6 +661,8 @@ export async function approveApplication(
       }
     }
 
+    const entryTier = await getEntryTier(serviceClient)
+
     const { error: roleError } = await (serviceClient
       .from('profiles')
       .update as any)({
@@ -669,9 +671,11 @@ export async function approveApplication(
         shop_name: shopName,
         shop_slug: shopSlug,
         // Approval means KYC passed → mark verified (drives the blue Verified
-        // badge) and start them at the entry gemstone tier.
+        // badge) and start them at the entry rank. The rank name is read live
+        // from seller_tier_config — hard-coding it broke approval outright when
+        // the ladder was re-keyed (profiles_seller_tier_check).
         is_verified: true,
-        seller_tier: DEFAULT_TIER,
+        seller_tier: entryTier,
         // Only ever set founding true here — never false, so this can't revoke
         // a founding status granted elsewhere.
         ...(grantFounding ? { founding_seller: true } : {}),

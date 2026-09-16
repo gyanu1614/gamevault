@@ -60,7 +60,7 @@ const BAND_STYLE: React.CSSProperties = {
   boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.12), inset 0 -1px 0 rgba(0,0,0,0.3)',
 }
 
-/** seller_tier_config badge_color → dark-surface chip classes (gemstone tokens). */
+/** seller_tier_config badge_color → dark-surface chip classes (rank tokens). */
 export const TIER_CHIP_CLASSES: Record<string, string> = {
   zinc: 'bg-white/[0.1] text-white/85',
   violet: 'bg-violet-500/[0.16] text-violet-300',

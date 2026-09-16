@@ -244,8 +244,8 @@ export default function ListingDetailClient({
   // seller's available quantity. Instant-delivery listings are single-unit.
   const maxQty = listing.isUnlimited ? 99 : Math.max(1, listing.quantity ?? 1)
 
-  // Gemstone tier badge — driven by the central ladder. tierByKey tolerates
-  // unknown/legacy tier strings by falling back to Quartz.
+  // Rank badge — driven by the central ladder. tierByKey tolerates
+  // unknown/legacy tier strings by falling back to the entry rank.
   const tierDef = tierByKey(listing.seller.tier?.toLowerCase())
   const sellerName = sellerDisplayName(listing.seller)
   const sellerInitial = sellerName.charAt(0).toUpperCase()

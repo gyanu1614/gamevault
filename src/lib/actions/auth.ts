@@ -8,7 +8,7 @@ import { redirect } from 'next/navigation'
 import type { z } from 'zod'
 import { applyReferralAtSignup } from '@/lib/referral/commission'
 import { generateDiceBearAvatar } from '@/lib/utils/avatar'
-import { DEFAULT_TIER } from '@/lib/seller/tiers'
+import { getEntryTier } from '@/lib/seller/entry-tier'
 
 // Signup with username
 export async function signup(formData: {
@@ -573,16 +573,21 @@ export async function registerAsSeller(formData: {
     }
 
     // "Already a seller" must key on role/is_seller — NOT seller_tier, which now
-    // defaults to the entry tier ('quartz') on every profile, seller or not.
+    // defaults to the entry rank on every profile, seller or not.
     if (profile.role === 'seller' || profile.is_seller) {
       return { error: 'You are already a seller' }
     }
 
-    // Update profile to make user a seller (entry tier by default)
+    // Update profile to make user a seller (entry rank by default). The rank
+    // name is read live from seller_tier_config, never hard-coded — a literal
+    // here breaks against profiles_seller_tier_check whenever the ladder is
+    // re-keyed.
+    const entryTier = await getEntryTier(supabase)
+
     const { data, error } = await (supabase
       .from('profiles')
       .update as any)({
-        seller_tier: DEFAULT_TIER,
+        seller_tier: entryTier,
         ...(formData.businessName && { business_name: formData.businessName }),
         ...(formData.paypalEmail && { paypal_email: formData.paypalEmail }),
       })

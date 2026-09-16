@@ -4,10 +4,10 @@
  * SellerTierBadge — the visual tier medallion.
  *
  * Renders the ornate per-tier art from `public/tiers/{tier}.png` (gently
- * floating), and falls back to the flat lucide gemstone icon when the PNG isn't
+ * floating), and falls back to the flat lucide rank icon when the PNG isn't
  * present yet — so the app works with a full set, a partial set, or none.
  *
- * Drop the images at:  public/tiers/{quartz,amethyst,ruby,sapphire,diamond}.png
+ * Drop the images at:  public/tiers/{bronze,silver,gold,diamond,legendary}.png
  * (transparent, square). See public/tiers/README.md for the spec.
  */
 
@@ -54,7 +54,7 @@ export default function SellerTierBadge({
     )
   }
 
-  // Fallback: the flat lucide gemstone icon in the tier's colour, on a soft chip.
+  // Fallback: the flat lucide rank icon in the rank's colour, on a soft chip.
   return (
     <span
       className={cn(
