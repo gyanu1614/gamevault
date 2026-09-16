@@ -93,3 +93,8 @@ data/sab-market-feeds/*.json
 .github/hooks/
 .github/skills/
 .agents/
+
+# ── Phase 1 growth working docs (kept local, never committed) ──
+/growth/
+docs/growth/
+src/types/database.generated.ts

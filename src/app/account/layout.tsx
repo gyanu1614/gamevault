@@ -68,7 +68,9 @@ export default function AccountLayout({ children }: { children: React.ReactNode 
     username: user.profile?.username || user.email?.split('@')[0] || '',
     email: user.email || '',
     avatar_url: user.profile?.avatar_url || undefined,
-    seller_tier: user.profile?.seller_tier,
+    // seller_tier is nullable in the DB; AccountSidebar's prop is optional
+    // (string | undefined), so normalise null away like avatar_url above.
+    seller_tier: user.profile?.seller_tier || undefined,
     isApprovedSeller: user.isApprovedSeller,
     shop_name: user.profile?.shop_name,
     shop_slug: user.profile?.shop_slug,

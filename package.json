@@ -10,6 +10,8 @@
     "start": "NODE_OPTIONS='--max-http-header-size=32768' next start",
     "lint": "next lint",
     "type-check": "tsc --noEmit",
+    "db:types": "supabase gen types typescript --local > src/types/database.generated.ts && node scripts/merge-db-types.mjs",
+    "seed:games": "node scripts/seed-games.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "sab:eldorado:collect": "node scripts/collect-eldorado-sab-api-v6.mjs",
