@@ -8,7 +8,6 @@ import { FooterGameLinks } from '@/components/footer-game-links'
 import { Toaster } from 'sonner'
 import RecentPurchaseToast, { DailyStatsToast } from '@/components/marketplace/RecentPurchaseToast'
 import { Analytics } from "@vercel/analytics/next"
-import { AllHeroesPreload } from '@/components/hero-backdrop'
 
 // Two text faces, split by surface:
 //   • MARKETPLACE (storefront, everything by default) → Inter, exposed as
@@ -88,12 +87,16 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <head>
-        {/* V21/P7.g — Warm-preload every hero AVIF at app load so
-            SPA navigations between routes show their backdrops
-            instantly without a black flash. fetchpriority=low so
-            this doesn't compete with the LCP hero on the landing
-            page. */}
-        <AllHeroesPreload />
+        {/* Hero preloading is ROUTE-AWARE: each segment layout emits its own
+            <HeroBackdropPreload> for the one hero it renders — `marketplace`
+            in (marketplace), `sell` in (sell), `account` in /account, `home`
+            on the landing page.
+
+            V21/P7.g used to warm-preload all five heroes here so SPA
+            navigations never showed a black flash. It cost every route ~2MB
+            of images it does not display — `order.avif` alone is 1.24MB, and
+            it was the single largest download on the landing page, which
+            never shows that hero. Removed in Step 1c/Fix 1. */}
       </head>
       <body className={`${inter.variable} ${figtree.variable} ${jetbrainsMono.variable} font-sans antialiased`} style={{ '--font-display': 'var(--font-inter)', '--font-body': 'var(--font-inter)' } as React.CSSProperties}>
         <Providers>
