@@ -10,6 +10,7 @@ import { tierByKey } from '@/lib/seller/tiers'
 import React from 'react'
 import { Metadata } from 'next'
 import { notFound } from 'next/navigation'
+import { isGameHubIndexable } from '@/lib/games/indexability'
 import Link from 'next/link'
 import { createAnonClient } from '@/lib/supabase/anon'
 import { ArrowRight, Calculator, Package, TrendingUp } from 'lucide-react'
@@ -57,7 +58,7 @@ const getGameData = cache(async function getGameData(gameSlug: string) {
     // STATE-012 — explicit columns. The 7 read directly off `game` in this
     // file, plus the 4 seo_* overrides resolveGameSeo() reads via `overrides`.
     .select(
-      'id, name, slug, description, ecosystem, image_url, seo_indexable, seo_title, seo_description, seo_h1, seo_intro',
+      'id, name, slug, description, ecosystem, content_tier, image_url, seo_indexable, seo_title, seo_description, seo_h1, seo_intro',
     )
     .eq('slug', gameSlug)
     .eq('is_active', true)
@@ -124,10 +125,14 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       .eq('category_type', 'currency')
       .limit(1),
   ] as const) as any
-  // Indexability: admin override (seo_indexable) wins; otherwise auto by
-  // real content (active listings or a curated currency config).
-  const autoIndexable = (listingCount ?? 0) > 0 || (curatedCfg?.length ?? 0) > 0
-  const indexable = game.seo_indexable ?? autoIndexable
+  // Indexability — ONE definition, shared with sitemap.ts so the robots meta
+  // and the sitemap can never disagree. See lib/games/indexability.ts.
+  const indexable = isGameHubIndexable({
+    contentTier: game.content_tier,
+    activeListingCount: listingCount ?? 0,
+    hasCuratedCurrencyConfig: (curatedCfg?.length ?? 0) > 0,
+    seoIndexable: game.seo_indexable,
+  })
 
   // Auto-SEO engine: admin overrides merged with smart templates.
   const seo = resolveGameSeo({
@@ -479,8 +484,32 @@ export default async function GameBrowsePage({ params }: PageProps) {
           <h2 className="text-3xl font-bold text-text-primary mb-8">Browse by Category</h2>
 
           {categories.length === 0 ? (
-            <div className="text-center py-12 bg-bg-overlay border border-border-subtle rounded-xl">
-              <p className="text-text-secondary">No categories available for this game yet</p>
+            /* Phase 1 · Step 1 — a `listed` game with no categories yet must
+               not read as broken. Point at the two things that ARE available:
+               selling into it, and asking for a category. */
+            <div className="rounded-xl border border-border-subtle bg-bg-overlay px-6 py-12 text-center">
+              <p className="text-text-primary font-semibold">
+                Categories For {game.name} Are Opening Soon
+              </p>
+              <p className="mx-auto mt-2 max-w-xl text-body-sm text-text-secondary">
+                No one has listed {game.name} yet. Sellers can start here first
+                — every order is covered by SafeDrop, item guaranteed or a full
+                refund.
+              </p>
+              <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+                <Link
+                  href={`/${gameSlug}/sell`}
+                  className="inline-flex items-center justify-center rounded-lg bg-lime px-5 py-2.5 text-body-sm font-semibold text-black transition-opacity hover:opacity-90"
+                >
+                  Sell {game.name}
+                </Link>
+                <Link
+                  href={`mailto:support@dropmarket.gg?subject=${encodeURIComponent(`Category request: ${game.name}`)}`}
+                  className="inline-flex items-center justify-center rounded-lg border border-border-subtle px-5 py-2.5 text-body-sm font-semibold text-text-primary transition-colors hover:bg-bg-overlay"
+                >
+                  Request A Category
+                </Link>
+              </div>
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">

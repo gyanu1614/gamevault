@@ -283,10 +283,10 @@ export default async function SEOLandingPage({
                         <td className="px-5 py-3.5">
                           <div className="flex items-center gap-2">
                             <span className="text-muted-foreground">{listing.seller?.username}</span>
-                            {listing.seller?.seller_rating > 0 && (
+                            {(listing.seller?.seller_rating ?? 0) > 0 && (
                               <span className="flex items-center gap-0.5 text-amber-400 text-xs">
                                 <Star className="w-3 h-3 fill-current" />
-                                {listing.seller.seller_rating.toFixed(1)}
+                                {(listing.seller.seller_rating ?? 0).toFixed(1)}
                               </span>
                             )}
                           </div>

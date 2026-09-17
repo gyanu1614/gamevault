@@ -19,7 +19,9 @@ interface EditReviewButtonProps {
   reviewId: string
   reviewerId: string
   currentUserId?: string
-  createdAt: string
+  /** Nullable in the DB. When absent the review's age is unknown, so the
+   *  30-day edit window cannot be proven open and editing is not offered. */
+  createdAt: string | null
   lastEditedAt?: string | null
   onClick: () => void
   className?: string
@@ -38,6 +40,12 @@ export default function EditReviewButton({
   const isReviewer = currentUserId === reviewerId
 
   if (!isReviewer) {
+    return null
+  }
+
+  // Without a creation timestamp we cannot prove the review is inside the
+  // 30-day window, so fail closed rather than granting an edit.
+  if (!createdAt) {
     return null
   }
 
