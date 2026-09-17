@@ -1,4 +1,5 @@
 import { revalidatePath } from 'next/cache'
+import { checkRateLimitByIp, rateLimitResponse } from '@/lib/security/rate-limit'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -43,6 +44,17 @@ function jsonResponse(
 export async function POST(
   request: Request,
 ): Promise<Response> {
+  // Limited before the secret comparison, so this cannot be used to brute
+  // force SAB_MARKET_REVALIDATE_SECRET at line speed.
+  const limit = await checkRateLimitByIp(
+    'internal',
+    request.headers,
+  )
+
+  if (limit.limited) {
+    return rateLimitResponse(limit)
+  }
+
   const expectedSecret =
     process.env.SAB_MARKET_REVALIDATE_SECRET
 

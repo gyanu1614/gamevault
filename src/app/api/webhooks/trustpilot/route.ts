@@ -11,6 +11,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/service'
+import { checkRateLimit, rateLimitResponse } from '@/lib/security/rate-limit'
 
 // Trustpilot signs webhooks with HMAC-SHA256 - verify for security
 const TRUSTPILOT_WEBHOOK_SECRET = process.env.TRUSTPILOT_WEBHOOK_SECRET
@@ -38,6 +39,13 @@ interface TrustpilotWebhookPayload {
 }
 
 export async function POST(request: NextRequest) {
+  // Per-provider budget (not per-IP): a provider's callbacks arrive from many
+  // IPs, and one noisy provider must not throttle another's. Charged before
+  // signature verification so a flood of forged callbacks cannot pin the CPU
+  // on HMAC work.
+  const limit = await checkRateLimit('webhook', 'provider:trustpilot')
+  if (limit.limited) return rateLimitResponse(limit)
+
   try {
     const body = await request.text()
 

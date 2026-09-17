@@ -1,4 +1,5 @@
 import * as Sentry from '@sentry/nextjs'
+import { checkRateLimitByIp, rateLimitResponse } from '@/lib/security/rate-limit'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -99,5 +100,11 @@ export async function GET(request: Request): Promise<Response> {
 }
 
 export async function POST(request: Request): Promise<Response> {
+  // Limited before the CRON_SECRET check: this route captures a real Sentry
+  // event per call, so an unauthenticated flood would burn the Sentry quota
+  // even while every request is being rejected.
+  const limit = await checkRateLimitByIp('internal', request.headers)
+  if (limit.limited) return rateLimitResponse(limit)
+
   return handle(request)
 }
