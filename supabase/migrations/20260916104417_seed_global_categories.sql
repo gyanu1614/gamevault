@@ -20,6 +20,12 @@
 -- "VaultShield escrow"). Seeded verbatim here so a fresh reset matches
 -- production byte for byte; the copy is corrected in the next migration
 -- so that both environments move together.
+--
+-- ORDERING: this file MUST sort before 20260916110000_global_categories_brand_copy,
+-- which UPDATEs these rows. If it sorts after, a fresh reset re-inserts the
+-- retired copy and the correction is silently lost. Renamed from the round
+-- 20260916100000 (which collided with rate_limits on remote and was therefore
+-- skipped during the Step 1 ship) to a real-second stamp that keeps this order.
 
 INSERT INTO public.global_categories
   (id, slug, name, description, icon_url, icon_emoji, sort_order, is_active, seo_title, seo_description, created_at, updated_at)
