@@ -24,20 +24,30 @@ const inter = Inter({
   display: 'swap',
 })
 
+// preload:false — Figtree is scoped to `.hub-chrome` (globals.css remaps
+// --font-inter inside the content hub). next/font preloads every font declared
+// in the root layout, so a marketplace route was fetching Figtree at high
+// priority to render zero glyphs with it. It still loads on hub routes that
+// use it, just without competing with the LCP everywhere else.
 const figtree = Figtree({
   subsets: ['latin'],
   weight: ['400', '500', '600', '700', '800', '900'],
   variable: '--font-figtree',
   display: 'swap',
+  preload: false,
 })
 
 // JetBrains Mono — order IDs, timestamps, mono data
 // (Geist Mono not available in next/font/google for Next.js 14; JetBrains Mono is equivalent quality)
+// preload:false — mono is for order IDs, timestamps and tabular data. 54 files
+// use it, but never above the fold on a hub/sell/landing page, so preloading it
+// spent priority on a font the first paint does not need.
 const jetbrainsMono = JetBrains_Mono({
   subsets: ['latin'],
   weight: ['400', '500'],
   variable: '--font-mono',
   display: 'swap',
+  preload: false,
 })
 
 export const metadata: Metadata = {
