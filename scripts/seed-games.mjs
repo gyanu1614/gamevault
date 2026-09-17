@@ -24,6 +24,7 @@ import { readFileSync, writeFileSync, existsSync } from 'node:fs'
 import { createClient } from '@supabase/supabase-js'
 import { config as loadEnv } from 'dotenv'
 import { validateGameIdentity } from '../src/lib/games/validate-game.ts'
+import { mergeGameRow, findAliasSlugCollisions } from '../src/lib/games/seed-merge.ts'
 
 // ── args ───────────────────────────────────────────────────────────────────
 const argv = process.argv.slice(2)
@@ -136,6 +137,26 @@ for (const rec of records) {
   valid.push({ ...result.value, raw: rec })
 }
 
+// ── alias/slug collision check (Step 1d · E3) ──────────────────────────────
+// An alias that equals ANOTHER row's slug means two rows describe the same
+// game under two identities — the duplicate class that had to be filtered by
+// hand during the Step 1 ship. Fail loudly before touching the database
+// rather than inserting the second identity.
+const aliasCollisions = findAliasSlugCollisions(
+  valid.map((v) => ({
+    slug: v.slug,
+    aliases: (v.raw.aliases ?? '').split('|').map((a) => a.trim()).filter(Boolean),
+  })),
+)
+if (aliasCollisions.length) {
+  console.error(`\n✗ ${aliasCollisions.length} alias/slug collision(s) — nothing written:`)
+  for (const c of aliasCollisions) {
+    console.error(`   "${c.slug}" aliases "${c.alias}", which is the slug of "${c.collidesWith}"`)
+  }
+  console.error('')
+  process.exit(1)
+}
+
 // ── diff against the database ──────────────────────────────────────────────
 const { data: existingRows, error: readErr } = await supabase
   .from('games')
@@ -165,9 +186,18 @@ function rowFor(v) {
   }
 }
 
+/**
+ * The row to WRITE for an existing game: rowFor() passed through the
+ * fill-only merge, so name/description fill a blank production value but
+ * never overwrite one someone has written by hand. See seed-merge.ts.
+ */
+function rowForExisting(v, e) {
+  return mergeGameRow(rowFor(v), e)
+}
+
 /** True when at least one seeded column differs from what the DB holds. */
 function hasChanges(v, e) {
-  const r = rowFor(v)
+  const r = rowForExisting(v, e)
   return Object.keys(r).some((k) => (e[k] ?? null) !== (r[k] ?? null))
 }
 
@@ -196,7 +226,10 @@ if (toUpdate.length) {
   console.log('   UPDATE');
   for (const v of toUpdate.slice(0, 15)) {
     const e = existing.get(v.slug)
-    const r = rowFor(v)
+    // rowForExisting, NOT rowFor: the preview must list the columns the
+    // apply would actually write. With fill-only semantics those differ —
+    // a protected non-empty name shows as changed under rowFor and is not.
+    const r = rowForExisting(v, e)
     const changed = Object.keys(r).filter((k) => (e[k] ?? null) !== (r[k] ?? null))
     console.log(`     ~ ${v.slug.padEnd(38)} [${changed.join(', ')}]`)
   }
@@ -252,8 +285,10 @@ let inserted = 0, updated = 0, skipped = 0, catsLinked = 0, failed = 0
 const failures = []
 
 for (const v of valid) {
-  const payload = rowFor(v)
   const prior = existing.get(v.slug)
+  // Inserts write the seeded row as-is; updates go through the fill-only
+  // merge so hand-edited prose on production survives a re-run.
+  const payload = prior ? rowForExisting(v, prior) : rowFor(v)
   let gameId = prior?.id
 
   if (prior && !hasChanges(v, prior)) {

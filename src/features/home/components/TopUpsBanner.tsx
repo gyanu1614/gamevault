@@ -55,6 +55,8 @@ export function TopUpsBanner() {
               <img
                 src="/characters/raptor.webp"
                 alt=""
+                loading="lazy"
+                decoding="async"
                 className="mascot unflip"
                 width={210}
                 height={519}

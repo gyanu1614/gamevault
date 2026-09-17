@@ -707,10 +707,10 @@ const TRUST_ROWS = [
    watermark, the 3D trust art with its tone glow — the look the user
    asked to keep, at 2-up phone size. */
 const TRUST_CARDS = [
-  { claim: 'SafeDrop On Every Order', proof: 'Sellers are paid only after you confirm delivery.', img: '/icons/trust/money-back.png', Ghost: ShieldCheck, glow: 'rgba(198,255,61,0.28)' },
-  { claim: 'Sellers Earn Their Spot', proof: 'ID checks, payment verification and live ratings.', img: '/icons/safedrop-emblem.png', Ghost: ShieldCheck, glow: 'rgba(74,222,128,0.30)' },
-  { claim: "Fees That Don't Sting", proof: 'Sellers pay 5\u201310%, not the 17\u201326% others skim.', img: '/how-it-works/step-2.png', Ghost: Coins, glow: 'rgba(251,191,36,0.28)' },
-  { claim: 'Humans, Around The Clock', proof: 'Support and dispute resolution never close.', img: '/icons/trust/support.png', Ghost: Headset, glow: 'rgba(96,165,250,0.32)' },
+  { claim: 'SafeDrop On Every Order', proof: 'Sellers are paid only after you confirm delivery.', img: '/icons/trust/money-back.avif', Ghost: ShieldCheck, glow: 'rgba(198,255,61,0.28)' },
+  { claim: 'Sellers Earn Their Spot', proof: 'ID checks, payment verification and live ratings.', img: '/icons/safedrop-emblem.avif', Ghost: ShieldCheck, glow: 'rgba(74,222,128,0.30)' },
+  { claim: "Fees That Don't Sting", proof: 'Sellers pay 5\u201310%, not the 17\u201326% others skim.', img: '/how-it-works/step-2.avif', Ghost: Coins, glow: 'rgba(251,191,36,0.28)' },
+  { claim: 'Humans, Around The Clock', proof: 'Support and dispute resolution never close.', img: '/icons/trust/support.avif', Ghost: Headset, glow: 'rgba(96,165,250,0.32)' },
 ] as const
 
 export function MobileTrustRows() {

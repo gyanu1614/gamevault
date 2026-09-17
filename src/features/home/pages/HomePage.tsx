@@ -133,28 +133,28 @@ const WHY_CARDS = [
     title: 'SafeDrop on Every Order',
     body: 'The seller is only paid after you confirm delivery. Not delivered or not as described? You get your money back — and real humans review anything off.',
     tone: 'lime',
-    img: '/icons/trust/money-back.png',
+    img: '/icons/trust/money-back.avif',
   },
   {
     icon: ShieldCheck,
     title: 'Sellers earn their spot',
     body: 'ID checks, payment verification, live ratings and full trade history on every storefront. The sketchy ones never make it in.',
     tone: 'success',
-    img: '/icons/safedrop-emblem.png',
+    img: '/icons/safedrop-emblem.avif',
   },
   {
     icon: Coins,
     title: "Fees that don't sting",
     body: 'Sellers pay 5–10% — not the 17–26% the big marketplaces skim — so listings start cheaper here and stay cheaper.',
     tone: 'warning',
-    img: '/how-it-works/step-2.png',
+    img: '/how-it-works/step-2.avif',
   },
   {
     icon: Headset,
     title: 'Humans, around the clock',
     body: 'Stuck mid-trade at 4 AM? Support and dispute resolution never close — real people, around the clock.',
     tone: 'info',
-    img: '/icons/trust/support.png',
+    img: '/icons/trust/support.avif',
   },
 ] as const
 
@@ -588,13 +588,24 @@ export function HomePage() {
             stands across the top of the section BEHIND the heading and
             fades out on the way down (and at the side edges), so it
             reads as scene-setting, not decoration. */}
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src="/characters/roblox-crew.webp"
-          alt=""
-          aria-hidden
-          className="pointer-events-none absolute left-1/2 top-0 z-0 hidden w-[1240px] max-w-none -translate-x-1/2 select-none object-contain opacity-[0.26] [mask-image:linear-gradient(to_bottom,transparent,black_14%,black_38%,transparent_88%)] md:block"
-        />
+        {/* `hidden md:block` stops it PAINTING on a phone but not DOWNLOADING:
+            a plain <img> is fetched whatever CSS says. Wrapped in <picture>
+            with a min-width source so the browser skips the request below the
+            md breakpoint entirely — 139 KB a phone never sees. */}
+        <picture>
+          <source media="(min-width: 768px)" srcSet="/characters/roblox-crew.webp" />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
+            alt=""
+            aria-hidden
+            loading="lazy"
+            decoding="async"
+            width={1111}
+            height={338}
+            className="pointer-events-none absolute left-1/2 top-0 z-0 hidden w-[1240px] max-w-none -translate-x-1/2 select-none object-contain opacity-[0.26] [mask-image:linear-gradient(to_bottom,transparent,black_14%,black_38%,transparent_88%)] md:block"
+          />
+        </picture>
         <div className="max-w-container mx-auto px-6 relative z-10">
           <ShopByCategoryShelf
             currencies={popularCurrencies}
@@ -657,13 +668,22 @@ export function HomePage() {
         {/* V58 — Tactical duo as faint background art: large, low
             opacity, dissolving on every side so it sits IN the scene
             rather than on top of it. */}
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src="/characters/cs-duo.webp"
-          alt=""
-          aria-hidden
-          className="pointer-events-none absolute -right-16 top-1/2 z-0 hidden w-[560px] -translate-y-1/2 select-none object-contain opacity-[0.22] [mask-image:radial-gradient(ellipse_62%_62%_at_center,black_28%,transparent_78%)] lg:block"
-        />
+        {/* Same treatment as roblox-crew above — hidden below lg, so the
+            source is gated to lg and phones never request the 102 KB. */}
+        <picture>
+          <source media="(min-width: 1024px)" srcSet="/characters/cs-duo.webp" />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
+            alt=""
+            aria-hidden
+            loading="lazy"
+            decoding="async"
+            width={800}
+            height={958}
+            className="pointer-events-none absolute -right-16 top-1/2 z-0 hidden w-[560px] -translate-y-1/2 select-none object-contain opacity-[0.22] [mask-image:radial-gradient(ellipse_62%_62%_at_center,black_28%,transparent_78%)] lg:block"
+          />
+        </picture>
         <div className="mx-auto max-w-[1200px] px-6 relative z-10">
           <div className="mx-auto max-w-2xl text-center mb-12 max-lg:mb-6">
             <div className="mb-2 flex items-center justify-center gap-2">
@@ -778,6 +798,10 @@ export function HomePage() {
           src="/characters/fortnite-trio.webp"
           alt=""
           aria-hidden
+          loading="lazy"
+          decoding="async"
+          width={821}
+          height={934}
           className="pointer-events-none absolute left-1/2 top-2 z-0 h-[430px] w-auto -translate-x-1/2 select-none object-contain opacity-[0.22] [mask-image:radial-gradient(ellipse_55%_58%_at_50%_42%,black_30%,transparent_80%)] sm:h-[700px] lg:h-[780px]"
         />
 

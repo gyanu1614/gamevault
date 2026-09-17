@@ -52,7 +52,7 @@ export default function FoundingNavbar({
         {/* Logo — real DropMarket mark, white so it reads over the forest panel. */}
         <Link href="/" aria-label="DropMarket home" className="flex items-center gap-2.5">
           <Image
-            src="/brand/logo-mark-white.png"
+            src="/brand/logo-mark-white.avif"
             alt="DropMarket"
             width={30}
             height={30}

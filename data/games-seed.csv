@@ -58,7 +58,7 @@ Catalog Avatar Creator,catalog-avatar-creator,roblox,items|accounts,,Buy and sel
 Catch And Tame,catch-and-tame,roblox,items,,Buy and sell Catch And Tame items safely on DropMarket.,listed,,seed-2026-09:eldorado
 Clash of Clans,clash-of-clans,mobile,top-up|accounts,,Buy and sell Clash of Clans accounts safely on DropMarket.,listed,,seed-2026-09:spec-aaa+eldorado
 Clash Royale,clash-royale,mobile,top-up|accounts,,Buy and sell Clash Royale accounts safely on DropMarket.,listed,,seed-2026-09:directory
-Counter-Strike 2,counter-strike-2,pc,accounts|items,,Buy and sell Counter-Strike 2 accounts safely on DropMarket.,listed,,seed-2026-09:spec-aaa
+Counter-Strike 2,cs2,pc,accounts|items,,Buy and sell Counter-Strike 2 accounts safely on DropMarket.,listed,counter-strike-2,seed-2026-09:spec-aaa
 Creatures of Sonaria,creatures-of-sonaria,roblox,currency|items|accounts,,Buy and sell Creatures of Sonaria accounts safely on DropMarket.,listed,,seed-2026-09:eldorado+rblxdb
 Da Hood,da-hood,roblox,items,,Buy and sell Da Hood items safely on DropMarket.,listed,,seed-2026-09:eldorado
 Dandys World,dandys-world,roblox,items|accounts,,Buy and sell Dandys World accounts safely on DropMarket.,listed,,seed-2026-09:rblxdb
@@ -111,8 +111,8 @@ Greenville,greenville,roblox,accounts,,Buy and sell Greenville accounts safely o
 Grow a Garden,grow-a-garden,roblox,currency|items|accounts,,Buy and sell Grow a Garden accounts safely on DropMarket.,listed,,seed-2026-09:eldorado+rblxdb
 Grow a Garden 2,grow-a-garden-2,roblox,currency|items|accounts,,Buy and sell Grow a Garden 2 accounts safely on DropMarket.,listed,,seed-2026-09:eldorado+rblxdb
 Growtopia,growtopia,pc,currency,,Buy and sell Growtopia items safely on DropMarket.,listed,,seed-2026-09:eldorado
-Grand Theft Auto 6,gta-6,pc,accounts|top-up,,Buy and sell Grand Theft Auto 6 accounts safely on DropMarket.,listed,,seed-2026-09:spec-aaa
-Grand Theft Auto 5,gta-v,pc,accounts|top-up,,Buy and sell Grand Theft Auto 5 accounts safely on DropMarket.,listed,,seed-2026-09:spec-aaa+eldorado
+Grand Theft Auto 6,gta-vi,pc,accounts|top-up,,Buy and sell Grand Theft Auto 6 accounts safely on DropMarket.,listed,gta-6,seed-2026-09:spec-aaa
+GTA V,gta-v,pc,accounts|top-up,,Buy and sell Grand Theft Auto 5 accounts safely on DropMarket.,listed,,seed-2026-09:spec-aaa+eldorado
 Guild Wars 2,guild-wars-2,mmo,currency|accounts|items,,Buy and sell Guild Wars 2 accounts safely on DropMarket.,listed,,seed-2026-09:directory
 Haze Seas,haze-seas,roblox,items,,Buy and sell Haze Seas items safely on DropMarket.,listed,,seed-2026-09:eldorado
 Honkai Star Rail,honkai-star-rail,mobile,top-up|accounts,,Buy and sell Honkai Star Rail accounts safely on DropMarket.,listed,,seed-2026-09:spec-aaa
@@ -133,7 +133,7 @@ King Legacy,king-legacy,roblox,items|accounts,,Buy and sell King Legacy accounts
 Knife Duels,knife-duels,roblox,items,,Buy and sell Knife Duels items safely on DropMarket.,listed,,seed-2026-09:eldorado
 Knockout,knockout,roblox,items,,Buy and sell Knockout items safely on DropMarket.,listed,,seed-2026-09:eldorado
 Last War Survival,last-war-survival,mobile,top-up|accounts,,Buy and sell Last War Survival accounts safely on DropMarket.,listed,,seed-2026-09:directory
-League of Legends,league-of-legends,pc,accounts|top-up,,Buy and sell League of Legends accounts safely on DropMarket.,listed,,seed-2026-09:spec-aaa+eldorado
+League of Legends,lol,pc,accounts|top-up,,Buy and sell League of Legends accounts safely on DropMarket.,listed,league-of-legends,seed-2026-09:spec-aaa+eldorado
 Lost Ark,lost-ark,mmo,currency|accounts|items,,Buy and sell Lost Ark accounts safely on DropMarket.,listed,,seed-2026-09:spec-aaa+eldorado
 MapleStory,maplestory,mmo,currency|accounts,,Buy and sell MapleStory accounts safely on DropMarket.,listed,,seed-2026-09:directory
 Marvel Rivals,marvel-rivals,pc,accounts|top-up,,Buy and sell Marvel Rivals accounts safely on DropMarket.,listed,,seed-2026-09:directory
@@ -163,7 +163,7 @@ Pokemon Go,pokemon-go,pc,top-up|accounts,,Buy and sell Pokemon Go accounts safel
 Pokemon TCG Pocket,pokemon-tcg-pocket,mobile,top-up|accounts,,Buy and sell Pokemon TCG Pocket accounts safely on DropMarket.,listed,,seed-2026-09:directory
 PUBG Mobile,pubg-mobile,mobile,top-up|accounts,,Buy and sell PUBG Mobile accounts safely on DropMarket.,listed,,seed-2026-09:spec-aaa
 Punishing Gray Raven,punishing-gray-raven,mobile,top-up|accounts,,Buy and sell Punishing Gray Raven accounts safely on DropMarket.,listed,,seed-2026-09:directory
-Rainbow Six Siege,rainbow-six-siege,pc,accounts,,Buy and sell Rainbow Six Siege accounts safely on DropMarket.,listed,,seed-2026-09:eldorado
+Rainbow Six Siege,r6-siege,pc,accounts,,Buy and sell Rainbow Six Siege accounts safely on DropMarket.,listed,rainbow-six-siege,seed-2026-09:eldorado
 Raise Animals,raise-animals,roblox,items,,Buy and sell Raise Animals items safely on DropMarket.,listed,,seed-2026-09:eldorado
 Re Rangers X,re-rangers-x,roblox,items,,Buy and sell Re Rangers X items safely on DropMarket.,listed,,seed-2026-09:eldorado
 Rise of Kingdoms,rise-of-kingdoms,mobile,top-up|accounts,,Buy and sell Rise of Kingdoms accounts safely on DropMarket.,listed,,seed-2026-09:directory
