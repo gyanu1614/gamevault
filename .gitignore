@@ -94,6 +94,9 @@ data/sab-market-feeds/*.json
 .github/skills/
 .agents/
 
+# Git worktrees kept inside the checkout — never tracked
+.worktrees/
+
 # ── Phase 1 growth working docs (kept local, never committed) ──
 /growth/
 docs/growth/
