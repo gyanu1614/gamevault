@@ -30,6 +30,7 @@ import { useScrollDirection } from '@/hooks/useScrollDirection'
 import { getMyWalletBalance } from '@/lib/actions/wallet-ledger'
 import { searchAttributeOptions, type AttrOptionHit } from '@/lib/actions/search'
 import { setStorePaused, getMyStorePaused } from '@/lib/actions/seller-presence'
+import { safeBackground } from '@/lib/utils/safe-background'
 import { toast } from 'sonner'
 
 // 5 fixed nav tabs with their DB type keys
@@ -446,7 +447,14 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
   useEffect(() => {
     if (!user?.isApprovedSeller) { setOfflineMode(false); return }
     let active = true
-    getMyStorePaused().then((v) => { if (active) setOfflineMode(v) })
+    // A `.then()` with no `.catch()` here was JAVASCRIPT-NEXTJS-5: on a flaky
+    // mobile connection the server-action POST rejects with WebKit's opaque
+    // "TypeError: Load failed" and, with nothing handling it, reaches Sentry as
+    // an unhandled rejection. Offline Mode is an enrichment — degrade to the
+    // safe default (store online) rather than break the navbar.
+    void safeBackground(() => getMyStorePaused(), false, 'navbar:storePaused').then((v) => {
+      if (active) setOfflineMode(v)
+    })
     return () => { active = false }
   }, [user?.id, user?.isApprovedSeller])
 
@@ -457,7 +465,14 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
     const next = !offlineMode
     setOfflineMode(next)
     setPendingOffline(true)
-    const res = await setStorePaused(next)
+    // A rejected POST here (same "Load failed" transport failure) would skip
+    // setPendingOffline(false) and leave the toggle permanently stuck, so the
+    // network failure degrades into the existing rollback path.
+    const res = await safeBackground(
+      () => setStorePaused(next),
+      { success: false as const },
+      'navbar:setStorePaused',
+    )
     setPendingOffline(false)
     if (!res.success) {
       setOfflineMode(!next) // rollback
