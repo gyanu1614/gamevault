@@ -109,35 +109,18 @@ export function HeroBackdropPreload({
 }
 
 /**
- * AllHeroesPreload — V21/P7.g
+ * REMOVED — AllHeroesPreload (V21/P7.g), Step 1c/Fix 1.
  *
- * Drop in the ROOT layout so every hero AVIF is fetched at app load
- * and cached for every subsequent SPA navigation. Without this, hero
- * preloads in route-level `page.tsx` only fire on *initial* HTML
- * render — SPA navigations to a different route show a black flash
- * while the new hero downloads. With this, the user sees the hero
- * instantly on every page after the first visit.
+ * It sat in the root layout and emitted <link rel=preload as=image> for all
+ * five hero AVIFs on EVERY route, so SPA navigations never flashed a black
+ * backdrop. The trade-off its comment advertised as "~1.2MB upfront" was
+ * really ~2MB, because `order.avif` alone is 1.24MB — and on the landing
+ * page that file was the single largest download of a hero the page does
+ * not display.
  *
- * Trade-off: ~1.2MB of upfront image data on first paint. Acceptable
- * for a content-heavy site, and most of it is `fetchpriority="low"`
- * so it doesn't compete with the LCP hero of the landing page.
+ * Preloading is now route-aware: every segment layout emits its own
+ * <HeroBackdropPreload> for the hero it actually renders. If the black-flash
+ * regression on cross-segment SPA navigation ever needs addressing again,
+ * do it per-destination (prefetch the ONE hero the link goes to), not by
+ * making every route pay for all five.
  */
-const ALL_HEROES = ['home', 'marketplace', 'order', 'account', 'sell'] as const
-
-export function AllHeroesPreload() {
-  return (
-    <>
-      {ALL_HEROES.map((name) => (
-        <link
-          key={name}
-          rel="preload"
-          as="image"
-          href={`/assets/heroes/${name}.avif`}
-          type="image/avif"
-          // @ts-expect-error — fetchpriority is valid HTML; React types lag.
-          fetchpriority="low"
-        />
-      ))}
-    </>
-  )
-}

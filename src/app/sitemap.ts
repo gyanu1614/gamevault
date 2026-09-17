@@ -152,13 +152,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     await Promise.all([
       supabase
         .from('games')
-        .select('id, slug, content_tier, updated_at')
+        .select('id, slug, content_tier, updated_at, seo_indexable')
         .eq('is_active', true) as unknown as Promise<{
         data: {
           id: string
           slug: string
           content_tier: string | null
           updated_at: string | null
+          seo_indexable: boolean | null
         }[] | null
       }>,
       supabase
@@ -249,9 +250,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         contentTier: game.content_tier,
         activeListingCount: activeGameSlugs.has(game.slug) ? 1 : 0,
         hasCuratedCurrencyConfig: curatedGameIds.has(game.id),
-        // sitemap.ts reads no seo_indexable override: the page is the
-        // authority on a forced value, and a sitemap entry for a noindex
-        // page is a contradictory signal. Left undefined = "no opinion".
+        // The admin override is passed through so the sitemap reaches the
+        // SAME verdict as the page's robots meta. Previously omitted, which
+        // meant `seo_indexable=false` produced a noindex hub that this
+        // sitemap still advertised — the exact contradictory signal the
+        // shared module exists to prevent (Step 1 verification, D13.4).
+        seoIndexable: game.seo_indexable,
       }),
     )
     .map((game) => {
@@ -275,6 +279,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     .filter((game) =>
       isGameSellPageIndexable({
         enabledCategoryCount: gamesWithCategories.has(game.id) ? 1 : 0,
+        // Same contract as the hub above: an explicit admin noindex on the
+        // game drops its sell page from the sitemap too, matching the
+        // robots meta that sell/page.tsx already derives from this field.
+        seoIndexable: game.seo_indexable,
       }),
     )
     .map((game) => ({
@@ -347,12 +355,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: 'weekly',
       priority: 0.8,
     },
-    {
-      // Seller-intent landing ("sell X for cash") — the top of the seller funnel.
-      url: `${BASE_URL}/steal-a-brainrot/sell`,
-      changeFrequency: 'weekly',
-      priority: 0.75,
-    },
+    // NOTE: /steal-a-brainrot/sell is deliberately NOT listed here. It was a
+    // hardcoded entry that bypassed isGameSellPageIndexable(), so an admin
+    // setting seo_indexable=false produced a noindex sell page this sitemap
+    // still advertised — and it double-listed the URL that `sellPages` already
+    // emits for every game. The rule-driven entry below covers it.
     {
       // E-E-A-T / AI-citability: how we source & calculate values.
       url: `${BASE_URL}/steal-a-brainrot/values/methodology`,
@@ -387,12 +394,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: 'weekly',
       priority: 0.8,
     },
-    {
-      // Seller-intent landing ("sell X for cash") — top of the seller funnel.
-      url: `${BASE_URL}/adopt-me/sell`,
-      changeFrequency: 'weekly',
-      priority: 0.75,
-    },
+    // NOTE: /adopt-me/sell omitted for the same reason as the SAB one above —
+    // `sellPages` emits it through the shared indexability rule.
     {
       url: `${BASE_URL}/adopt-me/neon-calculator`,
       changeFrequency: 'weekly',

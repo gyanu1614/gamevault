@@ -8,7 +8,6 @@ import { FooterGameLinks } from '@/components/footer-game-links'
 import { Toaster } from 'sonner'
 import RecentPurchaseToast, { DailyStatsToast } from '@/components/marketplace/RecentPurchaseToast'
 import { Analytics } from "@vercel/analytics/next"
-import { AllHeroesPreload } from '@/components/hero-backdrop'
 
 // Two text faces, split by surface:
 //   • MARKETPLACE (storefront, everything by default) → Inter, exposed as
@@ -25,20 +24,30 @@ const inter = Inter({
   display: 'swap',
 })
 
+// preload:false — Figtree is scoped to `.hub-chrome` (globals.css remaps
+// --font-inter inside the content hub). next/font preloads every font declared
+// in the root layout, so a marketplace route was fetching Figtree at high
+// priority to render zero glyphs with it. It still loads on hub routes that
+// use it, just without competing with the LCP everywhere else.
 const figtree = Figtree({
   subsets: ['latin'],
   weight: ['400', '500', '600', '700', '800', '900'],
   variable: '--font-figtree',
   display: 'swap',
+  preload: false,
 })
 
 // JetBrains Mono — order IDs, timestamps, mono data
 // (Geist Mono not available in next/font/google for Next.js 14; JetBrains Mono is equivalent quality)
+// preload:false — mono is for order IDs, timestamps and tabular data. 54 files
+// use it, but never above the fold on a hub/sell/landing page, so preloading it
+// spent priority on a font the first paint does not need.
 const jetbrainsMono = JetBrains_Mono({
   subsets: ['latin'],
   weight: ['400', '500'],
   variable: '--font-mono',
   display: 'swap',
+  preload: false,
 })
 
 export const metadata: Metadata = {
@@ -88,12 +97,16 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <head>
-        {/* V21/P7.g — Warm-preload every hero AVIF at app load so
-            SPA navigations between routes show their backdrops
-            instantly without a black flash. fetchpriority=low so
-            this doesn't compete with the LCP hero on the landing
-            page. */}
-        <AllHeroesPreload />
+        {/* Hero preloading is ROUTE-AWARE: each segment layout emits its own
+            <HeroBackdropPreload> for the one hero it renders — `marketplace`
+            in (marketplace), `sell` in (sell), `account` in /account, `home`
+            on the landing page.
+
+            V21/P7.g used to warm-preload all five heroes here so SPA
+            navigations never showed a black flash. It cost every route ~2MB
+            of images it does not display — `order.avif` alone is 1.24MB, and
+            it was the single largest download on the landing page, which
+            never shows that hero. Removed in Step 1c/Fix 1. */}
       </head>
       <body className={`${inter.variable} ${figtree.variable} ${jetbrainsMono.variable} font-sans antialiased`} style={{ '--font-display': 'var(--font-inter)', '--font-body': 'var(--font-inter)' } as React.CSSProperties}>
         <Providers>
