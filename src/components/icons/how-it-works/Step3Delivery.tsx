@@ -1,10 +1,10 @@
 /**
  * Step 3 — "Get Your Delivery" icon.
  *
- * V35 — 3D alarm-clock PNG (`public/how-it-works/step-3.png`,
+ * V35 — 3D alarm-clock AVIF (`public/how-it-works/step-3.avif`,
  * transparent background, 3dicons.co clock/dynamic/color).
  *
- * ▸ TO SWAP: drop a new PNG in `public/how-it-works/` and point src at
+ * ▸ TO SWAP: drop a new AVIF in `public/how-it-works/` and point src at
  *   it — keep `className` + `...props` passthrough. (The original
  *   stroke-SVG bolt lives in git history.)
  */
@@ -18,9 +18,11 @@ export default function Step3Delivery({
   return (
     /* eslint-disable-next-line @next/next/no-img-element */
     <img
-      src="/how-it-works/step-3.png"
+      src="/how-it-works/step-3.avif"
       alt=""
       aria-hidden="true"
+      width={640}
+      height={640}
       className={className}
       {...props}
     />

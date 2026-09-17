@@ -195,7 +195,7 @@ export function Footer() {
             <Link href="/" className="flex items-center gap-2.5">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src="/brand/logo-mark-lime.png"
+                src="/brand/logo-mark-lime.avif"
                 alt="DropMarket"
                 width={32}
                 height={32}

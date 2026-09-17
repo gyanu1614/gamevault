@@ -65,7 +65,7 @@ export default function IntroScreen({ onStart }: IntroScreenProps) {
           <div>
             <div className="mb-8 flex items-center gap-2.5">
               <Image
-                src="/brand/logo-mark-white.png"
+                src="/brand/logo-mark-white.avif"
                 alt="DropMarket"
                 width={40}
                 height={40}

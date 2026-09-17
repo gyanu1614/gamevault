@@ -135,7 +135,7 @@ export function HubNav({
         <div className="flex shrink-0 items-center gap-2 self-stretch sm:gap-3 md:flex-1">
           <Link href="/" aria-label="DropMarket home" className="shrink-0">
             <Image
-              src="/brand/logo-mark-white.png"
+              src="/brand/logo-mark-white.avif"
               alt="DropMarket"
               width={34}
               height={34}

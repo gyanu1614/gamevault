@@ -398,7 +398,7 @@ function HeroPanel({ mode }: { mode: AuthMode }) {
         <div className="flex items-center justify-center gap-2.5">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src="/brand/logo-mark-white.png"
+            src="/brand/logo-mark-white.avif"
             alt="DropMarket"
             width={32}
             height={32}

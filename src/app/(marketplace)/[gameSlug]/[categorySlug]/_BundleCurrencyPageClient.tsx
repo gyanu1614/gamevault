@@ -804,7 +804,9 @@ function OfferPanel({
     <Card className="relative isolate flex h-full min-h-[440px] flex-col overflow-hidden border-border-default bg-bg-overlay p-5 shadow-elevated">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
-        src="/icons/safedrop-emblem.png"
+        src="/icons/safedrop-emblem.avif"
+        width={128}
+        height={128}
         alt=""
         aria-hidden
         className="pointer-events-none absolute -bottom-16 -right-8 -z-10 h-44 w-44 rotate-12 select-none opacity-[0.32]"

@@ -24,7 +24,7 @@ export function CheckoutNavbar({
     >
       <Link href="/" className="inline-flex items-center gap-2 transition-opacity hover:opacity-85">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/brand/logo-mark-lime.png" alt="" className="h-6 w-6" />
+        <img src="/brand/logo-mark-lime.avif" alt="" width={96} height={96} className="h-6 w-6" />
         <span className="text-[15px] font-bold" style={{ color: '#FAFAF7' }}>
           DropMarket
         </span>

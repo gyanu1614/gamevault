@@ -133,28 +133,28 @@ const WHY_CARDS = [
     title: 'SafeDrop on Every Order',
     body: 'The seller is only paid after you confirm delivery. Not delivered or not as described? You get your money back — and real humans review anything off.',
     tone: 'lime',
-    img: '/icons/trust/money-back.png',
+    img: '/icons/trust/money-back.avif',
   },
   {
     icon: ShieldCheck,
     title: 'Sellers earn their spot',
     body: 'ID checks, payment verification, live ratings and full trade history on every storefront. The sketchy ones never make it in.',
     tone: 'success',
-    img: '/icons/safedrop-emblem.png',
+    img: '/icons/safedrop-emblem.avif',
   },
   {
     icon: Coins,
     title: "Fees that don't sting",
     body: 'Sellers pay 5–10% — not the 17–26% the big marketplaces skim — so listings start cheaper here and stay cheaper.',
     tone: 'warning',
-    img: '/how-it-works/step-2.png',
+    img: '/how-it-works/step-2.avif',
   },
   {
     icon: Headset,
     title: 'Humans, around the clock',
     body: 'Stuck mid-trade at 4 AM? Support and dispute resolution never close — real people, around the clock.',
     tone: 'info',
-    img: '/icons/trust/support.png',
+    img: '/icons/trust/support.avif',
   },
 ] as const
 

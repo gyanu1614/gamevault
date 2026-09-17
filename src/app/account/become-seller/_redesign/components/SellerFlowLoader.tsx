@@ -34,7 +34,7 @@ export default function SellerFlowLoader({ label }: { label: string }) {
       <div className="animate-fade-in relative z-10 flex h-full flex-col items-center justify-center gap-5 px-6">
         <div className="flex items-center gap-2.5">
           <Image
-            src="/brand/logo-mark-white.png"
+            src="/brand/logo-mark-white.avif"
             alt="DropMarket"
             width={36}
             height={36}

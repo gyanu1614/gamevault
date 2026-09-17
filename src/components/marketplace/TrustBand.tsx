@@ -35,7 +35,7 @@ const TRUST_ITEMS: Array<{
     label: 'Money-Back',
     title: 'Money-Back Guarantee',
     body: 'Every order is covered by SafeDrop Buyer Protection — the seller is only paid after you confirm delivery. No product? Full refund.',
-    img: '/icons/trust/money-back.png',
+    img: '/icons/trust/money-back.avif',
     glow: '#4FA3F7',
   },
   {
@@ -51,7 +51,7 @@ const TRUST_ITEMS: Array<{
     label: '24/7 Support',
     title: '24/7 Human Support',
     body: 'Real humans, around the clock. Open a ticket or live chat whenever an order needs help.',
-    img: '/icons/trust/support.png',
+    img: '/icons/trust/support.avif',
     glow: '#8A79F5',
   },
 ]

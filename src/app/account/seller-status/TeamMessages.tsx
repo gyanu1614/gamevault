@@ -152,7 +152,7 @@ export default function TeamMessages() {
               <div className="flex items-center gap-2.5">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src="/brand/logo-mark-white.png"
+                  src="/brand/logo-mark-white.avif"
                   alt=""
                   width={22}
                   height={22}

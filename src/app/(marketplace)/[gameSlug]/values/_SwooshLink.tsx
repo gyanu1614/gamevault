@@ -116,7 +116,7 @@ export function SwooshLink({
                   {/* Brand lockup — DropMarket logo + name, contextual suffix. */}
                   <div className="flex items-center gap-3">
                     <Image
-                      src="/brand/logo-mark-white.png"
+                      src="/brand/logo-mark-white.avif"
                       alt=""
                       width={44}
                       height={44}
