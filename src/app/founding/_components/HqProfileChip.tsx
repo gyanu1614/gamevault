@@ -40,7 +40,18 @@ export default function HqProfileChip({ user }: { user: HqUser }) {
 
   function signOut() {
     startTransition(() => {
-      void logout() // server action clears the session and redirects to /
+      // The server action clears the session and redirects to /. `void` left
+      // the promise unhandled, so a dropped connection mid-POST (common in an
+      // in-app webview, where WebKit reports "TypeError: Load failed") surfaced
+      // as an unhandled rejection in Sentry instead of a retry the user can see.
+      // A hard navigation is the correct fallback: it re-requests the page, and
+      // the server redirects to / if the session was in fact cleared.
+      logout().catch((err: unknown) => {
+        // Next signals the action's redirect() by throwing NEXT_REDIRECT; the
+        // framework consumes it, but never treat it as a failure if it surfaces.
+        if ((err as { digest?: string })?.digest?.startsWith('NEXT_REDIRECT')) return
+        window.location.href = '/'
+      })
     })
   }
 

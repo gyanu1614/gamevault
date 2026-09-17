@@ -177,6 +177,19 @@ export interface SellerDetail {
 
 const BALANCE_CURRENCIES = ['EUR', 'USD'] as const
 
+/**
+ * Normalise the balance rows before they cross to the client.
+ *
+ * These were previously passed through with a bare `as SellerBalance[]`,
+ * so the client's `amount.toFixed(2)` trusted a shape nothing validated.
+ */
+function toBalances(rows: unknown): SellerBalance[] {
+  return (Array.isArray(rows) ? rows : []).map((b: any) => ({
+    currency: String(b?.currency ?? ''),
+    amount: Number.isFinite(Number(b?.amount)) ? Number(b.amount) : 0,
+  }))
+}
+
 /** Latest of several ISO timestamps (nulls skipped); null when all missing. */
 function latestIso(...values: (string | null | undefined)[]): string | null {
   let best: string | null = null
@@ -421,8 +434,8 @@ export async function getSellerDetail(userId: string): Promise<{
         })),
       },
       wallet: {
-        sellerBalances: sellerBalancesRes as SellerBalance[],
-        storeCreditBalances: walletBalancesRes as SellerBalance[],
+        sellerBalances: toBalances(sellerBalancesRes),
+        storeCreditBalances: toBalances(walletBalancesRes),
         transactions: (walletTxRes.data ?? []).map((e: any) => {
           const minor = Number(e.amount_minor ?? 0)
           const tx = e.transaction ?? {}
