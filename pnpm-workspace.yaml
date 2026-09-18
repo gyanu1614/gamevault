@@ -10,9 +10,12 @@ overrides:
 #   esbuild       - vitest's bundler; tests cannot run without its binary
 #   @sentry/cli   - source-map upload during `next build`
 #   unrs-resolver - native resolver used by eslint-plugin-import
+#   sharp         - libvips image pipeline; resizes game icons to WebP
+#                   (scripts/fill-game-icons.mjs -> src/lib/games/icons.ts)
 allowBuilds:
   "@sentry/cli": true
   esbuild: true
+  sharp: true
   unrs-resolver: true
 
 minimumReleaseAgeExclude:
