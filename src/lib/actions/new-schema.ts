@@ -124,12 +124,17 @@ function fail<T = never>(e: any): Result<T>   {
 // GLOBAL CATEGORIES
 // ============================================
 
+/**
+ * Primary global categories for pickers (sell wizard, bulk upload).
+ * Sub-categories (parent_id set) are never offered as a picker choice.
+ */
 export async function getGlobalCategories(opts?: { includeDisabled?: boolean }): Promise<Result<GlobalCategory[]>> {
   try {
     const supabase = createAnonClient()
     let q = supabase
       .from('global_categories')
       .select('*')
+      .is('parent_id', null)
       .order('sort_order', { ascending: true })
       .order('name', { ascending: true })
     if (!opts?.includeDisabled) q = q.eq('is_active', true)
