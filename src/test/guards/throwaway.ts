@@ -147,6 +147,8 @@ export async function makeFixture(): Promise<Fixture> {
   const tag = Math.random().toString(36).slice(2, 8)
   const created: string[] = []
   let createdGameId: string | null = null
+  /** A pair created under a PRE-EXISTING game (no cascade to rely on). Its mirrored legacy row goes with it. */
+  let createdGameCategoryId: string | null = null
 
   async function mkUser(label: string): Promise<Actor> {
     const email = `guardtest-${label}-${tag}@example.com`
@@ -188,8 +190,18 @@ export async function makeFixture(): Promise<Fixture> {
           }
         }
       }
+      if (createdGameCategoryId) {
+        const { data: pair } = await svc.from('game_categories').select('legacy_category_id').eq('id', createdGameCategoryId).maybeSingle()
+        const { error } = await svc.from('game_categories').delete().eq('id', createdGameCategoryId)
+        if (error) failures.push(`game_categories.delete: ${error.message}`)
+        const legacyId = (pair as any)?.legacy_category_id
+        if (legacyId) {
+          const { error: le } = await svc.from('categories').delete().eq('id', legacyId)
+          if (le) failures.push(`categories.delete: ${le.message}`)
+        }
+      }
       if (createdGameId) {
-        const { error } = await svc.from('games').delete().eq('id', createdGameId) // categories cascade
+        const { error } = await svc.from('games').delete().eq('id', createdGameId) // game_categories + categories cascade
         if (error) failures.push(`games.delete: ${error.message}`)
       }
     } finally {
@@ -214,18 +226,24 @@ export async function makeFixture(): Promise<Fixture> {
       if (ge) throw new Error(`game insert: ${ge.message}`)
       game = g; createdGameId = (g as any).id
     }
-    let { data: cat } = await svc.from('categories').select('id').eq('game_id', (game as any).id).limit(1).maybeSingle()
-    if (!cat) ({ data: cat } = await svc.from('categories').select('id').limit(1).maybeSingle())
+    // Step 1b: game_categories is the category table. A fresh stack has the
+    // seeded globals (20260916104417) but no pairs — create one for the game;
+    // the Phase-A mirror trigger writes the legacy row and
+    // trg_listings_category_sync fills listings.category_id from it.
+    let { data: cat } = await svc.from('game_categories').select('id').eq('game_id', (game as any).id).eq('is_enabled', true).limit(1).maybeSingle()
     if (!cat) {
-      const { data: c, error: ce } = await svc.from('categories')
-        .insert({ name: 'Guard Test Items', slug: `guard-test-items-${tag}`, game_id: (game as any).id, metadata: { type: 'items' } })
+      const { data: gc } = await svc.from('global_categories').select('id').eq('slug', 'items').maybeSingle()
+      if (!gc) throw new Error('global_categories has no "items" row — apply migrations first')
+      const { data: c, error: ce } = await svc.from('game_categories')
+        .insert({ game_id: (game as any).id, global_category_id: (gc as any).id, is_enabled: true, slug: `guard-test-items-${tag}`, name: 'Guard Test Items', type: 'items' })
         .select('id').single()
-      if (ce) throw new Error(`category insert: ${ce.message}`)
+      if (ce) throw new Error(`game_categories insert: ${ce.message}`)
       cat = c
+      if (!createdGameId) createdGameCategoryId = (c as any).id
     }
 
     const { data: listing, error: le } = await svc.from('listings').insert({
-      seller_id: seller.id, game_id: (game as any).id, category_id: (cat as any).id,
+      seller_id: seller.id, game_id: (game as any).id, game_category_id: (cat as any).id,
       title: `GUARD-TEST-${tag}`, description: 'guard test throwaway', price: 1, quantity: 5, status: 'pending_approval',
     }).select('id').single()
     if (le) throw new Error(`listing insert: ${le.message}`)
