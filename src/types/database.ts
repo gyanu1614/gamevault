@@ -2338,6 +2338,8 @@ export type Database = {
           ecosystem: string | null
           emoji: string | null
           id: string
+          image_source: string | null
+          image_synced_at: string | null
           image_url: string | null
           is_active: boolean | null
           is_popular: boolean
@@ -2364,6 +2366,8 @@ export type Database = {
           ecosystem?: string | null
           emoji?: string | null
           id?: string
+          image_source?: string | null
+          image_synced_at?: string | null
           image_url?: string | null
           is_active?: boolean | null
           is_popular?: boolean
@@ -2390,6 +2394,8 @@ export type Database = {
           ecosystem?: string | null
           emoji?: string | null
           id?: string
+          image_source?: string | null
+          image_synced_at?: string | null
           image_url?: string | null
           is_active?: boolean | null
           is_popular?: boolean
