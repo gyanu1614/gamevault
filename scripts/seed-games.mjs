@@ -317,7 +317,10 @@ for (const v of valid) {
   // an existing pair is left exactly as the admin configured it.
   for (const globalSlug of v.categories) {
     try {
-      const r = await ensureGameCategory(supabase, { gameId, globalSlug }, categoryDeps)
+      // seedCurrencyConfig: false — a category_configs row makes a hub count as
+      // curated for the sitemap / robots rule; seeded games earn indexability
+      // with inventory (Step 1c), exactly as the legacy insert path behaved.
+      const r = await ensureGameCategory(supabase, { gameId, globalSlug, seedCurrencyConfig: false }, categoryDeps)
       if (r.created) catsLinked++
     } catch (e) {
       failed++

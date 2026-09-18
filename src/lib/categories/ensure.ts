@@ -25,6 +25,14 @@ export interface EnsureGameCategoryInput {
   name?: string
   /** Set only when the caller wants to change it. New pairs default to true. */
   enabled?: boolean
+  /**
+   * Seed a default category_configs row when a NEW currency pair is created
+   * (default true — the admin wizard's behaviour). The games seeder passes
+   * false: a config row counts as "curated content" for hub indexability
+   * (lib/games/indexability, sitemap), and a seeded zero-inventory hub must
+   * earn its place in the index with real listings, not a default config.
+   */
+  seedCurrencyConfig?: boolean
 }
 
 export interface EnsureGameCategoryDeps {
@@ -119,7 +127,7 @@ export async function ensureGameCategory(
 
   // V19/P5 — a currency page needs a category_configs row or it falls back
   // to the legacy layout. INSERT … ON CONFLICT DO NOTHING keeps a tuned row.
-  if (created.type === 'currency') {
+  if (created.type === 'currency' && input.seedCurrencyConfig !== false) {
     const { error } = await supabase
       .from('category_configs')
       .upsert(
