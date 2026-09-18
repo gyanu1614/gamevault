@@ -37,6 +37,13 @@
 - Cron/admin routes must call RPCs through `createServiceRoleClient()`; the session client has no cookies on a Vercel cron request and runs as anon.
 - Why: on 2026-09-11 the audit found 39 definer functions and 10 views open to the anon key (tax ids, delivery codes, order state) because the baseline granted `EXECUTE` by default.
 
+## Categories: one system (from migration 20260917190852, Step 1b)
+- `global_categories` (taxonomy: 5 primaries + sub-categories with `parent_id`, `default_type`, `default_slug`) + `game_categories` (the per-game row: `slug`, `name`, `type`, copy, icons, `sort_order`, `is_enabled`) are the ONLY category tables the app reads or writes. `listings.game_category_id` is the FK the app uses.
+- Create or enable a (game, category) pair ONLY through `ensureGameCategory` (`src/lib/categories`). Seller publish paths gate on `findEnabledGameCategory` with the session client and never write the catalogue (AUTH-010).
+- Pickers (nav, sell wizard, template builder, admin) list `global_categories` with `.is('parent_id', null)` — a guard test fails otherwise.
+- `public.categories` and `listings.category_id` still exist during Phase A as a mirror maintained by two DB triggers (`trg_game_categories_mirror_legacy`, `trg_listings_category_sync`). Never read or write them from app code; Phase B (draft in `supabase/migrations_draft/`) drops them.
+- `type` is a CHECK-constrained column (`currency|items|account|top_up|service|gift_card`) — the fee/warranty key. Never put it, or anything a query filters on, in `extras` JSON.
+
 ## Money seams are single SQL functions (from migration 20260914100000)
 - Order cancel + wallet-hold return, order refund + wallet credit, withdrawal cancel/reject, inventory claim, promo usage: each is ONE service-role RPC (`order_cancel_return_wallet`, `order_refund_to_wallet`, `withdrawal_cancel`, `withdrawal_reject`, `inventory_claim_for_order`, `promo_usage_record`). Never re-compose these as two calls from TypeScript; call the RPC (TS seam: `src/lib/wallet/order-money.ts`).
 - `money_fault_hook(point)` exists ONLY for tests: it raises when the transaction-local GUC `app.money_fault` equals `point`. PostgREST callers cannot set that GUC, so it is inert in the app; the GREEN tests set it from a psql transaction (`src/test/guards/money-atomicity.guard.integration.test.ts`, `withFault`) to prove a failure inside an atomic function leaves no partial state. Keep every new money function's interior steps behind a `PERFORM money_fault_hook('<fn>:<point>')` so the same proof can be written for it.
