@@ -69,11 +69,11 @@ const getGameData = cache(async function getGameData(gameSlug: string) {
   }
 
   const { data: categories, error: categoriesError } = await supabase
-    .from('categories')
-    .select('id, name, slug, description, icon, metadata')
+    .from('game_categories')
+    .select('id, name, slug, description, icon_emoji, icon_url, type, sub_types')
     .eq('game_id', game.id)
-    .eq('is_active', true)
-    .order('display_order', { ascending: true })
+    .eq('is_enabled', true)
+    .order('sort_order', { ascending: true })
     .order('name', { ascending: true }) as any
 
   if (categoriesError) {
@@ -102,9 +102,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   // Category labels the game has enabled (for template copy + accounts flag).
   const gameCats = (game.categories ?? []) as any[]
   const categoryLabels: string[] = gameCats.map(
-    (c: any) => c.name || (c.metadata?.label ?? c.slug),
+    (c: any) => c.name || c.slug,
   )
-  const hasAccounts = gameCats.some((c: any) => c.metadata?.type === 'account')
+  const hasAccounts = gameCats.some((c: any) => c.type === 'account')
 
   // Index bar (mirrors sitemap.ts): an empty hub — no active listings
   // and no curated currency config — stays out of the index until it
@@ -165,7 +165,7 @@ async function getCategoryListingCounts(gameId: string) {
 
   const { data: counts, error } = await supabase
     .from('listings')
-    .select('category_id, seller:profiles!listings_seller_id_fkey!inner(is_test)')
+    .select('game_category_id, seller:profiles!listings_seller_id_fkey!inner(is_test)')
     .eq('game_id', gameId)
     .eq('status', 'active')
     .eq('seller.is_test', false) as any
@@ -177,7 +177,7 @@ async function getCategoryListingCounts(gameId: string) {
 
   const countMap: Record<string, number> = {}
   counts?.forEach((item: any) => {
-    countMap[item.category_id] = (countMap[item.category_id] || 0) + 1
+    countMap[item.game_category_id] = (countMap[item.game_category_id] || 0) + 1
   })
 
   return countMap
@@ -191,7 +191,7 @@ async function getFeaturedListings(gameId: string, limit: number = 6) {
     .select(`
       *,
       seller:profiles!listings_seller_id_fkey!inner(username, seller_tier, is_test),
-      category:categories!listings_category_id_fkey(name, slug)
+      category:game_categories!listings_game_category_id_fkey(name, slug)
     `)
     .eq('game_id', gameId)
     .eq('status', 'active')
@@ -235,7 +235,7 @@ async function getSabTopValues(): Promise<SabTopValue[]> {
  * the real landscape `ItemCard`. Real inventory is thin pre-launch, so we
  * INCLUDE test/own sellers here (no is_test filter) — this is a marketing
  * surface, not an SEO-indexed listing count. Accounts are detected by the
- * joined category metadata.type === 'account'.
+ * joined category type === 'account'.
  */
 async function getSabLandingOffers(gameId: string): Promise<{
   itemOffers: ItemOffer[]
@@ -257,7 +257,7 @@ async function getSabLandingOffers(gameId: string): Promise<{
           id, username, shop_name, shop_slug, avatar_url, seller_tier,
           seller_rating, total_reviews, total_sales, is_verified
         ),
-        category:categories!listings_category_id_fkey(slug, name, metadata)
+        category:game_categories!listings_game_category_id_fkey(slug, name, type)
       `,
       )
       .eq('game_id', gameId)
@@ -273,7 +273,7 @@ async function getSabLandingOffers(gameId: string): Promise<{
   const prices: number[] = []
 
   for (const row of (rows ?? []) as any[]) {
-    const isAccount = row.category?.metadata?.type === 'account'
+    const isAccount = row.category?.type === 'account'
     const offer = listingToOffer(row, isAccount ? accountsTaxonomy : itemsTaxonomy)
     if (Number.isFinite(offer.pricePerUnit) && offer.pricePerUnit > 0) {
       prices.push(offer.pricePerUnit)
@@ -322,7 +322,7 @@ export default async function GameBrowsePage({ params }: PageProps) {
   const seo = resolveGameSeo({
     name: game.name,
     categoryLabels: categories.map((c: any) => c.name || c.slug),
-    hasAccounts: categories.some((c: any) => c.metadata?.type === 'account'),
+    hasAccounts: categories.some((c: any) => c.type === 'account'),
     ecosystem: game.ecosystem,
     description: game.description,
     overrides: game,
@@ -520,7 +520,7 @@ export default async function GameBrowsePage({ params }: PageProps) {
                   categorySlug={category.slug}
                   name={category.name}
                   description={category.description}
-                  icon={category.icon}
+                  icon={category.icon_emoji}
                   listingCount={listingCounts[category.id] || 0}
                 />
               ))}

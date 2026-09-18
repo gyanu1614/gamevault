@@ -170,7 +170,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
           updated_at,
           seller:profiles!listings_seller_id_fkey!inner(is_test),
           game:games!listings_game_id_fkey(slug),
-          category:categories!listings_category_id_fkey(slug)
+          category:game_categories!listings_game_category_id_fkey(slug)
         `
         )
         .eq('status', 'active')
@@ -193,21 +193,19 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // unique value) — so those URLs belong in the sitemap too.
   const supabase2 = await createClient()
   const { data: currencyCategories } = (await supabase2
-    .from('categories')
-    .select('slug, game_id, game:games!categories_game_id_fkey(slug)')
-    .eq('is_active', true)
-    .filter('metadata->>type', 'eq', 'currency')) as unknown as {
+    .from('game_categories')
+    .select('slug, game_id, game:games!game_categories_game_id_fkey(slug)')
+    .eq('is_enabled', true)
+    .eq('type', 'currency')) as unknown as {
     data: { slug: string; game_id: string; game: { slug: string } | null }[] | null
   }
 
   // Which games have at least one enabled category — the sell page's
-  // indexability input. Reads the legacy `categories` table because that is
-  // what the marketplace surfaces render from; see the step-1 report on
-  // unifying it with game_categories.
+  // indexability input.
   const { data: gameCategoryCounts } = (await supabase2
-    .from('categories')
+    .from('game_categories')
     .select('game_id')
-    .eq('is_active', true)) as unknown as {
+    .eq('is_enabled', true)) as unknown as {
     data: { game_id: string }[] | null
   }
 

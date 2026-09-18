@@ -46,14 +46,14 @@ const GAME_TOOLS: Record<string, Array<'values' | 'calculator'>> = {
  * with GAME_DIRECTORY_TAG so admin category edits invalidate it immediately.
  */
 const getCachedGameCategories = unstable_cache(
-  async (gameId: string): Promise<Array<{ slug: string; metadata: { type?: string } | null }>> => {
+  async (gameId: string): Promise<Array<{ slug: string; type: string | null }>> => {
     const supabase = createAnonClient()
     const { data } = await (supabase as any)
-      .from('categories')
-      .select('slug, metadata')
+      .from('game_categories')
+      .select('slug, type')
       .eq('game_id', gameId)
-      .eq('is_active', true)
-    return (data ?? []) as Array<{ slug: string; metadata: { type?: string } | null }>
+      .eq('is_enabled', true)
+    return (data ?? []) as Array<{ slug: string; type: string | null }>
   },
   ['hub-nav-game-categories'],
   { tags: [GAME_DIRECTORY_TAG], revalidate: 3600 },
@@ -69,10 +69,10 @@ export async function getHubNavData(gameSlug: string): Promise<HubNavData> {
   if (current) {
     const rows = await getCachedGameCategories(current.id)
     const hasItems = rows.some(
-      (r) => r.slug === 'buy-items' || r.metadata?.type === 'items',
+      (r) => r.slug === 'buy-items' || r.type === 'items',
     )
     const hasAccounts = rows.some(
-      (r) => r.slug === 'buy-accounts' || r.metadata?.type === 'account',
+      (r) => r.slug === 'buy-accounts' || r.type === 'account',
     )
     if (hasItems) itemsHref = `/${gameSlug}/buy-items`
     if (hasAccounts) accountsHref = `/${gameSlug}/buy-accounts`

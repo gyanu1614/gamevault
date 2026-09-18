@@ -2,8 +2,10 @@
  * AUTH-010 — publishListing / bulkPublishListings must not reach the
  * service-role catalogue writes for a (game, category) pair an admin has not
  * enabled. Before the fix the only pre-check was the 5-slug whitelist, so any
- * signed-in user could make `ensureLegacyCategoryRow` INSERT a public
- * `categories` row (and a `category_configs` row) for any real game.
+ * signed-in user could make the (since-deleted) legacy bridge INSERT a public
+ * `categories` row (and a `category_configs` row) for any real game. Since
+ * Step 1b the gate resolves the game_categories row itself; a seller path
+ * never writes the catalogue.
  *
  * AUTH-009 — both publish paths must also refuse anyone who is not an active
  * seller (profiles.role = 'seller' AND seller_status = 'active') or an active
@@ -106,15 +108,14 @@ describe('AUTH-010 — publish paths require an admin-enabled (game, category) p
     expect(h.session.calls.filter((c: any) => c.table === 'listings')).toHaveLength(0)
   })
 
-  it('publishListing: enabled pair with an existing active legacy row → listing inserted, no catalogue write', async () => {
+  it('publishListing: enabled pair → listing inserted against it, no catalogue write', async () => {
     h.session = sessionWith({
       profiles: [{ data: { role: 'seller', seller_status: 'active' }, error: null }],
       global_categories: [{ data: { id: 'gc-items' }, error: null }],
-      game_categories: [{ data: { id: 'pair-1' }, error: null }],
+      game_categories: [{ data: { id: 'pair-1', slug: 'buy-items', name: 'Items', type: 'items', legacy_category_id: 'cat-1' }, error: null }],
     })
     h.admin = mockClient({
       games: [{ data: { slug: 'fortnite' }, error: null }],
-      categories: [{ data: [{ id: 'cat-1', is_active: true, slug: 'buy-items' }], error: null }],
       listings: [{ data: { id: 'l-1', slug: 'sword' }, error: null }],
     })
     const res = await publishListing({ ...INPUT, status: 'draft' })
@@ -137,7 +138,7 @@ describe('AUTH-009 — publish paths refuse non-sellers before touching anything
         profiles: [{ data: profile, error: null }],
         admin_roles: [{ data: null, error: null }],
         global_categories: [{ data: { id: 'gc-items' }, error: null }],
-        game_categories: [{ data: { id: 'pair-1' }, error: null }],
+        game_categories: [{ data: { id: 'pair-1', slug: 'buy-items', name: 'Items', type: 'items', legacy_category_id: 'cat-1' }, error: null }],
       })
       h.admin = mockClient({})
       const res = await publishListing(INPUT)
@@ -152,7 +153,7 @@ describe('AUTH-009 — publish paths refuse non-sellers before touching anything
         profiles: [{ data: profile, error: null }],
         admin_roles: [{ data: null, error: null }],
         global_categories: [{ data: { id: 'gc-items' }, error: null }],
-        game_categories: [{ data: { id: 'pair-1' }, error: null }],
+        game_categories: [{ data: { id: 'pair-1', slug: 'buy-items', name: 'Items', type: 'items', legacy_category_id: 'cat-1' }, error: null }],
       })
       h.admin = mockClient({})
       const res = await bulkPublishListings('game-1', 'items', [
@@ -169,11 +170,10 @@ describe('AUTH-009 — publish paths refuse non-sellers before touching anything
       profiles: [{ data: { role: 'user', seller_status: 'active' }, error: null }],
       admin_roles: [{ data: { role: 'admin' }, error: null }],
       global_categories: [{ data: { id: 'gc-items' }, error: null }],
-      game_categories: [{ data: { id: 'pair-1' }, error: null }],
+      game_categories: [{ data: { id: 'pair-1', slug: 'buy-items', name: 'Items', type: 'items', legacy_category_id: 'cat-1' }, error: null }],
     })
     h.admin = mockClient({
       games: [{ data: { slug: 'fortnite' }, error: null }],
-      categories: [{ data: [{ id: 'cat-1', is_active: true, slug: 'buy-items' }], error: null }],
       listings: [{ data: { id: 'l-2', slug: 'x' }, error: null }],
     })
     const res = await publishListing({ ...INPUT, status: 'draft' })
@@ -186,11 +186,10 @@ describe('AUTH-031 — the service-role listing insert is pinned to the session 
     h.session = sessionWith({
       profiles: [{ data: { role: 'seller', seller_status: 'active' }, error: null }],
       global_categories: [{ data: { id: 'gc-items' }, error: null }],
-      game_categories: [{ data: { id: 'pair-1' }, error: null }],
+      game_categories: [{ data: { id: 'pair-1', slug: 'buy-items', name: 'Items', type: 'items', legacy_category_id: 'cat-1' }, error: null }],
     })
     h.admin = mockClient({
       games: [{ data: { slug: 'fortnite' }, error: null }],
-      categories: [{ data: [{ id: 'cat-1', is_active: true, slug: 'buy-items' }], error: null }],
       listings: [{ data: { id: 'l-3', slug: 'y' }, error: null }],
     })
     // a hostile client cannot smuggle moderation columns through the typed input
@@ -207,11 +206,10 @@ describe('AUTH-031 — the service-role listing insert is pinned to the session 
     h.session = sessionWith({
       profiles: [{ data: { role: 'seller', seller_status: 'active' }, error: null }],
       global_categories: [{ data: { id: 'gc-items' }, error: null }],
-      game_categories: [{ data: { id: 'pair-1' }, error: null }],
+      game_categories: [{ data: { id: 'pair-1', slug: 'buy-items', name: 'Items', type: 'items', legacy_category_id: 'cat-1' }, error: null }],
     })
     h.admin = mockClient({
       games: [{ data: { slug: 'fortnite' }, error: null }],
-      categories: [{ data: [{ id: 'cat-1', is_active: true, slug: 'buy-items' }], error: null }],
     })
     const res = await bulkPublishListings('game-1', 'items', [
       { line: 1, title: 'A', price: 1, quantity: 1, delivery_method: 'manual', images: [], template_data: {} } as any,

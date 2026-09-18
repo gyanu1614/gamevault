@@ -97,7 +97,7 @@ export async function getPendingListings(): Promise<{
           founding_seller
         ),
         game:games!listings_game_id_fkey(name, slug),
-        category:categories!listings_category_id_fkey(name, slug)
+        category:game_categories!listings_game_category_id_fkey(name, slug)
       `)
       .in('status', ['pending_approval', 'changes_requested'])
       .order('created_at', { ascending: false }) as any)
@@ -235,7 +235,7 @@ export async function approveListing(
           slug,
           seller:profiles!listings_seller_id_fkey(email, username, full_name),
           game:games!listings_game_id_fkey(slug),
-          category:categories!listings_category_id_fkey(slug)
+          category:game_categories!listings_game_category_id_fkey(slug)
         `)
         .eq('id', listingId)
         .single() as any
@@ -672,7 +672,7 @@ export async function getModerationHistory(input: {
         changes_requested_by, changes_requested_at,
         moderation_notes,
         game:games!listings_game_id_fkey(name, slug),
-        category:categories!listings_category_id_fkey(name, slug),
+        category:game_categories!listings_game_category_id_fkey(name, slug),
         seller:profiles!listings_seller_id_fkey(username)
       `,
         { count: 'exact' },

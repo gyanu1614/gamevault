@@ -23,7 +23,7 @@ export async function getListings(filters: ListingsFilters = {}) {
       *,
       seller:profiles!listings_seller_id_fkey!inner(*),
       game:games!listings_game_id_fkey(*),
-      category:categories!listings_category_id_fkey(*)
+      category:game_categories!listings_game_category_id_fkey(*)
     `)
     .eq('status', 'active')
     .eq('seller.is_test', false)
@@ -34,7 +34,7 @@ export async function getListings(filters: ListingsFilters = {}) {
   }
 
   if (filters.categoryId) {
-    query = query.eq('category_id', filters.categoryId)
+    query = query.eq('game_category_id', filters.categoryId)
   }
 
   if (filters.minPrice !== undefined) {
@@ -73,7 +73,7 @@ export async function getListing(id: string) {
       *,
       seller:profiles!listings_seller_id_fkey(*),
       game:games!listings_game_id_fkey(*),
-      category:categories!listings_category_id_fkey(*)
+      category:game_categories!listings_game_category_id_fkey(*)
     `)
     .eq('id', id)
     .single()
@@ -109,7 +109,7 @@ export async function getCategories() {
   const supabase = createClient()
 
   const { data, error } = await supabase
-    .from('categories')
+    .from('game_categories')
     .select('*')
     .order('name') as any
 

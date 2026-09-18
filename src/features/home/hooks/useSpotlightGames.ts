@@ -12,7 +12,7 @@ import { getGameIcon } from '../lib/game-icons'
 export interface SpotlightCategory {
   slug: string
   label: string
-  /** categories.metadata.type — used to prefer currency/items for the card tap. */
+  /** game_categories.type — used to prefer currency/items for the card tap. */
   type: string | null
 }
 
@@ -40,10 +40,8 @@ interface GameRow {
   sort_order: number | null
 }
 
-const catLabel = (slug: string, name: string | null, metadata: { label?: string; name?: string } | null) =>
+const catLabel = (slug: string, name: string | null) =>
   name ||
-  metadata?.label ||
-  metadata?.name ||
   slug
     .replace(/^buy-/, '')
     .replace(/[-_]+/g, ' ')
@@ -75,21 +73,21 @@ export function useSpotlightGames() {
       const rows = (data ?? []) as GameRow[]
       if (rows.length === 0) return []
 
-      // Every active category per spotlit game (display_order asc) so the
+      // Every enabled category per spotlit game (sort_order asc) so the
       // card can render tappable pills and pick a smart landing target.
       const gameIds = rows.map((g) => g.id)
       const { data: cats } = (await supabase
-        .from('categories')
-        .select('game_id, slug, name, metadata, display_order')
+        .from('game_categories')
+        .select('game_id, slug, name, type, sort_order')
         .in('game_id', gameIds)
-        .eq('is_active', true)
-        .order('display_order', { ascending: true })) as unknown as {
+        .eq('is_enabled', true)
+        .order('sort_order', { ascending: true })) as unknown as {
           data: {
             game_id: string
             slug: string
             name: string | null
-            metadata: { label?: string; name?: string; type?: string } | null
-            display_order: number | null
+            type: string | null
+            sort_order: number | null
           }[] | null
         }
 
@@ -97,8 +95,8 @@ export function useSpotlightGames() {
       for (const c of cats ?? []) {
         const entry: SpotlightCategory = {
           slug: c.slug,
-          label: catLabel(c.slug, c.name, c.metadata),
-          type: c.metadata?.type ?? null,
+          label: catLabel(c.slug, c.name),
+          type: c.type ?? null,
         }
         const list = categoriesByGame.get(c.game_id)
         if (list) list.push(entry)

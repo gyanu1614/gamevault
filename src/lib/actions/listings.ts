@@ -1,10 +1,11 @@
 /**
  * Listing Actions
- * Server actions for creating and managing listings with Phase 3 features:
- * - Template loading
+ * Server actions for managing existing listings:
  * - Image upload to Supabase Storage
  * - Pre-moderation handling
- * - Price history tracking (automatic via trigger)
+ * - Price / field updates (price history tracked automatically via trigger)
+ *
+ * Creation lives in sell-wizard.ts (publishListing / bulkPublishListings).
  */
 
 'use server'
@@ -13,35 +14,8 @@ import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { DEFAULT_TIER, tierByKey } from '@/lib/seller/tiers'
 
-// ============================================
-// TYPES
-// ============================================
-
-export interface ListingTemplate {
-  id: string
-  game_id: string
-  category_id: string
-  template_name: string
-  fields: TemplateField[]
-  is_active: boolean
-}
-
-export interface TemplateField {
-  name: string
-  type: 'text' | 'number' | 'boolean' | 'select' | 'textarea'
-  label: string
-  required: boolean
-  placeholder?: string
-  min?: number
-  max?: number
-  maxLength?: number
-  options?: { value: string; label: string }[]
-  defaultValue?: any
-}
-
-export interface CreateListingInput {
-  game_id: string
-  category_id: string
+/** Editable listing fields (updateListing). Category is fixed once published. */
+export interface ListingUpdateInput {
   title: string
   description: string
   price: number
@@ -57,122 +31,6 @@ export interface CreateListingInput {
   region?: string // For region-specific items (gift cards, regional accounts)
   platform?: string // For platform-specific items (GTA, Fortnite, etc.)
 }
-
-export interface Category {
-  id: string
-  game_id: string
-  name: string
-  slug: string
-  icon: string
-  description?: string
-  display_order: number
-  is_active: boolean
-  metadata: {
-    type?: 'currency' | 'items' | 'account' | 'service' | 'gift_card'
-    requires_region?: boolean
-    requires_platform?: boolean
-    available_regions?: Array<{ code: string; name: string; currency?: string }>
-    available_platforms?: string[]
-    unit_label?: string
-    is_limited?: boolean
-    is_modded?: boolean
-  }
-}
-
-// ============================================
-// CATEGORY ACTIONS
-// ============================================
-
-/**
- * Get game-specific categories
- */
-export async function getGameCategories(
-  gameId: string
-): Promise<{ success: boolean; categories?: Category[]; error?: string }> {
-  try {
-    const supabase = await createClient()
-
-    const { data, error } = await supabase
-      .from('categories')
-      .select('*')
-      .eq('game_id', gameId)
-      .eq('is_active', true)
-      .order('display_order', { ascending: true })
-      .order('name', { ascending: true })
-
-    if (error) throw error
-
-    return { success: true, categories: data || [] }
-  } catch (error: any) {
-    console.error('Error fetching game categories:', error)
-    return { success: false, error: error.message }
-  }
-}
-
-/**
- * Get category by ID with metadata
- */
-export async function getCategoryById(
-  categoryId: string
-): Promise<{ success: boolean; category?: Category; error?: string }> {
-  try {
-    const supabase = await createClient()
-
-    const { data, error } = await supabase
-      .from('categories')
-      .select('*')
-      .eq('id', categoryId)
-      .single()
-
-    if (error) throw error
-
-    return { success: true, category: data }
-  } catch (error: any) {
-    console.error('Error fetching category:', error)
-    return { success: false, error: error.message }
-  }
-}
-
-// ============================================
-// TEMPLATE ACTIONS
-// ============================================
-
-/**
- * Get listing template for a game/category combination
- */
-export async function getListingTemplate(
-  gameId: string,
-  categoryId: string
-): Promise<{ success: boolean; template?: ListingTemplate; error?: string }> {
-  try {
-    const supabase = await createClient()
-
-    const { data, error } = await supabase
-      .from('listing_templates')
-      .select('*')
-      .eq('game_id', gameId)
-      .eq('category_id', categoryId)
-      .eq('is_active', true)
-      .single()
-
-    if (error) {
-      // No template found is not an error - just means no custom fields
-      if (error.code === 'PGRST116') {
-        return { success: true, template: undefined }
-      }
-      throw error
-    }
-
-    return { success: true, template: data }
-  } catch (error: any) {
-    console.error('Error fetching listing template:', error)
-    return { success: false, error: error.message }
-  }
-}
-
-// ============================================
-// IMAGE UPLOAD ACTIONS
-// ============================================
 
 /**
  * Upload listing image to Supabase Storage
@@ -270,248 +128,6 @@ export async function deleteListingImage(
 // ============================================
 // SPAM PREVENTION
 // ============================================
-
-/**
- * Check for spam/duplicate listings
- */
-export async function checkListingSpam(
-  userId: string,
-  title: string,
-  gameId: string,
-  categoryId: string
-): Promise<{ success: boolean; isSpam: boolean; reason?: string; error?: string }> {
-  try {
-    const supabase = await createClient()
-
-    // 1. Rate limiting: Max 5 listings per hour for new sellers
-    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString()
-
-    const { count: recentCount } = await supabase
-      .from('listings')
-      .select('*', { count: 'exact', head: true })
-      .eq('seller_id', userId)
-      .gte('created_at', oneHourAgo)
-
-    // Check seller tier to determine rate limit
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('seller_tier, total_sales')
-      .eq('id', userId)
-      .single() as any
-
-    const sellerTier = profile?.seller_tier || DEFAULT_TIER
-    const totalSales = profile?.total_sales || 0
-
-    // Rate limits by rank (bronze 5/hr → legendary 100/hr), read from the
-    // ladder rather than compared against literals — the old gemstone literals
-    // here silently stopped matching any real tier after the metal re-key, so
-    // every seller fell back to the 5/hr entry cap.
-    let maxListingsPerHour = tierByKey(sellerTier).maxListingsPerHour
-    if (totalSales >= 10) maxListingsPerHour = Math.max(maxListingsPerHour, 10)
-    if (totalSales >= 50) maxListingsPerHour = Math.max(maxListingsPerHour, 20)
-    if (totalSales >= 100) maxListingsPerHour = Math.max(maxListingsPerHour, 50)
-
-    if ((recentCount || 0) >= maxListingsPerHour) {
-      return {
-        success: true,
-        isSpam: true,
-        reason: `Rate limit: Maximum ${maxListingsPerHour} listings per hour for your tier`,
-      }
-    }
-
-    // 2. Duplicate detection: Check for similar titles in same game/category
-    const { data: similarListings } = await supabase
-      .from('listings')
-      .select('id, title')
-      .eq('seller_id', userId)
-      .eq('game_id', gameId)
-      .eq('category_id', categoryId)
-      .in('status', ['active', 'pending_approval'])
-      .limit(50)
-
-    if (similarListings && similarListings.length > 0) {
-      // Use simple similarity check (can be enhanced with trigram later)
-      const normalizedTitle = title.toLowerCase().trim()
-      for (const listing of (similarListings as any)) {
-        const existingTitle = (listing as any).title.toLowerCase().trim()
-        if (normalizedTitle === existingTitle) {
-          return {
-            success: true,
-            isSpam: true,
-            reason: 'You already have an identical listing. Please update the existing one instead.',
-          }
-        }
-      }
-    }
-
-    // 3. Check for too many similar listings in short time
-    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString()
-    const { count: veryRecentCount } = await supabase
-      .from('listings')
-      .select('*', { count: 'exact', head: true })
-      .eq('seller_id', userId)
-      .eq('game_id', gameId)
-      .eq('category_id', categoryId)
-      .gte('created_at', fiveMinutesAgo)
-
-    if ((veryRecentCount || 0) >= 3) {
-      return {
-        success: true,
-        isSpam: true,
-        reason: 'Too many listings in this category. Please wait a few minutes.',
-      }
-    }
-
-    return { success: true, isSpam: false }
-  } catch (error: any) {
-    console.error('Error checking listing spam:', error)
-    return { success: false, isSpam: false, error: error.message }
-  }
-}
-
-// ============================================
-// LISTING CRUD ACTIONS
-// ============================================
-
-/**
- * Create a new listing with Phase 3 features
- */
-export async function createListing(
-  input: CreateListingInput
-): Promise<{ success: boolean; listing?: any; error?: string }> {
-  try {
-    const supabase = await createClient()
-
-    // Get authenticated user
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser()
-    if (authError || !user) {
-      return { success: false, error: 'Not authenticated' }
-    }
-
-    // Get seller profile to check tier and status
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('seller_tier, seller_status')
-      .eq('id', user.id)
-      .single() as any
-
-    // Check if seller is restricted or banned
-    if (profile?.seller_status && profile.seller_status !== 'active') {
-      return {
-        success: false,
-        error: 'Your seller account is restricted. You cannot create listings at this time.'
-      }
-    }
-
-    // Validate required fields
-    if (!input.title || input.title.trim().length < 5) {
-      return { success: false, error: 'Title must be at least 5 characters' }
-    }
-    if (input.title.trim().length > 100) {
-      return { success: false, error: 'Title must be less than 100 characters' }
-    }
-    if (!input.price || input.price <= 0) {
-      return { success: false, error: 'Price must be greater than 0' }
-    }
-    if (!input.images || input.images.length === 0) {
-      return { success: false, error: 'At least one image is required' }
-    }
-
-    // Check category metadata for required fields
-    const { data: category } = await supabase
-      .from('categories')
-      .select('metadata')
-      .eq('id', input.category_id)
-      .single() as any
-
-    if (category) {
-      const metadata = category.metadata as Category['metadata']
-
-      // Validate region if required
-      if (metadata.requires_region && !input.region) {
-        return { success: false, error: 'Region is required for this category' }
-      }
-
-      // Validate platform if required
-      if (metadata.requires_platform && !input.platform) {
-        return { success: false, error: 'Platform is required for this category' }
-      }
-    }
-
-    // Spam prevention check (skip for draft listings)
-    if (input.status !== 'draft') {
-      const spamCheck = await checkListingSpam(
-        user.id,
-        input.title,
-        input.game_id,
-        input.category_id
-      )
-
-      if (spamCheck.success && spamCheck.isSpam) {
-        return { success: false, error: spamCheck.reason || 'Listing flagged as spam' }
-      }
-    }
-
-    // Prepare listing data
-    const listingData = {
-      seller_id: user.id,
-      game_id: input.game_id,
-      category_id: input.category_id,
-      title: input.title.trim(),
-      description: input.description?.trim() || '',
-      price: input.price,
-      original_price: input.original_price || null,
-      quantity: input.quantity || 1,
-      min_quantity: input.min_quantity || 1,
-      delivery_method: input.delivery_method,
-      delivery_time: input.delivery_time || '1-24 hours',
-      delivery_method_type: input.delivery_method_type || null,
-      images: input.images,
-      template_data: input.template_data || {},
-      region: input.region || null,
-      platform: input.platform || null,
-      status: input.status || 'active', // Will be changed to pending_approval by trigger if needed
-      currency: 'USD',
-      views: 0,
-      sales: 0,
-    }
-
-    // Insert listing
-    const { data, error } = await (supabase
-      .from('listings')
-      .insert as any)([listingData])
-      .select(`
-        *,
-        game:game_id (id, name, slug, image_url),
-        category:category_id (id, name, slug, icon)
-      `)
-      .single()
-
-    if (error) throw error
-
-    // Check if status was changed to pending_approval by trigger
-    const requiresModeration = data.status === 'pending_approval'
-
-    revalidatePath('/account/listings')
-    // V21/P7.d — Marketplace tree lives at `/{gameSlug}/...` now;
-    // revalidate `/` (homepage features popular listings).
-    revalidatePath('/')
-
-    return {
-      success: true,
-      listing: {
-        ...data,
-        requiresModeration,
-      },
-    }
-  } catch (error: any) {
-    console.error('Error creating listing:', error)
-    return { success: false, error: error.message }
-  }
-}
 
 /**
  * Check if seller needs pre-moderation
@@ -681,7 +297,7 @@ export async function updateListingPrice(
  */
 export async function updateListing(
   listingId: string,
-  input: Partial<CreateListingInput> & { status?: string }
+  input: Partial<ListingUpdateInput> & { status?: string }
 ): Promise<{ success: boolean; listing?: any; error?: string }> {
   try {
     const supabase = await createClient()
@@ -782,7 +398,7 @@ export async function updateListing(
       .select(`
         *,
         game:game_id (id, name, slug, image_url),
-        category:category_id (id, name, slug, icon)
+        category:game_categories!listings_game_category_id_fkey (id, name, slug, icon_emoji)
       `)
       .single()
 
@@ -823,7 +439,7 @@ export async function getListingById(
       .select(`
         *,
         game:game_id (id, name, slug, image_url),
-        category:category_id (id, name, slug, icon, metadata)
+        category:game_categories!listings_game_category_id_fkey (id, name, slug, icon_emoji, type)
       `)
       .eq('id', listingId)
       .eq('seller_id', user.id) // Only allow sellers to view their own listings for editing

@@ -52,17 +52,17 @@ export async function getGameCategories(
   const gameIds = games.map((g) => g.id)
 
   const { data, error } = (await supabase
-    .from('categories')
-    .select('game_id, slug, metadata, is_active, display_order')
+    .from('game_categories')
+    .select('game_id, slug, type, is_enabled, sort_order')
     .in('game_id', gameIds)
-    .eq('is_active', true)
-    .order('display_order', { ascending: true })) as unknown as {
+    .eq('is_enabled', true)
+    .order('sort_order', { ascending: true })) as unknown as {
     data:
       | {
           game_id: string | null
           slug: string
-          metadata: { type?: string } | null
-          display_order: number | null
+          type: string | null
+          sort_order: number | null
         }[]
       | null
     error: unknown
@@ -73,7 +73,7 @@ export async function getGameCategories(
   const byGame = new Map<string, Set<SellerCategorySection>>()
   for (const row of data) {
     if (!row.game_id) continue
-    const section = sectionFor(row.metadata?.type, row.slug)
+    const section = sectionFor(row.type ?? undefined, row.slug)
     if (!byGame.has(row.game_id)) byGame.set(row.game_id, new Set())
     byGame.get(row.game_id)!.add(section)
   }

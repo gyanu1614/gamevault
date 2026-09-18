@@ -177,9 +177,10 @@ export async function createTestListings() {
       .order('name') as any
 
     const { data: categories, error: categoriesError } = await supabase
-      .from('categories')
-      .select('id, slug, name')
-      .order('name') as any
+      .from('game_categories')
+      .select('id, game_id, slug, type')
+      .eq('is_enabled', true)
+      .order('sort_order') as any
 
     if (gamesError || !games || games.length === 0) {
       return {
@@ -198,8 +199,14 @@ export async function createTestListings() {
     const robloxGame = games.find((g: any) => g.slug === 'roblox')
     const fortniteGame = games.find((g: any) => g.slug === 'fortnite')
     const valorantGame = games.find((g: any) => g.slug === 'valorant')
-    const accountsCategory = categories.find((c: any) => c.slug === 'accounts')
-    const currencyCategory = categories.find((c: any) => c.slug === 'currency')
+    // Per-game rows now (Step 1b): the account category of each game + Roblox's currency.
+    const byGameType = (gameId: string | undefined, type: string) =>
+      categories.find((c: any) => c.game_id === gameId && c.type === type)
+    const valorantAccounts = byGameType(valorantGame?.id, 'account')
+    const fortniteAccounts = byGameType(fortniteGame?.id, 'account')
+    const robloxCurrency = byGameType(robloxGame?.id, 'currency')
+    const accountsCategory = valorantAccounts && fortniteAccounts ? valorantAccounts : null
+    const currencyCategory = robloxCurrency ?? null
 
     if (!robloxGame || !fortniteGame || !valorantGame) {
       return {
@@ -211,7 +218,7 @@ export async function createTestListings() {
     if (!accountsCategory || !currencyCategory) {
       return {
         success: false,
-        error: 'Required categories not found. Need: accounts, currency',
+        error: 'Required categories not found. Need: valorant/fortnite account + roblox currency (enabled)',
       }
     }
 
@@ -223,7 +230,7 @@ export async function createTestListings() {
       {
         seller_id: sellerId,
         game_id: valorantGame.id,
-        category_id: accountsCategory.id,
+        game_category_id: valorantAccounts!.id,
         title: 'Valorant Radiant Account | 5000+ VP | All Agents',
         slug: 'valorant-radiant-account-5000-vp-all-agents',
         description: 'Rare Valorant account with Radiant rank, 5000+ VP, and all agents unlocked. Includes exclusive skins and battle pass rewards.',
@@ -247,7 +254,7 @@ export async function createTestListings() {
       {
         seller_id: sellerId,
         game_id: robloxGame.id,
-        category_id: currencyCategory.id,
+        game_category_id: robloxCurrency!.id,
         title: 'Roblox Premium Account | Level 250 | 100K Robux',
         slug: 'roblox-premium-account-level-250-100k-robux',
         description: 'High-level Roblox account with Premium subscription, 100K Robux, and tons of rare items.',
@@ -271,7 +278,7 @@ export async function createTestListings() {
       {
         seller_id: sellerId,
         game_id: fortniteGame.id,
-        category_id: accountsCategory.id,
+        game_category_id: fortniteAccounts!.id,
         title: 'Fortnite OG Account | Rare Skins | Stacked',
         slug: 'fortnite-og-account-rare-skins-stacked',
         description: 'OG Fortnite account with rare skins from Season 1-3, including Black Knight and Renegade Raider.',
@@ -313,7 +320,7 @@ export async function createTestListings() {
     // STEP 4: Verify listings are active
     const { data: verifyListings } = await supabase
       .from('listings')
-      .select('id, slug, status, game_id, category_id')
+      .select('id, slug, status, game_id, game_category_id')
       .in('slug', TEST_SLUGS)
 
     console.log('🔍 Verification - Final status:', verifyListings)

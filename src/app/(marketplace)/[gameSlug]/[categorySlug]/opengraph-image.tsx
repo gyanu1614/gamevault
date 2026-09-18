@@ -65,7 +65,7 @@ export default async function Image({
       // Lowest active price (first row, price ascending) + exact count
       // from the Content-Range header — one round trip.
       const listingsResult = await ogRestFetch<ListingPriceRow>(
-        `listings?game_id=eq.${encodeURIComponent(game.id)}&category_id=eq.${encodeURIComponent(category.id)}&status=eq.active&select=price&order=price.asc&limit=1`,
+        `listings?game_id=eq.${encodeURIComponent(game.id)}&game_category_id=eq.${encodeURIComponent(category.id)}&status=eq.active&select=price&order=price.asc&limit=1`,
         { count: true }
       )
       const lowPrice = formatUsd(listingsResult?.rows?.[0]?.price)

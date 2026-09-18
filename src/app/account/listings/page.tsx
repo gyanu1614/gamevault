@@ -377,7 +377,7 @@ function OffersContent() {
 
   // Section rows + the games represented in them (for the Game filter).
   const typed = useMemo(
-    () => listings.filter((l) => classifyOfferType(l.category?.metadata?.type, l.category?.slug) === type),
+    () => listings.filter((l) => classifyOfferType(l.category?.type ?? undefined, l.category?.slug) === type),
     [listings, type],
   )
   const games = useMemo(() => {

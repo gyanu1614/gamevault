@@ -119,7 +119,7 @@ function MobileSectionHeader({
 interface NavCatRow {
   slug: string
   name: string | null
-  metadata: { label?: string; name?: string; type?: string } | null
+  type: string | null
   game: {
     name: string
     slug: string
@@ -150,10 +150,10 @@ function useNavCategories() {
       const { createClient } = await import('@/lib/supabase/client')
       const supabase = createClient()
       const { data } = await supabase
-        .from('categories')
-        .select('slug, name, metadata, game_id, game:games!categories_game_id_fkey(name, slug, emoji, image_url, sort_order)')
-        .eq('is_active', true)
-        .order('display_order')
+        .from('game_categories')
+        .select('slug, name, type, game_id, game:games!game_categories_game_id_fkey(name, slug, emoji, image_url, sort_order)')
+        .eq('is_enabled', true)
+        .order('sort_order')
       return data || []
     },
     staleTime: 1000 * 60 * 5,
@@ -162,8 +162,6 @@ function useNavCategories() {
 
 const catLabel = (row: NavCatRow) =>
   row.name ||
-  row.metadata?.label ||
-  row.metadata?.name ||
   row.slug
     .replace(/^buy-/, '')
     .replace(/[-_]+/g, ' ')

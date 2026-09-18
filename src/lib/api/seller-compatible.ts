@@ -27,6 +27,8 @@ export interface Listing {
   seller_id: string
   game_id: string
   category_id: string
+  /** Step 1b — the game_categories row; category_id is the Phase-A legacy mirror. */
+  game_category_id?: string | null
   title: string
   description: string
   price: number
@@ -63,8 +65,8 @@ export interface Listing {
     id: string
     name: string
     slug: string
-    /** categories.metadata — carries the category type ('currency' | 'items' | …). */
-    metadata?: { type?: string } | null
+    /** game_categories.type — the fee / warranty key ('currency' | 'items' | …). */
+    type?: string | null
   }
 }
 
@@ -189,7 +191,7 @@ export const listingsApi = {
       .select(`
         *,
         game:game_id (id, name, slug, emoji, image_url),
-        category:category_id (id, name, slug, metadata)
+        category:game_categories!listings_game_category_id_fkey (id, name, slug, type)
       `)
       .eq('seller_id', user.id)  // CRITICAL: Only show current user's listings
       .order('created_at', { ascending: false })
@@ -201,7 +203,7 @@ export const listingsApi = {
       query = query.eq('game_id', filters.game_id)
     }
     if (filters?.category_id) {
-      query = query.eq('category_id', filters.category_id)
+      query = query.eq('game_category_id', filters.category_id)
     }
     if (filters?.search) {
       query = query.ilike('title', `%${filters.search}%`)
@@ -226,7 +228,7 @@ export const listingsApi = {
       .select(`
         *,
         game:game_id (id, name, slug, emoji, image_url),
-        category:category_id (id, name, slug, metadata)
+        category:game_categories!listings_game_category_id_fkey (id, name, slug, type)
       `)
       .eq('id', id)
       .eq('seller_id', user.id)  // CRITICAL: Only allow access to own listings
@@ -264,7 +266,7 @@ export const listingsApi = {
       .select(`
         *,
         game:game_id (id, name, slug, emoji, image_url),
-        category:category_id (id, name, slug, metadata)
+        category:game_categories!listings_game_category_id_fkey (id, name, slug, type)
       `)
       .single()
 
@@ -288,7 +290,7 @@ export const listingsApi = {
       .select(`
         *,
         game:game_id (id, name, slug, emoji, image_url),
-        category:category_id (id, name, slug, metadata)
+        category:game_categories!listings_game_category_id_fkey (id, name, slug, type)
       `)
       .single()
 
@@ -373,6 +375,7 @@ export const ordersApi = {
           title,
           game_id,
           category_id,
+          game_category_id,
           images,
           game:games!listings_game_id_fkey (
             id,
@@ -380,11 +383,11 @@ export const ordersApi = {
             slug,
             image_url
           ),
-          category:categories!listings_category_id_fkey (
+          category:game_categories!listings_game_category_id_fkey (
             id,
             name,
             slug,
-            metadata
+            type
           )
         ),
         buyer:buyer_id (
@@ -520,6 +523,7 @@ export const buyerOrdersApi = {
           title,
           game_id,
           category_id,
+          game_category_id,
           images,
           delivery_method,
           delivery_time,
@@ -529,11 +533,11 @@ export const buyerOrdersApi = {
             slug,
             image_url
           ),
-          category:categories!listings_category_id_fkey (
+          category:game_categories!listings_game_category_id_fkey (
             id,
             name,
             slug,
-            metadata
+            type
           )
         ),
         seller:seller_id (
@@ -581,6 +585,7 @@ export const buyerOrdersApi = {
           title,
           game_id,
           category_id,
+          game_category_id,
           images,
           delivery_method,
           delivery_time
@@ -780,7 +785,7 @@ export const analyticsApi = {
       .select(`
         *,
         game:game_id (id, name, slug, emoji, image_url),
-        category:category_id (id, name, slug, metadata)
+        category:game_categories!listings_game_category_id_fkey (id, name, slug, type)
       `)
       .eq('seller_id', user.id)
       .order('sales', { ascending: false })
@@ -1061,7 +1066,7 @@ export interface Conversation {
       title: string
       images: string[]
       game?: { name: string; slug: string; image_url?: string | null }
-      category?: { name: string; slug: string; metadata?: { type?: string } | null }
+      category?: { name: string; slug: string; type?: string | null }
     }
   }
 }
@@ -1091,7 +1096,7 @@ export const messagesApi = {
             title,
             images,
             game:game_id(name, slug, image_url),
-            category:category_id(name, slug, metadata)
+            category:game_categories!listings_game_category_id_fkey(name, slug, type)
           )
         )
       `)
@@ -1273,7 +1278,7 @@ export const messagesApi = {
             title,
             images,
             game:game_id(name, slug, image_url),
-            category:category_id(name, slug, metadata)
+            category:game_categories!listings_game_category_id_fkey(name, slug, type)
           )
         )
       `)
@@ -1348,7 +1353,7 @@ export const messagesApi = {
             title,
             images,
             game:game_id(name, slug, image_url),
-            category:category_id(name, slug, metadata)
+            category:game_categories!listings_game_category_id_fkey(name, slug, type)
           )
         )
       `)

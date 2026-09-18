@@ -49,7 +49,7 @@ async function getDirectory(): Promise<GameGroup[]> {
   const catsByGame = new Map<string, { slug: string; label: string }[]>()
   for (const c of cats ?? []) {
     const list = catsByGame.get(c.game_id) ?? []
-    list.push({ slug: c.slug, label: categoryLabel(c.slug, c.name, c.metadata?.label) })
+    list.push({ slug: c.slug, label: categoryLabel(c.slug, c.name, undefined) })
     catsByGame.set(c.game_id, list)
   }
 

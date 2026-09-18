@@ -40,7 +40,7 @@ export interface PopularCategoryGroup {
 interface ListingAggRow {
   price: number | null
   game: { slug: string; name: string; display_name: string | null } | null
-  category: { slug: string; name: string; metadata: { type?: string } | null } | null
+  category: { slug: string; name: string; type: string | null } | null
 }
 
 /**
@@ -72,7 +72,7 @@ export async function fetchPopularCategoryGroups(): Promise<PopularCategoryGroup
     .select(
       `price,
        game:games!listings_game_id_fkey(slug, name, display_name),
-       category:categories!listings_category_id_fkey(slug, name, metadata)`,
+       category:game_categories!listings_game_category_id_fkey(slug, name, type)`,
     )
     .eq('status', 'active')
   if (pausedSellerIds.length > 0) {
@@ -104,7 +104,7 @@ export async function fetchPopularCategoryGroups(): Promise<PopularCategoryGroup
     }
 
     groups.set(key, {
-      type: classifyOfferType(category.metadata?.type, category.slug),
+      type: classifyOfferType(category.type ?? undefined, category.slug),
       gameSlug: game.slug,
       gameName: game.display_name || game.name,
       gameIcon: getGameIcon(game.slug),

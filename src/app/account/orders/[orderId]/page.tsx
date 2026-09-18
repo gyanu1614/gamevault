@@ -146,11 +146,11 @@ export default async function OrderDetailPage({ params }: PageProps) {
           .eq('id', order.listing.game_id)
           .single() as any)
       : Promise.resolve({ data: null }),
-    order.listing?.category_id
+    order.listing?.game_category_id
       ? (supabase
-          .from('categories')
+          .from('game_categories')
           .select('id, name, slug')
-          .eq('id', order.listing.category_id)
+          .eq('id', order.listing.game_category_id)
           .single() as any)
       : Promise.resolve({ data: null }),
   ])

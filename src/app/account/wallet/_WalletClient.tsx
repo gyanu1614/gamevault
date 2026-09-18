@@ -85,7 +85,7 @@ async function fetchPurchases(userId: string) {
         title,
         images,
         game:game_id (name, emoji, image_url),
-        category:category_id (name)
+        category:game_categories!listings_game_category_id_fkey (name)
       )
     `)
     .eq('buyer_id', userId)
@@ -172,7 +172,7 @@ async function fetchSales(userId: string): Promise<SaleTransaction[]> {
         title,
         images,
         game:game_id (name, emoji, image_url),
-        category:category_id (name)
+        category:game_categories!listings_game_category_id_fkey (name)
       )
     `)
     .eq('seller_id', userId)

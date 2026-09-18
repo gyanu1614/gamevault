@@ -88,7 +88,7 @@ export const getCategoryStats = requestMemo(
       .from('listings')
       .select('price, delivery_time')
       .eq('game_id', gameId)
-      .eq('category_id', categoryId)
+      .eq('game_category_id', categoryId)
       .eq('status', 'active')
     if (hiddenSellerIds.length > 0) {
       query = query.not('seller_id', 'in', `(${hiddenSellerIds.join(',')})`)

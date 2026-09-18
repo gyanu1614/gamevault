@@ -738,10 +738,10 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
       const { createClient } = await import('@/lib/supabase/client')
       const supabase = createClient()
       const { data } = await supabase
-        .from('categories')
-        .select('slug, name, metadata, game_id, game:games!categories_game_id_fkey(name, slug, emoji, image_url, sort_order)')
-        .eq('is_active', true)
-        .order('display_order')
+        .from('game_categories')
+        .select('slug, name, type, game_id, game:games!game_categories_game_id_fkey(name, slug, emoji, image_url, sort_order)')
+        .eq('is_enabled', true)
+        .order('sort_order')
       return data || []
     },
     staleTime: 1000 * 60 * 5,
@@ -772,7 +772,7 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
     // URL slug. No client-side translation needed.
     const groups: Record<string, Array<{ game: any; categorySlug: string }>> = {}
     navCatsData?.forEach((cat: any) => {
-      const type = cat.metadata?.type
+      const type = cat.type
       if (type && cat.game) {
         if (!groups[type]) groups[type] = []
         // Dedupe by game.slug
@@ -2758,8 +2758,6 @@ function GlobalSearch({
       // (slug fallback "buy-vbucks" → "Vbucks" was the wrong casing).
       const label =
         (row.name as string) ||
-        (row.metadata?.label as string) ||
-        (row.metadata?.name as string) ||
         row.slug
           .replace(/^buy-/, '')
           .replace(/[-_]+/g, ' ')
@@ -2769,7 +2767,7 @@ function GlobalSearch({
       // placeholder SVG by category type from
       // /public/assets/category-icons/. Replace those SVGs to swap the
       // default per-category art.
-      const catType = row.metadata?.type as string | undefined
+      const catType = row.type as string | undefined
       const adminIcon =
         row.game_id && catType
           ? catIconMap.get(`${row.game_id}:${catType}`) ?? null
