@@ -11,12 +11,13 @@
  * list on error so a hiccup never blanks a whole marketplace page.
  */
 
-import { createClient } from '@/lib/supabase/server'
+import { createAnonClient } from '@/lib/supabase/anon'
 
 /** Ids of test/demo seller accounts to exclude from public listing queries. */
 export async function getTestSellerIds(): Promise<string[]> {
   try {
-    const supabase = await createClient()
+    // Cookie-free (Step 7a): called from ISR pages via getCategoryStats.
+    const supabase = createAnonClient()
     const { data, error } = await (supabase
       .from('profiles') as any)
       .select('id')

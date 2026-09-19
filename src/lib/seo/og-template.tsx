@@ -26,7 +26,7 @@ const SLATE = '#94a3b8'
 
 // ─── Data helpers (edge/runtime-safe: plain fetch against Supabase REST) ───
 
-interface RestResult<T> {
+export interface RestResult<T> {
   rows: T[]
   /** Exact total from Content-Range when `count: true`, else null. */
   total: number | null

@@ -19,36 +19,36 @@ import AdoptMePetPage from './_AdoptMePetPage'
 import { getAdoptMePet, getPublishablePetSlugs } from './_adoptMePetData'
 import GenericValueItemPage from '../_generic/ValueItemPage'
 import { getValueItems } from '@/lib/values/data'
+import { bindValuesTag } from '@/lib/values/revalidation'
 import { getGameContentTheme } from '@/lib/content/theme'
 
-export const revalidate = 3600
+/**
+ * Step 7a — time-based revalidation is a 24 h safety net. The primary refresh
+ * is on demand: the pricing job POSTs /api/internal/values-revalidate after
+ * each run, which revalidates every item page by route pattern.
+ */
+export const revalidate = 86400
 
 /** Games served by the generic values_* pipeline (see the hub route). */
 const VALUES_PIPELINE_GAMES = new Set(['steal-an-egg'])
 
 /**
- * Prerender the highest-value pages at build time; the long tail renders on
- * demand and lands in the same ISR cache (dynamicParams defaults to true), so
- * every slug is still cached — the only difference is who pays for the first
- * render.
- *
- * Deliberately capped. Building all ~500 value pages against the remote DB
- * took the build past Next's 60s-per-page limit intermittently
- * (static-page-generation-timeout on a single slow page fails the whole build).
- * SAB pages are ordered by market value so the pages that actually get traffic
- * are the ones built ahead of time. Unknown slugs still 404 through the gates
- * below.
+ * Prerender EVERY item page at build time (Step 7a). The set used to be
+ * capped at 100 per game because building ~500 pages against the remote DB
+ * intermittently tripped Next's 60 s per-page static-generation timeout; the
+ * cap left the other ~360 pages to render on first visit after every deploy,
+ * at ~12 deploys a day. `staticPageGenerationTimeout` in next.config.js is
+ * raised instead. Unknown slugs still 404 through the gates below
+ * (dynamicParams stays true: a slug published between deploys renders on
+ * demand into the same cache).
  */
-const PRERENDER_LIMIT = 100
-
 export async function generateStaticParams() {
   const supabase = createAnonClient()
   const [{ data: brainrots }, petSlugs] = await Promise.all([
     (supabase as any)
       .from('sab_brainrot_market_catalog')
       .select('slug')
-      .order('market_value_usd', { ascending: false, nullsFirst: false })
-      .limit(PRERENDER_LIMIT),
+      .order('market_value_usd', { ascending: false, nullsFirst: false }),
     getPublishablePetSlugs(),
   ])
   // Generic-pipeline games: prerender the PRICED items (the pages that can
@@ -59,7 +59,6 @@ export async function generateStaticParams() {
     pipelineParams.push(
       ...items
         .filter((i) => i.price?.cheapestUsd != null)
-        .slice(0, PRERENDER_LIMIT)
         .map((i) => ({ gameSlug: slug, itemSlug: i.slug })),
     )
   }
@@ -70,9 +69,7 @@ export async function generateStaticParams() {
       gameSlug: 'steal-a-brainrot',
       itemSlug: r.slug,
     }))),
-    ...petSlugs
-      .slice(0, PRERENDER_LIMIT)
-      .map((slug) => ({ gameSlug: 'adopt-me', itemSlug: slug })),
+    ...petSlugs.map((slug) => ({ gameSlug: 'adopt-me', itemSlug: slug })),
   ]
 }
 
@@ -505,6 +502,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default async function BrainrotValuePage({ params }: PageProps) {
   const { gameSlug, itemSlug } = await params
+  // Step 7a — tag this render `values:<game>` so the pricing job's
+  // revalidateTag reaches exactly this game's item pages (lib/values/revalidation).
+  await bindValuesTag(gameSlug)
 
   // Adopt Me per-pet page — only publishable pets (has_page) render; anything
   // thin or unpriced 404s rather than shipping an empty page.

@@ -11,6 +11,10 @@ const nextConfig = {
   // of .next — a `next build` racing the running `next dev` corrupts the dev
   // chunk cache (ChunkLoadError / "missing required error components").
   distDir: process.env.NEXT_DIST_DIR || '.next',
+  // Step 7a — every value item page is prerendered (~560 against the remote
+  // DB). A single slow page used to trip the 60 s default and fail the whole
+  // build, which is why the set was capped at 100 per game.
+  staticPageGenerationTimeout: 180,
   typescript: {
     ignoreBuildErrors: false,
     // QUAL-003 — a verification build (NEXT_DIST_DIR set) type-checks against a

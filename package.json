@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "NODE_OPTIONS='--max-http-header-size=32768' next dev",
     "dev:clean": "rm -rf .next && NODE_OPTIONS='--max-http-header-size=32768' next dev",
-    "build": "next build",
+    "build": "node scripts/check-public-route-caching.mjs && next build",
     "start": "NODE_OPTIONS='--max-http-header-size=32768' next start",
     "lint": "next lint",
     "type-check": "tsc --noEmit",

@@ -11,6 +11,12 @@ import { getAdoptMeCalcPets } from '../calculator/_adoptMeCalcData'
 import AdoptMeNeonClient from './_AdoptMeNeonClient'
 
 export const revalidate = 3600
+/**
+ * Closed set: generateStaticParams lists every slug this route serves, so an
+ * unknown slug is a static 404 with no function invocation (Step 7a — the
+ * crawl of 233 `/{game}/…` hub URLs was rendering an empty page each).
+ */
+export const dynamicParams = false
 
 /**
  * Prerender the game slug(s) this route serves; every other slug notFound()s

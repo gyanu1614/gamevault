@@ -16,7 +16,7 @@
  */
 
 import 'server-only'
-import { createClient } from '@/lib/supabase/server'
+import { createAnonClient } from '@/lib/supabase/anon'
 import { buildItemSlug, withDisambiguator } from '@/lib/utils/item-seo-slug'
 
 export interface ResolvedItem {
@@ -35,7 +35,8 @@ export async function resolveItemBySlug(
 ): Promise<ResolvedItem | null> {
   const slug = rawSlug.toLowerCase()
   if (!slug) return null
-  const supabase = await createClient()
+  // Cookie-free (Step 7a): runs in the ISR route gate.
+  const supabase = createAnonClient()
 
   // Find the per-game items category id so we can scope the lookup.
   const { data: catRow } = await supabase

@@ -13,8 +13,9 @@
  */
 
 import { sellerDisplayName } from '@/lib/seller/identity'
-import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { SearchParamsBridge } from '@/components/navigation/SearchParamsBridge'
+import { useAuth } from '@/hooks/use-auth'
 import * as Popover from '@radix-ui/react-popover'
 import { Check, ChevronDown, Search, SlidersHorizontal, Gamepad2, X, ShieldCheck } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -52,7 +53,6 @@ interface ItemsPageClientProps {
   tagline?: string
   offers: ItemOffer[]
   taxonomy: ItemsTaxonomy
-  viewerId?: string | null
   /** V21/P7.l — Category label for the header (e.g. "Items",
    *  "Accounts", "Boosting"). Defaults to "Items" for back-compat. */
   categoryLabel?: string
@@ -73,7 +73,6 @@ export default function ItemsPageClient({
   gameImageUrl,
   offers,
   taxonomy,
-  viewerId,
   categoryLabel = 'Items',
   introLine,
   stats,
@@ -87,36 +86,51 @@ export default function ItemsPageClient({
     window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior })
   }, [])
 
-  const searchParams = useSearchParams()
-  const initialSearch = searchParams.get('search')?.trim() ?? ''
-  const [q, setQ] = useState(initialSearch)
-  const [debouncedQ, setDebouncedQ] = useState(initialSearch.toLowerCase())
+  // V14m/Step 7a — viewer from the client auth context (self-purchase block).
+  const { user: viewer } = useAuth()
+  const viewerId = viewer?.id ?? null
+
+  const [q, setQ] = useState('')
+  const [debouncedQ, setDebouncedQ] = useState('')
   useEffect(() => {
     const t = setTimeout(() => setDebouncedQ(q.trim().toLowerCase()), 200)
     return () => clearTimeout(t)
   }, [q])
+
+  // V15b — One filter value per attribute, keyed by attribute slug.
+  // Default sentinel is 'all'. A filter is only "active" (i.e. applied
+  // AND visible in the UI) when its value is not 'all'.
+  const [attrFilters, setAttrFilters] = useState<Record<string, string>>({})
 
   // V21/P7.v — Seed filters from the URL so a navbar search hit like
   // "garama" can deep-link to this page with the filter pre-applied:
   // /steal-a-brainrot/buy-items?attr_category=garama. We read each
   // `attr_<slug>` param and keep only those whose option actually exists
   // in this category's taxonomy (defensive against stale links).
-  const initialAttrFilters = useMemo(() => {
-    const seeded: Record<string, string> = {}
-    for (const f of taxonomy.filters ?? []) {
-      const v = searchParams.get(`attr_${f.slug}`)
-      if (v && f.options.some((o) => o.slug === v)) seeded[f.slug] = v
-    }
-    return seeded
-    // Seed once from the initial params; subsequent filter changes are
-    // local state, not URL-driven.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  // V15b — One filter value per attribute, keyed by attribute slug.
-  // Default sentinel is 'all'. A filter is only "active" (i.e. applied
-  // AND visible in the UI) when its value is not 'all'.
-  const [attrFilters, setAttrFilters] = useState<Record<string, string>>(initialAttrFilters)
+  //
+  // Step 7a — read through SearchParamsBridge after hydration (the page is
+  // ISR; useSearchParams() here would drop this whole grid out of the static
+  // HTML). Seed ONCE, as before: later filter changes are local state, not
+  // URL-driven.
+  const seededRef = useRef(false)
+  const seedFromUrl = useCallback(
+    (params: URLSearchParams) => {
+      if (seededRef.current) return
+      seededRef.current = true
+      const search = params.get('search')?.trim() ?? ''
+      if (search) {
+        setQ(search)
+        setDebouncedQ(search.toLowerCase())
+      }
+      const seeded: Record<string, string> = {}
+      for (const f of taxonomy.filters ?? []) {
+        const v = params.get(`attr_${f.slug}`)
+        if (v && f.options.some((o) => o.slug === v)) seeded[f.slug] = v
+      }
+      if (Object.keys(seeded).length > 0) setAttrFilters(seeded)
+    },
+    [taxonomy],
+  )
   const setAttrFilter = (slug: string, value: string) => {
     setAttrFilters((prev) => {
       const next = { ...prev, [slug]: value }
@@ -258,6 +272,7 @@ export default function ItemsPageClient({
 
   return (
     <main className="min-h-screen">
+      <SearchParamsBridge onParams={seedFromUrl} />
       {/* Filter band */}
       {/* V19/P24/P7.mm — Hero section bg removed so the body's violet
           gradient bleeds through. The hero is now a transparent
