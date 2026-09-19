@@ -697,7 +697,7 @@ export default async function BrainrotValuePage({ params }: PageProps) {
               )}
             </p>
             <p className="mt-2 text-xs leading-5 text-[#9BA8A0]">
-              Estimated from recent comparable marketplace listings and completed sales when available. Extreme prices, bundles, and unclear variants are excluded.
+              Estimated from recent comparable marketplace listings by reputable sellers when available. Extreme prices, bundles, and unclear variants are excluded.
             </p>
 
             <dl className="mt-5 divide-y divide-white/[0.07] border-y border-white/[0.07]">

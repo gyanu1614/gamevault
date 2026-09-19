@@ -246,7 +246,7 @@ export default async function GameBlogIndex({
         <ValuesTeaser
           gameSlug={gameSlug}
           items={topValues}
-          footnote="Prices are medians of completed sales and active listings. Bundles, account sales and disputed orders are excluded. Change indicators appear only where we hold enough price history."
+          footnote="Prices come from active listings by reputable sellers. Bundles, account sales and disputed orders are excluded. Change indicators appear only where we hold enough price history."
         />
 
         {/* Sample items come from the game's own theme, never a hardcoded

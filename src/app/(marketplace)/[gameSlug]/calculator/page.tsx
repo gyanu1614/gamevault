@@ -123,7 +123,7 @@ export async function generateMetadata({
 
   return {
     title: `Steal a Brainrot WFL Calculator (${monthYear}) — Win, Fair or Loss Trade Checker`,
-    description: `Free Steal a Brainrot WFL calculator: put both sides of a trade in and see instantly whether it's a Win, Fair or Loss. Priced from real completed sales and live listings, every mutation covered, refreshed every few hours — ${monthYear}.`,
+    description: `Free Steal a Brainrot WFL calculator: put both sides of a trade in and see instantly whether it's a Win, Fair or Loss. Priced from live marketplace listings by reputable sellers, every mutation covered, refreshed every few hours — ${monthYear}.`,
     alternates: {
       canonical: '/steal-a-brainrot/calculator',
     },

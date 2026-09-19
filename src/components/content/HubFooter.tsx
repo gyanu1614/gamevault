@@ -17,6 +17,7 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
+import { HUB_COPY } from '@/lib/content/theme'
 
 const LEGAL = [
   { name: 'Terms', href: '/terms' },
@@ -122,8 +123,8 @@ export function HubFooter({
               <span className="text-[17px] font-bold text-[#F1F3F1]">DropMarket</span>
             </Link>
             <p className="mt-3 text-[13.5px] leading-6 text-[#8B978F]">
-              Real {gameName} prices from completed sales, and a safer place to buy
-              them — the seller is paid on delivery.
+              Real {gameName} prices from live marketplace listings, and a safer
+              place to buy them — {HUB_COPY.safedropShort.toLowerCase()}
             </p>
 
             {/* Socials + direct support — the professional bit. */}

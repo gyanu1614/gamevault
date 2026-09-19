@@ -15,7 +15,7 @@
  * sellers, not buyers. Games with a content theme keep their per-game accent
  * and top-values teaser; everything else renders on DEFAULT_THEME with the
  * teaser absent (getHubTopValues returns [] for them). Cash claims stay honest
- * per game (SAB = completed sales; Adopt Me = estimated until sales land).
+ * per game (SAB = live reputable listings; Adopt Me = estimated until real data lands).
  */
 
 import type { Metadata } from 'next'
@@ -131,7 +131,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     gameSlug,
   })
   const title = `Sell ${name} ${categoryWord} — ${rate}% fee`
-  const description = `Turn your ${name} inventory into real cash. List on DropMarket, get paid on delivery with SafeDrop even if a buyer ghosts, and founding sellers lock a lower fee for life. Here's how to start.`
+  const description = `Turn your ${name} inventory into real cash. List on DropMarket, sell with SafeDrop protection even if a buyer ghosts, and founding sellers lock a lower fee for life. Here's how to start.`
 
   return {
     title,
@@ -174,7 +174,7 @@ export default async function SellLandingPage({ params }: PageProps) {
     },
     {
       q: `Is it safe to sell here?`,
-      a: `Yes. With SafeDrop you're paid on delivery, so you're protected from buyers who pay then vanish. Every seller is verified, and all communication and delivery stay on-platform where they're covered.`,
+      a: `Yes. SafeDrop protects you from buyers who pay then vanish. Every seller is verified, and all communication and delivery stay on-platform where they're covered.`,
     },
     {
       q: `Do I need to verify my identity?`,

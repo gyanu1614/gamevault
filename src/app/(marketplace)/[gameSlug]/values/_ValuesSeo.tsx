@@ -30,7 +30,7 @@ export function valuesFaq({
   return [
     {
       q: `How much is a ${u} worth in ${gameName}?`,
-      a: `Every ${u}'s worth is listed here in real US dollars, pulled from live marketplace listings and completed sales and refreshed every day. Search or browse the list to see any ${u}'s current cash value, its typical price range, and how confident we are in the number — not a made-up "value points" score.`,
+      a: `Every ${u}'s worth is listed here in real US dollars, pulled from live marketplace listings by reputable sellers and refreshed every day. Search or browse the list to see any ${u}'s current cash value, its typical price range, and how confident we are in the number — not a made-up "value points" score.`,
     },
     {
       q: `Do these ${gameName} values update?`,
@@ -42,11 +42,11 @@ export function valuesFaq({
     },
     {
       q: `How do you calculate ${gameName} values?`,
-      a: `We aggregate real marketplace listings and completed sales across sources, apply a correction layer to filter outliers, and publish an average current market price with a confidence label. The full method — sources, dating, and quality checks — is documented on our pricing methodology page so you can trust and cite the number.`,
+      a: `We aggregate real marketplace listings from reputable sellers across sources, apply a correction layer to filter outliers, and publish an average current market price with a confidence label. The full method — sources, dating, and quality checks — is documented on our pricing methodology page so you can trust and cite the number.`,
     },
     {
       q: `How do I sell my ${gameName} ${u}s for money?`,
-      a: `Price your ${u} against this list, then list it for sale on DropMarket. Every order is SafeDrop protected — you're paid on delivery with no chargebacks. Buyers find your listing through these same value pages, which rank on Google.`,
+      a: `Price your ${u} against this list, then list it for sale on DropMarket. Every order is SafeDrop protected, with no chargebacks. Buyers find your listing through these same value pages, which rank on Google.`,
     },
   ]
 }
@@ -83,7 +83,7 @@ export function ValuesSeo({
       body: (
         <>
           This is the DropMarket {gameName} value list: every {u}&apos;s worth in real US
-          dollars, sourced from live marketplace listings and completed sales and updated
+          dollars, sourced from live marketplace listings by reputable sellers and updated
           daily. Instead of static &quot;value points&quot; that go stale within days of an
           update, each price is a real cash value you can act on — so you never overpay, get
           lowballed, or accept a bad trade. Search any {u} to see its current value, price
@@ -103,7 +103,7 @@ export function ValuesSeo({
       body: (
         <>
           Every value on this list comes from real marketplace data — live listings and
-          completed sales aggregated across sources, cleaned of outliers, and published as an
+          reputable-seller listings aggregated across sources, cleaned of outliers, and published as an
           average current market price with a confidence label. We re-price every day so the
           list keeps pace with the real market after updates and new releases. See exactly how
           each number is sourced, dated, and quality-checked in our{' '}
