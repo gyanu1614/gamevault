@@ -23,17 +23,24 @@ import { ArticleGrid } from './_ArticleGrid'
 import { ValuesTeaser, CalculatorTeaser } from './_HubTeasers'
 import { SabSellerCta } from '../_SabSellerCta'
 import { getHubTopValues, getHubStatStrip, getHubCalcExample } from './_hubData'
-import { CONTENT_HUB_GAME_SLUGS } from '@/lib/content/theme'
+import { getBlogHubGameSlugs } from '@/lib/blog/hub-params'
 import { cache } from 'react'
 
 export const revalidate = 3600
+/**
+ * Closed set: generateStaticParams lists every slug this route serves, so an
+ * unknown slug is a static 404 with no function invocation (Step 7a — the
+ * crawl of 233 `/{game}/…` hub URLs was rendering an empty page each).
+ */
+export const dynamicParams = false
 
 /**
- * Prerender the content-hub games; any other slug fails the getGame() lookup
- * below and 404s, so there is nothing else to build.
+ * Prerender every game with a hub: the content-hub games plus any game a
+ * published post is filed under (see getBlogHubGameSlugs). With
+ * dynamicParams=false this list IS the set of blog hubs that exist.
  */
-export function generateStaticParams() {
-  return CONTENT_HUB_GAME_SLUGS.map((gameSlug) => ({ gameSlug }))
+export async function generateStaticParams() {
+  return (await getBlogHubGameSlugs()).map((gameSlug) => ({ gameSlug }))
 }
 
 interface HubGame {
