@@ -38,8 +38,16 @@ const STEAL_AN_EGG_SEED_ALIASES = {
     'angel or demon',
     'evil or angel',
     'angels & demons',
+    'angels / demons',
+    'angel / demon',
+    'angel / devil',
+    'demon / angel',
+    'devil / angel',
+    'angel devil',
   ],
   'king-monkey': ['king monkey', 'monkey area', 'king monkey area'],
+  // Slash forms seen at production scale: "angels/demons", "Angel/Devil".
+  // comparable() spaces the slash out, so these match as written.
   'abyss-ocean': ['ocean', 'abyss', 'abyss ocean'],
   'cherry-blossom': ['cherry blossom', 'cherry', 'blossom'],
   'titan-temple': ['titan', 'temple', 'titan temple area'],
@@ -181,6 +189,26 @@ async function main() {
   // "King Monkey" is an area sellers name constantly but the wiki omits it.
   if (!areas.has('king-monkey')) {
     areas.set('king-monkey', { slug: 'king-monkey', name: 'King Monkey' })
+  }
+
+  /**
+   * Rarity tiers are a real sale unit, not just a pet attribute: sellers list
+   * "secret egg", "1 divine eggs from random place", "DIVINE, ETERNAL or
+   * SECRET EGG". At production scale (1,914 listings) that is ~70 listings
+   * that otherwise match nothing. Seeded as priceable items so a tier listing
+   * has something to resolve to.
+   *
+   * Taken from the rarities the wiki actually uses, so this cannot invent a
+   * tier the game does not have.
+   */
+  const RARITY_TIERS = ['Secret', 'Divine', 'Eternal', 'Mythic', 'Legendary']
+  const wikiRarities = new Set(
+    rows.map((r) => clean(r.rarity)).filter(Boolean),
+  )
+  for (const tier of RARITY_TIERS) {
+    if (!wikiRarities.has(tier)) continue
+    const s = slugify(tier)
+    if (s && !areas.has(s)) areas.set(s, { slug: s, name: tier })
   }
 
   const aliasCount = Object.values(STEAL_AN_EGG_SEED_ALIASES).flat().length

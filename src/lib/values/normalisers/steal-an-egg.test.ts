@@ -190,3 +190,63 @@ describe('seed aliases (measured against the live sample)', () => {
     ).toBeNull()
   })
 })
+
+describe('production-scale title patterns (1,914 live listings)', () => {
+  /**
+   * The first prod crawl matched 70.7% where a 400-listing sample had shown
+   * 91.1%. The full population carries formats the sample missed. Running the
+   * shipped parser over all 1,914 live listings put egg/area matching at
+   * 84.2%; the three fixes below restored it to 91.4% (unmatched 173 -> 99).
+   *
+   * Each case is a real title from that crawl.
+   */
+  const TAX: TaxonomyEntry[] = [
+    { id: 'a', kind: 'area', slug: 'angels-demons', name: 'Angels & Demons', aliases: STEAL_AN_EGG_SEED_ALIASES['angels-demons'] },
+    { id: 'b', kind: 'egg', slug: 'luminous-egg', name: 'Luminous Egg' },
+    { id: 'c', kind: 'area', slug: 'secret', name: 'Secret' },
+    { id: 'd', kind: 'area', slug: 'divine', name: 'Divine' },
+    { id: 'e', kind: 'area', slug: 'titan-temple', name: 'Titan Temple', aliases: STEAL_AN_EGG_SEED_ALIASES['titan-temple'] },
+  ]
+  const parseP = (t: string) => n.parse(t, TAX)
+
+  it('handles a quantity glued to the item name ("50xLuminous Egg")', () => {
+    // Previously "50xluminous" matched nothing, silently dropping every
+    // listing in this common format.
+    for (const title of ['50xLuminous Egg [3499R]', '10xLuminous Egg [799R]', '1xLuminous Egg [99R]']) {
+      const r = parseP(title)
+      expect(r.itemSlug, title).toBe('luminous-egg')
+    }
+    expect(parseP('50xLuminous Egg [3499R]').quantity).toBe(50)
+  })
+
+  it('matches slash-separated area names', () => {
+    for (const title of [
+      '5x random egg from angels/demons',
+      '5x Random Eggs From Angel/Devil Area | STEAL AN EGG!!!',
+      '🥚 5x DEMON/ANGEL EGG',
+    ]) {
+      expect(parseP(title).itemSlug, title).toBe('angels-demons')
+    }
+  })
+
+  it('matches listings sold by rarity tier rather than by area', () => {
+    expect(parseP('Steal ann egg 10 secret egg!!').itemSlug).toBe('secret')
+    expect(parseP('1 divine eggs from random place').itemSlug).toBe('divine')
+    // A tier covers several eggs, so it is a weaker claim than a named egg.
+    expect(parseP('secret egg').confidence).toBeLessThan(0.95)
+  })
+
+  it('tolerates the "rendom" misspelling', () => {
+    expect(parseP('1x Rendom Secret Egg | Instant Delivery').itemSlug).toBe('secret')
+  })
+
+  it('still refuses titles that name nothing we know', () => {
+    // These are genuinely unpriceable and belong in the review file.
+    expect(parseP('Steal an Egg | Random Eggs From Any Area You Choose').itemSlug).toBeNull()
+    expect(parseP('5 Random eggs from the last zone 🔥').itemSlug).toBeNull()
+  })
+
+  it('does not misread an account listing as an egg', () => {
+    expect(parseP('(22.2B/S) HIGH TIER PETS AND EGGS (ACCOUNT)').intent).not.toBe('area')
+  })
+})
