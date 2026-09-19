@@ -2248,6 +2248,38 @@ export type Database = {
           },
         ]
       }
+      game_external_ids: {
+        Row: {
+          created_at: string
+          external_id: string
+          game_id: string
+          id: string
+          platform: string
+        }
+        Insert: {
+          created_at?: string
+          external_id: string
+          game_id: string
+          id?: string
+          platform: string
+        }
+        Update: {
+          created_at?: string
+          external_id?: string
+          game_id?: string
+          id?: string
+          platform?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "game_external_ids_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       game_fee_overrides: {
         Row: {
           active: boolean
@@ -2327,6 +2359,69 @@ export type Database = {
           },
         ]
       }
+      game_metrics: {
+        Row: {
+          captured_at: string
+          external_id: string
+          favorites: number | null
+          id: number
+          in_top_trending: boolean
+          in_up_and_coming: boolean
+          platform: string
+          playing: number
+          visits: number | null
+        }
+        Insert: {
+          captured_at?: string
+          external_id: string
+          favorites?: number | null
+          id?: never
+          in_top_trending?: boolean
+          in_up_and_coming?: boolean
+          platform: string
+          playing?: number
+          visits?: number | null
+        }
+        Update: {
+          captured_at?: string
+          external_id?: string
+          favorites?: number | null
+          id?: never
+          in_top_trending?: boolean
+          in_up_and_coming?: boolean
+          platform?: string
+          playing?: number
+          visits?: number | null
+        }
+        Relationships: []
+      }
+      game_metrics_daily: {
+        Row: {
+          avg_playing: number
+          day: string
+          external_id: string
+          max_playing: number
+          platform: string
+          samples: number
+        }
+        Insert: {
+          avg_playing: number
+          day: string
+          external_id: string
+          max_playing: number
+          platform: string
+          samples: number
+        }
+        Update: {
+          avg_playing?: number
+          day?: string
+          external_id?: string
+          max_playing?: number
+          platform?: string
+          samples?: number
+        }
+        Relationships: []
+      }
       games: {
         Row: {
           blog_cta_image_url: string | null
@@ -2345,6 +2440,9 @@ export type Database = {
           is_popular: boolean
           is_spotlight: boolean
           name: string
+          review_note: string | null
+          review_snoozed_until: string | null
+          review_status: string
           seo_description: string | null
           seo_h1: string | null
           seo_indexable: boolean | null
@@ -2354,6 +2452,8 @@ export type Database = {
           slug: string
           sort_order: number | null
           source: string | null
+          trend_detected_at: string | null
+          trend_peak_playing: number | null
           updated_at: string | null
         }
         Insert: {
@@ -2373,6 +2473,9 @@ export type Database = {
           is_popular?: boolean
           is_spotlight?: boolean
           name: string
+          review_note?: string | null
+          review_snoozed_until?: string | null
+          review_status?: string
           seo_description?: string | null
           seo_h1?: string | null
           seo_indexable?: boolean | null
@@ -2382,6 +2485,8 @@ export type Database = {
           slug: string
           sort_order?: number | null
           source?: string | null
+          trend_detected_at?: string | null
+          trend_peak_playing?: number | null
           updated_at?: string | null
         }
         Update: {
@@ -2401,6 +2506,9 @@ export type Database = {
           is_popular?: boolean
           is_spotlight?: boolean
           name?: string
+          review_note?: string | null
+          review_snoozed_until?: string | null
+          review_status?: string
           seo_description?: string | null
           seo_h1?: string | null
           seo_indexable?: boolean | null
@@ -2410,6 +2518,8 @@ export type Database = {
           slug?: string
           sort_order?: number | null
           source?: string | null
+          trend_detected_at?: string | null
+          trend_peak_playing?: number | null
           updated_at?: string | null
         }
         Relationships: []
@@ -4956,6 +5066,27 @@ export type Database = {
             referencedColumns: ["seller_id"]
           },
         ]
+      }
+      rmt_chart_snapshots: {
+        Row: {
+          captured_at: string
+          id: number
+          names: string[]
+          source: string
+        }
+        Insert: {
+          captured_at?: string
+          id?: never
+          names: string[]
+          source?: string
+        }
+        Update: {
+          captured_at?: string
+          id?: never
+          names?: string[]
+          source?: string
+        }
+        Relationships: []
       }
       role_permissions: {
         Row: {
@@ -8072,6 +8203,59 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "seller_shop_banners"
             referencedColumns: ["seller_id"]
+          },
+        ]
+      }
+      trend_events: {
+        Row: {
+          created_at: string
+          discord_message_id: string | null
+          draft: Json | null
+          external_id: string
+          flags: Json
+          game_id: string | null
+          handled_at: string | null
+          id: string
+          name: string | null
+          platform: string
+          signal: string
+          value: number
+        }
+        Insert: {
+          created_at?: string
+          discord_message_id?: string | null
+          draft?: Json | null
+          external_id: string
+          flags?: Json
+          game_id?: string | null
+          handled_at?: string | null
+          id?: string
+          name?: string | null
+          platform: string
+          signal: string
+          value?: number
+        }
+        Update: {
+          created_at?: string
+          discord_message_id?: string | null
+          draft?: Json | null
+          external_id?: string
+          flags?: Json
+          game_id?: string | null
+          handled_at?: string | null
+          id?: string
+          name?: string | null
+          platform?: string
+          signal?: string
+          value?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trend_events_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "games"
+            referencedColumns: ["id"]
           },
         ]
       }

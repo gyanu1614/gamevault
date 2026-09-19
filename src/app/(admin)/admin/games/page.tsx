@@ -7,6 +7,7 @@
  * visit/refresh — while mutations keep their invalidate→refetch flow.
  */
 
+import { Suspense } from 'react'
 import { fetchAdminGames } from '@/lib/actions/admin-games'
 import { fetchAdminGameCategoryBadges } from '@/lib/actions/admin-game-categories'
 import GamesPageClient from './_components/GamesPageClient'
@@ -20,9 +21,13 @@ export default async function AdminGamesPage() {
   ])
 
   return (
-    <GamesPageClient
-      initialGames={(games ?? []) as any}
-      initialBadges={badges ?? []}
-    />
+    // Suspense: the client reads ?status= (useSearchParams) for the Step 2
+    // review chips; Next requires a boundary around that hook.
+    <Suspense fallback={null}>
+      <GamesPageClient
+        initialGames={(games ?? []) as any}
+        initialBadges={badges ?? []}
+      />
+    </Suspense>
   )
 }

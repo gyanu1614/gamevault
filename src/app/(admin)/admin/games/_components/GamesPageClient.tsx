@@ -15,12 +15,13 @@
  *   - Does NOT touch the live /admin/games. Old route keeps working as-is.
  */
 
-import React, { useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import {
-  Search, Pencil, Eye, EyeOff, ChevronRight, Pause, Play, Trash2, Star, Sparkles,
+  Search, Pencil, Eye, EyeOff, ChevronRight, ChevronDown, Pause, Play, Trash2, Star, Sparkles, Radar,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { GlassCard } from '@/components/ui/glass-card'
@@ -33,6 +34,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from '@/components/ui/dialog'
 import { AddGameDialog } from './AddGameDialog'
+import { TrendReviewCard } from './TrendReviewCard'
 
 interface Game {
   id: string
@@ -47,7 +49,21 @@ interface Game {
   is_spotlight?: boolean | null
   seo_indexable?: boolean | null
   listing_count?: number
+  // Step 2 — trend radar review state (games.review_status).
+  review_status?: 'pending' | 'approved' | 'rejected' | 'declining' | null
+  review_note?: string | null
+  review_snoozed_until?: string | null
+  trend_detected_at?: string | null
+  source?: string | null
 }
+
+type StatusFilter = 'all' | 'pending' | 'declining'
+
+const STATUS_FILTERS: { key: StatusFilter; label: string }[] = [
+  { key: 'all', label: 'All' },
+  { key: 'pending', label: 'Pending' },
+  { key: 'declining', label: 'Declining' },
+]
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -77,6 +93,25 @@ export default function GamesPageClient({
   initialBadges: AdminGameCategoryBadge[]
 }) {
   const [filter, setFilter] = useState('')
+  // Step 2 — the Discord alert links to /admin/games?status=pending#<slug>:
+  // the chip comes from the query string, the open card from the hash.
+  const searchParams = useSearchParams()
+  const initialStatus = searchParams?.get('status')
+  const [status, setStatus] = useState<StatusFilter>(
+    initialStatus === 'pending' || initialStatus === 'declining' ? initialStatus : 'all',
+  )
+  const [openReview, setOpenReview] = useState<Set<string>>(() => new Set())
+  useEffect(() => {
+    const slug = typeof window !== 'undefined' ? window.location.hash.replace(/^#/, '') : ''
+    if (slug) setOpenReview(new Set([slug]))
+  }, [])
+  const toggleReview = (slug: string) =>
+    setOpenReview((prev) => {
+      const next = new Set(prev)
+      if (next.has(slug)) next.delete(slug)
+      else next.add(slug)
+      return next
+    })
   // V17l — Pending-delete game lives in local state so the confirm
   // dialog can read it. Cleared on cancel/success.
   const [pendingDelete, setPendingDelete] = useState<Game | null>(null)
@@ -167,7 +202,16 @@ export default function GamesPageClient({
     [badgesQuery.data]
   )
 
+  const reviewCounts = useMemo(() => {
+    const all = gamesQuery.data ?? []
+    return {
+      pending: all.filter((g) => g.review_status === 'pending').length,
+      declining: all.filter((g) => g.review_status === 'declining').length,
+    }
+  }, [gamesQuery.data])
+
   const filtered = (gamesQuery.data ?? []).filter((g) => {
+    if (status !== 'all' && g.review_status !== status) return false
     if (!filter) return true
     const f = filter.toLowerCase()
     return g.name.toLowerCase().includes(f) || g.slug.includes(f)
@@ -203,6 +247,40 @@ export default function GamesPageClient({
         </div>
       </header>
 
+      {/* ── Status chips (Step 2: trend-radar review queue) ── */}
+      <div className="flex flex-wrap items-center gap-2" role="tablist" aria-label="Review status">
+        {STATUS_FILTERS.map((s) => {
+          const count = s.key === 'pending' ? reviewCounts.pending : s.key === 'declining' ? reviewCounts.declining : null
+          const active = status === s.key
+          return (
+            <button
+              key={s.key}
+              type="button"
+              role="tab"
+              aria-selected={active}
+              onClick={() => setStatus(s.key)}
+              className={cn(
+                'inline-flex h-9 items-center gap-1.5 rounded-full border px-3.5 text-[13px] font-medium transition-colors',
+                active
+                  ? 'border-lime-tint-border bg-lime-tint-bg text-lime-text'
+                  : 'border-border-default bg-bg-raised text-text-secondary hover:bg-bg-raised-hover hover:text-text-primary',
+              )}
+            >
+              {s.key !== 'all' && <Radar className="h-3.5 w-3.5" />}
+              {s.label}
+              {count !== null && (
+                <span className={cn('rounded-full px-1.5 text-[11px] font-semibold', active ? 'bg-lime/20' : 'bg-bg-base text-text-tertiary')}>
+                  {count}
+                </span>
+              )}
+            </button>
+          )
+        })}
+        {status !== 'all' && filtered.length === 0 && !isLoading && (
+          <span className="text-[13px] text-text-tertiary">Nothing {status} — the radar has no games waiting.</span>
+        )}
+      </div>
+
       {/* ── List ── */}
       <GlassCard intensity="light" noPadding rounded="2xl">
         {/* Column headings */}
@@ -221,17 +299,22 @@ export default function GamesPageClient({
             <div className="px-5 py-16 text-center text-sm text-text-tertiary">Loading games…</div>
           ) : filtered.length === 0 ? (
             <div className="px-5 py-16 text-center text-sm text-text-tertiary">
-              No games match &quot;{filter}&quot;
+              {filter ? <>No games match &quot;{filter}&quot;</> : <>No {status === 'all' ? '' : `${status} `}games</>}
             </div>
           ) : (
             filtered.map((game) => {
               const badges = badgesByGame.get(game.id) ?? []
+              const inReview = game.review_status === 'pending' || game.review_status === 'declining'
+              const reviewOpen = inReview && openReview.has(game.slug)
               return (
+                <React.Fragment key={game.id}>
                 <div
-                  key={game.id}
+                  id={game.slug}
                   className={cn(
-                    'grid grid-cols-[60px_1.4fr_1.4fr_100px_110px_156px] items-center gap-3 border-b border-border-subtle px-5 py-4 text-sm transition-colors hover:bg-bg-base',
-                    !game.is_active && 'bg-red-500/[0.025]'
+                    'grid grid-cols-[60px_1.4fr_1.4fr_100px_110px_156px] items-center gap-3 border-b border-border-subtle px-5 py-4 text-sm transition-colors hover:bg-bg-base scroll-mt-24',
+                    !game.is_active && !inReview && 'bg-red-500/[0.025]',
+                    game.review_status === 'pending' && 'bg-lime/[0.03]',
+                    reviewOpen && 'border-b-0'
                   )}
                 >
                   {/* Logo */}
@@ -305,24 +388,50 @@ export default function GamesPageClient({
                   </div>
 
                   {/* Status */}
-                  <div>
-                    <span
-                      className={cn(
-                        'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[12px] font-medium',
-                        game.is_active
-                          ? 'bg-success-bg text-success'
-                          : 'bg-red-500/15 text-red-400'
-                      )}
-                    >
-                      {game.is_active ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
-                      {game.is_active ? 'Active' : 'Paused'}
-                    </span>
+                  <div className="flex flex-col items-start gap-1">
+                    {game.review_status === 'pending' ? (
+                      <span className="inline-flex items-center gap-1 rounded-full border border-lime-tint-border bg-lime-tint-bg px-2 py-0.5 text-[12px] font-medium text-lime-text">
+                        <Radar className="h-3 w-3" /> Pending Review
+                      </span>
+                    ) : game.review_status === 'declining' ? (
+                      <span className="inline-flex items-center gap-1 rounded-full border border-warning bg-warning-bg px-2 py-0.5 text-[12px] font-medium text-warning">
+                        <Radar className="h-3 w-3" /> Declining
+                      </span>
+                    ) : null}
+                    {game.review_status !== 'pending' && (
+                      <span
+                        className={cn(
+                          'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[12px] font-medium',
+                          game.is_active
+                            ? 'bg-success-bg text-success'
+                            : 'bg-red-500/15 text-red-400'
+                        )}
+                      >
+                        {game.is_active ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
+                        {game.is_active ? 'Active' : game.review_status === 'rejected' ? 'Rejected' : 'Paused'}
+                      </span>
+                    )}
                   </div>
 
                   {/* V17l/V17s — Row actions: popular star, pause/resume,
                       edit, delete. The star flips games.is_popular so the
                       homepage Popular Games shelf surfaces this game. */}
                   <div className="flex items-center justify-end gap-0.5">
+                    {inReview && (
+                      <button
+                        type="button"
+                        onClick={() => toggleReview(game.slug)}
+                        aria-expanded={reviewOpen}
+                        className={cn(
+                          'mr-1 inline-flex h-8 items-center gap-1 rounded-lg border px-2 text-[12px] font-medium transition-colors',
+                          reviewOpen
+                            ? 'border-lime-tint-border bg-lime-tint-bg text-lime-text'
+                            : 'border-border-default text-text-secondary hover:bg-bg-raised-hover hover:text-text-primary',
+                        )}
+                      >
+                        Review {reviewOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+                      </button>
+                    )}
                     <button
                       type="button"
                       onClick={() => popularMutation.mutate({ id: game.id, isPopular: !!game.is_popular })}
@@ -390,6 +499,8 @@ export default function GamesPageClient({
                     </button>
                   </div>
                 </div>
+                {reviewOpen && <TrendReviewCard gameId={game.id} slug={game.slug} />}
+                </React.Fragment>
               )
             })
           )}
