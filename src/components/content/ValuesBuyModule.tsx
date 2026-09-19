@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { HUB_COPY } from '@/lib/content/theme'
 
 /**
  * "Buy X from $Y" / "Sell X" module for a value page. Shared by every game on
@@ -74,8 +75,7 @@ export function ValuesBuyModule({
           Buy {itemName} from {fmt(cheapestUsd)}
         </p>
         <p className="mt-1.5 text-[13px] leading-relaxed text-[var(--ct-text-muted)]">
-          Every order is covered by SafeDrop — the seller is paid only after you
-          confirm delivery.
+          {HUB_COPY.safedrop}
         </p>
         <Link
           href={buyHref}

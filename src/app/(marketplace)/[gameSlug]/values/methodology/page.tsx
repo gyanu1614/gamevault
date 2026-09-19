@@ -104,7 +104,7 @@ const FAQ: { q: string; a: string }[] = [
   },
   {
     q: 'Where does DropMarket get its Steal a Brainrot price data?',
-    a: 'Prices are derived from real marketplace listings and completed sales across tracked sources, normalized to a single USD cash value per Brainrot and mutation. We prioritize high-value and popular Brainrots and price all of their mutations where data allows.',
+    a: 'Prices are derived from real marketplace listings by reputable sellers across tracked sources, normalized to a single USD cash value per Brainrot and mutation. We prioritize high-value and popular Brainrots and price all of their mutations where data allows.',
   },
   {
     q: 'What does the confidence label on a value mean?',
@@ -184,7 +184,7 @@ export default async function MethodologyPage({
       <div className="relative z-10 mx-auto w-full max-w-3xl space-y-6 px-4 sm:px-6 lg:px-8">
         <Section title="Live marketplace data, updated daily">
           Every DropMarket value comes from real Steal a Brainrot marketplace
-          activity — active listings and completed sales — not a hand-edited
+          activity — active listings from reputable sellers — not a hand-edited
           list. A scheduled job runs each morning (UTC) and captures a fresh
           price snapshot, so each value page shows an <em>&ldquo;as of&rdquo;</em>{' '}
           date that reflects genuinely recent data. Historical snapshots power the

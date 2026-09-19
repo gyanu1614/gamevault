@@ -122,8 +122,9 @@ export function HubFooter({
               <span className="text-[17px] font-bold text-[#F1F3F1]">DropMarket</span>
             </Link>
             <p className="mt-3 text-[13.5px] leading-6 text-[#8B978F]">
-              Real {gameName} prices from completed sales, and a safer place to buy
-              them — the seller is paid on delivery.
+              Real {gameName} prices from live marketplace listings, and a safer
+              place to buy them — get exactly what you ordered, or your money
+              back.
             </p>
 
             {/* Socials + direct support — the professional bit. */}

@@ -516,9 +516,9 @@ export default async function BrainrotValuesPage({ params }: PageProps) {
           title="Steal a Brainrot - Value"
           lead={
             <>
-              Real cash values from completed DropMarket sales — not community
-              guesses. Every Brainrot, its income per second, and what it trades
-              for right now.
+              Real cash values from live marketplace listings, reputable
+              sellers only — not community guesses. Every Brainrot, its income
+              per second, and what it trades for right now.
             </>
           }
         />
@@ -533,7 +533,7 @@ export default async function BrainrotValuesPage({ params }: PageProps) {
               Biggest movers this week
             </h2>
             <span className="font-mono text-[11px] uppercase tracking-[0.1em] text-[#5E685E]">
-              Based on completed sales · 7d
+              Based on live listings · 7d
             </span>
           </div>
           <div className="grid gap-px border border-[#1A211A] bg-[#1A211A] sm:grid-cols-3">
