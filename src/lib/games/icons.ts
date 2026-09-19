@@ -47,6 +47,13 @@ export interface GameForIcon {
   image_url?: string | null
   image_source?: string | null
   image_synced_at?: string | null
+  /**
+   * Known platform id (Roblox universeId). When set, the name search and
+   * its ambiguity rule are skipped: the caller already knows WHICH game.
+   * The trend radar discovers games by universeId, and Roblox has
+   * duplicate-title universes (Steal An Egg) that a name search must refuse.
+   */
+  externalId?: string | number | null
 }
 
 export interface IconCandidate {
@@ -679,8 +686,11 @@ export async function fetchGameIcon(
 
   for (const adapter of adapters) {
     try {
-      const candidates = await adapter.search(game.name, fetchImpl, retry)
-      const decision = decideMatch(game.name, candidates)
+      const known =
+        adapter.source === 'roblox' && game.externalId !== undefined && game.externalId !== null && game.externalId !== ''
+      const decision: MatchDecision = known
+        ? { status: 'matched', best: { title: game.name, id: game.externalId as string | number }, confidence: 1 }
+        : decideMatch(game.name, await adapter.search(game.name, fetchImpl, retry))
 
       if (decision.status === 'ambiguous') {
         // Ambiguity is a REFUSAL, not a miss: two plausible games means we

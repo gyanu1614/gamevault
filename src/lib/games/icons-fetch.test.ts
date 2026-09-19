@@ -314,6 +314,32 @@ describe('fetchGameIcon', () => {
     expect(uploads).toHaveLength(3)
   })
 
+  it('skips the name search when the caller already knows the universe id', async () => {
+    // The trend radar discovers games BY universe id, so a duplicate-title
+    // universe (Steal An Egg has two) must not turn into an ambiguity refusal.
+    const png = await samplePng()
+    const { storage, uploads } = fakeStorage()
+    const f = vi.fn(async (url: string) => {
+      if (url.includes('omni-search')) throw new Error('search must not be called')
+      if (url.includes('thumbnails.roblox.com')) {
+        expect(url).toContain('universeIds=10563114921')
+        return json({ data: [{ state: 'Completed', imageUrl: 'https://tr.rbxcdn.com/i' }] })
+      }
+      return binary(png)
+    })
+
+    const res = await fetchGameIcon(
+      { slug: 'steal-an-egg', name: 'Steal An Egg', ecosystem: 'roblox', externalId: '10563114921' },
+      { storage, fetchImpl: f as any },
+    )
+
+    expect(res.status).toBe('filled')
+    expect(res.source).toBe('roblox')
+    expect(res.confidence).toBe(1)
+    expect(res.matchedTitle).toBe('Steal An Egg')
+    expect(uploads).toHaveLength(3)
+  })
+
   it('reports ambiguous without uploading anything', async () => {
     const { storage, uploads } = fakeStorage()
     const f = vi.fn(async () =>
