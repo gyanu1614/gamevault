@@ -82,30 +82,112 @@ const STATIC_PATHS = [
 
 const VALUE_PAGES_PER_GAME = 5
 
-async function fetchText(url, { timeout = 45000 } = {}) {
-  const ctrl = new AbortController()
-  const t = setTimeout(() => ctrl.abort(), timeout)
+/**
+ * Cookie jar, per origin. Vercel's bypass flow answers the first request with
+ * `set-cookie: _vercel_jwt=…`; sending that back makes subsequent requests
+ * cheap and keeps the bypass sticky across the ~20 pages we fetch.
+ */
+const cookieJar = new Map()
+
+function originOf(url) {
   try {
-    const res = await fetch(url, {
-      signal: ctrl.signal,
-      headers: {
-        // Ask for the uncached, fully-rendered page.
-        'user-agent': 'DropMarket-hub-diff/1.0',
-        'accept': 'text/html',
-        'cache-control': 'no-cache',
-        ...(BYPASS
-          ? {
-              'x-vercel-protection-bypass': BYPASS,
-              'x-vercel-set-bypass-cookie': 'true',
-            }
-          : {}),
-      },
-      redirect: 'follow',
-    })
-    return { status: res.status, body: await res.text(), finalUrl: res.url }
-  } finally {
-    clearTimeout(t)
+    return new URL(url).origin
+  } catch {
+    return null
   }
+}
+
+function storeCookies(url, res) {
+  const origin = originOf(url)
+  if (!origin) return
+  // undici exposes multiple Set-Cookie headers via getSetCookie().
+  const raw =
+    typeof res.headers.getSetCookie === 'function'
+      ? res.headers.getSetCookie()
+      : [res.headers.get('set-cookie')].filter(Boolean)
+  if (!raw.length) return
+  const jar = cookieJar.get(origin) ?? new Map()
+  for (const line of raw) {
+    const [pair] = String(line).split(';')
+    const eq = pair.indexOf('=')
+    if (eq > 0) jar.set(pair.slice(0, eq).trim(), pair.slice(eq + 1).trim())
+  }
+  cookieJar.set(origin, jar)
+}
+
+function cookieHeader(url) {
+  const jar = cookieJar.get(originOf(url))
+  if (!jar || !jar.size) return null
+  return [...jar].map(([k, v]) => `${k}=${v}`).join('; ')
+}
+
+/**
+ * Fetch one page.
+ *
+ * Redirects are followed MANUALLY, and only within the same origin. A
+ * protected preview answers with a 302 to vercel.com/sso-api, which bounces on
+ * to vercel.com/login and then re-issues the whole chain — following that with
+ * `redirect: 'follow'` produced "redirect count exceeded" even with a valid
+ * bypass token, because the bypass header does not apply to vercel.com.
+ * Stopping at the first off-origin hop turns that infinite loop into a single
+ * reportable fact: `offOrigin`.
+ *
+ * The bypass header goes on EVERY request (not just the first): each page is a
+ * fresh request, and a 302 can be re-issued at any time if the cookie is
+ * missing or expired.
+ */
+async function fetchText(url, { timeout = 45000, maxHops = 5 } = {}) {
+  let current = url
+  for (let hop = 0; hop <= maxHops; hop += 1) {
+    const ctrl = new AbortController()
+    const t = setTimeout(() => ctrl.abort(), timeout)
+    let res
+    try {
+      const cookie = cookieHeader(current)
+      res = await fetch(current, {
+        signal: ctrl.signal,
+        // Manual: we decide whether a redirect is safe to follow.
+        redirect: 'manual',
+        headers: {
+          'user-agent': 'DropMarket-hub-diff/1.0',
+          accept: 'text/html',
+          'cache-control': 'no-cache',
+          ...(cookie ? { cookie } : {}),
+          ...(BYPASS
+            ? {
+                'x-vercel-protection-bypass': BYPASS,
+                // Ask Vercel to hand back a bypass cookie on the first hit; the
+                // jar carries it from then on.
+                'x-vercel-set-bypass-cookie': 'true',
+              }
+            : {}),
+        },
+      })
+    } finally {
+      clearTimeout(t)
+    }
+
+    storeCookies(current, res)
+
+    const location = res.headers.get('location')
+    if (res.status >= 300 && res.status < 400 && location) {
+      const next = new URL(location, current).toString()
+      if (originOf(next) !== originOf(current)) {
+        // Off-origin = an auth wall. Report it; never follow it.
+        return {
+          status: res.status,
+          body: '',
+          finalUrl: next,
+          offOrigin: true,
+        }
+      }
+      current = next
+      continue
+    }
+
+    return { status: res.status, body: await res.text(), finalUrl: current }
+  }
+  return { status: 599, body: '', finalUrl: current, tooManyHops: true }
 }
 
 /** Discover real value-page slugs from the baseline sitemap. */
@@ -215,25 +297,26 @@ async function mapLimit(items, limit, fn) {
 async function preflight() {
   const probe = '/steal-a-brainrot/values'
   const res = await fetchText(`${PREVIEW}${probe}`)
-  // Any landing outside the preview's own origin means we were bounced to a
-  // login/SSO host — whatever its exact path (vercel.com/sso-api today,
-  // vercel.com/login after a further hop). Comparing that page is meaningless.
-  let landedOffHost = false
-  try {
-    landedOffHost =
-      new URL(res.finalUrl || `${PREVIEW}${probe}`).origin !==
-      new URL(PREVIEW).origin
-  } catch {}
   const blocked =
-    landedOffHost ||
+    res.offOrigin === true ||
     /Authentication Required|vercel\.com\/(sso-api|login)|\/_vercel\/sso/i.test(
-      res.body.slice(0, 4000),
+      (res.body || '').slice(0, 4000),
     )
   if (blocked) {
     console.error('GATE: CANNOT RUN — the preview is behind Vercel Deployment Protection.')
     console.error(`  ${PREVIEW}${probe}`)
     console.error(`  redirected to: ${res.finalUrl}`)
     console.error('')
+    if (BYPASS) {
+      console.error('A bypass token WAS sent and the deployment still refused it.')
+      console.error('A rejected token is indistinguishable from none at the edge')
+      console.error('(both answer 302), so check the token itself:')
+      console.error('  - it must come from THIS project\'s Deployment Protection')
+      console.error('    ("Protection Bypass for Automation"), not another project')
+      console.error('    and not an app-level secret;')
+      console.error('  - regenerate it if unsure, then re-run.')
+      console.error('')
+    }
     console.error('Fix either way:')
     console.error('  a) Vercel → Project → Settings → Deployment Protection →')
     console.error('     "Protection Bypass for Automation" → copy the secret, then re-run with')
