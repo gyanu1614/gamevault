@@ -12,6 +12,7 @@ import { SabHeroBackdrop } from '../_SabHeroBackdrop'
 import { HubNav } from '@/components/content/HubNav'
 import { HubFooter } from '@/components/content/HubFooter'
 import { getHubNavData, HUB_NAV_CLEAR } from '@/lib/content/hubNav'
+import { hasHubPage } from '@/lib/content/theme'
 import { cn } from '@/lib/utils'
 import { sabCard } from '@/lib/sab/theme'
 import AdoptMePetPage from './_AdoptMePetPage'
@@ -47,18 +48,18 @@ export async function generateStaticParams() {
   return [
     ...(((brainrots ?? []) as { slug: string }[]).map((r) => ({
       gameSlug: 'steal-a-brainrot',
-      brainrotSlug: r.slug,
+      itemSlug: r.slug,
     }))),
     ...petSlugs
       .slice(0, PRERENDER_LIMIT)
-      .map((slug) => ({ gameSlug: 'adopt-me', brainrotSlug: slug })),
+      .map((slug) => ({ gameSlug: 'adopt-me', itemSlug: slug })),
   ]
 }
 
 interface PageProps {
   params: Promise<{
     gameSlug: string
-    brainrotSlug: string
+    itemSlug: string
   }>
 }
 
@@ -394,10 +395,10 @@ async function getRelatedBrainrots(brainrot: BrainrotRow): Promise<BrainrotRow[]
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  const { gameSlug, brainrotSlug } = await params
+  const { gameSlug, itemSlug } = await params
 
   if (gameSlug === 'adopt-me') {
-    const pet = await getAdoptMePet(brainrotSlug)
+    const pet = await getAdoptMePet(itemSlug)
     if (!pet) return { title: 'Value Not Found' }
     const monthYear = new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' })
     // Title leads with the pet name + "value" (the head term) and carries the
@@ -436,9 +437,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     }
   }
 
-  if (gameSlug !== 'steal-a-brainrot') return { title: 'Value Not Found' }
+  if (!hasHubPage(gameSlug, 'values')) return { title: 'Value Not Found' }
 
-  const brainrot = await getBrainrot(brainrotSlug)
+  const brainrot = await getBrainrot(itemSlug)
   if (!brainrot) return { title: 'Brainrot Not Found' }
 
   const title = `${brainrot.name} Value, Income & Mutations`
@@ -460,19 +461,19 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 export default async function BrainrotValuePage({ params }: PageProps) {
-  const { gameSlug, brainrotSlug } = await params
+  const { gameSlug, itemSlug } = await params
 
   // Adopt Me per-pet page — only publishable pets (has_page) render; anything
   // thin or unpriced 404s rather than shipping an empty page.
   if (gameSlug === 'adopt-me') {
-    const pet = await getAdoptMePet(brainrotSlug)
+    const pet = await getAdoptMePet(itemSlug)
     if (!pet) notFound()
     return <AdoptMePetPage pet={pet} />
   }
 
-  if (gameSlug !== 'steal-a-brainrot') notFound()
+  if (!hasHubPage(gameSlug, 'values')) notFound()
 
-  const brainrot = await getBrainrot(brainrotSlug)
+  const brainrot = await getBrainrot(itemSlug)
   if (!brainrot) notFound()
 
   const [mutations, relatedBrainrots, defaultTradePrice, priceHistory, hubNav] =

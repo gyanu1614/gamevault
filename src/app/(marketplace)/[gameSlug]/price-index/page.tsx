@@ -23,15 +23,18 @@ import { SabHeroBackdrop } from '../values/_SabHeroBackdrop'
 import { HubNav } from '@/components/content/HubNav'
 import { HubFooter } from '@/components/content/HubFooter'
 import { getHubNavData, HUB_NAV_CLEAR } from '@/lib/content/hubNav'
+import { contentHubSlugsFor, hasHubPage } from '@/lib/content/theme'
 
 export const revalidate = 3600
 
 /**
  * Prerender the game slug(s) this route serves; every other slug notFound()s
- * below, so there is nothing else to build.
+ * below, so there is nothing else to build. Driven by the content config
+ * (`pages.priceIndex`) rather than a hardcoded slug — today that resolves to
+ * exactly ['steal-a-brainrot'], so the built set is unchanged.
  */
 export function generateStaticParams() {
-  return ['steal-a-brainrot'].map((gameSlug) => ({ gameSlug }))
+  return contentHubSlugsFor('priceIndex').map((gameSlug) => ({ gameSlug }))
 }
 
 type TopValue = { slug: string; name: string; rarity: string; priceUsd: number }
@@ -124,7 +127,7 @@ export async function generateMetadata({
   params: Promise<{ gameSlug: string }>
 }): Promise<Metadata> {
   const { gameSlug } = await params
-  if (gameSlug !== 'steal-a-brainrot') return { title: 'Not Found' }
+  if (!hasHubPage(gameSlug, 'priceIndex')) return { title: 'Not Found' }
   const monthYear = new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
   const title = `Steal a Brainrot Price Index (${monthYear}) — Top Values & Movers`
   return {
@@ -141,7 +144,7 @@ export default async function PriceIndexPage({
   params: Promise<{ gameSlug: string }>
 }) {
   const { gameSlug } = await params
-  if (gameSlug !== 'steal-a-brainrot') notFound()
+  if (!hasHubPage(gameSlug, 'priceIndex')) notFound()
 
   const [topValues, movers, hubNav] = await Promise.all([
     getTopValues(),

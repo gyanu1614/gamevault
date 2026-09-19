@@ -8,6 +8,7 @@ import { HubNav } from '@/components/content/HubNav'
 import { HubGuidesStrip } from '@/components/content/HubGuidesStrip'
 import { HubFooter } from '@/components/content/HubFooter'
 import { getHubNavData } from '@/lib/content/hubNav'
+import { contentHubSlugsFor, hasHubPage } from '@/lib/content/theme'
 import { asNumber } from '@/lib/sab/format'
 import { HubBuyCta } from '@/components/content/HubBuyCta'
 import CalculatorClient, {
@@ -24,7 +25,7 @@ export const revalidate = 3600
  * below, so there is nothing else to build.
  */
 export function generateStaticParams() {
-  return ['steal-a-brainrot'].map((gameSlug) => ({ gameSlug }))
+  return contentHubSlugsFor('calculator').map((gameSlug) => ({ gameSlug }))
 }
 
 interface PageProps {
@@ -110,7 +111,7 @@ export async function generateMetadata({
     }
   }
 
-  if (gameSlug !== 'steal-a-brainrot') {
+  if (!hasHubPage(gameSlug, 'calculator')) {
     return { title: 'Calculator Not Found' }
   }
 
@@ -332,7 +333,7 @@ export default async function SabCalculatorPage({
     return <AdoptMeCalculatorPage />
   }
 
-  if (gameSlug !== 'steal-a-brainrot') notFound()
+  if (!hasHubPage(gameSlug, 'calculator')) notFound()
 
   const { brainrots, mutations, cashPrices, tradePrices, lastUpdated } =
     await getCalculatorData()

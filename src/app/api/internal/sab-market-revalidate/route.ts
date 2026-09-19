@@ -100,7 +100,7 @@ export async function POST(
   }
 
   revalidatePath(
-    '/steal-a-brainrot/values/[brainrotSlug]',
+    '/steal-a-brainrot/values/[itemSlug]',
     'page',
   )
 
@@ -108,7 +108,7 @@ export async function POST(
     ok: true,
     revalidated: [
       ...paths,
-      '/steal-a-brainrot/values/[brainrotSlug]',
+      '/steal-a-brainrot/values/[itemSlug]',
     ],
     revalidated_at: new Date().toISOString(),
   })

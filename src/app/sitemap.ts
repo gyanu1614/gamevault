@@ -22,6 +22,10 @@ import { LEGAL_DOCS } from '@/lib/legal/documents'
 import { getAllPosts, getFlatPosts } from '@/lib/blog/posts'
 
 import { SITE_URL } from '@/config/site'
+import {
+  CONTENT_HUB_GAME_SLUGS,
+  getGameContentTheme,
+} from '@/lib/content/theme'
 
 const BASE_URL = SITE_URL
 
@@ -339,80 +343,103 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.75,
     }))
 
-  const sabPages: MetadataRoute.Sitemap = [
-    {
-      url: `${BASE_URL}/steal-a-brainrot/values`,
-      changeFrequency: 'daily',
-      priority: 0.85,
-    },
-    {
-      // Canonical calculator route. The old /value-calculator + /trade-calculator
-      // URLs 301 here (next.config.js), so we emit only the live one to avoid
-      // pointing Google at a redirect and splitting equity between two URLs.
-      url: `${BASE_URL}/steal-a-brainrot/calculator`,
-      changeFrequency: 'weekly',
-      priority: 0.8,
-    },
-    // NOTE: /steal-a-brainrot/sell is deliberately NOT listed here. It was a
-    // hardcoded entry that bypassed isGameSellPageIndexable(), so an admin
-    // setting seo_indexable=false produced a noindex sell page this sitemap
-    // still advertised — and it double-listed the URL that `sellPages` already
-    // emits for every game. The rule-driven entry below covers it.
-    {
-      // E-E-A-T / AI-citability: how we source & calculate values.
-      url: `${BASE_URL}/steal-a-brainrot/values/methodology`,
-      changeFrequency: 'monthly',
-      priority: 0.5,
-    },
-    {
-      // Price Index — the citable data-story / link-magnet page.
-      url: `${BASE_URL}/steal-a-brainrot/price-index`,
-      changeFrequency: 'daily',
-      priority: 0.7,
-    },
-    ...((sabBrainrots ?? []) as { slug: string }[])
-      .filter((brainrot) => Boolean(brainrot.slug))
-      .map((brainrot) => ({
-        url: `${BASE_URL}/steal-a-brainrot/values/${brainrot.slug}`,
-        // Prices refresh daily via the snapshot cron — advertise real freshness.
-        changeFrequency: 'daily' as const,
-        priority: 0.7,
-      })),
-  ]
+  /**
+   * Hub pages for every game with a content hub — driven by the per-game
+   * content config (`pages`) rather than one hand-written block per game, so a
+   * new game's hub URLs appear here by adding its config entry.
+   *
+   * Emits exactly the URLs the previous hardcoded SAB + Adopt Me blocks did:
+   * the same paths, changeFrequency and priority. Per-game item URLs and the
+   * extras a single game has (Adopt Me's neon-calculator) are supplied by the
+   * caller through `itemsByGame` / `extraPathsByGame`.
+   *
+   * NOTE: /[game]/sell is deliberately NOT emitted here. It was a hardcoded
+   * entry that bypassed isGameSellPageIndexable(), so an admin setting
+   * seo_indexable=false produced a noindex sell page this sitemap still
+   * advertised — and it double-listed the URL that `sellPages` already emits
+   * for every game. The rule-driven entry covers it.
+   */
+  const itemsByGame: Record<
+    string,
+    Array<{ slug: string; updated_at?: string | null }>
+  > = {
+    'steal-a-brainrot': ((sabBrainrots ?? []) as { slug: string }[]),
+    'adopt-me': ((adoptMePets ?? []) as {
+      slug: string
+      updated_at: string | null
+    }[]),
+  }
 
-  // Adopt Me hub — mirrors the SAB block.
-  const adoptMePages: MetadataRoute.Sitemap = [
-    {
-      url: `${BASE_URL}/adopt-me/values`,
-      changeFrequency: 'daily',
-      priority: 0.85,
+  // Game-specific hub routes that are not part of the shared page set.
+  const extraPathsByGame: Record<
+    string,
+    Array<{ path: string; changeFrequency: 'weekly'; priority: number }>
+  > = {
+    'adopt-me': [
+      { path: 'neon-calculator', changeFrequency: 'weekly', priority: 0.6 },
+    ],
+  }
+
+  const hubPages: MetadataRoute.Sitemap = CONTENT_HUB_GAME_SLUGS.flatMap(
+    (slug) => {
+      const theme = getGameContentTheme(slug)
+      const entries: MetadataRoute.Sitemap = []
+
+      if (theme.pages.values) {
+        entries.push({
+          url: `${BASE_URL}/${slug}/values`,
+          changeFrequency: 'daily',
+          priority: 0.85,
+        })
+      }
+      if (theme.pages.calculator) {
+        // Canonical calculator route. The old /value-calculator +
+        // /trade-calculator URLs 301 here (next.config.js), so we emit only the
+        // live one to avoid pointing Google at a redirect and splitting equity.
+        entries.push({
+          url: `${BASE_URL}/${slug}/calculator`,
+          changeFrequency: 'weekly',
+          priority: 0.8,
+        })
+      }
+      for (const extra of extraPathsByGame[slug] ?? []) {
+        entries.push({
+          url: `${BASE_URL}/${slug}/${extra.path}`,
+          changeFrequency: extra.changeFrequency,
+          priority: extra.priority,
+        })
+      }
+      if (theme.pages.methodology) {
+        // E-E-A-T / AI-citability: how we source & calculate values.
+        entries.push({
+          url: `${BASE_URL}/${slug}/values/methodology`,
+          changeFrequency: 'monthly',
+          priority: 0.5,
+        })
+      }
+      if (theme.pages.priceIndex) {
+        // Price Index — the citable data-story / link-magnet page.
+        entries.push({
+          url: `${BASE_URL}/${slug}/price-index`,
+          changeFrequency: 'daily',
+          priority: 0.7,
+        })
+      }
+      for (const item of itemsByGame[slug] ?? []) {
+        if (!item.slug) continue
+        entries.push({
+          url: `${BASE_URL}/${slug}/values/${item.slug}`,
+          // Prices refresh daily via the snapshot cron — advertise real freshness.
+          ...(item.updated_at
+            ? { lastModified: new Date(item.updated_at) }
+            : {}),
+          changeFrequency: 'daily' as const,
+          priority: 0.7,
+        })
+      }
+      return entries
     },
-    {
-      url: `${BASE_URL}/adopt-me/calculator`,
-      changeFrequency: 'weekly',
-      priority: 0.8,
-    },
-    // NOTE: /adopt-me/sell omitted for the same reason as the SAB one above —
-    // `sellPages` emits it through the shared indexability rule.
-    {
-      url: `${BASE_URL}/adopt-me/neon-calculator`,
-      changeFrequency: 'weekly',
-      priority: 0.6,
-    },
-    {
-      url: `${BASE_URL}/adopt-me/values/methodology`,
-      changeFrequency: 'monthly',
-      priority: 0.5,
-    },
-    ...((adoptMePets ?? []) as { slug: string; updated_at: string | null }[])
-      .filter((pet) => Boolean(pet.slug))
-      .map((pet) => ({
-        url: `${BASE_URL}/adopt-me/values/${pet.slug}`,
-        lastModified: pet.updated_at ? new Date(pet.updated_at) : undefined,
-        changeFrequency: 'daily' as const,
-        priority: 0.7,
-      })),
-  ]
+  )
 
   return [
     ...staticPages,
@@ -421,8 +448,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...gameBlogIndexPages,
     ...gameBlogPages,
     ...landingPages,
-    ...sabPages,
-    ...adoptMePages,
+    ...hubPages,
     ...gamePages,
     ...sellPages,
     ...categoryPages,

@@ -23,7 +23,7 @@ import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown'
 import SearchIcon from '@mui/icons-material/Search'
 import SwapVertIcon from '@mui/icons-material/SwapVert'
 import CheckIcon from '@mui/icons-material/Check'
-import { variantColor } from './[brainrotSlug]/_adoptMeVariantColor'
+import { variantColor } from './[itemSlug]/_adoptMeVariantColor'
 import { CompactVariantPicker } from './_CompactVariantPicker'
 
 /* ── Rarity → accent. Adopt Me's five tiers only. ─────────────────────────── */

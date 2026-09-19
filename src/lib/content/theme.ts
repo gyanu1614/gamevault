@@ -53,6 +53,40 @@ export interface GameContentTheme {
    * theme means every game hub inherits a correct sample from its own entry.
    */
   calculatorExample: CalcPromoExample
+  /**
+   * Which hub pages this game publishes. The hub routes read this instead of
+   * hardcoding a slug list, so enabling a page for a new game is a config
+   * change rather than an edit to five route files.
+   */
+  pages: HubPageSet
+  /** Tool tabs shown in HubNav, in display order. */
+  navTools: Array<'values' | 'calculator'>
+  /**
+   * What this game calls one tradable thing ("Brainrot", "Pet", "Egg") and one
+   * of its forms ("Mutation", "Variant"). Shared components read these instead
+   * of embedding SAB vocabulary. `variantNoun: null` = the game has no variant
+   * axis, so variant UI is omitted entirely.
+   */
+  itemNoun: string
+  itemNounPlural: string
+  variantNoun: string | null
+  /**
+   * Surface this game's money tools (Value List / Value Calculator) in the
+   * footer directory alongside its marketplace categories. Flagship-only
+   * today: turning it on for a second game ADDS footer links, which is a
+   * visible change, so it stays opt-in per game rather than implied by
+   * `pages.values`.
+   */
+  footerTools: boolean
+}
+
+/** The hub pages a game can publish. Absent/false = the route notFound()s. */
+export interface HubPageSet {
+  values: boolean
+  calculator: boolean
+  priceIndex: boolean
+  methodology: boolean
+  blog: boolean
 }
 
 /** Static worked-example for the blog calculator promo (see `calculatorExample`). */
@@ -124,6 +158,21 @@ const DEFAULT_THEME: GameContentTheme = {
     verdict: 'See if the trade is fair',
     qualifier: 'Based on completed sales',
   },
+  // An unthemed game has no hub routes today (every hub page notFound()s a
+  // slug with no theme), so the fallback publishes nothing. Adding a real
+  // entry below is what turns pages on.
+  pages: {
+    values: false,
+    calculator: false,
+    priceIndex: false,
+    methodology: false,
+    blog: false,
+  },
+  navTools: [],
+  itemNoun: 'Item',
+  itemNounPlural: 'Items',
+  variantNoun: null,
+  footerTools: false,
 }
 
 const THEMES: Record<string, GameContentTheme> = {
@@ -149,6 +198,19 @@ const THEMES: Record<string, GameContentTheme> = {
       verdict: 'You come out behind',
       qualifier: 'Based on completed sales',
     },
+    // Exactly the pages SAB serves today — price-index is SAB-only.
+    pages: {
+      values: true,
+      calculator: true,
+      priceIndex: true,
+      methodology: true,
+      blog: true,
+    },
+    navTools: ['values', 'calculator'],
+    itemNoun: 'Brainrot',
+    itemNounPlural: 'Brainrots',
+    variantNoun: 'Mutation',
+    footerTools: true,
   },
   'adopt-me': {
     name: 'Adopt Me',
@@ -180,6 +242,19 @@ const THEMES: Record<string, GameContentTheme> = {
       verdict: 'Check if this trade is fair',
       qualifier: 'Cash values estimated until sales land',
     },
+    // Adopt Me has no price-index route today; everything else is live.
+    pages: {
+      values: true,
+      calculator: true,
+      priceIndex: false,
+      methodology: true,
+      blog: true,
+    },
+    navTools: ['values', 'calculator'],
+    itemNoun: 'Pet',
+    itemNounPlural: 'Pets',
+    variantNoun: 'Variant',
+    footerTools: false,
   },
 }
 
@@ -198,6 +273,24 @@ export function hasGameContentTheme(gameSlug: string): boolean {
  * hasGameContentTheme() gate those pages use to notFound() everything else.
  */
 export const CONTENT_HUB_GAME_SLUGS = Object.keys(THEMES)
+
+/** One hub page, as named in `HubPageSet`. */
+export type HubPage = keyof HubPageSet
+
+/**
+ * Slugs that publish a given hub page — the prerender set for that route's
+ * generateStaticParams, and the gate its page body uses to notFound() anything
+ * else. Replaces the hardcoded `['steal-a-brainrot']` literals that each hub
+ * route used to carry, so turning a page on for a game is a config edit here.
+ */
+export function contentHubSlugsFor(page: HubPage): string[] {
+  return CONTENT_HUB_GAME_SLUGS.filter((slug) => THEMES[slug]!.pages[page])
+}
+
+/** True when this game publishes this hub page. */
+export function hasHubPage(gameSlug: string, page: HubPage): boolean {
+  return THEMES[gameSlug]?.pages[page] === true
+}
 
 /**
  * The theme as CSS custom properties, to spread onto a wrapper's `style`.

@@ -14,6 +14,7 @@ import { HubBuyCta } from '@/components/content/HubBuyCta'
 import { HubNav } from '@/components/content/HubNav'
 import { HubFooter } from '@/components/content/HubFooter'
 import { getHubNavData, HUB_NAV_CLEAR } from '@/lib/content/hubNav'
+import { contentHubSlugsFor, hasHubPage } from '@/lib/content/theme'
 import { HubHero } from '@/components/content/HubHero'
 import { HubGuidesStrip } from '@/components/content/HubGuidesStrip'
 import AdoptMeValuesPage from './_AdoptMeValuesPage'
@@ -25,7 +26,7 @@ export const revalidate = 3600
  * below, so there is nothing else to build.
  */
 export function generateStaticParams() {
-  return ['steal-a-brainrot'].map((gameSlug) => ({ gameSlug }))
+  return contentHubSlugsFor('values').map((gameSlug) => ({ gameSlug }))
 }
 
 interface PageProps {
@@ -89,7 +90,7 @@ export async function generateMetadata({
     }
   }
 
-  if (gameSlug !== 'steal-a-brainrot') {
+  if (!hasHubPage(gameSlug, 'values')) {
     return { title: 'Values Not Found' }
   }
 
@@ -422,7 +423,7 @@ export default async function BrainrotValuesPage({ params }: PageProps) {
     return <AdoptMeValuesPage />
   }
 
-  if (gameSlug !== 'steal-a-brainrot') {
+  if (!hasHubPage(gameSlug, 'values')) {
     notFound()
   }
 
