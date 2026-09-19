@@ -45,6 +45,15 @@ const PREVIEW = arg('preview')
 const JSON_OUT = arg('json')
 const KEEP_DIR = arg('keep')
 const CONCURRENCY = Number(arg('concurrency', '4'))
+/**
+ * Vercel Deployment Protection bypass token (Project Settings → Deployment
+ * Protection → Protection Bypass for Automation). Without it a protected
+ * preview 302s every request to vercel.com/sso-api, and a redirect-following
+ * client would compare that LOGIN PAGE against the baseline — reporting a wall
+ * of content diffs that are really one auth problem. `preflight()` below makes
+ * that failure mode explicit instead.
+ */
+const BYPASS = arg('bypass') || process.env.VERCEL_AUTOMATION_BYPASS_SECRET || null
 
 if (!PREVIEW) {
   console.error('ERROR: --preview <url> is required (the Vercel preview URL).')
@@ -84,10 +93,16 @@ async function fetchText(url, { timeout = 45000 } = {}) {
         'user-agent': 'DropMarket-hub-diff/1.0',
         'accept': 'text/html',
         'cache-control': 'no-cache',
+        ...(BYPASS
+          ? {
+              'x-vercel-protection-bypass': BYPASS,
+              'x-vercel-set-bypass-cookie': 'true',
+            }
+          : {}),
       },
       redirect: 'follow',
     })
-    return { status: res.status, body: await res.text() }
+    return { status: res.status, body: await res.text(), finalUrl: res.url }
   } finally {
     clearTimeout(t)
   }
@@ -191,7 +206,49 @@ async function mapLimit(items, limit, fn) {
   return out
 }
 
+/**
+ * Refuse to run against a deployment that is not actually serving the app.
+ * A protected preview answers every path with a 302 to vercel.com/sso-api;
+ * following it yields a login page that diffs against everything. Detect that
+ * up front and say so, rather than emitting 20 meaningless "diffs".
+ */
+async function preflight() {
+  const probe = '/steal-a-brainrot/values'
+  const res = await fetchText(`${PREVIEW}${probe}`)
+  // Any landing outside the preview's own origin means we were bounced to a
+  // login/SSO host — whatever its exact path (vercel.com/sso-api today,
+  // vercel.com/login after a further hop). Comparing that page is meaningless.
+  let landedOffHost = false
+  try {
+    landedOffHost =
+      new URL(res.finalUrl || `${PREVIEW}${probe}`).origin !==
+      new URL(PREVIEW).origin
+  } catch {}
+  const blocked =
+    landedOffHost ||
+    /Authentication Required|vercel\.com\/(sso-api|login)|\/_vercel\/sso/i.test(
+      res.body.slice(0, 4000),
+    )
+  if (blocked) {
+    console.error('GATE: CANNOT RUN — the preview is behind Vercel Deployment Protection.')
+    console.error(`  ${PREVIEW}${probe}`)
+    console.error(`  redirected to: ${res.finalUrl}`)
+    console.error('')
+    console.error('Fix either way:')
+    console.error('  a) Vercel → Project → Settings → Deployment Protection →')
+    console.error('     "Protection Bypass for Automation" → copy the secret, then re-run with')
+    console.error('     --bypass <secret>   (or set VERCEL_AUTOMATION_BYPASS_SECRET)')
+    console.error('  b) Or set this deployment\'s protection to "Only Preview Comments"/disabled.')
+    process.exit(2)
+  }
+  if (res.status >= 400) {
+    console.error(`GATE: CANNOT RUN — preview returned ${res.status} for ${probe}.`)
+    process.exit(2)
+  }
+}
+
 async function main() {
+  await preflight()
   const discovered = await discoverValuePaths()
   const paths = [...STATIC_PATHS, ...discovered]
 
