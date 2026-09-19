@@ -128,6 +128,14 @@ export const HUB_COPY = {
     'Every order is covered by SafeDrop — get exactly what you ordered, or your money back.',
   /** Short form, for tight surfaces (footer, badges). */
   safedropShort: 'Get exactly what you ordered, or your money back.',
+  /**
+   * Lowercase clause, for continuing a sentence ("…a safer place to buy them —
+   * get exactly what you ordered"). Stored ready to use rather than
+   * lower-cased at render time: a `{expr}` in JSX emits its own text node, so
+   * React inserts a `<!-- -->` separator into the HTML and the page no longer
+   * matches its own copy byte for byte.
+   */
+  safedropClause: 'get exactly what you ordered, or your money back.',
   /** How prices are sourced. Accurate: active listings, reputable sellers. */
   pricingBasis: 'priced from live marketplace listings, reputable sellers only',
   /** Sentence-initial variant of the above. */

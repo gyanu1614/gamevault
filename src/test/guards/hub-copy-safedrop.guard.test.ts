@@ -134,10 +134,18 @@ describe('shared copy slots', () => {
     for (const file of [
       'src/components/content/HubBuyCta.tsx',
       'src/components/content/ValuesBuyModule.tsx',
-      'src/components/content/HubFooter.tsx',
     ]) {
       const src = fs.readFileSync(path.join(ROOT, file), 'utf8')
       expect(src, `${file} should read HUB_COPY`).toContain('HUB_COPY')
     }
+    // HubFooter states the same promise as literal text rather than a `{expr}`:
+    // an interpolation emits its own text node, so React writes a `<!-- -->`
+    // separator into the HTML. Harmless, but pointless here — the sentence has
+    // no per-game part. The wording is still pinned.
+    const footer = fs.readFileSync(
+      path.join(ROOT, 'src/components/content/HubFooter.tsx'),
+      'utf8',
+    )
+    expect(footer).toMatch(/get exactly what you ordered, or your money\s+back\./)
   })
 })
