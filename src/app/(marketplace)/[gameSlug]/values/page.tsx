@@ -18,8 +18,16 @@ import { contentHubSlugsFor, hasHubPage } from '@/lib/content/theme'
 import { HubHero } from '@/components/content/HubHero'
 import { HubGuidesStrip } from '@/components/content/HubGuidesStrip'
 import AdoptMeValuesPage from './_AdoptMeValuesPage'
+import GenericValuesHubPage from './_generic/ValuesHubPage'
+import { getGameContentTheme } from '@/lib/content/theme'
 
 export const revalidate = 3600
+
+/**
+ * Games served by the generic values_* pipeline rather than a per-game reader.
+ * SAB and Adopt Me still use their own tables until Phase 2 migrates them.
+ */
+const VALUES_PIPELINE_GAMES = new Set(['steal-an-egg'])
 
 /**
  * Prerender the game slug(s) this route serves; every other slug notFound()s
@@ -87,6 +95,24 @@ export async function generateMetadata({
         url: '/adopt-me/values',
         type: 'website',
       },
+    }
+  }
+
+  // Games on the generic values pipeline build their metadata from config, so
+  // a new game needs no edit here.
+  if (VALUES_PIPELINE_GAMES.has(gameSlug)) {
+    const theme = getGameContentTheme(gameSlug)
+    const monthYear = new Date().toLocaleDateString('en-US', {
+      month: 'long',
+      year: 'numeric',
+      timeZone: 'UTC',
+    })
+    const title = `${theme.name} Value List (${monthYear}) — Egg & Account Prices`
+    return {
+      title,
+      description: `${theme.name} values for ${monthYear}: what sealed eggs sell for by area and what accounts go for by income, priced from live marketplace listings.`,
+      alternates: { canonical: `/${gameSlug}/values` },
+      openGraph: { title, url: `/${gameSlug}/values`, type: 'website' },
     }
   }
 
@@ -421,6 +447,12 @@ export default async function BrainrotValuesPage({ params }: PageProps) {
   // income). Delegate rather than branch inline so the SAB path stays intact.
   if (gameSlug === 'adopt-me') {
     return <AdoptMeValuesPage />
+  }
+
+  // Games on the generic values_* pipeline render through the shared hub
+  // components — no per-game page component.
+  if (VALUES_PIPELINE_GAMES.has(gameSlug)) {
+    return <GenericValuesHubPage gameSlug={gameSlug} />
   }
 
   if (!hasHubPage(gameSlug, 'values')) {
