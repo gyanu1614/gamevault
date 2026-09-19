@@ -7,11 +7,11 @@
  *   - public.games          (existing — shared with classic admin)
  *   - public.game_categories (new — Phase A table)
  *
- * R11.a — also keeps public.categories in sync so listing detail pages and
- * the publish path stay functional during the legacy schema transition.
- * Toggle ON  -> ensureLegacyCategoryRow (creates if missing, reactivates)
- * Toggle OFF -> deactivateLegacyCategoryRow (soft delete; never hard delete
- *               since listings.category_id may still reference it).
+ * Step 1b — game_categories is the only category table the app writes.
+ * Toggle ON  -> ensureGameCategory (creates the pair if missing, enables it)
+ * Toggle OFF -> is_enabled = false (never a row delete; listings may
+ *               reference it). The legacy public.categories mirror is a DB
+ *               trigger during Phase A, not app code.
  */
 
 'use server'
@@ -19,10 +19,7 @@
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { requireAdmin } from '@/lib/actions/admin-permissions'
 import { revalidatePath, revalidateTag } from 'next/cache'
-import {
-  ensureLegacyCategoryRow,
-  deactivateLegacyCategoryRow,
-} from '@/lib/actions/_category-bridge'
+import { ensureGameCategory } from '@/lib/categories'
 import { GAME_DIRECTORY_TAG } from '@/lib/marketplace/gameDirectoryCache'
 import {
   validateGameIdentity,
@@ -72,6 +69,10 @@ export interface GameCategoryRow {
   sort_order: number
   seo_title: string | null
   seo_description: string | null
+  // per-game row (Step 1b)
+  slug?: string
+  name?: string
+  type?: string
   // joined for convenience
   global_category_slug?: string
   global_category_name?: string
@@ -146,11 +147,6 @@ export async function fetchGameById(id: string): Promise<GameDetail | null> {
 /**
  * All game_categories rows for one game, joined with global_categories
  * for display.
- *
- * V17n — Adds a legacy-fallback: if `game_categories` has no rows for
- * this game (Phase A backfill never ran for it), we synthesise the
- * enabled-set from the legacy `categories` table so the wizard's
- * Categories step still shows what's actually live on the marketplace.
  */
 export async function fetchGameCategoryRows(gameId: string): Promise<GameCategoryRow[]> {
   await requireAdmin()
@@ -162,6 +158,9 @@ export async function fetchGameCategoryRows(gameId: string): Promise<GameCategor
       game_id,
       global_category_id,
       is_enabled,
+      slug,
+      name,
+      type,
       requires_region,
       available_regions,
       requires_platform,
@@ -173,89 +172,37 @@ export async function fetchGameCategoryRows(gameId: string): Promise<GameCategor
       global_category:global_categories!game_categories_global_category_id_fkey(slug, name, icon_emoji, is_active)
     `)
     .eq('game_id', gameId)
+    .order('sort_order', { ascending: true })
 
-  if (!error && data && data.length > 0) {
-    return (data as any[]).map((r) => ({
-      id: r.id,
-      game_id: r.game_id,
-      global_category_id: r.global_category_id,
-      is_enabled: !!r.is_enabled,
-      requires_region: !!r.requires_region,
-      available_regions: Array.isArray(r.available_regions) ? r.available_regions : [],
-      requires_platform: !!r.requires_platform,
-      available_platforms: Array.isArray(r.available_platforms) ? r.available_platforms : [],
-      delivery_modes: Array.isArray(r.delivery_modes) ? r.delivery_modes : ['manual'],
-      sort_order: r.sort_order ?? 0,
-      seo_title: r.seo_title ?? null,
-      seo_description: r.seo_description ?? null,
-      global_category_slug:   r.global_category?.slug   ?? '',
-      global_category_name:   r.global_category?.name   ?? '',
-      global_category_emoji:  r.global_category?.icon_emoji ?? null,
-      global_category_active: !!r.global_category?.is_active,
-    }))
-  }
-
-  // V17n — Legacy fallback. Pull active categories from the legacy
-  // table and map their metadata.type → global slug so the wizard sees
-  // "this game has Currency + Items enabled" even when Phase A's
-  // backfill never created the join rows.
-  const TYPE_TO_GLOBAL_SLUG: Record<string, string> = {
-    currency: 'currency',
-    items: 'items',
-    account: 'accounts',
-    top_up: 'top-up',
-    service: 'boosting',
-  }
-
-  const [legacyRes, globalsRes] = await Promise.all([
-    supabase
-      .from('categories')
-      .select('id, game_id, slug, metadata, display_order, is_active')
-      .eq('game_id', gameId)
-      .eq('is_active', true),
-    supabase
-      .from('global_categories')
-      .select('id, slug, name, icon_emoji, is_active'),
-  ])
-
-  if (legacyRes.error || !legacyRes.data) return []
-
-  const globalsBySlug = new Map<string, any>()
-  for (const g of (globalsRes.data ?? []) as any[]) globalsBySlug.set(g.slug, g)
-
-  return (legacyRes.data as any[])
-    .map((row) => {
-      const type: string | undefined = row.metadata?.type
-      const globalSlug = type ? TYPE_TO_GLOBAL_SLUG[type] : undefined
-      const global = globalSlug ? globalsBySlug.get(globalSlug) : undefined
-      if (!global) return null
-      const synthesized: GameCategoryRow = {
-        id: row.id, // legacy id; saving will go through upsert which keys on (game,global_category)
-        game_id: row.game_id,
-        global_category_id: global.id,
-        is_enabled: true,
-        requires_region: !!row.metadata?.requires_region,
-        available_regions: Array.isArray(row.metadata?.available_regions) ? row.metadata.available_regions : [],
-        requires_platform: !!row.metadata?.requires_platform,
-        available_platforms: Array.isArray(row.metadata?.available_platforms) ? row.metadata.available_platforms : [],
-        delivery_modes:
-          type === 'currency' || type === 'items'
-            ? ['manual']
-            : ['manual', 'instant'],
-        sort_order: row.display_order ?? 0,
-        seo_title: null,
-        seo_description: null,
-        global_category_slug: global.slug,
-        global_category_name: global.name,
-        global_category_emoji: global.icon_emoji,
-        global_category_active: !!global.is_active,
-      }
-      return synthesized
-    })
-    .filter((r): r is GameCategoryRow => r !== null)
+  if (error || !data) return []
+  return (data as any[]).map((r) => ({
+    id: r.id,
+    game_id: r.game_id,
+    global_category_id: r.global_category_id,
+    is_enabled: !!r.is_enabled,
+    slug: r.slug ?? '',
+    name: r.name ?? '',
+    type: r.type ?? '',
+    requires_region: !!r.requires_region,
+    available_regions: Array.isArray(r.available_regions) ? r.available_regions : [],
+    requires_platform: !!r.requires_platform,
+    available_platforms: Array.isArray(r.available_platforms) ? r.available_platforms : [],
+    delivery_modes: Array.isArray(r.delivery_modes) ? r.delivery_modes : ['manual'],
+    sort_order: r.sort_order ?? 0,
+    seo_title: r.seo_title ?? null,
+    seo_description: r.seo_description ?? null,
+    global_category_slug:   r.global_category?.slug   ?? '',
+    global_category_name:   r.global_category?.name   ?? '',
+    global_category_emoji:  r.global_category?.icon_emoji ?? null,
+    global_category_active: !!r.global_category?.is_active,
+  }))
 }
 
-/** All global categories (active + inactive) — used by the wizard's toggle list. */
+/**
+ * Primary global categories (active + inactive) — the wizard's toggle list.
+ * Sub-categories (parent_id set: limiteds, skins, …) are not pickers; their
+ * per-game rows are preserved but managed elsewhere.
+ */
 export async function fetchGlobalCategoriesForWizard(): Promise<
   Array<{ id: string; slug: string; name: string; icon_emoji: string | null; is_active: boolean; sort_order: number }>
 > {
@@ -264,6 +211,7 @@ export async function fetchGlobalCategoriesForWizard(): Promise<
   const { data, error } = await supabase
     .from('global_categories')
     .select('id, slug, name, icon_emoji, is_active, sort_order')
+    .is('parent_id', null)
     .order('sort_order', { ascending: true })
   if (error || !data) return []
   return data as any
@@ -575,6 +523,9 @@ export async function deleteGameLogoV2(gameId: string): Promise<Result<{ id: str
 /**
  * Upsert a single (game_id, global_category_id) pair. Used when the admin
  * toggles a category on or edits its per-pair settings.
+ *
+ * Creation goes through ensureGameCategory (the same path the seeder and
+ * scripts use); the per-pair settings are applied on the returned row.
  */
 export async function upsertGameCategory(
   input: UpsertGameCategoryInput
@@ -583,19 +534,22 @@ export async function upsertGameCategory(
     await requireAdmin()
     const supabase = getAdminSupabase()
 
-    // Look for existing row
-    const { data: existing } = await supabase
-      .from('game_categories')
-      .select('id')
-      .eq('game_id', input.game_id)
-      .eq('global_category_id', input.global_category_id)
+    const { data: gc } = await supabase
+      .from('global_categories')
+      .select('slug')
+      .eq('id', input.global_category_id)
       .maybeSingle()
+    const globalSlug = (gc as { slug: string } | null)?.slug
+    if (!globalSlug) return { success: false, error: 'Unknown global category' }
 
-    const payload: any = {
-      game_id: input.game_id,
-      global_category_id: input.global_category_id,
-      is_enabled: input.is_enabled,
-    }
+    const ensured = await ensureGameCategory(supabase, {
+      gameId: input.game_id,
+      globalSlug,
+      enabled: input.is_enabled,
+    })
+    const gameCategoryRowId = ensured.id
+
+    const payload: any = {}
     if (input.requires_region     !== undefined) payload.requires_region     = input.requires_region
     if (input.available_regions   !== undefined) payload.available_regions   = input.available_regions
     if (input.requires_platform   !== undefined) payload.requires_platform   = input.requires_platform
@@ -604,45 +558,12 @@ export async function upsertGameCategory(
     if (input.sort_order          !== undefined) payload.sort_order          = input.sort_order
     if (input.seo_title           !== undefined) payload.seo_title           = input.seo_title
     if (input.seo_description     !== undefined) payload.seo_description     = input.seo_description
-
-    let gameCategoryRowId: string
-    if (existing) {
+    if (Object.keys(payload).length > 0) {
       const { error } = await supabase
         .from('game_categories')
         .update(payload)
-        .eq('id', (existing as any).id)
+        .eq('id', gameCategoryRowId)
       if (error) return { success: false, error: error.message }
-      gameCategoryRowId = (existing as any).id
-    } else {
-      const { data, error } = await supabase
-        .from('game_categories')
-        .insert(payload)
-        .select('id')
-        .single()
-      if (error) return { success: false, error: error.message }
-      gameCategoryRowId = (data as any).id
-    }
-
-    // R11.a — keep the legacy public.categories table in sync.
-    // Resolve the global slug from its id, then ensure / deactivate the
-    // corresponding legacy row. Failures here are logged but not fatal —
-    // the publish path's self-heal covers any miss.
-    try {
-      const { data: gc } = await supabase
-        .from('global_categories')
-        .select('slug')
-        .eq('id', input.global_category_id)
-        .maybeSingle()
-      const slug = (gc as { slug: string } | null)?.slug
-      if (slug) {
-        if (input.is_enabled) {
-          await ensureLegacyCategoryRow(supabase, input.game_id, slug, { reactivate: true })
-        } else {
-          await deactivateLegacyCategoryRow(supabase, input.game_id, slug)
-        }
-      }
-    } catch (e) {
-      console.warn('legacy categories sync failed (non-fatal):', e)
     }
 
     revalidatePath('/admin/games')

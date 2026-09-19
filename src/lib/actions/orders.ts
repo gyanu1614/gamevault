@@ -94,7 +94,7 @@ export async function createOrder(data: CreateOrderData): Promise<{
           username
         ),
         game:game_id ( slug ),
-        category:category_id ( slug, metadata )
+        category:game_categories!listings_game_category_id_fkey ( slug, type )
       `)
       .eq('id', data.listingId)
       .single() as any
@@ -145,7 +145,7 @@ export async function createOrder(data: CreateOrderData): Promise<{
     const subtotal = round2(listing.price * data.quantity)
     const fee = buyerFee(subtotal)
     const feeInput = {
-      categoryMetaType: listing.category?.metadata?.type as string | undefined,
+      categoryMetaType: listing.category?.type as string | undefined,
       categorySlug: listing.category?.slug as string | undefined,
       gameSlug: listing.game?.slug as string | undefined,
       // Founding sellers pay a permanently reduced commission (lib/fees).
@@ -423,7 +423,7 @@ export async function getOrder(orderId: string): Promise<{
           platform,
           region,
           game_id,
-          category_id
+          game_category_id
         )
       `)
       .eq('id', orderId)
@@ -634,7 +634,7 @@ export async function markOrderAsDelivered(
     // Get order
     const { data: order, error: orderError } = await supabase
       .from('orders')
-      .select('*, listing:listings!orders_listing_id_fkey( title, game:game_id ( slug ), category:category_id ( slug, metadata ) )')
+      .select('*, listing:listings!orders_listing_id_fkey( title, game:game_id ( slug ), category:game_categories!listings_game_category_id_fkey ( slug, type ) )')
       .eq('id', orderId)
       .eq('seller_id', user.id) // Ensure seller owns this order
       .single() as any
@@ -656,7 +656,7 @@ export async function markOrderAsDelivered(
     // auto_release_at; the DB trigger only falls back to 48h when the app
     // doesn't supply one (see update-fee-structure.sql).
     const windowHours = protectionWindowHours({
-      categoryMetaType: order.listing?.category?.metadata?.type,
+      categoryMetaType: order.listing?.category?.type,
       categorySlug: order.listing?.category?.slug,
       gameSlug: order.listing?.game?.slug,
     })

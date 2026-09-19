@@ -50,9 +50,11 @@ export async function fetchAdminGlobalCategories(): Promise<GlobalCategoryAdminR
   const supabase = getAdminSupabase()
 
   const [{ data: cats, error: catsErr }, { data: links, error: linksErr }] = await Promise.all([
+    // Primaries only — sub-categories (parent_id set) are not admin pickers.
     supabase
       .from('global_categories')
       .select('id, slug, name, description, icon_emoji, icon_url, sort_order, is_active, seo_title, seo_description')
+      .is('parent_id', null)
       .order('sort_order', { ascending: true }),
     supabase
       .from('game_categories')

@@ -28,7 +28,7 @@ interface ListingRow {
 }
 
 const LISTING_SELECT =
-  'select=title,price,game:games!listings_game_id_fkey(name),category:categories!listings_category_id_fkey(name)&limit=1'
+  'select=title,price,game:games!listings_game_id_fkey(name),category:game_categories!listings_game_category_id_fkey(name)&limit=1'
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 

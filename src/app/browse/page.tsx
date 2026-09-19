@@ -98,11 +98,11 @@ async function getBrowseDirectory() {
 
   // First active category per game → the card links to a real page.
   const { data: cats } = (await supabase
-    .from('categories')
-    .select('game_id, slug, display_order')
+    .from('game_categories')
+    .select('game_id, slug, sort_order')
     .in('game_id', list.map((g) => g.id))
-    .eq('is_active', true)
-    .order('display_order', { ascending: true })) as unknown as {
+    .eq('is_enabled', true)
+    .order('sort_order', { ascending: true })) as unknown as {
       data: { game_id: string; slug: string }[] | null
     }
 

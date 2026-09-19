@@ -17,7 +17,7 @@ import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { revalidatePath } from 'next/cache'
 import { getGlobalCategories, getGamesForGlobalCategory, getAttributeTemplateFull } from '@/lib/actions/new-schema'
 import type { GlobalCategory, GameCategory, AttributeTemplateFull, Attribute } from '@/lib/actions/new-schema'
-import { ensureLegacyCategoryRow, isEnabledGameCategory, GLOBAL_SLUG_TO_LEGACY_TYPE } from '@/lib/actions/_category-bridge'
+import { findEnabledGameCategory } from '@/lib/categories'
 import { pingIndexNow } from '@/lib/seo/indexnow'
 
 /** Service-role supabase client — bypasses RLS so we can self-heal a missing
@@ -141,7 +141,7 @@ export async function fetchListingForDuplicate(
         images, template_data, region, platform, game_id,
         status, moderation_notes,
         game:games(slug),
-        category:categories(metadata)
+        category:game_categories!listings_game_category_id_fkey(global_category:global_categories!game_categories_global_category_id_fkey(slug))
       `)
       .eq('id', listingId)
       .single()
@@ -165,7 +165,7 @@ export async function fetchListingForDuplicate(
       status: string
       moderation_notes: string | null
       game: { slug: string } | null
-      category: { metadata: { type?: string } } | null
+      category: { global_category: { slug: string } | null } | null
     }
 
     // Owner-only: don't leak fields from other sellers' listings.
@@ -173,15 +173,8 @@ export async function fetchListingForDuplicate(
       return { success: false, error: 'You can only duplicate your own listings' }
     }
 
-    // Map legacy category.metadata.type → global slug. Mirror of the bridge.
-    const legacyType = row.category?.metadata?.type ?? ''
-    const slug =
-      legacyType === 'currency' ? 'currency'
-      : legacyType === 'items'    ? 'items'
-      : legacyType === 'account'  ? 'accounts'
-      : legacyType === 'top_up'   ? 'top-up'
-      : legacyType === 'service'  ? 'boosting'
-      : ''
+    // The wizard is keyed by global slug (currency / items / accounts / …).
+    const slug = row.category?.global_category?.slug ?? ''
     if (!slug) {
       return { success: false, error: 'Could not map this listing to a category' }
     }
@@ -276,11 +269,12 @@ export async function fetchExistingCurrencyListingId(
     // used by publishListing and the buyer page; keeps "what counts
     // as currency for this game" centralised.
     const { data: catRow } = await supabase
-      .from('categories')
+      .from('game_categories')
       .select('id')
       .eq('game_id', gameId)
-      .or('slug.eq.currency,metadata->>type.eq.currency')
-      .eq('is_active', true)
+      .eq('type', 'currency')
+      .eq('is_enabled', true)
+      .order('sort_order', { ascending: true })
       .limit(1)
       .maybeSingle() as any
     const categoryId = catRow?.id
@@ -291,7 +285,7 @@ export async function fetchExistingCurrencyListingId(
       .select('id')
       .eq('seller_id', user.id)
       .eq('game_id', gameId)
-      .eq('category_id', categoryId)
+      .eq('game_category_id', categoryId)
       .in('status', ['active', 'draft', 'paused', 'pending_approval'])
       // Defensive: only intercept against flexible-mode listings.
       // Any bundle-tagged listing on a game whose config just lost
@@ -338,11 +332,12 @@ export async function fetchExistingBundleListingId(
     if (!user) return null
 
     const { data: catRow } = await supabase
-      .from('categories')
+      .from('game_categories')
       .select('id')
       .eq('game_id', gameId)
-      .or('slug.eq.currency,metadata->>type.eq.currency')
-      .eq('is_active', true)
+      .eq('type', 'currency')
+      .eq('is_enabled', true)
+      .order('sort_order', { ascending: true })
       .limit(1)
       .maybeSingle() as any
     const categoryId = catRow?.id
@@ -353,7 +348,7 @@ export async function fetchExistingBundleListingId(
       .select('id')
       .eq('seller_id', user.id)
       .eq('game_id', gameId)
-      .eq('category_id', categoryId)
+      .eq('game_category_id', categoryId)
       .eq('bundle_id', bundleId)
       .in('status', ['active', 'draft', 'paused', 'pending_approval'])
     if (region) {
@@ -571,13 +566,6 @@ export async function publishListing(input: PublishListingInput): Promise<Result
     const denied = await publishDenialFor(supabase, user.id)
     if (denied) return { success: false, error: denied }
 
-    // Validate the slug is one we know about. (Boosting may legitimately
-    // map to 'service' here but should be gated upstream — we still want a
-    // legacy row if it gets through.)
-    if (!GLOBAL_SLUG_TO_LEGACY_TYPE[input.category_slug]) {
-      return { success: false, error: 'Unknown category' }
-    }
-
     // ─── D1: tier-based cap + moderation gate ────────────────────────────
     // Fetch the publish policy in the same request so we can reject early
     // when the seller is at their listing cap and downgrade `active` to
@@ -601,24 +589,12 @@ export async function publishListing(input: PublishListingInput): Promise<Result
       }
     }
 
-    // AUTH-010 — the bridge below runs under the SERVICE ROLE and can create
-    // public catalogue rows. Only proceed for a (game, category) pair an
-    // admin has enabled in game_categories; a seller path never reactivates.
-    if (!(await isEnabledGameCategory(supabase, input.game_id, input.category_slug))) {
+    // AUTH-010 — resolved with the SESSION client: only a (game, category)
+    // pair an admin has enabled in game_categories can be published into.
+    // The row itself is the listing's category; nothing is created here.
+    const gameCategory = await findEnabledGameCategory(supabase, input.game_id, input.category_slug)
+    if (!gameCategory) {
       return { success: false, error: 'This category is not enabled for this game.' }
-    }
-
-    // Self-healing: look up the legacy categories row for this (game, slug)
-    // pair, creating it via the service-role client if missing. This handles
-    // games enabled via the new admin (which only writes game_categories)
-    // and any pair that slipped through the Phase A backfill.
-    const legacyCatId = await ensureLegacyCategoryRow(
-      getAdminSupabase(),
-      input.game_id,
-      input.category_slug,
-    )
-    if (!legacyCatId) {
-      return { success: false, error: 'Couldn’t resolve a category for this game. Please contact support.' }
     }
 
     // D1: downgrade `active` → `pending_approval` when the tier requires it.
@@ -640,7 +616,7 @@ export async function publishListing(input: PublishListingInput): Promise<Result
         .select('id')
         .eq('seller_id', user.id)
         .eq('game_id', input.game_id)
-        .eq('category_id', legacyCatId)
+        .eq('game_category_id', gameCategory.id)
         .in('status', ['active', 'draft', 'paused', 'pending_approval'])
       if (input.bundle_id) {
         // Bundle mode: match exact (bundle, region, platform). null
@@ -740,7 +716,10 @@ export async function publishListing(input: PublishListingInput): Promise<Result
     const insertPayload: Record<string, unknown> = {
       seller_id: user.id,
       game_id: input.game_id,
-      category_id: legacyCatId,
+      game_category_id: gameCategory.id,
+      // Phase A: listings.category_id is still NOT NULL and points at the
+      // mirrored legacy row (trg_listings_category_sync would derive it too).
+      category_id: gameCategory.legacy_category_id,
       title: resolvedTitle || 'Untitled',
       // listings.description is NOT NULL in the legacy schema; default to ''
       description: input.description?.trim() || '',
@@ -784,16 +763,13 @@ export async function publishListing(input: PublishListingInput): Promise<Result
     // in the seller offers table) are deliberately NOT wired to IndexNow
     // — the sitemap's lastmod (max listing updated_at) covers those.
     if (finalStatus === 'active') {
-      const [{ data: pingGame }, { data: pingCat }] = await Promise.all([
-        supabase.from('games').select('slug').eq('id', input.game_id).maybeSingle() as any,
-        supabase.from('categories').select('slug').eq('id', legacyCatId).maybeSingle() as any,
-      ])
-      if (pingGame?.slug && pingCat?.slug) {
+      const { data: pingGame } = await supabase.from('games').select('slug').eq('id', input.game_id).maybeSingle() as any
+      if (pingGame?.slug) {
         const listingSlug = (data as { id: string; slug?: string | null }).slug
         await pingIndexNow([
-          ...(listingSlug ? [`/${pingGame.slug}/${pingCat.slug}/${listingSlug}`] : []),
+          ...(listingSlug ? [`/${pingGame.slug}/${gameCategory.slug}/${listingSlug}`] : []),
           `/${pingGame.slug}`,
-          `/${pingGame.slug}/${pingCat.slug}`,
+          `/${pingGame.slug}/${gameCategory.slug}`,
         ])
       }
     }
@@ -1138,21 +1114,9 @@ export async function bulkPublishListings(
     }
 
     // AUTH-010 — same gate as publishListing: admin-enabled pair or nothing.
-    if (!GLOBAL_SLUG_TO_LEGACY_TYPE[categorySlug]) {
-      return { success: false, error: 'Unknown category' }
-    }
-    if (!(await isEnabledGameCategory(supabase, gameId, categorySlug))) {
+    const gameCategory = await findEnabledGameCategory(supabase, gameId, categorySlug)
+    if (!gameCategory) {
       return { success: false, error: 'This category is not enabled for this game.' }
-    }
-
-    // Resolve legacy category once.
-    const legacyCatId = await ensureLegacyCategoryRow(
-      getAdminSupabase(),
-      gameId,
-      categorySlug,
-    )
-    if (!legacyCatId) {
-      return { success: false, error: 'Couldn’t resolve a category for this game.' }
     }
 
     const status =
@@ -1182,7 +1146,8 @@ export async function bulkPublishListings(
         const payload: Record<string, unknown> = {
           seller_id: user.id,
           game_id: gameId,
-          category_id: legacyCatId,
+          game_category_id: gameCategory.id,
+          category_id: gameCategory.legacy_category_id,
           title: r.title.trim(),
           description: r.description?.trim() || '',
           price: r.price,
@@ -1216,12 +1181,9 @@ export async function bulkPublishListings(
     // are DB-generated and not selected back in the loop); the sitemap
     // picks them up on the next crawl.
     if (ok > 0 && status === 'active') {
-      const [{ data: pingGame }, { data: pingCat }] = await Promise.all([
-        supabase.from('games').select('slug').eq('id', gameId).maybeSingle() as any,
-        supabase.from('categories').select('slug').eq('id', legacyCatId).maybeSingle() as any,
-      ])
-      if (pingGame?.slug && pingCat?.slug) {
-        await pingIndexNow([`/${pingGame.slug}`, `/${pingGame.slug}/${pingCat.slug}`])
+      const { data: pingGame } = await supabase.from('games').select('slug').eq('id', gameId).maybeSingle() as any
+      if (pingGame?.slug) {
+        await pingIndexNow([`/${pingGame.slug}`, `/${pingGame.slug}/${gameCategory.slug}`])
       }
     }
 

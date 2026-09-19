@@ -130,7 +130,7 @@ export default function MessagesPage() {
     if (tab === 'dm' && conv.order) return false
     if (tab !== 'all' && tab !== 'unread' && tab !== 'dm') {
       const cat = conv.order?.listing?.category
-      if (!conv.order || classifyOfferType(cat?.metadata?.type ?? undefined, cat?.slug) !== tab) return false
+      if (!conv.order || classifyOfferType(cat?.type ?? undefined, cat?.slug) !== tab) return false
     }
     if (!searchQuery) return true
     const otherUser = conv.buyer_id === user?.id ? conv.seller : conv.buyer

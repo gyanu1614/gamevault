@@ -108,14 +108,14 @@ export async function getCurrencyShell(
   // categories.metadata.type === 'currency' renders the rich layout.
   const supabase = await createAnonClient()
   const { data: row } = await supabase
-    .from('categories')
-    .select('metadata, game:games!categories_game_id_fkey(slug)')
+    .from('game_categories')
+    .select('type, game:games!game_categories_game_id_fkey(slug)')
     .eq('slug', categorySlug)
     .eq('game.slug', gameSlug)
-    .eq('is_active', true)
+    .eq('is_enabled', true)
     .limit(1)
     .maybeSingle() as any
-  if (!row || row.metadata?.type !== 'currency') return null
+  if (!row || row.type !== 'currency') return null
 
   // Fetch the per-game currency config. If admin hasn't set one yet,
   // hydrate a minimal shell from the slug so the page still renders

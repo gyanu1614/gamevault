@@ -166,8 +166,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   if (!game) notFound()
 
   const { data: category } = await supabase
-    .from('categories')
-    .select('id, name, metadata, seo_title, seo_description, seo_h1, seo_intro')
+    .from('game_categories')
+    .select('id, name, type, sub_types, seo_title, seo_description, seo_h1, seo_intro')
     .eq('slug', categorySlug)
     .eq('game_id', game.id)
     .single() as any
@@ -207,7 +207,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   // with the JSON-LD and the on-page intro line).
   const stats = await getCategoryStats(game.id, category.id)
 
-  const isCurrency = category.metadata?.type === 'currency'
+  const isCurrency = category.type === 'currency'
   const currencyCfg = isCurrency
     ? await fetchCategoryConfigBySlug(gameSlug, 'currency')
     : null
@@ -294,11 +294,11 @@ const getGameAndCategory = cache(async function getGameAndCategory(
   if (gameResult.error || !gameResult.data) return null
 
   const categoryResult = await supabase
-    .from('categories')
-    .select('id, name, slug, description, icon, metadata, seo_title, seo_description, seo_h1, seo_intro')
+    .from('game_categories')
+    .select('id, name, slug, description, icon_emoji, type, sub_types, seo_title, seo_description, seo_h1, seo_intro')
     .eq('slug', categorySlug)
     .eq('game_id', gameResult.data.id)
-    .eq('is_active', true)
+    .eq('is_enabled', true)
     .single() as any
 
   if (categoryResult.error || !categoryResult.data) return null
@@ -309,11 +309,11 @@ const getGameAndCategory = cache(async function getGameAndCategory(
 async function getAllGameCategories(gameId: string): Promise<GameCategory[]> {
   const supabase = await createClient()
   const { data } = await supabase
-    .from('categories')
+    .from('game_categories')
     .select('id, name, slug')
     .eq('game_id', gameId)
-    .eq('is_active', true)
-    .order('display_order', { ascending: true })
+    .eq('is_enabled', true)
+    .order('sort_order', { ascending: true })
     .order('name', { ascending: true }) as any
   return (data || []) as GameCategory[]
 }
@@ -348,10 +348,10 @@ async function getListings(
         presence:seller_presence(is_online, last_seen_at)
       ),
       game:games!listings_game_id_fkey(name, slug),
-      category:categories!listings_category_id_fkey(name, slug)
+      category:game_categories!listings_game_category_id_fkey(name, slug)
     `)
     .eq('game_id', gameId)
-    .eq('category_id', categoryId)
+    .eq('game_category_id', categoryId)
     .eq('status', 'active')
     // SEO hygiene: hide test/demo accounts from public category pages.
     .eq('seller.is_test', false)
@@ -499,11 +499,12 @@ async function CategoryBrowsePage({ params, searchParams }: PageProps) {
     let stats: CategoryStats = { count: 0, lowPrice: null, highPrice: null, avgDeliveryLabel: null }
     if (game?.id) {
       const catRow = await supabase
-        .from('categories')
+        .from('game_categories')
         .select('id, slug')
         .eq('game_id', game.id)
-        .or('slug.eq.currency,metadata->>type.eq.currency')
-        .eq('is_active', true)
+        .eq('type', 'currency')
+        .eq('is_enabled', true)
+        .order('sort_order', { ascending: true })
         .limit(1)
         .maybeSingle() as any
       const categoryId = catRow.data?.id
@@ -521,7 +522,7 @@ async function CategoryBrowsePage({ params, searchParams }: PageProps) {
             )
           `)
           .eq('game_id', game.id)
-          .eq('category_id', categoryId)
+          .eq('game_category_id', categoryId)
           .eq('status', 'active')
           .not('bundle_id', 'is', null)
           .order('price', { ascending: true })
@@ -665,11 +666,12 @@ async function CategoryBrowsePage({ params, searchParams }: PageProps) {
     let stats: CategoryStats = { count: 0, lowPrice: null, highPrice: null, avgDeliveryLabel: null }
     if (game?.id) {
       const catRow = await supabase
-        .from('categories')
+        .from('game_categories')
         .select('id, slug')
         .eq('game_id', game.id)
-        .or('slug.eq.currency,metadata->>type.eq.currency')
-        .eq('is_active', true)
+        .eq('type', 'currency')
+        .eq('is_enabled', true)
+        .order('sort_order', { ascending: true })
         .limit(1)
         .maybeSingle() as any
       const categoryId = catRow.data?.id
@@ -687,7 +689,7 @@ async function CategoryBrowsePage({ params, searchParams }: PageProps) {
             )
           `)
           .eq('game_id', game.id)
-          .eq('category_id', categoryId)
+          .eq('game_category_id', categoryId)
           .eq('status', 'active')
           // V19/P8 — Removed the legacy `.lte('price', 1)` filter. It was
           // built for the old "$ per single unit" Robux pricing model and
@@ -829,7 +831,7 @@ async function CategoryBrowsePage({ params, searchParams }: PageProps) {
   // now also use this client. They get the same landscape card grid
   // + filter band; taxonomy() returns empty when no template exists,
   // so cards render cleanly with just title + photo + price.
-  const categoryType = (category as any).metadata?.type as string | undefined
+  const categoryType = (category as any).type as string | undefined
   const isItemsLikeCategory =
     category.slug === 'items' ||
     categoryType === 'items' ||
@@ -864,10 +866,10 @@ async function CategoryBrowsePage({ params, searchParams }: PageProps) {
               id, username, shop_name, shop_slug, avatar_url, seller_tier,
               seller_rating, total_reviews, total_sales, is_verified
             ),
-            category:categories!listings_category_id_fkey(slug, name)
+            category:game_categories!listings_game_category_id_fkey(slug, name)
           `)
           .eq('game_id', game.id)
-          .eq('category_id', category.id)
+          .eq('game_category_id', category.id)
           .eq('status', 'active')
           .order('updated_at', { ascending: false })
           .limit(200)
@@ -953,7 +955,7 @@ async function CategoryBrowsePage({ params, searchParams }: PageProps) {
     ? Math.max(...listings.map((l: any) => l.price))
     : 1000
 
-  const subTypes = ((category as any).metadata?.sub_types as string[]) || []
+  const subTypes = ((category as any).sub_types as string[]) || []
   const activeType = resolvedSearchParams.type || null
 
   return (
@@ -1118,17 +1120,16 @@ async function RelatedGames({
   if (list.length === 0) return null
 
   const { data: cats } = (await supabase
-    .from('categories')
-    .select('game_id, slug, name, metadata, display_order')
+    .from('game_categories')
+    .select('game_id, slug, name, sort_order')
     .in('game_id', list.map((g) => g.id))
-    .eq('is_active', true)
-    .order('display_order', { ascending: true })) as unknown as {
+    .eq('is_enabled', true)
+    .order('sort_order', { ascending: true })) as unknown as {
       data: {
         game_id: string
         slug: string
         name: string | null
-        metadata: { label?: string; name?: string } | null
-        display_order: number | null
+        sort_order: number | null
       }[] | null
     }
 
@@ -1136,8 +1137,6 @@ async function RelatedGames({
   for (const c of cats ?? []) {
     const label =
       c.name ||
-      c.metadata?.label ||
-      c.metadata?.name ||
       c.slug.replace(/^buy-/, '').replace(/[-_]+/g, ' ').replace(/\b\w/g, (ch) => ch.toUpperCase())
     const arr = catsByGame.get(c.game_id)
     if (arr) arr.push({ slug: c.slug, label })

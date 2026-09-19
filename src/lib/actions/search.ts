@@ -108,15 +108,15 @@ export async function searchAttributeOptions(
   if (gameIds.length === 0) return []
 
   const { data: cats } = await supabase
-    .from('categories')
-    .select('slug, name, game_id, metadata, is_active')
+    .from('game_categories')
+    .select('slug, name, game_id, type, is_enabled')
     .in('game_id', gameIds)
-    .eq('is_active', true)
+    .eq('is_enabled', true)
 
   // (game_id, type) → { slug, name }. First active category wins.
   const catByGameType = new Map<string, { slug: string; name: string }>()
   for (const c of (cats ?? []) as any[]) {
-    const type = (c.metadata?.type as string | undefined) ?? 'items'
+    const type = (c.type as string | undefined) ?? 'items'
     const key = `${c.game_id}:${type}`
     if (!catByGameType.has(key)) {
       catByGameType.set(key, { slug: c.slug, name: c.name })

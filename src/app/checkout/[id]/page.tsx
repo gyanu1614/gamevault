@@ -35,7 +35,7 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
         seller_rating, total_reviews, total_sales, is_verified, created_at
       ),
       game:game_id ( id, name, slug, image_url ),
-      category:category_id ( id, name, slug, metadata )
+      category:game_categories!listings_game_category_id_fkey ( id, name, slug, type )
     `)
     .eq('id', id)
     .single() as any

@@ -214,7 +214,7 @@ export default async function SellerShopPage({ params }: PageProps) {
     .select(`
       *,
       game:games(name, slug, image_url),
-      category:categories(name, slug)
+      category:game_categories!listings_game_category_id_fkey(name, slug)
     `)
     .eq('seller_id', profile.id)
     .eq('status', 'active')

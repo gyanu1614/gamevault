@@ -258,7 +258,7 @@ function OrdersContent() {
 
     // Category filter
     if (filters.category) {
-      filtered = filtered.filter(o => o.listing?.category_id === filters.category)
+      filtered = filtered.filter(o => o.listing?.game_category_id === filters.category)
     }
 
     // Date range filter

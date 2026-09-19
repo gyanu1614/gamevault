@@ -58,7 +58,7 @@ const resolveListing = cache(async function resolveListing(id: string) {
       `
       slug,
       game:games!listings_game_id_fkey(slug),
-      category:categories!listings_category_id_fkey(slug)
+      category:game_categories!listings_game_category_id_fkey(slug)
     `,
     )
     .eq('id', id)

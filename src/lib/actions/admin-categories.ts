@@ -6,18 +6,44 @@ import { requireAdmin } from '@/lib/actions/admin-permissions'
 import { revalidatePath, revalidateTag } from 'next/cache'
 import { GAME_DIRECTORY_TAG } from '@/lib/marketplace/gameDirectoryCache'
 
+/**
+ * /admin/categories — flat list of every per-game category row
+ * (game_categories) with edit / pause / disable / icon upload.
+ *
+ * Step 1b: creation is NOT here. A (game, category) pair is created from the
+ * game wizard (or the seeder) through ensureGameCategory; this page edits
+ * what exists. "Delete" disables the row (is_enabled = false) — never a row
+ * delete, listings may reference it.
+ */
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface CategoryData {
   name: string
   slug: string
-  game_id?: string | null
   description?: string | null
   icon_emoji?: string | null
   icon_url?: string | null
-  icon_type?: 'emoji' | 'image' | 'svg'
   sort_order?: number
-  is_active?: boolean
+  is_enabled?: boolean
+}
+
+export interface AdminCategoryRow {
+  id: string
+  game_id: string
+  game_name: string
+  game_slug: string
+  global_slug: string
+  name: string
+  slug: string
+  type: string
+  description: string | null
+  icon_emoji: string | null
+  icon_url: string | null
+  icon_type: 'emoji' | 'image' | 'svg'
+  sort_order: number
+  is_enabled: boolean
+  listing_count: number
 }
 
 // Service-role client — bypasses RLS for admin mutations
@@ -28,61 +54,77 @@ function getAdminSupabase() {
   )
 }
 
+function iconTypeOf(iconUrl: string | null): AdminCategoryRow['icon_type'] {
+  if (!iconUrl) return 'emoji'
+  return iconUrl.toLowerCase().endsWith('.svg') ? 'svg' : 'image'
+}
+
+function revalidateCategorySurfaces() {
+  revalidatePath('/admin/categories')
+  revalidatePath('/admin/games')
+  // Footer game directory renders on every route (unstable_cache).
+  revalidateTag(GAME_DIRECTORY_TAG)
+}
+
 // ─── Actions ──────────────────────────────────────────────────────────────────
 
-export async function fetchAdminCategories(gameId?: string) {
+export async function fetchAdminCategories(gameId?: string): Promise<AdminCategoryRow[]> {
   await requireAdmin()
   const supabase = getAdminSupabase()
 
   let query = supabase
-    .from('categories')
-    .select('*')
+    .from('game_categories')
+    .select(`
+      id, game_id, name, slug, type, description, icon_emoji, icon_url, sort_order, is_enabled,
+      game:games!game_categories_game_id_fkey(name, slug),
+      global_category:global_categories!game_categories_global_category_id_fkey(slug)
+    `)
     .order('sort_order', { ascending: true })
     .order('name', { ascending: true })
 
-  // Filter by game_id if provided
-  if (gameId) {
-    query = query.eq('game_id', gameId)
-  }
+  if (gameId) query = query.eq('game_id', gameId)
 
-  const { data: categoriesData, error } = await query
+  const { data, error } = await query
+  if (error || !data) return []
 
-  if (error || !categoriesData) return []
-
-  // Count listings per category
+  // Count active listings per category
   const { data: counts } = await supabase
     .from('listings')
-    .select('category_id')
+    .select('game_category_id')
     .eq('status', 'active')
 
   const countMap: Record<string, number> = {}
   counts?.forEach((l: any) => {
-    countMap[l.category_id] = (countMap[l.category_id] || 0) + 1
+    if (l.game_category_id) countMap[l.game_category_id] = (countMap[l.game_category_id] || 0) + 1
   })
 
-  return categoriesData.map((c: any) => ({ ...c, listing_count: countMap[c.id] || 0 }))
+  return (data as any[]).map((c) => ({
+    id: c.id,
+    game_id: c.game_id,
+    game_name: c.game?.name ?? '',
+    game_slug: c.game?.slug ?? '',
+    global_slug: c.global_category?.slug ?? '',
+    name: c.name,
+    slug: c.slug,
+    type: c.type,
+    description: c.description ?? null,
+    icon_emoji: c.icon_emoji ?? null,
+    icon_url: c.icon_url ?? null,
+    icon_type: iconTypeOf(c.icon_url ?? null),
+    sort_order: c.sort_order ?? 0,
+    is_enabled: !!c.is_enabled,
+    listing_count: countMap[c.id] || 0,
+  }))
 }
 
+/** "Delete" from the admin UI = disable. The row (and its listings) stay. */
 export async function deleteCategory(id: string) {
   await requireAdmin()
   const supabase = getAdminSupabase()
 
-  // Check if category has listings
-  const { count } = await supabase
-    .from('listings')
-    .select('id', { count: 'exact', head: true })
-    .eq('category_id', id)
-
-  if (count && count > 0) {
-    return { success: false, error: `Cannot delete category with ${count} active listings` }
-  }
-
-  const { error } = await supabase.from('categories').delete().eq('id', id)
-
+  const { error } = await supabase.from('game_categories').update({ is_enabled: false }).eq('id', id)
   if (error) return { success: false, error: error.message }
-  revalidatePath('/admin/categories')
-  // Footer game directory renders on every route (unstable_cache).
-  revalidateTag(GAME_DIRECTORY_TAG)
+  revalidateCategorySurfaces()
   return { success: true }
 }
 
@@ -91,65 +133,34 @@ export async function updateCategory(id: string, data: CategoryData) {
   const supabase = getAdminSupabase()
 
   const { error } = await supabase
-    .from('categories')
+    .from('game_categories')
     .update({
       name: data.name,
       slug: data.slug,
-      game_id: data.game_id || null,
       description: data.description || null,
       icon_emoji: data.icon_emoji || null,
       icon_url: data.icon_url || null,
-      icon_type: data.icon_type || 'emoji',
       sort_order: data.sort_order ?? 99,
-      is_active: data.is_active ?? true,
+      is_enabled: data.is_enabled ?? true,
     })
     .eq('id', id)
 
   if (error) return { success: false, error: error.message }
-  revalidatePath('/admin/categories')
-  revalidatePath('/admin/games')
-  // Footer game directory renders on every route (unstable_cache).
-  revalidateTag(GAME_DIRECTORY_TAG)
+  revalidateCategorySurfaces()
   return { success: true }
 }
 
-export async function insertCategory(data: CategoryData) {
-  await requireAdmin()
-  const supabase = getAdminSupabase()
-
-  const { error } = await supabase.from('categories').insert({
-    name: data.name,
-    slug: data.slug,
-    game_id: data.game_id || null,
-    description: data.description || null,
-    icon_emoji: data.icon_emoji || '📦',
-    icon_url: data.icon_url || null,
-    icon_type: data.icon_type || 'emoji',
-    sort_order: data.sort_order ?? 99,
-    is_active: data.is_active ?? true,
-  })
-
-  if (error) return { success: false, error: error.message }
-  revalidatePath('/admin/categories')
-  revalidatePath('/admin/games')
-  // Footer game directory renders on every route (unstable_cache).
-  revalidateTag(GAME_DIRECTORY_TAG)
-  return { success: true }
-}
-
-export async function toggleCategoryActive(id: string, isActive: boolean) {
+export async function toggleCategoryActive(id: string, isEnabled: boolean) {
   await requireAdmin()
   const supabase = getAdminSupabase()
 
   const { error } = await supabase
-    .from('categories')
-    .update({ is_active: isActive })
+    .from('game_categories')
+    .update({ is_enabled: isEnabled })
     .eq('id', id)
 
   if (error) return { success: false, error: error.message }
-  revalidatePath('/admin/categories')
-  // Footer game directory renders on every route (unstable_cache).
-  revalidateTag(GAME_DIRECTORY_TAG)
+  revalidateCategorySurfaces()
   return { success: true }
 }
 
@@ -179,9 +190,11 @@ export async function uploadCategoryIcon(
     const fileName = `${categoryId}-${Date.now()}.${fileExt}`
     const filePath = `${fileName}`
 
+    const adminSupabase = getAdminSupabase()
+
     // Delete old icon if exists
-    const { data: existingData } = await supabase
-      .from('categories')
+    const { data: existingData } = await adminSupabase
+      .from('game_categories')
       .select('icon_url')
       .eq('id', categoryId)
       .single() as { data: { icon_url: string | null } | null }
@@ -213,22 +226,16 @@ export async function uploadCategoryIcon(
     const iconUrl = urlData.publicUrl
 
     // Update category with new icon URL
-    const adminSupabase = getAdminSupabase()
     const { error: updateError } = await adminSupabase
-      .from('categories')
-      .update({
-        icon_url: iconUrl,
-        icon_type: file.type.includes('svg') ? 'svg' : 'image',
-      })
+      .from('game_categories')
+      .update({ icon_url: iconUrl })
       .eq('id', categoryId)
 
     if (updateError) {
       return { success: false, error: updateError.message }
     }
 
-    revalidatePath('/admin/categories')
-    // Footer game directory renders on every route (unstable_cache).
-    revalidateTag(GAME_DIRECTORY_TAG)
+    revalidateCategorySurfaces()
     return { success: true, url: iconUrl }
   } catch (error: any) {
     return { success: false, error: error.message || 'Upload failed' }
@@ -239,11 +246,11 @@ export async function deleteCategoryIcon(categoryId: string) {
   try {
     await requireAdmin()
     const supabase = await createClient()
+    const adminSupabase = getAdminSupabase()
 
     // Get current icon URL
-    const adminSupabase = getAdminSupabase()
     const { data: categoryData } = await adminSupabase
-      .from('categories')
+      .from('game_categories')
       .select('icon_url')
       .eq('id', categoryId)
       .single() as { data: { icon_url: string | null } | null }
@@ -257,18 +264,12 @@ export async function deleteCategoryIcon(categoryId: string) {
 
     // Reset category to emoji icon
     const { error } = await adminSupabase
-      .from('categories')
-      .update({
-        icon_url: null,
-        icon_type: 'emoji',
-      })
+      .from('game_categories')
+      .update({ icon_url: null })
       .eq('id', categoryId)
 
     if (error) return { success: false, error: error.message }
-
-    revalidatePath('/admin/categories')
-    // Footer game directory renders on every route (unstable_cache).
-    revalidateTag(GAME_DIRECTORY_TAG)
+    revalidateCategorySurfaces()
     return { success: true }
   } catch (error: any) {
     return { success: false, error: error.message || 'Delete failed' }

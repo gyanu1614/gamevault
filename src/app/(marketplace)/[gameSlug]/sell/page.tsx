@@ -71,12 +71,12 @@ const getSellPageGame = cache(async (gameSlug: string) => {
   if (!game) return null
 
   const { data: cats } = (await supabase
-    .from('categories')
-    .select('slug, metadata')
+    .from('game_categories')
+    .select('slug, type')
     .eq('game_id', game.id)
-    .eq('is_active', true)
-    .order('display_order', { ascending: true })) as unknown as {
-    data: { slug: string; metadata: { type?: string } | null }[] | null
+    .eq('is_enabled', true)
+    .order('sort_order', { ascending: true })) as unknown as {
+    data: { slug: string; type: string | null }[] | null
   }
   const categories = cats ?? []
 
@@ -89,9 +89,9 @@ const getSellPageGame = cache(async (gameSlug: string) => {
     // the default (they also carry the highest fee, so leading with them
     // quotes sellers the worst rate the game offers).
     primaryCategory:
-      categories.find((c) => c.metadata?.type === 'currency') ??
-      categories.find((c) => c.metadata?.type === 'items') ??
-      categories.find((c) => c.metadata?.type === 'account') ??
+      categories.find((c) => c.type === 'currency') ??
+      categories.find((c) => c.type === 'items') ??
+      categories.find((c) => c.type === 'account') ??
       categories[0] ??
       null,
   }
@@ -122,11 +122,11 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const primary = game.primaryCategory
   const categoryWord = primary
     ? ({ account: 'Accounts', items: 'Items', currency: 'Currency', top_up: 'Top-Ups' } as Record<string, string>)[
-        primary.metadata?.type ?? ''
+        primary.type ?? ''
       ] ?? 'Items'
     : 'Items'
   const rate = commissionPct({
-    categoryMetaType: primary?.metadata?.type ?? null,
+    categoryMetaType: primary?.type ?? null,
     categorySlug: primary?.slug ?? null,
     gameSlug,
   })

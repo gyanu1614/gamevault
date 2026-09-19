@@ -30,21 +30,6 @@ export type Database = {
         }
         Returns: Json
       }
-      // Added via 20260916100000_rate_limits.sql.
-      // NOTE: inert today — this hand-written schema's tables have no
-      // `Relationships` key, so it fails postgrest-js' GenericSchema
-      // constraint and every .rpc() through it degrades to `undefined` args.
-      // Kept because the signatures are correct and become load-bearing the
-      // moment that schema is widened; src/lib/security/rate-limit.ts types
-      // the call locally in the meantime.
-      rate_limit_hit: {
-        Args: { p_key: string; p_limit: number; p_window_seconds: number }
-        Returns: boolean
-      }
-      rate_limits_cleanup: {
-        Args: { p_retain_seconds?: number }
-        Returns: number
-      }
     }
     Enums: {
       [_ in never]: never
@@ -2170,15 +2155,26 @@ export type Database = {
           available_regions: Json
           created_at: string
           delivery_modes: string[]
+          description: string | null
+          extras: Json
           game_id: string
           global_category_id: string
+          icon_emoji: string | null
+          icon_url: string | null
           id: string
           is_enabled: boolean
+          legacy_category_id: string | null
+          name: string
           requires_platform: boolean
           requires_region: boolean
           seo_description: string | null
+          seo_h1: string | null
+          seo_intro: string | null
           seo_title: string | null
+          slug: string
           sort_order: number
+          sub_types: string[]
+          type: string
           updated_at: string
         }
         Insert: {
@@ -2186,15 +2182,26 @@ export type Database = {
           available_regions?: Json
           created_at?: string
           delivery_modes?: string[]
+          description?: string | null
+          extras?: Json
           game_id: string
           global_category_id: string
+          icon_emoji?: string | null
+          icon_url?: string | null
           id?: string
           is_enabled?: boolean
+          legacy_category_id?: string | null
+          name: string
           requires_platform?: boolean
           requires_region?: boolean
           seo_description?: string | null
+          seo_h1?: string | null
+          seo_intro?: string | null
           seo_title?: string | null
+          slug: string
           sort_order?: number
+          sub_types?: string[]
+          type: string
           updated_at?: string
         }
         Update: {
@@ -2202,15 +2209,26 @@ export type Database = {
           available_regions?: Json
           created_at?: string
           delivery_modes?: string[]
+          description?: string | null
+          extras?: Json
           game_id?: string
           global_category_id?: string
+          icon_emoji?: string | null
+          icon_url?: string | null
           id?: string
           is_enabled?: boolean
+          legacy_category_id?: string | null
+          name?: string
           requires_platform?: boolean
           requires_region?: boolean
           seo_description?: string | null
+          seo_h1?: string | null
+          seo_intro?: string | null
           seo_title?: string | null
+          slug?: string
           sort_order?: number
+          sub_types?: string[]
+          type?: string
           updated_at?: string
         }
         Relationships: [
@@ -2320,6 +2338,8 @@ export type Database = {
           ecosystem: string | null
           emoji: string | null
           id: string
+          image_source: string | null
+          image_synced_at: string | null
           image_url: string | null
           is_active: boolean | null
           is_popular: boolean
@@ -2346,6 +2366,8 @@ export type Database = {
           ecosystem?: string | null
           emoji?: string | null
           id?: string
+          image_source?: string | null
+          image_synced_at?: string | null
           image_url?: string | null
           is_active?: boolean | null
           is_popular?: boolean
@@ -2372,6 +2394,8 @@ export type Database = {
           ecosystem?: string | null
           emoji?: string | null
           id?: string
+          image_source?: string | null
+          image_synced_at?: string | null
           image_url?: string | null
           is_active?: boolean | null
           is_popular?: boolean
@@ -2503,12 +2527,15 @@ export type Database = {
       global_categories: {
         Row: {
           created_at: string
+          default_slug: string
+          default_type: string
           description: string | null
           icon_emoji: string | null
           icon_url: string | null
           id: string
           is_active: boolean
           name: string
+          parent_id: string | null
           seo_description: string | null
           seo_title: string | null
           slug: string
@@ -2517,12 +2544,15 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          default_slug: string
+          default_type: string
           description?: string | null
           icon_emoji?: string | null
           icon_url?: string | null
           id?: string
           is_active?: boolean
           name: string
+          parent_id?: string | null
           seo_description?: string | null
           seo_title?: string | null
           slug: string
@@ -2531,19 +2561,30 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          default_slug?: string
+          default_type?: string
           description?: string | null
           icon_emoji?: string | null
           icon_url?: string | null
           id?: string
           is_active?: boolean
           name?: string
+          parent_id?: string | null
           seo_description?: string | null
           seo_title?: string | null
           slug?: string
           sort_order?: number
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "global_categories_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "global_categories"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       inform_disclosures: {
         Row: {
@@ -3076,6 +3117,7 @@ export type Database = {
           delivery_method_type: string | null
           delivery_time: string | null
           description: string
+          game_category_id: string | null
           game_id: string
           id: string
           images: string[] | null
@@ -3116,6 +3158,7 @@ export type Database = {
           delivery_method_type?: string | null
           delivery_time?: string | null
           description: string
+          game_category_id?: string | null
           game_id: string
           id?: string
           images?: string[] | null
@@ -3156,6 +3199,7 @@ export type Database = {
           delivery_method_type?: string | null
           delivery_time?: string | null
           description?: string
+          game_category_id?: string | null
           game_id?: string
           id?: string
           images?: string[] | null
@@ -3224,6 +3268,13 @@ export type Database = {
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "listings_game_category_id_fkey"
+            columns: ["game_category_id"]
+            isOneToOne: false
+            referencedRelation: "game_categories"
             referencedColumns: ["id"]
           },
           {
@@ -4479,6 +4530,24 @@ export type Database = {
             referencedColumns: ["seller_id"]
           },
         ]
+      }
+      rate_limits: {
+        Row: {
+          count: number
+          key: string
+          window_start: string
+        }
+        Insert: {
+          count?: number
+          key: string
+          window_start: string
+        }
+        Update: {
+          count?: number
+          key?: string
+          window_start?: string
+        }
+        Relationships: []
       }
       referral_codes: {
         Row: {
@@ -10172,6 +10241,15 @@ export type Database = {
         }
         Returns: Json
       }
+      rate_limit_hit: {
+        Args: { p_key: string; p_limit: number; p_window_seconds: number }
+        Returns: boolean
+      }
+      rate_limits_cleanup: {
+        Args: { p_retain_seconds?: number }
+        Returns: number
+      }
+      rate_limits_version: { Args: never; Returns: number }
       reject_listing: {
         Args: { admin_id: string; listing_id: string; reason: string }
         Returns: undefined

@@ -12,19 +12,23 @@
  * wizard would have accepted. Rejects are written to
  * data/games-seed.rejected.csv with a reason rather than failing the run.
  *
- * Categories are enabled through the existing bridge semantics
- * (game_categories → global_categories, mirrored into the legacy
- * public.categories table that listings.category_id points at), so a seeded
- * game is wired exactly like one created in the admin wizard.
+ * Categories are enabled through ensureGameCategory
+ * (src/lib/categories/ensure.ts) — the same function the admin wizard calls —
+ * so a seeded game is wired exactly like one created in the wizard. Only
+ * game_categories is written (Step 1b); the legacy public.categories mirror
+ * is a Phase-A DB trigger, not this script.
  *
- * Writes use the service-role key: public.games and public.categories are
- * RLS-protected and admin-only.
+ * Writes use the service-role key: public.games and public.game_categories
+ * are RLS-protected and admin-only.
  */
 import { readFileSync, writeFileSync, existsSync } from 'node:fs'
 import { createClient } from '@supabase/supabase-js'
 import { config as loadEnv } from 'dotenv'
 import { validateGameIdentity } from '../src/lib/games/validate-game.ts'
 import { mergeGameRow, findAliasSlugCollisions } from '../src/lib/games/seed-merge.ts'
+import { ensureGameCategory } from '../src/lib/categories/ensure.ts'
+import { getCanonicalCategorySlug } from '../src/lib/utils/category-canonical.ts'
+import { DEFAULT_CURRENCY_CONFIG } from '../src/lib/types/category-configs.ts'
 
 // ── args ───────────────────────────────────────────────────────────────────
 const argv = process.argv.slice(2)
@@ -251,35 +255,30 @@ if (rejected.length) {
   console.log('')
 }
 
+// ── category diff (dry-run + apply both report it) ─────────────────────────
+// A pair counts as "to create" when the game is new, or exists without a
+// game_categories row for that global slug. After the Step 1b migration a
+// re-run against a seeded database must report 0 games / 0 categories.
+const { data: existingPairs } = await supabase
+  .from('game_categories')
+  .select('game_id, global_category:global_categories!game_categories_global_category_id_fkey(slug)')
+const pairSet = new Set((existingPairs ?? []).map((p) => `${p.game_id}|${p.global_category?.slug}`))
+let pairsToCreate = 0
+for (const v of valid) {
+  const prior = existing.get(v.slug)
+  for (const globalSlug of v.categories) {
+    if (!prior || !pairSet.has(`${prior.id}|${globalSlug}`)) pairsToCreate++
+  }
+}
+console.log(`   Categories: ${pairsToCreate} (game, category) pair(s) to create\n`)
+
 if (DRY) {
   console.log('   Dry run complete — no writes issued.\n')
   process.exit(0)
 }
 
 // ── apply ──────────────────────────────────────────────────────────────────
-// Global categories, resolved once: the bridge maps a global slug to the
-// legacy categories.metadata.type the marketplace renders from.
-const GLOBAL_SLUG_TO_LEGACY_TYPE = {
-  currency: 'currency', items: 'items', accounts: 'account',
-  'top-up': 'top_up', boosting: 'service',
-}
-const LEGACY_DEFAULTS = {
-  currency: { name: 'Currency', icon: '💰', description: 'In-game currency' },
-  items:    { name: 'Items',    icon: '🎒', description: 'In-game items' },
-  account:  { name: 'Accounts', icon: '👤', description: 'Game accounts' },
-  top_up:   { name: 'Top Up',   icon: '⚡', description: 'Official top-ups' },
-  service:  { name: 'Boosting', icon: '🚀', description: 'Boosting services' },
-}
-const LEGACY_SLUG = {
-  currency: 'buy-currency', items: 'buy-items', account: 'buy-accounts',
-  top_up: 'top-up', service: 'boosting',
-}
-
-const { data: globalCats } = await supabase
-  .from('global_categories')
-  .select('id, slug')
-  .eq('is_active', true)
-const globalBySlug = new Map((globalCats ?? []).map((c) => [c.slug, c.id]))
+const categoryDeps = { canonicalSlug: getCanonicalCategorySlug, currencyConfig: DEFAULT_CURRENCY_CONFIG }
 
 let inserted = 0, updated = 0, skipped = 0, catsLinked = 0, failed = 0
 const failures = []
@@ -314,44 +313,18 @@ for (const v of valid) {
     updated++
   }
 
-  // Enable each category on both sides of the bridge.
+  // Enable each category through the single creation path. Idempotent:
+  // an existing pair is left exactly as the admin configured it.
   for (const globalSlug of v.categories) {
-    const legacyType = GLOBAL_SLUG_TO_LEGACY_TYPE[globalSlug]
-    const globalId = globalBySlug.get(globalSlug)
-
-    if (globalId) {
-      const { data: pair } = await supabase
-        .from('game_categories')
-        .select('id')
-        .eq('game_id', gameId)
-        .eq('global_category_id', globalId)
-        .maybeSingle()
-      if (!pair) {
-        await supabase.from('game_categories').insert({
-          game_id: gameId, global_category_id: globalId, is_enabled: true,
-        })
-      }
-    }
-
-    // Legacy row — what /[game] and the sitemap actually read.
-    const { data: matches } = await supabase
-      .from('categories')
-      .select('id, is_active')
-      .eq('game_id', gameId)
-      .filter('metadata->>type', 'eq', legacyType)
-    if (!matches || matches.length === 0) {
-      const d = LEGACY_DEFAULTS[legacyType]
-      const { error } = await supabase.from('categories').insert({
-        game_id: gameId,
-        name: d.name,
-        slug: LEGACY_SLUG[legacyType],
-        icon: d.icon,
-        description: d.description,
-        display_order: 0,
-        is_active: true,
-        metadata: { type: legacyType },
-      })
-      if (!error) catsLinked++
+    try {
+      // seedCurrencyConfig: false — a category_configs row makes a hub count as
+      // curated for the sitemap / robots rule; seeded games earn indexability
+      // with inventory (Step 1c), exactly as the legacy insert path behaved.
+      const r = await ensureGameCategory(supabase, { gameId, globalSlug, seedCurrencyConfig: false }, categoryDeps)
+      if (r.created) catsLinked++
+    } catch (e) {
+      failed++
+      failures.push(`${v.slug}/${globalSlug}: ${e?.message ?? e}`)
     }
   }
 }

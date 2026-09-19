@@ -35,7 +35,7 @@ export interface DirectoryCategoryRow {
   game_id: string
   slug: string
   name: string | null
-  metadata: { label?: string; type?: string } | null
+  type: string | null
 }
 
 /**
@@ -53,10 +53,10 @@ export const getCachedGameDirectory = unstable_cache(
         .order('sort_order', { ascending: true })
         .limit(24),
       supabase
-        .from('categories')
-        .select('game_id, slug, name, metadata, display_order, is_active')
-        .eq('is_active', true)
-        .order('display_order', { ascending: true }),
+        .from('game_categories')
+        .select('game_id, slug, name, type, sort_order, is_enabled')
+        .eq('is_enabled', true)
+        .order('sort_order', { ascending: true }),
     ])
     return {
       games: (gamesResult.data as unknown as DirectoryGameRow[] | null) ?? [],

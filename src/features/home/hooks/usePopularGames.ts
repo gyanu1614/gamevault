@@ -119,17 +119,16 @@ export function usePopularGames() {
       // display_order so we can pick the first per game in JS.
       const gameIds = popularFirst.map((g) => g.id)
       const { data: cats } = (await supabase
-        .from('categories')
-        .select('game_id, slug, name, metadata, display_order')
+        .from('game_categories')
+        .select('game_id, slug, name, sort_order')
         .in('game_id', gameIds)
-        .eq('is_active', true)
-        .order('display_order', { ascending: true })) as unknown as {
+        .eq('is_enabled', true)
+        .order('sort_order', { ascending: true })) as unknown as {
           data: {
             game_id: string
             slug: string
             name: string | null
-            metadata: { label?: string; name?: string } | null
-            display_order: number | null
+            sort_order: number | null
           }[] | null
         }
 
@@ -144,8 +143,6 @@ export function usePopularGames() {
         }
         const label =
           c.name ||
-          c.metadata?.label ||
-          c.metadata?.name ||
           c.slug
             .replace(/^buy-/, '')
             .replace(/[-_]+/g, ' ')
