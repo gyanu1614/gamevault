@@ -1,0 +1,332 @@
+{
+ "contentType": "Games",
+ "gameSetTypeId": 23,
+ "gameSetTargetId": 671,
+ "primarySortId": 23,
+ "secondarySortId": 671,
+ "sortId": "top-playing-now",
+ "sortDisplayName": "Top Playing Now",
+ "subtitle": "Results for all devices and locations",
+ "topicLayoutData": {
+  "infoText": "Top experiences sorted by the number of concurrent users.",
+  "playButtonStyle": "Disabled"
+ },
+ "treatmentType": "Carousel",
+ "games": [
+  {
+   "universeId": 10563114921,
+   "rootPlaceId": 107778070777162,
+   "name": "Steal An Egg",
+   "playerCount": 2034139,
+   "isSponsored": false,
+   "totalUpVotes": 2348921,
+   "totalDownVotes": 181137
+  },
+  {
+   "universeId": 1686885941,
+   "rootPlaceId": 4924922222,
+   "name": "Brookhaven 🏡RP",
+   "playerCount": 561073,
+   "isSponsored": false,
+   "totalUpVotes": 8560306,
+   "totalDownVotes": 1404778
+  },
+  {
+   "universeId": 994732206,
+   "rootPlaceId": 2753915549,
+   "name": "[🧲] Blox Fruits",
+   "playerCount": 296094,
+   "isSponsored": false,
+   "totalUpVotes": 12687089,
+   "totalDownVotes": 1060935
+  },
+  {
+   "universeId": 6035872082,
+   "rootPlaceId": 17625359962,
+   "name": "[🏆] RIVALS",
+   "playerCount": 286676,
+   "isSponsored": false,
+   "totalUpVotes": 10589717,
+   "totalDownVotes": 708052
+  },
+  {
+   "universeId": 66654135,
+   "rootPlaceId": 142823291,
+   "name": "Murder Mystery 2",
+   "playerCount": 263401,
+   "isSponsored": false,
+   "totalUpVotes": 10607016,
+   "totalDownVotes": 1070090
+  },
+  {
+   "universeId": 5595353122,
+   "rootPlaceId": 16205713724,
+   "name": "Slayers 2",
+   "playerCount": 204979,
+   "isSponsored": false,
+   "totalUpVotes": 153739,
+   "totalDownVotes": 1909
+  },
+  {
+   "universeId": 3508322461,
+   "rootPlaceId": 9391468976,
+   "name": "[SKY ASSASSIN] Jujutsu Shenanigans",
+   "playerCount": 181920,
+   "isSponsored": false,
+   "totalUpVotes": 2580352,
+   "totalDownVotes": 410466
+  },
+  {
+   "universeId": 383310974,
+   "rootPlaceId": 920587237,
+   "name": "[🐈] Adopt Me!",
+   "playerCount": 152543,
+   "isSponsored": false,
+   "totalUpVotes": 9458542,
+   "totalDownVotes": 1511643
+  },
+  {
+   "universeId": 7326934954,
+   "rootPlaceId": 79546208627805,
+   "name": "99 Nights in the Forest 🔦",
+   "playerCount": 147695,
+   "isSponsored": false,
+   "totalUpVotes": 5378098,
+   "totalDownVotes": 565648
+  },
+  {
+   "universeId": 7709344486,
+   "rootPlaceId": 109983668079237,
+   "name": "Steal a Brainrot",
+   "playerCount": 128470,
+   "isSponsored": false,
+   "totalUpVotes": 15417007,
+   "totalDownVotes": 2674383
+  },
+  {
+   "universeId": 10035204815,
+   "rootPlaceId": 124216119978534,
+   "name": "[⌛] Ride A Pet",
+   "playerCount": 122761,
+   "isSponsored": false,
+   "totalUpVotes": 63379,
+   "totalDownVotes": 1826
+  },
+  {
+   "universeId": 9584852943,
+   "rootPlaceId": 95082159892680,
+   "name": "[X2] +1 Speed Keyboard Escape | Candy & Chocolate",
+   "playerCount": 114649,
+   "isSponsored": false,
+   "totalUpVotes": 9743561,
+   "totalDownVotes": 301605
+  },
+  {
+   "universeId": 10766456501,
+   "rootPlaceId": 74205509034203,
+   "name": "The Hunt: Roblox 20",
+   "playerCount": 102104,
+   "isSponsored": false,
+   "totalUpVotes": 19139,
+   "totalDownVotes": 4305
+  },
+  {
+   "universeId": 5203828273,
+   "rootPlaceId": 15101393044,
+   "name": "[🎂] Dress To Impress",
+   "playerCount": 91173,
+   "isSponsored": false,
+   "totalUpVotes": 3984894,
+   "totalDownVotes": 414999
+  },
+  {
+   "universeId": 5569032992,
+   "rootPlaceId": 16116270224,
+   "name": "🌟 Dandy's World [ALPHA]",
+   "playerCount": 90256,
+   "isSponsored": false,
+   "totalUpVotes": 1681767,
+   "totalDownVotes": 258665
+  },
+  {
+   "universeId": 6701277882,
+   "rootPlaceId": 121864768012064,
+   "name": "[🌸UPD] Fish It! 🐟",
+   "playerCount": 87944,
+   "isSponsored": false,
+   "totalUpVotes": 1342675,
+   "totalDownVotes": 277703
+  },
+  {
+   "universeId": 7219654364,
+   "rootPlaceId": 135856908115931,
+   "name": "[🌌DUELS] Murderers VS Sheriffs",
+   "playerCount": 84216,
+   "isSponsored": false,
+   "totalUpVotes": 252312,
+   "totalDownVotes": 36629
+  },
+  {
+   "universeId": 2711375305,
+   "rootPlaceId": 7041939546,
+   "name": "Catalog Avatar Creator",
+   "playerCount": 78581,
+   "isSponsored": false,
+   "totalUpVotes": 2990277,
+   "totalDownVotes": 200442
+  },
+  {
+   "universeId": 5750914919,
+   "rootPlaceId": 16732694052,
+   "name": "Fisch 📜 [JOURNAL]",
+   "playerCount": 78516,
+   "isSponsored": false,
+   "totalUpVotes": 3011152,
+   "totalDownVotes": 307991
+  },
+  {
+   "universeId": 6331902150,
+   "rootPlaceId": 18687417158,
+   "name": "[WEEK 3 ⛱️] Forsaken",
+   "playerCount": 75521,
+   "isSponsored": false,
+   "totalUpVotes": 2373193,
+   "totalDownVotes": 435334
+  },
+  {
+   "universeId": 3808081382,
+   "rootPlaceId": 10449761463,
+   "name": "The Strongest Battlegrounds",
+   "playerCount": 60694,
+   "isSponsored": false,
+   "totalUpVotes": 5292478,
+   "totalDownVotes": 1022698
+  },
+  {
+   "universeId": 10155360168,
+   "rootPlaceId": 126987974021910,
+   "name": "Illegal Soccer",
+   "playerCount": 59526,
+   "isSponsored": false,
+   "totalUpVotes": 47629,
+   "totalDownVotes": 7483
+  },
+  {
+   "universeId": 10148749921,
+   "rootPlaceId": 78515283254292,
+   "name": "Animal Hospital (Anomaly) 🧪",
+   "playerCount": 57523,
+   "isSponsored": false,
+   "totalUpVotes": 1284352,
+   "totalDownVotes": 82338
+  },
+  {
+   "universeId": 47545,
+   "rootPlaceId": 192800,
+   "name": "🍕Work at a Pizza Place",
+   "playerCount": 56614,
+   "isSponsored": false,
+   "totalUpVotes": 3451364,
+   "totalDownVotes": 263573
+  },
+  {
+   "universeId": 3240075297,
+   "rootPlaceId": 8481844229,
+   "name": "Berry Avenue 🏠 RP",
+   "playerCount": 50482,
+   "isSponsored": false,
+   "totalUpVotes": 1136781,
+   "totalDownVotes": 184688
+  },
+  {
+   "universeId": 2440500124,
+   "rootPlaceId": 6516141723,
+   "name": "DOORS 👔",
+   "playerCount": 47521,
+   "isSponsored": false,
+   "totalUpVotes": 4682967,
+   "totalDownVotes": 352756
+  },
+  {
+   "universeId": 6931042565,
+   "rootPlaceId": 73956553001240,
+   "name": "[UPD] Volleyball Legends",
+   "playerCount": 44337,
+   "isSponsored": false,
+   "totalUpVotes": 2541678,
+   "totalDownVotes": 127444
+  },
+  {
+   "universeId": 2619619496,
+   "rootPlaceId": 6872265039,
+   "name": "BedWars [📦NEW ITEM SKINS!]",
+   "playerCount": 43132,
+   "isSponsored": false,
+   "totalUpVotes": 2471543,
+   "totalDownVotes": 532293
+  },
+  {
+   "universeId": 65241,
+   "rootPlaceId": 189707,
+   "name": "Natural Disaster Survival",
+   "playerCount": 41467,
+   "isSponsored": false,
+   "totalUpVotes": 4393712,
+   "totalDownVotes": 446183
+  },
+  {
+   "universeId": 5361032378,
+   "rootPlaceId": 15532962292,
+   "name": "Sol's RNG [ Summer Event 🏖️]",
+   "playerCount": 41253,
+   "isSponsored": false,
+   "totalUpVotes": 1416884,
+   "totalDownVotes": 133660
+  },
+  {
+   "universeId": 3317771874,
+   "rootPlaceId": 8737899170,
+   "name": "🕹️ [ARCADE] Pet Simulator 99! 💰",
+   "playerCount": 41212,
+   "isSponsored": false,
+   "totalUpVotes": 3064843,
+   "totalDownVotes": 170082
+  },
+  {
+   "universeId": 10761687472,
+   "rootPlaceId": 113481077323469,
+   "name": "Scream And Run [UPD 3]",
+   "playerCount": 40355,
+   "isSponsored": false,
+   "totalUpVotes": 53597,
+   "totalDownVotes": 7341
+  },
+  {
+   "universeId": 4839802560,
+   "rootPlaceId": 13967668166,
+   "name": "LifeTogether 🏠 RP",
+   "playerCount": 40179,
+   "isSponsored": false,
+   "totalUpVotes": 934981,
+   "totalDownVotes": 98988
+  },
+  {
+   "universeId": 10756011174,
+   "rootPlaceId": 77108422251420,
+   "name": "[🐶] Search For The Needle",
+   "playerCount": 38317,
+   "isSponsored": false,
+   "totalUpVotes": 230839,
+   "totalDownVotes": 10968
+  },
+  {
+   "universeId": 4949420752,
+   "rootPlaceId": 14315258385,
+   "name": "Realistic Street Soccer",
+   "playerCount": 38011,
+   "isSponsored": false,
+   "totalUpVotes": 482570,
+   "totalDownVotes": 87672
+  }
+ ]
+}

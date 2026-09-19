@@ -1,0 +1,54 @@
+{
+ "data": [
+  {
+   "id": 10563114921,
+   "rootPlaceId": 107778070777162,
+   "name": "Steal An Egg",
+   "playing": 2028896,
+   "visits": 4026689367,
+   "favoritedCount": 4671184,
+   "created": "2026-07-25T07:50:51.492Z",
+   "genre": "All"
+  },
+  {
+   "id": 7709344486,
+   "rootPlaceId": 109983668079237,
+   "name": "Steal a Brainrot",
+   "playing": 128281,
+   "visits": 73516595059,
+   "favoritedCount": 29365624,
+   "created": "2025-05-16T00:49:12.563Z",
+   "genre": "All"
+  },
+  {
+   "id": 383310974,
+   "rootPlaceId": 920587237,
+   "name": "[🐈] Adopt Me!",
+   "playing": 152132,
+   "visits": 44766920081,
+   "favoritedCount": 29608961,
+   "created": "2017-07-14T19:26:21.347Z",
+   "genre": "RPG"
+  },
+  {
+   "id": 6035872082,
+   "rootPlaceId": 17625359962,
+   "name": "[🏆] RIVALS",
+   "playing": 287733,
+   "visits": 18193952910,
+   "favoritedCount": 92017629,
+   "created": "2024-05-26T16:47:48.617Z",
+   "genre": "FPS"
+  },
+  {
+   "id": 994732206,
+   "rootPlaceId": 2753915549,
+   "name": "[🧲] Blox Fruits",
+   "playing": 296685,
+   "visits": 64514576406,
+   "favoritedCount": 19937367,
+   "created": "2019-01-16T03:29:19.433Z",
+   "genre": "Adventure"
+  }
+ ]
+}
