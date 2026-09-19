@@ -95,7 +95,7 @@ export interface CurrencyPageData {
  * (so the page falls through to the generic items grid).
  */
 import { fetchCategoryConfigBySlug } from '@/lib/actions/admin-category-configs'
-import { createClient as createAnonClient } from '@/lib/supabase/server'
+import { createAnonClient } from '@/lib/supabase/anon'
 
 export async function getCurrencyShell(
   gameSlug: string,
@@ -106,7 +106,7 @@ export async function getCurrencyShell(
   // which meant new games created via the admin wizard fell through to
   // the legacy `CategoryPageLayout`. Now any (game, category) pair where
   // categories.metadata.type === 'currency' renders the rich layout.
-  const supabase = await createAnonClient()
+  const supabase = createAnonClient()
   const { data: row } = await supabase
     .from('game_categories')
     .select('type, game:games!game_categories_game_id_fkey(slug)')

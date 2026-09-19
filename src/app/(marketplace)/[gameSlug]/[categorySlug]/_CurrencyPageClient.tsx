@@ -11,6 +11,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, useTransition, type ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuthDialog } from '@/components/auth/AuthDialog'
+import { useAuth } from '@/hooks/use-auth'
 import {
   ShieldCheck, Zap, Store, Star, Minus, Plus, ArrowRight,
   SlidersHorizontal, ChevronDown, Package, Clock,
@@ -265,15 +266,12 @@ function MetricChipMobile({ icon: Icon, label, value }: { icon: LucideIcon; labe
 export default function CurrencyPageClient({
   data,
   gameImageUrl,
-  viewerId,
   gameSlug,
   introLine,
   blogRail,
 }: {
   data: CurrencyPageData
   gameImageUrl?: string | null
-  /** V14m — Current logged-in user. Used to detect self-purchase. */
-  viewerId?: string | null
   /** V43 — Game slug for the blog rail's relevance filter. */
   gameSlug?: string
   /** SEO intro sentence (live stats), server-computed so it lands in
@@ -285,6 +283,12 @@ export default function CurrencyPageClient({
   const allOffers = useMemo<Offer[]>(() => [data.hero, ...data.sellers], [data])
   const [activeId, setActiveId] = useState<string>(data.hero.id)
   const activeOffer = allOffers.find((o) => o.id === activeId) ?? data.hero
+  // V14m/Step 7a — the viewer comes from the client auth context now (the
+  // page is ISR; resolving the session on the server made it dynamic). While
+  // auth is still loading a click goes straight to checkout, which enforces
+  // sign-in itself — never bounce a signed-in buyer to the login dialog.
+  const { user: viewer, loading: authLoading } = useAuth()
+  const viewerId = viewer?.id ?? null
   // V14m — Is the current viewer the seller of the active offer?
   const isOwnOffer = !!viewerId && !!activeOffer.sellerId && activeOffer.sellerId === viewerId
 
@@ -300,7 +304,7 @@ export default function CurrencyPageClient({
   const goToCheckout = (offerId: string, quantity: number) => {
     // Logged out: open the sign-in modal in place with checkout as the
     // post-auth redirect (no bounce to home; buyer keeps their context).
-    if (!viewerId) {
+    if (!viewerId && !authLoading) {
       openAuth('login', { redirect: `/checkout/${offerId}?qty=${quantity}` })
       return
     }
