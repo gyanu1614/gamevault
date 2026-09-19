@@ -373,12 +373,22 @@ function normalise(html) {
 export function renderedBody(html) {
   const m = html.match(/<body[^>]*>([\s\S]*)<\/body>/i)
   const body = m ? m[1] : html
-  return body
-    .replace(/<script[\s\S]*?<\/script>/gi, '')
-    .replace(/\s+/g, ' ')
-    .replace(/\d{1,2}:\d{2}\s*(UTC|AM|PM)/gi, 'TIME')
-    .replace(/\d{4}-\d{2}-\d{2}T[\d:.]+Z?/g, 'TIMESTAMP')
-    .trim()
+  return (
+    body
+      .replace(/<script[\s\S]*?<\/script>/gi, '')
+      // Empty Suspense boundaries render nothing. A client leaf that only reads
+      // useSearchParams() (SearchParamsBridge, Step 7a) leaves a bailout
+      // template on a static route; an empty resolved boundary is the same
+      // thing on a dynamic one. Both are invisible, so neither is a diff.
+      .replace(/<!--\$!--><template data-dgst="BAILOUT_TO_CLIENT_SIDE_RENDERING"><\/template><!--\/\$-->/g, '')
+      .replace(/<!--\$--><!--\/\$-->/g, '')
+      .replace(/\s+/g, ' ')
+      .replace(/\d{1,2}:\d{2}\s*(UTC|AM|PM)/gi, 'TIME')
+      .replace(/\d{4}-\d{2}-\d{2}T[\d:.]+Z?/g, 'TIMESTAMP')
+      // Freshness copy ("36m ago", "1h ago") drifts between the two fetches.
+      .replace(/\b\d+\s*(m|h|d|min|mins|minutes?|hours?|days?)\s+ago\b/gi, 'RELTIME')
+      .trim()
+  )
 }
 
 /** SEO-critical head fields, compared field by field. */

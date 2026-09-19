@@ -17,8 +17,11 @@
  *   R3  force-dynamic / noStore / connection() — explicit opt-outs.
  *   R4  closed set — a page whose generateStaticParams derives from the
  *       content-hub config (`contentHubSlugsFor` / `CONTENT_HUB_GAME_SLUGS`)
- *       serves a closed set of params and must export `dynamicParams = false`,
- *       so an unknown slug is a static 404 with no function invocation.
+ *       serves a closed set of params and must export `dynamicParams = false`.
+ *       NOTE: on Vercel that flag alone is NOT enforced at runtime (Next only
+ *       throws its fallback-false 404 outside minimal mode; the Step 7a
+ *       preview served /rust/blog as 200). The page body must ALSO
+ *       `notFound()` by the same rule — the 404 is then cached by ISR.
  *   R5  ISR — a public page under a dynamic segment must export a numeric
  *       `revalidate` (or `dynamic = 'force-static'`).
  *

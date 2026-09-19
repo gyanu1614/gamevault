@@ -25,3 +25,20 @@ export async function getBlogHubGameSlugs(
   }
   return [...slugs].sort()
 }
+
+/**
+ * Runtime twin of getBlogHubGameSlugs, for the page body: a hub exists for a
+ * content-hub game, or for any game with at least one published post.
+ *
+ * Needed because `dynamicParams = false` is not enforced on Vercel — Next only
+ * throws its fallback-false 404 outside minimal mode (base-server.js), and the
+ * Step 7a preview served /rust/blog as a 200 empty hub despite the closed set.
+ * The page 404s here by the same rule; on ISR that 404 is then cached.
+ */
+export function isBlogHubGame(
+  gameSlug: string,
+  posts: readonly unknown[],
+  hubSlugs: readonly string[] = CONTENT_HUB_GAME_SLUGS,
+): boolean {
+  return hubSlugs.includes(gameSlug) || posts.length > 0
+}

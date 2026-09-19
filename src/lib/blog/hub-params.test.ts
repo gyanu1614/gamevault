@@ -15,7 +15,7 @@ vi.mock('react', async (importOriginal) => ({
   cache: (fn: unknown) => fn,
 }))
 
-import { getBlogHubGameSlugs } from './hub-params'
+import { getBlogHubGameSlugs, isBlogHubGame } from './hub-params'
 
 const post = (primaryGameSlug: string | null) => ({ primaryGameSlug })
 
@@ -40,5 +40,23 @@ describe('getBlogHubGameSlugs', () => {
       throw new Error('db down')
     })
     expect(slugs).toEqual(['adopt-me'])
+  })
+})
+
+/**
+ * Runtime twin of the static set. `dynamicParams = false` is NOT enforced on
+ * Vercel: Next only throws its fallback-false 404 outside minimal mode
+ * (base-server.js), and the preview served /rust/blog and /cs2/blog as 200
+ * empty hubs. The page must 404 in its own body, by the same rule.
+ */
+describe('isBlogHubGame', () => {
+  it('is true for a content-hub game even with no posts yet', () => {
+    expect(isBlogHubGame('steal-an-egg', [], ['steal-an-egg'])).toBe(true)
+  })
+  it('is true for a non-hub game that has a published post', () => {
+    expect(isBlogHubGame('valorant', [post('valorant')], ['adopt-me'])).toBe(true)
+  })
+  it('is false for a game with neither (the 233 empty hubs)', () => {
+    expect(isBlogHubGame('rust', [], ['adopt-me', 'steal-a-brainrot'])).toBe(false)
   })
 })

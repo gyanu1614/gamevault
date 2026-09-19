@@ -23,7 +23,7 @@ import { ArticleGrid } from './_ArticleGrid'
 import { ValuesTeaser, CalculatorTeaser } from './_HubTeasers'
 import { SabSellerCta } from '../_SabSellerCta'
 import { getHubTopValues, getHubStatStrip, getHubCalcExample } from './_hubData'
-import { getBlogHubGameSlugs } from '@/lib/blog/hub-params'
+import { getBlogHubGameSlugs, isBlogHubGame } from '@/lib/blog/hub-params'
 import { cache } from 'react'
 
 export const revalidate = 3600
@@ -53,6 +53,9 @@ interface HubGame {
 
 // STATE-004 — called from generateMetadata and the page body; cache() makes
 // the two runs of one request share a single query.
+// Shared by generateMetadata (hub guard) and the body — one query per render.
+const getPosts = cache(getGamePosts)
+
 const getGame = cache(async function getGame(gameSlug: string): Promise<HubGame | null> {
   const supabase = createAnonClient()
   const { data } = await (supabase as any)
@@ -113,8 +116,10 @@ export async function generateMetadata({
   params: Promise<{ gameSlug: string }>
 }): Promise<Metadata> {
   const { gameSlug } = await params
-  const game = await getGame(gameSlug)
-  if (!game) return { title: 'Not Found' }
+  const [game, posts] = await Promise.all([getGame(gameSlug), getPosts(gameSlug)])
+  // Same rule as the body (Step 7a): a real 404, not a "Not Found" title on a
+  // 200 — see ROUTE-008.
+  if (!game || !isBlogHubGame(gameSlug, posts)) notFound()
   return {
     title: `${game.name} Guides, Values & Trading Tips`,
     description: `Value lists, trading guides, and selling tips for ${game.name} — updated regularly with real DropMarket marketplace data.`,
@@ -135,13 +140,21 @@ export default async function GameBlogIndex({
 }) {
   const { gameSlug } = await params
 
+  // Step 7a — decide 404 before the fan-out. `dynamicParams = false` alone is
+  // not enforced on Vercel (Next only throws its fallback-false 404 outside
+  // minimal mode), so without this every active game answered /{game}/blog
+  // with an empty hub — eight queries per crawl hit. A content-hub game passes
+  // on the compile-time set; anything else needs a published post (one
+  // query, request-cached and reused below). The 404 is then cached by ISR.
+  const posts = await getPosts(gameSlug)
+  if (!isBlogHubGame(gameSlug, posts)) notFound()
+
   // STATE-007 — every member below takes gameSlug (not game), so getGame does
   // not gate them; it joins the fan-out instead of running ahead of it. The
   // 404 guard still runs before anything is rendered.
-  const [game, posts, pricedItems, topValues, heroPets, statStrip, calcExample, hubNav] =
+  const [game, pricedItems, topValues, heroPets, statStrip, calcExample, hubNav] =
     await Promise.all([
       getGame(gameSlug),
-      getGamePosts(gameSlug),
       getPricedItemCount(gameSlug),
       // A longer list feeds the auto-scrolling "Live Values" marquee.
       getHubTopValues(gameSlug, 10),
