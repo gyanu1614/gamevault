@@ -19,6 +19,7 @@
  *     their source egg's price instead.
  */
 import { createServiceRoleClient } from '@/lib/supabase/service'
+import type { RepriceOptions } from '@/lib/pricing/registry'
 import {
   computeReputablePrices,
   type RawListing,
@@ -105,8 +106,14 @@ export const MIN_BELIEVABLE_UNIT_USD = 0.01
  */
 export const MAX_BELIEVABLE_STOCK = 100_000
 
+/**
+ * `options.full` is accepted for registry parity but not yet acted on: this
+ * game reads ~2k rows, far inside budget. Add incremental writes the same way
+ * SAB does it if that changes.
+ */
 export async function runStealAnEggCorrection(
   gameSlug = 'steal-an-egg',
+  options: RepriceOptions = {},
 ): Promise<Record<string, unknown>> {
   const admin = createServiceRoleClient()
   const startedAt = new Date().toISOString()

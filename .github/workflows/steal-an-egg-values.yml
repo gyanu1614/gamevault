@@ -54,18 +54,16 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
-      # Prices are recomputed by the shared correct-prices cron, which runs the
-      # same reputable model for every game. Calling it here keeps the 3h
-      # cadence end-to-end instead of waiting for the daily Vercel cron.
-      - name: Recompute prices (shared reputable model)
+      # Prices are recomputed HERE on the runner, not through
+      # /api/cron/correct-prices. That route 504'd on every SAB run from
+      # 2026-09-14 once the read outgrew the 300s function budget, and the
+      # failure was swallowed — prices froze for five days behind a green
+      # workflow. The runner has no such limit and fails the job on error.
+      - name: Reprice Steal An Egg
         env:
-          CRON_SECRET: ${{ secrets.CRON_SECRET }}
-          PUBLIC_API_URL: ${{ secrets.PUBLIC_API_URL }}
-        run: |
-          curl -sS -f -X POST \
-            -H "Authorization: Bearer ${CRON_SECRET}" \
-            "${PUBLIC_API_URL}/api/cron/correct-prices?game=steal-an-egg" \
-            || { echo "correct-prices failed"; exit 1; }
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: pnpm reprice --game=steal-an-egg
 
       - name: Revalidate the value pages
         env:

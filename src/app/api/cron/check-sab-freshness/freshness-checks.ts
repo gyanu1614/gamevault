@@ -172,6 +172,101 @@ export function evaluate(
   }
 }
 
+/**
+ * A per-row staleness check: how many rows have NOT advanced.
+ *
+ * The max() checks above answer "did ANY row move?". That question has a blind
+ * spot, and on 2026-09-14 the pipeline fell straight into it: correct-prices
+ * began 504-ing on every crawl, but ~173 of 393 brainrots still repriced, so
+ * max(price_updated_at) was always minutes old and every check stayed green —
+ * for five days — while 214 brainrots served Sep 14 prices behind a confident
+ * "Updated" badge on the values pages.
+ *
+ * So we also ask the opposite question: "did any row NOT move?" A partial
+ * freeze is the failure mode that actually reaches users, because the rows that
+ * stop moving are invisible behind the rows that don't.
+ */
+export type StaleCountCheck = {
+  table: string
+  column: string
+  /** Rows older than this are counted as stale. */
+  stalenessHours: number
+  /**
+   * How many stale rows are tolerated before alerting. Not always 0: a game can
+   * carry a few items with no listings at all, and those must not cry wolf.
+   */
+  maxStaleRows: number
+}
+
+export type StaleCountResult = {
+  table: string
+  column: string
+  staleRows: number | null
+  maxStaleRows: number
+  stalenessHours: number
+  stale: boolean
+  error?: string
+}
+
+/**
+ * The stale-row checks. SAB is the one with a five-day outage behind it; the
+ * threshold tolerates the handful of brainrots that genuinely have no listings.
+ */
+export const STALE_COUNT_CHECKS: StaleCountCheck[] = [
+  {
+    table: 'sab_price_display',
+    column: 'price_updated_at',
+    stalenessHours: 6,
+    maxStaleRows: 25,
+  },
+]
+
+/**
+ * Decide staleness from a row count. Pure, so the threshold is unit-testable
+ * without a database.
+ *
+ * A failed count is stale, never a pass — same principle the max() check
+ * applies to an empty table: the absence of a signal is not a clean bill.
+ */
+export function evaluateStaleCount(
+  check: StaleCountCheck,
+  staleRows: number | null,
+  error?: string,
+): StaleCountResult {
+  const base = {
+    table: check.table,
+    column: check.column,
+    maxStaleRows: check.maxStaleRows,
+    stalenessHours: check.stalenessHours,
+  }
+
+  if (error) return { ...base, staleRows: null, stale: true, error }
+  if (staleRows == null) {
+    return { ...base, staleRows: null, stale: true, error: 'no count returned' }
+  }
+
+  return { ...base, staleRows, stale: staleRows > check.maxStaleRows }
+}
+
+/**
+ * Count rows older than the window, via PostgREST's exact count with a
+ * head-only request — no rows are transferred, just the Content-Range total.
+ */
+export async function readStaleCount(
+  client: { from: (t: string) => any },
+  check: StaleCountCheck,
+  now: number,
+): Promise<{ staleRows: number | null; error?: string }> {
+  const cutoff = new Date(now - check.stalenessHours * 3_600_000).toISOString()
+  const { count, error } = await client
+    .from(check.table)
+    .select(check.column, { count: 'exact', head: true })
+    .lt(check.column, cutoff)
+
+  if (error) return { staleRows: null, error: error.message }
+  return { staleRows: count ?? null }
+}
+
 /** The alert body. Plain text — sendAdminNoticeEmail escapes it. */
 export function buildAlertBody(stale: CheckResult[], checkedAt: string): string {
   const lines = stale.map((r) => {
@@ -209,5 +304,35 @@ export function buildAlertBody(stale: CheckResult[], checkedAt: string): string 
     `Prices on the values pages are still being served from the last good`,
     `snapshot, so this is silent to visitors — the pages will show an old`,
     `"Updated" date rather than no price.`,
+  ].join('\n')
+}
+
+/**
+ * The stale-ROW section of the alert. Appended to the hop alert so one email
+ * carries both questions: "did anything move?" and "did anything not move?".
+ */
+export function buildStaleCountAlertBody(stale: StaleCountResult[]): string {
+  if (!stale.length) return ''
+
+  const lines = stale.map((r) => {
+    const what =
+      r.staleRows === null
+        ? `could not be counted (${r.error ?? 'unknown error'})`
+        : `has ${r.staleRows} row(s) older than ${r.stalenessHours}h ` +
+          `(tolerated: ${r.maxStaleRows})`
+    return `• ${r.table}.${r.column} ${what}`
+  })
+
+  return [
+    ``,
+    ``,
+    `PARTIAL FREEZE — some rows stopped advancing while others kept moving:`,
+    ``,
+    ...lines,
+    ``,
+    `max() looks healthy in this state, which is why this check exists. The`,
+    `usual cause is the repricing run failing partway or not covering every`,
+    `item. Check the most recent "Reprice <game>" step in that game's workflow`,
+    `— it hard-fails now, so a red job is the signal.`,
   ].join('\n')
 }

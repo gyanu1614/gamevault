@@ -1977,7 +1977,10 @@ async function triggerPostCrawl() {
   const base = apiUrl.replace(/\/$/, "");
   // Expire is a GET, correct-prices a POST — match each route's verb.
   await triggerCron("Expiring vanished listings", `${base}/api/cron/expire-sab-listings`, "GET", secret);
-  await triggerCron("Repricing after crawl", `${base}/api/cron/correct-prices?game=sab`, "POST", secret);
+  // Repricing is NOT triggered from here any more. It runs as its own workflow
+  // step (`pnpm reprice --game=sab`) straight after this script, on the runner,
+  // where it has no 300s function budget and where a failure fails the job.
+  // Calling the route from here is what let a five-day outage hide in a log.
 }
 
 async function triggerCron(label, url, method, secret) {
@@ -1989,12 +1992,17 @@ async function triggerCron(label, url, method, secret) {
     });
     const body = await response.text();
     if (!response.ok) {
+      // MONITORING: a swallowed failure here is exactly how correct-prices
+      // 504'd on every run from 2026-09-14 while the workflow stayed green for
+      // five days. A failed hop must redden the job.
       console.error(`${label} failed (${response.status}): ${body.slice(0, 300)}`);
+      process.exitCode = 1;
       return;
     }
     console.log(`${label} ok: ${body.slice(0, 300)}`);
   } catch (error) {
     console.error(`${label} threw: ${error.message}`);
+    process.exitCode = 1;
   }
 }
 

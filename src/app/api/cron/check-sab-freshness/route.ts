@@ -13,10 +13,15 @@ import { sendAdminNoticeEmail } from '@/lib/email'
 import {
   FRESHNESS_ALERT_EMAIL,
   FRESHNESS_CHECKS,
+  STALE_COUNT_CHECKS,
   buildAlertBody,
+  buildStaleCountAlertBody,
   evaluate,
+  evaluateStaleCount,
   readLatest,
+  readStaleCount,
   type CheckResult,
+  type StaleCountResult,
 } from './freshness-checks'
 
 export async function GET(request: NextRequest) {
@@ -42,10 +47,24 @@ export async function GET(request: NextRequest) {
     results.push(evaluate(check, latest, now, error))
   }
 
-  const stale = results.filter((r) => r.stale)
+  // The per-row half: a partial freeze keeps max() fresh, so ask how many rows
+  // have NOT advanced (the blind spot that hid a five-day outage).
+  const countResults: StaleCountResult[] = []
+  for (const check of STALE_COUNT_CHECKS) {
+    const { staleRows, error } = await readStaleCount(admin as any, check, now)
+    countResults.push(evaluateStaleCount(check, staleRows, error))
+  }
 
-  if (!stale.length) {
-    return NextResponse.json({ ok: true, checked_at: checkedAt, results })
+  const stale = results.filter((r) => r.stale)
+  const staleCounts = countResults.filter((r) => r.stale)
+
+  if (!stale.length && !staleCounts.length) {
+    return NextResponse.json({
+      ok: true,
+      checked_at: checkedAt,
+      results,
+      stale_counts: countResults,
+    })
   }
 
   // Alert, then fail. The email is best-effort: if it throws we still return
@@ -56,10 +75,13 @@ export async function GET(request: NextRequest) {
     const result = await sendAdminNoticeEmail({
       to: FRESHNESS_ALERT_EMAIL,
       name: 'DropMarket ops',
-      subject: `[DropMarket] SAB pricing data is stale (${stale
-        .map((r) => r.table)
-        .join(', ')})`,
-      bodyText: buildAlertBody(stale, checkedAt),
+      subject: `[DropMarket] SAB pricing data is stale (${[
+        ...stale.map((r) => r.table),
+        ...staleCounts.map((r) => `${r.table} rows`),
+      ].join(', ')})`,
+      bodyText:
+        buildAlertBody(stale, checkedAt) +
+        buildStaleCountAlertBody(staleCounts),
     })
     emailed = result.success === true
     if (!result.success) {
@@ -70,8 +92,12 @@ export async function GET(request: NextRequest) {
   }
 
   console.error(
-    `check-sab-freshness: ${stale.length} stale hop(s):`,
-    stale.map((r) => `${r.table}.${r.column}=${r.ageHours ?? 'none'}h`).join(' '),
+    `check-sab-freshness: ${stale.length} stale hop(s), ` +
+      `${staleCounts.length} stale row-count(s):`,
+    [
+      ...stale.map((r) => `${r.table}.${r.column}=${r.ageHours ?? 'none'}h`),
+      ...staleCounts.map((r) => `${r.table}.stale_rows=${r.staleRows ?? 'none'}`),
+    ].join(' '),
   )
 
   return NextResponse.json(
@@ -79,10 +105,14 @@ export async function GET(request: NextRequest) {
       ok: false,
       error: 'SAB pricing data is stale',
       checked_at: checkedAt,
-      stale: stale.map((r) => r.table),
+      stale: [
+        ...stale.map((r) => r.table),
+        ...staleCounts.map((r) => r.table),
+      ],
       alert_emailed: emailed,
       ...(emailError ? { alert_email_error: emailError } : {}),
       results,
+      stale_counts: countResults,
     },
     { status: 500 },
   )

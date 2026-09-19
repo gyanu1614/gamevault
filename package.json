@@ -33,7 +33,9 @@
     "adoptme:cash:import": "node scripts/import-adoptme-cash.mjs --write",
     "adoptme:cash:refresh": "npm run adoptme:cash:eldorado && npm run adoptme:cash:u7buy && npm run adoptme:cash:import",
     "adoptme:snapshot": "node scripts/adopt-me-snapshot-history.mjs",
-    "radar:backfill": "node --experimental-strip-types --no-warnings scripts/backfill-game-external-ids.mjs"
+    "radar:backfill": "node --experimental-strip-types --no-warnings scripts/backfill-game-external-ids.mjs",
+    "reprice": "tsx scripts/reprice.mjs",
+    "retention:sab": "node scripts/roll-up-raw-listings.mjs"
   },
   "dependencies": {
     "@dicebear/collection": "^9.4.3",
@@ -116,6 +118,7 @@
     "postcss": "^8.4.49",
     "supabase": "^2.109.1",
     "tailwindcss": "^3.4.17",
+    "tsx": "^4.23.13",
     "typescript": "^5.7.3",
     "vitest": "^2.1.9"
   }
