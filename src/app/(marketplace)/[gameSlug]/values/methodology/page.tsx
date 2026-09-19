@@ -19,6 +19,7 @@ import { SabHeroBackdrop } from '../_SabHeroBackdrop'
 import { HubNav } from '@/components/content/HubNav'
 import { HubFooter } from '@/components/content/HubFooter'
 import { getHubNavData, HUB_NAV_CLEAR } from '@/lib/content/hubNav'
+import { contentHubSlugsFor, hasHubPage } from '@/lib/content/theme'
 import AdoptMeMethodology from './_AdoptMeMethodology'
 
 export const revalidate = 86400
@@ -28,7 +29,7 @@ export const revalidate = 86400
  * below, so there is nothing else to build.
  */
 export function generateStaticParams() {
-  return ['steal-a-brainrot'].map((gameSlug) => ({ gameSlug }))
+  return contentHubSlugsFor('methodology').map((gameSlug) => ({ gameSlug }))
 }
 
 export async function generateMetadata({
@@ -63,7 +64,7 @@ export async function generateMetadata({
 
   // Only SAB has a methodology page. Every other game answered
   // `200 + empty body + index,follow` here — a soft 404. See the body.
-  if (gameSlug !== 'steal-a-brainrot') notFound()
+  if (!hasHubPage(gameSlug, 'methodology')) notFound()
   return {
     title: 'How DropMarket Values Steal a Brainrot Prices — Methodology',
     description:
@@ -113,7 +114,7 @@ export default async function MethodologyPage({
   // `return null` here rendered an empty page with a 200 + index,follow —
   // GSC counted /{game}/values/methodology for every other game as a soft
   // 404. A real 404 is the honest answer.
-  if (gameSlug !== 'steal-a-brainrot') {
+  if (!hasHubPage(gameSlug, 'methodology')) {
     notFound()
   }
 

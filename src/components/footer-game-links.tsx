@@ -16,6 +16,7 @@ import Link from 'next/link'
 import { getCachedGameDirectory } from '@/lib/marketplace/gameDirectoryCache'
 import { getGameIcon } from '@/features/home/lib/game-icons'
 import { GamesDirectoryCollapse } from '@/components/games-directory-collapse'
+import { getGameContentTheme } from '@/lib/content/theme'
 
 type CategoryLink = { label: string; href: string }
 type GameGroup = {
@@ -58,13 +59,16 @@ async function getDirectory(): Promise<GameGroup[]> {
     let gameCats: CategoryLink[] = raw
       .slice(0, MAX_CATS)
       .map((c) => ({ label: c.label, href: `/${g.slug}/${c.slug}` }))
-    // Flagship: surface the Steal a Brainrot money tools alongside its
-    // marketplace categories (high-intent, keyword-rich anchors).
-    if (g.slug === 'steal-a-brainrot') {
+    // Flagship: surface the game's money tools alongside its marketplace
+    // categories (high-intent, keyword-rich anchors). Config-driven via
+    // `footerTools`, which is on for Steal a Brainrot only — so the rendered
+    // footer is unchanged.
+    const theme = getGameContentTheme(g.slug)
+    if (theme.footerTools) {
       gameCats = [
         ...gameCats.slice(0, MAX_CATS - 2),
-        { label: 'Value List', href: '/steal-a-brainrot/values' },
-        { label: 'Value Calculator', href: '/steal-a-brainrot/calculator' },
+        { label: 'Value List', href: `/${g.slug}/values` },
+        { label: 'Value Calculator', href: `/${g.slug}/calculator` },
       ]
     }
     return {
