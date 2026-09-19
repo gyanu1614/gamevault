@@ -1977,7 +1977,16 @@ async function triggerPostCrawl() {
   const base = apiUrl.replace(/\/$/, "");
   // Expire is a GET, correct-prices a POST — match each route's verb.
   await triggerCron("Expiring vanished listings", `${base}/api/cron/expire-sab-listings`, "GET", secret);
-  await triggerCron("Repricing after crawl", `${base}/api/cron/correct-prices?game=sab`, "POST", secret);
+  // STOP THE BLEED: /api/cron/correct-prices has 504'd on every run since
+  // 2026-09-14 (the full-table read outgrew the Vercel function budget), so
+  // every crawl spent 5 minutes waiting to fail. Repricing moves to the runner
+  // (scripts/reprice.mjs); until that lands, skip the doomed call. Set
+  // SKIP_REPRICE_TRIGGER=0 to restore the old behaviour.
+  if (process.env.SKIP_REPRICE_TRIGGER === "0") {
+    await triggerCron("Repricing after crawl", `${base}/api/cron/correct-prices?game=sab`, "POST", secret);
+  } else {
+    console.log("\nSkipping post-crawl repricing trigger (SKIP_REPRICE_TRIGGER).");
+  }
 }
 
 async function triggerCron(label, url, method, secret) {
