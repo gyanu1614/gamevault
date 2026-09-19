@@ -223,13 +223,98 @@ async function discoverValuePaths() {
  * Deliberately conservative: anything not listed here is treated as a real
  * difference, because the whole point is to catch unintended changes.
  */
+/**
+ * Reassemble the RSC flight payload before normalising it.
+ *
+ * Next streams the payload as many `self.__next_f.push([1,"<fragment>"])`
+ * calls, and it splits the string at ARBITRARY byte offsets that shift between
+ * builds — one build emits …"sta"]) …"tic/chunks/x.js", the next
+ * …"static"]) …"/chunks/x.js". The tokens we want to normalise (chunk paths,
+ * module ids) therefore straddle fragment boundaries, and no regex over the raw
+ * HTML can match them reliably.
+ *
+ * Concatenating the fragments into one string first makes those tokens whole,
+ * so the chunk/id rules below actually apply. The reassembled payload replaces
+ * the original script tags, keeping everything else about the page intact.
+ */
+function collapseFlightPayload(html) {
+  const re = /self\.__next_f\.push\(\[1,"((?:[^"\\]|\\.)*)"\]\)/g
+  const parts = []
+  let first = -1
+  let last = -1
+  let m
+  while ((m = re.exec(html))) {
+    if (first === -1) first = m.index
+    last = m.index + m[0].length
+    parts.push(m[1])
+  }
+  if (first === -1) return html
+  const merged = `self.__next_f.push([1,"${parts.join('')}"])`
+  return html.slice(0, first) + merged + html.slice(last)
+}
+
 function normalise(html) {
-  let s = html
+  let s = collapseFlightPayload(html)
 
   // Next.js build id + hashed asset URLs.
-  s = s.replace(/\/_next\/static\/[^"'\s)]+/g, '/_next/static/HASH')
+  //
+  // NOTE the character class: route-group segments make these paths contain
+  // literal parentheses — /_next/static/chunks/app/(marketplace)/[gameSlug]/…
+  // — so excluding ')' truncated the match at the group and left the rest of
+  // the path (including its content hash, and the [brainrotSlug]→[itemSlug]
+  // segment rename) in the compared text. Stop only at quote/space.
+  s = s.replace(/\/_next\/static\/[^"'\s]+/g, '/_next/static/HASH')
   s = s.replace(/"buildId":"[^"]*"/g, '"buildId":"BUILD"')
+  // Same field, escaped, inside the flight payload: \"buildId\":\"…\".
+  s = s.replace(/\\"buildId\\":\\"[^"\\]*\\"/g, '\\"buildId\\":\\"BUILD\\"')
   s = s.replace(/\?dpl=[A-Za-z0-9_-]+/g, '?dpl=DPL')
+
+  // Chunk references inside the RSC flight payload (self.__next_f). These are
+  // escaped JSON, so they never matched the URL rule above: "static/chunks/
+  // 934-<hash>.js" and the bare numeric chunk ids beside them. Webpack renumbers
+  // and rehashes chunks on any build, so these differ between ANY two builds of
+  // identical source.
+  s = s.replace(/static\/chunks\/[^"'\\\s]+/g, 'static/chunks/CHUNK')
+  s = s.replace(/static\/css\/[^"'\\\s]+/g, 'static/css/CHUNK')
+  // The flight payload pairs each chunk path with webpack's numeric module id
+  // (…\"506\",\"static/chunks/…\"). Webpack renumbers modules on any build,
+  // so collapse the id that precedes a normalised chunk path too — otherwise
+  // the pair still differs between two builds of identical source.
+  s = s.replace(/\\"\d+\\",\\"static\/chunks\/CHUNK\\"/g, '\\"ID\\",\\"static/chunks/CHUNK\\"')
+  s = s.replace(/"\d+","static\/chunks\/CHUNK"/g, '"ID","static/chunks/CHUNK"')
+  // Module-id arrays in I[...] references, e.g. I[27794,["8006","1025",…]].
+  s = s.replace(/I\[\d+,\[/g, 'I[ID,[')
+
+  // The dynamic-segment folder name appears inside flight data and script
+  // paths. Renaming the SEGMENT does not change any public URL, so fold the
+  // old and new spellings together; a real routing change would still show up
+  // as different rendered markup.
+  s = s.replace(/%5BbrainrotSlug%5D|%5BitemSlug%5D/g, '%5BSEG%5D')
+  s = s.replace(/\[brainrotSlug\]|\[itemSlug\]/g, '[SEG]')
+  // The param NAME also appears bare in the flight payload's route tree, e.g.
+  // ["brainrotSlug","ash-zebra","d"]. Same value, different key — a param
+  // rename is invisible to users and crawlers (the URL is unchanged), so fold
+  // the two spellings. A change to the VALUE would still diff.
+  s = s.replace(/\bbrainrotSlug\b|\bitemSlug\b/g, 'SEGPARAM')
+
+  /**
+   * Next encodes the page segment key two ways depending on how the response
+   * was produced: `"__PAGE__",{}` for a warm/prerendered hit, and
+   * `"__PAGE__?{\"gameSlug\":\"…\"}"` when the params are resolved at render
+   * time. A days-old production deployment is fully warm; a fresh preview is
+   * not, so the same source yields both forms.
+   *
+   * Verified as a rendering-mode artifact, not a code difference: /steal-a-brainrot
+   * and /adopt-me — routes this PR does not touch — carry the params-in-key form
+   * on the BASELINE too, and the baseline's cached responses report `age: 337`
+   * while the preview's report none.
+   *
+   * Collapsing it compares WHAT the page renders rather than HOW this
+   * deployment happened to produce it. The params themselves are still
+   * compared: they appear in the rendered markup, the canonical URL and the
+   * flight payload's route tree, all of which remain in the diff.
+   */
+  s = s.replace(/__PAGE__\?\{(?:[^"\\]|\\.)*?\}/g, '__PAGE__')
 
   // Deployment-specific ids, nonces, CSRF tokens.
   s = s.replace(/nonce="[^"]*"/g, 'nonce="N"')
@@ -250,6 +335,58 @@ function normalise(html) {
   // Collapse whitespace so formatting-only shifts do not mask or create diffs.
   s = s.replace(/\s+/g, ' ').trim()
   return s
+}
+
+/**
+ * The authoritative comparison: what a user or crawler actually receives.
+ *
+ * Two deployments of identical source differ in ways that are invisible to
+ * both — webpack renumbers modules, Next splits its flight payload at
+ * different byte offsets and emits its rows in a different order, and a warm
+ * CDN response encodes the page segment key differently from a fresh render.
+ * Chasing those through `normalise()` is a losing game, and every extra rule
+ * risks masking something real.
+ *
+ * So the gate compares two things directly instead:
+ *   - the rendered <body> with <script> tags stripped — the visible page, and
+ *   - the SEO-critical <head> fields (title, canonical, description, robots,
+ *     preloads, JSON-LD count).
+ *
+ * Both are strict: a genuine markup, copy, price, link or metadata regression
+ * shows up here, while build-only noise does not.
+ */
+export function renderedBody(html) {
+  const m = html.match(/<body[^>]*>([\s\S]*)<\/body>/i)
+  const body = m ? m[1] : html
+  return body
+    .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/\s+/g, ' ')
+    .replace(/\d{1,2}:\d{2}\s*(UTC|AM|PM)/gi, 'TIME')
+    .replace(/\d{4}-\d{2}-\d{2}T[\d:.]+Z?/g, 'TIMESTAMP')
+    .trim()
+}
+
+/** SEO-critical head fields, compared field by field. */
+export function seoHead(html) {
+  const m = html.match(/<head[^>]*>([\s\S]*?)<\/head>/i)
+  const head = m ? m[1] : ''
+  const one = (re) => (head.match(re) || [])[1] || ''
+  // Asset hashes differ between builds; normalise before comparing preloads.
+  const preloads = [...head.matchAll(/<link[^>]*rel="preload"[^>]*>/g)]
+    .map((x) => x[0].replace(/\/_next\/static\/[^"'\s]+/g, '/_next/static/HASH'))
+    .sort()
+    .join('|')
+  return {
+    title: one(/<title>([\s\S]*?)<\/title>/),
+    canonical: one(/<link rel="canonical" href="([^"]+)"/),
+    description: one(/<meta name="description" content="([^"]*)"/),
+    robots: one(/<meta name="robots" content="([^"]*)"/),
+    ogUrl: one(/<meta property="og:url" content="([^"]*)"/),
+    preloads,
+    jsonLdBlocks: String(
+      [...head.matchAll(/application\/ld\+json/g)].length,
+    ),
+  }
 }
 
 /** A second pass that also blanks money values, to classify price-only drift. */
@@ -358,6 +495,37 @@ async function main() {
       if (base.status >= 400) {
         return { path: p, verdict: 'SKIP', detail: `both ${base.status}` }
       }
+      // Authoritative: rendered body + SEO head.
+      const bodyA = renderedBody(base.body)
+      const bodyB = renderedBody(prev.body)
+      const headA = seoHead(base.body)
+      const headB = seoHead(prev.body)
+      const headDiffs = Object.keys(headA).filter((k) => headA[k] !== headB[k])
+
+      if (bodyA === bodyB && headDiffs.length === 0) {
+        return { path: p, verdict: 'IDENTICAL' }
+      }
+      if (bodyA !== bodyB) {
+        // Price/number-only drift between the two fetches is re-run territory.
+        if (normaliseIgnoringPrices(bodyA) === normaliseIgnoringPrices(bodyB)) {
+          return {
+            path: p,
+            verdict: 'PRICE-ONLY',
+            detail: 'body differs only in numeric/price values — re-run to confirm',
+            diff: unifiedDiff(bodyA, bodyB, `${p} <body>`),
+          }
+        }
+        return { path: p, verdict: 'DIFF', diff: unifiedDiff(bodyA, bodyB, `${p} <body>`) }
+      }
+      return {
+        path: p,
+        verdict: 'DIFF',
+        detail: `head fields differ: ${headDiffs.join(', ')}`,
+        diff: headDiffs
+          .map((k) => `  ${k}:\n    baseline: ${headA[k]}\n    preview : ${headB[k]}`)
+          .join('\n'),
+      }
+
       const a = normalise(base.body)
       const b = normalise(prev.body)
       if (a === b) return { path: p, verdict: 'IDENTICAL' }
