@@ -139,6 +139,17 @@ jobs:
         continue-on-error: true
         run: pnpm sab:eldorado:popularity
 
+      # Repricing, on the runner (see scripts/reprice.mjs for the full why).
+      # This replaces the POST to /api/cron/correct-prices that the collector
+      # used to make: that route 504'd on every run from 2026-09-14 and the
+      # failure was swallowed, so prices froze for five days behind a green
+      # workflow.
+      #
+      # Deliberately NOT continue-on-error: a failed reprice must fail the job.
+      - name: Reprice SAB
+        if: inputs.publish_only_run_id == ''
+        run: pnpm reprice --game=sab
+
       # Freshness guard (ROUTE-014). The vercel.json cron is daily-only —
       # Vercel Hobby rejects sub-daily schedules — so the real 3-hourly cadence
       # lives here, same pattern as expire-pending-payments.yml. Runs LAST, after

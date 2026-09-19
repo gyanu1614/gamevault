@@ -10,6 +10,7 @@
  */
 
 import { createServiceRoleClient } from '@/lib/supabase/service'
+import type { RepriceOptions } from '@/lib/pricing/registry'
 import {
   correctAdoptMePrices,
   type AdoptMeVariantCorrection,
@@ -52,7 +53,15 @@ async function selectAll<T>(
   return rows
 }
 
-export async function runAdoptMeCorrection(): Promise<Record<string, unknown>> {
+/**
+ * `options.full` is accepted for registry parity but not yet acted on: this
+ * game reads ~38k already-filtered rows (listing_status=active) against 488
+ * pets, which is comfortably inside budget. Add incremental writes here the
+ * same way SAB does it if that ever stops being true.
+ */
+export async function runAdoptMeCorrection(
+  options: RepriceOptions = {},
+): Promise<Record<string, unknown>> {
   const admin = createServiceRoleClient()
   const startedAt = new Date().toISOString()
 

@@ -27,12 +27,27 @@ vi.mock('@/lib/email', () => ({
 }))
 
 const latestByTable = new Map<string, { value: string | null; error?: string }>()
+/**
+ * Stale-row counts per table for the partial-freeze check. Defaults to 0 so the
+ * existing max()-only cases keep asserting exactly what they always did.
+ */
+const staleCountByTable = new Map<string, { count: number | null; error?: string }>()
 
 vi.mock('@/lib/supabase/service', () => ({
   createServiceRoleClient: () => ({
     from(table: string) {
       const builder: any = {
-        select: () => builder,
+        // The count path is head-only: `.select(col, {count, head}).lt(...)`
+        // resolves to a { count } with no rows, unlike the ordered read below.
+        select: (_col?: string, options?: { count?: string; head?: boolean }) => {
+          if (!options?.head) return builder
+          const entry = staleCountByTable.get(table) ?? { count: 0 }
+          builder.lt = async () =>
+            entry.error
+              ? { count: null, error: { message: entry.error } }
+              : { count: entry.count, error: null }
+          return builder
+        },
         order: () => builder,
         limit: async () => {
           const entry = latestByTable.get(table)
@@ -95,6 +110,7 @@ const check = (over: Partial<FreshnessCheck> = {}): FreshnessCheck => ({
 beforeEach(() => {
   vi.clearAllMocks()
   latestByTable.clear()
+  staleCountByTable.clear()
   vi.stubEnv('CRON_SECRET', SECRET)
   vi.useFakeTimers()
   vi.setSystemTime(NOW)
@@ -198,6 +214,50 @@ describe('ROUTE-014 — route behaviour', () => {
     expect(FRESHNESS_ALERT_EMAIL).toBe('admin@dropmarket.gg')
     expect(arg.subject).toContain('sab_price_display')
     expect(arg.bodyText).toContain('sab_price_display.price_updated_at')
+  })
+
+  it('fails on a PARTIAL freeze: every hop fresh, but rows frozen', async () => {
+    // The five-day outage, exactly. correct-prices 504'd on every crawl, yet
+    // ~173 of 393 brainrots kept repricing — so max(price_updated_at) was
+    // always minutes old and this route returned 200 while 214 brainrots
+    // served Sep 14 prices. max() alone cannot see this; the row count can.
+    stubAllFresh(1)
+    staleCountByTable.set('sab_price_display', { count: 214 })
+
+    const res = await GET(req())
+    expect(res.status).toBe(500)
+    const body = await res.json()
+    expect(body.ok).toBe(false)
+    expect(body.stale).toEqual(['sab_price_display'])
+    // The max() checks must still all read as healthy — that is the point.
+    expect(body.results.every((r: any) => r.stale === false)).toBe(true)
+    expect(body.stale_counts[0].staleRows).toBe(214)
+
+    const arg = (sendAdminNoticeEmail as any).mock.calls[0][0]
+    expect(arg.bodyText).toContain('PARTIAL FREEZE')
+  })
+
+  it('tolerates a few unpriced laggards without alerting', async () => {
+    // Some items genuinely have no listings; they must not page anyone.
+    stubAllFresh(1)
+    staleCountByTable.set('sab_price_display', { count: 25 })
+
+    const res = await GET(req())
+    expect(res.status).toBe(200)
+    expect((await res.json()).ok).toBe(true)
+    expect(sendAdminNoticeEmail).not.toHaveBeenCalled()
+  })
+
+  it('fails when the stale-row count itself cannot be read', async () => {
+    stubAllFresh(1)
+    staleCountByTable.set('sab_price_display', {
+      count: null,
+      error: '57014 statement timeout',
+    })
+
+    const res = await GET(req())
+    expect(res.status).toBe(500)
+    expect((await res.json()).stale_counts[0].error).toContain('57014')
   })
 
   it('reports every stale hop, not just the first', async () => {

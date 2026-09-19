@@ -17,27 +17,32 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { revalidateTag } from 'next/cache'
 
-import { runSabCorrection } from '@/lib/pricing/games/sab'
-import { runAdoptMeCorrection } from '@/lib/pricing/games/adopt-me'
-import { runStealAnEggCorrection } from '@/lib/pricing/games/steal-an-egg'
+import { PRICING_GAMES } from '@/lib/pricing/registry'
 import { PRICE_CACHE_TAG } from '@/lib/sab/priceCache'
 
 const CRON_SECRET = process.env.CRON_SECRET
 
 /**
- * The game registry. Each entry owns its own read → price → write, so games
- * stay fully independent. `run` returns a small summary for the response.
+ * Next reads this as a literal only — it cannot follow a re-export or a
+ * computed value (CLAUDE.md). 300s is the Vercel maximum; the scheduled path
+ * lives on the runner precisely because even 300s was not enough for SAB.
  */
-const GAMES: {
-  key: string
-  run: () => Promise<Record<string, unknown>>
-}[] = [
-  { key: 'sab', run: runSabCorrection },
-  { key: 'adopt-me', run: runAdoptMeCorrection },
-  // Steal An Egg runs on the generic values_* pipeline; same shared reputable
-  // model, so it needs no new pricing maths.
-  { key: 'steal-an-egg', run: runStealAnEggCorrection },
-]
+export const maxDuration = 300
+
+/**
+ * Repricing normally runs on the GH Actions runner (scripts/reprice.mjs), right
+ * after each game's crawl. This route stays as a THIN MANUAL TRIGGER for one-off
+ * re-runs — it is not on the scheduled path any more.
+ *
+ * It was the scheduled path until 2026-09-14, when the SAB read outgrew the
+ * function budget and it 504'd on every crawl for five days without anyone
+ * noticing. maxDuration below buys the manual path the full budget; the runner
+ * is what makes the scheduled path reliable.
+ *
+ * The game list comes from the shared registry so this route and the runner can
+ * never price different sets of games.
+ */
+const GAMES = PRICING_GAMES
 
 export async function GET(request: NextRequest) {
   const authHeader = request.headers.get('authorization')
