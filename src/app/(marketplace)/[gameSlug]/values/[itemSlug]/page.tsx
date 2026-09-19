@@ -17,8 +17,14 @@ import { cn } from '@/lib/utils'
 import { sabCard } from '@/lib/sab/theme'
 import AdoptMePetPage from './_AdoptMePetPage'
 import { getAdoptMePet, getPublishablePetSlugs } from './_adoptMePetData'
+import GenericValueItemPage from '../_generic/ValueItemPage'
+import { getValueItems } from '@/lib/values/data'
+import { getGameContentTheme } from '@/lib/content/theme'
 
 export const revalidate = 3600
+
+/** Games served by the generic values_* pipeline (see the hub route). */
+const VALUES_PIPELINE_GAMES = new Set(['steal-an-egg'])
 
 /**
  * Prerender the highest-value pages at build time; the long tail renders on
@@ -45,7 +51,21 @@ export async function generateStaticParams() {
       .limit(PRERENDER_LIMIT),
     getPublishablePetSlugs(),
   ])
+  // Generic-pipeline games: prerender the PRICED items (the pages that can
+  // rank). The unpriced catalogue renders on demand into the same ISR cache.
+  const pipelineParams: Array<{ gameSlug: string; itemSlug: string }> = []
+  for (const slug of VALUES_PIPELINE_GAMES) {
+    const items = await getValueItems(slug)
+    pipelineParams.push(
+      ...items
+        .filter((i) => i.price?.cheapestUsd != null)
+        .slice(0, PRERENDER_LIMIT)
+        .map((i) => ({ gameSlug: slug, itemSlug: i.slug })),
+    )
+  }
+
   return [
+    ...pipelineParams,
     ...(((brainrots ?? []) as { slug: string }[]).map((r) => ({
       gameSlug: 'steal-a-brainrot',
       itemSlug: r.slug,
@@ -437,6 +457,29 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     }
   }
 
+  if (VALUES_PIPELINE_GAMES.has(gameSlug)) {
+    const theme = getGameContentTheme(gameSlug)
+    const item = (await getValueItems(gameSlug)).find((i) => i.slug === itemSlug)
+    if (!item) return { title: 'Value Not Found' }
+    const price = item.price
+    const priced = price?.cheapestUsd != null
+    // The brief's rule: fewer than 3 live listings behind a value is not
+    // enough to index. Every unpriced catalogue page (all pets) is noindex too
+    // — it is useful to a reader who lands on it, but it is not a ranking page.
+    const thin = !priced || (price?.sampleSize ?? 0) < 3
+    const title = priced
+      ? `${item.name} Value — ${theme.name}`
+      : `${item.name} — ${theme.name} ${item.rarity ? `${item.rarity} ` : ''}Pet`
+    return {
+      title,
+      description: priced
+        ? `${item.name} sells for about $${price!.cheapestUsd!.toFixed(2)} in ${theme.name}, priced from ${price!.sampleSize} live marketplace listings.`
+        : `${item.name} in ${theme.name}: rarity, area, income and the egg it hatches from. No market price — ${item.name} is not sold directly.`,
+      alternates: { canonical: `/${gameSlug}/values/${item.slug}` },
+      ...(thin ? { robots: { index: false, follow: true } } : {}),
+    }
+  }
+
   if (!hasHubPage(gameSlug, 'values')) return { title: 'Value Not Found' }
 
   const brainrot = await getBrainrot(itemSlug)
@@ -469,6 +512,10 @@ export default async function BrainrotValuePage({ params }: PageProps) {
     const pet = await getAdoptMePet(itemSlug)
     if (!pet) notFound()
     return <AdoptMePetPage pet={pet} />
+  }
+
+  if (VALUES_PIPELINE_GAMES.has(gameSlug)) {
+    return <GenericValueItemPage gameSlug={gameSlug} itemSlug={itemSlug} />
   }
 
   if (!hasHubPage(gameSlug, 'values')) notFound()

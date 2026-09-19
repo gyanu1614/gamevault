@@ -1,0 +1,78 @@
+name: Steal An Egg Values (3h)
+
+# Vercel Hobby cannot schedule sub-daily cron, so the 3-hourly cadence lives
+# here — the same pattern the SAB Eldorado collection uses.
+on:
+  schedule:
+    - cron: "40 */3 * * *"
+  workflow_dispatch:
+    inputs:
+      max_pages:
+        description: "Eldorado pages to crawl (50 listings each; 39 pages = all)"
+        required: false
+        default: "40"
+
+concurrency:
+  group: steal-an-egg-values
+  cancel-in-progress: false
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Collect Eldorado listings and upsert raw rows
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: >-
+          node scripts/collect-eldorado-sae.mjs
+          --max-pages ${{ github.event.inputs.max_pages || '40' }}
+          --write
+
+      - name: Upload the collected feed (debug artifact)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sae-market-${{ github.run_id }}
+          path: data/sae-market-feeds/
+          if-no-files-found: ignore
+          retention-days: 7
+
+      # Prices are recomputed by the shared correct-prices cron, which runs the
+      # same reputable model for every game. Calling it here keeps the 3h
+      # cadence end-to-end instead of waiting for the daily Vercel cron.
+      - name: Recompute prices (shared reputable model)
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          PUBLIC_API_URL: ${{ secrets.PUBLIC_API_URL }}
+        run: |
+          curl -sS -f -X POST \
+            -H "Authorization: Bearer ${CRON_SECRET}" \
+            "${PUBLIC_API_URL}/api/cron/correct-prices?game=steal-an-egg" \
+            || { echo "correct-prices failed"; exit 1; }
+
+      - name: Revalidate the value pages
+        env:
+          VALUES_REVALIDATE_SECRET: ${{ secrets.VALUES_REVALIDATE_SECRET }}
+          PUBLIC_API_URL: ${{ secrets.PUBLIC_API_URL }}
+        run: |
+          curl -sS -f -X POST \
+            -H "x-values-revalidate-secret: ${VALUES_REVALIDATE_SECRET}" \
+            "${PUBLIC_API_URL}/api/internal/values-revalidate?game=steal-an-egg" \
+            || { echo "revalidate failed"; exit 1; }

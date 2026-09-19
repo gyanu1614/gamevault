@@ -212,6 +212,51 @@ const THEMES: Record<string, GameContentTheme> = {
     variantNoun: 'Mutation',
     footerTools: true,
   },
+  'steal-an-egg': {
+    name: 'Steal an Egg',
+    initials: 'SAE',
+    // Warm gold — an egg/hatch palette, distinct from SAB's forest green and
+    // Adopt Me's violet so the three hubs read apart at a glance.
+    accent: '#D8A23B',
+    accentText: '#E8C687',
+    accentBorder: '#3A2E17',
+    accentDeep: '#151008',
+    onAccent: '#120C03',
+    ambient: ambientFor('216,162,59', 105, 42),
+    heroTitle: 'Steal an Egg values, eggs, pets and account prices',
+    // Honest lead: the market prices SEALED eggs by area and ACCOUNTS by
+    // income. It does not price individual pets, and this says so rather than
+    // implying a pet value list we cannot back with listings.
+    heroLead:
+      'What eggs and accounts actually sell for in real money — priced from live marketplace listings, with every pet and the egg it hatches from.',
+    heroAbout:
+      'Steal an Egg is a Roblox game where players race to steal eggs from themed areas and hatch pets that generate income per second. Almost all real-money trading is in sealed eggs — sold by area rather than by pet, because what hatches is random — and in accounts priced by their income. These pages track what buyers actually pay for both, and show every pet with the egg it comes from.',
+    // Steal An Egg has no variant/mutation axis, so the promo uses the two
+    // things the market really prices: an egg by area, and an account by income.
+    calculatorExample: {
+      offer: 'Titan Temple Egg · from $0.25',
+      give: 'Account · 50–100B/s',
+      letter: 'F',
+      verdict: 'Compare eggs and accounts',
+      qualifier: 'Priced from live listings',
+    },
+    // No calculator or price-index at launch: with ~126 priced items and no
+    // variant axis there is nothing for a WFL calculator to weigh yet.
+    pages: {
+      values: true,
+      calculator: false,
+      priceIndex: false,
+      methodology: true,
+      blog: false,
+    },
+    navTools: ['values'],
+    itemNoun: 'Egg',
+    itemNounPlural: 'Eggs',
+    // The game has no mutation/variant system — verified against the wiki
+    // taxonomy, which has no variant field. Variant UI is omitted entirely.
+    variantNoun: null,
+    footerTools: false,
+  },
   'adopt-me': {
     name: 'Adopt Me',
     initials: 'AM',

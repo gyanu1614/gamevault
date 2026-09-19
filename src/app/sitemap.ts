@@ -63,6 +63,40 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     console.error('Unable to load Adopt Me pets for sitemap:', adoptMePetsError)
   }
 
+  /**
+   * Games on the generic values_* pipeline. Only PRICED items are listed:
+   * a value with no price (every Steal An Egg pet) renders `noindex`, so
+   * advertising it here would contradict the page's own robots meta — the
+   * exact soft-404 shape Step 1c fixed for the hubs.
+   *
+   * `lastmod` is the value's real last CHANGE, not the crawl time.
+   */
+  const { data: pipelineItems, error: pipelineItemsError } = await (supabase as any)
+    .from('values_items')
+    .select('slug, games!inner(slug), values_prices!inner(price_changed_at, sample_size)')
+    .eq('is_enabled', true)
+    .eq('is_priced', true)
+    .order('slug', { ascending: true })
+
+  if (pipelineItemsError) {
+    console.error('Unable to load values-pipeline items for sitemap:', pipelineItemsError)
+  }
+
+  const pipelineByGame = new Map<string, Array<{ slug: string; updated_at: string | null }>>()
+  for (const row of (pipelineItems ?? []) as Array<{
+    slug: string
+    games?: { slug: string } | null
+    values_prices?: { price_changed_at: string | null; sample_size: number } | null
+  }>) {
+    const gameSlug = row.games?.slug
+    // Mirror the page's own noindex rule: fewer than 3 listings behind a value
+    // means it is not a ranking page, so it does not belong in the sitemap.
+    if (!gameSlug || (row.values_prices?.sample_size ?? 0) < 3) continue
+    const list = pipelineByGame.get(gameSlug) ?? []
+    list.push({ slug: row.slug, updated_at: row.values_prices?.price_changed_at ?? null })
+    pipelineByGame.set(gameSlug, list)
+  }
+
   // Static marketing/trust pages — no lastmod (see policy above).
   const staticPages: MetadataRoute.Sitemap = [
     {
@@ -368,6 +402,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       slug: string
       updated_at: string | null
     }[]),
+    // Generic-pipeline games contribute their priced items by config.
+    ...Object.fromEntries(pipelineByGame),
   }
 
   // Game-specific hub routes that are not part of the shared page set.

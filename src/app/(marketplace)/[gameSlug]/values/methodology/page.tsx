@@ -21,8 +21,13 @@ import { HubFooter } from '@/components/content/HubFooter'
 import { getHubNavData, HUB_NAV_CLEAR } from '@/lib/content/hubNav'
 import { contentHubSlugsFor, hasHubPage } from '@/lib/content/theme'
 import AdoptMeMethodology from './_AdoptMeMethodology'
+import GenericMethodologyPage from '../_generic/MethodologyPage'
+import { getGameContentTheme } from '@/lib/content/theme'
 
 export const revalidate = 86400
+
+/** Games served by the generic values_* pipeline (see the values hub route). */
+const VALUES_PIPELINE_GAMES = new Set(['steal-an-egg'])
 
 /**
  * Prerender the game slug(s) this route serves; every other slug notFound()s
@@ -59,6 +64,18 @@ export async function generateMetadata({
         url: '/adopt-me/values/methodology',
         type: 'article',
       },
+    }
+  }
+
+  // Games on the generic values pipeline build metadata from config.
+  if (VALUES_PIPELINE_GAMES.has(gameSlug)) {
+    const theme = getGameContentTheme(gameSlug)
+    const title = `How DropMarket Prices ${theme.name} — Methodology`
+    return {
+      title,
+      description: `How DropMarket calculates ${theme.name} values: live marketplace listings, reputable-seller filtering, minimum evidence, why we never price individual pets, and the single-source limitation.`,
+      alternates: { canonical: `/${gameSlug}/values/methodology` },
+      openGraph: { title, url: `/${gameSlug}/values/methodology`, type: 'article' },
     }
   }
 
@@ -114,6 +131,10 @@ export default async function MethodologyPage({
   // `return null` here rendered an empty page with a 200 + index,follow —
   // GSC counted /{game}/values/methodology for every other game as a soft
   // 404. A real 404 is the honest answer.
+  if (VALUES_PIPELINE_GAMES.has(gameSlug)) {
+    return <GenericMethodologyPage gameSlug={gameSlug} />
+  }
+
   if (!hasHubPage(gameSlug, 'methodology')) {
     notFound()
   }

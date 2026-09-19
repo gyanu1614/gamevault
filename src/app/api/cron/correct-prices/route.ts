@@ -19,6 +19,7 @@ import { revalidateTag } from 'next/cache'
 
 import { runSabCorrection } from '@/lib/pricing/games/sab'
 import { runAdoptMeCorrection } from '@/lib/pricing/games/adopt-me'
+import { runStealAnEggCorrection } from '@/lib/pricing/games/steal-an-egg'
 import { PRICE_CACHE_TAG } from '@/lib/sab/priceCache'
 
 const CRON_SECRET = process.env.CRON_SECRET
@@ -33,6 +34,9 @@ const GAMES: {
 }[] = [
   { key: 'sab', run: runSabCorrection },
   { key: 'adopt-me', run: runAdoptMeCorrection },
+  // Steal An Egg runs on the generic values_* pipeline; same shared reputable
+  // model, so it needs no new pricing maths.
+  { key: 'steal-an-egg', run: runStealAnEggCorrection },
 ]
 
 export async function GET(request: NextRequest) {

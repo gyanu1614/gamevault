@@ -30,12 +30,14 @@ describe('content hub config', () => {
     expect([...CONTENT_HUB_GAME_SLUGS].sort()).toEqual([
       'adopt-me',
       'steal-a-brainrot',
+      'steal-an-egg',
     ])
   })
 
   /**
    * The published page matrix, pinned. Steal a Brainrot is the only game with a
-   * price-index; both have values/calculator/methodology/blog.
+   * price-index. Steal An Egg publishes values + methodology only: it has no
+   * variant axis for a calculator to weigh, and no blog content yet.
    */
   it('pins the per-game page matrix', () => {
     const matrix = Object.fromEntries(
@@ -59,6 +61,13 @@ describe('content hub config', () => {
         methodology: true,
         blog: true,
       },
+      'steal-an-egg': {
+        values: true,
+        calculator: false,
+        priceIndex: false,
+        methodology: true,
+        blog: false,
+      },
     })
   })
 
@@ -68,7 +77,9 @@ describe('content hub config', () => {
     expect([...contentHubSlugsFor('values')].sort()).toEqual([
       'adopt-me',
       'steal-a-brainrot',
+      'steal-an-egg',
     ])
+    // Steal An Egg deliberately absent: no calculator at launch.
     expect([...contentHubSlugsFor('calculator')].sort()).toEqual([
       'adopt-me',
       'steal-a-brainrot',
