@@ -44,10 +44,12 @@ on:
         required: false
         default: ""
   schedule:
-    # Every 3h over the CURATED tradeable set (~300 items, not all 498). The
-    # collector's staleness queue (--refresh-after-hours 6) makes each 3h run
-    # grab whichever tradeable items aged past 6h → about half the set per run,
-    # whole curated set every ~6h. No item's listings go older than ~6h, and we
+    # Every 3h over the CURATED tradeable set (not all 498). The collector's
+    # staleness queue (--refresh-after-hours 6) makes each 3h run grab whichever
+    # tradeable items aged past 6h → about half the set per run, whole curated
+    # set every ~6h. EVERY tradeable item rotates, including fully-covered ones
+    # (2026-09-20: a 14/14 item used to leave the rotation for good — see
+    # scopeQueue in the collector). No item's listings go older than ~6h, and we
     # spend zero budget on junk nobody trades. Self-balancing (a new item is max-
     # stale → crawled next run) and self-healing (a failed run just leaves items
     # for the next tick — no static half to black out).

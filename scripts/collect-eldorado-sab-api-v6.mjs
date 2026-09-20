@@ -335,7 +335,46 @@ async function fetchNewestListingByBrainrot(brainrotIds) {
   return newest;
 }
 
-async function buildQueue(requestedName) {
+/**
+ * Which brainrots are in the crawl's scope at all — extracted so the rule can
+ * be tested, because the previous rule silently froze the catalogue's best
+ * items (2026-09-20).
+ *
+ * `rotateCovered` is the panel-refresh mode. Coverage (mutation_gap / priority)
+ * is an ORDERING signal there, never a filter: a fully-covered item must keep
+ * rotating on staleness like any other, or its listings are never re-observed,
+ * the expire job never gets the repeat look it needs to end anything, coverage
+ * never drops, and the item leaves the rotation for good. That is exactly what
+ * happened — 10 runs and 1,665 crawl slots never touched a 14/14 item — and
+ * the batch-stamped price_updated_at hid it until incremental writes made it
+ * visible as 688 rows / 70 brainrots frozen on the backfill timestamp.
+ *
+ * In backfill mode (no --refresh-after-hours) the coverage filter still
+ * applies: that mode exists to fill gaps, and a 14/14 item has none.
+ */
+export function scopeQueue(
+  queue,
+  { tradeableIds, haveTradeableFlag, rotateCovered },
+) {
+  let scoped = queue;
+  // Crawl only the curated tradeable set — skip junk nobody buys so the cycle
+  // stays fast and fresh on the items that matter. Only enforced once the flag
+  // exists (haveTradeableFlag); before the first nightly recompute we crawl
+  // everything as before.
+  if (haveTradeableFlag) {
+    scoped = scoped.filter((row) => tradeableIds.has(row.id));
+  }
+  if (!rotateCovered) {
+    // Include any brainrot still missing mutations (gap > 0) OR without a solid
+    // default price. Previously this only took missing/low DEFAULT prices, which
+    // skipped items that have a good default but many blank mutations — exactly
+    // the coverage we want to fill.
+    scoped = scoped.filter((row) => row.mutation_gap > 0 || row.priority < 2);
+  }
+  return scoped;
+}
+
+async function buildQueue(requestedName, { rotateCovered = false } = {}) {
   const [brainrots, correctionRows, mutations, calculatorRows, tradeableRows] =
     await Promise.all([
       supabaseRows(
@@ -493,18 +532,7 @@ async function buildQueue(requestedName) {
     );
     if (!queue.length) throw new Error(`Brainrot not found: ${requestedName}`);
   } else {
-    // Crawl only the curated tradeable set — skip junk nobody buys so the cycle
-    // stays fast and fresh on the items that matter. Only enforced once the flag
-    // exists (haveTradeableFlag); before the first nightly recompute we crawl
-    // everything as before.
-    if (haveTradeableFlag) {
-      queue = queue.filter((row) => tradeableIds.has(row.id));
-    }
-    // Include any brainrot still missing mutations (gap > 0) OR without a solid
-    // default price. Previously this only took missing/low DEFAULT prices, which
-    // skipped items that have a good default but many blank mutations — exactly
-    // the coverage we now want to fill.
-    queue = queue.filter((row) => row.mutation_gap > 0 || row.priority < 2);
+    queue = scopeQueue(queue, { tradeableIds, haveTradeableFlag, rotateCovered });
   }
 
   // Highest priority_score first (rarity → coverage gap → value); ties break
@@ -1737,7 +1765,11 @@ async function main() {
     totalMutations,
     expectedIncomeByVariant,
     totals,
-  } = await buildQueue(options.brainrot);
+  } = await buildQueue(options.brainrot, {
+    // Panel refresh rotates EVERY tradeable item on staleness; only backfill
+    // narrows to coverage gaps. See scopeQueue.
+    rotateCovered: options.refreshAfterHours > 0,
+  });
   const progress = await readProgress(options.progressPath, options.resetProgress);
   // Eligibility.
   //
