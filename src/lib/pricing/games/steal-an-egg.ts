@@ -51,16 +51,27 @@ function toNumber(value: number | string | null | undefined): number | null {
   return Number.isFinite(parsed) ? parsed : null
 }
 
+/**
+ * Page through a table in 1000-row chunks (PostgREST caps a single select).
+ *
+ * `orderBy` is REQUIRED and per-table: pagination without a stable sort can
+ * skip or duplicate rows at the page seams. It is a parameter rather than a
+ * hardcoded 'id' because these tables do not share a key — values_prices is
+ * keyed by `item_id` (one row per item, no surrogate id), so ordering it by
+ * 'id' raised `column values_prices.id does not exist` and failed the whole
+ * pricing run in production.
+ */
 async function selectAll<T>(
   client: ReturnType<typeof createServiceRoleClient>,
   table: string,
   columns: string,
+  orderBy: string,
   filter?: (q: any) => any,
 ): Promise<T[]> {
   const rows: T[] = []
   for (let page = 0; ; page += 1) {
     const from = page * PAGE_SIZE
-    let query = (client as any).from(table).select(columns).order('id')
+    let query = (client as any).from(table).select(columns).order(orderBy)
     if (filter) query = filter(query)
     const { data, error } = await query.range(from, from + PAGE_SIZE - 1)
     if (error) throw new Error(`${table}: ${error.message}`)
@@ -132,6 +143,7 @@ export async function runStealAnEggCorrection(
     admin,
     'values_items',
     'id,kind,is_priced',
+    'id',
     (q) => q.eq('game_id', game.id).eq('is_enabled', true),
   )
   const priceable = new Map(
@@ -143,6 +155,7 @@ export async function runStealAnEggCorrection(
     admin,
     'values_raw_listings',
     'id,matched_item_id,price_usd,quantity,seller_reviews,match_confidence',
+    'id',
     (q) =>
       q
         .eq('game_id', game.id)
@@ -219,8 +232,13 @@ export async function runStealAnEggCorrection(
     cheapest_usd: number | string | null
     average_usd: number | string | null
     price_changed_at: string | null
-  }>(admin, 'values_prices', 'item_id,cheapest_usd,average_usd,price_changed_at', (q) =>
-    q.eq('game_id', game.id),
+  }>(
+    admin,
+    'values_prices',
+    'item_id,cheapest_usd,average_usd,price_changed_at',
+    // values_prices has no surrogate `id`; item_id IS the primary key.
+    'item_id',
+    (q) => q.eq('game_id', game.id),
   )
   const prev = new Map(existing.map((r) => [r.item_id, r]))
 

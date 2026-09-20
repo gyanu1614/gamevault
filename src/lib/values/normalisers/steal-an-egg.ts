@@ -25,11 +25,20 @@ import type { Normaliser, ParsedListing, TaxonomyEntry } from '@/lib/values/type
 
 /** Lowercase, strip emoji/punctuation, collapse whitespace. */
 function comparable(title: string): string {
-  return title
-    .toLowerCase()
-    .replace(/[^a-z0-9&+/. ]+/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim()
+  return (
+    title
+      .toLowerCase()
+      // "50xLuminous Egg" / "3xTitan" — sellers glue the quantity to the item
+      // name. Without this the matcher sees "50xluminous" and matches nothing,
+      // which silently dropped every listing in that (common) format.
+      .replace(/\b(\d{1,4})x(?=[a-z])/g, '$1x ')
+      // A slash between two names is a separator, not part of either:
+      // "angels/demons", "Angel/Devil", "demon/angel".
+      .replace(/([a-z])\/([a-z])/g, '$1 / $2')
+      .replace(/[^a-z0-9&+/. ]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+  )
 }
 
 /**
@@ -37,7 +46,18 @@ function comparable(title: string): string {
  * A random-draw listing is still priceable (it is exactly what the market
  * sells); it just cannot resolve to a NAMED egg.
  */
-const RANDOM_RE = /\b(r[ao]nd[ou]m|ramdom|randum|any area|you choose|mystery)\b/
+const RANDOM_RE = /\b(r[ao]nd[ou]m|ramdom|randum|rendom|any area|you choose|mystery)\b/
+
+/**
+ * Sellers also sell by RARITY TIER rather than by area — "secret egg",
+ * "1 divine eggs from random place", "DIVINE, ETERNAL or SECRET EGG". At
+ * production scale this is ~70 listings that previously matched nothing.
+ *
+ * These are priced as a tier, so they resolve to a tier pseudo-area when the
+ * taxonomy carries one; the caller seeds those the same way it seeds areas.
+ */
+const RARITY_TIER_RE =
+  /\b(secret|divine|eternal|mythic|legendary|cosmic|monster)\b/
 
 /** Services: someone plays for you. Never an item value. */
 const SERVICE_RE = /\b(egg run|carry|service|boost(ing)?|tips? jar|1 hr|hour run)\b/
@@ -187,8 +207,16 @@ export const STEAL_AN_EGG_SEED_ALIASES: Record<string, string[]> = {
     'angel or demon',
     'evil or angel',
     'angels & demons',
+    'angels / demons',
+    'angel / demon',
+    'angel / devil',
+    'demon / angel',
+    'devil / angel',
+    'angel devil',
   ],
   'king-monkey': ['king monkey', 'monkey area', 'king monkey area'],
+  // Slash forms seen at production scale: "angels/demons", "Angel/Devil".
+  // comparable() spaces the slash out, so these match as written.
   'abyss-ocean': ['ocean', 'abyss', 'abyss ocean'],
   'cherry-blossom': ['cherry blossom', 'cherry', 'blossom'],
   'titan-temple': ['titan', 'temple', 'titan temple area'],
@@ -253,6 +281,23 @@ export const stealAnEggNormaliser: Normaliser = {
           quantity,
         })
       }
+      // Sold by rarity tier rather than by area ("secret egg", "divine eggs").
+      // Only counts when the taxonomy actually carries that tier as an item,
+      // so this can never invent a match.
+      const tier = t.match(RARITY_TIER_RE)?.[1]
+      if (tier) {
+        const tierEntry = matchTaxonomy(tier, taxonomy, ['area', 'egg'])
+        if (tierEntry) {
+          return result({
+            intent: 'egg',
+            itemSlug: tierEntry.entry.slug,
+            // Weaker than a named egg: a tier covers several eggs.
+            confidence: 0.6,
+            quantity,
+          })
+        }
+      }
+
       // Mentions an egg, resolves to nothing we know → review, never a guess.
       return result({
         intent: 'egg',
