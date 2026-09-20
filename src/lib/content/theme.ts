@@ -103,6 +103,48 @@ export interface CalcPromoExample {
   qualifier: string
 }
 
+/**
+ * Shared hub copy — the SafeDrop model, stated the same way everywhere.
+ *
+ * These live here, not in the per-game entries, because they are claims about
+ * DropMarket rather than about a game: every current and future game inherits
+ * them, and there is exactly one place to change them.
+ *
+ * TWO RULES, both load-bearing:
+ *
+ *  1. PRICING. We price ACTIVE third-party listings from reputable sellers. We
+ *     do not have completed-sale history, so no hub string may claim "completed
+ *     sales" or "completed DropMarket sales" — that was a factual overclaim on
+ *     every hub surface.
+ *  2. PROTECTION. Never describe payout timing or where money sits. DropMarket
+ *     acts as the seller's commercial agent; "the seller is paid only after you
+ *     confirm delivery", "escrow" and "we hold funds" all describe custody we
+ *     do not perform, and they cut against the agent model. Say what the BUYER
+ *     gets instead: the outcome, and the refund.
+ */
+export const HUB_COPY = {
+  /** The one-line protection promise. Outcome, never mechanics. */
+  safedrop:
+    'Every order is covered by SafeDrop — get exactly what you ordered, or your money back.',
+  /** Short form, for tight surfaces (footer, badges). */
+  safedropShort: 'Get exactly what you ordered, or your money back.',
+  /**
+   * Lowercase clause, for continuing a sentence ("…a safer place to buy them —
+   * get exactly what you ordered"). Stored ready to use rather than
+   * lower-cased at render time: a `{expr}` in JSX emits its own text node, so
+   * React inserts a `<!-- -->` separator into the HTML and the page no longer
+   * matches its own copy byte for byte.
+   */
+  safedropClause: 'get exactly what you ordered, or your money back.',
+  /** How prices are sourced. Accurate: active listings, reputable sellers. */
+  pricingBasis: 'priced from live marketplace listings, reputable sellers only',
+  /** Sentence-initial variant of the above. */
+  pricingBasisSentence:
+    'Prices come from live marketplace listings, reputable sellers only.',
+  /** The qualifier under a calculator/promo verdict. */
+  pricingQualifier: 'Based on live marketplace listings',
+} as const
+
 /** Neutral tokens — identical across every game. */
 export const CONTENT_NEUTRALS = {
   bg: '#0A0D0B',
@@ -146,9 +188,9 @@ const DEFAULT_THEME: GameContentTheme = {
   ambient: ambientFor('110,140,116', 90, 44),
   heroTitle: 'Item values, trading and cash-out guides',
   heroLead:
-    'What items are actually worth — priced from completed sales, not trading-server rumours.',
+    'What items are actually worth — priced from live marketplace listings, reputable sellers only, not trading-server rumours.',
   heroAbout:
-    'These guides track what buyers really pay, and what that means whether you are buying, selling or holding. Every value is built from completed sales and active listings on DropMarket, never from estimates.',
+    'These guides track what buyers really pay, and what that means whether you are buying, selling or holding. Every value is built from live marketplace listings by reputable sellers, never from estimates.',
   // Neutral, game-agnostic fallback — no item names, so an unthemed game never
   // shows another game's items. Reads as an illustrative placeholder.
   calculatorExample: {
@@ -156,7 +198,7 @@ const DEFAULT_THEME: GameContentTheme = {
     give: 'Your side of the trade',
     letter: 'F',
     verdict: 'See if the trade is fair',
-    qualifier: 'Based on completed sales',
+    qualifier: HUB_COPY.pricingQualifier,
   },
   // An unthemed game has no hub routes today (every hub page notFound()s a
   // slug with no theme), so the fallback publishes nothing. Adding a real
@@ -187,7 +229,7 @@ const THEMES: Record<string, GameContentTheme> = {
     ambient: ambientFor('63,163,92', 90, 44),
     heroTitle: 'Steal a Brainrot values, trading and cash-out guides',
     heroLead:
-      'Everything worth knowing about what Brainrots are actually worth — priced from completed sales, not trading-server rumours.',
+      'Everything worth knowing about what Brainrots are actually worth — priced from live marketplace listings, reputable sellers only, not trading-server rumours.',
     heroAbout:
       'Steal a Brainrot is a Roblox base-building game where players steal and defend Brainrots that generate income per second. Almost all trading happens around Secrets and mutated variants, and prices move whenever an event adds or retires supply. These guides track what people really pay, and what that means if you are buying, selling or holding.',
     // SAB items + SAB mutation vocabulary (Default / Lava …).
@@ -196,7 +238,7 @@ const THEMES: Record<string, GameContentTheme> = {
       give: 'Bunny and Eggy · Lava — $183.72',
       letter: 'L',
       verdict: 'You come out behind',
-      qualifier: 'Based on completed sales',
+      qualifier: HUB_COPY.pricingQualifier,
     },
     // Exactly the pages SAB serves today — price-index is SAB-only.
     pages: {
