@@ -47,11 +47,12 @@ export async function GET(request: NextRequest) {
     results.push(evaluate(check, latest, now, error))
   }
 
-  // The per-row half: a partial freeze keeps max() fresh, so ask how many rows
-  // have NOT advanced (the blind spot that hid a five-day outage).
+  // The per-key half: a partial freeze keeps max() fresh, so ask how many keys
+  // have evidence NEWER than their price (the blind spot that hid a five-day
+  // outage). Not a row-age count — see freshness-checks.ts.
   const countResults: StaleCountResult[] = []
   for (const check of STALE_COUNT_CHECKS) {
-    const { staleRows, error } = await readStaleCount(admin as any, check, now)
+    const { staleRows, error } = await readStaleCount(admin as any, check)
     countResults.push(evaluateStaleCount(check, staleRows, error))
   }
 
@@ -96,7 +97,7 @@ export async function GET(request: NextRequest) {
       `${staleCounts.length} stale row-count(s):`,
     [
       ...stale.map((r) => `${r.table}.${r.column}=${r.ageHours ?? 'none'}h`),
-      ...staleCounts.map((r) => `${r.table}.stale_rows=${r.staleRows ?? 'none'}`),
+      ...staleCounts.map((r) => `${r.table}.unrepriced=${r.staleRows ?? 'none'}`),
     ].join(' '),
   )
 
