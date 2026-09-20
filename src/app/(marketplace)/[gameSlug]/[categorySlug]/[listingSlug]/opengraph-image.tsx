@@ -18,6 +18,9 @@ import {
 export const alt = 'Listing on DropMarket — covered by SafeDrop Buyer Protection'
 export const size = OG_SIZE
 export const contentType = 'image/png'
+// Step 7a — listings are an open set (no static params); force-static makes
+// the 24 h ISR explicit so a future dynamic-API slip fails loudly.
+export const dynamic = 'force-static'
 export const revalidate = 86400
 
 interface ListingRow {

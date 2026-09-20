@@ -8,31 +8,21 @@
  */
 
 import { ImageResponse } from 'next/og'
-import {
-  OgCard,
-  OG_SIZE,
-  ogRestFetch,
-  slugToTitle,
-  formatUsd,
-} from '@/lib/seo/og-template'
+import { OgCard, OG_SIZE } from '@/lib/seo/og-template'
+import { getIndexableCategoryPairs } from '@/lib/seo/category-pairs'
+import { buildCategoryOgData } from './_ogData'
 
 export const alt = 'Buy and sell on DropMarket — covered by SafeDrop Buyer Protection'
 export const size = OG_SIZE
 export const contentType = 'image/png'
+// Step 7a — see ../opengraph-image.tsx: prerender the sitemap's pairs, keep
+// 24 h ISR for the long tail. Data comes from _ogData.ts (game_categories,
+// not the legacy `categories` mirror this route used to read).
+export const dynamic = 'force-static'
 export const revalidate = 86400
 
-interface GameRow {
-  id: string
-  name: string
-}
-
-interface CategoryRow {
-  id: string
-  name: string
-}
-
-interface ListingPriceRow {
-  price: number | string | null
+export async function generateStaticParams() {
+  return getIndexableCategoryPairs()
 }
 
 export default async function Image({
@@ -41,41 +31,7 @@ export default async function Image({
   params: Promise<{ gameSlug: string; categorySlug: string }>
 }) {
   const { gameSlug, categorySlug } = await params
-
-  let gameName = slugToTitle(gameSlug)
-  let categoryName = slugToTitle(categorySlug)
-  let subtitle = 'Verified Sellers · Instant Delivery'
-
-  const gameResult = await ogRestFetch<GameRow>(
-    `games?slug=eq.${encodeURIComponent(gameSlug)}&select=id,name&limit=1`
-  )
-  const game = gameResult?.rows?.[0]
-
-  if (game) {
-    gameName = game.name
-
-    const categoryResult = await ogRestFetch<CategoryRow>(
-      `categories?slug=eq.${encodeURIComponent(categorySlug)}&game_id=eq.${encodeURIComponent(game.id)}&select=id,name&limit=1`
-    )
-    const category = categoryResult?.rows?.[0]
-
-    if (category) {
-      categoryName = category.name
-
-      // Lowest active price (first row, price ascending) + exact count
-      // from the Content-Range header — one round trip.
-      const listingsResult = await ogRestFetch<ListingPriceRow>(
-        `listings?game_id=eq.${encodeURIComponent(game.id)}&game_category_id=eq.${encodeURIComponent(category.id)}&status=eq.active&select=price&order=price.asc&limit=1`,
-        { count: true }
-      )
-      const lowPrice = formatUsd(listingsResult?.rows?.[0]?.price)
-      const count = listingsResult?.total ?? 0
-
-      if (lowPrice && count > 0) {
-        subtitle = `From ${lowPrice} · ${count.toLocaleString('en-US')} ${count === 1 ? 'Offer' : 'Offers'} · Instant Delivery`
-      }
-    }
-  }
+  const { gameName, categoryName, subtitle } = await buildCategoryOgData(gameSlug, categorySlug)
 
   return new ImageResponse(
     (

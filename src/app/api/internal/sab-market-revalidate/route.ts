@@ -1,4 +1,5 @@
-import { revalidatePath } from 'next/cache'
+import { revalidatePath, revalidateTag } from 'next/cache'
+import { valuesTag } from '@/lib/values/revalidation'
 import { checkRateLimitByIp, rateLimitResponse } from '@/lib/security/rate-limit'
 
 export const runtime = 'nodejs'
@@ -99,16 +100,17 @@ export async function POST(
     revalidatePath(path)
   }
 
-  revalidatePath(
-    '/steal-a-brainrot/values/[itemSlug]',
-    'page',
-  )
+  // Step 7a — item pages by tag. The old call,
+  // revalidatePath('/steal-a-brainrot/values/[itemSlug]', 'page'), never
+  // matched anything (pages are tagged by route pattern + concrete pathname),
+  // so SAB item pages had only ever refreshed by time.
+  revalidateTag(valuesTag('steal-a-brainrot'))
 
   return jsonResponse({
     ok: true,
     revalidated: [
       ...paths,
-      '/steal-a-brainrot/values/[itemSlug]',
+      valuesTag('steal-a-brainrot'),
     ],
     revalidated_at: new Date().toISOString(),
   })

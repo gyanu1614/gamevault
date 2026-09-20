@@ -7,6 +7,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { createAnonClient } from '@/lib/supabase/anon'
 
 /**
  * Update seller presence to online
@@ -254,7 +255,9 @@ export async function setStorePaused(paused: boolean): Promise<{
  */
 export async function getPausedSellerIds(): Promise<string[]> {
   try {
-    const supabase = await createClient()
+    // Public read, cookie-free (Step 7a): every ISR marketplace page calls
+    // this; the session client would make them all render per request.
+    const supabase = createAnonClient()
     const { data, error } = await supabase
       .from('seller_presence')
       .select('seller_id')

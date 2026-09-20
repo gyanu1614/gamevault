@@ -11,7 +11,10 @@
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { revalidatePath } from 'next/cache'
 import { requireAdmin } from '@/lib/actions/admin-permissions'
-import { createClient as createAnonClient } from '@/lib/supabase/server'
+// The public reads below run inside ISR pages (category, currency shell),
+// so they use the cookie-free anon client. Step 7a: this import used to alias
+// the SESSION client as `createAnonClient`, which made every caller dynamic.
+import { createAnonClient } from '@/lib/supabase/anon'
 import type {
   CategoryConfigByType,
   CategoryConfigType,
@@ -36,7 +39,7 @@ export async function fetchCategoryConfig<T extends CategoryConfigType>(
   gameId: string,
   categoryType: T,
 ): Promise<CategoryConfigByType[T] | null> {
-  const supabase = await createAnonClient()
+  const supabase = createAnonClient()
   const { data } = await supabase
     .from('category_configs')
     .select('config')
@@ -55,7 +58,7 @@ export async function fetchCategoryConfigBySlug<T extends CategoryConfigType>(
   gameSlug: string,
   categoryType: T,
 ): Promise<CategoryConfigByType[T] | null> {
-  const supabase = await createAnonClient()
+  const supabase = createAnonClient()
   const { data: game } = await supabase
     .from('games')
     .select('id')

@@ -25,6 +25,12 @@ import GenericMethodologyPage from '../_generic/MethodologyPage'
 import { getGameContentTheme } from '@/lib/content/theme'
 
 export const revalidate = 86400
+/**
+ * Closed set: generateStaticParams lists every slug this route serves, so an
+ * unknown slug is a static 404 with no function invocation (Step 7a — the
+ * crawl of 233 `/{game}/…` hub URLs was rendering an empty page each).
+ */
+export const dynamicParams = false
 
 /** Games served by the generic values_* pipeline (see the values hub route). */
 const VALUES_PIPELINE_GAMES = new Set(['steal-an-egg'])

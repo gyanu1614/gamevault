@@ -19,6 +19,12 @@ import CalculatorClient, {
 import AdoptMeCalculatorPage from './_AdoptMeCalculatorPage'
 
 export const revalidate = 3600
+/**
+ * Closed set: generateStaticParams lists every slug this route serves, so an
+ * unknown slug is a static 404 with no function invocation (Step 7a — the
+ * crawl of 233 `/{game}/…` hub URLs was rendering an empty page each).
+ */
+export const dynamicParams = false
 
 /**
  * Prerender the game slug(s) this route serves; every other slug notFound()s
@@ -30,11 +36,6 @@ export function generateStaticParams() {
 
 interface PageProps {
   params: Promise<{ gameSlug: string }>
-  searchParams: Promise<{
-    brainrot?: string
-    mutation?: string
-    tab?: string
-  }>
 }
 
 type BrainrotRow = {
@@ -320,12 +321,8 @@ async function getCalculatorData(): Promise<{
   return { brainrots, mutations, cashPrices, tradePrices, lastUpdated }
 }
 
-export default async function SabCalculatorPage({
-  params,
-  searchParams,
-}: PageProps) {
-  const [{ gameSlug }, resolvedSearchParams] =
-    await Promise.all([params, searchParams])
+export default async function SabCalculatorPage({ params }: PageProps) {
+  const { gameSlug } = await params
 
   // Adopt Me WFL calculator (dual trade + cash verdict). ?tab=cash on Adopt Me
   // deep-links to the values list instead of a separate cash tab (see nav).
@@ -369,7 +366,7 @@ export default async function SabCalculatorPage({
   return (
     <main className="relative min-h-screen bg-[#0C0F0E]">
       <SabHeroBackdrop height={420}>
-      <HubNav data={hubNav} calcMode={resolvedSearchParams.tab === 'cash' ? 'cash' : 'trade'} />
+      <HubNav data={hubNav} />
       <JsonLd
         data={breadcrumbList([
           { name: 'Home', path: '/' },
@@ -401,12 +398,9 @@ export default async function SabCalculatorPage({
         mutations={mutations}
         cashPrices={cashPrices}
         tradePrices={tradePrices}
-        initialBrainrotSlug={resolvedSearchParams.brainrot}
-        initialMutationSlug={resolvedSearchParams.mutation}
-        // WFL is the page's job now. Cash prices already have a whole page
-        // (/values), so they stay available here as the secondary tab but no
-        // longer greet everyone who lands on the calculator.
-        initialTab={resolvedSearchParams.tab === 'cash' ? 'cash' : 'trade'}
+        // ?tab=cash / ?brainrot= / ?mutation= are read on the client
+        // (_deepLink.ts): reading searchParams here made the ISR route render
+        // per request. WFL stays the default; cash is the secondary tab.
       />
 
       {/* Guides strip — routes a trader who just checked a price into the

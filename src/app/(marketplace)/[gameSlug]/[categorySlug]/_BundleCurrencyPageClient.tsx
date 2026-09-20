@@ -31,6 +31,7 @@ import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useAuthDialog } from '@/components/auth/AuthDialog'
+import { useAuth } from '@/hooks/use-auth'
 import { BadgeCheck, Check, Clock, Flame, Package, ShieldCheck, SlidersHorizontal, Star, Zap, type LucideIcon  } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Card } from '@/components/ui/card'
@@ -101,12 +102,10 @@ export interface BundleCurrencyPageData {
 
 export default function BundleCurrencyPageClient({
   data,
-  viewerId,
   introLine,
   blogRail,
 }: {
   data: BundleCurrencyPageData
-  viewerId: string | null
   /** SEO intro sentence (live stats), server-computed so it lands in
    *  the initial HTML. Rendered under the header tagline. */
   introLine?: string | null
@@ -220,6 +219,12 @@ export default function BundleCurrencyPageClient({
         return rest
     }
   }, [offersForSelection, otherFilter, activeOffer?.listingId])
+  // V14m/Step 7a — the viewer comes from the client auth context now (the
+  // page is ISR; resolving the session on the server made it dynamic). While
+  // auth is still loading a click goes straight to checkout, which enforces
+  // sign-in itself — never bounce a signed-in buyer to the login dialog.
+  const { user: viewer, loading: authLoading } = useAuth()
+  const viewerId = viewer?.id ?? null
   const isOwn = !!viewerId && activeOffer?.sellerId === viewerId
   const cappedQty = Math.min(qty, activeOffer?.stock ?? 1)
 
@@ -229,7 +234,7 @@ export default function BundleCurrencyPageClient({
   // place with checkout as the post-auth redirect (no bounce to home).
   const onBuy = (listingId: string, quantity: number) => {
     const dest = `/checkout/${listingId}?qty=${quantity}`
-    if (!viewerId) {
+    if (!viewerId && !authLoading) {
       openAuth('login', { redirect: dest })
       return
     }
