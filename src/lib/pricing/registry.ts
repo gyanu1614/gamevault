@@ -22,6 +22,13 @@ import { runStealAnEggCorrection } from '@/lib/pricing/games/steal-an-egg'
 export type RepriceOptions = {
   /** Recompute and rewrite every item, ignoring the incremental check. */
   full?: boolean
+  /**
+   * How long to queue behind another writer holding the pipeline lock before
+   * failing (see src/lib/pricing/pipeline-lock.ts). The runner and the manual
+   * script wait (default 10 min); the thin correct-prices route passes 0 and
+   * fails fast with the holder's name, since it has a 300s budget.
+   */
+  lockWaitSeconds?: number
 }
 
 export type PricingGame = {

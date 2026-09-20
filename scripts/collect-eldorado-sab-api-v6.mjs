@@ -4,6 +4,7 @@ import { existsSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { spawn } from "node:child_process";
+import { hostname } from "node:os";
 import dotenv from "dotenv";
 
 dotenv.config({ path: ".env.local", quiet: true });
@@ -1693,6 +1694,112 @@ async function collectOne({
   };
 }
 
+/**
+ * Pipeline lock around the IMPORT phase — the thin fetch-based twin of
+ * src/lib/pricing/pipeline-lock.ts (this script cannot import app TypeScript;
+ * the SQL functions are the contract, this loop is ~40 lines).
+ *
+ * 2026-09-19 20:04Z: an 18-minute manual `pnpm reprice --game=sab --full` from
+ * the owner's machine overlapped this script's import. Batch 22 hit HTTP 546,
+ * then "canceling statement due to lock timeout" on every retry, and the job
+ * died with 10,837 listings crawled and not landed — and neither log named
+ * the other writer. Now whoever comes second queues behind a NAMED holder for
+ * a bounded time, then fails saying who and since when.
+ *
+ * Only the import phase is guarded: the Eldorado fetch phase before it does
+ * not write, so a manual reprice may run alongside that part. The TTL bounds
+ * a crashed holder (the job itself is capped at 120 minutes).
+ */
+const PIPELINE_LOCK_NAME = "sab-pipeline";
+const IMPORT_LOCK_TTL_SECONDS = 90 * 60;
+const IMPORT_LOCK_POLL_SECONDS = 15;
+
+function pipelineLockHolder() {
+  const where = process.env.GITHUB_RUN_ID
+    ? `gh-run-${process.env.GITHUB_RUN_ID}`
+    : hostname();
+  return `crawl:${where}:${process.pid}`;
+}
+
+async function pipelineLockRpc(fn, args) {
+  const base = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+  const response = await fetch(new URL(`/rest/v1/rpc/${fn}`, base), {
+    method: "POST",
+    headers: {
+      apikey: serviceKey,
+      authorization: `Bearer ${serviceKey}`,
+      "content-type": "application/json",
+      accept: "application/json",
+    },
+    body: JSON.stringify(args),
+  });
+  const body = await response.text();
+  if (!response.ok) throw new Error(`${fn} failed (${response.status}): ${body.slice(0, 300)}`);
+  return body ? JSON.parse(body) : null;
+}
+
+/** Run `work` holding the pipeline lock; always releases. */
+async function withImportLock(work) {
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() || !process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()) {
+    console.warn(
+      "\n⚠️ SUPABASE_SERVICE_ROLE_KEY not set — importing WITHOUT the pipeline lock. " +
+        "Make sure no reprice is running.",
+    );
+    return work();
+  }
+
+  const holder = pipelineLockHolder();
+  const waitSeconds = Number(process.env.SAB_PIPELINE_LOCK_WAIT_SECONDS ?? 20 * 60);
+  const waitMs = (Number.isFinite(waitSeconds) ? waitSeconds : 20 * 60) * 1000;
+  const startedAt = Date.now();
+  let announced = false;
+
+  for (;;) {
+    const rows = await pipelineLockRpc("sab_pipeline_lock_acquire", {
+      p_name: PIPELINE_LOCK_NAME,
+      p_holder: holder,
+      p_ttl_seconds: IMPORT_LOCK_TTL_SECONDS,
+    });
+    const row = Array.isArray(rows) ? rows[0] : rows;
+    if (row?.acquired === true) break;
+
+    const waited = Date.now() - startedAt;
+    if (!announced) {
+      console.log(
+        `\n⏳ ${PIPELINE_LOCK_NAME} is held by ${row?.holder} since ${row?.acquired_at} ` +
+          `(expires ${row?.expires_at}) — waiting up to ${Math.round(waitMs / 1000)}s ` +
+          `before importing.`,
+      );
+      announced = true;
+    }
+    if (waited >= waitMs) {
+      throw new Error(
+        `${PIPELINE_LOCK_NAME} is held by ${row?.holder} since ${row?.acquired_at} ` +
+          `(expires ${row?.expires_at}); gave up after waiting ${Math.round(waited / 1000)}s. ` +
+          `Two writers must not overlap. The crawled feed is in the run artifact — ` +
+          `re-send it with publish_only_run_id once the other writer finishes.`,
+      );
+    }
+    await sleep(Math.min(IMPORT_LOCK_POLL_SECONDS * 1000, waitMs - waited));
+  }
+  if (announced) console.log(`✅ ${PIPELINE_LOCK_NAME} acquired by ${holder} after waiting.`);
+
+  try {
+    return await work();
+  } finally {
+    try {
+      await pipelineLockRpc("sab_pipeline_lock_release", {
+        p_name: PIPELINE_LOCK_NAME,
+        p_holder: holder,
+      });
+    } catch (error) {
+      // The TTL frees it; not worth failing a finished import over.
+      console.warn(`⚠️ ${PIPELINE_LOCK_NAME} release failed (${error.message}); it expires on its own.`);
+    }
+  }
+}
+
 function runImporter(outputPath) {
   return new Promise((resolveImport, rejectImport) => {
     const child = spawn(
@@ -1972,7 +2079,7 @@ async function main() {
   if (!process.env.SAB_MARKET_IMPORT_SECRET) {
     throw new Error("SAB_MARKET_IMPORT_SECRET is required with --send");
   }
-  await runImporter(options.outputPath);
+  await withImportLock(() => runImporter(options.outputPath));
 
   // Nothing is triggered from here any more. Expire and reprice both run as
   // their own workflow steps straight after this script, on the runner

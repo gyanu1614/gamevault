@@ -14,6 +14,11 @@
 import { createServiceRoleClient } from '@/lib/supabase/service'
 import type { RepriceOptions } from '@/lib/pricing/registry'
 import {
+  SAB_PIPELINE_LOCK,
+  defaultHolder,
+  withPipelineLock,
+} from '@/lib/pricing/pipeline-lock'
+import {
   keysNeedingRecompute,
   newestObservedByKey,
 } from '@/lib/pricing/incremental'
@@ -242,11 +247,47 @@ async function selectAll<T>(
   return rows
 }
 
+/**
+ * A manual full reprice took 18 minutes from the owner's machine on 2026-09-19
+ * and outlived the runner's own lifetime for this step several times over;
+ * the TTL bounds a holder that dies without releasing, nothing more.
+ */
+const REPRICE_LOCK_TTL_SECONDS = 45 * 60
+
+/**
+ * Reprice SAB, holding the pipeline lock for the duration.
+ *
+ * 2026-09-19 20:04Z: a manual `--full` from the owner's machine overlapped the
+ * scheduled crawl's import; the import died on a lock timeout with 10,837
+ * listings crawled and not landed, and neither log named the other writer.
+ * The lock makes the overlap explicit: whoever comes second queues (up to
+ * lockWaitSeconds) behind a named holder, then fails with that name.
+ */
 export async function runSabCorrection(
   options: RepriceOptions = {},
 ): Promise<Record<string, unknown>> {
-  const full = options.full === true
   const admin = createServiceRoleClient()
+  const waitSeconds =
+    options.lockWaitSeconds ??
+    Number(process.env.SAB_PIPELINE_LOCK_WAIT_SECONDS ?? 600)
+
+  return withPipelineLock(
+    admin as any,
+    {
+      name: SAB_PIPELINE_LOCK,
+      holder: defaultHolder(options.full ? 'reprice-full' : 'reprice'),
+      ttlSeconds: REPRICE_LOCK_TTL_SECONDS,
+      waitSeconds: Number.isFinite(waitSeconds) ? waitSeconds : 600,
+    },
+    () => runSabCorrectionUnlocked(admin, options),
+  )
+}
+
+async function runSabCorrectionUnlocked(
+  admin: ReturnType<typeof createServiceRoleClient>,
+  options: RepriceOptions,
+): Promise<Record<string, unknown>> {
+  const full = options.full === true
   const startedAt = new Date().toISOString()
 
   // ROUTE-014: refresh the evidence snapshot BEFORE reading it. The crawl
