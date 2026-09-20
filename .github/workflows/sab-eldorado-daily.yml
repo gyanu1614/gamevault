@@ -14,7 +14,7 @@ name: SAB Eldorado Daily Market Collection
 # ever revisited — which is why listing disappearance carried no signal and
 # ended_at was null on every row.
 #
-# Re-crawling the same panel daily is also what /api/cron/expire-sab-listings
+# Re-crawling the same panel daily is also what the expire step (pnpm sab:expire)
 # depends on: absence only means something if we actually looked again.
 
 on:
@@ -77,9 +77,9 @@ jobs:
       NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
       # The popularity step writes popularity_rank directly to sab_brainrots.
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-      # Let the collector reprice as its LAST step (correct-prices?game=sab) once
-      # the whole crawl has landed — closes the snapshot-lag race that let a
-      # stale cheapest publish. The 10:00 UTC Vercel cron stays as a backstop.
+      # Used by the freshness check at the end of the job. The collector no
+      # longer calls any Vercel route: expire and reprice both run on this
+      # runner as their own steps (2026-09-20).
       PUBLIC_API_URL: ${{ secrets.PUBLIC_API_URL }}
       CRON_SECRET: ${{ secrets.CRON_SECRET }}
 
@@ -140,6 +140,19 @@ jobs:
         if: inputs.publish_only_run_id == ''
         continue-on-error: true
         run: pnpm sab:eldorado:popularity
+
+      # Listing lifecycle, on the runner (see scripts/expire-listings.mjs).
+      # The collector used to call /api/cron/expire-sab-listings for this; that
+      # route was killed at Vercel's 300s budget in 3 of 8 runs, and since PR #76
+      # made the failure fatal, each of those runs also skipped its reprice.
+      # Runs BEFORE the reprice so ended listings leave the evidence set in the
+      # same cycle.
+      #
+      # Deliberately NOT continue-on-error: a silent lifecycle failure is how
+      # ended_at stayed null on 16k rows for months.
+      - name: Expire vanished SAB listings
+        if: inputs.publish_only_run_id == ''
+        run: pnpm sab:expire
 
       # Repricing, on the runner (see scripts/reprice.mjs for the full why).
       # This replaces the POST to /api/cron/correct-prices that the collector

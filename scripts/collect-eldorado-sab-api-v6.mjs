@@ -1786,7 +1786,7 @@ async function main() {
   // PANEL REFRESH (--refresh-after-hours): eligibility comes from the DATABASE
   // (`price_updated_at`), not the inert progress file, so CI and local runs
   // agree and the queue actually rotates. Stale items become eligible again,
-  // which both restores coverage growth and gives /api/cron/expire-sab-listings
+  // which both restores coverage growth and gives the expire step (pnpm sab:expire)
   // the repeated observations it needs before absence means anything.
   const refreshAfterMs = options.refreshAfterHours * 60 * 60 * 1000;
   const usePanelRefresh = options.refreshAfterHours > 0;
@@ -1974,68 +1974,13 @@ async function main() {
   }
   await runImporter(options.outputPath);
 
-  // Reprice IMMEDIATELY after the whole crawl has landed. The correction cron
-  // is a single point-in-time read of the raw table; if it runs on its own
-  // clock while a multi-batch crawl is still importing, it prices a partial
-  // snapshot and stores a stale cheapest (Elefanto Frigo showed $259.99 while a
-  // $248 reputable listing existed). Triggering it HERE — after the last batch
-  // — closes that race by construction, for manual crawls too (a workflow-only
-  // step wouldn't cover `npm run sab:eldorado:send` run locally). Mirrors what
-  // adopt-me-daily.yml already does. Best-effort: the 10:00 UTC Vercel cron is
-  // an idempotent backstop, so a failure here never fails the crawl.
-  await triggerPostCrawl();
-}
-
-/**
- * After the whole crawl lands: (1) EXPIRE listings that vanished from the fresh
- * results (sold/removed — a gone listing must stop setting the price), THEN
- * (2) REPRICE from the cleaned-up active set. Order matters: expiring first
- * means the reprice never sees a dead $200 listing that's no longer on Eldorado.
- *
- * No-op (with a note) when the trigger env isn't set, so a bare `--send` still
- * works; never throws — these are follow-ups, not part of the import's success.
- * The scheduled crons remain idempotent backstops.
- */
-async function triggerPostCrawl() {
-  const apiUrl = process.env.PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_SITE_URL;
-  const secret = process.env.CRON_SECRET;
-  if (!apiUrl || !secret) {
-    console.log(
-      "\nSkipping post-crawl expire+reprice (set PUBLIC_API_URL + CRON_SECRET to enable). " +
-        "The scheduled crons will catch up.",
-    );
-    return;
-  }
-  const base = apiUrl.replace(/\/$/, "");
-  // Expire is a GET, correct-prices a POST — match each route's verb.
-  await triggerCron("Expiring vanished listings", `${base}/api/cron/expire-sab-listings`, "GET", secret);
-  // Repricing is NOT triggered from here any more. It runs as its own workflow
-  // step (`pnpm reprice --game=sab`) straight after this script, on the runner,
-  // where it has no 300s function budget and where a failure fails the job.
-  // Calling the route from here is what let a five-day outage hide in a log.
-}
-
-async function triggerCron(label, url, method, secret) {
-  try {
-    console.log(`\n${label} → ${url.replace(/https?:\/\/[^/]+/, "")} …`);
-    const response = await fetch(url, {
-      method,
-      headers: { authorization: `Bearer ${secret}` },
-    });
-    const body = await response.text();
-    if (!response.ok) {
-      // MONITORING: a swallowed failure here is exactly how correct-prices
-      // 504'd on every run from 2026-09-14 while the workflow stayed green for
-      // five days. A failed hop must redden the job.
-      console.error(`${label} failed (${response.status}): ${body.slice(0, 300)}`);
-      process.exitCode = 1;
-      return;
-    }
-    console.log(`${label} ok: ${body.slice(0, 300)}`);
-  } catch (error) {
-    console.error(`${label} threw: ${error.message}`);
-    process.exitCode = 1;
-  }
+  // Nothing is triggered from here any more. Expire and reprice both run as
+  // their own workflow steps straight after this script, on the runner
+  // (`pnpm sab:expire`, `pnpm reprice --game=sab`), where neither has a 300s
+  // function budget and where a failure fails the job. Calling the routes from
+  // here is what let a five-day repricing outage hide in a log (2026-09-14) and
+  // what turned an expire-route timeout into a dead collect step (2026-09-20).
+  // A manual local `--send` should be followed by those two commands.
 }
 
 // ROUTE-012: only run when invoked as a script, so the queue-ordering helpers

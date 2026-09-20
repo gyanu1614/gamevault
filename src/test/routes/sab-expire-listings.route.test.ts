@@ -30,37 +30,36 @@ type Page = { rows: any[] } | { error: { message: string; code?: string } }
 /** Queued outcomes per range-start offset; each read shifts one off. */
 const readPlan = new Map<number, Page[]>()
 const readCalls: { from: number; to: number; ordered: string[] }[] = []
-const writeCalls: { ids: string[]; endedAt: string }[] = []
+const writeCalls: { ids: string[] }[] = []
 let writePlan: Page[] = []
 
 vi.mock('@/lib/supabase/service', () => ({
   createServiceRoleClient: () => ({
+    // 2026-09-20: the write is ONE RPC per batch of ids — sab_end_listings()
+    // sets ended_at from each row's own fetched_at server-side. It used to be
+    // one UPDATE per distinct ended_at (ms precision → per listing), which is
+    // what pushed the route past Vercel's 300s budget in 3 of 8 runs.
+    rpc: async (name: string, args: { p_ids: string[] }) => {
+      if (name !== 'sab_end_listings') throw new Error(`unexpected rpc ${name}`)
+      const outcome = writePlan.shift() ?? { rows: [] }
+      writeCalls.push({ ids: args.p_ids })
+      return 'error' in outcome
+        ? { data: null, error: outcome.error }
+        : { data: args.p_ids.length, error: null }
+    },
     from() {
-      const state: any = { ordered: [], update: null }
+      const state: any = { ordered: [] }
       const builder: any = {
         select: () => builder,
         eq: () => builder,
-        in: (_col: string, ids: string[]) => {
-          state.ids = ids
-          return builder
-        },
         order: (col: string) => {
           state.ordered.push(col)
           return builder
         },
-        update: (patch: any) => {
-          state.update = patch
-          // The write chain ends on .eq(), so resolve it as a thenable.
-          builder.then = (resolve: any) => {
-            const outcome = writePlan.shift() ?? { rows: [] }
-            writeCalls.push({ ids: state.ids, endedAt: patch.ended_at })
-            return resolve(
-              'error' in outcome
-                ? { data: null, error: outcome.error }
-                : { data: null, error: null },
-            )
-          }
-          return builder
+        update: () => {
+          throw new Error(
+            'per-row UPDATE is what timed out — expire through sab_end_listings()',
+          )
         },
         range: async (from: number, to: number) => {
           readCalls.push({ from, to, ordered: [...state.ordered] })
