@@ -401,6 +401,10 @@ export function renderedBody(html) {
       .replace(/\s+/g, ' ')
       .replace(/\d{1,2}:\d{2}\s*(UTC|AM|PM)/gi, 'TIME')
       .replace(/\d{4}-\d{2}-\d{2}T[\d:.]+Z?/g, 'TIMESTAMP')
+      // NEXT_PUBLIC_PURCHASES_ENABLED is set for Production only, so every
+      // preview renders the pre-launch CTA (lib/config/purchases.ts). Fold the
+      // two literals: an environment difference, not a code one.
+      .replace(/Buying Opens Soon/g, 'Buy Now')
       // Freshness copy ("36m ago", "1h ago") drifts between the two fetches.
       .replace(/\b\d+\s*(m|h|d|min|mins|minutes?|hours?|days?)\s+ago\b/gi, 'RELTIME')
       .trim()
