@@ -75,6 +75,14 @@ describe('ROUTE-004 — cron handlers and vercel.json schedules agree', () => {
     expect(runnerScheduled.filter((r) => !handlers.includes(r))).toEqual([])
   })
 
+  it('a runner-scheduled route is NOT also in vercel.json — one schedule, not two', () => {
+    // The daily correct-prices entry ran the SAB reprice a second time, on a
+    // 300s budget it could not meet, hours after the runner had already done
+    // it; the daily expire entry did the same. Two schedules for one job is
+    // the ROUTE-004 bug in reverse.
+    expect(runnerScheduled.filter((r) => scheduled.includes(r))).toEqual([])
+  })
+
   it('every workflow that took over a route actually carries the step', () => {
     for (const [route, steps] of Object.entries(RUNNER_SCHEDULED)) {
       for (const { workflow, step } of steps) {

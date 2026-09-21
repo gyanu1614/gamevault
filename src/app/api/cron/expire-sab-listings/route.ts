@@ -3,9 +3,9 @@
  *
  * The job itself lives in src/lib/sab/expire-listings.ts and runs on the GH
  * Actions runner as its own workflow step between the crawl and the reprice
- * (scripts/expire-listings.mjs). This route stays for one-off re-runs and for
- * the daily vercel.json backstop; the reasoning, the guards and the history
- * are documented on the module.
+ * (scripts/expire-listings.mjs). This route stays for one-off re-runs only —
+ * it has no vercel.json entry (2026-09-20) — and the reasoning, the guards and
+ * the history are documented on the module.
  *
  * Why it moved (2026-09-20): as a route it scanned ~36–42k active listings and
  * then issued one UPDATE per distinct ended_at — millisecond fetched_at, so one

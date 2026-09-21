@@ -1,9 +1,9 @@
 /**
  * SAB correction — DB read/write around the SAB accuracy layer.
  *
- * Extracted verbatim from the old correct-sab-prices route, which is gone; the
- * unified /api/cron/correct-prices cron is now the only caller. Behaviour is
- * unchanged.
+ * Extracted verbatim from the old correct-sab-prices route, which is gone. The
+ * callers are the runner (scripts/reprice.mjs, the scheduled path) and the
+ * manual /api/cron/correct-prices route. Behaviour is unchanged.
  *
  * Recomputes: minimum-evidence suppression, cohort anchoring for thin samples,
  * empirically measured mutation multipliers, and the reputable cheapest/average
@@ -292,10 +292,10 @@ async function runSabCorrectionUnlocked(
 
   // ROUTE-014: refresh the evidence snapshot BEFORE reading it. The crawl
   // refreshes it at the end of every run, so this is the backstop for the case
-  // where the last crawl failed or never ran — the same role the 10:00 UTC
-  // reprice plays for sab_price_display. Refreshing first also means this cron
-  // corrects against current evidence rather than whatever the last successful
-  // crawl left behind.
+  // where the last crawl's publish failed — and what makes a manual reprice
+  // stand on its own. Refreshing first also means this run corrects against
+  // current evidence rather than whatever the last successful crawl left
+  // behind.
   //
   // Hard failure, deliberately: correcting prices from a stale snapshot would
   // publish wrong numbers silently, which is the exact failure mode that let the

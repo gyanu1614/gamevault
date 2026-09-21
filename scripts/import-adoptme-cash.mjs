@@ -225,7 +225,7 @@ async function main() {
 
   console.log(
     `\nWrote ${upserted} raw listings, retired ${retired} vanished. ` +
-      `Pricing runs in the correct-prices cron (reputable engine).`,
+      `Pricing runs next, on the runner (pnpm reprice --game=adopt-me).`,
   )
 }
 
