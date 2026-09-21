@@ -72,18 +72,28 @@ jobs:
       - name: Import raw listings to Supabase
         run: pnpm adoptme:cash:import
 
-      # Pricing + history reconciliation now happen in the unified correct-prices
-      # cron (reputable engine, shared with SAB), not here. Trigger it for just
-      # Adopt Me so the fresh raw listings are priced immediately after import,
-      # rather than waiting for the 10:00 UTC Vercel schedule. Best-effort: a
-      # failure here doesn't fail the collection (the scheduled cron will catch
-      # up), so the raw import still counts as a successful run.
-      - name: Price Adopt Me (unified reputable cron)
-        continue-on-error: true
+      # Prices are recomputed HERE on the runner, not through
+      # /api/cron/correct-prices — the same move SAB (PR #76) and Steal An Egg
+      # made. This step used to curl that route with continue-on-error, with
+      # the daily 10:00 UTC vercel.json cron as its backstop. The cron entry is
+      # gone (2026-09-20: it ran the SAB reprice a second time on a 300s budget
+      # it could not meet), so a swallowed curl here would have been Adopt Me's
+      # ONLY repricing — the exact shape that froze SAB prices for five days.
+      #
+      # Deliberately NOT continue-on-error: a failed reprice must fail the job.
+      - name: Reprice Adopt Me
+        run: pnpm reprice --game=adopt-me
+
+      # The route used to revalidate the price cache tag after pricing; on the
+      # runner the value pages are revalidated by path, as Steal An Egg does.
+      - name: Revalidate the value pages
+        env:
+          VALUES_REVALIDATE_SECRET: ${{ secrets.VALUES_REVALIDATE_SECRET }}
         run: |
-          curl -fsS -X POST \
-            -H "Authorization: Bearer $CRON_SECRET" \
-            "$PUBLIC_API_URL/api/cron/correct-prices?game=adopt-me"
+          curl -sS -f -X POST \
+            -H "x-values-revalidate-secret: ${VALUES_REVALIDATE_SECRET}" \
+            "${PUBLIC_API_URL}/api/internal/values-revalidate?game=adopt-me" \
+            || { echo "revalidate failed"; exit 1; }
 
       - name: Upload feeds (debug artifact)
         if: always()

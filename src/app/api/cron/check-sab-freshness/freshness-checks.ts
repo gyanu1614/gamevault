@@ -54,13 +54,11 @@ export type FreshnessCheck = {
  *    every 3 hours (.github/workflows/sab-eldorado-daily.yml) and the import
  *    edge function refreshes the evidence snapshot at the end of every run, so
  *    both hops have a 3h cadence and a 6h threshold.
- *  - sab_price_display advances from the same crawl AND from the 10:00 UTC
- *    correct-prices cron (vercel.json). The crawl is the tighter of the two, so
- *    3h is its cadence too — but the daily cron is the backstop that must not be
- *    missed, so a 6h threshold still fires well inside one day.
- *
- * Cadence is deliberately the CRAWL's, not the daily cron's: a pipeline that has
- * fallen back to once-a-day repricing is already degraded.
+ *  - sab_price_display advances from the same crawl: the reprice runs as a
+ *    runner step right after every collect (pnpm reprice --game=sab), so it has
+ *    the crawl's 3h cadence and the same 6h threshold. There is no daily Vercel
+ *    backstop any more (2026-09-20): the 10:00 UTC correct-prices entry ran the
+ *    same reprice a second time, on a 300s budget it could not meet.
  */
 export const FRESHNESS_CHECKS: FreshnessCheck[] = [
   {
@@ -74,7 +72,7 @@ export const FRESHNESS_CHECKS: FreshnessCheck[] = [
     column: 'price_updated_at',
     cadenceHours: 3,
     cadence:
-      'refreshed by every crawl, and by the 10:00 UTC correct-prices cron as a backstop',
+      'refreshed by the reprice step at the end of every Eldorado crawl (every 3 hours)',
   },
   {
     table: 'sab_market_raw_listings',

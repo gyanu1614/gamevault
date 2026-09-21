@@ -1,5 +1,6 @@
 /**
- * Unified daily price-correction cron — all games, one route.
+ * Unified price-correction route — all games, one route. MANUAL TRIGGER ONLY:
+ * it has no vercel.json entry (2026-09-20); the scheduled path is the runner.
  *
  * Each game's reputable pricing runs here, isolated in its own try/catch so a
  * failure in one game (a slow read, a bad row) can never block another. Adding
@@ -10,7 +11,8 @@
  * logic) via runSabCorrection; Adopt Me runs the plain reputable model. Both
  * write a buyer-facing cheapest + average.
  *
- * Scheduled after the collectors land (see vercel.json). Idempotent: re-running
+ * Each game's workflow reprices on the runner right after its collect
+ * (`pnpm reprice --game=<key>`). Idempotent: re-running
  * fully repairs each game's corrected values.
  */
 
