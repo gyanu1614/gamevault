@@ -48,3 +48,20 @@ export async function getIndexableGameSlugs(): Promise<string[]> {
     return []
   }
 }
+
+/**
+ * Every active game slug — the prerender set for `/[gameSlug]/opengraph-image`
+ * (Step 7b: all game images are built at deploy, so a scraper never pays a
+ * Satori render for one). [] on failure: the rest renders on demand.
+ */
+export async function getActiveGameSlugs(): Promise<string[]> {
+  try {
+    const supabase = createAnonClient()
+    const { data } = (await supabase.from('games').select('slug').eq('is_active', true)) as unknown as {
+      data: { slug: string }[] | null
+    }
+    return (data ?? []).map((g) => g.slug).sort()
+  } catch {
+    return []
+  }
+}
