@@ -1,18 +1,18 @@
 -- DLT-001 · PART B (THE CLOSE) — revoke anon's access to public.profiles.
 --
--- *** NOT A LIVE MIGRATION YET. ***  This file lives in
--- supabase/migrations_pending/ on purpose: the CLI only applies
--- supabase/migrations/, and `supabase db push` applies every pending file in
--- that directory AT ONCE. Leaving B there would apply it in the same push as
--- PART A and collapse the split back into the coupled migration the preview
--- run already proved broken.
---
 -- ⚠️ APPLY ONLY AFTER PR #81's CODE IS LIVE IN PRODUCTION.
 --
--- To ship it: merge follow-up PR #82, which moves this file UNCHANGED into
--- supabase/migrations/ under the same filename, then `supabase db push`.
--- Nothing in the body needs editing — the timestamp already sorts after
--- PART A's (20260921004158).
+-- This file was held in supabase/migrations_pending/ until PR #81 shipped,
+-- because `supabase db push` applies every pending file in
+-- supabase/migrations/ AT ONCE: leaving it there would have applied it in the
+-- same push as PART A and collapsed the split back into the coupled migration
+-- the preview run already proved broken (view absent + new code live =>
+-- PGRST200 on the grid embed, counts 0, listing pages 404).
+--
+-- PR #82 moved it here with the SQL body byte-identical; only these header
+-- lines changed, because the file is now live and the old "NOT A LIVE
+-- MIGRATION" marker would be false. Merge #82 only after #81 is deployed,
+-- then `supabase db push`.
 --
 -- This is the migration that actually closes the Critical finding. It is
 -- separated from PART A (20260921004158_public_profiles_view.sql) because it

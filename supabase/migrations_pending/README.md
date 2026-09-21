@@ -35,6 +35,9 @@ side is broken.
 
 ## Current contents
 
-| File | Blocked on | Ships via |
-|---|---|---|
-| `20260921151722_public_profiles_revoke_anon.sql` | PR #81's code being live in production | PR #82 (`git mv` into `migrations/`, unchanged) |
+_Empty._ `20260921151722_public_profiles_revoke_anon.sql` shipped in PR #82
+once PR #81's code was live.
+
+The directory and its guard stay so the next held-back migration has somewhere
+to go — and so the rule (`db push` applies everything in `migrations/` at once)
+stays written down rather than being rediscovered.
