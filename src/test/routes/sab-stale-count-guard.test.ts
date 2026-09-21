@@ -9,21 +9,26 @@
  * "Updated" badge.
  *
  * max() answers "did ANY row move?". These tests pin the question that would
- * have caught it: "did any row NOT move?"
+ * have caught it: "did the crawl land evidence the price never followed?" —
+ * counted per key by sab_count_unrepriced(). NOT "is any row old": with
+ * incremental writes (PR #76) an unvisited item's computed_at is old by
+ * design, and the row-age version of this check alerted every 3h on 688 such
+ * rows while the reprice it watched was green (2026-09-20).
  */
 import { describe, it, expect } from 'vitest'
 
 import { evaluateStaleCount } from '@/app/api/cron/check-sab-freshness/freshness-checks'
 
 const CHECK = {
-  table: 'sab_price_display',
-  column: 'price_updated_at',
+  table: 'sab_price_corrections',
+  column: 'computed_at',
+  rpc: 'sab_count_unrepriced',
+  graceHours: 1,
   maxStaleRows: 0,
-  stalenessHours: 6,
 }
 
 describe('evaluateStaleCount', () => {
-  it('passes when no row is older than the window', () => {
+  it('passes when no key has evidence newer than its price', () => {
     const result = evaluateStaleCount(CHECK, 0)
     expect(result.stale).toBe(false)
     expect(result.staleRows).toBe(0)

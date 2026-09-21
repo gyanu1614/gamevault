@@ -68,7 +68,10 @@ export async function GET(request: NextRequest) {
   // shared-connection contention here.)
   for (const game of games) {
     try {
-      results[game.key] = { ok: true, ...(await game.run()) }
+      // A held pipeline lock fails fast here: this route has a 300s budget and
+      // is a manual trigger, so "held by <who> since <when>" is the useful
+      // answer, not a wait.
+      results[game.key] = { ok: true, ...(await game.run({ lockWaitSeconds: 0 })) }
     } catch (error: any) {
       anyFailed = true
       console.error(`correct-prices: ${game.key} failed:`, error)

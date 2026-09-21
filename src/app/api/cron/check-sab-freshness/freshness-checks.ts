@@ -173,7 +173,8 @@ export function evaluate(
 }
 
 /**
- * A per-row staleness check: how many rows have NOT advanced.
+ * A per-KEY staleness check: how many priced keys have evidence NEWER than
+ * their price.
  *
  * The max() checks above answer "did ANY row move?". That question has a blind
  * spot, and on 2026-09-14 the pipeline fell straight into it: correct-prices
@@ -182,18 +183,37 @@ export function evaluate(
  * for five days — while 214 brainrots served Sep 14 prices behind a confident
  * "Updated" badge on the values pages.
  *
- * So we also ask the opposite question: "did any row NOT move?" A partial
- * freeze is the failure mode that actually reaches users, because the rows that
- * stop moving are invisible behind the rows that don't.
+ * The first version of this check counted rows by AGE ("did any row NOT
+ * move?"). That was the wrong question, and it cost a day of red runs and an
+ * email every three hours (2026-09-20): with incremental writes (PR #76) a
+ * row's computed_at moves only when its listings were re-observed, so every
+ * item the crawl did not visit in the last 6h was "stale" by construction —
+ * 1584 rows at 03:02Z, 688 at 22:56Z — while the reprice it watched was green.
+ * Row age cannot tell "not crawled" from "crawled but not repriced".
+ *
+ * The partial-freeze shape is the second one: the crawl keeps landing new
+ * listings and the price does not follow. That is evidence newer than price,
+ * per key, and sab_count_unrepriced() counts exactly that (active + matched
+ * listings only — the rows the correction reads — for keys that have a
+ * correction). Right after a successful reprice it is 0 by definition.
  */
 export type StaleCountCheck = {
+  /** The snapshot whose keys are compared. */
   table: string
+  /** The timestamp the evidence is compared against. */
   column: string
-  /** Rows older than this are counted as stale. */
-  stalenessHours: number
+  /** The service-role RPC that does the per-key comparison. */
+  rpc: string
   /**
-   * How many stale rows are tolerated before alerting. Not always 0: a game can
-   * carry a few items with no listings at all, and those must not cry wolf.
+   * Observations younger than this are ignored: the daily Vercel cron can land
+   * mid-crawl (listings just imported, reprice not yet run) and must not page.
+   * The in-job check runs AFTER the reprice, so 0 would also be correct there.
+   */
+  graceHours: number
+  /**
+   * How many unrepriced keys are tolerated before alerting. Not 0: the G2G
+   * cross-check lands listings between Eldorado crawls, so a handful of keys
+   * can legitimately lag by one run.
    */
   maxStaleRows: number
 }
@@ -203,26 +223,26 @@ export type StaleCountResult = {
   column: string
   staleRows: number | null
   maxStaleRows: number
-  stalenessHours: number
+  graceHours: number
   stale: boolean
   error?: string
 }
 
 /**
- * The stale-row checks. SAB is the one with a five-day outage behind it; the
- * threshold tolerates the handful of brainrots that genuinely have no listings.
+ * The partial-freeze checks. SAB is the one with a five-day outage behind it.
  */
 export const STALE_COUNT_CHECKS: StaleCountCheck[] = [
   {
-    table: 'sab_price_display',
-    column: 'price_updated_at',
-    stalenessHours: 6,
+    table: 'sab_price_corrections',
+    column: 'computed_at',
+    rpc: 'sab_count_unrepriced',
+    graceHours: 1,
     maxStaleRows: 25,
   },
 ]
 
 /**
- * Decide staleness from a row count. Pure, so the threshold is unit-testable
+ * Decide staleness from a key count. Pure, so the threshold is unit-testable
  * without a database.
  *
  * A failed count is stale, never a pass — same principle the max() check
@@ -237,7 +257,7 @@ export function evaluateStaleCount(
     table: check.table,
     column: check.column,
     maxStaleRows: check.maxStaleRows,
-    stalenessHours: check.stalenessHours,
+    graceHours: check.graceHours,
   }
 
   if (error) return { ...base, staleRows: null, stale: true, error }
@@ -249,22 +269,20 @@ export function evaluateStaleCount(
 }
 
 /**
- * Count rows older than the window, via PostgREST's exact count with a
- * head-only request — no rows are transferred, just the Content-Range total.
+ * Count unrepriced keys through the RPC. Never a PostgREST row count over a
+ * timestamp column: that measures age, and age is "not crawled", not "frozen".
  */
 export async function readStaleCount(
-  client: { from: (t: string) => any },
+  client: { rpc: (fn: string, args: Record<string, unknown>) => any },
   check: StaleCountCheck,
-  now: number,
 ): Promise<{ staleRows: number | null; error?: string }> {
-  const cutoff = new Date(now - check.stalenessHours * 3_600_000).toISOString()
-  const { count, error } = await client
-    .from(check.table)
-    .select(check.column, { count: 'exact', head: true })
-    .lt(check.column, cutoff)
+  const { data, error } = await client.rpc(check.rpc, {
+    p_grace_seconds: Math.round(check.graceHours * 3600),
+  })
 
   if (error) return { staleRows: null, error: error.message }
-  return { staleRows: count ?? null }
+  const count = data == null ? null : Number(data)
+  return { staleRows: count != null && Number.isFinite(count) ? count : null }
 }
 
 /** The alert body. Plain text — sendAdminNoticeEmail escapes it. */
@@ -318,21 +336,24 @@ export function buildStaleCountAlertBody(stale: StaleCountResult[]): string {
     const what =
       r.staleRows === null
         ? `could not be counted (${r.error ?? 'unknown error'})`
-        : `has ${r.staleRows} row(s) older than ${r.stalenessHours}h ` +
-          `(tolerated: ${r.maxStaleRows})`
-    return `• ${r.table}.${r.column} ${what}`
+        : `has ${r.staleRows} priced key(s) whose newest listing is newer than ` +
+          `their ${r.column} (ignoring the last ${r.graceHours}h; ` +
+          `tolerated: ${r.maxStaleRows})`
+    return `• ${r.table} ${what}`
   })
 
   return [
     ``,
     ``,
-    `PARTIAL FREEZE — some rows stopped advancing while others kept moving:`,
+    `PARTIAL FREEZE — the crawl landed listings and the price did not follow:`,
     ``,
     ...lines,
     ``,
     `max() looks healthy in this state, which is why this check exists. The`,
     `usual cause is the repricing run failing partway or not covering every`,
     `item. Check the most recent "Reprice <game>" step in that game's workflow`,
-    `— it hard-fails now, so a red job is the signal.`,
+    `— it hard-fails now, so a red job is the signal. An item that was simply`,
+    `not crawled recently is NOT counted here: its price is as old as its`,
+    `evidence, which is honest, not frozen.`,
   ].join('\n')
 }

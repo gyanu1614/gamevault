@@ -4,6 +4,7 @@ import { existsSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { spawn } from "node:child_process";
+import { hostname } from "node:os";
 import dotenv from "dotenv";
 
 dotenv.config({ path: ".env.local", quiet: true });
@@ -335,7 +336,46 @@ async function fetchNewestListingByBrainrot(brainrotIds) {
   return newest;
 }
 
-async function buildQueue(requestedName) {
+/**
+ * Which brainrots are in the crawl's scope at all — extracted so the rule can
+ * be tested, because the previous rule silently froze the catalogue's best
+ * items (2026-09-20).
+ *
+ * `rotateCovered` is the panel-refresh mode. Coverage (mutation_gap / priority)
+ * is an ORDERING signal there, never a filter: a fully-covered item must keep
+ * rotating on staleness like any other, or its listings are never re-observed,
+ * the expire job never gets the repeat look it needs to end anything, coverage
+ * never drops, and the item leaves the rotation for good. That is exactly what
+ * happened — 10 runs and 1,665 crawl slots never touched a 14/14 item — and
+ * the batch-stamped price_updated_at hid it until incremental writes made it
+ * visible as 688 rows / 70 brainrots frozen on the backfill timestamp.
+ *
+ * In backfill mode (no --refresh-after-hours) the coverage filter still
+ * applies: that mode exists to fill gaps, and a 14/14 item has none.
+ */
+export function scopeQueue(
+  queue,
+  { tradeableIds, haveTradeableFlag, rotateCovered },
+) {
+  let scoped = queue;
+  // Crawl only the curated tradeable set — skip junk nobody buys so the cycle
+  // stays fast and fresh on the items that matter. Only enforced once the flag
+  // exists (haveTradeableFlag); before the first nightly recompute we crawl
+  // everything as before.
+  if (haveTradeableFlag) {
+    scoped = scoped.filter((row) => tradeableIds.has(row.id));
+  }
+  if (!rotateCovered) {
+    // Include any brainrot still missing mutations (gap > 0) OR without a solid
+    // default price. Previously this only took missing/low DEFAULT prices, which
+    // skipped items that have a good default but many blank mutations — exactly
+    // the coverage we want to fill.
+    scoped = scoped.filter((row) => row.mutation_gap > 0 || row.priority < 2);
+  }
+  return scoped;
+}
+
+async function buildQueue(requestedName, { rotateCovered = false } = {}) {
   const [brainrots, correctionRows, mutations, calculatorRows, tradeableRows] =
     await Promise.all([
       supabaseRows(
@@ -493,18 +533,7 @@ async function buildQueue(requestedName) {
     );
     if (!queue.length) throw new Error(`Brainrot not found: ${requestedName}`);
   } else {
-    // Crawl only the curated tradeable set — skip junk nobody buys so the cycle
-    // stays fast and fresh on the items that matter. Only enforced once the flag
-    // exists (haveTradeableFlag); before the first nightly recompute we crawl
-    // everything as before.
-    if (haveTradeableFlag) {
-      queue = queue.filter((row) => tradeableIds.has(row.id));
-    }
-    // Include any brainrot still missing mutations (gap > 0) OR without a solid
-    // default price. Previously this only took missing/low DEFAULT prices, which
-    // skipped items that have a good default but many blank mutations — exactly
-    // the coverage we now want to fill.
-    queue = queue.filter((row) => row.mutation_gap > 0 || row.priority < 2);
+    queue = scopeQueue(queue, { tradeableIds, haveTradeableFlag, rotateCovered });
   }
 
   // Highest priority_score first (rarity → coverage gap → value); ties break
@@ -1665,6 +1694,112 @@ async function collectOne({
   };
 }
 
+/**
+ * Pipeline lock around the IMPORT phase — the thin fetch-based twin of
+ * src/lib/pricing/pipeline-lock.ts (this script cannot import app TypeScript;
+ * the SQL functions are the contract, this loop is ~40 lines).
+ *
+ * 2026-09-19 20:04Z: an 18-minute manual `pnpm reprice --game=sab --full` from
+ * the owner's machine overlapped this script's import. Batch 22 hit HTTP 546,
+ * then "canceling statement due to lock timeout" on every retry, and the job
+ * died with 10,837 listings crawled and not landed — and neither log named
+ * the other writer. Now whoever comes second queues behind a NAMED holder for
+ * a bounded time, then fails saying who and since when.
+ *
+ * Only the import phase is guarded: the Eldorado fetch phase before it does
+ * not write, so a manual reprice may run alongside that part. The TTL bounds
+ * a crashed holder (the job itself is capped at 120 minutes).
+ */
+const PIPELINE_LOCK_NAME = "sab-pipeline";
+const IMPORT_LOCK_TTL_SECONDS = 90 * 60;
+const IMPORT_LOCK_POLL_SECONDS = 15;
+
+function pipelineLockHolder() {
+  const where = process.env.GITHUB_RUN_ID
+    ? `gh-run-${process.env.GITHUB_RUN_ID}`
+    : hostname();
+  return `crawl:${where}:${process.pid}`;
+}
+
+async function pipelineLockRpc(fn, args) {
+  const base = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+  const response = await fetch(new URL(`/rest/v1/rpc/${fn}`, base), {
+    method: "POST",
+    headers: {
+      apikey: serviceKey,
+      authorization: `Bearer ${serviceKey}`,
+      "content-type": "application/json",
+      accept: "application/json",
+    },
+    body: JSON.stringify(args),
+  });
+  const body = await response.text();
+  if (!response.ok) throw new Error(`${fn} failed (${response.status}): ${body.slice(0, 300)}`);
+  return body ? JSON.parse(body) : null;
+}
+
+/** Run `work` holding the pipeline lock; always releases. */
+async function withImportLock(work) {
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() || !process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()) {
+    console.warn(
+      "\n⚠️ SUPABASE_SERVICE_ROLE_KEY not set — importing WITHOUT the pipeline lock. " +
+        "Make sure no reprice is running.",
+    );
+    return work();
+  }
+
+  const holder = pipelineLockHolder();
+  const waitSeconds = Number(process.env.SAB_PIPELINE_LOCK_WAIT_SECONDS ?? 20 * 60);
+  const waitMs = (Number.isFinite(waitSeconds) ? waitSeconds : 20 * 60) * 1000;
+  const startedAt = Date.now();
+  let announced = false;
+
+  for (;;) {
+    const rows = await pipelineLockRpc("sab_pipeline_lock_acquire", {
+      p_name: PIPELINE_LOCK_NAME,
+      p_holder: holder,
+      p_ttl_seconds: IMPORT_LOCK_TTL_SECONDS,
+    });
+    const row = Array.isArray(rows) ? rows[0] : rows;
+    if (row?.acquired === true) break;
+
+    const waited = Date.now() - startedAt;
+    if (!announced) {
+      console.log(
+        `\n⏳ ${PIPELINE_LOCK_NAME} is held by ${row?.holder} since ${row?.acquired_at} ` +
+          `(expires ${row?.expires_at}) — waiting up to ${Math.round(waitMs / 1000)}s ` +
+          `before importing.`,
+      );
+      announced = true;
+    }
+    if (waited >= waitMs) {
+      throw new Error(
+        `${PIPELINE_LOCK_NAME} is held by ${row?.holder} since ${row?.acquired_at} ` +
+          `(expires ${row?.expires_at}); gave up after waiting ${Math.round(waited / 1000)}s. ` +
+          `Two writers must not overlap. The crawled feed is in the run artifact — ` +
+          `re-send it with publish_only_run_id once the other writer finishes.`,
+      );
+    }
+    await sleep(Math.min(IMPORT_LOCK_POLL_SECONDS * 1000, waitMs - waited));
+  }
+  if (announced) console.log(`✅ ${PIPELINE_LOCK_NAME} acquired by ${holder} after waiting.`);
+
+  try {
+    return await work();
+  } finally {
+    try {
+      await pipelineLockRpc("sab_pipeline_lock_release", {
+        p_name: PIPELINE_LOCK_NAME,
+        p_holder: holder,
+      });
+    } catch (error) {
+      // The TTL frees it; not worth failing a finished import over.
+      console.warn(`⚠️ ${PIPELINE_LOCK_NAME} release failed (${error.message}); it expires on its own.`);
+    }
+  }
+}
+
 function runImporter(outputPath) {
   return new Promise((resolveImport, rejectImport) => {
     const child = spawn(
@@ -1737,7 +1872,11 @@ async function main() {
     totalMutations,
     expectedIncomeByVariant,
     totals,
-  } = await buildQueue(options.brainrot);
+  } = await buildQueue(options.brainrot, {
+    // Panel refresh rotates EVERY tradeable item on staleness; only backfill
+    // narrows to coverage gaps. See scopeQueue.
+    rotateCovered: options.refreshAfterHours > 0,
+  });
   const progress = await readProgress(options.progressPath, options.resetProgress);
   // Eligibility.
   //
@@ -1754,7 +1893,7 @@ async function main() {
   // PANEL REFRESH (--refresh-after-hours): eligibility comes from the DATABASE
   // (`price_updated_at`), not the inert progress file, so CI and local runs
   // agree and the queue actually rotates. Stale items become eligible again,
-  // which both restores coverage growth and gives /api/cron/expire-sab-listings
+  // which both restores coverage growth and gives the expire step (pnpm sab:expire)
   // the repeated observations it needs before absence means anything.
   const refreshAfterMs = options.refreshAfterHours * 60 * 60 * 1000;
   const usePanelRefresh = options.refreshAfterHours > 0;
@@ -1940,70 +2079,15 @@ async function main() {
   if (!process.env.SAB_MARKET_IMPORT_SECRET) {
     throw new Error("SAB_MARKET_IMPORT_SECRET is required with --send");
   }
-  await runImporter(options.outputPath);
+  await withImportLock(() => runImporter(options.outputPath));
 
-  // Reprice IMMEDIATELY after the whole crawl has landed. The correction cron
-  // is a single point-in-time read of the raw table; if it runs on its own
-  // clock while a multi-batch crawl is still importing, it prices a partial
-  // snapshot and stores a stale cheapest (Elefanto Frigo showed $259.99 while a
-  // $248 reputable listing existed). Triggering it HERE — after the last batch
-  // — closes that race by construction, for manual crawls too (a workflow-only
-  // step wouldn't cover `npm run sab:eldorado:send` run locally). Mirrors what
-  // adopt-me-daily.yml already does. Best-effort: the 10:00 UTC Vercel cron is
-  // an idempotent backstop, so a failure here never fails the crawl.
-  await triggerPostCrawl();
-}
-
-/**
- * After the whole crawl lands: (1) EXPIRE listings that vanished from the fresh
- * results (sold/removed — a gone listing must stop setting the price), THEN
- * (2) REPRICE from the cleaned-up active set. Order matters: expiring first
- * means the reprice never sees a dead $200 listing that's no longer on Eldorado.
- *
- * No-op (with a note) when the trigger env isn't set, so a bare `--send` still
- * works; never throws — these are follow-ups, not part of the import's success.
- * The scheduled crons remain idempotent backstops.
- */
-async function triggerPostCrawl() {
-  const apiUrl = process.env.PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_SITE_URL;
-  const secret = process.env.CRON_SECRET;
-  if (!apiUrl || !secret) {
-    console.log(
-      "\nSkipping post-crawl expire+reprice (set PUBLIC_API_URL + CRON_SECRET to enable). " +
-        "The scheduled crons will catch up.",
-    );
-    return;
-  }
-  const base = apiUrl.replace(/\/$/, "");
-  // Expire is a GET, correct-prices a POST — match each route's verb.
-  await triggerCron("Expiring vanished listings", `${base}/api/cron/expire-sab-listings`, "GET", secret);
-  // Repricing is NOT triggered from here any more. It runs as its own workflow
-  // step (`pnpm reprice --game=sab`) straight after this script, on the runner,
-  // where it has no 300s function budget and where a failure fails the job.
-  // Calling the route from here is what let a five-day outage hide in a log.
-}
-
-async function triggerCron(label, url, method, secret) {
-  try {
-    console.log(`\n${label} → ${url.replace(/https?:\/\/[^/]+/, "")} …`);
-    const response = await fetch(url, {
-      method,
-      headers: { authorization: `Bearer ${secret}` },
-    });
-    const body = await response.text();
-    if (!response.ok) {
-      // MONITORING: a swallowed failure here is exactly how correct-prices
-      // 504'd on every run from 2026-09-14 while the workflow stayed green for
-      // five days. A failed hop must redden the job.
-      console.error(`${label} failed (${response.status}): ${body.slice(0, 300)}`);
-      process.exitCode = 1;
-      return;
-    }
-    console.log(`${label} ok: ${body.slice(0, 300)}`);
-  } catch (error) {
-    console.error(`${label} threw: ${error.message}`);
-    process.exitCode = 1;
-  }
+  // Nothing is triggered from here any more. Expire and reprice both run as
+  // their own workflow steps straight after this script, on the runner
+  // (`pnpm sab:expire`, `pnpm reprice --game=sab`), where neither has a 300s
+  // function budget and where a failure fails the job. Calling the routes from
+  // here is what let a five-day repricing outage hide in a log (2026-09-14) and
+  // what turned an expire-route timeout into a dead collect step (2026-09-20).
+  // A manual local `--send` should be followed by those two commands.
 }
 
 // ROUTE-012: only run when invoked as a script, so the queue-ordering helpers

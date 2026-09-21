@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import {
   NEVER_PRICED_STALENESS_HOURS,
+  scopeQueue,
   selectEligible,
   stalenessHours,
 } from '../../../scripts/collect-eldorado-sab-api-v6.mjs'
@@ -171,5 +172,96 @@ describe('ROUTE-012 — the queue reaches position 355 across runs', () => {
 
     // Alphabetically 'AAA Common' wins; weighted staleness must put the Secret first.
     expect(ordered[0].id).toBe('secret')
+  })
+})
+
+/**
+ * 2026-09-20 — fully-covered items were never re-crawled.
+ *
+ * buildQueue dropped every brainrot with all 14 mutations priced and a solid
+ * default (`mutation_gap > 0 || priority < 2`) in EVERY mode. That was fine as
+ * a backfill rule — nothing to fill — but it also applied to panel refresh, so
+ * once an item reached full coverage it left the rotation for good: 10 runs and
+ * 1,665 crawl slots never touched a 14/14 item, Dragon Cannelloni included. The
+ * expire job then skipped those groups (it needs a recent crawl to conclude
+ * anything), coverage never dropped, and the loop closed. The old batch stamp
+ * on price_updated_at hid it; incremental writes (PR #76) made it visible as
+ * 688 rows / 70 brainrots frozen on the backfill timestamp.
+ *
+ * Coverage is an ORDERING signal for the refresh rotation, never a filter.
+ */
+describe('scopeQueue — fully-covered items stay in the refresh rotation', () => {
+  const covered = {
+    id: 'dragon',
+    name: 'Dragon Cannelloni',
+    rarity: 'Secret',
+    mutation_gap: 0,
+    priority: 2,
+  }
+  const gappy = {
+    id: 'rico',
+    name: 'Rico Dinero',
+    rarity: 'Secret',
+    mutation_gap: 3,
+    priority: 2,
+  }
+  const junk = {
+    id: 'junk',
+    name: 'Junk Item',
+    rarity: 'Common',
+    mutation_gap: 14,
+    priority: 0,
+  }
+  const tradeable = {
+    tradeableIds: new Set(['dragon', 'rico']),
+    haveTradeableFlag: true,
+  }
+
+  it('panel refresh keeps a 14/14 tradeable item — it must rotate like any other', () => {
+    const scoped = scopeQueue([covered, gappy, junk], {
+      ...tradeable,
+      rotateCovered: true,
+    })
+    expect(scoped.map((r: any) => r.id)).toEqual(['dragon', 'rico'])
+  })
+
+  it('backfill still crawls gaps only — a 14/14 item has nothing to fill', () => {
+    const scoped = scopeQueue([covered, gappy, junk], {
+      ...tradeable,
+      rotateCovered: false,
+    })
+    expect(scoped.map((r: any) => r.id)).toEqual(['rico'])
+  })
+
+  it('drops non-tradeable items in both modes once the flag exists', () => {
+    for (const rotateCovered of [true, false]) {
+      const scoped = scopeQueue([covered, gappy, junk], {
+        ...tradeable,
+        rotateCovered,
+      })
+      expect(scoped.map((r: any) => r.id)).not.toContain('junk')
+    }
+  })
+
+  it('crawls everything when the tradeable flag is not populated yet', () => {
+    const scoped = scopeQueue([covered, gappy, junk], {
+      tradeableIds: new Set(),
+      haveTradeableFlag: false,
+      rotateCovered: true,
+    })
+    expect(scoped.map((r: any) => r.id)).toEqual(['dragon', 'rico', 'junk'])
+  })
+
+  it('a stale 14/14 Secret then lands at the FRONT of the refresh queue', () => {
+    // The item nobody had looked at in 30 days, next to one refreshed 7h ago.
+    const rows = scopeQueue(
+      [
+        { ...covered, rarity_weight: 4, last_priced_at: new Date(NOW - 30 * 24 * HOUR).toISOString() },
+        { ...gappy, rarity_weight: 4, last_priced_at: new Date(NOW - 7 * HOUR).toISOString() },
+      ],
+      { ...tradeable, rotateCovered: true },
+    )
+    const ordered = selectEligible(rows, opts())
+    expect(ordered.map((r: any) => r.id)).toEqual(['dragon', 'rico'])
   })
 })

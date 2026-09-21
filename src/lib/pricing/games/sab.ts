@@ -14,6 +14,11 @@
 import { createServiceRoleClient } from '@/lib/supabase/service'
 import type { RepriceOptions } from '@/lib/pricing/registry'
 import {
+  SAB_PIPELINE_LOCK,
+  defaultHolder,
+  withPipelineLock,
+} from '@/lib/pricing/pipeline-lock'
+import {
   keysNeedingRecompute,
   newestObservedByKey,
 } from '@/lib/pricing/incremental'
@@ -242,11 +247,47 @@ async function selectAll<T>(
   return rows
 }
 
+/**
+ * A manual full reprice took 18 minutes from the owner's machine on 2026-09-19
+ * and outlived the runner's own lifetime for this step several times over;
+ * the TTL bounds a holder that dies without releasing, nothing more.
+ */
+const REPRICE_LOCK_TTL_SECONDS = 45 * 60
+
+/**
+ * Reprice SAB, holding the pipeline lock for the duration.
+ *
+ * 2026-09-19 20:04Z: a manual `--full` from the owner's machine overlapped the
+ * scheduled crawl's import; the import died on a lock timeout with 10,837
+ * listings crawled and not landed, and neither log named the other writer.
+ * The lock makes the overlap explicit: whoever comes second queues (up to
+ * lockWaitSeconds) behind a named holder, then fails with that name.
+ */
 export async function runSabCorrection(
   options: RepriceOptions = {},
 ): Promise<Record<string, unknown>> {
-  const full = options.full === true
   const admin = createServiceRoleClient()
+  const waitSeconds =
+    options.lockWaitSeconds ??
+    Number(process.env.SAB_PIPELINE_LOCK_WAIT_SECONDS ?? 600)
+
+  return withPipelineLock(
+    admin as any,
+    {
+      name: SAB_PIPELINE_LOCK,
+      holder: defaultHolder(options.full ? 'reprice-full' : 'reprice'),
+      ttlSeconds: REPRICE_LOCK_TTL_SECONDS,
+      waitSeconds: Number.isFinite(waitSeconds) ? waitSeconds : 600,
+    },
+    () => runSabCorrectionUnlocked(admin, options),
+  )
+}
+
+async function runSabCorrectionUnlocked(
+  admin: ReturnType<typeof createServiceRoleClient>,
+  options: RepriceOptions,
+): Promise<Record<string, unknown>> {
+  const full = options.full === true
   const startedAt = new Date().toISOString()
 
   // ROUTE-014: refresh the evidence snapshot BEFORE reading it. The crawl
@@ -524,6 +565,39 @@ export async function runSabCorrection(
     if (error) throw new Error(`upsert corrections: ${error.message}`)
   }
 
+  // Report what the incremental gate actually did, and prove it kept up: right
+  // after the writes, no priced key may still have evidence newer than its
+  // computed_at. sab_count_unrepriced(0) is the same question the freshness
+  // guard asks with a 1h grace; here, with no grace, the answer must be 0.
+  // Non-zero means a listing landed DURING this run (the G2G cross-check, a
+  // manual import) — the next run's gate picks it up, so warn, don't fail.
+  // A silent zero-write run is the shape that hid the 2026-09-14 outage; a
+  // number in the log is how it stays visible.
+  const rowsWritten = rowsToWrite.length
+  let unrepricedAfterWrite: number | null = null
+  const { data: unrepricedCount, error: unrepricedError } = await (
+    admin as any
+  ).rpc('sab_count_unrepriced', { p_grace_seconds: 0 })
+  if (unrepricedError) {
+    console.warn(
+      `sab_count_unrepriced after write failed: ${unrepricedError.message}`,
+    )
+  } else {
+    unrepricedAfterWrite = Number(unrepricedCount ?? 0)
+    if (unrepricedAfterWrite > 0) {
+      console.warn(
+        `⚠️ ${unrepricedAfterWrite} key(s) still have evidence newer than their ` +
+          `price after this write — a listing landed mid-run; the next reprice ` +
+          `covers it.`,
+      )
+    }
+  }
+  console.log(
+    `✅ SAB corrections written: ${rowsWritten} of ${rows.length}` +
+      `${full ? ' (full)' : ' (incremental)'}, ` +
+      `unrepriced after write: ${unrepricedAfterWrite ?? 'unknown'}`,
+  )
+
   // Prune rows for items that no longer exist in the catalogue at all.
   //
   // This USED to be `.lt('computed_at', startedAt)`, which was safe only while
@@ -639,6 +713,8 @@ export async function runSabCorrection(
   return {
     evidence_refreshed: evidenceRefreshed,
     corrected: corrections.length,
+    rows_written: rowsWritten,
+    unrepriced_after_write: unrepricedAfterWrite,
     anchored,
     suppressed,
     multipliers: multiplierRows.length,
