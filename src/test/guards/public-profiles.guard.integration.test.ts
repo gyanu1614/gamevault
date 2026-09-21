@@ -10,7 +10,10 @@
  * `seller_balance`, `kyc_status`, `stripe_*`, `seller_restriction_reason` and
  * `lifetime_earnings` for every user. Reproduced on the local stack.
  *
- * The fix (migration 20260921…_public_profiles_view):
+ * The fix ships as TWO migrations so the schema change is not coupled to the
+ * deploy — PART A creates the view (safe under the current code), PART B
+ * revokes anon once the new code is live. See the block above the describe()
+ * for how the assertions below are gated:
  *   - anon loses `profiles` entirely and reads `public_profiles`, a
  *     security_invoker view of the display-only columns;
  *   - `authenticated` KEEPS the table grant (seven security_invoker views —
@@ -30,7 +33,6 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { hasEnv, makeFixture, promoteToEstablishedSeller, URL, ANON, type Fixture } from './throwaway'
 
 let fx: Fixture | null = null
-let ready = false
 
 const anon = () => createClient(URL!, ANON!, { auth: { persistSession: false } })
 
@@ -58,24 +60,59 @@ const PUBLIC_COLUMNS = [
   'banner_url', 'banner_preset',
 ] as const
 
-async function migrationApplied(svc: SupabaseClient): Promise<boolean> {
+/**
+ * The migration ships in TWO parts so the schema change is not coupled to the
+ * deploy (see the migration headers and the PR runbook):
+ *
+ *   PART A  20260921004158_public_profiles_view.sql     — additive: creates the
+ *           view + grants + the authenticated policies. Safe to apply while the
+ *           CURRENT production code runs; anon keeps its blanket access.
+ *   PART B  20260921151722_public_profiles_revoke_anon.sql — the close: drops
+ *           the open policy and narrows anon to a column-scoped grant. Applies
+ *           only AFTER this PR's code is live.
+ *
+ * Between A and B, production is in a deliberate interim state where BOTH read
+ * paths work. The revoke assertions below would legitimately fail there, so
+ * they are gated on PART B's own marker and skip cleanly until it lands —
+ * the interim must not go red. `viewReady` / `revoked` are read separately so
+ * a half-applied pair is visible in the run output rather than silently
+ * skipping everything.
+ */
+async function partAApplied(svc: SupabaseClient): Promise<boolean> {
   const { error } = await svc.rpc('public_profiles_version')
   return !error
 }
+async function partBApplied(svc: SupabaseClient): Promise<boolean> {
+  const { error } = await svc.rpc('public_profiles_revoked_version')
+  return !error
+}
+
+/** PART A applied — the view exists. */
+let viewReady = false
+/** PART B applied — anon has actually been revoked. */
+let revoked = false
 
 describe.skipIf(!hasEnv)('DLT-001 — profiles is not anon-readable; public_profiles is (integration)', () => {
   beforeAll(async () => {
     fx = await makeFixture()
     await promoteToEstablishedSeller(fx.svc, fx.seller.id)
-    ready = await migrationApplied(fx.svc)
-    if (!ready) console.warn('[public-profiles guard] skipping — public_profiles migration not applied')
+    viewReady = await partAApplied(fx.svc)
+    revoked = await partBApplied(fx.svc)
+    if (!viewReady) {
+      console.warn('[public-profiles guard] skipping — PART A (public_profiles view) not applied')
+    } else if (!revoked) {
+      console.warn(
+        '[public-profiles guard] INTERIM STATE: PART A applied, PART B (anon revoke) not yet. ' +
+        'View tests run; the revoke assertions are skipped until B lands.',
+      )
+    }
   }, 60_000)
   afterAll(async () => { await fx?.cleanup() }, 60_000)
 
   // ── The exploit ───────────────────────────────────────────────────────────
   describe('the anon key cannot read the profiles table', () => {
     it('a select of the whole row is refused', async () => {
-      if (!ready) return
+      if (!revoked) return // PART B not applied — interim state, see the header
       const { data, error } = await anon().from('profiles').select('*').limit(1)
       expect(error, `expected 42501, got rows: ${JSON.stringify(data)}`).not.toBeNull()
       expect(error!.code).toBe('42501')
@@ -88,20 +125,20 @@ describe.skipIf(!hasEnv)('DLT-001 — profiles is not anon-readable; public_prof
      * which is what the rest of this block proves.
      */
     it('a public column is still reachable (the column grant, not the table, is the boundary)', async () => {
-      if (!ready) return
+      if (!revoked) return // PART B not applied — interim state, see the header
       const { error } = await anon().from('profiles').select('id').limit(1)
       expect(error).toBeNull()
     })
 
     it.each(SECRET_COLUMNS)('anon cannot select profiles.%s', async (col) => {
-      if (!ready) return
+      if (!revoked) return // PART B not applied — interim state, see the header
       const { data, error } = await anon().from('profiles').select(col).limit(1)
       expect(error, `${col} leaked: ${JSON.stringify(data)}`).not.toBeNull()
       expect(error!.code).toBe('42501')
     })
 
     it('anon cannot reach a secret column through the public view either', async () => {
-      if (!ready) return
+      if (!viewReady) return
       for (const col of SECRET_COLUMNS) {
         const { error } = await anon().from('public_profiles').select(col).limit(1)
         expect(error, `public_profiles exposes ${col}`).not.toBeNull()
@@ -109,7 +146,7 @@ describe.skipIf(!hasEnv)('DLT-001 — profiles is not anon-readable; public_prof
     })
 
     it('anon cannot embed profiles through a listings join', async () => {
-      if (!ready) return
+      if (!revoked) return // PART B not applied — interim state, see the header
       const { data, error } = await anon()
         .from('listings')
         .select('id, seller:profiles(email, seller_balance)')
@@ -121,7 +158,7 @@ describe.skipIf(!hasEnv)('DLT-001 — profiles is not anon-readable; public_prof
   // ── The legitimate public path still works ────────────────────────────────
   describe('public_profiles serves the shop/listing-card path', () => {
     it('anon reads the fixture seller through the view', async () => {
-      if (!ready) return
+      if (!viewReady) return
       const { data, error } = await anon()
         .from('public_profiles')
         .select('id, username, shop_name, shop_slug, avatar_url, seller_tier, seller_rating, total_reviews, is_verified, badges, created_at')
@@ -132,7 +169,7 @@ describe.skipIf(!hasEnv)('DLT-001 — profiles is not anon-readable; public_prof
     })
 
     it('every column the app renders is present on the view', async () => {
-      if (!ready) return
+      if (!viewReady) return
       const { error } = await anon().from('public_profiles').select(PUBLIC_COLUMNS.join(',')).limit(1)
       expect(error, `public_profiles is missing a column the app reads: ${error?.message}`).toBeNull()
     })
@@ -140,7 +177,7 @@ describe.skipIf(!hasEnv)('DLT-001 — profiles is not anon-readable; public_prof
     // `listings` has two FKs to profiles (seller_id, approved_by), so the
     // disambiguated form is what the app actually writes.
     it('anon can still embed the seller through listings via the view', async () => {
-      if (!ready) return
+      if (!viewReady) return
       const { error } = await anon()
         .from('listings')
         .select('id, seller:public_profiles!listings_seller_id_fkey(username, shop_slug, seller_rating)')
@@ -149,7 +186,7 @@ describe.skipIf(!hasEnv)('DLT-001 — profiles is not anon-readable; public_prof
     })
 
     it('anon can still embed public columns off the base table (existing readers keep working)', async () => {
-      if (!ready) return
+      if (!viewReady) return
       const { error } = await anon()
         .from('listings')
         .select('id, seller:profiles!listings_seller_id_fkey(username, seller_tier, is_test)')
@@ -161,7 +198,7 @@ describe.skipIf(!hasEnv)('DLT-001 — profiles is not anon-readable; public_prof
   // ── Signed-in users ───────────────────────────────────────────────────────
   describe('a signed-in user reads their own row but not a stranger\'s secrets', () => {
     it('the seller reads their own full row, financials included', async () => {
-      if (!ready) return
+      if (!viewReady) return
       const { data, error } = await fx!.seller.client
         .from('profiles').select('id, email, seller_balance, kyc_status').eq('id', fx!.seller.id).maybeSingle()
       expect(error).toBeNull()
@@ -183,7 +220,7 @@ describe.skipIf(!hasEnv)('DLT-001 — profiles is not anon-readable; public_prof
      * lands it fails loudly and is updated rather than silently passing.
      */
     it('KNOWN GAP (DLT-001b): a signed-in stranger can still read another row', async () => {
-      if (!ready) return
+      if (!viewReady) return
       const { data } = await fx!.buyer.client
         .from('profiles').select('id, email, seller_balance').eq('id', fx!.seller.id)
       expect(
@@ -193,7 +230,7 @@ describe.skipIf(!hasEnv)('DLT-001 — profiles is not anon-readable; public_prof
     })
 
     it("the buyer still sees the seller's public card through the view", async () => {
-      if (!ready) return
+      if (!viewReady) return
       const { data, error } = await fx!.buyer.client
         .from('public_profiles').select('id, username, seller_rating').eq('id', fx!.seller.id).maybeSingle()
       expect(error).toBeNull()
@@ -204,19 +241,19 @@ describe.skipIf(!hasEnv)('DLT-001 — profiles is not anon-readable; public_prof
   // ── Nothing else regressed ────────────────────────────────────────────────
   describe('dependent views and definer triggers survive', () => {
     it('the seller still reads seller_dashboard_stats (security_invoker over profiles)', async () => {
-      if (!ready) return
+      if (!viewReady) return
       const { error } = await fx!.seller.client.from('seller_dashboard_stats').select('*').limit(1)
       expect(error, `seller_dashboard_stats broke: ${error?.message}`).toBeNull()
     })
 
     it('the anon key still cannot read seller_dashboard_stats (DB-002 stays fixed)', async () => {
-      if (!ready) return
+      if (!viewReady) return
       const { error } = await anon().from('seller_dashboard_stats').select('*').limit(1)
       expect(error).not.toBeNull()
     })
 
     it('the service role still reads the full profiles table', async () => {
-      if (!ready) return
+      if (!viewReady) return
       const { error } = await fx!.svc.from('profiles').select('id, email, seller_balance').eq('id', fx!.seller.id).single()
       expect(error).toBeNull()
     })
