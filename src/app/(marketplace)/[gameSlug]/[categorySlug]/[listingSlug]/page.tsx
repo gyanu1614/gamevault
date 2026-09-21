@@ -7,7 +7,7 @@
 
 import { sellerRatingPercent, sellerShopSlug } from '@/lib/seller/identity'
 import { SITE_URL } from '@/config/site'
-import { JsonLd, breadcrumbList } from '@/lib/seo/jsonld'
+import { JsonLd, breadcrumbList, serializeJsonLd } from '@/lib/seo/jsonld'
 import React, { Suspense, cache } from 'react'
 import { Metadata } from 'next'
 import { notFound } from 'next/navigation'
@@ -427,7 +427,7 @@ async function ListingDetailPage({ params }: PageProps) {
       {!isPreview && <ViewTracker listingId={listing.id} />}
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(schemaData) }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(schemaData) }}
       />
       <JsonLd data={breadcrumbData} />
 

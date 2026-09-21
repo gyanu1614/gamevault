@@ -16,6 +16,7 @@ import { notFound } from 'next/navigation'
 import { ChevronLeft } from 'lucide-react'
 import { getFlatPosts, getPost } from '@/lib/blog/posts'
 import { SITE_NAME, SITE_URL } from '@/config/site'
+import { serializeJsonLd } from '@/lib/seo/jsonld'
 
 interface PageProps {
   params: Promise<{ slug: string }>
@@ -163,11 +164,11 @@ export default async function BlogPostPage({ params }: PageProps) {
     <main className="min-h-screen pb-24">
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema) }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(articleSchema) }}
       />
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(breadcrumbSchema) }}
       />
       <article className="mx-auto w-full max-w-3xl px-4 pt-10 sm:px-6 sm:pt-14">
         <Link

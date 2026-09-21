@@ -25,6 +25,7 @@ import {
 import Link from 'next/link'
 import { TrustpilotLink } from '@/components/trust/TrustpilotLink'
 import { SafeDropExplainer } from './_SafeDropExplainer'
+import { serializeJsonLd } from '@/lib/seo/jsonld'
 
 export const metadata: Metadata = {
   title: 'SafeDrop Buyer Protection',
@@ -108,7 +109,7 @@ export default function SafeDropPage() {
       {/* Schema.org FAQPage Structured Data */}
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(faqSchema) }}
       />
       {/* Hero Section */}
       <section className="relative pt-10 pb-14 sm:pt-16 sm:pb-20 lg:pt-24 px-4 sm:px-6 lg:px-8">
