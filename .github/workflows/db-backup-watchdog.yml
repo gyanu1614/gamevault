@@ -1,0 +1,88 @@
+name: Database Backup Watchdog
+
+# DLT-004: the second half of the backup alarm.
+#
+# `db-backup.yml` now pages on failure, but that only fires when the workflow
+# RUNS. It cannot cover the failure modes where nothing runs at all:
+#   - GitHub disables scheduled workflows on a repo with no activity for 60 days
+#   - the cron is deleted, renamed, or the default branch moves
+#   - the whole run is skipped (Actions outage, billing/quota, disabled Actions)
+#
+# In every one of those cases db-backup.yml stays silent forever while the
+# 30-day artifact retention quietly expires the last good backup. This job
+# looks at the evidence instead of the process: it asks GitHub for the most
+# recent successful backup RUN and pages when that is older than the threshold.
+#
+# 26h, not 24h: the nightly is at 05:00 UTC, so a 24h window would alarm on
+# normal queueing jitter. 26h alarms after exactly one missed night.
+
+on:
+  workflow_dispatch:
+  schedule:
+    # 08:00 UTC daily — three hours after the nightly backup's 05:00 slot, so a
+    # slow-but-successful run has finished before this checks.
+    - cron: "0 8 * * *"
+
+concurrency:
+  group: db-backup-watchdog
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    permissions:
+      # Reading Actions run history is all this needs.
+      actions: read
+      contents: read
+
+    steps:
+      - name: Check age of the last successful backup
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          DISCORD_OPS_WEBHOOK_URL: ${{ secrets.DISCORD_OPS_WEBHOOK_URL }}
+          MAX_AGE_HOURS: "26"
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+
+          # Most recent SUCCESSFUL run of the nightly backup workflow.
+          last="$(gh api \
+            "repos/${REPO}/actions/workflows/db-backup.yml/runs?status=success&per_page=1" \
+            --jq '.workflow_runs[0].updated_at // empty')"
+
+          now_epoch="$(date -u +%s)"
+          if [ -z "$last" ]; then
+            age_hours="never"
+            stale=1
+          else
+            last_epoch="$(date -u -d "$last" +%s)"
+            age_hours="$(( (now_epoch - last_epoch) / 3600 ))"
+            stale=0
+            [ "$age_hours" -gt "$MAX_AGE_HOURS" ] && stale=1
+          fi
+
+          echo "Last successful backup: ${last:-none} (age: ${age_hours}h, threshold: ${MAX_AGE_HOURS}h)"
+
+          if [ "$stale" -eq 0 ]; then
+            echo "Backup is fresh."
+            exit 0
+          fi
+
+          if [ -n "${DISCORD_OPS_WEBHOOK_URL:-}" ]; then
+            payload="$(jq -nc \
+              --arg content "🔴 **No successful DB backup in ${age_hours}h** (threshold ${MAX_AGE_HOURS}h). The nightly backup is not running at all — check that the schedule is still enabled. Artifacts expire after 30 days. Watchdog: ${RUN_URL}" \
+              '{content: $content, allowed_mentions: {parse: []}}')"
+            curl -sS -o /dev/null -X POST -H 'content-type: application/json' \
+              --data "$payload" "$DISCORD_OPS_WEBHOOK_URL" || \
+              echo "::warning::Discord alert POST failed"
+          else
+            echo "::warning::DISCORD_OPS_WEBHOOK_URL is not set — cannot page."
+          fi
+
+          # Fail the job too, so the watchdog itself shows red in the Actions
+          # list even if the webhook is missing or Discord is down.
+          echo "::error::No successful DB backup in ${age_hours}h (threshold ${MAX_AGE_HOURS}h)."
+          exit 1
