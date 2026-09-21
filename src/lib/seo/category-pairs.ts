@@ -28,7 +28,7 @@ export async function getIndexableCategoryPairs(): Promise<CategoryPair[]> {
           .select(
             `
             slug,
-            seller:profiles!listings_seller_id_fkey!inner(is_test),
+            seller:public_profiles!listings_seller_id_fkey!inner(is_test),
             game:games!listings_game_id_fkey(slug),
             category:game_categories!listings_game_category_id_fkey(slug)
           `,

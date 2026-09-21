@@ -28,8 +28,10 @@ const readTestSellerIds = unstable_cache(
     try {
       // Cookie-free (Step 7a): called from ISR pages via getCategoryStats.
       const supabase = createAnonClient()
+      // DLT-001: reads the public_profiles projection, never the base table —
+      // anon holds no grant on profiles' sensitive columns.
       const { data, error } = await (supabase
-        .from('profiles') as any)
+        .from('public_profiles') as any)
         .select('id')
         .eq('is_test', true)
       if (error || !data) return []

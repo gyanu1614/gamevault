@@ -20,7 +20,9 @@ vi.mock('@/lib/supabase/server', () => ({
     throw new Error('cookie client used')
   },
 }))
-const recorder = createSupabaseRecorder({ seller_presence: [{ seller_id: 's1' }], profiles: [{ id: 't1' }] })
+// DLT-001: getTestSellerIds reads the public_profiles projection, not the
+// base table — anon holds no grant on profiles' sensitive columns.
+const recorder = createSupabaseRecorder({ seller_presence: [{ seller_id: 's1' }], public_profiles: [{ id: 't1' }] })
 vi.mock('@/lib/supabase/anon', () => ({ createAnonClient: () => recorder.client }))
 
 import { PAUSED_SELLERS_TAG, TEST_SELLERS_TAG } from './tags'

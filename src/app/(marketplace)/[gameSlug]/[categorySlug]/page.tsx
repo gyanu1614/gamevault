@@ -329,7 +329,7 @@ async function getGenericListings(
     .select(`
       id, slug, title, description, price, original_price, images,
       delivery_time, view_count, created_at,
-      seller:profiles!listings_seller_id_fkey!inner(
+      seller:public_profiles!listings_seller_id_fkey!inner(
         id, username, seller_tier, avatar_url, is_test,
         presence:seller_presence(is_online, last_seen_at)
       )
@@ -444,7 +444,7 @@ async function CategoryBrowsePage({ params }: PageProps) {
           .select(`
             id, description, price, quantity, delivery_time, is_unlimited,
             bundle_id, region, platform,
-            seller:profiles!listings_seller_id_fkey(
+            seller:public_profiles!listings_seller_id_fkey(
               id, username, shop_name, shop_slug, avatar_url, seller_tier,
               seller_rating, total_reviews, is_verified
             )
@@ -602,7 +602,7 @@ async function CategoryBrowsePage({ params }: PageProps) {
           .select(`
             id, title, description, price, original_price, quantity,
             min_quantity, delivery_method, delivery_time, is_unlimited,
-            seller:profiles!listings_seller_id_fkey(
+            seller:public_profiles!listings_seller_id_fkey(
               id, username, shop_name, shop_slug, avatar_url, seller_tier,
               seller_rating, total_reviews, is_verified
             )
@@ -760,7 +760,7 @@ async function CategoryBrowsePage({ params }: PageProps) {
           .select(`
             id, slug, title, price, original_price, delivery_time,
             quantity, is_unlimited, images, template_data, status,
-            seller:profiles!listings_seller_id_fkey(
+            seller:public_profiles!listings_seller_id_fkey(
               id, username, shop_name, shop_slug, avatar_url, seller_tier,
               seller_rating, total_reviews, total_sales, is_verified
             ),

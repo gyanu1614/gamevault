@@ -23,6 +23,7 @@ import { cn } from '@/lib/utils'
 import { listingUrl } from '@/lib/listings/url'
 import { getAvatarUrl } from '@/lib/utils/avatar'
 import { tierByKey, DEFAULT_TIER, type SellerTier } from '@/lib/seller/tiers'
+import { serializeJsonLd } from '@/lib/seo/jsonld'
 
 interface SellerStorefrontProps {
   seller: {
@@ -108,7 +109,7 @@ export default function SellerStorefront({ seller }: SellerStorefrontProps) {
 
   return (
     <>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }} />
 
       <main className="min-h-screen bg-bg-base pb-16">
         {/* Banner */}

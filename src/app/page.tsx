@@ -1,7 +1,7 @@
 import { SITE_URL } from '@/config/site'
 import type { Metadata } from 'next'
 import { HomePage } from '@/features/home/pages/HomePage'
-import { organization, ORGANIZATION_ID } from '@/lib/seo/jsonld'
+import { organization, ORGANIZATION_ID, serializeJsonLd } from '@/lib/seo/jsonld'
 
 export const metadata: Metadata = {
   title: 'DropMarket | Buy & Sell Game Accounts, Items & Currency Safely',
@@ -68,7 +68,7 @@ export default function Page() {
         <script
           key={i}
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(s) }}
+          dangerouslySetInnerHTML={{ __html: serializeJsonLd(s) }}
         />
       ))}
 

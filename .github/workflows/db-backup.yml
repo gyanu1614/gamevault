@@ -113,3 +113,34 @@ jobs:
           path: dump-${{ env.STAMP }}.sql.gz.age
           retention-days: 30
           if-no-files-found: error
+
+      # DLT-004: a scheduled workflow surfaces in no PR check, and GitHub
+      # notifies only the last committer. With retention-days: 30, a silent
+      # failure that persists ~30 days leaves ZERO recoverable backups. This
+      # step is the alarm. It runs on failure OR cancellation (a 60-minute
+      # timeout kill is a cancellation, not a failure) and never fails the job
+      # itself -- an alert that breaks the run would hide the original error.
+      - name: Alert on backup failure
+        if: ${{ failure() || cancelled() }}
+        env:
+          DISCORD_OPS_WEBHOOK_URL: ${{ secrets.DISCORD_OPS_WEBHOOK_URL }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          OUTCOME: ${{ job.status }}
+        run: |
+          set -uo pipefail
+          if [ -z "${DISCORD_OPS_WEBHOOK_URL:-}" ]; then
+            echo "::warning::DISCORD_OPS_WEBHOOK_URL is not set — the nightly backup failed and nobody was paged."
+            exit 0
+          fi
+          # jq -Rs builds a correctly escaped JSON string, so no shell value is
+          # ever interpolated into the payload unquoted.
+          payload="$(jq -nc \
+            --arg content "🔴 **Nightly DB backup ${OUTCOME}** — no new backup was stored. Backups expire after 30 days, so repeated failures end with nothing to restore from. Run: ${RUN_URL}" \
+            '{content: $content, allowed_mentions: {parse: []}}')"
+          code="$(curl -sS -o /tmp/alert.out -w '%{http_code}' \
+            -X POST -H 'content-type: application/json' \
+            --data "$payload" "$DISCORD_OPS_WEBHOOK_URL" || echo 000)"
+          if [ "$code" != "204" ] && [ "$code" != "200" ]; then
+            echo "::warning::Discord alert POST returned HTTP $code"
+          fi
+          exit 0
