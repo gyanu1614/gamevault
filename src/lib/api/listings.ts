@@ -21,7 +21,7 @@ export async function getListings(filters: ListingsFilters = {}) {
     .from('listings')
     .select(`
       *,
-      seller:profiles!listings_seller_id_fkey!inner(*),
+      seller:public_profiles!listings_seller_id_fkey!inner(*),
       game:games!listings_game_id_fkey(*),
       category:game_categories!listings_game_category_id_fkey(*)
     `)
@@ -71,7 +71,7 @@ export async function getListing(id: string) {
     .from('listings')
     .select(`
       *,
-      seller:profiles!listings_seller_id_fkey(*),
+      seller:public_profiles!listings_seller_id_fkey(*),
       game:games!listings_game_id_fkey(*),
       category:game_categories!listings_game_category_id_fkey(*)
     `)

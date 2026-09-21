@@ -9189,6 +9189,37 @@ export type Database = {
           },
         ]
       }
+      public_profiles: {
+        Row: {
+          id: string | null
+          username: string | null
+          avatar_url: string | null
+          bio: string | null
+          created_at: string | null
+          business_name: string | null
+          seller_tier: string | null
+          seller_rating: number | null
+          total_reviews: number | null
+          positive_reviews: number | null
+          total_sales: number | null
+          badges: string[] | null
+          is_verified: boolean | null
+          founding_seller: boolean | null
+          is_test: boolean | null
+          role: string | null
+          shop_name: string | null
+          shop_slug: string | null
+          shop_banner_url: string | null
+          shop_banner_position: string | null
+          shop_primary_color: string | null
+          shop_secondary_color: string | null
+          shop_theme: string | null
+          shop_layout: string | null
+          banner_url: string | null
+          banner_preset: string | null
+        }
+        Relationships: []
+      }
       recent_security_events: {
         Row: {
           action: string | null

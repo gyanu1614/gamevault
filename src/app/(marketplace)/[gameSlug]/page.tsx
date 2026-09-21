@@ -114,7 +114,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       .from('listings')
       // SEO hygiene: only REAL (non-test) active listings count toward
       // indexability, so a game with only test listings stays noindex.
-      .select('id, seller:profiles!listings_seller_id_fkey!inner(is_test)', { count: 'exact', head: true })
+      .select('id, seller:public_profiles!listings_seller_id_fkey!inner(is_test)', { count: 'exact', head: true })
       .eq('game_id', game.id)
       .eq('status', 'active')
       .eq('seller.is_test', false),
@@ -165,7 +165,7 @@ async function getCategoryListingCounts(gameId: string) {
 
   const { data: counts, error } = await supabase
     .from('listings')
-    .select('game_category_id, seller:profiles!listings_seller_id_fkey!inner(is_test)')
+    .select('game_category_id, seller:public_profiles!listings_seller_id_fkey!inner(is_test)')
     .eq('game_id', gameId)
     .eq('status', 'active')
     .eq('seller.is_test', false) as any
@@ -190,7 +190,7 @@ async function getFeaturedListings(gameId: string, limit: number = 6) {
     .from('listings')
     .select(`
       *,
-      seller:profiles!listings_seller_id_fkey!inner(username, seller_tier, is_test),
+      seller:public_profiles!listings_seller_id_fkey!inner(username, seller_tier, is_test),
       category:game_categories!listings_game_category_id_fkey(name, slug)
     `)
     .eq('game_id', gameId)
@@ -253,7 +253,7 @@ async function getSabLandingOffers(gameId: string): Promise<{
         `
         id, slug, title, price, original_price, delivery_time,
         quantity, is_unlimited, images, template_data, status,
-        seller:profiles!listings_seller_id_fkey(
+        seller:public_profiles!listings_seller_id_fkey(
           id, username, shop_name, shop_slug, avatar_url, seller_tier,
           seller_rating, total_reviews, total_sales, is_verified
         ),

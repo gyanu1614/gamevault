@@ -50,7 +50,10 @@ describe('category page helpers read through the anon client', () => {
   it('getTestSellerIds', async () => {
     const { getTestSellerIds } = await import('@/lib/seo/public-hygiene')
     await expect(getTestSellerIds()).resolves.toEqual([])
-    expect(recorder.tables()).toContain('profiles')
+    // DLT-001: reads the public_profiles projection, never the base table —
+    // anon holds no grant on profiles' sensitive columns.
+    expect(recorder.tables()).toContain('public_profiles')
+    expect(recorder.tables()).not.toContain('profiles')
   })
 
   it('getPausedSellerIds', async () => {

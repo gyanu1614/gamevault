@@ -20,7 +20,7 @@ export async function getIndexableGameSlugs(): Promise<string[]> {
       }>,
       supabase
         .from('listings')
-        .select('seller:profiles!listings_seller_id_fkey!inner(is_test), game:games!listings_game_id_fkey(slug)')
+        .select('seller:public_profiles!listings_seller_id_fkey!inner(is_test), game:games!listings_game_id_fkey(slug)')
         .eq('status', 'active')
         .eq('seller.is_test', false) as unknown as Promise<{
         data: { game: { slug: string } | null }[] | null

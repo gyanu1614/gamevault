@@ -240,8 +240,8 @@ export async function getReviews(filters: ReviewFilters = {}): Promise<{
       .from('reviews')
       .select(`
         *,
-        buyer:profiles!reviews_reviewer_id_fkey(id, username, avatar_url),
-        seller:profiles!reviews_seller_id_fkey(id, username, shop_name, avatar_url),
+        buyer:public_profiles!reviews_reviewer_id_fkey(id, username, avatar_url),
+        seller:public_profiles!reviews_seller_id_fkey(id, username, shop_name, avatar_url),
         listing:listings(id, title, slug),
         game:games(id, name, slug),
         order:orders(id, order_number)
@@ -329,9 +329,11 @@ export async function getSellerReviews(sellerId: string, filters: ReviewFilters 
       return { data: null, error: reviewsError }
     }
 
-    // Get seller profile for stats
+    // Get seller profile for stats (DLT-001: public projection, not the base
+    // table — this runs on the browser client, i.e. as anon for a logged-out
+    // visitor reading a public seller page).
     const { data: profile, error: profileError } = await supabase
-      .from('profiles')
+      .from('public_profiles')
       .select('seller_rating, total_reviews, positive_reviews')
       .eq('id', sellerId)
       .single() as any
@@ -392,8 +394,8 @@ export async function getReview(reviewId: string): Promise<{
       .from('reviews')
       .select(`
         *,
-        buyer:profiles!reviews_reviewer_id_fkey(id, username, avatar_url),
-        seller:profiles!reviews_seller_id_fkey(id, username, shop_name, avatar_url),
+        buyer:public_profiles!reviews_reviewer_id_fkey(id, username, avatar_url),
+        seller:public_profiles!reviews_seller_id_fkey(id, username, shop_name, avatar_url),
         listing:listings(id, title, slug),
         game:games(id, name, slug),
         order:orders(id, order_number)
@@ -608,8 +610,8 @@ export async function getOrderReview(orderId: string): Promise<{
       .from('reviews')
       .select(`
         *,
-        buyer:profiles!reviews_reviewer_id_fkey(id, username, avatar_url),
-        seller:profiles!reviews_seller_id_fkey(id, username, shop_name, avatar_url),
+        buyer:public_profiles!reviews_reviewer_id_fkey(id, username, avatar_url),
+        seller:public_profiles!reviews_seller_id_fkey(id, username, shop_name, avatar_url),
         listing:listings(id, title, slug),
         game:games(id, name, slug),
         order:orders(id, order_number)
