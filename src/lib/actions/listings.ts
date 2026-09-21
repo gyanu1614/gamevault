@@ -12,6 +12,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { revalidateListingSurfaces } from '@/lib/revalidation/listings'
 import { DEFAULT_TIER, tierByKey } from '@/lib/seller/tiers'
 
 /** Editable listing fields (updateListing). Category is fixed once published. */
@@ -285,6 +286,9 @@ export async function updateListingPrice(
 
     if (updateError) throw updateError
 
+    // Step 7b — the category page shows this price (24 h TTL).
+    await revalidateListingSurfaces(supabase as never, { listingIds: [listingId] })
+
     return { success: true }
   } catch (error: any) {
     console.error('Error updating listing price:', error)
@@ -408,6 +412,8 @@ export async function updateListing(
     // V21/P7.d — Marketplace tree lives at `/{gameSlug}/...` now;
     // revalidate `/` (homepage features popular listings).
     revalidatePath('/')
+    // Step 7b — and the category page itself (status/price/title changes).
+    await revalidateListingSurfaces(supabase as never, { listingIds: [listingId] })
 
     return { success: true, listing: data }
   } catch (error: any) {
@@ -475,7 +481,9 @@ export async function deleteListing(
     // Verify ownership before deleting
     const { data: listing } = await supabase
       .from('listings')
-      .select('seller_id, images')
+      // game_category_id: read BEFORE the delete so the category page can be
+      // revalidated afterwards (Step 7b) — the row is gone by then.
+      .select('seller_id, images, game_category_id')
       .eq('id', listingId)
       .single() as any
 
@@ -506,6 +514,12 @@ export async function deleteListing(
       .eq('id', listingId)
 
     if (deleteError) throw deleteError
+
+    if (listing.game_category_id) {
+      await revalidateListingSurfaces(supabase as never, {
+        gameCategoryIds: [listing.game_category_id],
+      })
+    }
 
     return { success: true }
   } catch (error: any) {

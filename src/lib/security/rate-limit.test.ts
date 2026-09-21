@@ -137,6 +137,8 @@ describe('budget boundaries', () => {
       webhook: { limit: 120, windowSeconds: 60 },
       internal: { limit: 30, windowSeconds: 60 },
       contact: { limit: 5, windowSeconds: 60 },
+      // Step 7b — seller-triggered category revalidation (CPU a client spends).
+      revalidate: { limit: 10, windowSeconds: 60 },
     })
   })
 })

@@ -370,11 +370,27 @@ function normalise(html) {
  * Both are strict: a genuine markup, copy, price, link or metadata regression
  * shows up here, while build-only noise does not.
  */
+/**
+ * Canonical attribute order inside a tag. React emits `class` and `style`
+ * in different orders depending on how a client component was rendered
+ * (observed on framer-motion `<nav>`/`<div>` between two static builds of the
+ * same source). The DOM is identical either way, so the diff is not.
+ */
+function sortTagAttributes(html) {
+  return html.replace(
+    /<([a-zA-Z][\w:-]*)((?:\s+[\w:@.-]+(?:="[^"]*")?)+)\s*(\/?)>/g,
+    (_m, tag, attrs, slash) => {
+      const list = attrs.match(/[\w:@.-]+(?:="[^"]*")?/g) ?? []
+      return `<${tag} ${list.sort().join(' ')}${slash}>`
+    },
+  )
+}
+
 export function renderedBody(html) {
   const m = html.match(/<body[^>]*>([\s\S]*)<\/body>/i)
   const body = m ? m[1] : html
   return (
-    body
+    sortTagAttributes(body)
       .replace(/<script[\s\S]*?<\/script>/gi, '')
       // Empty Suspense boundaries render nothing. A client leaf that only reads
       // useSearchParams() (SearchParamsBridge, Step 7a) leaves a bailout
@@ -385,6 +401,10 @@ export function renderedBody(html) {
       .replace(/\s+/g, ' ')
       .replace(/\d{1,2}:\d{2}\s*(UTC|AM|PM)/gi, 'TIME')
       .replace(/\d{4}-\d{2}-\d{2}T[\d:.]+Z?/g, 'TIMESTAMP')
+      // NEXT_PUBLIC_PURCHASES_ENABLED is set for Production only, so every
+      // preview renders the pre-launch CTA (lib/config/purchases.ts). Fold the
+      // two literals: an environment difference, not a code one.
+      .replace(/Buying Opens Soon/g, 'Buy Now')
       // Freshness copy ("36m ago", "1h ago") drifts between the two fetches.
       .replace(/\b\d+\s*(m|h|d|min|mins|minutes?|hours?|days?)\s+ago\b/gi, 'RELTIME')
       .trim()

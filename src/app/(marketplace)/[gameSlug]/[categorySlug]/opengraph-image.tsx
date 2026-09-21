@@ -11,6 +11,7 @@ import { ImageResponse } from 'next/og'
 import { OgCard, OG_SIZE } from '@/lib/seo/og-template'
 import { getIndexableCategoryPairs } from '@/lib/seo/category-pairs'
 import { buildCategoryOgData } from './_ogData'
+import { ogCategoryFallbackBytes } from './_ogFallback'
 
 export const alt = 'Buy and sell on DropMarket — covered by SafeDrop Buyer Protection'
 export const size = OG_SIZE
@@ -18,8 +19,20 @@ export const contentType = 'image/png'
 // Step 7a — see ../opengraph-image.tsx: prerender the sitemap's pairs, keep
 // 24 h ISR for the long tail. Data comes from _ogData.ts (game_categories,
 // not the legacy `categories` mirror this route used to read).
+//
+// Step 7b — the long tail (no listing, no curated currency config: ~600
+// pairs nobody shares) no longer pays a Satori render: it gets the static
+// branded PNG (public/og/category-fallback.png), embedded in _ogFallback.ts
+// so it needs no asset tracing in any runtime — a base64 decode, not a
+// 0.4–1 s CPU pass.
 export const dynamic = 'force-static'
 export const revalidate = 86400
+
+function fallbackPng(): Response {
+  return new Response(ogCategoryFallbackBytes(), {
+    headers: { 'content-type': 'image/png', 'cache-control': 'public, max-age=86400' },
+  })
+}
 
 export async function generateStaticParams() {
   return getIndexableCategoryPairs()
@@ -31,7 +44,8 @@ export default async function Image({
   params: Promise<{ gameSlug: string; categorySlug: string }>
 }) {
   const { gameSlug, categorySlug } = await params
-  const { gameName, categoryName, subtitle } = await buildCategoryOgData(gameSlug, categorySlug)
+  const { gameName, categoryName, subtitle, live } = await buildCategoryOgData(gameSlug, categorySlug)
+  if (!live) return fallbackPng()
 
   return new ImageResponse(
     (

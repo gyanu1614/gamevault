@@ -5,6 +5,7 @@ import { createServiceRoleClient } from '@/lib/supabase/service'
 import { requireRole } from './admin-permissions'
 import { logAdminActivity } from '@/lib/admin/activity-log'
 import { revalidatePath } from 'next/cache'
+import { revalidateListingSurfaces } from '@/lib/revalidation/listings'
 
 export interface RestrictSellerParams {
   userId: string
@@ -147,6 +148,9 @@ export async function restrictSeller(params: RestrictSellerParams): Promise<{ su
     revalidatePath(`/admin/active-sellers/${userId}`)
     revalidatePath('/seller/dashboard')
     revalidatePath('/seller/listings')
+    // Step 7b — a restriction pauses every listing of the seller (and
+    // unrestrict reactivates): the category pages must re-render.
+    await revalidateListingSurfaces(createServiceRoleClient() as never, { sellerIds: [userId] })
 
     return { success: true }
   } catch (error: any) {

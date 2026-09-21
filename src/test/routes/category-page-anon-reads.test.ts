@@ -17,6 +17,14 @@ vi.mock('react', async (importOriginal) => ({
   cache: (fn: unknown) => fn,
 }))
 
+// unstable_cache needs Next's incremental cache (Step 7b wraps the shared
+// reads in it); outside the Next runtime it throws, so pass the reader through.
+vi.mock('next/cache', () => ({
+  unstable_cache: (fn: () => Promise<unknown>) => fn,
+  revalidateTag: () => undefined,
+  revalidatePath: () => undefined,
+}))
+
 vi.mock('@/lib/supabase/server', () => ({
   createClient: async () => {
     throw new Error('cookie client used on a public read')
