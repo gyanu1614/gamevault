@@ -14,6 +14,7 @@
  */
 
 import { createServiceRoleClient } from '@/lib/supabase/service'
+import { revalidateListingSurfaces } from '@/lib/revalidation/listings'
 import type { OrderEvent } from '@/lib/escrow/state-machine'
 
 export interface TransitionResult {
@@ -68,6 +69,25 @@ export async function transition(
   }
 
   const r = data as any
+
+  // Step 7b — on completion the DB trigger update_listing_quantity decrements
+  // the listing's stock; the (24 h TTL) category page shows it. Best-effort,
+  // never fails the transition; the nightly full revalidate is the backstop.
+  if (r.status === 'completed' && r.changed === true) {
+    try {
+      const { data: order } = await supabase
+        .from('orders')
+        .select('listing_id')
+        .eq('id', orderId)
+        .maybeSingle()
+      const listingId = (order as { listing_id?: string | null } | null)?.listing_id
+      if (listingId) {
+        await revalidateListingSurfaces(supabase as never, { listingIds: [listingId] })
+      }
+    } catch (e) {
+      console.error('[transition] listing surface revalidation failed (non-fatal):', e)
+    }
+  }
 
   // Stamp the payment moment: the delivery SLA timer starts at PAYMENT, not
   // at order creation (buyers can pay long after Buy Now). First stamp wins;

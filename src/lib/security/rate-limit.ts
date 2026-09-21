@@ -40,6 +40,9 @@ export const RATE_LIMITS = {
   internal: { limit: 30, windowSeconds: 60 },
   /** Public contact / support / waitlist forms. */
   contact: { limit: 5, windowSeconds: 60 },
+  /** Seller-triggered cache revalidation (Step 7b): each call re-renders the
+   *  caller's category pages on next visit, so it is CPU a client can spend. */
+  revalidate: { limit: 10, windowSeconds: 60 },
 } as const satisfies Record<string, RateLimitBudget>
 
 export type RateLimitName = keyof typeof RATE_LIMITS

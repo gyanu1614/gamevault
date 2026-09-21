@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { revalidateListingSurfaces } from '@/lib/revalidation/listings'
 import { createServiceRoleClient } from '@/lib/supabase/service'
 import { revalidatePath } from 'next/cache'
 import { logOrderAction, logUnauthorizedAccess, logFailure } from '@/lib/audit'
@@ -272,6 +273,8 @@ export async function createOrder(data: CreateOrderData): Promise<{
             .eq('id', order.id)
 
           console.log('[CreateOrder] Order marked as completed')
+          // Step 7b — the completion trigger decremented stock on the listing.
+          await revalidateListingSurfaces(supabase as never, { listingIds: [listing.id] })
         } else {
           console.error('[CreateOrder] ❌ Instant delivery failed:', deliveryResult.error)
           // Non-fatal - order still created successfully

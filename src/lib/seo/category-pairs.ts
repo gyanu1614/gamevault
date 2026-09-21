@@ -68,3 +68,32 @@ export async function getIndexableCategoryPairs(): Promise<CategoryPair[]> {
     return []
   }
 }
+
+/**
+ * EVERY enabled (active game, enabled category) pair — the prerender set for
+ * `/[gameSlug]/[categorySlug]` from Step 7b on. With ~12 deploys a day, any
+ * pair not built at deploy re-renders on its first visit after each one; the
+ * sitemap's subset (above) stays the rule for indexability and OG images.
+ * One read; [] on failure so the long tail simply renders on demand.
+ */
+export async function getAllEnabledCategoryPairs(): Promise<CategoryPair[]> {
+  try {
+    const supabase = createAnonClient()
+    const { data } = (await supabase
+      .from('game_categories')
+      .select('slug, game:games!game_categories_game_id_fkey(slug, is_active)')
+      .eq('is_enabled', true)) as unknown as {
+      data: { slug: string; game: { slug: string; is_active: boolean } | null }[] | null
+    }
+    return (data ?? [])
+      .filter((c) => c.game?.slug && c.game.is_active)
+      .map((c) => ({ gameSlug: c.game!.slug, categorySlug: c.slug }))
+      .sort((a, b) =>
+        a.gameSlug === b.gameSlug
+          ? a.categorySlug.localeCompare(b.categorySlug)
+          : a.gameSlug.localeCompare(b.gameSlug),
+      )
+  } catch {
+    return []
+  }
+}

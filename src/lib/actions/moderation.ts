@@ -13,6 +13,7 @@ import { createServiceRoleClient } from '@/lib/supabase/service'
 import { DEFAULT_TIER } from '@/lib/seller/tiers'
 import { logAdminActivity } from '@/lib/admin/activity-log'
 import { revalidatePath } from 'next/cache'
+import { revalidateListingSurfaces } from '@/lib/revalidation/listings'
 
 // ─── Shared moderator gate ───────────────────────────────────────────────────
 
@@ -273,6 +274,7 @@ export async function approveListing(
     // now trusted — release the rest of their queued listings automatically so
     // admins never re-review a seller who already crossed the bar.
     let drainedCount = 0
+    let drainedSellerId: string | undefined
     try {
       const service = createServiceRoleClient()
       const { data: approvedRow } = await service
@@ -281,6 +283,7 @@ export async function approveListing(
         .eq('id', listingId)
         .single() as any
       const sellerId = approvedRow?.seller_id as string | undefined
+      drainedSellerId = sellerId
       if (sellerId) {
         const { data: stillNeedsModeration } = await (service.rpc as any)(
           'check_seller_needs_moderation',
@@ -341,6 +344,12 @@ export async function approveListing(
     // homepage surfaces featured/popular listings so revalidating
     // `/` covers the public-facing impact of a moderation change.
     revalidatePath('/')
+    // Step 7b — the category pages (24 h TTL). An approval can drain the
+    // seller's whole queue, so resolve by listing AND seller.
+    await revalidateListingSurfaces(createServiceRoleClient() as never, {
+      listingIds: [listingId],
+      sellerIds: drainedSellerId ? [drainedSellerId] : [],
+    })
 
     return { success: true, drainedCount }
   } catch (error: any) {
@@ -427,6 +436,7 @@ export async function rejectListing(
     })
 
     revalidatePath('/admin/moderation')
+    await revalidateListingSurfaces(createServiceRoleClient() as never, { listingIds: [listingId] })
 
     return { success: true }
   } catch (error: any) {
@@ -518,6 +528,7 @@ export async function requestListingChanges(
 
     revalidatePath('/admin/moderation')
     revalidatePath('/account/listings')
+    await revalidateListingSurfaces(createServiceRoleClient() as never, { listingIds: [listingId] })
 
     return { success: true }
   } catch (error: any) {

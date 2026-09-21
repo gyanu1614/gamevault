@@ -5,6 +5,7 @@
  */
 
 import { createClient } from '@/lib/supabase/client'
+import { revalidateMyListingSurfaces } from '@/lib/actions/revalidate-listing-surfaces'
 import { slugify } from '@/lib/utils'
 import { type SellerTier, DEFAULT_TIER } from '@/lib/seller/tiers'
 
@@ -13,6 +14,15 @@ const supabase = createClient()
 // =====================================================
 // TYPES (matching your existing schema)
 // =====================================================
+
+/**
+ * Step 7b — after a listing write from the browser, ask the server to
+ * revalidate the category pages this seller has listings in. Best-effort:
+ * the write already happened; the action is session-scoped and rate-limited.
+ */
+function revalidateMine(): void {
+  void revalidateMyListingSurfaces().catch((e) => console.error('[seller-api] revalidate failed:', e))
+}
 
 export type ListingStatus =
   | 'draft' | 'active' | 'sold' | 'archived' | 'suspended' | 'paused'
@@ -271,6 +281,7 @@ export const listingsApi = {
       .single()
 
     if (error) throw error
+    revalidateMine()
     return data
   },
 
@@ -295,6 +306,7 @@ export const listingsApi = {
       .single()
 
     if (error) throw error
+    revalidateMine()
     return data
   },
 
@@ -313,6 +325,7 @@ export const listingsApi = {
       .eq('seller_id', user.id)  // CRITICAL: Only allow deleting own listings
 
     if (error) throw error
+    revalidateMine()
   },
 
   /**
@@ -330,6 +343,7 @@ export const listingsApi = {
       .eq('seller_id', user.id)  // CRITICAL: Only allow updating own listings
 
     if (error) throw error
+    revalidateMine()
   },
 
   /**
@@ -347,6 +361,7 @@ export const listingsApi = {
       .eq('seller_id', user.id)  // CRITICAL: Only allow deleting own listings
 
     if (error) throw error
+    revalidateMine()
   },
 }
 
@@ -494,6 +509,7 @@ export const ordersApi = {
       .single()
 
     if (error) throw error
+    revalidateMine()
     return data
   },
 }
