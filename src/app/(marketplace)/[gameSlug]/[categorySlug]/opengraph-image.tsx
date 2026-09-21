@@ -11,6 +11,7 @@ import { ImageResponse } from 'next/og'
 import { OgCard, OG_SIZE } from '@/lib/seo/og-template'
 import { getIndexableCategoryPairs } from '@/lib/seo/category-pairs'
 import { buildCategoryOgData } from './_ogData'
+import { ogCategoryFallbackBytes } from './_ogFallback'
 
 export const alt = 'Buy and sell on DropMarket — covered by SafeDrop Buyer Protection'
 export const size = OG_SIZE
@@ -21,16 +22,14 @@ export const contentType = 'image/png'
 //
 // Step 7b — the long tail (no listing, no curated currency config: ~600
 // pairs nobody shares) no longer pays a Satori render: it gets the static
-// branded PNG next to this file, read through the bundler (the same
-// `new URL(…, import.meta.url)` mechanism OG routes use for fonts).
+// branded PNG (public/og/category-fallback.png), embedded in _ogFallback.ts
+// so it needs no asset tracing in any runtime — a base64 decode, not a
+// 0.4–1 s CPU pass.
 export const dynamic = 'force-static'
 export const revalidate = 86400
 
-async function fallbackPng(): Promise<Response> {
-  const bytes = await fetch(new URL('./_og-category-fallback.png', import.meta.url)).then((r) =>
-    r.arrayBuffer(),
-  )
-  return new Response(bytes, {
+function fallbackPng(): Response {
+  return new Response(ogCategoryFallbackBytes(), {
     headers: { 'content-type': 'image/png', 'cache-control': 'public, max-age=86400' },
   })
 }
