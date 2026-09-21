@@ -3,7 +3,14 @@
 -- SAFE TO APPLY WHILE THE CURRENT PRODUCTION CODE IS RUNNING. Nothing here
 -- removes a privilege or a policy: anon keeps the blanket grant and the
 -- baseline's "Public profiles are viewable by everyone" policy stays in place
--- until PART B (20260921151722_public_profiles_revoke_anon.sql).
+-- until PART B.
+--
+-- PART B deliberately does NOT live in this directory yet. `supabase db push`
+-- applies every pending file in supabase/migrations/ AT ONCE, so a B sitting
+-- here would ride along with this push and collapse the split. It waits in
+-- supabase/migrations_pending/20260921151722_public_profiles_revoke_anon.sql
+-- and ships via PR #82, which moves it here unchanged once PR #81's code is
+-- live. See supabase/migrations_pending/README.md.
 --
 -- Why the split: the code in PR #81 reads `public_profiles`, and the schema
 -- change that CLOSES the hole revokes anon's access to `profiles`. Applying

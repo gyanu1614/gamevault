@@ -1,6 +1,18 @@
 -- DLT-001 · PART B (THE CLOSE) — revoke anon's access to public.profiles.
 --
+-- *** NOT A LIVE MIGRATION YET. ***  This file lives in
+-- supabase/migrations_pending/ on purpose: the CLI only applies
+-- supabase/migrations/, and `supabase db push` applies every pending file in
+-- that directory AT ONCE. Leaving B there would apply it in the same push as
+-- PART A and collapse the split back into the coupled migration the preview
+-- run already proved broken.
+--
 -- ⚠️ APPLY ONLY AFTER PR #81's CODE IS LIVE IN PRODUCTION.
+--
+-- To ship it: merge follow-up PR #82, which moves this file UNCHANGED into
+-- supabase/migrations/ under the same filename, then `supabase db push`.
+-- Nothing in the body needs editing — the timestamp already sorts after
+-- PART A's (20260921004158).
 --
 -- This is the migration that actually closes the Critical finding. It is
 -- separated from PART A (20260921004158_public_profiles_view.sql) because it
@@ -9,10 +21,10 @@
 -- lands. Once PR #81 is deployed, all 25 of those call sites read
 -- `public_profiles` instead, and this is a no-op for the app.
 --
--- Order (see the PR runbook):
---   A → re-run the hub-diff gate on the preview → merge → wait for deploy
---     → B → verify listing page, shop page, and that anon can no longer read
---       profiles with the public anon key.
+-- Order (see the PR #81 runbook):
+--   A (push) → verify view over REST → re-run gate → merge #81 → deploy
+--     → merge #82 (moves this file into migrations/) → push → verify listing
+--       page, shop page, and that anon can no longer read profiles.
 --
 -- Rollback: this file only narrows privileges, so recovery is a single
 -- statement if something unexpected surfaces --
