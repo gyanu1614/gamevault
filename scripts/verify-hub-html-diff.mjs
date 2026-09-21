@@ -370,11 +370,27 @@ function normalise(html) {
  * Both are strict: a genuine markup, copy, price, link or metadata regression
  * shows up here, while build-only noise does not.
  */
+/**
+ * Canonical attribute order inside a tag. React emits `class` and `style`
+ * in different orders depending on how a client component was rendered
+ * (observed on framer-motion `<nav>`/`<div>` between two static builds of the
+ * same source). The DOM is identical either way, so the diff is not.
+ */
+function sortTagAttributes(html) {
+  return html.replace(
+    /<([a-zA-Z][\w:-]*)((?:\s+[\w:@.-]+(?:="[^"]*")?)+)\s*(\/?)>/g,
+    (_m, tag, attrs, slash) => {
+      const list = attrs.match(/[\w:@.-]+(?:="[^"]*")?/g) ?? []
+      return `<${tag} ${list.sort().join(' ')}${slash}>`
+    },
+  )
+}
+
 export function renderedBody(html) {
   const m = html.match(/<body[^>]*>([\s\S]*)<\/body>/i)
   const body = m ? m[1] : html
   return (
-    body
+    sortTagAttributes(body)
       .replace(/<script[\s\S]*?<\/script>/gi, '')
       // Empty Suspense boundaries render nothing. A client leaf that only reads
       // useSearchParams() (SearchParamsBridge, Step 7a) leaves a bailout
