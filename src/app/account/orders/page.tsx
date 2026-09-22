@@ -40,7 +40,7 @@ import { motion } from 'framer-motion'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
-import { displayOrderRef } from '@/lib/orders/order-number'
+import { displayOrderRef, normalizeOrderNumber } from '@/lib/orders/order-number'
 
 type FilterStatus = 'all' | 'pending' | 'completed' | 'disputed' | 'cancelled'
 type ViewTab = 'purchases' | 'sales'
@@ -287,10 +287,11 @@ function OrdersContent() {
       })
     }
 
-    // Search filter
+    // Search filter (order numbers match dash/space/case-insensitively)
     if (filters.searchQuery) {
+      const orderKey = normalizeOrderNumber(filters.searchQuery)
       filtered = filtered.filter(o =>
-        o.order_number?.toLowerCase().includes(filters.searchQuery.toLowerCase()) ||
+        (orderKey.length > 0 && normalizeOrderNumber(o.order_number).includes(orderKey)) ||
         o.listing?.title?.toLowerCase().includes(filters.searchQuery.toLowerCase()) ||
         (o as any).seller?.username?.toLowerCase().includes(filters.searchQuery.toLowerCase()) ||
         (o as any).buyer?.username?.toLowerCase().includes(filters.searchQuery.toLowerCase())

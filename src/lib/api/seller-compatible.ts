@@ -8,6 +8,7 @@ import { createClient } from '@/lib/supabase/client'
 import { revalidateMyListingSurfaces } from '@/lib/actions/revalidate-listing-surfaces'
 import { slugify } from '@/lib/utils'
 import { type SellerTier, DEFAULT_TIER } from '@/lib/seller/tiers'
+import { orderNumberSearchPattern } from '@/lib/orders/order-number'
 
 const supabase = createClient()
 
@@ -428,7 +429,7 @@ export const ordersApi = {
       query = query.eq('status', filters.status)
     }
     if (filters?.search && filters.search.trim()) {
-      query = query.or(`order_number.ilike.%${filters.search}%`)
+      query = query.ilike('order_number_search', orderNumberSearchPattern(filters.search))
     }
 
     const { data, error } = await query
@@ -576,7 +577,7 @@ export const buyerOrdersApi = {
       query = query.eq('status', filters.status)
     }
     if (filters?.search && filters.search.trim()) {
-      query = query.or(`order_number.ilike.%${filters.search}%`)
+      query = query.ilike('order_number_search', orderNumberSearchPattern(filters.search))
     }
 
     const { data, error } = await query
