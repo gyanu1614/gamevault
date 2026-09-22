@@ -24,6 +24,7 @@ import { createServiceRoleClient } from '@/lib/supabase/service'
 import { PURCHASES_ENABLED, PURCHASES_DISABLED_MESSAGE } from '@/lib/config/purchases'
 import { buyerFee, protectionWindowHours, round2 } from '@/lib/fees'
 import { resolveSellerFee, FeeResolutionError, type SellerFeeTrace } from '@/lib/fees/resolver'
+import { runOrderInsert, OrderInsertConflictError } from '@/lib/checkout/order-insert'
 import { getProvider, activePaymentProviderName, providerNameForMethod } from '@/lib/payments/registry'
 import { spendWallet, getWalletBalance } from '@/lib/wallet/wallet'
 import { validatePromoCode, recordPromoUsage } from '@/lib/actions/promo'
@@ -199,17 +200,18 @@ export async function createCheckout(input: CreateCheckoutInput): Promise<Create
         promoDiscount,
         promoCodeId,
       })
-      if (insertRes.orderId) {
+      if ('orderId' in insertRes) {
         orderId = insertRes.orderId
         // AUTH-003 — usage is recorded so per-user / total limits bind.
         if (promoCodeId && promoDiscount > 0) {
           recordPromoUsage({ promoCodeId, orderId, discountAmount: promoDiscount, userId: user.id }).catch(() => {})
         }
-      } else if (insertRes.duplicate) {
-        // 23505 on the partial unique index — a concurrent double-submit won the
-        // race and created the pending order between our lookup and insert.
-        // Re-run the reuse lookup and hand the buyer that order instead of a
-        // "failed to create order".
+      } else if ('duplicate' in insertRes) {
+        // 23505 on one_pending_order_per_buyer_listing (and ONLY that index —
+        // lib/checkout/order-insert classifies by constraint name): a
+        // concurrent double-submit won the race and created the pending order
+        // between our lookup and insert. Re-run the reuse lookup and hand the
+        // buyer that order instead of a "failed to create order".
         const raced = await findReusablePendingOrder(supabase, user.id, input.listingId)
         if (raced?.checkout_url) {
           return { success: true, orderId: raced.id, checkoutUrl: toRelativePayUrl(raced.checkout_url) }
@@ -329,6 +331,13 @@ export async function createCheckout(input: CreateCheckoutInput): Promise<Create
       console.error('[createCheckout] seller fee resolution failed (order refused):', e.detail)
       return { success: false, error: e.message }
     }
+    // A unique violation on the order INSERT that is neither the buyer's own
+    // double-submit nor a first-time order_number collision (already retried
+    // once). Nothing was written. The constraint goes to the log, not the buyer.
+    if (e instanceof OrderInsertConflictError) {
+      console.error(`[createCheckout] order insert conflict on ${e.constraint} after ${e.attempts} attempt(s) (order refused)`)
+      return { success: false, error: e.message }
+    }
     const msg = String(e?.message ?? '')
     // Provider/config internals never reach the buyer verbatim.
     if (msg.startsWith('[Payssion]') || msg.startsWith('payssion:')) {
@@ -442,18 +451,20 @@ interface InsertPendingArgs {
 }
 
 /**
- * Insert the pending order. Distinguishes a unique-index collision (23505 on
- * one_pending_order_per_buyer_listing — a concurrent double-submit) from a real
- * failure so the caller can recover by reusing the racing order.
+ * Insert the pending order under lib/checkout/order-insert's 23505 policy:
+ * one_pending_order_per_buyer_listing → { duplicate } (reuse the racing
+ * order); orders_order_number_key → the INSERT is retried exactly once (the
+ * trigger draws a fresh number); any other unique index → throws
+ * OrderInsertConflictError, mapped to a buyer-safe refusal by the caller.
  */
 async function insertPendingOrder(
   a: InsertPendingArgs,
-): Promise<{ orderId?: string; duplicate?: boolean; error?: string }> {
+): Promise<{ orderId: string } | { duplicate: true } | { error: string }> {
   // Service role: client-side order inserts are RLS-blocked entirely (the old
   // permissive "Buyers can create orders" policy was a price-integrity hole) —
   // the server, which computed the amounts above, is the only writer.
   const service = createServiceRoleClient()
-  const { data, error } = await (service.from('orders').insert as any)({
+  return runOrderInsert(() => (service.from('orders').insert as any)({
     buyer_id: a.buyerId,
     seller_id: a.sellerId,
     listing_id: a.listingId,
@@ -477,10 +488,7 @@ async function insertPendingOrder(
     promo_code_id: a.promoCodeId,
   })
     .select('id')
-    .single()
-  if (data?.id) return { orderId: data.id as string }
-  if (error?.code === '23505') return { duplicate: true }
-  return { error: error?.message ?? 'insert failed' }
+    .single())
 }
 
 /**

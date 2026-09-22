@@ -362,6 +362,31 @@ describe.skipIf(!hasEnv)('fee engine PR 3 — createCheckout resolves the rate a
     expect(await orderSnapshot(r.orderId!)).toEqual(snap)
   }, 60_000)
 
+  // ── order numbers (migration 20260921230440) ────────────────────────────
+  it('every order this run created has a GV- + 10-symbol crypto-random order_number from the unambiguous alphabet, all distinct', async () => {
+    expect(createdOrderIds.length).toBeGreaterThan(0)
+    const numbers: string[] = []
+    for (let i = 0; i < createdOrderIds.length; i += 100) {
+      const { data, error } = await fx!.svc.from('orders').select('order_number').in('id', createdOrderIds.slice(i, i + 100))
+      expect(error, error?.message).toBeNull()
+      numbers.push(...(data as any[]).map((r) => r.order_number))
+    }
+    const bad = numbers.filter((n) => !/^GV-[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{10}$/.test(n ?? ''))
+    expect(bad, 'order numbers outside the GV-XXXXXXXXXX format').toEqual([])
+    expect(new Set(numbers).size).toBe(numbers.length)
+  })
+
+  it('generate_order_number is service-role only (a definer that reads every order must not be callable by a session)', async () => {
+    const svc = await fx!.svc.rpc('generate_order_number' as any)
+    expect(svc.error, 'service role must still be able to draw a number').toBeNull()
+    expect(String(svc.data)).toMatch(/^GV-[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{10}$/)
+    for (const actor of [fx!.buyer, fx!.seller]) {
+      const { error } = await actor.client.rpc('generate_order_number' as any)
+      expect(error, 'session client must be refused').not.toBeNull()
+      expect(error!.code).toBe('42501')
+    }
+  })
+
   // ── ops invariant ───────────────────────────────────────────────────────
   it('fee_resolution_gaps contains none of the orders this run created', async () => {
     expect(createdOrderIds.length).toBeGreaterThan(0)
