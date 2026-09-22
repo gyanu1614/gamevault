@@ -6,11 +6,15 @@
  * role for the insert — exactly the production path) against the local
  * stack, the same harness as money-atomicity.guard:
  *
- *   · PARITY (§7.4, the PR 3 gate): for EVERY game_categories row, the
- *     seller_payout createCheckout writes equals what the pre-change code path
- *     (commissionAmount over the TS constants) produced, seller_commission_pct
- *     equals commissionPct(), and the trace names a rule (never the fallback).
- *     Deleted in PR 4, where the rates intentionally diverge.
+ *   · PARITY (§7.4): for EVERY game_categories row, the order createCheckout
+ *     writes carries exactly the rate resolve_seller_fee() gives the seller on
+ *     that pair at order time — pct, payout (round2(subtotal − round2(subtotal
+ *     × pct / 100))), rule_id — and the trace names a rule (never the
+ *     fallback). Until fee engine PR 4 this compared against the TS constants
+ *     (the PR 3 money-neutrality gate); PR 4 is where the rates intentionally
+ *     diverge and the rank ladder goes live, so the reference is now the
+ *     resolver itself (fee-migration-parity.guard pins the resolver against
+ *     the constants before the start date and against the table from it).
  *   · founding and ranked sellers land the resolver's own pct in the snapshot.
  *   · resolver failure (error, or no row) → 'Could not price this order', no
  *     order row, no wallet debit — never a TS-constant fallback (A4).
@@ -26,7 +30,7 @@ import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest'
 import diagnostics_channel from 'node:diagnostics_channel'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
-import { commissionAmount, commissionPct, round2 } from '@/lib/fees'
+import { round2 } from '@/lib/fees'
 import { ORDER_NUMBER_RE } from '@/lib/orders/order-number'
 import { hasEnv, makeFixture, promoteToEstablishedSeller, expectGuardRejection, type Fixture } from './throwaway'
 
@@ -199,7 +203,7 @@ describe.skipIf(!hasEnv)('fee engine PR 3 — createCheckout resolves the rate a
   })
 
   // ── §7.4 PARITY — every pair, through the real checkout ──────────────────
-  it('PARITY: for every pair, createCheckout writes the payout the TS constants produced, the pct commissionPct() returns, and a ruled trace', async () => {
+  it('PARITY: for every pair, createCheckout writes exactly the pct, payout and rule_id resolve_seller_fee() gives the seller at order time, and a ruled trace', async () => {
     const listingIds = await insertListings(pairs)
     const mismatches: string[] = []
     const failures: string[] = []
@@ -231,15 +235,16 @@ describe.skipIf(!hasEnv)('fee engine PR 3 — createCheckout resolves the rate a
           continue
         }
         const o = await orderSnapshot(r.orderId)
-        const input = { categoryMetaType: p.type, categorySlug: p.slug, gameSlug: p.game?.slug ?? null }
+        const expected = await resolveFor(fx!.seller.id, p.id)
         const subtotal = Number(o.subtotal)
-        const oldPayout = round2(subtotal - commissionAmount(subtotal, input))
-        const oldPct = commissionPct(input)
-        if (Number(o.seller_payout) !== oldPayout) mismatches.push(`${label}: payout ${o.seller_payout} ≠ pre-change ${oldPayout}`)
-        if (Number(o.seller_commission_pct) !== oldPct) mismatches.push(`${label}: pct ${o.seller_commission_pct} ≠ commissionPct ${oldPct}`)
+        const pct = Number(expected.pct)
+        const payout = round2(subtotal - round2((subtotal * pct) / 100))
+        if (Number(o.seller_payout) !== payout) mismatches.push(`${label}: payout ${o.seller_payout} ≠ resolver-derived ${payout}`)
+        if (Number(o.seller_commission_pct) !== pct) mismatches.push(`${label}: pct ${o.seller_commission_pct} ≠ resolver ${pct}`)
         const t = o.seller_fee_trace
         if (!t) { mismatches.push(`${label}: no seller_fee_trace`); continue }
         if (t.rule_id == null) mismatches.push(`${label}: trace.rule_id NULL (fallback)`)
+        if (t.rule_id !== expected.rule_id) mismatches.push(`${label}: trace.rule_id ${t.rule_id} ≠ resolver ${expected.rule_id}`)
         if (Number(t.fallback_count) !== 0) mismatches.push(`${label}: fallback_count ${t.fallback_count}`)
         if (Number(t.resolver_version) !== 1) mismatches.push(`${label}: resolver_version ${t.resolver_version}`)
         const keys = Object.keys(t).sort()
@@ -250,7 +255,7 @@ describe.skipIf(!hasEnv)('fee engine PR 3 — createCheckout resolves the rate a
       console.error = origConsoleError
     }
     expect(failures, `${failures.length} checkout(s) produced no order:\n${failures.join('\n\n')}`).toEqual([])
-    expect(mismatches, `${mismatches.length} pair(s) differ from the pre-change path:\n${mismatches.join('\n')}`).toEqual([])
+    expect(mismatches, `${mismatches.length} pair(s) differ from the resolver:\n${mismatches.join('\n')}`).toEqual([])
   }, 600_000)
 
   // ── seller adjustments land in the snapshot ─────────────────────────────
