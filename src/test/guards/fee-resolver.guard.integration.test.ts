@@ -372,9 +372,27 @@ describe.skipIf(!hasEnv)('fee engine — resolve_seller_fee() (integration)', ()
       expect(del).toBeNull()
     })
 
+    it('14-day notice: an UPDATE that only closes a historical base rule is refused too (why the PR 4 migration sets app.fee_backfill for that one statement)', async () => {
+      // Any PR 1 seed row: starts_at 2026-01-01, closed at the PR 4 start.
+      const { data: seed } = await fx!.svc.from('fee_rules').select('id, ends_at').like('note', 'Seed:%').eq('kind', 'base').limit(1).single()
+      expect(seed).toBeTruthy()
+      const r = await fx!.svc.from('fee_rules').update({ ends_at: new Date(Date.now() + 40 * 86_400_000).toISOString() }).eq('id', (seed as any).id).select('id')
+      expect(r.error).not.toBeNull()
+      expect(r.error!.code).toBe('23514')
+      const { data: after } = await fx!.svc.from('fee_rules').select('ends_at').eq('id', (seed as any).id).single()
+      expect((after as any).ends_at).toBe((seed as any).ends_at)
+    })
+
     it('14-day notice: a base rule 15 days out is accepted by the service role', async () => {
+      // A pair with NO open-ended pair-scope base rule (PR 4 gave the fixture's
+      // own pair one; the exclusion constraint would refuse, which is a
+      // different proof). Pair-scope never conflicts with category-scope.
+      const { data: ruled } = await fx!.svc.from('fee_rules').select('game_category_id').eq('kind', 'base').eq('scope', 'game_category').is('ends_at', null)
+      const taken = new Set((ruled ?? []).map((r: any) => r.game_category_id))
+      const { data: cands } = await fx!.svc.from('game_categories').select('id').limit(500)
+      const freePairId = (cands ?? []).map((c: any) => c.id).find((id: string) => !taken.has(id)) ?? pairId
       const ok = new Date(Date.now() + 15 * 86_400_000).toISOString()
-      const r = await fx!.svc.from('fee_rules').insert({ kind: 'base', scope: 'game_category', category_type: 'items', game_category_id: pairId, pct: 9, starts_at: ok, note: 'FEE-TEST-notice-ok' }).select('id')
+      const r = await fx!.svc.from('fee_rules').insert({ kind: 'base', scope: 'game_category', category_type: 'items', game_category_id: freePairId, pct: 9, starts_at: ok, note: 'FEE-TEST-notice-ok' }).select('id')
       expect(r.error, r.error?.message).toBeNull()
       await fx!.svc.from('fee_rules').delete().eq('id', (r.data as any[])[0].id)
     })
@@ -406,6 +424,155 @@ describe.skipIf(!hasEnv)('fee engine — resolve_seller_fee() (integration)', ()
       expect(up2.error, up2.error?.message).toBeNull()
       const after = await fx!.svc.from('fee_resolution_gaps').select('id').in('id', [fx!.pendingOrderId, fx!.completedOrderId])
       expect((after.data as any[]).map((r) => r.id)).toEqual([fx!.pendingOrderId])
+    })
+  })
+
+  // ── PR 4 — the live rate table: rank ladder, floor, founding on both sides
+  //    of the start (migration 20260922001513; the ladder is an undated table,
+  //    so it is live from the push while the base rates wait for the start).
+  //    Real rows through PostgREST, no rollback; the fixture seller's tier is
+  //    set per case (seller_tier is not a guarded column) and the fixture is
+  //    deleted in afterAll.
+  describe('PR 4 rates on the live table (PostgREST)', () => {
+    type LivePair = { id: string; type: string; slug: string; game: { slug: string } | null }
+    let start = ''
+    let justBefore = ''
+    let livePairs: LivePair[] = []
+    let itemsPairId = ''
+    const CURRENCY_10 = ['anime-defenders', 'blade-ball', 'creatures-of-sonaria', 'death-ball', 'dragon-adventures', 'escape-tsunami-for-brainrots', 'fisch', 'fix-it-up', 'grow-a-garden', 'grow-a-garden-2', 'pet-simulator-99', 'pets-go', 'royale-high', 'tap-simulator', 'toilet-tower-defense', 'steal-a-brainrot']
+    const ACCOUNT_LISTED = ['call-of-duty', 'fortnite', 'r6-siege', 'gta-v', 'gtavi', 'gta-6', 'gta-vi']
+    const TOP_UP_10 = ['99-nights-in-the-forest', 'bite-by-night', 'bloxstrike', 'run-a-restaurant', 'sniper-duels']
+
+    const live = async (sellerId: string | null, pairId: string, at: string): Promise<Trace> => {
+      const { data, error } = await fx!.svc.rpc('resolve_seller_fee', { p_seller_id: sellerId, p_game_category_id: pairId, p_at: at } as any)
+      if (error) throw new Error(`resolve_seller_fee: ${error.message}`)
+      return (data as any[])[0] as Trace
+    }
+    const setSeller = async (tier: string, founding = false) => {
+      const { data: prof } = await fx!.svc.from('profiles').select('created_at').eq('id', fx!.seller.id).single()
+      const { error } = await fx!.svc.from('profiles')
+        .update({ seller_tier: tier, founding_seller: founding, founding_since: founding ? (prof as any).created_at : null })
+        .eq('id', fx!.seller.id)
+      if (error) throw new Error(`set seller ${tier}/${founding}: ${error.message}`)
+    }
+    const pick = (pred: (p: LivePair) => boolean) => livePairs.find(pred)
+    const slugOf = (p: LivePair) => (p.game?.slug ?? '').toLowerCase()
+
+    beforeAll(async () => {
+      const { data: rows } = await fx!.svc.from('fee_rules').select('starts_at').like('note', 'PR4:%').eq('kind', 'base').eq('scope', 'category')
+      const starts = Array.from(new Set((rows ?? []).map((r: any) => new Date(r.starts_at).getTime())))
+      if (starts.length === 1) { start = new Date(starts[0]).toISOString(); justBefore = new Date(starts[0] - 1000).toISOString() }
+      const { data } = await fx!.svc.from('game_categories').select('id, type, slug, game:games ( slug )')
+      livePairs = (data ?? []) as unknown as LivePair[]
+    })
+    afterAll(async () => { if (fx) await setSeller('bronze', false) })
+
+    it('the PR 4 rows are present with exactly one start date', () => {
+      expect(start, 'apply 20260922001513_fee_engine_rates_2026_10.sql').not.toBe('')
+    })
+
+    it('items (category default 7 → 10): no rank step before the start (base ≤ floor); from the start the ladder applies — legendary 8.00 sits ON the floor (floor_applied false), gold 9, silver 9.5, bronze 10', async (ctx) => {
+      const p = pick((x) => x.type === 'items')
+      if (!p) return ctx.skip()
+      itemsPairId = p.id
+      await setSeller('legendary')
+      const before = await live(fx!.seller.id, itemsPairId, justBefore)
+      expect(n(before.pct)).toBe(7)
+      expect(n(before.rank_pts)).toBe(0)
+      expect(before.floor_applied).toBe(false)
+      const from = await live(fx!.seller.id, itemsPairId, start)
+      expect(n(from.base_pct)).toBe(10)
+      expect(n(from.pct)).toBe(8)
+      expect(n(from.rank_pts)).toBe(2)
+      expect(from.floor_applied).toBe(false)
+      expect(from.rank).toBe('legendary')
+      const want: Record<string, number> = { gold: 9, silver: 9.5, bronze: 10, diamond: 8.5 }
+      for (const [tier, pct] of Object.entries(want)) {
+        await setSeller(tier)
+        const t = await live(fx!.seller.id, itemsPairId, start)
+        expect(n(t.pct), tier).toBe(pct)
+      }
+    })
+
+    it('unlisted currency pair (5 → 5): the ladder never touches a base at or below the floor, on either side', async (ctx) => {
+      const p = pick((x) => x.type === 'currency' && !CURRENCY_10.includes(slugOf(x)))
+      if (!p) return ctx.skip()
+      await setSeller('legendary')
+      for (const at of [justBefore, start]) {
+        const t = await live(fx!.seller.id, p.id, at)
+        expect(n(t.pct), at).toBe(5)
+        expect(n(t.rank_pts), at).toBe(0)
+        expect(t.floor_applied).toBe(false)
+      }
+    })
+
+    it('listed currency pair (5 today → 10): headline 5 before, 10 from the start; legendary 5 before, 8 from the start', async (ctx) => {
+      const p = pick((x) => x.type === 'currency' && CURRENCY_10.includes(slugOf(x)) && !['grow-a-garden', 'grow-a-garden-2', 'steal-a-brainrot'].includes(slugOf(x)))
+      if (!p) return ctx.skip()
+      expect(n((await live(null, p.id, justBefore)).pct)).toBe(5)
+      expect(n((await live(null, p.id, start)).pct)).toBe(10)
+      await setSeller('legendary')
+      expect(n((await live(fx!.seller.id, p.id, justBefore)).pct)).toBe(5)
+      expect(n((await live(fx!.seller.id, p.id, start)).pct)).toBe(8)
+    })
+
+    it('unlisted account pair (15 today → 10): the ladder is LIVE FROM THE PUSH — legendary already pays 13 before the start, then 8 from it', async (ctx) => {
+      const p = pick((x) => x.type === 'account' && !ACCOUNT_LISTED.includes(slugOf(x)))
+      if (!p) return ctx.skip()
+      await setSeller('legendary')
+      const before = await live(fx!.seller.id, p.id, justBefore)
+      expect(n(before.base_pct)).toBe(15)
+      expect(n(before.pct)).toBe(13)
+      expect(n(before.rank_pts)).toBe(2)
+      const from = await live(fx!.seller.id, p.id, start)
+      expect(n(from.base_pct)).toBe(10)
+      expect(n(from.pct)).toBe(8)
+      // headline (anonymous) is untouched by the ladder on both sides
+      expect(n((await live(null, p.id, justBefore)).pct)).toBe(15)
+      expect(n((await live(null, p.id, start)).pct)).toBe(10)
+    })
+
+    it('gta-v account (20 → 20): legendary 18 on both sides; diamond 18.5', async (ctx) => {
+      const p = pick((x) => x.type === 'account' && slugOf(x) === 'gta-v')
+      if (!p) return ctx.skip()
+      await setSeller('legendary')
+      expect(n((await live(fx!.seller.id, p.id, justBefore)).pct)).toBe(18)
+      expect(n((await live(fx!.seller.id, p.id, start)).pct)).toBe(18)
+      await setSeller('diamond')
+      expect(n((await live(fx!.seller.id, p.id, start)).pct)).toBe(18.5)
+    })
+
+    it('call-of-duty account (15 → 15 via its pair rule) and fortnite: the pair rule, not the new 10 default, from the start', async (ctx) => {
+      const cod = pick((x) => x.type === 'account' && slugOf(x) === 'call-of-duty')
+      if (!cod) return ctx.skip()
+      const t = await live(null, cod.id, start)
+      expect(n(t.pct)).toBe(15)
+      expect(t.rule_scope).toBe('game_category')
+    })
+
+    it('listed top_up pair (5 today → 10): headline 5 → 10; legendary 5 → 8; an unlisted top_up stays 5 with no step', async (ctx) => {
+      const listed = pick((x) => x.type === 'top_up' && TOP_UP_10.includes(slugOf(x)))
+      const other = pick((x) => x.type === 'top_up' && !TOP_UP_10.includes(slugOf(x)))
+      if (!listed || !other) return ctx.skip()
+      await setSeller('legendary')
+      expect(n((await live(null, listed.id, justBefore)).pct)).toBe(5)
+      expect(n((await live(null, listed.id, start)).pct)).toBe(10)
+      expect(n((await live(fx!.seller.id, listed.id, justBefore)).pct)).toBe(5)
+      expect(n((await live(fx!.seller.id, listed.id, start)).pct)).toBe(8)
+      const o = await live(fx!.seller.id, other.id, start)
+      expect(n(o.pct)).toBe(5)
+      expect(n(o.rank_pts)).toBe(0)
+    })
+
+    it('founding beats rank from the start too: legendary + founding on items → 10 × 0.5 = 5.00, rank_pts 0', async (ctx) => {
+      const p = pick((x) => x.type === 'items')
+      if (!p) return ctx.skip()
+      await setSeller('legendary', true)
+      const t = await live(fx!.seller.id, p.id, start)
+      expect(t.founding_applied).toBe(true)
+      expect(n(t.pct)).toBe(5)
+      expect(n(t.rank_pts)).toBe(0)
+      expect(t.floor_applied).toBe(false)
     })
   })
 })
