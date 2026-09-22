@@ -27,6 +27,7 @@ import diagnostics_channel from 'node:diagnostics_channel'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 import { commissionAmount, commissionPct, round2 } from '@/lib/fees'
+import { ORDER_NUMBER_RE } from '@/lib/orders/order-number'
 import { hasEnv, makeFixture, promoteToEstablishedSeller, expectGuardRejection, type Fixture } from './throwaway'
 
 // ── fault switches (set by a test, read by the session-client mock) ────────
@@ -362,8 +363,8 @@ describe.skipIf(!hasEnv)('fee engine PR 3 — createCheckout resolves the rate a
     expect(await orderSnapshot(r.orderId!)).toEqual(snap)
   }, 60_000)
 
-  // ── order numbers (migration 20260921230440) ────────────────────────────
-  it('every order this run created has a GV- + 10-symbol crypto-random order_number from the unambiguous alphabet, all distinct', async () => {
+  // ── order numbers (migrations 20260921230440 + 20260921234649) ──────────
+  it('every order this run created has a DM-XXXX-XXXX crypto-random order_number from the unambiguous alphabet, all distinct', async () => {
     expect(createdOrderIds.length).toBeGreaterThan(0)
     const numbers: string[] = []
     for (let i = 0; i < createdOrderIds.length; i += 100) {
@@ -371,15 +372,15 @@ describe.skipIf(!hasEnv)('fee engine PR 3 — createCheckout resolves the rate a
       expect(error, error?.message).toBeNull()
       numbers.push(...(data as any[]).map((r) => r.order_number))
     }
-    const bad = numbers.filter((n) => !/^GV-[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{10}$/.test(n ?? ''))
-    expect(bad, 'order numbers outside the GV-XXXXXXXXXX format').toEqual([])
+    const bad = numbers.filter((n) => !ORDER_NUMBER_RE.test(n ?? ''))
+    expect(bad, 'order numbers outside the DM-XXXX-XXXX format').toEqual([])
     expect(new Set(numbers).size).toBe(numbers.length)
   })
 
   it('generate_order_number is service-role only (a definer that reads every order must not be callable by a session)', async () => {
     const svc = await fx!.svc.rpc('generate_order_number' as any)
     expect(svc.error, 'service role must still be able to draw a number').toBeNull()
-    expect(String(svc.data)).toMatch(/^GV-[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{10}$/)
+    expect(String(svc.data)).toMatch(ORDER_NUMBER_RE)
     for (const actor of [fx!.buyer, fx!.seller]) {
       const { error } = await actor.client.rpc('generate_order_number' as any)
       expect(error, 'session client must be refused').not.toBeNull()
