@@ -340,10 +340,10 @@ export async function approveListing(
     }
 
     revalidatePath('/admin/moderation')
-    // V21/P7.d — Marketplace tree lives at `/{gameSlug}/...` now;
-    // homepage surfaces featured/popular listings so revalidating
-    // `/` covers the public-facing impact of a moderation change.
-    revalidatePath('/')
+    // No revalidatePath('/'): the homepage's featured/popular shelves are
+    // CLIENT react-query hooks (features/home/hooks/*), which server
+    // revalidation cannot reach. The category tags below are the real
+    // public-facing refresh (build audit 2026-09-22, §4).
     // Step 7b — the category pages (24 h TTL). An approval can drain the
     // seller's whole queue, so resolve by listing AND seller.
     await revalidateListingSurfaces(createServiceRoleClient() as never, {

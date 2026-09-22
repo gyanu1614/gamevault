@@ -409,10 +409,9 @@ export async function updateListing(
     if (updateError) throw updateError
 
     revalidatePath('/account/listings')
-    // V21/P7.d — Marketplace tree lives at `/{gameSlug}/...` now;
-    // revalidate `/` (homepage features popular listings).
-    revalidatePath('/')
-    // Step 7b — and the category page itself (status/price/title changes).
+    // No revalidatePath('/'): every homepage shelf is a CLIENT react-query
+    // hook (features/home/hooks/*), which server revalidation cannot reach.
+    // Step 7b — the category page itself (status/price/title changes).
     await revalidateListingSurfaces(supabase as never, { listingIds: [listingId] })
 
     return { success: true, listing: data }

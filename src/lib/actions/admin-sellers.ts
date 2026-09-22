@@ -4,6 +4,11 @@ import { createClient } from '@/lib/supabase/server'
 import { requireAdmin } from './admin-permissions'
 import { getAllGames, type Game } from '@/lib/utils/games'
 import {
+  revalidateListingSurfaces,
+  revalidateSellerStorefront,
+} from '@/lib/revalidation/listings'
+import { TEST_SELLERS_TAG } from '@/lib/revalidation/tags'
+import {
   buildApplicationGamesEnrichment,
   type GameCategorySelection,
   type GamesLookup,
@@ -231,10 +236,15 @@ export async function toggleSellerTest(profileId: string, isTest: boolean) {
 
   if (error) return { success: false, error: error.message }
 
-  const { revalidatePath } = await import('next/cache')
+  const { revalidatePath, revalidateTag } = await import('next/cache')
   revalidatePath('/admin/sellers')
   revalidatePath('/admin/active-sellers')
-  revalidatePath('/') // public pages read the test-seller set
+  // Public surfaces read the test-seller set through one `unstable_cache`d
+  // query (lib/revalidation/tags), and this seller's offers appear on their
+  // categories. Both are addressable — revalidating '/' instead dropped every
+  // prerendered page (build audit 2026-09-22, §4).
+  revalidateTag(TEST_SELLERS_TAG)
+  await revalidateListingSurfaces(admin as never, { sellerIds: [profileId] })
   return { success: true }
 }
 
@@ -267,7 +277,10 @@ export async function setFoundingSeller(profileId: string, founding: boolean) {
   const { revalidatePath } = await import('next/cache')
   revalidatePath('/admin/sellers')
   revalidatePath('/admin/active-sellers')
-  revalidatePath('/') // storefronts render the founding badge
+  // The badge renders on this seller's storefront and beside their offers —
+  // not on every page. `/shop/[slug]` is prerendered per seller, so revalidate
+  // that one path plus the categories they sell in.
+  await revalidateSellerStorefront(admin as never, profileId)
   return { success: true }
 }
 

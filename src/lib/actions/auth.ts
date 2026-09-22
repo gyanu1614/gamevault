@@ -3,7 +3,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { generateGamerTagCandidates } from '@/lib/username/gamer-names'
-import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import type { z } from 'zod'
 import { applyReferralAtSignup } from '@/lib/referral/commission'
@@ -171,7 +170,11 @@ export async function signup(formData: {
 
     // The profile will be automatically created by the database trigger
     // User is logged in automatically (email confirmation disabled)
-    revalidatePath('/', 'layout')
+    //
+    // No revalidation: the nav, account menu and founding badge all read the
+    // session through `useAuth()` in the browser, so nothing server-rendered
+    // changes when a session appears. Invalidating here dropped every
+    // prerendered page (build audit 2026-09-22, §4).
     return { data, error: null, success: true }
   } catch (err: any) {
     console.error('❌ Unexpected error in signup:', err)
@@ -210,7 +213,7 @@ export async function login(formData: { email: string; password: string }) {
 
     console.log('✅ Login successful:', data.user?.id)
 
-    revalidatePath('/', 'layout')
+    // No revalidation — see signup(). Auth-dependent chrome is client-side.
     return { data, error: null }
   } catch (err: any) {
     console.error('❌ Unexpected error in login:', err)
@@ -266,7 +269,8 @@ export async function logout() {
     return { error: error.message }
   }
 
-  revalidatePath('/', 'layout')
+  // No revalidation — see signup(). The client session listener clears the
+  // nav; the prerendered pages are identical logged out.
   redirect('/')
 }
 
@@ -342,7 +346,10 @@ export async function updateProfile(formData: {
     return { error: error.message }
   }
 
-  revalidatePath('/', 'layout')
+  // The viewer's own profile is read in the browser (`useAuth()` refetches
+  // and the realtime `profiles` subscription pushes the change), so there is
+  // no server-rendered copy to invalidate. A seller's PUBLIC storefront is
+  // revalidated by the paths that change it, not by the owner editing a bio.
   return { data, error: null }
 }
 
@@ -550,8 +557,8 @@ export async function uploadProfileAvatar(avatarData: string) {
 
     console.log('✅ Avatar uploaded successfully:', cacheBustedUrl)
 
-    revalidatePath('/', 'layout')
-    revalidatePath('/account/settings')
+    // /account/settings is a client component reading the session directly,
+    // and the avatar reaches the nav through `useAuth()`. Nothing to revalidate.
     return { success: true, avatarUrl: cacheBustedUrl }
   } catch (err: any) {
     // Raw messages here reached the UI verbatim (Postgres/Storage internals,
@@ -623,7 +630,9 @@ export async function registerAsSeller(formData: {
 
     console.log('✅ User registered as seller:', user.id)
 
-    revalidatePath('/', 'layout')
+    // Seller-only nav entries come from `useAuth()`; the public storefront
+    // does not exist until the application is approved (admin path, which
+    // revalidates the storefront itself).
     return { data, error: null, success: true }
   } catch (err: any) {
     console.error('❌ Unexpected error in seller registration:', err)

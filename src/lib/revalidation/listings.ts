@@ -92,3 +92,110 @@ export async function revalidateListingSurfaces(
   if (error) console.error('[revalidateListingSurfaces]', error, { target, tags })
   return error ? { tags, error } : { tags }
 }
+
+/** The slice of a Supabase client the storefront helper needs. */
+export interface SellerProfileReader extends ListingsReader {
+  from(table: 'profiles'): {
+    select(columns: string): {
+      eq(
+        column: string,
+        value: string,
+      ): { maybeSingle(): PromiseLike<{ data: unknown; error: unknown }> }
+    }
+  }
+  from(table: 'listings'): ReturnType<ListingsReader['from']>
+}
+
+/**
+ * Revalidate the surfaces that render ONE seller's identity — their public
+ * storefront and the category pages carrying their offers.
+ *
+ * Used by the admin paths that flip a badge-bearing profile column
+ * (`founding_seller`, restrictions). Those used to call `revalidatePath('/')`,
+ * which invalidated all ~950 prerendered pages to refresh one badge
+ * (build audit 2026-09-22, §4).
+ *
+ * Never throws — the write already happened.
+ */
+export async function revalidateSellerStorefront(
+  client: SellerProfileReader,
+  sellerId: string,
+): Promise<ListingSurfaceResult> {
+  const { revalidatePath } = await import('next/cache')
+  const result = await revalidateListingSurfaces(client, { sellerIds: [sellerId] })
+
+  try {
+    const { data, error } = await (client as SellerProfileReader)
+      .from('profiles')
+      .select('shop_slug')
+      .eq('id', sellerId)
+      .maybeSingle()
+    if (error) throw error
+    const slug = (data as { shop_slug: string | null } | null)?.shop_slug
+    // /shop/[slug] is prerendered per seller (revalidate = 60) — a concrete
+    // path matches it, unlike a route pattern.
+    if (slug) revalidatePath(`/shop/${slug}`)
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e)
+    console.error('[revalidateSellerStorefront]', message, { sellerId })
+    return { tags: result.tags, error: result.error ?? message }
+  }
+
+  return result
+}
+
+/** The slice of a Supabase client the game-category helper needs. */
+export interface GameCategoryReader {
+  from(table: 'game_categories'): {
+    select(columns: string): {
+      eq(column: string, value: string): PromiseLike<{ data: unknown; error: unknown }>
+    }
+  }
+}
+
+/**
+ * Revalidate every category surface of ONE game.
+ *
+ * For admin edits that change category copy/config for a whole game: the
+ * affected pages are that game's enabled `(game, category)` pairs, which the
+ * category page already anchors to via `bindCategoryListingsTag`. This used
+ * to be `revalidatePath('/', 'layout')` — all ~950 pages for a handful
+ * (build audit 2026-09-22, §4).
+ *
+ * Never throws — the write already happened.
+ */
+export async function revalidateGameCategorySurfaces(
+  client: GameCategoryReader,
+  gameId: string,
+): Promise<ListingSurfaceResult> {
+  const { revalidatePath } = await import('next/cache')
+  try {
+    const { data, error } = await client
+      .from('game_categories')
+      .select('id, slug, game:game_id (slug)')
+      .eq('game_id', gameId)
+    if (error) throw error
+
+    const rows = (data ?? []) as Array<{
+      id: string
+      slug: string | null
+      game: { slug: string | null } | Array<{ slug: string | null }> | null
+    }>
+
+    const tags: string[] = []
+    for (const row of rows) {
+      const tag = categoryListingsTag(row.id)
+      revalidateTag(tag)
+      tags.push(tag)
+      // The pair page is prerendered at a concrete path, so name it directly:
+      // the tag covers its listing data, the path covers the category copy.
+      const game = Array.isArray(row.game) ? row.game[0] : row.game
+      if (game?.slug && row.slug) revalidatePath(`/${game.slug}/${row.slug}`)
+    }
+    return { tags }
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e)
+    console.error('[revalidateGameCategorySurfaces]', message, { gameId })
+    return { tags: [], error: message }
+  }
+}
