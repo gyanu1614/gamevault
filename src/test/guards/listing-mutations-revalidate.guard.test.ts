@@ -125,7 +125,8 @@ describe('listing mutations revalidate the category surfaces', () => {
       'src/lib/actions/listing-views.ts',
       'src/lib/actions/listings.ts',
       'src/lib/actions/moderation.ts',
-      'src/lib/actions/orders.ts',
+      // orders.ts left the set with createOrder (fee engine PR 3, A9): the
+      // live path is createCheckout → transition(), pinned below.
       'src/lib/actions/sell-wizard.ts',
       'src/lib/actions/seller-presence.ts',
       'src/lib/actions/test-data.ts',
