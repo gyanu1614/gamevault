@@ -23,6 +23,7 @@
  * inserts, ledger journals under RUN, and the fixture users.
  */
 import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest'
+import diagnostics_channel from 'node:diagnostics_channel'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 import { commissionAmount, commissionPct, round2 } from '@/lib/fees'
@@ -123,6 +124,27 @@ async function fundWallet(userId: string, minor: bigint, suffix: string) {
   } as any)
   if (error) throw new Error(`fundWallet: ${error.message}`)
 }
+/**
+ * Transport-level capture for the parity loop. createCheckout's outer catch
+ * turns a thrown error into a message and drops the stack; the undici
+ * diagnostics channels see every fetch the harness makes (GoTrue, PostgREST)
+ * and keep the error object, so a failed checkout can be attributed to the
+ * exact request that failed — with its stack — without touching checkout.ts.
+ */
+const netErrors: string[] = []
+const netHttpErrors: string[] = []
+const consoleErrors: string[] = []
+diagnostics_channel.subscribe('undici:request:error', (msg: any) => {
+  const req = msg?.request
+  netErrors.push(`${new Date().toISOString()} ${req?.method} ${req?.origin}${req?.path}: ${msg?.error?.message}\n${msg?.error?.stack ?? ''}`)
+})
+diagnostics_channel.subscribe('undici:request:headers', (msg: any) => {
+  const status = msg?.response?.statusCode
+  if (status >= 400) {
+    const req = msg?.request
+    netHttpErrors.push(`${new Date().toISOString()} ${req?.method} ${req?.origin}${req?.path} -> ${status}`)
+  }
+})
 const TRACE_KEYS = ['rule_id', 'rule_kind', 'rule_scope', 'base_pct', 'rank', 'rank_pts', 'founding_applied', 'floor_applied', 'fallback_count', 'resolved_at', 'resolver_version'].sort()
 
 describe.skipIf(!hasEnv)('fee engine PR 3 — createCheckout resolves the rate and snapshots it (integration)', () => {
@@ -179,24 +201,33 @@ describe.skipIf(!hasEnv)('fee engine PR 3 — createCheckout resolves the rate a
   it('PARITY: for every pair, createCheckout writes the payout the TS constants produced, the pct commissionPct() returns, and a ruled trace', async () => {
     const listingIds = await insertListings(pairs)
     const mismatches: string[] = []
-    const transient: string[] = []
+    const failures: string[] = []
+    const origConsoleError = console.error
+    console.error = (...a: unknown[]) => { consoleErrors.push(`${new Date().toISOString()} ${a.map((x) => (x instanceof Error ? `${x.message}\n${x.stack}` : String(x))).join(' ')}`); origConsoleError(...a) }
     const CONC = 8
+    try {
     for (let i = 0; i < listingIds.length; i += CONC) {
       const slice = listingIds.slice(i, i + CONC)
       const results = await Promise.all(slice.map((id) => checkout(id)))
       for (let j = 0; j < slice.length; j++) {
         const p = pairs[i + j]
         const label = `${p.game?.slug}/${p.slug} (${p.type})`
-        let r = results[j]
+        const r = results[j]
         if (!r.success || !r.orderId) {
-          // A checkout that did not produce an order is a harness/transport
-          // failure (PostgREST under 8-way load), not a pricing answer: retry
-          // ONCE on a fresh listing and keep the first error visible. An
-          // amount mismatch below is never retried.
-          transient.push(`${label}: ${r.error}`)
-          const [again] = await insertListings([p])
-          r = await checkout(again)
-          if (!r.success || !r.orderId) { mismatches.push(`${label}: checkout failed twice: ${r.error}`); continue }
+          // NO retry: a checkout that produced no order is reported with
+          // everything the harness saw — the returned error, whether an order
+          // row exists anyway (a real race would leave one), the console.error
+          // lines and every transport error/HTTP≥400 captured so far.
+          const { data: rows } = await fx!.svc.from('orders').select('id, status, created_at').eq('buyer_id', fx!.buyer.id).eq('listing_id', slice[j])
+          failures.push([
+            `${new Date().toISOString()} ${label} listing=${slice[j]}`,
+            `  returned: success=${r.success} error=${JSON.stringify(r.error)} orderId=${r.orderId}`,
+            `  order rows for (buyer, listing): ${JSON.stringify(rows)}`,
+            `  console.error lines (${consoleErrors.length}):\n    ${consoleErrors.join('\n    ') || '(none)'}`,
+            `  undici request errors (${netErrors.length}):\n    ${netErrors.join('\n    ') || '(none)'}`,
+            `  HTTP >= 400 responses (${netHttpErrors.length}):\n    ${netHttpErrors.join('\n    ') || '(none)'}`,
+          ].join('\n'))
+          continue
         }
         const o = await orderSnapshot(r.orderId)
         const input = { categoryMetaType: p.type, categorySlug: p.slug, gameSlug: p.game?.slug ?? null }
@@ -214,14 +245,23 @@ describe.skipIf(!hasEnv)('fee engine PR 3 — createCheckout resolves the rate a
         if (keys.join(',') !== TRACE_KEYS.join(',')) mismatches.push(`${label}: trace keys ${keys.join(',')}`)
       }
     }
-    // eslint-disable-next-line no-console
-    if (transient.length) console.warn(`[fee-checkout] ${transient.length} checkout(s) needed a retry:\n${transient.join('\n')}`)
+    } finally {
+      console.error = origConsoleError
+    }
+    expect(failures, `${failures.length} checkout(s) produced no order:\n${failures.join('\n\n')}`).toEqual([])
     expect(mismatches, `${mismatches.length} pair(s) differ from the pre-change path:\n${mismatches.join('\n')}`).toEqual([])
   }, 600_000)
 
   // ── seller adjustments land in the snapshot ─────────────────────────────
   it('founding seller: the snapshot carries the resolver pct (base × 0.5) and founding_applied', async () => {
-    const { error } = await fx!.svc.from('profiles').update({ founding_seller: true, founding_since: new Date().toISOString() }).eq('id', fx!.seller.id)
+    // Anchor founding_since on the seller's created_at (what the PR 1 backfill
+    // does), NOT on the JS clock: the resolver compares the anchor with the
+    // database's now(), and the local Docker VM clock sits up to a few hundred
+    // ms either side of the host's — a "now" stamped here was seen landing in
+    // the DB's future (founding_applied=false) in 2 of 20 runs.
+    const { data: prof, error: pe } = await fx!.svc.from('profiles').select('created_at').eq('id', fx!.seller.id).single()
+    expect(pe, pe?.message).toBeNull()
+    const { error } = await fx!.svc.from('profiles').update({ founding_seller: true, founding_since: (prof as any).created_at }).eq('id', fx!.seller.id)
     expect(error, error?.message).toBeNull()
     try {
       const [listingId] = await insertListings([pairs.find((p) => p.id === fixturePairId)!])
