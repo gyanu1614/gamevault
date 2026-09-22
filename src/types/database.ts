@@ -4165,6 +4165,7 @@ export type Database = {
           is_guest_order: boolean | null
           listing_id: string
           order_number: string | null
+          order_number_search: string | null
           paid_at: string | null
           payment_expires_at: string | null
           payment_processing_fee: number
@@ -4222,6 +4223,7 @@ export type Database = {
           is_guest_order?: boolean | null
           listing_id: string
           order_number?: string | null
+          order_number_search?: string | null
           paid_at?: string | null
           payment_expires_at?: string | null
           payment_processing_fee: number
@@ -4279,6 +4281,7 @@ export type Database = {
           is_guest_order?: boolean | null
           listing_id?: string
           order_number?: string | null
+          order_number_search?: string | null
           paid_at?: string | null
           payment_expires_at?: string | null
           payment_processing_fee?: number
@@ -11709,6 +11712,7 @@ export type Database = {
           is_guest_order: boolean | null
           listing_id: string
           order_number: string | null
+          order_number_search: string | null
           paid_at: string | null
           payment_expires_at: string | null
           payment_processing_fee: number
