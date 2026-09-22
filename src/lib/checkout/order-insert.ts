@@ -67,8 +67,14 @@ export function classifyUniqueViolation(error: PostgrestLikeError | null | undef
   return 'other'
 }
 
-export type OrderInsertAttempt = () => Promise<{ data: { id: string } | null; error: PostgrestLikeError | null }>
-export type OrderInsertResult = { orderId: string } | { duplicate: true } | { error: string }
+export type OrderInsertAttempt = () => Promise<{
+  data: { id: string; order_number?: string | null } | null
+  error: PostgrestLikeError | null
+}>
+export type OrderInsertResult =
+  | { orderId: string; orderNumber?: string | null }
+  | { duplicate: true }
+  | { error: string }
 
 /**
  * Run the INSERT under the policy above. Resolves to the id, to `duplicate`
@@ -81,7 +87,7 @@ export async function runOrderInsert(attempt: OrderInsertAttempt): Promise<Order
   let orderNumberRetries = 0
   for (let attempts = 1; ; attempts++) {
     const { data, error } = await attempt()
-    if (data?.id) return { orderId: data.id }
+    if (data?.id) return { orderId: data.id, orderNumber: data.order_number ?? null }
     const kind = classifyUniqueViolation(error)
     if (kind === null) return { error: error?.message ?? 'insert failed' }
     if (kind === 'duplicate_submit') return { duplicate: true }

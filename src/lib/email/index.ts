@@ -343,7 +343,7 @@ export async function sendDisputeOpenedEmail({
 }: {
   to: string
   name: string
-  /** Human order reference (e.g. GV-123456) shown in the email. */
+  /** Human order reference (e.g. DM-ABCD-EFGH; older orders GV-123456) shown in the email. */
   disputeId: string
   /** Order UUID — the CTA links to the order page (no public /disputes route). */
   orderId: string

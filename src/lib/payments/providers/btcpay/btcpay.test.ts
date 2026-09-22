@@ -139,3 +139,42 @@ describe('btcpay: parseWebhook verification chain', () => {
     await expect(provider().parseWebhook(signed(b), b)).rejects.toThrow(/missing invoiceId/)
   })
 })
+
+// ─── createCharge: the buyer-visible itemDesc carries the order number ────
+describe('btcpay: createCharge itemDesc', () => {
+  const captureCreate = () => {
+    const bodies: any[] = []
+    const fetchImpl = (async (url: any, init: any) => {
+      if (String(url).endsWith('/invoices') && init?.method === 'POST') {
+        bodies.push(JSON.parse(String(init.body)))
+        return { ok: true, json: async () => ({ id: 'inv1', status: 'New', checkoutLink: 'https://pay.test.local/i/inv1' }) } as any
+      }
+      return { ok: false, status: 404, text: async () => 'nope' } as any
+    }) as any
+    return { bodies, provider: makeBtcpayProvider({ fetchImpl }) }
+  }
+  const base = {
+    orderId: '0f1e2d3c-1111-2222-3333-444444444444',
+    amount: { amountMinor: 1234n, currency: 'USD' as const },
+    returnUrl: 'https://app.test.local/account/orders/x',
+  }
+
+  it('shows the stored order_number; metadata.orderId stays the UUID link', async () => {
+    const { bodies, provider } = captureCreate()
+    await provider.createCharge({ ...base, orderNumber: 'DM-ABCD-EFGH' })
+    expect(bodies[0].metadata.itemDesc).toBe('DropMarket order DM-ABCD-EFGH')
+    expect(bodies[0].metadata.orderId).toBe(base.orderId)
+  })
+
+  it('an older GV- number is shown as stored', async () => {
+    const { bodies, provider } = captureCreate()
+    await provider.createCharge({ ...base, orderNumber: 'GV-123456' })
+    expect(bodies[0].metadata.itemDesc).toBe('DropMarket order GV-123456')
+  })
+
+  it('falls back to the 8-char id prefix only when the order has no number', async () => {
+    const { bodies, provider } = captureCreate()
+    await provider.createCharge({ ...base })
+    expect(bodies[0].metadata.itemDesc).toBe('DropMarket order 0F1E2D3C')
+  })
+})

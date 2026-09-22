@@ -24,7 +24,7 @@ import { createServiceRoleClient } from '@/lib/supabase/service'
 import { PURCHASES_ENABLED, PURCHASES_DISABLED_MESSAGE } from '@/lib/config/purchases'
 import { buyerFee, protectionWindowHours, round2 } from '@/lib/fees'
 import { resolveSellerFee, FeeResolutionError, type SellerFeeTrace } from '@/lib/fees/resolver'
-import { runOrderInsert, OrderInsertConflictError } from '@/lib/checkout/order-insert'
+import { runOrderInsert, OrderInsertConflictError, type OrderInsertResult } from '@/lib/checkout/order-insert'
 import { getProvider, activePaymentProviderName, providerNameForMethod } from '@/lib/payments/registry'
 import { spendWallet, getWalletBalance } from '@/lib/wallet/wallet'
 import { validatePromoCode, recordPromoUsage } from '@/lib/actions/promo'
@@ -184,6 +184,8 @@ export async function createCheckout(input: CreateCheckoutInput): Promise<Create
 
     // Create the order at PENDING. Confirmed only by the verified webhook.
     let orderId: string
+    // The stored number, for the provider's buyer-visible description.
+    let orderNumber: string | null = null
     {
       const insertRes = await insertPendingOrder({
         buyerId: user.id,
@@ -202,6 +204,7 @@ export async function createCheckout(input: CreateCheckoutInput): Promise<Create
       })
       if ('orderId' in insertRes) {
         orderId = insertRes.orderId
+        orderNumber = insertRes.orderNumber ?? null
         // AUTH-003 — usage is recorded so per-user / total limits bind.
         if (promoCodeId && promoDiscount > 0) {
           recordPromoUsage({ promoCodeId, orderId, discountAmount: promoDiscount, userId: user.id }).catch(() => {})
@@ -218,6 +221,7 @@ export async function createCheckout(input: CreateCheckoutInput): Promise<Create
         }
         if (raced) {
           orderId = raced.id
+          orderNumber = raced.order_number
         } else {
           return { success: false, error: 'Could not open checkout — please try again' }
         }
@@ -281,6 +285,7 @@ export async function createCheckout(input: CreateCheckoutInput): Promise<Create
     const provider = getProvider(providerName)
     const charge = await provider.createCharge({
       orderId,
+      orderNumber,
       amount: chargeMoney,
       // Payssion has ONE return URL for paid AND cancelled — the smart
       // /checkout/return route inspects the outcome and lands the buyer on
@@ -403,6 +408,7 @@ function bigintMin(a: bigint, b: bigint): bigint {
 
 interface ReusablePendingOrder {
   id: string
+  order_number: string | null
   total_amount: number
   checkout_url: string | null
   payment_expires_at: string | null
@@ -423,7 +429,7 @@ async function findReusablePendingOrder(
 ): Promise<ReusablePendingOrder | null> {
   const { data } = await supabase
     .from('orders')
-    .select('id, total_amount, checkout_url, payment_expires_at, payment_provider, provider_charge_id')
+    .select('id, order_number, total_amount, checkout_url, payment_expires_at, payment_provider, provider_charge_id')
     .eq('buyer_id', buyerId)
     .eq('listing_id', listingId)
     .eq('status', 'pending')
@@ -459,7 +465,7 @@ interface InsertPendingArgs {
  */
 async function insertPendingOrder(
   a: InsertPendingArgs,
-): Promise<{ orderId: string } | { duplicate: true } | { error: string }> {
+): Promise<OrderInsertResult> {
   // Service role: client-side order inserts are RLS-blocked entirely (the old
   // permissive "Buyers can create orders" policy was a price-integrity hole) —
   // the server, which computed the amounts above, is the only writer.
@@ -487,7 +493,7 @@ async function insertPendingOrder(
     promo_discount: a.promoDiscount,
     promo_code_id: a.promoCodeId,
   })
-    .select('id')
+    .select('id, order_number')
     .single())
 }
 
@@ -519,7 +525,7 @@ export async function retryOrderPayment(orderId: string): Promise<{
 
     const { data: order } = (await supabase
       .from('orders')
-      .select('id, buyer_id, listing_id, status, total_amount, checkout_url, payment_expires_at, payment_provider')
+      .select('id, order_number, buyer_id, listing_id, status, total_amount, checkout_url, payment_expires_at, payment_provider')
       .eq('id', orderId)
       .single()) as any
     if (!order) return { success: false, error: 'Order not found' }
@@ -571,6 +577,7 @@ export async function retryOrderPayment(orderId: string): Promise<{
     const provider = getProvider(providerName)
     const charge = await provider.createCharge({
       orderId,
+      orderNumber: order.order_number ?? null,
       amount: money(remainingMinor, ORDER_CURRENCY),
       returnUrl: `${base}/account/orders/${orderId}?paid=1`,
       cancelUrl: `${base}/account/orders/${orderId}`,

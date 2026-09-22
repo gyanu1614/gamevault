@@ -8,6 +8,7 @@ import { toast } from 'sonner'
 import MessageList from './MessageList'
 import MessageInput from './MessageInput'
 import DeliveryEvidenceUpload from '@/components/orders/DeliveryEvidenceUpload'
+import { displayOrderRef } from '@/lib/orders/order-number'
 import { Loader2, AlertCircle, Upload, ChevronDown, ChevronUp } from 'lucide-react'
 
 interface Message {
@@ -434,7 +435,7 @@ export default function ChatInterface({
             </div>
             {order && (
               <div className="mt-0.5 truncate text-[11.5px] text-text-secondary">
-                Order #{(order.order_number ?? '').replace(/^GV-/, 'DM-') || order.id.slice(0, 8).toUpperCase()}
+                Order #{displayOrderRef(order.order_number, order.id)}
                 {order.listing?.title ? ` · ${order.listing.title}` : ''}
               </div>
             )}

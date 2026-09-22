@@ -47,6 +47,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { getAvatarUrl } from '@/lib/utils/avatar'
+import { orderNumberSearchPattern } from '@/lib/orders/order-number'
 import type { AdminProfile } from './AdminChrome'
 
 interface EnhancedAdminHeaderProps {
@@ -251,7 +252,7 @@ export default function EnhancedAdminHeader({
         supabase
           .from('orders')
           .select('id, order_number, status')
-          .ilike('order_number', `%${query}%`)
+          .ilike('order_number_search', orderNumberSearchPattern(query))
           .limit(3) as any,
       ])
 

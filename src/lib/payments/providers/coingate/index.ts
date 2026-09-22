@@ -28,6 +28,7 @@ import {
 import { callbackTokenFor, callbackTokenMatches } from './callback-token'
 import { isAllowedIp } from './ip-allowlist'
 import { coinGateToCanonical, coinGateEventId, type CoinGateOrder } from './status-map'
+import { displayOrderRef } from '@/lib/orders/order-number'
 
 function authHeaders(): Record<string, string> {
   return {
@@ -81,7 +82,8 @@ export function makeCoinGateProvider(deps?: {
         callback_url: `${publicApiUrl()}/api/webhooks/coingate?token=${token}`,
         success_url: input.returnUrl,
         cancel_url: input.cancelUrl ?? input.returnUrl,
-        title: `DropMarket order ${input.orderId}`,
+        // Buyer-visible on CoinGate's page: the order number, as stored.
+        title: `DropMarket order ${displayOrderRef(input.orderNumber, input.orderId)}`,
       })
       const res = await fetchImpl(`${coinGateBase()}/orders`, {
         method: 'POST',

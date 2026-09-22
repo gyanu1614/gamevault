@@ -34,6 +34,7 @@ import {
   BTCPAY_MONITORING_MINUTES,
 } from './env'
 import { btcpayToCanonical, btcpayEventId, type BtcpayInvoice } from './status-map'
+import { displayOrderRef } from '@/lib/orders/order-number'
 
 function authHeaders(): Record<string, string> {
   return {
@@ -106,7 +107,8 @@ export function makeBtcpayProvider(deps?: { fetchImpl?: typeof fetch }): Payment
         // set by us at creation, never from the webhook body).
         metadata: {
           orderId: input.orderId,
-          itemDesc: `DropMarket order ${input.orderId}`,
+          // Buyer-visible on the invoice: the order number, as stored.
+          itemDesc: `DropMarket order ${displayOrderRef(input.orderNumber, input.orderId)}`,
           ...(input.metadata ?? {}),
         },
         checkout: {
