@@ -46,20 +46,18 @@ describe('AUTH-003 — resolveCheckoutPromo', () => {
 })
 
 describe('AUTH-003 — no client amount can reach the order total', () => {
-  it('checkout.ts and orders.ts never read a client-supplied promoDiscount', () => {
+  it('checkout.ts never reads a client-supplied promoDiscount; orders.ts no longer creates orders at all', () => {
     expect(CHECKOUT).not.toMatch(/input\.promoDiscount/)
-    expect(ORDERS).not.toMatch(/data\.promoDiscount/)
     expect(CHECKOUT).toMatch(/resolveCheckoutPromo\(input\.promoCode, subtotal, validatePromoCode\)/)
-    expect(ORDERS).toMatch(/resolveCheckoutPromo\(data\.promoCode, subtotal, validatePromoCode\)/)
+    // createOrder (the second order path with its own promo + fee logic) was
+    // deleted in fee engine PR 3 (A9). createCheckout is the only writer.
+    expect(ORDERS).not.toMatch(/createOrder\b|CreateOrderData|promoDiscount|resolveCheckoutPromo/)
   })
 
-  it('input contracts carry a promo CODE, not an amount', () => {
+  it('input contract carries a promo CODE, not an amount', () => {
     const checkoutInput = CHECKOUT.slice(CHECKOUT.indexOf('export interface CreateCheckoutInput'), CHECKOUT.indexOf('}', CHECKOUT.indexOf('export interface CreateCheckoutInput')))
     expect(checkoutInput).toMatch(/promoCode\?: string/)
     expect(checkoutInput).not.toMatch(/promoDiscount/)
-    const orderInput = ORDERS.slice(ORDERS.indexOf('interface CreateOrderData'), ORDERS.indexOf('}', ORDERS.indexOf('interface CreateOrderData')))
-    expect(orderInput).toMatch(/promoCode\?: string/)
-    expect(orderInput).not.toMatch(/promoDiscount|promoCodeId/)
   })
 
   it('API route forwards only a string promoCode; the client sends the code', () => {

@@ -145,8 +145,17 @@ Language rule: never "escrow" / "we hold funds" — agent model wording only
 
 1. `createCheckout({ listingId, quantity, promoDiscount, walletAmount,
    paymentMethodId? })` — **all amounts are recomputed server-side**; the
-   client's numbers are display-only. Fee source is `src/lib/fees`
+   client's numbers are display-only. Buyer-fee source is `src/lib/fees`
    (`buyerFee`), mirrored in the UI (Marketplace fee + Processing fee rows).
+   **Seller commission** (fee engine PR 3, 2026-09-21) comes from ONE
+   `resolve_seller_fee(seller_id, game_category_id)` RPC on the buyer's
+   session client (`src/lib/fees/resolver.ts`), before any amount is
+   computed; the returned `pct` and trace are written to
+   `orders.seller_commission_pct` / `orders.seller_fee_trace` (guarded
+   columns) on insert. If the RPC errors or returns no row the order is
+   **refused** with "Could not price this order" — there is no fallback to
+   the TS constants (`docs/design/fee-engine.md` §9 A4). `createOrder` in
+   `orders.ts` (the old Stripe-era second path) is deleted (A9).
 2. Wallet credit (ledger-backed, `getMyWalletBalance`) can part- or fully-pay;
    a fully-wallet-paid order skips the provider entirely.
 3. Provider routing (`src/lib/payments/registry.ts`):
