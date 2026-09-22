@@ -163,6 +163,13 @@ function categoryCommissionPct(input: CommissionInput): number {
  * Effective commission % for a listing (spec §1 table), after the
  * founding-seller discount when `input.isFounding` is set. Founding sellers pay
  * `max(0, categoryPct − FOUNDING_DISCOUNT_PTS)`.
+ *
+ * NOT A MONEY PATH ANY MORE (fee engine PR 3, 2026-09-21): checkout no longer
+ * reads this. The rate an order is charged comes from the `resolve_seller_fee`
+ * RPC via `@/lib/fees/resolver` and is snapshotted on the order. This function
+ * and the constants above survive only for display surfaces and the PR 3
+ * parity test (`fee-migration-parity`, `fee-checkout-snapshot`); PR 6 deletes
+ * them. Do not wire it back into any order/payout computation.
  */
 export function commissionPct(input: CommissionInput): number {
   const base = categoryCommissionPct(input)

@@ -22,7 +22,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service'
 import { PURCHASES_ENABLED, PURCHASES_DISABLED_MESSAGE } from '@/lib/config/purchases'
-import { buyerFee, commissionAmount, protectionWindowHours, round2 } from '@/lib/fees'
+import { buyerFee, protectionWindowHours, round2 } from '@/lib/fees'
+import { resolveSellerFee, FeeResolutionError, type SellerFeeTrace } from '@/lib/fees/resolver'
 import { getProvider, activePaymentProviderName, providerNameForMethod } from '@/lib/payments/registry'
 import { spendWallet, getWalletBalance } from '@/lib/wallet/wallet'
 import { validatePromoCode, recordPromoUsage } from '@/lib/actions/promo'
@@ -71,10 +72,12 @@ export async function createCheckout(input: CreateCheckoutInput): Promise<Create
 
     const quantity = Math.max(1, Math.floor(input.quantity ?? 1))
 
-    // Listing + seller tier (server-side; never trust client amounts).
+    // Listing (server-side; never trust client amounts). The seller's rank /
+    // founding state is NOT read here: resolve_seller_fee reads the profile
+    // row itself, under the definer, so the buyer's RLS view is irrelevant.
     const { data: listingRaw, error: listingError } = await supabase
       .from('listings')
-      .select('*, seller:seller_id ( id, seller_tier, founding_seller, username ), game:game_id ( slug ), category:game_categories!listings_game_category_id_fkey ( slug, type )')
+      .select('*')
       .eq('id', input.listingId)
       .single() as any
     const listing = listingRaw as any
@@ -85,21 +88,25 @@ export async function createCheckout(input: CreateCheckoutInput): Promise<Create
       return { success: false, error: `Insufficient stock. Only ${listing.quantity} available` }
     }
 
-    // Server-computed amounts (mirrors createOrder; promo clamped, no client
-    // money trusted). Fee spec: buyer pays a single Processing & Buyer
-    // Protection fee (5% + 2%); seller pays a per-category commission on the
-    // item price only — never both fees (lib/fees is the single source).
+    // Server-computed amounts (promo clamped, no client money trusted). Fee
+    // spec: buyer pays a single Processing & Buyer Protection fee (5% + 2%,
+    // lib/fees buyerFee); seller pays a commission on the item price only —
+    // never both fees.
     const subtotal = round2(listing.price * quantity)
     const fee = buyerFee(subtotal)
-    const feeInput = {
-      categoryMetaType: listing.category?.type as string | undefined,
-      categorySlug: listing.category?.slug as string | undefined,
-      gameSlug: listing.game?.slug as string | undefined,
-      // Founding sellers pay a permanently reduced commission (lib/fees).
-      // Read straight off the listing's seller join — no extra round-trip.
-      isFounding: listing.seller?.founding_seller === true,
-    }
-    const commission = commissionAmount(subtotal, feeInput)
+    // Seller commission: ONE resolve_seller_fee call (fee engine PR 3). The
+    // database decides the rate from fee_rules + the seller's rank/founding
+    // state and returns the trace that explains it; both are snapshotted on
+    // the order below so a later rule change can never touch this order.
+    // Runs on the BUYER's session client (the resolver is SECURITY DEFINER).
+    // FAILS CLOSED: an RPC error or empty result refuses the order — there is
+    // no TS-constant fallback (docs/design/fee-engine.md §9 A4).
+    const sellerFee = await resolveSellerFee(supabase, {
+      sellerId: listing.seller_id,
+      gameCategoryId: listing.game_category_id as string | null,
+    })
+    // R-2: the rate becomes money with the same rounding as before the switch.
+    const commission = round2((subtotal * sellerFee.pct) / 100)
     // AUTH-003 — never trust a client amount: validate the CODE and derive the
     // discount from the promo row, clamped to the subtotal.
     const promo = await resolveCheckoutPromo(input.promoCode, subtotal, validatePromoCode)
@@ -187,6 +194,8 @@ export async function createCheckout(input: CreateCheckoutInput): Promise<Create
         fee,
         totalAmount,
         sellerPayout,
+        sellerCommissionPct: sellerFee.pct,
+        sellerFeeTrace: sellerFee.trace,
         promoDiscount,
         promoCodeId,
       })
@@ -313,6 +322,13 @@ export async function createCheckout(input: CreateCheckoutInput): Promise<Create
 
     return { success: true, orderId, checkoutUrl: payUrl }
   } catch (e: any) {
+    // A4 — the rate could not be resolved: nothing was written (the resolver
+    // runs before the order insert and before any wallet move). The buyer
+    // gets the fixed message; the cause goes to the log.
+    if (e instanceof FeeResolutionError) {
+      console.error('[createCheckout] seller fee resolution failed (order refused):', e.detail)
+      return { success: false, error: e.message }
+    }
     const msg = String(e?.message ?? '')
     // Provider/config internals never reach the buyer verbatim.
     if (msg.startsWith('[Payssion]') || msg.startsWith('payssion:')) {
@@ -418,6 +434,9 @@ interface InsertPendingArgs {
   fee: { marketplacePct: number; processingPct: number; marketplaceAmount: number; processingAmount: number }
   totalAmount: number
   sellerPayout: number
+  /** Snapshot of the resolved seller rate + its trace (fee engine PR 3). */
+  sellerCommissionPct: number
+  sellerFeeTrace: SellerFeeTrace
   promoDiscount: number
   promoCodeId: string | null
 }
@@ -447,6 +466,10 @@ async function insertPendingOrder(
     payment_processing_fee: a.fee.processingAmount,
     total_amount: a.totalAmount,
     seller_payout: a.sellerPayout,
+    // Guarded columns (42501 on any later non-service UPDATE): the rate this
+    // order was priced at and why. Written once, here, never recomputed.
+    seller_commission_pct: a.sellerCommissionPct,
+    seller_fee_trace: a.sellerFeeTrace,
     currency: ORDER_CURRENCY,
     status: 'pending',
     escrow_status: 'pending',
