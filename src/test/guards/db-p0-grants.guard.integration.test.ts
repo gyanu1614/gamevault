@@ -35,7 +35,14 @@ const VIEWS = [
 ] as const
 
 /** The only SECURITY DEFINER functions the anon key may still execute. */
-const ANON_DEFINER_ALLOWLIST = ['has_permission', 'is_admin', 'sab_public_price_catalog_rows']
+const ANON_DEFINER_ALLOWLIST = [
+  'has_permission', 'is_admin',
+  // Fee engine PR 1: the public fee page and the ISR'd /[game]/sell resolve with
+  // no session; with a seller id it only returns a percentage the seller already
+  // publishes (rank/founding badge). Writes nothing. docs/design/fee-engine.md §2.5.
+  'resolve_seller_fee',
+  'sab_public_price_catalog_rows',
+]
 /** …and the only ones a plain signed-in user may execute (auth.uid()-scoped or moderator-asserted). */
 const AUTHENTICATED_DEFINER_ALLOWLIST = [
   ...ANON_DEFINER_ALLOWLIST,

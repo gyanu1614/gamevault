@@ -52,6 +52,12 @@ const PUBLIC_READ_ALLOWLIST: Record<string, string> = {
   values_prices: 'public value pages; aggregate market pricing, no PII',
   values_price_history: 'public value-page charts; aggregate pricing',
 
+  // Fee engine (PR 1): fees are public information, quoted on the seller fee
+  // page and the sell wizard. Read-only: no write policy, writes are
+  // service-role only. docs/design/fee-engine.md §1.1–1.2.
+  fee_rules: 'seller-commission rates; public by design, no PII, no money',
+  platform_fee_settings: 'single-row fee programme terms (floor, founding %, notice days)',
+
   // SAB public price catalogue.
   sab_brainrots: 'public SAB value pages',
   sab_mutations: 'public SAB value pages',
