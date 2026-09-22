@@ -40,6 +40,7 @@ import { motion } from 'framer-motion'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
+import { displayOrderRef } from '@/lib/orders/order-number'
 
 type FilterStatus = 'all' | 'pending' | 'completed' | 'disputed' | 'cancelled'
 type ViewTab = 'purchases' | 'sales'
@@ -840,7 +841,7 @@ function OrdersContent() {
                         (activeTab === 'sales' && disputeResolution.favored_party === 'seller')
                       )
                       const displayStatus = (order.status === 'disputed' && disputeResolution) ? 'resolved' : order.status
-                      const orderNo = (order.order_number || order.id.slice(0, 8).toUpperCase()).replace(/^GV-/, 'DM-')
+                      const orderNo = displayOrderRef(order.order_number, order.id)
                       const qty = (order as any).quantity ?? 1
                       return (
                         <tr
@@ -882,7 +883,7 @@ function OrdersContent() {
                               className="inline-flex items-center gap-1.5 rounded-md border border-border-subtle bg-white/[0.03] px-2 py-1 font-mono text-[12px] font-semibold text-text-secondary transition-colors hover:border-border-strong hover:text-text-primary"
                               aria-label={`Copy order id ${orderNo}`}
                             >
-                              #{orderNo.replace(/^DM-/, '')}
+                              {orderNo}
                               <CopyIcon className="h-3 w-3 opacity-60" />
                             </button>
                           </td>
