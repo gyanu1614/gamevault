@@ -1,6 +1,6 @@
 # Fee engine — PR 4 handoff (the new rates: data only)
 
-**Date:** 2026-09-22 · **Branch:** `feat/fee-engine-rates` (worktree `../gamevault-fee-pr4`, from `origin/main` at `dc9dc26c`) · **Not merged, no `db push` run.**
+**Date:** 2026-09-22 · **Branch:** `feat/fee-engine-rates` (worktree `../gamevault-fee-pr4`, from `origin/main` at `dc9dc26c`) · **PR:** https://github.com/gyanu1614/gamevault/pull/86 · **Not merged, no `db push` run.**
 Design: `docs/design/fee-engine.md` §1.1, §6 (PR 4 row ✅ updated in `~/gamevault` only — the file is gitignored), §6.2. Scope = PR 4 only: **one migration, no app code**. Tests and the parity guard are the only TS touched.
 
 ## What ships
