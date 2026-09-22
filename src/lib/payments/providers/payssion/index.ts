@@ -41,6 +41,7 @@ import {
   payssionToCanonical,
   type PayssionTxn,
 } from './status-map'
+import { displayOrderRef } from '@/lib/orders/order-number'
 
 const CAPABILITIES: ProviderCapabilities = {
   isCrypto: false,
@@ -139,7 +140,8 @@ export function makePayssionProvider(deps?: { fetchImpl?: typeof fetch }): Payme
         // docs scheme order_id; the echo of it is the only link back to us.
         track_id: input.orderId,
         order_id: input.orderId,
-        description: `DropMarket order ${input.orderId.slice(0, 8)}`,
+        // Buyer-visible on Payssion's page: the order number, as stored.
+        description: `DropMarket order ${displayOrderRef(input.orderNumber, input.orderId)}`,
         return_url: input.returnUrl,
         notify_url: notifyUrl,
       })

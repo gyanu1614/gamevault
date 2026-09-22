@@ -45,8 +45,13 @@ describe('runOrderInsert', () => {
   it('returns the id on the first success and calls the insert once', async () => {
     let calls = 0
     const r = await runOrderInsert(async () => { calls++; return { data: { id: 'o1' }, error: null } })
-    expect(r).toEqual({ orderId: 'o1' })
+    expect(r).toEqual({ orderId: 'o1', orderNumber: null })
     expect(calls).toBe(1)
+  })
+
+  it('passes the order_number the trigger drew through as orderNumber (the provider description reads it)', async () => {
+    const r = await runOrderInsert(async () => ({ data: { id: 'o1', order_number: 'DM-ABCD-EFGH' }, error: null }))
+    expect(r).toEqual({ orderId: 'o1', orderNumber: 'DM-ABCD-EFGH' })
   })
 
   it('buyer+listing collision → { duplicate: true }, no retry', async () => {
@@ -62,7 +67,7 @@ describe('runOrderInsert', () => {
       calls++
       return calls === 1 ? { data: null, error: pg('orders_order_number_key') } : { data: { id: 'o2' }, error: null }
     })
-    expect(r).toEqual({ orderId: 'o2' })
+    expect(r).toEqual({ orderId: 'o2', orderNumber: null })
     expect(calls).toBe(2)
   })
 

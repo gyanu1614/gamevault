@@ -44,6 +44,10 @@ export interface ProviderCapabilities {
 
 export interface CreateChargeInput {
   orderId: string
+  /** The stored orders.order_number (DM-XXXX-XXXX; older GV-…). The ONLY
+   *  order reference a buyer sees on the provider's page (description /
+   *  title); orderId stays the machine link back to us. */
+  orderNumber?: string | null
   amount: Money
   buyerRef?: string
   /** Where the buyer lands on SUCCESS (e.g. the order page). */

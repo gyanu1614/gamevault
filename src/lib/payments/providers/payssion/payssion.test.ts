@@ -4,7 +4,7 @@ import { payssionToCanonical, payssionEventId, type PayssionTxn } from './status
 import { createSigVariants, notifySigMatches, refundSig, detailsSig } from './sig'
 import { makePayssionProvider } from './index'
 import { providerNameForMethod } from '@/lib/payments/registry'
-import { payssionExpiryIso, splitPayssionMethodsByCountry } from './methods'
+import { payssionExpiryIso, splitPayssionMethodsByCountry, PAYSSION_METHODS } from './methods'
 import { fromDecimal } from '@/lib/money'
 
 // Configure the adapter for pure/mocked tests. ||= only fills fallbacks —
@@ -266,5 +266,51 @@ describe('payssion: parseWebhook verification chain', () => {
   it('MONEY: completed but underpaid (paid < amount) does NOT confirm', async () => {
     const { events } = await provider({ paid: '5.00' }).parseWebhook({}, notifyBody('completed'))
     expect(events[0].type).toBe('CHARGE_PENDING')
+  })
+})
+
+// ─── createCharge: the buyer-visible description carries the order number ──
+describe('payssion: createCharge description', () => {
+  process.env.PUBLIC_API_URL ||= 'https://app.test.local'
+  const captureCreate = () => {
+    const bodies: Record<string, string>[] = []
+    const fetchImpl = (async (url: any, init: any) => {
+      if (String(url).includes('/payment/create')) {
+        bodies.push(Object.fromEntries(new URLSearchParams(String(init?.body ?? ''))))
+        return {
+          ok: true,
+          json: async () => ({ result_code: 200, redirect_url: 'https://pay.test/x', transaction: { transaction_id: 't1', state: 'pending' } }),
+        } as any
+      }
+      return { ok: false, status: 404, text: async () => 'nope' } as any
+    }) as any
+    return { bodies, provider: makePayssionProvider({ fetchImpl }) }
+  }
+  const base = {
+    orderId: '0f1e2d3c-1111-2222-3333-444444444444',
+    amount: fromDecimal('12.34', 'USD'),
+    returnUrl: 'https://app.test.local/checkout/return/x',
+    metadata: { pm_id: Object.keys(PAYSSION_METHODS)[0] },
+  }
+
+  it('shows the stored order_number, not the UUID or its 8-char prefix', async () => {
+    const { bodies, provider } = captureCreate()
+    await provider.createCharge({ ...base, orderNumber: 'DM-ABCD-EFGH' })
+    expect(bodies[0].description).toBe('DropMarket order DM-ABCD-EFGH')
+    // the machine link back to us is still the UUID
+    expect(bodies[0].track_id).toBe(base.orderId)
+    expect(bodies[0].order_id).toBe(base.orderId)
+  })
+
+  it('an older GV- number is shown as stored', async () => {
+    const { bodies, provider } = captureCreate()
+    await provider.createCharge({ ...base, orderNumber: 'GV-123456' })
+    expect(bodies[0].description).toBe('DropMarket order GV-123456')
+  })
+
+  it('falls back to the 8-char id prefix only when the order has no number', async () => {
+    const { bodies, provider } = captureCreate()
+    await provider.createCharge({ ...base, orderNumber: null })
+    expect(bodies[0].description).toBe('DropMarket order 0F1E2D3C')
   })
 })
