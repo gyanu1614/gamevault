@@ -564,6 +564,23 @@ describe.skipIf(!hasEnv)('fee engine — resolve_seller_fee() (integration)', ()
       expect(n(o.rank_pts)).toBe(0)
     })
 
+    it('FC Points promo (ea-sports-fc-26 top_up): 0 for everyone from the start — founding and rank are no-ops on zero; 5 before the start and after the promo', async (ctx) => {
+      const p = pick((x) => x.type === 'top_up' && slugOf(x) === 'ea-sports-fc-26')
+      if (!p) return ctx.skip()
+      expect(n((await live(null, p.id, justBefore)).pct)).toBe(5)
+      const at = await live(null, p.id, start)
+      expect(n(at.pct)).toBe(0)
+      expect(at.rule_kind).toBe('promo')
+      await setSeller('legendary', true)
+      const f = await live(fx!.seller.id, p.id, start)
+      expect(n(f.pct)).toBe(0)
+      expect(f.founding_applied).toBe(true)
+      const end = new Date(start); end.setUTCMonth(end.getUTCMonth() + 6)
+      const after = await live(null, p.id, end.toISOString())
+      expect(after.rule_kind).toBe('base')
+      expect(n(after.pct)).toBe(5)
+    })
+
     it('founding beats rank from the start too: legendary + founding on items → 10 × 0.5 = 5.00, rank_pts 0', async (ctx) => {
       const p = pick((x) => x.type === 'items')
       if (!p) return ctx.skip()

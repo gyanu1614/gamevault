@@ -53,7 +53,8 @@ const RATES = {
     { type: 'service', pct: 15, slugs: ['call-of-duty'] },
     { type: 'top_up', pct: 10, slugs: ['99-nights-in-the-forest', 'bite-by-night', 'bloxstrike', 'run-a-restaurant', 'sniper-duels'] },
   ],
-  promos: { type: 'currency', pct: 0, months: 6, slugs: ['r6-siege', 'fc-25', 'fc-26', 'ea-sports-fc-26'] },
+  // R6 Credits / FC Points: bought-with-money in-game currency, filed under top_up on this catalogue (never the account pair).
+  promos: { types: ['top_up', 'currency'], pct: 0, months: 6, slugs: ['r6-siege', 'fc-25', 'fc-26', 'ea-sports-fc-26'] },
   ladder: { bronze: 0, silver: 0.5, gold: 1, diamond: 1.5, legendary: 2 } as Record<string, number>,
   settings: { rank_floor_pct: 8, founding_discount_pct: 50, founding_months: 12 },
   floorDate: Date.UTC(2026, 9, 6),
@@ -63,8 +64,10 @@ const n = (v: string | number) => Number(v)
 const iso = (ms: number) => new Date(ms).toISOString()
 const addMonthsUtc = (d: Date, months: number) => { const x = new Date(d); x.setUTCMonth(x.getUTCMonth() + months); return x }
 
-/** The rate the table gives a pair from the start: its pair rule if listed, else the category default. */
+const isPromoPair = (p: Pair) => RATES.promos.types.includes(p.type) && RATES.promos.slugs.includes((p.game?.slug ?? '').toLowerCase())
+/** The rate the table gives a pair from the start: its promo (0) while it runs, else its pair rule if listed, else the category default. */
 function expectedAtStart(p: Pair): number {
+  if (isPromoPair(p)) return RATES.promos.pct
   const slug = (p.game?.slug ?? '').toLowerCase()
   const pair = RATES.pairs.find((l) => l.type === p.type && l.slugs.includes(slug))
   return pair ? pair.pct : RATES.category[p.type]
@@ -213,9 +216,9 @@ describe.skipIf(!hasEnv)('fee engine PR 4 — the new rates, before and from the
     if (pairs.length >= 50) expect(pairRules.length).toBeGreaterThan(0)
   })
 
-  it('promos: one 0% promo [start, start + 6 months) for every listed slug that HAS a currency pair — and none otherwise', () => {
+  it('promos: one 0% promo [start, start + 6 months) on every listed slug\'s top_up/currency pair that EXISTS — none on account pairs, none otherwise', () => {
     const promos = pr4().filter((r) => r.kind === 'promo')
-    const expected = pairs.filter((p) => p.type === RATES.promos.type && RATES.promos.slugs.includes((p.game?.slug ?? '').toLowerCase()))
+    const expected = pairs.filter(isPromoPair)
     expect(promos.map((r) => r.game_category_id).sort()).toEqual(expected.map((p) => p.id).sort())
     const end = addMonthsUtc(new Date(start), RATES.promos.months).getTime()
     for (const r of promos) {
@@ -223,8 +226,28 @@ describe.skipIf(!hasEnv)('fee engine PR 4 — the new rates, before and from the
       expect(new Date(r.starts_at).getTime()).toBe(new Date(start).getTime())
       expect(new Date(r.ends_at ?? 0).getTime()).toBe(end)
     }
+    const accountPromo = promos.filter((r) => pairs.find((p) => p.id === r.game_category_id)?.type === 'account')
+    expect(accountPromo, 'a 0% promo must never sit on an account pair').toEqual([])
     // eslint-disable-next-line no-console
-    console.warn(`[fee-parity] promo pairs matched in this catalogue: ${expected.length ? expected.map((p) => p.game?.slug).join(', ') : '(none — r6-siege / fc-25 / fc-26 / ea-sports-fc-26 have no currency pair)'}`)
+    console.warn(`[fee-parity] promo pairs matched in this catalogue: ${expected.length ? expected.map((p) => `${p.game?.slug}/${p.type}`).join(', ') : '(none)'}`)
+  })
+
+  it('promo pair: 0 from the start (rule_kind promo), back to its base the second the promo ends', async (ctx) => {
+    const p = pairs.find(isPromoPair)
+    if (!p) return ctx.skip()
+    const at = await resolveAnon(p.id, null, start)
+    expect(n(at.pct)).toBe(0)
+    expect(at.rule_kind).toBe('promo')
+    const end = addMonthsUtc(new Date(start), RATES.promos.months)
+    const lastSecond = await resolveAnon(p.id, null, new Date(end.getTime() - 1000).toISOString())
+    expect(n(lastSecond.pct)).toBe(0)
+    const after = await resolveAnon(p.id, null, end.toISOString())
+    expect(after.rule_kind).toBe('base')
+    const slug = (p.game?.slug ?? '').toLowerCase()
+    const base = RATES.pairs.find((l) => l.type === p.type && l.slugs.includes(slug))?.pct ?? RATES.category[p.type]
+    expect(n(after.pct)).toBe(base)
+    // and before the start the promo does not exist yet: today's rate
+    expect(n((await resolveAnon(p.id, null, justBefore)).pct)).toBe(commissionPct({ categoryMetaType: p.type, categorySlug: p.slug, gameSlug: p.game?.slug ?? null }))
   })
 
   it('rank ladder: bronze 0 · silver 0.5 · gold 1.0 · diamond 1.5 · legendary 2.0 (live at push time — undated table)', async () => {

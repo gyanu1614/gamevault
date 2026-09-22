@@ -34,7 +34,8 @@
 --   service  15 : call-of-duty
 --   top_up   10 : 99-nights-in-the-forest, bite-by-night, bloxstrike,
 --                 run-a-restaurant, sniper-duels
---   PROMO 0%    : r6-siege currency, fc-25 / fc-26 / ea-sports-fc-26 currency
+--   PROMO 0%    : R6 Credits / FC Points — the top_up (or currency) pair of
+--                 r6-siege, fc-25, fc-26, ea-sports-fc-26; never an account pair
 -- A slug whose (game, type) pair does not exist is SKIPPED and printed in a
 -- NOTICE (matched / missing per list) — read the push output.
 --
@@ -167,24 +168,31 @@ BEGIN
       lst.category_type, lst.pct, COALESCE(v_matched, '{}'), COALESCE(v_missing, '{}');
   END LOOP;
 
-  -- ── 5. Promos: 0% currency for six months, only where the pair exists ──
+  -- ── 5. Promos: 0% on R6 Credits / FC Points for six months ─────────────
+  -- Both are bought-with-real-money in-game currencies, which this catalogue
+  -- files under `top_up` (EA Sports FC 26 → top-up pair; the game has no
+  -- `currency` pair). Matched by (slug, type ∈ top_up|currency) so a future
+  -- `currency` pair for the same game would also qualify; NEVER the account
+  -- pair. r6-siege has only an account pair today → reported, skipped.
   -- kind=promo is exempt from the notice trigger and from the exclusion
   -- constraint; guarded by note so a re-run cannot duplicate.
   v_list := ARRAY['r6-siege','fc-25','fc-26','ea-sports-fc-26'];
   INSERT INTO public.fee_rules (kind, scope, category_type, game_category_id, pct, starts_at, ends_at, note)
   SELECT 'promo', 'game_category', gc.type, gc.id, 0.00, v_start, v_promo_end,
-         'PR4: promo ' || g.slug || ' currency 0'
+         'PR4: promo ' || g.slug || ' ' || gc.type || ' 0'
     FROM public.game_categories gc
     JOIN public.games g ON g.id = gc.game_id
-   WHERE gc.type = 'currency'
+   WHERE gc.type IN ('top_up', 'currency')
      AND lower(g.slug) = ANY (v_list)
      AND NOT EXISTS (SELECT 1 FROM public.fee_rules fr
                       WHERE fr.kind = 'promo' AND fr.game_category_id = gc.id AND fr.note LIKE 'PR4: promo %');
-  SELECT array_agg(g.slug ORDER BY g.slug) INTO v_matched
+  SELECT array_agg(g.slug || '/' || gc.type ORDER BY g.slug, gc.type) INTO v_matched
     FROM public.game_categories gc JOIN public.games g ON g.id = gc.game_id
-   WHERE gc.type = 'currency' AND lower(g.slug) = ANY (v_list);
-  SELECT array_agg(s ORDER BY s) INTO v_missing FROM unnest(v_list) s WHERE NOT (s = ANY (COALESCE(v_matched, '{}')));
-  RAISE NOTICE 'fee engine PR 4: promo currency 0 pct [%, %) — matched % · missing (no currency pair, skipped) %',
+   WHERE gc.type IN ('top_up', 'currency') AND lower(g.slug) = ANY (v_list);
+  SELECT array_agg(s ORDER BY s) INTO v_missing FROM unnest(v_list) s
+   WHERE NOT EXISTS (SELECT 1 FROM public.game_categories gc JOIN public.games g ON g.id = gc.game_id
+                      WHERE gc.type IN ('top_up', 'currency') AND lower(g.slug) = s);
+  RAISE NOTICE 'fee engine PR 4: promo 0 pct [%, %) — matched % · missing (no top_up/currency pair, skipped) %',
     v_start, v_promo_end, COALESCE(v_matched, '{}'), COALESCE(v_missing, '{}');
 
   -- ── 6. Rank ladder + platform settings (undated → effective at push) ───
@@ -259,8 +267,19 @@ BEGIN
   -- (d) every promo row is bounded to [v_start, v_start + 6 months) at 0
   IF EXISTS (SELECT 1 FROM public.fee_rules
               WHERE note LIKE 'PR4: promo %'
-                AND (kind <> 'promo' OR pct <> 0 OR starts_at <> v_start OR ends_at <> v_promo_end)) THEN
-    RAISE EXCEPTION 'fee engine PR 4: a promo row is outside [%, %) or not 0 pct', v_start, v_promo_end;
+                AND (kind <> 'promo' OR pct <> 0 OR starts_at <> v_start OR ends_at <> v_promo_end
+                     OR category_type NOT IN ('top_up', 'currency'))) THEN
+    RAISE EXCEPTION 'fee engine PR 4: a promo row is outside [%, %), not 0 pct, or on a non-currency pair', v_start, v_promo_end;
+  END IF;
+  --     …and each promo pair resolves to 0 from the start and to its base again after the promo
+  SELECT count(*) INTO v_n
+    FROM public.fee_rules pr
+    CROSS JOIN LATERAL public.resolve_seller_fee(NULL, pr.game_category_id, v_start) r0
+    CROSS JOIN LATERAL public.resolve_seller_fee(NULL, pr.game_category_id, v_promo_end) r1
+   WHERE pr.note LIKE 'PR4: promo %'
+     AND (r0.pct <> 0 OR r0.rule_id <> pr.id OR r0.rule_kind <> 'promo' OR r1.rule_kind <> 'base' OR r1.pct = 0);
+  IF v_n > 0 THEN
+    RAISE EXCEPTION 'fee engine PR 4: % promo pair(s) do not resolve to 0 at % and back to base at %', v_n, v_start, v_promo_end;
   END IF;
 
   SELECT count(*) INTO v_pairs FROM public.fee_rules WHERE note LIKE 'PR4:%' AND scope = 'game_category' AND kind = 'base';
