@@ -1,6 +1,6 @@
 # Checkout fix round B — handoff
 
-**Date:** 2026-09-23 · **Branch:** `fix/checkout-round-b` (worktree `../gamevault-checkout-fix-b`) · **PR:** __PR_URL__ · **Not merged. ⚠️ `supabase db push` REQUIRED BEFORE the deploy** (5 migrations; three RPC signatures change).
+**Date:** 2026-09-23 · **Branch:** `fix/checkout-round-b` (worktree `../gamevault-checkout-fix-b`) · **PR:** https://github.com/gyanu1614/gamevault/pull/90 · **Not merged. ⚠️ `supabase db push` REQUIRED BEFORE the deploy** (5 migrations; three RPC signatures change).
 Source: `docs/audit/pass-6-checkout.md` PART B/C, the structural findings left by round A (`checkout-fix-a.md`). Money = single SQL RPCs; new SQL is service-role-only + listed in `db-p0-grants`.
 
 ## Commits (one per part, in order)
