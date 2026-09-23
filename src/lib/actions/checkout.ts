@@ -231,8 +231,9 @@ export async function createCheckout(input: CreateCheckoutInput): Promise<Create
     // PAY-007: cap on open pending orders per buyer, server-side. Counted
     // after the supersede above (a re-checkout of the same listing replaces
     // its order rather than adding one) and before this insert.
-    const openPending = await countOpenPendingOrders(user.id)
-    if (openPending >= maxOpenPendingOrders()) {
+    const maxOpen = maxOpenPendingOrders()
+    const openPending = await countOpenPendingOrders(user.id, maxOpen)
+    if (openPending >= maxOpen) {
       return {
         success: false,
         error: `You have ${openPending} orders awaiting payment. Complete or cancel one before starting another.`,
@@ -504,15 +505,21 @@ function isChargeInFlight(createdAtIso: string | null): boolean {
   return age >= 0 && age < CHARGE_IN_FLIGHT_WINDOW_MS
 }
 
-/** PAY-007: the buyer's open (pending) orders, counted as the backend. */
-async function countOpenPendingOrders(buyerId: string): Promise<number> {
-  const { count, error } = await createServiceRoleClient()
+/** PAY-007: the buyer's open (pending) orders, counted as the backend.
+ *  A bounded GET, deliberately NOT a `head: true` count: a HEAD response
+ *  through Kong → PostgREST leaves the upstream keep-alive socket in a bad
+ *  state and the NEXT request on it (the order INSERT) came back as a 502
+ *  "upstream prematurely closed" — 1–1.5 % of checkouts in the 405-order
+ *  parity loop, zero on the pre-fix code. We only need "at least the cap". */
+async function countOpenPendingOrders(buyerId: string, max: number): Promise<number> {
+  const { data, error } = await createServiceRoleClient()
     .from('orders')
-    .select('id', { count: 'exact', head: true })
+    .select('id')
     .eq('buyer_id', buyerId)
     .eq('status', 'pending')
+    .limit(max)
   if (error) throw new Error(`open pending order count failed: ${error.message}`)
-  return count ?? 0
+  return (data ?? []).length
 }
 
 interface ReusablePendingOrder {
