@@ -50,17 +50,23 @@ export async function GET(
 
   // Pending here usually means the buyer cancelled on the provider page and
   // beat the webhook home — ask the provider which it was. Best-effort: on
-  // any error fall through to the awaiting-payment panel.
+  // any error — including the PAY-016 probe deadline — fall through to the
+  // awaiting-payment panel; the webhook is the authority either way.
   try {
+    const { RETURN_PROBE_TIMEOUT_MS, withTimeout } = await import('@/lib/payments/timeouts')
     if (order.payment_provider === 'payssion' && order.provider_charge_id) {
       // Order-bound lookup: the details signature includes the order id.
       const { payssionTransactionState } = await import('@/lib/payments/providers/payssion')
-      const state = await payssionTransactionState(order.provider_charge_id, order.id)
+      const state = await payssionTransactionState(order.provider_charge_id, order.id, {
+        timeoutMs: RETURN_PROBE_TIMEOUT_MS,
+      })
       if (CANCELLED_STATES.has(state)) return to(backToCheckout)
     } else if (order.payment_provider && order.provider_charge_id) {
       const { getProvider } = await import('@/lib/payments/registry')
-      const { rawStatus } = await getProvider(order.payment_provider).getCharge(
-        order.provider_charge_id
+      const { rawStatus } = await withTimeout(
+        getProvider(order.payment_provider).getCharge(order.provider_charge_id),
+        RETURN_PROBE_TIMEOUT_MS,
+        'return-route charge probe'
       )
       if (CANCELLED_STATES.has(rawStatus)) return to(backToCheckout)
     }

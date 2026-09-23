@@ -35,6 +35,7 @@ import {
 } from './env'
 import { btcpayToCanonical, btcpayEventId, type BtcpayInvoice } from './status-map'
 import { displayOrderRef } from '@/lib/orders/order-number'
+import { PROVIDER_FETCH_TIMEOUT_MS } from '@/lib/payments/timeouts'
 
 function authHeaders(): Record<string, string> {
   return {
@@ -78,7 +79,7 @@ export function makeBtcpayProvider(deps?: { fetchImpl?: typeof fetch }): Payment
   async function getInvoice(id: string): Promise<BtcpayInvoice> {
     const res = await fetchImpl(
       `${btcpayBase()}/api/v1/stores/${btcpayStoreId()}/invoices/${id}`,
-      { headers: authHeaders() }
+      { headers: authHeaders(), signal: AbortSignal.timeout(PROVIDER_FETCH_TIMEOUT_MS) }
     )
     if (!res.ok) throw new Error(`btcpay: invoice re-fetch failed ${res.status}`)
     return (await res.json()) as BtcpayInvoice
@@ -121,10 +122,12 @@ export function makeBtcpayProvider(deps?: { fetchImpl?: typeof fetch }): Payment
           redirectAutomatically: true,
         },
       })
+      // PAY-016: a hung provider socket must not pin a serverless invocation.
       const res = await fetchImpl(`${btcpayBase()}/api/v1/stores/${btcpayStoreId()}/invoices`, {
         method: 'POST',
         headers: authHeaders(),
         body,
+        signal: AbortSignal.timeout(PROVIDER_FETCH_TIMEOUT_MS),
       })
       if (!res.ok) throw new Error(`btcpay: create failed ${res.status} ${await res.text()}`)
       const inv = (await res.json()) as BtcpayInvoice
@@ -197,6 +200,7 @@ export async function btcpayFetchInvoice(invoiceId: string): Promise<BtcpayInvoi
   const res = await fetch(`${btcpayBase()}/api/v1/stores/${btcpayStoreId()}/invoices/${invoiceId}`, {
     headers: authHeaders(),
     cache: 'no-store',
+    signal: AbortSignal.timeout(PROVIDER_FETCH_TIMEOUT_MS),
   })
   if (!res.ok) throw new Error(`btcpay: invoice fetch failed ${res.status}`)
   return (await res.json()) as BtcpayInvoice
@@ -206,7 +210,7 @@ export async function btcpayFetchPaymentMethods(invoiceId: string): Promise<Btcp
   assertBtcpayConfigured()
   const res = await fetch(
     `${btcpayBase()}/api/v1/stores/${btcpayStoreId()}/invoices/${invoiceId}/payment-methods`,
-    { headers: authHeaders(), cache: 'no-store' }
+    { headers: authHeaders(), cache: 'no-store', signal: AbortSignal.timeout(PROVIDER_FETCH_TIMEOUT_MS) }
   )
   if (!res.ok) throw new Error(`btcpay: payment-methods fetch failed ${res.status}`)
   return (await res.json()) as BtcpayPaymentMethod[]

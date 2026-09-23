@@ -314,3 +314,28 @@ describe('payssion: createCharge description', () => {
     expect(bodies[0].description).toBe('DropMarket order 0F1E2D3C')
   })
 })
+
+// ─── PAY-016: every outbound call carries a deadline ─────────────────────
+describe('payssion: provider fetches carry an AbortSignal timeout (PAY-016)', () => {
+  process.env.PUBLIC_API_URL ||= 'https://app.test.local'
+  it('create and details requests pass an AbortSignal', async () => {
+    const signals: unknown[] = []
+    const fetchImpl = (async (url: any, init: any) => {
+      signals.push(init?.signal)
+      if (String(url).includes('/payment/create')) {
+        return { ok: true, json: async () => ({ result_code: 200, redirect_url: 'https://pay.test/x', transaction: { transaction_id: 't1', state: 'pending' } }) } as any
+      }
+      return { ok: true, json: async () => ({ result_code: 200, transaction: { transaction_id: 't1', state: 'completed', order_id: 'o', paid: '1', amount: '1', currency: 'USD' } }) } as any
+    }) as any
+    const provider = makePayssionProvider({ fetchImpl })
+    await provider.createCharge({
+      orderId: '0f1e2d3c-1111-2222-3333-444444444444',
+      amount: fromDecimal('12.34', 'USD'),
+      returnUrl: 'https://app.test.local/checkout/return/x',
+      metadata: { pm_id: Object.keys(PAYSSION_METHODS)[0] },
+    })
+    await provider.getCharge('t1')
+    expect(signals.length).toBe(2)
+    for (const s of signals) expect(s).toBeInstanceOf(AbortSignal)
+  })
+})

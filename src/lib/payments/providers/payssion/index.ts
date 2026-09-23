@@ -42,6 +42,7 @@ import {
   type PayssionTxn,
 } from './status-map'
 import { displayOrderRef } from '@/lib/orders/order-number'
+import { PROVIDER_FETCH_TIMEOUT_MS } from '@/lib/payments/timeouts'
 
 const CAPABILITIES: ProviderCapabilities = {
   isCrypto: false,
@@ -73,10 +74,12 @@ export function makePayssionProvider(deps?: { fetchImpl?: typeof fetch }): Payme
   const fetchImpl = deps?.fetchImpl ?? fetch
 
   async function post(path: string, data: Record<string, string>): Promise<any> {
+    // PAY-016: a hung provider socket must not pin a serverless invocation.
     const res = await fetchImpl(`${payssionBase()}${path}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: form(data),
+      signal: AbortSignal.timeout(PROVIDER_FETCH_TIMEOUT_MS),
     })
     if (!res.ok) throw new Error(`payssion: ${path} HTTP ${res.status}`)
     return res.json()
@@ -256,11 +259,13 @@ export const payssionProvider: PaymentProvider = makePayssionProvider()
  */
 export async function payssionTransactionState(
   transactionId: string,
-  orderId?: string | null
+  orderId?: string | null,
+  opts?: { timeoutMs?: number }
 ): Promise<string> {
   assertPayssionConfigured()
   const apiKey = payssionApiKey()!
   const secret = payssionSecretKey()!
+  const timeoutMs = opts?.timeoutMs ?? PROVIDER_FETCH_TIMEOUT_MS
   const attempt = async (sigOrderId: string | null, sendOrderId: boolean) => {
     const res = await fetch(`${payssionBase()}/api/v1/payment/details`, {
       method: 'POST',
@@ -271,6 +276,7 @@ export async function payssionTransactionState(
         ...(sendOrderId && orderId ? { order_id: orderId } : {}),
         api_sig: detailsSig({ apiKey, transactionId, orderId: sigOrderId, secret }),
       }).toString(),
+      signal: AbortSignal.timeout(timeoutMs),
     })
     return res.ok ? ((await res.json()) as any) : null
   }
@@ -294,6 +300,7 @@ export async function payssionCancelTransaction(transactionId: string): Promise<
       transaction_id: transactionId,
       api_sig: cancelSig({ apiKey, transactionId, secret }),
     }).toString(),
+    signal: AbortSignal.timeout(PROVIDER_FETCH_TIMEOUT_MS),
   })
   const json: any = res.ok ? await res.json() : null
   if (json?.result_code === 200 && json?.transaction?.state) {
