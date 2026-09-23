@@ -57,7 +57,16 @@ export function orderEventFor(event: CanonicalEvent): OrderEvent | null {
  */
 export async function dispatch(
   event: CanonicalEvent,
-  providerEventId: string
+  providerEventId: string,
+  /** Round B: the provider the event came from — binds its charge id to the
+   *  order's payment attempt inside the money RPCs. */
+  providerName?: string,
+  opts?: {
+    /** CHARGE_FAILED only: how the open attempt closes. The expiry sweep
+     *  passes 'void' (we closed it); a provider webhook leaves the default
+     *  ('failed' — the provider reported it dead). */
+    closeAttemptAs?: 'failed' | 'void'
+  }
 ): Promise<{ applied: boolean; orderId?: string; status?: string }> {
   const orderEvent = orderEventFor(event)
   if (orderEvent === null) {
@@ -95,10 +104,14 @@ export async function dispatch(
   // to the buyer's wallet inside the confirm transaction; the comms below
   // must then be the REFUND comms, not the paid ones.
   let notifyEvent: OrderEvent = orderEvent
+  const charge =
+    providerName && 'providerChargeId' in event && event.providerChargeId
+      ? { provider: providerName, providerChargeId: event.providerChargeId }
+      : undefined
   try {
     if (event.type === 'CHARGE_CONFIRMED') {
       const { confirmOrderPayment } = await import('@/lib/wallet/order-money')
-      const confirmed = await confirmOrderPayment(event.orderId, providerEventId)
+      const confirmed = await confirmOrderPayment(event.orderId, providerEventId, charge)
       if (confirmed.outcome === 'oversold_refunded') {
         console.warn(
           `[Dispatch] order ${event.orderId} paid but out of stock (${confirmed.reason ?? 'unknown'}) — refunded to the buyer wallet in the same transaction`
@@ -111,13 +124,19 @@ export async function dispatch(
       result = await refundOrderToWallet(event.orderId, providerEventId, event.amount?.amountMinor)
     } else if (event.type === 'CHARGE_FAILED') {
       const { cancelOrderReturnWallet } = await import('@/lib/wallet/order-money')
-      result = await cancelOrderReturnWallet(event.orderId, providerEventId)
+      result = await cancelOrderReturnWallet(event.orderId, providerEventId, { charge, closeAttemptAs: opts?.closeAttemptAs })
       // PAY-002: a stale/late failure for an order that is already paid (or
       // terminal) is refused inside the RPC — nothing moved, admins were
       // alerted once. Not an error: the event is processed (no provider retry).
       if (result.refused) {
         console.warn(
           `[Dispatch] CHARGE_FAILED refused for order ${event.orderId} (status ${result.status}, charge ${event.providerChargeId}): order is not pending`
+        )
+      } else if (result.reason === 'stale_attempt') {
+        // Round B: the charge that failed is no longer the order's open
+        // attempt (a retry superseded it); the live attempt is untouched.
+        console.warn(
+          `[Dispatch] CHARGE_FAILED for superseded charge ${event.providerChargeId} on order ${event.orderId}: no-op`
         )
       }
     } else {

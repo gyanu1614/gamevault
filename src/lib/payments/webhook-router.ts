@@ -81,7 +81,7 @@ export async function handleWebhook(
   try {
     let processed = 0
     for (const event of parsed.events) {
-      await dispatch(event, parsed.providerEventId)
+      await dispatch(event, parsed.providerEventId, providerName)
       processed++
     }
     // 5. Mark processed.

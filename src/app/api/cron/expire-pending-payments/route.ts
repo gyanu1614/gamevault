@@ -5,8 +5,9 @@
  * does NOT enforce our per-method windows (vouchers 48h, instant 1h), so a
  * buyer who walks away would leave the order pending forever. This sweep:
  *
- *   1. finds payssion orders still 'pending' past payment_expires_at (+5 min
- *      grace for a payment landing at the buzzer),
+ *   1. finds orders still 'pending' whose OPEN payment attempt expired (+5 min
+ *      grace for a payment landing at the buzzer) — or, with no attempt, whose
+ *      fallback expiry passed (round B: expired_pending_payment_attempts),
  *   2. cancels the transaction at Payssion (their notify then mirrors it),
  *   3. drives the SAME canonical cancel path the webhook uses — dispatch()
  *      handles the transition, wallet-credit return, nudge cleanup and the
@@ -18,7 +19,6 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createServiceRoleClient } from '@/lib/supabase/service'
 import { isCronAuthorized } from '@/lib/security/cron-auth'
 
 const GRACE_MS = 5 * 60 * 1000
@@ -33,27 +33,20 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const supabase = createServiceRoleClient()
   const cutoff = new Date(Date.now() - GRACE_MS).toISOString()
 
-  // PAY-006: an order with NO provider (the charge was never created — a
-  // crash between insert and the charge UPDATE) carries the fallback expiry
-  // stamped at insert; it has nothing to cancel at a provider and is closed
-  // through the same canonical path.
-  const { data: orders, error } = (await supabase
-    .from('orders')
-    .select('id, provider_charge_id, payment_provider, payment_expires_at')
-    .eq('status', 'pending')
-    .or('payment_provider.eq.payssion,payment_provider.is.null')
-    .lt('payment_expires_at', cutoff)
-    .order('payment_expires_at', { ascending: true })
-    .limit(BATCH)) as any
-
-  if (error) {
-    console.error('[ExpirePayments] fetch failed:', error)
+  // Round B Part 1: the expiry lives on the order's OPEN payment attempt; an
+  // order with no attempt at all (PAY-006: the charge was never created)
+  // carries the fallback expiry stamped at insert. One service-role read.
+  const { expiredPendingAttempts } = await import('@/lib/payments/attempts')
+  let rows
+  try {
+    rows = await expiredPendingAttempts(cutoff, BATCH)
+  } catch (e) {
+    console.error('[ExpirePayments] fetch failed:', e)
     return NextResponse.json({ error: 'fetch failed' }, { status: 500 })
   }
-  if (!orders?.length) {
+  if (!rows.length) {
     return NextResponse.json({ ok: true, expired: 0 })
   }
 
@@ -62,11 +55,11 @@ export async function GET(request: NextRequest) {
 
   let expired = 0
   let skippedPaid = 0
-  for (const order of orders) {
+  for (const row of rows) {
     try {
       let state = 'cancelled'
-      if (order.payment_provider === 'payssion' && order.provider_charge_id) {
-        state = await payssionCancelTransaction(order.provider_charge_id)
+      if (row.provider === 'payssion' && row.providerChargeId) {
+        state = await payssionCancelTransaction(row.providerChargeId)
       }
       if (state === 'completed' || state === 'paid_more') {
         // Paid at the buzzer — leave it for the completed webhook.
@@ -76,17 +69,20 @@ export async function GET(request: NextRequest) {
       await dispatch(
         {
           type: 'CHARGE_FAILED',
-          orderId: order.id,
-          providerChargeId: order.provider_charge_id ?? '',
+          orderId: row.orderId,
+          providerChargeId: row.providerChargeId ?? '',
           reason: 'expired:sweep',
         },
-        `${order.provider_charge_id ?? order.id}:expired-sweep`
+        `${row.providerChargeId ?? row.orderId}:expired-sweep`,
+        row.providerChargeId ? row.provider ?? undefined : undefined,
+        // We are closing it — the provider did not report it dead.
+        { closeAttemptAs: 'void' }
       )
       expired++
     } catch (e) {
-      console.error(`[ExpirePayments] order ${order.id} failed (retried next run):`, e)
+      console.error(`[ExpirePayments] order ${row.orderId} failed (retried next run):`, e)
     }
   }
 
-  return NextResponse.json({ ok: true, expired, skippedPaid, scanned: orders.length })
+  return NextResponse.json({ ok: true, expired, skippedPaid, scanned: rows.length })
 }

@@ -404,7 +404,7 @@ export async function cancelOrder(orderId: string): Promise<{
     // paid-but-undelivered. The RPC re-checks the status under the row lock.
     const { data: orderRaw, error: fetchError } = await supabase
       .from('orders')
-      .select('id, buyer_id, seller_id, listing_id, status, escrow_status, currency, total_amount, order_number, payment_provider, provider_charge_id')
+      .select('id, buyer_id, seller_id, listing_id, status, escrow_status, currency, total_amount, order_number')
       .eq('id', orderId)
       .single() as any
     const order = orderRaw as any
@@ -428,6 +428,10 @@ export async function cancelOrder(orderId: string): Promise<{
     // The old TS composition (bare transition, then a separate refundToWallet
     // whose failure was logged as CRITICAL and ignored) could leave a
     // cancelled order with the buyer's money stranded.
+    // Round B: the provider charge to close is the order's OPEN attempt,
+    // read BEFORE the cancel (the RPC closes the attempt as void).
+    const { openAttemptForOrder } = await import('@/lib/payments/attempts')
+    const openAttempt = wasUnpaid ? await openAttemptForOrder(orderId).catch(() => null) : null
     let cancelResult
     try {
       cancelResult = await cancelOrderReturnWallet(orderId, undefined, { allowPaid: true })
@@ -464,9 +468,9 @@ export async function cancelOrder(orderId: string): Promise<{
       // cancel there too so a cancelled order can't be paid into later.
       // Best-effort; a late payment lands on PAY-002's refusal path (the
       // order is cancelled, so CHARGE_CONFIRMED raises and admins are paged).
-      if ((order as any).payment_provider === 'payssion' && (order as any).provider_charge_id) {
+      if (openAttempt?.provider === 'payssion' && openAttempt.provider_charge_id) {
         const { payssionCancelTransaction } = await import('@/lib/payments/providers/payssion')
-        await payssionCancelTransaction((order as any).provider_charge_id).catch((e: any) =>
+        await payssionCancelTransaction(openAttempt.provider_charge_id).catch((e: any) =>
           console.error('[Cancel] payssion provider cancel failed:', e)
         )
       }

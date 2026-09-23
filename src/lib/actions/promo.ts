@@ -15,6 +15,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service'
 import { revalidatePath } from 'next/cache'
 import type { PromoCode } from '@/types/database'
+import { promoRefusalMessage } from '@/lib/checkout/promo'
 
 // ── Buyer: validate a promo code at checkout ──────────────────────────────────
 
@@ -117,13 +118,6 @@ export async function validatePromoCode(
 export type PromoUsageResult = { ok: true; totalUsed: number } | { ok: false; error: string }
 
 /** Buyer-safe copy for a refused usage (the RPC message names the cap). */
-function promoRefusalMessage(detail: string): string {
-  if (/per-user limit/i.test(detail)) return 'You have already used this promo code'
-  if (/usage limit/i.test(detail)) return 'This promo code has reached its usage limit'
-  if (/no longer active/i.test(detail)) return 'This promo code has expired'
-  return 'This promo code could not be applied'
-}
-
 export async function recordPromoUsage(params: {
   promoCodeId: string
   orderId: string

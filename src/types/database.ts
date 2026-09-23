@@ -4032,6 +4032,8 @@ export type Database = {
           seller_marked_delivered_at: string | null
           seller_payout: number
           status: string | null
+          stock_claimed_at: string | null
+          stock_returned_at: string | null
           stripe_payment_intent_id: string | null
           stripe_transfer_id: string | null
           subtotal: number
@@ -4090,6 +4092,8 @@ export type Database = {
           seller_marked_delivered_at?: string | null
           seller_payout: number
           status?: string | null
+          stock_claimed_at?: string | null
+          stock_returned_at?: string | null
           stripe_payment_intent_id?: string | null
           stripe_transfer_id?: string | null
           subtotal: number
@@ -4148,6 +4152,8 @@ export type Database = {
           seller_marked_delivered_at?: string | null
           seller_payout?: number
           status?: string | null
+          stock_claimed_at?: string | null
+          stock_returned_at?: string | null
           stripe_payment_intent_id?: string | null
           stripe_transfer_id?: string | null
           subtotal?: number
@@ -4273,6 +4279,84 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "seller_shop_banners"
             referencedColumns: ["seller_id"]
+          },
+        ]
+      }
+      payment_attempts: {
+        Row: {
+          activated_at: string | null
+          amount_minor: number
+          checkout_url: string | null
+          close_reason: string | null
+          closed_at: string | null
+          created_at: string
+          currency: string
+          expires_at: string | null
+          id: string
+          order_id: string
+          order_total_minor: number
+          paid_event_id: string | null
+          pm_id: string | null
+          provider: string
+          provider_charge_id: string | null
+          status: string
+          updated_at: string
+          wallet_minor: number
+        }
+        Insert: {
+          activated_at?: string | null
+          amount_minor: number
+          checkout_url?: string | null
+          close_reason?: string | null
+          closed_at?: string | null
+          created_at?: string
+          currency: string
+          expires_at?: string | null
+          id?: string
+          order_id: string
+          order_total_minor: number
+          paid_event_id?: string | null
+          pm_id?: string | null
+          provider: string
+          provider_charge_id?: string | null
+          status?: string
+          updated_at?: string
+          wallet_minor?: number
+        }
+        Update: {
+          activated_at?: string | null
+          amount_minor?: number
+          checkout_url?: string | null
+          close_reason?: string | null
+          closed_at?: string | null
+          created_at?: string
+          currency?: string
+          expires_at?: string | null
+          id?: string
+          order_id?: string
+          order_total_minor?: number
+          paid_event_id?: string | null
+          pm_id?: string | null
+          provider?: string
+          provider_charge_id?: string | null
+          status?: string
+          updated_at?: string
+          wallet_minor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_attempts_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "fee_resolution_gaps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_attempts_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -11488,6 +11572,16 @@ export type Database = {
         Args: { p_data: string; p_encryption_key: string }
         Returns: string
       }
+      expired_pending_payment_attempts: {
+        Args: { p_cutoff: string; p_limit?: number }
+        Returns: {
+          attempt_id: string
+          expires_at: string
+          order_id: string
+          provider: string
+          provider_charge_id: string
+        }[]
+      }
       fee_engine_version: { Args: never; Returns: number }
       fee_rule_cancel_scheduled: { Args: { p_rule_id: string }; Returns: Json }
       fee_rule_schedule_base: {
@@ -11584,6 +11678,8 @@ export type Database = {
           seller_marked_delivered_at: string | null
           seller_payout: number
           status: string | null
+          stock_claimed_at: string | null
+          stock_returned_at: string | null
           stripe_payment_intent_id: string | null
           stripe_transfer_id: string | null
           subtotal: number
@@ -11659,6 +11755,43 @@ export type Database = {
           p_allow_paid?: boolean
           p_dedupe_key?: string
           p_order_id: string
+          p_provider?: string
+          p_provider_charge_id?: string
+        }
+        Returns: Json
+      }
+      order_confirm_payment: {
+        Args: {
+          p_dedupe_key?: string
+          p_order_id: string
+          p_provider?: string
+          p_provider_charge_id?: string
+        }
+        Returns: Json
+      }
+      order_create_pending: {
+        Args: {
+          p_buyer_id: string
+          p_currency: string
+          p_fallback_expires_at: string
+          p_listing_id: string
+          p_payment_processing_fee: number
+          p_payment_processing_fee_rate: number
+          p_platform_fee: number
+          p_platform_fee_rate: number
+          p_pm_id: string
+          p_promo_code_id: string
+          p_promo_discount: number
+          p_provider: string
+          p_quantity: number
+          p_seller_commission_pct: number
+          p_seller_fee_trace: Json
+          p_seller_id: string
+          p_seller_payout: number
+          p_subtotal: number
+          p_total_amount: number
+          p_unit_price: number
+          p_wallet_minor: number
         }
         Returns: Json
       }
@@ -11670,6 +11803,31 @@ export type Database = {
         }
         Returns: Json
       }
+      payment_attempt_activate: {
+        Args: {
+          p_attempt_id: string
+          p_checkout_url: string
+          p_expires_at: string
+          p_provider_charge_id: string
+        }
+        Returns: Json
+      }
+      payment_attempt_open: {
+        Args: {
+          p_amount_minor: number
+          p_fallback_expires_at: string
+          p_order_id: string
+          p_pm_id: string
+          p_provider: string
+        }
+        Returns: Json
+      }
+      payment_attempt_supersede: {
+        Args: { p_force?: boolean; p_order_id: string; p_reason: string }
+        Returns: Json
+      }
+      payment_attempts_backfill: { Args: never; Returns: number }
+      payment_attempts_version: { Args: never; Returns: number }
       post_journal: {
         Args: {
           p_entries: Json
@@ -11835,6 +11993,12 @@ export type Database = {
       sab_recompute_tradeable: { Args: never; Returns: number }
       sab_refresh_evidence_display: { Args: never; Returns: number }
       sab_refresh_price_display: { Args: never; Returns: number }
+      sab_refresh_price_display_changed: {
+        Args: never
+        Returns: {
+          brainrot_slug: string
+        }[]
+      }
       sab_refresh_price_snapshots: {
         Args: { p_calculated_at?: string }
         Returns: number

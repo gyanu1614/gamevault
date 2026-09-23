@@ -1,19 +1,20 @@
 'use server'
 
 /**
- * createCheckout — the CoinGate checkout entry point (Phase 6).
+ * createCheckout — the checkout entry point.
  *
- * Replaces the Stripe createPaymentIntent flow. Unlike the old path (which made
- * a Stripe intent and created the order LATER from webhook metadata — the
- * audit's "trust metadata money" hole), this:
+ * Unlike the old Stripe path (which made an intent and created the order
+ * LATER from webhook metadata — the audit's "trust metadata money" hole),
+ * this:
  *   1. Re-derives the buyer from the session (never trusts client).
  *   2. Validates the listing + stock + own-listing guard.
  *   3. Computes ALL amounts server-side (no client-trusted money).
- *   4. Creates the order row at status 'pending' / escrow 'pending'.
- *   5. Optionally applies WALLET credit (spendWallet → escrow_held) toward the
- *      order, reducing the crypto charge by that amount.
- *   6. Creates a CoinGate hosted charge for the REMAINING amount and returns the
- *      checkout URL to redirect the buyer to.
+ *   4. Creates the order at 'pending' / escrow 'pending', the promo usage,
+ *      the WALLET hold (spendWallet → escrow_held) and the payment attempt
+ *      in ONE database transaction (order_create_pending, round B Part 1).
+ *   5. Mints the provider charge for the REMAINING amount and stores it on
+ *      the attempt (payment_attempt_activate) — the order's charge columns
+ *      are a mirror the RPCs maintain; every read here is of the attempt.
  *
  * The order is confirmed (pending → paid) only by the verified provider
  * webhook (order_confirm_payment: CHARGE_CONFIRMED + stock claim in one
@@ -24,22 +25,27 @@ import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service'
 import { PURCHASES_ENABLED, PURCHASES_DISABLED_MESSAGE } from '@/lib/config/purchases'
 import { buyerFee, protectionWindowHours, round2 } from '@/lib/fees'
-import { resolveSellerFee, FeeResolutionError, type SellerFeeTrace } from '@/lib/fees/resolver'
-import { runOrderInsert, OrderInsertConflictError, type OrderInsertResult } from '@/lib/checkout/order-insert'
+import { resolveSellerFee, FeeResolutionError } from '@/lib/fees/resolver'
+import { classifyUniqueViolation, uniqueViolationConstraint, OrderInsertConflictError } from '@/lib/checkout/order-insert'
 import { getProvider, activePaymentProviderName, providerNameForMethod } from '@/lib/payments/registry'
-import { spendWallet, getWalletBalance } from '@/lib/wallet/wallet'
+import {
+  activateAttempt,
+  createPendingOrder,
+  isOpenAttempt,
+  openAttempt,
+  openAttemptForOrder,
+  supersedeAttempt,
+  type PaymentAttempt,
+} from '@/lib/payments/attempts'
 import { cancelOrderReturnWallet } from '@/lib/wallet/order-money'
 import { checkRateLimit } from '@/lib/security/rate-limit'
-import { validatePromoCode, recordPromoUsage } from '@/lib/actions/promo'
-import { resolveCheckoutPromo } from '@/lib/checkout/promo'
+import { validatePromoCode } from '@/lib/actions/promo'
+import { promoRefusalMessage, resolveCheckoutPromo } from '@/lib/checkout/promo'
 import { fromDecimal, money } from '@/lib/money'
 
-// Order currency is the ledger base (EUR). Listing price_currency / display is
-// a separate concern handled at the UI layer; the order + charge settle EUR.
-// USD end-to-end (decided 2026-09-04): listings, checkout totals, orders,
-// wallet ledger and BTCPay invoices all denominate in USD — matching every
-// $-labelled surface of the UI. (EUR was a leftover of the CoinGate/SEPA
-// plan; switched before any real payment existed.)
+// Order currency is the ledger base. USD end-to-end (decided 2026-09-04):
+// listings, checkout totals, orders, wallet ledger and provider invoices all
+// denominate in USD — matching every $-labelled surface of the UI.
 const ORDER_CURRENCY = 'USD'
 
 /** PAY-007: open (pending) orders one buyer may hold at once. Each one is a
@@ -54,12 +60,14 @@ function maxOpenPendingOrders(): number {
 }
 /** PAY-006: a pending order gets this expiry at INSERT, before any provider
  *  call, so an order stranded by a crash between insert and the charge
- *  UPDATE is always sweepable. The provider's own expiry overwrites it. */
+ *  activation is always sweepable. The provider's own expiry overwrites it. */
 const FALLBACK_PAYMENT_WINDOW_MS = 30 * 60 * 1000
-/** PAY-005: an existing pending order with no checkout_url yet is a racing
- *  request still inside provider.createCharge for this long; superseding it
- *  would cancel an order that is about to receive a live charge. */
+/** PAY-005: a `created` attempt this young is a racing request still inside
+ *  provider.createCharge; superseding it would cancel an order that is about
+ *  to receive a live charge. */
 const CHARGE_IN_FLIGHT_WINDOW_MS = 90 * 1000
+/** Reuse a live invoice only while it has this much validity left. */
+const REUSE_VALIDITY_BUFFER_MS = 5 * 60 * 1000
 const PAYMENT_BEING_PREPARED_MESSAGE =
   'Your payment is still being prepared — please try again in a moment.'
 const PROVIDER_UNAVAILABLE_MESSAGE =
@@ -68,6 +76,8 @@ const PROVIDER_UNAVAILABLE_MESSAGE =
  *  refunded to the wallet inside the confirm transaction. */
 const SOLD_OUT_REFUNDED_MESSAGE =
   'This item sold out just before your payment went through — the full amount is back in your DropMarket wallet.'
+const WALLET_CHANGED_MESSAGE =
+  'Your wallet balance changed while the order was being created — nothing was charged. Please try again.'
 
 export interface CreateCheckoutInput {
   listingId: string
@@ -84,7 +94,7 @@ export interface CreateCheckoutInput {
 export interface CreateCheckoutResult {
   success: boolean
   orderId?: string
-  checkoutUrl?: string // CoinGate hosted page (null if fully wallet-paid)
+  checkoutUrl?: string // hosted page or our native pay page (null if fully wallet-paid)
   fullyPaidByWallet?: boolean
   error?: string
 }
@@ -158,59 +168,58 @@ export async function createCheckout(input: CreateCheckoutInput): Promise<Create
     // set auto_release_at; stored implicitly via markDelivered (lib/fees).
     void protectionWindowHours
 
+    // Provider is a property of the METHOD picked: Payssion pm_ids route to
+    // 'payssion' (hosted redirect); everything else stays on the env-active
+    // crypto provider. Persisted on the attempt (PAY-018).
+    const providerName = providerNameForMethod(input.paymentMethodId)
+    const pmId = providerName === 'payssion' && input.paymentMethodId ? input.paymentMethodId : null
+
     // ── Duplicate-order guard ────────────────────────────────────────────────
     // Before minting a new pending order, look for one this buyer already has
     // open against this same listing. Re-submitting checkout (or bouncing back
-    // to the CoinGate page) must NOT create a second order + second live
+    // to the provider page) must NOT create a second order + second live
     // invoice. A partial unique index (one_pending_order_per_buyer_listing) is
     // the hard backstop; this lookup is the graceful path.
-    const existingPending = await findReusablePendingOrder(supabase, user.id, input.listingId)
-    if (existingPending) {
-      // Same amount + a still-payable stored invoice → reuse it verbatim. The
-      // buyer lands back on the exact CoinGate charge they already have open.
+    const existing = await findReusablePendingOrder(supabase, user.id, input.listingId)
+    if (existing) {
+      const { order: existingPending, attempt } = existing
+      // Same amount + a still-payable live attempt on the SAME provider the
+      // buyer just picked → reuse it verbatim (handing a GCash buyer a crypto
+      // pay page, or vice versa, is worse than minting a fresh charge).
       const sameAmount = Math.abs(Number(existingPending.total_amount) - totalAmount) < 0.005
-      const notExpired = existingPending.payment_expires_at
-        ? new Date(existingPending.payment_expires_at).getTime() > Date.now()
-        : false
-      // Reuse only when the stored charge belongs to the SAME provider the
-      // buyer just picked — handing a GCash buyer a crypto pay page (or
-      // vice versa) is worse than minting a fresh charge.
-      const sameProvider =
-        !existingPending.payment_provider ||
-        existingPending.payment_provider === providerNameForMethod(input.paymentMethodId)
-      if (sameAmount && notExpired && sameProvider && existingPending.checkout_url) {
-        return {
-          success: true,
-          orderId: existingPending.id,
-          checkoutUrl: toRelativePayUrl(existingPending.checkout_url),
-        }
+      if (
+        sameAmount &&
+        attempt?.status === 'active' &&
+        attempt.checkout_url &&
+        attempt.provider === providerName &&
+        isStillPayable(attempt.expires_at, 0)
+      ) {
+        return { success: true, orderId: existingPending.id, checkoutUrl: toRelativePayUrl(attempt.checkout_url) }
       }
-      // PAY-005: no checkout_url yet and created moments ago = a racing
-      // request (other tab, double submit) is still creating the provider
-      // charge for it. Superseding now would cancel an order about to get a
-      // live charge; minting our own would give one order two charges. The
-      // buyer retries in a moment and finds the finished order (reuse above).
-      if (!existingPending.checkout_url && isChargeInFlight(existingPending.created_at)) {
+      // PAY-005: a `created` attempt seconds old = a racing request (other
+      // tab, double submit) is still creating the provider charge for it.
+      // Superseding now would cancel an order about to get a live charge;
+      // minting our own would give one order two charges. The buyer retries
+      // in a moment and finds the finished order (reuse above).
+      if (attempt?.status === 'created' && isChargeInFlight(attempt.created_at)) {
         return { success: false, orderId: existingPending.id, error: PAYMENT_BEING_PREPARED_MESSAGE }
       }
-      // Amounts drifted (quantity/promo/wallet changed) OR the invoice expired.
-      // Supersede the stale order: CANCELLED + the exact mirror of any wallet
-      // hold the buyer applied to it (checkout_wallet:<id>, escrow_held →
-      // user_wallet) run in ONE DB transaction (DB-015: the old two-RPC
-      // sequence stranded the hold when the wallet RPC failed after the
-      // transition). Idempotent on both keys. A failure here changes nothing:
-      // the stale order stays pending and the unique index below hands the
-      // buyer back that same order instead of minting a second one.
+      // Amounts drifted (quantity/promo/wallet changed), the invoice expired,
+      // the method changed, or the minting request died. Supersede the stale
+      // order: CANCELLED + the exact mirror of any wallet hold the buyer
+      // applied to it + the attempt closed as void, in ONE DB transaction
+      // (DB-015). Idempotent. A failure here changes nothing: the stale order
+      // stays pending and the unique index below hands the buyer back that
+      // same order instead of minting a second one.
       try {
-        const { cancelOrderReturnWallet } = await import('@/lib/wallet/order-money')
         await cancelOrderReturnWallet(existingPending.id, `superseded-by-recheckout:${existingPending.id}`)
 
         // Payssion vouchers stay PAYABLE at the provider until told otherwise
         // — cancel there too, or the buyer could pay a slip whose order no
-        // longer exists. Best-effort: the expiry cron re-tries stragglers.
-        if (existingPending.payment_provider === 'payssion' && existingPending.provider_charge_id) {
+        // longer exists. Best-effort until Part 2's outbox drains failures.
+        if (attempt?.provider === 'payssion' && attempt.provider_charge_id) {
           const { payssionCancelTransaction } = await import('@/lib/payments/providers/payssion')
-          await payssionCancelTransaction(existingPending.provider_charge_id).catch((e) =>
+          await payssionCancelTransaction(attempt.provider_charge_id).catch((e) =>
             console.error('[createCheckout] payssion cancel on supersede failed:', e)
           )
         }
@@ -240,94 +249,81 @@ export async function createCheckout(input: CreateCheckoutInput): Promise<Create
       }
     }
 
-    // Create the order at PENDING. Confirmed only by the verified webhook.
-    let orderId: string
-    // The stored number, for the provider's buyer-visible description.
-    let orderNumber: string | null = null
-    {
-      const insertRes = await insertPendingOrder({
-        buyerId: user.id,
-        sellerId: listing.seller_id,
-        listingId: input.listingId,
-        quantity,
-        unitPrice: listing.price,
-        subtotal,
-        fee,
-        totalAmount,
-        sellerPayout,
-        sellerCommissionPct: sellerFee.pct,
-        sellerFeeTrace: sellerFee.trace,
-        promoDiscount,
-        promoCodeId,
-      })
-      if ('orderId' in insertRes) {
-        orderId = insertRes.orderId
-        orderNumber = insertRes.orderNumber ?? null
-        // AUTH-003 / PAY-014 — the usage is recorded, AWAITED, before the
-        // discounted order can go anywhere: the RPC enforces usage_limit /
-        // per_user_limit under the promo row lock. A refusal cancels the
-        // order we just created (nothing else has happened to it yet) and
-        // the buyer gets the cap message — the discount is never granted.
-        if (promoCodeId && promoDiscount > 0) {
-          const usage = await recordPromoUsage({ promoCodeId, orderId, discountAmount: promoDiscount, userId: user.id })
-          if (!usage.ok) {
-            await cancelOrderReturnWallet(orderId, 'promo-refused').catch((e) =>
-              console.error('[createCheckout] cancel after promo refusal failed:', e)
-            )
-            return { success: false, error: usage.error }
-          }
-        }
-      } else if ('duplicate' in insertRes) {
-        // 23505 on one_pending_order_per_buyer_listing (and ONLY that index —
-        // lib/checkout/order-insert classifies by constraint name): a
-        // concurrent double-submit won the race and created the pending order
-        // between our lookup and insert. Re-run the reuse lookup and hand the
-        // buyer that order instead of a "failed to create order".
+    // ── ONE transaction: order + promo usage + wallet hold + attempt ─────────
+    // The wallet request is clamped inside the RPC to the balance AND the
+    // total (server-clamped, never client-trusted). A promo cap refusal or a
+    // wallet balance that moved rolls the whole order back — no cancelled
+    // order, no stranded hold, nothing to sweep.
+    const walletReqMinor =
+      (input.walletAmount ?? 0) > 0
+        ? fromDecimal(Math.max(0, input.walletAmount ?? 0).toFixed(2), ORDER_CURRENCY).amountMinor
+        : 0n
+    const created = await createPendingOrder({
+      buyerId: user.id,
+      sellerId: listing.seller_id,
+      listingId: input.listingId,
+      quantity,
+      unitPrice: listing.price,
+      subtotal,
+      platformFeeRate: fee.marketplacePct,
+      paymentProcessingFeeRate: fee.processingPct,
+      platformFee: fee.marketplaceAmount,
+      paymentProcessingFee: fee.processingAmount,
+      totalAmount,
+      sellerPayout,
+      // Guarded columns (42501 on any later non-service UPDATE): the rate this
+      // order was priced at and why. Written once, here, never recomputed.
+      sellerCommissionPct: sellerFee.pct,
+      sellerFeeTrace: sellerFee.trace,
+      currency: ORDER_CURRENCY,
+      promoCodeId,
+      promoDiscount,
+      walletMinor: walletReqMinor,
+      provider: providerName,
+      pmId,
+      // PAY-006: sweepable from birth; the provider's expiry replaces this.
+      fallbackExpiresAt: new Date(Date.now() + FALLBACK_PAYMENT_WINDOW_MS).toISOString(),
+    })
+    if (created.error) {
+      const kind = classifyUniqueViolation(created.error)
+      if (kind === 'duplicate_submit') {
+        // 23505 on one_pending_order_per_buyer_listing: a concurrent
+        // double-submit won the race and created the pending order between
+        // our lookup and insert. Hand the buyer that order instead.
         const raced = await findReusablePendingOrder(supabase, user.id, input.listingId)
-        if (raced?.checkout_url) {
-          return { success: true, orderId: raced.id, checkoutUrl: toRelativePayUrl(raced.checkout_url) }
+        if (raced?.attempt?.status === 'active' && raced.attempt.checkout_url) {
+          return { success: true, orderId: raced.order.id, checkoutUrl: toRelativePayUrl(raced.attempt.checkout_url) }
         }
-        // PAY-005: the winner is still inside provider.createCharge (its
-        // checkout_url UPDATE comes after). This request did not insert that
-        // order and must NEVER create a charge for it — that overwrote the
-        // winner's provider_charge_id and left two live charges on one order.
+        // PAY-005: the winner is still inside provider.createCharge. This
+        // request did not insert that order and must NEVER create a charge
+        // for it — the attempt's unique index would refuse anyway.
         if (raced) {
-          return { success: false, orderId: raced.id, error: PAYMENT_BEING_PREPARED_MESSAGE }
+          return { success: false, orderId: raced.order.id, error: PAYMENT_BEING_PREPARED_MESSAGE }
         }
         return { success: false, error: 'Could not open checkout — please try again' }
-      } else {
-        const isDev = process.env.NODE_ENV !== 'production'
-        return { success: false, error: isDev ? `Failed to create order: ${insertRes.error}` : 'Failed to create order' }
       }
-    }
-
-    // Total as Money (minor units, EUR).
-    const totalMoney = fromDecimal(totalAmount.toFixed(2), ORDER_CURRENCY)
-
-    // Apply wallet credit (server-clamped to balance AND to the total).
-    let chargeMoney = totalMoney
-    const walletReq = Math.max(0, input.walletAmount ?? 0)
-    if (walletReq > 0) {
-      const balance = await getWalletBalance(user.id, ORDER_CURRENCY) // minor units
-      const wantMinor = fromDecimal(walletReq.toFixed(2), ORDER_CURRENCY).amountMinor
-      const applyMinor = bigintMin(bigintMin(wantMinor, balance), totalMoney.amountMinor)
-      if (applyMinor > 0n) {
-        // Move wallet → escrow_held for this order (idempotent on order id).
-        await spendWallet({
-          userId: user.id,
-          amountMinor: applyMinor,
-          currency: ORDER_CURRENCY,
-          target: 'escrow_held',
-          idempotencyKey: `checkout_wallet:${orderId}`,
-          eventRef: 'CHECKOUT_WALLET_CREDIT',
-          orderId,
-        })
-        chargeMoney = money(totalMoney.amountMinor - applyMinor, ORDER_CURRENCY)
+      if (kind !== null) {
+        // A unique violation that is neither the buyer's own double-submit
+        // nor the order_number collision the RPC already retried once.
+        throw new OrderInsertConflictError(uniqueViolationConstraint(created.error) ?? 'unknown', 1)
       }
+      const detail = String(created.error.message ?? '')
+      if (/promo_usage_record/i.test(detail)) {
+        // PAY-014: the cap bound under the promo row lock; nothing was written.
+        return { success: false, error: promoRefusalMessage(detail) }
+      }
+      if (/wallet_spend: insufficient/i.test(detail)) {
+        return { success: false, error: WALLET_CHANGED_MESSAGE }
+      }
+      console.error('[createCheckout] order_create_pending failed:', detail)
+      const isDev = process.env.NODE_ENV !== 'production'
+      return { success: false, error: isDev ? `Failed to create order: ${detail}` : 'Failed to create order' }
     }
+    const { orderId, orderNumber, attemptId, chargeMinor } = created.result
 
-    // If wallet fully covered it, confirm the order now (no crypto charge needed).
-    if (chargeMoney.amountMinor <= 0n) {
+    // If wallet fully covered it, confirm the order now (no provider charge:
+    // the RPC opened no attempt).
+    if (chargeMinor <= 0n || !attemptId) {
       // Wallet already funded escrow_held for the full total; mark paid.
       // safedrop_transition dedupes the wallet-paid portion, so this posts
       // NO provider_float journal for a fully wallet-paid order. Service-role
@@ -354,17 +350,13 @@ export async function createCheckout(input: CreateCheckoutInput): Promise<Create
     //    collapses history → the back button skips the payment page).
     //  • cancel  → back to checkout so the buyer can retry.
     const base = publicAppUrl()
-    // Provider is a property of the METHOD picked: Payssion pm_ids route to
-    // 'payssion' (hosted redirect); everything else stays on the env-active
-    // crypto provider.
-    const providerName = providerNameForMethod(input.paymentMethodId)
     const provider = getProvider(providerName)
     let charge
     try {
       charge = await provider.createCharge({
         orderId,
         orderNumber,
-        amount: chargeMoney,
+        amount: money(chargeMinor, ORDER_CURRENCY),
         // Payssion has ONE return URL for paid AND cancelled — the smart
         // /checkout/return route inspects the outcome and lands the buyer on
         // the order page (paid/awaiting) or back at checkout (cancelled).
@@ -375,18 +367,14 @@ export async function createCheckout(input: CreateCheckoutInput): Promise<Create
         cancelUrl: `${base}/checkout/${input.listingId}?qty=${quantity}`,
         metadata: {
           listing_id: input.listingId,
-          ...(providerName === 'payssion' && input.paymentMethodId
-            ? { pm_id: input.paymentMethodId }
-            : {}),
+          ...(pmId ? { pm_id: pmId } : {}),
         },
       })
     } catch (chargeError: any) {
-      // PAY-006: no charge exists, but the order does — and the wallet debit
-      // above sits in escrow_held for it. Left alone it was a pending order
-      // with no provider, no expiry and no webhook ever coming: invisible to
-      // the sweep, the buyer's money stranded. Cancel + return the hold in
-      // ONE RPC (idempotent), then tell the buyer the truth. Provider/config
-      // internals never reach the buyer verbatim.
+      // PAY-006: no charge exists, but the order does — and the wallet hold
+      // sits in escrow_held for it. Cancel + return the hold + void the
+      // attempt in ONE RPC (idempotent), then tell the buyer the truth.
+      // Provider/config internals never reach the buyer verbatim.
       console.error(`[createCheckout] ${providerName} charge creation failed (order ${orderId} cancelled, wallet returned):`, chargeError?.message ?? chargeError)
       try {
         await cancelOrderReturnWallet(orderId, 'charge-create-failed')
@@ -398,7 +386,7 @@ export async function createCheckout(input: CreateCheckoutInput): Promise<Create
       return { success: false, error: PROVIDER_UNAVAILABLE_MESSAGE }
     }
     // BTCPay: the buyer pays on OUR native page (address/QR/status), not the
-    // provider's hosted checkout — the invoice id on the order is what the
+    // provider's hosted checkout — the invoice id on the attempt is what the
     // page renders from. RELATIVE on purpose: an absolute URL would pin the
     // env's host/port (localhost:3000 vs :3001 vs LAN IP vs prod) and strand
     // the buyer on the wrong origin. Other providers redirect to their own
@@ -406,19 +394,19 @@ export async function createCheckout(input: CreateCheckoutInput): Promise<Create
     const payUrl =
       providerName === 'btcpay' ? `/checkout/pay/${orderId}` : charge.checkoutUrl
 
-    // Persist the charge on the order so a re-checkout can REUSE this exact
-    // invoice instead of minting a second one. Expiry is the provider's
-    // authoritative invoice expiry when given (BTCPay: 30 min), else the ~2h
-    // CoinGate default. Best-effort: a failed UPDATE only costs the reuse
-    // optimisation on a subsequent attempt (the unique index still prevents a
-    // genuine duplicate), so it never fails the checkout.
+    // Activate the attempt with the charge (and mirror it onto the order).
+    // Expiry is the provider's authoritative invoice expiry when given
+    // (BTCPay: 30 min, Payssion: per-method window), else ~2h.
     const expiresAt = charge.expiresAt ?? new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString()
-    await (supabase.from('orders').update as any)({
-      payment_provider: providerName,
-      provider_charge_id: charge.providerChargeId,
-      checkout_url: payUrl,
-      payment_expires_at: expiresAt,
-    }).eq('id', orderId)
+    try {
+      await activateAttempt({ attemptId, providerChargeId: charge.providerChargeId, checkoutUrl: payUrl, expiresAt })
+    } catch (activateError) {
+      // The attempt was closed while the provider call was in flight (the
+      // buyer cancelled in another tab, the sweep expired it). The charge just
+      // minted has no order to pay — never hand the buyer its URL.
+      console.error(`[createCheckout] attempt ${attemptId} could not be activated (charge ${charge.providerChargeId} orphaned):`, activateError)
+      return { success: false, orderId, error: PAYMENT_BEING_PREPARED_MESSAGE }
+    }
 
     await upsertIncompleteNudge(user.id, orderId, providerName, expiresAt)
 
@@ -494,15 +482,17 @@ async function upsertIncompleteNudge(
   }
 }
 
-function bigintMin(a: bigint, b: bigint): bigint {
-  return a < b ? a : b
-}
-
-/** PAY-005: was this url-less pending order inserted within the in-flight window? */
+/** PAY-005: was this `created` attempt opened within the in-flight window? */
 function isChargeInFlight(createdAtIso: string | null): boolean {
   if (!createdAtIso) return false
   const age = Date.now() - new Date(createdAtIso).getTime()
   return age >= 0 && age < CHARGE_IN_FLIGHT_WINDOW_MS
+}
+
+/** Does the attempt's expiry leave at least `bufferMs` of validity? */
+function isStillPayable(expiresAtIso: string | null, bufferMs: number): boolean {
+  if (!expiresAtIso) return false
+  return new Date(expiresAtIso).getTime() > Date.now() + bufferMs
 }
 
 /** PAY-007: the buyer's open (pending) orders, counted as the backend.
@@ -526,103 +516,44 @@ interface ReusablePendingOrder {
   id: string
   order_number: string | null
   total_amount: number
-  checkout_url: string | null
-  payment_expires_at: string | null
-  payment_provider: string | null
-  provider_charge_id: string | null
   created_at: string | null
 }
 
 /**
- * Find an existing PENDING order for this buyer + listing that we can either
- * reuse (same amount, unexpired invoice) or supersede (drifted/expired).
- * Returns null when there is none. Newest first so a legacy pre-index dupe
- * resolves to the most recent attempt.
+ * Find an existing PENDING order for this buyer + listing, with its OPEN
+ * payment attempt (null when the order has none — a legacy order, or one
+ * whose charge was never created). The caller either reuses it (same
+ * amount, live attempt) or supersedes it. Newest first so a legacy
+ * pre-index dupe resolves to the most recent attempt.
  */
 async function findReusablePendingOrder(
   supabase: any,
   buyerId: string,
   listingId: string,
-): Promise<ReusablePendingOrder | null> {
+): Promise<{ order: ReusablePendingOrder; attempt: PaymentAttempt | null } | null> {
   const { data } = await supabase
     .from('orders')
-    .select('id, order_number, total_amount, checkout_url, payment_expires_at, payment_provider, provider_charge_id, created_at')
+    .select('id, order_number, total_amount, created_at')
     .eq('buyer_id', buyerId)
     .eq('listing_id', listingId)
     .eq('status', 'pending')
     .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle()
-  return (data as ReusablePendingOrder | null) ?? null
-}
-
-interface InsertPendingArgs {
-  buyerId: string
-  sellerId: string
-  listingId: string
-  quantity: number
-  unitPrice: number
-  subtotal: number
-  fee: { marketplacePct: number; processingPct: number; marketplaceAmount: number; processingAmount: number }
-  totalAmount: number
-  sellerPayout: number
-  /** Snapshot of the resolved seller rate + its trace (fee engine PR 3). */
-  sellerCommissionPct: number
-  sellerFeeTrace: SellerFeeTrace
-  promoDiscount: number
-  promoCodeId: string | null
-}
-
-/**
- * Insert the pending order under lib/checkout/order-insert's 23505 policy:
- * one_pending_order_per_buyer_listing → { duplicate } (reuse the racing
- * order); orders_order_number_key → the INSERT is retried exactly once (the
- * trigger draws a fresh number); any other unique index → throws
- * OrderInsertConflictError, mapped to a buyer-safe refusal by the caller.
- */
-async function insertPendingOrder(
-  a: InsertPendingArgs,
-): Promise<OrderInsertResult> {
-  // Service role: client-side order inserts are RLS-blocked entirely (the old
-  // permissive "Buyers can create orders" policy was a price-integrity hole) —
-  // the server, which computed the amounts above, is the only writer.
-  const service = createServiceRoleClient()
-  return runOrderInsert(() => (service.from('orders').insert as any)({
-    buyer_id: a.buyerId,
-    seller_id: a.sellerId,
-    listing_id: a.listingId,
-    quantity: a.quantity,
-    unit_price: a.unitPrice,
-    subtotal: a.subtotal,
-    platform_fee_rate: a.fee.marketplacePct,
-    payment_processing_fee_rate: a.fee.processingPct,
-    platform_fee: a.fee.marketplaceAmount,
-    payment_processing_fee: a.fee.processingAmount,
-    total_amount: a.totalAmount,
-    seller_payout: a.sellerPayout,
-    // Guarded columns (42501 on any later non-service UPDATE): the rate this
-    // order was priced at and why. Written once, here, never recomputed.
-    seller_commission_pct: a.sellerCommissionPct,
-    seller_fee_trace: a.sellerFeeTrace,
-    currency: ORDER_CURRENCY,
-    status: 'pending',
-    escrow_status: 'pending',
-    promo_discount: a.promoDiscount,
-    promo_code_id: a.promoCodeId,
-    // PAY-006: sweepable from birth; the provider's expiry replaces this.
-    payment_expires_at: new Date(Date.now() + FALLBACK_PAYMENT_WINDOW_MS).toISOString(),
-  })
-    .select('id, order_number')
-    .single())
+  const order = (data as ReusablePendingOrder | null) ?? null
+  if (!order) return null
+  const attempt = await openAttemptForOrder(order.id)
+  return { order, attempt: isOpenAttempt(attempt) ? attempt : null }
 }
 
 /**
  * retryOrderPayment — get the buyer back into a payable state for an order
- * stuck at Awaiting Payment. Reuses the existing CoinGate invoice when it is
- * still valid; otherwise mints a fresh charge for the REMAINING amount
- * (total minus any wallet credit already held for this order) and stores it
- * on the order. If wallet credit already covers the full total (edge case),
- * confirms the order directly instead of charging.
+ * stuck at Awaiting Payment. Reuses the open attempt's invoice while it is
+ * still valid; otherwise SUPERSEDES that attempt (history kept, round B) and
+ * opens + activates a fresh one for the REMAINING amount (total minus any
+ * wallet credit already held), on the provider the persisted pm_id implies.
+ * If wallet credit already covers the full total (edge case), confirms the
+ * order directly instead of charging.
  */
 export async function retryOrderPayment(orderId: string): Promise<{
   success: boolean
@@ -644,7 +575,7 @@ export async function retryOrderPayment(orderId: string): Promise<{
 
     const { data: order } = (await supabase
       .from('orders')
-      .select('id, order_number, buyer_id, listing_id, status, total_amount, checkout_url, payment_expires_at, payment_provider')
+      .select('id, order_number, buyer_id, listing_id, status, total_amount')
       .eq('id', orderId)
       .single()) as any
     if (!order) return { success: false, error: 'Order not found' }
@@ -653,25 +584,15 @@ export async function retryOrderPayment(orderId: string): Promise<{
       return { success: false, error: 'This order is not awaiting payment' }
     }
 
-    // Payssion: the stored hosted URL is the answer for the whole pending
-    // lifetime — their page renders its own expired state, and we can't mint
-    // a fresh charge here (pm_id isn't persisted; silently re-charging via
-    // crypto would switch the buyer's method). Only a corrupt order with no
-    // URL falls through to the re-order message.
-    if (order.payment_provider === 'payssion') {
-      if (order.checkout_url) {
-        return { success: true, checkoutUrl: order.checkout_url }
-      }
-      return {
-        success: false,
-        error: 'This payment link is no longer available — please place the order again.',
-      }
-    }
+    const current = await openAttemptForOrder(orderId)
 
     // Reuse the existing invoice while it has a comfortable validity buffer.
-    const validUntil = order.payment_expires_at ? new Date(order.payment_expires_at).getTime() : 0
-    if (order.checkout_url && validUntil > Date.now() + 5 * 60 * 1000) {
-      return { success: true, checkoutUrl: toRelativePayUrl(order.checkout_url) }
+    if (current?.status === 'active' && current.checkout_url && isStillPayable(current.expires_at, REUSE_VALIDITY_BUFFER_MS)) {
+      return { success: true, checkoutUrl: toRelativePayUrl(current.checkout_url) }
+    }
+    // PAY-005: another request is minting this order's charge right now.
+    if (current?.status === 'created' && isChargeInFlight(current.created_at)) {
+      return { success: false, error: PAYMENT_BEING_PREPARED_MESSAGE }
     }
 
     // Remaining charge = total − wallet credit already held for this order.
@@ -696,28 +617,74 @@ export async function retryOrderPayment(orderId: string): Promise<{
       return { success: true, fullyPaidByWallet: true }
     }
 
+    // The method the buyer chose is on the attempt (PAY-018): a Payssion
+    // attempt re-mints on Payssion with the same pm_id; a legacy Payssion
+    // attempt with no pm_id cannot be re-minted without switching rails.
+    const pmId = current?.pm_id ?? null
+    if (current?.provider === 'payssion' && !pmId) {
+      return {
+        success: false,
+        error: 'This payment link is no longer available — please place the order again.',
+      }
+    }
+    const providerName = pmId ? providerNameForMethod(pmId) : activePaymentProviderName()
+
+    // Supersede the stale attempt (history kept), then reserve the slot for
+    // the fresh one — the unique index makes two concurrent retries impossible.
+    if (current) {
+      const superseded = await supersedeAttempt(orderId, 'retry')
+      if (!superseded.changed && superseded.reason === 'in_flight') {
+        return { success: false, error: PAYMENT_BEING_PREPARED_MESSAGE }
+      }
+      if (superseded.provider === 'payssion' && superseded.providerChargeId) {
+        const { payssionCancelTransaction } = await import('@/lib/payments/providers/payssion')
+        await payssionCancelTransaction(superseded.providerChargeId).catch((e) =>
+          console.error('[retryOrderPayment] payssion cancel on supersede failed:', e)
+        )
+      }
+    }
+    const fallbackExpiresAt = new Date(Date.now() + FALLBACK_PAYMENT_WINDOW_MS).toISOString()
+    let attemptId: string
+    try {
+      attemptId = (await openAttempt({ orderId, provider: providerName, pmId, amountMinor: remainingMinor, fallbackExpiresAt })).attemptId
+    } catch (e: any) {
+      if (e?.code === '23505') return { success: false, error: PAYMENT_BEING_PREPARED_MESSAGE }
+      throw e
+    }
+
     const base = publicAppUrl()
-    const providerName = activePaymentProviderName()
     const provider = getProvider(providerName)
-    const charge = await provider.createCharge({
-      orderId,
-      orderNumber: order.order_number ?? null,
-      amount: money(remainingMinor, ORDER_CURRENCY),
-      returnUrl: `${base}/account/orders/${orderId}?paid=1`,
-      cancelUrl: `${base}/account/orders/${orderId}`,
-      metadata: { listing_id: order.listing_id, retry: 'true' },
-    })
+    let charge
+    try {
+      charge = await provider.createCharge({
+        orderId,
+        orderNumber: order.order_number ?? null,
+        amount: money(remainingMinor, ORDER_CURRENCY),
+        returnUrl:
+          providerName === 'payssion'
+            ? `${base}/checkout/return/${orderId}`
+            : `${base}/account/orders/${orderId}?paid=1`,
+        cancelUrl: `${base}/account/orders/${orderId}`,
+        metadata: { listing_id: order.listing_id, retry: 'true', ...(pmId ? { pm_id: pmId } : {}) },
+      })
+    } catch (chargeError: any) {
+      // The fresh attempt never got a charge: close it so the next retry is
+      // not told "being prepared" for 90 s. The order stays pending.
+      console.error(`[retryOrderPayment] ${providerName} charge creation failed (order ${orderId}):`, chargeError?.message ?? chargeError)
+      await supersedeAttempt(orderId, 'charge-create-failed', { force: true }).catch(() => {})
+      return { success: false, error: PROVIDER_UNAVAILABLE_MESSAGE }
+    }
     // Relative for the same reason as createCheckout: never pin an origin.
     const payUrl =
       providerName === 'btcpay' ? `/checkout/pay/${orderId}` : charge.checkoutUrl
 
     const expiresAt = charge.expiresAt ?? new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString()
-    await (supabase.from('orders').update as any)({
-      payment_provider: providerName,
-      provider_charge_id: charge.providerChargeId,
-      checkout_url: payUrl,
-      payment_expires_at: expiresAt,
-    }).eq('id', orderId)
+    try {
+      await activateAttempt({ attemptId, providerChargeId: charge.providerChargeId, checkoutUrl: payUrl, expiresAt })
+    } catch (activateError) {
+      console.error(`[retryOrderPayment] attempt ${attemptId} could not be activated (charge ${charge.providerChargeId} orphaned):`, activateError)
+      return { success: false, error: PAYMENT_BEING_PREPARED_MESSAGE }
+    }
 
     await upsertIncompleteNudge(user.id, orderId, providerName, expiresAt)
 

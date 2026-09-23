@@ -63,6 +63,12 @@ const MONEY_ATOMICITY_SERVICE_ONLY = [
   'money_atomicity_version', 'webhook_event_claim',
   // fix/checkout-p0 (PAY-003): payment confirm + stock claim, one RPC, service_role only.
   'order_confirm_payment',
+  // fix/checkout-round-b Part 1: the payment attempts model. Checkout, retry
+  // and the sweep drive these as the backend; a browser must never open,
+  // activate or supersede a charge, nor read another buyer's attempts.
+  'payment_attempts_version', 'payment_attempts_backfill', 'order_create_pending',
+  'payment_attempt_open', 'payment_attempt_activate', 'payment_attempt_supersede',
+  'expired_pending_payment_attempts',
 ]
 
 /**

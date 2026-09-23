@@ -22,6 +22,16 @@ export interface OrderMoneyResult extends TransitionResult {
   /** PAY-002: the RPC declined to touch the order (paid/terminal on an
    *  automatic cancel). Nothing changed; admins were alerted (deduped). */
   refused: boolean
+  /** Round B: why nothing changed when it was neither a replay nor a
+   *  refusal — `stale_attempt` = the charge named is no longer the order's
+   *  open attempt (a retry superseded it). */
+  reason?: string | null
+}
+
+/** Round B: the provider charge an event names — bound to its attempt in the RPC. */
+export interface ChargeRef {
+  provider: string
+  providerChargeId: string
 }
 
 function toResult(data: any): OrderMoneyResult {
@@ -33,6 +43,7 @@ function toResult(data: any): OrderMoneyResult {
     changed: data.changed === true,
     walletTxnId: data.wallet_txn_id ?? null,
     refused: data.refused === true,
+    reason: data.reason ?? null,
   }
 }
 
@@ -47,17 +58,26 @@ function toResult(data: any): OrderMoneyResult {
  * admin `payment_review` alert and answers `{ changed: false, refused: true }`.
  * The buyer's explicit cancel passes `allowPaid: true`, which also cancels a
  * `paid` order and credits the full total to the wallet — inside the RPC.
+ *
+ * Round B: `charge` binds the event to the order's payment attempt (a charge
+ * bound elsewhere is refused; one no longer open is a no-op, reason
+ * `stale_attempt`). `closeAttemptAs` says how the open attempt closes:
+ * 'failed' = the provider reported it dead (default when a charge is named),
+ * 'void' = we closed it (sweep, supersede, buyer cancel).
  */
 export async function cancelOrderReturnWallet(
   orderId: string,
   dedupeKey?: string,
-  opts?: { allowPaid?: boolean }
+  opts?: { allowPaid?: boolean; charge?: ChargeRef; closeAttemptAs?: 'failed' | 'void' }
 ): Promise<OrderMoneyResult> {
   const supabase = createServiceRoleClient()
   const { data, error } = await (supabase.rpc as any)('order_cancel_return_wallet', {
     p_order_id: orderId,
     p_dedupe_key: dedupeKey ?? null,
     p_allow_paid: opts?.allowPaid === true,
+    p_provider: opts?.charge?.provider ?? null,
+    p_provider_charge_id: opts?.charge?.providerChargeId ?? null,
+    p_attempt_close: opts?.closeAttemptAs ?? null,
   })
   if (error) throw new Error(`order_cancel_return_wallet failed: ${error.message}`)
   return toResult(data)
@@ -102,12 +122,21 @@ export interface ConfirmPaymentResult extends OrderMoneyResult {
  *
  * The only way an order becomes `paid`: the webhook (dispatch), the fully
  * wallet-paid checkout, and the wallet-covered retry all call this.
+ *
+ * Round B: `charge` names the provider charge that paid. The RPC refuses a
+ * charge bound to another order and closes the charge's attempt as paid.
  */
-export async function confirmOrderPayment(orderId: string, dedupeKey?: string): Promise<ConfirmPaymentResult> {
+export async function confirmOrderPayment(
+  orderId: string,
+  dedupeKey?: string,
+  charge?: ChargeRef
+): Promise<ConfirmPaymentResult> {
   const supabase = createServiceRoleClient()
   const { data, error } = await (supabase.rpc as any)('order_confirm_payment', {
     p_order_id: orderId,
     p_dedupe_key: dedupeKey ?? null,
+    p_provider: charge?.provider ?? null,
+    p_provider_charge_id: charge?.providerChargeId ?? null,
   })
   if (error) throw new Error(`order_confirm_payment failed: ${error.message}`)
   const result: ConfirmPaymentResult = {
