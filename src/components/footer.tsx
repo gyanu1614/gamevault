@@ -63,7 +63,7 @@ const LINK_GROUPS: Array<{
       // land on the founding-seller waitlist, not a dead end.
       { name: 'Become a Founding Seller', href: '/early-seller?src=footer' },
       { name: 'SafeDrop', href: '/safedrop' },
-      { name: 'Fees', href: '/fees' },
+      { name: 'Seller Fees', href: '/sell/fees' },
       { name: 'Blog', href: '/blog' },
       { name: 'Company', href: '/company' },
     ],
@@ -76,6 +76,7 @@ const LINK_GROUPS: Array<{
       { name: 'Seller Agreement', href: '/seller-agreement' },
       { name: 'Privacy Policy', href: '/privacy' },
       { name: 'Cookie Policy', href: '/cookies' },
+      { name: 'Fees & Charges', href: '/fees' },
       { name: 'Company Details', href: '/company' },
     ],
   },
