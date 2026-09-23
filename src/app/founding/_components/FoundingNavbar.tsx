@@ -58,6 +58,9 @@ export default function FoundingNavbar({
             height={30}
             className="h-[28px] w-[28px] object-contain"
             priority
+            // Already an optimised 2 KB AVIF rendered at ~30px — re-encoding
+            // it to WebP bills a transformation and saves nothing.
+            unoptimized
           />
           <span className="text-[19px] tracking-tight text-white">
             <span className="font-extrabold">Drop</span>

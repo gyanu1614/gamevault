@@ -150,6 +150,9 @@ export function HubNav({
               width={34}
               height={34}
               className="h-[28px] w-[28px] drop-shadow-[0_1px_3px_rgba(0,0,0,0.5)] sm:h-[34px] sm:w-[34px]"
+              // Already an optimised 2 KB AVIF rendered at ~30px — re-encoding
+              // it to WebP bills a transformation and saves nothing.
+              unoptimized
             />
           </Link>
           <span aria-hidden className="hidden h-[26px] w-px bg-[#26332C] sm:block" />

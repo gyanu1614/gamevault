@@ -56,6 +56,22 @@ const nextConfig = {
   ignoreDuringBuilds: true,
 },
   images: {
+    // Transformation budget (build audit 2026-09-22, §6). Vercel bills per
+    // unique (source, width, quality, format). `formats` and `quality` are left
+    // at their defaults (webp / 75), so WIDTH is the only axis that multiplies
+    // — trimming the ladder is the highest-leverage change available.
+    //
+    // Next's default deviceSizes is [640,750,828,1080,1200,1920,2048,3840].
+    // Nothing here is ever displayed above 1120px CSS px (the widest `sizes`
+    // in the tree is the hero's "(max-width:1120px) 100vw, 1120px"), so 2048
+    // is the 2×-DPR ceiling that matters and 3840 only ever billed 4K/5K
+    // re-encodes of images shown at a fraction of that. 750 and 1200 are
+    // dropped as near-duplicates of 828 and 1080.
+    deviceSizes: [640, 828, 1080, 1920, 2048],
+    // Widths for `sizes`-bearing and fixed-width images: game marks, avatars,
+    // card thumbnails and the 220/124px cover art. Default drops 16 and 48,
+    // which nothing requests, and adds 220 to match the two card ladders.
+    imageSizes: [32, 64, 96, 128, 220, 256, 384],
     dangerouslyAllowSVG: true,
     contentDispositionType: 'attachment',
     contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
