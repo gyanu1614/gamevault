@@ -61,6 +61,8 @@ interface OrderDetailsCardProps {
   /** Opens the controlled DisputeModal. When provided, the SafeDrop
    *  CTA fires this instead of the legacy #dispute href. */
   onOpenDispute?: () => void
+  /** PR 7: end of the buyer's dispute window (delivered_at + N days). */
+  disputeUntil?: string | null
   /** Buyer's review for this order. V21/P5.r — folded into Payout
    *  body now (sibling card retired). */
   buyerReview?: {
@@ -188,6 +190,7 @@ function SafeDropBody({
   role,
   escrowStatus,
   onOpenDispute,
+  disputeUntil,
 }: {
   amount: number
   orderStatus: string
@@ -196,7 +199,12 @@ function SafeDropBody({
   role: 'buyer' | 'seller' | 'admin'
   escrowStatus?: string | null
   onOpenDispute?: () => void
+  disputeUntil?: string | null
 }) {
+  const disputeWindowOpen = !!disputeUntil && new Date(disputeUntil).getTime() > Date.now()
+  const disputeUntilLabel = disputeUntil
+    ? new Date(disputeUntil).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    : null
   // A cancelled order only carries a refund when money was actually covered
   // and returned (escrow refunded). An unpaid order cancelled before payment
   // never charged the buyer — no store credit landed, so don't claim one.
@@ -209,14 +217,16 @@ function SafeDropBody({
 
   if (orderStatus === 'completed') {
     amountLabel = 'Seller Paid'
-    caption = (
+    caption = disputeWindowOpen ? (
       <>
         The seller has been paid for this order. If anything was off with
-        your order, you can still open a dispute within the protection
-        window.
+        your order, you can still open a dispute until {disputeUntilLabel} —
+        SafeDrop Protection covers you for that window.
       </>
+    ) : (
+      <>The seller has been paid for this order and the dispute window has closed. Need help? Contact Support.</>
     )
-    showDisputeCta = true
+    showDisputeCta = disputeWindowOpen
   } else if (orderStatus === 'delivered') {
     amountLabel = 'Amount Covered'
     caption =
@@ -635,6 +645,7 @@ export function OrderDetailsCard(props: OrderDetailsCardProps) {
             role={role}
             escrowStatus={props.escrowStatus}
             onOpenDispute={onOpenDispute}
+            disputeUntil={props.disputeUntil ?? null}
           />
         </OrderCard>
       )}

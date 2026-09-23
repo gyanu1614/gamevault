@@ -24,6 +24,9 @@ interface StatusStripProps {
   overdue?: boolean
   /** Where the dispute CTA links to. Optional — falls back to a noop hash. */
   disputeHref?: string
+  /** PR 7: end of the buyer's dispute window; a completed order still shows
+   *  "Open Dispute" while now < disputeUntil. */
+  disputeUntil?: string | null
   /** Seller only: opens the Mark As Delivered modal. */
   onMarkDelivered?: () => void
   /** Buyer only: opens the Confirm Receipt modal. */
@@ -192,6 +195,7 @@ export function StatusStrip({
   amount,
   overdue,
   disputeHref = '#',
+  disputeUntil = null,
   onMarkDelivered,
   onMarkReceived,
   onLeaveReview,
@@ -290,7 +294,10 @@ export function StatusStrip({
   const showMarkDeliveredCTA = role === 'seller' && status === 'delivering' && !!onMarkDelivered
   const showMarkReceivedCTA = role === 'buyer' && status === 'delivered' && !!onMarkReceived
   const showLeaveReviewCTA = role === 'buyer' && status === 'completed' && !!onLeaveReview
-  const showCaptionDisputeLink = role === 'buyer' && status === 'delivering'
+  const disputeWindowOpen = !!disputeUntil && new Date(disputeUntil).getTime() > Date.now()
+  const showCaptionDisputeLink =
+    (role === 'buyer' && status === 'delivering') ||
+    (role === 'buyer' && status === 'completed' && disputeWindowOpen && !existingReview)
 
   // V21/P5.d — Buyer's delivered state: bespoke 2-row card.
   //   Row 1 (left): Order Delivered title       (right): Confirm Receipt CTA
