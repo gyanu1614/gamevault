@@ -864,18 +864,24 @@ export async function sendWithdrawalProcessedEmail({
   status,
   reason,
   txReference,
+  net,
+  fee,
 }: {
   to: string
   name: string
   amount: number
   /** Display name of the withdrawal method, e.g. 'Bank Transfer'. */
   method: string
-  status: 'approved' | 'rejected' | 'completed'
+  status: 'requested' | 'approved' | 'rejected' | 'completed'
   /** Rejection reason (required when status is 'rejected'). */
   reason?: string
-  /** On-chain tx hash / bank reference (shown when status is 'completed'). */
+  /** On-chain tx hash / Payoneer reference (shown when status is 'completed'). */
   txReference?: string
+  /** PR 7: the quoted net / fee, shown when known. */
+  net?: number
+  fee?: number
 }) {
+  const requested = status === 'requested'
   const approved = status === 'approved'
   const completed = status === 'completed'
   const { data, error } = await resend.emails.send({
@@ -883,41 +889,51 @@ export async function sendWithdrawalProcessedEmail({
     replyTo: REPLY_TO,
     to,
     subject: completed
-      ? `Withdrawal sent — $${amount.toFixed(2)} paid out`
+      ? `Withdrawal sent — $${(net ?? amount).toFixed(2)} paid out`
       : approved
-        ? `Withdrawal approved — $${amount.toFixed(2)} on the way`
-        : `Withdrawal request declined`,
+        ? `Withdrawal approved — $${(net ?? amount).toFixed(2)} on the way`
+        : requested
+          ? `Withdrawal requested — $${amount.toFixed(2)}`
+          : `Withdrawal request declined`,
     html: emailShell({
       preview: completed
-        ? `$${amount.toFixed(2)} has been sent to your ${method}.`
+        ? `$${(net ?? amount).toFixed(2)} has been sent to your ${method}.`
         : approved
-          ? `$${amount.toFixed(2)} is on the way to your ${method}.`
-          : `We couldn't process your withdrawal this time.`,
-      icon: completed || approved ? 'payout' : 'rejected',
-      heading: completed ? 'Withdrawal sent' : approved ? 'Withdrawal approved' : 'Withdrawal declined',
+          ? `$${(net ?? amount).toFixed(2)} is on the way to your ${method}.`
+          : requested
+            ? `We received your withdrawal request for $${amount.toFixed(2)}.`
+            : `We couldn't process your withdrawal this time.`,
+      icon: completed || approved || requested ? 'payout' : 'rejected',
+      heading: completed ? 'Withdrawal sent' : approved ? 'Withdrawal approved' : requested ? 'Withdrawal requested' : 'Withdrawal declined',
       body:
         emailText(
           completed
             ? `Hi ${escapeHtml(name)} — your withdrawal has been sent to your payout method. Depending on the method, it can take a little while to land.`
             : approved
               ? `Hi ${escapeHtml(name)} — your withdrawal is approved and on its way to your payout method.`
-              : `Hi ${escapeHtml(name)} — we couldn't process your withdrawal this time. Your funds stay safe in your seller balance.`,
+              : requested
+                ? `Hi ${escapeHtml(name)} — we received your withdrawal request. The amount is set aside from your balance while our team reviews it, usually within 1&ndash;2 business days.`
+                : `Hi ${escapeHtml(name)} — we couldn't process your withdrawal this time. Your funds stay safe in your seller balance.`,
         ) +
         emailOrderSummary([
           ['Amount', `$${amount.toFixed(2)}`],
+          ...(fee != null ? ([['Fee', `-$${fee.toFixed(2)}`]] as [string, string][]) : []),
+          ...(net != null ? ([['You receive', `$${net.toFixed(2)}`]] as [string, string][]) : []),
           ['Method', escapeHtml(method)],
           ...(completed && txReference
             ? ([['Reference', escapeHtml(txReference)]] as [string, string][])
             : []),
         ]) +
-        (!approved && !completed && reason ? emailBox({ title: 'Why', html: `<span style="overflow-wrap:anywhere;">${escapeHtml(reason)}</span>` }) : '') +
+        (!approved && !completed && !requested && reason ? emailBox({ title: 'Why', html: `<span style="overflow-wrap:anywhere;">${escapeHtml(reason)}</span>` }) : '') +
         emailButton('View Your Wallet', `${APP_URL}/account/wallet`) +
         emailFooterNote(
           completed
             ? `Sent from our side — arrival depends on your payout method, usually within 1&ndash;5 business days.`
             : approved
               ? `Arrival depends on your payout method — usually 1&ndash;5 business days.`
-              : `Questions? Just reply to this email.`,
+              : requested
+                ? `Changed your mind? You can cancel the request from your wallet while it is pending.`
+                : `Questions? Just reply to this email.`,
         ),
     }),
   })
@@ -1287,5 +1303,51 @@ export async function sendOrderConfirmReminderEmail({
     }),
   })
 
+  return error ? { success: false, error } : { success: true, data }
+}
+
+/**
+ * PR 7 — payout details changed (security notice). Withdrawals are paused
+ * for the freeze window so the account owner can react to an unexpected change.
+ */
+export async function sendPayoutDetailsChangedEmail({
+  to,
+  name,
+  kind,
+  summary,
+  freezeUntil,
+}: {
+  to: string
+  name: string
+  kind: 'crypto' | 'payoneer'
+  /** Human summary of the new destination (masked address / email). */
+  summary: string
+  /** ISO timestamp when withdrawals reopen, or null when no freeze applies. */
+  freezeUntil: string | null
+}) {
+  const untilText = freezeUntil ? new Date(freezeUntil).toUTCString().replace(' GMT', ' UTC') : null
+  const { data, error } = await resend.emails.send({
+    from: FROM_EMAIL,
+    replyTo: REPLY_TO,
+    to,
+    subject: 'Your payout details were changed',
+    html: emailShell({
+      preview: `Your ${kind === 'crypto' ? 'crypto payout address' : 'Payoneer email'} was updated.`,
+      icon: 'payout',
+      heading: 'Payout details changed',
+      body:
+        emailText(`Hi ${escapeHtml(name)} — the ${kind === 'crypto' ? 'crypto payout address' : 'Payoneer email'} on your DropMarket seller account was just updated.`) +
+        emailOrderSummary([['New destination', escapeHtml(summary)]]) +
+        (untilText
+          ? emailBox({
+              accent: true,
+              title: 'Withdrawals paused briefly',
+              html: `For your security, withdrawals are paused until <strong class="dm-strong" style="color:${EMAIL_TOKENS.INK};">${untilText}</strong> whenever payout details change.`,
+            })
+          : '') +
+        emailButton('Review Payout Settings →', `${APP_URL}/account/settings?tab=payouts`) +
+        emailFooterNote(`Didn't make this change? Reset your password and <a href="mailto:${REPLY_TO}" style="color:${EMAIL_TOKENS.FOREST_2};font-weight:600;text-decoration:underline;">contact support</a> straight away — nothing can be withdrawn during the pause.`),
+    }),
+  })
   return error ? { success: false, error } : { success: true, data }
 }

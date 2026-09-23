@@ -79,6 +79,9 @@ const PR7_SERVICE_ONLY = [
   'get_orders_ready_for_auto_release', 'order_confirm_reminders_claim', 'notify_once',
   'seller_since', 'seller_withdrawal_gate', 'wallet_available_balance',
   'order_disputes_version', 'order_dispute_open', 'order_dispute_resolve',
+  'withdrawal_rules_version', 'fee_round_cents', 'withdrawal_quote', 'withdrawal_request', 'withdrawal_approve',
+  'withdrawal_mark_paid', 'seller_payout_details_set', 'withdrawal_risk_snapshot', 'withdrawal_methods_set_fees',
+  'platform_money_setting_set', 'order_completion_window_set',
 ]
 
 const RATE_LIMIT_SERVICE_ONLY = [

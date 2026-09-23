@@ -61,7 +61,7 @@ CREATE TABLE IF NOT EXISTS public.order_completion_windows (
                       CHECK (category_type IN ('currency','items','account','top_up','service','gift_card')),
   auto_complete_hours integer NOT NULL CHECK (auto_complete_hours > 0 AND auto_complete_hours <= 24 * 60),
   updated_at          timestamptz NOT NULL DEFAULT now(),
-  updated_by          uuid REFERENCES public.profiles(id)
+  updated_by          uuid REFERENCES public.profiles(id) ON DELETE SET NULL
 );
 COMMENT ON TABLE public.order_completion_windows IS
   'Hours after delivered_at before an unconfirmed order auto-completes (SafeDrop Protection window), per game_categories.type. Admin-editable; every change writes a fee_config_audit row.';

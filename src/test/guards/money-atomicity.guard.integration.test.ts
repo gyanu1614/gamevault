@@ -402,6 +402,11 @@ describe.skipIf(!hasEnv)('DB-015/016/017 — money-path seams are atomic (integr
   describe('DB-015c — withdrawal cancel/reject reverse the hold FIRST, in the same transaction', () => {
     async function makeHeldRequest(amountMinor: bigint, suffix: string) {
       await fundSeller(fx!.seller.id, amountMinor, suffix)
+      // PR 7: one OPEN withdrawal per seller is a partial unique index. Each
+      // case here needs a fresh pending row, so park whatever the previous
+      // case left open (status only — its hold journal is cleaned up by id).
+      await fx!.svc.from('withdrawal_requests').update({ status: 'failed' })
+        .eq('user_id', fx!.seller.id).in('status', ['pending', 'approved', 'processing'])
       const { data: req, error } = await fx!.svc.from('withdrawal_requests').insert({
         user_id: fx!.seller.id, amount: Number(amountMinor) / 100, method_id: methodId, method_name: 'Guard Test Method',
         status: 'pending', fee_amount: 0, net_amount: Number(amountMinor) / 100, payment_details: {},
