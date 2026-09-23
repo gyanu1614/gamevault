@@ -163,14 +163,17 @@ export async function dispatch(
       result = await transition(event.orderId, orderEvent, providerEventId)
     }
   } catch (err) {
-    // A CONFIRMED charge that can't apply means real money arrived for an
-    // order that is no longer payable (cancelled/superseded voucher paid
-    // late, buyer cancelled mid-flight). That must never die silently in a
-    // failed webhook row — page the admins, then rethrow so the event stays
-    // recorded as failed (the dedupe claim stops retry spam).
+    // Round B: money for a closed order no longer lands here — the RPC
+    // credits the buyer's wallet and notes admins once (Part 3). What still
+    // throws is a genuine fault (unknown order, a charge bound to another
+    // order, the database itself): log it and rethrow so the router marks
+    // the event failed and answers 500 — the provider retries, and the
+    // reconciler caps a poison row and alerts ONCE, in SQL (Part 4). No
+    // TS-side notification insert: every admin page is admin_alert_once.
     if (event.type === 'CHARGE_CONFIRMED') {
-      await alertAdminsPaymentForClosedOrder(event.orderId, event.providerChargeId, err).catch(
-        () => {}
+      console.error(
+        `[Dispatch] CHARGE_CONFIRMED for order ${event.orderId} (charge ${event.providerChargeId}) could not be applied:`,
+        err
       )
     }
     throw err
@@ -187,36 +190,4 @@ export async function dispatch(
   }
 
   return { applied: result.changed, orderId: result.orderId, status: result.status }
-}
-
-/**
- * Service-role admin page for "money arrived for a non-payable order" — the
- * one payment failure that must reach a human (webhook context has no user
- * session, so this bypasses the session-bound notification helpers).
- */
-async function alertAdminsPaymentForClosedOrder(
-  orderId: string,
-  providerChargeId: string,
-  err: unknown
-): Promise<void> {
-  console.error(
-    `[Dispatch] CRITICAL: confirmed payment for non-payable order ${orderId} (charge ${providerChargeId}):`,
-    err
-  )
-  const { createServiceRoleClient } = await import('@/lib/supabase/service')
-  const service = createServiceRoleClient()
-  const { data: admins } = (await service
-    .from('admin_roles')
-    .select('user_id')
-    .eq('is_active', true)
-    .limit(10)) as any
-  const rows = (admins ?? []).map((a: any) => ({
-    user_id: a.user_id,
-    type: 'payment_review',
-    title: 'Payment Needs Review',
-    message: `Charge ${providerChargeId} paid a closed order (${orderId.slice(0, 8).toUpperCase()}) — refund or credit manually.`,
-    link: `/account/orders/${orderId}`,
-    is_read: false,
-  }))
-  if (rows.length) await service.from('notifications').insert(rows)
 }
