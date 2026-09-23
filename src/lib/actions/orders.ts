@@ -8,7 +8,7 @@ import { protectionWindowHours } from '@/lib/fees'
 // Funds-flow cutover: order money moves go through the atomic ledger
 // transition; buyer refunds land in their wallet as store credit.
 import { transition } from '@/lib/escrow/transition'
-import { refundToWallet } from '@/lib/wallet/wallet'
+import { cancelOrderReturnWallet } from '@/lib/wallet/order-money'
 
 // P5.2 — Loyalty cashback
 import { awardCashback } from '@/lib/loyalty/award'
@@ -400,7 +400,8 @@ export async function cancelOrder(orderId: string): Promise<{
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return { success: false, error: 'Not authenticated' }
 
-    // Fetch order — must be buyer and status must be 'paid'
+    // Fetch order — must be the buyer; cancellable while pending (unpaid) or
+    // paid-but-undelivered. The RPC re-checks the status under the row lock.
     const { data: orderRaw, error: fetchError } = await supabase
       .from('orders')
       .select('id, buyer_id, seller_id, listing_id, status, escrow_status, currency, total_amount, order_number, payment_provider, provider_charge_id')
@@ -418,45 +419,38 @@ export async function cancelOrder(orderId: string): Promise<{
     }
     const wasUnpaid = order.status === 'pending'
 
-    // Cancel atomically: locks the order, validates paid → cancelled, moves
-    // the held escrow to refunds and flips status in one transaction.
-    const escrowWasHeld = order.escrow_status === 'held'
+    // PAY-008: ONE RPC (DB-015 seam) — locks the order, validates the move,
+    // flips status and returns the buyer's money in the same transaction:
+    //   pending → CANCELLED + exact mirror of the checkout wallet hold;
+    //   paid    → CANCELLED (escrow_held → refunds) + full total credited to
+    //             the wallet as store credit (allowPaid: the buyer's explicit
+    //             cancel is the one caller allowed past 'pending').
+    // The old TS composition (bare transition, then a separate refundToWallet
+    // whose failure was logged as CRITICAL and ignored) could leave a
+    // cancelled order with the buyer's money stranded.
     let cancelResult
     try {
-      cancelResult = await transition(orderId, 'CANCELLED')
-    } catch (transitionError: any) {
-      console.error('Failed to cancel order:', transitionError)
+      cancelResult = await cancelOrderReturnWallet(orderId, undefined, { allowPaid: true })
+    } catch (cancelError: any) {
+      console.error('Failed to cancel order:', cancelError)
       return { success: false, error: 'Cancellation failed — please contact support' }
+    }
+    if (cancelResult.refused) {
+      // Raced past 'paid' (delivery started) between our read and the lock.
+      return { success: false, error: 'Order can only be cancelled before delivery starts' }
     }
     if (!cancelResult.changed) {
       // Already cancelled (double-click / replay) — nothing more to do.
       return { success: true }
     }
+    // Money is back in the wallet exactly when the RPC posted the wallet leg
+    // (a pending order with no wallet hold has nothing to return).
+    const refundIssued = cancelResult.walletTxnId !== null
+    const refundAmount = wasUnpaid
+      ? Number(await heldMinorFor(supabase, orderId)) / 100
+      : (order.total_amount ?? 0)
 
-    // Unpaid (pending) cancel: no provider charge ever settled, but wallet
-    // credit may have been applied at checkout (held for this order). Return
-    // exactly that held amount — the same cross-stream refund the
-    // re-checkout supersede path performs. Idempotent per order.
-    let refundIssued = false
     if (wasUnpaid) {
-      try {
-        const { data: heldRaw } = await (supabase.rpc as any)('checkout_wallet_hold_minor', {
-          p_order_id: orderId,
-        })
-        const heldMinor = BigInt(heldRaw ?? 0)
-        if (heldMinor > 0n) {
-          await refundToWallet({
-            userId: order.buyer_id,
-            amountMinor: heldMinor,
-            currency: (order.currency || 'EUR').toUpperCase(),
-            orderId,
-          })
-          refundIssued = true
-        }
-      } catch (walletError: any) {
-        console.error('[Cancel] CRITICAL: unpaid wallet-hold refund failed:', walletError?.message)
-      }
-
       // The "Order Incomplete" navbar nudge for this order is moot now —
       // webhook cancels clear it in notify.ts, buyer-initiated cancels here.
       await supabase
@@ -468,31 +462,13 @@ export async function cancelOrder(orderId: string): Promise<{
 
       // Payssion vouchers stay payable at the provider until told otherwise —
       // cancel there too so a cancelled order can't be paid into later.
-      // Best-effort; the expiry cron re-tries stragglers.
+      // Best-effort; a late payment lands on PAY-002's refusal path (the
+      // order is cancelled, so CHARGE_CONFIRMED raises and admins are paged).
       if ((order as any).payment_provider === 'payssion' && (order as any).provider_charge_id) {
         const { payssionCancelTransaction } = await import('@/lib/payments/providers/payssion')
         await payssionCancelTransaction((order as any).provider_charge_id).catch((e: any) =>
           console.error('[Cancel] payssion provider cancel failed:', e)
         )
-      }
-    }
-
-    // Credit the buyer's wallet with the full amount as store credit.
-    // Idempotent per order ('wallet_refund:<orderId>'), so a replay can't
-    // double-credit. Only when money was actually held for this order.
-    if (!wasUnpaid && escrowWasHeld && (order.total_amount ?? 0) > 0) {
-      try {
-        await refundToWallet({
-          userId: order.buyer_id,
-          amountMinor: BigInt(Math.round((order.total_amount ?? 0) * 100)),
-          currency: (order.currency || 'EUR').toUpperCase(),
-          orderId,
-        })
-        refundIssued = true
-      } catch (walletError: any) {
-        // The order IS cancelled; the wallet credit can be re-run (idempotent
-        // key). Surface loudly but don't undo the cancellation.
-        console.error('[Cancel] CRITICAL: wallet refund credit failed:', walletError?.message)
       }
     }
 
@@ -533,8 +509,8 @@ export async function cancelOrder(orderId: string): Promise<{
           type: 'order_refunded',
           title: refundIssued ? 'Money In Your Wallet' : 'Order Cancelled',
           message: refundIssued
-            ? `Order #${orderRef} was cancelled — $${(order.total_amount ?? 0).toFixed(2)} was refunded to your DropMarket wallet as store credit. Spend it instantly or withdraw it.`
-            : `Order #${orderRef} was cancelled — our team is arranging your refund and will confirm once it's issued.`,
+            ? `Order #${orderRef} was cancelled — $${refundAmount.toFixed(2)} was refunded to your DropMarket wallet as store credit. Spend it instantly or withdraw it.`
+            : `Order #${orderRef} was cancelled — nothing had been charged.`,
           link: refundIssued ? '/account/wallet' : `/account/orders/${orderId}`,
         }),
         createNotification({
@@ -545,16 +521,16 @@ export async function cancelOrder(orderId: string): Promise<{
           link: `/account/orders/${orderId}`,
         }),
       ])
-      if (buyer?.email) {
+      if (buyer?.email && refundIssued) {
         const { sendOrderRefundedEmail } = await import('@/lib/email')
         await sendOrderRefundedEmail({
           to: buyer.email,
           name: buyer.full_name || buyer.username || 'Gamer',
           orderNumber: orderRef,
           listingTitle: cancelledListing?.title || 'your item',
-          amount: order.total_amount ?? 0,
+          amount: refundAmount,
           destination: 'your DropMarket wallet',
-          pending: !refundIssued,
+          pending: false,
         })
       }
     })().catch((err) => console.error('[Cancel] Refund comms failed:', err))
@@ -567,6 +543,12 @@ export async function cancelOrder(orderId: string): Promise<{
     console.error('Error cancelling order:', error)
     return { success: false, error: error.message || 'Failed to cancel order' }
   }
+}
+
+/** Wallet credit (minor units) that was held for an order at checkout — comms copy only. */
+async function heldMinorFor(supabase: any, orderId: string): Promise<bigint> {
+  const { data } = await (supabase.rpc as any)('checkout_wallet_hold_minor', { p_order_id: orderId })
+  return BigInt(data ?? 0)
 }
 
 /**

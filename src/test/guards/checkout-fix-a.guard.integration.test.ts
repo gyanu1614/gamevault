@@ -10,6 +10,9 @@
  *            confirm transaction; sold out → refunded to the wallet in the
  *            same transaction; an undelivered cancel returns the stock.
  *   PAY-015  inventory_claim_for_order refuses a new claim on an unpaid order.
+ *   PAY-008  the buyer's cancelOrder is the RPC (no TS composition): pending
+ *            returns the wallet hold; paid credits the full total; a raced
+ *            'delivering' is refused.
  *   PAY-005  an in-flight racing order (no checkout_url yet) is never
  *            superseded or re-charged: "payment is being prepared".
  *   PAY-006  createCharge failure cancels the order + returns the wallet
@@ -148,6 +151,19 @@ describe.skipIf(!hasEnv)('checkout fix round A (integration)', () => {
       // Admin alerts go to EVERY active admin on the stack — remove by order link.
       await del('notifications(admin alerts)', svc.from('notifications').delete().like('link', `%${id}%`))
       await del('webhook_events', svc.from('webhook_events').delete().eq('provider', 'fake').like('provider_event_id', `fake_${id}:%`))
+    }
+    // cancelOrder writes audit_logs (logOrderAction / logUnauthorizedAccess).
+    // audit_logs is immutable by trigger (even for service_role) and its
+    // user_id FK is ON DELETE SET NULL, so a fixture user with audit rows
+    // cannot be deleted — the run would leak the fixture. Local stack only:
+    // purge this run's rows with the immutability triggers paused.
+    if (TARGET_IS_LOCAL) {
+      try {
+        execFileSync('psql', [DB_URL, '-v', 'ON_ERROR_STOP=1', '-q', '-c',
+          `BEGIN; ALTER TABLE public.audit_logs DISABLE TRIGGER trg_prevent_audit_log_delete; ` +
+          `DELETE FROM public.audit_logs WHERE user_id IN ('${users.join("','")}'); ` +
+          `ALTER TABLE public.audit_logs ENABLE TRIGGER trg_prevent_audit_log_delete; COMMIT;`], { stdio: 'pipe' })
+      } catch (e: any) { failures.push(`audit_logs purge: ${e?.stderr?.toString() ?? e}`) }
     }
     try { await fx.cleanup() } catch (e: any) { failures.push(String(e?.message ?? e)) }
     if (failures.length) throw new Error(`checkout-fix-a cleanup left residue:\n  - ${failures.join('\n  - ')}`)
@@ -377,6 +393,71 @@ describe.skipIf(!hasEnv)('checkout fix round A (integration)', () => {
         await fx!.svc.from('orders').update({ instant_delivery_inventory_id: null }).eq('listing_id', fx!.listingId).not('instant_delivery_inventory_id', 'is', null)
         await fx!.svc.from('instant_delivery_inventory').delete().eq('listing_id', fx!.listingId)
       }
+    }, 60_000)
+  })
+
+  // ── PAY-008 ────────────────────────────────────────────────────────────────
+  describe('PAY-008 — buyer cancelOrder goes through order_cancel_return_wallet', () => {
+    async function fundAndHold(orderId: string, minor: bigint) {
+      const { error: fund } = await fx!.svc.rpc('wallet_credit', {
+        p_user_id: fx!.buyer.id, p_amount_minor: minor.toString(), p_currency: CUR, p_counterparty: 'refunds',
+        p_idempotency_key: `test:ledger:fix-a:fund:${orderId}`, p_event_ref: 'TEST_FUND', p_order_id: null,
+      } as any)
+      if (fund) throw new Error(fund.message)
+      const { error: spend } = await fx!.svc.rpc('wallet_spend', {
+        p_user_id: fx!.buyer.id, p_amount_minor: minor.toString(), p_currency: CUR, p_target: 'escrow_held',
+        p_idempotency_key: `checkout_wallet:${orderId}`, p_event_ref: 'CHECKOUT_WALLET_CREDIT', p_order_id: orderId,
+      } as any)
+      if (spend) throw new Error(spend.message)
+    }
+
+    it('pending order with a wallet hold: cancelled + hold returned, buyer notified with the held amount', async () => {
+      await parkPendingOrders(fx!.buyer.id)
+      const orderId = await insertOrder({ status: 'pending', escrow_status: 'pending', total_amount: 3, order_number: `GT-P8-p-${tag()}` })
+      await fundAndHold(orderId, 150n)
+      const before = await walletMinor(fx!.buyer.id)
+      sessionClient = fx!.buyer.client
+      const { cancelOrder } = await import('@/lib/actions/orders')
+      const res = await cancelOrder(orderId)
+      expect(res.success, res.error).toBe(true)
+      const row = await orderRow(orderId)
+      expect(row.status).toBe('cancelled')
+      expect(await walletMinor(fx!.buyer.id)).toBe(before + 150n)
+      await new Promise((r) => setTimeout(r, 800)) // comms are fire-and-forget
+      const { data: notes } = await fx!.svc.from('notifications').select('message').eq('user_id', fx!.buyer.id).eq('type', 'order_refunded').like('message', `%${row.order_number}%`)
+      expect((notes ?? []).map((n: any) => n.message).join('\n')).toMatch(/\$1\.50 was refunded/)
+      // Replay: the action refuses a cancelled order (pre-check, as before);
+      // the RPC underneath is idempotent — no second credit either way.
+      expect((await cancelOrder(orderId)).success).toBe(false)
+      expect(await walletMinor(fx!.buyer.id)).toBe(before + 150n)
+      await fx!.svc.rpc('ledger_test_cleanup', { p_prefix: `test:ledger:fix-a:fund:${orderId}` } as any)
+    }, 60_000)
+
+    it('paid order: cancelled + full total credited to the wallet in one RPC', async () => {
+      const orderId = await insertOrder({ status: 'paid', escrow_status: 'held', total_amount: 4, seller_payout: 3, order_number: `GT-P8-paid-${tag()}` })
+      const before = await walletMinor(fx!.buyer.id)
+      sessionClient = fx!.buyer.client
+      const { cancelOrder } = await import('@/lib/actions/orders')
+      const res = await cancelOrder(orderId)
+      expect(res.success, res.error).toBe(true)
+      const row = await orderRow(orderId)
+      expect(row.status).toBe('cancelled')
+      expect(row.escrow_status).toBe('refunded')
+      expect(await walletMinor(fx!.buyer.id)).toBe(before + 400n)
+      expect(await txnByKey(`wallet_refund:${orderId}`)).not.toBeNull()
+    }, 60_000)
+
+    it('delivering order: refused, nothing moves; another buyer: unauthorized', async () => {
+      const orderId = await insertOrder({ status: 'delivering', escrow_status: 'held', order_number: `GT-P8-d-${tag()}` })
+      sessionClient = fx!.buyer.client
+      const { cancelOrder } = await import('@/lib/actions/orders')
+      const res = await cancelOrder(orderId)
+      expect(res.success).toBe(false)
+      expect((await orderRow(orderId)).status).toBe('delivering')
+      sessionClient = fx!.admin.client
+      const other = await cancelOrder(orderId)
+      expect(other.success).toBe(false)
+      expect(other.error).toMatch(/Unauthorized|not found/i)
     }, 60_000)
   })
 
