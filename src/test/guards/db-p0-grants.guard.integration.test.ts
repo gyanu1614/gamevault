@@ -78,6 +78,7 @@ const PR7_SERVICE_ONLY = [
   'order_completion_window_hours', 'order_mark_delivering', 'order_mark_delivered', 'order_confirm_receipt',
   'get_orders_ready_for_auto_release', 'order_confirm_reminders_claim', 'notify_once',
   'seller_since', 'seller_withdrawal_gate', 'wallet_available_balance',
+  'order_disputes_version', 'order_dispute_open', 'order_dispute_resolve',
 ]
 
 const RATE_LIMIT_SERVICE_ONLY = [

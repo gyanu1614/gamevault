@@ -758,60 +758,31 @@ export async function openDispute(
       }
     }
 
-    // Check if order can be disputed
-    if (order.status === 'completed' || order.status === 'refunded') {
-      return {
-        success: false,
-        error: 'This order cannot be disputed',
+    // PR 7: ONE RPC — window check (dispute_window_days from delivered_at),
+    // one-open-per-order, BUYER_DISPUTED through safedrop_transition (freezes
+    // the seller amount after completion), disputes row, audit row and the
+    // two deduped in-app notifications, all in one transaction.
+    const { data: opened, error: openError } = await (createServiceRoleClient().rpc as any)('order_dispute_open', {
+      p_order_id: orderId,
+      p_actor_id: user.id,
+      p_actor_role: 'buyer',
+      p_reason: dbCategory,
+      p_title: `Order #${order.order_number || orderId.slice(0, 8)} - ${category}`,
+      p_description: reason,
+    })
+    if (openError) {
+      console.error('Database error opening dispute:', openError)
+      return { success: false, error: openError.message || 'Failed to open dispute' }
+    }
+    if (!opened || opened.opened !== true) {
+      const why = String(opened?.reason ?? '')
+      if (why === 'window_closed') {
+        return { success: false, error: `The dispute window for this order closed on ${new Date(opened.window_ends_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}. Contact support if you still need help.` }
       }
+      if (why === 'already_open') return { success: false, error: 'A dispute is already open for this order' }
+      return { success: false, error: 'This order cannot be disputed' }
     }
-
-    // Update order to disputed status. AUTH-002: escrow_status is
-    // trigger-protected; the buyer session cannot set it through PostgREST, so
-    // write via the service role — scoped to the order AND the buyer verified
-    // by the RLS read above.
-    const { error: updateError } = await (createServiceRoleClient()
-      .from('orders')
-      .update as any)({
-        status: 'disputed',
-        escrow_status: 'frozen',
-        disputed_at: new Date().toISOString(),
-        dispute_reason: reason,
-      })
-      .eq('id', orderId)
-      .eq('buyer_id', user.id)
-
-    if (updateError) {
-      console.error('Database error opening dispute:', updateError)
-      return {
-        success: false,
-        error: updateError.message || 'Failed to open dispute',
-      }
-    }
-
-    // Create dispute record in disputes table
-    const disputeTitle = `Order #${order.order_number || orderId.slice(0, 8)} - ${category}`
-
-    const { error: disputeError } = await (supabase
-      .from('disputes')
-      .insert as any)({
-        transaction_id: orderId,
-        order_reference: order.order_number || orderId.slice(0, 8),
-        buyer_id: order.buyer_id,
-        seller_id: order.seller_id,
-        reason: dbCategory as any,
-        title: disputeTitle,
-        description: reason,
-        disputed_amount: order.total_amount,
-        status: 'open',
-        priority: 'normal',
-      })
-
-    if (disputeError) {
-      console.error('Error creating dispute record:', disputeError)
-      // Don't fail the whole operation if dispute record creation fails
-      // The order is already marked as disputed
-    }
+    const disputeError = null
 
     // Send dispute notification message to order conversation
     try {
@@ -843,20 +814,7 @@ export async function openDispute(
       // Non-fatal - dispute is already created
     }
 
-    // Create navbar notifications for both buyer and seller
-    try {
-      const { createDisputeNotifications } = await import('@/lib/utils/notifications')
-      await createDisputeNotifications({
-        buyerId: order.buyer_id,
-        sellerId: order.seller_id,
-        orderId,
-        orderNumber: order.order_number,
-      })
-      console.log('[Dispute] Navbar notifications created for buyer and seller')
-    } catch (error) {
-      console.error('[Dispute] Failed to create navbar notifications:', error)
-      // Non-fatal - dispute is already created
-    }
+    // In-app notifications for both parties were written by the RPC (notify_once).
 
     // Notify admin team
     try {
