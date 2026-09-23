@@ -98,6 +98,14 @@ export async function dispatch(
     } else if (event.type === 'CHARGE_FAILED') {
       const { cancelOrderReturnWallet } = await import('@/lib/wallet/order-money')
       result = await cancelOrderReturnWallet(event.orderId, providerEventId)
+      // PAY-002: a stale/late failure for an order that is already paid (or
+      // terminal) is refused inside the RPC — nothing moved, admins were
+      // alerted once. Not an error: the event is processed (no provider retry).
+      if (result.refused) {
+        console.warn(
+          `[Dispatch] CHARGE_FAILED refused for order ${event.orderId} (status ${result.status}, charge ${event.providerChargeId}): order is not pending`
+        )
+      }
     } else {
       result = await transition(event.orderId, orderEvent, providerEventId)
     }

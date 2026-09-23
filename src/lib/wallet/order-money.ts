@@ -18,6 +18,9 @@ import type { TransitionResult } from '@/lib/escrow/transition'
 
 export interface OrderMoneyResult extends TransitionResult {
   walletTxnId: string | null
+  /** PAY-002: the RPC declined to touch the order (paid/terminal on an
+   *  automatic cancel). Nothing changed; admins were alerted (deduped). */
+  refused: boolean
 }
 
 function toResult(data: any): OrderMoneyResult {
@@ -28,6 +31,7 @@ function toResult(data: any): OrderMoneyResult {
     ledgerTxnId: data.ledger_txn_id ?? null,
     changed: data.changed === true,
     walletTxnId: data.wallet_txn_id ?? null,
+    refused: data.refused === true,
   }
 }
 
@@ -35,12 +39,24 @@ function toResult(data: any): OrderMoneyResult {
  * Cancel an unpaid order AND mirror its checkout wallet hold
  * (`checkout_wallet:<id>`, escrow_held → user_wallet) back to the buyer, in
  * one transaction. No-op halves are skipped (already cancelled / no hold).
+ *
+ * PAY-002: the automatic callers (CHARGE_FAILED webhook, expiry sweep,
+ * checkout supersede, charge-create failure) may cancel from `pending` ONLY.
+ * On a paid/terminal order the RPC changes nothing, inserts one deduped
+ * admin `payment_review` alert and answers `{ changed: false, refused: true }`.
+ * The buyer's explicit cancel passes `allowPaid: true`, which also cancels a
+ * `paid` order and credits the full total to the wallet — inside the RPC.
  */
-export async function cancelOrderReturnWallet(orderId: string, dedupeKey?: string): Promise<OrderMoneyResult> {
+export async function cancelOrderReturnWallet(
+  orderId: string,
+  dedupeKey?: string,
+  opts?: { allowPaid?: boolean }
+): Promise<OrderMoneyResult> {
   const supabase = createServiceRoleClient()
   const { data, error } = await (supabase.rpc as any)('order_cancel_return_wallet', {
     p_order_id: orderId,
     p_dedupe_key: dedupeKey ?? null,
+    p_allow_paid: opts?.allowPaid === true,
   })
   if (error) throw new Error(`order_cancel_return_wallet failed: ${error.message}`)
   return toResult(data)
