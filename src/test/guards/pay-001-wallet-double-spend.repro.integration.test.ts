@@ -25,10 +25,16 @@
  * is what this test asserts, so it FAILS on current main and passes after
  * the fix.
  *
+ * Harness note (fix/checkout-p0): session B runs ASYNCHRONOUSLY. A blocked B
+ * must be able to outlive "A commits" — a synchronous B would deadlock the
+ * test against its own held transaction and be killed, never observing the
+ * refusal. On unfixed main B returns immediately (nothing blocks it), so the
+ * ordering below still reproduces the overdraw there.
+ *
  * Local stack only (direct psql session), via .env.test — never .env.local.
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
-import { spawn, execFileSync } from 'node:child_process'
+import { spawn } from 'node:child_process'
 import { hasEnv, makeFixture, type Fixture } from './throwaway'
 
 const CUR = 'USD'
@@ -94,6 +100,19 @@ function heldTransaction(firstSql: string): Promise<{ commit: () => Promise<stri
   })
 }
 
+/** Run one statement in its own autocommit psql session; resolves to the
+ *  stderr text (contains 'ERROR' when the statement was refused) or ''. */
+function autocommitSpend(sql: string): Promise<string> {
+  return new Promise((resolve) => {
+    const p = spawn('psql', [DB_URL, '-v', 'ON_ERROR_STOP=1', '-q', '-c', sql], { stdio: ['ignore', 'pipe', 'pipe'] })
+    let err = ''
+    p.stderr.on('data', (d) => { err += String(d) })
+    const killer = setTimeout(() => { err += 'ERROR: session B timed out (still blocked?)'; p.kill() }, 30_000)
+    p.on('close', () => { clearTimeout(killer); resolve(err) })
+    p.on('error', (e) => { clearTimeout(killer); resolve(`ERROR: ${String(e)}`) })
+  })
+}
+
 describe.skipIf(!hasEnv)('PAY-001 — concurrent wallet_spend must not overdraw (repro)', () => {
   beforeAll(async () => {
     fx = await makeFixture()
@@ -133,17 +152,14 @@ describe.skipIf(!hasEnv)('PAY-001 — concurrent wallet_spend must not overdraw 
     const held = await heldTransaction(spendSql(buyer, `${RUN}:order-a`))
 
     // Session B: autocommit spend of the full balance while A is uncommitted.
-    let bError = ''
-    try {
-      execFileSync('psql', [DB_URL, '-v', 'ON_ERROR_STOP=1', '-q', '-c', spendSql(buyer, `${RUN}:order-b`)], {
-        stdio: 'pipe',
-        timeout: 20_000,
-      })
-    } catch (e: any) {
-      bError = e?.stderr?.toString() ?? String(e)
-    }
+    // Started, NOT awaited: a correctly locked wallet_spend blocks B here.
+    const bRun = autocommitSpend(spendSql(buyer, `${RUN}:order-b`))
+    // Give B time to reach the guard (unfixed: it has already committed;
+    // fixed: it is parked on the wallet lock) before A commits.
+    await new Promise((r) => setTimeout(r, 2_000))
 
     const aError = await held.commit()
+    const bError = await bRun
 
     const final = await balance(buyer)
     const succeeded = [aError, bError].filter((e) => !e.includes('ERROR')).length
