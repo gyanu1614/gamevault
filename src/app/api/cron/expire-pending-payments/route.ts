@@ -36,12 +36,17 @@ export async function GET(request: NextRequest) {
   const supabase = createServiceRoleClient()
   const cutoff = new Date(Date.now() - GRACE_MS).toISOString()
 
+  // PAY-006: an order with NO provider (the charge was never created — a
+  // crash between insert and the charge UPDATE) carries the fallback expiry
+  // stamped at insert; it has nothing to cancel at a provider and is closed
+  // through the same canonical path.
   const { data: orders, error } = (await supabase
     .from('orders')
-    .select('id, provider_charge_id, payment_expires_at')
+    .select('id, provider_charge_id, payment_provider, payment_expires_at')
     .eq('status', 'pending')
-    .eq('payment_provider', 'payssion')
+    .or('payment_provider.eq.payssion,payment_provider.is.null')
     .lt('payment_expires_at', cutoff)
+    .order('payment_expires_at', { ascending: true })
     .limit(BATCH)) as any
 
   if (error) {
@@ -60,7 +65,7 @@ export async function GET(request: NextRequest) {
   for (const order of orders) {
     try {
       let state = 'cancelled'
-      if (order.provider_charge_id) {
+      if (order.payment_provider === 'payssion' && order.provider_charge_id) {
         state = await payssionCancelTransaction(order.provider_charge_id)
       }
       if (state === 'completed' || state === 'paid_more') {

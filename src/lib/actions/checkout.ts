@@ -28,6 +28,7 @@ import { resolveSellerFee, FeeResolutionError, type SellerFeeTrace } from '@/lib
 import { runOrderInsert, OrderInsertConflictError, type OrderInsertResult } from '@/lib/checkout/order-insert'
 import { getProvider, activePaymentProviderName, providerNameForMethod } from '@/lib/payments/registry'
 import { spendWallet, getWalletBalance } from '@/lib/wallet/wallet'
+import { cancelOrderReturnWallet } from '@/lib/wallet/order-money'
 import { validatePromoCode, recordPromoUsage } from '@/lib/actions/promo'
 import { resolveCheckoutPromo } from '@/lib/checkout/promo'
 import { fromDecimal, money } from '@/lib/money'
@@ -40,12 +41,18 @@ import { fromDecimal, money } from '@/lib/money'
 // plan; switched before any real payment existed.)
 const ORDER_CURRENCY = 'USD'
 
+/** PAY-006: a pending order gets this expiry at INSERT, before any provider
+ *  call, so an order stranded by a crash between insert and the charge
+ *  UPDATE is always sweepable. The provider's own expiry overwrites it. */
+const FALLBACK_PAYMENT_WINDOW_MS = 30 * 60 * 1000
 /** PAY-005: an existing pending order with no checkout_url yet is a racing
  *  request still inside provider.createCharge for this long; superseding it
  *  would cancel an order that is about to receive a live charge. */
 const CHARGE_IN_FLIGHT_WINDOW_MS = 90 * 1000
 const PAYMENT_BEING_PREPARED_MESSAGE =
   'Your payment is still being prepared — please try again in a moment.'
+const PROVIDER_UNAVAILABLE_MESSAGE =
+  'The payment service is temporarily unavailable. Nothing was charged, and any wallet credit you applied is back in your wallet. Please try again shortly.'
 /** PAY-003: the stock ran out between checkout and payment; the order was
  *  refunded to the wallet inside the confirm transaction. */
 const SOLD_OUT_REFUNDED_MESSAGE =
@@ -311,25 +318,44 @@ export async function createCheckout(input: CreateCheckoutInput): Promise<Create
     // crypto provider.
     const providerName = providerNameForMethod(input.paymentMethodId)
     const provider = getProvider(providerName)
-    const charge = await provider.createCharge({
-      orderId,
-      orderNumber,
-      amount: chargeMoney,
-      // Payssion has ONE return URL for paid AND cancelled — the smart
-      // /checkout/return route inspects the outcome and lands the buyer on
-      // the order page (paid/awaiting) or back at checkout (cancelled).
-      returnUrl:
-        providerName === 'payssion'
-          ? `${base}/checkout/return/${orderId}`
-          : `${base}/account/orders/${orderId}?paid=1`,
-      cancelUrl: `${base}/checkout/${input.listingId}?qty=${quantity}`,
-      metadata: {
-        listing_id: input.listingId,
-        ...(providerName === 'payssion' && input.paymentMethodId
-          ? { pm_id: input.paymentMethodId }
-          : {}),
-      },
-    })
+    let charge
+    try {
+      charge = await provider.createCharge({
+        orderId,
+        orderNumber,
+        amount: chargeMoney,
+        // Payssion has ONE return URL for paid AND cancelled — the smart
+        // /checkout/return route inspects the outcome and lands the buyer on
+        // the order page (paid/awaiting) or back at checkout (cancelled).
+        returnUrl:
+          providerName === 'payssion'
+            ? `${base}/checkout/return/${orderId}`
+            : `${base}/account/orders/${orderId}?paid=1`,
+        cancelUrl: `${base}/checkout/${input.listingId}?qty=${quantity}`,
+        metadata: {
+          listing_id: input.listingId,
+          ...(providerName === 'payssion' && input.paymentMethodId
+            ? { pm_id: input.paymentMethodId }
+            : {}),
+        },
+      })
+    } catch (chargeError: any) {
+      // PAY-006: no charge exists, but the order does — and the wallet debit
+      // above sits in escrow_held for it. Left alone it was a pending order
+      // with no provider, no expiry and no webhook ever coming: invisible to
+      // the sweep, the buyer's money stranded. Cancel + return the hold in
+      // ONE RPC (idempotent), then tell the buyer the truth. Provider/config
+      // internals never reach the buyer verbatim.
+      console.error(`[createCheckout] ${providerName} charge creation failed (order ${orderId} cancelled, wallet returned):`, chargeError?.message ?? chargeError)
+      try {
+        await cancelOrderReturnWallet(orderId, 'charge-create-failed')
+      } catch (cancelError) {
+        // The fallback payment_expires_at stamped at insert makes this order
+        // sweepable; the sweep drives the same cancel + return path.
+        console.error(`[createCheckout] cancel after charge failure ALSO failed (order ${orderId} left for the sweep):`, cancelError)
+      }
+      return { success: false, error: PROVIDER_UNAVAILABLE_MESSAGE }
+    }
     // BTCPay: the buyer pays on OUR native page (address/QR/status), not the
     // provider's hosted checkout — the invoice id on the order is what the
     // page renders from. RELATIVE on purpose: an absolute URL would pin the
@@ -374,11 +400,8 @@ export async function createCheckout(input: CreateCheckoutInput): Promise<Create
     const msg = String(e?.message ?? '')
     // Provider/config internals never reach the buyer verbatim.
     if (msg.startsWith('[Payssion]') || msg.startsWith('payssion:')) {
-      console.error('[createCheckout] payssion charge failed:', msg)
-      return {
-        success: false,
-        error: 'The payment service is temporarily unavailable — nothing was charged. Please try again shortly.',
-      }
+      console.error('[createCheckout] payssion call failed:', msg)
+      return { success: false, error: PROVIDER_UNAVAILABLE_MESSAGE }
     }
     return { success: false, error: e?.message ?? 'Checkout failed' }
   }
@@ -528,6 +551,8 @@ async function insertPendingOrder(
     escrow_status: 'pending',
     promo_discount: a.promoDiscount,
     promo_code_id: a.promoCodeId,
+    // PAY-006: sweepable from birth; the provider's expiry replaces this.
+    payment_expires_at: new Date(Date.now() + FALLBACK_PAYMENT_WINDOW_MS).toISOString(),
   })
     .select('id, order_number')
     .single())

@@ -12,6 +12,8 @@
  *   PAY-015  inventory_claim_for_order refuses a new claim on an unpaid order.
  *   PAY-005  an in-flight racing order (no checkout_url yet) is never
  *            superseded or re-charged: "payment is being prepared".
+ *   PAY-006  createCharge failure cancels the order + returns the wallet
+ *            hold; every pending order is born with a payment_expires_at.
  *
  * Every row this file causes is removed in afterAll — orders, ledger
  * journals, and the admin notifications the RPC inserts (for EVERY active
@@ -31,6 +33,23 @@ vi.mock('@/lib/supabase/server', () => ({
 }))
 vi.mock('next/cache', () => ({ revalidatePath: () => undefined }))
 vi.mock('server-only', () => ({}))
+let failCreateChargeOnce = false
+vi.mock('@/lib/payments/registry', async (importOriginal) => {
+  const real = await importOriginal<typeof import('@/lib/payments/registry')>()
+  return {
+    ...real,
+    getProvider: (name: string) => {
+      const p = real.getProvider(name)
+      return {
+        ...p,
+        createCharge: async (input: any) => {
+          if (failCreateChargeOnce) { failCreateChargeOnce = false; throw new Error('btcpay: create failed 503 <upstream body>') }
+          return p.createCharge(input)
+        },
+      }
+    },
+  }
+})
 vi.mock('@/lib/email', async (importOriginal) => {
   const real = await importOriginal<Record<string, unknown>>()
   return Object.fromEntries(Object.keys(real).map((k) => [k, async () => undefined]))
@@ -396,6 +415,33 @@ describe.skipIf(!hasEnv)('checkout fix round A (integration)', () => {
       createdOrderIds.push(r2.orderId!)
       expect((await orderRow(inFlight)).status).toBe('cancelled')
       expect((await orderRow(r2.orderId!)).payment_expires_at).not.toBeNull()
+    }, 90_000)
+
+    it('PAY-006: provider createCharge failure cancels the order and returns the wallet hold; the copy is truthful', async () => {
+      await clearRateLimit()
+      await cancelAllPendingFor(fx!.buyer.id)
+      const { error: fund } = await fx!.svc.rpc('wallet_credit', {
+        p_user_id: fx!.buyer.id, p_amount_minor: '50', p_currency: CUR, p_counterparty: 'refunds',
+        p_idempotency_key: `test:ledger:fix-a:fund:p6:${tag()}`, p_event_ref: 'TEST_FUND', p_order_id: null,
+      } as any)
+      if (fund) throw new Error(fund.message)
+      const walletBefore = await walletMinor(fx!.buyer.id)
+      sessionClient = fx!.buyer.client
+      const { createCheckout } = await import('@/lib/actions/checkout')
+      failCreateChargeOnce = true
+      const r = await createCheckout({ listingId: fx!.listingId, quantity: 1, walletAmount: 0.5 })
+      expect(r.success).toBe(false)
+      expect(r.error).toMatch(/back in your wallet/)
+      expect(r.error).not.toMatch(/503|upstream/) // provider internals never reach the buyer
+      const { data: rows } = await fx!.svc.from('orders').select('id, status, payment_expires_at, provider_charge_id')
+        .eq('buyer_id', fx!.buyer.id).eq('listing_id', fx!.listingId).order('created_at', { ascending: false }).limit(1)
+      const row = (rows as any[])[0]
+      createdOrderIds.push(row.id)
+      expect(row.status).toBe('cancelled')
+      expect(row.provider_charge_id).toBeNull()
+      expect(row.payment_expires_at).not.toBeNull() // stamped at insert (sweepable even if the cancel had failed)
+      expect(await walletMinor(fx!.buyer.id)).toBe(walletBefore) // hold returned
+      expect(await txnByKey(`wallet_refund:${row.id}`)).not.toBeNull()
     }, 90_000)
   })
 })
