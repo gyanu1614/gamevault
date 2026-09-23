@@ -241,6 +241,10 @@ describe.skipIf(!hasEnv)('DB-015/016/017 — money-path seams are atomic (integr
   describe('DB-015a — createCheckout supersede runs CANCELLED + hold return as one RPC', () => {
     it('supersede returns the exact hold (escrow_held → user_wallet) under wallet_refund:<id>', async () => {
       sessionClient = fx!.buyer.client
+      // PAY-005: the fixture's raw pending order (no charge, seconds old) reads
+      // as a racing checkout still creating its charge and would be refused
+      // with "payment is being prepared" rather than superseded — park it.
+      await parkPendingOrders()
       await fundWallet(fx!.buyer.id, 10_00n, 'supersede')
       const { createCheckout } = await import('@/lib/actions/checkout')
 
@@ -266,6 +270,7 @@ describe.skipIf(!hasEnv)('DB-015/016/017 — money-path seams are atomic (integr
 
     it('seam module unreachable → nothing changes and the buyer gets the SAME pending order back', async () => {
       sessionClient = fx!.buyer.client
+      await parkPendingOrders() // PAY-005, as above
       const { createCheckout } = await import('@/lib/actions/checkout')
       const a = await createCheckout({ listingId: fx!.listingId, quantity: 1, walletAmount: 0.5 })
       expect(a.success, a.error).toBe(true)
