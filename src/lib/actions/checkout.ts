@@ -44,8 +44,14 @@ const ORDER_CURRENCY = 'USD'
 
 /** PAY-007: open (pending) orders one buyer may hold at once. Each one is a
  *  live provider invoice and, when wallet credit was applied, money held for
- *  that order — an unbounded count is an abuse surface, not a feature. */
-const MAX_OPEN_PENDING_ORDERS = 5
+ *  that order — an unbounded count is an abuse surface, not a feature.
+ *  Read per call so a load harness (the fee parity loop drives hundreds of
+ *  checkouts through one buyer) can raise it; production never sets it. */
+const DEFAULT_MAX_OPEN_PENDING_ORDERS = 5
+function maxOpenPendingOrders(): number {
+  const n = Number.parseInt(process.env.CHECKOUT_MAX_OPEN_PENDING_ORDERS ?? '', 10)
+  return Number.isFinite(n) && n >= 1 ? n : DEFAULT_MAX_OPEN_PENDING_ORDERS
+}
 /** PAY-006: a pending order gets this expiry at INSERT, before any provider
  *  call, so an order stranded by a crash between insert and the charge
  *  UPDATE is always sweepable. The provider's own expiry overwrites it. */
@@ -226,7 +232,7 @@ export async function createCheckout(input: CreateCheckoutInput): Promise<Create
     // after the supersede above (a re-checkout of the same listing replaces
     // its order rather than adding one) and before this insert.
     const openPending = await countOpenPendingOrders(user.id)
-    if (openPending >= MAX_OPEN_PENDING_ORDERS) {
+    if (openPending >= maxOpenPendingOrders()) {
       return {
         success: false,
         error: `You have ${openPending} orders awaiting payment. Complete or cancel one before starting another.`,
