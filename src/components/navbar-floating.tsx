@@ -503,10 +503,10 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
       // Count unread messages in those conversations where I'm not the sender
       const { count } = await supabase
         .from('messages')
-        .select('*', { count: 'exact', head: true })
+        .select('*', { count: 'exact' })
         .in('conversation_id', conversationIds)
         .neq('sender_id', user.id)
-        .eq('is_read', false)
+        .eq('is_read', false).limit(1)
 
       return count || 0
     },
@@ -526,13 +526,13 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
 
       const { count } = await supabase
         .from('notifications')
-        .select('*', { count: 'exact', head: true })
+        .select('*', { count: 'exact' })
         .eq('user_id', user.id)
         .eq('is_read', false)
         // Workstream E — chat messages live under the Messages badge, not the
         // bell. Exclude legacy 'new_message' rows so they stop polluting the
         // bell count.
-        .neq('type', 'new_message')
+        .neq('type', 'new_message').limit(1)
 
       return count || 0
     },

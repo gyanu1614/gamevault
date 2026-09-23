@@ -73,9 +73,9 @@ export async function validatePromoCode(
     if (user && promo.per_user_limit > 0) {
       const { count } = await supabase
         .from('promo_code_usages')
-        .select('id', { count: 'exact', head: true })
+        .select('id', { count: 'exact' })
         .eq('promo_code_id', promo.id)
-        .eq('user_id', user.id)
+        .eq('user_id', user.id).limit(1)
 
       if ((count ?? 0) >= promo.per_user_limit) {
         return { valid: false, error: 'You have already used this promo code' }

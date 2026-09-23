@@ -51,10 +51,10 @@ export async function submitGdprRequest(type: 'export' | 'deletion'): Promise<{
     // Prevent duplicate pending requests of same type
     const { count } = await supabase
       .from('gdpr_requests')
-      .select('id', { count: 'exact', head: true })
+      .select('id', { count: 'exact' })
       .eq('user_id', user.id)
       .eq('type', type)
-      .in('status', ['pending', 'processing'])
+      .in('status', ['pending', 'processing']).limit(1)
 
     if ((count ?? 0) > 0) {
       return { success: false, error: `A ${type} request is already pending. Please wait for it to be processed.` }

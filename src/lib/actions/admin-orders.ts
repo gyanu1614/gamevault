@@ -166,25 +166,25 @@ export async function getOrderStats() {
     // Get total orders
     const { count: totalOrders } = await supabase
       .from('orders')
-      .select('*', { count: 'exact', head: true })
+      .select('*', { count: 'exact' }).limit(1)
 
     // Get completed orders
     const { count: completedOrders } = await supabase
       .from('orders')
-      .select('*', { count: 'exact', head: true })
-      .eq('status', 'completed')
+      .select('*', { count: 'exact' })
+      .eq('status', 'completed').limit(1)
 
     // Get pending orders
     const { count: pendingOrders } = await supabase
       .from('orders')
-      .select('*', { count: 'exact', head: true })
-      .in('status', ['pending', 'processing', 'paid'])
+      .select('*', { count: 'exact' })
+      .in('status', ['pending', 'processing', 'paid']).limit(1)
 
     // Get disputed orders
     const { count: disputedOrders } = await supabase
       .from('disputes')
-      .select('*', { count: 'exact', head: true })
-      .in('status', ['open', 'under_review'])
+      .select('*', { count: 'exact' })
+      .in('status', ['open', 'under_review']).limit(1)
 
     // Get total revenue
     const { data: revenueData } = await supabase

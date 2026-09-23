@@ -297,16 +297,16 @@ export async function getSellerStats(): Promise<{
     const [sellersRes, listingsRes, ordersRes, withdrawalsRes] = await Promise.all([
       service
         .from('profiles')
-        .select('id', { count: 'exact', head: true })
-        .eq('role', 'seller') as any,
+        .select('id', { count: 'exact' })
+        .eq('role', 'seller').limit(1) as any,
       service
         .from('listings')
-        .select('id', { count: 'exact', head: true })
-        .eq('status', 'active') as any,
+        .select('id', { count: 'exact' })
+        .eq('status', 'active').limit(1) as any,
       service.from('orders').select('seller_payout').eq('status', 'completed') as any,
       (service.from('withdrawal_requests' as any) as any)
-        .select('id', { count: 'exact', head: true })
-        .eq('status', 'pending'),
+        .select('id', { count: 'exact' })
+        .eq('status', 'pending').limit(1),
     ])
 
     if (sellersRes.error) {

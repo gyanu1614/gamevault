@@ -152,9 +152,9 @@ export async function createWithdrawalRequest(params: {
     // review workload multiplies.
     const { count: openCount } = await supabase
       .from('withdrawal_requests')
-      .select('id', { count: 'exact', head: true })
+      .select('id', { count: 'exact' })
       .eq('user_id', user.id)
-      .in('status', ['pending', 'approved', 'processing'])
+      .in('status', ['pending', 'approved', 'processing']).limit(1)
 
     if ((openCount ?? 0) > 0) {
       return {

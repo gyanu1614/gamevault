@@ -53,7 +53,7 @@ describe.skipIf(!hasEnv)('trend radar — nightly (integration)', () => {
     expect(s.rollup.daysWritten).toBe(1)
     const { data: daily } = await svc.from('game_metrics_daily').select('*').eq('external_id', String(U_OLD)).eq('day', dayStr).single()
     expect(daily).toMatchObject({ max_playing: 300, avg_playing: 200, samples: 3 })
-    const { count } = await svc.from('game_metrics').select('id', { count: 'exact', head: true }).eq('external_id', String(U_OLD))
+    const { count } = await svc.from('game_metrics').select('id', { count: 'exact' }).eq('external_id', String(U_OLD)).limit(1)
     expect(count).toBe(1)
   })
 

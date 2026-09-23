@@ -213,8 +213,8 @@ export async function snoozeGame(db: Db, gameId: string, opts: ReviewOpts & { da
 
 export async function loadReviewCounts(db: Db): Promise<{ pending: number; declining: number }> {
   const [{ count: pending }, { count: declining }] = await Promise.all([
-    db.from('games').select('id', { count: 'exact', head: true }).eq('review_status', 'pending'),
-    db.from('games').select('id', { count: 'exact', head: true }).eq('review_status', 'declining'),
+    db.from('games').select('id', { count: 'exact' }).eq('review_status', 'pending').limit(1),
+    db.from('games').select('id', { count: 'exact' }).eq('review_status', 'declining').limit(1),
   ])
   return { pending: pending ?? 0, declining: declining ?? 0 }
 }

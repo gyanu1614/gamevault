@@ -114,10 +114,10 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       .from('listings')
       // SEO hygiene: only REAL (non-test) active listings count toward
       // indexability, so a game with only test listings stays noindex.
-      .select('id, seller:public_profiles!listings_seller_id_fkey!inner(is_test)', { count: 'exact', head: true })
+      .select('id, seller:public_profiles!listings_seller_id_fkey!inner(is_test)', { count: 'exact' })
       .eq('game_id', game.id)
       .eq('status', 'active')
-      .eq('seller.is_test', false),
+      .eq('seller.is_test', false).limit(1),
     supabase
       .from('category_configs')
       .select('game_id')

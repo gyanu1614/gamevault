@@ -570,29 +570,29 @@ export async function getModerationStats(): Promise<{
     ] = await Promise.all([
       supabase
         .from('listings')
-        .select('*', { count: 'exact', head: true })
-        .eq('status', 'pending_approval'),
+        .select('*', { count: 'exact' })
+        .eq('status', 'pending_approval').limit(1),
       supabase
         .from('listings')
-        .select('*', { count: 'exact', head: true })
-        .eq('status', 'changes_requested'),
+        .select('*', { count: 'exact' })
+        .eq('status', 'changes_requested').limit(1),
       supabase
         .from('listings')
-        .select('*', { count: 'exact', head: true })
+        .select('*', { count: 'exact' })
         .eq('status', 'active')
-        .gte('approved_at', today.toISOString()),
+        .gte('approved_at', today.toISOString()).limit(1),
       // reject_listing nulls approved_at and stamps rejected_at, so the
       // "today" filter must use rejected_at (approved_at was always 0).
       supabase
         .from('listings')
-        .select('*', { count: 'exact', head: true })
+        .select('*', { count: 'exact' })
         .eq('status', 'rejected')
-        .gte('rejected_at', today.toISOString()),
+        .gte('rejected_at', today.toISOString()).limit(1),
       supabase
         .from('listings')
-        .select('*', { count: 'exact', head: true })
+        .select('*', { count: 'exact' })
         .eq('status', 'active')
-        .not('approved_at', 'is', null),
+        .not('approved_at', 'is', null).limit(1),
     ])
 
     return {

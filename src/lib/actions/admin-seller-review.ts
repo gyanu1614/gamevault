@@ -99,23 +99,23 @@ export async function getApplicationStats(): Promise<ApplicationStats> {
     // Get total users count
     const { count: usersCount } = await supabase
       .from('profiles')
-      .select('*', { count: 'exact', head: true })
+      .select('*', { count: 'exact' }).limit(1)
 
     stats.totalUsers = usersCount || 0
 
     // Get active sellers count (users with seller role)
     const { count: sellersCount } = await supabase
       .from('profiles')
-      .select('*', { count: 'exact', head: true })
-      .eq('role', 'seller')
+      .select('*', { count: 'exact' })
+      .eq('role', 'seller').limit(1)
 
     stats.activeSellers = sellersCount || 0
 
     // Get open disputes count
     const { count: disputesCount } = await supabase
       .from('disputes')
-      .select('*', { count: 'exact', head: true })
-      .in('status', ['open', 'under_review'])
+      .select('*', { count: 'exact' })
+      .in('status', ['open', 'under_review']).limit(1)
 
     stats.openDisputes = disputesCount || 0
 

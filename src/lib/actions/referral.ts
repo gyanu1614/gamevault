@@ -95,8 +95,8 @@ export async function getReferralStats(): Promise<{
   // Count total unique users referred
   const { count: totalReferrals } = await supabase
     .from('profiles')
-    .select('*', { count: 'exact', head: true })
-    .eq('referred_by', user.id)
+    .select('*', { count: 'exact' })
+    .eq('referred_by', user.id).limit(1)
 
   // Earnings aggregates
   const { data: earnings } = await supabase

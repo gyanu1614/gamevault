@@ -77,9 +77,9 @@ export async function getMyTierInfo() {
   const [salesResult, profileResult, completionResult] = await Promise.all([
     service
       .from('orders')
-      .select('id', { count: 'exact', head: true })
+      .select('id', { count: 'exact' })
       .eq('seller_id', user.id)
-      .eq('status', 'completed'),
+      .eq('status', 'completed').limit(1),
 
     service
       .from('profiles')

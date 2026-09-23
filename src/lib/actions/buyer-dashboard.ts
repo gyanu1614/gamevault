@@ -55,12 +55,12 @@ export async function getBuyerDashboard(): Promise<BuyerDashboardData | null> {
       .order('created_at', { ascending: false }),
     supabase
       .from('wishlists')
-      .select('id', { count: 'exact', head: true })
-      .eq('user_id', user.id),
+      .select('id', { count: 'exact' })
+      .eq('user_id', user.id).limit(1),
     supabase
       .from('reviews')
-      .select('id', { count: 'exact', head: true })
-      .eq('reviewer_id', user.id),
+      .select('id', { count: 'exact' })
+      .eq('reviewer_id', user.id).limit(1),
   ])
 
   const orders = (ordersRes.data ?? []) as any[]
