@@ -31,7 +31,11 @@ function latestDefinitionOf(functionName: string): string {
     const sql = readFileSync(join(MIGRATIONS, file), 'utf8')
     if (
       new RegExp(
-        `create\\s+or\\s+replace\\s+function\\s+(public\\.)?"?${functionName}"?`,
+        // `(?![\\w"])` so a function whose name merely STARTS with this one
+        // does not match: sab_refresh_price_display_changed is a separate
+        // function (migration 20260922172054) and would otherwise shadow the
+        // real definition here, making this guard assert against the wrong SQL.
+        `create\\s+or\\s+replace\\s+function\\s+(public\\.)?"?${functionName}"?(?![\\w"])`,
         'i',
       ).test(sql)
     ) {

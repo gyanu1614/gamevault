@@ -5,6 +5,7 @@ import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { requireAdmin, requireRole } from './admin-permissions'
 import { getEntryTier } from '@/lib/seller/entry-tier'
 import { revalidatePath } from 'next/cache'
+import { revalidateSellerStorefront } from '@/lib/revalidation/listings'
 import {
   sendApplicationApprovedEmail,
   sendApplicationInReviewEmail,
@@ -783,7 +784,11 @@ export async function approveApplication(
 
     revalidatePath('/admin/sellers')
     revalidatePath(`/admin/sellers/${applicationId}`)
-    if (grantFounding) revalidatePath('/') // storefronts render the founding badge
+    // The founding badge renders on THIS seller's storefront and beside their
+    // offers — not on every page (build audit 2026-09-22, §4).
+    if (grantFounding && application.user_id) {
+      await revalidateSellerStorefront(getServiceClient() as never, application.user_id)
+    }
 
     return {
       success: true,

@@ -20,7 +20,10 @@
 name: Trend Radar
 on:
   schedule:
-    - cron: '17 */6 * * *'   # collect + prepare, four times a day (offset from other crons)
+    # Daily (Gyanu 2026-09-22: only prices are sub-daily). Was every 6h; a
+    # game trending is a multi-day signal, and each run is a Roblox-paced
+    # crawl, so four passes a day bought resolution nothing reads.
+    - cron: '17 6 * * *'     # collect + prepare, once a day (offset from other crons)
     - cron: '41 4 * * *'     # nightly rollup + decay
   workflow_dispatch:
     inputs:

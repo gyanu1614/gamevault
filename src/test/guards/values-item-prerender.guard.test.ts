@@ -24,8 +24,15 @@ describe('value item pages — prerender + revalidation', () => {
     expect(page).not.toMatch(/const PRERENDER_LIMIT/)
   })
 
-  it('keeps a 24 h time-based safety net behind on-demand revalidation', () => {
-    expect(page).toMatch(/export const revalidate = 86400/)
+  it('keeps a LONG time-based safety net behind on-demand revalidation', () => {
+    // The refresh path is the tags, not the clock: `values:<game>` for
+    // catalogue edits and `price:<game>:<item>` for prices, which the crawl
+    // fires only for the items whose numbers actually moved. The window was
+    // 24 h; it is a safety net, and a short one just rebuilds every item page
+    // on a timer and undoes the per-item tag (build audit 2026-09-22, §4).
+    const m = page.match(/export const revalidate = (\d+)/)
+    expect(m, 'the page must declare a revalidate window').not.toBeNull()
+    expect(Number(m![1])).toBeGreaterThanOrEqual(86400)
   })
 
   it('gives the build room for the full set (staticPageGenerationTimeout ≥ 180 s)', () => {

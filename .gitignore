@@ -63,6 +63,9 @@ OldProgress/
 .claude/
 .next-check/
 .next-check2/
+# Perf measurement builds (before/after wall-time + size comparisons).
+.next-base/
+.next-after/
 design-refs/
 
 data/sab-market-imports/*.csv

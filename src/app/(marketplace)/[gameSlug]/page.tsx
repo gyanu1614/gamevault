@@ -400,6 +400,11 @@ export default async function GameBrowsePage({ params }: PageProps) {
                   src={game.image_url}
                   alt={game.name}
                   fill
+                  // Rendered in a fixed 128px box (w-32 h-32). Without `sizes`,
+                  // `fill` assumes 100vw and Next generates the whole device
+                  // ladder up to 3840px for a thumbnail — one of the sources of
+                  // the 4K/5K transformations in the 2026-09-22 build audit.
+                  sizes="128px"
                   className="object-cover"
                 />
               </div>
@@ -664,7 +669,17 @@ function ListingPreviewCard({
         {/* Image */}
         <div className="relative h-48 bg-gradient-to-br from-[rgba(198,255,61,0.12)] to-[rgba(255,255,255,0.05)]">
           {imageUrl ? (
-            <Image src={imageUrl} alt={title} fill className="object-cover" />
+            <Image
+              src={imageUrl}
+              alt={title}
+              fill
+              // Card image in a 192px-tall tile; the grid is 1/2/3 up. Without
+              // `sizes`, `fill` assumes 100vw and bills the full ladder up to
+              // 3840px — 6 of these render per game landing page × 264 pages
+              // (build audit 2026-09-22, §6).
+              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+              className="object-cover"
+            />
           ) : (
             <div className="w-full h-full flex items-center justify-center text-5xl">
               🎮

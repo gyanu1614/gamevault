@@ -1,6 +1,6 @@
 import { SITE_URL } from '@/config/site'
 import type { Metadata } from 'next'
-import { Inter, Figtree, JetBrains_Mono } from 'next/font/google'
+import localFont from 'next/font/local'
 import './globals.css'
 import { Providers } from '@/components/providers'
 import { LayoutWrapper } from '@/components/layout-wrapper'
@@ -17,9 +17,19 @@ import { Analytics } from "@vercel/analytics/next"
 //     --font-figtree. globals.css remaps --font-inter → --font-figtree inside
 //     the `.hub-chrome` wrapper, so hub pages pick up Figtree with no
 //     component changes; the marketplace keeps Inter.
-const inter = Inter({
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700', '800', '900'],
+//
+// SELF-HOSTED (build audit 2026-09-22, §3): these were `next/font/google`,
+// which fetches the font files from Google at BUILD time — three families per
+// build, and it flaked twice during the audit with a `next/font` TypeError.
+// The files now live in ./fonts, so the build does no network I/O for fonts
+// and cannot fail on Google being slow or unreachable.
+//
+// One variable woff2 per family covers the whole weight range (Google serves
+// the same file for every static weight anyway), so this is also 14 requests
+// fewer than the per-weight form. `latin` subset only, as before.
+const inter = localFont({
+  src: './fonts/inter-variable.woff2',
+  weight: '100 900',
   variable: '--font-inter',
   display: 'swap',
 })
@@ -29,9 +39,9 @@ const inter = Inter({
 // in the root layout, so a marketplace route was fetching Figtree at high
 // priority to render zero glyphs with it. It still loads on hub routes that
 // use it, just without competing with the LCP everywhere else.
-const figtree = Figtree({
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700', '800', '900'],
+const figtree = localFont({
+  src: './fonts/figtree-variable.woff2',
+  weight: '300 900',
   variable: '--font-figtree',
   display: 'swap',
   preload: false,
@@ -42,9 +52,9 @@ const figtree = Figtree({
 // preload:false — mono is for order IDs, timestamps and tabular data. 54 files
 // use it, but never above the fold on a hub/sell/landing page, so preloading it
 // spent priority on a font the first paint does not need.
-const jetbrainsMono = JetBrains_Mono({
-  subsets: ['latin'],
-  weight: ['400', '500'],
+const jetbrainsMono = localFont({
+  src: './fonts/jetbrains-mono-variable.woff2',
+  weight: '100 800',
   variable: '--font-mono',
   display: 'swap',
   preload: false,

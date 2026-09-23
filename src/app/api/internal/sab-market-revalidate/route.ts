@@ -1,5 +1,9 @@
 import { revalidatePath, revalidateTag } from 'next/cache'
-import { valuesTag } from '@/lib/values/revalidation'
+import {
+  valueGamePriceTag,
+  valueItemPriceTag,
+  valuesTag,
+} from '@/lib/values/revalidation'
 import { checkRateLimitByIp, rateLimitResponse } from '@/lib/security/rate-limit'
 
 export const runtime = 'nodejs'
@@ -91,27 +95,63 @@ export async function POST(
     )
   }
 
-  const paths = [
-    '/steal-a-brainrot/values',
-    '/steal-a-brainrot/calculator',
-  ]
+  const GAME = 'steal-a-brainrot'
+
+  // The lists always move when anything moves: they rank every item by price.
+  const paths = [`/${GAME}/values`, `/${GAME}/calculator`]
 
   for (const path of paths) {
     revalidatePath(path)
   }
 
-  // Step 7a — item pages by tag. The old call,
-  // revalidatePath('/steal-a-brainrot/values/[itemSlug]', 'page'), never
-  // matched anything (pages are tagged by route pattern + concrete pathname),
-  // so SAB item pages had only ever refreshed by time.
-  revalidateTag(valuesTag('steal-a-brainrot'))
+  // Which items actually changed this crawl. The publish step diffs the
+  // freshly materialised prices against the previous snapshot
+  // (sab_refresh_price_display_changed, migration 20260922172054) and sends
+  // the slugs here.
+  //
+  // Absent or malformed body → fall back to the whole-game tag, which is the
+  // pre-2026-09-22 behaviour. That keeps an older deployment of the edge
+  // function (or a manual curl) correct, just expensive: the game tag marks
+  // every one of the ~500 item pages stale, which was ~80% of the monthly ISR
+  // budget (build audit 2026-09-22, §4).
+  let changedSlugs: string[] | null = null
+  try {
+    const body: unknown = await request.json()
+    const raw = (body as { changedSlugs?: unknown } | null)?.changedSlugs
+    if (Array.isArray(raw)) {
+      changedSlugs = raw.filter(
+        (slug): slug is string => typeof slug === 'string' && slug.length > 0,
+      )
+    }
+  } catch {
+    // No body / not JSON — fall through to the whole-game tag.
+  }
+
+  const revalidated: string[] = [...paths]
+
+  if (changedSlugs === null) {
+    revalidateTag(valuesTag(GAME))
+    revalidated.push(valuesTag(GAME))
+  } else {
+    // Item pages whose price moved. An empty list is a legitimate answer —
+    // a crawl where nothing changed revalidates no item page at all.
+    for (const slug of changedSlugs) {
+      const tag = valueItemPriceTag(GAME, slug)
+      revalidateTag(tag)
+      revalidated.push(tag)
+    }
+    if (changedSlugs.length > 0) {
+      // The price LISTS (directory, calculator) read every item's price.
+      revalidateTag(valueGamePriceTag(GAME))
+      revalidated.push(valueGamePriceTag(GAME))
+    }
+  }
 
   return jsonResponse({
     ok: true,
-    revalidated: [
-      ...paths,
-      valuesTag('steal-a-brainrot'),
-    ],
+    mode: changedSlugs === null ? 'whole-game-fallback' : 'changed-items',
+    changed_count: changedSlugs?.length ?? null,
+    revalidated,
     revalidated_at: new Date().toISOString(),
   })
 }

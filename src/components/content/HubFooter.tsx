@@ -118,6 +118,9 @@ export function HubFooter({
                 width={28}
                 height={28}
                 className="h-7 w-7"
+                // Already an optimised 2 KB AVIF rendered at ~30px — re-encoding
+                // it to WebP bills a transformation and saves nothing.
+                unoptimized
               />
               <span className="text-[17px] font-bold text-[#F1F3F1]">DropMarket</span>
             </Link>

@@ -70,6 +70,9 @@ export default function IntroScreen({ onStart }: IntroScreenProps) {
                 width={40}
                 height={40}
                 className="h-10 w-10 object-contain"
+                // Already an optimised 2 KB AVIF rendered at ~30px — re-encoding
+                // it to WebP bills a transformation and saves nothing.
+                unoptimized
               />
               <span className="text-xl font-bold tracking-tight text-white">
                 Drop<span className="text-white/70">Market</span>
