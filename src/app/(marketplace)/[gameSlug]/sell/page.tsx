@@ -24,7 +24,7 @@ import { notFound } from 'next/navigation'
 import { IconRosetteDiscountCheck, IconShieldCheck, IconSearch, IconArrowRight, IconCheck, IconUserPlus, IconListDetails, IconCash } from '@tabler/icons-react'
 import { JsonLd, breadcrumbList, faqPage } from '@/lib/seo/jsonld'
 import { isGameSellPageIndexable } from '@/lib/games/indexability'
-import { commissionPct } from '@/lib/fees'
+import { getPairHeadlineRate } from '@/lib/fees/public-rates'
 import { HubNav } from '@/components/content/HubNav'
 import { HubFooter } from '@/components/content/HubFooter'
 import { HubHero } from '@/components/content/HubHero'
@@ -72,11 +72,11 @@ const getSellPageGame = cache(async (gameSlug: string) => {
 
   const { data: cats } = (await supabase
     .from('game_categories')
-    .select('slug, type')
+    .select('id, slug, type')
     .eq('game_id', game.id)
     .eq('is_enabled', true)
     .order('sort_order', { ascending: true })) as unknown as {
-    data: { slug: string; type: string | null }[] | null
+    data: { id: string; slug: string; type: string | null }[] | null
   }
   const categories = cats ?? []
 
@@ -117,21 +117,18 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   // Bare title — the root layout template appends "| DropMarket".
   // Step 1 deliverable 5 title pattern: "Sell {Game} {Category} — {rate}% fee".
-  // The rate is READ from the live fee table (no fee changes in this step), so
-  // a rate edit can never leave the title quoting a stale number.
+  // The rate is the resolver's headline answer for the primary pair
+  // (p_seller_id NULL, fee engine PR 5 D2), cached under FEE_RULES_TAG and
+  // republished by every admin fee write — never a constant, never stale.
   const primary = game.primaryCategory
   const categoryWord = primary
     ? ({ account: 'Accounts', items: 'Items', currency: 'Currency', top_up: 'Top-Ups' } as Record<string, string>)[
         primary.type ?? ''
       ] ?? 'Items'
     : 'Items'
-  const rate = commissionPct({
-    categoryMetaType: primary?.type ?? null,
-    categorySlug: primary?.slug ?? null,
-    gameSlug,
-  })
-  const title = `Sell ${name} ${categoryWord} — ${rate}% fee`
-  const description = `Turn your ${name} inventory into real cash. List on DropMarket, sell with SafeDrop protection even if a buyer ghosts, and founding sellers lock a lower fee for life. Here's how to start.`
+  const rate = primary ? await getPairHeadlineRate(primary.id) : null
+  const title = rate != null ? `Sell ${name} ${categoryWord} — ${rate}% fee` : `Sell ${name} ${categoryWord} for Real Money`
+  const description = `Turn your ${name} inventory into real cash. List on DropMarket, sell with SafeDrop protection even if a buyer ghosts, and founding sellers get a discounted rate for their first year. Here's how to start.`
 
   return {
     title,
@@ -170,7 +167,7 @@ export default async function SellLandingPage({ params }: PageProps) {
     },
     {
       q: `What does it cost to sell?`,
-      a: `There's no listing fee — you only pay when an item sells, and you keep more of every sale than on the big marketplaces. Founding sellers (the first 100) lock in a lower rate that stays with their account for life, even after full launch.`,
+      a: `There's no listing fee — you only pay when an item sells, and you keep more of every sale than on the big marketplaces. Founding sellers (the first 100) get a discounted rate for their first year, applied automatically to every sale.`,
     },
     {
       q: `Is it safe to sell here?`,
@@ -248,7 +245,7 @@ export default async function SellLandingPage({ params }: PageProps) {
               points: [
                 'No listing fees — you pay nothing until an item sells.',
                 'One of the lowest seller commissions anywhere.',
-                'Founding sellers lock an even lower rate, for life.',
+                'Founding sellers get a discounted rate for their first year.',
               ],
             },
             {
