@@ -256,9 +256,19 @@ export async function createCheckout(input: CreateCheckoutInput): Promise<Create
       if ('orderId' in insertRes) {
         orderId = insertRes.orderId
         orderNumber = insertRes.orderNumber ?? null
-        // AUTH-003 — usage is recorded so per-user / total limits bind.
+        // AUTH-003 / PAY-014 — the usage is recorded, AWAITED, before the
+        // discounted order can go anywhere: the RPC enforces usage_limit /
+        // per_user_limit under the promo row lock. A refusal cancels the
+        // order we just created (nothing else has happened to it yet) and
+        // the buyer gets the cap message — the discount is never granted.
         if (promoCodeId && promoDiscount > 0) {
-          recordPromoUsage({ promoCodeId, orderId, discountAmount: promoDiscount, userId: user.id }).catch(() => {})
+          const usage = await recordPromoUsage({ promoCodeId, orderId, discountAmount: promoDiscount, userId: user.id })
+          if (!usage.ok) {
+            await cancelOrderReturnWallet(orderId, 'promo-refused').catch((e) =>
+              console.error('[createCheckout] cancel after promo refusal failed:', e)
+            )
+            return { success: false, error: usage.error }
+          }
         }
       } else if ('duplicate' in insertRes) {
         // 23505 on one_pending_order_per_buyer_listing (and ONLY that index —

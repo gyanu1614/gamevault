@@ -18,6 +18,7 @@
  *   PAY-006  createCharge failure cancels the order + returns the wallet
  *            hold; every pending order is born with a payment_expires_at.
  *   PAY-007  checkout is rate-limited per buyer; ≤ 5 open pending orders.
+ *   PAY-014  promo caps bind inside promo_usage_record; checkout awaits it.
  *
  * Every row this file causes is removed in afterAll — orders, ledger
  * journals, and the admin notifications the RPC inserts (for EVERY active
@@ -566,5 +567,49 @@ describe.skipIf(!hasEnv)('checkout fix round A (integration)', () => {
       expect(r.error).toMatch(/Too many checkout attempts/)
       await clearRateLimit()
     }, 60_000)
+
+    it('PAY-014: promo caps bind inside the RPC; checkout awaits the usage', async () => {
+      await clearRateLimit()
+      await cancelAllPendingFor(fx!.buyer.id)
+      const code = `GTA${tag().toUpperCase()}`
+      const { data: promo, error } = await fx!.svc.from('promo_codes').insert({
+        code, type: 'flat', value: 0.5, usage_limit: 1, per_user_limit: 5, is_active: true,
+      }).select('id').single()
+      if (error) throw new Error(`promo insert: ${error.message}`)
+      const promoId = (promo as any).id
+      try {
+        sessionClient = fx!.buyer.client
+        const { createCheckout } = await import('@/lib/actions/checkout')
+        const first = await createCheckout({ listingId: fx!.listingId, quantity: 1, promoCode: code })
+        expect(first.success, first.error).toBe(true)
+        createdOrderIds.push(first.orderId!)
+        // Awaited, not fire-and-forget: the usage row exists when the action returns.
+        const { count } = await fx!.svc.from('promo_code_usages').select('id', { count: 'exact', head: true }).eq('promo_code_id', promoId)
+        expect(count).toBe(1)
+
+        // The cap is enforced by the RPC itself (the lock holder), not only by the pre-validation.
+        const other = await insertOrder({ buyer_id: fx!.admin.id, status: 'pending', escrow_status: 'pending', order_number: `GT-P14-${tag()}` })
+        const refused = await (fx!.svc.rpc as any)('promo_usage_record', {
+          p_promo_code_id: promoId, p_order_id: other, p_user_id: fx!.admin.id, p_discount_amount: 0.5,
+        })
+        expect(refused.error).not.toBeNull()
+        expect(refused.error.code).toBe('23514')
+        expect(refused.error.message).toMatch(/usage limit/)
+        const { data: p } = await fx!.svc.from('promo_codes').select('total_used').eq('id', promoId).single()
+        expect((p as any).total_used).toBe(1)
+
+        // Per-user cap, same lock.
+        await fx!.svc.from('promo_codes').update({ usage_limit: 10, per_user_limit: 1 }).eq('id', promoId)
+        await parkPendingOrders(fx!.buyer.id)
+        const again = await insertOrder({ status: 'pending', escrow_status: 'pending', order_number: `GT-P14-u-${tag()}` })
+        const perUser = await (fx!.svc.rpc as any)('promo_usage_record', {
+          p_promo_code_id: promoId, p_order_id: again, p_user_id: fx!.buyer.id, p_discount_amount: 0.5,
+        })
+        expect(perUser.error?.message ?? '').toMatch(/per-user limit/)
+      } finally {
+        await fx!.svc.from('promo_code_usages').delete().eq('promo_code_id', promoId)
+        await fx!.svc.from('promo_codes').delete().eq('id', promoId)
+      }
+    }, 90_000)
   })
 })
