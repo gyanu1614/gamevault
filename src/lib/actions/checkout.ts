@@ -29,6 +29,7 @@ import { runOrderInsert, OrderInsertConflictError, type OrderInsertResult } from
 import { getProvider, activePaymentProviderName, providerNameForMethod } from '@/lib/payments/registry'
 import { spendWallet, getWalletBalance } from '@/lib/wallet/wallet'
 import { cancelOrderReturnWallet } from '@/lib/wallet/order-money'
+import { checkRateLimit } from '@/lib/security/rate-limit'
 import { validatePromoCode, recordPromoUsage } from '@/lib/actions/promo'
 import { resolveCheckoutPromo } from '@/lib/checkout/promo'
 import { fromDecimal, money } from '@/lib/money'
@@ -41,6 +42,10 @@ import { fromDecimal, money } from '@/lib/money'
 // plan; switched before any real payment existed.)
 const ORDER_CURRENCY = 'USD'
 
+/** PAY-007: open (pending) orders one buyer may hold at once. Each one is a
+ *  live provider invoice and, when wallet credit was applied, money held for
+ *  that order — an unbounded count is an abuse surface, not a feature. */
+const MAX_OPEN_PENDING_ORDERS = 5
 /** PAY-006: a pending order gets this expiry at INSERT, before any provider
  *  call, so an order stranded by a crash between insert and the charge
  *  UPDATE is always sweepable. The provider's own expiry overwrites it. */
@@ -89,6 +94,14 @@ export async function createCheckout(input: CreateCheckoutInput): Promise<Create
     const supabase = await createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) return { success: false, error: 'Authentication required' }
+
+    // PAY-007: the live UI calls this action directly (never /api/checkout),
+    // so the budget must be charged HERE. Per buyer, not per IP: one account
+    // minting orders + provider invoices is the abuse this bounds.
+    const limit = await checkRateLimit('checkout', `user:${user.id}`)
+    if (limit.limited) {
+      return { success: false, error: 'Too many checkout attempts — please wait a minute and try again.' }
+    }
 
     const quantity = Math.max(1, Math.floor(input.quantity ?? 1))
 
@@ -206,6 +219,17 @@ export async function createCheckout(input: CreateCheckoutInput): Promise<Create
           .like('link', `%${existingPending.id}%`)
       } catch (superErr) {
         console.error('[createCheckout] supersede pending order failed (nothing changed, continuing):', superErr)
+      }
+    }
+
+    // PAY-007: cap on open pending orders per buyer, server-side. Counted
+    // after the supersede above (a re-checkout of the same listing replaces
+    // its order rather than adding one) and before this insert.
+    const openPending = await countOpenPendingOrders(user.id)
+    if (openPending >= MAX_OPEN_PENDING_ORDERS) {
+      return {
+        success: false,
+        error: `You have ${openPending} orders awaiting payment. Complete or cancel one before starting another.`,
       }
     }
 
@@ -462,6 +486,17 @@ function isChargeInFlight(createdAtIso: string | null): boolean {
   if (!createdAtIso) return false
   const age = Date.now() - new Date(createdAtIso).getTime()
   return age >= 0 && age < CHARGE_IN_FLIGHT_WINDOW_MS
+}
+
+/** PAY-007: the buyer's open (pending) orders, counted as the backend. */
+async function countOpenPendingOrders(buyerId: string): Promise<number> {
+  const { count, error } = await createServiceRoleClient()
+    .from('orders')
+    .select('id', { count: 'exact', head: true })
+    .eq('buyer_id', buyerId)
+    .eq('status', 'pending')
+  if (error) throw new Error(`open pending order count failed: ${error.message}`)
+  return count ?? 0
 }
 
 interface ReusablePendingOrder {

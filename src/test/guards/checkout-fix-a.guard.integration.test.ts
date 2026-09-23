@@ -14,6 +14,7 @@
  *            superseded or re-charged: "payment is being prepared".
  *   PAY-006  createCharge failure cancels the order + returns the wallet
  *            hold; every pending order is born with a payment_expires_at.
+ *   PAY-007  checkout is rate-limited per buyer; ≤ 5 open pending orders.
  *
  * Every row this file causes is removed in afterAll — orders, ledger
  * journals, and the admin notifications the RPC inserts (for EVERY active
@@ -443,5 +444,46 @@ describe.skipIf(!hasEnv)('checkout fix round A (integration)', () => {
       expect(await walletMinor(fx!.buyer.id)).toBe(walletBefore) // hold returned
       expect(await txnByKey(`wallet_refund:${row.id}`)).not.toBeNull()
     }, 90_000)
+
+    it('PAY-007: at most 5 open pending orders per buyer', async () => {
+      await clearRateLimit()
+      await cancelAllPendingFor(fx!.buyer.id)
+      const { data: base } = await fx!.svc.from('listings').select('game_id, game_category_id').eq('id', fx!.listingId).single()
+      const extra: string[] = []
+      for (let i = 0; i < 5; i++) {
+        const { data: l, error } = await fx!.svc.from('listings').insert({
+          seller_id: fx!.seller.id, game_id: (base as any).game_id, game_category_id: (base as any).game_category_id,
+          title: `GUARD-TEST-p7-${i}-${tag()}`, description: 'cap test', price: 1, quantity: 5, status: 'active',
+        }).select('id').single()
+        if (error) throw new Error(`listing insert: ${error.message}`)
+        extra.push((l as any).id)
+        await insertOrder({ listing_id: (l as any).id, status: 'pending', escrow_status: 'pending', order_number: `GT-P7-${i}-${tag()}` })
+      }
+      sessionClient = fx!.buyer.client
+      const { createCheckout } = await import('@/lib/actions/checkout')
+      const r = await createCheckout({ listingId: fx!.listingId, quantity: 1 })
+      expect(r.success).toBe(false)
+      expect(r.error).toMatch(/orders awaiting payment/)
+      const { count } = await fx!.svc.from('orders').select('id', { count: 'exact', head: true }).eq('buyer_id', fx!.buyer.id).eq('status', 'pending')
+      expect(count).toBe(5)
+      await cancelAllPendingFor(fx!.buyer.id)
+      for (const id of extra) await fx!.svc.from('orders').delete().eq('listing_id', id)
+      await fx!.svc.from('listings').delete().in('id', extra)
+    }, 120_000)
+
+    it('PAY-007: the checkout budget is charged per buyer inside the action', async () => {
+      await clearRateLimit()
+      await cancelAllPendingFor(fx!.buyer.id)
+      for (let i = 0; i < 20; i++) {
+        const { error } = await (fx!.svc as any).rpc('rate_limit_hit', { p_key: rlKey(), p_limit: 20, p_window_seconds: 60 })
+        if (error) throw new Error(`rate_limit_hit: ${error.message}`)
+      }
+      sessionClient = fx!.buyer.client
+      const { createCheckout } = await import('@/lib/actions/checkout')
+      const r = await createCheckout({ listingId: fx!.listingId, quantity: 1 })
+      expect(r.success).toBe(false)
+      expect(r.error).toMatch(/Too many checkout attempts/)
+      await clearRateLimit()
+    }, 60_000)
   })
 })
