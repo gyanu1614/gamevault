@@ -1,6 +1,6 @@
 # Fee engine — PR 5 handoff (readers + copy + cleanup; PR 6 absorbed)
 
-**Date:** 2026-09-22 · **Branch:** `feat/fee-engine-readers` (worktree `../gamevault-fee-pr5`) · **PR:** __PR_URL__ · **Not merged, no `db push` run.** No rate changed; only who reads them.
+**Date:** 2026-09-22 · **Branch:** `feat/fee-engine-readers` (worktree `../gamevault-fee-pr5`) · **PR:** https://github.com/gyanu1614/gamevault/pull/87 · **Not merged, no `db push` run.** No rate changed; only who reads them.
 Design: `docs/design/fee-engine.md` §4, §5, §6 (PR 5 ✅, PR 6 absorbed), §7, §9 A5–A13 (updated in `~/gamevault`; the file is gitignored).
 
 ## Commits (one per part)
