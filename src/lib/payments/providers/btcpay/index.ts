@@ -34,7 +34,7 @@ import {
   BTCPAY_INVOICE_EXPIRY_MINUTES,
   BTCPAY_MONITORING_MINUTES,
 } from './env'
-import { btcpayToCanonical, btcpayEventId, type BtcpayInvoice } from './status-map'
+import { btcpayToCanonical, btcpayEventId, btcpayPaidFromMethods, type BtcpayInvoice } from './status-map'
 import { displayOrderRef } from '@/lib/orders/order-number'
 import { PROVIDER_FETCH_TIMEOUT_MS } from '@/lib/payments/timeouts'
 
@@ -84,6 +84,15 @@ export function makeBtcpayProvider(deps?: { fetchImpl?: typeof fetch }): Payment
     )
     if (!res.ok) throw new Error(`btcpay: invoice re-fetch failed ${res.status}`)
     return (await res.json()) as BtcpayInvoice
+  }
+
+  async function getPaymentMethods(id: string): Promise<BtcpayPaymentMethod[]> {
+    const res = await fetchImpl(
+      `${btcpayBase()}/api/v1/stores/${btcpayStoreId()}/invoices/${id}/payment-methods`,
+      { headers: authHeaders(), signal: AbortSignal.timeout(PROVIDER_FETCH_TIMEOUT_MS) }
+    )
+    if (!res.ok) throw new Error(`btcpay: payment-methods fetch failed ${res.status}`)
+    return (await res.json()) as BtcpayPaymentMethod[]
   }
 
   return {
@@ -222,7 +231,19 @@ export function makeBtcpayProvider(deps?: { fetchImpl?: typeof fetch }): Payment
       if (inv.storeId && inv.storeId !== btcpayStoreId()) {
         throw new Error('btcpay: re-fetched invoice storeId mismatch')
       }
-      const events = btcpayToCanonical(inv)
+      // PAY-011: a PaidOver settlement carries what was actually received so
+      // the confirm RPC can credit the excess. Best-effort — an unreachable
+      // methods endpoint or an unusable rate leaves `paid` absent; the
+      // confirmation itself never waits on it.
+      let paid
+      if (inv.status === 'Settled' && inv.additionalStatus === 'PaidOver') {
+        try {
+          paid = btcpayPaidFromMethods(await getPaymentMethods(payload.invoiceId), inv.currency)
+        } catch (e) {
+          console.warn(`[btcpay] PaidOver on ${inv.id}: payment methods unavailable, excess not computed:`, e)
+        }
+      }
+      const events = btcpayToCanonical(inv, paid)
       return { providerEventId: btcpayEventId(inv), events }
     },
   }

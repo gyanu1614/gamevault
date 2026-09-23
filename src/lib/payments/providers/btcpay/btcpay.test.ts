@@ -257,3 +257,45 @@ describe('btcpay: voidCharge', () => {
     expect((await harness('New', { archiveOk: false }).provider.voidCharge('inv-1')).outcome).toBe('voided')
   })
 })
+
+// ─── overpayment (round B Part 3, PAY-011) ────────────────────────────────
+describe('btcpay: PaidOver carries what was actually paid', () => {
+  const harness = (invoice: Partial<BtcpayInvoice>, methods: any[]) => {
+    const calls: string[] = []
+    const fetchImpl = (async (url: any) => {
+      const u = String(url)
+      calls.push(u)
+      if (/\/invoices\/inv-1\/payment-methods$/.test(u)) return { ok: true, json: async () => methods } as any
+      if (/\/invoices\/inv-1$/.test(u)) return { ok: true, json: async () => inv('Settled', invoice) } as any
+      return { ok: false, status: 404, text: async () => 'nope' } as any
+    }) as any
+    return { calls, provider: makeBtcpayProvider({ fetchImpl }) }
+  }
+  const body = JSON.stringify({ invoiceId: 'inv-1', storeId: STORE, type: 'InvoiceSettled' })
+  const signed = (b: string) => ({ 'btcpay-sig': 'sha256=' + createHmac('sha256', SECRET).update(b).digest('hex') })
+
+  it('Settled + PaidOver → paid = Σ totalPaid × rate over the payment methods (invoice currency, cents)', async () => {
+    const { provider } = harness({ additionalStatus: 'PaidOver', amount: '49.99', currency: 'USD' }, [
+      { paymentMethodId: 'BTC-CHAIN', destination: 'bc1x', totalPaid: '0.0010', rate: '60000.00' }, // 60.00
+      { paymentMethodId: 'USDT-TRON', destination: 'Tx', totalPaid: '0', rate: '1.00' },
+    ])
+    const { events } = await provider.parseWebhook(signed(body), body)
+    expect(events[0].type).toBe('CHARGE_CONFIRMED')
+    expect((events[0] as any).settled).toEqual({ amountMinor: 4999n, currency: 'USD' })
+    expect((events[0] as any).paid).toEqual({ amountMinor: 6000n, currency: 'USD' })
+  })
+
+  it('Settled without PaidOver → no payment-methods fetch, paid absent', async () => {
+    const { calls, provider } = harness({ additionalStatus: 'None' }, [])
+    const { events } = await provider.parseWebhook(signed(body), body)
+    expect((events[0] as any).paid).toBeUndefined()
+    expect(calls.some((u) => u.includes('/payment-methods'))).toBe(false)
+  })
+
+  it('PaidOver with an unusable rate → paid absent (never a guess), the confirmation still stands', async () => {
+    const { provider } = harness({ additionalStatus: 'PaidOver' }, [{ paymentMethodId: 'BTC-CHAIN', destination: 'bc1x', totalPaid: '0.001' }])
+    const { events } = await provider.parseWebhook(signed(body), body)
+    expect(events[0].type).toBe('CHARGE_CONFIRMED')
+    expect((events[0] as any).paid).toBeUndefined()
+  })
+})

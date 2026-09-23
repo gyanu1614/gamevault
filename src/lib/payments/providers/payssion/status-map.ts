@@ -72,7 +72,10 @@ export function payssionToCanonical(txn: PayssionTxn): CanonicalEvent[] {
       )
       return [{ type: 'CHARGE_PENDING', orderId, providerChargeId: chargeId }]
     }
-    return [{ type: 'CHARGE_CONFIRMED', orderId, providerChargeId: chargeId, settled: amount }]
+    // PAY-011: what was actually paid rides along; the excess over the
+    // charge is credited to the buyer's wallet inside order_confirm_payment.
+    const paidMoney = fromDecimal(Number(paid).toFixed(2), txn.currency.toUpperCase())
+    return [{ type: 'CHARGE_CONFIRMED', orderId, providerChargeId: chargeId, settled: amount, paid: paidMoney }]
   }
   if (PENDING_STATES.has(txn.state)) {
     return [{ type: 'CHARGE_PENDING', orderId, providerChargeId: chargeId }]

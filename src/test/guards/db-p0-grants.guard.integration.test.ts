@@ -72,6 +72,8 @@ const MONEY_ATOMICITY_SERVICE_ONLY = [
   // Part 2: the provider cancel outbox + the deduped admin alert helper.
   'provider_cancel_outbox_version', 'provider_cancel_outbox_enqueue', 'provider_cancel_outbox_claim',
   'provider_cancel_outbox_mark', 'admin_alert_once',
+  // Part 3: late-payment / overpayment credit — wallet money moves, service only.
+  'late_payment_credit_version', 'order_credit_late_payment',
 ]
 
 /**

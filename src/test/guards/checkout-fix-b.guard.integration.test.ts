@@ -20,6 +20,12 @@
  *           provider with retries + backoff and alerts admins ONCE at the
  *           cap; a charge the provider reports paid is never voided; the
  *           sweep asks the provider before cancelling.
+ *   Part 3  order_credit_late_payment (PAY-009/011): a confirmed payment
+ *           on a cancelled / superseded / already-paid attempt, or an
+ *           amount above the charge, credits the buyer's wallet — one RPC,
+ *           idempotent on (charge id, event id), reason recorded on the
+ *           attempt, buyer notified once, admins noted once, the order is
+ *           NEVER re-opened; the webhook answers 200, not a retry storm.
  *
  * Every row this file causes is removed in afterAll — orders, attempts,
  * ledger journals, webhook_events and the notifications the RPCs insert
@@ -614,6 +620,135 @@ describe.skipIf(!hasEnv)('checkout fix round B (integration)', () => {
       // leave the buzzer-paid order closed for the fixture teardown
       const { cancelOrderReturnWallet } = await import('@/lib/wallet/order-money')
       await cancelOrderReturnWallet(paidOrder, 'test-reset')
+    }, 60_000)
+  })
+
+  // ── Part 3 ─────────────────────────────────────────────────────────────────
+  describe('Part 3 — late-payment and overpayment credit (PAY-009/011)', () => {
+    async function buyerNotes(orderNumber: string) {
+      const { data } = await fx!.svc.from('notifications').select('id, message').eq('user_id', fx!.buyer.id).eq('type', 'late_payment_credit').like('message', `%${orderNumber}%`)
+      return (data ?? []) as any[]
+    }
+    const paidBody = (chargeId: string, orderId: string, amountMinor: string, paidMinor?: string) =>
+      JSON.stringify({ chargeId, orderId, status: 'paid', amountMinor, ...(paidMinor ? { paidMinor } : {}), currency: CUR })
+
+    it('a payment landing on a CANCELLED order credits the buyer wallet, never re-opens the order, notifies once, answers 200', async () => {
+      await parkPendingOrders()
+      const num = `GT-LP-${tag()}`
+      const orderId = await insertOrder({ status: 'pending', escrow_status: 'pending', order_number: num })
+      const chargeId = `fake_${orderId}`
+      const attemptId = await insertAttempt({ order_id: orderId, provider_charge_id: chargeId, amount_minor: 100 })
+      const { cancelOrderReturnWallet } = await import('@/lib/wallet/order-money')
+      await cancelOrderReturnWallet(orderId, 'sweep', { closeAttemptAs: 'void' })
+      const before = await walletMinor(fx!.buyer.id)
+      const { handleWebhook } = await import('@/lib/payments/webhook-router')
+      const res = await handleWebhook('fake', sig, paidBody(chargeId, orderId, '100'))
+      expect(res.status, res.error).toBe(200) // processed — no provider retry storm (PAY-009)
+      expect((await orderRow(orderId)).status).toBe('cancelled')
+      expect(await walletMinor(fx!.buyer.id)).toBe(before + 100n)
+      const txn = await txnByKey(`late_payment:fake:${chargeId}:${chargeId}:paid`)
+      expect(txn).not.toBeNull()
+      const [a] = await attempts(orderId)
+      expect(a.id).toBe(attemptId)
+      expect(a.status).toBe('void') // untouched: still closed
+      expect(Number(a.credited_minor)).toBe(100)
+      expect(a.credit_reason).toBe('late_payment')
+      expect(await buyerNotes(num)).toHaveLength(1)
+      // the provider retries the same event: deduped by the router; a direct RPC replay credits nothing
+      const again = await handleWebhook('fake', sig, paidBody(chargeId, orderId, '100'))
+      expect(again.deduped).toBe(true)
+      const { confirmOrderPayment } = await import('@/lib/wallet/order-money')
+      const replay = await confirmOrderPayment(orderId, `${chargeId}:paid`, { provider: 'fake', providerChargeId: chargeId }, { amountMinor: 100n, currency: CUR })
+      expect(replay.outcome).toBe('late_credited')
+      expect(replay.changed).toBe(false)
+      expect(await walletMinor(fx!.buyer.id)).toBe(before + 100n)
+      expect(await buyerNotes(num)).toHaveLength(1)
+      // one deduped admin note for the fixture admin
+      expect(await adminAlerts('Late Payment Credited', `/account/orders/${orderId}`)).toHaveLength(1)
+    }, 60_000)
+
+    it('a payment on a SUPERSEDED attempt is credited while the order stays pending with its live attempt; the live one then pays normally', async () => {
+      await parkPendingOrders()
+      const num = `GT-SUP-${tag()}`
+      const orderId = await insertOrder({ status: 'pending', escrow_status: 'pending', order_number: num })
+      const oldCharge = `stale_${orderId}`
+      const liveCharge = `fake_${orderId}`
+      await insertAttempt({ order_id: orderId, status: 'superseded', provider_charge_id: oldCharge, amount_minor: 100, closed_at: new Date().toISOString() })
+      await insertAttempt({ order_id: orderId, provider_charge_id: liveCharge, amount_minor: 100 })
+      const before = await walletMinor(fx!.buyer.id)
+      const { handleWebhook } = await import('@/lib/payments/webhook-router')
+      const late = await handleWebhook('fake', sig, paidBody(oldCharge, orderId, '100'))
+      expect(late.status, late.error).toBe(200)
+      expect((await orderRow(orderId)).status).toBe('pending')
+      expect(await walletMinor(fx!.buyer.id)).toBe(before + 100n)
+      const rows = await attempts(orderId)
+      expect(rows.find((a) => a.provider_charge_id === oldCharge)).toMatchObject({ status: 'superseded', credit_reason: 'late_payment' })
+      expect(rows.find((a) => a.provider_charge_id === liveCharge)).toMatchObject({ status: 'active', credited_minor: 0 })
+      const paid = await handleWebhook('fake', sig, paidBody(liveCharge, orderId, '100'))
+      expect(paid.status, paid.error).toBe(200)
+      expect((await orderRow(orderId)).status).toBe('paid')
+      expect((await attempts(orderId)).find((a) => a.provider_charge_id === liveCharge)?.status).toBe('paid')
+      expect(await walletMinor(fx!.buyer.id)).toBe(before + 100n) // the live payment is the order's, not wallet money
+    }, 60_000)
+
+    it('an OVERPAYMENT confirms the order and credits only the excess, keyed on the event; a replay adds nothing', async () => {
+      await parkPendingOrders()
+      const num = `GT-OVER-${tag()}`
+      const orderId = await insertOrder({ status: 'pending', escrow_status: 'pending', total_amount: 1.07, order_number: num })
+      const chargeId = `fake_${orderId}`
+      await insertAttempt({ order_id: orderId, provider_charge_id: chargeId, amount_minor: 107, order_total_minor: 107 })
+      const before = await walletMinor(fx!.buyer.id)
+      const { handleWebhook } = await import('@/lib/payments/webhook-router')
+      const res = await handleWebhook('fake', sig, paidBody(chargeId, orderId, '107', '150'))
+      expect(res.status, res.error).toBe(200)
+      expect((await orderRow(orderId)).status).toBe('paid')
+      expect(await walletMinor(fx!.buyer.id)).toBe(before + 43n)
+      expect(await txnByKey(`overpayment:fake:${chargeId}:${chargeId}:paid`)).not.toBeNull()
+      const [a] = await attempts(orderId)
+      expect(a).toMatchObject({ status: 'paid', credit_reason: 'overpayment' })
+      expect(Number(a.credited_minor)).toBe(43)
+      expect(await buyerNotes(num)).toHaveLength(1)
+      const { confirmOrderPayment } = await import('@/lib/wallet/order-money')
+      const replay = await confirmOrderPayment(orderId, `${chargeId}:paid`, { provider: 'fake', providerChargeId: chargeId }, { amountMinor: 107n, currency: CUR, paidMinor: 150n })
+      expect(replay.outcome).toBe('noop')
+      expect(await walletMinor(fx!.buyer.id)).toBe(before + 43n)
+      expect(await buyerNotes(num)).toHaveLength(1)
+    }, 60_000)
+
+    it('a SECOND payment on an already-paid order (another charge) is credited in full as a duplicate; the order is untouched', async () => {
+      await parkPendingOrders()
+      const num = `GT-DUP-${tag()}`
+      const orderId = await insertOrder({ status: 'pending', escrow_status: 'pending', order_number: num })
+      const first = `fake_${orderId}`
+      const second = `dup_${orderId}`
+      await insertAttempt({ order_id: orderId, status: 'superseded', provider_charge_id: second, amount_minor: 100, closed_at: new Date().toISOString() })
+      await insertAttempt({ order_id: orderId, provider_charge_id: first, amount_minor: 100 })
+      const { handleWebhook } = await import('@/lib/payments/webhook-router')
+      expect((await handleWebhook('fake', sig, paidBody(first, orderId, '100'))).status).toBe(200)
+      expect((await orderRow(orderId)).status).toBe('paid')
+      const before = await walletMinor(fx!.buyer.id)
+      const dup = await handleWebhook('fake', sig, paidBody(second, orderId, '100'))
+      expect(dup.status, dup.error).toBe(200)
+      expect((await orderRow(orderId)).status).toBe('paid')
+      expect(await walletMinor(fx!.buyer.id)).toBe(before + 100n)
+      expect(await txnByKey(`late_payment:fake:${second}:${second}:paid`)).not.toBeNull()
+      expect((await attempts(orderId)).find((a) => a.provider_charge_id === second)).toMatchObject({ status: 'superseded', credit_reason: 'late_payment' })
+    }, 60_000)
+
+    itFault('an in-RPC fault after the credit journal rolls everything back — no credit, no note', async () => {
+      await parkPendingOrders()
+      const num = `GT-LPF-${tag()}`
+      const orderId = await insertOrder({ status: 'cancelled', escrow_status: 'pending', order_number: num })
+      const chargeId = `fault_${orderId}`
+      await insertAttempt({ order_id: orderId, status: 'void', provider_charge_id: chargeId, amount_minor: 100, closed_at: new Date().toISOString() })
+      const before = await walletMinor(fx!.buyer.id)
+      const err = withFault('order_credit_late_payment:after_journal',
+        `SELECT public.order_credit_late_payment('fake', '${chargeId}', 'evt-1', 100, 'USD', 'late_payment')`)
+      expect(err).toMatch(/injected fault at order_credit_late_payment:after_journal/)
+      expect(await walletMinor(fx!.buyer.id)).toBe(before)
+      expect(await txnByKey(`late_payment:fake:${chargeId}:evt-1`)).toBeNull()
+      expect(await buyerNotes(num)).toHaveLength(0)
+      expect(Number((await attempts(orderId))[0].credited_minor)).toBe(0)
     }, 60_000)
   })
 })

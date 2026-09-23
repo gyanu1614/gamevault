@@ -113,7 +113,21 @@ export async function dispatch(
   try {
     if (event.type === 'CHARGE_CONFIRMED') {
       const { confirmOrderPayment } = await import('@/lib/wallet/order-money')
-      const confirmed = await confirmOrderPayment(event.orderId, providerEventId, charge)
+      const confirmed = await confirmOrderPayment(event.orderId, providerEventId, charge, {
+        amountMinor: event.settled.amountMinor,
+        currency: event.settled.currency,
+        paidMinor: event.paid?.amountMinor,
+      })
+      if (confirmed.outcome === 'late_credited') {
+        // Round B Part 3 (PAY-009): money for a charge the order no longer
+        // wanted — credited to the buyer's wallet inside the RPC (buyer and
+        // admins notified there, once). The order is untouched and this is
+        // a PROCESSED event: no throw, no failed row, no provider retry.
+        console.warn(
+          `[Dispatch] late payment on order ${event.orderId} (charge ${event.providerChargeId}, status ${confirmed.status}): ${confirmed.creditedMinor} minor credited to the buyer wallet`
+        )
+        return { applied: false, orderId: confirmed.orderId, status: confirmed.status }
+      }
       if (confirmed.outcome === 'oversold_refunded') {
         console.warn(
           `[Dispatch] order ${event.orderId} paid but out of stock (${confirmed.reason ?? 'unknown'}) — refunded to the buyer wallet in the same transaction`

@@ -7,7 +7,7 @@
  *
  * Webhook payload shape (JSON string in rawBody):
  *   { "chargeId": "...", "orderId": "...", "status": "paid"|"pending"|"failed"|"refunded",
- *     "amountMinor": "10000", "currency": "EUR" }
+ *     "amountMinor": "10000", "currency": "EUR", "paidMinor"?: "12000" }
  * Signature: header "x-fake-signature" must equal FAKE_WEBHOOK_SECRET (default
  * "fake-secret"); anything else throws (→ spine returns 400).
  */
@@ -85,7 +85,13 @@ export const fakeProvider: PaymentProvider = {
         events.push({ type: 'CHARGE_PENDING', orderId, providerChargeId: chargeId })
         break
       case 'paid':
-        events.push({ type: 'CHARGE_CONFIRMED', orderId, providerChargeId: chargeId, settled: amt() })
+        events.push({
+          type: 'CHARGE_CONFIRMED',
+          orderId,
+          providerChargeId: chargeId,
+          settled: amt(),
+          ...(body.paidMinor ? { paid: money(BigInt(body.paidMinor), body.currency ?? 'EUR') } : {}),
+        })
         break
       case 'failed':
         events.push({ type: 'CHARGE_FAILED', orderId, providerChargeId: chargeId, reason: 'fake-failed' })

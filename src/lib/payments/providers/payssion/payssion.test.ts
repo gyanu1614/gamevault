@@ -382,3 +382,17 @@ describe('payssion: voidCharge', () => {
     await expect(harness({ code: 400 }, { state: 'pending' }).provider.voidCharge('T1')).rejects.toThrow(/cancel refused/)
   })
 })
+
+// ─── overpayment (round B Part 3, PAY-011) ────────────────────────────────
+describe('payssion: CHARGE_CONFIRMED carries what was actually paid', () => {
+  it('paid > amount → `paid` Money present (the excess is credited by order_confirm_payment)', () => {
+    const ev = payssionToCanonical(txn('paid_more', { amount: '14.98', paid: '20.00' }))[0]
+    expect(ev.type).toBe('CHARGE_CONFIRMED')
+    expect((ev as any).settled).toEqual(fromDecimal('14.98', 'USD'))
+    expect((ev as any).paid).toEqual(fromDecimal('20.00', 'USD'))
+  })
+  it('paid == amount → `paid` equals settled', () => {
+    const ev = payssionToCanonical(txn('completed', { amount: '14.98', paid: '14.98' }))[0]
+    expect((ev as any).paid).toEqual(fromDecimal('14.98', 'USD'))
+  })
+})

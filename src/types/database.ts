@@ -4056,6 +4056,119 @@ export type Database = {
           },
         ]
       }
+      order_dispute_events: {
+        Row: {
+          action: string
+          actor_id: string | null
+          actor_role: string
+          created_at: string
+          dispute_id: string | null
+          id: number
+          order_id: string
+          post_completion: boolean
+          reason: string | null
+          refund_minor: number
+          seller_side_minor: number
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          actor_role: string
+          created_at?: string
+          dispute_id?: string | null
+          id?: never
+          order_id: string
+          post_completion?: boolean
+          reason?: string | null
+          refund_minor?: number
+          seller_side_minor?: number
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          actor_role?: string
+          created_at?: string
+          dispute_id?: string | null
+          id?: never
+          order_id?: string
+          post_completion?: boolean
+          reason?: string | null
+          refund_minor?: number
+          seller_side_minor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_dispute_events_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "admin_review_overview"
+            referencedColumns: ["reviewer_id"]
+          },
+          {
+            foreignKeyName: "order_dispute_events_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "admin_review_overview"
+            referencedColumns: ["seller_id"]
+          },
+          {
+            foreignKeyName: "order_dispute_events_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_dispute_events_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_dispute_events_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "seller_dashboard_stats"
+            referencedColumns: ["seller_id"]
+          },
+          {
+            foreignKeyName: "order_dispute_events_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "seller_shop_banners"
+            referencedColumns: ["seller_id"]
+          },
+          {
+            foreignKeyName: "order_dispute_events_dispute_id_fkey"
+            columns: ["dispute_id"]
+            isOneToOne: false
+            referencedRelation: "disputes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_dispute_events_dispute_id_fkey"
+            columns: ["dispute_id"]
+            isOneToOne: false
+            referencedRelation: "disputes_with_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_dispute_events_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "fee_resolution_gaps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_dispute_events_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       orders: {
         Row: {
           auto_release_at: string | null
@@ -4363,6 +4476,8 @@ export type Database = {
           close_reason: string | null
           closed_at: string | null
           created_at: string
+          credit_reason: string | null
+          credited_minor: number
           currency: string
           expires_at: string | null
           id: string
@@ -4383,6 +4498,8 @@ export type Database = {
           close_reason?: string | null
           closed_at?: string | null
           created_at?: string
+          credit_reason?: string | null
+          credited_minor?: number
           currency: string
           expires_at?: string | null
           id?: string
@@ -4403,6 +4520,8 @@ export type Database = {
           close_reason?: string | null
           closed_at?: string | null
           created_at?: string
+          credit_reason?: string | null
+          credited_minor?: number
           currency?: string
           expires_at?: string | null
           id?: string
@@ -11887,6 +12006,7 @@ export type Database = {
         Args: { new_status: string; old_status: string }
         Returns: boolean
       }
+      late_payment_credit_version: { Args: never; Returns: number }
       ledger_balance: {
         Args: {
           p_currency: string
@@ -11937,7 +12057,7 @@ export type Database = {
           p_order_id: string
           p_provider?: string
           p_provider_charge_id?: string
-          p_provider_void_done?: boolean
+          p_provider_void_outcome?: string
         }
         Returns: Json
       }
@@ -11948,8 +12068,11 @@ export type Database = {
       }
       order_confirm_payment: {
         Args: {
+          p_amount_minor?: number
+          p_currency?: string
           p_dedupe_key?: string
           p_order_id: string
+          p_paid_minor?: number
           p_provider?: string
           p_provider_charge_id?: string
         }
@@ -12055,6 +12178,40 @@ export type Database = {
         }
         Returns: Json
       }
+      order_credit_late_payment: {
+        Args: {
+          p_amount_minor: number
+          p_currency: string
+          p_event_id: string
+          p_order_id?: string
+          p_provider: string
+          p_provider_charge_id: string
+          p_reason: string
+        }
+        Returns: Json
+      }
+      order_dispute_open: {
+        Args: {
+          p_actor_id: string
+          p_actor_role: string
+          p_description: string
+          p_order_id: string
+          p_reason: string
+          p_title: string
+        }
+        Returns: Json
+      }
+      order_dispute_resolve: {
+        Args: {
+          p_admin_id: string
+          p_dispute_id: string
+          p_notes?: string
+          p_outcome: string
+          p_refund_minor?: number
+        }
+        Returns: Json
+      }
+      order_disputes_version: { Args: never; Returns: number }
       order_mark_delivered: {
         Args: { p_order_id: string; p_seller_id: string }
         Returns: Json
@@ -12143,11 +12300,11 @@ export type Database = {
       provider_cancel_outbox_enqueue: {
         Args: {
           p_attempt_id: string
-          p_done?: boolean
           p_order_id: string
           p_provider: string
           p_provider_charge_id: string
           p_reason: string
+          p_void_outcome?: string
         }
         Returns: string
       }

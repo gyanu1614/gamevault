@@ -90,3 +90,11 @@ describe('fake provider: voidCharge (test double for the cancel outbox)', () => 
     fakeVoid.reset()
   })
 })
+
+describe('fake provider: paidMinor on a paid webhook (overpayment tests)', () => {
+  it('carries `paid` when the body names paidMinor', async () => {
+    const { events } = await fakeProvider.parseWebhook(sig, body({ chargeId: 'c1', orderId: 'o1', status: 'paid', amountMinor: '107', paidMinor: '150', currency: 'USD' }))
+    expect((events[0] as any).settled).toEqual({ amountMinor: 107n, currency: 'USD' })
+    expect((events[0] as any).paid).toEqual({ amountMinor: 150n, currency: 'USD' })
+  })
+})

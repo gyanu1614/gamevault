@@ -113,12 +113,24 @@ export async function refundOrderToWallet(
   return toResult(data)
 }
 
-export type ConfirmOutcome = 'paid' | 'oversold_refunded' | 'noop'
+export type ConfirmOutcome = 'paid' | 'oversold_refunded' | 'noop' | 'late_credited'
 
 export interface ConfirmPaymentResult extends OrderMoneyResult {
   outcome: ConfirmOutcome
   /** oversold_refunded only: why the stock could not be claimed. */
   reason?: string | null
+  /** late_credited / overpayment: minor units credited to the buyer wallet
+   *  by this call (0 on a replay — the credit is idempotent per event). */
+  creditedMinor: bigint
+}
+
+/** Round B Part 3: the amounts a confirmation carries. */
+export interface ConfirmAmounts {
+  /** What the charge asked for (the invoice / transaction amount). */
+  amountMinor: bigint
+  currency: string
+  /** What was actually paid, when the provider says; above amountMinor = overpayment. */
+  paidMinor?: bigint
 }
 
 /**
@@ -134,11 +146,16 @@ export interface ConfirmPaymentResult extends OrderMoneyResult {
  *
  * Round B: `charge` names the provider charge that paid. The RPC refuses a
  * charge bound to another order and closes the charge's attempt as paid.
+ * `amounts` (Part 3) lets the RPC route money the order no longer wants —
+ * a closed attempt, a closed or already-paid order — to the buyer's wallet
+ * (outcome `late_credited`, the order untouched) and credit an overpayment's
+ * excess after a normal confirmation.
  */
 export async function confirmOrderPayment(
   orderId: string,
   dedupeKey?: string,
-  charge?: ChargeRef
+  charge?: ChargeRef,
+  amounts?: ConfirmAmounts
 ): Promise<ConfirmPaymentResult> {
   const supabase = createServiceRoleClient()
   const { data, error } = await (supabase.rpc as any)('order_confirm_payment', {
@@ -146,12 +163,19 @@ export async function confirmOrderPayment(
     p_dedupe_key: dedupeKey ?? null,
     p_provider: charge?.provider ?? null,
     p_provider_charge_id: charge?.providerChargeId ?? null,
+    p_amount_minor: amounts ? amounts.amountMinor.toString() : null,
+    p_paid_minor: amounts?.paidMinor !== undefined ? amounts.paidMinor.toString() : null,
+    p_currency: amounts?.currency ?? null,
   })
   if (error) throw new Error(`order_confirm_payment failed: ${error.message}`)
+  const outcome = (data.outcome as ConfirmOutcome) ?? 'noop'
   const result: ConfirmPaymentResult = {
     ...toResult(data),
-    outcome: (data.outcome as ConfirmOutcome) ?? 'noop',
+    outcome,
     reason: data.reason ?? null,
+    creditedMinor: BigInt(
+      outcome === 'late_credited' ? (data.credited_minor ?? 0) : outcome === 'paid' ? (data.overpaid_minor ?? 0) : 0
+    ),
   }
   // Stock moved (claimed, or the listing re-opened): the prerendered
   // category page shows the quantity. Best-effort, never fails the payment.

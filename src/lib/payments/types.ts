@@ -17,7 +17,19 @@ import type { Money } from '@/lib/money'
 
 export type CanonicalEvent =
   | { type: 'CHARGE_PENDING'; orderId: string; providerChargeId: string }
-  | { type: 'CHARGE_CONFIRMED'; orderId: string; providerChargeId: string; settled: Money }
+  | {
+      type: 'CHARGE_CONFIRMED'
+      orderId: string
+      providerChargeId: string
+      /** The amount the charge asked for (the invoice / transaction amount). */
+      settled: Money
+      /** Round B Part 3 (PAY-011): what the buyer ACTUALLY paid when the
+       *  provider reports it (Payssion `paid`, BTCPay PaidOver via the
+       *  payment methods). Above `settled` = an overpayment, credited to the
+       *  wallet by order_confirm_payment. Absent when the provider gives no
+       *  figure (CoinGate) — never a guess. */
+      paid?: Money
+    }
   | { type: 'CHARGE_FAILED'; orderId: string; providerChargeId: string; reason: string }
   | { type: 'REFUND_COMPLETED'; orderId: string; refundId: string; amount: Money }
   | { type: 'PAYOUT_COMPLETED'; payoutId: string; amount: Money }
