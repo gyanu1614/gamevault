@@ -10,6 +10,8 @@
  *            confirm transaction; sold out → refunded to the wallet in the
  *            same transaction; an undelivered cancel returns the stock.
  *   PAY-015  inventory_claim_for_order refuses a new claim on an unpaid order.
+ *   PAY-005  an in-flight racing order (no checkout_url yet) is never
+ *            superseded or re-charged: "payment is being prepared".
  *
  * Every row this file causes is removed in afterAll — orders, ledger
  * journals, and the admin notifications the RPC inserts (for EVERY active
@@ -127,7 +129,6 @@ describe.skipIf(!hasEnv)('checkout fix round A (integration)', () => {
       await del('notifications(admin alerts)', svc.from('notifications').delete().like('link', `%${id}%`))
       await del('webhook_events', svc.from('webhook_events').delete().eq('provider', 'fake').like('provider_event_id', `fake_${id}:%`))
     }
-    await del('audit_logs', svc.from('audit_logs').delete().in('user_id', users))
     try { await fx.cleanup() } catch (e: any) { failures.push(String(e?.message ?? e)) }
     if (failures.length) throw new Error(`checkout-fix-a cleanup left residue:\n  - ${failures.join('\n  - ')}`)
   }, 120_000)
@@ -150,9 +151,11 @@ describe.skipIf(!hasEnv)('checkout fix round A (integration)', () => {
       expect(row.escrow_status).toBe('held')
       expect(await walletMinor(fx!.buyer.id)).toBe(walletBefore)
 
-      const admins = await activeAdminCount()
-      expect(admins).toBeGreaterThan(0) // the fixture admin at least
-      expect((await adminAlerts(orderId)).length).toBe(admins)
+      // One alert per active admin; pinned on OUR fixture admin (other test
+      // runs on the shared stack may add/remove their own admins mid-test).
+      expect(await activeAdminCount()).toBeGreaterThan(0)
+      const mine = (alerts: { user_id: string }[]) => alerts.filter((a) => a.user_id === fx!.admin.id).length
+      expect(mine(await adminAlerts(orderId))).toBe(1)
 
       // A second stale failure (sweep, provider retry with a new event id) adds nothing.
       const { cancelOrderReturnWallet } = await import('@/lib/wallet/order-money')
@@ -160,7 +163,7 @@ describe.skipIf(!hasEnv)('checkout fix round A (integration)', () => {
       expect(again.refused).toBe(true)
       expect(again.changed).toBe(false)
       expect((await orderRow(orderId)).status).toBe('paid')
-      expect((await adminAlerts(orderId)).length).toBe(admins)
+      expect(mine(await adminAlerts(orderId))).toBe(1)
     }, 60_000)
 
     it('every non-pending status is refused for the automatic caller', async () => {
@@ -355,5 +358,44 @@ describe.skipIf(!hasEnv)('checkout fix round A (integration)', () => {
         await fx!.svc.from('instant_delivery_inventory').delete().eq('listing_id', fx!.listingId)
       }
     }, 60_000)
+  })
+
+  // ── PAY-005 / PAY-006 / PAY-007 / PAY-014 (createCheckout) ────────────────
+  describe('createCheckout — PAY-005/006/007/014', () => {
+    const rlKey = () => `checkout:user:${fx!.buyer.id}`
+    async function clearRateLimit() {
+      await fx!.svc.from('rate_limits').delete().eq('key', rlKey())
+    }
+    async function cancelAllPendingFor(buyerId: string) {
+      const { data } = await fx!.svc.from('orders').select('id').eq('buyer_id', buyerId).eq('status', 'pending')
+      const { cancelOrderReturnWallet } = await import('@/lib/wallet/order-money')
+      for (const o of (data ?? []) as any[]) await cancelOrderReturnWallet(o.id, 'test-reset')
+    }
+
+    it('PAY-005: a racing pending order still creating its charge is neither superseded nor re-charged', async () => {
+      await clearRateLimit()
+      await cancelAllPendingFor(fx!.buyer.id)
+      // The "winner": inserted seconds ago, no checkout_url yet (createCharge in flight).
+      const inFlight = await insertOrder({ status: 'pending', escrow_status: 'pending', order_number: `GT-P5-${tag()}` })
+      sessionClient = fx!.buyer.client
+      const { createCheckout } = await import('@/lib/actions/checkout')
+      const r = await createCheckout({ listingId: fx!.listingId, quantity: 1 })
+      expect(r.success).toBe(false)
+      expect(r.error).toMatch(/being prepared/)
+      const row = await orderRow(inFlight)
+      expect(row.status).toBe('pending')
+      expect(row.provider_charge_id).toBeNull() // never charged by the loser
+      expect(row.checkout_url).toBeNull()
+
+      // A STALE url-less pending order (older than the in-flight window) is
+      // superseded as before.
+      await fx!.svc.from('orders').update({ created_at: new Date(Date.now() - 10 * 60_000).toISOString() }).eq('id', inFlight)
+      const r2 = await createCheckout({ listingId: fx!.listingId, quantity: 1 })
+      expect(r2.success, r2.error).toBe(true)
+      expect(r2.orderId).not.toBe(inFlight)
+      createdOrderIds.push(r2.orderId!)
+      expect((await orderRow(inFlight)).status).toBe('cancelled')
+      expect((await orderRow(r2.orderId!)).payment_expires_at).not.toBeNull()
+    }, 90_000)
   })
 })

@@ -40,6 +40,12 @@ import { fromDecimal, money } from '@/lib/money'
 // plan; switched before any real payment existed.)
 const ORDER_CURRENCY = 'USD'
 
+/** PAY-005: an existing pending order with no checkout_url yet is a racing
+ *  request still inside provider.createCharge for this long; superseding it
+ *  would cancel an order that is about to receive a live charge. */
+const CHARGE_IN_FLIGHT_WINDOW_MS = 90 * 1000
+const PAYMENT_BEING_PREPARED_MESSAGE =
+  'Your payment is still being prepared — please try again in a moment.'
 /** PAY-003: the stock ran out between checkout and payment; the order was
  *  refunded to the wallet inside the confirm transaction. */
 const SOLD_OUT_REFUNDED_MESSAGE =
@@ -153,6 +159,14 @@ export async function createCheckout(input: CreateCheckoutInput): Promise<Create
           checkoutUrl: toRelativePayUrl(existingPending.checkout_url),
         }
       }
+      // PAY-005: no checkout_url yet and created moments ago = a racing
+      // request (other tab, double submit) is still creating the provider
+      // charge for it. Superseding now would cancel an order about to get a
+      // live charge; minting our own would give one order two charges. The
+      // buyer retries in a moment and finds the finished order (reuse above).
+      if (!existingPending.checkout_url && isChargeInFlight(existingPending.created_at)) {
+        return { success: false, orderId: existingPending.id, error: PAYMENT_BEING_PREPARED_MESSAGE }
+      }
       // Amounts drifted (quantity/promo/wallet changed) OR the invoice expired.
       // Supersede the stale order: CANCELLED + the exact mirror of any wallet
       // hold the buyer applied to it (checkout_wallet:<id>, escrow_held →
@@ -225,12 +239,14 @@ export async function createCheckout(input: CreateCheckoutInput): Promise<Create
         if (raced?.checkout_url) {
           return { success: true, orderId: raced.id, checkoutUrl: toRelativePayUrl(raced.checkout_url) }
         }
+        // PAY-005: the winner is still inside provider.createCharge (its
+        // checkout_url UPDATE comes after). This request did not insert that
+        // order and must NEVER create a charge for it — that overwrote the
+        // winner's provider_charge_id and left two live charges on one order.
         if (raced) {
-          orderId = raced.id
-          orderNumber = raced.order_number
-        } else {
-          return { success: false, error: 'Could not open checkout — please try again' }
+          return { success: false, orderId: raced.id, error: PAYMENT_BEING_PREPARED_MESSAGE }
         }
+        return { success: false, error: 'Could not open checkout — please try again' }
       } else {
         const isDev = process.env.NODE_ENV !== 'production'
         return { success: false, error: isDev ? `Failed to create order: ${insertRes.error}` : 'Failed to create order' }
@@ -418,6 +434,13 @@ function bigintMin(a: bigint, b: bigint): bigint {
   return a < b ? a : b
 }
 
+/** PAY-005: was this url-less pending order inserted within the in-flight window? */
+function isChargeInFlight(createdAtIso: string | null): boolean {
+  if (!createdAtIso) return false
+  const age = Date.now() - new Date(createdAtIso).getTime()
+  return age >= 0 && age < CHARGE_IN_FLIGHT_WINDOW_MS
+}
+
 interface ReusablePendingOrder {
   id: string
   order_number: string | null
@@ -426,6 +449,7 @@ interface ReusablePendingOrder {
   payment_expires_at: string | null
   payment_provider: string | null
   provider_charge_id: string | null
+  created_at: string | null
 }
 
 /**
@@ -441,7 +465,7 @@ async function findReusablePendingOrder(
 ): Promise<ReusablePendingOrder | null> {
   const { data } = await supabase
     .from('orders')
-    .select('id, order_number, total_amount, checkout_url, payment_expires_at, payment_provider, provider_charge_id')
+    .select('id, order_number, total_amount, checkout_url, payment_expires_at, payment_provider, provider_charge_id, created_at')
     .eq('buyer_id', buyerId)
     .eq('listing_id', listingId)
     .eq('status', 'pending')
