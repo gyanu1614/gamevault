@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { revalidatePath, revalidateTag } from 'next/cache'
 import { GAME_DIRECTORY_TAG, PAUSED_SELLERS_TAG, TEST_SELLERS_TAG } from '@/lib/revalidation/tags'
+import { isCronAuthorized } from '@/lib/security/cron-auth'
 
 /**
  * Nightly full revalidate of the listing surfaces (Step 7b).
@@ -20,9 +21,8 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
-  const cronSecret = process.env.CRON_SECRET
-  const authHeader = request.headers.get('authorization')
-  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
+  // PAY-020: constant-time bearer compare, fails closed when CRON_SECRET is unset.
+  if (!isCronAuthorized(request.headers)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 

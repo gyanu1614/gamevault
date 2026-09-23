@@ -22,6 +22,8 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 const CANCELLED_STATES = new Set(['cancelled', 'failed', 'expired', 'rejected', 'blocked', 'error'])
+/** Statuses reached THROUGH a successful payment (safedrop state machine). */
+const PAID_LIFECYCLE = new Set(['paid', 'delivering', 'delivered', 'completed'])
 
 export async function GET(
   req: NextRequest,
@@ -45,7 +47,12 @@ export async function GET(
 
   const backToCheckout = `/checkout/${order.listing_id}?qty=${order.quantity ?? 1}&cancelled=1`
   if (order.status !== 'pending') {
-    return order.status === 'cancelled' ? to(backToCheckout) : to(`/account/orders/${orderId}?paid=1`)
+    // PAY-020: `?paid=1` means "a payment just landed" (collapses history).
+    // Only the paid lifecycle earns it; a refunded / disputed order lands
+    // on its plain order page, a cancelled one back at checkout.
+    if (order.status === 'cancelled') return to(backToCheckout)
+    if (PAID_LIFECYCLE.has(order.status)) return to(`/account/orders/${orderId}?paid=1`)
+    return to(`/account/orders/${orderId}`)
   }
 
   // Pending here usually means the buyer cancelled on the provider page and

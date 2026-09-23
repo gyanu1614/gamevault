@@ -14,8 +14,8 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { isCronAuthorized } from '@/lib/security/cron-auth'
 
-const CRON_SECRET = process.env.CRON_SECRET
 
 function getServiceClient() {
   return createClient(
@@ -27,8 +27,8 @@ function getServiceClient() {
 export async function GET(request: NextRequest) {
   try {
     // ── Auth ────────────────────────────────────────────────────────────────
-    const authHeader = request.headers.get('authorization')
-    if (!CRON_SECRET || authHeader !== `Bearer ${CRON_SECRET}`) {
+    // PAY-020: constant-time bearer compare, fails closed when CRON_SECRET is unset.
+    if (!isCronAuthorized(request.headers)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
