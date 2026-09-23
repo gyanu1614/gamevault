@@ -19,15 +19,26 @@ import AdoptMePetPage from './_AdoptMePetPage'
 import { getAdoptMePet, getPublishablePetSlugs } from './_adoptMePetData'
 import GenericValueItemPage from '../_generic/ValueItemPage'
 import { getValueItems } from '@/lib/values/data'
-import { bindValuesTag } from '@/lib/values/revalidation'
+import { bindValueItemPriceTag, bindValuesTag } from '@/lib/values/revalidation'
 import { getGameContentTheme } from '@/lib/content/theme'
 
 /**
- * Step 7a — time-based revalidation is a 24 h safety net. The primary refresh
- * is on demand: the pricing job POSTs /api/internal/values-revalidate after
- * each run, which revalidates every item page by route pattern.
+ * The page SHELL is static content — an item's name, rarity, artwork, income
+ * and copy change when the catalogue is edited, not on a price crawl. Only the
+ * price block moves, and it moves on its own tag.
+ *
+ * So the time-based window is a long safety net (7 days), not the refresh
+ * path. The refresh is event-driven:
+ *   • prices  → `price:<game>:<item>`, revalidated by the crawl's publish step
+ *               for the items whose prices actually moved
+ *               (/api/internal/sab-market-revalidate)
+ *   • content → `values:<game>`, revalidated by /api/internal/values-revalidate
+ *
+ * Before this, the 24 h window plus a whole-game tag on every one of 8 daily
+ * crawls rebuilt all ~500 item pages whether or not anything changed — ~80% of
+ * the monthly ISR budget (build audit 2026-09-22, §4).
  */
-export const revalidate = 86400
+export const revalidate = 604800
 
 /** Games served by the generic values_* pipeline (see the hub route). */
 const VALUES_PIPELINE_GAMES = new Set(['steal-an-egg'])
@@ -502,9 +513,17 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default async function BrainrotValuePage({ params }: PageProps) {
   const { gameSlug, itemSlug } = await params
-  // Step 7a — tag this render `values:<game>` so the pricing job's
-  // revalidateTag reaches exactly this game's item pages (lib/values/revalidation).
-  await bindValuesTag(gameSlug)
+  // Two tags, two lifetimes (see `revalidate` above):
+  //   • `values:<game>`      — catalogue/content edits, whole game.
+  //   • `price:<game>:<item>` — this item's prices, moved by a crawl only when
+  //     the published numbers actually changed.
+  // Both are bound before any branch so every variant of this page carries
+  // them, and the prices below stay SERVER-rendered (they are in the HTML for
+  // crawlers — the tags change when the page is rebuilt, not how).
+  await Promise.all([
+    bindValuesTag(gameSlug),
+    bindValueItemPriceTag(gameSlug, itemSlug),
+  ])
 
   // Adopt Me per-pet page — only publishable pets (has_page) render; anything
   // thin or unpriced 404s rather than shipping an empty page.

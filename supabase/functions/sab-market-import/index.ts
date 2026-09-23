@@ -82,8 +82,9 @@ function jsonResponse(
   });
 }
 
-async function revalidateMarketPages():
-  Promise<RevalidationResult> {
+async function revalidateMarketPages(
+  changedSlugs: string[],
+): Promise<RevalidationResult> {
   const revalidateUrl = Deno.env.get(
     "SAB_MARKET_REVALIDATE_URL",
   );
@@ -122,6 +123,10 @@ async function revalidateMarketPages():
       headers,
       body: JSON.stringify({
         reason: "sab-market-import",
+        // Per-item revalidation: only the items whose published prices
+        // actually moved this crawl. The route falls back to the whole-game
+        // tag when this is absent, so an older deployment still works.
+        changedSlugs,
       }),
       signal: AbortSignal.timeout(8_000),
     });
@@ -416,11 +421,16 @@ Deno.serve(async (request) => {
     // perfectly and still never reach the page, which is exactly why the values
     // pages sat at "Aug 13" while crawls kept passing. Refreshing here closes
     // that gap so a successful crawl is visible without waiting for the cron.
+    // ...and report WHICH items changed, so the revalidation below can be per
+    // item instead of per game. `_changed` does the same refresh and returns
+    // the brainrot slugs whose published prices actually moved (migration
+    // 20260922172054). The whole-game tag marked all ~500 item pages stale on
+    // every crawl — ~80% of the monthly ISR budget (build audit 2026-09-22, §4).
     const {
       data: displayRows,
       error: displayError,
     } = await supabaseAdmin.rpc(
-      "sab_refresh_price_display",
+      "sab_refresh_price_display_changed",
     );
 
     if (displayError) {
@@ -445,8 +455,20 @@ Deno.serve(async (request) => {
       );
     }
 
-    const revalidation =
-      await revalidateMarketPages();
+    // The RPC returns one row per changed slug.
+    const changedSlugs = Array.isArray(displayRows)
+      ? (displayRows as Array<{ brainrot_slug?: string | null }>)
+        .map((row) =>
+          typeof row === "string" ? row : row?.brainrot_slug ?? null
+        )
+        .filter((slug): slug is string =>
+          typeof slug === "string" && slug.length > 0
+        )
+      : [];
+
+    const revalidation = await revalidateMarketPages(
+      changedSlugs,
+    );
 
     // ROUTE-010: a failed revalidation means fresh prices are in the database
     // but the public pages keep serving the cached old ones — silent staleness,
@@ -471,7 +493,10 @@ Deno.serve(async (request) => {
             ok: true,
             published_rows: publishedRows ?? 0,
           },
-          display_refreshed: Number(displayRows ?? 0),
+          // sab_refresh_price_display_changed returns ROWS (the changed
+          // slugs), not a count — Number() on an array is NaN. The useful
+          // number here is how many items actually moved.
+          price_rows_changed: changedSlugs.length,
           revalidation,
         },
         502,
@@ -486,7 +511,9 @@ Deno.serve(async (request) => {
         published_rows: publishedRows ?? 0,
       },
       evidence_refreshed: Number(evidenceRows ?? 0),
-      display_refreshed: Number(displayRows ?? 0),
+      // sab_refresh_price_display_changed returns ROWS (the changed slugs),
+      // not a count. The useful number is how many items actually moved.
+      price_rows_changed: changedSlugs.length,
       revalidation,
     });
   } catch (error) {
