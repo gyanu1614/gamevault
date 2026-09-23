@@ -396,3 +396,46 @@ describe('payssion: CHARGE_CONFIRMED carries what was actually paid', () => {
     expect((ev as any).paid).toEqual(fromDecimal('14.98', 'USD'))
   })
 })
+
+// ─── PAY-017 (round B Part 4): the 402 fallback must never mint twice ─────
+describe('payssion: createCharge 402 handling', () => {
+  process.env.PUBLIC_API_URL ||= 'https://app.test.local'
+  const harness = (first: any, second: any = { result_code: 200, redirect_url: 'https://pay.test/2', transaction: { transaction_id: 't2', state: 'pending' } }) => {
+    let n = 0
+    const fetchImpl = (async (url: any) => {
+      if (String(url).includes('/payment/create')) {
+        n++
+        return { ok: true, json: async () => (n === 1 ? first : second) } as any
+      }
+      return { ok: false, status: 404, text: async () => 'nope' } as any
+    }) as any
+    return { calls: () => n, provider: makePayssionProvider({ fetchImpl }) }
+  }
+  const input = {
+    orderId: '0f1e2d3c-1111-2222-3333-444444444444',
+    amount: fromDecimal('12.34', 'USD'),
+    returnUrl: 'https://app.test.local/checkout/return/x',
+    metadata: { pm_id: Object.keys(PAYSSION_METHODS)[0] },
+  }
+
+  it('a bare 402 (signature only) retries once with the fallback signature', async () => {
+    const h = harness({ result_code: 402 })
+    const r = await h.provider.createCharge(input)
+    expect(r.providerChargeId).toBe('t2')
+    expect(h.calls()).toBe(2)
+  })
+
+  it('a 402 that STILL carries a transaction + redirect is that transaction — used, never re-minted', async () => {
+    const h = harness({ result_code: 402, redirect_url: 'https://pay.test/1', transaction: { transaction_id: 't1', state: 'pending' } })
+    const r = await h.provider.createCharge(input)
+    expect(r.providerChargeId).toBe('t1')
+    expect(r.checkoutUrl).toBe('https://pay.test/1')
+    expect(h.calls()).toBe(1)
+  })
+
+  it('a 402 with a transaction but no redirect throws naming the id and does not retry', async () => {
+    const h = harness({ result_code: 402, transaction: { transaction_id: 't1' } })
+    await expect(h.provider.createCharge(input)).rejects.toThrow(/t1/)
+    expect(h.calls()).toBe(1)
+  })
+})

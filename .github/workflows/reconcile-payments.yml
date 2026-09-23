@@ -6,6 +6,7 @@
 #
 #   /api/cron/reconcile-payments
 #     · drains provider_cancel_outbox (void charges we closed) with backoff
+#     · re-runs webhook events stuck `received` > 15 min (PAY-010)
 #
 # Secrets: CRON_SECRET (existing — the same bearer expire-pending-payments
 # uses). Nothing else.

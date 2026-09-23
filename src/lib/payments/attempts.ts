@@ -278,3 +278,14 @@ export async function expiredPendingAttempts(cutoffIso: string, limit: number): 
     expiresAt: r.expires_at ?? null,
   }))
 }
+
+/** PAY-012: count a sweep failure on the attempt; the RPC alerts once at the cap
+ *  and expired_pending_payment_attempts stops returning the row. */
+export async function noteSweepFailure(attemptId: string, error: string): Promise<{ sweepFailures: number; alerted: number }> {
+  const { data, error: rpcErr } = await (createServiceRoleClient().rpc as any)('payment_attempt_note_sweep_failure', {
+    p_attempt_id: attemptId,
+    p_error: error.slice(0, 500),
+  })
+  if (rpcErr) throw new Error(`payment_attempt_note_sweep_failure failed: ${rpcErr.message}`)
+  return { sweepFailures: Number(data?.sweep_failures ?? 0), alerted: Number(data?.alerted ?? 0) }
+}

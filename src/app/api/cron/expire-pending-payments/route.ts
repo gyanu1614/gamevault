@@ -92,8 +92,17 @@ export async function GET(request: NextRequest) {
         { closeAttemptAs: 'void', providerVoidOutcome: voidOutcome }
       )
       expired++
-    } catch (e) {
+    } catch (e: any) {
+      // PAY-012: a poison row is counted on its attempt (alert once at the
+      // cap, then dropped from the batch) instead of retried silently
+      // forever; the ORDER BY expiry keeps it from starving the rest.
       console.error(`[ExpirePayments] order ${row.orderId} failed (retried next run):`, e)
+      if (row.attemptId) {
+        const { noteSweepFailure } = await import('@/lib/payments/attempts')
+        await noteSweepFailure(row.attemptId, String(e?.message ?? e)).catch((noteErr) =>
+          console.error(`[ExpirePayments] could not record the failure on attempt ${row.attemptId}:`, noteErr)
+        )
+      }
     }
   }
 

@@ -74,6 +74,9 @@ const MONEY_ATOMICITY_SERVICE_ONLY = [
   'provider_cancel_outbox_mark', 'admin_alert_once',
   // Part 3: late-payment / overpayment credit — wallet money moves, service only.
   'late_payment_credit_version', 'order_credit_late_payment',
+  // Part 4: the stuck-webhook reconciler + the sweep's poison counter.
+  'payment_reconciler_version', 'webhook_events_flip_unreplayable', 'webhook_events_stuck_claim',
+  'webhook_event_reconcile_mark', 'payment_attempt_note_sweep_failure',
 ]
 
 /**

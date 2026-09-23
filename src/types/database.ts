@@ -4488,6 +4488,8 @@ export type Database = {
           provider: string
           provider_charge_id: string | null
           status: string
+          sweep_failures: number
+          sweep_last_error: string | null
           updated_at: string
           wallet_minor: number
         }
@@ -4510,6 +4512,8 @@ export type Database = {
           provider: string
           provider_charge_id?: string | null
           status?: string
+          sweep_failures?: number
+          sweep_last_error?: string | null
           updated_at?: string
           wallet_minor?: number
         }
@@ -4532,6 +4536,8 @@ export type Database = {
           provider?: string
           provider_charge_id?: string | null
           status?: string
+          sweep_failures?: number
+          sweep_last_error?: string | null
           updated_at?: string
           wallet_minor?: number
         }
@@ -9839,32 +9845,44 @@ export type Database = {
       }
       webhook_events: {
         Row: {
+          events: Json | null
           id: string
+          last_error: string | null
+          last_reconciled_at: string | null
           payload_hash: string | null
           processed_at: string | null
           provider: string
           provider_event_id: string
           received_at: string
+          reconcile_attempts: number
           result: Json | null
           status: Database["public"]["Enums"]["webhook_event_status"]
         }
         Insert: {
+          events?: Json | null
           id?: string
+          last_error?: string | null
+          last_reconciled_at?: string | null
           payload_hash?: string | null
           processed_at?: string | null
           provider: string
           provider_event_id: string
           received_at?: string
+          reconcile_attempts?: number
           result?: Json | null
           status?: Database["public"]["Enums"]["webhook_event_status"]
         }
         Update: {
+          events?: Json | null
           id?: string
+          last_error?: string | null
+          last_reconciled_at?: string | null
           payload_hash?: string | null
           processed_at?: string | null
           provider?: string
           provider_event_id?: string
           received_at?: string
+          reconcile_attempts?: number
           result?: Json | null
           status?: Database["public"]["Enums"]["webhook_event_status"]
         }
@@ -12237,6 +12255,10 @@ export type Database = {
         }
         Returns: Json
       }
+      payment_attempt_note_sweep_failure: {
+        Args: { p_attempt_id: string; p_error: string }
+        Returns: Json
+      }
       payment_attempt_open: {
         Args: {
           p_amount_minor: number
@@ -12253,6 +12275,7 @@ export type Database = {
       }
       payment_attempts_backfill: { Args: never; Returns: number }
       payment_attempts_version: { Args: never; Returns: number }
+      payment_reconciler_version: { Args: never; Returns: number }
       post_journal: {
         Args: {
           p_entries: Json
@@ -12564,6 +12587,7 @@ export type Database = {
       }
       webhook_event_claim: {
         Args: {
+          p_events?: Json
           p_payload_hash?: string
           p_provider: string
           p_provider_event_id: string
@@ -12578,6 +12602,42 @@ export type Database = {
           p_status: Database["public"]["Enums"]["webhook_event_status"]
         }
         Returns: undefined
+      }
+      webhook_event_reconcile_mark: {
+        Args: {
+          p_error: string
+          p_id: string
+          p_max_attempts?: number
+          p_ok: boolean
+        }
+        Returns: Json
+      }
+      webhook_events_flip_unreplayable: {
+        Args: { p_older_than_minutes?: number }
+        Returns: number
+      }
+      webhook_events_stuck_claim: {
+        Args: { p_limit?: number; p_older_than_minutes?: number }
+        Returns: {
+          events: Json | null
+          id: string
+          last_error: string | null
+          last_reconciled_at: string | null
+          payload_hash: string | null
+          processed_at: string | null
+          provider: string
+          provider_event_id: string
+          received_at: string
+          reconcile_attempts: number
+          result: Json | null
+          status: Database["public"]["Enums"]["webhook_event_status"]
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "webhook_events"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
       withdraw_seller_application: {
         Args: { application_id_param: string; user_id_param: string }

@@ -26,6 +26,13 @@
  *           idempotent on (charge id, event id), reason recorded on the
  *           attempt, buyer notified once, admins noted once, the order is
  *           NEVER re-opened; the webhook answers 200, not a retry storm.
+ *   Part 4  reconciler (PAY-010/012): a webhook event stuck `received`
+ *           (crash between claim and mark) is re-run after 15 min via the
+ *           same dispatch from the events stored at claim time; one with no
+ *           stored events is flipped to failed so the provider's retry
+ *           re-claims it; a poison row is capped and alerted once; the
+ *           expiry sweep counts per-attempt failures, alerts once at the cap
+ *           and never lets a poison row starve the batch.
  *
  * Every row this file causes is removed in afterAll — orders, attempts,
  * ledger journals, webhook_events and the notifications the RPCs insert
@@ -37,6 +44,18 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { hasEnv, makeFixture, promoteToEstablishedSeller, type Fixture } from './throwaway'
 
 let sessionClient: SupabaseClient | null = null
+/** PAY-012: orders whose cancel RPC must throw (a poison row for the sweep). */
+const poisonCancelOrderIds = new Set<string>()
+vi.mock('@/lib/wallet/order-money', async (importOriginal) => {
+  const real = await importOriginal<typeof import('@/lib/wallet/order-money')>()
+  return {
+    ...real,
+    cancelOrderReturnWallet: async (...a: Parameters<typeof real.cancelOrderReturnWallet>) => {
+      if (poisonCancelOrderIds.has(a[0])) throw new Error(`injected: cancel RPC unreachable for ${a[0]}`)
+      return real.cancelOrderReturnWallet(...a)
+    },
+  }
+})
 vi.mock('@/lib/supabase/server', () => ({
   createClient: async () => {
     if (!sessionClient) throw new Error('test: session client not set')
@@ -750,5 +769,155 @@ describe.skipIf(!hasEnv)('checkout fix round B (integration)', () => {
       expect(await buyerNotes(num)).toHaveLength(0)
       expect(Number((await attempts(orderId))[0].credited_minor)).toBe(0)
     }, 60_000)
+  })
+
+  // ── Part 4 ─────────────────────────────────────────────────────────────────
+  describe('Part 4 — reconciler for stuck webhook events + poison counters (PAY-010/012)', () => {
+    const RECONCILE_MAX_ATTEMPTS = 5
+    const SWEEP_MAX_FAILURES = 5
+    async function eventRow(providerEventId: string) {
+      const { data, error } = await fx!.svc.from('webhook_events').select('*').eq('provider', 'fake').eq('provider_event_id', providerEventId).maybeSingle()
+      if (error) throw new Error(error.message)
+      return data as any
+    }
+    async function insertStuck(providerEventId: string, events: unknown[] | null, minutesAgo: number) {
+      const { error } = await fx!.svc.from('webhook_events').insert({
+        provider: 'fake', provider_event_id: providerEventId, status: 'received',
+        received_at: new Date(Date.now() - minutesAgo * 60_000).toISOString(),
+        ...(events ? { events } : {}),
+      })
+      if (error) throw new Error(`webhook_events insert: ${error.message}`)
+    }
+    async function reconcile() {
+      const { GET } = await import('@/app/api/cron/reconcile-payments/route')
+      const res = await GET(cronRequest('/api/cron/reconcile-payments'))
+      expect(res.status).toBe(200)
+      return (await res.json()) as any
+    }
+    const confirmedEvent = (orderId: string, chargeId: string) => ({
+      type: 'CHARGE_CONFIRMED', orderId, providerChargeId: chargeId,
+      settled: { amountMinor: '100', currency: CUR },
+    })
+
+    it('a `received` event older than 15 min is re-run through dispatch from its stored events and marked processed', async () => {
+      await parkPendingOrders()
+      const orderId = await insertOrder({ status: 'pending', escrow_status: 'pending', order_number: `GT-RC-${tag()}` })
+      const chargeId = `fake_${orderId}`
+      await insertAttempt({ order_id: orderId, provider_charge_id: chargeId, amount_minor: 100 })
+      const evtId = `${chargeId}:paid`
+      await insertStuck(evtId, [confirmedEvent(orderId, chargeId)], 20)
+      const young = `${chargeId}:young`
+      await insertStuck(young, [confirmedEvent(orderId, chargeId)], 2) // too young: untouched
+      const body = await reconcile()
+      expect(body.stuck.claimed).toBeGreaterThanOrEqual(1)
+      expect((await orderRow(orderId)).status).toBe('paid')
+      expect((await attempts(orderId))[0]).toMatchObject({ status: 'paid', paid_event_id: evtId })
+      const row = await eventRow(evtId)
+      expect(row.status).toBe('processed')
+      expect(row.reconcile_attempts).toBe(1)
+      expect(row.processed_at).not.toBeNull()
+      const y = await eventRow(young)
+      expect(y.status).toBe('received')
+      expect(y.reconcile_attempts).toBe(0)
+      // the provider's own late retry of the same event dedupes as processed
+      const { handleWebhook } = await import('@/lib/payments/webhook-router')
+      const r = await handleWebhook('fake', sig, JSON.stringify({ chargeId, orderId, status: 'paid', amountMinor: '100', currency: CUR }))
+      expect(r.deduped).toBe(true)
+      await fx!.svc.from('webhook_events').delete().eq('provider_event_id', young)
+    }, 60_000)
+
+    it('a stuck row with NO stored events is flipped to failed, so the provider retry re-claims and re-runs it', async () => {
+      await parkPendingOrders()
+      const orderId = await insertOrder({ status: 'pending', escrow_status: 'pending', order_number: `GT-RCn-${tag()}` })
+      const chargeId = `fake_${orderId}`
+      await insertAttempt({ order_id: orderId, provider_charge_id: chargeId, amount_minor: 100 })
+      const evtId = `${chargeId}:paid`
+      await insertStuck(evtId, null, 30)
+      await reconcile()
+      const row = await eventRow(evtId)
+      expect(row.status).toBe('failed')
+      expect(row.last_error).toMatch(/no stored events/i)
+      expect((await orderRow(orderId)).status).toBe('pending')
+      const { handleWebhook } = await import('@/lib/payments/webhook-router')
+      const r = await handleWebhook('fake', sig, JSON.stringify({ chargeId, orderId, status: 'paid', amountMinor: '100', currency: CUR }))
+      expect(r.status, r.error).toBe(200)
+      expect(r.deduped).not.toBe(true)
+      expect((await orderRow(orderId)).status).toBe('paid')
+      expect((await eventRow(evtId)).status).toBe('processed')
+    }, 60_000)
+
+    it('a poison row is retried up to the cap, then failed with ONE admin alert; healthy rows beside it still run', async () => {
+      await parkPendingOrders()
+      const ghost = '00000000-0000-4000-8000-000000000000' // no such order → dispatch throws every time
+      const poisonId = `poison_${tag()}:paid`
+      await insertStuck(poisonId, [confirmedEvent(ghost, `fake_${ghost}`)], 30)
+      const link = `/admin/orders?webhook=fake:${poisonId}`
+      for (let i = 1; i <= RECONCILE_MAX_ATTEMPTS; i++) {
+        // a healthy stuck row in the same batch
+        const orderId = await insertOrder({ status: 'pending', escrow_status: 'pending', order_number: `GT-RCh${i}-${tag()}` })
+        const chargeId = `fake_${orderId}`
+        await insertAttempt({ order_id: orderId, provider_charge_id: chargeId, amount_minor: 100 })
+        await insertStuck(`${chargeId}:paid`, [confirmedEvent(orderId, chargeId)], 30)
+        await fx!.svc.from('webhook_events').update({ last_reconciled_at: new Date(Date.now() - 20 * 60_000).toISOString() }).eq('provider_event_id', poisonId)
+        await reconcile()
+        expect((await orderRow(orderId)).status).toBe('paid') // never starved
+        await parkPendingOrders()
+        const row = await eventRow(poisonId)
+        expect(row.reconcile_attempts).toBe(i)
+        expect(row.last_error).toMatch(/not found|no_data_found|order/i)
+        if (i < RECONCILE_MAX_ATTEMPTS) {
+          expect(row.status).toBe('received')
+          expect(await adminAlerts('Webhook Event Poisoned', link)).toHaveLength(0)
+        } else {
+          expect(row.status).toBe('failed')
+          expect(await adminAlerts('Webhook Event Poisoned', link)).toHaveLength(1)
+        }
+      }
+      // failed rows are not claimed again; the alert stays at one
+      await fx!.svc.from('webhook_events').update({ last_reconciled_at: new Date(Date.now() - 20 * 60_000).toISOString() }).eq('provider_event_id', poisonId)
+      await reconcile()
+      expect((await eventRow(poisonId)).reconcile_attempts).toBe(RECONCILE_MAX_ATTEMPTS)
+      expect(await adminAlerts('Webhook Event Poisoned', link)).toHaveLength(1)
+      await fx!.svc.from('notifications').delete().eq('link', link)
+      await fx!.svc.from('webhook_events').delete().eq('provider_event_id', poisonId)
+    }, 120_000)
+
+    it('the expiry sweep counts per-attempt failures, alerts once at the cap and drops the poison row from the batch', async () => {
+      await parkPendingOrders(fx!.buyer.id)
+      await parkPendingOrders(fx!.admin.id)
+      const past = new Date(Date.now() - 10 * 60_000).toISOString()
+      const poison = await insertOrder({ status: 'pending', escrow_status: 'pending', order_number: `GT-SWP-${tag()}` })
+      const poisonAttempt = await insertAttempt({ order_id: poison, provider_charge_id: `fake_sw_${poison}`, expires_at: past })
+      poisonCancelOrderIds.add(poison)
+      const link = `/account/orders/${poison}`
+      const { GET } = await import('@/app/api/cron/expire-pending-payments/route')
+      try {
+        for (let i = 1; i <= SWEEP_MAX_FAILURES; i++) {
+          // a healthy expired order beside it every run — never starved
+          const healthy = await insertOrder({ buyer_id: fx!.admin.id, status: 'pending', escrow_status: 'pending', order_number: `GT-SWh${i}-${tag()}` })
+          await insertAttempt({ order_id: healthy, provider_charge_id: `fake_swh_${healthy}`, expires_at: past })
+          const res = await GET(cronRequest('/api/cron/expire-pending-payments'))
+          expect(res.status).toBe(200)
+          expect((await orderRow(healthy)).status).toBe('cancelled')
+          const { data: a } = await fx!.svc.from('payment_attempts').select('sweep_failures, sweep_last_error, status').eq('id', poisonAttempt).single()
+          expect((a as any).sweep_failures).toBe(i)
+          expect((a as any).sweep_last_error).toMatch(/injected/)
+          expect((a as any).status).toBe('active')
+          expect(await adminAlerts('Expiry Sweep Poisoned Order', link)).toHaveLength(i < SWEEP_MAX_FAILURES ? 0 : 1)
+        }
+        // at the cap the row is excluded from the sweep's read; the alert stays at one
+        const { expiredPendingAttempts } = await import('@/lib/payments/attempts')
+        const due = await expiredPendingAttempts(new Date().toISOString(), 100)
+        expect(due.find((r) => r.orderId === poison)).toBeUndefined()
+        await GET(cronRequest('/api/cron/expire-pending-payments'))
+        const { data: a } = await fx!.svc.from('payment_attempts').select('sweep_failures').eq('id', poisonAttempt).single()
+        expect((a as any).sweep_failures).toBe(SWEEP_MAX_FAILURES)
+        expect(await adminAlerts('Expiry Sweep Poisoned Order', link)).toHaveLength(1)
+      } finally {
+        poisonCancelOrderIds.delete(poison)
+        const { cancelOrderReturnWallet } = await import('@/lib/wallet/order-money')
+        await cancelOrderReturnWallet(poison, 'test-reset')
+      }
+    }, 120_000)
   })
 })

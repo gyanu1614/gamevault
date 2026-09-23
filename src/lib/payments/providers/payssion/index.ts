@@ -155,10 +155,22 @@ export function makePayssionProvider(deps?: { fetchImpl?: typeof fetch }): Payme
 
       let json = await post('/api/v1/payment/create', body(sigPrimary))
       if (json?.result_code === 402) {
-        console.warn('[Payssion] docs-scheme sig rejected — retrying WHMCS 7-field fallback')
-        json = await post('/api/v1/payment/create', body(sigFallback))
+        // PAY-017: a 402 is assumed to be "signature rejected", but it is not
+        // provably signature-only. If the answer nevertheless names a
+        // transaction, one WAS minted under this track_id — retrying would
+        // bind two transactions to one order. Use it when it is usable,
+        // refuse loudly when it is not; retry only a bare 402.
+        const mintedId = json?.transaction?.transaction_id as string | undefined
+        if (mintedId && json?.redirect_url) {
+          console.warn(`[Payssion] 402 with a live transaction ${mintedId} — using it, not re-minting`)
+        } else if (mintedId) {
+          throw new Error(`payssion: create answered 402 but minted transaction ${mintedId} without a redirect — not retrying (PAY-017)`)
+        } else {
+          console.warn('[Payssion] docs-scheme sig rejected — retrying WHMCS 7-field fallback')
+          json = await post('/api/v1/payment/create', body(sigFallback))
+        }
       }
-      if (json?.result_code !== 200 || !json?.transaction?.transaction_id || !json?.redirect_url) {
+      if (!json?.transaction?.transaction_id || !json?.redirect_url || (json?.result_code !== 200 && json?.result_code !== 402)) {
         throw new Error(`payssion: create failed (result_code ${json?.result_code})`)
       }
 
