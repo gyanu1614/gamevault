@@ -10,6 +10,7 @@ import type { Metadata } from 'next'
 import { fetchMoneySettings } from '@/lib/actions/admin-fees'
 import { PageHeader } from '../components/kit'
 import { MoneySettingsClient } from './_MoneySettingsClient'
+import { FeeNoticeClient } from './_FeeNoticeClient'
 
 export const metadata: Metadata = { title: 'Fees & Payouts' }
 export const dynamic = 'force-dynamic'
@@ -23,6 +24,7 @@ export default async function AdminFeesPage() {
         description="Completion hold, protection windows, dispute window, withdrawal gate and payout fees. Each change writes an audit row."
       />
       <MoneySettingsClient initial={data} />
+      <FeeNoticeClient />
     </div>
   )
 }

@@ -73,6 +73,17 @@ const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
  * titles, usernames and dispute reasons are attacker-controlled — without
  * this a seller could inject markup into buyers' inboxes.
  */
+/** Low-level sender for templates that live in their own module (PR 7: fee notice). */
+export async function sendTransactionalEmail({ to, subject, html }: { to: string; subject: string; html: string }) {
+  const { data, error } = await resend.emails.send({ from: FROM_EMAIL, replyTo: REPLY_TO, to, subject, html })
+  return error ? { success: false as const, error } : { success: true as const, data }
+}
+
+/** escapeHtml for templates outside this module. */
+export function escapeHtmlText(s: string): string {
+  return escapeHtml(s)
+}
+
 function escapeHtml(s: string): string {
   return s
     .replace(/&/g, '&amp;')
